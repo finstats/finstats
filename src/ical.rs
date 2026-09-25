@@ -155,13 +155,19 @@ pub struct FeedQuery {
     #[allow(dead_code)]
     key: Option<String>,
     days: Option<i64>,
-    mine: Option<bool>,
+    /// `1`, `true`, `yes`, `on` — an address typed by hand, not a form finstats wrote.
+    mine: Option<String>,
+}
+
+/// Whether a hand-typed query flag says yes.
+fn truthy(v: Option<&str>) -> bool {
+    matches!(v.map(|s| s.trim().to_ascii_lowercase()).as_deref(), Some("1" | "true" | "yes" | "on"))
 }
 
 /// `GET /api/calendar.ics?key=&days=&mine=` — the key's owner's agenda, as a calendar.
 pub async fn feed(State(app): State<App>, CalendarKey(user): CalendarKey, Query(q): Query<FeedQuery>) -> ApiResult<Response> {
     let days = q.days.unwrap_or(90).clamp(1, 90);
-    let mine = q.mine.unwrap_or(false);
+    let mine = truthy(q.mine.as_deref());
     let subject = user.id.clone();
     let public_url = app.settings().public_url.clone();
     let rows = app.db.call(move |c| crate::pipeline::entries_for(c, days, &subject, mine)).await?;
@@ -242,6 +248,14 @@ mod tests {
         let mut e = film();
         e.release = "digital".into();
         assert!(vevent(&e, 0, "", false).contains("UID:2-movie-77-digital@finstats\r\n"));
+    }
+
+    #[test]
+    fn a_flag_in_a_hand_typed_address_is_read_generously() {
+        // Somebody subscribing a phone types `mine=1` as readily as `mine=true`; a bool would 400 the first.
+        for yes in ["1", "true", "TRUE", "yes", "on"] { assert!(truthy(Some(yes)), "{yes}"); }
+        for no in ["0", "false", "no", "off", ""] { assert!(!truthy(Some(no)), "{no}"); }
+        assert!(!truthy(None));
     }
 
     #[test]
