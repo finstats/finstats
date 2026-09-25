@@ -31,6 +31,7 @@ mod services;
 mod socket;
 mod state;
 mod stats;
+mod streamystats;
 mod sync;
 mod timeline;
 
@@ -49,6 +50,7 @@ const USAGE: &str = "finstats — playback statistics for Jellyfin
 USAGE:
     finstats                            Run the server
     finstats import-jellystat <file>    Import a Jellystat backup (.jsonl / .json), then exit
+    finstats import-streamystats <file> Import a Streamystats backup (.json), then exit
     finstats backup                     Write a backup into <data dir>/backups, then exit
     finstats restore <file>             Merge a finstats backup into the database (history, settings, permissions), then exit
     finstats relink                     Re-attach history to renamed items now, then exit (also runs after every sync)
@@ -118,6 +120,16 @@ fn main() -> Result<()> {
                 "Imported {} plays ({} skipped as duplicates), {} users, {} libraries, {} items, {} seasons, {} episodes in {:.1}s",
                 res.plays_imported, res.plays_skipped, res.users, res.libraries, res.items, res.seasons, res.episodes,
                 started.elapsed().as_secs_f64()
+            );
+            return Ok(());
+        }
+        Some("import-streamystats") => {
+            let Some(file) = args.get(1) else { bail!("usage: finstats import-streamystats <file>") };
+            let started = std::time::Instant::now();
+            let res = streamystats::run(&db, std::path::Path::new(file), None)?;
+            println!(
+                "Imported {} plays ({} already present, {} marked watched but never played) and {} users from {} sessions in {:.1}s",
+                res.plays_imported, res.plays_skipped, res.marked_watched, res.users, res.sessions_read, started.elapsed().as_secs_f64()
             );
             return Ok(());
         }

@@ -22,7 +22,7 @@ use tower_http::compression::predicate::{DefaultPredicate, NotForContentType, Pr
 use crate::auth::{self, AuthUser, JellyfinAdmin, Manager};
 use crate::state::{ApiError, ApiResult, App, Settings};
 use crate::db::rusqlite::OptionalExtension;
-use crate::{changelog, db, groups, import, pipeline, profile, recap, recent, security, services, stats, sync, timeline};
+use crate::{changelog, db, groups, import, pipeline, profile, recap, recent, security, services, stats, streamystats, sync, timeline};
 
 #[derive(RustEmbed)]
 #[folder = "$CARGO_MANIFEST_DIR/web"]
@@ -97,6 +97,7 @@ pub fn router(app: App) -> Router {
         .route("/tasks/{id}/run", post(run_task))
         // Backups run to hundreds of MB and are streamed to disk, never buffered.
         .route("/import/jellystat", post(import_jellystat).layer(DefaultBodyLimit::disable()))
+        .route("/import/streamystats", post(import_streamystats).layer(DefaultBodyLimit::disable()))
         .route("/backups", get(list_backups).post(create_backup))
         .route("/backups/restore", post(restore_upload).layer(DefaultBodyLimit::disable()))
         .route("/backups/{name}", get(download_backup).delete(delete_backup))
@@ -570,7 +571,7 @@ async fn put_user_permissions(State(app): State<App>, JellyfinAdmin(_): Jellyfin
     }
 }
 
-// ---------------------------------------------------------------- Jellystat import
+// ---------------------------------------------------------------- importing history
 
 // ---------------------------------------------------------------- backups
 // Jellyfin administrators only: a backup is everyone's history, and restoring one can bring permissions back.
@@ -696,10 +697,43 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin,
 }
 
 async fn import_jellystat(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult<Response> {
+    let path = receive(&app, req, "jellystat-upload.tmp").await?;
+    let worker = app.clone();
+    tokio::task::spawn_blocking(move || {
+        let outcome = import::run(&worker.db, &path, Some(&worker.tasks));
+        let _ = std::fs::remove_file(&path);
+        worker.tasks.finish("import", outcome.map(|r| (format!("Imported {} plays ({} already present)", r.plays_imported, r.plays_skipped), serde_json::to_value(&r).ok())));
+    });
+    Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
+}
+
+async fn import_streamystats(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult<Response> {
+    let path = receive(&app, req, "streamystats-upload.tmp").await?;
+    let worker = app.clone();
+    tokio::task::spawn_blocking(move || {
+        let outcome = streamystats::run(&worker.db, &path, Some(&worker.tasks));
+        let _ = std::fs::remove_file(&path);
+        worker.tasks.finish(
+            "import",
+            outcome.map(|r| {
+                let mut msg = format!("Imported {} plays ({} already present)", r.plays_imported, r.plays_skipped);
+                if r.marked_watched > 0 {
+                    msg.push_str(&format!(", {} marked watched but never played", r.marked_watched));
+                }
+                (msg, serde_json::to_value(&r).ok())
+            }),
+        );
+    });
+    Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
+}
+
+/// Stream an uploaded export to disk. One import at a time, whichever tracker it came from: they
+/// write to the same tables and share the task the page watches.
+async fn receive(app: &App, req: Request, name: &str) -> ApiResult<std::path::PathBuf> {
     if !app.tasks.try_start("import", "Receiving backup") {
         return Err(ApiError::new(StatusCode::CONFLICT, "An import is already running"));
     }
-    let path = app.data_dir.join("jellystat-upload.tmp");
+    let path = app.data_dir.join(name);
     let received = async {
         let mut file = tokio::fs::File::create(&path).await?;
         let mut stream = req.into_body().into_data_stream();
@@ -714,35 +748,23 @@ async fn import_jellystat(State(app): State<App>, Manager(_): Manager, req: Requ
     }
     .await;
 
-    let total = match received {
+    match received {
         Ok(0) => {
             let _ = tokio::fs::remove_file(&path).await;
             app.tasks.finish("import", Err(anyhow::anyhow!("The uploaded file was empty")));
-            return Err(ApiError::bad_request("The uploaded file was empty"));
+            Err(ApiError::bad_request("The uploaded file was empty"))
         }
-        Ok(n) => n,
+        Ok(total) => {
+            tracing::info!("received a history export ({:.1} MB)", total as f64 / 1e6);
+            Ok(path)
+        }
         Err(e) => {
             let _ = tokio::fs::remove_file(&path).await;
             let msg = format!("{e:#}");
             app.tasks.finish("import", Err(e));
-            return Err(ApiError::bad_request(msg));
+            Err(ApiError::bad_request(msg))
         }
-    };
-    tracing::info!("received Jellystat backup ({:.1} MB)", total as f64 / 1e6);
-
-    let worker = app.clone();
-    tokio::task::spawn_blocking(move || {
-        let outcome = import::run(&worker.db, &path, Some(&worker.tasks));
-        let _ = std::fs::remove_file(&path);
-        worker.tasks.finish(
-            "import",
-            outcome.map(|r| {
-                let msg = format!("Imported {} plays ({} already present)", r.plays_imported, r.plays_skipped);
-                (msg, serde_json::to_value(&r).ok())
-            }),
-        );
-    });
-    Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
+    }
 }
 
 #[cfg(test)]

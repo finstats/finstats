@@ -434,6 +434,10 @@ pub fn store_people(conn: &Connection, it: &Value) -> Result<()> {
 }
 
 /// Plays recorded before their item was known get their library (and type details) filled in.
+/// Everything the library can tell a play that the play did not already know. Runs after every
+/// library read as well as after an import, because history is often imported first: a tracker that
+/// records no item type (neither Jellystat nor Streamystats does) leaves rows guessed or unknown,
+/// and an episode has no season or episode number until something knows the library.
 pub fn backfill_playbacks(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "UPDATE playbacks SET library_id = COALESCE(
@@ -441,7 +445,18 @@ pub fn backfill_playbacks(conn: &Connection) -> Result<()> {
                 (SELECT library_id FROM items WHERE items.id = playbacks.series_id))
          WHERE library_id IS NULL;
          UPDATE playbacks SET runtime_s = (SELECT runtime_s FROM items WHERE items.id = playbacks.item_id)
-         WHERE runtime_s IS NULL;",
+         WHERE runtime_s IS NULL;
+
+         UPDATE playbacks SET
+            season_number  = (SELECT parent_index_number FROM items WHERE items.id = playbacks.item_id),
+            episode_number = (SELECT index_number FROM items WHERE items.id = playbacks.item_id)
+         WHERE item_type = 'Episode' AND episode_number IS NULL;
+
+         -- Only for history that was imported: a play finstats watched itself was typed by the
+         -- session as it happened, and that is the better answer if the two ever disagree.
+         UPDATE playbacks SET item_type = (SELECT type FROM items WHERE items.id = playbacks.item_id)
+         WHERE source <> 'live' AND item_type <> 'Episode'
+           AND EXISTS (SELECT 1 FROM items WHERE items.id = playbacks.item_id AND items.type <> playbacks.item_type);",
     )?;
     crate::relink::relink_orphans(conn)?;
     // New titles may be what Sonarr, Radarr or a request were waiting for.
@@ -821,6 +836,36 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_library_read_tells_imported_plays_what_they_were_watching() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        // History imported before finstats had ever read the library: one tracker guessed the type
+        // wrong, another could not tell at all, and neither knew which episode this was.
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, runtime_s, parent_index_number, index_number, updated_at) VALUES
+                ('i1', 'Audio', 'Big Buck Bunny', 210, NULL, NULL, 0),
+                ('e1', 'Episode', 'The Big Meadow', 1500, 2, 5, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+                ('streamystats', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Unknown', 100, 400, 300),
+                ('jellystat', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 500, 800, 300),
+                ('streamystats', 'u1', 'alice', 'e1', 'The Big Meadow', 'Episode', 900, 2400, 1500),
+                ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 3000, 3300, 300);",
+        )
+        .unwrap();
+        backfill_playbacks(&c).unwrap();
+        let ty = |start: i64| -> String { c.query_row("SELECT item_type FROM playbacks WHERE started_at = ?1", [start], |r| r.get(0)).unwrap() };
+        assert_eq!(ty(100), "Audio");
+        assert_eq!(ty(500), "Audio");
+        // A play finstats watched itself was typed by the session at the time; that stands.
+        assert_eq!(ty(3000), "Movie");
+        // And the episode now knows which one it is.
+        let se: (i64, i64) = c.query_row("SELECT season_number, episode_number FROM playbacks WHERE item_id = 'e1'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        assert_eq!(se, (2, 5));
+    }
 
     #[test]
     fn keeps_the_billed_cast_and_directors_and_replaces_them_on_the_next_read() {

@@ -263,11 +263,14 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
             "playbacks" => {
                 let exists = crate::playback::already_recorded(
                     &tx,
-                    row.get("source").and_then(Value::as_str).unwrap_or("live"),
-                    row.get("source_id").and_then(Value::as_str),
-                    row.get("user_id").and_then(Value::as_str).unwrap_or_default(),
-                    row.get("item_id").and_then(Value::as_str).unwrap_or_default(),
-                    row.get("started_at").and_then(Value::as_i64).unwrap_or_default(),
+                    crate::playback::Play {
+                        source: row.get("source").and_then(Value::as_str).unwrap_or("live"),
+                        source_id: row.get("source_id").and_then(Value::as_str),
+                        user_id: row.get("user_id").and_then(Value::as_str).unwrap_or_default(),
+                        item_id: row.get("item_id").and_then(Value::as_str).unwrap_or_default(),
+                        started_at: row.get("started_at").and_then(Value::as_i64).unwrap_or_default(),
+                        ended_at: row.get("ended_at").and_then(Value::as_i64).unwrap_or_default(),
+                    },
                     merge_window_s,
                 )?;
                 if exists {

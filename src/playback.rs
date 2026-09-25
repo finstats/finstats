@@ -116,7 +116,15 @@ impl PlayRecord {
     /// already: either this very row has been imported before, or another tracker — or the
     /// collector — got there first. See [`already_recorded`].
     pub fn insert_imported(&self, conn: &Connection, merge_window_s: i64) -> Result<Option<i64>> {
-        if already_recorded(conn, self.source, self.source_id.as_deref(), &self.user_id, &self.item_id, self.started_at, merge_window_s)? {
+        let this = Play {
+            source: self.source,
+            source_id: self.source_id.as_deref(),
+            user_id: &self.user_id,
+            item_id: &self.item_id,
+            started_at: self.started_at,
+            ended_at: self.ended_at,
+        };
+        if already_recorded(conn, this, merge_window_s)? {
             return Ok(None);
         }
         self.insert(conn)
@@ -157,19 +165,38 @@ impl PlayRecord {
     }
 }
 
+/// The bits of a play that say which play it is.
+#[derive(Debug, Clone, Copy)]
+pub struct Play<'a> {
+    pub source: &'a str,
+    pub source_id: Option<&'a str>,
+    pub user_id: &'a str,
+    pub item_id: &'a str,
+    pub started_at: i64,
+    pub ended_at: i64,
+}
+
 /// Is this play already in the history? The one rule a restore and both importers share, so that
 /// the same evening cannot be counted twice however it arrives.
 ///
-/// Its own id settles it when there is one. Otherwise it is the same person, the same item and a
-/// start close enough to be the same viewing — where "close enough" depends on who recorded the
-/// other row. **Between** sources it is `window` seconds, because the trackers disagree about what
-/// they record: Jellystat stores the *end* of a play and finstats derives the start from it, while
-/// Streamystats and the collector store the real start, so one evening seen by two of them lands a
-/// little apart. **Within** one source it is the very same second and nothing wider, because a
-/// tracker never exports the same play twice: a second row of the same item minutes later is a
-/// restart the viewer really made, and a window there would silently drop it.
-pub fn already_recorded(conn: &Connection, source: &str, source_id: Option<&str>, user_id: &str, item_id: &str, started_at: i64, window: i64) -> Result<bool> {
-    if let Some(sid) = source_id
+/// Its own id settles it when there is one. Otherwise it is the same person, the same item, and one
+/// of the play's two ends close enough to be the same viewing — where "close enough" depends on who
+/// recorded the other row.
+///
+/// **Between** sources it is `window` seconds at *either* end, because the trackers disagree about
+/// what they record. Jellystat keeps only the moment a play *ended*, so finstats works the start
+/// back from the seconds played, and every minute the viewer spent paused moves that start later;
+/// Streamystats and the collector keep the real start. The ends, on the other hand, are the same
+/// moment for all three, give or take how quickly each noticed. Measured against real history —
+/// 3,162 plays a Streamystats export and a Jellystat import held in common — matching either end
+/// recognised 2,750 of them, the start alone 2,527, and the offsets of the ones the start missed
+/// ran in an unbroken smear out past ten minutes, while the ends fall off a cliff inside one.
+///
+/// **Within** one source it is the very same second and nothing wider, because a tracker never
+/// exports the same play twice: a second row of the same item minutes later is a restart the viewer
+/// really made, and a window there would silently drop it.
+pub fn already_recorded(conn: &Connection, p: Play<'_>, window: i64) -> Result<bool> {
+    if let Some(sid) = p.source_id
         && conn.prepare_cached("SELECT 1 FROM playbacks WHERE source_id = ?1")?.exists([sid])?
     {
         return Ok(true);
@@ -177,9 +204,10 @@ pub fn already_recorded(conn: &Connection, source: &str, source_id: Option<&str>
     Ok(conn
         .prepare_cached(
             "SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2
-               AND (started_at = ?3 OR (source <> ?4 AND ABS(started_at - ?3) <= ?5))",
+               AND (started_at = ?3
+                    OR (source <> ?5 AND (ABS(started_at - ?3) <= ?6 OR ABS(ended_at - ?4) <= ?6)))",
         )?
-        .exists(params![user_id, item_id, started_at, source, window.max(0)])?)
+        .exists(params![p.user_id, p.item_id, p.started_at, p.ended_at, p.source, window.max(0)])?)
 }
 
 /// One thing that happened during a play (pause, skip, track switch…).
@@ -221,8 +249,8 @@ mod tests {
     #[test]
     fn a_play_already_here_is_recognised_by_its_own_id_whatever_its_start_says() {
         let c = conn();
-        assert!(already_recorded(&c, "jellystat", Some("jellystat:abc"), "u2", "i1", 123, 600).unwrap());
-        assert!(!already_recorded(&c, "streamystats", Some("streamystats:abc"), "u2", "i1", 123, 600).unwrap());
+        assert!(already_recorded(&c, Play { source: "jellystat", source_id: Some("jellystat:abc"), user_id: "u2", item_id: "i1", started_at: 123, ended_at: 456 }, 600).unwrap());
+        assert!(!already_recorded(&c, Play { source: "streamystats", source_id: Some("streamystats:abc"), user_id: "u2", item_id: "i1", started_at: 123, ended_at: 456 }, 600).unwrap());
     }
 
     #[test]
@@ -231,13 +259,28 @@ mod tests {
         // Jellystat records the end and finstats derives the start; Streamystats records the true
         // start. The same play therefore arrives a little off, and must still be the same play.
         for start in [10000, 10045, 9955] {
-            assert!(already_recorded(&c, "streamystats", Some("streamystats:x"), "u1", "i1", start, 600).unwrap(), "{start}");
+            assert!(already_recorded(&c, Play { source: "streamystats", source_id: Some("streamystats:x"), user_id: "u1", item_id: "i1", started_at: start, ended_at: start + 5400 }, 600).unwrap(), "{start}");
         }
         // Beyond the window it is a second viewing, not the same one.
-        assert!(!already_recorded(&c, "streamystats", Some("streamystats:x"), "u1", "i1", 10601, 600).unwrap());
+        assert!(!already_recorded(&c, Play { source: "streamystats", source_id: Some("streamystats:x"), user_id: "u1", item_id: "i1", started_at: 10601, ended_at: 99999 }, 600).unwrap());
         // Another person, or another item, is never the same play.
-        assert!(!already_recorded(&c, "streamystats", Some("streamystats:x"), "u3", "i1", 10000, 600).unwrap());
-        assert!(!already_recorded(&c, "streamystats", Some("streamystats:x"), "u1", "i2", 10000, 600).unwrap());
+        assert!(!already_recorded(&c, Play { source: "streamystats", source_id: Some("streamystats:x"), user_id: "u3", item_id: "i1", started_at: 10000, ended_at: 15400 }, 600).unwrap());
+        assert!(!already_recorded(&c, Play { source: "streamystats", source_id: Some("streamystats:x"), user_id: "u1", item_id: "i2", started_at: 10000, ended_at: 15400 }, 600).unwrap());
+    }
+
+    #[test]
+    fn the_same_evening_is_recognised_by_its_end_when_a_pause_moved_its_start() {
+        let c = conn();
+        // The trackers agree about when a play ended far better than about when it began: Jellystat
+        // keeps only the end, so finstats works its start back from the seconds played, and every
+        // minute the viewer spent paused moves that start later. Half an hour of pause puts it well
+        // outside any sane window — while both still say the play ended at the same moment.
+        assert!(already_recorded(&c, Play { source: "jellystat", source_id: Some("jellystat:x"), user_id: "u1", item_id: "i1", started_at: 11_800, ended_at: 15_400 }, 600).unwrap());
+        // Measured on real history: matching either end catches 2,750 of 3,162 plays the two
+        // trackers held in common, against 2,527 for the start alone.
+        assert!(already_recorded(&c, Play { source: "jellystat", source_id: Some("jellystat:x"), user_id: "u1", item_id: "i1", started_at: 11_800, ended_at: 15_430 }, 600).unwrap());
+        // A different viewing of the same thing agrees on neither end.
+        assert!(!already_recorded(&c, Play { source: "jellystat", source_id: Some("jellystat:x"), user_id: "u1", item_id: "i1", started_at: 30_000, ended_at: 35_400 }, 600).unwrap());
     }
 
     #[test]
@@ -246,14 +289,14 @@ mod tests {
         // One tracker never exports the same play twice, so a second row of the same item minutes
         // later is a restart the viewer really made. Widening the window inside a source would
         // silently drop it — on an import and, worse, on a restore of finstats' own backup.
-        assert!(!already_recorded(&c, "live", None, "u1", "i1", 10180, 600).unwrap());
-        assert!(already_recorded(&c, "live", None, "u1", "i1", 10000, 600).unwrap());
+        assert!(!already_recorded(&c, Play { source: "live", source_id: None, user_id: "u1", item_id: "i1", started_at: 10180, ended_at: 99999 }, 600).unwrap());
+        assert!(already_recorded(&c, Play { source: "live", source_id: None, user_id: "u1", item_id: "i1", started_at: 10000, ended_at: 99999 }, 600).unwrap());
     }
 
     #[test]
     fn a_window_of_zero_asks_for_the_very_same_second_from_anyone() {
         let c = conn();
-        assert!(already_recorded(&c, "streamystats", None, "u1", "i1", 10000, 0).unwrap());
-        assert!(!already_recorded(&c, "streamystats", None, "u1", "i1", 10001, 0).unwrap());
+        assert!(already_recorded(&c, Play { source: "streamystats", source_id: None, user_id: "u1", item_id: "i1", started_at: 10000, ended_at: 99999 }, 0).unwrap());
+        assert!(!already_recorded(&c, Play { source: "streamystats", source_id: None, user_id: "u1", item_id: "i1", started_at: 10001, ended_at: 99999 }, 0).unwrap());
     }
 }
