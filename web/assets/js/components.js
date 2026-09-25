@@ -208,47 +208,75 @@ export function rangeControl(days, onChange) {
 }
 
 /** Searchable select. options: [{value, label}] or an async loader. */
-export function combobox({ value = '', onChange, placeholder = 'All users', allLabel = 'All users', load, label = 'User' }) {
+/// A dropdown of options, one of them or several.
+///
+/// `multiple` makes it a list you tick: `value` and what `onChange` is handed are then a
+/// comma-separated string rather than one value, which is what a URL carries either way — so a
+/// caller that already passes its filter straight into the query string needs no change at all.
+/// `searchable` is worth having for a list of people and only noise for a list of four, and a list
+/// you tick stays open while you tick it.
+export function combobox({ value = '', onChange, placeholder = 'All users', allLabel = 'All users', load, label = 'User',
+                           multiple = false, searchable = true, iconName = 'user' }) {
   let options = [];
-  let open = false, activeIdx = 0, filtered = [], selected = value;
+  let open = false, activeIdx = 0, filtered = [];
+  // Inside, always a list of chosen values; outside, always the comma-separated string a URL holds.
+  const split = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean);
+  let chosen = split(value);
   const uid = 'cb' + Math.random().toString(36).slice(2, 8);
   const btnLabel = h('span', { class: 'combo-label' }, placeholder);
   const btn = h('button', { type: 'button', class: 'combo-btn', 'aria-haspopup': 'listbox', 'aria-expanded': 'false', 'aria-label': label },
-    icon('user', 14), btnLabel, icon('chevronDown', 14, 'combo-caret'));
+    iconName ? icon(iconName, 14) : null, btnLabel, icon('chevronDown', 14, 'combo-caret'));
   const input = h('input', { class: 'combo-input', type: 'text', placeholder: 'Type to filter…', autocomplete: 'off', spellcheck: false,
     role: 'combobox', 'aria-controls': uid, 'aria-expanded': 'true', 'aria-autocomplete': 'list', 'aria-label': 'Filter ' + label.toLowerCase() + 's' });
-  const list = h('ul', { class: 'combo-list', role: 'listbox', id: uid });
-  const pop = h('div', { class: 'combo-pop', hidden: true }, h('div', { class: 'combo-search' }, icon('search', 14), input), list);
-  const root = h('div', { class: 'combo' }, btn, pop);
+  const list = h('ul', { class: 'combo-list', role: 'listbox', id: uid, tabindex: -1, 'aria-multiselectable': multiple ? 'true' : null });
+  const search = searchable ? h('div', { class: 'combo-search' }, icon('search', 14), input) : null;
+  const pop = h('div', { class: 'combo-pop', hidden: true }, search, list);
+  const root = h('div', { class: ['combo', multiple && 'is-multi'] }, btn, pop);
+
+  const isOn = (v) => (v ? chosen.includes(v) : chosen.length === 0);
 
   function paintLabel() {
-    const o = options.find((x) => x.value === selected);
-    btnLabel.textContent = selected && o ? o.label : selected ? 'Selected user' : allLabel;
-    root.classList.toggle('has-value', !!selected);
+    const named = chosen.map((v) => (options.find((x) => x.value === v) || {}).label).filter(Boolean);
+    // One is named; several are the first and a count, so the button never grows with the choice.
+    btnLabel.textContent = !chosen.length ? allLabel
+      : named.length === 0 ? placeholder
+      : named.length === 1 ? named[0]
+      : `${named[0]} +${named.length - 1}`;
+    root.classList.toggle('has-value', chosen.length > 0);
   }
   function renderList() {
-    const q = input.value.trim().toLowerCase();
+    const q = searchable ? input.value.trim().toLowerCase() : '';
     const all = [{ value: '', label: allLabel }, ...options];
     filtered = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : all;
     activeIdx = Math.min(activeIdx, Math.max(0, filtered.length - 1));
     if (!filtered.length) { mount(list, h('li', { class: 'combo-empty' }, 'No results')); input.removeAttribute('aria-activedescendant'); return; }
     mount(list, filtered.map((o, i) => h('li', { id: `${uid}-${i}`, role: 'option', class: ['combo-opt', i === activeIdx && 'is-active'],
-      'aria-selected': String(o.value === selected),
+      'aria-selected': String(isOn(o.value)),
       onPointerdown: (e) => { e.preventDefault(); choose(o); },
       onPointermove: () => { if (activeIdx !== i) { activeIdx = i; renderList(); } } },
-      h('span', null, o.label), o.value === selected ? icon('check', 14) : null)));
-    input.setAttribute('aria-activedescendant', `${uid}-${activeIdx}`);
+      h('span', null, o.label), isOn(o.value) ? icon('check', 14) : null)));
+    (searchable ? input : list).setAttribute('aria-activedescendant', `${uid}-${activeIdx}`);
     list.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
   }
   function choose(o) {
-    const changed = o.value !== selected;
-    selected = o.value; paintLabel(); close(true);
-    if (changed) onChange(selected);
+    const before = chosen.join(',');
+    if (!multiple) {
+      chosen = o.value ? [o.value] : [];
+    } else if (!o.value) {
+      chosen = []; // "All" is not one more thing to tick: it is nothing ticked.
+    } else {
+      chosen = chosen.includes(o.value) ? chosen.filter((v) => v !== o.value) : [...chosen, o.value];
+    }
+    paintLabel();
+    // Ticking several means staying open; choosing one means you are done.
+    if (multiple) renderList(); else close(true);
+    if (chosen.join(',') !== before) onChange(chosen.join(','));
   }
   function openPop() {
     if (open) return;
     open = true; pop.hidden = false; btn.setAttribute('aria-expanded', 'true');
-    input.value = ''; activeIdx = 0; renderList(); input.focus();
+    input.value = ''; activeIdx = 0; renderList();
+    (searchable ? input : list).focus();
     document.addEventListener('pointerdown', outside, true);
   }
   function close(refocus) {
@@ -261,28 +289,37 @@ export function combobox({ value = '', onChange, placeholder = 'All users', allL
   const outside = (e) => { if (!root.contains(e.target)) close(false); };
   btn.addEventListener('click', () => (open ? close(true) : openPop()));
   input.addEventListener('input', () => { activeIdx = 0; renderList(); });
-  input.addEventListener('keydown', (e) => {
+  const keys = (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(filtered.length - 1, activeIdx + 1); renderList(); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(0, activeIdx - 1); renderList(); }
-    else if (e.key === 'Enter') { e.preventDefault(); if (filtered[activeIdx]) choose(filtered[activeIdx]); }
+    else if (e.key === 'Enter' || (!searchable && e.key === ' ')) { e.preventDefault(); if (filtered[activeIdx]) choose(filtered[activeIdx]); }
+    // The overlay's own Escape: `shell.js` handles it globally and would step back a page.
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); }
     else if (e.key === 'Tab') close(false);
-  });
+  };
+  input.addEventListener('keydown', keys);
+  list.addEventListener('keydown', keys);
 
   paintLabel();
   Promise.resolve(load()).then((opts) => { options = opts || []; paintLabel(); if (open) renderList(); }).catch(() => {});
   return root;
 }
 
-export function userCombobox({ value, onChange, signal }) {
-  return combobox({ value, onChange, load: () => userList(signal).then((us) => us.map((u) => ({ value: u.id, label: u.name }))) });
+/// A dropdown of a known handful of options, ticked rather than chosen: media types, play methods,
+/// which tracker recorded a play. No search — for four options it is only noise.
+export function multiSelect({ options, value, onChange, label, allLabel, iconName = null }) {
+  return combobox({ value, onChange, label, allLabel, placeholder: allLabel, iconName, multiple: true, searchable: false, load: () => options });
+}
+
+export function userCombobox({ value, onChange, signal, multiple = false }) {
+  return combobox({ value, onChange, multiple, load: () => userList(signal).then((us) => us.map((u) => ({ value: u.id, label: u.name }))) });
 }
 
 /** One row of filters above everything they scope. */
 export function filterBar({ days, onDays, userId, onUser, signal, extra = [] }) {
   return h('div', { class: 'filters', role: 'group', 'aria-label': 'Filters' },
     rangeControl(days, onDays),
-    onUser && can('see_everyone') ? userCombobox({ value: userId || '', onChange: onUser, signal }) : null,
+    onUser && can('see_everyone') ? userCombobox({ value: userId || '', onChange: onUser, signal, multiple: true }) : null,
     extra);
 }
 

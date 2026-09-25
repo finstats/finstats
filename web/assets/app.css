@@ -355,6 +355,10 @@ kbd {
 .combo-opt.is-active { background: var(--hover); }
 .combo-opt[aria-selected="true"] { color: var(--accent-hi); }
 .combo-empty { padding: 14px 10px; color: var(--text-faint); font-size: 13px; text-align: center; }
+/* A list you tick: it takes the focus itself, having no search box to hold it, and the active row is
+   what shows where you are — so no focus ring on the list as well. */
+.combo-list:focus { outline: none; }
+.combo.is-multi .combo-opt[aria-selected="true"] { background: var(--accent-wash); }
 
 /* toggle switch */
 .switch { position: relative; width: 38px; height: 22px; flex: none; padding: 0; border: 1px solid var(--border); border-radius: 99px; background: var(--hover); transition: background var(--ease), border-color var(--ease); }

@@ -2,15 +2,16 @@ import { h, icon, debounce, num, mount } from '../dom.js';
 import { api } from '../api.js';
 import { readDays, saveDays, rangeLong, can } from '../state.js';
 import { replaceQuery } from '../router.js';
-import { pageHeader, card, filterBar, dataView, sk, playsTable, pagination, segmented } from '../components.js';
+import { pageHeader, card, filterBar, dataView, sk, playsTable, pagination, multiSelect } from '../components.js';
 import { openPlayModal } from '../playmodal.js';
 
+// Ticked, not chosen: films *and* episodes without music is a question worth being able to ask.
+// "All" is nothing ticked rather than one more thing to tick, so it is left out of these.
 const METHODS = [
-  { value: '', label: 'All' }, { value: 'DirectPlay', label: 'Direct play' },
-  { value: 'DirectStream', label: 'Direct stream' }, { value: 'Transcode', label: 'Transcode' },
+  { value: 'DirectPlay', label: 'Direct play' }, { value: 'DirectStream', label: 'Direct stream' }, { value: 'Transcode', label: 'Transcode' },
 ];
 const TYPES = [
-  { value: '', label: 'All' }, { value: 'Movie', label: 'Movies' }, { value: 'Episode', label: 'Episodes' }, { value: 'Audio', label: 'Music' },
+  { value: 'Movie', label: 'Movies' }, { value: 'Episode', label: 'Episodes' }, { value: 'Audio', label: 'Music' }, { value: 'Other', label: 'Other' },
 ];
 // Which tracker a play came from. Only offered for the ones this history actually holds, which the
 // answer lists: an install that has never imported anything has nothing to choose between.
@@ -78,13 +79,14 @@ export default function activity(ctx) {
     // Whatever is being filtered on stays offered even where there is none of it, so that a filter
     // somebody arrived with in the address can be seen and cleared rather than silently emptying
     // the page.
-    const list = f.source && SOURCES[f.source] && !held.includes(f.source) ? [...held, f.source] : held;
+    const asked = f.source.split(',').map((x) => x.trim()).filter((x) => SOURCES[x]);
+    const list = [...held, ...asked.filter((x) => !held.includes(x))];
     const sig = list.join();
     if (sig === sourceSig) return;
     sourceSig = sig;
     // One tracker, or none: nothing to choose between, so no filter at all.
     mount(sourceSlot, list.length < 2 ? null
-      : segmented({ label: 'Recorded by', options: [{ value: '', label: 'All' }, ...list.map((v) => ({ value: v, label: SOURCES[v] }))],
+      : multiSelect({ label: 'Recorded by', allLabel: 'All trackers', options: list.map((v) => ({ value: v, label: SOURCES[v] })),
         value: f.source, onChange: (v) => { f.source = v; apply(); } }));
   }
 
@@ -95,8 +97,8 @@ export default function activity(ctx) {
     onDays: (v) => { f.days = v; saveDays(v); apply(); },
     onUser: (v) => { f.user_id = v; apply(); },
     extra: [
-      segmented({ label: 'Play method', options: METHODS, value: f.method, onChange: (v) => { f.method = v; apply(); } }),
-      segmented({ label: 'Media type', options: TYPES, value: f.type, onChange: (v) => { f.type = v; apply(); } }),
+      multiSelect({ label: 'Play method', allLabel: 'All methods', options: METHODS, value: f.method, onChange: (v) => { f.method = v; apply(); } }),
+      multiSelect({ label: 'Media type', allLabel: 'All types', options: TYPES, value: f.type, onChange: (v) => { f.type = v; apply(); } }),
       sourceSlot,
       h('div', { class: 'search-field' }, icon('search', 14), search),
       scopeChip,
