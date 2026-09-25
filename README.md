@@ -119,6 +119,19 @@ the dashboard, on each profile ("most often with"), and as a small mark on every
 **Together** page has the whole of it: who watches with whom, hours in company against hours alone
 over time, each person's share, and the recent evenings — an evening of three counts for each of its pairs.
 
+### Use it from outside
+Everything the pages know, a script can ask. Make a key under **Settings → API keys** and send it as a header:
+
+```sh
+curl -H "Authorization: Bearer fs_…" https://finstats.example/api/stats/overview?days=30
+```
+
+A key is you: it sees what you may see and no more, dies when your access does, and is shown once. Make one
+with the *calendar* scope and your phone can subscribe to **what is coming** — every episode and film Sonarr
+and Radarr expect, as a calendar you carry with you, without that key opening anything else. And every change
+made in finstats — a sign-in, a setting, a key, a backup, an import — is on record under **Server → Audit**,
+with who did it and from where.
+
 ### Where you are in every show
 Your profile shows each series as a bar with one segment per episode: seen, started, or not yet.
 Only episodes that are actually on your server count, so an announced season does not spoil a
@@ -245,6 +258,7 @@ Everything works out of the box. If you want to tune it, **Settings** in the app
 | | |
 |---|---|
 | **Access** | Who may sign in and what they may see, for everyone or per person: *sign in*, *see everyone's activity*, *see network details*, *see the server*, *manage finstats*. Jellyfin administrators always have everything, and only they can change this. |
+| **API keys** | Your own keys for scripts and calendars, with a scope and an expiry; shown once, revoked with a click. Every signed-in user has this section; administrators see everyone's keys. |
 | **Follow Jellyfin's library scan** | On by default. finstats refreshes its copy of your library right after Jellyfin's own scheduled scan — no second schedule to manage. |
 | **Check every…** | How often finstats asks what is playing: every second while someone is watching, and — only while the live connection is not carrying — every 5 seconds while nobody is. Jellyfin pushes a new play within about a second, so the second one is a fallback and nothing more. |
 | **Treat a restart as the same play** | A stream that stops and resumes within 10 minutes counts as one viewing. |

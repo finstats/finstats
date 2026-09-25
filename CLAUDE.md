@@ -338,7 +338,18 @@ The same table feeds the Cast & crew row on `/items/:id` and the person pages (`
 scoped like any other stats query.
 
 **Auth (`auth.rs`).** Login forwards credentials to Jellyfin's `AuthenticateByName`, immediately logs that Jellyfin
-session out, and mints an own opaque session token (stored hashed, HttpOnly SameSite=Lax cookie).
+session out, and mints an own opaque session token (stored hashed, HttpOnly SameSite=Lax cookie). **Two credentials, one
+resolution point**: `auth::resolve` reads `Authorization: Bearer fs_…` first (`looks_like_key` gates before any query; an
+invalid header never falls back to the cookie — header beats cookie), else the cookie, and both end in the same `AuthUser`,
+which now carries `credential` (`Session` | `Key{id, scope}`) and `ip`. A key (`keys.rs`, `api_keys`, sha256 of `fs_`+64 hex,
+shown once) is resolved against the **live** user row and the live grants through `effective`, never a snapshot, so a lost
+`sign_in` or a demotion reaches every key at once; `touch_key` writes `last_used_*` at most once a minute. `KeyScope::Calendar`
+opens only `/api/calendar.ics`: the `AuthUser` extractor refuses it with 403 everywhere, and the feed's own `CalendarKey`
+extractor takes `?key=` or the header and never the cookie (`ical.rs`; `pipeline::entries_for` carries no name by construction,
+since a subscribed calendar syncs through somebody's cloud). Minting or revoking through a key is refused (`keys::only_a_session`).
+`audit.rs` is the one record of finstats' own write paths (`KINDS`; `Actor::from(&AuthUser)`; `record` is fire-and-forget and
+never the caller's error, `record_now` for a row that must land before what it announces — an import's transaction); a new
+write path gets a kind and one `record`, never a second log. `api_keys` is never in a backup; `audit` is.
 
 **Permissions.** `AuthUser.perms` (`Perms`: `see_everyone`, `see_network`, `see_server`, `see_downloads`, `notify`, `manage`) is rebuilt on every
 request from `user_permissions` ∪ `Settings.default_permissions`; `sign_in` (or `allow_user_login`) gates access at
@@ -459,7 +470,7 @@ watchable). Adding a kind of event means a `Kind` arm and one `raise` — never 
 
 **Backups (`backup.rs`).** gzip JSON Lines, one row per line tagged with its table, matched *by column name* both ways so files move
 between versions; a new table that holds something Jellyfin cannot give back must be added to `backup::TABLES`. Secrets (Jellyfin
-URL/API key, sessions) and the library are never exported; a test asserts the key is absent. Restore merges (dedupe on `source_id`
+URL/API key, sessions, API keys) and the library are never exported; a test asserts the key is absent. Restore merges (dedupe on `source_id`
 or user+item+start), remaps timeline rows to the new play ids, and re-derives groups, `is_local` and library links. The scheduler
 writes one when the newest file is older than `backup_every_d`; endpoints are `JellyfinAdmin`-only and names go through `valid_name`.
 

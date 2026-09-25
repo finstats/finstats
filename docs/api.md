@@ -1,7 +1,9 @@
 # finstats HTTP API
 
 All endpoints live under `/api` and speak JSON. Authentication is a session
-cookie (`finstats_session`, HttpOnly, SameSite=Lax) issued by `POST /api/auth/login`.
+cookie (`finstats_session`, HttpOnly, SameSite=Lax) issued by `POST /api/auth/login`, **or** an API key
+sent as `Authorization: Bearer fs_…` (see *v1.10*). Either resolves to the same user with the same
+permissions; a request carrying both is judged on the header alone.
 
 ## Conventions
 
@@ -9,7 +11,8 @@ cookie (`finstats_session`, HttpOnly, SameSite=Lax) issued by `POST /api/auth/lo
 - **Dates** in time series are `YYYY-MM-DD` in the server's local timezone (`TZ` env).
 - **IDs** are Jellyfin IDs: 32 lowercase hex chars, no dashes.
 - **Errors**: non-2xx status with `{"error": "human readable message"}`.
-  `401` = not logged in, `403` = not allowed, `409` = wrong state (e.g. already configured).
+  `401` = not logged in (also an expired, revoked or malformed API key), `403` = not allowed (also a
+  calendar-scoped key anywhere but the feed), `409` = wrong state (e.g. already configured).
 - **Common filters** (query string) on every `/api/stats/*`, `/api/activity`, `/api/users*`,
   `/api/libraries*`, `/api/items/*` endpoint:
   - `days` — integer window ending now. `0` or absent = all time.
@@ -410,6 +413,7 @@ What each one gates, server-side:
 | `see_network` | `remote_ip`, `device_id`, `is_local` in plays and sessions; `ips` on user pages; `network` in insights; IP search in `/api/activity?q=`. Otherwise `null` / `[]`. |
 | `see_server` | `/api/server`, `/api/events`, `failed_logins` in insights, `item.path`. Otherwise `403` / `[]` / `null`. |
 | `manage` | `/api/settings`, `/api/tasks*`, `/api/import/*`, `DELETE /api/activity/{id}`. Otherwise `403`. |
+| *Jellyfin administrator* | Not a permission but the account flag: `/api/audit`, everyone's keys in `/api/keys` (and revoking them), `/api/permissions*`, backups, connections. |
 
 `/api/recap` is never widened: it is always the caller's own. `PUT /api/settings` rejects `allow_user_login` and
 `default_permissions` with `403` unless the caller is a Jellyfin administrator.
@@ -1238,3 +1242,86 @@ Scoping is the caller's, as everywhere: without *see everyone* the pairs are the
 alone (a companion's name is theirs to see; a companion's time alone is not), and `previous` and `series` follow the same
 pin. `min_play_s` applies to `watch_s` and the series' totals, not to the sessions themselves, which are at least two
 minutes long by construction.
+
+# v1.10 — API keys, calendar feed, audit
+
+## API keys
+
+A key is a second credential for the same person: `fs_` + 64 hex characters (67 in all), shown **once** when it is
+made and stored only as a hash. It is sent as `Authorization: Bearer fs_…` — scheme case-insensitive, spacing
+tolerant — and resolves to exactly the `user` a session would: name, administrator flag and permissions are read live
+on every request, so a demoted administrator's key demotes with them and a person who may no longer sign in has no
+working keys. **Header beats cookie**: a request carrying both is judged on the header, and an invalid header is `401`
+even with a valid cookie beside it. A key is refused (`401`) once revoked or past its expiry.
+
+Two scopes. `full` opens everything its holder may see. `calendar` opens `GET /api/calendar.ics` and nothing else
+(`403` everywhere else) — it exists so a phone's calendar can hold a credential that cannot read a single statistic.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| GET | `/api/keys` | – | `{keys: [{id, name, scope, user_id, user_name, has_image, created_at, expires_at, last_used_at, last_used_ip, mine}]}` — the caller's live keys; a Jellyfin administrator's list holds everyone's. Never the key itself. |
+| POST | `/api/keys` | `{name (1–60), scope: "full"\|"calendar", expires_in_d?: 1..3650}` | `201 {id, key, name, scope, created_at, expires_at}` — the only time `key` is ever answered. At most 20 live keys per person (`409`). |
+| DELETE | `/api/keys/{id}` | – | `{ok: true}`; a soft revoke that stops the key on its next request. Own keys, or anyone's for an administrator; `404` otherwise, and for a key already revoked. |
+
+Both writes need a **session**: a request authenticated by a key cannot mint or revoke keys (`403`), so a leaked key
+has no successors. `last_used_at`/`last_used_ip` are written at most once a minute per key.
+
+## The calendar feed
+
+`GET /api/calendar.ics?key=fs_…&days=90&mine=1` — a subscribable iCalendar of what Sonarr and Radarr have coming, the
+same rows as `/api/upcoming` for the same person, as far ahead as `days` (1–90, default 90). `mine=1` (or `true`)
+keeps it to the shows and films the caller follows.
+
+**This is the one place a credential is accepted in the address.** A subscribed calendar can send no header, so the
+feed reads `?key=` (a Bearer header works too); it **never** reads the cookie, so a link cannot open a feed in a
+browser that happens to be signed in. A `calendar`-scoped key is meant for it; a `full` key opens it as well.
+
+The answer is `text/calendar; charset=utf-8`, `Cache-Control: private, no-store`, CRLF line ends, folded at 75 octets:
+
+```
+BEGIN:VCALENDAR / VERSION:2.0 / PRODID:-//finstats//EN / CALSCALE:GREGORIAN / METHOD:PUBLISH / X-WR-CALNAME:finstats: coming up
+BEGIN:VEVENT
+UID:{service_id}-{episode|movie}-{external_id}-{release}@finstats     // the upcoming row's own key, stable across syncs
+DTSTAMP:…Z
+DTSTART:20260921T141320Z            // an episode: its moment, and DURATION:PT1H
+DTSTART;VALUE=DATE:20260921         // a film: the whole day, DTEND the next day
+SUMMARY:Low Orbit S03E10 · Re-entry   // a film: "Title (2026) · In cinemas" / "· On disc"
+CATEGORIES:Episode | Film
+DESCRIPTION:Season finale. \n Already here. \n You watch this. \n <public_url>/items/{id}   // what applies; the link only when public_url is set and the title is in the library
+URL:<public_url>/items/{id}
+END:VEVENT
+```
+
+The feed **names nobody by construction**: the query behind it carries no user name or count, only whether the
+caller follows the title, because a subscribed calendar syncs through somebody's cloud.
+
+## The audit log — Jellyfin administrators only (🔒)
+
+Every write path in finstats leaves a row: who did it, from where, through which key if any, to what, and how it
+went. Reads leave none. `GET /api/audit` pages through it.
+
+| Query | Meaning |
+|---|---|
+| `page`, `per_page` | as `/api/events` |
+| `q` | word-by-word over the user name, the target and the detail |
+| `kind` | one of the kinds below; an unknown one answers an empty page |
+| `user_id` | rows by one person |
+| `sort`, `dir` | `when` (default, newest first), `kind`, `user`, `outcome`; anything else falls back to `when` |
+
+```jsonc
+{ "total": 412, "page": 1, "per_page": 50,
+  "rows": [ { "id": 9, "at": 1790000000, "kind": "setting_changed", "user_id": "…", "user_name": "alice", "has_image": true,
+              "ip": "192.168.1.10", "key_id": null, "key_name": null, "target": null,
+              "detail": { "changed": [ { "key": "min_play_s", "from": 60, "to": 90 } ] }, "outcome": "ok" } ],
+  "kinds": ["sign_in", "setting_changed", "…"] }   // the kinds present, for the filter
+```
+
+Kinds: `sign_in`, `sign_in_failed` (the name as typed, outcome `failed`), `sign_in_refused` (a valid password but no
+right to sign in), `sign_out`, `setup_completed`, `key_created`, `key_revoked`, `key_used` (a key's first use),
+`setting_changed` (only the keys that changed, with `from` and `to`; settings hold no secret), `permissions_changed`,
+`service_added|changed|removed` (kind and name, never the address or key), `target_added|changed|removed` (name,
+channel, whose), `backup_made` (no actor when the schedule wrote it) / `backup_restored` / `backup_deleted` /
+`backup_downloaded`, `task_run`, `import_started` / `import_finished` (plays imported and skipped, or the error),
+`play_deleted`, `alert_resolved` / `alert_reopened`. A row is kept a year, is written even when the action it records
+failed (`outcome: "failed"`), and never fails the action for not being written. The `audit` table is part of
+backups; `api_keys` is not.

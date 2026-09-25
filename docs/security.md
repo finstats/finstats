@@ -6,6 +6,15 @@ never stored or logged. finstats then issues its own session: a random 256-bit t
 as a hash, sent as an `HttpOnly; SameSite=Lax` cookie (and `Secure` when a proxy reports HTTPS).
 Attempts are rate limited to 10 per 5 minutes per address.
 
+**API keys.** Anyone signed in may make keys for themselves under Settings → API keys, for a script,
+a dashboard or a phone's calendar. A key is a second credential for the same person and nothing
+more: it is resolved at the one place a session is, reads that person's name, administrator flag and
+permissions live on every request, and so can never open more than its maker could at that moment —
+lose the right to sign in and every key you hold stops with it. Keys are shown once and stored
+hashed; they can be given an expiry, are revoked with one click (an administrator can revoke
+anyone's), and a request made with a key can neither make nor revoke keys, so a leaked key has no
+successors. A key travels in the `Authorization` header — with one exception, next.
+
 **Who sees what.** Jellyfin administrators see everything. Other users can only sign in when you
 allow it — for everyone, or person by person — and then start with their own statistics only: no
 other people's activity, no IP addresses, no device ids, no file paths, no server log, no settings.
@@ -37,7 +46,16 @@ but finishing it requires a Jellyfin administrator's credentials.
 
 **The web interface** loads nothing from third parties: fonts and scripts are bundled, posters are
 proxied from your own Jellyfin, and a strict Content-Security-Policy is sent with every response.
-Requests that change anything are refused when their `Origin` does not match.
+Requests that change anything are refused when their `Origin` does not match. A request without an
+`Origin` carries either a cookie a browser attaches only to a navigation, or an API key no browser
+adds on its own.
+
+**The calendar feed** (`/api/calendar.ics`) is the one address finstats accepts a credential in:
+a subscribed calendar can send no header. So the feed reads `?key=`, never the cookie — a link can
+not open it in a browser that happens to be signed in — and the key meant for it has the `calendar`
+scope, which opens the feed and refuses everything else. The feed itself names nobody: the question
+it asks the database carries no user name or count. Treat the address like the key it holds; revoke
+the key and the address is dead.
 
 **The container** runs finstats as an unprivileged user (1000:1000, or `PUID`:`PGID`). It starts as root for one
 step only: making the data directory belong to that user, because Docker creates a missing bind-mount folder as root.
@@ -45,10 +63,18 @@ It then drops privileges with `su-exec` and cannot get them back; finstats itsel
 container with `--user` and even that step is skipped.
 
 **Backups** (`data/backups`, and whatever you download from **Settings → Backups**) hold the full viewing history
-with IP addresses, the permissions and the settings. They never contain the Jellyfin address or API key, nor any
-sign-in session, so a leaked backup exposes history but grants no access. Only Jellyfin administrators can list,
+with IP addresses, the permissions, the settings and the audit log. They never contain the Jellyfin address or API
+key, nor any sign-in session or API key, so a leaked backup exposes history but grants no access. Only Jellyfin administrators can list,
 download, delete or restore them, and a backup's file name is checked against the exact pattern finstats generates
 before it touches the disk. Restoring validates the settings it brings back the same way the settings page does.
+
+**The audit log** (Server → Audit, Jellyfin administrators only) is finstats' record of itself: every sign-in and
+failed attempt with the address it came from, every setting or permission changed and what it changed to, every
+key made, first used or revoked, every connection or destination added, changed or removed (its kind and name,
+never its address or secret), every backup made, downloaded, deleted or restored, every import and its result,
+every play deleted and every alert resolved — who did it, from where, through which key if any, and whether it
+worked. Reads leave no trace. A row is kept a year, is written even when the action failed, and its absence can
+never stop an action. It is part of backups.
 
 **No telemetry, and two outside requests: one you can switch off, one that is off until you switch it on.** finstats talks to your Jellyfin server and, by
 default, to a public "what is my IP" service (`checkip.amazonaws.com`, falling back to Cloudflare's `cdn-cgi/trace`, by name and by `1.1.1.1`,
@@ -108,7 +134,8 @@ queues instead.
   only while a page is showing them, every minute while something is in them, and every five minutes while there is not. Every read also
   asks for a compressed answer (`Accept-Encoding: gzip, br`), which these services and Jellyfin all give.
 - **Keys and passwords** are stored in finstats' database next to the Jellyfin key, are never sent back to the browser (the settings page only
-  learns that one is stored), never written to a log and never part of a backup. They travel in headers or request bodies, never in an address.
+  learns that one is stored), never written to a log and never part of a backup. They travel in headers or request bodies, never in an
+  address (finstats' own calendar feed is the one address that carries a key, above, and that key opens nothing else).
 - **No redirect is followed.** A key would travel along a redirect to wherever it points, so finstats reports a redirect as an error and asks for
   the final address instead.
 - **Certificates are verified.** A service with a self-signed certificate needs "Accept a self-signed certificate" switched on for that one
