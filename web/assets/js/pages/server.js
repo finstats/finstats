@@ -8,6 +8,8 @@ import { pageHeader, card, dataView, sk, emptyState, facts, setBusy, inlineError
 import { plainTable } from '../tables.js';
 import { reveal, pickSection, sectionNav, sectionLayout } from '../sections.js';
 import { logView, prefetchEvents } from './events.js';
+import { auditView, prefetchAudit } from './audit.js';
+import { isAdmin } from '../state.js';
 
 const RESULT = {
   Completed: ['sev-good', 'check', 'Completed'],
@@ -18,7 +20,7 @@ const RESULT = {
 
 // Shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
 const loadServer = (signal) => api.get('/server', null, { signal });
-export const prefetchServer = (c) => (c.params && c.params.section === 'log' ? prefetchEvents(c) : [() => loadServer(c.signal)]);
+export const prefetchServer = (c) => (c.params && c.params.section === 'log' ? prefetchEvents(c) : c.params && c.params.section === 'audit' ? prefetchAudit(c) : [() => loadServer(c.signal)]);
 
 const SECTIONS = [
   { key: 'overview', label: 'Overview', sub: 'Version, system and storage', icon: 'server' },
@@ -26,12 +28,15 @@ const SECTIONS = [
   { key: 'devices', label: 'Devices', sub: 'Every device that has signed in', icon: 'monitor' },
   { key: 'plugins', label: 'Plugins', sub: 'What is installed on Jellyfin', icon: 'layers' },
   { key: 'log', label: 'Log', sub: 'Jellyfin’s own activity log: sign-ins, failed logins, playback, tasks', icon: 'log' },
+  // finstats' own doings, for administrators: it names who changed what.
+  { key: 'audit', label: 'Audit', sub: 'What changed in finstats, and who did it', icon: 'shield', visible: () => isAdmin() },
 ];
 // The one-page card anchors, so a link from before still lands.
 const LEGACY = { jobs: 'jobs' };
 
 export default function serverPage(ctx) {
-  const section = pickSection(ctx, '/server', SECTIONS, LEGACY);
+  const visible = SECTIONS.filter((s) => !s.visible || s.visible());
+  const section = pickSection(ctx, '/server', visible, LEGACY);
   if (!section) return;
   ctx.title(`${section.label} · Server`);
   const headerSlot = h('div', null, pageHeader('Server', section.sub));
@@ -291,10 +296,10 @@ export default function serverPage(ctx) {
     jobsBadge.hidden = !want;
   }
 
-  ctx.root.append(headerSlot, sectionLayout(sectionNav('/server', SECTIONS, section.key, 'Server sections'), view));
-  if (section.key === 'log') {
-    // The log is its own request with its own filters; the server details only name the page.
-    view.append(...logView(ctx));
+  ctx.root.append(headerSlot, sectionLayout(sectionNav('/server', visible, section.key, 'Server sections'), view));
+  if (section.key === 'log' || section.key === 'audit') {
+    // The logs are their own requests with their own filters; the server details only name the page.
+    view.append(...(section.key === 'log' ? logView(ctx) : auditView(ctx)));
     loadServer(ctx.signal).then((d) => { if (!ctx.signal.aborted) paintHeader(d); }).catch(() => {});
   } else dv.load();
   if (section.key === 'jobs') {
