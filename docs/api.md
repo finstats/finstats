@@ -13,10 +13,15 @@ cookie (`finstats_session`, HttpOnly, SameSite=Lax) issued by `POST /api/auth/lo
 - **Common filters** (query string) on every `/api/stats/*`, `/api/activity`, `/api/users*`,
   `/api/libraries*`, `/api/items/*` endpoint:
   - `days` — integer window ending now. `0` or absent = all time.
-  - `user_id` — restrict to one user.
+  - `user_id` — restrict to these users: one id, or several separated by commas
+    (`user_id=a1b2,c3d4`). Absent or empty = everybody.
   - `library_id` — restrict to one library.
-- **Non-admin users** are always scoped to their own `user_id` server-side, never see
-  IP addresses, and get `403` on admin endpoints (marked 🔒).
+- **A filter that names several values** uses commas, and naming nothing means all of them —
+  so `?type=` and no `type` at all are the same request. Values are de-duplicated and at most 50
+  are read, so no caller can grow the SQL by repeating or padding them.
+- **Non-admin users** are always scoped to their own `user_id` server-side, whichever and however
+  many the URL names — a user filter can narrow what somebody sees and never widen it. They also
+  never see IP addresses, and get `403` on admin endpoints (marked 🔒).
 
 ## Bootstrap & auth
 
@@ -100,8 +105,11 @@ Sorted by `watch_s` desc unless `&sort=plays`.
 
 `GET /api/activity?page=1&per_page=50&q=&method=&type=&item_id=&series_id=&source=` (+ common filters)
 
-`source` is `live`, `jellystat` or `streamystats`; anything else, an empty value included, means all
-of them. `sources` in the answer lists which of the three this caller's history actually came from,
+`method`, `type` and `source` each take several comma-separated values: `type=Movie,Episode` is films
+and episodes and no music. `type` also takes `Other`, which is anything that is not `Movie`,
+`Episode` or `Audio` — so `type=Movie,Other` means either, and naming all four is no filter at all.
+`source` is `live`, `jellystat` or `streamystats`; anything else, an empty value included, is ignored,
+so an unknown tracker means all of them. `sources` in the answer lists which of the three this caller's history actually came from,
 in that order — scoped to whose plays they may see, and deliberately *not* narrowed by the window or
 the other filters, so a filter built from it does not appear and disappear as the days change. The UI
 offers the filter only when there is more than one to choose between.

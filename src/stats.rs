@@ -71,6 +71,19 @@ impl Cond {
         self.args.push(v.into());
         self
     }
+    /// `col IN (?, ?, …)`, or nothing at all when no value was named — which is how "all of them"
+    /// is spelt throughout: a filter naming nothing is not a filter.
+    pub fn add_in(&mut self, col: &str, vals: &[String]) -> &mut Self {
+        if vals.is_empty() {
+            return self;
+        }
+        let holes = std::iter::repeat_n("?", vals.len()).collect::<Vec<_>>().join(", ");
+        self.clauses.push(format!("{col} IN ({holes})"));
+        for v in vals {
+            self.args.push(v.clone().into());
+        }
+        self
+    }
     pub fn raw(&mut self, clause: &str) -> &mut Self {
         self.clauses.push(clause.to_string());
         self
@@ -96,17 +109,51 @@ pub struct Scope {
     pub days: i64,
     /// Start of the window (local midnight `days-1` days ago); `None` = all time.
     pub since: Option<i64>,
-    pub user_id: Option<String>,
+    /// Whose plays are counted. Empty = everybody's. Never widened past what the caller may see.
+    pub user_ids: Vec<String>,
     pub library_id: Option<String>,
     pub min_play_s: i64,
     /// What the caller may see; decides which fields survive and whose plays are counted.
     pub perms: crate::auth::Perms,
 }
 
-/// Whose rows a request may be about: without "see everyone" the caller's own, whatever the URL asks for;
-/// with it, the person asked for, or everybody (`None`). The one place this rule is written down.
+/// A filter that may name several values at once: `type=Movie,Episode`. Naming nothing is not a
+/// filter, which is how "all of them" is spelt. Capped, so that no caller can make the SQL
+/// arbitrarily long, and de-duplicated, so that repeating a value cannot pad it either.
+pub(crate) fn many(v: Option<&str>) -> Vec<String> {
+    const MOST: usize = 50;
+    let mut out: Vec<String> = vec![];
+    for part in v.unwrap_or_default().split(',').map(str::trim).filter(|s| !s.is_empty()) {
+        if !out.iter().any(|x| x == part) {
+            out.push(part.to_string());
+        }
+        if out.len() == MOST {
+            break;
+        }
+    }
+    out
+}
+
+/// Whose rows a request may be about — the one place this rule is written down. Empty means
+/// everybody. With "see everyone", the people the URL names; without it, always exactly the caller,
+/// whoever the URL names and however many: the filter can narrow what somebody sees and never widen it.
+pub fn pinned_users(user: &AuthUser, asked: &[String]) -> Vec<String> {
+    if !user.perms.see_everyone {
+        return vec![user.id.clone()];
+    }
+    let mut out: Vec<String> = vec![];
+    for id in asked.iter().map(|s| db::norm_id(s)).filter(|s| !s.is_empty()) {
+        if !out.contains(&id) {
+            out.push(id);
+        }
+    }
+    out
+}
+
+/// The same rule where exactly one person is the subject (their requests, their places). `None`
+/// means everybody. Several named, and the first is taken — those endpoints are about one person.
 pub fn pinned_user(user: &AuthUser, asked: Option<&str>) -> Option<String> {
-    if user.perms.see_everyone { asked.map(db::norm_id).filter(|s| !s.is_empty()) } else { Some(user.id.clone()) }
+    pinned_users(user, &many(asked)).into_iter().next()
 }
 
 impl Scope {
@@ -116,7 +163,7 @@ impl Scope {
             days: q.days.unwrap_or(0).clamp(0, 36_500),
             since: None,
             // Without "see everyone" a request is pinned to the caller, whatever the URL asks for.
-            user_id: pinned_user(user, q.user_id.as_deref()),
+            user_ids: pinned_users(user, &many(q.user_id.as_deref())),
             library_id: clean(&q.library_id),
             min_play_s: app.settings().min_play_s,
             perms: user.perms,
@@ -139,9 +186,7 @@ impl Scope {
 
     fn base(&self) -> Cond {
         let mut c = Cond::default();
-        if let Some(u) = &self.user_id {
-            c.add("p.user_id = ?", u.clone());
-        }
+        c.add_in("p.user_id", &self.user_ids);
         if let Some(l) = &self.library_id {
             c.add("p.library_id = ?", l.clone());
         }
@@ -155,9 +200,7 @@ impl Scope {
     /// other filter. For questions about a history rather than about one view of it.
     pub fn whose(&self) -> Cond {
         let mut c = Cond::default();
-        if let Some(u) = &self.user_id {
-            c.add("p.user_id = ?", u.clone());
-        }
+        c.add_in("p.user_id", &self.user_ids);
         c
     }
 
@@ -531,6 +574,40 @@ pub(crate) fn sources_present(conn: &Connection, whose: &Cond) -> Result<Vec<&'s
     Ok(out)
 }
 
+/// The three kinds finstats charts by name; anything else is "Other".
+const CHARTED_TYPES: [&str; 3] = ["Movie", "Episode", "Audio"];
+
+/// The media-type filter as a clause and the values to bind, or `None` when it asks for everything
+/// — nothing named, or all four, both of which are "no filter".
+///
+/// "Other" is not a type but the absence of the three named ones, so it cannot join them in an `IN`
+/// list: asking for films *and* other has to mean either.
+fn type_clause(types: &[String]) -> Option<(String, Vec<String>)> {
+    if types.is_empty() {
+        return None;
+    }
+    let other = types.iter().any(|t| t == "Other");
+    let named: Vec<String> = types.iter().filter(|t| CHARTED_TYPES.contains(&t.as_str())).cloned().collect();
+    if other && named.len() == CHARTED_TYPES.len() {
+        return None;
+    }
+    let mut ors: Vec<String> = vec![];
+    if !named.is_empty() {
+        let holes = std::iter::repeat_n("?", named.len()).collect::<Vec<_>>().join(", ");
+        ors.push(format!("p.item_type IN ({holes})"));
+    }
+    if other {
+        let names = CHARTED_TYPES.map(|t| format!("'{t}'")).join(", ");
+        ors.push(format!("p.item_type NOT IN ({names})"));
+    }
+    // Only names finstats does not chart: an IN of exactly those, nothing clever.
+    if ors.is_empty() {
+        let holes = std::iter::repeat_n("?", types.len()).collect::<Vec<_>>().join(", ");
+        return Some((format!("(p.item_type IN ({holes}))"), types.to_vec()));
+    }
+    Some((format!("({})", ors.join(" OR ")), named))
+}
+
 const ACTIVITY_SORTS: [(&str, &str); 8] = [
     ("when", "p.ended_at"),
     ("user", "COALESCE(u.name, p.user_name) COLLATE NOCASE"),
@@ -549,14 +626,12 @@ pub async fn activity(State(app): State<App>, user: AuthUser, Query(q): Query<Ac
     let filter = FilterQuery { days: q.days, user_id: q.user_id.clone(), library_id: q.library_id.clone() };
     let out = scoped(&app, &user, &filter, move |c, scope| {
         let mut cond = scope.cond();
-        if let Some(m) = q.method.filter(|m| !m.is_empty()) {
-            cond.add("p.play_method = ?", m);
-        }
-        if let Some(t) = q.item_type.filter(|t| !t.is_empty()) {
-            match t.as_str() {
-                "Other" => cond.raw("p.item_type NOT IN ('Movie', 'Episode', 'Audio')"),
-                _ => cond.add("p.item_type = ?", t),
-            };
+        cond.add_in("p.play_method", &many(q.method.as_deref()));
+        if let Some((sql, vals)) = type_clause(&many(q.item_type.as_deref())) {
+            cond.clauses.push(sql);
+            for v in vals {
+                cond.args.push(v.into());
+            }
         }
         if let Some(id) = q.item_id.filter(|s| !s.is_empty()) {
             cond.add("p.item_id = ?", db::norm_id(&id));
@@ -564,9 +639,8 @@ pub async fn activity(State(app): State<App>, user: AuthUser, Query(q): Query<Ac
         if let Some(id) = q.series_id.filter(|s| !s.is_empty()) {
             cond.add("p.series_id = ?", db::norm_id(&id));
         }
-        if let Some(source) = source_filter(q.source.as_deref()) {
-            cond.add("p.source = ?", source.to_string());
-        }
+        let sources: Vec<String> = many(q.source.as_deref()).iter().filter_map(|s| source_filter(Some(s))).map(str::to_string).collect();
+        cond.add_in("p.source", &sources);
         // Word by word: "alya opera" finds plays of Alya… on Opera. Every word must be somewhere in the row.
         for like in like_words(q.q.as_deref()) {
             let mut fields = vec!["p.item_name", "p.series_name", "p.user_name", "p.client", "p.device_name"];
@@ -598,9 +672,7 @@ pub async fn activity_detail(State(app): State<App>, user: AuthUser, Path(id): P
     let found = scoped(&app, &user, &FilterQuery::default(), move |c, scope| {
         let mut cond = Cond::default();
         cond.add("p.id = ?", id);
-        if let Some(u) = &scope.user_id {
-            cond.add("p.user_id = ?", u.clone());
-        }
+        cond.add_in("p.user_id", &scope.user_ids);
         let Some(play) = one_json(c, &format!("{PLAY_SELECT} {}", cond.sql()), &cond.args)? else { return Ok(None) };
         let mut play = decorate_play(play, scope.perms.see_network, true);
         let events = rows_json(c, "SELECT at, kind, position_s, detail FROM playback_events WHERE playback_id = ?1 ORDER BY id", &[id.into()])?;
@@ -742,7 +814,7 @@ pub async fn users(State(app): State<App>, user: AuthUser, Query(q): Query<Filte
     let q = FilterQuery { user_id: None, ..q };
     let me = (!user.perms.see_everyone).then(|| user.id.clone());
     let rows = scoped(&app, &user, &q, move |c, scope| {
-        let everyone = Scope { user_id: None, ..scope.clone() };
+        let everyone = Scope { user_ids: vec![], ..scope.clone() };
         user_rows(c, &everyone, me.as_deref())
     })
     .await?;
@@ -759,7 +831,7 @@ pub async fn user_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
     let as_viewer = AuthUser { perms: crate::auth::Perms { see_everyone: true, ..user.perms }, ..user.clone() };
     let see_network = user.perms.see_network;
     let out = scoped(&app, &as_viewer, &q, move |c, scope| {
-        let list_scope = Scope { user_id: None, ..scope.clone() };
+        let list_scope = Scope { user_ids: vec![], ..scope.clone() };
         let Some(u) = user_rows(c, &list_scope, Some(&id))?.into_iter().next() else { return Ok(None) };
         let cond = scope.cond();
         let mut t = totals(c, &cond)?;
@@ -1028,7 +1100,8 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
         let (series, bucket) = daily(c, scope, &cond)?;
         // Jellyfin's own flags. For a series: anyone who has finished at least one episode.
         let mut pb_args: Vec<SqlValue> = vec![id.clone().into()];
-        let only_me = match &scope.user_id {
+        // Without "see everyone" the scope is exactly the caller, so there is one id to pin to.
+        let only_me = match scope.user_ids.first() {
             Some(u) if !scope.perms.see_everyone => {
                 pb_args.push(u.clone().into());
                 "AND ui.user_id = ?2"
@@ -1652,6 +1725,71 @@ mod tests {
         )
         .unwrap();
         c
+    }
+
+    fn caller(id: &str, see_everyone: bool) -> AuthUser {
+        let perms = crate::auth::Perms { see_everyone, ..Default::default() };
+        AuthUser { id: id.to_string(), name: "x".into(), is_admin: false, perms }
+    }
+
+    #[test]
+    fn a_filter_can_name_several_values_and_nothing_it_should_not() {
+        assert_eq!(many(Some("Movie,Episode")), ["Movie", "Episode"]);
+        // Spelt the way a URL really arrives: spaces around the commas, a trailing one, repeats.
+        assert_eq!(many(Some(" Movie , Episode , ")), ["Movie", "Episode"]);
+        assert_eq!(many(Some("Movie,Movie,Episode")), ["Movie", "Episode"]);
+        // Nothing asked for is not a filter at all, which is how "All" is spelt.
+        for none in [None, Some(""), Some(","), Some("   "), Some(",,,")] {
+            assert!(many(none).is_empty(), "{none:?}");
+        }
+        // A caller cannot make the SQL arbitrarily long by naming thousands of values.
+        assert_eq!(many(Some(&(0..500).map(|i| i.to_string()).collect::<Vec<_>>().join(","))).len(), 50);
+    }
+
+    #[test]
+    fn whose_plays_a_request_may_be_about_is_decided_in_one_place() {
+        // With "see everyone": the people asked for, or everybody when nobody is named.
+        assert_eq!(pinned_users(&caller("me", true), &[]), Vec::<String>::new());
+        assert_eq!(pinned_users(&caller("me", true), &["a".into(), "b".into()]), ["a", "b"]);
+        // Ids are normalised and repeats collapse, so the SQL cannot be padded out.
+        assert_eq!(pinned_users(&caller("me", true), &["A-B".into(), "ab".into(), "".into()]), ["ab"]);
+        // Without it: always exactly themselves, whoever the URL names, however many.
+        assert_eq!(pinned_users(&caller("me", false), &[]), ["me"]);
+        assert_eq!(pinned_users(&caller("me", false), &["someone".into()]), ["me"]);
+        assert_eq!(pinned_users(&caller("me", false), &["someone".into(), "me".into(), "other".into()]), ["me"]);
+    }
+
+    #[test]
+    fn a_scope_of_several_people_holds_to_those_people() {
+        let c = conn();
+        let two = |ids: &[&str]| -> i64 {
+            let scope = Scope { days: 0, since: None, user_ids: ids.iter().map(|s| s.to_string()).collect(), library_id: None, min_play_s: 0, perms: crate::auth::Perms::ALL };
+            let cond = scope.cond();
+            c.query_row(&format!("SELECT COUNT(*) FROM playbacks p {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0)).unwrap()
+        };
+        assert_eq!(two(&[]), 3, "nobody named means everybody");
+        assert_eq!(two(&["u1"]), 2);
+        assert_eq!(two(&["u1", "u2"]), 3);
+        assert_eq!(two(&["u2"]), 1);
+        assert_eq!(two(&["nobody"]), 0);
+    }
+
+    #[test]
+    fn the_media_type_filter_can_ask_for_several_kinds_and_for_the_rest() {
+        // "Other" is not a type but the absence of the three finstats names by themselves, so it
+        // cannot go in the same IN list — and asking for Movies *and* Other has to mean either.
+        assert_eq!(type_clause(&[]), None);
+        let (sql, vals) = type_clause(&["Movie".into(), "Episode".into()]).unwrap();
+        assert_eq!(sql, "(p.item_type IN (?, ?))");
+        assert_eq!(vals, ["Movie", "Episode"]);
+        let (sql, vals) = type_clause(&["Other".into()]).unwrap();
+        assert_eq!(sql, "(p.item_type NOT IN ('Movie', 'Episode', 'Audio'))");
+        assert!(vals.is_empty());
+        let (sql, vals) = type_clause(&["Movie".into(), "Other".into()]).unwrap();
+        assert_eq!(sql, "(p.item_type IN (?) OR p.item_type NOT IN ('Movie', 'Episode', 'Audio'))");
+        assert_eq!(vals, ["Movie"]);
+        // Asking for all four is asking for everything, which is no filter at all.
+        assert_eq!(type_clause(&["Movie".into(), "Episode".into(), "Audio".into(), "Other".into()]), None);
     }
 
     #[test]

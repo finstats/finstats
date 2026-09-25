@@ -148,9 +148,12 @@ pub async fn groups(State(app): State<App>, user: AuthUser, Query(q): Query<Filt
                 wh.push("p.library_id = ?".into());
                 args.push(l.clone().into());
             }
-            if let Some(u) = &scope.user_id {
-                wh.push("p.group_id IN (SELECT group_id FROM playbacks WHERE user_id = ? AND group_id IS NOT NULL)".into());
-                args.push(u.clone().into());
+            if !scope.user_ids.is_empty() {
+                let holes = std::iter::repeat_n("?", scope.user_ids.len()).collect::<Vec<_>>().join(", ");
+                wh.push(format!("p.group_id IN (SELECT group_id FROM playbacks WHERE user_id IN ({holes}) AND group_id IS NOT NULL)"));
+                for u in &scope.user_ids {
+                    args.push(u.clone().into());
+                }
             }
             let sql = format!(
                 "SELECT p.group_id, p.user_id, COALESCE(u.name, p.user_name), (u.image_tag IS NOT NULL), p.duration_s, p.started_at,

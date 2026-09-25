@@ -595,7 +595,19 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
         .db
         .call(move |c| {
             let scope = scope.resolve(c)?;
-            let (since, who) = (scope.since.unwrap_or(0), scope.user_id.clone());
+            let since = scope.since.unwrap_or(0);
+            // The map can be about several people at once now, so "whose" is a clause rather than
+            // one bound value. Empty = everybody, which is what `1` says.
+            let who = scope.user_ids.clone();
+            let whose = |col: &str| match who.len() {
+                0 => "1".to_string(),
+                n => format!("{col} IN ({})", std::iter::repeat_n("?", n).collect::<Vec<_>>().join(", ")),
+            };
+            let with_who = |first: SqlValue| -> Vec<SqlValue> {
+                let mut a = vec![first];
+                a.extend(who.iter().map(|u| SqlValue::from(u.clone())));
+                a
+            };
             let home = home_place(c)?;
             let mut places: BTreeMap<String, PlaceAgg> = BTreeMap::new();
             let key = |p: &Place| format!("{:.4},{:.4}", p.latitude.unwrap_or(0.0), p.longitude.unwrap_or(0.0));
@@ -604,10 +616,10 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
             let mut stmt = c.prepare(&format!(
                 "SELECT {PLACE_COLS}, p.user_id, COALESCE(u.name, p.user_name), COUNT(*), COALESCE(SUM(p.duration_s), 0), MAX(p.started_at), COUNT(DISTINCT p.remote_ip)
                  FROM playbacks p JOIN ip_locations l ON l.ip = p.remote_ip LEFT JOIN users u ON u.id = p.user_id
-                 WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NOT NULL AND p.started_at >= ?1 AND (?2 IS NULL OR p.user_id = ?2)
-                 GROUP BY l.latitude, l.longitude, p.user_id"
+                 WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NOT NULL AND p.started_at >= ?1 AND {}
+                 GROUP BY l.latitude, l.longitude, p.user_id", whose("p.user_id")
             ))?;
-            let rows = stmt.query_map(params![since, who], |r| Ok((place_at(r, 0)?, r.get::<_, String>(6)?, r.get::<_, String>(7)?, r.get::<_, i64>(8)?, r.get::<_, i64>(9)?, r.get::<_, i64>(10)?, r.get::<_, i64>(11)?)))?;
+            let rows = stmt.query_map(params_from_iter(with_who(since.into()).iter()), |r| Ok((place_at(r, 0)?, r.get::<_, String>(6)?, r.get::<_, String>(7)?, r.get::<_, i64>(8)?, r.get::<_, i64>(9)?, r.get::<_, i64>(10)?, r.get::<_, i64>(11)?)))?;
             for row in rows {
                 let (place, uid, name, plays, watch_s, last, ips) = row?;
                 let a = places.entry(key(&place)).or_insert_with(|| PlaceAgg { place: place.clone(), ..Default::default() });
@@ -621,12 +633,12 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
 
             // Plays at home: one dot where this network is.
             if let Some(h) = &home {
-                let mut stmt = c.prepare(
+                let mut stmt = c.prepare(&format!(
                     "SELECT p.user_id, COALESCE(u.name, p.user_name), COUNT(*), COALESCE(SUM(p.duration_s), 0), MAX(p.started_at)
                      FROM playbacks p LEFT JOIN users u ON u.id = p.user_id
-                     WHERE p.is_local = 1 AND p.started_at >= ?1 AND (?2 IS NULL OR p.user_id = ?2) GROUP BY p.user_id",
-                )?;
-                let rows = stmt.query_map(params![since, who], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?, r.get::<_, i64>(3)?, r.get::<_, i64>(4)?)))?;
+                     WHERE p.is_local = 1 AND p.started_at >= ?1 AND {} GROUP BY p.user_id", whose("p.user_id")
+                ))?;
+                let rows = stmt.query_map(params_from_iter(with_who(since.into()).iter()), |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?, r.get::<_, i64>(3)?, r.get::<_, i64>(4)?)))?;
                 for row in rows {
                     let (uid, name, plays, watch_s, last) = row?;
                     let a = places.entry("home".into()).or_insert_with(|| PlaceAgg { place: h.clone(), home: true, ..Default::default() });
@@ -642,10 +654,10 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
                 "SELECT {PLACE_COLS}, e.user_id, u.name, COUNT(*), MAX(e.date)
                  FROM server_events e JOIN ip_locations l ON l.ip = e.remote_ip JOIN users u ON u.id = e.user_id
                  WHERE e.type = 'AuthenticationSucceeded' AND e.remote_ip <> '' AND l.latitude IS NOT NULL
-                   AND e.remote_ip NOT IN (SELECT ip FROM home_addresses) AND e.date >= ?1 AND (?2 IS NULL OR e.user_id = ?2)
-                 GROUP BY l.latitude, l.longitude, e.user_id"
+                   AND e.remote_ip NOT IN (SELECT ip FROM home_addresses) AND e.date >= ?1 AND {}
+                 GROUP BY l.latitude, l.longitude, e.user_id", whose("e.user_id")
             ))?;
-            let rows = stmt.query_map(params![since, who], |r| Ok((place_at(r, 0)?, r.get::<_, String>(6)?, r.get::<_, String>(7)?, r.get::<_, i64>(8)?, r.get::<_, i64>(9)?)))?;
+            let rows = stmt.query_map(params_from_iter(with_who(since.into()).iter()), |r| Ok((place_at(r, 0)?, r.get::<_, String>(6)?, r.get::<_, String>(7)?, r.get::<_, i64>(8)?, r.get::<_, i64>(9)?)))?;
             for row in rows {
                 let (place, uid, name, n, last) = row?;
                 let a = places.entry(key(&place)).or_insert_with(|| PlaceAgg { place: place.clone(), ..Default::default() });
@@ -656,7 +668,7 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
 
             // Failed sign-ins have no account, only a name somebody typed. Part of the server log.
             let mut failed: BTreeMap<String, (Place, i64, i64, Vec<String>)> = BTreeMap::new();
-            if with_failed && who.is_none() {
+            if with_failed && who.is_empty() {
                 let mut stmt = c.prepare(&format!(
                     "SELECT {PLACE_COLS}, e.name, COUNT(*), MAX(e.date)
                      FROM server_events e JOIN ip_locations l ON l.ip = e.remote_ip
@@ -677,8 +689,8 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
             }
 
             // Streams running right now.
-            if let Some(u) = &who {
-                live.retain(|s| s["user_id"].as_str() == Some(u.as_str()));
+            if !who.is_empty() {
+                live.retain(|s| s["user_id"].as_str().is_some_and(|u| who.iter().any(|w| w == u)));
             }
             let mut now_playing = vec![];
             for s in &live {
@@ -721,7 +733,11 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
                 .map(|(p, n, last, names)| json!({ "label": place_label(&p), "country_code": p.country_code, "latitude": p.latitude, "longitude": p.longitude, "attempts": n, "last_at": last, "events": names }))
                 .collect();
 
-            let open_alerts: i64 = c.query_row("SELECT COUNT(*) FROM security_alerts WHERE resolved_at IS NULL AND (?1 IS NULL OR user_id = ?1)", [&who], |r| r.get(0))?;
+            let open_alerts: i64 = c.query_row(
+                &format!("SELECT COUNT(*) FROM security_alerts WHERE resolved_at IS NULL AND {}", whose("user_id")),
+                params_from_iter(who.iter()),
+                |r| r.get(0),
+            )?;
             let unplaced: i64 = c.query_row(
                 "SELECT COUNT(DISTINCT p.remote_ip) FROM playbacks p JOIN ip_locations l ON l.ip = p.remote_ip WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NULL",
                 [],
