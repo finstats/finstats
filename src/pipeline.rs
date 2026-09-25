@@ -78,6 +78,8 @@ pub struct Entry {
     pub arr_media_id: i64,
     pub has_file: bool,
     pub item_id: Option<String>,
+    /// Sonarr's episode id, Radarr's movie id: with the service, kind and release, the row's own key.
+    pub external_id: i64,
 }
 
 /// Two Sonarrs that both follow a show report its episode twice, and an HD and a 4K Radarr the same film.
@@ -117,7 +119,7 @@ fn entries(conn: &Connection, days: i64, only_item: Option<&str>) -> Result<Vec<
     // Days are local days, like every "per day" number in finstats; a film already carries its day.
     let sql = format!(
         "SELECT u.service_id, u.kind, u.release, COALESCE(u.day, date(u.at, 'unixepoch', 'localtime')) AS local_day, u.at, u.series_title, u.title,
-                u.season, u.episode, u.finale, u.year, u.tvdb_id, u.tmdb_id, u.arr_media_id, u.has_file, u.item_id
+                u.season, u.episode, u.finale, u.year, u.tvdb_id, u.tmdb_id, u.arr_media_id, u.has_file, u.item_id, u.external_id
          FROM upcoming u JOIN services s ON s.id = u.service_id AND s.enabled = 1
          WHERE local_day >= date('now', 'localtime') AND local_day < date('now', 'localtime', ?1) {}
          ORDER BY local_day, u.at IS NULL, u.at, u.series_title, u.season, u.episode, u.title, u.service_id",
@@ -129,6 +131,7 @@ fn entries(conn: &Connection, days: i64, only_item: Option<&str>) -> Result<Vec<
             Ok(Entry {
                 service_id: r.get(0)?, kind: r.get(1)?, release: r.get(2)?, day: r.get(3)?, at: r.get(4)?, series_title: r.get(5)?, title: r.get(6)?, season: r.get(7)?,
                 episode: r.get(8)?, finale: r.get(9)?, year: r.get(10)?, tvdb_id: r.get(11)?, tmdb_id: r.get(12)?, arr_media_id: r.get(13)?, has_file: r.get(14)?, item_id: r.get(15)?,
+                external_id: r.get(16)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -189,6 +192,20 @@ pub fn upcoming_json(conn: &Connection, days: i64, subject: &str, everyone: bool
         out.push(v);
     }
     Ok(out)
+}
+
+/// The agenda for a calendar feed: each entry and whether `subject` follows its show, and nothing about
+/// anybody else by construction — a subscribed calendar syncs through somebody's cloud, exactly the
+/// place a household's names are kept out of.
+pub fn entries_for(conn: &Connection, days: i64, subject: &str, mine: bool) -> Result<Vec<(Entry, bool)>> {
+    let follows = followers(conn)?;
+    Ok(entries(conn, days, None)?
+        .into_iter()
+        .filter_map(|e| {
+            let you = e.tvdb_id.filter(|_| e.kind == "episode").and_then(|t| follows.get(&t)).is_some_and(|w| w.contains_key(subject));
+            (!mine || you).then_some((e, you))
+        })
+        .collect())
 }
 
 /// The next episodes of one show, for its page. Says nothing about people.
@@ -588,6 +605,25 @@ mod tests {
             params![service, kind, id, release, (kind == "episode").then_some(at), day, (kind == "episode").then_some("Low Orbit"), tvdb, tmdb, has_file],
         )
         .unwrap();
+    }
+
+    #[test]
+    fn entries_for_never_carries_a_name() {
+        // The feed's own reader: an entry and whether the subject follows its show; who else does is
+        // not in the answer at all, so no filtering can ever forget to remove a name.
+        let c = conn();
+        add(&c, 1, "episode", 5, "air", 2, Some(370001), None, false);
+        link(&c).unwrap();
+        c.execute_batch(&format!(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, started_at, ended_at, duration_s) VALUES
+               ('live', 'ua', 'alice', 'e-1', 'Pilot', 'Episode', 's-hd', {0}, {1}, 1500)", crate::db::now() - 4000, crate::db::now() - 2500)).unwrap();
+        let alice = entries_for(&c, 14, "ua", false).unwrap();
+        assert_eq!(alice.len(), 1);
+        assert!(alice[0].1, "alice played an episode lately");
+        assert_eq!(alice[0].0.external_id, 5);
+        let bob = entries_for(&c, 14, "ub", false).unwrap();
+        assert!(!bob[0].1);
+        assert!(entries_for(&c, 14, "ub", true).unwrap().is_empty(), "only what bob follows: nothing");
     }
 
     #[test]

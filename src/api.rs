@@ -70,6 +70,7 @@ pub fn router(app: App) -> Router {
         .route("/audit", get(crate::audit::audit))
         .route("/keys", get(crate::keys::list).post(crate::keys::create))
         .route("/keys/{id}", delete(crate::keys::revoke))
+        .route("/calendar.ics", get(crate::ical::feed))
         .route("/security", get(security::overview))
         .route("/security/alerts", get(security::alerts))
         .route("/security/alerts/resolve-all", post(security::resolve_all))

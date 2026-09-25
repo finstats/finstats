@@ -139,7 +139,6 @@ pub enum Presented {
 
 /// The feed's own extractor: a key in the query string or the header, of any scope, and never the
 /// cookie — a subscribed calendar cannot send one, and a browser must not open a feed by accident.
-#[allow(dead_code)] // its one route, the calendar feed, arrives in its own commit
 pub struct CalendarKey(pub AuthUser);
 
 /// May change settings, run tasks, import and delete plays.

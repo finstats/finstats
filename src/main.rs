@@ -11,6 +11,7 @@ mod downloads;
 mod fuzzy;
 mod geo;
 mod groups;
+mod ical;
 mod import;
 mod jellyfin;
 mod jobs;
