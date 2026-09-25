@@ -25,6 +25,7 @@ mod outbound;
 mod pipeline;
 mod playback;
 mod profile;
+mod public;
 mod recap;
 mod recent;
 mod relink;

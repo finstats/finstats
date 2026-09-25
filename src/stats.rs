@@ -253,7 +253,7 @@ where
 
 // ---------------------------------------------------------------- building blocks
 
-fn totals(conn: &Connection, cond: &Cond) -> Result<Value> {
+pub(crate) fn totals(conn: &Connection, cond: &Cond) -> Result<Value> {
     let sql = format!(
         "SELECT COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s,
                 COUNT(DISTINCT p.user_id) AS active_users, COUNT(DISTINCT p.item_id) AS distinct_items
@@ -318,7 +318,7 @@ pub(crate) fn daily(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<(Ve
     Ok((out, name))
 }
 
-fn heatmap(conn: &Connection, cond: &Cond) -> Result<Value> {
+pub(crate) fn heatmap(conn: &Connection, cond: &Cond) -> Result<Value> {
     let sql = format!(
         "SELECT CAST(strftime('%w', p.started_at, 'unixepoch', 'localtime') AS INTEGER),
                 CAST(strftime('%H', p.started_at, 'unixepoch', 'localtime') AS INTEGER),
@@ -376,7 +376,7 @@ const RESOLUTION_SQL: &str = "CASE
 const CHANNELS_SQL: &str = "CASE p.audio_channels WHEN 0 THEN NULL WHEN 1 THEN 'Mono' WHEN 2 THEN 'Stereo'
     WHEN 6 THEN '5.1' WHEN 8 THEN '7.1' ELSE p.audio_channels || ' ch' END";
 
-fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, by_plays: bool) -> Result<Vec<Value>> {
+pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, by_plays: bool) -> Result<Vec<Value>> {
     let order = if by_plays { "plays DESC, watch_s DESC" } else { "watch_s DESC, plays DESC" };
     let agg = "COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT p.user_id) AS users, MAX(p.ended_at) AS last_played";
     let (sql, cond) = match kind {
@@ -1612,7 +1612,7 @@ fn external_links(item_type: Option<&str>, provider_ids: Option<Value>) -> Vec<V
 }
 
 /// Watch time per genre. Episodes carry no genres of their own, so they count towards their series'.
-fn genre_buckets(conn: &Connection, cond: &Cond) -> Result<Vec<Value>> {
+pub(crate) fn genre_buckets(conn: &Connection, cond: &Cond) -> Result<Vec<Value>> {
     buckets(conn, cond, "g.value", "JOIN items gi ON gi.id = COALESCE(p.series_id, p.item_id), json_each(gi.genres) g", 12)
         .map(|mut v| {
             v.sort_by_key(|b| std::cmp::Reverse(b["watch_s"].as_i64().unwrap_or(0)));

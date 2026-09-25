@@ -58,7 +58,7 @@ pub async fn recap(State(app): State<App>, user: AuthUser, Query(q): Query<Recap
     Ok(Json(out))
 }
 
-fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64, server_name: &str, requested: &str) -> Result<Value> {
+pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64, server_name: &str, requested: &str) -> Result<Value> {
     // Live TV is left out of the recap altogether: a channel left on all evening says nothing about taste.
     let mut scope_wh = format!("WHERE {NOT_LIVE_TV}");
     let mut scope_args: Vec<SqlValue> = vec![];

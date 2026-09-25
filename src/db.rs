@@ -561,6 +561,21 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE INDEX idx_audit_at ON audit(at);
     CREATE INDEX idx_audit_user ON audit(user_id, at);
     "#,
+    // 24 — Public profiles (2.0): what a person chose to publish, and the link that reaches it. The token
+    //      is stored as it is, not hashed: it is a link its owner is shown again, and it opens nothing but
+    //      what the owner published. Not part of a backup, so a restore never brings an old link back.
+    r#"
+    CREATE TABLE public_profiles (
+        user_id      TEXT PRIMARY KEY,
+        token        TEXT NOT NULL UNIQUE,
+        published    INTEGER NOT NULL DEFAULT 0,
+        display_name TEXT NOT NULL DEFAULT '',
+        show_avatar  INTEGER NOT NULL DEFAULT 0,
+        sections     TEXT NOT NULL DEFAULT '{}',   -- {"totals","habits","recap","recent"}: bools, all off
+        created_at   INTEGER NOT NULL,
+        updated_at   INTEGER NOT NULL
+    ) WITHOUT ROWID;
+    "#,
 ];
 
 impl Db {

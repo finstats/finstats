@@ -107,11 +107,13 @@ pub struct Settings {
     /// Where finstats answers from outside, so a notification can carry a link back to the page it is
     /// about. finstats cannot know this by itself; empty means messages carry no link.
     pub public_url: String,
+    /// People may publish a profile readable without an account (2.0). Off until an administrator allows it.
+    pub public_profiles: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { follow_jellyfin_scan: true, allow_user_login: false, default_permissions: vec![], active_interval_s: 1, idle_interval_s: 5, sync_interval_h: 6, merge_window_s: 600, min_play_s: 0, group_window_s: 60, public_ip_lookup: true, home_addresses: vec![], backup_every_d: 7, backup_keep: 5, geoip_download: false, travel_speed_kmh: 900, travel_min_km: 500, public_url: String::new() }
+        Self { follow_jellyfin_scan: true, allow_user_login: false, default_permissions: vec![], active_interval_s: 1, idle_interval_s: 5, sync_interval_h: 6, merge_window_s: 600, min_play_s: 0, group_window_s: 60, public_ip_lookup: true, home_addresses: vec![], backup_every_d: 7, backup_keep: 5, geoip_download: false, travel_speed_kmh: 900, travel_min_km: 500, public_url: String::new(), public_profiles: false }
     }
 }
 
