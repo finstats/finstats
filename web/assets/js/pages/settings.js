@@ -18,8 +18,9 @@ import services from '../settings/services.js';
 import backups from '../settings/backups.js';
 import importSection from '../settings/import.js';
 import system from '../settings/system.js';
+import keys from '../settings/keys.js';
 
-const SECTIONS = [jellyfin, access, collection, network, security, ...services, backups, importSection, system];
+const SECTIONS = [jellyfin, access, collection, network, security, ...services, backups, importSection, system, keys];
 // Where the one-page anchors went, so links and bookmarks from before still land.
 const LEGACY = { connections: 'connections', security: 'security', notifications: 'notifications', outbound: 'system', backups: 'backups', 'import-jellystat': 'import', 'import-streamystats': 'import' };
 // ---------------------------------------------------------------- the finder

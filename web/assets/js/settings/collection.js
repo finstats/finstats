@@ -1,6 +1,7 @@
 // Settings → Collection: how closely plays are followed, and what counts as one.
 
 import { h, mount } from '../dom.js';
+import { can } from '../state.js';
 import { card, sk } from '../components.js';
 import { toggleRow, numberForm } from './common.js';
 
@@ -15,7 +16,7 @@ const FIELDS = [
 
 export default {
   key: 'collection', label: 'Collection', sub: 'How closely plays are followed', group: 'Tracking', icon: 'activity',
-  visible: () => true,
+  visible: () => can('manage'),
   entries: [
     { id: 'follow_jellyfin_scan', label: 'Follow Jellyfin’s library scan', hint: 'sync library read scan schedule' },
     ...FIELDS.map((f) => ({ id: f.key, label: f.label, hint: `${f.key.replace(/_/g, ' ')} interval poll ${f.unit}` })),

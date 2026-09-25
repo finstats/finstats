@@ -1614,6 +1614,13 @@ span.shelf-card { cursor: default; }
 .setting-actions { justify-content: flex-end; padding-top: 12px; }
 .setting-foot { margin-top: 14px; }
 .setting-notes { display: grid; gap: 6px; margin-top: 14px; }
+/* API keys: the one-time reveal and the form. */
+.key-reveal { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border-soft)); border-radius: var(--radius); background: var(--accent-wash); }
+.key-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.key-token { flex: 1 1 auto; min-width: 0; padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-sunken); font-size: 12.5px; overflow-wrap: anywhere; }
+.key-form { display: grid; gap: 14px; }
+.key-form-row { display: grid; gap: 14px 20px; grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr); }
+@media (max-width: 560px) { .key-form-row { grid-template-columns: minmax(0, 1fr); } }
 .setting-row.is-hit, .card.is-hit { animation: hit 2.4s ease-out both; }
 .setting-row.is-hit { border-radius: 6px; }
 @keyframes hit { 0%, 60% { box-shadow: inset 3px 0 0 var(--accent-hi); background: color-mix(in srgb, var(--accent) 10%, transparent); } 100% { box-shadow: none; background: transparent; } }

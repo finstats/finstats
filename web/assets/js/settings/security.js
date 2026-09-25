@@ -1,6 +1,7 @@
 // Settings → Security: where addresses are placed, and what counts as impossible travel.
 
 import { h, icon, mount, dateTime } from '../dom.js';
+import { can } from '../state.js';
 import { api } from '../api.js';
 import { card, sk, setBusy, inlineError } from '../components.js';
 import { toggleRow, numberForm, settingRow } from './common.js';
@@ -12,7 +13,7 @@ const TRAVEL_FIELDS = [
 
 export default {
   key: 'security', label: 'Security', sub: 'Places, and impossible travel', group: 'Tracking', icon: 'shield',
-  visible: () => true,
+  visible: () => can('manage'),
   entries: [
     { id: 'geoip-database', label: 'Geolocation database', hint: 'geoip mmdb city db-ip maxmind download places map' },
     { id: 'geoip_download', label: 'Keep the database up to date', hint: 'geoip download monthly db-ip' },

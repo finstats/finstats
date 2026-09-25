@@ -1,11 +1,12 @@
 // Settings → Jellyfin: the server finstats reads from, and how the collector is being told about it.
 
 import { h, icon, num, relTime, dateTime, mount } from '../dom.js';
+import { can } from '../state.js';
 import { card, sk, facts } from '../components.js';
 
 export default {
   key: 'jellyfin', label: 'Jellyfin', sub: 'The server finstats reads from', icon: 'server',
-  visible: () => true,
+  visible: () => can('manage'),
   entries: [{ id: 'jellyfin', label: 'Jellyfin connection', hint: 'server address version collector live socket asked told' }],
   async render(slot, store) {
     const body = h('div', null, sk.rows(2));

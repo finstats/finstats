@@ -3,7 +3,7 @@
 
 import { h, icon, num, bytes, relTime, dateTime, mount, humanize } from '../dom.js';
 import { api, isAbort } from '../api.js';
-import { isAdmin, state } from '../state.js';
+import { isAdmin, state, can } from '../state.js';
 import { card, sk, spinner, inlineError, errorState, facts } from '../components.js';
 import { progressOf } from './common.js';
 
@@ -26,7 +26,7 @@ const STATE_LABEL = { always: ['is-always', 'Always on'], on: ['is-on', 'On'], o
 
 export default {
   key: 'system', label: 'System', sub: 'Jobs, outbound connections, the database', group: 'Data', icon: 'cpu',
-  visible: () => true,
+  visible: () => can('manage'),
   entries: [
     { id: 'tasks', label: 'Tasks', hint: 'jobs run now sync users libraries server log failed' },
     { id: 'outbound', label: 'Outbound connections', hint: 'privacy what finstats reaches hosts telemetry' },

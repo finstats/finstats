@@ -3,13 +3,14 @@
 // Jellyfin through its public name arrives with it), and finstats has to learn that one.
 
 import { h, mount, relTime, dateTime } from '../dom.js';
+import { can } from '../state.js';
 import { api } from '../api.js';
 import { card, sk, setBusy, inlineError } from '../components.js';
 import { toggleRow, settingRow } from './common.js';
 
 export default {
   key: 'network', label: 'Home network', sub: 'Which plays count as local', group: 'Tracking', icon: 'lan',
-  visible: () => true,
+  visible: () => can('manage'),
   entries: [
     { id: 'public_ip_lookup', label: 'Recognise my own public address', hint: 'public ip lookup what is my ip local remote' },
     { id: 'known-home', label: 'Known home addresses', hint: 'public ip found look up now' },

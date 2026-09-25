@@ -3,6 +3,7 @@
 // going says so rather than offering a drop zone.
 
 import { h, icon, num, bytes, relTime, dateTime, mount } from '../dom.js';
+import { can } from '../state.js';
 import { uploadRaw } from '../api.js';
 import { card, spinner, inlineError } from '../components.js';
 
@@ -67,7 +68,7 @@ export const importing = (store) => IMPORTERS.some((i) => { const t = store.task
 
 export default {
   key: 'import', label: 'Import', sub: 'Bring your history from another tracker', group: 'Data', icon: 'upload',
-  visible: () => true,
+  visible: () => can('manage'),
   entries: IMPORTERS.map((i) => ({ id: `import-${i.key}`, label: i.title, hint: `${i.name} backup upload history tracker` })),
   async render(slot, store) {
     const slots = Object.fromEntries(IMPORTERS.map((i) => [i.key, h('div')]));
