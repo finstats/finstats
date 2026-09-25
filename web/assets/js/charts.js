@@ -2,7 +2,7 @@
 // were validated against the card surface (#262626) with the dataviz validator,
 // and text never wears a series color.
 
-import { h, s, num, bytes, duration, durationExact, dayLabel, dayLabelLong, dayLabelYear, methodLabel, pct } from './dom.js';
+import { h, s, num, bytes, duration, durationExact, dayLabel, dayLabelLong, dayLabelYear, methodLabel, pct, clock } from './dom.js';
 import { sortable, plainTable, chartTable } from './tables.js';
 
 export const TYPES = [
@@ -17,6 +17,8 @@ export const METHODS = [
   { key: 'Transcode', color: '#d95926' },
 ];
 const SINGLE = '#9085e9';
+const REWIND = '#d95926';   // marks on the retention chart: the orange and blue already validated for the columns
+const SUBS = '#3987e5';
 const HEAT_EMPTY = '#2f2f2f';
 const HEAT_RAMP = ['#3a3358', '#4b3f80', '#5e4ba8', '#7459d0', '#8f6ff0', '#b49dfb'];
 const TIME_STEPS = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400, 172800, 360000, 720000, 1800000, 3600000];
@@ -450,6 +452,107 @@ export function simpleColumnsTable({ rows, head = ['Period', 'Count'] }) {
     h('thead', null, h('tr', null, h('th', null, head[0]), h('th', { class: 'r' }, head[1]))),
     h('tbody', null, (rows || []).slice().reverse().map((d) => h('tr', null,
       h('td', { class: 'mono' }, d.title || d.label), h('td', { class: 'mono r' }, num(d.value)))))));
+}
+
+// ---------------------------------------------------------------- retention: a title on a position axis
+/** Where a title loses its viewers: the share still watching at every bucket edge, and under it, per
+ *  bucket, how many rewound to there and how many switched subtitles on there. `curve` has one point
+ *  per edge (n + 1), `rewinds` and `subtitles` one count per bucket (n). */
+export function retentionChart({ runtime_s, bucket_s, curve, rewinds = [], subtitles = [], ariaLabel = 'Where people stop', empty = 'Not enough plays yet.' }) {
+  const pts = curve || [];
+  const n = Math.max(0, pts.length - 1);
+  const wrap = h('div', { class: 'chart chart-retention', tabindex: n ? 0 : null, role: 'group', 'aria-label': `${ariaLabel}. Use left and right arrow keys to read values.` });
+  if (!n || !(runtime_s > 0) || !(bucket_s > 0)) { wrap.append(h('div', { class: 'chart-empty' }, empty)); return wrap; }
+  const plot = h('div', { class: 'chart-plot' });
+  wrap.append(plot);
+  const sum = (a) => (a || []).reduce((x, y) => x + (Number(y) || 0), 0);
+  const totals = { rewinds: sum(rewinds), subtitles: sum(subtitles) };
+  const markMax = Math.max(1, ...(rewinds || []).map(Number), ...(subtitles || []).map(Number));
+  const H = 240, RUG = 22, M = { l: 40, r: 8, t: 10, b: 18 + RUG + 4 };
+  const edge = (k) => Math.min(k * bucket_s, runtime_s);
+  let active = -1, geom = null, band = null;
+
+  function draw(w) {
+    const pw = w - M.l - M.r, ph = H - M.t - M.b;
+    const x = (sec) => M.l + (sec / runtime_s) * pw;
+    const y = (v) => M.t + ph - v * ph;
+    geom = { x };
+    const svg = s('svg', { width: w, height: H, viewBox: `0 0 ${w} ${H}`, 'aria-hidden': 'true' });
+    for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+      const ty = Math.round(y(t)) + 0.5;
+      svg.append(s('line', { x1: M.l, x2: w - M.r, y1: ty, y2: ty, class: t === 0 ? 'axis-line' : 'grid-line' }));
+      svg.append(s('text', { x: M.l - 8, y: ty + 3.5, class: 'tick', 'text-anchor': 'end' }, `${t * 100}%`));
+    }
+    const step = TIME_STEPS.find((st) => runtime_s / st <= 6) || runtime_s;
+    for (let t = 0; t <= runtime_s; t += step) {
+      if (x(t) + 24 > w && t > 0) break;
+      svg.append(s('text', { x: x(t), y: M.t + ph + 14, class: 'tick', 'text-anchor': t === 0 ? 'start' : 'middle' }, clock(t)));
+    }
+    // The curve holds each value from its edge to the next: a step, and the area under it.
+    let d = `M${x(0)},${y(pts[0])}`;
+    for (let k = 1; k <= n; k++) d += ` H${x(edge(k))} V${y(pts[k])}`;
+    svg.append(s('path', { class: 'ret-area', fill: SINGLE, d: `${d} V${y(0)} H${x(0)} Z` }));
+    svg.append(s('path', { class: 'ret-line', stroke: SINGLE, d }));
+    // The rug: rewinds on the left half of each bucket, subtitle switch-ons on the right.
+    const rugTop = M.t + ph + 22, rugBase = H - 4;
+    svg.append(s('line', { x1: M.l, x2: w - M.r, y1: rugBase + 0.5, y2: rugBase + 0.5, class: 'grid-line' }));
+    for (let i = 0; i < n; i++) {
+      const bx = x(edge(i)), bw = Math.max(1, x(edge(i + 1)) - bx), half = Math.max(1, bw / 2 - 0.5);
+      const rw = Number(rewinds[i]) || 0, sb = Number(subtitles[i]) || 0;
+      if (rw) svg.append(s('rect', { class: 'ret-mark', fill: REWIND, x: bx, y: rugBase - (rw / markMax) * (rugBase - rugTop), width: half, height: (rw / markMax) * (rugBase - rugTop) }));
+      if (sb) svg.append(s('rect', { class: 'ret-mark', fill: SUBS, x: bx + half + 1, y: rugBase - (sb / markMax) * (rugBase - rugTop), width: half, height: (sb / markMax) * (rugBase - rugTop) }));
+    }
+    band = s('rect', { class: 'col-band', x: 0, y: M.t, width: 1, height: H - M.t - 4, rx: 3, visibility: 'hidden' });
+    svg.append(band);
+    const hit = s('rect', { x: M.l, y: M.t, width: pw, height: H - M.t - 4, fill: 'transparent' });
+    hit.addEventListener('pointermove', (e) => {
+      const r = hit.getBoundingClientRect();
+      const sec = ((e.clientX - r.left) / r.width) * runtime_s;
+      setActive(Math.max(0, Math.min(n - 1, Math.floor(sec / bucket_s))));
+    });
+    hit.addEventListener('pointerleave', () => { if (document.activeElement !== wrap) setActive(-1); });
+    svg.append(hit);
+    plot.replaceChildren(svg);
+    if (active >= 0) setActive(active);
+  }
+  function setActive(i) {
+    active = i;
+    if (!band || !geom) return;
+    if (i < 0) { band.setAttribute('visibility', 'hidden'); hideTip(); return; }
+    const bx = geom.x(edge(i)), bw = Math.max(2, geom.x(edge(i + 1)) - bx);
+    band.setAttribute('x', bx); band.setAttribute('width', bw);
+    band.setAttribute('visibility', 'visible');
+    const pr = plot.getBoundingClientRect();
+    const rows = [{ color: SINGLE, value: pct(pts[i]), label: 'still watching' }];
+    const rw = Number(rewinds[i]) || 0, sb = Number(subtitles[i]) || 0;
+    if (rw) rows.push({ color: REWIND, value: num(rw), label: rw === 1 ? 'rewind to here' : 'rewinds to here' });
+    if (sb) rows.push({ color: SUBS, value: num(sb), label: sb === 1 ? 'switched subtitles on' : 'switched subtitles on' });
+    showTip({ left: pr.left + bx, width: bw, top: pr.top + M.t, bottom: pr.bottom }, tipRows(`${clock(edge(i))} – ${clock(edge(i + 1))}`, rows));
+  }
+  wrap.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      setActive(active < 0 ? 0 : Math.max(0, Math.min(n - 1, active + (e.key === 'ArrowRight' ? 1 : -1))));
+    } else if (e.key === 'Escape') setActive(-1);
+  });
+  wrap.addEventListener('focus', () => { if (active < 0) setActive(0); });
+  wrap.addEventListener('blur', () => setActive(-1));
+  responsive(wrap, draw);
+  wrap.append(legend([{ color: SINGLE, label: 'Still watching' },
+    totals.rewinds ? { color: REWIND, label: 'Rewinds', value: num(totals.rewinds) } : null,
+    totals.subtitles ? { color: SUBS, label: 'Subtitles switched on', value: num(totals.subtitles) } : null].filter(Boolean)));
+  return wrap;
+}
+
+export function retentionTable({ runtime_s, bucket_s, curve, rewinds = [], subtitles = [] }) {
+  const pts = curve || [];
+  const n = Math.max(0, pts.length - 1);
+  const edge = (k) => Math.min(k * bucket_s, runtime_s);
+  return chartTable(h('table', { class: 'table' },
+    h('thead', null, h('tr', null, h('th', null, 'From'), h('th', { class: 'r' }, 'Still watching'), h('th', { class: 'r' }, 'Rewinds'), h('th', { class: 'r' }, 'Subtitles on'))),
+    h('tbody', null, Array.from({ length: n }, (_, i) => h('tr', null,
+      h('td', { class: 'mono' }, clock(edge(i))), h('td', { class: 'mono r' }, pct(pts[i])),
+      h('td', { class: 'mono r' }, num(rewinds[i] || 0)), h('td', { class: 'mono r' }, num(subtitles[i] || 0)))))));
 }
 
 // ---------------------------------------------------------------- client × play method
