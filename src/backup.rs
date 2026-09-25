@@ -339,6 +339,7 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
     crate::network::set_manual(&tx, &settings.home_addresses)?;
     crate::network::reclassify(&tx)?;
     crate::sync::backfill_playbacks(&tx)?;
+    crate::playback::backfill_seek_origins(&tx)?;
     tx.commit()?;
     // Who watched together is derived data with a transaction of its own; the restore itself is already safe.
     crate::groups::detect(&mut conn, settings.group_window_s, None)?;
@@ -427,6 +428,35 @@ mod tests {
 
         std::fs::write(tmp.join("not.jsonl"), "{\"hello\": 1}\n").unwrap();
         assert!(restore(&plain, &tmp.join("not.jsonl"), false, None).unwrap_err().to_string().contains("not a finstats backup"));
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn a_backup_from_before_seek_origins_were_kept_gets_them_back_on_restore() {
+        // A file written by a version before migration 21 carries a seek's origin only in its label.
+        // Restoring is the one other way such a row arrives, so the restore does what the migration did.
+        let tmp = std::env::temp_dir().join(format!("finstats-seek-origin-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let source = Db::open(&tmp.join("source.db")).unwrap();
+        source
+            .conn()
+            .unwrap()
+            .execute_batch(
+                "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+                   VALUES (7, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 1600, 600);
+                 INSERT INTO playback_events(playback_id, at, kind, position_s, from_s, detail) VALUES
+                   (7, 1000, 'start', 0, NULL, NULL), (7, 1100, 'seek', 900, NULL, '1:45 → 15:00'), (7, 1200, 'seek', 30, NULL, '16:40 → 0:30');",
+            )
+            .unwrap();
+        let made = export(&source, &dir(&tmp), None).unwrap();
+        let target = Db::open(&tmp.join("target.db")).unwrap();
+        restore(&target, &dir(&tmp).join(&made.name), false, None).unwrap();
+        let c = target.conn().unwrap();
+        let from: Vec<Option<i64>> = c
+            .prepare("SELECT from_s FROM playback_events ORDER BY at").unwrap()
+            .query_map([], |r| r.get(0)).unwrap().collect::<Result<_, _>>().unwrap();
+        assert_eq!(from, [None, Some(105), Some(1000)]);
         let _ = std::fs::remove_dir_all(&tmp);
     }
 

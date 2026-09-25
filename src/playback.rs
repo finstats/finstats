@@ -252,6 +252,23 @@ pub struct PlayEvent {
     pub detail: Option<String>,
 }
 
+/// Give a seek kept without its origin one from its label — what migration 21 did once for every
+/// seek already in the database, repeated here for rows that arrive later without the column: a
+/// backup written by a version from before it. The two statements must say the same thing.
+pub fn backfill_seek_origins(conn: &Connection) -> Result<usize> {
+    Ok(conn.execute(
+        "UPDATE playback_events SET from_s = (
+           WITH c(t) AS (SELECT substr(detail, 1, instr(detail, ' → ') - 1))
+           SELECT CASE WHEN length(t) - length(replace(t, ':', '')) = 2
+                       THEN CAST(substr(t, 1, instr(t, ':') - 1) AS INTEGER) * 3600
+                          + CAST(substr(t, instr(t, ':') + 1, 2) AS INTEGER) * 60 + CAST(substr(t, -2) AS INTEGER)
+                       ELSE CAST(substr(t, 1, instr(t, ':') - 1) AS INTEGER) * 60 + CAST(substr(t, -2) AS INTEGER) END
+           FROM c)
+         WHERE kind = 'seek' AND from_s IS NULL AND detail LIKE '%:__ → %'",
+        [],
+    )?)
+}
+
 pub fn insert_events(conn: &Connection, playback_id: i64, events: &[PlayEvent]) -> Result<()> {
     let mut stmt = conn.prepare_cached("INSERT INTO playback_events(playback_id, at, kind, position_s, from_s, detail) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")?;
     for e in events {
