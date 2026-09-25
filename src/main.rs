@@ -3,6 +3,7 @@ mod arr;
 mod audit;
 mod auth;
 mod backup;
+mod card;
 mod changelog;
 mod channels;
 mod collector;
@@ -234,6 +235,8 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
         wishes: Default::default(),
         downloads_watched: Mutex::new(0),
         downloads_wake: Notify::new(),
+        public_cards: Default::default(),
+        card_permits: tokio::sync::Semaphore::new(2),
         jf_jobs: Mutex::new(Default::default()),
         notify_targets: Default::default(),
         notify_wake: Notify::new(),

@@ -49,6 +49,10 @@ pub struct AppState {
     /// When a page last said it was showing the downloads, and how to wake their loop.
     pub downloads_watched: Mutex<i64>,
     pub downloads_wake: Notify,
+    /// Published profiles drawn as pictures (2.0), and the two drawing at most at once: a card is the one
+    /// thing a reader without an account can make finstats work for.
+    pub public_cards: crate::card::Cache,
+    pub card_permits: tokio::sync::Semaphore,
     /// Wakes background loops when configuration or settings change.
     pub wake: Notify,
     /// A controlled, fail-closed shutdown: when finstats reads something from Jellyfin it refuses to
@@ -339,6 +343,8 @@ pub fn test_app() -> App {
         wishes: Default::default(),
         downloads_watched: Mutex::new(0),
         downloads_wake: Notify::new(),
+        public_cards: Default::default(),
+        card_permits: tokio::sync::Semaphore::new(2),
         jf_jobs: Mutex::new(Default::default()),
         notify_targets: Default::default(),
         notify_wake: Notify::new(),

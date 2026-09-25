@@ -122,6 +122,7 @@ pub fn router(app: App) -> Router {
     Router::new()
         .nest("/api", api)
         .route("/u/{token}", get(public_page))
+        .route("/u/{token}/card.png", get(public_card))
         .fallback(static_handler)
         .layer(middleware::from_fn(security_headers))
         // A backup is gzip already. Compressing it again gains nothing, and the doubly-encoded stream
@@ -363,6 +364,54 @@ async fn public_page(State(app): State<App>, Path(token): Path<String>) -> Respo
     let base = app.settings().public_url.trim_end_matches('/').to_string();
     let html = crate::public::fill_page(&page, &a, &base, &token);
     crate::public::noindex(([(CONTENT_TYPE, "text/html; charset=utf-8"), (CACHE_CONTROL, "no-cache")], html).into_response())
+}
+
+#[derive(Deserialize)]
+struct CardQuery {
+    kind: Option<String>,
+}
+
+/// `/u/{token}/card.png`: the published profile as a picture, for a link preview or to post.
+async fn public_card(State(app): State<App>, Path(token): Path<String>, Query(q): Query<CardQuery>) -> ApiResult<Response> {
+    let kind = crate::card::Kind::parse(q.kind.as_deref()).ok_or_else(crate::public::not_found)?;
+    let (_, a) = crate::public::resolve(&app, token.clone()).await?;
+    if !kind.available(&a) {
+        return Err(crate::public::not_found());
+    }
+    let key = crate::card::key(&token, kind, &a);
+    let png = match app.public_cards.get(&key) {
+        Some(png) => png,
+        None => {
+            let _permit = app.card_permits.acquire().await.map_err(anyhow::Error::from)?;
+            match app.public_cards.get(&key) {
+                Some(png) => png,
+                None => {
+                    let mut posters = crate::card::Posters::new();
+                    for id in crate::card::poster_ids(kind, &a) {
+                        if let Some(bytes) = poster_bytes(&app, &id).await {
+                            posters.insert(id, bytes);
+                        }
+                    }
+                    let svg = crate::card::svg(kind, &a, &posters);
+                    let png = tokio::task::spawn_blocking(move || crate::card::render_png(&svg)).await.map_err(anyhow::Error::from)??;
+                    app.public_cards.put(key, png)
+                }
+            }
+        }
+    };
+    let r = Response::builder()
+        .header(CONTENT_TYPE, "image/png")
+        .header(CACHE_CONTROL, "public, max-age=3600")
+        .body(Body::from(png.as_ref().clone()))
+        .unwrap();
+    Ok(crate::public::noindex(r))
+}
+
+/// A poster's bytes through the same cache the pages use; a card without one draws an empty frame.
+async fn poster_bytes(app: &App, id: &str) -> Option<Vec<u8>> {
+    let id = valid_id(id).ok()?;
+    let r = cached_image(app, format!("item-{id}-primary-480"), format!("/Items/{id}/Images/Primary"), 480).await.ok()?;
+    axum::body::to_bytes(r.into_body(), 16 << 20).await.ok().map(|b| b.to_vec())
 }
 
 /// The poster of a title that is not in the library yet: only Sonarr or Radarr has it. Both path segments

@@ -18,6 +18,7 @@ const SOURCE: &str = include_str!("../THIRD-PARTY.json");
 const BUNDLED: &[(&str, &str, &str, &str, Option<&str>)] = &[
     ("finstats", env!("CARGO_PKG_VERSION"), "GPL-3.0-only", "https://github.com/OlaYZen/finstats", Some(include_str!("../LICENSE"))),
     ("Inter", "", "OFL-1.1", "https://github.com/rsms/inter", Some(include_str!("../web/assets/fonts/LICENSE-Inter.txt"))),
+    ("Inter (cards)", "4.1", "OFL-1.1", "https://github.com/rsms/inter", Some(include_str!("../fonts/card/LICENSE-Inter.txt"))),
     ("JetBrains Mono", "", "OFL-1.1", "https://github.com/JetBrains/JetBrainsMono", Some(include_str!("../web/assets/fonts/LICENSE-JetBrainsMono.txt"))),
     ("Natural Earth", "1:50m", "Public domain", "https://www.naturalearthdata.com", None),
     ("DB-IP IP to City Lite", "", "CC-BY-4.0", "https://db-ip.com/db/lite.php", None),
