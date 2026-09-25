@@ -52,6 +52,13 @@ directly or transcodes, and why. A status bar keeps the essentials in sight on e
 - **How much leaves the house?** Local versus remote plays and an estimate of data streamed. finstats knows your
   household's public address, so a phone on the Wi-Fi that goes through your public name still counts as home.
 - **Do people finish what they start?** See how far viewers get before they stop.
+- **Where do people give up?** Every film and episode draws the shape of it: the share still watching at each minute,
+  so "68% stop at four minutes" reads as an opening-credits problem and a show says which episode people never come
+  back after.
+- **Where do people rewind, and when do the subtitles go on?** On the same chart: the spot several people skipped
+  back to is where the dialogue is mumbled, and subtitles going on three minutes in is a finding about that file.
+- **Which files are broken?** A title started three times that never got past thirty seconds is a bad remux or a
+  missing codec, and finstats says which apps tried, before a family member has to tell you it doesn't work.
 - **Want it in a different order?** Every table sorts by any column with a click, and long ones can be filtered as you type.
 - **Is it dubbed?** Every title shows the languages of its audio and subtitle tracks. A show says how far a dub goes
   ("English: 13 of 26 episodes"), and each episode lists its own, so you know before you start.

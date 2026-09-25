@@ -406,7 +406,7 @@ What each one gates, server-side:
 | Permission | Effect |
 |---|---|
 | *(none)* | Every list and statistic is pinned to the caller's own `user_id` (a `user_id` filter is ignored); `/api/users` returns only them; `/api/users/{other}` → `403`. |
-| `see_everyone` | `user_id` filters are honoured, `/api/users` and `/api/users/{id}` for anyone, all sessions in `/api/now-playing`, users in `/api/search`, everyone in `watchers` / `played_by`. |
+| `see_everyone` | `user_id` filters are honoured, `/api/users` and `/api/users/{id}` for anyone, all sessions in `/api/now-playing`, users in `/api/search`, everyone in `watchers` / `played_by`, the lists in `/api/stats/files`. |
 | `see_network` | `remote_ip`, `device_id`, `is_local` in plays and sessions; `ips` on user pages; `network` in insights; IP search in `/api/activity?q=`. Otherwise `null` / `[]`. |
 | `see_server` | `/api/server`, `/api/events`, `failed_logins` in insights, `item.path`. Otherwise `403` / `[]` / `null`. |
 | `manage` | `/api/settings`, `/api/tasks*`, `/api/import/*`, `DELETE /api/activity/{id}`. Otherwise `403`. |
@@ -1142,3 +1142,66 @@ all there is to say.
 
 `cargo test` fails while `THIRD-PARTY.json` does not cover every package in `Cargo.lock`, so a dependency cannot be
 added without its licence being recorded.
+
+---
+
+# v1.8 — Playback insights
+
+What the timeline of every play adds up to. Pure reads over `playbacks` and `playback_events`; nothing new is collected.
+
+## `GET /api/items/{id}` gains `insights` and per-episode `users` / `finished`
+
+A film or episode answers where its plays stopped:
+
+```jsonc
+"insights": {
+  "runtime_s": 7020,             // the axis: the item's runtime, or the longest a play reported
+  "bucket_s": 120,               // the grid: 30 s for a short episode, 120 s for a film, never more than 60 buckets
+  "plays": 41,
+  "measured": 9,                 // plays finstats recorded: the stop is where playback was when it ended
+  "estimated": 32,               // imported plays: a tracker keeps how long it ran, so the stop is taken as that, from 0:00
+  "curve": [1.0, 0.98, …],       // share still watching at each bucket edge, from the start to the runtime (n + 1 points)
+  "rewinds": [0, 0, 3, …],       // per bucket: seeks that landed there from further on (n counts)
+  "subtitles": [0, 2, …]         // per bucket: plays whose first subtitle change, to a track, happened there
+} | null
+```
+
+`null` for anything but a film or an episode, under three plays in scope, or without a runtime to draw on. The stop rule
+is the one `completion` has always used, made explicit: `position_s` when finstats saw the play end, else `duration_s`.
+The two are never mixed silently — `measured` and `estimated` always travel with the curve. Rewinds and subtitle
+switch-ons exist only for plays finstats recorded itself. A seek shorter than 20 s was never recorded, so a short rewind
+is invisible by design.
+
+A show's `seasons[].episodes[]` gain `"users": 3` (distinct people who started the episode, in scope) and
+`"finished": 2` (plays that stopped at 90 % of the runtime or later). "Everyone quits episode three" is people who
+never press play on episode four, which `users` in episode order shows.
+
+`GET /api/activity/{id}` events gain `"from_s": 1632 | null`: a seek's origin as a number beside its label (the
+position playback was expected at when it jumped; `position_s` is where it landed). Filled once for every seek already
+kept, and by a restore for a backup from before it existed.
+
+## `GET /api/stats/files` (common filters) 🔒 *see everyone*
+
+Files worth a look, from everyone's plays in the window. Without *see everyone* every list is `[]` (200): from one
+person's own plays they would be noise, and a title in "files nobody gets into" is a fact about other people's viewing.
+
+```jsonc
+{
+  "broken": [                    // started three times or more, never past thirty seconds; newest tried first
+    {"id": "…", "name": "Broken Reel", "type": "Movie", "series_id": null, "series_name": null,
+     "plays": 3, "users": 2, "longest_s": 12, "last_tried_at": 1790000000, "clients": ["Jellyfin Web", "Kodi"]}
+  ],
+  "rewound": [                   // backwards seeks per play, from plays finstats recorded; two plays and three rewinds at least
+    {"id": "…", "name": "Mumbled", "type": "Movie", "series_id": null, "series_name": null,
+     "plays": 2, "rewinds": 4, "per_play": 2.0, "hot_s": 1260}   // hot_s: the minute they cluster in
+  ],
+  "subtitled": [                 // plays whose first subtitle change was to a track within ten minutes; two at least
+    {"id": "…", "name": "Clear", "type": "Movie", "series_id": null, "series_name": null,
+     "plays": 3, "switched_on": 2, "share": 0.67, "typical_s": 350}
+  ]
+}
+```
+
+The broken list is built **without the minimum play length**: that setting is exactly what a broken file's plays never
+reach. Jellyfin's activity log carries no playback errors, so the plays are the only witness. Movies and episodes only,
+up to 25 broken and 15 of each of the others.

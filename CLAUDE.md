@@ -275,6 +275,20 @@ field is usually just adding a column to a SELECT. Local-time bucketing relies o
 process `TZ` (the Docker image ships tzdata for this). Do not use `#[serde(flatten)]` in `Query` structs —
 serde_urlencoded then hands numbers over as strings and every numeric filter 400s.
 
+**Playback insights (`stats.rs`, 2.0).** Where a title loses its viewers, drawn from where each play stopped. **A stop is
+`position_s` for a play finstats recorded and `duration_s` for an imported one** (a tracker keeps a length, not a place; the play is
+taken to have started at 0:00), and the two are never mixed silently: every curve carries `measured` and `estimated`. The grid
+(`bucket_width`) keeps any runtime to sixty points; under `MIN_CURVE_PLAYS` (3) or without a runtime there is no curve, not a thin
+one. Events exist only for live plays, so rewinds (a seek whose `from_s` is past its `position_s`) and subtitle switch-ons (a play's
+*first* subtitle change, to a track — the state before it is never an event, so a later language change is not a second switch-on)
+are counted over those. `from_s` came in migration 21, backfilled from the seek label in SQL; `playback::backfill_seek_origins` is
+the same statement for a restored backup from before it, and a test holds both to the same answer. A show's episodes carry `users`
+and `finished` because "everyone quits episode three" is a fact *between* episodes. `GET /api/stats/files` builds three lists from
+everyone's plays and answers empty lists without `see_everyone`; the broken-file list uses `Scope::cond_any_length()` — the minimum
+play length is precisely what a broken file never reaches — and reads nothing from `server_events`, because Jellyfin's activity
+log carries no playback errors (every Error row on a real install was a failed sign-in). Server-wide event queries go through
+`idx_pbe_kind` and a test pins the plan. A seek under `SEEK_TOLERANCE_S` was never recorded, so a short rewind is invisible by design.
+
 **Group watching (`groups.rs`).** Inferred, because `/Sessions` exposes no SyncPlay groups: plays of one item by ≥ 2
 different users starting within `group_window_s` (default 60 — real data shows a third of genuine groups start 6–60 s
 apart) and overlapping ≥ 2 min share `playbacks.group_id` (= lowest play id in the group). `detect()` re-runs per item
