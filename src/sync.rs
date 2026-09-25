@@ -520,11 +520,16 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
     let mut total_items = 0usize;
     let lib_count = libraries.len();
     for (n, (lib_id, lib_name)) in libraries.into_iter().enumerate() {
-        let mut start = 0usize;
+        // How many of this library's items the read actually saw. The guard below rests on it, so it
+        // is named for what it means and never reused: a second cursor called `start` for the
+        // cast-and-crew pass used to shadow it, and the guard then compared a library's *shows*
+        // against its *items* — on a television library, a handful against thousands, so every read
+        // looked like a gutted library and halted the install.
+        let mut seen = 0usize;
         let mut total = 0usize;
         loop {
-            let (items, reported) = jf.items_page(&lib_id, start, PAGE).await?;
-            if start == 0 {
+            let (items, reported) = jf.items_page(&lib_id, seen, PAGE).await?;
+            if seen == 0 {
                 total = reported;
             }
             let got = items.len();
@@ -543,12 +548,12 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
                     Ok(())
                 })
                 .await?;
-            start += got;
+            seen += got;
             total_items += got;
-            let within = if total > 0 { start as f64 / total as f64 } else { 1.0 };
+            let within = if total > 0 { seen as f64 / total as f64 } else { 1.0 };
             app.tasks.update(
                 ID,
-                format!("{lib_name}: {start} of {} items", total.max(start)),
+                format!("{lib_name}: {seen} of {} items", total.max(seen)),
                 Some((n as f64 + within.min(1.0)) / lib_count.max(1) as f64),
             );
             if got < PAGE {
@@ -556,9 +561,9 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             }
         }
         // Cast and crew, for films and shows only. A failure here never fails the library read.
-        let mut start = 0usize;
+        let mut people_at = 0usize;
         loop {
-            let items = match jf.people_page(&lib_id, start, PAGE).await {
+            let items = match jf.people_page(&lib_id, people_at, PAGE).await {
                 Ok(items) => items,
                 Err(e) => {
                     tracing::warn!("reading cast and crew of {lib_name} failed: {e:#}");
@@ -580,18 +585,17 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
                     Ok(())
                 })
                 .await?;
-            start += got;
+            people_at += got;
             if got < PAGE {
                 break;
             }
         }
 
         // Only after a library was read completely is "not seen" proof of removal — and only if the
-        // read is trustworthy. `start` is how many items this pass actually saw; if that is a fraction
-        // of what finstats holds, the read is broken, not the library empty. Refuse, keep the data,
-        // and halt so the operator can look (see `trustworthy_removal`).
+        // read is trustworthy. `seen` is how many of this library's items the read above actually
+        // saw; if that is a fraction of what finstats holds, the read is broken, not the library
+        // empty. Refuse, keep the data, and halt so the operator can look (`trustworthy_removal`).
         let lib = lib_id.clone();
-        let seen = start;
         let shrink_ok = allow_shrink();
         let refused = app
             .db
