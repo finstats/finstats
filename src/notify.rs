@@ -614,9 +614,16 @@ fn task_label(id: &str) -> &str {
     }
 }
 
+// Settings is one section on screen at a time, so every link below names the section that holds the
+// thing it is about: bare `/settings` would land on the first one and leave the reader to look.
+
 /// A background job ended in an error.
 pub async fn task_failed(app: &App, id: &str, error: &str) {
-    let event = Event::new(
+    raise(app, task_failed_event(id, error)).await;
+}
+
+fn task_failed_event(id: &str, error: &str) -> Event {
+    Event::new(
         Kind::TaskFailed,
         daily("task", id),
         format!("{} failed", task_label(id)),
@@ -624,25 +631,31 @@ pub async fn task_failed(app: &App, id: &str, error: &str) {
     )
     .field("Job", id.to_string())
     .field("Error", error.chars().take(400).collect::<String>())
-    .link("/settings");
-    raise(app, event).await;
+    .link("/settings/system")
 }
 
 /// A backup could not be written. The one kind of failure that quietly costs you everything.
 pub async fn backup_failed(app: &App, error: &str) {
-    let event = Event::new(
+    raise(app, backup_failed_event(error)).await;
+}
+
+fn backup_failed_event(error: &str) -> Event {
+    Event::new(
         Kind::BackupFailed,
         daily("backup", "write"),
         "A backup could not be written",
         "finstats could not write its automatic backup. Check the finstats log and the data folder.",
     )
     .field("Error", error.chars().take(400).collect::<String>())
-    .link("/settings");
-    raise(app, event).await;
+    .link("/settings/backups")
 }
 
 /// Something finstats reads from stopped answering, or started again. Both are worth saying once.
 pub async fn service_state(app: &App, name: &str, what: &str, down: Option<&str>) {
+    raise(app, service_state_event(name, what, down)).await;
+}
+
+fn service_state_event(name: &str, what: &str, down: Option<&str>) -> Event {
     let event = match down {
         Some(error) => Event::new(
             Kind::ServiceDown,
@@ -658,7 +671,23 @@ pub async fn service_state(app: &App, name: &str, what: &str, down: Option<&str>
             format!("finstats can read from {name} ({what}) again."),
         ),
     };
-    raise(app, event.field("Connection", name.to_string()).link("/settings")).await;
+    event.field("Connection", name.to_string()).link("/settings/connections")
+}
+
+/// The message "Test" sends: proof that a destination works, with a link back to where it was set up.
+fn test_event(user_name: &str, destination: &str) -> Stored {
+    Stored {
+        id: 0,
+        kind: Kind::Test,
+        severity: INFO.to_string(),
+        at: db::now(),
+        user_name: Some(user_name.to_string()),
+        title: "finstats is connected".to_string(),
+        body: format!("A test message from finstats, sent by {user_name}. If you are reading this, this destination works."),
+        link: Some("/settings/notifications".to_string()),
+        data: vec![("Destination".to_string(), destination.to_string())],
+        private: vec![],
+    }
 }
 
 // ---------------------------------------------------------------- sending
@@ -1259,19 +1288,7 @@ pub async fn test(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -
     if !may_touch(&user, &stored) {
         return Err(ApiError::forbidden());
     }
-    let now = db::now();
-    let event = Stored {
-        id: 0,
-        kind: Kind::Test,
-        severity: INFO.to_string(),
-        at: now,
-        user_name: Some(user.name.clone()),
-        title: "finstats is connected".to_string(),
-        body: format!("A test message from finstats, sent by {}. If you are reading this, this destination works.", user.name),
-        link: Some("/settings".to_string()),
-        data: vec![("Destination".to_string(), stored.name.clone())],
-        private: vec![],
-    };
+    let event = test_event(&user.name, &stored.name);
     let msg = message(&event, stored.with_addresses, Some(&app.settings().public_url));
     let outcome = channels::send(&app, &stored, &msg).await;
     let now = db::now();
@@ -1436,6 +1453,17 @@ mod tests {
         assert!(names_an_address(&m.text()), "with the switch on, the addresses are the point");
         assert_eq!(m.link.as_deref(), Some("https://finstats.example/security"));
         assert_eq!(message(&stored(Kind::Travel), true, Some("")).link, None, "no address for finstats, no link");
+    }
+
+    #[test]
+    fn a_link_lands_on_the_settings_section_that_holds_the_thing() {
+        // Settings is one section on screen at a time, so a link to bare `/settings` lands on the first one
+        // and leaves the reader to find the failed job, the backup or the connection themselves.
+        assert_eq!(task_failed_event("sync_users", "timed out").link.as_deref(), Some("/settings/system"));
+        assert_eq!(backup_failed_event("disk full").link.as_deref(), Some("/settings/backups"));
+        assert_eq!(service_state_event("Sonarr", "calendar", Some("connection refused")).link.as_deref(), Some("/settings/connections"));
+        assert_eq!(service_state_event("Sonarr", "calendar", None).link.as_deref(), Some("/settings/connections"));
+        assert_eq!(test_event("alice", "Living room").link.as_deref(), Some("/settings/notifications"));
     }
 
     #[test]
