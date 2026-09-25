@@ -1205,3 +1205,36 @@ person's own plays they would be noise, and a title in "files nobody gets into" 
 The broken list is built **without the minimum play length**: that setting is exactly what a broken file's plays never
 reach. Jellyfin's activity log carries no playback errors, so the plays are the only witness. Movies and episodes only,
 up to 25 broken and 15 of each of the others.
+
+---
+
+# v1.9 — Watched together
+
+`GET /api/stats/groups` (common filters) answers what the **Together** page draws, alongside the keys the dashboard and
+profile cards have always read. Nothing new is collected: the sessions are the groups `group_id` already marks.
+
+```jsonc
+{
+  "totals": { "sessions": 12, "together_s": 61200, "person_s": 130000, "people": 4,
+              "watch_s": 400000,            // everything the scoped people watched in the window, in company or not
+              "share": 0.31 },              // their time in group sessions ÷ watch_s; null when nothing was watched
+  "previous": { "sessions": 9, "together_s": 40000, "people": 3, "share": 0.25 } | null,   // the same window right before; null for all time
+  "bucket": "day" | "week",
+  "series": [ { "date": "2026-09-20", "together_s": 5400, "alone_s": 7200 } ],   // gap-free, like every series
+  "pairs": [ { "members": [{"user_id": "…", "user_name": "alice", "has_image": true}, {"…": "bob"}],
+              "sessions": 5, "together_s": 21000, "last_at": 1790000000,
+              "top_title": {"id": "…", "name": "Low Orbit", "image_item_id": "…", "sessions": 3} | null } ],   // at most 20
+  "people": [ { "user_id": "…", "user_name": "alice", "has_image": true, "together_s": 21000, "alone_s": 60000, "total_s": 81000, "share": 0.259 } ],
+  "companions": […], "titles": […], "recent": […]   // as before; a recent session also carries its "group_id"
+}
+```
+
+Two rules. **A pair's time together is the shorter of the two stays**, which is theirs alone — a session's own
+`together_s` (the second-longest stay) describes any two of its members, so an evening of three counts for each of its
+three pairs. **A session belongs whole to the bucket it started in**; `alone_s` is what the scoped people watched in that
+bucket minus their time inside sessions that started in it, never below zero.
+
+Scoping is the caller's, as everywhere: without *see everyone* the pairs are the caller's own, `people` is the caller
+alone (a companion's name is theirs to see; a companion's time alone is not), and `previous` and `series` follow the same
+pin. `min_play_s` applies to `watch_s` and the series' totals, not to the sessions themselves, which are at least two
+minutes long by construction.

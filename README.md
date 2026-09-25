@@ -115,7 +115,9 @@ re-attaches the old plays to the new entry.
 ### Who watches together
 When two or more people press play on the same thing at the same time, finstats notices: which
 groups watch together, what they watch, and how many hours they have spent doing it. It shows on
-the dashboard, on each profile ("most often with"), and as a small mark on every shared play.
+the dashboard, on each profile ("most often with"), and as a small mark on every shared play. The
+**Together** page has the whole of it: who watches with whom, hours in company against hours alone
+over time, each person's share, and the recent evenings — an evening of three counts for each of its pairs.
 
 ### Where you are in every show
 Your profile shows each series as a bar with one segment per episode: seen, started, or not yet.

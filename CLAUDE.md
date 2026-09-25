@@ -289,7 +289,13 @@ play length is precisely what a broken file never reaches — and reads nothing 
 log carries no playback errors (every Error row on a real install was a failed sign-in). Server-wide event queries go through
 `idx_pbe_kind` and a test pins the plan. A seek under `SEEK_TOLERANCE_S` was never recorded, so a short rewind is invisible by design.
 
-**Group watching (`groups.rs`).** Inferred, because `/Sessions` exposes no SyncPlay groups: plays of one item by ≥ 2
+**Group watching (`groups.rs`, `/together`).** The fold is pure and reusable (2.0): `sessions_for` (a `Window` with an end, so the recap can
+ask for one person and one year) → `fold_sessions` → `pairs`, `per_bucket`, `people_shares`, and the three lists the cards always read;
+`answer` assembles `GET /api/stats/groups` from them. Two rules: **a pair's time together is the shorter of the two stays** (an evening of
+three counts for each of its three pairs; a session's own `together_s` describes any two of its members), and **a session belongs whole to
+the bucket it started in** (`alone_s` = scoped watch time in the bucket minus grouped time, never below zero). Without `see_everyone` the
+pairs must include the caller and `people` is the caller alone: a companion's name is theirs to see, a companion's time alone is not.
+Inferred, because `/Sessions` exposes no SyncPlay groups: plays of one item by ≥ 2
 different users starting within `group_window_s` (default 60 — real data shows a third of genuine groups start 6–60 s
 apart) and overlapping ≥ 2 min share `playbacks.group_id` (= lowest play id in the group). `detect()` re-runs per item
 when a play ends, fully after import/start-up, and fully when the setting changes. "Time together" is the
