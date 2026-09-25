@@ -1,11 +1,11 @@
 #!/bin/sh
-# Refuses to commit anything that looks like runtime data, a Jellystat backup or a secret,
+# Refuses to commit anything that looks like runtime data, a tracker export or a secret,
 # even when it was force-added past .gitignore. Enable once per clone:
 #   git config core.hooksPath .githooks
 fail=0
 for f in $(git diff --cached --name-only --diff-filter=AM); do
   case "$f" in
-    data/*|*.db|*.db-wal|*.db-shm|*.sqlite|*.sqlite3|*.jsonl|backup_*|*/backup_*|.env|.env.*|*.pem|*.key)
+    data/*|*.db|*.db-wal|*.db-shm|*.sqlite|*.sqlite3|*.jsonl|backup_*|*/backup_*|streamystats-backup-*|*/streamystats-backup-*|.env|.env.*|*.pem|*.key)
       echo "pre-commit: refusing '$f' (runtime data, backup or secret)" >&2; fail=1 ;;
   esac
   size=$(git cat-file -s ":$f" 2>/dev/null || echo 0)

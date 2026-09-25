@@ -6,6 +6,7 @@ data
 *.sqlite*
 *.jsonl
 backup_*
+streamystats-backup-*.json
 .git
 .githooks
 .env

@@ -42,6 +42,7 @@ cargo clippy --all-targets                 # not clean: ~12 style warnings exist
 
 FINSTATS_DATA_DIR=./data FINSTATS_BIND=127.0.0.1:8088 cargo run     # serve
 cargo run -- import-jellystat <backup.jsonl>                         # headless import, then exit
+cargo run -- import-streamystats <backup.json>                       # the other tracker, same thing
 cargo run -- relink                                                  # re-attach history to renamed items, then exit
 
 for f in web/assets/js/*.js web/assets/js/pages/*.js; do node --check "$f"; done   # the only JS check there is
@@ -59,7 +60,7 @@ docker build -t finstats:latest .        # local image; the published one is ghc
 ```
 Jellyfin ──/socket push, else /Sessions 1 s / 5 s idle─▶ collector ──▶ SQLite ◀── stats / recap API ◀── embedded SPA (web/)
          ──/Users /Items /Devices /System/* (scheduler)──▶ sync ──┘        ▲
-Jellystat backup ──▶ import ─────────────────────────────────────┘   relink (after sync/import/start-up)
+Jellystat / Streamystats backup ──▶ import ──────────────────────┘   relink (after sync/import/start-up)
 Sonarr/Radarr ──calendar, history (15 min)──┐
 Seerr ──requests (5 min, one row if quiet)──┼──▶ SQLite ──▶ pipeline API ◀── /pipeline
 Sonarr/Radarr queues ───────────────────────┴──▶ in-memory snapshot (5 s watched / 60 s busy / 5 min empty) ──▶ /api/downloads
@@ -177,9 +178,10 @@ Any doubt falls back to polling on the next pass, because a play that is never s
 The handshake cannot ask for `profile="PascalCase"` the way every HTTP read does, so `socket.rs` re-cases keys and
 holds the first pushed snapshot against one real `/Sessions` read before a row is written from it.
 
-**One play-row shape, two producers.** `playback.rs::PlayRecord` + `media.rs` (stream/transcode extraction, labels,
-`effective_play_method`) are shared by the live `collector.rs` and the Jellystat `import.rs`, so both sources
-produce identical columns. The collector inserts a row the moment a play is first seen (`active = 1`), refreshes
+**One play-row shape, three producers.** `playback.rs::PlayRecord` + `media.rs` (stream/transcode extraction, labels,
+`effective_play_method`) are shared by the live `collector.rs`, the Jellystat `import.rs` and the Streamystats
+`streamystats.rs`, so every source produces identical columns. A fourth tracker is a reader, not new architecture.
+The collector inserts a row the moment a play is first seen (`active = 1`), refreshes
 it every 30 s, counts only un-paused time, merges a restart within `merge_window_s` into the same row, and diffs
 consecutive sightings into `playback_events` (pause/seek/track/transcode timeline). **An event is a change, so the two
 sides of `diff_events` must be the same kind of value.** "Once a transcode, always a transcode" is applied to the new
@@ -188,11 +190,47 @@ says what the client settled back to, and each one is a change — finstats wrot
 rest of the play, reading `DirectPlay: <reasons>`, a line that contradicts itself (migration 17 clears them). Anything
 sticky that the diff also reads belongs above the diff.
 
-**Jellystat import semantics** (learned from real exports; documented at the top of `import.rs` and in the README):
+**Jellystat import semantics** (learned from real exports; documented at the top of `import.rs` and in `docs/jellystat-import.md`):
 `ActivityDateInserted` is the *end* of a play; for episodes `NowPlayingItemId` is the series and `EpisodeId` the
 episode; `PositionTicks` is unreliable and not imported (completion = watched ÷ runtime for imported rows);
 there is no item type, so Live TV is inferred (video, not in library, no container → `TvChannel`). The import is a
-single transaction, de-duplicated by `source_id = "jellystat:<id>"`, and streams a multi-hundred-MB file line by line.
+single transaction and streams a multi-hundred-MB file line by line.
+
+**Streamystats import semantics (`streamystats.rs`, `docs/streamystats-import.md`).** Its backup is **sessions only** —
+no items, users or libraries — and holds three kinds of row that must be read differently, none of them flagged as such.
+**A row carries one moment or two, and which it is decides what the moment means**: two (`startTime` < `endTime`) is a
+play Streamystats watched, and the first is the real start; one (`startTime` == `endTime`) is a play it imported from
+Jellystat, and that moment is the **end** — `ActivityDateInserted` copied into both fields, 1,799 of 3,167 rows in the
+file this was learned from. Reading those as starts moves every one of those evenings forward by the length of the film,
+which is invisible until every chart is quietly wrong. `isInferred` (or an `inferred:` id) is **not a play at all**:
+Jellyfin reported the item watched, so Streamystats wrote a row as long as the whole runtime for a viewing nobody saw —
+counted (`marked_watched`) and never imported. `itemId` is the item in both kinds (Streamystats re-links renamed items);
+`mediaSourceId` is *not* an item id. **Where the two kinds carry data is opposite, and reading the wrong one is worse
+than reading nothing**: a play it watched has no source media at all (`videoCodec`, `resolution*`, `audioCodec`,
+`videoRangeType` empty in every row) but does carry its transcode target; a play from Jellystat carries the whole session
+in `rawData` (read with `Streams::extract`) while its own flat `transcoding*` columns are a copy of the *source* with
+`transcodeReasons: ["Unknown"]`, which stored as a transcode reads as a file transcoded into itself for reasons unknown —
+so those are read only from `rawData.TranscodingInfo`, and a third of them have none and get no transcode. `positionTicks`
+counts only where the row also keeps the `runtimeTicks` it is a position in. `isActive` is `true` on nearly every row of a
+backup and means nothing. **Nothing is invented to fill a gap**: an item neither the row nor the library can type is left
+`Unknown`, not guessed. The file is walked with a `DeserializeSeed` rather than loaded, one transaction.
+
+**One rule for a play the history already has (`playback::already_recorded`), shared by both importers and the backup
+restore.** `source_id` stops a file being imported twice and says nothing about the same evening arriving from another
+tracker under another id. So: its own id first, else the same person, the same item, and one of the play's **two ends**
+close enough. **Between** sources that is `merge_window_s` at *either* end, because the trackers disagree about the
+*start* — Jellystat keeps only the end, so the start is derived from the seconds played and every minute paused moves it
+later — while all three agree about the end. Measured on real history (3,162 plays a Streamystats export and a Jellystat
+import held in common): either end recognised 2,750, the start alone 2,527, and the start's misses ran in an unbroken
+smear past ten minutes where the ends fall off a cliff inside one. **Within** one source it is the very same second and
+nothing wider: a tracker never exports the same play twice, so a second row of the same item minutes later is a restart
+the viewer really made, and a window there would silently drop it — on an import and, worse, on a restore of finstats'
+own backup. A new importer goes through `PlayRecord::insert_imported`, never `insert`.
+
+**What the library can tell a play lives in `sync::backfill_playbacks`**, not in an importer, because history is usually
+imported before finstats has ever read the library: it runs after every library read as well as after an import, and
+fills `library_id`, `runtime_s`, season/episode numbers and — for imported rows only — the item type neither tracker
+records. A live row keeps the type the session gave it.
 
 **Sync scheduling (`sync.rs`).** Small reads (users, activity log, server details/devices) run every 15 min. The public-IP
 lookup is **not** among them: it runs once at start-up on an install that has never learned an address, and otherwise only when
@@ -498,8 +536,9 @@ image, never at a locally built tag.
 
 ## This repository is public
 
-`data/` (the SQLite database: users, IP addresses, the Jellyfin API key) and Jellystat backups (`*.jsonl`,
-`backup_*`) sit next to the source on development machines and must never be committed; `.gitignore`,
+`data/` (the SQLite database: users, IP addresses, the Jellyfin API key) and tracker exports — Jellystat's
+(`*.jsonl`, `backup_*`) and Streamystats' (`streamystats-backup-*.json`, which carries public IP addresses) —
+sit next to the source on development machines and must never be committed; `.gitignore`,
 `.dockerignore` and `.githooks/pre-commit` (enable with `git config core.hooksPath .githooks`) guard this. Stage
 explicit paths rather than `git add -A`. Tests, docs, examples and commit messages use invented data only
 (e.g. "alice", "Big Buck Bunny", `Europe/London`, `192.168.1.10`) — never values from a real server.

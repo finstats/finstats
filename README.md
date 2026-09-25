@@ -28,7 +28,7 @@ finstats watches your server quietly in the background and turns that into answe
 lightweight alternative to Jellystat and Streamystats: a single small program with its own
 built-in database, using about **20 MB of memory**. Nothing else to install, nothing to maintain.
 
-Already using Jellystat? [Bring your history with you](#moving-from-jellystat) — it takes seconds.
+Already using Jellystat or Streamystats? [Bring your history with you](#moving-from-jellystat-or-streamystats) — it takes seconds.
 
 ## What you get
 
@@ -197,21 +197,30 @@ Set `TZ` to your own timezone so "today" and "evening" mean what you expect.
 > Inside a container, `localhost` is the container itself. Use your server's address
 > (for example `http://192.168.1.10:8096`) or the Jellyfin container's name.
 
-## Moving from Jellystat
+## Moving from Jellystat or Streamystats
 
-Your history comes with you. In Jellystat:
+Your history comes with you, from either one.
+
+**Jellystat:**
 
 1. Open **Settings → Backup**
 2. Select only **Activity** (it turns purple)
 3. Under settings click **Settings**, scroll to the end and start a backup
 4. Go back to **Backups**, open **Actions** on the new backup and click **Download**
 
-In finstats, open **Settings → Import from Jellystat** and drop the file in.
+**Streamystats:** open **Settings → Backup & Import**, scroll down to **Backup & Restore** and
+click **Download Backup**.
 
-Large backups are no problem — a 350 MB file imports in a few seconds — and importing the same
-file twice is safe. One thing to know: Jellystat never recorded what happens during a play, so
-imported history has no pause-and-skip timelines. Everything finstats records from now on does.
-[How imported data is interpreted →](docs/jellystat-import.md)
+In finstats, open **Settings**, find the card for the one you used, and drop the file in.
+
+**Ran both?** Import both files. Nothing is counted twice — finstats recognises a play it already
+has, whichever tracker brought it in and whether or not it watched that evening itself.
+
+Large backups are no problem — a 350 MB file imports in a few seconds — and importing the same file
+twice is safe. One thing to know: neither tracker recorded what happens *during* a play, so imported
+history has no pause-and-skip timelines. Everything finstats records from now on does.
+[How Jellystat data is interpreted →](docs/jellystat-import.md) ·
+[How Streamystats data is interpreted →](docs/streamystats-import.md)
 
 ## Settings
 
@@ -322,13 +331,13 @@ problem? [Report it privately](SECURITY.md). Questions go to
 
 - [Contributing](CONTRIBUTING.md) — reporting bugs, what fits the project, running it from source or in a local Docker setup, the rules for a change, pull requests
 - [HTTP API](docs/api.md) — the contract the web UI is built on
-- [How Jellystat data is interpreted](docs/jellystat-import.md)
+- [How Jellystat data is interpreted](docs/jellystat-import.md) and [how Streamystats data is interpreted](docs/streamystats-import.md)
 - [Security model](docs/security.md)
 - [Patch notes](CHANGELOG.md)
 
-The database holds your users, their IP addresses and your Jellyfin API key, and a Jellystat
-backup is a complete viewing history. Both are ignored by git. Before contributing, switch on the
-bundled commit guard as a second lock:
+The database holds your users, their IP addresses and your Jellyfin API key, and a Jellystat or
+Streamystats backup is a complete viewing history. All of them are ignored by git. Before
+contributing, switch on the bundled commit guard as a second lock:
 
 ```sh
 git config core.hooksPath .githooks

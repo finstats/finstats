@@ -21,6 +21,16 @@ Learned from real exports rather than documentation:
 | *(no item type exists)* | Episodes are recognised by `EpisodeId`; other items by the library. Something with video that is not in the library and has no file container is a **Live TV** channel. |
 | `jf_playback_reporting_plugin_data` | Skipped — Jellystat has already folded these rows into its activity table. |
 
+## Importing alongside Streamystats
+
+An evening is not counted twice if it arrives from both trackers, or if finstats recorded it itself.
+Beyond the Jellystat id above, a play is recognised as one already here when the same person watched
+the same item with either end of the play within the **Merge window** (Settings → Collection) of one
+in the history. Either end, because the two trackers disagree about when a play *began*: Jellystat
+keeps only the end, so the start is worked back from the seconds played and every minute the viewer
+spent paused moves it later, while both agree about when it ended.
+[How Streamystats data is interpreted →](streamystats-import.md)
+
 ## What imported history cannot have
 
 Jellystat stores one row per play, so imported plays have no timeline of pauses, skips and track

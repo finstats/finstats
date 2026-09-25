@@ -103,7 +103,7 @@ Sorted by `watch_s` desc unless `&sort=plays`.
 {"total": 2918, "page": 1, "per_page": 50, "rows": [Play]}
 
 Play = {
-  "id": 123, "source": "live" | "jellystat", "active": false,
+  "id": 123, "source": "live" | "jellystat" | "streamystats", "active": false,
   "user_id": "…", "user_name": "…",
   "item_id": "…", "item_name": "…", "item_type": "Episode",
   "series_id": null, "series_name": null, "season_number": null, "episode_number": null,
@@ -208,14 +208,28 @@ Both send long-lived `Cache-Control`. Use as `<img loading="lazy">` with an `one
  "collector": {"connected": true, "last_poll_at": 0, "active_sessions": 1, "error": null},
  "db": {"size_bytes","plays","items","oldest_play_at"}}
 ```
-`POST /api/tasks/{id}/run` (not for `import`) → `202 {ok:true}`; `409` if already running.
+`POST /api/tasks/{id}/run` (not for `import` or `import_streamystats`) → `202 {ok:true}`; `409` if already running.
 
 `POST /api/import/jellystat` — **raw request body** is the `.jsonl` (or legacy `.json`) backup
 (`Content-Type: application/octet-stream`; can be hundreds of MB — use XHR for upload progress).
 Returns `202 {ok:true}` once the upload is stored; parsing continues as task `import`
 (poll `/api/tasks`). On finish the task `message` summarises, and `result` holds
 `{"plays_imported","plays_skipped","users","libraries","items","seasons","episodes","item_info"}`.
-Re-importing the same backup is safe: plays are de-duplicated by their Jellystat id.
+
+`POST /api/import/streamystats` — the same, for a Streamystats backup (its **Settings → Backup &
+Import → Download Backup**, one `.json` document). Task `import_streamystats`; `result` holds
+`{"sessions_read","plays_imported","plays_skipped","marked_watched","users","unreadable_rows"}`,
+where `marked_watched` counts rows that were never a play — Jellyfin reported the item watched and
+Streamystats wrote a row as long as the whole runtime for a viewing nobody saw. Those are never
+imported. A Streamystats export carries no libraries, items or users of its own.
+
+**One import runs at a time**, either kind: both write to the same tables, so whichever is not
+running answers `409` while the other is.
+
+Re-importing the same backup is safe: a play is recognised by the tracker's own id for it and,
+failing that, by the same person watching the same item with either end of the play within
+`merge_window_s` of one already here. That second rule is what lets a Jellystat export and a
+Streamystats export of the same evenings both be imported without counting anything twice.
 
 `GET /api/events?page=1&per_page=50&q=&type=` → Jellyfin server activity log
 ```jsonc
@@ -243,7 +257,7 @@ The collector now keeps a timeline per live play and counts interruptions.
                "position_s": 512|null,
                "detail": null | "12:40 → 31:05" | "EAC3 5.1 eng" | "Off" | "Transcode: ContainerNotSupported"} ]
   ```
-  Oldest first. Empty for imported plays (Jellystat never recorded this).
+  Oldest first. Empty for imported plays: a tracker stores one row per play and nothing of what happened during it.
 
 ## `GET /api/stats/insights` (common filters)
 
@@ -381,7 +395,7 @@ What each one gates, server-side:
 | `see_everyone` | `user_id` filters are honoured, `/api/users` and `/api/users/{id}` for anyone, all sessions in `/api/now-playing`, users in `/api/search`, everyone in `watchers` / `played_by`. |
 | `see_network` | `remote_ip`, `device_id`, `is_local` in plays and sessions; `ips` on user pages; `network` in insights; IP search in `/api/activity?q=`. Otherwise `null` / `[]`. |
 | `see_server` | `/api/server`, `/api/events`, `failed_logins` in insights, `item.path`. Otherwise `403` / `[]` / `null`. |
-| `manage` | `/api/settings`, `/api/tasks*`, `/api/import/jellystat`, `DELETE /api/activity/{id}`. Otherwise `403`. |
+| `manage` | `/api/settings`, `/api/tasks*`, `/api/import/*`, `DELETE /api/activity/{id}`. Otherwise `403`. |
 
 `/api/recap` is never widened: it is always the caller's own. `PUT /api/settings` rejects `allow_user_login` and
 `default_permissions` with `403` unless the caller is a Jellyfin administrator.
@@ -689,7 +703,7 @@ the fact (an import, the first database) are filed as resolved by `finstats`. Al
 # v1.2.2 — Languages
 
 Every audio and subtitle track of a file is kept, not only the first: ISO 639-2 codes as Jellyfin reports them, lower case, each once,
-in track order, `"und"` for a track without a language. Filled by the library read (and by a Jellystat import for files it describes).
+in track order, `"und"` for a track without a language. Filled by the library read (and by a Jellystat import for files it describes; a Streamystats export describes none).
 
 - `GET /api/items/{id}` — a film, episode or other file: `item.audio_languages: ["jpn","eng"] | null` and `item.subtitle_languages`.
   A series or a season has no tracks of its own and gets
