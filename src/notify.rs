@@ -1611,7 +1611,7 @@ mod tests {
     }
 
     fn admin() -> AuthUser {
-        AuthUser { id: "ua".into(), name: "alice".into(), is_admin: true, perms: Perms::ALL }
+        AuthUser { id: "ua".into(), name: "alice".into(), is_admin: true, perms: Perms::ALL, credential: Default::default(), ip: None }
     }
 
     #[test]
@@ -1633,7 +1633,7 @@ mod tests {
         let user = admin();
         let full = json!({ "kind": "email", "url": "smtps://smtp.example.com", "topic": "me@example.com",
                            "options": { "from": "finstats@example.com", "username": "finstats", "bcc": "someone@example.com" } });
-        let t = describe(body(full), None, &user).ok().expect("a destination that says everything");
+        let t = describe(body(full), None, &user).expect("a destination that says everything");
         assert_eq!(t.option("from"), "finstats@example.com");
         assert_eq!(t.option("username"), "finstats");
         assert_eq!(t.option("bcc"), "", "a field this kind of destination never asked for is not stored");
@@ -1644,7 +1644,7 @@ mod tests {
         assert!(describe(body(bad_sender), None, &user).is_err());
         // A channel whose address is its service's own is filled in rather than asked for.
         let telegram = json!({ "kind": "telegram", "secret": "123:abc", "topic": "-1001234567890" });
-        assert_eq!(describe(body(telegram), None, &user).ok().expect("a telegram destination").url(), "https://api.telegram.org");
+        assert_eq!(describe(body(telegram), None, &user).expect("a telegram destination").url(), "https://api.telegram.org");
     }
 
     #[test]

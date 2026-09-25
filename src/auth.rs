@@ -7,7 +7,7 @@
 use std::net::{IpAddr, SocketAddr};
 
 use axum::extract::{ConnectInfo, FromRequestParts, State};
-use axum::http::header::{COOKIE, SET_COOKIE};
+use axum::http::header::{AUTHORIZATION, COOKIE, SET_COOKIE};
 use axum::http::request::Parts;
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -18,12 +18,19 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 use crate::audit::{self, Actor};
-use crate::db::{self, rusqlite::OptionalExtension, rusqlite::params};
+use crate::db::rusqlite::{Connection, OptionalExtension, params};
+use crate::db::{self};
 use crate::jellyfin::{self, AuthError};
 use crate::state::{ApiError, ApiResult, App, JfConfig};
 
 const COOKIE_NAME: &str = "finstats_session";
 const SESSION_TTL_S: i64 = 30 * 86_400;
+/// An API key is `fs_` and 64 hex characters: recognisable in a log, greppable in a leak, and a token
+/// of any other shape never reaches the database.
+pub const KEY_PREFIX: &str = "fs_";
+const KEY_LEN: usize = 3 + 64;
+/// How often a key's last use is written down: once a minute, not once a request.
+const KEY_TOUCH_S: i64 = 60;
 const MAX_ATTEMPTS: u32 = 10;
 const ATTEMPT_WINDOW_S: i64 = 300;
 
@@ -76,7 +83,64 @@ pub struct AuthUser {
     /// A Jellyfin administrator. Only they can change who is allowed what.
     pub is_admin: bool,
     pub perms: Perms,
+    /// What this request proved itself with: the cookie a browser carries, or a key a script sent.
+    pub credential: Credential,
+    /// Where the request came from, for the audit log.
+    pub ip: Option<IpAddr>,
 }
+
+impl AuthUser {
+    /// The key this request came through, if it did.
+    pub fn key_id(&self) -> Option<i64> {
+        match self.credential {
+            Credential::Key { id, .. } => Some(id),
+            Credential::Session => None,
+        }
+    }
+}
+
+/// What a key may open: everything its maker may, or the calendar feed alone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KeyScope {
+    Full,
+    Calendar,
+}
+
+impl KeyScope {
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "full" => Some(KeyScope::Full),
+            "calendar" => Some(KeyScope::Calendar),
+            _ => None,
+        }
+    }
+    pub fn as_str(self) -> &'static str {
+        match self {
+            KeyScope::Full => "full",
+            KeyScope::Calendar => "calendar",
+        }
+    }
+}
+
+/// How a request proved itself.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Credential {
+    #[default]
+    Session,
+    Key { id: i64, scope: KeyScope },
+}
+
+/// What the headers presented, before anything is looked up.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Presented {
+    Bearer(String),
+    Cookie(String),
+}
+
+/// The feed's own extractor: a key in the query string or the header, of any scope, and never the
+/// cookie — a subscribed calendar cannot send one, and a browser must not open a feed by accident.
+#[allow(dead_code)] // its one route, the calendar feed, arrives in its own commit
+pub struct CalendarKey(pub AuthUser);
 
 /// May change settings, run tasks, import and delete plays.
 pub struct Manager(#[allow(dead_code)] pub AuthUser);
@@ -116,6 +180,142 @@ fn cookie_token(headers: &HeaderMap) -> Option<String> {
     })
 }
 
+/// `Authorization: Bearer <key>`: `None` when there is no such header at all (the cookie may be there),
+/// `Some(Err)` when there is one that is not a bearer token — which is never quietly ignored.
+pub fn bearer_token(headers: &HeaderMap) -> Option<Result<String, ApiError>> {
+    let raw = headers.get(AUTHORIZATION)?.to_str().ok().map(str::trim).unwrap_or_default();
+    let bad = || ApiError::new(StatusCode::UNAUTHORIZED, "Use `Authorization: Bearer <key>`");
+    let Some((scheme, rest)) = raw.split_once(char::is_whitespace) else { return Some(Err(bad())) };
+    let token = rest.trim();
+    Some(if scheme.eq_ignore_ascii_case("bearer") && !token.is_empty() { Ok(token.to_string()) } else { Err(bad()) })
+}
+
+/// The header wins over the cookie: it is an explicit act of this request where a cookie is ambient,
+/// so a script sending a revoked key gets its 401 rather than quietly succeeding on a browser's session.
+pub fn pick_credential(headers: &HeaderMap) -> Result<Presented, ApiError> {
+    match bearer_token(headers) {
+        Some(t) => Ok(Presented::Bearer(t?)),
+        None => cookie_token(headers).map(Presented::Cookie).ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, "Sign in to continue")),
+    }
+}
+
+pub fn looks_like_key(s: &str) -> bool {
+    s.len() == KEY_LEN && s.starts_with(KEY_PREFIX) && s[KEY_PREFIX.len()..].bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
+/// Whether a key's last use is worth writing down again.
+pub fn touch_due(last_used_at: Option<i64>, now: i64) -> bool {
+    last_used_at.is_none_or(|t| now - t >= KEY_TOUCH_S)
+}
+
+/// A new key for a user: its row id and the one time the token is ever seen in the clear.
+pub fn mint_key(c: &Connection, user_id: &str, name: &str, scope: KeyScope, expires_at: Option<i64>, now: i64) -> anyhow::Result<(i64, String)> {
+    let mut raw = [0u8; 32];
+    rand::rng().fill_bytes(&mut raw);
+    let token = format!("{KEY_PREFIX}{}", hex::encode(raw));
+    c.execute(
+        "INSERT INTO api_keys(token_hash, user_id, name, scope, created_at, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![hash_token(&token), user_id, name, scope.as_str(), now, expires_at],
+    )?;
+    Ok((c.last_insert_rowid(), token))
+}
+
+/// A session token to its user, as it was at sign-in; grants and settings read now.
+pub(crate) fn resolve_session_in(c: &Connection, settings: &crate::state::Settings, token: &str, now: i64) -> anyhow::Result<Option<AuthUser>> {
+    let user = c
+        .query_row(
+            "SELECT user_id, user_name, is_admin FROM sessions WHERE token_hash = ?1 AND expires_at > ?2",
+            params![hash_token(token), now],
+            |r| Ok(AuthUser { id: r.get(0)?, name: r.get(1)?, is_admin: r.get::<_, i64>(2)? != 0, perms: Perms::default(), credential: Credential::Session, ip: None }),
+        )
+        .optional()?;
+    let Some(mut user) = user else { return Ok(None) };
+    let grants = if user.is_admin { vec![] } else { stored_grants(c, &user.id)? };
+    let Some(perms) = effective(user.is_admin, &grants, settings) else { return Ok(None) };
+    user.perms = perms;
+    Ok(Some(user))
+}
+
+/// A key to its user, **as they are now**: a key may live years and stands in for its maker as the
+/// users table has them today, so a demoted administrator's key demotes and a removed or disabled
+/// user's key dies. Then the same grants and settings as a session, so revoking a permission or
+/// switching sign-in off revokes the key on the next request.
+pub(crate) fn resolve_key_in(c: &Connection, settings: &crate::state::Settings, token: &str, now: i64) -> anyhow::Result<Option<AuthUser>> {
+    if !looks_like_key(token) {
+        return Ok(None);
+    }
+    let row = c
+        .query_row(
+            "SELECT k.id, k.scope, k.user_id, k.expires_at, k.revoked_at, u.name, u.is_admin, u.is_disabled, u.removed
+             FROM api_keys k LEFT JOIN users u ON u.id = k.user_id WHERE k.token_hash = ?1",
+            [hash_token(token)],
+            |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, Option<i64>>(3)?, r.get::<_, Option<i64>>(4)?,
+                    r.get::<_, Option<String>>(5)?, r.get::<_, Option<i64>>(6)?, r.get::<_, Option<i64>>(7)?, r.get::<_, Option<i64>>(8)?)),
+        )
+        .optional()?;
+    let Some((id, scope, user_id, expires_at, revoked_at, name, is_admin, disabled, removed)) = row else { return Ok(None) };
+    let (Some(name), Some(scope)) = (name, KeyScope::parse(&scope)) else { return Ok(None) };
+    if revoked_at.is_some() || expires_at.is_some_and(|e| e <= now) || disabled.unwrap_or(0) != 0 || removed.unwrap_or(0) != 0 {
+        return Ok(None);
+    }
+    let is_admin = is_admin.unwrap_or(0) != 0;
+    let grants = if is_admin { vec![] } else { stored_grants(c, &user_id)? };
+    let Some(perms) = effective(is_admin, &grants, settings) else { return Ok(None) };
+    Ok(Some(AuthUser { id: user_id, name, is_admin, perms, credential: Credential::Key { id, scope }, ip: None }))
+}
+
+/// A calendar key opens the calendar feed and nothing else.
+pub fn refuse_calendar_key(user: &AuthUser) -> Result<(), ApiError> {
+    match user.credential {
+        Credential::Key { scope: KeyScope::Calendar, .. } => Err(ApiError::new(StatusCode::FORBIDDEN, "This key only opens the calendar feed")),
+        _ => Ok(()),
+    }
+}
+
+/// The address a request came from, when the listener recorded one.
+fn request_ip(parts: &Parts, app: &App) -> Option<IpAddr> {
+    parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|ConnectInfo(peer)| client_ip(app, &parts.headers, *peer))
+}
+
+/// A presented credential to its user: the one place a request proves who it is.
+async fn resolve(presented: Presented, ip: Option<IpAddr>, app: &App) -> Result<AuthUser, ApiError> {
+    let unauthorized = || ApiError::new(StatusCode::UNAUTHORIZED, "Sign in to continue");
+    let settings = app.settings();
+    let user = app
+        .db
+        .call(move |c| {
+            let now = db::now();
+            match presented {
+                Presented::Cookie(token) => resolve_session_in(c, &settings, &token, now),
+                Presented::Bearer(token) => {
+                    let user = resolve_key_in(c, &settings, &token, now)?;
+                    if let Some(u) = &user {
+                        touch_key(c, u, ip, now)?;
+                    }
+                    Ok(user)
+                }
+            }
+        })
+        .await?
+        .ok_or_else(unauthorized)?;
+    Ok(AuthUser { ip, ..user })
+}
+
+/// Write a key's last use down, once a minute at most; its first use is an audit entry.
+fn touch_key(c: &Connection, u: &AuthUser, ip: Option<IpAddr>, now: i64) -> anyhow::Result<()> {
+    let Some(id) = u.key_id() else { return Ok(()) };
+    let last: Option<i64> = c.query_row("SELECT last_used_at FROM api_keys WHERE id = ?1", [id], |r| r.get(0))?;
+    if !touch_due(last, now) {
+        return Ok(());
+    }
+    c.execute("UPDATE api_keys SET last_used_at = ?2, last_used_ip = ?3 WHERE id = ?1", params![id, now, ip.map(|i| i.to_string())])?;
+    if last.is_none() {
+        let actor = audit::Actor { user_id: Some(u.id.clone()), user_name: Some(u.name.clone()), ip, key_id: Some(id) };
+        audit::record_quietly(c, &audit::Entry::new("key_used", actor).at(now).target(id.to_string()));
+    }
+    Ok(())
+}
+
 pub fn client_ip(app: &App, headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
     if app.trust_proxy {
         if let Some(ip) = headers
@@ -133,31 +333,28 @@ pub fn client_ip(app: &App, headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
 impl FromRequestParts<App> for AuthUser {
     type Rejection = ApiError;
 
+    /// Every route but the calendar feed: the cookie or a full key. Grants are read on every
+    /// request, so a change by an administrator applies at once — to a key as much as to a session.
     async fn from_request_parts(parts: &mut Parts, app: &App) -> Result<Self, Self::Rejection> {
-        let unauthorized = || ApiError::new(StatusCode::UNAUTHORIZED, "Sign in to continue");
-        let token = cookie_token(&parts.headers).ok_or_else(unauthorized)?;
-        let hash = hash_token(&token);
-        // Grants are read on every request, so a change by an administrator applies at once.
-        let (mut user, grants) = app
-            .db
-            .call(move |c| {
-                let user = c
-                    .query_row(
-                        "SELECT user_id, user_name, is_admin FROM sessions WHERE token_hash = ?1 AND expires_at > ?2",
-                        params![hash, db::now()],
-                        |r| Ok(AuthUser { id: r.get(0)?, name: r.get(1)?, is_admin: r.get::<_, i64>(2)? != 0, perms: Perms::default() }),
-                    )
-                    .optional()?;
-                let grants = match &user {
-                    Some(u) if !u.is_admin => stored_grants(c, &u.id)?,
-                    _ => vec![],
-                };
-                Ok(user.map(|u| (u, grants)))
-            })
-            .await?
-            .ok_or_else(unauthorized)?;
-        user.perms = effective(user.is_admin, &grants, &app.settings()).ok_or_else(unauthorized)?;
+        let user = resolve(pick_credential(&parts.headers)?, request_ip(parts, app), app).await?;
+        refuse_calendar_key(&user)?;
         Ok(user)
+    }
+}
+
+impl FromRequestParts<App> for CalendarKey {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, app: &App) -> Result<Self, Self::Rejection> {
+        let in_query = parts.uri.query().and_then(|q| q.split('&').find_map(|kv| kv.strip_prefix("key=")).map(|v| v.trim().to_string())).filter(|v| !v.is_empty());
+        let presented = match in_query {
+            Some(token) => Presented::Bearer(token),
+            None => match bearer_token(&parts.headers) {
+                Some(t) => Presented::Bearer(t?),
+                None => return Err(ApiError::new(StatusCode::UNAUTHORIZED, "This feed needs a key: add ?key=… to its address")),
+            },
+        };
+        Ok(CalendarKey(resolve(presented, request_ip(parts, app), app).await?))
     }
 }
 
@@ -526,5 +723,138 @@ mod tests {
         let s = Settings { default_permissions: grants(&["see_everyone", "root"]), ..Settings::default() };
         assert!(s.validate().is_err());
         assert!(Settings { default_permissions: grants(&["manage"]), ..Settings::default() }.validate().is_ok());
+    }
+}
+
+#[cfg(test)]
+mod key_tests {
+    use super::*;
+    use crate::db::rusqlite::Connection;
+    use crate::state::Settings;
+
+    fn conn() -> Connection {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u1', 'alice', 1, 1), ('u2', 'bob', 0, 1);
+             INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('u2', '[\"see_everyone\"]', 1);",
+        )
+        .unwrap();
+        c
+    }
+    fn open() -> Settings {
+        Settings { allow_user_login: true, ..Default::default() }
+    }
+
+    #[test]
+    fn a_key_resolves_to_the_same_permissions_as_a_session() {
+        let c = conn();
+        c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u2', 'bob', 0, 1, 9999999999)", [hash_token("cookie-token")]).unwrap();
+        let (_, key) = mint_key(&c, "u2", "laptop", KeyScope::Full, None, 1000).unwrap();
+        let by_session = resolve_session_in(&c, &open(), "cookie-token", 1000).unwrap().expect("the session is good");
+        let by_key = resolve_key_in(&c, &open(), &key, 1000).unwrap().expect("the key is good");
+        assert_eq!((by_key.id.as_str(), by_key.name.as_str(), by_key.is_admin, by_key.perms), (by_session.id.as_str(), by_session.name.as_str(), by_session.is_admin, by_session.perms));
+        assert!(by_key.perms.see_everyone && !by_key.perms.manage);
+        assert_eq!(by_session.credential, Credential::Session);
+        assert!(matches!(by_key.credential, Credential::Key { scope: KeyScope::Full, .. }));
+        assert_eq!(by_key.key_id(), Some(1));
+        // An administrator's key is an administrator: everything, read live from the users table.
+        let (_, admin) = mint_key(&c, "u1", "script", KeyScope::Full, None, 1000).unwrap();
+        assert_eq!(resolve_key_in(&c, &open(), &admin, 1000).unwrap().unwrap().perms, Perms::ALL);
+        c.execute_batch("UPDATE users SET is_admin = 0 WHERE id = 'u1'").unwrap();
+        assert_eq!(resolve_key_in(&c, &open(), &admin, 1000).unwrap().unwrap().perms, Perms::default(), "demoted, the key demotes with them");
+    }
+
+    #[test]
+    fn a_calendar_key_is_refused_everywhere_but_the_feed() {
+        let c = conn();
+        let (_, key) = mint_key(&c, "u2", "phone", KeyScope::Calendar, None, 1000).unwrap();
+        let user = resolve_key_in(&c, &open(), &key, 1000).unwrap().unwrap();
+        assert!(matches!(user.credential, Credential::Key { scope: KeyScope::Calendar, .. }));
+        assert_eq!(refuse_calendar_key(&user).unwrap_err().0, StatusCode::FORBIDDEN);
+        let (_, full) = mint_key(&c, "u2", "laptop", KeyScope::Full, None, 1000).unwrap();
+        assert!(refuse_calendar_key(&resolve_key_in(&c, &open(), &full, 1000).unwrap().unwrap()).is_ok());
+    }
+
+    #[test]
+    fn an_expired_revoked_or_unknown_key_is_refused() {
+        let c = conn();
+        let (id, expiring) = mint_key(&c, "u2", "a", KeyScope::Full, Some(2000), 1000).unwrap();
+        assert!(resolve_key_in(&c, &open(), &expiring, 1999).unwrap().is_some());
+        assert!(resolve_key_in(&c, &open(), &expiring, 2000).unwrap().is_none(), "expired on the second");
+        let (rid, revoked) = mint_key(&c, "u2", "b", KeyScope::Full, None, 1000).unwrap();
+        c.execute("UPDATE api_keys SET revoked_at = 1500 WHERE id = ?1", [rid]).unwrap();
+        assert!(resolve_key_in(&c, &open(), &revoked, 1600).unwrap().is_none());
+        assert!(resolve_key_in(&c, &open(), &format!("fs_{}", "0".repeat(64)), 1000).unwrap().is_none(), "unknown");
+        assert!(resolve_key_in(&c, &open(), "not a key", 1000).unwrap().is_none(), "not even shaped like one");
+        assert_ne!(id, rid);
+    }
+
+    #[test]
+    fn a_key_of_someone_who_may_no_longer_sign_in_is_refused() {
+        let c = conn();
+        let (_, key) = mint_key(&c, "u2", "laptop", KeyScope::Full, None, 1000).unwrap();
+        assert!(resolve_key_in(&c, &open(), &key, 1000).unwrap().is_some());
+        let closed = Settings { allow_user_login: false, ..Default::default() };
+        assert!(resolve_key_in(&c, &closed, &key, 1000).unwrap().is_none(), "sign-in switched off, no sign_in grant: the key dies with the access");
+        c.execute_batch("UPDATE user_permissions SET permissions = '[\"sign_in\"]' WHERE user_id = 'u2'").unwrap();
+        assert!(resolve_key_in(&c, &closed, &key, 1000).unwrap().is_some(), "granted sign_in, the key lives");
+        c.execute_batch("UPDATE users SET is_disabled = 1 WHERE id = 'u2'").unwrap();
+        assert!(resolve_key_in(&c, &open(), &key, 1000).unwrap().is_none(), "disabled in Jellyfin");
+        c.execute_batch("UPDATE users SET is_disabled = 0, removed = 1 WHERE id = 'u2'").unwrap();
+        assert!(resolve_key_in(&c, &open(), &key, 1000).unwrap().is_none(), "removed from Jellyfin");
+    }
+
+    #[test]
+    fn the_header_beats_the_cookie() {
+        let mut h = HeaderMap::new();
+        h.insert(COOKIE, HeaderValue::from_static("finstats_session=cookie-token"));
+        assert_eq!(pick_credential(&h).unwrap(), Presented::Cookie("cookie-token".into()));
+        h.insert(AUTHORIZATION, HeaderValue::from_static("Bearer fs_abc"));
+        assert_eq!(pick_credential(&h).unwrap(), Presented::Bearer("fs_abc".into()), "an explicit header, not the ambient cookie");
+        h.insert(AUTHORIZATION, HeaderValue::from_static("Basic dXNlcjpwYXNz"));
+        assert_eq!(pick_credential(&h).unwrap_err().0, StatusCode::UNAUTHORIZED, "a wrong header never falls back to the cookie");
+        assert_eq!(pick_credential(&HeaderMap::new()).unwrap_err().0, StatusCode::UNAUTHORIZED);
+    }
+
+    #[test]
+    fn only_a_token_shaped_like_a_key_reaches_the_database() {
+        let hex64 = "a".repeat(64);
+        assert!(looks_like_key(&format!("fs_{hex64}")));
+        assert!(!looks_like_key(&format!("fs_{}", "a".repeat(63))));
+        assert!(!looks_like_key(&format!("fs_{}", "A".repeat(64))), "lowercase hex only");
+        assert!(!looks_like_key(&hex64), "no prefix");
+        assert!(!looks_like_key(&format!("fs_{}", "g".repeat(64))));
+        assert!(!looks_like_key(""));
+    }
+
+    #[test]
+    fn a_key_is_touched_at_most_once_a_minute() {
+        assert!(touch_due(None, 1000));
+        assert!(!touch_due(Some(1000 - 30), 1000));
+        assert!(touch_due(Some(1000 - 61), 1000));
+    }
+
+    #[test]
+    fn a_token_is_stored_only_as_a_hash() {
+        let c = conn();
+        let (_, key) = mint_key(&c, "u2", "laptop", KeyScope::Full, None, 1000).unwrap();
+        assert!(looks_like_key(&key));
+        let plain: i64 = c.query_row("SELECT COUNT(*) FROM api_keys WHERE token_hash = ?1", [&key], |r| r.get(0)).unwrap();
+        let hashed: i64 = c.query_row("SELECT COUNT(*) FROM api_keys WHERE token_hash = ?1", [hash_token(&key)], |r| r.get(0)).unwrap();
+        assert_eq!((plain, hashed), (0, 1));
+    }
+
+    #[test]
+    fn bearer_scheme_is_case_insensitive_and_spacing_tolerant() {
+        let h = |v: &'static str| { let mut m = HeaderMap::new(); m.insert(AUTHORIZATION, HeaderValue::from_static(v)); m };
+        assert_eq!(bearer_token(&h("bearer x")).unwrap().unwrap(), "x");
+        assert_eq!(bearer_token(&h("BEARER   x  ")).unwrap().unwrap(), "x");
+        assert!(bearer_token(&h("Basic x")).unwrap().is_err());
+        assert!(bearer_token(&h("Bearer")).unwrap().is_err());
+        assert!(bearer_token(&h("Bearer   ")).unwrap().is_err());
+        assert!(bearer_token(&HeaderMap::new()).is_none(), "no header at all is not an error: the cookie may be there");
     }
 }

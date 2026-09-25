@@ -14,6 +14,7 @@ mod groups;
 mod import;
 mod jellyfin;
 mod jobs;
+mod keys;
 mod licenses;
 mod mail;
 mod media;

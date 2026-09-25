@@ -1925,7 +1925,7 @@ mod tests {
 
     fn caller(id: &str, see_everyone: bool) -> AuthUser {
         let perms = crate::auth::Perms { see_everyone, ..Default::default() };
-        AuthUser { id: id.to_string(), name: "x".into(), is_admin: false, perms }
+        AuthUser { id: id.to_string(), name: "x".into(), is_admin: false, perms, credential: Default::default(), ip: None }
     }
 
     #[test]

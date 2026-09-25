@@ -348,6 +348,7 @@ pub fn test_app() -> App {
 
 // ---------------------------------------------------------------- errors
 
+#[derive(Debug)]
 pub struct ApiError(pub StatusCode, pub String);
 
 impl ApiError {

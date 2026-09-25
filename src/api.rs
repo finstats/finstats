@@ -67,6 +67,8 @@ pub fn router(app: App) -> Router {
         .route("/search", get(stats::search))
         .route("/events", get(stats::events))
         .route("/audit", get(crate::audit::audit))
+        .route("/keys", get(crate::keys::list).post(crate::keys::create))
+        .route("/keys/{id}", delete(crate::keys::revoke))
         .route("/security", get(security::overview))
         .route("/security/alerts", get(security::alerts))
         .route("/security/alerts/resolve-all", post(security::resolve_all))
@@ -120,7 +122,8 @@ pub fn router(app: App) -> Router {
 // ---------------------------------------------------------------- middleware
 
 /// Browsers attach `Origin` to cross-site writes. Refuse any write whose origin is not us.
-/// (SameSite=Lax cookies already cover this; this is the second lock.)
+/// (SameSite=Lax cookies already cover this; this is the second lock. A `Bearer` key needs neither:
+/// no browser adds an `Authorization` header on its own.)
 ///
 /// Behind a reverse proxy the browser's `Origin` is the public name while `Host` has been rewritten to
 /// the internal one, so a proxy's `X-Forwarded-Host` is what the origin should match. But that header
@@ -143,7 +146,10 @@ async fn same_origin(State(app): State<App>, req: Request, next: Next) -> Respon
 /// The same-origin decision, pulled out so it can be tested without a live request. A write is
 /// cross-site when it carries both an `Origin` and a `Host` and the origin's host matches neither the
 /// real `Host` nor — **only behind a trusted proxy** — the `X-Forwarded-Host`. A request with no
-/// `Origin` (a native client, curl) is not judged here: the SameSite=Lax cookie is what covers it.
+/// `Origin` (a native client, curl) is not judged here: it carries either the SameSite=Lax cookie, which a
+/// browser attaches to a cross-site navigation only and never to a cross-site `fetch`, or a `Bearer` key,
+/// which no browser adds on its own — a cross-site page cannot set `Authorization` without a CORS
+/// preflight, and finstats answers none.
 fn cross_site(origin: Option<&str>, host: Option<&str>, forwarded: Option<&str>, trust_proxy: bool) -> bool {
     let (Some(origin), Some(host)) = (origin, host) else { return false };
     let origin_host = origin.split_once("://").map(|(_, h)| h).unwrap_or(origin);
@@ -814,7 +820,8 @@ mod tests {
         // Same origin: allowed. (`Host` carries no scheme; `Origin` does.)
         assert!(!cross_site(Some("https://finstats.example"), Some(us), None, false));
         assert!(!cross_site(Some("http://finstats.example"), Some(us), None, false));
-        // No Origin at all (a native client): not judged here — SameSite=Lax covers it.
+        // No Origin at all (a native client): not judged here — a cookie a browser only attaches to a
+        // navigation, or a Bearer key no browser adds on its own.
         assert!(!cross_site(None, Some(us), None, false));
         // A foreign origin is refused.
         assert!(cross_site(Some("https://evil.example"), Some(us), None, false));

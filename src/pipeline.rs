@@ -695,10 +695,10 @@ mod tests {
     }
 
     fn plain(id: &str) -> AuthUser {
-        AuthUser { id: id.into(), name: id.into(), is_admin: false, perms: crate::auth::Perms::default() }
+        AuthUser { id: id.into(), name: id.into(), is_admin: false, perms: crate::auth::Perms::default(), credential: Default::default(), ip: None }
     }
     fn everyone(id: &str) -> AuthUser {
-        AuthUser { id: id.into(), name: id.into(), is_admin: false, perms: crate::auth::Perms { see_everyone: true, ..Default::default() } }
+        AuthUser { id: id.into(), name: id.into(), is_admin: false, perms: crate::auth::Perms { see_everyone: true, ..Default::default() }, credential: Default::default(), ip: None }
     }
 
     /// alice asked for a film (HD and 4K) and season 2 of a show; bob asked for a film; someone Seerr cannot place asked for another.

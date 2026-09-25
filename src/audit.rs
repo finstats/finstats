@@ -48,7 +48,7 @@ pub struct Actor {
 
 impl From<&AuthUser> for Actor {
     fn from(u: &AuthUser) -> Self {
-        Actor { user_id: Some(u.id.clone()), user_name: Some(u.name.clone()), ip: None, key_id: None }
+        Actor { user_id: Some(u.id.clone()), user_name: Some(u.name.clone()), ip: u.ip, key_id: u.key_id() }
     }
 }
 
