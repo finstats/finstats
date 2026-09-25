@@ -506,8 +506,10 @@ the loader its `dataView` uses, and `main.js` passes it as `route(…, { prefetc
 prefetched, and a loader copied into `prefetch.js` would drift from the page's URLs and silently miss. Clearing the cache bumps a
 generation and aborts what is on its way, so an answer from before a sign-out or a write is never stored. Pages join a prefetch
 already in flight (`shareRequestsOf`); only the prefetcher's requests can be joined, because a page's signal dies with the page.
-**Settings (`pages/settings.js`, `settings/*.js`) is one section on screen at a time**: `/settings/:section`, a sticky list of sections on the
-left (a scrolling chip row on a phone), and a finder in the header (`/` focuses it) built from each section's `entries`. A section is a module
+**Settings (`pages/settings.js`, `settings/*.js`) and Server (`pages/server.js`) are one section on screen at a time**, on the shell in
+`sections.js` (`pickSection` forwards bare and legacy addresses, `sectionNav` draws the sticky list, `reveal` marks a row a link pointed at):
+`/settings/:section` and `/server/:section`, a sticky list on the left (a row of chips on a phone), and on Settings a finder in the header
+(`/` focuses it) built from each section's `entries`. A section is a module
 exporting `{ key, label, sub, group, icon, visible, entries, render(slot, store) }`; `settings/common.js` holds the store (`/settings` and
 `/tasks`, fetched once per visit, tasks polled only if a section subscribes) and the two shapes a setting takes: `toggleRow` (saves itself) and
 `numberForm` (one `Save` per section, bottom right). A setting is one row — label, one line of help of at most ~150 characters, control on the
