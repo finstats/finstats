@@ -430,6 +430,12 @@ pre-compressed needs the same exemption.
 
 **HTTP contract.** `docs/api.md` is the contract the UI is written against; change it together with the endpoint.
 
+**The README says how finstats is built** — a blockquote under the hero shot disclosing that most of the code was
+written by Claude Code from the maintainer's decisions, and what that does and does not mean: test-first, reviewed
+before it lands, `cargo test` in CI on every push to `main` and every release tag, each release run against a real
+server. Those are promises, like the privacy sentences: if any of them stops being true, the blockquote changes in
+the same commit. It names no model version on purpose, so it does not go stale.
+
 For people: `CONTRIBUTING.md` is the one guide (what fits the project, running from source, the local Docker setup with a throwaway
 Jellyfin, rules for a change, pull requests); `SECURITY.md` covers private reporting, `CODE_OF_CONDUCT.md` behaviour (it forbids posting other people's viewing data), and
 `.github/` holds the issue forms, the discussion forms (file name = category slug: `q-a`, `ideas`, `show-and-tell`) and the PR template. Keep their rules in step with this file, and do

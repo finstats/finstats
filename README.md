@@ -18,6 +18,13 @@
   <img src="docs/screenshots/dashboard.png" alt="The finstats dashboard: two live streams, watch-time tiles and the newest arrivals in the library" width="100%">
 </p>
 
+> **How finstats is built: with AI assistance.** Most of the code here was written by Claude Code,
+> working from the maintainer's design decisions and reviewed before it landed. Nothing is generated
+> and forgotten — every change is written test-first, `cargo test` runs in CI on every push to `main`
+> and on every release tag, and each release is run against a real Jellyfin server before it ships.
+> Said plainly because you should know what you are running; the responsibility for this code is the
+> maintainer's, not a model's.
+
 ## Why finstats
 
 Jellyfin tells you what is playing right now. It does not tell you that one client transcodes
