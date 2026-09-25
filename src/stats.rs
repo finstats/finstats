@@ -689,7 +689,7 @@ pub async fn activity_detail(State(app): State<App>, user: AuthUser, Path(id): P
         cond.add_in("p.user_id", &scope.user_ids);
         let Some(play) = one_json(c, &format!("{PLAY_SELECT} {}", cond.sql()), &cond.args)? else { return Ok(None) };
         let mut play = decorate_play(play, scope.perms.see_network, true);
-        let events = rows_json(c, "SELECT at, kind, position_s, detail FROM playback_events WHERE playback_id = ?1 ORDER BY id", &[id.into()])?;
+        let events = rows_json(c, "SELECT at, kind, position_s, from_s, detail FROM playback_events WHERE playback_id = ?1 ORDER BY id", &[id.into()])?;
         play["events"] = json!(events);
         // The people it was watched with. Visible to anyone who can see this play: it was a shared evening.
         let with = match play["group_id"].as_i64() {
@@ -1209,7 +1209,7 @@ fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<
     // the first change is never an event, so a later language change is not a second switch-on.
     let positions = |sql: &str| -> Result<Vec<i64>> {
         let mut stmt = c.prepare(&format!("SELECT e.position_s FROM playbacks p JOIN playback_events e ON e.playback_id = p.id {} AND {sql}", ended.sql()))?;
-        let out = stmt.query_map(params_from_iter(ended.args.iter()), |r| r.get::<_, Option<i64>>(0))?.filter_map(|r| r.transpose()).collect::<Result<_, _>>()?;
+        let out = stmt.query_map(params_from_iter(ended.args.iter()), |r| r.get::<_, Option<i64>>(0))?.filter_map(Result::transpose).collect::<Result<_, _>>()?;
         Ok(out)
     };
     let rewinds = positions("e.kind = 'seek' AND e.from_s IS NOT NULL AND e.position_s IS NOT NULL AND e.from_s > e.position_s")?;
@@ -1218,6 +1218,7 @@ fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<
          AND e.id = (SELECT MIN(o.id) FROM playback_events o WHERE o.playback_id = p.id AND o.kind = 'subtitle')",
     )?;
     Ok(json!({
+        "runtime_s": runtime,
         "bucket_s": bucket_s,
         "plays": rows.len(),
         "measured": measured,
@@ -1275,7 +1276,7 @@ fn series_seasons(c: &Connection, cond: &Cond, series_id: &str, series_removed: 
 /// see everyone: from one person's own plays they would be noise, and a title in "files nobody gets
 /// into" is a fact about other people's viewing.
 pub async fn file_signals(State(app): State<App>, user: AuthUser, Query(q): Query<FilterQuery>) -> ApiResult {
-    let out = scoped(&app, &user, &q, |c, scope| file_signals_for(c, scope)).await?;
+    let out = scoped(&app, &user, &q, file_signals_for).await?;
     Ok(Json(out))
 }
 
@@ -2032,7 +2033,7 @@ mod tests {
         let ins = item_insights(&c, &cond, Some(6000)).unwrap();
         assert_eq!(ins["plays"], 4);
         assert_eq!((ins["measured"].as_i64(), ins["estimated"].as_i64()), (Some(1), Some(3)), "said apart, never mixed silently");
-        assert_eq!(ins["bucket_s"], 120);
+        assert_eq!((ins["bucket_s"].as_i64(), ins["runtime_s"].as_i64()), (Some(120), Some(6000)), "the axis the curve is drawn on travels with it");
         let curve = ins["curve"].as_array().unwrap();
         assert_eq!(curve.len(), 51);
         assert_eq!(curve[5], 1.0, "at ten minutes all four are still going");
