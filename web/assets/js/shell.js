@@ -20,6 +20,7 @@ function navItems() {
     { href: '/recap', label: 'Recap', icon: 'recap' },
     { href: `/users/${me.id}`, label: 'My profile', icon: 'user' },
     { href: '/activity', label: 'Activity', icon: 'activity' },
+    { href: '/together', label: 'Together', icon: 'users' },
     can('see_everyone') ? { href: '/users', label: 'Users', icon: 'users', not: `/users/${me.id}` } : null,
     { href: '/libraries', label: 'Libraries', icon: 'library', also: ['/items'] },
     { href: '/playback', label: 'Playback', icon: 'sliders' },
