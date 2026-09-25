@@ -129,9 +129,11 @@ export default function dashboard(ctx) {
       const nothingYet = days === 0 && !userId && !(overview.totals && overview.totals.plays);
       if (nothingYet) {
         return [emptyState('No plays recorded yet',
-          can('manage') ? 'finstats is now watching your Jellyfin server — new plays show up here as they happen. You can also bring in your history from Jellystat.'
+          can('manage') ? 'finstats is now watching your Jellyfin server — new plays show up here as they happen. You can also bring in the history you already have, from Jellystat or Streamystats.'
                 : 'Your plays show up here as they happen.',
-          can('manage') ? h('a', { class: 'btn btn-primary', href: '/settings#import' }, icon('upload', 14), 'Import from Jellystat') : null), dlCard, shelfCard, comingCard];
+          can('manage') ? h('div', { class: 'empty-buttons' },
+            h('a', { class: 'btn btn-primary', href: '/settings#import-jellystat' }, icon('upload', 14), 'Import from Jellystat'),
+            h('a', { class: 'btn', href: '/settings#import-streamystats' }, icon('upload', 14), 'Import from Streamystats')) : null), dlCard, shelfCard, comingCard];
       }
       const usersMode = admin && !userId;
       return [

@@ -696,8 +696,12 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin,
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
+/// The trackers finstats can take history from, each with its own task so each Settings card can
+/// watch its own import. Only one runs at a time whichever it is: they write to the same tables.
+pub const IMPORT_TASKS: [&str; 2] = ["import", "import_streamystats"];
+
 async fn import_jellystat(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult<Response> {
-    let path = receive(&app, req, "jellystat-upload.tmp").await?;
+    let path = receive(&app, req, "import", "jellystat-upload.tmp").await?;
     let worker = app.clone();
     tokio::task::spawn_blocking(move || {
         let outcome = import::run(&worker.db, &path, Some(&worker.tasks));
@@ -708,13 +712,13 @@ async fn import_jellystat(State(app): State<App>, Manager(_): Manager, req: Requ
 }
 
 async fn import_streamystats(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult<Response> {
-    let path = receive(&app, req, "streamystats-upload.tmp").await?;
+    let path = receive(&app, req, "import_streamystats", "streamystats-upload.tmp").await?;
     let worker = app.clone();
     tokio::task::spawn_blocking(move || {
         let outcome = streamystats::run(&worker.db, &path, Some(&worker.tasks));
         let _ = std::fs::remove_file(&path);
         worker.tasks.finish(
-            "import",
+            "import_streamystats",
             outcome.map(|r| {
                 let mut msg = format!("Imported {} plays ({} already present)", r.plays_imported, r.plays_skipped);
                 if r.marked_watched > 0 {
@@ -727,10 +731,9 @@ async fn import_streamystats(State(app): State<App>, Manager(_): Manager, req: R
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
-/// Stream an uploaded export to disk. One import at a time, whichever tracker it came from: they
-/// write to the same tables and share the task the page watches.
-async fn receive(app: &App, req: Request, name: &str) -> ApiResult<std::path::PathBuf> {
-    if !app.tasks.try_start("import", "Receiving backup") {
+/// Stream an uploaded export to disk. One import at a time, whichever tracker it came from.
+async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> ApiResult<std::path::PathBuf> {
+    if IMPORT_TASKS.iter().any(|other| *other != task && app.tasks.running(other)) || !app.tasks.try_start(task, "Receiving backup") {
         return Err(ApiError::new(StatusCode::CONFLICT, "An import is already running"));
     }
     let path = app.data_dir.join(name);
@@ -751,7 +754,7 @@ async fn receive(app: &App, req: Request, name: &str) -> ApiResult<std::path::Pa
     match received {
         Ok(0) => {
             let _ = tokio::fs::remove_file(&path).await;
-            app.tasks.finish("import", Err(anyhow::anyhow!("The uploaded file was empty")));
+            app.tasks.finish(task, Err(anyhow::anyhow!("The uploaded file was empty")));
             Err(ApiError::bad_request("The uploaded file was empty"))
         }
         Ok(total) => {
@@ -761,7 +764,7 @@ async fn receive(app: &App, req: Request, name: &str) -> ApiResult<std::path::Pa
         Err(e) => {
             let _ = tokio::fs::remove_file(&path).await;
             let msg = format!("{e:#}");
-            app.tasks.finish("import", Err(e));
+            app.tasks.finish(task, Err(e));
             Err(ApiError::bad_request(msg))
         }
     }
@@ -770,6 +773,22 @@ async fn receive(app: &App, req: Request, name: &str) -> ApiResult<std::path::Pa
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn both_ways_of_importing_history_have_a_task_of_their_own() {
+        // `Tasks::try_start` panics on an id it does not know, and these two are started from
+        // their own Settings card rather than through `RUNNABLE`, so nothing else checks them.
+        let tasks = crate::state::Tasks::new();
+        for id in IMPORT_TASKS {
+            assert!(crate::state::TASK_IDS.contains(&id), "`{id}` would panic in Tasks::try_start");
+            assert!(!tasks.running(id));
+            assert!(tasks.try_start(id, "Receiving backup"));
+            assert!(tasks.running(id));
+            assert!(!tasks.try_start(id, "Receiving backup"), "`{id}` must refuse a second run");
+        }
+        // Each one refuses while the other is going: they write to the same tables.
+        assert!(IMPORT_TASKS.iter().any(|id| tasks.running(id)));
+    }
 
     #[test]
     fn every_task_that_can_be_started_is_known_and_has_exactly_one_runner() {

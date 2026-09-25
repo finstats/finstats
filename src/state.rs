@@ -245,7 +245,7 @@ pub struct TaskState {
 #[derive(Clone)]
 pub struct Tasks(Arc<Mutex<BTreeMap<&'static str, TaskState>>>);
 
-pub const TASK_IDS: [&str; 12] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "import", "backup", "restore", "geoip", "sync_upcoming", "sync_requests", "sync_grabs"];
+pub const TASK_IDS: [&str; 13] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "import", "import_streamystats", "backup", "restore", "geoip", "sync_upcoming", "sync_requests", "sync_grabs"];
 
 impl Tasks {
     pub fn new() -> Self {
@@ -256,6 +256,10 @@ impl Tasks {
             })
             .collect();
         Tasks(Arc::new(Mutex::new(map)))
+    }
+
+    pub fn running(&self, id: &str) -> bool {
+        self.0.lock().unwrap().get(id).is_some_and(|t| t.state == "running")
     }
 
     /// Returns false when the task is already running.

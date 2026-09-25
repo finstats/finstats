@@ -18,10 +18,16 @@ export function networkChip(isLocal) {
     icon(isLocal ? 'lan' : 'globe', 12), isLocal ? 'Local' : 'Remote');
 }
 
+// Where a play came from. Anything but 'live' is history somebody brought with them: one row per
+// play, so there is no timeline behind it and no pause or skip count.
+const SOURCE = { live: 'Recorded by finstats', jellystat: 'Imported from Jellystat', streamystats: 'Imported from Streamystats' };
+const imported = (p) => p.source && p.source !== 'live';
+const sourceName = (p) => SOURCE[p.source] || 'Imported';
+
 function timeline(p) {
   const events = Array.isArray(p.events) ? p.events : [];
   if (!events.length) {
-    const why = p.source === 'jellystat' ? 'Imported from Jellystat, which doesn’t record what happens during a play.'
+    const why = imported(p) ? `${sourceName(p)}, which records one row per play and nothing of what happens during it.`
       : 'Nothing was recorded during this play.';
     return h('p', { class: 'help' }, why);
   }
@@ -68,7 +74,7 @@ export function openPlayModal(play, { onDeleted } = {}) {
           canLink ? h('a', { href: `/items/${p.item_id}`, onClick: close }, p.item_name) : p.item_name) : null,
         h('div', { class: 'play-head-meta' }, methodBadge(p.play_method),
           p.active ? h('span', { class: 'badge live' }, h('span', { class: 'badge-dot' }), 'Playing now') : null,
-          h('span', { class: 'chip' }, p.source === 'jellystat' ? 'Imported from Jellystat' : 'Recorded by finstats'),
+          h('span', { class: 'chip' }, sourceName(p)),
           canLink ? null : h('span', { class: 'chip' }, 'No longer in library'))));
 
     const session = facts([
@@ -78,8 +84,8 @@ export function openPlayModal(play, { onDeleted } = {}) {
       ['Watched', h('span', { title: durationExact(p.duration_s) }, duration(p.duration_s)), { mono: true }],
       ['Paused for', p.paused_s ? duration(p.paused_s) : '–', { mono: true }],
       p.start_position_s > 30 ? ['Resumed from', clock(p.start_position_s), { mono: true }] : null,
-      p.source !== 'jellystat' && p.pause_count != null ? ['Pauses', num(p.pause_count), { mono: true }] : null,
-      p.source !== 'jellystat' && p.seek_count != null ? ['Skips', num(p.seek_count), { mono: true }] : null,
+      !imported(p) && p.pause_count != null ? ['Pauses', num(p.pause_count), { mono: true }] : null,
+      !imported(p) && p.seek_count != null ? ['Skips', num(p.seek_count), { mono: true }] : null,
       ['Stopped at', p.position_s != null ? `${clock(p.position_s)}${p.runtime_s ? ' / ' + clock(p.runtime_s) : ''}${p.completion != null ? ` (${pct(Math.min(1, p.completion))})` : ''}` : '–', { mono: true }],
     ]);
 
