@@ -130,8 +130,6 @@ pub fn detect(conn: &mut Connection, window_s: i64, only_item: Option<&str>) -> 
     Ok(groups)
 }
 
-/// `GET /api/stats/groups` — who watches together, what, and for how long.
-/// Without "see everyone" only groups the caller was part of are returned.
 // ---------------------------------------------------------------- the fold (2.0)
 //
 // One grouped play as the SELECT hands it over; sessions are folded from these in Rust, and everything
@@ -285,7 +283,9 @@ pub fn fold_sessions(rows: impl IntoIterator<Item = PlayRow>) -> Vec<Session> {
 /// `must_include`, only pairs that include one of those people: a caller who may see only
 /// themselves is answered their own pairs and nobody else's.
 pub fn pairs(sessions: &[Session], must_include: &[String]) -> Vec<Pair> {
-    let mut acc: BTreeMap<(String, String), (Pair, HashMap<String, (String, i64)>)> = BTreeMap::new();
+    // A pair so far, and how often it has watched each title: (name, sessions).
+    type PerTitle = HashMap<String, (String, i64)>;
+    let mut acc: BTreeMap<(String, String), (Pair, PerTitle)> = BTreeMap::new();
     for s in sessions {
         let members: Vec<(&String, &Member)> = s.per_user.iter().collect();
         for (i, (ia, ma)) in members.iter().enumerate() {
@@ -397,6 +397,7 @@ pub fn recent(sessions: &[Session]) -> Vec<Value> {
         .take(10)
         .map(|s| {
             let mut v = s.item.clone();
+            v["group_id"] = json!(s.group_id);
             v["started_at"] = json!(s.started_at);
             v["together_s"] = json!(s.together_s());
             v["members"] = json!(s.per_user.iter().map(|(id, m)| json!({ "user_id": id, "user_name": m.name, "has_image": m.has_image, "duration_s": m.duration_s })).collect::<Vec<_>>());
@@ -405,25 +406,94 @@ pub fn recent(sessions: &[Session]) -> Vec<Value> {
         .collect()
 }
 
+/// Everything each scoped person watched in a window: user id → (name, has_image, seconds).
+fn watch_totals(c: &Connection, cond: &crate::stats::Cond) -> Result<BTreeMap<String, (String, bool, i64)>> {
+    let mut stmt = c.prepare(&format!(
+        "SELECT p.user_id, COALESCE(u.name, p.user_name), (u.image_tag IS NOT NULL), COALESCE(SUM(p.duration_s), 0)
+         FROM playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id",
+        cond.sql()
+    ))?;
+    let rows = stmt.query_map(params_from_iter(cond.args.iter()), |r| Ok((r.get::<_, String>(0)?, (r.get(1)?, r.get(2)?, r.get(3)?))))?;
+    Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// The scoped people's time inside group sessions, and their time overall: what the share is made of.
+fn share_of(sessions: &[Session], scoped: &[String], totals: &BTreeMap<String, (String, bool, i64)>) -> (i64, i64, Value) {
+    let grouped: i64 = sessions.iter().flat_map(|s| s.per_user.iter()).filter(|(id, _)| scoped.is_empty() || scoped.contains(id)).map(|(_, m)| m.duration_s).sum();
+    let watch: i64 = totals.values().map(|t| t.2).sum::<i64>().max(grouped);
+    let share = if watch > 0 { json!(((grouped as f64 / watch as f64) * 1000.0).round() / 1000.0) } else { Value::Null };
+    (grouped, watch, share)
+}
+
+fn pair_json(p: &Pair) -> Value {
+    let person = |x: &Person| json!({ "user_id": x.id, "user_name": x.name, "has_image": x.has_image });
+    json!({
+        "members": [person(&p.a), person(&p.b)], "sessions": p.sessions, "together_s": p.together_s, "last_at": p.last_at,
+        "top_title": p.top_title.as_ref().map(|(id, name, n)| json!({ "id": id, "name": name, "image_item_id": id, "sessions": n })),
+    })
+}
+
+/// What the Together page, the dashboard card and the profile card read, from one call: the lists the
+/// cards always had, plus the pairs, a gap-free series of time together against time alone, each
+/// person's share, and the same window right before for the deltas.
+pub(crate) fn answer(c: &Connection, scope: &Scope) -> Result<Value> {
+    let sessions = sessions_for(c, &Window { since: scope.since, until: None }, scope.library_id.as_deref(), &scope.user_ids)?;
+    let people_seen: BTreeSet<&str> = sessions.iter().flat_map(|s| s.per_user.keys().map(String::as_str)).collect();
+    let cond = scope.cond();
+    let totals = watch_totals(c, &cond)?;
+    let (_, watch_s, share) = share_of(&sessions, &scope.user_ids, &totals);
+
+    // The series: `daily` gives the grid and everything watched per bucket; the sessions give the time together.
+    let (template, bucket) = crate::stats::daily(c, scope, &cond)?;
+    let mut date_stmt = c.prepare_cached(if bucket == "week" { "SELECT date(?1, 'unixepoch', 'localtime', 'weekday 0', '-6 days')" } else { "SELECT date(?1, 'unixepoch', 'localtime')" })?;
+    let buckets = per_bucket(&sessions, &scope.user_ids, |t| Ok(date_stmt.query_row([t], |r| r.get::<_, String>(0))?))?;
+    let series: Vec<Value> = template
+        .iter()
+        .map(|d| {
+            let date = d["date"].as_str().unwrap_or_default();
+            let (t, g) = buckets.get(date).copied().unwrap_or((0, 0));
+            json!({ "date": date, "together_s": t, "alone_s": (d["watch_s"].as_i64().unwrap_or(0) - g).max(0) })
+        })
+        .collect();
+
+    let pairs_json: Vec<Value> = pairs(&sessions, &scope.user_ids).iter().take(20).map(pair_json).collect();
+    // Without "see everyone" the scope is the caller alone, and so is this list: companions' names are
+    // theirs to see, companions' time alone is not.
+    let people: Vec<Value> = people_shares(&sessions, &totals)
+        .into_iter()
+        .filter(|p| scope.user_ids.is_empty() || p["user_id"].as_str().is_some_and(|id| scope.user_ids.iter().any(|u| u == id)))
+        .collect();
+
+    let previous = match (scope.since, scope.previous_cond()) {
+        (Some(since), Some(pcond)) => {
+            let before = sessions_for(c, &Window { since: Some(since - scope.days * 86_400), until: Some(since) }, scope.library_id.as_deref(), &scope.user_ids)?;
+            let ptotals = watch_totals(c, &pcond)?;
+            let (_, _, pshare) = share_of(&before, &scope.user_ids, &ptotals);
+            let ppeople: BTreeSet<&str> = before.iter().flat_map(|s| s.per_user.keys().map(String::as_str)).collect();
+            json!({ "sessions": before.len(), "together_s": before.iter().map(Session::together_s).sum::<i64>(), "people": ppeople.len(), "share": pshare })
+        }
+        _ => Value::Null,
+    };
+
+    Ok(json!({
+        "totals": {
+            "sessions": sessions.len(),
+            "together_s": sessions.iter().map(Session::together_s).sum::<i64>(),
+            "person_s": sessions.iter().map(Session::person_s).sum::<i64>(),
+            "people": people_seen.len(),
+            "watch_s": watch_s,
+            "share": share,
+        },
+        "previous": previous, "bucket": bucket, "series": series, "pairs": pairs_json, "people": people,
+        "companions": companions(&sessions), "titles": titles(&sessions), "recent": recent(&sessions),
+    }))
+}
+
+/// `GET /api/stats/groups` — who watches together, what, and for how long.
+/// Without "see everyone" only groups the caller was part of are returned.
 pub async fn groups(State(app): State<App>, user: AuthUser, Query(q): Query<FilterQuery>) -> ApiResult {
     let scope = Scope::new(&app, &user, &q);
-    let out = app
-        .db
-        .call(move |c| {
-            let scope = scope.resolve(c)?;
-            let sessions = sessions_for(c, &Window { since: scope.since, until: None }, scope.library_id.as_deref(), &scope.user_ids)?;
-            let people: BTreeSet<&str> = sessions.iter().flat_map(|s| s.per_user.keys().map(String::as_str)).collect();
-            Ok(json!({
-                "totals": {
-                    "sessions": sessions.len(),
-                    "together_s": sessions.iter().map(Session::together_s).sum::<i64>(),
-                    "person_s": sessions.iter().map(Session::person_s).sum::<i64>(),
-                    "people": people.len(),
-                },
-                "companions": companions(&sessions), "titles": titles(&sessions), "recent": recent(&sessions),
-            }))
-        })
-        .await?;
+    let out = app.db.call(move |c| answer(c, &scope.resolve(c)?)).await?;
     Ok(Json(out))
 }
 
@@ -470,7 +540,7 @@ mod tests {
         assert_eq!(sessions[0].started_at, 86_399, "a session starts when its first member did");
         let buckets = per_bucket(&sessions, &[], |t| Ok(format!("d{}", t / 86_400))).unwrap();
         assert_eq!(buckets.get("d0"), Some(&(2500, 5500)), "time together, and everything the people in it watched");
-        assert!(buckets.get("d1").is_none());
+        assert!(!buckets.contains_key("d1"));
         // Scoped to one person, the grouped watch is that person's alone.
         let mine = per_bucket(&sessions, &["a".into()], |t| Ok(format!("d{}", t / 86_400))).unwrap();
         assert_eq!(mine.get("d0"), Some(&(2500, 3000)));
@@ -557,6 +627,44 @@ mod tests {
         let rc = recent(&sessions);
         assert_eq!((rc[0]["started_at"].as_i64(), rc[0]["together_s"].as_i64(), rc[0]["members"].as_array().unwrap().len()), (Some(1000), Some(2500), 2));
         assert_eq!(rc[0]["members"][0]["duration_s"], 3000);
+    }
+
+    #[test]
+    fn the_page_is_answered_pairs_a_series_people_and_the_window_before() {
+        // Everything the Together page draws, from one call: the old keys, the pairs, a gap-free
+        // series of time together against time alone, each person's share, and the window before.
+        let c = conn();
+        let since: i64 = c.query_row("SELECT CAST(strftime('%s', date('now', 'localtime', '-6 days'), 'utc') AS INTEGER)", [], |r| r.get(0)).unwrap();
+        let (now_ish, before) = (since + 3600, since - 3600);
+        c.execute_batch(&format!(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, group_id) VALUES
+               (1, 'live', 'a', 'A', 'x', 'X', 'Movie', {now_ish}, {}, 3000, 1), (2, 'live', 'b', 'B', 'x', 'X', 'Movie', {}, {}, 2500, 1),
+               (3, 'live', 'a', 'A', 'z', 'Z', 'Movie', {}, {}, 1000, NULL),
+               (4, 'live', 'a', 'A', 'y', 'Y', 'Movie', {before}, {}, 900, 4), (5, 'live', 'c', 'C', 'y', 'Y', 'Movie', {}, {}, 800, 4);",
+            now_ish + 3000, now_ish + 5, now_ish + 2505, now_ish + 7200, now_ish + 8200, before + 900, before + 2, before + 802
+        ))
+        .unwrap();
+        let scope = Scope { days: 7, since: Some(since), user_ids: vec![], library_id: None, min_play_s: 0, perms: crate::auth::Perms::ALL };
+        let a = answer(&c, &scope).unwrap();
+        assert_eq!((a["totals"]["sessions"].as_i64(), a["totals"]["together_s"].as_i64(), a["totals"]["watch_s"].as_i64()), (Some(1), Some(2500), Some(6500)));
+        assert_eq!(a["totals"]["share"], ((5500.0 / 6500.0) * 1000.0f64).round() / 1000.0);
+        assert_eq!(a["bucket"], "day");
+        let series = a["series"].as_array().unwrap();
+        assert_eq!(series.len(), 7, "one entry per day of the window, gaps included");
+        assert_eq!((series[0]["together_s"].as_i64(), series[0]["alone_s"].as_i64()), (Some(2500), Some(1000)), "a's solo play is the only time alone that day");
+        assert!(series[1..].iter().all(|d| d["together_s"] == 0 && d["alone_s"] == 0));
+        assert_eq!(a["pairs"].as_array().unwrap().len(), 1);
+        assert_eq!(a["pairs"][0]["members"].as_array().unwrap().len(), 2);
+        assert_eq!(a["pairs"][0]["top_title"]["name"], "X");
+        let people = a["people"].as_array().unwrap();
+        assert_eq!(people.len(), 2);
+        assert_eq!(a["previous"]["sessions"], 1, "the week before had one evening");
+        assert_eq!(a["previous"]["together_s"], 800);
+        assert!(a["companions"].is_array() && a["titles"].is_array() && a["recent"].is_array());
+        // All time: no window before.
+        let all = answer(&c, &Scope { days: 0, since: None, ..scope }).unwrap();
+        assert!(all["previous"].is_null());
+        assert_eq!(all["totals"]["sessions"], 2);
     }
 
     #[test]

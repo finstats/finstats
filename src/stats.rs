@@ -62,7 +62,7 @@ pub struct FilterQuery {
 #[derive(Clone, Default)]
 pub struct Cond {
     clauses: Vec<String>,
-    args: Vec<SqlValue>,
+    pub(crate) args: Vec<SqlValue>,
 }
 
 impl Cond {
@@ -227,7 +227,7 @@ impl Scope {
     }
 
     /// The window of equal length right before the current one.
-    fn previous_cond(&self) -> Option<Cond> {
+    pub(crate) fn previous_cond(&self) -> Option<Cond> {
         let since = self.since?;
         let mut c = self.base();
         c.add("p.started_at >= ?", since - self.days * 86_400);
@@ -266,7 +266,7 @@ fn totals(conn: &Connection, cond: &Cond) -> Result<Value> {
 const TYPE_GROUPS: [&str; 4] = ["Movie", "Episode", "Audio", "Other"];
 
 /// Gap-free time series. Day buckets, or ISO weeks once the span passes 120 days.
-fn daily(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<(Vec<Value>, &'static str)> {
+pub(crate) fn daily(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<(Vec<Value>, &'static str)> {
     let today: String = conn.query_row("SELECT date('now', 'localtime')", [], |r| r.get(0))?;
     let today = NaiveDate::parse_from_str(&today, "%Y-%m-%d")?;
     let first: Option<String> = match scope.since {
