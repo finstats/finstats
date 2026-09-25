@@ -173,6 +173,8 @@ pub async fn scheduler(app: App) {
                 spawn(&app, "sync_users");
                 spawn(&app, "sync_events");
                 spawn(&app, "sync_server");
+                // A year of finstats' own audit log is enough to answer "who changed this in spring".
+                let _ = app.db.call(|c| crate::audit::thin(c, db::now())).await;
             }
 
             // Requests change by the hour, not by the quarter: who asked for what should feel current.

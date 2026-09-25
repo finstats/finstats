@@ -17,6 +17,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+use crate::audit::{self, Actor};
 use crate::db::{self, rusqlite::OptionalExtension, rusqlite::params};
 use crate::jellyfin::{self, AuthError};
 use crate::state::{ApiError, ApiResult, App, JfConfig};
@@ -317,6 +318,9 @@ pub async fn login(
     let auth = match jf.authenticate(username, &body.password).await {
         Ok(a) => a,
         Err(AuthError::InvalidCredentials) => {
+            // The name as typed: it is the administrator's own server, and Jellyfin's log says the same.
+            let who = Actor { user_id: None, user_name: Some(username.chars().take(100).collect()), ip: Some(ip), key_id: None };
+            audit::record(&app, audit::Entry::new("sign_in_failed", who).outcome("failed"));
             return Err(ApiError::new(StatusCode::UNAUTHORIZED, "Wrong username or password"));
         }
         Err(AuthError::Other(e)) => {
@@ -328,7 +332,9 @@ pub async fn login(
 
     let uid = auth.user_id.clone();
     let grants = if auth.is_admin { vec![] } else { app.db.call(move |c| stored_grants(c, &uid)).await? };
+    let actor = Actor { user_id: Some(auth.user_id.clone()), user_name: Some(auth.user_name.clone()), ip: Some(ip), key_id: None };
     let Some(perms) = effective(auth.is_admin, &grants, &app.settings()) else {
+        audit::record(&app, audit::Entry::new("sign_in_refused", actor).outcome("refused"));
         return Err(ApiError::new(
             StatusCode::FORBIDDEN,
             "You haven't been given access to finstats. A Jellyfin administrator can allow you in Settings.",
@@ -336,13 +342,25 @@ pub async fn login(
     };
     clear_rate_limit(&app, ip);
     tracing::info!("{} signed in from {ip}", auth.user_name);
+    audit::record(&app, audit::Entry::new("sign_in", actor));
     start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, auth.is_admin, perms).await
 }
 
-pub async fn logout(State(app): State<App>, headers: HeaderMap) -> ApiResult<Response> {
+pub async fn logout(State(app): State<App>, ConnectInfo(peer): ConnectInfo<SocketAddr>, headers: HeaderMap) -> ApiResult<Response> {
     if let Some(token) = cookie_token(&headers) {
         let hash = hash_token(&token);
-        app.db.call(move |c| Ok(c.execute("DELETE FROM sessions WHERE token_hash = ?1", [hash])?)).await?;
+        let ip = client_ip(&app, &headers, peer);
+        app.db
+            .call(move |c| {
+                let who: Option<(String, String)> = c
+                    .query_row("DELETE FROM sessions WHERE token_hash = ?1 RETURNING user_id, user_name", [hash], |r| Ok((r.get(0)?, r.get(1)?)))
+                    .optional()?;
+                if let Some((id, name)) = who {
+                    audit::record_quietly(c, &audit::Entry::new("sign_out", Actor { user_id: Some(id), user_name: Some(name), ip: Some(ip), key_id: None }));
+                }
+                Ok(())
+            })
+            .await?;
     }
     let mut resp = Json(json!({ "ok": true })).into_response();
     resp.headers_mut().insert(SET_COOKIE, session_cookie("", 0, is_https(&headers)));
@@ -465,6 +483,7 @@ pub async fn setup(
     *app.config.write().unwrap() = Some(cfg);
     clear_rate_limit(&app, ip);
     tracing::info!("setup completed by {}", auth.user_name);
+    audit::record(&app, audit::Entry::new("setup_completed", Actor { user_id: Some(auth.user_id.clone()), user_name: Some(auth.user_name.clone()), ip: Some(ip), key_id: None }));
     app.wake.notify_waiters();
 
     start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, true, Perms::ALL).await

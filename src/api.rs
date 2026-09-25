@@ -66,6 +66,7 @@ pub fn router(app: App) -> Router {
         .route("/people/{id}", get(stats::person_detail))
         .route("/search", get(stats::search))
         .route("/events", get(stats::events))
+        .route("/audit", get(crate::audit::audit))
         .route("/security", get(security::overview))
         .route("/security/alerts", get(security::alerts))
         .route("/security/alerts/resolve-all", post(security::resolve_all))
@@ -406,6 +407,8 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
     let raw = serde_json::to_string(&next).map_err(anyhow::Error::from)?;
     let regroup = (next.group_window_s != app.settings().group_window_s).then_some(next.group_window_s);
     let before = app.settings();
+    // What changed, for the audit log: the blob holds no secret, so the diff is the whole story.
+    let changed = crate::audit::changed_keys(&serde_json::to_value(&before).unwrap_or_default(), &serde_json::to_value(&next).unwrap_or_default());
     let homes = (next.home_addresses != before.home_addresses).then(|| next.home_addresses.clone());
     let homes_changed = homes.is_some();
     let lookup_switched_on = next.public_ip_lookup && !before.public_ip_lookup;
@@ -436,6 +439,9 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
     }
     if rules_changed || homes_changed {
         security::check(&app, None).await;
+    }
+    if !changed.is_empty() {
+        crate::audit::record(&app, crate::audit::Entry::new("setting_changed", crate::audit::Actor::from(&user)).detail(json!({ "changed": changed })));
     }
     settings_response(&app).await
 }

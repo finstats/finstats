@@ -1,5 +1,6 @@
 mod api;
 mod arr;
+mod audit;
 mod auth;
 mod backup;
 mod changelog;
