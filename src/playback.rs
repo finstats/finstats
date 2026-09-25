@@ -247,13 +247,15 @@ pub struct PlayEvent {
     pub at: i64,
     pub kind: &'static str,
     pub position_s: Option<i64>,
+    /// A seek only: where playback was expected to be when it jumped. `position_s` is where it landed.
+    pub from_s: Option<i64>,
     pub detail: Option<String>,
 }
 
 pub fn insert_events(conn: &Connection, playback_id: i64, events: &[PlayEvent]) -> Result<()> {
-    let mut stmt = conn.prepare_cached("INSERT INTO playback_events(playback_id, at, kind, position_s, detail) VALUES (?1, ?2, ?3, ?4, ?5)")?;
+    let mut stmt = conn.prepare_cached("INSERT INTO playback_events(playback_id, at, kind, position_s, from_s, detail) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")?;
     for e in events {
-        stmt.execute(crate::db::rusqlite::params![playback_id, e.at, e.kind, e.position_s, e.detail])?;
+        stmt.execute(crate::db::rusqlite::params![playback_id, e.at, e.kind, e.position_s, e.from_s, e.detail])?;
     }
     Ok(())
 }
@@ -275,6 +277,19 @@ mod tests {
         )
         .unwrap();
         c
+    }
+
+    #[test]
+    fn a_seek_is_stored_with_its_origin() {
+        let c = conn();
+        insert_events(&c, 1, &[
+            PlayEvent { at: 10001, kind: "seek", position_s: Some(900), from_s: Some(105), detail: Some("1:45 → 15:00".into()) },
+            PlayEvent { at: 10002, kind: "pause", position_s: Some(900), from_s: None, detail: None },
+        ]).unwrap();
+        let rows: Vec<(String, Option<i64>)> = c
+            .prepare("SELECT kind, from_s FROM playback_events WHERE playback_id = 1 ORDER BY id").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().collect::<Result<_, _>>().unwrap();
+        assert_eq!(rows, [("seek".to_string(), Some(105)), ("pause".to_string(), None)]);
     }
 
     #[test]

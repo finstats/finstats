@@ -512,6 +512,22 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     r#"
     CREATE INDEX idx_pb_source ON playbacks(source);
     "#,
+    // 21 — a seek's origin as a number. The label ("27:12 → 33:10") stays for the timeline; the number
+    //      is what says whether a seek went backwards, which the rewind heatmap asks of every seek. The
+    //      left side of the label is the position playback was expected at, in m:ss or h:mm:ss.
+    //      `backup::restore` runs the same backfill for a file from before the column existed.
+    r#"
+    ALTER TABLE playback_events ADD COLUMN from_s INTEGER;
+    UPDATE playback_events SET from_s = (
+      WITH c(t) AS (SELECT substr(detail, 1, instr(detail, ' → ') - 1))
+      SELECT CASE WHEN length(t) - length(replace(t, ':', '')) = 2
+                  THEN CAST(substr(t, 1, instr(t, ':') - 1) AS INTEGER) * 3600
+                     + CAST(substr(t, instr(t, ':') + 1, 2) AS INTEGER) * 60 + CAST(substr(t, -2) AS INTEGER)
+                  ELSE CAST(substr(t, 1, instr(t, ':') - 1) AS INTEGER) * 60 + CAST(substr(t, -2) AS INTEGER) END
+      FROM c)
+    WHERE kind = 'seek' AND detail LIKE '%:__ → %';
+    CREATE INDEX idx_pbe_kind ON playback_events(kind, playback_id, position_s);
+    "#,
 ];
 
 impl Db {
@@ -786,6 +802,36 @@ mod tests {
             set_setting(&c, VERSION_KEY, v).unwrap();
         }
         c
+    }
+
+    #[test]
+    fn a_seek_recorded_before_its_origin_was_kept_gets_one_from_its_label() {
+        // A seek used to keep where it came from only in its label ("27:12 → 33:10"), the left side
+        // being the position playback was expected at. The rewind heatmap asks of every seek whether
+        // it went backwards, so the origin becomes a number once, here, for every seek already kept.
+        let c = Connection::open_in_memory().unwrap();
+        let last = MIGRATIONS.len() - 1;
+        for m in &MIGRATIONS[..last] {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES (1, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100, 700, 600);
+             INSERT INTO playback_events(playback_id, at, kind, position_s, detail) VALUES
+               (1, 100, 'seek', 1990, '27:12 → 33:10'),
+               (1, 200, 'seek', 300, '1:02:03 → 5:00'),
+               (1, 300, 'seek', 5, '0:40 → 0:05'),
+               (1, 400, 'pause', 5, NULL),
+               (1, 500, 'seek', 9, 'garbled');",
+        )
+        .unwrap();
+        c.execute_batch(MIGRATIONS[last]).unwrap();
+        let from: Vec<Option<i64>> = c
+            .prepare("SELECT from_s FROM playback_events ORDER BY id").unwrap()
+            .query_map([], |r| r.get(0)).unwrap().collect::<Result<_, _>>().unwrap();
+        assert_eq!(from, [Some(27 * 60 + 12), Some(3600 + 2 * 60 + 3), Some(40), None, None]);
+        let indexed: i64 = c.query_row("SELECT COUNT(*) FROM pragma_index_list('playback_events') WHERE name = 'idx_pbe_kind'", [], |r| r.get(0)).unwrap();
+        assert_eq!(indexed, 1, "an aggregate over one kind of event must not read every event");
     }
 
     #[test]

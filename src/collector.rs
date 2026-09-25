@@ -215,13 +215,14 @@ fn transcode_detail(r: &PlayRecord) -> String {
 /// What changed between two sightings of the same play. `dt` is the time between them.
 fn diff_events(old: &PlayRecord, new: &mut PlayRecord, was_paused: bool, is_paused: bool, dt: f64, now: i64) -> Vec<PlayEvent> {
     let mut out = vec![];
-    let ev = |kind, position_s, detail| PlayEvent { at: now, kind, position_s, detail };
+    let ev = |kind, position_s, detail| PlayEvent { at: now, kind, position_s, from_s: None, detail };
 
     if let (Some(from), Some(to)) = (old.position_s, new.position_s) {
         let expected = from as f64 + if was_paused { 0.0 } else { dt };
         if (to as f64 - expected).abs() > SEEK_TOLERANCE_S + dt * 0.5 {
             new.seek_count += 1;
-            out.push(ev("seek", Some(to), Some(format!("{} → {}", clock(expected.round() as i64), clock(to)))));
+            let from = expected.round() as i64;
+            out.push(PlayEvent { at: now, kind: "seek", position_s: Some(to), from_s: Some(from), detail: Some(format!("{} → {}", clock(from), clock(to))) });
         }
     }
     if was_paused != is_paused {
@@ -1155,7 +1156,7 @@ async fn tick(
                             },
                         )
                         .optional()?;
-                    let start = |detail: Option<&str>| PlayEvent { at: now, kind: "start", position_s: probe.position_s, detail: detail.map(str::to_string) };
+                    let start = |detail: Option<&str>| PlayEvent { at: now, kind: "start", position_s: probe.position_s, from_s: None, detail: detail.map(str::to_string) };
                     if let Some((id, started, dur, paused, counters)) = resumed.filter(|_| merge_window_s > 0) {
                         c.execute("UPDATE playbacks SET active = 1 WHERE id = ?1", [id])?;
                         insert_events(c, id, &[start(Some("Continued after a short break"))])?;
@@ -1205,7 +1206,7 @@ async fn tick(
                     c.execute("DELETE FROM playbacks WHERE id = ?1", [row_id])?;
                 } else {
                     rec.update_progress(c, row_id)?;
-                    insert_events(c, row_id, &[PlayEvent { at: rec.ended_at, kind: "stop", position_s: rec.position_s, detail: None }])?;
+                    insert_events(c, row_id, &[PlayEvent { at: rec.ended_at, kind: "stop", position_s: rec.position_s, from_s: None, detail: None }])?;
                 }
                 // Now that its length is known: was this one watched together with someone?
                 crate::groups::detect(c, group_window_s, Some(&rec.item_id))?;
@@ -1653,6 +1654,19 @@ mod tests {
 
     fn rec(position: i64) -> PlayRecord {
         PlayRecord { position_s: Some(position), play_method: "DirectPlay".into(), ..Default::default() }
+    }
+
+    #[test]
+    fn a_seek_records_where_it_came_from() {
+        // The label says it for a reader; `from_s` says it for a query, which is what tells a rewind
+        // from a skip ahead. Anything that is not a seek has no origin.
+        let mut new = rec(900);
+        let out = diff_events(&rec(100), &mut new, false, false, 5.0, 0);
+        assert_eq!(out.len(), 1);
+        assert_eq!((out[0].kind, out[0].position_s, out[0].from_s), ("seek", Some(900), Some(105)));
+        let mut paused = rec(105);
+        let out = diff_events(&rec(100), &mut paused, false, true, 5.0, 0);
+        assert_eq!((out[0].kind, out[0].from_s), ("pause", None));
     }
 
     #[test]
