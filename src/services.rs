@@ -484,7 +484,7 @@ pub async fn test_connection(State(app): State<App>, JellyfinAdmin(_): JellyfinA
     Ok(Json(json!({ "ok": true, "app": what, "version": version })))
 }
 
-pub async fn create(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Json(body): Json<ServiceBody>) -> ApiResult {
+pub async fn create(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Json(body): Json<ServiceBody>) -> ApiResult {
     if all(&app).len() >= MAX_SERVICES {
         return Err(ApiError::bad_request(format!("At most {MAX_SERVICES} connections")));
     }
@@ -494,6 +494,7 @@ pub async fn create(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Jso
     // Only what answers is saved: a typo in a key is found now, not in a log next week.
     let (_, version) = test(&app, &svc).await.map_err(unreachable_service)?;
     let now = db::now();
+    let (kind, name) = (svc.kind.key(), svc.name.clone());
     app.db
         .call(move |c| {
             Ok(c.execute(
@@ -502,11 +503,13 @@ pub async fn create(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Jso
             )?)
         })
         .await?;
+    // Kind and name, never the address or the key.
+    crate::audit::record(&app, crate::audit::Entry::new("service_added", crate::audit::Actor::from(&user)).detail(json!({ "kind": kind, "name": name })));
     changed(&app).await?;
     Ok(Json(list_json(&app)))
 }
 
-pub async fn update(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Path(id): Path<i64>, Json(body): Json<ServiceBody>) -> ApiResult {
+pub async fn update(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(id): Path<i64>, Json(body): Json<ServiceBody>) -> ApiResult {
     let stored = find(&app, id)?;
     let taken: Vec<String> = names(&app).into_iter().filter(|n| *n != stored.name).collect();
     let svc = describe(body, Some(&stored), &taken)?;
@@ -514,6 +517,7 @@ pub async fn update(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Pat
     let moved = !same_instance(&svc.url, &stored.url);
     let version = if reconnect && svc.enabled { Some(test(&app, &svc).await.map_err(unreachable_service)?.1) } else { None };
     let now = db::now();
+    crate::audit::record(&app, crate::audit::Entry::new("service_changed", crate::audit::Actor::from(&user)).target(id.to_string()).detail(json!({ "kind": svc.kind.key(), "name": svc.name, "reconnected": reconnect, "moved": moved })));
     app.db
         .call(move |c| {
             let tx = c.transaction()?;
@@ -536,8 +540,9 @@ pub async fn update(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Pat
     Ok(Json(list_json(&app)))
 }
 
-pub async fn remove(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Path(id): Path<i64>) -> ApiResult {
-    find(&app, id)?;
+pub async fn remove(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(id): Path<i64>) -> ApiResult {
+    let stored = find(&app, id)?;
+    crate::audit::record(&app, crate::audit::Entry::new("service_removed", crate::audit::Actor::from(&user)).target(id.to_string()).detail(json!({ "kind": stored.kind.key(), "name": stored.name })));
     // Whatever was read from it goes with it (ON DELETE CASCADE).
     app.db.call(move |c| Ok(c.execute("DELETE FROM services WHERE id = ?1", [id])?)).await?;
     changed(&app).await?;

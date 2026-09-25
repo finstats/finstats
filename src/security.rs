@@ -821,6 +821,7 @@ pub async fn resolve(State(app): State<App>, Manager(user): Manager, Path(id): P
     gate(&user)?;
     let note = body.note.map(|n| n.trim().chars().take(500).collect::<String>()).filter(|n| !n.is_empty());
     let mute = body.mute;
+    let actor = crate::audit::Actor::from(&user);
     let changed = app
         .db
         .call(move |c| {
@@ -848,7 +849,10 @@ pub async fn resolve(State(app): State<App>, Manager(user): Manager, Path(id): P
         })
         .await?;
     match changed {
-        Some(also) => Ok(Json(json!({ "ok": true, "also_resolved": also }))),
+        Some(also) => {
+            crate::audit::record(&app, crate::audit::Entry::new("alert_resolved", actor).target(id.to_string()).detail(json!({ "muted": mute, "also_resolved": also })));
+            Ok(Json(json!({ "ok": true, "also_resolved": also })))
+        }
         None => Err(ApiError::not_found("Alert")),
     }
 }
@@ -856,26 +860,33 @@ pub async fn resolve(State(app): State<App>, Manager(user): Manager, Path(id): P
 pub async fn reopen(State(app): State<App>, Manager(user): Manager, Path(id): Path<i64>) -> ApiResult {
     gate(&user)?;
     let n = app.db.call(move |c| Ok(c.execute("UPDATE security_alerts SET resolved_at = NULL, resolved_by = NULL, note = NULL, muted = 0 WHERE id = ?1", [id])?)).await?;
-    if n == 0 { Err(ApiError::not_found("Alert")) } else { Ok(Json(json!({ "ok": true }))) }
+    if n == 0 {
+        return Err(ApiError::not_found("Alert"));
+    }
+    crate::audit::record(&app, crate::audit::Entry::new("alert_reopened", crate::audit::Actor::from(&user)).target(id.to_string()));
+    Ok(Json(json!({ "ok": true })))
 }
 
 pub async fn resolve_all(State(app): State<App>, Manager(user): Manager) -> ApiResult {
     gate(&user)?;
+    let actor = crate::audit::Actor::from(&user);
     let n = app
         .db
         .call(move |c| Ok(c.execute("UPDATE security_alerts SET resolved_at = ?1, resolved_by = ?2 WHERE resolved_at IS NULL", params![db::now(), user.name])?))
         .await?;
+    crate::audit::record(&app, crate::audit::Entry::new("alert_resolved", actor).target("all").detail(json!({ "resolved": n })));
     Ok(Json(json!({ "ok": true, "resolved": n })))
 }
 
 /// Fetch the database now. Managers only; the monthly refresh is the `geoip_download` setting.
-pub async fn download_database(State(app): State<App>, Manager(_): Manager) -> ApiResult<Response> {
+pub async fn download_database(State(app): State<App>, Manager(user): Manager) -> ApiResult<Response> {
     if std::env::var("FINSTATS_GEOIP_DB").is_ok_and(|p| !p.trim().is_empty()) {
         return Err(ApiError::bad_request("The database is set with FINSTATS_GEOIP_DB; replace that file instead"));
     }
     if !geo::spawn_download(&app) {
         return Err(ApiError::new(StatusCode::CONFLICT, "The database is already being downloaded"));
     }
+    crate::audit::record(&app, crate::audit::Entry::new("task_run", crate::audit::Actor::from(&user)).target("geoip"));
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 

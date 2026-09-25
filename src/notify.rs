@@ -1227,6 +1227,7 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Tar
         return Err(ApiError::bad_request(format!("At most {MAX_OWN_TARGETS} destinations of your own")));
     }
     tracing::info!("notification destination added: {} ({})", next.name, next.channel.label());
+    let detail = target_detail(&next.name, next.channel, next.owner_id.is_some());
     let id = app
         .db
         .call(move |c| {
@@ -1241,6 +1242,7 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Tar
         })
         .await?;
     reload(&app).await?;
+    crate::audit::record(&app, crate::audit::Entry::new("target_added", crate::audit::Actor::from(&user)).target(id.to_string()).detail(detail));
     one(&app, &user, id).await
 }
 
@@ -1266,7 +1268,13 @@ pub async fn update(State(app): State<App>, user: AuthUser, Path(id): Path<i64>,
         })
         .await?;
     reload(&app).await?;
+    crate::audit::record(&app, crate::audit::Entry::new("target_changed", crate::audit::Actor::from(&user)).target(id.to_string()).detail(target_detail(&stored.name, stored.channel, stored.owner_id.is_some())));
     one(&app, &user, id).await
+}
+
+/// Name, channel and whose it is — never the address, which is the credential.
+fn target_detail(name: &str, channel: Channel, own: bool) -> Value {
+    json!({ "name": name, "channel": channel.key(), "owner": if own { "own" } else { "server" } })
 }
 
 pub async fn remove(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -> ApiResult {
@@ -1276,6 +1284,7 @@ pub async fn remove(State(app): State<App>, user: AuthUser, Path(id): Path<i64>)
         return Err(ApiError::forbidden());
     }
     app.db.call(move |c| Ok(c.execute("DELETE FROM notify_targets WHERE id = ?1", [id])?)).await?;
+    crate::audit::record(&app, crate::audit::Entry::new("target_removed", crate::audit::Actor::from(&user)).target(id.to_string()).detail(target_detail(&stored.name, stored.channel, stored.owner_id.is_some())));
     reload(&app).await?;
     Ok(Json(json!({ "ok": true })))
 }

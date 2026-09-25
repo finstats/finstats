@@ -63,7 +63,6 @@ pub struct Entry {
     pub outcome: &'static str,
 }
 
-#[allow(dead_code)] // `at` and `target` are consumed by the write-path hooks that follow in their own commits
 impl Entry {
     pub fn new(kind: &'static str, actor: Actor) -> Self {
         Entry { kind, at: db::now(), actor, target: None, detail: json!({}), outcome: "ok" }

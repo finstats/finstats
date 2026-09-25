@@ -121,12 +121,13 @@ const SCAN_CHECK_EVERY_S: i64 = 300;
 const SAFETY_NET_S: i64 = 7 * 86_400;
 
 /// Write a backup in the background and thin out old ones. Returns false when one is already being written.
-pub fn run_backup(app: &App, automatic: bool) -> bool {
+pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
     const ID: &str = "backup";
     if !app.tasks.try_start(ID, "Writing backup") {
         return false;
     }
     let app = app.clone();
+    let automatic = actor.is_none();
     tokio::task::spawn_blocking(move || {
         let dir = crate::backup::dir(&app.data_dir);
         let outcome = crate::backup::export(&app.db, &dir, Some((&app.tasks, ID))).map(|made| {
@@ -135,6 +136,15 @@ pub fn run_backup(app: &App, automatic: bool) -> bool {
                 if removed > 0 { format!("; removed {removed} old") } else { String::new() });
             (format!("{} plays, {:.1} MB", made.plays, made.size_bytes as f64 / 1e6), serde_json::to_value(&made).ok())
         });
+        if let Ok(c) = app.db.conn() {
+            let who = actor.unwrap_or_default();
+            let entry = match &outcome {
+                Ok((_, made)) => crate::audit::Entry::new("backup_made", who).target(made.as_ref().and_then(|m| m["name"].as_str()).unwrap_or("").to_string())
+                    .detail(serde_json::json!({ "trigger": if automatic { "schedule" } else { "request" }, "plays": made.as_ref().and_then(|m| m["plays"].as_i64()), "size_bytes": made.as_ref().and_then(|m| m["size_bytes"].as_i64()) })),
+                Err(e) => crate::audit::Entry::new("backup_made", who).detail(serde_json::json!({ "trigger": if automatic { "schedule" } else { "request" }, "error": format!("{e:#}") })).outcome("failed"),
+            };
+            crate::audit::record_quietly(&c, &entry);
+        }
         if let Err(e) = &outcome {
             tracing::error!("backup failed: {e:#}");
             let (app, message) = (app.clone(), format!("{e:#}"));
@@ -222,7 +232,7 @@ pub async fn scheduler(app: App) {
                 if now - newest >= settings.backup_every_d * 86_400 {
                     let has_plays = app.db.call(|c| Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM playbacks)", [], |r| r.get::<_, bool>(0))?)).await.unwrap_or(false);
                     if has_plays {
-                        run_backup(&app, true);
+                        run_backup(&app, None);
                     }
                 }
             }

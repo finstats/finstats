@@ -19,6 +19,7 @@ use tokio::io::AsyncWriteExt;
 use tower_http::compression::CompressionLayer;
 use tower_http::compression::predicate::{DefaultPredicate, NotForContentType, Predicate};
 
+use crate::audit::{self, Actor};
 use crate::auth::{self, AuthUser, JellyfinAdmin, Manager};
 use crate::state::{ApiError, ApiResult, App, Settings};
 use crate::db::rusqlite::OptionalExtension;
@@ -471,12 +472,13 @@ async fn get_tasks(State(app): State<App>, Manager(_): Manager) -> ApiResult {
 /// holds this list against `TASK_IDS`.
 const RUNNABLE: [&str; 8] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "sync_upcoming", "sync_requests", "sync_grabs"];
 
-async fn run_task(State(app): State<App>, Manager(_): Manager, Path(id): Path<String>) -> ApiResult<Response> {
+async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>) -> ApiResult<Response> {
     let Some(id) = RUNNABLE.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
     // One way in: the Jellyfin reads, then the ones that read from connected services.
     if !sync::spawn(&app, id) && !services::spawn(&app, id) {
         return Err(ApiError::new(StatusCode::CONFLICT, "That task is already running"));
     }
+    audit::record(&app, audit::Entry::new("task_run", Actor::from(&user)).target(id));
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
@@ -542,7 +544,7 @@ async fn get_permissions(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin
     Ok(Json(json!({ "available": available, "defaults": defaults_as_keys(&app.settings()), "users": users })))
 }
 
-async fn put_default_permissions(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Json(body): Json<PermissionsBody>) -> ApiResult {
+async fn put_default_permissions(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Json(body): Json<PermissionsBody>) -> ApiResult {
     let keys = clean_permissions(body.permissions)?;
     let mut next = app.settings();
     next.allow_user_login = keys.iter().any(|k| k == auth::SIGN_IN);
@@ -550,13 +552,15 @@ async fn put_default_permissions(State(app): State<App>, JellyfinAdmin(_): Jelly
     let raw = serde_json::to_string(&next).map_err(anyhow::Error::from)?;
     app.db.call(move |c| db::set_setting(c, "settings", &raw)).await?;
     *app.settings.write().unwrap() = next.clone();
+    audit::record(&app, audit::Entry::new("permissions_changed", Actor::from(&user)).target("defaults").detail(json!({ "permissions": defaults_as_keys(&next) })));
     Ok(Json(json!({ "defaults": defaults_as_keys(&next) })))
 }
 
-async fn put_user_permissions(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Path(id): Path<String>, Json(body): Json<PermissionsBody>) -> ApiResult {
+async fn put_user_permissions(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(id): Path<String>, Json(body): Json<PermissionsBody>) -> ApiResult {
     let id = db::norm_id(&id);
     let keys = clean_permissions(body.permissions)?;
     let stored = keys.clone();
+    let (actor, target, granted) = (Actor::from(&user), id.clone(), keys.clone());
     let found = app
         .db
         .call(move |c| {
@@ -580,7 +584,10 @@ async fn put_user_permissions(State(app): State<App>, JellyfinAdmin(_): Jellyfin
     match found {
         None => Err(ApiError::not_found("User")),
         Some(false) => Err(ApiError::bad_request("Jellyfin administrators already have every permission")),
-        Some(true) => Ok(Json(json!({ "permissions": keys }))),
+        Some(true) => {
+            audit::record(&app, audit::Entry::new("permissions_changed", actor).target(target).detail(json!({ "permissions": granted })));
+            Ok(Json(json!({ "permissions": keys })))
+        }
     }
 }
 
@@ -611,15 +618,17 @@ async fn list_backups(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -
     Ok(Json(json!({ "backups": backups, "every_d": s.backup_every_d, "keep": s.backup_keep, "next_at": next_at })))
 }
 
-async fn create_backup(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -> ApiResult<Response> {
-    if !sync::run_backup(&app, false) {
+async fn create_backup(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin) -> ApiResult<Response> {
+    if !sync::run_backup(&app, Some(Actor::from(&user))) {
         return Err(ApiError::new(StatusCode::CONFLICT, "A backup is already being written"));
     }
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
-async fn download_backup(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Path(name): Path<String>) -> ApiResult<Response> {
+async fn download_backup(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(name): Path<String>) -> ApiResult<Response> {
     let path = backup_path(&app, &name)?;
+    // The whole history leaving: worth a line, though it is a read.
+    audit::record(&app, audit::Entry::new("backup_downloaded", Actor::from(&user)).target(name.clone()));
     let file = tokio::fs::File::open(&path).await.map_err(anyhow::Error::from)?;
     let len = file.metadata().await.map_err(anyhow::Error::from)?.len();
     // Streamed from disk in 64 KB pieces: a large history never has to fit in memory.
@@ -640,19 +649,37 @@ async fn download_backup(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin
         .unwrap())
 }
 
-async fn delete_backup(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Path(name): Path<String>) -> ApiResult {
+async fn delete_backup(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(name): Path<String>) -> ApiResult {
     let path = backup_path(&app, &name)?;
     tokio::fs::remove_file(&path).await.map_err(anyhow::Error::from)?;
+    audit::record(&app, audit::Entry::new("backup_deleted", Actor::from(&user)).target(name.clone()));
     Ok(Json(json!({ "ok": true })))
 }
 
+/// How an import ended, for the audit log; written from the worker thread.
+fn import_finished(app: &App, actor: Actor, tracker: &str, outcome: Result<(u64, u64), String>) {
+    let Ok(c) = app.db.conn() else { return };
+    let entry = match outcome {
+        Ok((imported, skipped)) => audit::Entry::new("import_finished", actor).target(tracker).detail(json!({ "plays_imported": imported, "plays_skipped": skipped })),
+        Err(e) => audit::Entry::new("import_finished", actor).target(tracker).detail(json!({ "error": e })).outcome("failed"),
+    };
+    audit::record_quietly(&c, &entry);
+}
+
 /// Run a restore in the background, then load what it may have changed (the settings) into the running app.
-fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bool) {
+fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bool, actor: Actor, source: String) {
     let worker = app.clone();
     tokio::task::spawn_blocking(move || {
         let outcome = crate::backup::restore(&worker.db, &path, with_settings, Some((&worker.tasks, "restore")));
         if remove_after {
             let _ = std::fs::remove_file(&path);
+        }
+        if let Ok(c) = worker.db.conn() {
+            let entry = match &outcome {
+                Ok(r) => audit::Entry::new("backup_restored", actor).target(source).detail(json!({ "plays_imported": r.plays_imported, "plays_skipped": r.plays_skipped, "settings_restored": r.settings_restored })),
+                Err(e) => audit::Entry::new("backup_restored", actor).target(source).detail(json!({ "error": format!("{e:#}") })).outcome("failed"),
+            };
+            audit::record_quietly(&c, &entry);
         }
         if outcome.is_ok() {
             if let Ok(conn) = worker.db.conn() {
@@ -669,16 +696,16 @@ fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bo
     });
 }
 
-async fn restore_stored(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Path(name): Path<String>, Query(q): Query<RestoreQuery>) -> ApiResult<Response> {
+async fn restore_stored(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(name): Path<String>, Query(q): Query<RestoreQuery>) -> ApiResult<Response> {
     let path = backup_path(&app, &name)?;
     if !app.tasks.try_start("restore", "Reading backup") {
         return Err(ApiError::new(StatusCode::CONFLICT, "A restore is already running"));
     }
-    spawn_restore(&app, path, q.settings.unwrap_or(true), false);
+    spawn_restore(&app, path, q.settings.unwrap_or(true), false, Actor::from(&user), name);
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
-async fn restore_upload(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Query(q): Query<RestoreQuery>, req: Request) -> ApiResult<Response> {
+async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Query(q): Query<RestoreQuery>, req: Request) -> ApiResult<Response> {
     if !app.tasks.try_start("restore", "Receiving backup") {
         return Err(ApiError::new(StatusCode::CONFLICT, "A restore is already running"));
     }
@@ -705,7 +732,7 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin,
             return Err(ApiError::bad_request(msg));
         }
     }
-    spawn_restore(&app, path, q.settings.unwrap_or(true), true);
+    spawn_restore(&app, path, q.settings.unwrap_or(true), true, Actor::from(&user), "upload".into());
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
@@ -713,23 +740,29 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin,
 /// watch its own import. Only one runs at a time whichever it is: they write to the same tables.
 pub const IMPORT_TASKS: [&str; 2] = ["import", "import_streamystats"];
 
-async fn import_jellystat(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult<Response> {
+async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
     let path = receive(&app, req, "import", "jellystat-upload.tmp").await?;
+    let actor = Actor::from(&user);
+    audit::record(&app, audit::Entry::new("import_started", actor.clone()).target("jellystat"));
     let worker = app.clone();
     tokio::task::spawn_blocking(move || {
         let outcome = import::run(&worker.db, &path, Some(&worker.tasks));
         let _ = std::fs::remove_file(&path);
+        import_finished(&worker, actor, "jellystat", outcome.as_ref().map(|r| (r.plays_imported, r.plays_skipped)).map_err(|e| format!("{e:#}")));
         worker.tasks.finish("import", outcome.map(|r| (format!("Imported {} plays ({} already present)", r.plays_imported, r.plays_skipped), serde_json::to_value(&r).ok())));
     });
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
-async fn import_streamystats(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult<Response> {
+async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
     let path = receive(&app, req, "import_streamystats", "streamystats-upload.tmp").await?;
+    let actor = Actor::from(&user);
+    audit::record(&app, audit::Entry::new("import_started", actor.clone()).target("streamystats"));
     let worker = app.clone();
     tokio::task::spawn_blocking(move || {
         let outcome = streamystats::run(&worker.db, &path, Some(&worker.tasks));
         let _ = std::fs::remove_file(&path);
+        import_finished(&worker, actor, "streamystats", outcome.as_ref().map(|r| (r.plays_imported, r.plays_skipped)).map_err(|e| format!("{e:#}")));
         worker.tasks.finish(
             "import_streamystats",
             outcome.map(|r| {

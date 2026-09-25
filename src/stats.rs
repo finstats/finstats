@@ -708,8 +708,21 @@ pub async fn activity_detail(State(app): State<App>, user: AuthUser, Path(id): P
     found.map(Json).ok_or_else(|| ApiError::not_found("Play"))
 }
 
-pub async fn activity_delete(State(app): State<App>, Manager(_): Manager, Path(id): Path<i64>) -> ApiResult {
-    let n = app.db.call(move |c| Ok(c.execute("DELETE FROM playbacks WHERE id = ?1 AND active = 0", [id])?)).await?;
+pub async fn activity_delete(State(app): State<App>, Manager(user): Manager, Path(id): Path<i64>) -> ApiResult {
+    let actor = crate::audit::Actor::from(&user);
+    let n = app
+        .db
+        .call(move |c| {
+            let gone: Option<(String, String, i64)> = c
+                .query_row("SELECT item_name, user_name, started_at FROM playbacks WHERE id = ?1 AND active = 0", [id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+                .optional()?;
+            let n = c.execute("DELETE FROM playbacks WHERE id = ?1 AND active = 0", [id])?;
+            if let Some((title, who, started_at)) = gone.filter(|_| n > 0) {
+                crate::audit::record_quietly(c, &crate::audit::Entry::new("play_deleted", actor).target(id.to_string()).detail(json!({ "title": title, "user": who, "started_at": started_at })));
+            }
+            Ok(n)
+        })
+        .await?;
     if n == 0 {
         return Err(ApiError::not_found("Play"));
     }
