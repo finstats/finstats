@@ -143,7 +143,7 @@ whatever permissions they hold, and there is no recap of the whole server.
   makes by default is a plain "what is my IP" lookup — asked **once**, so that people watching at home
   through your public address are not counted as remote, and after that never again unless you press the
   button. It carries no information about you or your server, and one switch in Settings turns it off.
-  **Settings → Outbound connections** lists every destination finstats can reach and whether it is
+  **Settings → System → Outbound connections** lists every destination finstats can reach and whether it is
   switched on, so the promise is one you can check rather than one you have to take. The Security map needs a geolocation database; downloading it is
   off until you ask for it, and addresses are always looked up on your own machine. Sonarr, Radarr, Seerr and torrent
   are reached at the addresses you enter, on your own network.

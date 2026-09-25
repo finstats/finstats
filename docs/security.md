@@ -88,7 +88,7 @@ existed, so adding one cannot replay a year of history at you.
 - **Mail is encrypted or it does not go.** `smtps://` is encrypted from the first byte; `smtp://` starts plain and must upgrade with
   STARTTLS before anything is said. There is no third setting, and no path by which your mail password is sent in the clear.
 
-**Settings → Outbound connections** lists both of the outside requests above, your Jellyfin, every Sonarr, Radarr or Seerr you have connected,
+**Settings → System → Outbound connections** lists both of the outside requests above, your Jellyfin, every Sonarr, Radarr or Seerr you have connected,
 and every notification destination: what each is for, whether it is switched on, and when it last answered or last took a message. It is built
 from what finstats already keeps, so the list itself learns nothing; it exists so that the paragraphs above are something you can check rather
 than something you have to believe.

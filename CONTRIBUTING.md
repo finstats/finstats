@@ -43,7 +43,7 @@ Knowing this saves you from building something that cannot be merged.
   to anything but your Jellyfin is an anonymous "what is my IP" lookup, made once and switchable off; the one other, downloading
   a geolocation database for the Security map, stays off until the owner asks for it, and addresses are always looked up
   locally. Notifications are the one thing finstats sends rather than reads, and only to destinations the owner enters, only the
-  events ticked for each, and without addresses unless that destination asked for them. Settings → Outbound connections lists every
+  events ticked for each, and without addresses unless that destination asked for them. Settings → System → Outbound connections lists every
   destination, so a new one cannot be added quietly: it shows up there. The README and
   [`docs/security.md`](docs/security.md) state these things as promises; a change that would make one of
   those sentences untrue has to change the sentence too, and will be looked at very hard.
@@ -53,7 +53,7 @@ Knowing this saves you from building something that cannot be merged.
   GPL-3.0-compatible licence. It also needs its licence recorded: run `python3 tools/make-third-party.py`
   (after `cargo fetch`) and commit the updated `THIRD-PARTY.json` with the change. `cargo test` fails while
   that file does not cover every package in `Cargo.lock`, and the app shows the result under
-  **Settings → Licences**.
+  **Settings → System → Licences**.
 - **Personal where it matters.** The recap is one person's year and there is deliberately no whole-server
   edition; permissions are enforced on the server, never only in the UI.
 
@@ -176,7 +176,7 @@ Short, because each one exists for a reason that has already cost somebody an ev
 1. **Do not run `cargo fmt`.** The code is deliberately not rustfmt-formatted; it would rewrite every file
    and bury your change. Match the style around you.
 2. **Tests pass, and you add one when you fix a bug.** `cargo test`, and
-   `for f in web/assets/js/*.js web/assets/js/pages/*.js; do node --check "$f"; done`. `cargo clippy
+   `for f in $(find web/assets/js -name "*.js"); do node --check "$f"; done`. `cargo clippy
    --all-targets` has about 20 style warnings; add no new ones. Every commit that touches Rust builds and
    passes on its own.
 3. **Look at it like a user.** UI changes: at desktop width *and* around 390 px, as an administrator *and* as

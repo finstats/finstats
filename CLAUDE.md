@@ -45,7 +45,7 @@ cargo run -- import-jellystat <backup.jsonl>                         # headless 
 cargo run -- import-streamystats <backup.json>                       # the other tracker, same thing
 cargo run -- relink                                                  # re-attach history to renamed items, then exit
 
-for f in web/assets/js/*.js web/assets/js/pages/*.js; do node --check "$f"; done   # the only JS check there is
+for f in $(find web/assets/js -name "*.js"); do node --check "$f"; done   # the only JS check there is
 docker build -t finstats:latest .        # local image; the published one is ghcr.io/olayzen/finstats
 ```
 
@@ -492,6 +492,14 @@ the loader its `dataView` uses, and `main.js` passes it as `route(…, { prefetc
 prefetched, and a loader copied into `prefetch.js` would drift from the page's URLs and silently miss. Clearing the cache bumps a
 generation and aborts what is on its way, so an answer from before a sign-out or a write is never stored. Pages join a prefetch
 already in flight (`shareRequestsOf`); only the prefetcher's requests can be joined, because a page's signal dies with the page.
+**Settings (`pages/settings.js`, `settings/*.js`) is one section on screen at a time**: `/settings/:section`, a sticky list of sections on the
+left (a scrolling chip row on a phone), and a finder in the header (`/` focuses it) built from each section's `entries`. A section is a module
+exporting `{ key, label, sub, group, icon, visible, entries, render(slot, store) }`; `settings/common.js` holds the store (`/settings` and
+`/tasks`, fetched once per visit, tasks polled only if a section subscribes) and the two shapes a setting takes: `toggleRow` (saves itself) and
+`numberForm` (one `Save` per section, bottom right). A setting is one row — label, one line of help of at most ~150 characters, control on the
+right — and a QA check holds that budget, because the page it replaced was fourteen cards and six hundred words of help in one column. Bare
+`/settings` and the old anchors (`/settings#backups`) forward to the section that holds them (`LEGACY`); a new section's card id stays a valid
+anchor. Sections hide themselves (`visible`) rather than explaining why they are empty.
 Esc is handled globally in `shell.js` (steps back out of `/libraries/:id`, `/users/:id`,
 `/items/:id`); overlays must keep calling `stopPropagation()` on their own Esc.
 Each screen is held to the UX patterns from <https://uxgoodpatterns.com>. A generated copy, `ux-rules.md`, may sit in the working
