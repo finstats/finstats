@@ -1,8 +1,9 @@
-import { h, icon, num, bytes, bitrate, duration, durationExact, durEl, relEl, dateTime, episodeCode, compact, safeHttps, languageName } from '../dom.js';
+import { h, icon, num, bytes, bitrate, duration, durationExact, durEl, relEl, dateTime, episodeCode, compact, safeHttps, languageName, pct } from '../dom.js';
 import { api, imgItem } from '../api.js';
 import { readDays, saveDays, can } from '../state.js';
 import { replaceQuery } from '../router.js';
-import { card, filterBar, dataView, sk, poster, avatar, chip, statTile, playsTable, emptyState, facts } from '../components.js';
+import { card, chartCard, filterBar, dataView, sk, poster, avatar, chip, statTile, playsTable, emptyState, facts } from '../components.js';
+import { retentionChart, retentionTable, simpleColumns, simpleColumnsTable } from '../charts.js';
 import { activityCard } from '../widgets.js';
 import { openPlayModal } from '../playmodal.js';
 import { plainTable } from '../tables.js';
@@ -79,6 +80,8 @@ export default function itemPage(ctx) {
           statTile({ label: 'Plays', value: compact(t.plays), title: num(t.plays), hint: t.last_played_at ? ['last ', relEl(t.last_played_at, '')] : 'Never played' }),
           statTile({ label: 'Watched by', value: `${num(t.users)} ${t.users === 1 ? 'user' : 'users'}`, hint: ' ' })),
         activityCard({ daily: d.daily, bucket: d.bucket, title: 'Plays over time' }),
+        whereTheyStop(d.insights),
+        whoKeepsWatching(it, d.seasons),
         castCard(d.people),
         comingCard(it),
         d.seasons && d.seasons.length ? card({ title: 'Seasons', sub: 'Plays per episode in this range', body: seasons(d.seasons) }) : null,
@@ -95,6 +98,32 @@ export default function itemPage(ctx) {
   filtersSlot.append(filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }));
   ctx.root.append(filtersSlot, view);
   dv.load();
+}
+
+/** Where plays of this film or episode stopped, with rewinds and subtitle switch-ons on the same axis.
+ *  Absent under three plays, or on anything without a runtime: the server answers null for those. */
+function whereTheyStop(ins) {
+  if (!ins || !Array.isArray(ins.curve) || ins.curve.length < 2) return null;
+  const parts = [`${num(ins.plays)} ${ins.plays === 1 ? 'play' : 'plays'}`,
+    `${num(ins.measured)} measured exactly, ${num(ins.estimated)} estimated from time watched`, 'skips under 20 s are not recorded'];
+  return chartCard({ title: 'Where people stop', sub: parts.join(' · '),
+    chart: () => retentionChart(ins),
+    table: () => retentionTable(ins) });
+}
+
+/** A show: how many people started each episode, in order. "Everyone quits episode three" is people
+ *  who never press play on episode four. Needs three played episodes to be a shape. */
+function whoKeepsWatching(it, seasons) {
+  if (!it || it.type !== 'Series' || !Array.isArray(seasons)) return null;
+  const eps = seasons.flatMap((sn) => sn.episodes || []).filter((e) => e.plays > 0 && e.users != null);
+  if (eps.length < 3) return null;
+  const rows = eps.map((e) => {
+    const code = episodeCode(e.season_number ?? seasons.find((sn) => (sn.episodes || []).includes(e))?.season_number, e.episode_number);
+    return { label: code, title: `${code} · ${e.name}`, value: e.users };
+  });
+  return chartCard({ title: 'Who keeps watching', sub: 'People who started each episode, in order',
+    chart: () => simpleColumns({ rows, unit: ['viewer', 'viewers'], ariaLabel: 'Viewers per episode' }),
+    table: () => simpleColumnsTable({ rows, head: ['Episode', 'Viewers'] }) });
 }
 
 /** What Sonarr or Radarr expect next for this title. Absent without a connection or without anything due. */
@@ -162,6 +191,7 @@ function watchers(rows) {
 
 function seasons(list) {
   const withAudio = list.some((sn) => sn.episodes.some((e) => Array.isArray(e.audio_languages) && e.audio_languages.length));
+  const withFinished = list.some((sn) => sn.episodes.some((e) => e.finished != null));
   return h('div', { class: 'seasons' }, list.map((sn, i) => {
     const plays = sn.episodes.reduce((a, e) => a + (e.plays || 0), 0);
     const max = Math.max(1, ...sn.episodes.map((e) => e.plays || 0));
@@ -169,13 +199,14 @@ function seasons(list) {
       h('summary', null, icon('chevronRight', 14), h('span', { class: 'season-name' }, sn.name || `Season ${sn.season_number}`),
         h('span', { class: 'season-meta mono' }, `${num(sn.episodes.length)} ep · ${num(plays)} ${plays === 1 ? 'play' : 'plays'}`)),
       plainTable(h('table', { class: 'table table-dense episodes' },
-        h('thead', null, h('tr', null, h('th', null, '#'), h('th', null, 'Episode'), withAudio ? h('th', null, 'Audio') : null, h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Share')), h('th', { class: 'r' }, 'Plays'), h('th', { class: 'r' }, 'Watch time'))),
+        h('thead', null, h('tr', null, h('th', null, '#'), h('th', null, 'Episode'), withAudio ? h('th', null, 'Audio') : null, h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Share')), h('th', { class: 'r' }, 'Plays'), withFinished ? h('th', { class: 'r' }, 'Finished') : null, h('th', { class: 'r' }, 'Watch time'))),
         h('tbody', null, sn.episodes.map((e) => h('tr', null,
           h('td', { class: 'mono muted ep-num' }, e.episode_number != null ? String(e.episode_number) : '–'),
           h('td', null, h('a', { href: `/items/${e.id}` }, e.name)),
           withAudio ? h('td', { class: 'ep-langs', title: (e.audio_languages || []).map(languageName).join(', ') }, (e.audio_languages || []).map(languageName).join(' · ') || h('span', { class: 'muted' }, '–')) : null,
           h('td', { class: 'bucket-bar' }, h('span', { class: 'bucket-track' }, e.plays ? h('span', { class: 'bucket-fill', style: { width: Math.max(2, (e.plays / max) * 100) + '%' } }) : null)),
           h('td', { class: 'mono r' }, e.plays ? num(e.plays) : h('span', { class: 'muted' }, '0')),
+          withFinished ? h('td', { class: 'mono r', title: e.plays ? `${num(e.finished)} of ${num(e.plays)} plays reached 90% of the episode` : null }, e.plays ? pct(e.finished / e.plays) : h('span', { class: 'muted' }, '–')) : null,
           h('td', { class: 'mono r' }, e.watch_s ? duration(e.watch_s) : h('span', { class: 'muted' }, '–'))))))));
     if (i === 0 && list.length === 1) det.open = true;
     return det;
