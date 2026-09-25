@@ -551,6 +551,14 @@ The image has no `USER` line on purpose: `docker-entrypoint.sh` starts as root o
 to that user; with `--user` it changes nothing. finstats itself never runs as root. `main.rs::ensure_writable` fails fast with the fix.
 Test the image on folders Docker creates (`qa/run.sh docker`), not on a data folder that already exists on the dev machine.
 
+**The owner's own install runs from this checkout, and it is redeployed at the end of every change.** When a container named `finstats`
+is running (`docker ps`), finishing a feature or a fix means rebuilding the local image and swapping the container without being
+asked: `docker build -t finstats:latest .`, `docker rm -f finstats`, then the same `docker run` it had (read its binds, env and ports
+from `docker inspect` first, never from memory), and a check of `/api/status`, the log and the health state afterwards. Work that
+only lands in the repository while `localhost:8080` still shows the old build is not finished. A newer binary snapshots the database
+by itself before it changes anything (`back_up_before_update`); take a manual `sqlite3 data/finstats.db ".backup …"` too when the
+change is risky.
+
 The repository is `github.com/OlaYZen/finstats`; images go to `ghcr.io/olayzen/finstats`. `.github/workflows/docker.yml` runs the unit
 tests, builds amd64 and arm64 on native runners (no QEMU), and publishes `:edge` from `main` and `:X.Y.Z`, `:X.Y`, `:X`, `:latest` from a
 `vX.Y.Z` tag, then creates the GitHub release from that version's `CHANGELOG.md` section. It refuses a tag that does not match
