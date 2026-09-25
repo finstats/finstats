@@ -68,6 +68,14 @@ pub fn router(app: App) -> Router {
         .route("/search", get(stats::search))
         .route("/events", get(stats::events))
         .route("/audit", get(crate::audit::audit))
+        .route("/me/public-profile", get(crate::public::get_mine).put(crate::public::put_mine))
+        .route("/me/public-profile/reset", post(crate::public::reset_mine))
+        .route("/public-profiles", get(crate::public::list))
+        .route("/public-profiles/{id}", delete(crate::public::take_down))
+        // Read without an account: what one person published, to anyone holding the link, and nothing else.
+        .route("/public/{token}", get(crate::public::read))
+        .route("/public/{token}/img/{item_id}", get(public_item_image))
+        .route("/public/{token}/avatar", get(public_avatar))
         .route("/keys", get(crate::keys::list).post(crate::keys::create))
         .route("/keys/{id}", delete(crate::keys::revoke))
         .route("/calendar.ics", get(crate::ical::feed))
@@ -113,6 +121,7 @@ pub fn router(app: App) -> Router {
 
     Router::new()
         .nest("/api", api)
+        .route("/u/{token}", get(public_page))
         .fallback(static_handler)
         .layer(middleware::from_fn(security_headers))
         // A backup is gzip already. Compressing it again gains nothing, and the doubly-encoded stream
@@ -181,7 +190,8 @@ async fn security_headers(req: Request, next: Next) -> Response {
 
 async fn static_handler(uri: Uri) -> Response {
     let path = uri.path().trim_start_matches('/');
-    if let Some(file) = WebAssets::get(path).filter(|_| !path.is_empty()) {
+    // The public page is a template with holes in it; it is only ever served filled, from `/u/{token}`.
+    if let Some(file) = WebAssets::get(path).filter(|_| !path.is_empty() && path != "public.html") {
         let mime = mime_guess::from_path(path).first_or_octet_stream();
         // Fonts never change; everything else revalidates so upgrades show up immediately.
         let cache = if path.starts_with("assets/fonts/") { "public, max-age=31536000, immutable" } else { "no-cache" };
@@ -312,6 +322,47 @@ async fn user_image(State(app): State<App>, _user: AuthUser, Path(id): Path<Stri
     let id = valid_id(&id)?;
     let width = pick_width(q.w.or(Some(96)));
     cached_image(&app, format!("user-{id}-{width}"), format!("/Users/{id}/Images/Primary"), width).await
+}
+
+/// A poster on a published profile, for a reader without an account: only an item the page itself shows.
+async fn public_item_image(State(app): State<App>, Path((token, id)): Path<(String, String)>, Query(q): Query<ImageQuery>) -> ApiResult<Response> {
+    let id = valid_id(&id)?;
+    let (_, a) = crate::public::resolve(&app, token).await?;
+    if !crate::public::listed_images(&a).contains(&id) {
+        return Err(ApiError::not_found("Image"));
+    }
+    let width = pick_width(q.w);
+    public_image(cached_image(&app, format!("item-{id}-primary-{width}"), format!("/Items/{id}/Images/Primary"), width).await?)
+}
+
+/// The owner's picture, when they chose to show it.
+async fn public_avatar(State(app): State<App>, Path(token): Path<String>) -> ApiResult<Response> {
+    let (p, _) = crate::public::resolve(&app, token).await?;
+    if !p.show_avatar {
+        return Err(ApiError::not_found("Image"));
+    }
+    let id = valid_id(&p.user_id)?;
+    public_image(cached_image(&app, format!("user-{id}-96"), format!("/Users/{id}/Images/Primary"), 96).await?)
+}
+
+/// Anyone may keep a published poster, but not for long: a profile taken down should stop showing soon.
+fn public_image(mut r: Response) -> ApiResult<Response> {
+    r.headers_mut().insert(CACHE_CONTROL, HeaderValue::from_static("public, max-age=3600"));
+    Ok(crate::public::noindex(r))
+}
+
+/// `/u/{token}`: the published page. Its preview (the title and the card chat apps show) is filled in
+/// here, because a link preview is read by a bot that runs no script.
+async fn public_page(State(app): State<App>, Path(token): Path<String>) -> Response {
+    let found = crate::public::resolve(&app, token.clone()).await;
+    let page = WebAssets::get("public.html").map(|f| String::from_utf8_lossy(&f.data).into_owned());
+    let (Ok((_, a)), Some(page)) = (found, page) else {
+        let body = "<!doctype html><meta charset=utf-8><title>Not found</title><p>There is no profile here.</p>";
+        return crate::public::noindex((StatusCode::NOT_FOUND, [(CONTENT_TYPE, "text/html; charset=utf-8")], body).into_response());
+    };
+    let base = app.settings().public_url.trim_end_matches('/').to_string();
+    let html = crate::public::fill_page(&page, &a, &base, &token);
+    crate::public::noindex(([(CONTENT_TYPE, "text/html; charset=utf-8"), (CACHE_CONTROL, "no-cache")], html).into_response())
 }
 
 /// The poster of a title that is not in the library yet: only Sonarr or Radarr has it. Both path segments
@@ -485,9 +536,9 @@ async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path
 
 // ---------------------------------------------------------------- permissions
 
-/// Settings only a Jellyfin administrator may write: who gets in, what everyone may see, and the
-/// address finstats puts in the messages it sends.
-const ACCESS_KEYS: [&str; 3] = ["allow_user_login", "default_permissions", "public_url"];
+/// Settings only a Jellyfin administrator may write: who gets in, what everyone may see, the address
+/// finstats puts in the messages it sends, and whether anything may be read without an account.
+const ACCESS_KEYS: [&str; 4] = ["allow_user_login", "default_permissions", "public_url", "public_profiles"];
 
 const PERMISSION_INFO: [(&str, &str, &str); 7] = [
     ("sign_in", "Sign in", "May use finstats and sees their own statistics and recap."),
@@ -820,6 +871,11 @@ async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> Api
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_a_jellyfin_administrator_lets_profiles_be_public() {
+        assert!(ACCESS_KEYS.contains(&"public_profiles"));
+    }
 
     #[test]
     fn both_ways_of_importing_history_have_a_task_of_their_own() {

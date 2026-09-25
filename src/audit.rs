@@ -27,7 +27,7 @@ pub const KEEP_S: i64 = 365 * 86_400;
 
 /// Every kind an entry can be. A kind the list is asked for that is not one of these is an empty
 /// list, not an error.
-pub const KINDS: [&str; 26] = [
+pub const KINDS: [&str; 30] = [
     "sign_in", "sign_in_failed", "sign_in_refused", "sign_out", "setup_completed",
     "key_created", "key_revoked", "key_used",
     "setting_changed", "permissions_changed",
@@ -35,6 +35,7 @@ pub const KINDS: [&str; 26] = [
     "target_added", "target_changed", "target_removed",
     "backup_made", "backup_restored", "backup_deleted", "backup_downloaded",
     "task_run", "import_started", "import_finished", "play_deleted", "alert_resolved", "alert_reopened",
+    "profile_published", "profile_changed", "profile_unpublished", "profile_link_reset",
 ];
 
 /// Who did it, and through what.

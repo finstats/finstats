@@ -14,8 +14,16 @@ use serde::{Deserialize, Serialize};
 
 use serde_json::Value;
 
-use crate::db::rusqlite::{Connection, OptionalExtension, params, params_from_iter};
-use crate::state::Settings;
+use axum::Json;
+use axum::extract::{Path, State};
+use axum::http::{HeaderValue, StatusCode};
+use axum::response::{IntoResponse, Response};
+use serde_json::json;
+
+use crate::audit::{self, Actor};
+use crate::auth::{AuthUser, Credential, JellyfinAdmin};
+use crate::db::{self, rusqlite::{Connection, OptionalExtension, params, params_from_iter}};
+use crate::state::{ApiError, ApiResult, App, Settings};
 use crate::stats::{self, Cond};
 
 /// What a person chose to show. All off until they turn one on.
@@ -325,6 +333,15 @@ pub fn save(c: &Connection, user_id: &str, e: &Edit, now: i64) -> Result<String>
     Ok(c.query_row("SELECT token FROM public_profiles WHERE user_id = ?1", [user_id], |r| r.get(0))?)
 }
 
+/// What a save did, for the audit log: a link going live and a link going dark are the two that matter.
+fn save_kind(was: Option<bool>, now: bool) -> &'static str {
+    match (was.unwrap_or(false), now) {
+        (false, true) => "profile_published",
+        (true, false) => "profile_unpublished",
+        _ => "profile_changed",
+    }
+}
+
 pub const NAME_MAX: usize = 60;
 
 /// A new token; every link already shared stops working.
@@ -332,6 +349,192 @@ pub fn reset(c: &Connection, user_id: &str, now: i64) -> Result<Option<String>> 
     let token = new_token();
     let n = c.execute("UPDATE public_profiles SET token = ?2, updated_at = ?3 WHERE user_id = ?1", params![user_id, token, now])?;
     Ok((n > 0).then_some(token))
+}
+
+// ---------------------------------------------------------------- the owner's side
+
+/// Making something public is done with a session, never a key: a key left in a script should not be
+/// able to publish its owner's viewing.
+fn only_a_session(user: &AuthUser) -> Result<(), ApiError> {
+    match user.credential {
+        Credential::Session => Ok(()),
+        Credential::Key { .. } => Err(ApiError::new(StatusCode::FORBIDDEN, "Sign in to publish a profile; a key cannot make anything public")),
+    }
+}
+
+/// The address of a profile: absolute when finstats knows where it answers from outside.
+fn link(settings: &Settings, token: &str) -> String {
+    format!("{}/u/{token}", settings.public_url.trim_end_matches('/'))
+}
+
+fn mine(c: &Connection, settings: &Settings, user_id: &str) -> Result<Value> {
+    let row = c
+        .query_row(
+            "SELECT token, published, display_name, show_avatar, sections FROM public_profiles WHERE user_id = ?1",
+            [user_id],
+            |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?, r.get::<_, String>(2)?, r.get::<_, bool>(3)?, r.get::<_, String>(4)?)),
+        )
+        .optional()?;
+    let (url, published, display_name, show_avatar, sections) = match row {
+        Some((token, p, n, a, s)) => (Some(link(settings, &token)), p, n, a, serde_json::from_str(&s).unwrap_or_default()),
+        None => (None, false, String::new(), false, Sections::default()),
+    };
+    Ok(json!({
+        "server_enabled": settings.public_profiles, "published": published, "url": url,
+        "display_name": display_name, "show_avatar": show_avatar, "sections": sections,
+    }))
+}
+
+/// `GET /api/me/public-profile`
+pub async fn get_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
+    let settings = app.settings();
+    Ok(Json(app.db.call(move |c| mine(c, &settings, &user.id)).await?))
+}
+
+/// `PUT /api/me/public-profile` — what to publish, and whether to. The first save mints the link.
+pub async fn put_mine(State(app): State<App>, user: AuthUser, Json(e): Json<Edit>) -> ApiResult {
+    only_a_session(&user)?;
+    let settings = app.settings();
+    if !settings.public_profiles {
+        return Err(ApiError::new(StatusCode::CONFLICT, "An administrator has not allowed public profiles on this server"));
+    }
+    let actor = Actor::from(&user);
+    let out = app
+        .db
+        .call(move |c| {
+            let was: Option<bool> = c.query_row("SELECT published FROM public_profiles WHERE user_id = ?1", [&user.id], |r| r.get(0)).optional()?;
+            save(c, &user.id, &e, db::now())?;
+            audit::record_quietly(c, &audit::Entry::new(save_kind(was, e.published), actor).target(user.id.clone()).detail(json!({ "sections": e.sections, "show_avatar": e.show_avatar })));
+            mine(c, &settings, &user.id)
+        })
+        .await?;
+    Ok(Json(out))
+}
+
+/// `POST /api/me/public-profile/reset` — a new link; the old one is gone for good.
+pub async fn reset_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
+    only_a_session(&user)?;
+    let settings = app.settings();
+    let actor = Actor::from(&user);
+    let out = app
+        .db
+        .call(move |c| {
+            if reset(c, &user.id, db::now())?.is_none() {
+                return Ok(None);
+            }
+            audit::record_quietly(c, &audit::Entry::new("profile_link_reset", actor).target(user.id.clone()));
+            Ok(Some(mine(c, &settings, &user.id)?))
+        })
+        .await?
+        .ok_or_else(|| ApiError::not_found("Profile"))?;
+    Ok(Json(out))
+}
+
+/// `GET /api/public-profiles` — who publishes what, for the administrators who answer for the server.
+pub async fn list(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -> ApiResult {
+    let rows = app
+        .db
+        .call(|c| {
+            let mut stmt = c.prepare(
+                "SELECT p.user_id, COALESCE(u.name, ''), p.display_name, p.published, p.sections, p.created_at, p.updated_at
+                 FROM public_profiles p LEFT JOIN users u ON u.id = p.user_id ORDER BY p.published DESC, p.updated_at DESC",
+            )?;
+            let rows = stmt.query_map([], |r| {
+                Ok(json!({
+                    "user_id": r.get::<_, String>(0)?, "user_name": r.get::<_, String>(1)?, "display_name": r.get::<_, String>(2)?,
+                    "published": r.get::<_, bool>(3)?, "sections": serde_json::from_str::<Sections>(&r.get::<_, String>(4)?).unwrap_or_default(),
+                    "created_at": r.get::<_, i64>(5)?, "updated_at": r.get::<_, i64>(6)?,
+                }))
+            })?;
+            Ok(rows.collect::<Result<Vec<_>, _>>()?)
+        })
+        .await?;
+    Ok(Json(json!({ "enabled": app.settings().public_profiles, "profiles": rows })))
+}
+
+/// `DELETE /api/public-profiles/{user_id}` — an administrator takes a profile down. The owner's choices
+/// are kept; publishing again is theirs to do.
+pub async fn take_down(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(id): Path<String>) -> ApiResult {
+    let id = db::norm_id(&id);
+    let actor = Actor::from(&user);
+    let done = app
+        .db
+        .call(move |c| {
+            let n = c.execute("UPDATE public_profiles SET published = 0, updated_at = ?2 WHERE user_id = ?1 AND published = 1", params![id, db::now()])?;
+            if n > 0 {
+                audit::record_quietly(c, &audit::Entry::new("profile_unpublished", actor).target(id));
+            }
+            Ok(n > 0)
+        })
+        .await?;
+    if !done {
+        return Err(ApiError::not_found("Profile"));
+    }
+    Ok(Json(json!({ "ok": true })))
+}
+
+// ---------------------------------------------------------------- the stranger's side
+
+/// Every way of there being nothing to show answers exactly this, so a link cannot tell "switched off"
+/// from "taken down" from "never existed".
+pub fn not_found() -> ApiError {
+    ApiError::not_found("Profile")
+}
+
+/// A token to its profile and the answer, on the database thread.
+pub async fn resolve(app: &App, token: String) -> Result<(Published, PublicProfile), ApiError> {
+    let settings = app.settings();
+    let min_play_s = settings.min_play_s;
+    app.db
+        .call(move |c| {
+            let Some(p) = lookup(c, &settings, &token)? else { return Ok(None) };
+            let a = answer(c, &p, min_play_s, db::now())?;
+            Ok(Some((p, a)))
+        })
+        .await?
+        .ok_or_else(not_found)
+}
+
+/// `GET /api/public/{token}` — no session, no key: the link is the only thing asked for.
+pub async fn read(State(app): State<App>, Path(token): Path<String>) -> ApiResult<Response> {
+    let (_, a) = resolve(&app, token).await?;
+    Ok(noindex(Json(a).into_response()))
+}
+
+/// The page's preview: what a chat app shows under a pasted link. Every value is escaped for HTML.
+pub fn fill_page(page: &str, a: &PublicProfile, base: &str, token: &str) -> String {
+    let url = format!("{base}/u/{token}");
+    let title = if a.name.is_empty() { "A finstats profile".to_string() } else { format!("{} on finstats", a.name) };
+    let description = match &a.totals {
+        Some(t) => format!("{} hours watched, {} plays.", t.watch_s / 3600, t.plays),
+        None => "What they watch, published by them.".to_string(),
+    };
+    page.replace("{{title}}", &html_escape(&title))
+        .replace("{{description}}", &html_escape(&description))
+        .replace("{{image}}", &html_escape(&format!("{url}/card.png")))
+        .replace("{{url}}", &html_escape(&url))
+}
+
+/// For text and attribute values alike.
+pub fn html_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// Published pages are for the people a link is sent to, not for search engines.
+pub fn noindex(mut r: Response) -> Response {
+    r.headers_mut().insert("x-robots-tag", HeaderValue::from_static("noindex, nofollow"));
+    r
 }
 
 #[cfg(test)]
@@ -479,6 +682,36 @@ mod tests {
         assert!(lookup(&c, &on(), &old).unwrap().is_none());
         assert!(lookup(&c, &on(), &new).unwrap().is_some());
         assert!(reset(&c, "u-bob-0002", NOW).unwrap().is_none(), "nothing to reset for somebody who never published");
+    }
+
+    #[test]
+    fn a_save_is_on_record_as_what_it_did_to_the_link() {
+        assert_eq!(save_kind(None, true), "profile_published");
+        assert_eq!(save_kind(Some(false), true), "profile_published");
+        assert_eq!(save_kind(Some(true), true), "profile_changed");
+        assert_eq!(save_kind(Some(true), false), "profile_unpublished");
+        assert_eq!(save_kind(None, false), "profile_changed");
+        for k in ["profile_published", "profile_changed", "profile_unpublished", "profile_link_reset"] {
+            assert!(crate::audit::KINDS.contains(&k), "{k} is not an audit kind");
+        }
+    }
+
+    #[test]
+    fn the_page_preview_is_the_chosen_name_escaped_and_a_card() {
+        let c = conn();
+        let p = published(&c, &Edit { display_name: "<b>Al & \"Ice\"</b>".into(), ..all() });
+        let a = answer(&c, &p, 0, NOW).unwrap();
+        let page = "<title>{{title}}</title><meta property=\"og:description\" content=\"{{description}}\"><meta property=\"og:image\" content=\"{{image}}\"><meta property=\"og:url\" content=\"{{url}}\">";
+        let html = fill_page(page, &a, "https://stats.example.com", "Tok3n");
+        assert!(html.contains("&lt;b&gt;Al &amp; &quot;Ice&quot;&lt;/b&gt;"), "{html}");
+        assert!(!html.contains("<b>"), "{html}");
+        assert!(html.contains("content=\"https://stats.example.com/u/Tok3n/card.png\""), "{html}");
+        assert!(html.contains("content=\"https://stats.example.com/u/Tok3n\""), "{html}");
+        assert!(!html.contains("{{"), "every hole filled: {html}");
+        // Without a name and without an address: a plain title, and a card on this server's own path.
+        let p = published(&c, &Edit { display_name: String::new(), ..all() });
+        let html = fill_page(page, &answer(&c, &p, 0, NOW).unwrap(), "", "Tok3n");
+        assert!(html.contains("<title>A finstats profile</title>") && html.contains("content=\"/u/Tok3n/card.png\""), "{html}");
     }
 
     #[test]
