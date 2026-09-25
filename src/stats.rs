@@ -16,7 +16,7 @@ use crate::media;
 use crate::state::{ApiError, ApiResult, App};
 
 const BOOL_COLS: [&str; 11] = ["active", "is_admin", "is_disabled", "removed", "has_image", "item_exists", "has_backdrop", "is_local", "is_favorite", "is_actor", "is_director"];
-const JSON_COLS: [&str; 6] = ["genres", "transcode", "studios", "provider_ids", "audio_languages", "subtitle_languages"];
+const JSON_COLS: [&str; 7] = ["genres", "transcode", "studios", "provider_ids", "audio_languages", "subtitle_languages", "clients"];
 
 // ---------------------------------------------------------------- plumbing
 
@@ -206,6 +206,20 @@ impl Scope {
 
     pub fn cond(&self) -> Cond {
         let mut c = self.base();
+        if let Some(s) = self.since {
+            c.add("p.started_at >= ?", s);
+        }
+        c
+    }
+
+    /// The same window and pin, but plays of any length: for the one question where the minimum play
+    /// length would hide the answer — a file nobody ever gets thirty seconds into.
+    pub fn cond_any_length(&self) -> Cond {
+        let mut c = Cond::default();
+        c.add_in("p.user_id", &self.user_ids);
+        if let Some(l) = &self.library_id {
+            c.add("p.library_id = ?", l.clone());
+        }
         if let Some(s) = self.since {
             c.add("p.started_at >= ?", s);
         }
@@ -1257,6 +1271,72 @@ fn series_seasons(c: &Connection, cond: &Cond, series_id: &str, series_removed: 
     Ok(seasons)
 }
 
+/// Files worth a look, from everyone's plays. The three lists are only built for a caller who may
+/// see everyone: from one person's own plays they would be noise, and a title in "files nobody gets
+/// into" is a fact about other people's viewing.
+pub async fn file_signals(State(app): State<App>, user: AuthUser, Query(q): Query<FilterQuery>) -> ApiResult {
+    let out = scoped(&app, &user, &q, |c, scope| file_signals_for(c, scope)).await?;
+    Ok(Json(out))
+}
+
+/// The most-rewound query, with the caller's window in `where_sql`; on its own so a test can hold
+/// its plan to the index over event kinds. A rewind is a seek that landed before where it left from.
+fn rewound_sql(where_sql: &str) -> String {
+    format!(
+        "WITH r AS (SELECT e.playback_id, e.position_s FROM playback_events e WHERE e.kind = 'seek' AND e.from_s > e.position_s)
+         SELECT p.item_id AS id, COALESCE(i.name, MAX(p.item_name)) AS name, MAX(p.item_type) AS type, MAX(p.series_id) AS series_id, MAX(p.series_name) AS series_name,
+                COUNT(DISTINCT p.id) AS plays, COUNT(r.playback_id) AS rewinds, ROUND(COUNT(r.playback_id) * 1.0 / COUNT(DISTINCT p.id), 2) AS per_play,
+                (SELECT (r2.position_s / 60) * 60 FROM r r2 JOIN playbacks p2 ON p2.id = r2.playback_id WHERE p2.item_id = p.item_id
+                 GROUP BY 1 ORDER BY COUNT(*) DESC, 1 LIMIT 1) AS hot_s
+         FROM playbacks p LEFT JOIN r ON r.playback_id = p.id LEFT JOIN items i ON i.id = p.item_id {where_sql}
+         GROUP BY p.item_id HAVING COUNT(DISTINCT p.id) >= 2 AND COUNT(r.playback_id) >= 3
+         ORDER BY per_play DESC, rewinds DESC LIMIT 15"
+    )
+}
+
+fn file_signals_for(c: &Connection, scope: &Scope) -> Result<Value> {
+    if !scope.perms.see_everyone {
+        return Ok(json!({ "broken": [], "rewound": [], "subtitled": [] }));
+    }
+    // A broken file is one nobody ever gets thirty seconds into, however many times it is tried: the
+    // minimum play length is exactly what those plays never reach, so it does not apply here.
+    let any = scope.cond_any_length().with_raw("p.item_type IN ('Movie', 'Episode') AND p.active = 0");
+    let broken = rows_json(
+        c,
+        &format!(
+            "SELECT p.item_id AS id, COALESCE(i.name, MAX(p.item_name)) AS name, MAX(p.item_type) AS type, MAX(p.series_id) AS series_id, MAX(p.series_name) AS series_name,
+                    COUNT(*) AS plays, COUNT(DISTINCT p.user_id) AS users, MAX(p.duration_s) AS longest_s, MAX(p.started_at) AS last_tried_at,
+                    json_group_array(DISTINCT p.client) FILTER (WHERE p.client IS NOT NULL) AS clients
+             FROM playbacks p LEFT JOIN items i ON i.id = p.item_id {}
+             GROUP BY p.item_id HAVING COUNT(*) >= 3 AND MAX(p.duration_s) < 30
+             ORDER BY plays DESC, last_tried_at DESC LIMIT 25",
+            any.sql()
+        ),
+        &any.args,
+    )?;
+    // Rewinds and subtitle switch-ons exist only for plays finstats recorded itself.
+    let live = scope.cond().with_raw("p.source = 'live' AND p.item_type IN ('Movie', 'Episode') AND p.active = 0");
+    let rewound = rows_json(c, &rewound_sql(&live.sql()), &live.args)?;
+    // A play's first subtitle change, when it is to a track and within the first ten minutes: the
+    // moment somebody found they could not follow the sound.
+    let subtitled = rows_json(
+        c,
+        &format!(
+            "WITH f AS (SELECT playback_id, MIN(id) AS first_id FROM playback_events WHERE kind = 'subtitle' GROUP BY playback_id),
+                  o AS (SELECT f.playback_id, e.position_s FROM f JOIN playback_events e ON e.id = f.first_id
+                        WHERE e.detail IS NOT NULL AND e.detail <> 'Off' AND e.position_s <= 600)
+             SELECT p.item_id AS id, COALESCE(i.name, MAX(p.item_name)) AS name, MAX(p.item_type) AS type, MAX(p.series_id) AS series_id, MAX(p.series_name) AS series_name,
+                    COUNT(DISTINCT p.id) AS plays, COUNT(o.playback_id) AS switched_on,
+                    ROUND(COUNT(o.playback_id) * 1.0 / COUNT(DISTINCT p.id), 2) AS share, CAST(AVG(o.position_s) AS INTEGER) AS typical_s
+             FROM playbacks p LEFT JOIN o ON o.playback_id = p.id LEFT JOIN items i ON i.id = p.item_id {}
+             GROUP BY p.item_id HAVING COUNT(o.playback_id) >= 2 ORDER BY share DESC, switched_on DESC LIMIT 15",
+            live.sql()
+        ),
+        &live.args,
+    )?;
+    Ok(json!({ "broken": broken, "rewound": rewound, "subtitled": subtitled }))
+}
+
 /// One actor or director: what they are in, and how much of it was watched (within the caller's scope).
 pub async fn person_detail(State(app): State<App>, user: AuthUser, Path(id): Path<String>, Query(q): Query<FilterQuery>) -> ApiResult {
     let id = db::norm_id(&id);
@@ -2028,6 +2108,121 @@ mod tests {
         assert_eq!(col("plays"), [3, 4, 1]);
         assert_eq!(col("users"), [3, 3, 1], "cat's two tries at episode two are one viewer");
         assert_eq!(col("finished"), [3, 1, 0], "bob's imported play ran 1150 of 1200 s: finished");
+    }
+
+    fn with_files(c: &Connection) {
+        // A broken file: three tries by two people on two apps, none past thirty seconds, and one try
+        // still going. A control that somebody once got 45 s into. Both films.
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, position_s, runtime_s, client, active) VALUES
+               (20, 'live', 'u1', 'alice', 'i7', 'Broken Reel', 'Movie', 1000, 1008, 8, 8, 5400, 'Jellyfin Web', 0),
+               (21, 'live', 'u2', 'bob',   'i7', 'Broken Reel', 'Movie', 2000, 2012, 12, 12, 5400, 'Kodi', 0),
+               (22, 'live', 'u2', 'bob',   'i7', 'Broken Reel', 'Movie', 3000, 3005, 5, 5, 5400, 'Kodi', 0),
+               (23, 'live', 'u1', 'alice', 'i7', 'Broken Reel', 'Movie', 4000, 4003, 3, 3, 5400, 'Kodi', 1),
+               (24, 'live', 'u1', 'alice', 'i8', 'Fine Reel', 'Movie', 1000, 1008, 8, 8, 5400, 'Kodi', 0),
+               (25, 'live', 'u2', 'bob',   'i8', 'Fine Reel', 'Movie', 2000, 2045, 45, 45, 5400, 'Kodi', 0),
+               (26, 'live', 'u2', 'bob',   'i8', 'Fine Reel', 'Movie', 3000, 3005, 5, 5, 5400, 'Kodi', 0);",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn the_file_lists_are_empty_for_somebody_who_may_only_see_themselves() {
+        let c = conn();
+        with_files(&c);
+        let mine = Scope { user_ids: vec!["u1".into()], perms: crate::auth::Perms { see_everyone: false, ..Default::default() }, ..everyone() };
+        let out = file_signals_for(&c, &mine).unwrap();
+        for key in ["broken", "rewound", "subtitled"] {
+            assert_eq!(out[key], json!([]), "{key}: a list of files built from one person's own plays is noise, and names other people's viewing");
+        }
+    }
+
+    #[test]
+    fn a_file_nobody_gets_thirty_seconds_into_is_listed_with_who_tried_it() {
+        let c = conn();
+        with_files(&c);
+        let out = file_signals_for(&c, &everyone()).unwrap();
+        let broken = out["broken"].as_array().unwrap();
+        assert_eq!(broken.len(), 1, "the control was got 45 s into once: {broken:?}");
+        let b = &broken[0];
+        assert_eq!((b["id"].as_str(), b["name"].as_str(), b["type"].as_str()), (Some("i7"), Some("Broken Reel"), Some("Movie")));
+        assert_eq!((b["plays"].as_i64(), b["users"].as_i64(), b["longest_s"].as_i64(), b["last_tried_at"].as_i64()), (Some(3), Some(2), Some(12), Some(3000)), "the try still going is not counted");
+        let mut clients: Vec<&str> = b["clients"].as_array().unwrap().iter().map(|v| v.as_str().unwrap()).collect();
+        clients.sort();
+        assert_eq!(clients, ["Jellyfin Web", "Kodi"]);
+    }
+
+    #[test]
+    fn the_broken_file_list_ignores_the_minimum_play_length() {
+        // The minimum play length is exactly what a broken file never reaches.
+        let c = conn();
+        with_files(&c);
+        let strict = Scope { min_play_s: 60, ..everyone() };
+        assert_eq!(file_signals_for(&c, &strict).unwrap()["broken"].as_array().unwrap().len(), 1);
+    }
+
+    fn with_rewinds(c: &Connection) {
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, position_s, runtime_s) VALUES
+               (30, 'live', 'u1', 'alice', 'x', 'Mumbled', 'Movie', 1000, 6000, 5000, 5000, 5400),
+               (31, 'live', 'u2', 'bob',   'x', 'Mumbled', 'Movie', 1000, 6000, 5000, 5000, 5400),
+               (32, 'live', 'u1', 'alice', 'y', 'Clear', 'Movie', 1000, 6000, 5000, 5000, 5400),
+               (33, 'live', 'u2', 'bob',   'y', 'Clear', 'Movie', 1000, 6000, 5000, 5000, 5400),
+               (34, 'live', 'u3', 'cat',   'y', 'Clear', 'Movie', 1000, 6000, 5000, 5000, 5400),
+               (35, 'live', 'u1', 'alice', 'z', 'Quiet', 'Movie', 1000, 6000, 5000, 5000, 5400),
+               (36, 'live', 'u2', 'bob',   'z', 'Quiet', 'Movie', 1000, 6000, 5000, 5000, 5400);
+             INSERT INTO playback_events(playback_id, at, kind, position_s, from_s, detail) VALUES
+               (30, 1100, 'seek', 1260, 1400, '23:20 → 21:00'), (30, 1200, 'seek', 1290, 1420, '23:40 → 21:30'),
+               (31, 1100, 'seek', 1270, 1400, '23:20 → 21:10'), (31, 1200, 'seek', 1280, 1400, '23:20 → 21:20'),
+               (31, 1300, 'seek', 4000, 1500, '25:00 → 66:40'),
+               (32, 1100, 'seek', 100, 400, '6:40 → 1:40'), (33, 1100, 'seek', 100, 400, '6:40 → 1:40'), (34, 1100, 'seek', 3000, 3200, '53:20 → 50:00'),
+               (35, 1100, 'seek', 100, 400, '6:40 → 1:40'), (36, 1100, 'seek', 100, 400, '6:40 → 1:40');",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn most_rewound_ranks_by_rewinds_per_play_and_names_the_hot_spot() {
+        let c = conn();
+        with_rewinds(&c);
+        let out = file_signals_for(&c, &everyone()).unwrap();
+        let rows = out["rewound"].as_array().unwrap();
+        let names: Vec<&str> = rows.iter().map(|r| r["name"].as_str().unwrap()).collect();
+        assert_eq!(names, ["Mumbled", "Clear"], "two rewinds are not a pattern; the skip ahead is not a rewind");
+        assert_eq!((rows[0]["plays"].as_i64(), rows[0]["rewinds"].as_i64(), rows[0]["per_play"].as_f64(), rows[0]["hot_s"].as_i64()), (Some(2), Some(4), Some(2.0), Some(1260)));
+        assert_eq!((rows[1]["rewinds"].as_i64(), rows[1]["per_play"].as_f64()), (Some(3), Some(1.0)));
+    }
+
+    #[test]
+    fn subtitles_switched_on_counts_the_first_ten_minutes_only() {
+        let c = conn();
+        with_rewinds(&c);
+        c.execute_batch(
+            "INSERT INTO playback_events(playback_id, at, kind, position_s, from_s, detail) VALUES
+               (32, 1150, 'subtitle', 200, NULL, 'eng (subrip)'), (33, 1150, 'subtitle', 500, NULL, 'eng (subrip)'), (34, 1150, 'subtitle', 900, NULL, 'eng (subrip)'),
+               (30, 1150, 'subtitle', 100, NULL, 'Off');",
+        )
+        .unwrap();
+        let out = file_signals_for(&c, &everyone()).unwrap();
+        let rows = out["subtitled"].as_array().unwrap();
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!((rows[0]["name"].as_str(), rows[0]["plays"].as_i64(), rows[0]["switched_on"].as_i64(), rows[0]["share"].as_f64(), rows[0]["typical_s"].as_i64()),
+                   (Some("Clear"), Some(3), Some(2), Some(0.67), Some(350)));
+    }
+
+    #[test]
+    fn the_rewind_list_reads_seeks_through_the_kind_index_rather_than_every_event() {
+        // Events are the biggest table on a long history and seeks a small part of it.
+        let c = conn();
+        let plan: Vec<String> = c
+            .prepare(&format!("EXPLAIN QUERY PLAN {}", rewound_sql("")))
+            .unwrap()
+            .query_map([], |r| r.get::<_, String>(3))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        assert!(plan.iter().any(|p| p.contains("idx_pbe_kind")), "{plan:?}");
+        assert!(!plan.iter().any(|p| p.contains("SCAN playback_events")), "{plan:?}");
     }
 
     #[test]

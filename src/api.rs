@@ -43,6 +43,7 @@ pub fn router(app: App) -> Router {
         .route("/stats/heatmap", get(stats::heatmap_handler))
         .route("/stats/playback", get(stats::playback))
         .route("/stats/insights", get(stats::insights))
+        .route("/stats/files", get(stats::file_signals))
         .route("/stats/groups", get(groups::groups))
         .route("/library/insights", get(stats::library_insights))
         .route("/library/recent", get(recent::recently_added))
