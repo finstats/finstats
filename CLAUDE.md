@@ -227,6 +227,24 @@ nothing wider: a tracker never exports the same play twice, so a second row of t
 the viewer really made, and a window there would silently drop it — on an import and, worse, on a restore of finstats'
 own backup. A new importer goes through `PlayRecord::insert_imported`, never `insert`.
 
+**Re-linking is the only thing that rewrites `item_id`, so it is the only thing that can turn an imported play into a
+duplicate of one already here** — the `already_recorded` check ran before the id moved. `relink::relink_orphans` therefore
+ends by re-applying the rule (`playback::drop_relinked_duplicates`), and takes `merge_window_s` as an argument so that
+none of its three callers can forget to. Only an imported row is ever removed, never one the collector recorded (its row
+carries a timeline no import can have), and rows of one source are never compared with each other. A real history had 363
+such pairs, 189 rows, mostly music — music being what gets re-added and renamed. **Anything that rewrites which item a
+play points at re-applies the rule, or it re-creates that bug.**
+
+**`sync_libraries` reads a library twice — every item, then the cast and crew of films and shows only — and only the
+first count may be shown to `trustworthy_removal`.** The two cursors were both called `start`, the second shadowing the
+first, so the guard compared a library's *shows* against its *items*: equal on a film library, 223 against 16,744 on a
+television one and 0 against 4,773 on music. Every read of such a library read as a gutted library, so the guard refused
+it and halted — correctly, on a reading that was never true — and the install restarted and did it again, every two and a
+half minutes, with no library read ever completing. Nothing was wrongly removed (`updated_at` decides that, not this
+count, and too small a count only ever refuses) but nothing was read either. The cursors are now `seen` and `people_at`.
+**A QA mock must answer the query it is standing in for**: `mock-jellyfin-breakable.mjs` ignored `IncludeItemTypes`, so
+both passes looked identical to it and a stage written for exactly this class of fault passed throughout.
+
 **What the library can tell a play lives in `sync::backfill_playbacks`**, not in an importer, because history is usually
 imported before finstats has ever read the library: it runs after every library read as well as after an import, and
 fills `library_id`, `runtime_s`, season/episode numbers and — for imported rows only — the item type neither tracker
