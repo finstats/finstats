@@ -3,7 +3,7 @@
 use anyhow::Result;
 use serde_json::Value;
 
-use crate::db::rusqlite::{Connection, named_params};
+use crate::db::rusqlite::{Connection, named_params, params};
 use crate::media::Streams;
 
 #[derive(Debug, Clone, Default)]
@@ -112,6 +112,16 @@ impl PlayRecord {
         Ok((n > 0).then(|| conn.last_insert_rowid()))
     }
 
+    /// Insert an imported row, unless the history already holds this play. `None` means it did
+    /// already: either this very row has been imported before, or another tracker — or the
+    /// collector — got there first. See [`already_recorded`].
+    pub fn insert_imported(&self, conn: &Connection, merge_window_s: i64) -> Result<Option<i64>> {
+        if already_recorded(conn, self.source, self.source_id.as_deref(), &self.user_id, &self.item_id, self.started_at, merge_window_s)? {
+            return Ok(None);
+        }
+        self.insert(conn)
+    }
+
     /// Refresh the parts of a live row that change while it plays.
     pub fn update_progress(&self, conn: &Connection, row_id: i64) -> Result<()> {
         let transcode = self.transcode.as_ref().map(|t| t.to_string());
@@ -147,6 +157,31 @@ impl PlayRecord {
     }
 }
 
+/// Is this play already in the history? The one rule a restore and both importers share, so that
+/// the same evening cannot be counted twice however it arrives.
+///
+/// Its own id settles it when there is one. Otherwise it is the same person, the same item and a
+/// start close enough to be the same viewing — where "close enough" depends on who recorded the
+/// other row. **Between** sources it is `window` seconds, because the trackers disagree about what
+/// they record: Jellystat stores the *end* of a play and finstats derives the start from it, while
+/// Streamystats and the collector store the real start, so one evening seen by two of them lands a
+/// little apart. **Within** one source it is the very same second and nothing wider, because a
+/// tracker never exports the same play twice: a second row of the same item minutes later is a
+/// restart the viewer really made, and a window there would silently drop it.
+pub fn already_recorded(conn: &Connection, source: &str, source_id: Option<&str>, user_id: &str, item_id: &str, started_at: i64, window: i64) -> Result<bool> {
+    if let Some(sid) = source_id
+        && conn.prepare_cached("SELECT 1 FROM playbacks WHERE source_id = ?1")?.exists([sid])?
+    {
+        return Ok(true);
+    }
+    Ok(conn
+        .prepare_cached(
+            "SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2
+               AND (started_at = ?3 OR (source <> ?4 AND ABS(started_at - ?3) <= ?5))",
+        )?
+        .exists(params![user_id, item_id, started_at, source, window.max(0)])?)
+}
+
 /// One thing that happened during a play (pause, skip, track switch…).
 #[derive(Debug, Clone)]
 pub struct PlayEvent {
@@ -162,4 +197,63 @@ pub fn insert_events(conn: &Connection, playback_id: i64, events: &[PlayEvent]) 
         stmt.execute(crate::db::rusqlite::params![playback_id, e.at, e.kind, e.position_s, e.detail])?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::rusqlite::Connection;
+
+    fn conn() -> Connection {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO playbacks(source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES ('live', NULL, 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 10000, 15400, 5400),
+                      ('jellystat', 'jellystat:abc', 'u2', 'bob', 'i1', 'Big Buck Bunny', 'Movie', 90000, 95400, 5400);",
+        )
+        .unwrap();
+        c
+    }
+
+    #[test]
+    fn a_play_already_here_is_recognised_by_its_own_id_whatever_its_start_says() {
+        let c = conn();
+        assert!(already_recorded(&c, "jellystat", Some("jellystat:abc"), "u2", "i1", 123, 600).unwrap());
+        assert!(!already_recorded(&c, "streamystats", Some("streamystats:abc"), "u2", "i1", 123, 600).unwrap());
+    }
+
+    #[test]
+    fn the_same_evening_from_another_tracker_is_recognised_by_person_item_and_start() {
+        let c = conn();
+        // Jellystat records the end and finstats derives the start; Streamystats records the true
+        // start. The same play therefore arrives a little off, and must still be the same play.
+        for start in [10000, 10045, 9955] {
+            assert!(already_recorded(&c, "streamystats", Some("streamystats:x"), "u1", "i1", start, 600).unwrap(), "{start}");
+        }
+        // Beyond the window it is a second viewing, not the same one.
+        assert!(!already_recorded(&c, "streamystats", Some("streamystats:x"), "u1", "i1", 10601, 600).unwrap());
+        // Another person, or another item, is never the same play.
+        assert!(!already_recorded(&c, "streamystats", Some("streamystats:x"), "u3", "i1", 10000, 600).unwrap());
+        assert!(!already_recorded(&c, "streamystats", Some("streamystats:x"), "u1", "i2", 10000, 600).unwrap());
+    }
+
+    #[test]
+    fn within_one_source_only_the_very_same_second_counts_as_the_same_play() {
+        let c = conn();
+        // One tracker never exports the same play twice, so a second row of the same item minutes
+        // later is a restart the viewer really made. Widening the window inside a source would
+        // silently drop it — on an import and, worse, on a restore of finstats' own backup.
+        assert!(!already_recorded(&c, "live", None, "u1", "i1", 10180, 600).unwrap());
+        assert!(already_recorded(&c, "live", None, "u1", "i1", 10000, 600).unwrap());
+    }
+
+    #[test]
+    fn a_window_of_zero_asks_for_the_very_same_second_from_anyone() {
+        let c = conn();
+        assert!(already_recorded(&c, "streamystats", None, "u1", "i1", 10000, 0).unwrap());
+        assert!(!already_recorded(&c, "streamystats", None, "u1", "i1", 10001, 0).unwrap());
+    }
 }

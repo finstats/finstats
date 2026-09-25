@@ -9,10 +9,12 @@
 *.sqlite3
 *.backup.db
 
-# Personal Jellystat backups
+# Personal history exports: these carry user names, IP addresses and viewing history
 *.jsonl
 backup_*
 jellystat-upload.tmp
+streamystats-backup-*.json
+streamystats-upload.tmp
 
 # Secrets and local overrides
 .env

@@ -72,6 +72,7 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
     file.seek(SeekFrom::Start(0))?;
 
     let mut conn = db.conn()?;
+    let settings = crate::state::Settings::load(&conn)?;
     let tx = conn.transaction()?;
     let mut res = ImportResult::default();
     let report = |msg: &str, p: f64| {
@@ -91,7 +92,7 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
             for (table, rows) in obj {
                 report(phase_label(table), 0.1 + 0.8 * i as f64 / count as f64);
                 for row in rows.as_array().map(Vec::as_slice).unwrap_or_default() {
-                    import_row(&tx, table, row, &mut res)?;
+                    import_row(&tx, table, row, &mut res, settings.merge_window_s)?;
                 }
             }
         }
@@ -130,7 +131,7 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
                     recognised += 1;
                     let table = v["table"].as_str().map(str::to_string).unwrap_or_else(|| current_table.clone());
                     let data = v["data"].take();
-                    import_row(&tx, &table, &data, &mut res)?;
+                    import_row(&tx, &table, &data, &mut res, settings.merge_window_s)?;
                 }
                 _ => res.unknown_rows += 1,
             }
@@ -150,15 +151,14 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
     finalize(&tx)?;
     report("Saving", 0.99);
     tx.commit()?;
-    let window = crate::state::Settings::load(&conn)?.group_window_s;
-    crate::groups::detect(&mut conn, window, None)?;
+    crate::groups::detect(&mut conn, settings.group_window_s, None)?;
     conn.execute_batch("PRAGMA optimize;")?;
     Ok(res)
 }
 
-fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult) -> Result<()> {
+fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult, merge_window_s: i64) -> Result<()> {
     match table {
-        "jf_playback_activity" => import_play(conn, d, res),
+        "jf_playback_activity" => import_play(conn, d, res, merge_window_s),
         "jf_users" => {
             let Some(id) = d["Id"].as_str() else { return Ok(()) };
             res.users += conn
@@ -303,7 +303,7 @@ fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult)
     }
 }
 
-fn import_play(conn: &Connection, d: &Value, res: &mut ImportResult) -> Result<()> {
+fn import_play(conn: &Connection, d: &Value, res: &mut ImportResult, merge_window_s: i64) -> Result<()> {
     let (Some(source_id), Some(user_id), Some(np_id)) = (d["Id"].as_str(), d["UserId"].as_str(), d["NowPlayingItemId"].as_str()) else {
         res.plays_skipped += 1;
         return Ok(());
@@ -375,7 +375,7 @@ fn import_play(conn: &Connection, d: &Value, res: &mut ImportResult) -> Result<(
         seek_count: 0,
         start_position_s: None,
     };
-    match rec.insert(conn)? {
+    match rec.insert_imported(conn, merge_window_s)? {
         Some(_) => res.plays_imported += 1,
         None => res.plays_skipped += 1,
     }
@@ -400,4 +400,59 @@ fn finalize(conn: &Connection) -> Result<()> {
     backfill_playbacks(conn)?;
     crate::network::reclassify(conn)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::rusqlite::Connection;
+    use serde_json::json;
+
+    fn conn() -> Connection {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c
+    }
+
+    /// 2026-01-01T00:00:00Z, and ten minutes and forty seconds later.
+    const MIDNIGHT: i64 = 1_767_225_600;
+
+    fn jellystat_play(ended: &str, duration: &str) -> serde_json::Value {
+        json!({
+            "Id": "abc", "UserId": "u1", "UserName": "alice", "NowPlayingItemId": "i1",
+            "NowPlayingItemName": "Big Buck Bunny", "OriginalContainer": "mkv",
+            "ActivityDateInserted": ended, "PlaybackDuration": duration,
+        })
+    }
+
+    #[test]
+    fn a_play_the_collector_already_recorded_is_not_imported_a_second_time() {
+        let c = conn();
+        // alice's evening, as finstats watched it happen: a ten-minute film from midnight.
+        c.execute_batch(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1767225600, 1767226240, 640);",
+        )
+        .unwrap();
+        // Jellystat kept the same evening: it ended at 00:10:40 after 600 s of play, so finstats
+        // reads its start as 00:00:40 — forty seconds off, and still the same film.
+        let mut res = ImportResult::default();
+        import_play(&c, &jellystat_play("2026-01-01T00:10:40Z", "600"), &mut res, 600).unwrap();
+        assert_eq!((res.plays_imported, res.plays_skipped), (0, 1));
+        assert_eq!(c.query_row("SELECT COUNT(*) FROM playbacks", [], |r| r.get::<_, i64>(0)).unwrap(), 1);
+    }
+
+    #[test]
+    fn a_play_nothing_else_holds_is_imported() {
+        let c = conn();
+        let mut res = ImportResult::default();
+        import_play(&c, &jellystat_play("2026-01-01T00:10:40Z", "600"), &mut res, 600).unwrap();
+        assert_eq!((res.plays_imported, res.plays_skipped), (1, 0));
+        assert_eq!(c.query_row("SELECT started_at FROM playbacks", [], |r| r.get::<_, i64>(0)).unwrap(), MIDNIGHT + 40);
+        // Importing the very same backup again changes nothing: its own id is enough.
+        import_play(&c, &jellystat_play("2026-01-01T00:10:40Z", "600"), &mut res, 600).unwrap();
+        assert_eq!((res.plays_imported, res.plays_skipped), (1, 1));
+    }
 }

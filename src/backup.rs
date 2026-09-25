@@ -227,6 +227,8 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
         if gz { Box::new(BufReader::with_capacity(1 << 20, GzDecoder::new(counted))) } else { Box::new(BufReader::with_capacity(1 << 20, counted)) };
 
     let mut conn = db.conn()?;
+    // This install's own idea of how far apart two sightings can be and still be one viewing.
+    let merge_window_s = Settings::load(&conn)?.merge_window_s;
     let tx = conn.transaction()?;
     let mut res = RestoreResult::default();
     let mut known: HashMap<&'static str, HashSet<String>> = HashMap::new();
@@ -259,12 +261,15 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
         match table {
             "settings" => settings_raw = row.get("value").and_then(Value::as_str).map(str::to_string),
             "playbacks" => {
-                let exists: bool = match row.get("source_id").and_then(Value::as_str) {
-                    Some(sid) => tx.prepare_cached("SELECT 1 FROM playbacks WHERE source_id = ?1")?.exists([sid])?,
-                    None => tx
-                        .prepare_cached("SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2 AND started_at = ?3")?
-                        .exists(params_from_iter([sql_value(&row["user_id"]), sql_value(&row["item_id"]), sql_value(&row["started_at"])].iter()))?,
-                };
+                let exists = crate::playback::already_recorded(
+                    &tx,
+                    row.get("source").and_then(Value::as_str).unwrap_or("live"),
+                    row.get("source_id").and_then(Value::as_str),
+                    row.get("user_id").and_then(Value::as_str).unwrap_or_default(),
+                    row.get("item_id").and_then(Value::as_str).unwrap_or_default(),
+                    row.get("started_at").and_then(Value::as_i64).unwrap_or_default(),
+                    merge_window_s,
+                )?;
                 if exists {
                     res.plays_skipped += 1;
                     continue;
@@ -419,6 +424,44 @@ mod tests {
 
         std::fs::write(tmp.join("not.jsonl"), "{\"hello\": 1}\n").unwrap();
         assert!(restore(&plain, &tmp.join("not.jsonl"), false, None).unwrap_err().to_string().contains("not a finstats backup"));
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn a_play_another_tracker_already_holds_is_not_restored_again_but_a_restart_still_is() {
+        let tmp = std::env::temp_dir().join(format!("finstats-restore-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let source = Db::open(&tmp.join("source.db")).unwrap();
+        source
+            .conn()
+            .unwrap()
+            .execute_batch(
+                "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, device_id)
+                   VALUES ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100000, 100600, 600, 'tv'),
+                          ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100180, 100900, 600, 'phone');",
+            )
+            .unwrap();
+        let made = export(&source, &dir(&tmp), None).unwrap();
+        let file = dir(&tmp).join(&made.name);
+
+        // Both are real: alice started it on the television and again on her phone three minutes
+        // later. A restore must keep both.
+        let empty = Db::open(&tmp.join("empty.db")).unwrap();
+        assert_eq!(restore(&empty, &file, false, None).unwrap().plays_imported, 2);
+
+        // But an install that imported the same evening from Streamystats already has it.
+        let imported = Db::open(&tmp.join("imported.db")).unwrap();
+        imported
+            .conn()
+            .unwrap()
+            .execute_batch(
+                "INSERT INTO playbacks(source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+                   VALUES ('streamystats', 'streamystats:1', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100045, 100650, 600);",
+            )
+            .unwrap();
+        let r = restore(&imported, &file, false, None).unwrap();
+        assert_eq!((r.plays_imported, r.plays_skipped), (0, 2));
         let _ = std::fs::remove_dir_all(&tmp);
     }
 }
