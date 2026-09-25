@@ -1040,41 +1040,7 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
             Value::Null
         };
 
-        let mut seasons: Vec<Value> = vec![];
-        if is_series {
-            let mut args = cond.args.clone();
-            args.push(id.clone().into());
-            let eps = rows_json(
-                c,
-                &format!(
-                    "SELECT e.id, e.name, e.index_number AS episode_number, e.parent_index_number AS season_number, e.season_id,
-                            COALESCE(sn.name, 'Season ' || COALESCE(e.parent_index_number, '?')) AS season_name,
-                            e.runtime_s, e.audio_languages, COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s
-                     FROM items e
-                     LEFT JOIN items sn ON sn.id = e.season_id
-                     LEFT JOIN (SELECT p.item_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s FROM playbacks p {} GROUP BY p.item_id) s ON s.item_id = e.id
-                     WHERE e.series_id = ? AND e.type = 'Episode' AND (e.removed = 0 OR {series_removed})
-                     ORDER BY COALESCE(e.parent_index_number, 9999), COALESCE(e.index_number, 9999), e.name",
-                    cond.sql(),
-                    series_removed = if item.get("removed").and_then(Value::as_bool).unwrap_or(false) { 1 } else { 0 },
-                ),
-                &args,
-            )?;
-            for mut e in eps {
-                let key = e.get("season_id").cloned().unwrap_or(Value::Null);
-                let season_number = e.get("season_number").cloned().unwrap_or(Value::Null);
-                let season_name = e.remove("season_name").unwrap_or(Value::Null);
-                e.remove("season_id");
-                e.remove("season_number");
-                let same = seasons.last().is_some_and(|s: &Value| s["id"] == key && s["season_number"] == season_number);
-                if !same {
-                    seasons.push(json!({ "id": key, "name": season_name, "season_number": season_number, "episodes": [] }));
-                }
-                if let Some(list) = seasons.last_mut().and_then(|s| s["episodes"].as_array_mut()) {
-                    list.push(Value::Object(e));
-                }
-            }
-        }
+        let seasons = if is_series { series_seasons(c, &cond, &id, item.get("removed").and_then(Value::as_bool).unwrap_or(false))? } else { vec![] };
         // A show or a season has no tracks of its own: say how many of its episodes have each language,
         // which is what tells a complete dub from one that stops after season one.
         let item_type = item.get("type").and_then(Value::as_str).unwrap_or("").to_string();
@@ -1246,6 +1212,49 @@ fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<
         "rewinds": histogram(&rewinds, runtime, bucket_s),
         "subtitles": histogram(&subtitles, runtime, bucket_s),
     }))
+}
+
+/// A show's episodes, season by season, each with its plays in scope, who started it and how many of
+/// those plays finished (stopped at 90 % of the runtime or later). "Everyone quits episode three" is
+/// people who never press play on episode four, which is what `users` in episode order shows.
+fn series_seasons(c: &Connection, cond: &Cond, series_id: &str, series_removed: bool) -> Result<Vec<Value>> {
+    let mut args = cond.args.clone();
+    args.push(series_id.to_string().into());
+    let eps = rows_json(
+        c,
+        &format!(
+            "SELECT e.id, e.name, e.index_number AS episode_number, e.parent_index_number AS season_number, e.season_id,
+                    COALESCE(sn.name, 'Season ' || COALESCE(e.parent_index_number, '?')) AS season_name,
+                    e.runtime_s, e.audio_languages, COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s,
+                    COALESCE(s.users, 0) AS users, COALESCE(s.finished, 0) AS finished
+             FROM items e
+             LEFT JOIN items sn ON sn.id = e.season_id
+             LEFT JOIN (SELECT p.item_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, COUNT(DISTINCT p.user_id) AS users,
+                               SUM(COALESCE(p.runtime_s, 0) > 0 AND CASE WHEN p.source = 'live' AND p.position_s IS NOT NULL THEN p.position_s ELSE p.duration_s END >= 0.9 * p.runtime_s) AS finished
+                        FROM playbacks p {} GROUP BY p.item_id) s ON s.item_id = e.id
+             WHERE e.series_id = ? AND e.type = 'Episode' AND (e.removed = 0 OR {series_removed})
+             ORDER BY COALESCE(e.parent_index_number, 9999), COALESCE(e.index_number, 9999), e.name",
+            cond.sql(),
+            series_removed = if series_removed { 1 } else { 0 },
+        ),
+        &args,
+    )?;
+    let mut seasons: Vec<Value> = vec![];
+    for mut e in eps {
+        let key = e.get("season_id").cloned().unwrap_or(Value::Null);
+        let season_number = e.get("season_number").cloned().unwrap_or(Value::Null);
+        let season_name = e.remove("season_name").unwrap_or(Value::Null);
+        e.remove("season_id");
+        e.remove("season_number");
+        let same = seasons.last().is_some_and(|s: &Value| s["id"] == key && s["season_number"] == season_number);
+        if !same {
+            seasons.push(json!({ "id": key, "name": season_name, "season_number": season_number, "episodes": [] }));
+        }
+        if let Some(list) = seasons.last_mut().and_then(|s| s["episodes"].as_array_mut()) {
+            list.push(Value::Object(e));
+        }
+    }
+    Ok(seasons)
 }
 
 /// One actor or director: what they are in, and how much of it was watched (within the caller's scope).
@@ -1990,6 +1999,35 @@ mod tests {
         assert_eq!(subs.len(), 50);
         assert_eq!(subs.iter().map(|v| v.as_i64().unwrap()).sum::<i64>(), 2);
         assert_eq!((&subs[150 / 120], &subs[100 / 120]), (&json!(1), &json!(1)), "one in each of the first two buckets");
+    }
+
+    #[test]
+    fn a_show_says_how_many_people_started_each_episode_and_how_many_finished() {
+        // "Everyone quits episode three" is people who never press play on episode four: a fact
+        // between episodes, so each episode counts who started it, and how many of its plays finished.
+        let c = conn();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, series_id, parent_index_number, index_number, runtime_s, updated_at) VALUES
+               ('s1', 'Series', 'Sintel: the show', NULL, NULL, NULL, NULL, 1),
+               ('e1', 'Episode', 'One', 's1', 1, 1, 1200, 1), ('e2', 'Episode', 'Two', 's1', 1, 2, 1200, 1), ('e3', 'Episode', 'Three', 's1', 1, 3, 1200, 1);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, started_at, ended_at, duration_s, position_s, runtime_s) VALUES
+               ('live',      'u1', 'alice', 'e1', 'One', 'Episode', 's1', 100, 1300, 1200, 1200, 1200),
+               ('jellystat', 'u2', 'bob',   'e1', 'One', 'Episode', 's1', 100, 1250, 1150, NULL, 1200),
+               ('live',      'u3', 'cat',   'e1', 'One', 'Episode', 's1', 100, 1300, 1200, 1100, 1200),
+               ('live',      'u1', 'alice', 'e2', 'Two', 'Episode', 's1', 2000, 3200, 1200, 1200, 1200),
+               ('live',      'u2', 'bob',   'e2', 'Two', 'Episode', 's1', 2000, 2600, 600, 600, 1200),
+               ('live',      'u3', 'cat',   'e2', 'Two', 'Episode', 's1', 2000, 2100, 100, 100, 1200),
+               ('live',      'u3', 'cat',   'e2', 'Two', 'Episode', 's1', 2200, 2300, 100, 100, 1200),
+               ('live',      'u1', 'alice', 'e3', 'Three', 'Episode', 's1', 4000, 4100, 100, 100, 1200);",
+        )
+        .unwrap();
+        let cond = everyone().cond().with("p.series_id = ?", "s1".to_string());
+        let seasons = series_seasons(&c, &cond, "s1", false).unwrap();
+        let eps = seasons[0]["episodes"].as_array().unwrap();
+        let col = |k: &str| eps.iter().map(|e| e[k].as_i64().unwrap()).collect::<Vec<_>>();
+        assert_eq!(col("plays"), [3, 4, 1]);
+        assert_eq!(col("users"), [3, 3, 1], "cat's two tries at episode two are one viewer");
+        assert_eq!(col("finished"), [3, 1, 0], "bob's imported play ran 1150 of 1200 s: finished");
     }
 
     #[test]
