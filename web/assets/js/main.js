@@ -17,7 +17,7 @@ import itemPage, { prefetchItem } from './pages/item.js';
 import personPage, { prefetchPerson } from './pages/person.js';
 import playback, { prefetchPlayback } from './pages/playback.js';
 import recapPage, { prefetchRecap } from './pages/recap.js';
-import events, { prefetchEvents } from './pages/events.js';
+import events from './pages/events.js';
 import serverPage, { prefetchServer } from './pages/server.js';
 import securityPage, { prefetchSecurity } from './pages/security.js';
 import pipelinePage, { prefetchPipeline } from './pages/pipeline.js';
@@ -43,7 +43,7 @@ route('/playback', playback, { prefetch: prefetchPlayback });
 route('/pipeline', pipelinePage, { prefetch: prefetchPipeline });
 route('/server', serverPage, { perm: 'see_server', prefetch: prefetchServer });
 route('/server/:section', serverPage, { perm: 'see_server', prefetch: prefetchServer });
-route('/events', events, { perm: 'see_server', prefetch: prefetchEvents });
+route('/events', events, { perm: 'see_server' });   // forwards to /server/log
 route('/security', securityPage, { perm: 'see_network', prefetch: prefetchSecurity });
 route('/settings', settings, { perm: 'manage' });
 route('/settings/:section', settings, { perm: 'manage' });

@@ -141,7 +141,7 @@ export default function securityPage(ctx) {
     let body;
     if (d.failed) {
       body = [h('p', { class: 'help' }, `${num(d.attempts)} failed ${d.attempts === 1 ? 'sign-in' : 'sign-ins'}, last ${relTime(d.last_at)}.`), h('ul', { class: 'picked-list' }, d.events.map((e) => h('li', null, e))),
-        can('see_server') ? h('a', { href: '/events?type=AuthenticationFailed' }, 'Open the server log') : null];
+        can('see_server') ? h('a', { href: '/server/log?type=AuthenticationFailed' }, 'Open the server log') : null];
     } else if (d.live) {
       body = h('p', { class: 'help' }, `${d.user_name} is playing ${d.series_name ? d.series_name + ' · ' : ''}${d.item_name}${d.device_name ? ' on ' + d.device_name : ''}.`);
     } else {

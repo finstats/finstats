@@ -1,7 +1,7 @@
 import { h, icon, debounce, num, dateTime, relTime } from '../dom.js';
 import { api } from '../api.js';
-import { replaceQuery } from '../router.js';
-import { pageHeader, card, dataView, sk, pagination, emptyState } from '../components.js';
+import { replaceQuery, navigate } from '../router.js';
+import { card, dataView, sk, pagination, emptyState } from '../components.js';
 import { dataTable } from '../tables.js';
 
 const PER_PAGE = 50;
@@ -19,8 +19,13 @@ const loadEvents = (f, signal) => api.get('/events', { ...f, per_page: PER_PAGE 
 const filtersOf = (query) => ({ q: query.get('q') || '', type: query.get('type') || '', sort: query.get('sort') || '', dir: query.get('dir') || '', page: Math.max(1, Number(query.get('page')) || 1) });
 export const prefetchEvents = ({ query, signal }) => [() => loadEvents(filtersOf(query), signal)];
 
-export default function events(ctx) {
-  ctx.title('Server log');
+/** `/events` was the log's own page; it lives under Server now, and the old address forwards with its filters. */
+export default function events() {
+  navigate('/server/log' + location.search, { replace: true, scroll: false });
+}
+
+/** The log itself: filters, count and the table. Mounted by the Server page's Log section. */
+export function logView(ctx) {
   const f = filtersOf(ctx.query);
   const view = h('div');
   const summary = h('p', { class: 'result-count', 'aria-live': 'polite' });
@@ -65,8 +70,7 @@ export default function events(ctx) {
   ctx.onCleanup(() => onSearch.cancel());
 
   paintType();
-  ctx.root.append(pageHeader('Server log', 'Jellyfin’s own activity log: sign-ins, failed logins, playback, tasks'),
-    h('div', { class: 'filters' }, h('div', { class: 'search-field' }, icon('search', 14), search), typeSlot),
-    summary, card({ cls: 'card-flush', body: view }));
   dv.load();
+  return [h('div', { class: 'filters' }, h('div', { class: 'search-field' }, icon('search', 14), search), typeSlot),
+    summary, card({ cls: 'card-flush', id: 'log', body: view })];
 }

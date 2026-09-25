@@ -7,6 +7,7 @@ import { state } from '../state.js';
 import { pageHeader, card, dataView, sk, emptyState, facts, setBusy, inlineError } from '../components.js';
 import { plainTable } from '../tables.js';
 import { reveal, pickSection, sectionNav, sectionLayout } from '../sections.js';
+import { logView, prefetchEvents } from './events.js';
 
 const RESULT = {
   Completed: ['sev-good', 'check', 'Completed'],
@@ -17,13 +18,14 @@ const RESULT = {
 
 // Shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
 const loadServer = (signal) => api.get('/server', null, { signal });
-export const prefetchServer = ({ signal }) => [() => loadServer(signal)];
+export const prefetchServer = (c) => (c.params && c.params.section === 'log' ? prefetchEvents(c) : [() => loadServer(c.signal)]);
 
 const SECTIONS = [
   { key: 'overview', label: 'Overview', sub: 'Version, system and storage', icon: 'server' },
   { key: 'jobs', label: 'Jobs', sub: 'What Jellyfin is doing, live', icon: 'clock' },
   { key: 'devices', label: 'Devices', sub: 'Every device that has signed in', icon: 'monitor' },
   { key: 'plugins', label: 'Plugins', sub: 'What is installed on Jellyfin', icon: 'layers' },
+  { key: 'log', label: 'Log', sub: 'Jellyfin’s own activity log: sign-ins, failed logins, playback, tasks', icon: 'log' },
 ];
 // The one-page card anchors, so a link from before still lands.
 const LEGACY = { jobs: 'jobs' };
@@ -43,7 +45,7 @@ export default function serverPage(ctx) {
     render,
   });
 
-  function render(d) {
+  function paintHeader(d) {
     d = d || {};
     const info = d.info || null;
     const name = (info && info.server_name) || (state.status && state.status.server_name) || 'Jellyfin';
@@ -54,7 +56,12 @@ export default function serverPage(ctx) {
     headerSlot.replaceChildren(pageHeader(name,
       [info && info.version ? `Jellyfin ${info.version}` : 'Your Jellyfin server', d.fetched_at ? ['· details from ', relEl(d.fetched_at, '')] : null],
       chips.length ? h('div', { class: 'chips' }, chips) : null));
+  }
 
+  function render(d) {
+    d = d || {};
+    const info = d.info || null;
+    paintHeader(d);
     // Jobs are live and their own request: they are worth nothing a quarter of an hour old, so the
     // section stands even before the rest has ever been fetched.
     if (section.key === 'jobs') return jobsCard();
@@ -285,7 +292,11 @@ export default function serverPage(ctx) {
   }
 
   ctx.root.append(headerSlot, sectionLayout(sectionNav('/server', SECTIONS, section.key, 'Server sections'), view));
-  dv.load();
+  if (section.key === 'log') {
+    // The log is its own request with its own filters; the server details only name the page.
+    view.append(...logView(ctx));
+    loadServer(ctx.signal).then((d) => { if (!ctx.signal.aborted) paintHeader(d); }).catch(() => {});
+  } else dv.load();
   if (section.key === 'jobs') {
     loadJobs();
     // One timer: every three seconds while Jellyfin is busy (a percentage that only moves every quarter of

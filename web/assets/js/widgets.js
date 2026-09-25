@@ -238,7 +238,7 @@ export function groupsCard(g, { title = 'Watched together', forUser = null } = {
 export function failedLoginsCard(rows) {
   if (!can('see_server') || !Array.isArray(rows) || !rows.length) return null;
   return card({ title: 'Failed sign-ins', sub: 'Most recent attempts on your Jellyfin server',
-    actions: h('a', { class: 'btn btn-ghost btn-sm', href: '/events' }, 'Server log', icon('chevronRight', 14)),
+    actions: h('a', { class: 'btn btn-ghost btn-sm', href: '/server/log' }, 'Server log', icon('chevronRight', 14)),
     body: h('ul', { class: 'mini-list' }, rows.map((r) => h('li', { class: 'mini-row' },
       h('span', { class: 'sev sev-warning' }, icon('alert', 13)),
       h('span', { class: 'mini-main' }, r.overview || 'Failed sign-in', r.user_name ? h('span', { class: 'muted' }, ' · ' + r.user_name) : null),
