@@ -744,7 +744,7 @@ pub const IMPORT_TASKS: [&str; 2] = ["import", "import_streamystats"];
 async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
     let path = receive(&app, req, "import", "jellystat-upload.tmp").await?;
     let actor = Actor::from(&user);
-    audit::record(&app, audit::Entry::new("import_started", actor.clone()).target("jellystat"));
+    audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("jellystat")).await;
     let worker = app.clone();
     tokio::task::spawn_blocking(move || {
         let outcome = import::run(&worker.db, &path, Some(&worker.tasks));
@@ -758,7 +758,7 @@ async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: R
 async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
     let path = receive(&app, req, "import_streamystats", "streamystats-upload.tmp").await?;
     let actor = Actor::from(&user);
-    audit::record(&app, audit::Entry::new("import_started", actor.clone()).target("streamystats"));
+    audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("streamystats")).await;
     let worker = app.clone();
     tokio::task::spawn_blocking(move || {
         let outcome = streamystats::run(&worker.db, &path, Some(&worker.tasks));

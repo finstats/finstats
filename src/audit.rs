@@ -109,6 +109,13 @@ pub fn record(app: &App, e: Entry) {
     });
 }
 
+/// The same, awaited: for a row that must be on record before what it announces begins — an import
+/// takes one long transaction, and a write landing in the middle of its first reads would make its
+/// own upgrade to writing fail (`SQLITE_BUSY_SNAPSHOT`). Still never the caller's error.
+pub async fn record_now(app: &App, e: Entry) {
+    let _ = app.db.call(move |c| { record_quietly(c, &e); Ok(()) }).await;
+}
+
 /// The settings that differ between two blobs: `[{key, from, to}]`, by key.
 pub fn changed_keys(before: &Value, after: &Value) -> Vec<Value> {
     let (Some(b), Some(a)) = (before.as_object(), after.as_object()) else { return vec![] };

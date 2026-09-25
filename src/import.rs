@@ -73,7 +73,9 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
 
     let mut conn = db.conn()?;
     let settings = crate::state::Settings::load(&conn)?;
-    let tx = conn.transaction()?;
+    // Immediate: the import will write, so it takes the write lock before its first read rather than
+    // failing to upgrade later when another connection (the collector, an audit row) commits meanwhile.
+    let tx = conn.transaction_with_behavior(crate::db::rusqlite::TransactionBehavior::Immediate)?;
     let mut res = ImportResult::default();
     let report = |msg: &str, p: f64| {
         if let Some(t) = tasks {
