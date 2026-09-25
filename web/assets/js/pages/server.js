@@ -1,10 +1,12 @@
-// /server — what the Jellyfin server itself looks like (GET /api/server, admins only).
+// /server — what the Jellyfin server itself looks like (GET /api/server, see_server). One section on
+// screen at a time, like Settings: Overview (system and storage), Jobs (live), Devices, Plugins.
 
 import { h, icon, num, bytes, duration, relEl, dateTime, debounce, mount, untilText } from '../dom.js';
 import { api, isAbort } from '../api.js';
 import { state } from '../state.js';
 import { pageHeader, card, dataView, sk, emptyState, facts, setBusy, inlineError } from '../components.js';
 import { plainTable } from '../tables.js';
+import { reveal, pickSection, sectionNav, sectionLayout } from '../sections.js';
 
 const RESULT = {
   Completed: ['sev-good', 'check', 'Completed'],
@@ -17,10 +19,21 @@ const RESULT = {
 const loadServer = (signal) => api.get('/server', null, { signal });
 export const prefetchServer = ({ signal }) => [() => loadServer(signal)];
 
+const SECTIONS = [
+  { key: 'overview', label: 'Overview', sub: 'Version, system and storage', icon: 'server' },
+  { key: 'jobs', label: 'Jobs', sub: 'What Jellyfin is doing, live', icon: 'clock' },
+  { key: 'devices', label: 'Devices', sub: 'Every device that has signed in', icon: 'monitor' },
+  { key: 'plugins', label: 'Plugins', sub: 'What is installed on Jellyfin', icon: 'layers' },
+];
+// The one-page card anchors, so a link from before still lands.
+const LEGACY = { jobs: 'jobs' };
+
 export default function serverPage(ctx) {
-  ctx.title('Server');
-  const headerSlot = h('div', null, pageHeader('Server', 'Your Jellyfin server, as finstats last saw it'));
-  const view = h('div', { class: 'stack' });
+  const section = pickSection(ctx, '/server', SECTIONS, LEGACY);
+  if (!section) return;
+  ctx.title(`${section.label} · Server`);
+  const headerSlot = h('div', null, pageHeader('Server', section.sub));
+  const view = h('div', { class: 'section-body stack' });
   let deviceFilter = '';
 
   const dv = dataView({
@@ -42,10 +55,14 @@ export default function serverPage(ctx) {
       [info && info.version ? `Jellyfin ${info.version}` : 'Your Jellyfin server', d.fetched_at ? ['· details from ', relEl(d.fetched_at, '')] : null],
       chips.length ? h('div', { class: 'chips' }, chips) : null));
 
+    // Jobs are live and their own request: they are worth nothing a quarter of an hour old, so the
+    // section stands even before the rest has ever been fetched.
+    if (section.key === 'jobs') return jobsCard();
     if (!d.fetched_at) return fetchPrompt();
-
+    if (section.key === 'devices') return devicesCard(d.devices);
+    if (section.key === 'plugins') return pluginsCard(d.plugins);
     return [
-      info ? card({ title: 'System', body: facts([
+      info ? card({ title: 'System', id: 'system', body: facts([
         ['Version', info.version, { mono: true }],
         ['Operating system', [info.operating_system, info.architecture].filter(Boolean).join(' · ') || null],
         ['Transcoder', info.encoder_location],
@@ -55,9 +72,6 @@ export default function serverPage(ctx) {
         info.log_path ? ['Log folder', h('span', { class: 'mono path' }, info.log_path)] : null,
       ]) }) : null,
       storageCard(d.storage),
-      devicesCard(d.devices),
-      jobsCard(),
-      h('div', { class: 'grid-2' }, pluginsCard(d.plugins)),
     ];
   }
 
@@ -100,11 +114,11 @@ export default function serverPage(ctx) {
   function storageCard(storage) {
     const rows = (Array.isArray(storage) ? storage : []).filter((x) => x && x.used_bytes >= 0 && x.free_bytes >= 0 && x.used_bytes + x.free_bytes > 0);
     if (!rows.length) {
-      return card({ title: 'Storage', body: h('p', { class: 'help' }, 'This Jellyfin version doesn’t report disk usage (it arrived in 10.11).') });
+      return card({ title: 'Storage', id: 'storage', body: h('p', { class: 'help' }, 'This Jellyfin version doesn’t report disk usage (it arrived in 10.11).') });
     }
     const order = { library: 0, system: 1 };
     rows.sort((a, b) => (order[a.kind] ?? 2) - (order[b.kind] ?? 2));
-    return card({ title: 'Storage', sub: 'Disk usage of the volumes Jellyfin lives on. Entries with identical numbers share a disk.',
+    return card({ title: 'Storage', id: 'storage', sub: 'Disk usage of the volumes Jellyfin lives on. Entries with identical numbers share a disk.',
       body: h('ul', { class: 'storage' }, rows.map((x) => {
         const total = x.used_bytes + x.free_bytes, share = x.used_bytes / total;
         // Severity lives in the fill; the track is a lighter step of the same hue.
@@ -145,13 +159,13 @@ export default function serverPage(ctx) {
     const input = h('input', { class: 'input input-search', type: 'search', placeholder: 'Filter devices…', 'aria-label': 'Filter devices', value: deviceFilter, spellcheck: false,
       onInput: (e) => onInput(e.target.value) });
     paint();
-    return card({ title: ['Devices ', count], sub: 'Every device that has signed in to Jellyfin',
+    return card({ title: ['Devices ', count], id: 'devices', sub: 'Every device that has signed in to Jellyfin',
       actions: all.length > 5 ? h('div', { class: 'search-field search-field-sm' }, icon('search', 14), input) : null, cls: 'card-flush', body });
   }
 
   function pluginsCard(plugins) {
     const rows = Array.isArray(plugins) ? plugins : [];
-    return card({ title: 'Plugins', cls: 'card-flush', body: !rows.length ? emptyState('No plugins reported.') :
+    return card({ title: 'Plugins', id: 'plugins', cls: 'card-flush', body: !rows.length ? emptyState('No plugins reported.') :
       plainTable(h('table', { class: 'table' },
         h('thead', null, h('tr', null, h('th', null, 'Plugin'), h('th', null, 'Version'), h('th', null, 'Status'))),
         h('tbody', null, rows.map((p) => {
@@ -270,14 +284,18 @@ export default function serverPage(ctx) {
     jobsBadge.hidden = !want;
   }
 
-  ctx.root.append(headerSlot, view);
+  ctx.root.append(headerSlot, sectionLayout(sectionNav('/server', SECTIONS, section.key, 'Server sections'), view));
   dv.load();
-  loadJobs();
-  // One timer: every three seconds while Jellyfin is busy (a percentage that only moves every quarter of
-  // an hour is not a progress bar), every twenty when it is not.
-  ctx.every(() => {
-    const busy = jobsData && jobsData.running > 0;
-    if (busy || Date.now() - jobsAt >= 20000) loadJobs();
-    else renderJobs();               // the "watched for" clock still ticks
-  }, 3000, { visibleOnly: true });
+  if (section.key === 'jobs') {
+    loadJobs();
+    // One timer: every three seconds while Jellyfin is busy (a percentage that only moves every quarter of
+    // an hour is not a progress bar), every twenty when it is not.
+    ctx.every(() => {
+      const busy = jobsData && jobsData.running > 0;
+      if (busy || Date.now() - jobsAt >= 20000) loadJobs();
+      else renderJobs();               // the "watched for" clock still ticks
+    }, 3000, { visibleOnly: true });
+  }
+  const id = location.hash.slice(1);
+  if (id) requestAnimationFrame(() => reveal(id));
 }

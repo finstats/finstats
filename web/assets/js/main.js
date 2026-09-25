@@ -42,6 +42,7 @@ route('/people/:id', personPage, { prefetch: prefetchPerson });
 route('/playback', playback, { prefetch: prefetchPlayback });
 route('/pipeline', pipelinePage, { prefetch: prefetchPipeline });
 route('/server', serverPage, { perm: 'see_server', prefetch: prefetchServer });
+route('/server/:section', serverPage, { perm: 'see_server', prefetch: prefetchServer });
 route('/events', events, { perm: 'see_server', prefetch: prefetchEvents });
 route('/security', securityPage, { perm: 'see_network', prefetch: prefetchSecurity });
 route('/settings', settings, { perm: 'manage' });

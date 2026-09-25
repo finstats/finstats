@@ -1,4 +1,4 @@
-// Settings: one section on screen at a time, a list to move between them, and a finder that knows
+// Settings: one section on screen at a time (the shell is sections.js), and a finder that knows
 // every setting by name. Each section is a module under settings/ (`{ key, label, sub, group, icon,
 // visible, entries, render }`); this page only decides which one is open and gives it a slot.
 // `/settings` itself lands on the first section the caller may see; the anchors the old one-page
@@ -7,6 +7,7 @@
 import { h, icon, mount } from '../dom.js';
 import { navigate } from '../router.js';
 import { pageHeader, errorState } from '../components.js';
+import { reveal, pickSection, sectionNav, sectionLayout } from '../sections.js';
 import { createStore } from '../settings/common.js';
 import jellyfin from '../settings/jellyfin.js';
 import access from '../settings/access.js';
@@ -21,33 +22,6 @@ import system from '../settings/system.js';
 const SECTIONS = [jellyfin, access, collection, network, security, ...services, backups, importSection, system];
 // Where the one-page anchors went, so links and bookmarks from before still land.
 const LEGACY = { connections: 'connections', security: 'security', notifications: 'notifications', outbound: 'system', backups: 'backups', 'import-jellystat': 'import', 'import-streamystats': 'import' };
-const HIT_MS = 2400;
-
-/** Scroll a row (or card) into view and mark it for a moment, so the eye lands where the link pointed. */
-function reveal(id, focus = false) {
-  const el = document.getElementById(id);
-  if (!el) return false;
-  el.scrollIntoView({ block: 'center' });
-  el.classList.add('is-hit');
-  setTimeout(() => el.classList.remove('is-hit'), HIT_MS);
-  if (focus) { const c = el.querySelector('input, textarea, select, button, a[href]'); if (c) c.focus({ preventScroll: true }); }
-  return true;
-}
-
-function nav(visible, current) {
-  const groups = [];
-  for (const s of visible) {
-    const name = s.group || '';
-    let g = groups.find((x) => x.name === name);
-    if (!g) groups.push(g = { name, items: [] });
-    g.items.push(s);
-  }
-  return h('nav', { class: 'settings-nav', 'aria-label': 'Settings sections' }, groups.map((g) => h('div', { class: 'settings-group' },
-    g.name ? h('p', { class: 'settings-group-title' }, g.name) : null,
-    g.items.map((s) => h('a', { class: ['settings-link', s.key === current && 'is-active'], href: `/settings/${s.key}`, 'aria-current': s.key === current ? 'page' : null },
-      icon(s.icon, 15), h('span', null, s.label))))));
-}
-
 // ---------------------------------------------------------------- the finder
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, '');
 const words = (s) => norm(s).split(/[^a-z0-9]+/).filter(Boolean);
@@ -124,20 +98,13 @@ function finder(visible, current, ctx) {
 // ---------------------------------------------------------------- the page
 export default function settings(ctx) {
   const visible = SECTIONS.filter((s) => s.visible());
-  const key = ctx.params.section;
-  const section = key ? visible.find((s) => s.key === key) : null;
-  if (!section) {
-    const anchor = location.hash.slice(1);
-    const known = LEGACY[anchor] && visible.some((s) => s.key === LEGACY[anchor]) ? LEGACY[anchor] : null;
-    const to = known || visible[0].key;
-    navigate(`/settings/${to}${anchor && anchor !== to && known ? '#' + anchor : ''}`, { replace: true, scroll: false });
-    return;
-  }
+  const section = pickSection(ctx, '/settings', visible, LEGACY);
+  if (!section) return;
   ctx.title(`${section.label} · Settings`);
   const store = createStore(ctx);
-  const slot = h('div', { class: 'settings-section stack' });
+  const slot = h('div', { class: 'section-body stack' });
   ctx.root.append(pageHeader('Settings', section.sub, finder(visible, section.key, ctx)),
-    h('div', { class: 'settings-layout' }, nav(visible, section.key), slot));
+    sectionLayout(sectionNav('/settings', visible, section.key, 'Settings sections'), slot));
   section.render(slot, store)
     .then(() => { const id = location.hash.slice(1); if (id && !ctx.signal.aborted) reveal(id); })
     .catch((e) => { if (!ctx.signal.aborted && e.name !== 'AbortError' && e.status !== 401) mount(slot, errorState(e, () => section.render(slot, store))); });
