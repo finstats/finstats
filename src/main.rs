@@ -145,8 +145,11 @@ fn main() -> Result<()> {
             return Ok(());
         }
         Some("relink") => {
-            let r = relink::relink_orphans(&*db.conn()?)?;
-            println!("Re-linked {} title plays and {} episode plays; cleaned {} names", r.titles, r.episodes, r.names_cleaned);
+            let r = relink::relink_orphans(&*db.conn()?, Settings::load(&*db.conn()?)?.merge_window_s)?;
+            println!(
+                "Re-linked {} title plays and {} episode plays; cleaned {} names; removed {} plays that had become duplicates",
+                r.titles, r.episodes, r.names_cleaned, r.duplicates_removed
+            );
             return Ok(());
         }
         Some(other) => bail!("unknown command `{other}`\n\n{USAGE}"),
@@ -186,8 +189,8 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
             c.execute("DELETE FROM sessions WHERE expires_at <= ?1", [db::now()])?;
             network::set_manual(c, &Settings::load(c)?.home_addresses)?;
             network::reclassify(c)?;
-            relink::relink_orphans(c)?;
             let settings_now = Settings::load(c)?;
+            relink::relink_orphans(c, settings_now.merge_window_s)?;
             groups::detect(c, settings_now.group_window_s, None)?;
             Ok((stored, Settings::load(c)?, device_id))
         })

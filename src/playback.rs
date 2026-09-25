@@ -210,6 +210,37 @@ pub fn already_recorded(conn: &Connection, p: Play<'_>, window: i64) -> Result<b
         .exists(params![p.user_id, p.item_id, p.started_at, p.ended_at, p.source, window.max(0)])?)
 }
 
+/// Apply [`already_recorded`] again to history that is already written, and take back out what has
+/// become a duplicate since. Answers how many rows went.
+///
+/// Needed because [`crate::relink`] rewrites `item_id`: a row whose item had been renamed in
+/// Jellyfin matches nothing when it is imported — no other row carries that old id — and is then
+/// pointed at the item that is really there, which is the one an older row from another tracker
+/// already points at. So the duplicate appears *after* the rule ran, and the rule has to run again
+/// wherever ids are rewritten rather than only where rows are written.
+///
+/// Only a row somebody imported is ever removed, and never one finstats recorded itself: its own
+/// row carries a timeline and the counts that go with it, which no import can have. Between two
+/// imported rows the one that arrived first stays. Rows of one tracker are never compared with each
+/// other — a second row of the same item is a restart the viewer really made.
+pub fn drop_relinked_duplicates(conn: &Connection, window: i64) -> Result<usize> {
+    let n = conn.execute(
+        "DELETE FROM playbacks WHERE source <> 'live' AND EXISTS (
+            SELECT 1 FROM playbacks k
+             WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
+               AND k.source <> playbacks.source
+               AND (k.source = 'live' OR k.id < playbacks.id)
+               AND (k.started_at = playbacks.started_at
+                    OR ABS(k.started_at - playbacks.started_at) <= ?1
+                    OR ABS(k.ended_at - playbacks.ended_at) <= ?1))",
+        [window.max(0)],
+    )?;
+    if n > 0 {
+        tracing::info!("removed {n} imported plays that re-linking had turned into duplicates of plays already here");
+    }
+    Ok(n)
+}
+
 /// One thing that happened during a play (pause, skip, track switch…).
 #[derive(Debug, Clone)]
 pub struct PlayEvent {
@@ -244,6 +275,43 @@ mod tests {
         )
         .unwrap();
         c
+    }
+
+    #[test]
+    fn a_duplicate_that_relinking_creates_afterwards_is_taken_back_out() {
+        let c = conn();
+        // The rule runs before a row is written, against the item id the tracker gave. When that
+        // item has since been renamed in Jellyfin, nothing matches it — and then `relink_orphans`
+        // points the row at the item that is really there, which is the one an older row from
+        // another tracker already points at. That is the duplicate the rule exists to stop,
+        // made after it ran, so the rule has to be applied again wherever item ids are rewritten.
+        c.execute_batch(
+            "DELETE FROM playbacks;
+             INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+               -- the same second, two trackers: the imported one goes
+               (1, 'jellystat',    'js:1', 'u1', 'alice', 'i1', 'A track', 'Audio', 100, 101, 1),
+               (2, 'streamystats', 'ss:1', 'u1', 'alice', 'i1', 'A track', 'Audio', 100, 101, 1),
+               -- finstats' own recording is the better row and is never the one removed, whenever it arrived
+               (3, 'streamystats', 'ss:2', 'u1', 'alice', 'i2', 'A film', 'Movie', 1000, 4600, 3600),
+               (4, 'live',         NULL,   'u1', 'alice', 'i2', 'A film', 'Movie', 1000, 4600, 3600),
+               -- a real second viewing, days later: not a duplicate of anything
+               (5, 'streamystats', 'ss:3', 'u1', 'alice', 'i1', 'A track', 'Audio', 900000, 900001, 1),
+               -- two rows of one tracker are its own business, never touched here
+               (6, 'streamystats', 'ss:4', 'u2', 'bob', 'i1', 'A track', 'Audio', 100, 101, 1),
+               (7, 'streamystats', 'ss:5', 'u2', 'bob', 'i1', 'A track', 'Audio', 100, 101, 1);",
+        )
+        .unwrap();
+        assert_eq!(drop_relinked_duplicates(&c, 600).unwrap(), 2);
+        let left: Vec<i64> = c
+            .prepare("SELECT id FROM playbacks ORDER BY id")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        assert_eq!(left, [1, 4, 5, 6, 7]);
+        // And again changes nothing: there is no duplicate left to find.
+        assert_eq!(drop_relinked_duplicates(&c, 600).unwrap(), 0);
     }
 
     #[test]

@@ -105,9 +105,14 @@ pub struct Relinked {
     pub titles: usize,
     pub episodes: usize,
     pub names_cleaned: usize,
+    /// Plays that re-linking turned into duplicates of plays already here, and so were taken out.
+    pub duplicates_removed: usize,
 }
 
-pub fn relink_orphans(conn: &Connection) -> Result<Relinked> {
+/// `merge_window_s` is asked for rather than read here so that a caller cannot forget it: the one
+/// thing that rewrites `item_id` is the one thing that can turn an imported play into a duplicate
+/// of a play already here, and the rule has to be re-applied where the ids move.
+pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked> {
     let mut done = Relinked::default();
     const ORPHAN: &str = "NOT EXISTS (SELECT 1 FROM items live WHERE live.id = p.item_id AND live.removed = 0)";
 
@@ -180,6 +185,10 @@ pub fn relink_orphans(conn: &Connection) -> Result<Relinked> {
         }
     }
 
+    // The check that would have caught a duplicate ran before the ids moved, so it runs again here
+    // at the end of the rewrite rather than at each of the three places that ask for a re-link.
+    done.duplicates_removed = crate::playback::drop_relinked_duplicates(conn, merge_window_s)?;
+
     if done.titles + done.episodes + done.names_cleaned > 0 {
         tracing::info!("re-linked {} title plays and {} episode plays to renamed items; cleaned {} names", done.titles, done.episodes, done.names_cleaned);
     }
@@ -216,8 +225,9 @@ mod tests {
             "CREATE TABLE items(id TEXT PRIMARY KEY, type TEXT, name TEXT, production_year INTEGER, removed INTEGER DEFAULT 0,
                                 provider_ids TEXT, library_id TEXT, runtime_s INTEGER, series_id TEXT, season_id TEXT,
                                 parent_index_number INTEGER, index_number INTEGER);
-             CREATE TABLE playbacks(id INTEGER PRIMARY KEY, item_id TEXT, item_name TEXT, item_type TEXT, series_id TEXT, series_name TEXT,
-                                    season_id TEXT, season_number INTEGER, episode_number INTEGER, library_id TEXT, runtime_s INTEGER);
+             CREATE TABLE playbacks(id INTEGER PRIMARY KEY, source TEXT NOT NULL DEFAULT 'live', user_id TEXT, item_id TEXT, item_name TEXT,
+                                    item_type TEXT, series_id TEXT, series_name TEXT, season_id TEXT, season_number INTEGER,
+                                    episode_number INTEGER, library_id TEXT, runtime_s INTEGER, started_at INTEGER, ended_at INTEGER);
              INSERT INTO items(id, type, name, production_year, provider_ids, library_id) VALUES
                 ('new1', 'Movie', 'Big Buck Bunny', 2008, '{\"Tmdb\":\"10378\"}', 'lib'),
                 ('remakeA', 'Movie', 'Twins', 1988, NULL, 'lib'), ('remakeB', 'Movie', 'Twins', 2024, NULL, 'lib'),
@@ -231,8 +241,10 @@ mod tests {
                 VALUES ('e-old', 'Episode 1', 'Episode', 's-old', 'Test Show', 1, 1);",
         )
         .unwrap();
-        let r = relink_orphans(&conn).unwrap();
-        assert_eq!((r.titles, r.episodes, r.names_cleaned), (1, 1, 1));
+        // Every row here is one finstats recorded itself, so none of them can be a duplicate of
+        // another tracker's — re-linking them takes nothing away.
+        let r = relink_orphans(&conn, 600).unwrap();
+        assert_eq!((r.titles, r.episodes, r.names_cleaned, r.duplicates_removed), (1, 1, 1, 0));
         let get = |old: &str| -> (String, String) { conn.query_row("SELECT item_id, item_name FROM playbacks WHERE id = ?1", [old], |r| Ok((r.get(0)?, r.get(1)?))).unwrap() };
         assert_eq!(get("1"), ("new1".into(), "Big Buck Bunny".into()));
         assert_eq!(get("2").0, "old2", "two films called Twins and no year: ambiguous, leave it");

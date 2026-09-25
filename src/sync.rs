@@ -458,7 +458,7 @@ pub fn backfill_playbacks(conn: &Connection) -> Result<()> {
          WHERE source <> 'live' AND item_type <> 'Episode'
            AND EXISTS (SELECT 1 FROM items WHERE items.id = playbacks.item_id AND items.type <> playbacks.item_type);",
     )?;
-    crate::relink::relink_orphans(conn)?;
+    crate::relink::relink_orphans(conn, crate::state::Settings::load(conn)?.merge_window_s)?;
     // New titles may be what Sonarr, Radarr or a request were waiting for.
     crate::pipeline::link(conn)?;
     Ok(())
@@ -838,6 +838,36 @@ mod tests {
     use super::*;
 
     #[test]
+    fn re_linking_a_renamed_item_does_not_leave_the_same_evening_twice() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        // The track was re-added in Jellyfin, so it has a new id: `old-id` is gone and `new-id` is
+        // what is there now. A Jellystat import was linked to it long ago; a Streamystats import of
+        // the same evening still carries the old id, so nothing matched it when it was written.
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, runtime_s, removed, updated_at) VALUES
+                ('new-id', 'Audio', 'A track', 210, 0, 0),
+                ('old-id', 'Audio', 'A track', 210, 1, 0);
+             INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+                (1, 'jellystat',    'js:1', 'u1', 'alice', 'new-id', 'A track', 'Audio', 100, 310, 210),
+                (2, 'streamystats', 'ss:1', 'u1', 'alice', 'old-id', 'A track', 'Audio', 100, 310, 210);",
+        )
+        .unwrap();
+        backfill_playbacks(&c).unwrap();
+        // Re-linked onto the item that is really there — and then not counted twice.
+        let rows: Vec<(i64, String, String)> = c
+            .prepare("SELECT id, source, item_id FROM playbacks ORDER BY id")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        assert_eq!(rows, [(1, "jellystat".to_string(), "new-id".to_string())]);
+    }
+
+    #[test]
     fn a_library_read_tells_imported_plays_what_they_were_watching() {
         let c = Connection::open_in_memory().unwrap();
         for m in crate::db::MIGRATIONS {
@@ -849,19 +879,21 @@ mod tests {
             "INSERT INTO items(id, type, name, runtime_s, parent_index_number, index_number, updated_at) VALUES
                 ('i1', 'Audio', 'Big Buck Bunny', 210, NULL, NULL, 0),
                 ('e1', 'Episode', 'The Big Meadow', 1500, 2, 5, 0);
+             -- Days apart on purpose: these are four separate viewings, not one evening seen by
+             -- several trackers, which `drop_relinked_duplicates` would rightly take apart.
              INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
                 ('streamystats', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Unknown', 100, 400, 300),
-                ('jellystat', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 500, 800, 300),
-                ('streamystats', 'u1', 'alice', 'e1', 'The Big Meadow', 'Episode', 900, 2400, 1500),
-                ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 3000, 3300, 300);",
+                ('jellystat', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100000, 100300, 300),
+                ('streamystats', 'u1', 'alice', 'e1', 'The Big Meadow', 'Episode', 200000, 201500, 1500),
+                ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 300000, 300300, 300);",
         )
         .unwrap();
         backfill_playbacks(&c).unwrap();
         let ty = |start: i64| -> String { c.query_row("SELECT item_type FROM playbacks WHERE started_at = ?1", [start], |r| r.get(0)).unwrap() };
         assert_eq!(ty(100), "Audio");
-        assert_eq!(ty(500), "Audio");
+        assert_eq!(ty(100000), "Audio");
         // A play finstats watched itself was typed by the session at the time; that stands.
-        assert_eq!(ty(3000), "Movie");
+        assert_eq!(ty(300000), "Movie");
         // And the episode now knows which one it is.
         let se: (i64, i64) = c.query_row("SELECT season_number, episode_number FROM playbacks WHERE item_id = 'e1'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         assert_eq!(se, (2, 5));
