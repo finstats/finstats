@@ -132,8 +132,8 @@ export default function dashboard(ctx) {
           can('manage') ? 'finstats is now watching your Jellyfin server — new plays show up here as they happen. You can also bring in the history you already have, from Jellystat or Streamystats.'
                 : 'Your plays show up here as they happen.',
           can('manage') ? h('div', { class: 'empty-buttons' },
-            h('a', { class: 'btn btn-primary', href: '/settings#import-jellystat' }, icon('upload', 14), 'Import from Jellystat'),
-            h('a', { class: 'btn', href: '/settings#import-streamystats' }, icon('upload', 14), 'Import from Streamystats')) : null), dlCard, shelfCard, comingCard];
+            h('a', { class: 'btn btn-primary', href: '/settings/import#import-jellystat' }, icon('upload', 14), 'Import from Jellystat'),
+            h('a', { class: 'btn', href: '/settings/import#import-streamystats' }, icon('upload', 14), 'Import from Streamystats')) : null), dlCard, shelfCard, comingCard];
       }
       const usersMode = admin && !userId;
       return [

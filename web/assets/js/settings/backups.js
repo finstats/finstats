@@ -1,0 +1,144 @@
+// Settings → Backups: the history, settings and permissions in one file. Jellyfin administrators only.
+
+import { h, icon, num, bytes, relTime, dateTime, mount, untilText } from '../dom.js';
+import { api, isAbort, uploadRaw } from '../api.js';
+import { isAdmin } from '../state.js';
+import { card, sk, setBusy, inlineError, errorState } from '../components.js';
+import { plainTable } from '../tables.js';
+import { progressOf, settingRow } from './common.js';
+
+export default {
+  key: 'backups', label: 'Backups', sub: 'Keep your history safe, or move it', group: 'Data', icon: 'database',
+  visible: () => isAdmin(),
+  entries: [
+    { id: 'backups', label: 'Back up now', hint: 'backups download delete list' },
+    { id: 'restore', label: 'Restore from a file', hint: 'restore upload move new install merge' },
+    { id: 'backup_every_d', label: 'Back up every', hint: 'schedule automatic days' },
+    { id: 'backup_keep', label: 'Keep the newest', hint: 'schedule keep count prune' },
+  ],
+  async render(slot, store) {
+    const body = h('div', { class: 'net-stack' }, sk.rows(2));
+    mount(slot, card({ title: 'Backups', sub: 'Your history, settings and permissions in one file, to keep safe or to move to another finstats', body, id: 'backups' }));
+    await store.loadSettings();
+
+    let backupsData = null;
+    let pending = null;            // {name, action: 'restore' | 'delete'}: waiting for the second click
+    let err = null;
+    let restoreSettings = true;
+    const restoreUpload = { active: false, progress: 0, name: '' };
+    const wasRunning = { backup: false, restore: false };
+    let sig = '';
+
+    async function loadBackups() {
+      try { backupsData = await api.get('/backups', null, { signal: store.signal }); sig = ''; paint(); }
+      catch (e) { if (isAbort(e) || e.status === 401) return; mount(body, errorState(e, loadBackups)); }
+    }
+    const act = async (fn) => { err = null; try { await fn(); } catch (e) { err = e.message; } pending = null; await store.poke(1000); await loadBackups(); };
+
+    function scheduleForm() {
+      const s = store.settings;
+      const every = h('input', { class: 'input input-num mono', type: 'text', inputMode: 'numeric', id: 'f-backup-every', value: String(s.backup_every_d), autocomplete: 'off', 'aria-describedby': 'backup_every_d-help' });
+      const keep = h('input', { class: 'input input-num mono', type: 'text', inputMode: 'numeric', id: 'f-backup-keep', value: String(s.backup_keep), autocomplete: 'off', 'aria-describedby': 'backup_keep-help' });
+      const formErr = h('div'), note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
+      const save = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Save schedule');
+      const form = h('form', { class: 'setting-rows', noValidate: true },
+        settingRow({ id: 'backup_every_d', label: 'Back up every', labelFor: 'f-backup-every', help: '7 is weekly. 0 turns automatic backups off. 0–365.',
+          control: h('div', { class: 'field-input' }, every, h('span', { class: 'unit' }, 'days')) }),
+        settingRow({ id: 'backup_keep', label: 'Keep the newest', labelFor: 'f-backup-keep', help: 'Older ones are removed when a new one is written. 1–100.',
+          control: h('div', { class: 'field-input' }, keep, h('span', { class: 'unit' }, 'backups')) }),
+        h('div', { class: 'form-actions setting-actions' }, save, note), formErr);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault(); mount(formErr, '');
+        const a = Number(every.value.trim()), k = Number(keep.value.trim());
+        if (!/^\d+$/.test(every.value.trim()) || a > 365) { mount(formErr, inlineError('bk-e', 'Days must be a whole number from 0 to 365.')); every.focus(); return; }
+        if (!/^\d+$/.test(keep.value.trim()) || k < 1 || k > 100) { mount(formErr, inlineError('bk-e', 'Keep must be a whole number from 1 to 100.')); keep.focus(); return; }
+        setBusy(save, true, 'Saving…');
+        try { await store.put({ backup_every_d: a, backup_keep: k }); await loadBackups(); }
+        catch (e2) { mount(formErr, inlineError('bk-e', `Couldn’t save: ${e2.message}`)); }
+        finally { setBusy(save, false); }
+      });
+      return form;
+    }
+
+    function paint() {
+      if (!backupsData) return;
+      const s = store.settings;
+      const bk = store.task('backup'), rs = store.task('restore');
+      const busy = (bk && bk.state === 'running') || (rs && rs.state === 'running') || restoreUpload.active;
+      const now = JSON.stringify([backupsData, bk, rs, pending, err, restoreSettings, restoreUpload, s.backup_every_d, s.backup_keep]);
+      if (now === sig) return;
+      sig = now;
+
+      const rows = backupsData.backups || [];
+      const table = rows.length ? plainTable(h('table', { class: 'table backups' },
+        h('thead', null, h('tr', null, h('th', null, 'Made'), h('th', { class: 'r' }, 'Size'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Actions')))),
+        h('tbody', null, rows.map((b) => {
+          const mine = pending && pending.name === b.name ? pending.action : null;
+          const ask = (action) => () => { pending = { name: b.name, action }; sig = ''; paint(); };
+          const cancel = h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { pending = null; sig = ''; paint(); } }, 'Cancel');
+          const actions = mine === 'delete'
+            ? [h('span', { class: 'muted' }, 'Delete this backup?'), h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: () => act(() => api.del(`/backups/${b.name}`)) }, 'Delete'), cancel]
+            : mine === 'restore'
+              ? [h('span', { class: 'muted' }, restoreSettings ? 'Merge its history in and replace settings and permissions?' : 'Merge its history in?'),
+                h('button', { type: 'button', class: 'btn btn-sm btn-primary', onClick: () => act(() => api.post(`/backups/${b.name}/restore?settings=${restoreSettings}`)) }, 'Restore'), cancel]
+              : [h('a', { class: 'btn btn-sm', href: `/api/backups/${b.name}`, download: b.name }, icon('upload', 12, 'flip-v'), 'Download'),
+                h('button', { type: 'button', class: 'btn btn-sm btn-ghost', disabled: busy, onClick: ask('restore') }, 'Restore'),
+                h('button', { type: 'button', class: 'icon-btn', 'aria-label': `Delete the backup from ${dateTime(b.created_at)}`, title: 'Delete', disabled: busy, onClick: ask('delete') }, icon('trash', 14))];
+          return h('tr', null,
+            h('td', null, h('span', { class: 'when-cell' }, h('time', { dateTime: new Date(b.created_at * 1000).toISOString(), title: b.name }, dateTime(b.created_at)), h('span', { class: 'cell-sub mono' }, relTime(b.created_at)))),
+            h('td', { class: 'mono r' }, bytes(b.size_bytes)),
+            h('td', null, h('div', { class: 'backup-actions' }, actions)));
+        }))))
+        : h('p', { class: 'help' }, s.backup_every_d > 0 ? 'No backups yet. The first one is written by itself once there is something to back up, or make one now.' : 'No backups yet, and automatic backups are off.');
+
+      const restored = rs && rs.state === 'ok' && rs.result ? h('p', { class: 'sev sev-good sev-line' }, icon('check', 13),
+        `Restored ${num(rs.result.plays_imported)} plays, ${num(rs.result.plays_skipped)} were already here${rs.result.settings_restored ? '; settings and permissions restored' : ''}.`) : null;
+      const failed = rs && rs.state === 'error' && rs.error ? inlineError('restore-err', `Restore failed: ${rs.error} Nothing was changed.`) : null;
+
+      const makeNow = h('button', { type: 'button', class: 'btn', disabled: busy, onClick: () => act(() => api.post('/backups')) }, icon('plus', 13), 'Back up now');
+      const file = h('input', { type: 'file', class: 'sr-only', id: 'restore-file', accept: '.gz,.jsonl,application/gzip', tabindex: -1 });
+      file.addEventListener('change', () => {
+        const f = file.files && file.files[0];
+        if (!f) return;
+        Object.assign(restoreUpload, { active: true, progress: 0, name: f.name }); err = null; sig = ''; paint();
+        uploadRaw(`/backups/restore?settings=${restoreSettings}`, f, (p) => { restoreUpload.progress = p; sig = ''; paint(); }).promise
+          .catch((e) => { err = e.status === 413 ? 'The server rejected the file as too large. Behind a reverse proxy, raise its upload limit and try again.' : e.message; })
+          .finally(() => { restoreUpload.active = false; sig = ''; store.poke(1000); paint(); });
+      });
+      const keepSettings = h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: restoreSettings, onChange: (e) => { restoreSettings = e.target.checked; sig = ''; paint(); } }),
+        h('span', null, 'Also restore settings and permissions'));
+
+      mount(body,
+        h('div', { class: 'backup-head' },
+          h('p', { class: 'help' }, s.backup_every_d > 0
+            ? [`Written every ${s.backup_every_d === 1 ? 'day' : num(s.backup_every_d) + ' days'}, the newest ${num(s.backup_keep)} kept`,
+              backupsData.next_at ? [', next ', h('span', { title: dateTime(backupsData.next_at) }, untilText(backupsData.next_at)), '.'] : '.']
+            : 'Automatic backups are off.', ' They live in the ', h('span', { class: 'mono' }, 'backups'), ' folder of your data directory.'),
+          makeNow),
+        progressOf(bk, 'Backup progress'), bk && bk.state === 'error' && bk.error ? inlineError('backup-err', `Backup failed: ${bk.error}`) : null,
+        table,
+        err ? inlineError('backups-err', err) : null,
+        h('div', { class: 'field', id: 'restore' },
+          h('div', { class: 'setting-label' }, 'Restore from a file'),
+          h('p', { class: 'help' }, 'Restoring merges: plays already here are skipped, so it is safe to do twice. A backup holds everyone’s history and addresses, never your Jellyfin API key.'),
+          restoreUpload.active
+            ? h('div', { class: 'task-progress' }, h('div', { class: 'meter meter-wide', role: 'progressbar', 'aria-label': 'Upload progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(restoreUpload.progress * 100) },
+              h('span', { class: 'meter-fill', style: { width: restoreUpload.progress * 100 + '%' } })), h('span', { class: 'mono task-msg' }, `Uploading ${restoreUpload.name} · ${Math.round(restoreUpload.progress * 100)}%`))
+            : h('div', { class: 'backup-restore' }, file, h('label', { class: ['btn', busy && 'is-disabled'], htmlFor: busy ? null : 'restore-file' }, icon('upload', 13), 'Choose a backup file…'), keepSettings),
+          progressOf(rs, 'Restore progress'), restored, failed),
+        scheduleForm());
+    }
+
+    // The list changes when a backup finishes, and nearly everything changes when a restore does.
+    store.onTasks(() => {
+      for (const id of ['backup', 'restore']) {
+        const t = store.task(id);
+        const running = !!t && t.state === 'running';
+        if (wasRunning[id] && !running) { loadBackups(); if (id === 'restore') store.reloadSettings().then(() => { sig = ''; paint(); }).catch(() => {}); }
+        wasRunning[id] = running;
+      }
+      paint();
+    });
+    await Promise.all([loadBackups(), store.loadTasks().catch(() => {})]);
+  },
+};

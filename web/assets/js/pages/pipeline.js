@@ -288,7 +288,7 @@ export default function pipelinePage(ctx) {
   if (!tabs.length) {
     ctx.root.append(pageHeader('Pipeline', 'What is requested, coming and downloading'),
       emptyState('Nothing is connected yet', 'Connect Sonarr, Radarr, Seerr or a torrent client, and this page shows what people asked for, what airs when and what is arriving.',
-        state.user && state.user.is_admin ? h('a', { class: 'btn btn-primary', href: '/settings#connections' }, icon('plus', 14), 'Add a connection') : null));
+        state.user && state.user.is_admin ? h('a', { class: 'btn btn-primary', href: '/settings/connections' }, icon('plus', 14), 'Add a connection') : null));
     return;
   }
   const current = tabOf(ctx.query);
