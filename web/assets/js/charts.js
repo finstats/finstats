@@ -11,6 +11,11 @@ export const TYPES = [
   { key: 'Audio', label: 'Music', color: '#d95926' },
   { key: 'Other', label: 'Other', color: '#3987e5' },
 ];
+// Time in company against time alone: its own two colours, never an entity's.
+export const TOGETHER = [
+  { key: 'together', label: 'Together', color: '#9085e9' },
+  { key: 'alone', label: 'Alone', color: '#5a6275' },
+];
 export const METHODS = [
   { key: 'DirectPlay', color: '#9085e9' },
   { key: 'DirectStream', color: '#199e70' },
@@ -87,13 +92,14 @@ const fmtMetric = (metric, v) => (metric === 'plays' ? num(v) + (v === 1 ? ' pla
 
 // ---------------------------------------------------------------- stacked columns
 /** daily: [{date, plays, watch_s, by_type: {Movie:[plays, watch_s], …}}] */
-export function columnsChart({ daily, bucket = 'day', metric = 'watch_s' }) {
+/** `series`: which keys of `by_type` are stacked, and their colours; the media types unless told otherwise. */
+export function columnsChart({ daily, bucket = 'day', metric = 'watch_s', series = TYPES }) {
   const idx = metric === 'plays' ? 0 : 1;
   const rows = daily || [];
   const val = (d, key) => ((d.by_type && d.by_type[key]) || [0, 0])[idx] || 0;
   const total = (d) => (metric === 'plays' ? d.plays : d.watch_s) || 0;
   const max = Math.max(0, ...rows.map(total));
-  const used = TYPES.filter((t) => rows.some((d) => val(d, t.key) > 0));
+  const used = series.filter((t) => rows.some((d) => val(d, t.key) > 0));
 
   const wrap = h('div', { class: 'chart', tabindex: rows.length && max > 0 ? 0 : null, role: 'group',
     'aria-label': `${metric === 'plays' ? 'Plays' : 'Watch time'} per ${bucket}. Use left and right arrow keys to read values.` });
@@ -206,19 +212,19 @@ export function columnsChart({ daily, bucket = 'day', metric = 'watch_s' }) {
   return wrap;
 }
 
-export function columnsTable({ daily, bucket = 'day' }) {
+export function columnsTable({ daily, bucket = 'day', series = TYPES }) {
   const rows = (daily || []).slice().reverse();
   const cell = (d, key) => ((d.by_type && d.by_type[key]) || [0, 0]);
   return chartTable(
     h('table', { class: 'table' },
       h('thead', null, h('tr', null,
         h('th', null, bucket === 'week' ? 'Week of' : 'Date'), h('th', { class: 'r' }, 'Plays'), h('th', { class: 'r' }, 'Watch time'),
-        TYPES.map((t) => h('th', { class: 'r' }, t.label)))),
+        series.map((t) => h('th', { class: 'r' }, t.label)))),
       h('tbody', null, rows.map((d) => h('tr', null,
         h('td', { class: 'mono' }, dayLabelYear(d.date)),
         h('td', { class: 'mono r' }, num(d.plays)),
         h('td', { class: 'mono r', title: durationExact(d.watch_s) }, duration(d.watch_s)),
-        TYPES.map((t) => h('td', { class: 'mono r' }, cell(d, t.key)[1] ? duration(cell(d, t.key)[1]) : '–')))))));
+        series.map((t) => h('td', { class: 'mono r' }, cell(d, t.key)[1] ? duration(cell(d, t.key)[1]) : '–')))))));
 }
 
 // ---------------------------------------------------------------- heatmap
