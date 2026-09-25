@@ -1223,12 +1223,28 @@ fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<
     let stops: Vec<i64> = rows.iter().map(|r| r.0).collect();
     let measured = rows.iter().filter(|r| r.1).count();
     let bucket_s = bucket_width(runtime);
+    // Events exist only for plays finstats recorded itself, so these two are counted over those. A
+    // rewind is a seek that landed before where it left from, counted where it landed; a switch-on
+    // is a play's first subtitle change when it is to a track rather than to "Off" — the state before
+    // the first change is never an event, so a later language change is not a second switch-on.
+    let positions = |sql: &str| -> Result<Vec<i64>> {
+        let mut stmt = c.prepare(&format!("SELECT e.position_s FROM playbacks p JOIN playback_events e ON e.playback_id = p.id {} AND {sql}", ended.sql()))?;
+        let out = stmt.query_map(params_from_iter(ended.args.iter()), |r| r.get::<_, Option<i64>>(0))?.filter_map(|r| r.transpose()).collect::<Result<_, _>>()?;
+        Ok(out)
+    };
+    let rewinds = positions("e.kind = 'seek' AND e.from_s IS NOT NULL AND e.position_s IS NOT NULL AND e.from_s > e.position_s")?;
+    let subtitles = positions(
+        "e.kind = 'subtitle' AND e.detail IS NOT NULL AND e.detail <> 'Off' AND e.position_s IS NOT NULL
+         AND e.id = (SELECT MIN(o.id) FROM playback_events o WHERE o.playback_id = p.id AND o.kind = 'subtitle')",
+    )?;
     Ok(json!({
         "bucket_s": bucket_s,
         "plays": rows.len(),
         "measured": measured,
         "estimated": rows.len() - measured,
         "curve": retention_curve(&stops, runtime, bucket_s),
+        "rewinds": histogram(&rewinds, runtime, bucket_s),
+        "subtitles": histogram(&subtitles, runtime, bucket_s),
     }))
 }
 
@@ -1935,6 +1951,45 @@ mod tests {
         assert_eq!(curve[25], 0.75, "at fifty minutes the imported one is still counted");
         assert_eq!(curve[26], 0.5);
         assert_eq!(curve[50], 0.5, "two reached the end");
+    }
+
+    #[test]
+    fn only_a_seek_that_went_backwards_is_a_rewind() {
+        let c = conn();
+        with_plays(&c);
+        c.execute_batch(
+            "INSERT INTO playback_events(playback_id, at, kind, position_s, from_s, detail) VALUES
+               (10, 1100, 'seek', 1265, 1400, '23:20 → 21:05'),   -- back: a rewind, landing at 21:05
+               (10, 1200, 'seek', 900, 100, '1:40 → 15:00'),      -- forward: a skip, not a rewind
+               (10, 1300, 'seek', 500, NULL, 'garbled'),          -- no origin known: says nothing
+               (10, 1400, 'pause', 1300, NULL, NULL);",
+        )
+        .unwrap();
+        let ins = item_insights(&c, &everyone().cond().with("p.item_id = ?", "i9".to_string()), Some(6000)).unwrap();
+        let rewinds = ins["rewinds"].as_array().unwrap();
+        assert_eq!(rewinds.len(), 50, "one count per bucket, on the curve's grid");
+        assert_eq!(rewinds.iter().map(|v| v.as_i64().unwrap()).sum::<i64>(), 1);
+        assert_eq!(rewinds[1265 / 120], 1, "counted where it landed");
+    }
+
+    #[test]
+    fn a_subtitle_turned_off_is_not_turned_on_and_only_the_first_change_counts() {
+        let c = conn();
+        with_plays(&c);
+        c.execute_batch(
+            "INSERT INTO playback_events(playback_id, at, kind, position_s, from_s, detail) VALUES
+               (10, 1100, 'subtitle', 150, NULL, 'eng (subrip)'),  -- on at 2:30, then off again: one switch-on
+               (10, 1200, 'subtitle', 900, NULL, 'Off'),
+               (11, 5100, 'subtitle', 200, NULL, 'Off'),           -- only ever turned off: none
+               (12, 9100, 'subtitle', 100, NULL, 'nor (subrip)'),  -- a language change later is not a second switch-on
+               (12, 9200, 'subtitle', 400, NULL, 'eng (subrip)');",
+        )
+        .unwrap();
+        let ins = item_insights(&c, &everyone().cond().with("p.item_id = ?", "i9".to_string()), Some(6000)).unwrap();
+        let subs = ins["subtitles"].as_array().unwrap();
+        assert_eq!(subs.len(), 50);
+        assert_eq!(subs.iter().map(|v| v.as_i64().unwrap()).sum::<i64>(), 2);
+        assert_eq!((&subs[150 / 120], &subs[100 / 120]), (&json!(1), &json!(1)), "one in each of the first two buckets");
     }
 
     #[test]
