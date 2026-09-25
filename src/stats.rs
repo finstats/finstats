@@ -1033,6 +1033,13 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
             &cond.args,
         )?;
 
+        // Where plays of a film or an episode stopped; a show's episodes each have their own page for it.
+        let insights = if matches!(item.get("type").and_then(Value::as_str), Some("Movie") | Some("Episode")) {
+            item_insights(c, &cond, item.get("runtime_s").and_then(Value::as_i64))?
+        } else {
+            Value::Null
+        };
+
         let mut seasons: Vec<Value> = vec![];
         if is_series {
             let mut args = cond.args.clone();
@@ -1126,7 +1133,7 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
             "SELECT person_id AS id, name, kind, role, has_image FROM item_people WHERE item_id = ?1 ORDER BY (kind = 'Actor'), sort",
             &[credited.into()],
         )?;
-        Ok(Some(json!({ "item": item, "request": requested, "totals": totals, "watchers": watchers, "seasons": seasons, "daily": series, "bucket": bucket, "played_by": played_by, "people": people })))
+        Ok(Some(json!({ "item": item, "request": requested, "totals": totals, "watchers": watchers, "insights": insights, "seasons": seasons, "daily": series, "bucket": bucket, "played_by": played_by, "people": people })))
     })
     .await?;
     let mut out = out.ok_or_else(|| ApiError::not_found("Item"))?;
@@ -1140,6 +1147,89 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
         o.remove("request");
     }
     Ok(Json(out))
+}
+
+// ---------------------------------------------------------------- v1.8: playback insights
+//
+// Where a title loses its viewers, drawn from where each play stopped. A stop is `position_s` for a
+// play finstats recorded itself and `duration_s` for an imported one (a tracker keeps how long it ran,
+// not where it was; the play is taken to have started at 0:00), and the two are never mixed silently:
+// every curve carries how many stops were measured and how many estimated.
+
+/// A curve is only a shape once there is more than an anecdote to draw it from.
+pub(crate) const MIN_CURVE_PLAYS: i64 = 3;
+/// The widest a bucket gets, in seconds; a curve has at most sixty of them.
+const BUCKET_LADDER: [i64; 6] = [30, 60, 120, 300, 600, 900];
+
+/// The bucket, in seconds, that keeps a runtime to sixty points or fewer: half a minute for a short
+/// episode, two minutes for a film, and whole minutes beyond the ladder for anything longer.
+fn bucket_width(runtime_s: i64) -> i64 {
+    BUCKET_LADDER.iter().copied().find(|w| runtime_s <= w * 60).unwrap_or_else(|| (runtime_s + 3599) / 3600 * 60)
+}
+
+/// How many buckets a runtime takes at this width.
+fn bucket_count(runtime_s: i64, bucket_s: i64) -> usize {
+    ((runtime_s.max(1) + bucket_s - 1) / bucket_s).max(1) as usize
+}
+
+/// The share of plays still going at each bucket edge, from the start (everyone) to the runtime. A
+/// stop past the runtime counts as finished; one before the first edge is gone by it.
+fn retention_curve(stops: &[i64], runtime_s: i64, bucket_s: i64) -> Vec<f64> {
+    let n = bucket_count(runtime_s, bucket_s);
+    (0..=n)
+        .map(|k| {
+            let edge = (k as i64 * bucket_s).min(runtime_s);
+            if stops.is_empty() { 0.0 } else { ((stops.iter().filter(|&&s| s >= edge).count() as f64 / stops.len() as f64) * 1000.0).round() / 1000.0 }
+        })
+        .collect()
+}
+
+/// How many of the positions fall in each bucket; the end, and anything past it, belongs to the last.
+fn histogram(positions: &[i64], runtime_s: i64, bucket_s: i64) -> Vec<i64> {
+    let n = bucket_count(runtime_s, bucket_s);
+    let mut out = vec![0; n];
+    for &p in positions {
+        let i = ((p.max(0) / bucket_s) as usize).min(n - 1);
+        out[i] += 1;
+    }
+    out
+}
+
+/// The shape of where plays of one film or episode stopped, or `null` when there is no runtime to draw
+/// it on or fewer than [`MIN_CURVE_PLAYS`] plays in scope. `cond` already names the item and the caller's scope.
+fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<Value> {
+    let ended = cond.with_raw("p.active = 0");
+    let runtime = match runtime_s.filter(|r| *r > 0) {
+        Some(r) => r,
+        None => c
+            .query_row(&format!("SELECT MAX(p.runtime_s) FROM playbacks p {}", ended.sql()), params_from_iter(ended.args.iter()), |r| r.get::<_, Option<i64>>(0))?
+            .unwrap_or(0),
+    };
+    if runtime <= 0 {
+        return Ok(Value::Null);
+    }
+    let mut stmt = c.prepare(&format!(
+        "SELECT MAX(0, MIN(?, CASE WHEN p.source = 'live' AND p.position_s IS NOT NULL THEN p.position_s ELSE COALESCE(p.duration_s, 0) END)) AS stop_s,
+                (p.source = 'live' AND p.position_s IS NOT NULL) AS measured
+         FROM playbacks p {}",
+        ended.sql()
+    ))?;
+    let mut args: Vec<SqlValue> = vec![runtime.into()];
+    args.extend(ended.args.iter().cloned());
+    let rows: Vec<(i64, bool)> = stmt.query_map(params_from_iter(args.iter()), |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<_, _>>()?;
+    if (rows.len() as i64) < MIN_CURVE_PLAYS {
+        return Ok(Value::Null);
+    }
+    let stops: Vec<i64> = rows.iter().map(|r| r.0).collect();
+    let measured = rows.iter().filter(|r| r.1).count();
+    let bucket_s = bucket_width(runtime);
+    Ok(json!({
+        "bucket_s": bucket_s,
+        "plays": rows.len(),
+        "measured": measured,
+        "estimated": rows.len() - measured,
+        "curve": retention_curve(&stops, runtime, bucket_s),
+    }))
 }
 
 /// One actor or director: what they are in, and how much of it was watched (within the caller's scope).
@@ -1757,6 +1847,117 @@ mod tests {
         assert_eq!(pinned_users(&caller("me", false), &[]), ["me"]);
         assert_eq!(pinned_users(&caller("me", false), &["someone".into()]), ["me"]);
         assert_eq!(pinned_users(&caller("me", false), &["someone".into(), "me".into(), "other".into()]), ["me"]);
+    }
+
+    // ---- v1.8: playback insights
+
+    fn everyone() -> Scope {
+        Scope { days: 0, since: None, user_ids: vec![], library_id: None, min_play_s: 0, perms: crate::auth::Perms::ALL }
+    }
+
+    #[test]
+    fn bucket_width_keeps_a_curve_to_sixty_points_or_fewer() {
+        assert_eq!(bucket_width(1500), 30);
+        assert_eq!(bucket_width(1800), 30);
+        assert_eq!(bucket_width(2700), 60);
+        assert_eq!(bucket_width(7200), 120);
+        assert_eq!(bucket_width(10800), 300);
+        assert_eq!(bucket_width(60), 30);
+        assert_eq!(bucket_width(0), 30);
+        for rt in [1, 1500, 7020, 7200, 20000, 100000] {
+            assert!((rt as f64 / bucket_width(rt) as f64).ceil() as i64 <= 60, "{rt}");
+        }
+    }
+
+    #[test]
+    fn the_curve_starts_at_everyone_and_never_rises() {
+        let curve = retention_curve(&[7200, 7200, 240, 3600], 7200, 120);
+        assert_eq!(curve.len(), 61, "one point per bucket edge, both ends included");
+        assert_eq!(curve[0], 1.0);
+        assert_eq!(curve[2], 1.0, "at four minutes everyone is still there");
+        assert_eq!(curve[3], 0.75, "the one that stopped at four minutes is gone by six");
+        assert_eq!(curve[30], 0.75);
+        assert_eq!(curve[31], 0.5);
+        assert_eq!(curve[60], 0.5, "two of four reached the end");
+        assert!(curve.windows(2).all(|w| w[1] <= w[0]));
+    }
+
+    #[test]
+    fn a_stop_beyond_the_runtime_or_before_the_start_stays_on_the_axis() {
+        // A file replaced by a shorter one leaves old stops past the end: they count as finished.
+        let curve = retention_curve(&[9999, 10], 7200, 120);
+        assert_eq!(curve[60], 0.5);
+        // A play shorter than one bucket is there at the start and gone at the first edge.
+        assert_eq!(curve[0], 1.0);
+        assert_eq!(curve[1], 0.5);
+        // A runtime that is not a whole number of buckets still ends at the runtime.
+        assert_eq!(retention_curve(&[7020, 7000], 7020, 120).len(), 60, "59 buckets and both ends");
+        assert_eq!(retention_curve(&[7020, 7000], 7020, 120)[59], 0.5);
+        assert_eq!(retention_curve(&[], 7200, 120), vec![0.0; 61].iter().map(|_| 0.0).collect::<Vec<f64>>());
+    }
+
+    #[test]
+    fn histogram_puts_a_position_in_its_bucket_and_the_end_in_the_last_one() {
+        let h = histogram(&[0, 119, 120, 7200, 7300, -5], 7200, 120);
+        assert_eq!(h.len(), 60);
+        assert_eq!(h[0], 3, "0, 119 and a negative all belong to the first bucket");
+        assert_eq!(h[1], 1);
+        assert_eq!(h[59], 2, "the end and anything past it belong to the last bucket");
+        assert_eq!(h.iter().sum::<i64>(), 6);
+    }
+
+    fn with_plays(c: &Connection) {
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, position_s, runtime_s) VALUES
+               -- finstats saw this one: it stopped at ten minutes after fifty minutes of playing (a resume)
+               (10, 'live',         'u1', 'alice', 'i9', 'Sintel', 'Movie', 1000, 4000, 3000, 600, 6000),
+               -- imported: only how long it ran is known, so it is taken to have stopped at fifty minutes
+               (11, 'jellystat',    'u1', 'alice', 'i9', 'Sintel', 'Movie', 5000, 8000, 3000, NULL, 6000),
+               (12, 'streamystats', 'u1', 'alice', 'i9', 'Sintel', 'Movie', 9000, 15000, 6000, NULL, 6000),
+               (13, 'jellystat',    'u2', 'bob',   'i9', 'Sintel', 'Movie', 9000, 15000, 6000, NULL, 6000);",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn an_imported_play_stops_where_its_time_watched_ends_and_a_live_one_where_it_stopped() {
+        let c = conn();
+        with_plays(&c);
+        let cond = everyone().cond().with("p.item_id = ?", "i9".to_string());
+        let ins = item_insights(&c, &cond, Some(6000)).unwrap();
+        assert_eq!(ins["plays"], 4);
+        assert_eq!((ins["measured"].as_i64(), ins["estimated"].as_i64()), (Some(1), Some(3)), "said apart, never mixed silently");
+        assert_eq!(ins["bucket_s"], 120);
+        let curve = ins["curve"].as_array().unwrap();
+        assert_eq!(curve.len(), 51);
+        assert_eq!(curve[5], 1.0, "at ten minutes all four are still going");
+        assert_eq!(curve[6], 0.75, "the live play stopped at ten minutes, whatever it had watched");
+        assert_eq!(curve[25], 0.75, "at fifty minutes the imported one is still counted");
+        assert_eq!(curve[26], 0.5);
+        assert_eq!(curve[50], 0.5, "two reached the end");
+    }
+
+    #[test]
+    fn fewer_than_three_plays_or_no_runtime_means_no_curve_at_all() {
+        let c = conn();
+        // Three plays of i1 from `conn()`, but nothing knows how long it is.
+        let cond = everyone().cond().with("p.item_id = ?", "i1".to_string());
+        assert!(item_insights(&c, &cond, None).unwrap().is_null(), "no runtime, no axis");
+        assert!(item_insights(&c, &cond, Some(0)).unwrap().is_null());
+        // The runtime the plays carry will do when the item has none.
+        c.execute_batch("UPDATE playbacks SET runtime_s = 600 WHERE id = 1").unwrap();
+        assert_eq!(item_insights(&c, &cond, None).unwrap()["plays"], 3);
+        c.execute_batch("DELETE FROM playbacks WHERE id = 1").unwrap();
+        assert!(item_insights(&c, &cond, Some(600)).unwrap().is_null(), "two plays are an anecdote");
+    }
+
+    #[test]
+    fn a_viewer_without_see_everyone_gets_a_curve_of_their_own_plays_only() {
+        let c = conn();
+        with_plays(&c);
+        let mine = Scope { user_ids: vec!["u1".into()], perms: crate::auth::Perms { see_everyone: false, ..Default::default() }, ..everyone() };
+        let ins = item_insights(&c, &mine.cond().with("p.item_id = ?", "i9".to_string()), Some(6000)).unwrap();
+        assert_eq!(ins["plays"], 3, "bob's play is not on alice's curve");
     }
 
     #[test]
