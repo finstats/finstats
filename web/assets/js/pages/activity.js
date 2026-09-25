@@ -1,4 +1,4 @@
-import { h, icon, debounce, num } from '../dom.js';
+import { h, icon, debounce, num, mount } from '../dom.js';
 import { api } from '../api.js';
 import { readDays, saveDays, rangeLong, can } from '../state.js';
 import { replaceQuery } from '../router.js';
@@ -12,6 +12,9 @@ const METHODS = [
 const TYPES = [
   { value: '', label: 'All' }, { value: 'Movie', label: 'Movies' }, { value: 'Episode', label: 'Episodes' }, { value: 'Audio', label: 'Music' },
 ];
+// Which tracker a play came from. Only offered for the ones this history actually holds, which the
+// answer lists: an install that has never imported anything has nothing to choose between.
+const SOURCES = { live: 'finstats', jellystat: 'Jellystat', streamystats: 'Streamystats' };
 const PER_PAGE = 50;
 
 export const loadActivity = (f, signal) => api.get('/activity', { ...f, per_page: PER_PAGE }, { signal });
@@ -26,6 +29,7 @@ function filtersOf(q0) {
     q: q0.get('q') || '',
     item_id: q0.get('item_id') || '',
     series_id: q0.get('series_id') || '',
+    source: q0.get('source') || '',
     sort: q0.get('sort') || '',
     dir: q0.get('dir') || '',
     page: Math.max(1, Number(q0.get('page')) || 1),
@@ -44,6 +48,7 @@ export default function activity(ctx) {
     fetch: () => loadActivity(f, ctx.signal),
     render: (data) => {
       summary.textContent = `${num(data.total)} ${data.total === 1 ? 'play' : 'plays'} · ${rangeLong(f.days).toLowerCase()}`;
+      renderSources(data.sources);
       return [
         playsTable(data.rows, { showUser: can('see_everyone'), sort: { key: f.sort, dir: f.dir, onSort: (key, dir) => { f.sort = key; f.dir = dir; apply(); } }, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }),
           empty: 'No plays match these filters. Try a longer range or clear the search.' }),
@@ -64,6 +69,25 @@ export default function activity(ctx) {
   search.addEventListener('input', onSearch);
   ctx.onCleanup(() => onSearch.cancel());
 
+  // Built from the answer rather than up front, because only the server knows what this history is
+  // made of — and rebuilt only when that changes, so tabbing to the control does not lose the focus.
+  const sourceSlot = h('div', { class: 'seg-slot' });
+  let sourceSig = null;
+  function renderSources(present) {
+    const held = (Array.isArray(present) ? present : []).filter((s) => SOURCES[s]);
+    // Whatever is being filtered on stays offered even where there is none of it, so that a filter
+    // somebody arrived with in the address can be seen and cleared rather than silently emptying
+    // the page.
+    const list = f.source && SOURCES[f.source] && !held.includes(f.source) ? [...held, f.source] : held;
+    const sig = list.join();
+    if (sig === sourceSig) return;
+    sourceSig = sig;
+    // One tracker, or none: nothing to choose between, so no filter at all.
+    mount(sourceSlot, list.length < 2 ? null
+      : segmented({ label: 'Recorded by', options: [{ value: '', label: 'All' }, ...list.map((v) => ({ value: v, label: SOURCES[v] }))],
+        value: f.source, onChange: (v) => { f.source = v; apply(); } }));
+  }
+
   const scopeChip = f.item_id || f.series_id ? h('span', { class: 'chip chip-removable' }, f.series_id ? 'One series' : 'One title',
     h('button', { type: 'button', class: 'chip-x', 'aria-label': 'Remove title filter', onClick: (e) => { f.item_id = ''; f.series_id = ''; e.target.closest('.chip').remove(); apply(); } }, icon('x', 12))) : null;
 
@@ -73,6 +97,7 @@ export default function activity(ctx) {
     extra: [
       segmented({ label: 'Play method', options: METHODS, value: f.method, onChange: (v) => { f.method = v; apply(); } }),
       segmented({ label: 'Media type', options: TYPES, value: f.type, onChange: (v) => { f.type = v; apply(); } }),
+      sourceSlot,
       h('div', { class: 'search-field' }, icon('search', 14), search),
       scopeChip,
     ] });

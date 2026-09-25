@@ -329,6 +329,9 @@ kbd {
 .seg-sm .seg-btn { padding: 2px 9px; min-height: 22px; font-size: 12px; }
 
 .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* A filter the server decides the existence of (which tracker a play came from) sits in a slot that
+   is filled once the answer arrives. Empty, it must not take a gap of its own. */
+.seg-slot:empty { display: none; }
 
 /* combobox */
 .combo { position: relative; }
