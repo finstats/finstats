@@ -98,9 +98,15 @@ Sorted by `watch_s` desc unless `&sort=plays`.
 
 ## Activity
 
-`GET /api/activity?page=1&per_page=50&q=&method=&type=&item_id=&series_id=` (+ common filters)
+`GET /api/activity?page=1&per_page=50&q=&method=&type=&item_id=&series_id=&source=` (+ common filters)
+
+`source` is `live`, `jellystat` or `streamystats`; anything else, an empty value included, means all
+of them. `sources` in the answer lists which of the three this caller's history actually came from,
+in that order — scoped to whose plays they may see, and deliberately *not* narrowed by the window or
+the other filters, so a filter built from it does not appear and disappear as the days change. The UI
+offers the filter only when there is more than one to choose between.
 ```jsonc
-{"total": 2918, "page": 1, "per_page": 50, "rows": [Play]}
+{"total": 2918, "page": 1, "per_page": 50, "sources": ["live", "jellystat"], "rows": [Play]}
 
 Play = {
   "id": 123, "source": "live" | "jellystat" | "streamystats", "active": false,

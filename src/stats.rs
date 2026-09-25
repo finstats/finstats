@@ -151,6 +151,16 @@ impl Scope {
         c
     }
 
+    /// Whose rows the caller may see at all: the permission pin on its own, with no window and no
+    /// other filter. For questions about a history rather than about one view of it.
+    pub fn whose(&self) -> Cond {
+        let mut c = Cond::default();
+        if let Some(u) = &self.user_id {
+            c.add("p.user_id = ?", u.clone());
+        }
+        c
+    }
+
     pub fn cond(&self) -> Cond {
         let mut c = self.base();
         if let Some(s) = self.since {
@@ -459,6 +469,7 @@ pub struct ActivityQuery {
     item_type: Option<String>,
     item_id: Option<String>,
     series_id: Option<String>,
+    source: Option<String>,
     sort: Option<String>,
     dir: Option<String>,
 }
@@ -487,6 +498,37 @@ pub(crate) fn order_by(columns: &[(&str, &str)], sort: Option<&str>, dir: Option
     let Some((_, expr)) = sort.and_then(|k| columns.iter().find(|(key, _)| *key == k)) else { return default.to_string() };
     let dir = if dir == Some("asc") { "ASC" } else { "DESC" };
     format!("({expr}) IS NULL, {expr} {dir}, {default}")
+}
+
+/// The trackers a play can have come from: the live collector, or an import from one of the two
+/// other trackers. In the order the Activity filter offers them.
+pub(crate) const SOURCES: [&str; 3] = ["live", "jellystat", "streamystats"];
+
+/// The `source` filter, chosen from [`SOURCES`] rather than passed through — the value reaches SQL.
+/// Anything else, an empty value included, means all of them, which is what the filter shows when
+/// nobody has picked one.
+pub(crate) fn source_filter(asked: Option<&str>) -> Option<&'static str> {
+    let asked = asked?;
+    SOURCES.into_iter().find(|s| *s == asked)
+}
+
+/// Which trackers this history came from, in [`SOURCES`] order so the filter never reshuffles.
+///
+/// `whose` is the caller's permission scope and nothing else — no window, no library, no search. It
+/// answers what somebody's history is *made of* rather than what the view in front of them happens
+/// to contain, so the filter does not appear and disappear as they change the days. The scope still
+/// applies: a person who may only see their own plays must not learn that somebody else's history
+/// was imported from somewhere.
+pub(crate) fn sources_present(conn: &Connection, whose: &Cond) -> Result<Vec<&'static str>> {
+    let mut out = vec![];
+    for source in SOURCES {
+        let cond = whose.with("p.source = ?", source.to_string());
+        let sql = format!("SELECT EXISTS(SELECT 1 FROM playbacks p {})", cond.sql());
+        if conn.query_row(&sql, params_from_iter(cond.args.iter()), |r| r.get::<_, bool>(0))? {
+            out.push(source);
+        }
+    }
+    Ok(out)
 }
 
 const ACTIVITY_SORTS: [(&str, &str); 8] = [
@@ -522,6 +564,9 @@ pub async fn activity(State(app): State<App>, user: AuthUser, Query(q): Query<Ac
         if let Some(id) = q.series_id.filter(|s| !s.is_empty()) {
             cond.add("p.series_id = ?", db::norm_id(&id));
         }
+        if let Some(source) = source_filter(q.source.as_deref()) {
+            cond.add("p.source = ?", source.to_string());
+        }
         // Word by word: "alya opera" finds plays of Alya… on Opera. Every word must be somewhere in the row.
         for like in like_words(q.q.as_deref()) {
             let mut fields = vec!["p.item_name", "p.series_name", "p.user_name", "p.client", "p.device_name"];
@@ -540,7 +585,10 @@ pub async fn activity(State(app): State<App>, user: AuthUser, Query(q): Query<Ac
         let order = order_by(&ACTIVITY_SORTS, sort, q.dir.as_deref(), "p.ended_at DESC, p.id DESC");
         let sql = format!("{PLAY_SELECT} {} ORDER BY {order} LIMIT {per_page} OFFSET {}", cond.sql(), (page - 1) * per_page);
         let rows: Vec<Value> = rows_json(c, &sql, &cond.args)?.into_iter().map(|m| decorate_play(m, scope.perms.see_network, false)).collect();
-        Ok(json!({ "total": total, "page": page, "per_page": per_page, "rows": rows }))
+        // What this history is made of, so the page can offer a filter for it — and leave it out
+        // when there is only one answer.
+        let sources = sources_present(c, &scope.whose())?;
+        Ok(json!({ "total": total, "page": page, "per_page": per_page, "rows": rows, "sources": sources }))
     })
     .await?;
     Ok(Json(out))
@@ -1590,6 +1638,67 @@ pub async fn server(State(app): State<App>, ServerViewer(_): ServerViewer) -> Ap
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn conn() -> Connection {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+               ('live',         'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100, 700, 600),
+               ('jellystat',    'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 900, 1500, 600),
+               ('streamystats', 'u2', 'bob',   'i1', 'Big Buck Bunny', 'Movie', 2000, 2600, 600);",
+        )
+        .unwrap();
+        c
+    }
+
+    #[test]
+    fn only_a_tracker_finstats_knows_can_be_filtered_on() {
+        // The value reaches SQL, so it is chosen from a list rather than passed through. Anything
+        // else means "all of them", which is what the filter shows when it is not set.
+        assert_eq!(source_filter(Some("live")), Some("live"));
+        assert_eq!(source_filter(Some("jellystat")), Some("jellystat"));
+        assert_eq!(source_filter(Some("streamystats")), Some("streamystats"));
+        for all in [None, Some(""), Some("all"), Some("LIVE"), Some("' OR 1=1 --"), Some("jellystat' --")] {
+            assert_eq!(source_filter(all), None, "{all:?}");
+        }
+    }
+
+    #[test]
+    fn the_trackers_a_history_came_from_are_listed_in_one_order_and_only_where_they_are() {
+        let c = conn();
+        // Always the same order, whatever order the rows are in, so the filter never reshuffles.
+        assert_eq!(sources_present(&c, &Cond::default()).unwrap(), ["live", "jellystat", "streamystats"]);
+        // Somebody who may only see their own plays is told only about their own history: bob's
+        // Streamystats rows are not alice's business, and a filter for them would say they exist.
+        let mut alice = Cond::default();
+        alice.add("p.user_id = ?", "u1".to_string());
+        assert_eq!(sources_present(&c, &alice).unwrap(), ["live", "jellystat"]);
+        let mut bob = Cond::default();
+        bob.add("p.user_id = ?", "u2".to_string());
+        assert_eq!(sources_present(&c, &bob).unwrap(), ["streamystats"]);
+        // An install that has never imported anything has nothing to choose between.
+        c.execute("DELETE FROM playbacks WHERE source <> 'live'", []).unwrap();
+        assert_eq!(sources_present(&c, &Cond::default()).unwrap(), ["live"]);
+    }
+
+    #[test]
+    fn asking_which_trackers_a_history_came_from_never_reads_the_whole_table() {
+        // It runs on every page of Activity, so it must be a seek per tracker rather than a scan:
+        // on a long history three scans would cost more than the page itself.
+        let c = conn();
+        let plan: Vec<String> = c
+            .prepare("EXPLAIN QUERY PLAN SELECT EXISTS(SELECT 1 FROM playbacks p WHERE p.source = 'jellystat')")
+            .unwrap()
+            .query_map([], |r| r.get::<_, String>(3))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        assert!(plan.iter().any(|p| p.contains("idx_pb_source")), "{plan:?}");
+        assert!(!plan.iter().any(|p| p.contains("SCAN playbacks")), "{plan:?}");
+    }
 
     #[test]
     fn a_search_word_can_never_grow_into_a_pattern_sqlite_refuses() {

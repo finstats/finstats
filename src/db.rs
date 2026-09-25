@@ -507,6 +507,11 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     r#"
     ALTER TABLE notify_targets ADD COLUMN options TEXT NOT NULL DEFAULT '{}';
     "#,
+    // 20 — which tracker a play came from is a filter on the Activity page, and the page asks on
+    //      every load which trackers the history holds at all. Three seeks rather than three scans.
+    r#"
+    CREATE INDEX idx_pb_source ON playbacks(source);
+    "#,
 ];
 
 impl Db {
