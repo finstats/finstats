@@ -7,8 +7,8 @@
 //! dropped). It streams both ways: size is bounded by disk, not memory.
 //!
 //! What is in it: plays and their timelines, manual seen-marks, permissions, home addresses, the
-//! server log, known devices and the settings. What is not, on purpose: the Jellyfin address and API
-//! key, sign-in sessions, and the library itself (items, people, played flags), which the next sync
+//! server log, known devices, finstats' own audit log and the settings. What is not, on purpose: the Jellyfin address and API
+//! key, sign-in sessions, API keys, and the library itself (items, people, played flags), which the next sync
 //! reads from Jellyfin again. A backup is still a complete viewing history with IP addresses in it:
 //! treat the file accordingly.
 //!
@@ -38,7 +38,7 @@ const SUFFIX: &str = ".jsonl.gz";
 
 /// In the order they are written, which is also the order they must be read in: a timeline row
 /// needs its play to exist.
-const TABLES: [&str; 8] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts"];
+const TABLES: [&str; 9] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit"];
 
 pub fn dir(data_dir: &Path) -> PathBuf {
     data_dir.join("backups")
@@ -123,7 +123,7 @@ pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Res
         let mut written = 0i64;
         for table in TABLES {
             // Most of these tables are WITHOUT ROWID and come out in primary-key order by themselves.
-            let order = if matches!(table, "playbacks" | "playback_events" | "server_events") { " ORDER BY id" } else { "" };
+            let order = if matches!(table, "playbacks" | "playback_events" | "server_events" | "audit") { " ORDER BY id" } else { "" };
             let mut stmt = tx.prepare(&format!("SELECT * FROM {table}{order}"))?;
             let mut rows = stmt.query([])?;
             while let Some(row) = rows.next()? {
@@ -309,6 +309,19 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
             // Its own ids mean nothing here; `dedupe` keeps an alert this database already has from doubling.
             "security_alerts" if insert_row(&tx, table, &known["security_alerts"], row, &["id"], "INSERT OR IGNORE")? => res.other_rows += 1,
             "security_alerts" => {}
+            // Its ids mean nothing here either, and it has no natural key: a row is appended unless the
+            // same thing, by the same person, at the same moment, is already written down.
+            "audit" => {
+                let get = |k: &str| row.get(k).cloned().unwrap_or(Value::Null);
+                let dup: i64 = tx.query_row(
+                    "SELECT COUNT(*) FROM audit WHERE at = ?1 AND kind = ?2 AND COALESCE(user_id, '') = COALESCE(?3, '') AND COALESCE(target, '') = COALESCE(?4, '') AND detail = ?5",
+                    params_from_iter([sql_value(&get("at")), sql_value(&get("kind")), sql_value(&get("user_id")), sql_value(&get("target")), sql_value(&get("detail"))].iter()),
+                    |r| r.get(0),
+                )?;
+                if dup == 0 && insert_row(&tx, "audit", &known["audit"], row, &["id"], "INSERT")? {
+                    res.other_rows += 1;
+                }
+            }
             _ => {} // a table from a newer finstats
         }
         if n % 5000 == 0 {
@@ -390,16 +403,18 @@ mod tests {
                  INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('u2', '[\"see_everyone\"]', 5);
                  INSERT INTO settings(key, value) VALUES ('settings', '{\"min_play_s\": 42, \"home_addresses\": [\"203.0.113.7\"]}'), ('jellyfin_api_key', 'secret-key'), ('jellyfin_url', 'http://jellyfin.internal:8096'), ('device_id', 'secret-device');
                  INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES ('secret-session-hash', 'u1', 'alice', 1, 1, 9999999999);
-                 INSERT INTO services(kind, name, url, username, secret, created_at) VALUES ('sonarr', 'Sonarr', 'http://sonarr.internal:8989', 'secret-service-user', 'secret-service-key', 1);",
+                 INSERT INTO services(kind, name, url, username, secret, created_at) VALUES ('sonarr', 'Sonarr', 'http://sonarr.internal:8989', 'secret-service-user', 'secret-service-key', 1);
+                 INSERT INTO api_keys(token_hash, user_id, name, scope, created_at) VALUES ('secret-key-hash', 'u1', 'laptop', 'full', 1);
+                 INSERT INTO audit(at, kind, user_id, user_name, target, detail) VALUES (5, 'setting_changed', 'u1', 'alice', NULL, '{\"changed\":[{\"key\":\"min_play_s\"}]}');",
             )
             .unwrap();
         }
         let made = export(&source, &dir(&tmp), None).unwrap();
-        assert_eq!((made.plays, made.rows), (2, 6));
+        assert_eq!((made.plays, made.rows), (2, 7), "the audit row travels; the key does not");
         let file = dir(&tmp).join(&made.name);
         let mut text = String::new();
         GzDecoder::new(File::open(&file).unwrap()).read_to_string(&mut text).unwrap();
-        for secret in ["secret-key", "jellyfin.internal", "secret-device", "secret-session-hash", "secret-service-key", "secret-service-user", "sonarr.internal"] {
+        for secret in ["secret-key", "jellyfin.internal", "secret-device", "secret-session-hash", "secret-service-key", "secret-service-user", "sonarr.internal", "secret-key-hash"] {
             assert!(!text.contains(secret), "{secret} must never be in a backup");
         }
 
@@ -416,6 +431,8 @@ mod tests {
         assert_eq!(n("SELECT COUNT(*) FROM playback_events e JOIN playbacks p ON p.id = e.playback_id WHERE p.user_id = 'u1'"), 2);
         assert_eq!(n("SELECT is_local FROM playbacks WHERE user_id = 'u2'"), 1);
         assert_eq!(n("SELECT COUNT(DISTINCT group_id) FROM playbacks WHERE group_id IS NOT NULL"), 1);
+        assert_eq!(n("SELECT COUNT(*) FROM audit WHERE kind = 'setting_changed'"), 1, "restoring twice adds no audit rows");
+        assert_eq!(n("SELECT COUNT(*) FROM api_keys"), 0, "a key never arrives with a backup");
         assert_eq!(n("SELECT COUNT(*) FROM user_permissions"), 1);
         assert_eq!(Settings::load(&c).unwrap().min_play_s, 42);
 

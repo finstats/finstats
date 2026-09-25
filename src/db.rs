@@ -528,6 +528,39 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     WHERE kind = 'seek' AND detail LIKE '%:__ → %';
     CREATE INDEX idx_pbe_kind ON playback_events(kind, playback_id, position_s);
     "#,
+    // 22 — API keys, and finstats' own audit log, in one migration: a long-lived credential without a
+    //      record of what it did would be a step backwards. A key is stored as the hash of its token,
+    //      like a session, and is never part of a backup; the audit log is, being finstats' own data.
+    //      Ids are never reused (AUTOINCREMENT) so an audit row keeps pointing at the right key.
+    r#"
+    CREATE TABLE api_keys (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        token_hash   TEXT NOT NULL UNIQUE,
+        user_id      TEXT NOT NULL,
+        name         TEXT NOT NULL,
+        scope        TEXT NOT NULL,              -- full | calendar
+        created_at   INTEGER NOT NULL,
+        expires_at   INTEGER,                    -- NULL = until revoked
+        last_used_at INTEGER,
+        last_used_ip TEXT,
+        revoked_at   INTEGER
+    );
+    CREATE INDEX idx_api_keys_user ON api_keys(user_id);
+    CREATE TABLE audit (
+        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        at        INTEGER NOT NULL,
+        kind      TEXT NOT NULL,
+        user_id   TEXT,                          -- who did it; NULL for a failed sign-in of an unknown name, or the scheduler
+        user_name TEXT,                          -- as typed, for a failed sign-in
+        ip        TEXT,
+        key_id    INTEGER,                       -- through which key, when a key did it
+        target    TEXT,                          -- what it was about: a user id, a backup name, a key id, a play id
+        detail    TEXT NOT NULL DEFAULT '{}',    -- JSON; never a secret
+        outcome   TEXT NOT NULL DEFAULT 'ok'     -- ok | failed | refused
+    );
+    CREATE INDEX idx_audit_at ON audit(at);
+    CREATE INDEX idx_audit_user ON audit(user_id, at);
+    "#,
 ];
 
 impl Db {
@@ -805,12 +838,34 @@ mod tests {
     }
 
     #[test]
+    fn keys_and_an_audit_log_arrive_together() {
+        // A long-lived credential without a record of what it did would be a step backwards, so the
+        // two tables are one migration.
+        let c = Connection::open_in_memory().unwrap();
+        for m in MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO api_keys(token_hash, user_id, name, scope, created_at) VALUES ('h', 'u1', 'laptop', 'full', 1);
+             INSERT INTO audit(at, kind, user_id, user_name, ip, key_id, target, detail, outcome) VALUES (1, 'key_created', 'u1', 'alice', '192.168.1.10', 1, '1', '{}', 'ok');",
+        )
+        .unwrap();
+        let n: i64 = c.query_row("SELECT COUNT(*) FROM audit a JOIN api_keys k ON k.id = a.key_id", [], |r| r.get(0)).unwrap();
+        assert_eq!(n, 1);
+        for idx in ["idx_api_keys_user", "idx_audit_at", "idx_audit_user"] {
+            let t = if idx.starts_with("idx_api") { "api_keys" } else { "audit" };
+            let found: i64 = c.query_row(&format!("SELECT COUNT(*) FROM pragma_index_list('{t}') WHERE name = '{idx}'"), [], |r| r.get(0)).unwrap();
+            assert_eq!(found, 1, "{idx}");
+        }
+    }
+
+    #[test]
     fn a_seek_recorded_before_its_origin_was_kept_gets_one_from_its_label() {
         // A seek used to keep where it came from only in its label ("27:12 → 33:10"), the left side
         // being the position playback was expected at. The rewind heatmap asks of every seek whether
         // it went backwards, so the origin becomes a number once, here, for every seek already kept.
         let c = Connection::open_in_memory().unwrap();
-        let last = MIGRATIONS.len() - 1;
+        let last = 20; // migration 21 (numbered from 1), whatever comes after it
         for m in &MIGRATIONS[..last] {
             c.execute_batch(m).unwrap();
         }
