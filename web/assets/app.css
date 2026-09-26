@@ -1646,3 +1646,36 @@ span.shelf-card { cursor: default; }
   .setting-control { justify-content: flex-start; width: 100%; }
   .setting-control .home-input { width: 100%; }
 }
+
+/* ---------------------------------------------------------------- public profile (/u/:token, 2.0) */
+body.public { min-height: 100vh; }
+#public { max-width: 1040px; margin: 0 auto; padding: 40px 24px 32px; display: flex; flex-direction: column; gap: 20px; }
+.pub-hero { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.pub-hero-text { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.pub-avatar { width: 64px; height: 64px; font-size: 24px; }
+.pub-section .card-body { display: flex; flex-direction: column; gap: 18px; }
+.pub-sub { font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+.pub-shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 16px; list-style: none; }
+.pub-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pub-title .poster { width: 100%; margin-bottom: 4px; }
+.pub-title-name { font-size: 13.5px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.pub-title-sub { font-size: 12px; }
+.pub-genres .chips { list-style: none; }
+.pub-genres .chip { gap: 7px; }
+.pub-year-line { font-size: 17px; color: var(--text); }
+.pub-year-line strong { font-size: 22px; }
+.pub-persona strong { color: var(--accent-hi); }
+.pub-recap .pub-shelf { max-width: 300px; grid-template-columns: repeat(2, 1fr); }
+.pub-card-link { align-self: flex-start; }
+.pub-recent-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.pub-recent-list li { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 12px; }
+.pub-recent-list .poster { width: 38px; }
+.pub-recent-text { display: flex; flex-direction: column; min-width: 0; }
+.pub-recent-text > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pub-foot { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding-top: 8px; }
+.pub-gone { padding: 80px 0; text-align: center; display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 620px) {
+  #public { padding: 24px 16px; }
+  .pub-shelf { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; }
+}
+
