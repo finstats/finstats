@@ -991,6 +991,10 @@ pub async fn library_detail(State(app): State<App>, user: AuthUser, Path(id): Pa
 pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<String>, Query(q): Query<FilterQuery>) -> ApiResult {
     let id = db::norm_id(&id);
     let (caller, min_play) = (user.id.clone(), app.settings().min_play_s.max(120));
+    // Where people open Jellyfin: the address an administrator gave, else the one finstats connects to.
+    let jellyfin_base = Some(app.settings().jellyfin_public_url.trim().to_string())
+        .filter(|u| !u.is_empty())
+        .or_else(|| app.config.read().unwrap().as_ref().map(|c| c.url.clone()));
     let out = scoped(&app, &user, &q, move |c, scope| {
         let mut requested: Option<Value> = None;
         let item = one_json(
@@ -1031,6 +1035,9 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
         let provider_ids = item.remove("provider_ids");
         let external = external_links(item.get("type").and_then(Value::as_str), provider_ids);
         item.insert("external".into(), json!(external));
+        // A title Jellyfin no longer has has no page there to open.
+        let open = item.get("removed").and_then(Value::as_bool) != Some(true);
+        item.insert("jellyfin_link".into(), json!(jellyfin_base.as_deref().filter(|_| open).map(|b| crate::jellyfin::web_link(b, &id))));
         if item.get("studios").is_none_or(Value::is_null) {
             item.insert("studios".into(), json!([]));
         }

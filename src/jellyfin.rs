@@ -461,9 +461,20 @@ pub fn scan_status(tasks: &[Value]) -> Option<(bool, Option<i64>)> {
     })
 }
 
+/// A title's own page in Jellyfin's web app, at `base` (the address people use, or finstats' own).
+pub fn web_link(base: &str, item_id: &str) -> String {
+    format!("{}/web/#/details?id={item_id}", base.trim().trim_end_matches('/'))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_title_opens_on_its_own_page_in_jellyfins_web_app() {
+        assert_eq!(web_link("https://jellyfin.example.com", "0123456789abcdef0123456789abcdef"), "https://jellyfin.example.com/web/#/details?id=0123456789abcdef0123456789abcdef");
+        assert_eq!(web_link("http://192.168.1.10:8096/jf/", "abc"), "http://192.168.1.10:8096/jf/web/#/details?id=abc", "one slash, however the address was typed");
+    }
 
     #[test]
     fn a_socket_url_keeps_the_host_the_port_and_the_path_behind_a_proxy() {

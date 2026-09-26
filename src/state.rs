@@ -113,11 +113,15 @@ pub struct Settings {
     pub public_url: String,
     /// People may publish a profile readable without an account (2.0). Off until an administrator allows it.
     pub public_profiles: bool,
+    /// Where people open Jellyfin — its address from outside, which is often not the one finstats connects
+    /// to (a container name, a LAN address). Every "Open in Jellyfin" button points here; empty means the
+    /// address finstats connects to.
+    pub jellyfin_public_url: String,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { follow_jellyfin_scan: true, allow_user_login: false, default_permissions: vec![], active_interval_s: 1, idle_interval_s: 5, sync_interval_h: 6, merge_window_s: 600, min_play_s: 0, group_window_s: 60, public_ip_lookup: true, home_addresses: vec![], backup_every_d: 7, backup_keep: 5, geoip_download: false, travel_speed_kmh: 900, travel_min_km: 500, public_url: String::new(), public_profiles: false }
+        Self { follow_jellyfin_scan: true, allow_user_login: false, default_permissions: vec![], active_interval_s: 1, idle_interval_s: 5, sync_interval_h: 6, merge_window_s: 600, min_play_s: 0, group_window_s: 60, public_ip_lookup: true, home_addresses: vec![], backup_every_d: 7, backup_keep: 5, geoip_download: false, travel_speed_kmh: 900, travel_min_km: 500, public_url: String::new(), public_profiles: false, jellyfin_public_url: String::new() }
     }
 }
 
@@ -149,6 +153,13 @@ impl Settings {
             }
             if url.len() > 300 {
                 return Err("That address is too long".into());
+            }
+        }
+        if !self.jellyfin_public_url.is_empty() {
+            let url = self.jellyfin_public_url.trim();
+            let parsed = reqwest::Url::parse(url).ok().filter(|u| matches!(u.scheme(), "http" | "https") && u.host_str().is_some_and(|h| !h.is_empty()));
+            if parsed.is_none() || url.len() > 300 {
+                return Err("Jellyfin's address must start with http:// or https:// and name a host".into());
             }
         }
         check("backup_every_d", self.backup_every_d, 0, 365)?;
@@ -397,3 +408,19 @@ impl From<db::rusqlite::Error> for ApiError {
 }
 
 pub type ApiResult<T = Json<Value>> = Result<T, ApiError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn jellyfins_address_for_people_is_an_http_address_or_nothing() {
+        let with = |url: &str| Settings { jellyfin_public_url: url.into(), ..Settings::default() }.validate();
+        assert!(with("").is_ok(), "empty: the address finstats connects to");
+        assert!(with("https://jellyfin.example.com").is_ok());
+        assert!(with("http://192.168.1.10:8096/jf").is_ok());
+        for bad in ["jellyfin.example.com", "ftp://jellyfin.example.com", "javascript:alert(1)", "https://"] {
+            assert!(with(bad).is_err(), "{bad} was accepted");
+        }
+    }
+}

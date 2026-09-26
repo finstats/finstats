@@ -665,7 +665,7 @@ async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path
 
 /// Settings only a Jellyfin administrator may write: who gets in, what everyone may see, the address
 /// finstats puts in the messages it sends, and whether anything may be read without an account.
-const ACCESS_KEYS: [&str; 4] = ["allow_user_login", "default_permissions", "public_url", "public_profiles"];
+const ACCESS_KEYS: [&str; 5] = ["allow_user_login", "default_permissions", "public_url", "public_profiles", "jellyfin_public_url"];
 
 const PERMISSION_INFO: [(&str, &str, &str); 7] = [
     ("sign_in", "Sign in", "May use finstats and sees their own statistics and recap."),
@@ -1002,6 +1002,12 @@ mod tests {
     #[test]
     fn only_a_jellyfin_administrator_lets_profiles_be_public() {
         assert!(ACCESS_KEYS.contains(&"public_profiles"));
+    }
+
+    #[test]
+    fn only_a_jellyfin_administrator_says_where_people_open_jellyfin() {
+        // Every "Open in Jellyfin" button points there: a manager must not be able to send everyone elsewhere.
+        assert!(ACCESS_KEYS.contains(&"jellyfin_public_url"));
     }
 
     #[test]
