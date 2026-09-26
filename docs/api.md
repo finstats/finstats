@@ -1404,3 +1404,11 @@ beside it listing its cards.
 A new event kind, `recap_ready` (Library group, the person it is about): in December, once per person who watched that year,
 "Your 2025 in review is ready" with a link to `/recap?year=2025`.
 
+# v2.0.2 — Open in Jellyfin
+
+`GET /api/items/{id}` gains `item.jellyfin_link`: Jellyfin's web app on that title's page
+(`{base}/web/#/details?id={id}`), or `null` for a title Jellyfin no longer has. `base` is the setting
+`jellyfin_public_url` — where people open Jellyfin, which is often not the address finstats connects to — or,
+while it is empty, the address finstats connects to. `jellyfin_public_url` is an http(s) address naming a host
+(`400` otherwise) and, being a link everyone follows, only a Jellyfin administrator may set it (`403` for anyone else).
+

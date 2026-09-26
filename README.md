@@ -276,6 +276,7 @@ Everything works out of the box. If you want to tune it, **Settings** in the app
 | | |
 |---|---|
 | **Access** | Who may sign in and what they may see, for everyone or per person: *sign in*, *see everyone's activity*, *see network details*, *see the server*, *manage finstats*. Jellyfin administrators always have everything, and only they can change this. |
+| **Jellyfin's address for people** | Where every title's *Open in Jellyfin* button points — your Jellyfin's address from outside, when that is not the one finstats connects to (a container name, a LAN address). Empty: the address finstats connects to. Jellyfin administrators only. |
 | **API keys** | Your own keys for scripts and calendars, with a scope and an expiry; shown once, revoked with a click. Every signed-in user has this section; administrators see everyone's keys. |
 | **Follow Jellyfin's library scan** | On by default. finstats refreshes its copy of your library right after Jellyfin's own scheduled scan — no second schedule to manage. |
 | **Check every…** | How often finstats asks what is playing: every second while someone is watching, and — only while the live connection is not carrying — every 5 seconds while nobody is. Jellyfin pushes a new play within about a second, so the second one is a fallback and nothing more. |
