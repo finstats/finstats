@@ -65,6 +65,35 @@ const FALLBACK_IDLE_S: i64 = 30;
 const PAUSE_DEBOUNCE: u32 = 3;
 const DEVICE_REFRESH: Duration = Duration::from_secs(300);
 
+/// The plays being tracked that this pass did not see: the ones that ended. `seen` is a set, because searching a list
+/// once per tracked play is 100 million comparisons a second at 10,000 streams.
+fn ended_keys<'a>(tracked: impl Iterator<Item = &'a String>, seen: &std::collections::HashSet<String>) -> Vec<String> {
+    tracked.filter(|k| !seen.contains(*k)).cloned().collect()
+}
+
+/// Every play that ended in one pass, closed in one transaction — a play too short to keep deleted, the rest given their
+/// final numbers and a stop event — and then each title's groups worked out once, not once per play. One call and one
+/// detection per play closed 245 plays a second, so a crowd ending together held up the collector for minutes.
+fn close_ended(c: &mut crate::db::rusqlite::Connection, finished: &[(i64, PlayRecord)], group_window_s: i64) -> Result<()> {
+    let mut titles = std::collections::BTreeSet::new();
+    let tx = c.transaction()?;
+    for (row_id, rec) in finished {
+        if rec.duration_s < MIN_KEEP_S {
+            tx.execute("DELETE FROM playbacks WHERE id = ?1", [row_id])?;
+        } else {
+            rec.update_progress(&tx, *row_id)?;
+            insert_events(&tx, *row_id, &[PlayEvent { at: rec.ended_at, kind: "stop", position_s: rec.position_s, from_s: None, detail: None }])?;
+        }
+        titles.insert(rec.item_id.clone());
+    }
+    tx.commit()?;
+    for item in titles {
+        // Now that their lengths are known: was any of these watched together with someone?
+        crate::groups::detect(c, group_window_s, Some(&item))?;
+    }
+    Ok(())
+}
+
 /// When each device's row was last written, forgetting any not written for longer than [`DEVICE_REFRESH`]: past that
 /// an entry decides nothing, and a device id is the app's own word — one that invented a new id every time would
 /// otherwise grow the map for as long as finstats runs.
@@ -1083,7 +1112,7 @@ async fn tick(
     let now = db::now();
     let tick_at = Instant::now();
     forget_stale_devices(devices_seen, tick_at);
-    let mut seen: Vec<String> = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut device_rows: Vec<(String, String, Option<String>, Option<String>, Option<String>, Option<String>)> = vec![];
 
     for s in sessions {
@@ -1100,7 +1129,7 @@ async fn tick(
         let key = format!("{}:{}", s["Id"].as_str().unwrap_or(rec.device_id.as_deref().unwrap_or("?")), rec.item_id);
         let is_paused = s["PlayState"]["IsPaused"].as_bool().unwrap_or(false);
         let transcode_progress = s["TranscodingInfo"]["CompletionPercentage"].as_f64().map(|p| (p / 100.0).clamp(0.0, 1.0));
-        seen.push(key.clone());
+        seen.insert(key.clone());
 
         if let Some(t) = tracked.get_mut(&key) {
             // Cap the step so a stalled poll loop or suspended host is not counted as viewing.
@@ -1196,8 +1225,8 @@ async fn tick(
     }
 
     // Whatever is tracked but no longer reported has ended.
-    let ended: Vec<String> = tracked.keys().filter(|k| !seen.contains(k)).cloned().collect();
-    for key in ended {
+    let mut finished = vec![];
+    for key in ended_keys(tracked.keys(), &seen) {
         let mut t = tracked.remove(&key).expect("key came from the map");
         t.rec.active = false;
         t.rec.duration_s = t.watched.round() as i64;
@@ -1208,19 +1237,10 @@ async fn tick(
             let (teller, event) = (app.clone(), play_event(&rec, false, row_id));
             tokio::spawn(async move { crate::notify::raise(&teller, event).await; });
         }
-        app.db
-            .call(move |c| {
-                if rec.duration_s < MIN_KEEP_S {
-                    c.execute("DELETE FROM playbacks WHERE id = ?1", [row_id])?;
-                } else {
-                    rec.update_progress(c, row_id)?;
-                    insert_events(c, row_id, &[PlayEvent { at: rec.ended_at, kind: "stop", position_s: rec.position_s, from_s: None, detail: None }])?;
-                }
-                // Now that its length is known: was this one watched together with someone?
-                crate::groups::detect(c, group_window_s, Some(&rec.item_id))?;
-                Ok(())
-            })
-            .await?;
+        finished.push((row_id, rec));
+    }
+    if !finished.is_empty() {
+        app.db.call(move |c| close_ended(c, &finished, group_window_s)).await?;
     }
 
     if !device_rows.is_empty() {
@@ -1250,6 +1270,46 @@ async fn tick(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn which_plays_ended_is_found_in_one_pass_over_them() {
+        // The keys seen in a pass were a list, searched once for every play being tracked: 10,000 streams meant 100
+        // million string comparisons every second, and at 25,000 a pass no longer fitted in the second it had.
+        let tracked: Vec<String> = (0..200_000).map(|i| format!("session-{i}:item")).collect();
+        let seen: std::collections::HashSet<String> = tracked.iter().step_by(2).cloned().collect();
+        let started = Instant::now();
+        let gone = ended_keys(tracked.iter(), &seen);
+        assert!(started.elapsed() < Duration::from_secs(2), "{:?}", started.elapsed());
+        assert_eq!(gone.len(), 100_000);
+        assert!(gone.iter().all(|k| !seen.contains(k)));
+    }
+
+    #[test]
+    fn plays_that_end_together_are_closed_in_one_go_and_each_title_regrouped_once() {
+        // Each ended play was its own database call and its own group detection over its title's whole history: 245
+        // plays a second, so 25,000 ending together took over four minutes, while the collector read nothing new.
+        let mut c = crate::db::rusqlite::Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let play = |user: &str, item: &str, started: i64| PlayRecord {
+            source: "live", active: true, user_id: user.into(), user_name: user.into(), item_id: item.into(), item_name: item.into(),
+            item_type: "Movie".into(), started_at: started, ended_at: started + 5, play_method: "DirectPlay".into(), ..Default::default()
+        };
+        let mut finished = vec![];
+        for (user, item, started, watched) in [("a", "film", 1000, 1500), ("b", "film", 1004, 1490), ("c", "other", 1000, 1)] {
+            let mut rec = play(user, item, started);
+            let id = rec.insert(&c).unwrap().unwrap();
+            (rec.active, rec.duration_s, rec.ended_at) = (false, watched, started + watched);
+            finished.push((id, rec));
+        }
+        close_ended(&mut c, &finished, 60).unwrap();
+        let rows: Vec<(String, i64, Option<i64>)> = c.prepare("SELECT user_id, active, group_id FROM playbacks ORDER BY id").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(rows, vec![("a".to_string(), 0, Some(1)), ("b".to_string(), 0, Some(1))], "closed, grouped, and the two-second play gone");
+        let stops: i64 = c.query_row("SELECT COUNT(*) FROM playback_events WHERE kind = 'stop'", [], |r| r.get(0)).unwrap();
+        assert_eq!(stops, 2);
+    }
 
     #[test]
     fn devices_not_seen_for_a_while_are_forgotten_so_the_map_cannot_grow_for_ever() {
