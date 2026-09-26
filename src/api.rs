@@ -125,6 +125,8 @@ pub fn router(app: App) -> Router {
         .nest("/api", api)
         .route("/u/{token}", get(public_page))
         .route("/u/{token}/card.png", get(public_card))
+        .route("/u/{token}/recap/{chapter}", get(public_story_card))
+        .route("/u/{token}/recap.zip", get(public_story_zip))
         .fallback(static_handler)
         .layer(middleware::from_fn(security_headers))
         // A backup is gzip already. Compressing it again gains nothing, and the doubly-encoded stream
@@ -414,6 +416,26 @@ where
     let svg = svg(&posters);
     let png = tokio::task::spawn_blocking(move || crate::card::render_png(&svg)).await.map_err(anyhow::Error::from)??;
     Ok(app.public_cards.put(key, png))
+}
+
+/// The published year, one chapter at a time, to anyone holding the link — only when the year is published.
+async fn public_story_card(State(app): State<App>, Path((token, chapter)): Path<(String, String)>) -> ApiResult<Response> {
+    let ch = crate::story::Chapter::parse(&chapter).ok_or_else(crate::public::not_found)?;
+    let (_, a) = crate::public::resolve(&app, token).await?;
+    let story = a.recap.filter(|y| y.chapters().contains(&ch)).ok_or_else(crate::public::not_found)?;
+    let png = draw_story(&app, &story, ch).await?;
+    let r = Response::builder()
+        .header(CONTENT_TYPE, "image/png")
+        .header(CACHE_CONTROL, "public, max-age=3600")
+        .body(Body::from(png.as_ref().clone()))
+        .unwrap();
+    Ok(crate::public::noindex(r))
+}
+
+async fn public_story_zip(State(app): State<App>, Path(token): Path<String>) -> ApiResult<Response> {
+    let (_, a) = crate::public::resolve(&app, token).await?;
+    let story = a.recap.ok_or_else(crate::public::not_found)?;
+    Ok(crate::public::noindex(zip_response(&story_files(&app, &story).await?, &story.label)))
 }
 
 /// One chapter of the caller's year as a 1080×1920 card, for the same people who may open that year.

@@ -58,16 +58,27 @@ function habits(x) {
       h('ul', { class: 'chips' }, x.genres.map((g) => h('li', { class: 'chip' }, g.name, h('span', { class: 'muted' }, duration(g.watch_s)))))) : null);
 }
 
-function recap(r) {
-  const picks = [['Top show', r.top_series], ['Top film', r.top_movie]].filter(([, t]) => t);
-  return section(`Their ${r.year}`, 'pub-recap',
-    h('p', { class: 'pub-year-line' }, h('strong', null, hours(r.watch_s)), ' hours, ', num(r.plays), ' plays on ', num(r.active_days), ' days',
-      r.longest_streak_days ? `, a ${r.longest_streak_days}-day streak` : '', '.'),
+// What each card of the story is about: its alternative text, and the caption under it.
+const CHAPTER = {
+  year: 'The year', numbers: 'In numbers', shows: 'Top shows', films: 'Top films', music: 'Top music', genres: 'Genres',
+  persona: 'The persona', rhythm: 'Hours and days', days: 'Every day', records: 'Records', together: 'In company',
+  finished: 'Shows finished', asked: 'Requests', versus: 'Against the year before',
+};
+
+function recap(r, story) {
+  const base = `/u/${encodeURIComponent(token)}`;
+  const slug = r.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return section(`Their ${r.label}`, 'pub-recap',
+    h('p', { class: 'pub-year-line' }, h('strong', null, hours(r.totals.watch_s)), ' hours, ', num(r.totals.plays), ' plays on ', num(r.totals.active_days), ' days',
+      r.records.longest_streak_days ? `, a ${r.records.longest_streak_days}-day streak` : '', '.'),
     r.persona ? h('p', { class: 'pub-persona' }, h('strong', null, r.persona.title), ' ', h('span', { class: 'muted' }, r.persona.line)) : null,
-    r.top_genre && !r.persona ? h('p', { class: 'pub-persona' }, h('strong', null, `Mostly ${r.top_genre}`)) : null,
-    picks.length ? h('ol', { class: 'pub-shelf' }, picks.map(([label, t]) => h('li', { class: 'pub-title' },
-      poster(t), h('span', { class: 'pub-title-sub muted' }, label), h('span', { class: 'pub-title-name' }, t.name)))) : null,
-    h('a', { class: 'btn pub-card-link', href: `/u/${encodeURIComponent(token)}/card.png?kind=recap`, download: `finstats-${r.year}.png` }, 'Download the year as a card'));
+    (story || []).length ? h('ol', { class: 'pub-story' }, story.map((key) => h('li', null,
+      h('a', { href: `${base}/recap/${key}`, target: '_blank', rel: 'noopener', 'aria-label': `Open the card: ${CHAPTER[key] || key}` },
+        h('img', { src: `${base}/recap/${key}`, alt: `${CHAPTER[key] || key}, as a card`, loading: 'lazy', decoding: 'async', width: 1080, height: 1920 })),
+      h('span', { class: 'pub-title-sub muted' }, CHAPTER[key] || key, ' · ', h('a', { href: `${base}/recap/${key}`, download: `finstats-${slug}-${key}.png` }, 'Download'))))) : null,
+    h('div', { class: 'pub-actions' },
+      (story || []).length ? h('a', { class: 'btn', href: `${base}/recap.zip`, download: `finstats-${slug}.zip` }, 'Download every card') : null,
+      h('a', { class: 'btn pub-card-link', href: `${base}/card.png?kind=recap`, download: `finstats-${slug}.png` }, 'Download the wide card')));
 }
 
 function recent(list) {
@@ -91,7 +102,7 @@ function page(a) {
       profileCard ? h('a', { class: 'btn pub-card-link', href: `/u/${encodeURIComponent(token)}/card.png`, download: 'finstats-profile.png' }, 'Download as a card') : null),
     a.totals ? totals(a.totals) : null,
     a.habits ? habits(a.habits) : null,
-    a.recap ? recap(a.recap) : null,
+    a.recap ? recap(a.recap, a.story) : null,
     a.recent ? recent(a.recent) : null,
     h('footer', { class: 'pub-foot muted' }, logo(18), h('span', null, 'Made with finstats, a statistics server for Jellyfin.')),
   ].filter(Boolean);

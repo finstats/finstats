@@ -25,6 +25,7 @@ use crate::auth::{AuthUser, Credential, JellyfinAdmin};
 use crate::db::{self, rusqlite::{Connection, OptionalExtension, params, params_from_iter}};
 use crate::state::{ApiError, ApiResult, App, Settings};
 use crate::stats::{self, Cond};
+use crate::story::StoryYear;
 
 /// What a person chose to show. All off until they turn one on.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -58,9 +59,12 @@ pub struct PublicProfile {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub habits: Option<Habits>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub recap: Option<Recap>,
+    pub recap: Option<StoryYear>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recent: Option<Vec<RecentPlay>>,
+    /// The published year's cards, in order, by chapter key.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub story: Option<Vec<&'static str>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -110,19 +114,6 @@ pub struct Habits {
 pub struct Persona {
     pub title: String,
     pub line: String,
-}
-
-#[derive(Clone, Debug, Serialize)]
-pub struct Recap {
-    pub year: i64,
-    pub plays: i64,
-    pub watch_s: i64,
-    pub active_days: i64,
-    pub persona: Option<Persona>,
-    pub top_series: Option<Title>,
-    pub top_movie: Option<Title>,
-    pub top_genre: Option<String>,
-    pub longest_streak_days: Option<i64>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -184,13 +175,15 @@ pub fn answer(c: &Connection, p: &Published, min_play_s: i64, now: i64) -> Resul
     cond.raw("p.active = 0");
     cond.add("p.ended_at <= ?", until);
     let s = p.sections;
+    let recap = if s.recap { recap(c, p, min_play_s, until)? } else { None };
     Ok(PublicProfile {
         // Never the Jellyfin user name: that is half of a sign-in.
         name: p.display_name.trim().to_string(),
         avatar: p.show_avatar,
         totals: if s.totals { Some(totals(c, &cond)?) } else { None },
         habits: if s.habits { Some(habits(c, &cond)?) } else { None },
-        recap: if s.recap { recap(c, &p.user_id, min_play_s, until)? } else { None },
+        story: recap.as_ref().map(|y| y.chapters().into_iter().map(|ch| ch.key()).collect()),
+        recap,
         recent: if s.recent { Some(recent(c, &cond)?) } else { None },
     })
 }
@@ -258,29 +251,11 @@ fn habits(c: &Connection, cond: &Cond) -> Result<Habits> {
     Ok(Habits { longest_streak_days: longest, active_days: days.len() as i64, heatmap, genres })
 }
 
-/// The ready year's headline, read off the recap and nothing more: not its rank among the other people
-/// on the server, not the apps, not the records with their times of day.
-fn recap(c: &Connection, user_id: &str, min_play_s: i64, until: i64) -> Result<Option<Recap>> {
-    let r = crate::recap::build(c, Some(user_id.to_string()), min_play_s, "", "", Some(until))?;
-    if r["empty"] == true {
-        return Ok(None);
-    }
-    let first = |k: &str| r[k].as_array().and_then(|a| a.first()).map(title);
-    let persona = r["persona"].as_object().map(|p| Persona {
-        title: p.get("title").and_then(Value::as_str).unwrap_or_default().to_string(),
-        line: p.get("line").and_then(Value::as_str).unwrap_or_default().to_string(),
-    });
-    Ok(Some(Recap {
-        year: r["year"].as_i64().unwrap_or_default(),
-        plays: int(&r["totals"], "plays"),
-        watch_s: int(&r["totals"], "watch_s"),
-        active_days: int(&r["totals"], "active_days"),
-        persona,
-        top_series: first("top_series"),
-        top_movie: first("top_movies"),
-        top_genre: r["top_genres"].as_array().and_then(|a| a.first()).and_then(|g| text(g, "name")),
-        longest_streak_days: r["records"]["longest_streak"]["days"].as_i64(),
-    }))
+/// The ready year, as the whole story (2.0): the same `StoryYear` the app's cards are drawn from, so it
+/// carries no companion, no rank among other people and no app, and it wears the name the owner chose.
+fn recap(c: &Connection, p: &Published, min_play_s: i64, until: i64) -> Result<Option<StoryYear>> {
+    let r = crate::recap::build(c, Some(p.user_id.clone()), min_play_s, "", "", Some(until))?;
+    Ok(StoryYear::from_recap(&r, &p.display_name))
 }
 
 /// Before this long has passed since a play ended, a stranger is not told about it: "watching now" or
@@ -317,7 +292,9 @@ pub fn listed_images(a: &PublicProfile) -> HashSet<String> {
         t.top_series.iter().chain(&t.top_movies).chain(&t.top_tracks).for_each(&mut add);
     }
     if let Some(r) = &a.recap {
-        r.top_series.iter().chain(&r.top_movie).for_each(&mut add);
+        for ch in r.chapters() {
+            out.extend(r.poster_ids(ch));
+        }
     }
     if let Some(recent) = &a.recent {
         out.extend(recent.iter().filter_map(|r| r.image.clone()));
@@ -704,8 +681,32 @@ mod tests {
         let p = published(&c, &Edit { sections: Sections { recap: true, ..Sections::default() }, ..all() });
         let v = serde_json::to_value(answer(&c, &p, 0, NOW).unwrap()).unwrap();
         let recap = v["recap"].as_object().expect("a recap");
-        for k in ["rank", "clients", "people", "records", "scope"] {
+        // The published year is the whole story (2.0), records included; never the rank among other
+        // people, the apps, the cast or whose login it is.
+        for k in ["rank", "clients", "people", "scope"] {
             assert!(!recap.contains_key(k), "{k} is not published");
+        }
+    }
+
+    #[test]
+    fn the_published_year_is_the_whole_story_and_names_nobody() {
+        let c = conn();
+        let p = published(&c, &Edit { sections: Sections { recap: true, ..Sections::default() }, ..all() });
+        let a = answer(&c, &p, 0, NOW).unwrap();
+        let story = a.recap.as_ref().expect("a published year");
+        assert_eq!(story.whose, "Alice", "the name the owner chose");
+        let chapters = story.chapters();
+        assert!(chapters.contains(&crate::story::Chapter::Year) && chapters.contains(&crate::story::Chapter::Together), "{chapters:?}");
+        let text = serde_json::to_string(&a).unwrap();
+        assert!(!text.contains("bob") && !text.contains("u-bob-0002"), "the companion is not named: {text}");
+        let v: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(v["story"][0], "year", "the page is told which cards there are, not left to work it out: {}", v["story"]);
+        assert_eq!(v["story"].as_array().unwrap().len(), chapters.len());
+        let listed = listed_images(&a);
+        for ch in chapters {
+            for id in story.poster_ids(ch) {
+                assert!(listed.contains(&id), "{id}, drawn on the {ch:?} card, cannot be fetched");
+            }
         }
     }
 

@@ -1685,3 +1685,8 @@ body.public { min-height: 100vh; }
 .pub-preview figure { display: grid; gap: 6px; min-width: 0; }
 .pub-preview img { width: 100%; height: auto; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--bg-sunken); }
 #pub-name { width: min(260px, 100%); }
+/* The published year, card by card: a grid that wraps, never a row that scrolls sideways. */
+.pub-story { list-style: none; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.pub-story li { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pub-story img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: var(--radius-sm); border: 1px solid var(--border-soft); background: var(--bg-sunken); }
+.pub-actions { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -256,7 +256,7 @@ fn shelf(a: &PublicProfile) -> Vec<&Title> {
 
 fn recap_picks(a: &PublicProfile) -> Vec<(&'static str, &Title)> {
     let Some(r) = &a.recap else { return vec![] };
-    [("Top show", r.top_series.as_ref()), ("Top film", r.top_movie.as_ref())].into_iter().filter_map(|(l, t)| t.map(|t| (l, t))).collect()
+    [("Top show", r.top_series.first()), ("Top film", r.top_movies.first())].into_iter().filter_map(|(l, t)| t.map(|t| (l, t))).collect()
 }
 
 fn profile(c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
@@ -311,21 +311,21 @@ fn heat(c: &mut Canvas, x: f64, y: f64, w: f64, row: f64, grid: &[Vec<i64>]) {
 
 fn recap(c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
     let Some(r) = &a.recap else { return };
-    c.text(64.0, 170.0, Style(132.0, 700, ACCENT_HI), &r.year.to_string());
+    c.text_fit(64.0, 170.0, Style(132.0, 700, ACCENT_HI), &r.label, Some(620.0));
     let whose = if a.name.is_empty() { "A year on finstats".to_string() } else { format!("{}’s year", a.name) };
     c.text_fit(64.0, 226.0, Style(34.0, 600, TEXT), &whose, Some(620.0));
-    c.text(64.0, 330.0, Style(84.0, 700, TEXT), &thousands(r.watch_s / 3600));
+    c.text(64.0, 330.0, Style(84.0, 700, TEXT), &thousands(r.totals.watch_s / 3600));
     c.text(64.0, 366.0, Style(24.0, 400, MUTED), "hours watched");
-    let mut facts = vec![format!("{} plays", thousands(r.plays)), format!("{} days", thousands(r.active_days))];
-    if let Some(d) = r.longest_streak_days {
+    let mut facts = vec![format!("{} plays", thousands(r.totals.plays)), format!("{} days", thousands(r.totals.active_days))];
+    if let Some(d) = r.records.longest_streak_days {
         facts.push(format!("a {d}-day streak"));
     }
     c.text_fit(64.0, 414.0, Style(22.0, 400, MUTED), &facts.join(" · "), Some(620.0));
     if let Some(p) = &r.persona {
         c.text_fit(64.0, 480.0, Style(30.0, 700, ACCENT_HI), &p.title, Some(620.0));
         c.text_fit(64.0, 514.0, Style(20.0, 400, MUTED), &p.line, Some(620.0));
-    } else if let Some(g) = &r.top_genre {
-        c.text_fit(64.0, 480.0, Style(30.0, 700, ACCENT_HI), &format!("Mostly {g}"), Some(620.0));
+    } else if let Some(g) = r.genres.first() {
+        c.text_fit(64.0, 480.0, Style(30.0, 700, ACCENT_HI), &format!("Mostly {}", g.name), Some(620.0));
     }
     let picks = recap_picks(a);
     let (pw, ph) = (200.0, 300.0);
@@ -425,7 +425,7 @@ pub fn render_png(svg: &str) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::public::{Habits, Heat, Recap, Totals};
+    use crate::public::{Habits, Heat, Totals};
 
     fn t(name: &str, image: Option<&str>) -> Title {
         Title { name: name.into(), sub: Some("2008".into()), plays: 3, watch_s: 5400, image: image.map(str::to_string) }
@@ -440,7 +440,13 @@ mod tests {
                 top_series: vec![t("Sintel Stories", Some("s1"))], top_movies: vec![t("Big Buck Bunny", Some("m1"))], top_tracks: vec![],
             }),
             habits: Some(Habits { longest_streak_days: 23, active_days: 200, heatmap: Heat { plays: vec![vec![0; 24]; 7], watch_s: vec![vec![0; 24]; 7].into_iter().enumerate().map(|(d, mut r)| { r[20] = d as i64 * 600; r }).collect() }, genres: vec![] }),
-            recap: Some(Recap { year: 2025, plays: 500, watch_s: 300 * 3600, active_days: 150, persona: None, top_series: Some(t("Sintel Stories", Some("s1"))), top_movie: None, top_genre: Some("Drama".into()), longest_streak_days: Some(12) }),
+            recap: crate::story::StoryYear::from_recap(&serde_json::json!({
+                "year": 2025, "totals": { "plays": 500, "watch_s": 300 * 3600, "active_days": 150 },
+                "top_series": [{ "name": "Sintel Stories", "sub": "2008", "plays": 3, "watch_s": 5400, "image_item_id": "s1" }],
+                "top_genres": [{ "name": "Drama", "watch_s": 100 }],
+                "records": { "longest_streak": { "days": 12 } },
+            }), "Alice"),
+            story: None,
             recent: None,
         }
     }
