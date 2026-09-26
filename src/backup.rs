@@ -101,8 +101,9 @@ pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Res
     };
 
     let mut conn = db.conn()?;
-    // One read transaction: the file is a snapshot of a single moment even while plays keep arriving.
-    let tx = conn.transaction()?;
+    // One read transaction: the file is a snapshot of a single moment even while plays keep arriving. Deferred by name,
+    // because a pooled connection's transactions take the write lock by default and this one must never hold it.
+    let tx = conn.transaction_with_behavior(crate::db::rusqlite::TransactionBehavior::Deferred)?;
     let count = |table: &str| -> Result<i64> { Ok(tx.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))?) };
     let mut counts = Map::new();
     for t in TABLES {

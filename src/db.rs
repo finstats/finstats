@@ -624,14 +624,20 @@ impl Db {
     pub fn open(path: &Path) -> Result<Self> {
         preflight(path)?;
         let manager = SqliteConnectionManager::file(path).with_init(|c| {
-            c.execute_batch(
+            c.execute_batch(&format!(
                 "PRAGMA journal_mode = WAL;
                  PRAGMA synchronous = NORMAL;
                  PRAGMA foreign_keys = ON;
                  PRAGMA busy_timeout = 15000;
                  PRAGMA temp_store = MEMORY;
-                 PRAGMA cache_size = -8000;",
-            )
+                 PRAGMA cache_size = -8000;
+                 PRAGMA journal_size_limit = {JOURNAL_LIMIT};"
+            ))?;
+            // Every transaction takes the write lock as it begins, waiting its turn under busy_timeout, so one that reads
+            // before it writes can never be refused its write by a commit in between (SQLITE_BUSY_SNAPSHOT). The one
+            // transaction that only reads — a backup's consistent snapshot — asks for a deferred one by name.
+            c.set_transaction_behavior(rusqlite::TransactionBehavior::Immediate);
+            Ok(())
         });
         let pool = r2d2::Pool::builder()
             .max_size(6)
@@ -741,6 +747,9 @@ fn is_update(schema: i64, stored: Option<&str>, running: &str, migrations_len: u
 /// something, so they are never served over the API.
 const PRE_UPDATE_DIR: &str = "pre-update-backups";
 const PRE_UPDATE_KEEP: usize = 3;
+
+/// The most the write-ahead journal keeps on disk once it has been checkpointed (64 MB).
+const JOURNAL_LIMIT: i64 = 64 * 1024 * 1024;
 
 /// Before a newer finstats touches an older database, copy the whole thing, so that nothing an upgrade
 /// might break — a migration, or the new binary writing rows the old one cannot — can lose the user's
@@ -1036,6 +1045,43 @@ mod tests {
         let _db = Db::open(&path).unwrap();
         let count = std::fs::read_dir(dir.join("pre-update-backups")).unwrap().filter_map(|e| e.ok()).filter(|e| e.path().extension().is_some_and(|x| x == "db")).count();
         assert_eq!(count, 1, "a restart of the same version must not snapshot again");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_transaction_holds_the_write_lock_from_its_first_statement() {
+        // A deferred transaction that reads before it writes cannot write at all once anybody else has committed in
+        // between — SQLITE_BUSY_SNAPSHOT, which no busy timeout waits out. Under the collector's steady writes that
+        // failed the group detection after an import (so the import said it failed) and could fail any read-then-write.
+        let dir = std::env::temp_dir().join(format!("finstats-txlock-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let db = Db::open(&dir.join("finstats.db")).unwrap();
+        let mut mine = db.conn().unwrap();
+        let other = db.conn().unwrap();
+        other.busy_timeout(std::time::Duration::ZERO).unwrap();
+        let tx = mine.transaction().unwrap();
+        let _: i64 = tx.query_row("SELECT COUNT(*) FROM playbacks", [], |r| r.get(0)).unwrap();
+        assert!(other.execute("INSERT INTO settings(key, value) VALUES ('between', 'x')", []).is_err(), "another connection committed inside a transaction that had begun");
+        tx.execute("INSERT INTO settings(key, value) VALUES ('mine', 'x')", []).unwrap();
+        tx.commit().unwrap();
+        drop((mine, other, db));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_journal_is_kept_to_a_size_after_a_big_write() {
+        // SQLite reuses the write-ahead journal and never shrinks it on its own: after a 120,000-play import it
+        // stayed 95 MB for good. journal_size_limit truncates it to this size whenever it is reset.
+        let dir = std::env::temp_dir().join(format!("finstats-journal-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let db = Db::open(&dir.join("finstats.db")).unwrap();
+        for _ in 0..3 {
+            let limit: i64 = db.conn().unwrap().query_row("PRAGMA journal_size_limit", [], |r| r.get(0)).unwrap();
+            assert_eq!(limit, JOURNAL_LIMIT, "every pooled connection");
+        }
+        drop(db);
         let _ = std::fs::remove_dir_all(&dir);
     }
 
