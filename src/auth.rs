@@ -453,6 +453,26 @@ pub(crate) fn remember_sign_in(c: &Connection, user_id: &str, user_name: &str, i
     Ok(())
 }
 
+/// The most sign-ins one person keeps open at once: every device they use, many times over. A session is a row kept
+/// for thirty days, and somebody with a password could otherwise sign in in a loop and fill the table and the disk.
+pub(crate) const SESSIONS_PER_USER: usize = 30;
+
+/// A new session, written, and that person's oldest beyond [`SESSIONS_PER_USER`] let go — never the new one.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn store_session(c: &Connection, hash: &str, user_id: &str, user_name: &str, is_admin: bool, now: i64, ip: Option<&str>, ua: Option<&str>) -> anyhow::Result<()> {
+    c.execute(
+        "INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at, ip, user_agent)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        params![hash, user_id, user_name, is_admin, now, now + SESSION_TTL_S, ip, ua],
+    )?;
+    c.execute(
+        "DELETE FROM sessions WHERE user_id = ?1 AND token_hash <> ?2 AND token_hash NOT IN (
+           SELECT token_hash FROM sessions WHERE user_id = ?1 AND token_hash <> ?2 ORDER BY created_at DESC LIMIT ?3)",
+        params![user_id, hash, SESSIONS_PER_USER as i64 - 1],
+    )?;
+    Ok(())
+}
+
 async fn start_session(
     app: &App,
     headers: &HeaderMap,
@@ -473,11 +493,7 @@ async fn start_session(
             let now = db::now();
             c.execute("DELETE FROM sessions WHERE expires_at <= ?1", [now])?;
             remember_sign_in(c, &uid, &uname, is_admin, now)?;
-            c.execute(
-                "INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at, ip, user_agent)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-                params![hash, uid, uname, is_admin, now, now + SESSION_TTL_S, ip_s, ua],
-            )?;
+            store_session(c, &hash, &uid, &uname, is_admin, now, Some(&ip_s), ua.as_deref())?;
             Ok(())
         })
         .await?;
@@ -805,6 +821,21 @@ mod key_tests {
         c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u9', 'carol', 1, 1, 9999999999)", [hash_token("carol-cookie")]).unwrap();
         let first = resolve_session_in(&c, &open(), "carol-cookie", 1000).unwrap().expect("no users row yet");
         assert!(first.is_admin && first.name == "carol");
+    }
+
+    #[test]
+    fn one_person_keeps_a_bounded_number_of_sessions_and_the_oldest_give_way() {
+        let c = conn();
+        for n in 0..(SESSIONS_PER_USER as i64 + 15) {
+            store_session(&c, &hash_token(&format!("t{n}")), "u2", "bob", false, 1000 + n, None, None).unwrap();
+        }
+        store_session(&c, &hash_token("alice"), "u1", "alice", true, 5000, None, None).unwrap();
+        let bob: i64 = c.query_row("SELECT COUNT(*) FROM sessions WHERE user_id = 'u2'", [], |r| r.get(0)).unwrap();
+        assert_eq!(bob, SESSIONS_PER_USER as i64, "one person's sign-ins are not bounded");
+        let newest = SESSIONS_PER_USER as i64 + 14;
+        assert!(resolve_session_in(&c, &open(), &format!("t{newest}"), 2000).unwrap().is_some(), "the newest was dropped");
+        assert!(resolve_session_in(&c, &open(), "t0", 2000).unwrap().is_none(), "the oldest is still open");
+        assert!(resolve_session_in(&c, &open(), "alice", 6000).unwrap().is_some(), "somebody else's session gave way");
     }
 
     #[test]
