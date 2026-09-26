@@ -576,6 +576,11 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         updated_at   INTEGER NOT NULL
     ) WITHOUT ROWID;
     "#,
+    // 25 — An import asks, for every row, whether this person already has this play of this title. The
+    //      title index alone made that read every play of the title by anybody — quadratic in a big import.
+    "CREATE INDEX idx_pb_user_item ON playbacks(user_id, item_id, started_at);",
+    // 26 — …and the same by where a play ended, for the other half of the rule: two trackers agree about the end.
+    "CREATE INDEX idx_pb_user_item_end ON playbacks(user_id, item_id, ended_at);",
 ];
 
 impl Db {

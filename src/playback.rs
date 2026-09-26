@@ -201,14 +201,18 @@ pub fn already_recorded(conn: &Connection, p: Play<'_>, window: i64) -> Result<b
     {
         return Ok(true);
     }
-    Ok(conn
-        .prepare_cached(
-            "SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2
-               AND (started_at = ?3
-                    OR (source <> ?5 AND (ABS(started_at - ?3) <= ?6 OR ABS(ended_at - ?4) <= ?6)))",
-        )?
-        .exists(params![p.user_id, p.item_id, p.started_at, p.ended_at, p.source, window.max(0)])?)
+    Ok(conn.prepare_cached(SAME_PLAY_SQL)?.exists(params![p.user_id, p.item_id, p.started_at, p.ended_at, p.source, window.max(0)])?)
 }
+
+/// The same person, the same item, and the same second — or, from another tracker, either end within the window.
+/// Written as three index ranges rather than `ABS(started_at - ?3) <= ?6`, which the index cannot narrow: that form
+/// read every play this person ever made of the title, for every row of an import.
+const SAME_PLAY_SQL: &str = "
+    SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2 AND started_at = ?3
+    UNION ALL
+    SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2 AND started_at BETWEEN ?3 - ?6 AND ?3 + ?6 AND source <> ?5
+    UNION ALL
+    SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2 AND ended_at BETWEEN ?4 - ?6 AND ?4 + ?6 AND source <> ?5";
 
 /// Apply [`already_recorded`] again to history that is already written, and take back out what has
 /// become a duplicate since. Answers how many rows went.
@@ -224,22 +228,25 @@ pub fn already_recorded(conn: &Connection, p: Play<'_>, window: i64) -> Result<b
 /// imported rows the one that arrived first stays. Rows of one tracker are never compared with each
 /// other — a second row of the same item is a restart the viewer really made.
 pub fn drop_relinked_duplicates(conn: &Connection, window: i64) -> Result<usize> {
-    let n = conn.execute(
-        "DELETE FROM playbacks WHERE source <> 'live' AND EXISTS (
-            SELECT 1 FROM playbacks k
-             WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
-               AND k.source <> playbacks.source
-               AND (k.source = 'live' OR k.id < playbacks.id)
-               AND (k.started_at = playbacks.started_at
-                    OR ABS(k.started_at - playbacks.started_at) <= ?1
-                    OR ABS(k.ended_at - playbacks.ended_at) <= ?1))",
-        [window.max(0)],
-    )?;
+    let n = conn.execute(RELINKED_DUPLICATES_SQL, [window.max(0)])?;
     if n > 0 {
         tracing::info!("removed {n} imported plays that re-linking had turned into duplicates of plays already here");
     }
     Ok(n)
 }
+
+/// [`drop_relinked_duplicates`]' rule: the same as [`SAME_PLAY_SQL`]'s, as two index ranges (the same second is inside
+/// either). It runs at every start and after every library read, as one write: in the `ABS(…) <= ?1` form it held the
+/// write lock for 25 s on 150,000 plays, long enough for the collector's own writes to give up.
+const RELINKED_DUPLICATES_SQL: &str = "DELETE FROM playbacks WHERE source <> 'live' AND (
+    EXISTS (SELECT 1 FROM playbacks k
+             WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
+               AND k.started_at BETWEEN playbacks.started_at - ?1 AND playbacks.started_at + ?1
+               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id))
+    OR EXISTS (SELECT 1 FROM playbacks k
+             WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
+               AND k.ended_at BETWEEN playbacks.ended_at - ?1 AND playbacks.ended_at + ?1
+               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id)))";
 
 /// One thing that happened during a play (pause, skip, track switch…).
 #[derive(Debug, Clone)]
@@ -281,6 +288,22 @@ pub fn insert_events(conn: &Connection, playback_id: i64, events: &[PlayEvent]) 
 mod tests {
     use super::*;
     use crate::db::rusqlite::Connection;
+
+    #[test]
+    fn the_same_play_is_looked_for_in_a_window_of_one_persons_plays_of_one_title() {
+        // Searched by title, then by person and title with the time tested row by row, every play read every other
+        // play of its title: 150,000 plays took five minutes to import, and the sweep after every library read held
+        // the write lock for 25 s — past the collector's 15-second wait, so live plays went unrecorded meanwhile.
+        let c = conn();
+        for (what, sql, n) in [("an import", SAME_PLAY_SQL, 6), ("the sweep after re-linking", RELINKED_DUPLICATES_SQL, 1)] {
+            let args: Vec<Box<dyn crate::db::rusqlite::ToSql>> = (0..n).map(|i| Box::new(i as i64) as Box<dyn crate::db::rusqlite::ToSql>).collect();
+            let plan: Vec<String> = c.prepare(&format!("EXPLAIN QUERY PLAN {sql}")).unwrap()
+                .query_map(crate::db::rusqlite::params_from_iter(args.iter()), |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
+            // (The sweep's delete also reaches each play's events through their foreign key, which is not the rule.)
+            let searches: Vec<&String> = plan.iter().filter(|p| p.contains("SEARCH playbacks") || p.contains("SEARCH k ")).collect();
+            assert!(!searches.is_empty() && searches.iter().all(|p| p.contains("user_id=? AND item_id=?") && (p.contains("started_at") || p.contains("ended_at"))), "{what}: {plan:?}");
+        }
+    }
 
     fn conn() -> Connection {
         let c = Connection::open_in_memory().unwrap();
