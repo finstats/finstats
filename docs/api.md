@@ -849,7 +849,7 @@ connecting a service or a read of Seerr all refresh it at once. The prefetcher n
              "release": "Low.Orbit.S03.1080p.WEB-DL" | null,   // what the release is called
              "client": "qBittorrent" | null,                   // the client Sonarr or Radarr handed it to
              "protocol": "torrent" | "usenet" | null, "service_name": "Sonarr" | null,
-             "error": "One file was not imported" | null,
+             "error": "One file was not imported" | null,         // Sonarr's or Radarr's words, with any login or key in an address blanked
              "poster": {"item_id": "…"} | {"service_id": 1, "media_id": 12} | null,
              "item_id": "…" | null,
              "requested_by": {"user_id": "…" | null, "user_name": "maria"} | null} ],

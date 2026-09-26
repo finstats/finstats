@@ -70,7 +70,14 @@ Sonarr/Radarr queues ───────────────────�
 `Settings` (one JSON blob in the `settings` table, `#[serde(default)]` so old installs load), the in-memory task
 registry, the live now-playing snapshot, and a `Notify` (`wake`) that background loops select on. All DB work goes
 through `db.call(|conn| …)` (r2d2 pool + `spawn_blocking`); rusqlite is re-exported as `db::rusqlite` — import it from
-there, not from the crate, to stay on the version `r2d2_sqlite` uses.
+there, not from the crate, to stay on the version `r2d2_sqlite` uses. **Every `transaction()` on a pooled connection is
+IMMEDIATE** (set in the pool's init): a deferred one that reads before it writes is refused its write outright once anybody
+else commits in between (`SQLITE_BUSY_SNAPSHOT`, which `busy_timeout` does not wait out), and the collector commits all the
+time. A transaction that only reads — the backup's snapshot — asks for `Deferred` by name, or it would hold the write lock
+for the whole export. `journal_size_limit` (64 MB) is set there too: SQLite never shrinks its WAL on its own. **Before the
+pool touches the file, `preflight` looks at it once**: the pool retries a bad file for its 30-second timeout and its first
+connection switches the file to WAL (a write), so a damaged file, another program's database (tables, `user_version` 0), a
+folder or a file finstats may not write is refused there, in milliseconds, naming it and saying nothing was changed.
 
 **Migrations** are the `MIGRATIONS` array in `db.rs`, applied by index against `PRAGMA user_version`. Released
 migrations are immutable — deployed databases have already run them. Add a new entry; never edit or reorder one.
@@ -85,7 +92,9 @@ exportable JSON backups — is written to `<data>/pre-update-backups/` **before*
 binary that corrupts data can always be rolled back to (stop finstats, put the copy in place of `finstats.db`, run the old
 version). A brand-new database and a same-version restart snapshot nothing. The newest `PRE_UPDATE_KEEP` (3) are kept; the
 copies are never served over the API. A failed copy is fatal only when migrations are pending (the risky case) — a plain
-version bump warns and continues. `FINSTATS_SKIP_PREUPDATE_BACKUP=1` turns it off.
+version bump warns and continues. `FINSTATS_SKIP_PREUPDATE_BACKUP=1` turns it off. The copy is written to `<name>.db.part`
+and renamed when complete, and what a killed start left is swept first: `VACUUM INTO` writes straight into its target, and an
+empty file under a snapshot's name is a valid empty database to SQLite that counted toward the three kept.
 
 **Library reads must ask for real items.** `items_page` passes `CollapseBoxSetItems=false` (otherwise servers with
 "group movies into collections" return the BoxSet *instead of* its films, which then get flagged removed) and
@@ -225,7 +234,10 @@ import held in common): either end recognised 2,750, the start alone 2,527, and 
 smear past ten minutes where the ends fall off a cliff inside one. **Within** one source it is the very same second and
 nothing wider: a tracker never exports the same play twice, so a second row of the same item minutes later is a restart
 the viewer really made, and a window there would silently drop it — on an import and, worse, on a restore of finstats'
-own backup. A new importer goes through `PlayRecord::insert_imported`, never `insert`.
+own backup. A new importer goes through `PlayRecord::insert_imported`, never `insert`. **Both statements of the rule
+(`SAME_PLAY_SQL`, `RELINKED_DUPLICATES_SQL`) are index ranges** over `(user_id, item_id, started_at)` and `…ended_at`
+(migration 25), and a test holds their plans: written as `ABS(started_at - ?) <= window` no index could narrow them, a
+120,000-play import took five minutes, and the sweep held the write lock for 25 s at every start and library read.
 
 **Re-linking is the only thing that rewrites `item_id`, so it is the only thing that can turn an imported play into a
 duplicate of one already here** — the `already_recorded` check ran before the id moved. `relink::relink_orphans` therefore
@@ -351,7 +363,8 @@ resolution point**: `auth::resolve` reads `Authorization: Bearer fs_…` first (
 invalid header never falls back to the cookie — header beats cookie), else the cookie, and both end in the same `AuthUser`,
 which now carries `credential` (`Session` | `Key{id, scope}`) and `ip`. A key (`keys.rs`, `api_keys`, sha256 of `fs_`+64 hex,
 shown once) is resolved against the **live** user row and the live grants through `effective`, never a snapshot, so a lost
-`sign_in` or a demotion reaches every key at once. **A session is resolved the same way** (`resolve_session_in` joins `users`;
+`sign_in` or a demotion reaches every key at once. One person keeps at most `SESSIONS_PER_USER` (30) sessions, the oldest giving
+way at the next sign-in (`store_session`), or a password in a loop fills the table. **A session is resolved the same way** (`resolve_session_in` joins `users`;
 `sessions.is_admin` is only the fallback before the users read has written the row, which the wizard's own sign-in is): an
 administrator demoted, disabled or deleted in Jellyfin used to keep full access for the session's 30 days. Because the
 session now trusts the row, every sign-in writes Jellyfin's fresh answer into it (`remember_sign_in`), or a row a Jellystat
@@ -396,7 +409,9 @@ plus the manual `home_addresses` setting. Always go through
 must stay anonymous (no version, no ids in the request) and the docs' privacy claims must stay true to it.
 
 **Security (`geo.rs`, `security.rs`, `/security`).** `geo.rs` reads a MaxMind-format city database through a memory map (`Geo` in `AppState`,
-swapped whole when a newer file appears): `FINSTATS_GEOIP_DB`, else the newest `.mmdb` in `<data>/geoip/`. Lookups never leave the machine; the
+swapped whole when a newer file appears) — of a **private copy** (`private_copy`: copied into `<data>/geoip`, opened, its name removed),
+never of the file itself, because an owner who copies a newer file over the old one truncates what is mapped and the next lookup is
+SIGBUS, which kills the process. The file used is `FINSTATS_GEOIP_DB`, else the newest `.mmdb` in `<data>/geoip/`. Lookups never leave the machine; the
 only network use is the opt-in download of DB-IP's monthly file (`geoip_download`, off by default, task `geoip`), which must stay as anonymous
 as the public-IP lookup, and the docs' privacy claims must stay true to both. Every distinct address gets one row in `ip_locations`, keyed by the
 spelling stored in `playbacks`/`server_events` (an all-NULL row = looked up, no place); a changed database empties the table and places everything
@@ -430,7 +445,9 @@ what keeps a five-minute cadence from being most of the traffic finstats makes. 
 page, connecting a service or a read of Seerr all wake the loop. No DB work per tick, the snapshot in memory only. `fold()` turns queue records into downloads by `downloadId` + service: a season pack is one row, the same id in two
 instances is two rows, a record without an id stands for itself. Scoping goes through `stats::pinned_user`: own requests for everyone, others'
 need `see_everyone` (and then no follower *counts* either — on a small server a number is a name), the queue needs `see_downloads`, while own-request
-progress (`state`, `progress`, `eta_s` and nothing else) is always allowed. The poster proxy `/img/arr/{service}/{media}` serves only ids finstats
+progress (`state`, `progress`, `eta_s` and nothing else) is always allowed. A queue row's `error` is the service's own words
+passed through `downloads::redact`: Sonarr and Radarr quote the client or indexer they could not reach, `user:pass@` and
+`?apikey=` included. The poster proxy `/img/arr/{service}/{media}` serves only ids finstats
 itself has listed. None of these tables are in `backup::TABLES`: they are re-readable, and `services` holds secrets.
 
 **Outbound connections (`outbound.rs`, `GET /api/outbound`, Settings card).** One row per destination finstats can reach —
@@ -500,6 +517,7 @@ between versions; a new table that holds something Jellyfin cannot give back mus
 URL/API key, sessions, API keys) and the library are never exported; a test asserts the key is absent. Restore merges (dedupe on `source_id`
 or user+item+start), remaps timeline rows to the new play ids, and re-derives groups, `is_local` and library links. The scheduler
 writes one when the newest file is older than `backup_every_d`; endpoints are `JellyfinAdmin`-only and names go through `valid_name`.
+A file is written as `<name>.part` and renamed when complete; a `.part` found when the next one starts was a killed backup and is removed.
 
 The response compression layer skips `application/gzip`: re-compressing a backup broke the download in browsers. Anything served
 pre-compressed needs the same exemption.
