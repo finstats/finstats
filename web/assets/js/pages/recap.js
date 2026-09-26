@@ -7,7 +7,7 @@ import { h, icon, mount, num, duration, durationExact, pct, parseDay } from '../
 import { api, imgItem } from '../api.js';
 import { state, isAdmin, userList } from '../state.js';
 import { replaceQuery } from '../router.js';
-import { dataView, segmented, poster, emptyState, sk, combobox } from '../components.js';
+import { dataView, segmented, poster, emptyState, sk, combobox, openModal, avatar } from '../components.js';
 import { showTip, hideTip } from '../charts.js';
 
 const BAR = '#9085e9';      // the single series hue used everywhere else in finstats
@@ -40,6 +40,10 @@ const hour2 = (i) => String(i).padStart(2, '0') + ':00';
 // ---------------------------------------------------------------- voice
 /** Your own recap speaks to you; an administrator looking at someone else's reads about them by name. */
 function voiceFor(scope, me) {
+  if (scope && scope.kind === 'server') {
+    const name = scope.server_name || 'This server';
+    return { you: false, server: true, who: name, whoLow: name, your: `This server’s`, yourLow: `this server’s` };
+  }
   if (!scope || !scope.user_id || (me && scope.user_id === me.id)) return { you: true, who: 'You', whoLow: 'you', your: 'Your', yourLow: 'your' };
   const name = scope.user_name || 'This user';
   return { you: false, who: name, whoLow: name, your: `${name}’s`, yourLow: `${name}’s` };
@@ -248,7 +252,7 @@ function waveform(d) {
     h('figcaption', { class: 'rc-note' }, 'One bar a week. The loudest: ', h('strong', null, range(weeks[peak])), `, with ${duration(max)}.`));
 }
 
-function heroChapter(d, v, periodLabel, picker) {
+function heroChapter(d, v, periodLabel, picker, share) {
   const t = d.totals || {};
   const isYear = /^\d{4}$/.test(periodLabel);
   const hrs = hoursOf(t.watch_s);
@@ -263,6 +267,7 @@ function heroChapter(d, v, periodLabel, picker) {
         h('p', { class: 'rc-hero-line' },
           b(countUp(hrs, (x) => (hrs >= 10 ? num(x) : (Math.round(x * 10) / 10).toLocaleString())), hrs === 1 ? ' hour' : ' hours'),
           ' across ', b(plural(t.plays, 'play', 'plays')), ' and ', b(plural(t.distinct_items, 'title', 'titles')), '.'),
+        share,
         r && r.position && r.of > 1 ? h('p', { class: 'rc-hero-rank mono' }, `#${num(r.position)} of ${plural(r.of, 'viewer', 'viewers')}${r.share != null ? ` · ${pct(r.share)} of all watching` : ''}`) : null),
       fan.length >= 3 ? h('div', { class: 'rc-fan', 'aria-hidden': 'true' }, fan.map((x) => h('img', { src: imgItem(x.image_item_id, 300), alt: '', decoding: 'async', onError: (e) => e.target.remove() }))) : null),
     waveform(d));
@@ -557,6 +562,108 @@ function discoveryChapter(d, v) {
   });
 }
 
+// ---------------------------------------------------------------- 2.0: what the rest of finstats left lying around
+
+/** Evenings in company. Companions are named here, in the app, and never on a card. */
+function togetherChapter(d, v) {
+  const g = d.together;
+  if (!g || !g.evenings) return null;
+  const top = g.top_title;
+  const people = g.companions || [];
+  return chapter({
+    id: 'together', icon: 'users', eyebrow: 'Together', mark: 'Company',
+    title: [em(plural(g.evenings, 'evening', 'evenings')), ' in company'],
+    lead: [b(`${hoursText(g.together_s)} hours`), ' watched with somebody else', g.share ? tail(` — ${pct(g.share)} of ${v.yourLow} watching.`) : '.'],
+    body: [
+      people.length ? h('div', null, h('h3', { class: 'rc-subhead' }, v.you ? 'Who you watched with' : `Who ${v.who} watched with`),
+        h('ul', { class: 'rc-chips' }, people.map((p) => h('li', { class: 'rc-chip' },
+          h('a', { class: 'rc-link rc-person', href: `/users/${p.user_id}` }, avatar(p.user_id, p.user_name, { size: 22, hasImage: p.has_image }), h('span', { class: 'rc-chip-name' }, p.user_name)),
+          h('span', { class: 'rc-chip-val mono' }, plural(p.evenings, 'evening', 'evenings')))))) : null,
+      people_in(g),
+      top ? h('div', { class: 'rc-once' }, h('h3', { class: 'rc-subhead' }, 'What brought people together most'),
+        h('ul', { class: 'rc-posterrow' }, h('li', null, poster(top.image_item_id, top.name, { w: 300, cls: 'rc-posterrow-poster' }),
+          h('a', { class: 'rc-link rc-posterrow-name', href: `/items/${top.id}` }, top.name), h('span', { class: 'rc-note' }, plural(top.evenings, 'evening', 'evenings'))))) : null,
+    ],
+  });
+}
+const people_in = (g) => (g.people_in_company ? h('p', { class: 'rc-note' }, `${plural(g.people_in_company, 'person', 'people')} watched in company this year.`) : null);
+
+/** Seen to the end, and left for later — by the same "seen" as the profile's progress bars. */
+function finishedChapter(d, v) {
+  const f = d.finished;
+  if (!f || (!f.count && !f.dropped_count)) return null;
+  const shelf = (rows, sub) => h('ul', { class: 'rc-posterrow' }, rows.map((s) => h('li', null, poster(s.image_item_id, s.name, { w: 300, cls: 'rc-posterrow-poster' }),
+    h('a', { class: 'rc-link rc-posterrow-name', href: `/items/${s.id}` }, s.name), h('span', { class: 'rc-note' }, sub(s)))));
+  return chapter({
+    id: 'finished', icon: 'check', eyebrow: 'Finished', mark: 'Done',
+    title: f.count ? [em(plural(f.count, 'show', 'shows')), ' seen to the end'] : ['Left for ', em('later')],
+    body: [
+      f.series && f.series.length ? shelf(f.series, (s) => `${plural(s.episodes, 'episode', 'episodes')} · ${dayMonth(parseDay(s.finished_on))}`) : null,
+      f.dropped && f.dropped.length ? h('div', { class: 'rc-once' }, h('h3', { class: 'rc-subhead' }, 'Left for later'),
+        h('p', { class: 'rc-note' }, 'Begun this year, less than half seen, and nothing of it for two months.'),
+        shelf(f.dropped, (s) => `${num(s.seen)} of ${plural(s.total, 'episode', 'episodes')}`)) : null,
+    ],
+  });
+}
+
+/** What was asked for through Seerr, what arrived, and what was then watched. */
+function askedChapter(d, v) {
+  const q = d.requests;
+  if (!q || !q.made) return null;
+  return chapter({
+    id: 'asked', icon: 'download', eyebrow: 'Asked for', mark: 'Wishes',
+    title: [em(plural(q.made, 'request', 'requests')), v.you ? ' you made' : v.server ? ' made' : ` ${v.who} made`],
+    stats: [
+      { value: countUp(q.made), label: 'Asked for' },
+      { value: countUp(q.available), label: 'Arrived' },
+      { value: countUp(q.watched), label: 'Watched after it arrived' },
+    ],
+    body: q.top && q.top.length ? h('ul', { class: 'rc-posterrow' }, q.top.map((t) => h('li', null, poster(t.image_item_id, t.title, { w: 300, cls: 'rc-posterrow-poster' }),
+      t.item_id ? h('a', { class: 'rc-link rc-posterrow-name', href: `/items/${t.item_id}` }, t.title) : h('span', { class: 'rc-posterrow-name' }, t.title)))) : null,
+  });
+}
+
+/** The year against the one before it. */
+function versusChapter(d, v) {
+  const p = d.versus;
+  const t = d.totals || {};
+  if (!p || !p.watch_s) return null;
+  const change = Math.round(((t.watch_s || 0) - p.watch_s) / p.watch_s * 100);
+  return chapter({
+    id: 'versus', icon: 'chart', eyebrow: `Against ${p.year}`, mark: 'Versus',
+    title: change >= 0 ? [em(`${num(change)}% more`), ` than ${p.year}`] : [em(`${num(-change)}% less`), ` than ${p.year}`],
+    stats: [
+      { value: countUp(hoursOf(t.watch_s)), label: `Hours in ${d.year}` },
+      { value: countUp(hoursOf(p.watch_s)), label: `Hours in ${p.year}` },
+      { value: countUp(p.plays), label: `Plays in ${p.year}` },
+    ],
+  });
+}
+
+// ---------------------------------------------------------------- 2.0: the year as a story of cards
+
+const CARD_NAMES = {
+  year: 'The year', numbers: 'In numbers', shows: 'Top shows', films: 'Top films', music: 'Top music', genres: 'Genres',
+  persona: 'The persona', rhythm: 'Hours and days', days: 'Every day', records: 'Records', together: 'In company',
+  finished: 'Shows finished', asked: 'Requests', versus: 'Against the year before',
+};
+
+/** Every card of the year, to look at and to save. Cards name nobody but the server; a login name never goes on one. */
+function openStory(d, params) {
+  const q = new URLSearchParams(Object.entries(params).filter(([, x]) => x));
+  const slug = String(d.year || 'recap').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const body = h('div', { class: 'story-body' },
+    h('p', { class: 'help' }, 'Each chapter as a picture, the shape phone stories use. Other people are never named on a card.'),
+    h('ol', { class: 'story-grid' }, (d.story || []).map((key) => {
+      const src = `/api/recap/cards/${key}?${q}`;
+      return h('li', null,
+        h('img', { src, alt: `${CARD_NAMES[key] || key}, as a card`, loading: 'lazy', decoding: 'async', width: 1080, height: 1920 }),
+        h('span', { class: 'help' }, CARD_NAMES[key] || key, ' · ', h('a', { href: src, download: `finstats-${slug}-${key}.png` }, 'Download')));
+    })),
+    h('div', { class: 'form-actions' }, h('a', { class: 'btn btn-primary', href: `/api/recap/cards.zip?${q}`, download: `finstats-${slug}.zip` }, icon('download', 13), 'Download every card')));
+  openModal({ title: 'The year as cards', body, wide: true, cls: 'story-modal' });
+}
+
 function clientsChapter(d, v) {
   const rows = (d.clients || []).filter((c) => c && c.name);
   if (!rows.length) return null;
@@ -595,10 +702,10 @@ function outroChapter(d, v, periodLabel) {
 }
 
 // ---------------------------------------------------------------- page
-function buildStory(d, me, periodLabel, picker) {
+function buildStory(d, me, periodLabel, picker, share) {
   const v = voiceFor(d.scope, me);
   const parts = [
-    heroChapter(d, v, periodLabel, picker),
+    heroChapter(d, v, periodLabel, picker, share),
     numbersChapter(d, v, periodLabel),
     topChapter('shows', d.top_series, {
       icon: 'tv', eyebrow: 'Top shows', mark: 'Shows',
@@ -622,6 +729,10 @@ function buildStory(d, me, periodLabel, picker) {
     daysChapter(d, v),
     recordsChapter(d, v, /^\d{4}$/.test(periodLabel)),
     discoveryChapter(d, v),
+    togetherChapter(d, v),
+    finishedChapter(d, v),
+    askedChapter(d, v),
+    versusChapter(d, v),
     clientsChapter(d, v),
     outroChapter(d, v, periodLabel),
   ];
@@ -629,34 +740,40 @@ function buildStory(d, me, periodLabel, picker) {
 }
 
 // Shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
-const loadRecap = (year, userId, signal) => api.get('/recap', { year, user_id: userId }, { signal });
+const loadRecap = (year, userId, scope, signal) => api.get('/recap', { year, user_id: userId, scope }, { signal });
 const yearOf = (query) => { const y = query.get('year'); return /^\d{4}$/.test(y || '') || y === 'last12' ? y : ''; };
-export const prefetchRecap = ({ query, signal }) => [() => loadRecap(yearOf(query), isAdmin() ? query.get('user') || '' : '', signal)];
+const scopeOf = (query) => (isAdmin() && query.get('scope') === 'server' ? 'server' : '');
+export const prefetchRecap = ({ query, signal }) => [() => loadRecap(yearOf(query), isAdmin() ? query.get('user') || '' : '', scopeOf(query), signal)];
 
 export default function recapPage(ctx) {
   ctx.title('Recap');
   const me = state.user;
   let year = yearOf(ctx.query);
-  // Administrators can open one other person's recap. There is no "everyone" recap.
+  // Administrators can open one other person's recap, or the whole server's year (2.0).
   let userId = isAdmin() ? ctx.query.get('user') || '' : '';
+  let scope = scopeOf(ctx.query);
   let reveal = revealer();
   ctx.onCleanup(() => { reveal.stop(); hideTip(); });
 
-  const controls = isAdmin() ? h('div', { class: 'filters rc-controls' },
-    combobox({ value: userId, allLabel: 'My recap', placeholder: 'My recap', label: 'Whose recap',
-      load: () => userList(ctx.signal).then((us) => us.filter((u) => !me || u.id !== me.id).map((u) => ({ value: u.id, label: u.name }))),
-      onChange: (val) => { userId = val; year = ''; sync(); dv.load(); } })) : null;
+  const people = isAdmin() ? combobox({ value: userId, allLabel: 'My recap', placeholder: 'My recap', label: 'Whose recap',
+    load: () => userList(ctx.signal).then((us) => us.filter((u) => !me || u.id !== me.id).map((u) => ({ value: u.id, label: u.name }))),
+    onChange: (val) => { userId = val; year = ''; sync(); dv.load(); } }) : null;
+  const scopeSwitch = isAdmin() ? h('div', { class: 'rc-scope' }, segmented({ label: 'Whose year', size: 'sm', value: scope || 'user',
+    options: [{ value: 'user', label: 'A person' }, { value: 'server', label: 'Server' }],
+    onChange: (val) => { scope = val === 'server' ? 'server' : ''; people.hidden = !!scope; sync(); dv.load(); } })) : null;
+  if (people) people.hidden = !!scope;
+  const controls = isAdmin() ? h('div', { class: 'filters rc-controls' }, scopeSwitch, people) : null;
   const view = h('div', { class: 'rc-story' });
 
   const periodLabel = (y) => (y === 'last12' ? 'Last 12 months' : String(y));
-  const sync = () => replaceQuery({ year, user: userId });
+  const sync = () => replaceQuery({ year, user: scope ? '' : userId, scope });
 
   const dv = dataView({
     container: view, signal: ctx.signal,
     skeleton: () => [h('div', { class: 'rc-hero rc-sk' }, h('div', { class: 'rc-hero-text' }, sk.line('120px', 12), sk.line('min(80%, 520px)', 64), sk.line('min(90%, 360px)', 16), sk.block(120))),
       h('div', { class: 'rc-chapter is-in' }, sk.line('120px', 12), sk.line('min(80%, 380px)', 30), sk.block(220)),
       h('div', { class: 'rc-chapter is-in' }, sk.line('120px', 12), sk.line('min(80%, 380px)', 30), sk.block(220))],
-    fetch: () => loadRecap(year, userId, ctx.signal),
+    fetch: () => loadRecap(year, scope ? '' : userId, scope, ctx.signal),
     render: (d) => {
       if (d.year != null) year = String(d.year);
       const picker = yearTabs(d, String(year || ''), (val) => { year = val; sync(); dv.load(); });
@@ -670,7 +787,9 @@ export default function recapPage(ctx) {
         return [h('div', { class: 'rc-empty-picker' }, picker),
           emptyState(`Nothing was played in ${year === 'last12' ? 'the last 12 months' : label}.`, `${v.who} didn’t play anything in this period. Pick another one above.`)];
       }
-      const story = buildStory(d, me, label, picker);
+      const share = d.story && d.story.length ? h('button', { type: 'button', class: 'btn rc-share', onClick: () => openStory(d, { year: String(d.year), user_id: scope ? '' : userId, scope }) },
+        icon('share', 14), 'Share the year as cards') : null;
+      const story = buildStory(d, me, label, picker, share);
       // Observe after mount so the first screen reveals immediately.
       requestAnimationFrame(() => story.forEach((el) => { if (el.classList.contains('rc-reveal')) reveal.watch(el); }));
       return story;

@@ -1690,3 +1690,10 @@ body.public { min-height: 100vh; }
 .pub-story li { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pub-story img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: var(--radius-sm); border: 1px solid var(--border-soft); background: var(--bg-sunken); }
 .pub-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Recap → the year as cards (2.0) */
+.rc-share { margin-top: 14px; align-self: flex-start; }
+.rc-scope { display: inline-flex; }
+.rc-person { display: inline-flex; align-items: center; gap: 7px; }
+.story-grid { list-style: none; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); margin: 12px 0; }
+.story-grid li { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.story-grid img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: var(--radius-sm); border: 1px solid var(--border-soft); background: var(--bg-sunken); }

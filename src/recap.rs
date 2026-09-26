@@ -71,7 +71,13 @@ async fn year_for(app: &App, user: &AuthUser, q: &RecapQuery) -> Result<(Value, 
     let requested = q.year.clone().unwrap_or_default();
     let name = server_name.clone();
     let out = app.db.call(move |c| build(c, scope_user, min_play_s, &name, &requested, None)).await?;
-    Ok((if server { server_edition(out) } else { out }, server, server_name))
+    let mut out = if server { server_edition(out) } else { out };
+    // Which cards the year has: said here, so the page never works it out again and drifts.
+    out["story"] = match crate::story::StoryYear::from_recap(&out, "") {
+        Some(y) => json!(y.chapters().into_iter().map(|ch| ch.key()).collect::<Vec<_>>()),
+        None => Value::Null,
+    };
+    Ok((out, server, server_name))
 }
 
 pub async fn recap(State(app): State<App>, user: AuthUser, Query(q): Query<RecapQuery>) -> ApiResult {
