@@ -60,7 +60,7 @@ function habits(x) {
 
 function recap(r) {
   const picks = [['Top show', r.top_series], ['Top film', r.top_movie]].filter(([, t]) => t);
-  return section(`${r.year}`, 'pub-recap',
+  return section(`Their ${r.year}`, 'pub-recap',
     h('p', { class: 'pub-year-line' }, h('strong', null, hours(r.watch_s)), ' hours, ', num(r.plays), ' plays on ', num(r.active_days), ' days',
       r.longest_streak_days ? `, a ${r.longest_streak_days}-day streak` : '', '.'),
     r.persona ? h('p', { class: 'pub-persona' }, h('strong', null, r.persona.title), ' ', h('span', { class: 'muted' }, r.persona.line)) : null,

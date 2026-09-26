@@ -1681,7 +1681,7 @@ body.public { min-height: 100vh; }
 
 /* Settings → Public profile */
 .pub-link-box { display: grid; gap: 8px; }
-.pub-preview { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); margin-top: 6px; }
+.pub-preview { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 380px)); margin-top: 6px; }
 .pub-preview figure { display: grid; gap: 6px; min-width: 0; }
 .pub-preview img { width: 100%; height: auto; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--bg-sunken); }
 #pub-name { width: min(260px, 100%); }

@@ -6,7 +6,7 @@
 import { h, icon, mount, relEl } from '../dom.js';
 import { api, isAbort } from '../api.js';
 import { state, isAdmin } from '../state.js';
-import { card, sk, toggle, setBusy, inlineError, errorState, formField, copyButton, avatar } from '../components.js';
+import { card, sk, toggle, spinner, setBusy, inlineError, errorState, copyButton, avatar } from '../components.js';
 import { plainTable } from '../tables.js';
 import { settingRow, toggleRow } from './common.js';
 
@@ -69,18 +69,55 @@ export default {
               : h('button', { type: 'button', class: 'btn btn-sm btn-ghost btn-danger-text', onClick: () => { confirming = p.user_id; paint(); } }, 'Take down…')) : null)))))) : null);
     }
 
-    function switchRow(id, label, help, checked, onChange) {
-      const sw = toggle({ checked, labelledby: `${id}-row-label`, describedby: `${id}-row-help`, onChange: (next) => onChange(next) });
+    // Like every switch in Settings, each of these saves itself and says so beside itself; the name saves
+    // when you leave the field. One request each, carrying the whole choice as it now stands.
+    let draft = null, drawnAt = Date.now();
+    async function save(patch) {
+      const next = { ...draft, ...patch, sections: { ...draft.sections, ...(patch.sections || {}) } };
+      mine = await api.put('/me/public-profile', next);
+      draft = pick(mine);
+      drawnAt = Date.now();
+    }
+    const pick = (m) => ({ published: m.published, display_name: m.display_name || '', show_avatar: m.show_avatar, sections: { ...m.sections } });
+
+    function savedNote(note, errBox, run) {
+      return async (...args) => {
+        mount(errBox, ''); note.replaceChildren(spinner(12));
+        try {
+          await run(...args);
+          note.replaceChildren(icon('check', 13), 'Saved');
+          setTimeout(() => note.replaceChildren(), 2000);
+          paintTop();
+        } catch (e) { note.replaceChildren(); mount(errBox, inlineError('pub-err', `Couldn’t save: ${e.message}`)); throw e; }
+      };
+    }
+
+    function switchRow(id, label, help, checked, patchFor) {
+      const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
+      const errBox = h('div');
+      const saveIt = savedNote(note, errBox, (next) => save(patchFor(next)));
+      const sw = toggle({ checked, labelledby: `${id}-row-label`, describedby: `${id}-row-help`,
+        onChange: (next, revert) => saveIt(next).catch(() => revert(!next)) });
       sw.id = id;
-      return settingRow({ id: `${id}-row`, label, help, control: sw });
+      return settingRow({ id: `${id}-row`, label, help, control: [note, sw], error: errBox });
+    }
+
+    /** What a chat app shows under the link: below the switches, so saving one never moves the row you clicked. */
+    function previewBox(m) {
+      const path = pathOf(m.url);
+      const cards = [];
+      // The browser keeps a card for an hour; a preview drawn after a change asks under a new address.
+      if (m.published && (m.sections.totals || m.sections.habits)) cards.push(['Profile card', `${path}/card.png?v=${drawnAt}`]);
+      if (m.published && m.sections.recap) cards.push(['Year card', `${path}/card.png?kind=recap&v=${drawnAt}`]);
+      if (!cards.length) return null;
+      return h('div', { class: 'pub-preview' }, cards.map(([label, src]) => h('figure', null,
+        h('img', { src, alt: `${label}: what a chat app shows under your link`, loading: 'lazy', width: 600, height: 315 }),
+        h('figcaption', { class: 'help' }, label, ' · ', h('a', { href: src, download: '' }, 'Download')))));
     }
 
     function linkBox(m) {
       const url = absolute(m.url);
       const path = pathOf(m.url);
-      const cards = [];
-      if (m.published && (m.sections.totals || m.sections.habits)) cards.push(['Profile card', `${path}/card.png`]);
-      if (m.published && m.sections.recap) cards.push(['Year card', `${path}/card.png?kind=recap`]);
       const resetting = confirming === 'reset';
       return h('div', { class: 'pub-link-box' },
         h('div', { class: 'setting-label' }, m.published ? 'Your link' : 'Your link (not published: it opens nothing)'),
@@ -88,37 +125,35 @@ export default {
           m.published ? h('a', { class: 'btn btn-sm btn-ghost', href: path, target: '_blank', rel: 'noopener' }, icon('external', 13), 'Open') : null),
         h('div', { class: 'backup-actions' }, resetting
           ? [h('span', { class: 'muted' }, 'Reset it? Every copy of the old link stops working.'),
-            h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: async (ev) => { setBusy(ev.currentTarget, true, 'Resetting…'); try { mine = await api.post('/me/public-profile/reset', {}); } catch (e) { err = e.message; } confirming = null; paint(); } }, 'Reset'),
-            h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { confirming = null; paint(); } }, 'Cancel')]
-          : h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { confirming = 'reset'; paint(); } }, 'Reset link…')),
-        cards.length ? h('div', { class: 'pub-preview' }, cards.map(([label, src]) => h('figure', null,
-          h('img', { src, alt: `${label}: what a chat app shows under your link`, loading: 'lazy', width: 600, height: 315 }),
-          h('figcaption', { class: 'help' }, label, ' · ', h('a', { href: src, download: '' }, 'Download'))))) : null);
+            h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: async (ev) => { setBusy(ev.currentTarget, true, 'Resetting…'); try { mine = await api.post('/me/public-profile/reset', {}); drawnAt = Date.now(); } catch (e) { err = e.message; } confirming = null; paintTop(); } }, 'Reset'),
+            h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { confirming = null; paintTop(); } }, 'Cancel')]
+          : h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { confirming = 'reset'; paintTop(); } }, 'Reset link…')));
     }
 
     function form(m) {
-      const draft = { published: m.published, show_avatar: m.show_avatar, sections: { ...m.sections } };
-      const name = formField({ id: 'pub-name', label: 'Name shown', autocomplete: 'off', placeholder: 'Leave empty to show no name' });
-      name.input.value = m.display_name || '';
-      name.input.maxLength = 60;
-      const save = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Save');
-      const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
-      const formErr = h('div');
-      const f = h('form', { class: 'setting-rows', id: 'pub-form', noValidate: true },
-        switchRow('pub-published', 'Publish my profile', 'Anyone with the link can read what is ticked below, without signing in.', draft.published, (v) => { draft.published = v; }),
-        settingRow({ id: 'pub-name-row', label: 'Name shown', help: 'Your Jellyfin user name is never shown unless you type it here.', labelFor: 'pub-name', control: name.input }),
-        switchRow('pub-avatar', 'Show my picture', 'Your Jellyfin picture next to the name.', draft.show_avatar, (v) => { draft.show_avatar = v; }),
-        SECTIONS.map(([k, label, help]) => switchRow(`pub-${k}`, label, help, !!draft.sections[k], (v) => { draft.sections[k] = v; })),
-        h('div', { class: 'form-actions setting-actions' }, save, note), formErr);
-      f.addEventListener('submit', async (e) => {
-        e.preventDefault(); mount(formErr, '');
-        setBusy(save, true, 'Saving…');
-        try {
-          mine = await api.put('/me/public-profile', { ...draft, display_name: name.input.value.trim() });
-          paint();
-        } catch (e2) { mount(formErr, inlineError('pub-err', e2.message)); setBusy(save, false); }
-      });
-      return f;
+      draft = pick(m);
+      const name = h('input', { class: 'input', id: 'pub-name', name: 'pub-name', type: 'text', maxLength: 60, autocomplete: 'off',
+        placeholder: 'Leave empty to show no name', value: draft.display_name, 'aria-describedby': 'pub-name-row-help' });
+      const nameNote = h('span', { class: 'saved-note', 'aria-live': 'polite' });
+      const nameErr = h('div');
+      const saveName = savedNote(nameNote, nameErr, () => save({ display_name: name.value.trim() }));
+      name.addEventListener('change', () => { if (name.value.trim() !== draft.display_name) saveName().catch(() => {}); });
+      name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); name.blur(); } });
+      return h('div', { class: 'setting-rows', id: 'pub-form' },
+        switchRow('pub-published', 'Publish my profile', 'Anyone with the link can read what is switched on below, without signing in.', draft.published, (v) => ({ published: v })),
+        settingRow({ id: 'pub-name-row', label: 'Name shown', help: 'Your Jellyfin user name is never shown unless you type it here.', labelFor: 'pub-name', control: [nameNote, name], error: nameErr }),
+        switchRow('pub-avatar', 'Show my picture', 'Your Jellyfin picture next to the name.', draft.show_avatar, (v) => ({ show_avatar: v })),
+        SECTIONS.map(([k, label, help]) => switchRow(`pub-${k}`, label, help, !!draft.sections[k], (v) => ({ sections: { [k]: v } }))));
+    }
+
+    // The link and the preview sit above the rows and are redrawn after every save; the rows are drawn
+    // once, so a switch keeps its focus and its "Saved" while the preview catches up.
+    const top = h('div');
+    const bottom = h('div');
+    function paintTop() {
+      mount(top, mine && mine.url ? linkBox(mine) : null, err ? inlineError('pub-list-err', err) : null);
+      mount(bottom, mine && mine.url ? previewBox(mine) : null);
+      err = null;
     }
 
     function paintOwn() {
@@ -127,7 +162,8 @@ export default {
         mount(own, h('p', { class: 'help' }, isAdmin() ? 'Allow public profiles above to publish your own.' : 'An administrator has not allowed public profiles.'));
         return;
       }
-      mount(own, mine.url ? linkBox(mine) : null, form(mine), err ? inlineError('pub-list-err', err) : null);
+      paintTop();
+      mount(own, top, form(mine), bottom);
     }
 
     function paint() { paintServer(); paintOwn(); err = null; }
