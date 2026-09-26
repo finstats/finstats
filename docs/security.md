@@ -4,7 +4,9 @@
 server every time, and the Jellyfin session that check creates is ended immediately. Passwords are
 never stored or logged. finstats then issues its own session: a random 256-bit token, stored only
 as a hash, sent as an `HttpOnly; SameSite=Lax` cookie (and `Secure` when a proxy reports HTTPS).
-Attempts are rate limited to 10 per 5 minutes per address.
+A session follows the person as Jellyfin has them now, not as they were when they signed in: once
+finstats has read Jellyfin's users (every 15 minutes, or at once from Settings), an administrator
+Jellyfin demoted is no longer one here, and somebody it disabled or deleted is signed out. Attempts are rate limited to 10 per 5 minutes per address.
 
 **API keys.** Anyone signed in may make keys for themselves under Settings → API keys, for a script,
 a dashboard or a phone's calendar. A key is a second credential for the same person and nothing

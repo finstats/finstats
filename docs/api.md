@@ -1251,7 +1251,8 @@ A key is a second credential for the same person: `fs_` + 64 hex characters (67 
 made and stored only as a hash. It is sent as `Authorization: Bearer fs_…` — scheme case-insensitive, spacing
 tolerant — and resolves to exactly the `user` a session would: name, administrator flag and permissions are read live
 on every request, so a demoted administrator's key demotes with them and a person who may no longer sign in has no
-working keys. **Header beats cookie**: a request carrying both is judged on the header, and an invalid header is `401`
+working keys. A session cookie is read the same way, and one of somebody disabled or deleted in Jellyfin
+is `401`. **Header beats cookie**: a request carrying both is judged on the header, and an invalid header is `401`
 even with a valid cookie beside it. A key is refused (`401`) once revoked or past its expiry.
 
 Two scopes. `full` opens everything its holder may see. `calendar` opens `GET /api/calendar.ics` and nothing else

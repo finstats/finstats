@@ -351,7 +351,12 @@ resolution point**: `auth::resolve` reads `Authorization: Bearer fs_…` first (
 invalid header never falls back to the cookie — header beats cookie), else the cookie, and both end in the same `AuthUser`,
 which now carries `credential` (`Session` | `Key{id, scope}`) and `ip`. A key (`keys.rs`, `api_keys`, sha256 of `fs_`+64 hex,
 shown once) is resolved against the **live** user row and the live grants through `effective`, never a snapshot, so a lost
-`sign_in` or a demotion reaches every key at once; `touch_key` writes `last_used_*` at most once a minute. `KeyScope::Calendar`
+`sign_in` or a demotion reaches every key at once. **A session is resolved the same way** (`resolve_session_in` joins `users`;
+`sessions.is_admin` is only the fallback before the users read has written the row, which the wizard's own sign-in is): an
+administrator demoted, disabled or deleted in Jellyfin used to keep full access for the session's 30 days. Because the
+session now trusts the row, every sign-in writes Jellyfin's fresh answer into it (`remember_sign_in`), or a row a Jellystat
+import wrote from the file's `IsAdministrator` could crown somebody Jellyfin did not. `sync::store_users` marks removed whoever
+the read did not return, by id — a whole-second `updated_at` comparison missed a deletion read in the same second; `touch_key` writes `last_used_*` at most once a minute. `KeyScope::Calendar`
 opens only `/api/calendar.ics`: the `AuthUser` extractor refuses it with 403 everywhere, and the feed's own `CalendarKey`
 extractor takes `?key=` or the header and never the cookie (`ical.rs`; `pipeline::entries_for` carries no name by construction,
 since a subscribed calendar syncs through somebody's cloud). Minting or revoking through a key is refused (`keys::only_a_session`).
