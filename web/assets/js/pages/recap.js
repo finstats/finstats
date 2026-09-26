@@ -571,7 +571,7 @@ function togetherChapter(d, v) {
   const top = g.top_title;
   const people = g.companions || [];
   return chapter({
-    id: 'together', icon: 'users', eyebrow: 'Together', mark: 'Company',
+    id: 'together', icon: 'together', eyebrow: 'Together', mark: 'Company',
     title: [em(plural(g.evenings, 'evening', 'evenings')), ' in company'],
     lead: [b(`${hoursText(g.together_s)} hours`), ' watched with somebody else', g.share ? tail(` — ${pct(g.share)} of ${v.yourLow} watching.`) : '.'],
     body: [
