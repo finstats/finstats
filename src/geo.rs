@@ -84,11 +84,36 @@ pub struct Database {
     stamp: Option<(u64, std::time::SystemTime)>,
 }
 
+/// A copy of `src` that nothing else can reach: written into `scratch`, opened, and its name removed at once, so it
+/// lives on as an open file only this process holds, and its space goes back the moment finstats lets go of it.
+fn private_copy(src: &Path, scratch: &Path) -> Result<std::fs::File> {
+    std::fs::create_dir_all(scratch).with_context(|| format!("creating {}", scratch.display()))?;
+    // A copy left by a process killed between copying and removing its name: nothing holds it any more.
+    if let Ok(entries) = std::fs::read_dir(scratch) {
+        for e in entries.flatten() {
+            if e.file_name().to_str().is_some_and(|n| n.starts_with(".in-use-") && n.ends_with(".tmp")) {
+                let _ = std::fs::remove_file(e.path());
+            }
+        }
+    }
+    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let tmp = scratch.join(format!(".in-use-{}-{nanos}.tmp", std::process::id()));
+    let opened = std::fs::copy(src, &tmp).and_then(|_| std::fs::File::open(&tmp));
+    let _ = std::fs::remove_file(&tmp);
+    opened.with_context(|| format!("copying {}", src.display()))
+}
+
 impl Database {
-    pub fn open(path: &Path) -> Result<Self> {
-        // Memory-mapped: a city database is over 100 MB and only the pages a lookup touches get read.
-        // Safety: finstats never writes to an open file; a replacement is written next to it and renamed.
-        let reader = unsafe { Reader::open_mmap(path) }.with_context(|| format!("opening {}", path.display()))?;
+    /// `scratch` is a folder of finstats' own, for the private copy that is actually read.
+    pub fn open(path: &Path, scratch: &Path) -> Result<Self> {
+        // Memory-mapped, because a city database is over 100 MB and only the pages a lookup touches get read — but
+        // mapped from a private copy, never from `path` itself: the owner can overwrite that file in place (a `cp`
+        // onto the same name truncates it first), and a lookup that then reads past its new end is SIGBUS, which
+        // kills the process. Nothing but this process can reach the copy, so nothing can shorten it.
+        let file = private_copy(path, scratch)?;
+        // Safety: the mapped file has no name and is open only here, read-only; nothing else can write to it.
+        let map = unsafe { maxminddb::Mmap::map(&file) }.with_context(|| format!("mapping {}", path.display()))?;
+        let reader = Reader::from_source(map).with_context(|| format!("opening {}", path.display()))?;
         let meta = reader.metadata();
         let kind = meta.database_type.clone();
         if !kind.to_ascii_lowercase().contains("city") {
@@ -169,7 +194,7 @@ pub fn load(app: &App) -> bool {
     }
     match found {
         None => app.geo.set(None),
-        Some(path) => match Database::open(&path) {
+        Some(path) => match Database::open(&path, &dir(&app.data_dir)) {
             Ok(db) => {
                 tracing::info!("geolocation database: {} ({}, built {})", path.display(), db.kind, chrono::DateTime::from_timestamp(db.built_at, 0).map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default());
                 app.geo.set(Some(db));
@@ -289,7 +314,7 @@ async fn fetch(app: &App, url: &str, folder: &Path, target: &Path, task: &'stati
             let mut out = std::io::BufWriter::new(std::fs::File::create(&to)?);
             std::io::copy(&mut gz, &mut out)?;
             // Only a file that opens as a city database may replace the one in use.
-            Database::open(&to).map(|_| ())
+            Database::open(&to, to.parent().unwrap_or(Path::new("."))).map(|_| ())
         })
         .await??;
         tokio::fs::rename(&unpacked, target).await?;
@@ -358,8 +383,29 @@ mod tests {
         for (name, bytes) in cases {
             let path = dir.join(name);
             std::fs::write(&path, &bytes).unwrap();
-            assert!(Database::open(&path).is_err(), "{name} was accepted as a city database");
+            assert!(Database::open(&path, &dir).is_err(), "{name} was accepted as a city database");
         }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn what_is_mapped_is_a_private_copy_the_original_can_be_overwritten_under() {
+        // `cp newer.mmdb dbip.mmdb` truncates the very file a running finstats had mapped and writes it again: the
+        // next lookup read past the new end of the file and the process died of SIGBUS. What is mapped must be a
+        // copy nobody else can reach, and it must leave nothing behind in the folder.
+        let dir = std::env::temp_dir().join(format!("finstats-geo-copy-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let src = dir.join("city.mmdb");
+        let original: Vec<u8> = (0..200_000u32).map(|i| (i.wrapping_mul(2_654_435_761) >> 11) as u8).collect();
+        std::fs::write(&src, &original).unwrap();
+        let mut copy = private_copy(&src, &dir).unwrap();
+        std::fs::write(&src, b"a shorter file, copied over it").unwrap();
+        let mut back = Vec::new();
+        std::io::Read::read_to_end(&mut copy, &mut back).unwrap();
+        assert!(back == original, "the copy changed with the file it was taken from");
+        let names: Vec<String> = std::fs::read_dir(&dir).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
+        assert_eq!(names, ["city.mmdb"], "the copy is reachable by name, or was left behind");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
