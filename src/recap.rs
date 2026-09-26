@@ -45,9 +45,10 @@ impl Window {
 const TITLE_ID: &str = "COALESCE(p.series_id, p.item_id)";
 const NOT_LIVE_TV: &str = "p.item_type NOT IN ('TvChannel', 'LiveTvChannel', 'Program', 'LiveTvProgram')";
 
-pub async fn recap(State(app): State<App>, user: AuthUser, Query(q): Query<RecapQuery>) -> ApiResult {
-    // A recap is one person's year. Everyone gets their own; only a Jellyfin administrator may open
-    // someone else's, or the whole server's (2.0), and no permission widens that.
+/// Whose year a request is about: `(scope_user, server)`. A recap is one person's year. Everyone gets
+/// their own; only a Jellyfin administrator may open someone else's, or the whole server's (2.0), and
+/// no permission widens that. An unknown scope is refused rather than guessed.
+fn whose_year(user: &AuthUser, q: &RecapQuery) -> Result<(Option<String>, bool), ApiError> {
     let server = match q.scope.as_deref() {
         None | Some("") | Some("user") => false,
         Some("server") if user.is_admin => true,
@@ -59,11 +60,31 @@ pub async fn recap(State(app): State<App>, user: AuthUser, Query(q): Query<Recap
         Some(other) if user.is_admin => other,
         _ => user.id.clone(),
     });
+    Ok((scope_user, server))
+}
+
+/// The year a request asks for, whole server's already stripped of anybody in it.
+async fn year_for(app: &App, user: &AuthUser, q: &RecapQuery) -> Result<(Value, bool, String), ApiError> {
+    let (scope_user, server) = whose_year(user, q)?;
     let min_play_s = app.settings().min_play_s;
     let server_name = app.config.read().unwrap().as_ref().map(|c| c.server_name.clone()).unwrap_or_else(|| "Jellyfin".into());
-    let requested = q.year.unwrap_or_default();
-    let out = app.db.call(move |c| build(c, scope_user, min_play_s, &server_name, &requested, None)).await?;
-    Ok(Json(if server { server_edition(out) } else { out }))
+    let requested = q.year.clone().unwrap_or_default();
+    let name = server_name.clone();
+    let out = app.db.call(move |c| build(c, scope_user, min_play_s, &name, &requested, None)).await?;
+    Ok((if server { server_edition(out) } else { out }, server, server_name))
+}
+
+pub async fn recap(State(app): State<App>, user: AuthUser, Query(q): Query<RecapQuery>) -> ApiResult {
+    let (out, _, _) = year_for(&app, &user, &q).await?;
+    Ok(Json(out))
+}
+
+/// The year as a story (2.0). In the app a card names nobody, not even its owner: a login name is half a
+/// sign-in, and the name a person wants on a card is the one they chose for their public profile. The
+/// server's year says the server's name.
+pub(crate) async fn story_for(app: &App, user: &AuthUser, q: &RecapQuery) -> Result<crate::story::StoryYear, ApiError> {
+    let (out, server, server_name) = year_for(app, user, q).await?;
+    crate::story::StoryYear::from_recap(&out, if server { &server_name } else { "" }).ok_or_else(|| ApiError::not_found("Year"))
 }
 
 /// `until`: count only plays that had ended by then — for a published recap, which must not move while

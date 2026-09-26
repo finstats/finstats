@@ -52,6 +52,52 @@ pub fn poster_ids(kind: Kind, a: &PublicProfile) -> Vec<String> {
     drawn.into_iter().filter_map(|t| t.image.clone()).collect()
 }
 
+/// A ZIP of files stored as they are: PNGs do not compress, so nothing is gained by deflating them, and
+/// the format is then small enough to write by hand rather than take a dependency for.
+pub fn zip(files: &[(String, Vec<u8>)]) -> Vec<u8> {
+    let mut out = vec![];
+    let mut dir = vec![];
+    // 1980-01-01 00:00 in DOS form: the files are made now, and no reader needs to be told when.
+    let (time, date): (u16, u16) = (0, 0x21);
+    for (name, data) in files {
+        let mut crc = flate2::Crc::new();
+        crc.update(data);
+        let (crc, size, offset) = (crc.sum(), data.len() as u32, out.len() as u32);
+        let common = |b: &mut Vec<u8>| {
+            b.extend(20u16.to_le_bytes()); // version needed: 2.0
+            b.extend(0u16.to_le_bytes()); // flags
+            b.extend(0u16.to_le_bytes()); // stored
+            b.extend(time.to_le_bytes());
+            b.extend(date.to_le_bytes());
+            b.extend(crc.to_le_bytes());
+            b.extend(size.to_le_bytes());
+            b.extend(size.to_le_bytes());
+            b.extend((name.len() as u16).to_le_bytes());
+            b.extend(0u16.to_le_bytes()); // no extra field
+        };
+        out.extend(0x0403_4b50u32.to_le_bytes());
+        common(&mut out);
+        out.extend(name.as_bytes());
+        out.extend(data);
+        dir.extend(0x0201_4b50u32.to_le_bytes());
+        dir.extend(20u16.to_le_bytes()); // made by
+        common(&mut dir);
+        dir.extend([0u8; 10]); // no comment, disk 0, no internal or external attributes
+        dir.extend(offset.to_le_bytes());
+        dir.extend(name.as_bytes());
+    }
+    let (at, len, n) = (out.len() as u32, dir.len() as u32, files.len() as u16);
+    out.extend(dir);
+    out.extend(0x0605_4b50u32.to_le_bytes());
+    out.extend([0u8; 4]); // this disk, the directory's disk
+    out.extend(n.to_le_bytes());
+    out.extend(n.to_le_bytes());
+    out.extend(len.to_le_bytes());
+    out.extend(at.to_le_bytes());
+    out.extend(0u16.to_le_bytes()); // no comment
+    out
+}
+
 /// Rendered cards, newest last. A card takes a few hundred milliseconds to draw and a pasted link is
 /// fetched by every chat app it lands in, so the same card is drawn once.
 pub const CACHE_MAX: usize = 64;
@@ -103,36 +149,36 @@ pub fn svg(kind: Kind, a: &PublicProfile, posters: &Posters) -> String {
 }
 
 // The app's own tokens (`app.css`): Obsidian's dark theme.
-const BG: &str = "#1e1e1e";
-const TILE: &str = "#262626";
-const TEXT: &str = "#dadada";
-const MUTED: &str = "#a8a8a8";
-const FAINT: &str = "#7d7d7d";
-const ACCENT: &str = "#8a5cf5";
-const ACCENT_HI: &str = "#a68af9";
+pub(crate) const BG: &str = "#1e1e1e";
+pub(crate) const TILE: &str = "#262626";
+pub(crate) const TEXT: &str = "#dadada";
+pub(crate) const MUTED: &str = "#a8a8a8";
+pub(crate) const FAINT: &str = "#7d7d7d";
+pub(crate) const ACCENT: &str = "#8a5cf5";
+pub(crate) const ACCENT_HI: &str = "#a68af9";
 // The weekday × hour grid's colours, as `charts.js` has them.
-const HEAT_EMPTY: &str = "#2f2f2f";
-const HEAT_RAMP: [&str; 6] = ["#3a3358", "#4b3f80", "#5e4ba8", "#7459d0", "#8f6ff0", "#b49dfb"];
-const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+pub(crate) const HEAT_EMPTY: &str = "#2f2f2f";
+pub(crate) const HEAT_RAMP: [&str; 6] = ["#3a3358", "#4b3f80", "#5e4ba8", "#7459d0", "#8f6ff0", "#b49dfb"];
+pub(crate) const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /// Size, weight and colour of a line of text.
 #[derive(Clone, Copy)]
-struct Style(f64, u16, &'static str);
+pub(crate) struct Style(pub f64, pub u16, pub &'static str);
 
-struct Canvas {
+pub(crate) struct Canvas {
     body: String,
     clips: usize,
 }
 
 impl Canvas {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Canvas { body: String::new(), clips: 0 }
     }
-    fn push(&mut self, s: impl AsRef<str>) {
+    pub(crate) fn push(&mut self, s: impl AsRef<str>) {
         self.body.push_str(s.as_ref());
     }
     /// One line of text, cut to `max_w` pixels when given.
-    fn text_fit(&mut self, x: f64, y: f64, st: Style, s: &str, max_w: Option<f64>) {
+    pub(crate) fn text_fit(&mut self, x: f64, y: f64, st: Style, s: &str, max_w: Option<f64>) {
         let Style(size, weight, fill) = st;
         let s = match max_w {
             Some(w) => fit(s, w, size, weight),
@@ -142,7 +188,7 @@ impl Canvas {
     }
     /// Word-wrapped into at most `lines` lines of `max_w`; the last one cut when it all does not fit.
     /// Answers how many lines it took.
-    fn wrap(&mut self, x: f64, y: f64, st: Style, s: &str, max_w: f64, lines: usize) -> usize {
+    pub(crate) fn wrap(&mut self, x: f64, y: f64, st: Style, s: &str, max_w: f64, lines: usize) -> usize {
         let room = chars_in(max_w, st.0, st.1);
         let mut out: Vec<String> = vec![];
         let mut words = s.split_whitespace();
@@ -169,11 +215,11 @@ impl Canvas {
         }
         out.len()
     }
-    fn text(&mut self, x: f64, y: f64, st: Style, s: &str) {
+    pub(crate) fn text(&mut self, x: f64, y: f64, st: Style, s: &str) {
         self.text_fit(x, y, st, s, None);
     }
     /// A poster in a rounded frame, or the frame alone when there is no picture to put in it.
-    fn poster(&mut self, x: f64, y: f64, w: f64, h: f64, bytes: Option<&Vec<u8>>) {
+    pub(crate) fn poster(&mut self, x: f64, y: f64, w: f64, h: f64, bytes: Option<&Vec<u8>>) {
         self.push(format!(r#"<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="{TILE}"/>"#));
         let Some(uri) = bytes.and_then(|b| data_uri(b)) else { return };
         self.clips += 1;
@@ -182,8 +228,11 @@ impl Canvas {
             r#"<clipPath id="c{id}"><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8"/></clipPath><image x="{x}" y="{y}" width="{w}" height="{h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#c{id})" href="{uri}"/>"#
         ));
     }
-    fn finish(self) -> String {
-        format!(r#"<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" font-family="Inter">{}</svg>"#, self.body)
+    pub(crate) fn finish(self) -> String {
+        self.finish_sized(W, H)
+    }
+    pub(crate) fn finish_sized(self, w: u32, h: u32) -> String {
+        format!(r#"<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" font-family="Inter">{}</svg>"#, self.body)
     }
 }
 
@@ -332,7 +381,7 @@ fn base64(b: &[u8]) -> String {
     out
 }
 
-fn thousands(n: i64) -> String {
+pub(crate) fn thousands(n: i64) -> String {
     let digits = n.unsigned_abs().to_string();
     let mut out = String::new();
     for (i, ch) in digits.chars().enumerate() {
@@ -366,7 +415,9 @@ fn options() -> usvg::Options<'static> {
 
 pub fn render_png(svg: &str) -> Result<Vec<u8>> {
     let tree = usvg::Tree::from_str(svg, &options())?;
-    let mut pixmap = resvg::tiny_skia::Pixmap::new(W, H).ok_or_else(|| anyhow::anyhow!("no pixmap"))?;
+    // As large as the SVG says it is: a wide card or a story card.
+    let size = tree.size().to_int_size();
+    let mut pixmap = resvg::tiny_skia::Pixmap::new(size.width(), size.height()).ok_or_else(|| anyhow::anyhow!("no pixmap"))?;
     resvg::render(&tree, resvg::tiny_skia::Transform::default(), &mut pixmap.as_mut());
     Ok(pixmap.encode_png()?)
 }
@@ -392,6 +443,31 @@ mod tests {
             recap: Some(Recap { year: 2025, plays: 500, watch_s: 300 * 3600, active_days: 150, persona: None, top_series: Some(t("Sintel Stories", Some("s1"))), top_movie: None, top_genre: Some("Drama".into()), longest_streak_days: Some(12) }),
             recent: None,
         }
+    }
+
+    #[test]
+    fn the_zip_holds_every_card_intact() {
+        let files = vec![("2025-year.png".to_string(), vec![1u8, 2, 3, 4, 5]), ("2025-days.png".to_string(), (0..=255u8).collect::<Vec<u8>>())];
+        let z = zip(&files);
+        let u16at = |i: usize| u16::from_le_bytes([z[i], z[i + 1]]) as usize;
+        let u32at = |i: usize| u32::from_le_bytes([z[i], z[i + 1], z[i + 2], z[i + 3]]);
+        let mut at = 0;
+        for (name, data) in &files {
+            assert_eq!(u32at(at), 0x0403_4b50, "a local header");
+            let (crc, size, name_len, extra) = (u32at(at + 14), u32at(at + 18) as usize, u16at(at + 26), u16at(at + 28));
+            assert_eq!(&z[at + 30..at + 30 + name_len], name.as_bytes());
+            let body = &z[at + 30 + name_len + extra..at + 30 + name_len + extra + size];
+            assert_eq!(body, &data[..], "stored as it is");
+            let mut check = flate2::Crc::new();
+            check.update(data);
+            assert_eq!(crc, check.sum(), "{name}");
+            at += 30 + name_len + extra + size;
+        }
+        assert_eq!(u32at(at), 0x0201_4b50, "the central directory follows the files");
+        let end = z.len() - 22;
+        assert_eq!(u32at(end), 0x0605_4b50, "and the end record closes it");
+        assert_eq!((u16at(end + 8), u16at(end + 10)), (2, 2), "two entries");
+        assert_eq!(u32at(end + 16) as usize, at, "the directory is where the end record says");
     }
 
     #[test]

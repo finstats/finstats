@@ -63,7 +63,7 @@ pub struct PublicProfile {
     pub recent: Option<Vec<RecentPlay>>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Title {
     pub name: String,
     pub sub: Option<String>,
@@ -106,7 +106,7 @@ pub struct Habits {
     pub genres: Vec<Genre>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Persona {
     pub title: String,
     pub line: String,

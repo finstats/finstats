@@ -51,6 +51,8 @@ pub fn router(app: App) -> Router {
         .route("/server", get(stats::server))
         .route("/jellyfin/jobs", get(crate::jobs::jobs))
         .route("/recap", get(recap::recap))
+        .route("/recap/cards/{chapter}", get(story_card))
+        .route("/recap/cards.zip", get(story_zip))
         .route("/changelog", get(changelog::changelog))
         .route("/licenses", get(crate::licenses::licenses))
         .route("/activity", get(stats::activity))
@@ -379,32 +381,86 @@ async fn public_card(State(app): State<App>, Path(token): Path<String>, Query(q)
         return Err(crate::public::not_found());
     }
     let key = crate::card::key(&token, kind, &a);
-    let png = match app.public_cards.get(&key) {
-        Some(png) => png,
-        None => {
-            let _permit = app.card_permits.acquire().await.map_err(anyhow::Error::from)?;
-            match app.public_cards.get(&key) {
-                Some(png) => png,
-                None => {
-                    let mut posters = crate::card::Posters::new();
-                    for id in crate::card::poster_ids(kind, &a) {
-                        if let Some(bytes) = poster_bytes(&app, &id).await {
-                            posters.insert(id, bytes);
-                        }
-                    }
-                    let svg = crate::card::svg(kind, &a, &posters);
-                    let png = tokio::task::spawn_blocking(move || crate::card::render_png(&svg)).await.map_err(anyhow::Error::from)??;
-                    app.public_cards.put(key, png)
-                }
-            }
-        }
-    };
+    let ids = crate::card::poster_ids(kind, &a);
+    let png = draw(&app, key, ids, move |posters| crate::card::svg(kind, &a, posters)).await?;
     let r = Response::builder()
         .header(CONTENT_TYPE, "image/png")
         .header(CACHE_CONTROL, "public, max-age=3600")
         .body(Body::from(png.as_ref().clone()))
         .unwrap();
     Ok(crate::public::noindex(r))
+}
+
+/// A card from the memory cache, or drawn: at most two at once (`card_permits`), its posters fetched
+/// through the image cache, rasterised off the async threads. Every card goes through here — the
+/// published ones and the recap's story — so none of them can skip the limit.
+pub(crate) async fn draw<F>(app: &App, key: String, poster_ids: Vec<String>, svg: F) -> ApiResult<std::sync::Arc<Vec<u8>>>
+where
+    F: FnOnce(&crate::card::Posters) -> String,
+{
+    if let Some(png) = app.public_cards.get(&key) {
+        return Ok(png);
+    }
+    let _permit = app.card_permits.acquire().await.map_err(anyhow::Error::from)?;
+    if let Some(png) = app.public_cards.get(&key) {
+        return Ok(png);
+    }
+    let mut posters = crate::card::Posters::new();
+    for id in poster_ids {
+        if let Some(bytes) = poster_bytes(app, &id).await {
+            posters.insert(id, bytes);
+        }
+    }
+    let svg = svg(&posters);
+    let png = tokio::task::spawn_blocking(move || crate::card::render_png(&svg)).await.map_err(anyhow::Error::from)??;
+    Ok(app.public_cards.put(key, png))
+}
+
+/// One chapter of the caller's year as a 1080×1920 card, for the same people who may open that year.
+async fn story_card(State(app): State<App>, user: AuthUser, Path(chapter): Path<String>, Query(q): Query<recap::RecapQuery>) -> ApiResult<Response> {
+    let ch = crate::story::Chapter::parse(&chapter).ok_or_else(|| ApiError::not_found("Chapter"))?;
+    let story = recap::story_for(&app, &user, &q).await?;
+    if !story.chapters().contains(&ch) {
+        return Err(ApiError::not_found("Chapter"));
+    }
+    let png = draw_story(&app, &story, ch).await?;
+    Ok(Response::builder()
+        .header(CONTENT_TYPE, "image/png")
+        .header(CACHE_CONTROL, "private, max-age=300")
+        .body(Body::from(png.as_ref().clone()))
+        .unwrap())
+}
+
+/// Every chapter's card, in order, in one ZIP.
+async fn story_zip(State(app): State<App>, user: AuthUser, Query(q): Query<recap::RecapQuery>) -> ApiResult<Response> {
+    let story = recap::story_for(&app, &user, &q).await?;
+    Ok(zip_response(&story_files(&app, &story).await?, &story.label))
+}
+
+pub(crate) async fn story_files(app: &App, story: &crate::story::StoryYear) -> ApiResult<Vec<(String, Vec<u8>)>> {
+    let mut files = vec![];
+    for (i, ch) in story.chapters().into_iter().enumerate() {
+        files.push((format!("{:02}-{}.png", i + 1, ch.key()), draw_story(app, story, ch).await?.as_ref().clone()));
+    }
+    Ok(files)
+}
+
+pub(crate) fn zip_response(files: &[(String, Vec<u8>)], label: &str) -> Response {
+    let slug: String = label.to_lowercase().chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '-' }).collect();
+    Response::builder()
+        .header(CONTENT_TYPE, "application/zip")
+        .header("content-disposition", format!("attachment; filename=\"finstats-{}.zip\"", slug.trim_matches('-')))
+        .header(CACHE_CONTROL, "private, max-age=300")
+        .body(Body::from(crate::card::zip(files)))
+        .unwrap()
+}
+
+pub(crate) async fn draw_story(app: &App, story: &crate::story::StoryYear, ch: crate::story::Chapter) -> ApiResult<std::sync::Arc<Vec<u8>>> {
+    use sha2::{Digest, Sha256};
+    let said = serde_json::to_vec(story).map_err(anyhow::Error::from)?;
+    let key = format!("story:{}:{}", ch.key(), hex::encode(&Sha256::digest(&said)[..12]));
+    let story = story.clone();
+    draw(app, key, story.poster_ids(ch), move |posters| crate::story::svg(ch, &story, posters)).await
 }
 
 /// A poster's bytes through the same cache the pages use; a card without one draws an empty frame.

@@ -36,6 +36,7 @@ mod services;
 mod socket;
 mod state;
 mod stats;
+mod story;
 mod streamystats;
 mod sync;
 mod timeline;
