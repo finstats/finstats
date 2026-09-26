@@ -116,35 +116,46 @@ pub fn detect(conn: &mut Connection, window_s: i64, only_item: Option<&str>) -> 
     {
         let filter = if only_item.is_some() { "AND item_id = ?1" } else { "" };
         let args: Vec<SqlValue> = only_item.map(|i| vec![i.to_string().into()]).unwrap_or_default();
-        let mut stmt = tx.prepare(&format!("SELECT item_id, id, user_id, started_at, ended_at FROM playbacks WHERE 1 = 1 {filter} ORDER BY item_id, started_at, id"))?;
+        let mut stmt = tx.prepare(&format!("SELECT item_id, id, user_id, started_at, ended_at, group_id FROM playbacks WHERE 1 = 1 {filter} ORDER BY item_id, started_at, id"))?;
         let mut rows = stmt.query(params_from_iter(args.iter()))?;
-        let mut assigned: Vec<(i64, i64)> = vec![];
+        // Each title's plays with the group they have now; what the clustering says is compared with it, and only the
+        // plays whose group actually changes are written. (Resetting every group to NULL and writing them all back
+        // rewrote every grouped play of the history each time — at start-up, after every import, after every play.)
+        let mut changes: Vec<(i64, Option<i64>)> = vec![];
+        let mut found: BTreeSet<i64> = BTreeSet::new();
         let mut current: Option<String> = None;
         let mut batch: Vec<Row> = vec![];
-        let mut flush = |batch: &mut Vec<Row>| {
-            if batch.len() >= 2 {
-                assigned.extend(cluster(batch, window_s));
+        let mut had: Vec<Option<i64>> = vec![];
+        let mut flush = |batch: &mut Vec<Row>, had: &mut Vec<Option<i64>>| {
+            let assigned: HashMap<i64, i64> = if batch.len() >= 2 { cluster(batch, window_s).into_iter().collect() } else { HashMap::new() };
+            for (row, now) in batch.iter().zip(had.iter()) {
+                let want = assigned.get(&row.id).copied();
+                if want != *now {
+                    changes.push((row.id, want));
+                }
             }
+            found.extend(assigned.values());
             batch.clear();
+            had.clear();
         };
         while let Some(r) = rows.next()? {
             let item: String = r.get(0)?;
             if current.as_deref() != Some(item.as_str()) {
-                flush(&mut batch);
+                flush(&mut batch, &mut had);
                 current = Some(item);
             }
             batch.push(Row { id: r.get(1)?, user: r.get(2)?, start: r.get(3)?, end: r.get(4)? });
+            had.push(r.get(5)?);
         }
-        flush(&mut batch);
+        flush(&mut batch, &mut had);
         drop(rows);
         drop(stmt);
 
-        tx.execute(&format!("UPDATE playbacks SET group_id = NULL WHERE group_id IS NOT NULL {filter}"), params_from_iter(args.iter()))?;
         let mut set = tx.prepare("UPDATE playbacks SET group_id = ?2 WHERE id = ?1")?;
-        for (id, group_id) in &assigned {
+        for (id, group_id) in &changes {
             set.execute(params![id, group_id])?;
         }
-        groups += assigned.iter().map(|(_, g)| *g).collect::<BTreeSet<_>>().len();
+        groups += found.len();
     }
     tx.commit()?;
     Ok(groups)
@@ -723,6 +734,31 @@ mod tests {
         let named = live[0]["group"]["with"].as_array().unwrap();
         assert_eq!(named.len(), COMPANIONS_NAMED);
         assert!(named.iter().all(|w| w["user_id"] != "u0"), "a stream is not its own companion");
+    }
+
+    #[test]
+    fn detecting_groups_again_writes_nothing_when_nothing_changed() {
+        // Every run set every grouped play's group to NULL and wrote it back: at start-up, after every import and each
+        // time a play ended, the same rows again — on a history of millions, millions of writes that changed nothing.
+        let mut c = conn();
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES (1, 'live', 'a', 'a', 'film', 'Film', 'Movie', 1000, 2500, 1500), (2, 'live', 'b', 'b', 'film', 'Film', 'Movie', 1004, 2500, 1496),
+                      (3, 'live', 'c', 'c', 'other', 'Other', 'Movie', 1000, 2500, 1500);",
+        )
+        .unwrap();
+        assert_eq!(detect(&mut c, 60, None).unwrap(), 1);
+        let before = c.total_changes();
+        assert_eq!(detect(&mut c, 60, None).unwrap(), 1);
+        assert_eq!(detect(&mut c, 60, Some("film")).unwrap(), 1);
+        assert_eq!(c.total_changes() - before, 0, "unchanged groups were written again");
+        // …while a real change still lands, both ways.
+        c.execute_batch("INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+                           VALUES (4, 'live', 'd', 'd', 'other', 'Other', 'Movie', 1010, 2500, 1490);
+                         UPDATE playbacks SET started_at = 9000, ended_at = 10500 WHERE id = 2;").unwrap();
+        detect(&mut c, 60, None).unwrap();
+        let groups: Vec<(i64, Option<i64>)> = c.prepare("SELECT id, group_id FROM playbacks ORDER BY id").unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(groups, vec![(1, None), (2, None), (3, Some(3)), (4, Some(3))]);
     }
 
     #[test]
