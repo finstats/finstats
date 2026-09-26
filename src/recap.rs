@@ -13,7 +13,7 @@ use serde_json::{Map, Value, json};
 use crate::auth::AuthUser;
 use crate::db::rusqlite::{Connection, params_from_iter};
 use crate::db::{self, SqlValue};
-use crate::state::{ApiResult, App};
+use crate::state::{ApiError, ApiResult, App};
 use crate::stats::{one_json, rows_json};
 
 #[derive(Deserialize)]
@@ -21,6 +21,8 @@ pub struct RecapQuery {
     year: Option<String>,
     /// Honoured for Jellyfin administrators only.
     user_id: Option<String>,
+    /// `server`: the whole server's year, for Jellyfin administrators only.
+    scope: Option<String>,
 }
 
 /// `WHERE` over `playbacks p` for the period and scope, plus its arguments.
@@ -45,9 +47,15 @@ const NOT_LIVE_TV: &str = "p.item_type NOT IN ('TvChannel', 'LiveTvChannel', 'Pr
 
 pub async fn recap(State(app): State<App>, user: AuthUser, Query(q): Query<RecapQuery>) -> ApiResult {
     // A recap is one person's year. Everyone gets their own; only a Jellyfin administrator may open
-    // someone else's, and no permission widens that. There is deliberately no whole-server edition.
+    // someone else's, or the whole server's (2.0), and no permission widens that.
+    let server = match q.scope.as_deref() {
+        None | Some("") | Some("user") => false,
+        Some("server") if user.is_admin => true,
+        Some("server") => return Err(ApiError::forbidden()),
+        Some(_) => return Err(ApiError::bad_request("The scope is `user` or `server`")),
+    };
     let requested_user = q.user_id.as_deref().map(db::norm_id).filter(|s| !s.is_empty());
-    let scope_user = Some(match requested_user {
+    let scope_user = (!server).then(|| match requested_user {
         Some(other) if user.is_admin => other,
         _ => user.id.clone(),
     });
@@ -55,7 +63,7 @@ pub async fn recap(State(app): State<App>, user: AuthUser, Query(q): Query<Recap
     let server_name = app.config.read().unwrap().as_ref().map(|c| c.server_name.clone()).unwrap_or_else(|| "Jellyfin".into());
     let requested = q.year.unwrap_or_default();
     let out = app.db.call(move |c| build(c, scope_user, min_play_s, &server_name, &requested, None)).await?;
-    Ok(Json(out))
+    Ok(Json(if server { server_edition(out) } else { out }))
 }
 
 /// `until`: count only plays that had ended by then — for a published recap, which must not move while
@@ -286,6 +294,21 @@ fn requests(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>) 
         &args,
     )?;
     Ok(json!({ "made": made, "available": available, "watched": watched, "top": top }))
+}
+
+/// The whole server's year, for Jellyfin administrators: every title and total, and nobody in it.
+pub(crate) fn server_edition(mut v: Value) -> Value {
+    if let Some(o) = v.as_object_mut() {
+        o.remove("rank");
+        o.remove("clients");
+        if let Some(t) = o.get_mut("together").and_then(Value::as_object_mut) {
+            t.remove("companions");
+        }
+    }
+    v["scope"]["kind"] = json!("server");
+    v["scope"]["user_id"] = Value::Null;
+    v["scope"]["user_name"] = Value::Null;
+    v
 }
 
 /// A show counts as left behind when it was begun in the window, less than half of it is seen, and
@@ -827,6 +850,26 @@ mod tests {
 
     fn names_of_titles(v: &Value) -> Vec<String> {
         v.as_array().map(|a| a.iter().map(|s| s["title"].as_str().unwrap_or_default().to_string()).collect()).unwrap_or_default()
+    }
+
+    #[test]
+    fn the_server_edition_names_nobody_and_ranks_nobody() {
+        let c = year_db();
+        let a = play(&c, "ua", "m1", "Movie", "2025-03-01", 600, None);
+        play(&c, "ub", "m1", "Movie", "2025-03-01", 500, Some(a));
+        c.execute("UPDATE playbacks SET group_id = ?1 WHERE id = ?1", [a]).unwrap();
+        c.execute("UPDATE playbacks SET client = 'Jellyfin Web'", []).unwrap();
+        play(&c, "uc", "m2", "Movie", "2025-05-01", 900, None);
+        let v = server_edition(year_of(&c, None, "2025"));
+        let text = v.to_string();
+        for name in ["alice", "bob", "carol", "ua", "ub", "uc", "Jellyfin Web"] {
+            assert!(!text.contains(&format!("\"{name}\"")), "{name} is in the server's year: {text}");
+        }
+        assert!(v.get("rank").is_none() && v.get("clients").is_none(), "no ranking, no apps");
+        assert_eq!(v["scope"]["kind"], "server");
+        assert_eq!(v["together"]["people_in_company"], 2);
+        assert_eq!(v["totals"]["plays"], 3, "everybody's year");
+        assert!(v["persona"].is_object(), "the house has a habit too");
     }
 
     #[test]
