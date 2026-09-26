@@ -800,10 +800,27 @@ fn back_up_before_update(conn: &Connection, path: &Path, running: &str) -> Resul
 
 /// A consistent copy of the whole database to `dst` (which must not already exist). `VACUUM INTO`
 /// writes a compact, fully-committed snapshot without needing the file closed or a special build feature.
+///
+/// Written to `<dst>.part` and renamed only once complete: VACUUM INTO writes straight into the file it is given, so a
+/// start killed while copying used to leave an empty file under a snapshot's own name, which counted toward the
+/// three kept. Whatever such a start left behind is removed first.
 fn snapshot_into(conn: &Connection, dir: &Path, dst: &Path) -> Result<()> {
     std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
-    let dst = dst.to_str().context("backup path is not valid UTF-8")?;
-    conn.execute_batch(&format!("VACUUM INTO '{}'", dst.replace('\'', "''")))?;
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for e in entries.flatten() {
+            if e.file_name().to_str().is_some_and(|n| n.starts_with("finstats-") && n.contains(".db.part")) {
+                let _ = std::fs::remove_file(e.path());
+            }
+        }
+    }
+    let part = dst.with_file_name(format!("{}.part", dst.file_name().and_then(|n| n.to_str()).context("backup path is not valid UTF-8")?));
+    let written = part.to_str().context("backup path is not valid UTF-8")?;
+    let copied = conn.execute_batch(&format!("VACUUM INTO '{}'", written.replace('\'', "''")));
+    if let Err(e) = copied {
+        let _ = std::fs::remove_file(&part);
+        return Err(e.into());
+    }
+    std::fs::rename(&part, dst).with_context(|| format!("naming {}", dst.display()))?;
     Ok(())
 }
 
@@ -1128,6 +1145,35 @@ mod tests {
         drop(Db::open(&dir.join("new.db")).unwrap());
         std::fs::write(dir.join("empty.db"), b"").unwrap();
         drop(Db::open(&dir.join("empty.db")).unwrap());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_snapshot_cut_short_is_never_kept_under_a_snapshots_name() {
+        // VACUUM INTO writes straight into the file it is given, so a start killed while copying left an empty
+        // `finstats-<version>-<stamp>.db` (and its journal) — which SQLite calls a valid empty database, and which
+        // counted toward the three kept, pushing a real one out.
+        let dir = std::env::temp_dir().join(format!("finstats-snapcut-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("pre-update-backups")).unwrap();
+        let path = dir.join("finstats.db");
+        {
+            let db = Db::open(&path).unwrap();
+            let c = db.conn().unwrap();
+            set_setting(&c, "marker", "keep-me").unwrap();
+            set_setting(&c, VERSION_KEY, "0.1.0").unwrap();
+        }
+        // What a killed start left: the copy it was writing, and that copy's journal.
+        let snaps = dir.join("pre-update-backups");
+        std::fs::write(snaps.join("finstats-0.1.0-20200101-000000.db.part"), b"").unwrap();
+        std::fs::write(snaps.join("finstats-0.1.0-20200101-000000.db.part-journal"), [0u8; 512]).unwrap();
+        drop(Db::open(&path).unwrap());
+        let names: Vec<String> = std::fs::read_dir(&snaps).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
+        assert_eq!(names.len(), 1, "what a killed snapshot left is still there: {names:?}");
+        assert!(names[0].ends_with(".db") && !names[0].contains(".part"), "{names:?}");
+        let snap = Connection::open(snaps.join(&names[0])).unwrap();
+        assert_eq!(get_setting(&snap, "marker").unwrap().as_deref(), Some("keep-me"), "the snapshot kept does not hold the database");
+        drop(snap);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

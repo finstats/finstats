@@ -92,6 +92,16 @@ fn raw_row(row: &crate::db::rusqlite::Row) -> Map<String, Value> {
 /// Write a backup into `dir`. The file only gets its real name once it is complete.
 pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Result<ExportResult> {
     std::fs::create_dir_all(dir).context("creating the backups folder")?;
+    // Only one backup is written at a time, so a partial file already here was a backup that was killed. Only files
+    // with a backup's own name are touched.
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for e in entries.flatten() {
+            let file = e.file_name();
+            if file.to_str().and_then(|n| n.strip_suffix(".part")).is_some_and(valid_name) {
+                let _ = std::fs::remove_file(e.path());
+            }
+        }
+    }
     let name = new_name();
     let (part, path) = (dir.join(format!("{name}.part")), dir.join(&name));
     let report = |msg: String, p: f64| {
@@ -384,6 +394,25 @@ mod tests {
         for bad in ["../finstats.db", "finstats-backup-20260920-031500.jsonl.gz/../../x", "finstats-backup-2026092-0315000.jsonl.gz", "finstats-backup-20260920-031500.jsonl", "finstats-backup-abcdefgh-ijklmn.jsonl.gz", ""] {
             assert!(!valid_name(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn a_backup_killed_half_way_leaves_nothing_behind_once_the_next_one_is_written() {
+        // Only one backup is ever written at a time, so a `.part` beside a new one is a backup that was killed:
+        // on a big history that is gigabytes nobody will ever see, kept for good.
+        let tmp = std::env::temp_dir().join(format!("finstats-backup-part-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(tmp.join("backups")).unwrap();
+        let stale = tmp.join("backups").join("finstats-backup-20200101-000000.jsonl.gz.part");
+        std::fs::write(&stale, b"half a backup").unwrap();
+        let unrelated = tmp.join("backups").join("notes.part");
+        std::fs::write(&unrelated, b"somebody else's").unwrap();
+        let db = Db::open(&tmp.join("finstats.db")).unwrap();
+        export(&db, &tmp.join("backups"), None).unwrap();
+        assert!(!stale.exists(), "the killed backup's partial file is still there");
+        assert!(unrelated.exists(), "a file finstats did not name was removed");
+        drop(db);
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 
     #[test]
