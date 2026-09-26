@@ -1,17 +1,23 @@
 // Settings → Jellyfin: the server finstats reads from, and how the collector is being told about it.
 
 import { h, icon, num, relTime, dateTime, mount } from '../dom.js';
-import { can } from '../state.js';
-import { card, sk, facts } from '../components.js';
+import { can, isAdmin } from '../state.js';
+import { card, sk, facts, setBusy, inlineError } from '../components.js';
+import { settingRow } from './common.js';
 
 export default {
   key: 'jellyfin', label: 'Jellyfin', sub: 'The server finstats reads from', icon: 'server',
   visible: () => can('manage'),
-  entries: [{ id: 'jellyfin', label: 'Jellyfin connection', hint: 'server address version collector live socket asked told' }],
+  entries: [
+    { id: 'jellyfin', label: 'Jellyfin connection', hint: 'server address version collector live socket asked told' },
+    { id: 'jellyfin_public_url', label: 'Jellyfin’s address for people', hint: 'open in jellyfin play button external url link domain reverse proxy' },
+  ],
   async render(slot, store) {
     const body = h('div', null, sk.rows(2));
-    mount(slot, card({ title: 'Jellyfin connection', sub: 'Read-only: finstats never changes anything on it', body, id: 'jellyfin' }));
+    const address = h('div');
+    mount(slot, card({ title: 'Jellyfin connection', sub: 'Read-only: finstats never changes anything on it', body: [body, address], id: 'jellyfin' }));
     await store.loadSettings();
+    mount(address, peopleAddress(store));
     const paint = () => {
       const s = store.settings, c = store.tasks && store.tasks.collector;
       const status = !c ? h('span', { class: 'muted' }, 'Checking…')
@@ -42,3 +48,27 @@ export default {
     store.loadTasks().catch(() => {});
   },
 };
+
+/** Where "Open in Jellyfin" points. Only a Jellyfin administrator may change it: it is a link everyone follows. */
+function peopleAddress(store) {
+  const current = store.settings.jellyfin_public_url || '';
+  const input = h('input', { class: 'input', id: 'f-jellyfin_public_url', type: 'url', inputMode: 'url', autocomplete: 'off', spellcheck: false,
+    value: current, placeholder: store.settings.jellyfin_url || 'https://jellyfin.example.com', disabled: !isAdmin(), 'aria-describedby': 'jellyfin_public_url-help' });
+  const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
+  const err = h('div');
+  const save = h('button', { type: 'button', class: 'btn btn-sm' }, 'Save');
+  save.addEventListener('click', async () => {
+    mount(err, ''); setBusy(save, true, 'Saving…');
+    try {
+      await store.put({ jellyfin_public_url: input.value.trim() });
+      note.replaceChildren(icon('check', 13), 'Saved');
+      setTimeout(() => note.replaceChildren(), 2000);
+    } catch (e) { mount(err, inlineError('jellyfin_public_url-err', e.message)); }
+    finally { setBusy(save, false); }
+  });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save.click(); } });
+  return settingRow({ id: 'jellyfin_public_url', label: 'Jellyfin’s address for people', labelFor: 'f-jellyfin_public_url',
+    help: 'Where the “Open in Jellyfin” buttons go. Leave empty to use the address finstats connects to.',
+    control: h('div', { class: 'field-input' }, note, input, isAdmin() ? save : null), error: err });
+}
+

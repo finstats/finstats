@@ -60,6 +60,8 @@ export default function itemPage(ctx) {
           Array.isArray(it.studios) && it.studios.length ? h('p', { class: 'item-studios' }, it.studios.slice(0, 4).join(' · ')) : null,
           languageLines(it),
           externalLinks(it.external),
+          it.jellyfin_link ? h('p', { class: 'item-open' }, h('a', { class: 'btn btn-primary open-in-jellyfin', href: it.jellyfin_link, target: '_blank', rel: 'noopener noreferrer' },
+            icon('play', 14), 'Open in Jellyfin')) : null,
           it.overview ? h('p', { class: 'item-overview' }, it.overview) : null,
           it.library_id ? h('p', { class: 'item-lib' }, 'In ', h('a', { href: `/libraries/${it.library_id}` }, it.library_name || 'library'),
             it.date_created ? [' · added ', h('span', { title: dateTime(it.date_created) }, relEl(it.date_created, ''))] : null) : null));

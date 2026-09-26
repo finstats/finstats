@@ -1697,3 +1697,5 @@ body.public { min-height: 100vh; }
 .story-grid { list-style: none; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); margin: 12px 0; }
 .story-grid li { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .story-grid img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: var(--radius-sm); border: 1px solid var(--border-soft); background: var(--bg-sunken); }
+.item-open { margin: 10px 0 2px; }
+#f-jellyfin_public_url { width: min(320px, 100%); }
