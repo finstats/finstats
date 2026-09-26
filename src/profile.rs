@@ -66,13 +66,20 @@ pub(crate) struct Episode {
     /// For a seen episode: "played", "jellyfin" or "manual", the first that applies.
     pub source: Option<&'static str>,
     pub last_at: Option<i64>,
+    /// When it became seen, by whichever source says so: the first play that went far enough, the
+    /// date Jellyfin keeps with its flag, or the manual mark. `None` when that source keeps no date.
+    pub seen_at: Option<i64>,
+    /// When it was first pressed play on, if ever.
+    pub first_at: Option<i64>,
 }
 
 pub(crate) fn episodes(conn: &Connection, user_id: &str) -> Result<Vec<Episode>> {
     let mut stmt = conn.prepare(
         "WITH mine AS (
-            SELECT p.item_id, MAX(p.ended_at) AS last_at,
-                   MAX(MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0))) AS frac
+            SELECT p.item_id, MAX(p.ended_at) AS last_at, MIN(p.started_at) AS first_at,
+                   MAX(MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0))) AS frac,
+                   MIN(CASE WHEN MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0)) >= ?2
+                            THEN p.ended_at END) AS seen_at
             FROM playbacks p LEFT JOIN items i ON i.id = p.item_id
             WHERE p.user_id = ?1 AND p.item_type = 'Episode' GROUP BY p.item_id),
          touched AS (
@@ -81,7 +88,8 @@ pub(crate) fn episodes(conn: &Connection, user_id: &str) -> Result<Vec<Episode>>
             UNION SELECT e.series_id FROM manual_seen ms JOIN items e ON e.id = ms.item_id WHERE ms.user_id = ?1)
          SELECT s.id, s.name, s.production_year, s.removed,
                 e.id, COALESCE(e.parent_index_number, 1), e.index_number, e.name,
-                m.frac, m.last_at, COALESCE(ui.played, 0), (ms.item_id IS NOT NULL)
+                m.frac, m.last_at, COALESCE(ui.played, 0), (ms.item_id IS NOT NULL),
+                m.seen_at, m.first_at, ui.last_played_at, ms.created_at
          FROM items e
          JOIN items s ON s.id = e.series_id AND s.type = 'Series'
          LEFT JOIN mine m ON m.item_id = e.id
@@ -93,7 +101,7 @@ pub(crate) fn episodes(conn: &Connection, user_id: &str) -> Result<Vec<Episode>>
            AND (e.removed = 0 OR s.removed = 1)
          ORDER BY s.id, COALESCE(e.parent_index_number, 1), COALESCE(e.index_number, 9999), e.name",
     )?;
-    let mut rows = stmt.query([user_id])?;
+    let mut rows = stmt.query(params![user_id, SEEN_AT])?;
     let mut out = vec![];
     while let Some(r) = rows.next()? {
         let frac: Option<f64> = r.get(8)?;
@@ -109,6 +117,13 @@ pub(crate) fn episodes(conn: &Connection, user_id: &str) -> Result<Vec<Episode>>
         out.push(Episode {
             series_id: r.get(0)?, series_name: r.get(1)?, series_year: r.get(2)?, series_removed: r.get::<_, i64>(3)? != 0,
             id: r.get(4)?, season: r.get(5)?, number: r.get(6)?, name: r.get(7)?, state, source, last_at: r.get(9)?,
+            seen_at: match source {
+                Some("played") => r.get(12)?,
+                Some("jellyfin") => r.get(14)?,
+                Some("manual") => r.get(15)?,
+                _ => None,
+            },
+            first_at: r.get(13)?,
         });
     }
     Ok(out)
@@ -207,7 +222,7 @@ mod tests {
                                 production_year INTEGER, removed INTEGER DEFAULT 0, path TEXT, size_bytes INTEGER, runtime_s INTEGER);
              CREATE TABLE playbacks(id INTEGER PRIMARY KEY, user_id TEXT, item_id TEXT, item_type TEXT, series_id TEXT, started_at INTEGER, ended_at INTEGER,
                                     duration_s INTEGER, position_s INTEGER, runtime_s INTEGER);
-             CREATE TABLE user_items(user_id TEXT, item_id TEXT, played INTEGER, PRIMARY KEY(user_id, item_id));
+             CREATE TABLE user_items(user_id TEXT, item_id TEXT, played INTEGER, last_played_at INTEGER, PRIMARY KEY(user_id, item_id));
              CREATE TABLE manual_seen(user_id TEXT, item_id TEXT, created_at INTEGER, PRIMARY KEY(user_id, item_id));
              INSERT INTO items(id, type, name) VALUES ('s', 'Series', 'Test Show');
              INSERT INTO items(id, type, name, series_id, parent_index_number, index_number, path, runtime_s) VALUES
@@ -219,7 +234,7 @@ mod tests {
              INSERT INTO playbacks(user_id, item_id, item_type, series_id, started_at, ended_at, duration_s, position_s, runtime_s) VALUES
                 ('u', 'e1', 'Episode', 's', 0, 950, 950, 950, 1000),      -- watched
                 ('u', 'e2', 'Episode', 's', 0, 100, 100, 100, 1000);      -- only started
-             INSERT INTO user_items VALUES ('u', 'e3', 1);                 -- Jellyfin says played
+             INSERT INTO user_items VALUES ('u', 'e3', 1, NULL);                 -- Jellyfin says played
              INSERT INTO manual_seen VALUES ('u', 'e4', 0);                -- marked by hand",
         )
         .unwrap();

@@ -179,7 +179,167 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
         &format!("SELECT p.client AS name, COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s FROM playbacks p {} GROUP BY 1 ORDER BY watch_s DESC LIMIT 3", w.with("p.client IS NOT NULL")),
         &w.args,
     )?);
+    let watch_s = out["totals"]["watch_s"].as_i64().unwrap_or(0);
+    out["together"] = together(c, &w, scope_user.as_deref(), until, watch_s)?;
+    out["requests"] = requests(c, &w, scope_user.as_deref(), until)?;
+    out["finished"] = match &scope_user {
+        Some(u) => finished(c, &w, u, until.unwrap_or_else(db::now))?,
+        None => Value::Null,
+    };
+    out["versus"] = match year_json.as_i64() {
+        Some(y) => versus(c, &w, y, &local_midnight(&format!("'{:04}-01-01'", y - 1))?)?,
+        None => Value::Null,
+    };
     Ok(out)
+}
+
+/// Who this person watched with, from the evenings the group fold found: how many, how long in
+/// company (for each evening the shorter of their stay and the longest other one), the title that
+/// brought people together most, and at most three companions — named here, in the app, and nowhere
+/// that leaves it. The whole server's year counts evenings and people and names nobody.
+fn together(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>, watch_s: i64) -> Result<Value> {
+    let end = until.map_or(w.to, |u| u.min(w.to));
+    let window = crate::groups::Window { since: Some(w.from), until: Some(end) };
+    let people: Vec<String> = user.map(|u| vec![u.to_string()]).unwrap_or_default();
+    let sessions = crate::groups::sessions_for(c, &window, None, &people)?;
+    let mine: Vec<&crate::groups::Session> = sessions.iter().filter(|s| user.is_none_or(|u| s.per_user.contains_key(u))).collect();
+    if mine.is_empty() {
+        return Ok(Value::Null);
+    }
+    let mut together_s = 0;
+    let mut titles: std::collections::HashMap<&str, (&str, i64, i64)> = Default::default();
+    let mut companions: std::collections::BTreeMap<&str, (&crate::groups::Member, i64, i64)> = Default::default();
+    for s in &mine {
+        let t = match user {
+            Some(u) => {
+                let me = s.per_user[u].duration_s;
+                let others = s.per_user.iter().filter(|(id, _)| id.as_str() != u);
+                let longest_other = others.clone().map(|(_, m)| m.duration_s).max().unwrap_or(0);
+                for (id, m) in others {
+                    let e = companions.entry(id.as_str()).or_insert((m, 0, 0));
+                    e.1 += 1;
+                    e.2 += me.min(m.duration_s);
+                }
+                me.min(longest_other)
+            }
+            None => s.together_s(),
+        };
+        together_s += t;
+        let e = titles.entry(s.title_id.as_str()).or_insert((s.title_name.as_str(), 0, 0));
+        e.1 += 1;
+        e.2 += t;
+    }
+    let top_title = titles
+        .iter()
+        .max_by_key(|(id, (_, n, secs))| (*n, *secs, std::cmp::Reverse(**id)))
+        .map(|(id, (name, n, _))| json!({ "id": id, "name": name, "image_item_id": id, "evenings": n }));
+    let share = if watch_s > 0 { together_s as f64 / watch_s as f64 } else { 0.0 };
+    let mut out = json!({ "evenings": mine.len(), "together_s": together_s, "share": share, "top_title": top_title });
+    match user {
+        Some(_) => {
+            let mut list: Vec<_> = companions.into_iter().collect();
+            list.sort_by_key(|(id, (_, n, secs))| (std::cmp::Reverse(*n), std::cmp::Reverse(*secs), *id));
+            out["companions"] = json!(list.into_iter().take(3).map(|(id, (m, n, secs))| json!({
+                "user_id": id, "user_name": m.name, "has_image": m.has_image, "evenings": n, "together_s": secs,
+            })).collect::<Vec<_>>());
+        }
+        None => {
+            let people: std::collections::BTreeSet<&str> = mine.iter().flat_map(|s| s.per_user.keys().map(String::as_str)).collect();
+            out["people_in_company"] = json!(people.len());
+        }
+    }
+    Ok(out)
+}
+
+/// What this person asked for through Seerr in the window, how much of it arrived, and how much of what
+/// arrived they then watched (a play by them after it became available — watching it before does not count
+/// as the request's doing). Nothing at all when no request was ever recorded: Seerr is not connected, or
+/// nobody uses it. The whole server's year counts everybody's and names nobody.
+fn requests(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>) -> Result<Value> {
+    let any: bool = c.query_row("SELECT EXISTS (SELECT 1 FROM requests)", [], |r| r.get(0))?;
+    if !any {
+        return Ok(Value::Null);
+    }
+    let end = until.map_or(w.to, |u| u.min(w.to));
+    let mut wh = "r.removed_at IS NULL AND r.requested_at >= ?1 AND r.requested_at < ?2".to_string();
+    let mut args: Vec<SqlValue> = vec![w.from.into(), end.into()];
+    if let Some(u) = user {
+        wh.push_str(" AND r.user_id = ?3");
+        args.push(u.to_string().into());
+    }
+    let watched_sql = "r.available_at IS NOT NULL AND r.item_id IS NOT NULL AND EXISTS (
+        SELECT 1 FROM playbacks p WHERE p.user_id = r.user_id AND p.item_id = r.item_id AND p.started_at >= r.available_at AND p.ended_at <= ?2)";
+    let (made, available, watched): (i64, i64, i64) = c.query_row(
+        &format!("SELECT COUNT(*), COALESCE(SUM(r.available_at IS NOT NULL AND r.available_at < ?2), 0), COALESCE(SUM({watched_sql}), 0) FROM requests r WHERE {wh}"),
+        params_from_iter(args.iter()),
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )?;
+    if made == 0 {
+        return Ok(Value::Null);
+    }
+    let top = rows_json(
+        c,
+        &format!(
+            "SELECT r.title, r.year, r.item_id, r.item_id AS image_item_id FROM requests r
+             WHERE {wh} AND {watched_sql} ORDER BY r.available_at DESC LIMIT 5"
+        ),
+        &args,
+    )?;
+    Ok(json!({ "made": made, "available": available, "watched": watched, "top": top }))
+}
+
+/// A show counts as left behind when it was begun in the window, less than half of it is seen, and
+/// nothing of it was played in this long before the window closed (or before now, in a year still
+/// going): long enough that a show between seasons, or saved for the holidays, is not called dropped.
+const DROPPED_QUIET_S: i64 = 60 * 86_400;
+
+/// The shows this person finished in the window — every episode on the server seen, the last of them
+/// inside it — and the ones they began and left, by the same reading of "seen" as the profile's
+/// progress bars (`profile::episodes`).
+fn finished(c: &Connection, w: &Window, user: &str, now: i64) -> Result<Value> {
+    let end = w.to.min(now);
+    let within = |t: i64| t >= w.from && t < end;
+    let eps = crate::profile::episodes(c, user)?;
+    let day = |t: i64| -> Result<String> { Ok(c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [t], |r| r.get(0))?) };
+    let (mut done, mut dropped) = (vec![], vec![]);
+    for show in eps.chunk_by(|a, b| a.series_id == b.series_id) {
+        let first = &show[0];
+        let total = show.len() as i64;
+        let seen = show.iter().filter(|e| e.state == "seen").count() as i64;
+        let seen_last = show.iter().map(|e| e.seen_at).collect::<Option<Vec<i64>>>().and_then(|v| v.into_iter().max());
+        if seen == total {
+            if let Some(t) = seen_last.filter(|t| within(*t)) {
+                done.push((t, json!({ "id": first.series_id, "name": first.series_name, "image_item_id": first.series_id, "episodes": total, "finished_on": day(t)? })));
+            }
+            continue;
+        }
+        let began = show.iter().filter_map(|e| e.first_at).min();
+        let last = show.iter().filter_map(|e| e.last_at.max(e.seen_at)).max();
+        if began.is_some_and(within) && seen * 2 < total && last.is_some_and(|l| l < end - DROPPED_QUIET_S) {
+            dropped.push((began.unwrap_or(0), json!({ "id": first.series_id, "name": first.series_name, "image_item_id": first.series_id, "seen": seen, "total": total })));
+        }
+    }
+    if done.is_empty() && dropped.is_empty() {
+        return Ok(Value::Null);
+    }
+    done.sort_by_key(|(t, _)| std::cmp::Reverse(*t));
+    dropped.sort_by_key(|(t, _)| *t);
+    let (count, dropped_count) = (done.len(), dropped.len());
+    Ok(json!({
+        "series": done.into_iter().map(|(_, v)| v).take(10).collect::<Vec<_>>(), "count": count,
+        "dropped": dropped.into_iter().map(|(_, v)| v).take(10).collect::<Vec<_>>(), "dropped_count": dropped_count,
+    }))
+}
+
+/// The same headline numbers for the calendar year before, when there was one.
+fn versus(c: &Connection, w: &Window, year: i64, from: &i64) -> Result<Value> {
+    let mut args = w.scope_args.clone();
+    args.extend([(*from).into(), w.from.into()]);
+    let t = totals_in(c, &format!("{} AND p.started_at >= ? AND p.started_at < ?", w.scope_wh), &args)?;
+    if t.get("plays").and_then(Value::as_i64).unwrap_or(0) == 0 {
+        return Ok(Value::Null);
+    }
+    Ok(json!({ "year": year - 1, "plays": t["plays"], "watch_s": t["watch_s"], "active_days": t["active_days"] }))
 }
 
 /// A year's recap is "ready" in its December and stays the default until the next December.
@@ -509,6 +669,177 @@ fn discovery(c: &Connection, w: &Window) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ---- the chapters 2.0 added: invented people and titles, on 2025 and 2024.
+
+    /// Noon on a day, local time, as SQLite reads it: what the recap's local-midnight windows compare against.
+    fn at(c: &Connection, day: &str) -> i64 {
+        c.query_row("SELECT CAST(strftime('%s', ?1 || ' 12:00:00', 'utc') AS INTEGER)", [day], |r| r.get(0)).unwrap()
+    }
+
+    fn year_db() -> Connection {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO users(id, name, is_admin, updated_at) VALUES ('ua', 'alice', 0, 1), ('ub', 'bob', 0, 1), ('uc', 'carol', 0, 1);
+             INSERT INTO items(id, type, name, production_year, runtime_s, updated_at) VALUES
+               ('m1', 'Movie', 'Big Buck Bunny', 2008, 600, 1), ('m2', 'Movie', 'Sintel', 2010, 900, 1);",
+        )
+        .unwrap();
+        c
+    }
+
+    fn play(c: &Connection, user: &str, item: &str, ty: &str, day: &str, secs: i64, group: Option<i64>) -> i64 {
+        let start = at(c, day);
+        c.execute(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, position_s, group_id)
+             VALUES ('live', ?1, ?1, ?2, COALESCE((SELECT name FROM items WHERE id = ?2), ?2), ?3, ?4, ?4 + ?5, ?5, ?5, ?6)",
+            crate::db::rusqlite::params![user, item, ty, start, secs, group],
+        )
+        .unwrap();
+        c.last_insert_rowid()
+    }
+
+    fn year_of(c: &Connection, user: Option<&str>, year: &str) -> Value {
+        build(c, user.map(str::to_string), 0, "", year, None).unwrap()
+    }
+
+    #[test]
+    fn together_counts_evenings_in_company_and_names_at_most_three() {
+        let c = year_db();
+        // Two evenings of Big Buck Bunny with bob, one of Sintel with carol, and one film alone.
+        for (day, g) in [("2025-03-01", 1), ("2025-04-01", 3)] {
+            let a = play(&c, "ua", "m1", "Movie", day, 600, Some(g));
+            play(&c, "ub", "m1", "Movie", day, 500, Some(g));
+            c.execute("UPDATE playbacks SET group_id = ?1 WHERE id = ?1", [a]).unwrap();
+            c.execute("UPDATE playbacks SET group_id = ?1 WHERE group_id = ?2", [a, g]).unwrap();
+        }
+        let a = play(&c, "ua", "m2", "Movie", "2025-05-01", 900, None);
+        play(&c, "uc", "m2", "Movie", "2025-05-01", 900, Some(a));
+        c.execute("UPDATE playbacks SET group_id = ?1 WHERE id = ?1", [a]).unwrap();
+        play(&c, "ua", "m2", "Movie", "2025-06-01", 900, None);
+
+        let t = &year_of(&c, Some("ua"), "2025")["together"];
+        assert_eq!(t["evenings"], 3, "{t}");
+        assert_eq!(t["together_s"], 500 + 500 + 900, "each evening counts the time she was in company");
+        let share = t["share"].as_f64().unwrap();
+        assert!((share - 1900.0 / 3000.0).abs() < 1e-9, "{share}");
+        assert_eq!(t["top_title"]["name"], "Big Buck Bunny");
+        assert_eq!(t["top_title"]["evenings"], 2);
+        let names: Vec<&str> = t["companions"].as_array().unwrap().iter().map(|p| p["user_name"].as_str().unwrap()).collect();
+        assert_eq!(names, ["bob", "carol"], "most evenings first");
+        // Nobody else in the year: no chapter.
+        assert!(year_of(&c, Some("ua"), "2024")["together"].is_null());
+    }
+
+    fn show(c: &Connection, id: &str, name: &str, episodes: &[&str]) {
+        c.execute("INSERT INTO items(id, type, name, updated_at) VALUES (?1, 'Series', ?2, 1)", [id, name]).unwrap();
+        for (i, e) in episodes.iter().enumerate() {
+            c.execute(
+                "INSERT INTO items(id, type, name, series_id, parent_index_number, index_number, path, runtime_s, updated_at) VALUES (?1, 'Episode', ?1, ?2, 1, ?3, '/f/' || ?1, 1000, 1)",
+                crate::db::rusqlite::params![e, id, i as i64 + 1],
+            )
+            .unwrap();
+        }
+    }
+
+    fn episode(c: &Connection, user: &str, ep: &str, day: &str, secs: i64) {
+        let series: String = c.query_row("SELECT series_id FROM items WHERE id = ?1", [ep], |r| r.get(0)).unwrap();
+        let start = at(c, day);
+        c.execute(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, started_at, ended_at, duration_s, position_s, runtime_s)
+             VALUES ('live', ?1, ?1, ?2, ?2, 'Episode', ?3, ?4, ?4 + ?5, ?5, ?5, 1000)",
+            crate::db::rusqlite::params![user, ep, series, start, secs],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn a_show_is_finished_in_the_year_its_last_episode_was_seen_and_one_barely_started_is_dropped() {
+        let c = year_db();
+        show(&c, "s1", "Sintel Stories", &["e1", "e2"]);
+        episode(&c, "ua", "e1", "2025-03-01", 950);
+        episode(&c, "ua", "e2", "2025-11-02", 950);
+        show(&c, "s2", "Old Show", &["e3", "e4"]);
+        episode(&c, "ua", "e3", "2024-03-01", 950);
+        episode(&c, "ua", "e4", "2024-04-01", 950);
+        // Seen by a play and by Jellyfin's own flag: the flag's date is when it was seen.
+        show(&c, "s5", "Flagged", &["g1", "g2"]);
+        episode(&c, "ua", "g1", "2025-01-10", 950);
+        c.execute("INSERT INTO user_items(user_id, item_id, played, last_played_at) VALUES ('ua', 'g2', 1, ?1)", [at(&c, "2025-06-10")]).unwrap();
+        // One episode of four in February and nothing since: dropped.
+        show(&c, "s3", "Dropped Tales", &["f1", "f2", "f3", "f4"]);
+        episode(&c, "ua", "f1", "2025-02-01", 950);
+        // Half of it, but watched in December: still going, neither finished nor dropped.
+        show(&c, "s4", "Half Done", &["h1", "h2"]);
+        episode(&c, "ua", "h1", "2025-12-15", 950);
+
+        let f = &year_of(&c, Some("ua"), "2025")["finished"];
+        let names = |k: &str| f[k].as_array().unwrap().iter().map(|s| s["name"].as_str().unwrap().to_string()).collect::<Vec<_>>();
+        assert_eq!(names("series"), ["Sintel Stories", "Flagged"], "newest first: {f}");
+        assert_eq!(f["series"][0]["finished_on"], "2025-11-02");
+        assert_eq!(f["series"][1]["finished_on"], "2025-06-10");
+        assert_eq!(f["series"][0]["episodes"], 2);
+        assert_eq!(f["count"], 2);
+        assert_eq!(names("dropped"), ["Dropped Tales"]);
+        assert_eq!((f["dropped"][0]["seen"].as_i64(), f["dropped"][0]["total"].as_i64()), (Some(1), Some(4)));
+        assert_eq!(f["dropped_count"], 1);
+        assert_eq!(names_of(&year_of(&c, Some("ua"), "2024")["finished"]["series"]), ["Old Show"]);
+        assert!(year_of(&c, Some("ub"), "2025")["finished"].is_null(), "bob touched no show");
+    }
+
+    fn names_of(v: &Value) -> Vec<String> {
+        v.as_array().map(|a| a.iter().map(|s| s["name"].as_str().unwrap_or_default().to_string()).collect()).unwrap_or_default()
+    }
+
+    fn request(c: &Connection, id: i64, user: &str, title: &str, item: Option<&str>, asked: &str, arrived: Option<&str>) {
+        let (asked, arrived) = (at(c, asked), arrived.map(|d| at(c, d)));
+        c.execute(
+            "INSERT INTO requests(service_id, request_id, media_type, title, status, media_status, requested_at, updated_at, available_at, user_id, item_id)
+             VALUES (9, ?1, 'movie', ?2, 2, ?3, ?4, ?4, ?5, ?6, ?7)",
+            crate::db::rusqlite::params![id, title, if arrived.is_some() { 5 } else { 3 }, asked, arrived, user, item],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn requests_count_what_became_watchable_and_what_was_watched() {
+        let c = year_db();
+        c.execute("INSERT INTO services(id, kind, name, url, secret, created_at) VALUES (9, 'seerr', 'Seerr', 'http://nas:5055', 'k', 1)", []).unwrap();
+        assert!(year_of(&c, Some("ua"), "2025")["requests"].is_null(), "no request rows at all: no chapter");
+        request(&c, 1, "ua", "Big Buck Bunny", Some("m1"), "2025-02-01", Some("2025-02-03"));
+        play(&c, "ua", "m1", "Movie", "2025-02-04", 600, None);
+        request(&c, 2, "ua", "Sintel", Some("m2"), "2025-03-01", Some("2025-03-05"));   // arrived, never watched
+        request(&c, 3, "ua", "Tears of Steel", None, "2025-04-01", None);              // still waiting
+        request(&c, 4, "ua", "Elephants Dream", None, "2024-04-01", None);             // another year
+        request(&c, 5, "ub", "Cosmos Laundromat", None, "2025-04-01", None);           // somebody else's
+        play(&c, "ua", "m2", "Movie", "2025-02-20", 900, None);                        // watched before it arrived: not because of it
+
+        let r = &year_of(&c, Some("ua"), "2025")["requests"];
+        assert_eq!((r["made"].as_i64(), r["available"].as_i64(), r["watched"].as_i64()), (Some(3), Some(2), Some(1)), "{r}");
+        assert_eq!(names_of_titles(&r["top"]), ["Big Buck Bunny"]);
+        let everyone = &year_of(&c, None, "2025")["requests"];
+        assert_eq!(everyone["made"], 4, "the server's year counts everybody's: {everyone}");
+        assert!(everyone.get("top").is_none_or(|t| t.as_array().is_some_and(|a| a.iter().all(|x| x.get("user_name").is_none()))));
+    }
+
+    fn names_of_titles(v: &Value) -> Vec<String> {
+        v.as_array().map(|a| a.iter().map(|s| s["title"].as_str().unwrap_or_default().to_string()).collect()).unwrap_or_default()
+    }
+
+    #[test]
+    fn versus_is_the_year_before_or_nothing() {
+        let c = year_db();
+        play(&c, "ua", "m1", "Movie", "2024-06-01", 600, None);
+        play(&c, "ua", "m2", "Movie", "2025-06-01", 900, None);
+        play(&c, "ua", "m2", "Movie", "2025-06-02", 900, None);
+        let v = &year_of(&c, Some("ua"), "2025")["versus"];
+        assert_eq!((v["year"].as_i64(), v["plays"].as_i64(), v["watch_s"].as_i64(), v["active_days"].as_i64()), (Some(2024), Some(1), Some(600), Some(1)), "{v}");
+        assert!(year_of(&c, Some("ua"), "2024")["versus"].is_null(), "nothing in 2023");
+        assert!(year_of(&c, Some("ua"), "last12")["versus"].is_null(), "only a calendar year has a year before");
+    }
 
     #[test]
     fn the_default_recap_flips_in_december() {
