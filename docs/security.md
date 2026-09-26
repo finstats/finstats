@@ -48,7 +48,10 @@ is read fresh each time, so taking a permission away works immediately — inclu
 someone out. Only a Jellyfin administrator can change permissions: someone who may *manage*
 finstats still cannot open sign-in to everyone, change the defaults or grant anything, so nobody
 can promote themselves. The year recap is personal: you get your own. A Jellyfin administrator can open another
-person's; no permission grants that to anyone else, and there is no whole-server recap.
+person's, and the whole server's year, which ranks and names nobody; no permission grants either to anyone
+else. The year's cards (2.0) are drawn from a copy of the year that has no field for another person, a rank
+or an app, so a card that leaves finstats — downloaded, or shown on a published profile — can never name the
+people somebody watched with; in the app a card does not even carry its owner's login name.
 
 **Talking to Jellyfin.** During setup finstats creates its own API key, named `finstats`, which
 you can revoke at any time under Dashboard → API Keys. It only reads: it never modifies your

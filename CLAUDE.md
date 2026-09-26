@@ -330,8 +330,16 @@ The shelf scrolls by hand (`shelf()` in `pages/dashboard.js`): one glide towards
 put CSS scroll-snap on a row like this: a wheel notch shorter than half a card springs back, so Firefox users could barely move it.
 
 **Recap (`recap.rs`)** is one person's year: the caller's own, or, for a Jellyfin administrator only (`is_admin`, not a
-permission), the user in `user_id`. There is deliberately no whole-server edition. It excludes Live TV item types and
-defaults to the year that is "ready": the current year in December, otherwise the previous one.
+permission), the user in `user_id`, or the whole server's (`scope=server`, 2.0) — which goes through `server_edition`, so it
+ranks nobody and names nobody (companions, rank and apps taken out). `whose_year` is the one place that rule lives; the page
+and the cards both go through it. It excludes Live TV item types and defaults to the year that is "ready": the current year in
+December, otherwise the previous one. 2.0 added `together` (the group fold for one person and one year; companions named, at
+most three), `finished` (by `profile::episodes`, the same "seen" as show progress; dropped = begun this year, under half seen,
+nothing for `DROPPED_QUIET_S`), `requests` (null when no request was ever recorded) and `versus`. **The year as a story
+(`story.rs`)**: every card is drawn from `StoryYear`, a typed copy with no field for a companion, a rank or an app, so a card
+cannot name anybody however the recap grows — never draw a card from the recap's JSON. `/api/recap` answers `story` (which
+chapters have cards) so the page never recomputes it. `recap::announce_ready` tells each person who watched in December, once
+(`notify:recap:{year}:{user}`).
 Its "most watched people" read `item_people`: actors (first 12 billed) and directors of films and shows only, filled by a
 second, small `/Items` pass per library in `sync_libraries` (`Fields=People`) — never add `People` to the main item read.
 The same table feeds the Cast & crew row on `/items/:id` and the person pages (`/people/:id`, `stats::person_detail`), which are

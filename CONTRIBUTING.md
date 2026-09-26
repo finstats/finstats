@@ -54,8 +54,8 @@ Knowing this saves you from building something that cannot be merged.
   (after `cargo fetch`) and commit the updated `THIRD-PARTY.json` with the change. `cargo test` fails while
   that file does not cover every package in `Cargo.lock`, and the app shows the result under
   **Settings → System → Licences**.
-- **Personal where it matters.** The recap is one person's year and there is deliberately no whole-server
-  edition; permissions are enforced on the server, never only in the UI.
+- **Personal where it matters.** The recap is one person's year; the server's year (for administrators) ranks
+  and names nobody, and no card ever names anybody else. Permissions are enforced on the server, never only in the UI.
 
 ## Reporting a bug
 

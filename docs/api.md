@@ -468,7 +468,7 @@ and `seen: false` only removes manual marks, never a recorded play.
 
 `GET /api/recap?year=&user_id=` — `user_id` is honoured for **Jellyfin administrators** only and selects one other
 user's recap (`scope` then names them). Everyone else always gets their own, whatever permissions they hold
-(`see_everyone` included); the parameter is ignored rather than refused. There is no whole-server recap.
+(`see_everyone` included); the parameter is ignored rather than refused. The whole server's year came in 2.0 (`scope=server`, below).
 
 ---
 
@@ -1364,4 +1364,42 @@ top_genre, longest_streak_days}` — never the rank among other people, the apps
 
 `/api/auth/me` gains `user.features.public_profiles`. Audit kinds: `profile_published`, `profile_changed`,
 `profile_unpublished`, `profile_link_reset`. `public_profiles` is not in backups: a restore never brings a link back.
+
+# v2.0 — Recap 2026
+
+## `GET /api/recap` grows
+
+Parameters gain `scope`: `user` (default) or `server`. `server` is the whole server's year, **Jellyfin administrators
+only** (`403` for anyone else, whatever they were granted; `400` for an unknown scope): every title and total and the
+persona of the house, with `rank`, `clients` and `together.companions` taken out and `scope.kind = "server"`.
+
+New keys, each `null` when there is nothing to say:
+
+| Key | Shape |
+|---|---|
+| `together` | `{evenings, together_s, share, top_title: {id, name, image_item_id, evenings} \| null, companions: [{user_id, user_name, has_image, evenings, together_s}] /* ≤ 3, a person's year only */, people_in_company /* the server's year only */}` |
+| `finished` | `{series: [{id, name, image_item_id, episodes, finished_on}], count, dropped: [{id, name, image_item_id, seen, total}], dropped_count}` — a person's year only. Finished: every file episode seen, the last inside the year. Dropped: begun in the year, under half seen, nothing played for 60 days before the year closed (or before now). |
+| `requests` | `{made, available, watched, top: [{title, year, item_id, image_item_id}]}` — Seerr requests made in the year; `watched` counts those played by the requester after they arrived. `null` when no request was ever recorded. |
+| `versus` | `{year, plays, watch_s, active_days}` — the calendar year before; `null` for `last12` or when that year had no plays. |
+| `story` | The chapters that have a card, in order: keys of `year, numbers, shows, films, music, genres, persona, rhythm, days, records, together, finished, asked, versus`. |
+
+## The year as cards
+
+| Method | Path | Response |
+|---|---|---|
+| GET | `/api/recap/cards/{chapter}?year=&user_id=&scope=` | A 1080×1920 PNG of one chapter, for whoever may open that year. `404` for a chapter the year has no card for. |
+| GET | `/api/recap/cards.zip?…` | Every card, `01-year.png` onwards, as one stored ZIP (`Content-Disposition: attachment; filename="finstats-2025.zip"`). |
+| GET | `/u/{token}/recap/{chapter}` | The same for a published year, without an account (`Cache-Control: public, max-age=3600`). |
+| GET | `/u/{token}/recap.zip` | …and all of them. Both `404` exactly like the rest of `/u/` when the year is not published. |
+
+A card is drawn from a typed copy of the year that has no field for another person, a rank or an app: it never names the
+people someone watched with. In the app a card carries no name at all; a published one carries the owner's chosen name, the
+server's year the server's name. `GET /api/public/{token}`'s `recap` is now that copy (`{label, whose, totals, top_series,
+top_movies, top_tracks, genres, persona, hours, weekdays, days, records, together, finished, asked, versus}`), with `story`
+beside it listing its cards.
+
+## Notifications
+
+A new event kind, `recap_ready` (Library group, the person it is about): in December, once per person who watched that year,
+"Your 2025 in review is ready" with a link to `/recap?year=2025`.
 

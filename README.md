@@ -149,10 +149,17 @@ A personal recap for every user, in the spirit of Spotify Wrapped: hours watched
 music and genres, the actors and directors you spent the most time with, and a viewing
 personality — night owl, weekend warrior, binge watcher and more. See the whole year as a calendar
 of days, find out which weekday took the crown, and collect the records worth bragging about:
-biggest binge, longest daily streak, most rewatched title, the oldest film you watched.
+biggest binge, longest daily streak, most rewatched title, the oldest film you watched. Since 2.0 it
+also tells you who you watched with, which shows you finished (and which you left for later), what you
+asked for through Seerr and what came of it, and how the year compares with the one before.
 
-Each person sees only their own. Administrators can open another person's recap; nobody else can,
-whatever permissions they hold, and there is no recap of the whole server.
+**Share it as a story.** Every chapter is also a 1080×1920 card, the shape phone stories use: save one,
+or all of them as a ZIP. A card never names anybody else — the people you watched with are named in
+the app and nowhere that leaves it. Publish your year on your public profile and anyone with the link
+sees the same cards. In December, when the year is ready, finstats can tell you so.
+
+Each person sees only their own. Administrators can open another person's recap, and the whole server's
+year — titles and totals, nobody ranked or named; nobody else can, whatever permissions they hold.
 
 ### Share it, if you want to
 
