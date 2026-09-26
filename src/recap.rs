@@ -54,11 +54,13 @@ pub async fn recap(State(app): State<App>, user: AuthUser, Query(q): Query<Recap
     let min_play_s = app.settings().min_play_s;
     let server_name = app.config.read().unwrap().as_ref().map(|c| c.server_name.clone()).unwrap_or_else(|| "Jellyfin".into());
     let requested = q.year.unwrap_or_default();
-    let out = app.db.call(move |c| build(c, scope_user, min_play_s, &server_name, &requested)).await?;
+    let out = app.db.call(move |c| build(c, scope_user, min_play_s, &server_name, &requested, None)).await?;
     Ok(Json(out))
 }
 
-pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64, server_name: &str, requested: &str) -> Result<Value> {
+/// `until`: count only plays that had ended by then — for a published recap, which must not move while
+/// somebody is watching (`public::answer`).
+pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64, server_name: &str, requested: &str, until: Option<i64>) -> Result<Value> {
     // Live TV is left out of the recap altogether: a channel left on all evening says nothing about taste.
     let mut scope_wh = format!("WHERE {NOT_LIVE_TV}");
     let mut scope_args: Vec<SqlValue> = vec![];
@@ -69,6 +71,10 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
     if min_play_s > 0 {
         scope_wh.push_str(" AND p.duration_s >= ?");
         scope_args.push(min_play_s.into());
+    }
+    if let Some(t) = until {
+        scope_wh.push_str(" AND p.active = 0 AND p.ended_at <= ?");
+        scope_args.push(t.into());
     }
 
     let years: Vec<i64> = rows_json(

@@ -228,7 +228,7 @@ fn profile(c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
     if let Some(hb) = &a.habits {
         let (x, y, w, row) = if a.totals.is_some() { (780.0, 232.0, 356.0, 14.0) } else { (64.0, 214.0, 1072.0, 30.0) };
         c.text(x, y - 18.0, Style(18.0, 600, FAINT), "When they watch");
-        heat(c, x, y, w, row, &hb.heatmap);
+        heat(c, x, y, w, row, &hb.heatmap.watch_s);
         let under = y + 7.0 * (row + 2.0) + 58.0;
         let streak = format!("Longest streak {} {}", thousands(hb.longest_streak_days), if hb.longest_streak_days == 1 { "day" } else { "days" });
         c.text(x, under, Style(24.0, 600, TEXT), &streak);
@@ -374,7 +374,7 @@ pub fn render_png(svg: &str) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::public::{Habits, Recap, Totals};
+    use crate::public::{Habits, Heat, Recap, Totals};
 
     fn t(name: &str, image: Option<&str>) -> Title {
         Title { name: name.into(), sub: Some("2008".into()), plays: 3, watch_s: 5400, image: image.map(str::to_string) }
@@ -388,7 +388,7 @@ mod tests {
                 plays: 1203, watch_s: 412 * 3600 + 59, movies: 80, episodes: 1100, tracks: 23,
                 top_series: vec![t("Sintel Stories", Some("s1"))], top_movies: vec![t("Big Buck Bunny", Some("m1"))], top_tracks: vec![],
             }),
-            habits: Some(Habits { longest_streak_days: 23, active_days: 200, heatmap: vec![vec![0; 24]; 7].into_iter().enumerate().map(|(d, mut r)| { r[20] = d as i64 * 600; r }).collect(), genres: vec![] }),
+            habits: Some(Habits { longest_streak_days: 23, active_days: 200, heatmap: Heat { plays: vec![vec![0; 24]; 7], watch_s: vec![vec![0; 24]; 7].into_iter().enumerate().map(|(d, mut r)| { r[20] = d as i64 * 600; r }).collect() }, genres: vec![] }),
             recap: Some(Recap { year: 2025, plays: 500, watch_s: 300 * 3600, active_days: 150, persona: None, top_series: Some(t("Sintel Stories", Some("s1"))), top_movie: None, top_genre: Some("Drama".into()), longest_streak_days: Some(12) }),
             recent: None,
         }

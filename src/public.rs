@@ -91,12 +91,18 @@ pub struct Genre {
     pub watch_s: i64,
 }
 
+/// `[weekday Monday = 0][hour]`, over all time: the shape `charts.js`'s `heatmap` draws.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Heat {
+    pub plays: Vec<Vec<i64>>,
+    pub watch_s: Vec<Vec<i64>>,
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct Habits {
     pub longest_streak_days: i64,
     pub active_days: i64,
-    /// Watch seconds, `[weekday Monday = 0][hour]`, over all time.
-    pub heatmap: Vec<Vec<i64>>,
+    pub heatmap: Heat,
     pub genres: Vec<Genre>,
 }
 
@@ -165,22 +171,27 @@ fn new_token() -> String {
     rand::rng().sample_iter(rand::distr::Alphanumeric).take(TOKEN_LEN).map(char::from).collect()
 }
 
-/// Everything the owner published, built from their id alone.
+/// Everything the owner published, built from their id alone, and only from plays that ended a day
+/// ago or more: a figure that moved the moment somebody pressed play would tell a stranger polling the
+/// page that they are at home watching now.
 pub fn answer(c: &Connection, p: &Published, min_play_s: i64, now: i64) -> Result<PublicProfile> {
+    let until = now - DELAY_S;
     let mut cond = Cond::default();
     cond.add("p.user_id = ?", p.user_id.clone());
     if min_play_s > 0 {
         cond.add("p.duration_s >= ?", min_play_s);
     }
+    cond.raw("p.active = 0");
+    cond.add("p.ended_at <= ?", until);
     let s = p.sections;
     Ok(PublicProfile {
         // Never the Jellyfin user name: that is half of a sign-in.
         name: p.display_name.trim().to_string(),
         avatar: p.show_avatar,
         totals: if s.totals { Some(totals(c, &cond)?) } else { None },
-        habits: if s.habits { Some(habits(c, &p.user_id, &cond, min_play_s)?) } else { None },
-        recap: if s.recap { recap(c, &p.user_id, min_play_s)? } else { None },
-        recent: if s.recent { Some(recent(c, &cond, now)?) } else { None },
+        habits: if s.habits { Some(habits(c, &cond)?) } else { None },
+        recap: if s.recap { recap(c, &p.user_id, min_play_s, until)? } else { None },
+        recent: if s.recent { Some(recent(c, &cond)?) } else { None },
     })
 }
 
@@ -229,24 +240,28 @@ fn totals(c: &Connection, cond: &Cond) -> Result<Totals> {
     })
 }
 
-fn habits(c: &Connection, user_id: &str, cond: &Cond, min_play_s: i64) -> Result<Habits> {
-    // Longest run and days active only: the current streak says whether somebody watched today.
-    let streaks = crate::profile::streaks(c, user_id, min_play_s)?;
-    let heat = stats::heatmap(c, cond)?;
-    let heatmap = serde_json::from_value(heat["watch_s"].clone()).unwrap_or_default();
+fn habits(c: &Connection, cond: &Cond) -> Result<Habits> {
+    // The longest run and the days active; never the current streak, which is about today.
+    let mut stmt = c.prepare(&format!("SELECT DISTINCT date(p.started_at, 'unixepoch', 'localtime') FROM playbacks p {}", cond.sql()))?;
+    let days: std::collections::BTreeSet<chrono::NaiveDate> = stmt
+        .query_map(params_from_iter(cond.args.iter()), |r| r.get::<_, String>(0))?
+        .filter_map(|d| d.ok().and_then(|d| chrono::NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok()))
+        .collect();
+    let longest = crate::recap::longest_run(&days).map_or(0, |(len, _, _)| len);
+    let heatmap = serde_json::from_value(stats::heatmap(c, cond)?).unwrap_or_default();
     let genres = stats::genre_buckets(c, cond)?
         .iter()
         .filter(|g| g["name"] != "Other")
         .take(8)
         .map(|g| Genre { name: text(g, "name").unwrap_or_default(), watch_s: int(g, "watch_s") })
         .collect();
-    Ok(Habits { longest_streak_days: int(&streaks["longest"], "days"), active_days: int(&streaks, "active_days"), heatmap, genres })
+    Ok(Habits { longest_streak_days: longest, active_days: days.len() as i64, heatmap, genres })
 }
 
 /// The ready year's headline, read off the recap and nothing more: not its rank among the other people
 /// on the server, not the apps, not the records with their times of day.
-fn recap(c: &Connection, user_id: &str, min_play_s: i64) -> Result<Option<Recap>> {
-    let r = crate::recap::build(c, Some(user_id.to_string()), min_play_s, "", "")?;
+fn recap(c: &Connection, user_id: &str, min_play_s: i64, until: i64) -> Result<Option<Recap>> {
+    let r = crate::recap::build(c, Some(user_id.to_string()), min_play_s, "", "", Some(until))?;
     if r["empty"] == true {
         return Ok(None);
     }
@@ -270,10 +285,9 @@ fn recap(c: &Connection, user_id: &str, min_play_s: i64) -> Result<Option<Recap>
 
 /// Before this long has passed since a play ended, a stranger is not told about it: "watching now" or
 /// "an hour ago" tells them when somebody is at home.
-const RECENT_DELAY_S: i64 = 86_400;
+const DELAY_S: i64 = 86_400;
 
-fn recent(c: &Connection, cond: &Cond, now: i64) -> Result<Vec<RecentPlay>> {
-    let cond = cond.with_raw("p.active = 0").with("p.ended_at <= ?", now - RECENT_DELAY_S);
+fn recent(c: &Connection, cond: &Cond) -> Result<Vec<RecentPlay>> {
     let sql = format!(
         "SELECT date(p.ended_at, 'unixepoch', 'localtime'),
                 CASE WHEN p.item_type = 'Episode' THEN COALESCE(s.name, p.series_name, p.item_name) ELSE COALESCE(i.name, p.item_name) END,
@@ -647,6 +661,41 @@ mod tests {
         assert_eq!(recent[0].sub.as_deref(), Some("S1E1 · Pilot"));
         assert_eq!(recent[1].name, "Big Buck Bunny");
         assert!(recent.iter().all(|r| r.day.len() == 10), "a day, never a time: {recent:?}");
+    }
+
+    #[test]
+    fn the_weekday_grid_has_the_shape_the_apps_chart_draws() {
+        let c = conn();
+        let p = published(&c, &Edit { sections: Sections { habits: true, ..Sections::default() }, ..all() });
+        let v = serde_json::to_value(answer(&c, &p, 0, NOW).unwrap()).unwrap();
+        let heat = &v["habits"]["heatmap"];
+        for k in ["plays", "watch_s"] {
+            let grid = heat[k].as_array().unwrap_or_else(|| panic!("{k}: {heat}"));
+            assert_eq!(grid.len(), 7);
+            assert!(grid.iter().all(|r| r.as_array().unwrap().len() == 24));
+        }
+        let sum = |k: &str| heat[k].as_array().unwrap().iter().flat_map(|r| r.as_array().unwrap().iter().map(|x| x.as_i64().unwrap())).sum::<i64>();
+        assert_eq!((sum("plays"), sum("watch_s")), (2, 600 + 1200), "the plays of a day ago and before");
+    }
+
+    #[test]
+    fn nothing_a_stranger_sees_moves_while_somebody_is_watching() {
+        // Anything that counts a play the moment it happens tells a stranger polling the page that
+        // somebody is at home watching right now: the totals, the grid, the streak and the year as
+        // much as the recent list. Every section counts only what ended a day ago or more.
+        let c = conn();
+        let p = published(&c, &all());
+        let before = serde_json::to_string(&answer(&c, &p, 0, NOW).unwrap()).unwrap();
+        c.execute_batch(&format!(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, active) VALUES
+               ('live', 'u-alice-0001', 'alice.login', 'm1', 'Big Buck Bunny', 'Movie', {n} - 7200, {n} - 1800, 5400, 0),
+               ('live', 'u-alice-0001', 'alice.login', 's1', 'Pilot', 'Episode', {n} - 600, {n}, 600, 1);",
+            n = NOW
+        ))
+        .unwrap();
+        assert_eq!(serde_json::to_string(&answer(&c, &p, 0, NOW).unwrap()).unwrap(), before);
+        // A day later the evening is history and may be told.
+        assert_ne!(serde_json::to_string(&answer(&c, &p, 0, NOW + DAY).unwrap()).unwrap(), before);
     }
 
     #[test]
