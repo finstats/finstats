@@ -64,3 +64,27 @@ export function noteRunningVersion(v) {
   versionSubs.forEach((fn) => fn());
 }
 export function onVersionSeen(fn) { versionSubs.add(fn); return () => versionSubs.delete(fn); }
+
+// ---- theme: 'device' (nothing stored, app.css follows the device), 'light' or 'dark' — this browser's
+// choice. theme.js applies the stored one before the first paint; this changes it afterwards.
+const THEME_KEY = 'finstats.theme';
+export const THEMES = ['device', 'light', 'dark'];
+export function themeChoice() {
+  const t = store.get(THEME_KEY);
+  return t === 'light' || t === 'dark' ? t : 'device';
+}
+/** Apply a choice, and keep it (Device is the absence of one). */
+export function setTheme(t) {
+  if (t === 'light' || t === 'dark') store.set(THEME_KEY, t); else store.remove(THEME_KEY);
+  applyTheme();
+}
+export function applyTheme() {
+  const t = themeChoice(), root = document.documentElement;
+  if (t === 'device') delete root.dataset.theme; else root.dataset.theme = t;
+  // the browser's own bar: each tag carries one scheme's colour; a choice switches the other off
+  for (const m of document.querySelectorAll('meta[name="theme-color"]')) {
+    m.dataset.media ??= m.media;
+    const light = m.dataset.media.includes('light');
+    m.media = t === 'device' ? m.dataset.media : (t === 'light') === light ? 'all' : 'not all';
+  }
+}

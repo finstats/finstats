@@ -10,8 +10,8 @@ import { replaceQuery } from '../router.js';
 import { dataView, segmented, poster, emptyState, sk, combobox, openModal, avatar } from '../components.js';
 import { showTip, hideTip } from '../charts.js';
 
-const BAR = '#9085e9';      // the single series hue used everywhere else in finstats
-const BAR_PEAK = '#b49dfb'; // emphasis: the extreme, nothing else
+const BAR = 'var(--single)'; // the single series hue used everywhere else in finstats
+const BAR_PEAK = 'var(--peak)'; // emphasis: the extreme, nothing else
 
 // ---------------------------------------------------------------- formatting
 const wdF = new Intl.DateTimeFormat(undefined, { weekday: 'long' });
@@ -426,7 +426,7 @@ function rhythmChapter(d, v) {
   });
 }
 
-const HEAT = ['rgba(255, 255, 255, .055)', '#3a2f6b', '#5b47ad', '#8067e0', '#b9a5fc']; // one hue, dim → bright
+const HEAT = ['var(--rc-heat-0)', 'var(--rc-heat-1)', 'var(--rc-heat-2)', 'var(--rc-heat-3)', 'var(--rc-heat-4)']; // one hue, quiet → busy (app.css)
 const isoDay = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 
 /** Every day of the period as one cell, a week per column. ←/→ move a week, ↑/↓ a day. */

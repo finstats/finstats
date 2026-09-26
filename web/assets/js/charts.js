@@ -1,31 +1,32 @@
-// Hand-rolled SVG charts. Colors follow the entity (Movie is always violet),
-// were validated against the card surface (#262626) with the dataviz validator,
-// and text never wears a series color.
+// Hand-rolled SVG charts. Colors follow the entity (Movie is always series 1), come from app.css' tokens —
+// Obsidian's hues in the dark, washi dyes in the light, each held at 3:1 against its theme's card — and
+// text never wears a series color. A token is a string 'var(--x)', so it goes on through style, never an
+// SVG presentation attribute.
 
 import { h, s, num, bytes, duration, durationExact, dayLabel, dayLabelLong, dayLabelYear, methodLabel, pct, clock } from './dom.js';
 import { sortable, plainTable, chartTable } from './tables.js';
 
 export const TYPES = [
-  { key: 'Movie', label: 'Movies', color: '#9085e9' },
-  { key: 'Episode', label: 'Episodes', color: '#199e70' },
-  { key: 'Audio', label: 'Music', color: '#d95926' },
-  { key: 'Other', label: 'Other', color: '#3987e5' },
+  { key: 'Movie', label: 'Movies', color: 'var(--series-1)' },
+  { key: 'Episode', label: 'Episodes', color: 'var(--series-2)' },
+  { key: 'Audio', label: 'Music', color: 'var(--series-3)' },
+  { key: 'Other', label: 'Other', color: 'var(--series-4)' },
 ];
 // Time in company against time alone: its own two colours, never an entity's.
 export const TOGETHER = [
-  { key: 'together', label: 'Together', color: '#9085e9' },
-  { key: 'alone', label: 'Alone', color: '#5a6275' },
+  { key: 'together', label: 'Together', color: 'var(--single)' },
+  { key: 'alone', label: 'Alone', color: 'var(--alone)' },
 ];
 export const METHODS = [
-  { key: 'DirectPlay', color: '#9085e9' },
-  { key: 'DirectStream', color: '#199e70' },
-  { key: 'Transcode', color: '#d95926' },
+  { key: 'DirectPlay', color: 'var(--series-1)' },
+  { key: 'DirectStream', color: 'var(--series-2)' },
+  { key: 'Transcode', color: 'var(--series-3)' },
 ];
-const SINGLE = '#9085e9';
-const REWIND = '#d95926';   // marks on the retention chart: the orange and blue already validated for the columns
-const SUBS = '#3987e5';
-const HEAT_EMPTY = '#2f2f2f';
-const HEAT_RAMP = ['#3a3358', '#4b3f80', '#5e4ba8', '#7459d0', '#8f6ff0', '#b49dfb'];
+const SINGLE = 'var(--single)';
+const REWIND = 'var(--series-3)';   // marks on the retention chart: two colours already validated for the columns
+const SUBS = 'var(--series-4)';
+const HEAT_EMPTY = 'var(--heat-0)';
+const HEAT_RAMP = ['var(--heat-1)', 'var(--heat-2)', 'var(--heat-3)', 'var(--heat-4)', 'var(--heat-5)', 'var(--heat-6)'];
 const TIME_STEPS = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400, 172800, 360000, 720000, 1800000, 3600000];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAYS_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -159,10 +160,10 @@ export function columnsChart({ daily, bucket = 'day', metric = 'watch_s', series
         const topY = isTop ? y1 : y0 - hgt;
         if (isTop) {
           const r = Math.min(4, bw / 2, Math.max(0, y0 - topY));
-          svg.append(s('path', { fill: seg.t.color, d:
+          svg.append(s('path', { style: { fill: seg.t.color }, d:
             `M${x},${y0} V${topY + r} Q${x},${topY} ${x + r},${topY} H${x + bw - r} Q${x + bw},${topY} ${x + bw},${topY + r} V${y0} Z` }));
         } else {
-          svg.append(s('rect', { x, y: yy, width: bw, height: hgt, fill: seg.t.color }));
+          svg.append(s('rect', { x, y: yy, width: bw, height: hgt, style: { fill: seg.t.color } }));
         }
       });
       if (i % every === 0 && cx + 24 < w) {
@@ -256,7 +257,7 @@ export function heatmap({ data, metric = 'plays' }) {
       cells[d] = [];
       for (let hr = 0; hr < 24; hr++) {
         const v = (grid[d] && grid[d][hr]) || 0;
-        const rect = s('rect', { x: L + hr * (cw + G), y, width: Math.max(1, cw), height: CH, rx: 3, fill: color(v), class: 'heat-cell' });
+        const rect = s('rect', { x: L + hr * (cw + G), y, width: Math.max(1, cw), height: CH, rx: 3, style: { fill: color(v) }, class: 'heat-cell' });
         rect.addEventListener('pointerenter', () => setActive(d, hr));
         cells[d][hr] = rect;
         svg.append(rect);
@@ -338,7 +339,7 @@ export function methodsBar(methods, metric = 'plays') {
   const rest = (methods || []).filter((m) => !METHODS.some((k) => k.key === m.name));
   if (rest.length) {
     const v = rest.reduce((a, b) => a + (b[metric] || 0), 0);
-    if (v > 0) items.push({ label: 'Other', color: '#3987e5', value: v, display: fmtMetric(metric, v) });
+    if (v > 0) items.push({ label: 'Other', color: 'var(--series-4)', value: v, display: fmtMetric(metric, v) });
   }
   return stackedBar(items, { ariaLabel: 'Share of plays by play method' });
 }
@@ -415,7 +416,7 @@ export function simpleColumns({ rows, unit = ['item', 'items'], ariaLabel = 'Col
       if (v > 0) {
         const y0 = y(0), y1 = Math.min(y(v), y0 - 0.75), x = cx - bw / 2;
         const r = Math.min(4, bw / 2, Math.max(0, y0 - y1));
-        svg.append(s('path', { fill: SINGLE, d: `M${x},${y0} V${y1 + r} Q${x},${y1} ${x + r},${y1} H${x + bw - r} Q${x + bw},${y1} ${x + bw},${y1 + r} V${y0} Z` }));
+        svg.append(s('path', { style: { fill: SINGLE }, d: `M${x},${y0} V${y1 + r} Q${x},${y1} ${x + r},${y1} H${x + bw - r} Q${x + bw},${y1} ${x + bw},${y1 + r} V${y0} Z` }));
       }
       if (i % every === 0 && cx + 20 < w) svg.append(s('text', { x: cx, y: H - 6, class: 'tick', 'text-anchor': 'middle' }, d.label));
     });
@@ -497,16 +498,16 @@ export function retentionChart({ runtime_s, bucket_s, curve, rewinds = [], subti
     // The curve holds each value from its edge to the next: a step, and the area under it.
     let d = `M${x(0)},${y(pts[0])}`;
     for (let k = 1; k <= n; k++) d += ` H${x(edge(k))} V${y(pts[k])}`;
-    svg.append(s('path', { class: 'ret-area', fill: SINGLE, d: `${d} V${y(0)} H${x(0)} Z` }));
-    svg.append(s('path', { class: 'ret-line', stroke: SINGLE, d }));
+    svg.append(s('path', { class: 'ret-area', style: { fill: SINGLE }, d: `${d} V${y(0)} H${x(0)} Z` }));
+    svg.append(s('path', { class: 'ret-line', style: { stroke: SINGLE }, d }));
     // The rug: rewinds on the left half of each bucket, subtitle switch-ons on the right.
     const rugTop = M.t + ph + 22, rugBase = H - 4;
     svg.append(s('line', { x1: M.l, x2: w - M.r, y1: rugBase + 0.5, y2: rugBase + 0.5, class: 'grid-line' }));
     for (let i = 0; i < n; i++) {
       const bx = x(edge(i)), bw = Math.max(1, x(edge(i + 1)) - bx), half = Math.max(1, bw / 2 - 0.5);
       const rw = Number(rewinds[i]) || 0, sb = Number(subtitles[i]) || 0;
-      if (rw) svg.append(s('rect', { class: 'ret-mark', fill: REWIND, x: bx, y: rugBase - (rw / markMax) * (rugBase - rugTop), width: half, height: (rw / markMax) * (rugBase - rugTop) }));
-      if (sb) svg.append(s('rect', { class: 'ret-mark', fill: SUBS, x: bx + half + 1, y: rugBase - (sb / markMax) * (rugBase - rugTop), width: half, height: (sb / markMax) * (rugBase - rugTop) }));
+      if (rw) svg.append(s('rect', { class: 'ret-mark', style: { fill: REWIND }, x: bx, y: rugBase - (rw / markMax) * (rugBase - rugTop), width: half, height: (rw / markMax) * (rugBase - rugTop) }));
+      if (sb) svg.append(s('rect', { class: 'ret-mark', style: { fill: SUBS }, x: bx + half + 1, y: rugBase - (sb / markMax) * (rugBase - rugTop), width: half, height: (sb / markMax) * (rugBase - rugTop) }));
     }
     band = s('rect', { class: 'col-band', x: 0, y: M.t, width: 1, height: H - M.t - 4, rx: 3, visibility: 'hidden' });
     svg.append(band);
@@ -591,8 +592,8 @@ export function sparkline(values, { w = 104, hgt = 30 } = {}) {
   const y = (val) => hgt - pad - (val / max) * (hgt - pad * 2);
   const pts = v.map((val, i) => `${x(i).toFixed(1)},${y(val).toFixed(1)}`).join(' ');
   return s('svg', { class: 'spark', width: w, height: hgt, viewBox: `0 0 ${w} ${hgt}`, 'aria-hidden': 'true' },
-    s('polyline', { points: pts, fill: 'none', stroke: '#6a5fb0', 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }),
-    s('circle', { cx: x(v.length - 1), cy: y(v[v.length - 1]), r: 3.5, fill: '#a68af9', stroke: '#262626', 'stroke-width': 2 }));
+    s('polyline', { points: pts, fill: 'none', style: { stroke: 'var(--spark)' }, 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }),
+    s('circle', { cx: x(v.length - 1), cy: y(v[v.length - 1]), r: 3.5, style: { fill: 'var(--peak)', stroke: 'var(--bg-2)' }, 'stroke-width': 2 }));
 }
 
 // ---------------------------------------------------------------- radar

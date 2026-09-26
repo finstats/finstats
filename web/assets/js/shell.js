@@ -3,7 +3,7 @@
 
 import { h, icon, num, relTime, dateTime, mount, logo } from './dom.js';
 import { api, isAbort } from './api.js';
-import { state, resetCaches, hasUnseenVersion, onVersionSeen, noteRunningVersion, can } from './state.js';
+import { state, resetCaches, hasUnseenVersion, onVersionSeen, noteRunningVersion, can, THEMES, themeChoice, setTheme } from './state.js';
 import { hasPipeline } from './pages/pipeline.js';
 import { navigate, onRouteChange } from './router.js';
 import { avatar } from './components.js';
@@ -11,6 +11,9 @@ import { openPalette } from './palette.js';
 
 let shell = null; // {el, content, navLinks, destroy, userId}
 let bare = null;
+
+const THEME_NAME = { device: 'Device', light: 'Light', dark: 'Dark' };
+const THEME_ICON = { device: 'monitor', light: 'sun', dark: 'moon' };
 
 
 function navItems() {
@@ -64,6 +67,16 @@ function buildShell() {
   const searchBtn = h('button', { type: 'button', class: 'search-btn', onClick: () => openPalette(), 'aria-keyshortcuts': 'Control+Space' },
     icon('search', 14), h('span', null, 'Search…'), h('kbd', null, 'Ctrl Space'));
 
+  const themeBtn = h('button', { type: 'button', class: 'icon-btn theme-btn' });
+  const paintTheme = () => {
+    const t = themeChoice(), next = THEMES[(THEMES.indexOf(t) + 1) % THEMES.length];
+    mount(themeBtn, icon(THEME_ICON[t], 15));
+    themeBtn.setAttribute('aria-label', `Theme: ${THEME_NAME[t]}`);
+    themeBtn.title = `Theme: ${THEME_NAME[t]} — switch to ${THEME_NAME[next]}`;
+  };
+  themeBtn.addEventListener('click', () => { setTheme(THEMES[(THEMES.indexOf(themeChoice()) + 1) % THEMES.length]); paintTheme(); });
+  paintTheme();
+
   const logout = h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Sign out', title: 'Sign out' }, icon('logout', 15));
   logout.addEventListener('click', () => signOut(logout));
 
@@ -74,7 +87,7 @@ function buildShell() {
     h('div', { class: 'sidebar-foot' },
       h('a', { class: 'me', href: `/users/${me.id}` }, avatar(me.id, me.name, { size: 26, hasImage: me.has_image }),
         h('span', { class: 'me-text' }, h('span', { class: 'me-name' }, me.name), h('span', { class: 'me-role' }, me.is_admin ? 'Administrator' : 'Viewer'))),
-      logout));
+      themeBtn, logout));
 
   const menuBtn = h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Open menu', 'aria-controls': 'sidebar', 'aria-expanded': 'false' }, icon('menu', 18));
   const topbar = h('header', { class: 'topbar' }, menuBtn, h('a', { class: 'brand', href: '/' }, brandMark(), h('span', { class: 'brand-name' }, 'finstats')),

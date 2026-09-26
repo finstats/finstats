@@ -2,7 +2,7 @@
 
 import { h, icon } from './dom.js';
 import { api, setUnauthorizedHandler } from './api.js';
-import { state, resetCaches } from './state.js';
+import { state, resetCaches, applyTheme } from './state.js';
 import { route, setLayout, start, navigate } from './router.js';
 import { layout } from './shell.js';
 import { startPrefetching } from './prefetch.js';
@@ -68,6 +68,8 @@ setUnauthorizedHandler(() => {
   resetCaches();
   navigate(location.pathname + location.search, { replace: true });
 });
+
+applyTheme();   // theme.js already set the page's colours; this points the browser's own bar at the same choice
 
 async function boot() {
   const app = document.getElementById('app');
