@@ -58,34 +58,54 @@ fn cluster(rows: &[Row], window_s: i64) -> Vec<(i64, i64)> {
 /// started within the window or sitting at nearly the same position. While something is playing,
 /// position is the stronger signal; start times are only as exact as the moment finstats first
 /// noticed each stream. Adds `"group": {"size", "with": [{user_id, user_name}]}` to each member.
+/// How many companions a live stream names; its group's size says how many there are in all.
+pub const COMPANIONS_NAMED: usize = 6;
+
 pub fn mark_live(sessions: &mut [Value], window_s: i64) {
     let near = window_s.max(30);
-    let n = sessions.len();
-    let mut with: Vec<Vec<usize>> = vec![vec![]; n];
-    for a in 0..n {
-        for b in 0..n {
-            let (x, y) = (&sessions[a], &sessions[b]);
-            if a == b || x["item_id"] != y["item_id"] || x["user_id"] == y["user_id"] {
-                continue;
+    // Read what the comparison needs once, as plain values: looking fields up in JSON for every pair of streams is
+    // what made 10,000 streams take 40 s. People become small numbers, so "already counted" is one array lookup.
+    let mut people: HashMap<String, usize> = HashMap::new();
+    let facts: Vec<(usize, Option<i64>, Option<i64>)> = sessions
+        .iter()
+        .map(|s| {
+            let n = people.len();
+            let who = *people.entry(s["user_id"].to_string()).or_insert(n);
+            (who, s["position_s"].as_i64(), s["started_at"].as_i64())
+        })
+        .collect();
+    let mut titles: HashMap<String, Vec<usize>> = HashMap::new();
+    for (i, s) in sessions.iter().enumerate() {
+        titles.entry(s["item_id"].to_string()).or_default().push(i);
+    }
+    let close = |a: Option<i64>, b: Option<i64>, within: i64| matches!((a, b), (Some(p), Some(q)) if (p - q).abs() <= within);
+    let mut counted = vec![usize::MAX; people.len()];
+    let mut groups: Vec<Option<(usize, Vec<usize>)>> = vec![None; sessions.len()];
+    for streams in titles.values() {
+        for &a in streams {
+            let (me, pos, started) = facts[a];
+            counted[me] = a;
+            let (mut size, mut named) = (0usize, Vec::new());
+            for &b in streams {
+                let (who, p, s) = facts[b];
+                if counted[who] == a || !(close(pos, p, near) || close(started, s, window_s)) {
+                    continue;
+                }
+                counted[who] = a;
+                size += 1;
+                if named.len() < COMPANIONS_NAMED {
+                    named.push(b);
+                }
             }
-            let close = |k: &str| matches!((x[k].as_i64(), y[k].as_i64()), (Some(p), Some(q)) if (p - q).abs() <= if k == "position_s" { near } else { window_s });
-            if close("position_s") || close("started_at") {
-                with[a].push(b);
+            if size > 0 {
+                groups[a] = Some((size, named));
             }
         }
     }
-    for (i, others) in with.into_iter().enumerate() {
-        if others.is_empty() {
-            continue;
-        }
-        let mut people: Vec<Value> = vec![];
-        for o in others {
-            let who = json!({ "user_id": sessions[o]["user_id"], "user_name": sessions[o]["user_name"] });
-            if !people.contains(&who) {
-                people.push(who);
-            }
-        }
-        sessions[i]["group"] = json!({ "size": people.len() + 1, "with": people });
+    for (i, group) in groups.into_iter().enumerate() {
+        let Some((size, named)) = group else { continue };
+        let with: Vec<Value> = named.into_iter().map(|o| json!({ "user_id": sessions[o]["user_id"], "user_name": sessions[o]["user_name"] })).collect();
+        sessions[i]["group"] = json!({ "size": size + 1, "with": with });
     }
 }
 
@@ -686,6 +706,23 @@ mod tests {
         assert_eq!(live[0]["group"]["with"][0]["user_name"], "b");
         assert_eq!(live[1]["group"]["with"].as_array().unwrap().len(), 1, "a on two devices is still one person");
         assert!(live[2]["group"].is_null() && live[3]["group"].is_null());
+    }
+
+    #[test]
+    fn a_crowd_on_one_title_is_grouped_quickly_and_named_briefly() {
+        // 10,000 streams of four titles, all started in the same minute. The now-playing list compared every stream
+        // with every other and gave each one every companion by name: 40 s at 10,000 streams, and at 25,000 no answer
+        // after five minutes and 23.7 GB of memory. The size says how many; a few names say who.
+        let mut live: Vec<Value> = (0..10_000)
+            .map(|i| json!({ "user_id": format!("u{i}"), "user_name": format!("viewer{i}"), "item_id": format!("t{}", i % 4), "position_s": i % 3000, "started_at": 1000 + i % 30 }))
+            .collect();
+        let started = std::time::Instant::now();
+        mark_live(&mut live, 60);
+        assert!(started.elapsed() < std::time::Duration::from_secs(3), "grouping 10,000 streams took {:?} (unoptimised build)", started.elapsed());
+        assert_eq!(live[0]["group"]["size"], 2500, "everybody on that title, and nobody on the others");
+        let named = live[0]["group"]["with"].as_array().unwrap();
+        assert_eq!(named.len(), COMPANIONS_NAMED);
+        assert!(named.iter().all(|w| w["user_id"] != "u0"), "a stream is not its own companion");
     }
 
     #[test]
