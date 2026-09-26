@@ -500,7 +500,9 @@ filter only that person's groups)
 `Session` (from `GET /api/now-playing`) gains `"group": {"size": 2, "with": [{"user_id","user_name"}]}` when other
 people are playing the same title right now, having started within `group_window_s` or being within
 `max(group_window_s, 30)` seconds of the same position; absent otherwise. It is computed before the list is narrowed
-to the caller, so someone without `see_everyone` still sees who they are watching with.
+to the caller, so someone without `see_everyone` still sees who they are watching with. `size` counts everybody
+(the stream's own person included); `with` names at most six of the others, so a crowd on one title
+costs a few names per stream instead of the whole crowd.
 
 ---
 

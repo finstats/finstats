@@ -313,7 +313,12 @@ apart) and overlapping ≥ 2 min share `playbacks.group_id` (= lowest play id in
 when a play ends, fully after import/start-up, and fully when the setting changes. "Time together" is the
 second-longest stay in a session. Running streams are grouped separately by `mark_live` (same title,
 different users, starts within the window *or* positions within `max(window, 30)` s), before `/api/now-playing` narrows
-the list to the caller.
+the list to the caller. **Everything here is measured at crowd scale** (the capacity stage in `qa/`): `mark_live` pairs
+streams of one title only, on plain values read once, and names at most `COMPANIONS_NAMED` companions (the size is exact) —
+comparing every stream with every other and listing every companion took 40 s at 10,000 streams and 23.7 GB at 25,000.
+`detect` writes only the plays whose group changed; resetting every group to NULL and writing it back rewrote every grouped
+play of the history at each start, import and play end. The collector finds ended plays with a set (`ended_keys`) and closes
+a pass's ended plays in one transaction, detecting each title once (`close_ended`).
 
 **Search (`fuzzy.rs`).** `/api/search` scores every library title in Rust instead of using `LIKE`: normalised (case,
 accents, punctuation, leading article), every typed word must match some word of the title (exact > prefix > substring
