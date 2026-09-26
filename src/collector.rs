@@ -64,6 +64,13 @@ const FALLBACK_IDLE_S: i64 = 30;
 /// starting again does not change transport twice.
 const PAUSE_DEBOUNCE: u32 = 3;
 const DEVICE_REFRESH: Duration = Duration::from_secs(300);
+
+/// When each device's row was last written, forgetting any not written for longer than [`DEVICE_REFRESH`]: past that
+/// an entry decides nothing, and a device id is the app's own word — one that invented a new id every time would
+/// otherwise grow the map for as long as finstats runs.
+fn forget_stale_devices(seen: &mut HashMap<(String, String), Instant>, now: Instant) {
+    seen.retain(|_, written| now.saturating_duration_since(*written) <= DEVICE_REFRESH);
+}
 /// Plays shorter than this are accidental clicks; they are dropped when they end.
 const MIN_KEEP_S: i64 = 2;
 /// Reads of the session list that must fail in a row before Jellyfin counts as down. At one a second
@@ -1075,6 +1082,7 @@ async fn tick(
 ) -> Result<()> {
     let now = db::now();
     let tick_at = Instant::now();
+    forget_stale_devices(devices_seen, tick_at);
     let mut seen: Vec<String> = Vec::new();
     let mut device_rows: Vec<(String, String, Option<String>, Option<String>, Option<String>, Option<String>)> = vec![];
 
@@ -1242,6 +1250,22 @@ async fn tick(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn devices_not_seen_for_a_while_are_forgotten_so_the_map_cannot_grow_for_ever() {
+        // The map only spares a device's row from being rewritten every second. A device id is the app's own word,
+        // and an app that made up a new one each time would otherwise have grown it for as long as finstats ran.
+        let now = Instant::now();
+        let mut seen: HashMap<(String, String), Instant> = HashMap::new();
+        let long_ago = now.checked_sub(DEVICE_REFRESH * 2).expect("the clock is far enough along");
+        for n in 0..1000 {
+            seen.insert((format!("made-up-{n}"), "u".into()), long_ago);
+        }
+        seen.insert(("tv".into(), "u".into()), now);
+        forget_stale_devices(&mut seen, now);
+        assert_eq!(seen.len(), 1);
+        assert!(seen.contains_key(&("tv".to_string(), "u".to_string())));
+    }
     use serde_json::json;
 
     /// One session, as Jellyfin lists it. `None` for somebody with nothing loaded.
