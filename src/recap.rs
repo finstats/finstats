@@ -111,24 +111,7 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
         None => None,
     };
 
-    let totals = one_json(
-        c,
-        &format!(
-            "SELECT COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT p.item_id) AS distinct_items,
-                    COALESCE(SUM(p.item_type = 'Movie'), 0) AS movies, COALESCE(SUM(p.item_type = 'Episode'), 0) AS episodes,
-                    COALESCE(SUM(p.item_type = 'Audio'), 0) AS tracks,
-                    COALESCE(SUM(CASE WHEN p.item_type = 'Movie' THEN p.duration_s END), 0) AS movie_watch_s,
-                    COALESCE(SUM(CASE WHEN p.item_type = 'Episode' THEN p.duration_s END), 0) AS episode_watch_s,
-                    COALESCE(SUM(CASE WHEN p.item_type = 'Audio' THEN p.duration_s END), 0) AS track_watch_s,
-                    COUNT(DISTINCT CASE WHEN p.item_type = 'Episode' THEN COALESCE(p.series_id, p.series_name) END) AS series_count,
-                    COUNT(DISTINCT date(p.started_at, 'unixepoch', 'localtime')) AS active_days,
-                    COUNT(DISTINCT date(p.started_at, 'unixepoch', 'localtime') || p.user_id) AS user_days
-             FROM playbacks p {}",
-            w.wh
-        ),
-        &w.args,
-    )?
-    .unwrap_or_default();
+    let totals = totals_in(c, &w.wh, &w.args)?;
     let empty = totals.get("plays").and_then(Value::as_i64).unwrap_or(0) == 0;
 
     let mut out = json!({
@@ -204,6 +187,29 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
 fn default_year(this_year: i64, month: i64, years_with_plays: &[i64]) -> i64 {
     let ready = if month == 12 { this_year } else { this_year - 1 };
     if years_with_plays.contains(&ready) { ready } else { years_with_plays.first().copied().unwrap_or(ready) }
+}
+
+/// A period's headline numbers over any WHERE clause on `playbacks p`: the year asked for, or the one
+/// before it for the comparison.
+fn totals_in(c: &Connection, wh: &str, args: &[SqlValue]) -> Result<Map<String, Value>> {
+    Ok(one_json(
+        c,
+        &format!(
+            "SELECT COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT p.item_id) AS distinct_items,
+                    COALESCE(SUM(p.item_type = 'Movie'), 0) AS movies, COALESCE(SUM(p.item_type = 'Episode'), 0) AS episodes,
+                    COALESCE(SUM(p.item_type = 'Audio'), 0) AS tracks,
+                    COALESCE(SUM(CASE WHEN p.item_type = 'Movie' THEN p.duration_s END), 0) AS movie_watch_s,
+                    COALESCE(SUM(CASE WHEN p.item_type = 'Episode' THEN p.duration_s END), 0) AS episode_watch_s,
+                    COALESCE(SUM(CASE WHEN p.item_type = 'Audio' THEN p.duration_s END), 0) AS track_watch_s,
+                    COUNT(DISTINCT CASE WHEN p.item_type = 'Episode' THEN COALESCE(p.series_id, p.series_name) END) AS series_count,
+                    COUNT(DISTINCT date(p.started_at, 'unixepoch', 'localtime')) AS active_days,
+                    COUNT(DISTINCT date(p.started_at, 'unixepoch', 'localtime') || p.user_id) AS user_days
+             FROM playbacks p {}",
+            wh
+        ),
+        args,
+    )?
+    .unwrap_or_default())
 }
 
 fn rank(c: &Connection, w: &Window, user: Option<&str>, min_play_s: i64) -> Result<Value> {

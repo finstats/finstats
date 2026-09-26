@@ -49,9 +49,26 @@ pub fn streaks(conn: &Connection, user_id: &str, min_play_s: i64) -> Result<Valu
     }))
 }
 
-fn user_shows(conn: &Connection, user_id: &str) -> Result<Vec<Value>> {
-    // Episodes that exist as files (no missing or unaired ones, no specials) of every show this
-    // person has touched, each with what is known about it from three sources.
+/// One episode of a show somebody has touched, as far as they have got with it: episodes that exist
+/// as files (no missing or unaired ones, no specials), each with what three sources know about it.
+/// Shared by the profile's show progress and the recap's finished shows, so the two agree on "seen".
+pub(crate) struct Episode {
+    pub series_id: String,
+    pub series_name: String,
+    pub series_year: Option<i64>,
+    pub series_removed: bool,
+    pub id: String,
+    pub season: i64,
+    pub number: Option<i64>,
+    pub name: String,
+    /// "seen", "started" or "none"
+    pub state: &'static str,
+    /// For a seen episode: "played", "jellyfin" or "manual", the first that applies.
+    pub source: Option<&'static str>,
+    pub last_at: Option<i64>,
+}
+
+pub(crate) fn episodes(conn: &Connection, user_id: &str) -> Result<Vec<Episode>> {
     let mut stmt = conn.prepare(
         "WITH mine AS (
             SELECT p.item_id, MAX(p.ended_at) AS last_at,
@@ -77,12 +94,9 @@ fn user_shows(conn: &Connection, user_id: &str) -> Result<Vec<Value>> {
          ORDER BY s.id, COALESCE(e.parent_index_number, 1), COALESCE(e.index_number, 9999), e.name",
     )?;
     let mut rows = stmt.query([user_id])?;
-    let mut shows: Vec<Value> = vec![];
+    let mut out = vec![];
     while let Some(r) = rows.next()? {
-        let series_id: String = r.get(0)?;
-        let season: i64 = r.get(5)?;
         let frac: Option<f64> = r.get(8)?;
-        let last_at: Option<i64> = r.get(9)?;
         let (jellyfin, manual): (bool, bool) = (r.get::<_, i64>(10)? != 0, r.get(11)?);
         let played = frac.is_some_and(|f| f >= SEEN_AT);
         let (state, source) = match (played, jellyfin, manual, frac) {
@@ -92,28 +106,38 @@ fn user_shows(conn: &Connection, user_id: &str) -> Result<Vec<Value>> {
             (_, _, _, Some(_)) => ("started", None),
             _ => ("none", None),
         };
-        if shows.last().is_none_or(|s| s["id"] != series_id.as_str()) {
+        out.push(Episode {
+            series_id: r.get(0)?, series_name: r.get(1)?, series_year: r.get(2)?, series_removed: r.get::<_, i64>(3)? != 0,
+            id: r.get(4)?, season: r.get(5)?, number: r.get(6)?, name: r.get(7)?, state, source, last_at: r.get(9)?,
+        });
+    }
+    Ok(out)
+}
+
+fn user_shows(conn: &Connection, user_id: &str) -> Result<Vec<Value>> {
+    let mut shows: Vec<Value> = vec![];
+    for e in episodes(conn, user_id)? {
+        if shows.last().is_none_or(|s| s["id"] != e.series_id.as_str()) {
             shows.push(json!({
-                "id": series_id, "name": r.get::<_, String>(1)?, "year": r.get::<_, Option<i64>>(2)?, "removed": r.get::<_, i64>(3)? != 0,
-                "image_item_id": series_id, "total": 0, "seen": 0, "started": 0, "last_played_at": null, "seasons": [],
+                "id": e.series_id, "name": e.series_name, "year": e.series_year, "removed": e.series_removed,
+                "image_item_id": e.series_id, "total": 0, "seen": 0, "started": 0, "last_played_at": null, "seasons": [],
             }));
         }
         let show = shows.last_mut().expect("just pushed");
-        if show["seasons"].as_array().and_then(|a| a.last()).is_none_or(|s| s["season_number"] != season) {
-            show["seasons"].as_array_mut().unwrap().push(json!({ "season_number": season, "total": 0, "seen": 0, "episodes": [] }));
+        if show["seasons"].as_array().and_then(|a| a.last()).is_none_or(|s| s["season_number"] != e.season) {
+            show["seasons"].as_array_mut().unwrap().push(json!({ "season_number": e.season, "total": 0, "seen": 0, "episodes": [] }));
         }
         let bump = |v: &mut Value, key: &str| v[key] = json!(v[key].as_i64().unwrap_or(0) + 1);
         bump(show, "total");
-        if state == "seen" { bump(show, "seen") } else if state == "started" { bump(show, "started") }
-        if last_at > show["last_played_at"].as_i64() {
-            show["last_played_at"] = json!(last_at);
+        if e.state == "seen" { bump(show, "seen") } else if e.state == "started" { bump(show, "started") }
+        if e.last_at > show["last_played_at"].as_i64() {
+            show["last_played_at"] = json!(e.last_at);
         }
         let s = show["seasons"].as_array_mut().unwrap().last_mut().unwrap();
         bump(s, "total");
-        if state == "seen" { bump(s, "seen") }
+        if e.state == "seen" { bump(s, "seen") }
         s["episodes"].as_array_mut().unwrap().push(json!({
-            "id": r.get::<_, String>(4)?, "episode_number": r.get::<_, Option<i64>>(6)?, "name": r.get::<_, String>(7)?,
-            "state": state, "source": source,
+            "id": e.id, "episode_number": e.number, "name": e.name, "state": e.state, "source": e.source,
         }));
     }
     // Shows where nothing is seen or started would only be noise (a Jellyfin flag on a since-removed episode, say).
