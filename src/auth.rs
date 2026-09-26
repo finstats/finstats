@@ -219,16 +219,24 @@ pub fn mint_key(c: &Connection, user_id: &str, name: &str, scope: KeyScope, expi
     Ok((c.last_insert_rowid(), token))
 }
 
-/// A session token to its user, as it was at sign-in; grants and settings read now.
+/// A session token to its user **as they are now**, exactly like a key: a session lives thirty days, and
+/// one minted for an administrator whom Jellyfin has since demoted, disabled or deleted must not go on
+/// acting for who they were. Only before the users read has written their row at all (the wizard signs
+/// its administrator in first) is the session what Jellyfin said at sign-in.
 pub(crate) fn resolve_session_in(c: &Connection, settings: &crate::state::Settings, token: &str, now: i64) -> anyhow::Result<Option<AuthUser>> {
-    let user = c
+    let row = c
         .query_row(
-            "SELECT user_id, user_name, is_admin FROM sessions WHERE token_hash = ?1 AND expires_at > ?2",
+            "SELECT s.user_id, s.user_name, COALESCE(u.is_admin, s.is_admin), COALESCE(u.is_disabled, 0), COALESCE(u.removed, 0)
+             FROM sessions s LEFT JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?1 AND s.expires_at > ?2",
             params![hash_token(token), now],
-            |r| Ok(AuthUser { id: r.get(0)?, name: r.get(1)?, is_admin: r.get::<_, i64>(2)? != 0, perms: Perms::default(), credential: Credential::Session, ip: None }),
+            |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)? != 0, r.get::<_, i64>(3)? != 0, r.get::<_, i64>(4)? != 0)),
         )
         .optional()?;
-    let Some(mut user) = user else { return Ok(None) };
+    let Some((id, name, is_admin, disabled, removed)) = row else { return Ok(None) };
+    if disabled || removed {
+        return Ok(None);
+    }
+    let mut user = AuthUser { id, name, is_admin, perms: Perms::default(), credential: Credential::Session, ip: None };
     let grants = if user.is_admin { vec![] } else { stored_grants(c, &user.id)? };
     let Some(perms) = effective(user.is_admin, &grants, settings) else { return Ok(None) };
     user.perms = perms;
@@ -432,6 +440,19 @@ async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms
     json!({ "id": id, "name": name, "is_admin": is_admin, "has_image": has_image, "permissions": perms, "features": crate::services::features(app) })
 }
 
+/// What Jellyfin has just said about somebody it let in, written to their users row: a session reads that
+/// row live, so it must never be older than the sign-in it serves. Without this, a row the users read has
+/// not reached yet — written by a Jellystat import from the file's own word for who administers Jellyfin —
+/// would make a session an administrator's that Jellyfin never did.
+pub(crate) fn remember_sign_in(c: &Connection, user_id: &str, user_name: &str, is_admin: bool, now: i64) -> anyhow::Result<()> {
+    c.execute(
+        "INSERT INTO users(id, name, is_admin, is_disabled, removed, updated_at) VALUES (?1, ?2, ?3, 0, 0, ?4)
+         ON CONFLICT(id) DO UPDATE SET name = excluded.name, is_admin = excluded.is_admin, is_disabled = 0, removed = 0",
+        params![user_id, user_name, is_admin, now],
+    )?;
+    Ok(())
+}
+
 async fn start_session(
     app: &App,
     headers: &HeaderMap,
@@ -451,6 +472,7 @@ async fn start_session(
         .call(move |c| {
             let now = db::now();
             c.execute("DELETE FROM sessions WHERE expires_at <= ?1", [now])?;
+            remember_sign_in(c, &uid, &uname, is_admin, now)?;
             c.execute(
                 "INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at, ip, user_agent)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
@@ -764,6 +786,45 @@ mod key_tests {
         assert_eq!(resolve_key_in(&c, &open(), &admin, 1000).unwrap().unwrap().perms, Perms::ALL);
         c.execute_batch("UPDATE users SET is_admin = 0 WHERE id = 'u1'").unwrap();
         assert_eq!(resolve_key_in(&c, &open(), &admin, 1000).unwrap().unwrap().perms, Perms::default(), "demoted, the key demotes with them");
+    }
+
+    #[test]
+    fn a_session_follows_the_user_as_jellyfin_has_them_now() {
+        let c = conn();
+        c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u1', 'alice', 1, 1, 9999999999)", [hash_token("alice-cookie")]).unwrap();
+        assert_eq!(resolve_session_in(&c, &open(), "alice-cookie", 1000).unwrap().unwrap().perms, Perms::ALL);
+        c.execute_batch("UPDATE users SET is_admin = 0 WHERE id = 'u1'").unwrap();
+        let demoted = resolve_session_in(&c, &open(), "alice-cookie", 1000).unwrap().expect("a demoted administrator may still sign in");
+        assert!(!demoted.is_admin && demoted.perms == Perms::default(), "demoted in Jellyfin, the session signed in as an administrator demotes with them");
+        c.execute_batch("UPDATE users SET is_disabled = 1 WHERE id = 'u1'").unwrap();
+        assert!(resolve_session_in(&c, &open(), "alice-cookie", 1000).unwrap().is_none(), "disabled in Jellyfin");
+        c.execute_batch("UPDATE users SET is_disabled = 0, removed = 1 WHERE id = 'u1'").unwrap();
+        assert!(resolve_session_in(&c, &open(), "alice-cookie", 1000).unwrap().is_none(), "removed from Jellyfin");
+        // The wizard signs its administrator in before the first read of the users has written their row:
+        // until there is one, the session is what Jellyfin said at sign-in.
+        c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u9', 'carol', 1, 1, 9999999999)", [hash_token("carol-cookie")]).unwrap();
+        let first = resolve_session_in(&c, &open(), "carol-cookie", 1000).unwrap().expect("no users row yet");
+        assert!(first.is_admin && first.name == "carol");
+    }
+
+    #[test]
+    fn signing_in_writes_down_what_jellyfin_just_said_about_them() {
+        let c = conn();
+        // A Jellystat import writes a row for somebody the users read has not reached yet, with the
+        // file's word for whether they administer Jellyfin. The file is not Jellyfin.
+        c.execute_batch("INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u3', 'dave', 1, 0);").unwrap();
+        remember_sign_in(&c, "u3", "dave", false, 1000).unwrap();
+        c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u3', 'dave', 0, 1, 9999999999)", [hash_token("dave-cookie")]).unwrap();
+        assert!(!resolve_session_in(&c, &open(), "dave-cookie", 1000).unwrap().unwrap().is_admin, "an imported row crowned somebody Jellyfin did not");
+        // Jellyfin has just let them in, so they are there and not disabled, whatever the last read said.
+        c.execute_batch("UPDATE users SET removed = 1, is_disabled = 1 WHERE id = 'u2'").unwrap();
+        remember_sign_in(&c, "u2", "bob", false, 1000).unwrap();
+        let bob: (i64, i64, i64) = c.query_row("SELECT is_admin, is_disabled, removed FROM users WHERE id = 'u2'", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap();
+        assert_eq!(bob, (0, 0, 0));
+        // And somebody the read has never seen gets a row of their own.
+        remember_sign_in(&c, "u9", "carol", true, 1000).unwrap();
+        let carol: (String, i64) = c.query_row("SELECT name, is_admin FROM users WHERE id = 'u9'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        assert_eq!(carol, ("carol".to_string(), 1));
     }
 
     #[test]
