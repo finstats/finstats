@@ -300,51 +300,55 @@ async fn refresh_server_info(app: &App) {
 
 // ---------------------------------------------------------------- users
 
+/// One read of Jellyfin's users, written down. `Some(known)` = refused: the read came back empty where
+/// finstats knows people, which is a broken read, not everybody deleted.
+pub(crate) fn store_users(c: &mut Connection, users: &[Value], shrink_ok: bool, now: i64) -> Result<Option<i64>> {
+    let tx = c.transaction()?;
+    {
+        let mut stmt = tx.prepare(
+            "INSERT INTO users(id, name, is_admin, is_disabled, image_tag, last_login_at, last_activity_at, removed, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8)
+             ON CONFLICT(id) DO UPDATE SET name = excluded.name, is_admin = excluded.is_admin,
+                is_disabled = excluded.is_disabled, image_tag = excluded.image_tag,
+                last_login_at = excluded.last_login_at, last_activity_at = excluded.last_activity_at,
+                removed = 0, updated_at = excluded.updated_at",
+        )?;
+        for u in users {
+            let Some(id) = u["Id"].as_str() else { continue };
+            stmt.execute(params![
+                norm_id(id),
+                u["Name"].as_str().unwrap_or("Unknown"),
+                u["Policy"]["IsAdministrator"].as_bool().unwrap_or(false),
+                u["Policy"]["IsDisabled"].as_bool().unwrap_or(false),
+                opt_str(&u["PrimaryImageTag"]),
+                u["LastLoginDate"].as_str().and_then(parse_ts),
+                u["LastActivityDate"].as_str().and_then(parse_ts),
+                now,
+            ])?;
+        }
+    }
+    // The same guard as libraries and items: an empty /Users where finstats knows people is a
+    // broken read, not everyone deleted — do not mark them all removed.
+    let current: i64 = tx.query_row("SELECT COUNT(*) FROM users WHERE removed = 0", [], |r| r.get(0))?;
+    if !shrink_ok && whole_set_vanished(users.len(), current) {
+        tx.rollback()?;
+        return Ok(Some(current));
+    }
+    // Removed = not in this read, by id. Comparing `updated_at` with a clock in whole seconds could not
+    // tell a row this read wrote from one the read before it wrote in the same second, and a session now
+    // ends with its user's removal, so a deleted user must be seen as deleted by the read that missed them.
+    let seen: Vec<String> = users.iter().filter_map(|u| u["Id"].as_str()).map(norm_id).collect();
+    tx.execute("UPDATE users SET removed = 1 WHERE removed = 0 AND id NOT IN (SELECT value FROM json_each(?1))", [serde_json::to_string(&seen)?])?;
+    tx.commit()?;
+    Ok(None)
+}
+
 async fn sync_users(app: &App, jf: &Jellyfin) -> Result<String> {
     app.tasks.update("sync_users", "Fetching users", None);
     let users = jf.users().await?;
     let count = users.len();
     let shrink_ok = allow_shrink();
-    let refused = app
-        .db
-        .call(move |c| {
-            let now = db::now();
-            let tx = c.transaction()?;
-            {
-                let mut stmt = tx.prepare(
-                    "INSERT INTO users(id, name, is_admin, is_disabled, image_tag, last_login_at, last_activity_at, removed, updated_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8)
-                     ON CONFLICT(id) DO UPDATE SET name = excluded.name, is_admin = excluded.is_admin,
-                        is_disabled = excluded.is_disabled, image_tag = excluded.image_tag,
-                        last_login_at = excluded.last_login_at, last_activity_at = excluded.last_activity_at,
-                        removed = 0, updated_at = excluded.updated_at",
-                )?;
-                for u in &users {
-                    let Some(id) = u["Id"].as_str() else { continue };
-                    stmt.execute(params![
-                        norm_id(id),
-                        u["Name"].as_str().unwrap_or("Unknown"),
-                        u["Policy"]["IsAdministrator"].as_bool().unwrap_or(false),
-                        u["Policy"]["IsDisabled"].as_bool().unwrap_or(false),
-                        opt_str(&u["PrimaryImageTag"]),
-                        u["LastLoginDate"].as_str().and_then(parse_ts),
-                        u["LastActivityDate"].as_str().and_then(parse_ts),
-                        now,
-                    ])?;
-                }
-            }
-            // The same guard as libraries and items: an empty /Users where finstats knows people is a
-            // broken read, not everyone deleted — do not mark them all removed.
-            let current: i64 = tx.query_row("SELECT COUNT(*) FROM users WHERE removed = 0", [], |r| r.get(0))?;
-            if !shrink_ok && whole_set_vanished(count, current) {
-                tx.rollback()?;
-                return Ok(Some(current));
-            }
-            tx.execute("UPDATE users SET removed = 1 WHERE updated_at < ?1", [now])?;
-            tx.commit()?;
-            Ok(None)
-        })
-        .await?;
+    let refused = app.db.call(move |c| store_users(c, &users, shrink_ok, db::now())).await?;
     if let Some(current) = refused {
         let msg = format!(
             "Jellyfin returned {count} user(s) where finstats knows {current}. Refusing to mark the missing ones removed — this looks like a Jellyfin change or a bad read. Nothing was changed."
@@ -872,6 +876,25 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_user_missing_from_the_read_is_removed_even_by_a_read_in_the_same_second() {
+        let mut c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let user = |id: &str, name: &str| json!({ "Id": id, "Name": name, "Policy": { "IsAdministrator": false, "IsDisabled": false } });
+        let removed = |c: &Connection, id: &str| c.query_row("SELECT removed FROM users WHERE id = ?1", [id], |r| r.get::<_, i64>(0)).unwrap();
+        assert_eq!(store_users(&mut c, &[user("a1", "alice"), user("b2", "bob")], false, 100).unwrap(), None);
+        // bob is deleted in Jellyfin and the next read lands in the same second as the last: comparing
+        // whole-second timestamps, bob's row looked as fresh as alice's and was never marked removed.
+        assert_eq!(store_users(&mut c, &[user("a1", "alice")], false, 100).unwrap(), None);
+        assert_eq!((removed(&c, "a1"), removed(&c, "b2")), (0, 1), "the read did not say bob is gone");
+        store_users(&mut c, &[user("a1", "alice"), user("b2", "bob")], false, 101).unwrap();
+        assert_eq!(removed(&c, "b2"), 0, "back in Jellyfin, back in finstats");
+        assert_eq!(store_users(&mut c, &[], false, 102).unwrap(), Some(2), "an empty read is refused, not everybody removed");
+        assert_eq!(removed(&c, "a1"), 0);
+    }
 
     #[test]
     fn re_linking_a_renamed_item_does_not_leave_the_same_evening_twice() {
