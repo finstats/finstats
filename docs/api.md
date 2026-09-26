@@ -1325,3 +1325,43 @@ channel, whose), `backup_made` (no actor when the schedule wrote it) / `backup_r
 `play_deleted`, `alert_resolved` / `alert_reopened`. A row is kept a year, is written even when the action it records
 failed (`outcome: "failed"`), and never fails the action for not being written. The `audit` table is part of
 backups; `api_keys` is not.
+
+# v1.11 — Public profiles and shareable cards
+
+The first answers given without an account. They are built by `public.rs` from what one person published and nothing
+else, and each of them answers the same `404 {"error": "Profile not found"}` when the server switch (`public_profiles`,
+off by default, Jellyfin administrators only) is off, the link is unknown or was reset, the profile is unpublished or was
+taken down, or its owner was removed, disabled or may no longer sign in. Every figure counts only plays that **ended at
+least a day before** (`active = 0`, `ended_at <= now − 86400`), recent plays included. Responses carry
+`X-Robots-Tag: noindex, nofollow`.
+
+## Without an account
+
+| Method | Path | Response |
+|---|---|---|
+| GET | `/u/{token}` | The page, HTML, with its link preview (`og:title`, `og:description`, `og:image` = the profile card; absolute when `public_url` is set). |
+| GET | `/u/{token}/card.png?kind=profile\|recap` | A 1200×630 PNG. `profile` needs `totals` or `habits` published, `recap` needs `recap`. `Cache-Control: public, max-age=3600`. |
+| GET | `/api/public/{token}` | `{name, avatar, totals?, habits?, recap?, recent?}` — an unpublished section is absent, not empty. |
+| GET | `/api/public/{token}/img/{item_id}?w=` | A poster, only for an `image` the answer lists. |
+| GET | `/api/public/{token}/avatar` | The owner's picture, only when `avatar` is true. |
+
+`totals`: `{plays, watch_s, movies, episodes, tracks, top_series, top_movies, top_tracks}`, each list up to five
+`{name, sub, plays, watch_s, image}`. `habits`: `{longest_streak_days, active_days, heatmap: {plays, watch_s}, genres: [{name,
+watch_s}]}` — the grid is `[weekday, Monday = 0][hour]`, the shape `charts.js` draws; there is no current streak.
+`recap` (the ready year): `{year, plays, watch_s, active_days, persona: {title, line}|null, top_series, top_movie,
+top_genre, longest_streak_days}` — never the rank among other people, the apps or the records. `recent`: up to ten
+`{day: "YYYY-MM-DD", name, sub, image}`. `name` is the name the owner typed, `""` for none; never the Jellyfin login name.
+
+## The owner's side (a session; a key is refused `403`)
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| GET | `/api/me/public-profile` | – | `{server_enabled, published, url, display_name, show_avatar, sections: {totals, habits, recap, recent}}`; `url` is `null` until the first save. |
+| PUT | `/api/me/public-profile` | `{published, display_name (≤ 60), show_avatar, sections}` | The same; the first save mints the link. `409` while the server switch is off. |
+| POST | `/api/me/public-profile/reset` | – | The same, with a new `url`; the old link is gone. `404` before the first save. |
+| GET | `/api/public-profiles` 🔒 *Jellyfin administrators* | – | `{enabled, profiles: [{user_id, user_name, display_name, published, sections, created_at, updated_at}]}` |
+| DELETE | `/api/public-profiles/{user_id}` 🔒 *Jellyfin administrators* | – | `{ok: true}`: unpublished, the owner's choices kept. `404` when it was not published. |
+
+`/api/auth/me` gains `user.features.public_profiles`. Audit kinds: `profile_published`, `profile_changed`,
+`profile_unpublished`, `profile_link_reset`. `public_profiles` is not in backups: a restore never brings a link back.
+

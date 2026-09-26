@@ -351,6 +351,20 @@ since a subscribed calendar syncs through somebody's cloud). Minting or revoking
 never the caller's error, `record_now` for a row that must land before what it announces — an import's transaction); a new
 write path gets a kind and one `record`, never a second log. `api_keys` is never in a backup; `audit` is.
 
+**Public profiles (`public.rs`, `card.rs`, `/u/:token`, 2.0) are the one read without an account, and they never go
+through `AuthUser` or `Scope`.** A `Published` names one person and the sections they switched on; `answer` builds each
+of those from that id alone and returns typed structs, never `row_json`, so a column added to a shared query cannot reach
+a stranger. Devices, clients, play methods, addresses, places, paths, other people and the login name are never produced.
+**Every section counts only plays that ended a day ago or more** (`DELAY_S`; `recap::build` takes `until` for it): the
+first version delayed only the recent list, and the totals, grid and streak then moved the moment somebody pressed play.
+`lookup` answers `None` for every reason there is nothing (switch off, unknown or reset token, unpublished, owner removed,
+disabled or without `sign_in` via `auth::effective`) and all of them are the same 404. The image routes serve only
+`listed_images`. Cards are SVG built from the `PublicProfile` alone and rasterised with resvg using Inter TTFs in
+`fonts/card/` (the web woff2 cannot be read; no system font, and `<image>` may only be the card's own `data:`), cached by
+link + kind + a hash of what they say, two drawn at once. `charts.js` cannot run server-side, so the card's grid copies
+its colours; change them together. The page (`web/public.html` + `js/public/profile.js`) is outside the app: no
+state, api.js, router or prefetch, so nothing there can send a stranger to /login. `public_profiles` is not in backups.
+
 **Permissions.** `AuthUser.perms` (`Perms`: `see_everyone`, `see_network`, `see_server`, `see_downloads`, `notify`, `manage`) is rebuilt on every
 request from `user_permissions` ∪ `Settings.default_permissions`; `sign_in` (or `allow_user_login`) gates access at
 all; Jellyfin admins always get `Perms::ALL`. Grants only add, there are no denies. Extractors: `AuthUser` (anyone

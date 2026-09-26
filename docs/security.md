@@ -15,6 +15,20 @@ hashed; they can be given an expiry, are revoked with one click (an administrato
 anyone's), and a request made with a key can neither make nor revoke keys, so a leaked key has no
 successors. A key travels in the `Authorization` header — with one exception, next.
 
+**Public profiles (the one read without an account).** Everything else finstats answers needs a
+session or a key. The exception is `/u/<link>` and the API behind it, and it is closed until a Jellyfin
+administrator switches public profiles on (Settings → Public profile) and a person then publishes theirs.
+A published page is built by its own code, which starts from nothing and adds only the sections its owner
+switched on — never from the signed-in statistics with parts taken away — and it can never carry a device,
+a client or app, a play method, an IP address, a place, a file path, another person, the Jellyfin login
+name or when somebody was last seen. Every figure on it counts only plays that ended at least a day
+before, so watching a page tells a stranger nothing about who is at home now. Posters are served only for
+the titles the page shows. The link is 22 random characters; resetting it, unpublishing, an administrator
+taking it down, the owner losing the right to sign in and the server switch each close it, and all of them
+answer the same "not found" as a link that never existed. Publishing needs a session — a key cannot make
+anything public — and every publish, change, reset and take-down is in the audit log. Pages ask search
+engines not to index them; a chat app that already fetched a card may keep it for up to an hour.
+
 **Who sees what.** Jellyfin administrators see everything. Other users can only sign in when you
 allow it — for everyone, or person by person — and then start with their own statistics only: no
 other people's activity, no IP addresses, no device ids, no file paths, no server log, no settings.

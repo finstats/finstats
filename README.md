@@ -154,8 +154,19 @@ biggest binge, longest daily streak, most rewatched title, the oldest film you w
 Each person sees only their own. Administrators can open another person's recap; nobody else can,
 whatever permissions they hold, and there is no recap of the whole server.
 
+### Share it, if you want to
+
+A person can publish part of their profile at a link that opens without an account — totals and top
+titles, streaks and when they watch, the year, the last few plays — and every link comes with a card
+that chat apps show when it is pasted. It is off until an administrator allows it, each part is off
+until its owner turns it on, and nothing on it is newer than a day, so a published page never says
+who is watching right now. Devices, addresses, apps and file paths are never published, whatever is
+switched on. The link is random, and resetting it is how you take back one already sent.
+
 ### Private by design
 - **Sign in with your Jellyfin account.** No new passwords, and finstats never stores yours.
+- **Nothing is readable without an account** unless an administrator allows public profiles and a person
+  publishes one — and then only what that person switched on, a day late, never a device, address or path.
 - **You decide who sees what.** Let family and friends sign in if you like. By default they get
   their own statistics and recap and nothing else. From there you grant more, per person or for
   everyone: other people's activity, network details like IP addresses, the server pages, or
