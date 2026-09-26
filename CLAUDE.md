@@ -586,8 +586,15 @@ anchor. Sections hide themselves (`visible`) rather than explaining why they are
 Esc is handled globally in `shell.js` (steps back out of `/libraries/:id`, `/users/:id`,
 `/items/:id`); overlays must keep calling `stopPropagation()` on their own Esc.
 Each screen is held to the UX patterns from <https://uxgoodpatterns.com>. A generated copy, `ux-rules.md`, may sit in the working
-tree for reference; it is someone else's work, is git-ignored and must never be committed. The look is Obsidian's dark theme via the tokens at the top of
-`app.css`; categorical chart colours follow the entity (Movie/Episode/Audio/Other), never rank.
+tree for reference; it is someone else's work, is git-ignored and must never be committed. The look is Obsidian's in the dark and washi paper in the light (cream ground, ink text, a vermilion seal for
+the accent, nando for quantities), via the tokens at the top of `app.css`; categorical chart colours follow the entity (Movie/Episode/Audio/Other), never rank.
+**Every colour is a token, and every token is `light-dark(light, dark)`** — one declaration, two themes. A colour literal
+anywhere else (a CSS rule, a chart's `fill`, a `style.background` in JS) is right in one theme and wrong in the other; the QA
+light sweep measures text contrast on every page and fails on it. JS reaches a token as the string `'var(--x)'` through `style`
+(never an SVG presentation attribute). With nothing chosen the device decides (`color-scheme: light dark`); the sidebar's
+theme button cycles Device → Light → Dark and keeps the choice in `localStorage` (`finstats.theme`, absent = Device), which
+`theme.js` — a classic, blocking script in both pages' `<head>` — puts on `<html data-theme>` before the first paint. The
+server-rendered profile cards (`card.rs`) stay dark.
 
 ## Local QA suite
 
