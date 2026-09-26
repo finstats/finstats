@@ -113,6 +113,25 @@ async fn announce_new_items(app: &App) {
     }
 }
 
+/// In December, each person's year in review is ready: say so, once. Outside December it reads nothing.
+async fn announce_ready_year(app: &App) {
+    let bus_app = app.clone();
+    let done = app.db.call(move |c| {
+        let today: String = c.query_row("SELECT date('now', 'localtime')", [], |r| r.get(0))?;
+        let today = chrono::NaiveDate::parse_from_str(&today, "%Y-%m-%d")?;
+        if chrono::Datelike::month(&today) != 12 {
+            return Ok(0);
+        }
+        let bus = crate::notify::Fanout::of(c, &bus_app)?;
+        crate::recap::announce_ready(c, &bus, today)
+    }).await;
+    match done {
+        Ok(n) if n > 0 => app.notify_wake.notify_one(),
+        Ok(_) => {}
+        Err(e) => tracing::warn!("could not announce the year in review: {e:#}"),
+    }
+}
+
 const LIGHT_EVERY_S: i64 = 900;
 const REQUESTS_EVERY_S: i64 = 300;
 const SCAN_CHECK_EVERY_S: i64 = 300;
@@ -174,6 +193,7 @@ pub async fn scheduler(app: App) {
                 // Users, the activity log and server details are tiny; keep them fresh.
                 last_light = now;
                 refresh_server_info(&app).await;
+                announce_ready_year(&app).await;
                 crate::geo::refresh(&app).await;
                 crate::services::check_all(&app).await;
                 if !crate::services::enabled(&app, crate::services::Kind::is_arr).is_empty() {

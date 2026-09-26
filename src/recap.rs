@@ -317,6 +317,37 @@ fn requests(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>) 
     Ok(json!({ "made": made, "available": available, "watched": watched, "top": top }))
 }
 
+/// In December the year is ready (`default_year` flips then): tell each person who watched in it, once.
+pub fn announce_ready(c: &Connection, bus: &crate::notify::Fanout, today: NaiveDate) -> Result<usize> {
+    if today.month() != 12 {
+        return Ok(0);
+    }
+    let year = today.year();
+    let from: i64 = c.query_row("SELECT CAST(strftime('%s', ?1, 'utc') AS INTEGER)", [format!("{year:04}-01-01")], |r| r.get(0))?;
+    let to: i64 = c.query_row("SELECT CAST(strftime('%s', ?1, 'utc') AS INTEGER)", [format!("{:04}-01-01", year + 1)], |r| r.get(0))?;
+    let people: Vec<(String, String)> = c
+        .prepare(&format!(
+            "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) FROM playbacks p LEFT JOIN users u ON u.id = p.user_id
+             WHERE p.started_at >= ?1 AND p.started_at < ?2 AND {NOT_LIVE_TV} GROUP BY p.user_id ORDER BY p.user_id"
+        ))?
+        .query_map([from, to], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<Result<_, _>>()?;
+    let mut told = 0;
+    for (user_id, name) in people {
+        let event = crate::notify::Event::new(
+            crate::notify::Kind::RecapReady,
+            format!("notify:recap:{year}:{user_id}"),
+            format!("Your {year} in review is ready"),
+            format!("Hours, top titles, the shows finished and the rest of {name}'s {year}, ready to look back on — and to share."),
+        )
+        .field("Year", year.to_string())
+        .link(format!("/recap?year={year}"))
+        .about(user_id, name);
+        told += usize::from(crate::notify::raise_in(c, bus, &event)?);
+    }
+    Ok(told)
+}
+
 /// The whole server's year, for Jellyfin administrators: every title and total, and nobody in it.
 pub(crate) fn server_edition(mut v: Value) -> Value {
     if let Some(o) = v.as_object_mut() {
@@ -891,6 +922,31 @@ mod tests {
         assert_eq!(v["together"]["people_in_company"], 2);
         assert_eq!(v["totals"]["plays"], 3, "everybody's year");
         assert!(v["persona"].is_object(), "the house has a habit too");
+    }
+
+    fn told(c: &Connection) -> Vec<(String, String)> {
+        let mut stmt = c.prepare("SELECT dedupe, COALESCE(user_name, '') FROM notify_events WHERE kind = 'recap_ready' ORDER BY dedupe").unwrap();
+        stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().collect::<Result<_, _>>().unwrap()
+    }
+
+    #[test]
+    fn a_ready_year_is_announced_in_december_once_to_each_person_who_watched() {
+        use crate::notify::{Kind, tests::{bus, target}};
+        let c = year_db();
+        play(&c, "ua", "m1", "Movie", "2025-03-01", 600, None);
+        play(&c, "ub", "m2", "Movie", "2025-06-01", 900, None);
+        play(&c, "uc", "m2", "Movie", "2024-06-01", 900, None);   // carol watched nothing in 2025
+        let f = bus(&c, vec![target(1, None, &[Kind::RecapReady])]);
+        let day = |d: &str| NaiveDate::parse_from_str(d, "%Y-%m-%d").unwrap();
+
+        assert_eq!(announce_ready(&c, &f, day("2025-11-30")).unwrap(), 0, "not before the year is ready");
+        assert!(told(&c).is_empty());
+        assert_eq!(announce_ready(&c, &f, day("2025-12-01")).unwrap(), 2);
+        assert_eq!(told(&c), [("notify:recap:2025:ua".into(), "alice".into()), ("notify:recap:2025:ub".into(), "bob".into())]);
+        assert_eq!(announce_ready(&c, &f, day("2025-12-02")).unwrap(), 0, "once a year, however often it is asked");
+        assert_eq!(announce_ready(&c, &f, day("2026-01-05")).unwrap(), 0, "January is not a second December");
+        let (title, link): (String, String) = c.query_row("SELECT title, link FROM notify_events WHERE dedupe = 'notify:recap:2025:ua'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        assert_eq!((title.as_str(), link.as_str()), ("Your 2025 in review is ready", "/recap?year=2025"));
     }
 
     #[test]

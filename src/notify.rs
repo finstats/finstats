@@ -113,14 +113,16 @@ pub enum Kind {
     RequestAvailable,
     PlayStarted,
     PlayStopped,
+    /// In December: a person's year in review is ready (2.0).
+    RecapReady,
     /// The message the Test button sends. Never ticked, never fanned out: it goes to one destination.
     Test,
 }
 
 impl Kind {
-    pub const ALL: [Kind; 12] = [
+    pub const ALL: [Kind; 13] = [
         Kind::Travel, Kind::NewCountry, Kind::FailedSignIns, Kind::TaskFailed, Kind::BackupFailed, Kind::ServiceDown,
-        Kind::ServiceBack, Kind::NewItems, Kind::RequestAvailable, Kind::PlayStarted, Kind::PlayStopped, Kind::Test,
+        Kind::ServiceBack, Kind::NewItems, Kind::RequestAvailable, Kind::PlayStarted, Kind::PlayStopped, Kind::RecapReady, Kind::Test,
     ];
 
     pub fn key(self) -> &'static str {
@@ -136,6 +138,7 @@ impl Kind {
             Kind::RequestAvailable => "request_available",
             Kind::PlayStarted => "play_started",
             Kind::PlayStopped => "play_stopped",
+            Kind::RecapReady => "recap_ready",
             Kind::Test => "test",
         }
     }
@@ -157,6 +160,7 @@ impl Kind {
             Kind::RequestAvailable => "A request is watchable",
             Kind::PlayStarted => "Somebody started watching",
             Kind::PlayStopped => "Somebody stopped watching",
+            Kind::RecapReady => "The year in review is ready",
             Kind::Test => "Test message",
         }
     }
@@ -175,6 +179,7 @@ impl Kind {
             Kind::RequestAvailable => "Something somebody asked for in Seerr can now be watched",
             Kind::PlayStarted => "A play begins: the title, the person and the device",
             Kind::PlayStopped => "A play ends, with how much of it was watched",
+            Kind::RecapReady => "In December, once: a person's year in review is ready to look back on and share",
             Kind::Test => "Sent by the Test button, and by nothing else",
         }
     }
@@ -183,7 +188,7 @@ impl Kind {
         Some(match self {
             Kind::Travel | Kind::NewCountry | Kind::FailedSignIns => Group::Security,
             Kind::TaskFailed | Kind::BackupFailed | Kind::ServiceDown | Kind::ServiceBack => Group::Housekeeping,
-            Kind::NewItems | Kind::RequestAvailable => Group::Library,
+            Kind::NewItems | Kind::RequestAvailable | Kind::RecapReady => Group::Library,
             Kind::PlayStarted | Kind::PlayStopped => Group::Playback,
             Kind::Test => return None,
         })
@@ -201,7 +206,7 @@ impl Kind {
         match self {
             Kind::Travel | Kind::NewCountry | Kind::FailedSignIns => Need::Place,
             Kind::TaskFailed | Kind::BackupFailed | Kind::ServiceDown | Kind::ServiceBack => Need::Server,
-            Kind::RequestAvailable | Kind::PlayStarted | Kind::PlayStopped => Need::Person,
+            Kind::RequestAvailable | Kind::PlayStarted | Kind::PlayStopped | Kind::RecapReady => Need::Person,
             Kind::NewItems | Kind::Test => Need::Anyone,
         }
     }
@@ -1392,7 +1397,7 @@ pub async fn history(State(app): State<App>, user: AuthUser, Query(q): Query<His
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::db::rusqlite::Connection;
 
@@ -1409,7 +1414,7 @@ mod tests {
         c
     }
 
-    fn target(id: i64, owner: Option<&str>, events: &[Kind]) -> Target {
+    pub(crate) fn target(id: i64, owner: Option<&str>, events: &[Kind]) -> Target {
         Target {
             id,
             channel: Channel::Webhook,
@@ -1523,7 +1528,7 @@ mod tests {
     }
 
     /// The destinations as they really are: rows in the database, which is what a delivery points at.
-    fn bus(c: &Connection, targets: Vec<Target>) -> Fanout {
+    pub(crate) fn bus(c: &Connection, targets: Vec<Target>) -> Fanout {
         for t in &targets {
             c.execute(
                 "INSERT INTO notify_targets(id, kind, name, url, secret, topic, owner_id, events, min_severity, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
