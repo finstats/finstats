@@ -378,7 +378,12 @@ pub async fn check_all(app: &App) {
 pub fn features(app: &App) -> Value {
     let list = all(app);
     let has = |want: fn(Kind) -> bool| list.iter().any(|s| s.enabled && want(s.kind));
-    json!({ "upcoming": has(Kind::is_arr), "requests": has(|k| k == Kind::Seerr), "downloads": has(Kind::is_arr) })
+    json!({
+        "upcoming": has(Kind::is_arr), "requests": has(|k| k == Kind::Seerr), "downloads": has(Kind::is_arr),
+        // Not a connection, but the same question: is there anything behind the page. Settings offers
+        // "Public profile" only once an administrator has allowed them.
+        "public_profiles": app.settings().public_profiles,
+    })
 }
 
 // ---------------------------------------------------------------- API (Jellyfin administrators)
