@@ -65,6 +65,55 @@ pub struct Queued {
     pub error: Option<String>,
 }
 
+/// Parameter names whose value is somebody's credential, as indexers, trackers and download clients spell them.
+const SECRET_PARAMS: [&str; 14] = ["apikey", "api_key", "api-key", "key", "passkey", "token", "access_token", "auth", "password", "pass", "pwd", "secret", "sig", "signature"];
+
+/// A service's own words with the credentials in them blanked: the login in an address (`http://user:pass@host`)
+/// and the value of any query parameter named like a key or a password. Sonarr and Radarr quote the download
+/// client and the indexer they could not reach, addresses and all, and those words are shown to everybody who
+/// may see the queue — who may see what is downloading, not the keys it is downloading with.
+pub fn redact(s: &str) -> String {
+    let stop = |c: char| c.is_whitespace() || matches!(c, '/' | '?' | '#' | ')' | '(' | '"' | '\'' | ',' | '<' | '>');
+    // The login part of every address.
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find("://") {
+        let (head, tail) = rest.split_at(i + 3);
+        out.push_str(head);
+        let end = tail.find(stop).unwrap_or(tail.len());
+        match tail[..end].rfind('@') {
+            Some(at) => {
+                out.push_str("***");
+                out.push_str(&tail[at..end]);
+            }
+            None => out.push_str(&tail[..end]),
+        }
+        rest = &tail[end..];
+    }
+    out.push_str(rest);
+    // Then every `?name=value`, `&name=value` and `;name=value` whose name is a credential's.
+    let value_stop = |c: char| c.is_whitespace() || matches!(c, '&' | ';' | '#' | ')' | '"' | '\'' | ',' | '<' | '>');
+    let mut done = String::with_capacity(out.len());
+    let mut rest = out.as_str();
+    while let Some(i) = rest.find(['?', '&', ';']) {
+        let (head, tail) = rest.split_at(i + 1);
+        done.push_str(head);
+        let name_end = tail.find(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-')).unwrap_or(tail.len());
+        let (name, after) = tail.split_at(name_end);
+        if after.starts_with('=') && SECRET_PARAMS.iter().any(|k| k.eq_ignore_ascii_case(name)) {
+            let value = &after[1..];
+            let end = value.find(value_stop).unwrap_or(value.len());
+            done.push_str(name);
+            done.push_str("=***");
+            rest = &value[end..];
+        } else {
+            rest = tail;
+        }
+    }
+    done.push_str(rest);
+    done
+}
+
 fn text(v: &Value) -> Option<String> {
     v.as_str().map(str::trim).filter(|s| !s.is_empty()).map(str::to_string)
 }
@@ -108,7 +157,7 @@ pub fn queue_state(status: &str, tracked_state: &str, tracked_status: &str) -> &
 fn queue_row(svc_id: i64, svc_name: &str, kind: Kind, r: &Value) -> Option<Queued> {
     let size = r["size"].as_f64().unwrap_or(0.0).max(0.0) as i64;
     let left = r["sizeleft"].as_f64().unwrap_or(0.0).max(0.0) as i64;
-    let error = text(&r["errorMessage"]).or_else(|| r["statusMessages"].as_array().and_then(|a| a.first().and_then(|m| m["title"].as_str().map(str::to_string))));
+    let error = text(&r["errorMessage"]).or_else(|| r["statusMessages"].as_array().and_then(|a| a.first().and_then(|m| m["title"].as_str().map(str::to_string)))).map(|e| redact(&e));
     let (series, movie) = (&r["series"], &r["movie"]);
     let (title, sub, media_type, tmdb, tvdb, arr_media_id) = if kind == Kind::Sonarr {
         let episode = &r["episode"];
@@ -518,6 +567,36 @@ pub async fn downloads(State(app): State<App>, DownloadsViewer(_): DownloadsView
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn credentials_in_a_services_own_words_are_blanked() {
+        // Sonarr and Radarr quote the download client and the indexer they could not reach, addresses and all.
+        assert_eq!(redact("stalled (qBittorrent at http://admin:hunter2@10.0.0.5:8080/api/v2?apikey=abc123&x=1)"), "stalled (qBittorrent at http://***@10.0.0.5:8080/api/v2?apikey=***&x=1)");
+        assert_eq!(redact("GET https://indexer.example/api?t=get&id=7&ApiKey=Zz9&passkey=p4ss failed"), "GET https://indexer.example/api?t=get&id=7&ApiKey=***&passkey=*** failed");
+        assert_eq!(redact("https://tracker.example/dl?token=abc;api_key=def&password=ghi&pwd=x&auth=y&secret=z"), "https://tracker.example/dl?token=***;api_key=***&password=***&pwd=***&auth=***&secret=***");
+        assert_eq!(redact("rtorrent at https://user@host/RPC2"), "rtorrent at https://***@host/RPC2", "a user name alone is still somebody's login");
+        // Plain words are left alone, a key that is only part of a longer name is not a key, and nothing is cut mid-character.
+        for plain in ["Not an upgrade for existing file", "One file was not imported", "mail me at someone@example.invalid", "monkey=banana&keyword=x", ""] {
+            assert_eq!(redact(plain), plain);
+        }
+        assert_eq!(redact("Téléchargé http://ü:ö@hôte/?apikey=é&ünd=1 😀"), "Téléchargé http://***@hôte/?apikey=***&ünd=1 😀");
+        assert_eq!(redact("http://a:b@"), "http://***@");
+        assert_eq!(redact("?apikey="), "?apikey=***");
+    }
+
+    #[test]
+    fn a_queue_error_never_carries_a_credential() {
+        let r = json!({ "title": "Some.Film.2026", "movie": { "title": "Some Film", "year": 2026 }, "size": 1, "sizeleft": 1, "status": "warning",
+            "trackedDownloadState": "downloading", "trackedDownloadStatus": "warning", "downloadId": "x",
+            "errorMessage": "stalled (qBittorrent at http://admin:hunter2@10.0.0.5:8080/?apikey=abc123)" });
+        let q = queue_row(1, "Radarr", Kind::Radarr, &r).unwrap();
+        let e = q.error.unwrap();
+        assert!(!e.contains("hunter2") && !e.contains("abc123") && e.contains("stalled"), "{e}");
+        let r = json!({ "title": "x", "movie": { "title": "x" }, "status": "warning", "trackedDownloadState": "downloading", "downloadId": "y",
+            "statusMessages": [{ "title": "Could not reach https://u:p4ss@indexer.example/?passkey=zz" }] });
+        let e = queue_row(1, "Radarr", Kind::Radarr, &r).unwrap().error.unwrap();
+        assert!(!e.contains("p4ss") && !e.contains("zz"), "{e}");
+    }
     use serde_json::json;
 
     fn queued(id: i64, title: &str, download_id: Option<&str>, season: Option<i64>, state: &'static str, size: i64, left: i64) -> Queued {
