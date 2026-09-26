@@ -81,7 +81,9 @@ export function nowPlayingCard(sn) {
         [sn.video, sn.audio].filter(Boolean).map((x) => h('span', { class: 'chip mono' }, x)),
         sn.bitrate ? h('span', { class: 'chip mono' }, bitrate(sn.bitrate)) : null,
         sn.group && sn.group.with && sn.group.with.length ? h('span', { class: 'chip chip-group', title: `Watching together · ${sn.group.size} people` }, icon('together', 12),
-          'With ', sn.group.with.map((w) => w.user_name).join(', ')) : null,
+          'With ', sn.group.with.map((w) => w.user_name).join(', '),
+          // The server names a few companions; the size says how many there are in all.
+          sn.group.size - 1 > sn.group.with.length ? ` and ${(sn.group.size - 1 - sn.group.with.length).toLocaleString()} ${sn.group.size - 1 - sn.group.with.length === 1 ? 'other' : 'others'}` : '') : null,
         can('see_network') && sn.remote_ip ? h('span', { class: 'chip mono', title: 'IP address' }, sn.remote_ip) : null),
       h('div', { class: 'np-progress' },
         h('div', { class: 'meter meter-wide', role: 'progressbar', 'aria-label': 'Playback position', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': prog == null ? null : Math.round(prog * 100) },
