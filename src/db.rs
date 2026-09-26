@@ -583,8 +583,46 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     "CREATE INDEX idx_pb_user_item_end ON playbacks(user_id, item_id, ended_at);",
 ];
 
+/// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole
+/// 30-second timeout and then says only "timed out waiting for connection", and its first connection switches the
+/// file to WAL — a write — before any check could run. So a file that is damaged, is not a database, or is another
+/// program's database is refused here, at once, by name, having only been read.
+fn preflight(path: &Path) -> Result<()> {
+    let shown = path.display();
+    let recover = "Nothing was changed. If this is finstats' database and it was damaged, stop finstats and put the newest \
+                   copy from pre-update-backups/ (or restore one from backups/) in its place.";
+    match std::fs::metadata(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => bail!("{shown} cannot be read ({e}). Nothing was changed."),
+        Ok(m) if m.is_dir() => bail!("{shown} is a folder, not a database. Nothing was changed."),
+        Ok(m) if m.len() == 0 => return Ok(()), // an empty file is a new database, as SQLite itself treats it
+        Ok(_) => {}
+    }
+    // SQLite opens a file it may not write read-only without a word, and the first write fails much later.
+    if let Err(e) = std::fs::OpenOptions::new().read(true).write(true).open(path) {
+        bail!("{shown} cannot be written ({e}). Nothing was changed. It must belong to the user finstats runs as, with write permission.");
+    }
+    let read = (|| -> rusqlite::Result<(i64, Vec<String>)> {
+        let c = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX)?;
+        let version: i64 = c.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+        let mut stmt = c.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")?;
+        let tables = stmt.query_map([], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok((version, tables))
+    })();
+    match read {
+        Err(e) => bail!("{shown} is damaged or is not a database ({e}). {recover}"),
+        Ok((0, tables)) if !tables.is_empty() => bail!(
+            "{shown} is another program's database (it holds {}, which finstats did not make), so finstats will not write into it. \
+             Nothing was changed. Point FINSTATS_DATA_DIR at a folder of finstats' own.",
+            tables.iter().take(5).map(|t| format!("`{t}`")).collect::<Vec<_>>().join(", ")
+        ),
+        Ok(_) => Ok(()),
+    }
+}
+
 impl Db {
     pub fn open(path: &Path) -> Result<Self> {
+        preflight(path)?;
         let manager = SqliteConnectionManager::file(path).with_init(|c| {
             c.execute_batch(
                 "PRAGMA journal_mode = WAL;
@@ -998,6 +1036,52 @@ mod tests {
         let _db = Db::open(&path).unwrap();
         let count = std::fs::read_dir(dir.join("pre-update-backups")).unwrap().filter_map(|e| e.ok()).filter(|e| e.path().extension().is_some_and(|x| x == "db")).count();
         assert_eq!(count, 1, "a restart of the same version must not snapshot again");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_damaged_or_foreign_file_is_refused_at_once_and_left_as_it_was() {
+        let dir = std::env::temp_dir().join(format!("finstats-preflight-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let refused = |path: &Path, why: &str| {
+            let before = std::fs::read(path).ok();
+            let started = std::time::Instant::now();
+            let err = format!("{:#}", Db::open(path).err().unwrap_or_else(|| panic!("{why}: opened")));
+            assert!(started.elapsed() < std::time::Duration::from_secs(5), "{why}: took {:?} to refuse — a supervisor sees a hang", started.elapsed());
+            assert!(err.contains(&path.display().to_string()) && err.contains("Nothing was changed"), "{why}: the message names neither the file nor what happened to it: {err}");
+            assert_eq!(std::fs::read(path).ok(), before, "{why}: the file was changed");
+            let wal = path.with_extension("db-wal");
+            assert!(!wal.exists() || std::fs::metadata(&wal).unwrap().len() == 0, "{why}: a journal was left beside it");
+        };
+        // Random bytes, and a finstats database cut in half — what a failed copy or a full disk leaves.
+        let garbage = dir.join("garbage.db");
+        std::fs::write(&garbage, (0..300_000u32).map(|i| (i.wrapping_mul(2_654_435_761) >> 13) as u8).collect::<Vec<_>>()).unwrap();
+        refused(&garbage, "random bytes");
+        let cut = dir.join("cut.db");
+        drop(Db::open(&cut).unwrap());
+        let whole = std::fs::read(&cut).unwrap();
+        std::fs::write(&cut, &whole[..whole.len() / 3]).unwrap();
+        let _ = std::fs::remove_file(cut.with_extension("db-wal"));
+        let _ = std::fs::remove_file(cut.with_extension("db-shm"));
+        refused(&cut, "a database cut short");
+        // Somebody else's database, which the data folder was pointed at by mistake: never written into.
+        let foreign = dir.join("foreign.db");
+        Connection::open(&foreign).unwrap().execute_batch("CREATE TABLE notes(id INTEGER PRIMARY KEY, body TEXT); INSERT INTO notes(body) VALUES ('mine');").unwrap();
+        refused(&foreign, "another program's database");
+        // Read-only (a restored copy that kept the wrong permissions): it can be read, and nothing can be recorded.
+        let locked = dir.join("locked.db");
+        drop(Db::open(&locked).unwrap());
+        let mut perms = std::fs::metadata(&locked).unwrap().permissions();
+        perms.set_readonly(true);
+        std::fs::set_permissions(&locked, perms).unwrap();
+        if std::fs::OpenOptions::new().write(true).open(&locked).is_err() {
+            refused(&locked, "a read-only file"); // (not provable as root, who may write anything)
+        }
+        // A new install still starts: no file, or an empty one.
+        drop(Db::open(&dir.join("new.db")).unwrap());
+        std::fs::write(dir.join("empty.db"), b"").unwrap();
+        drop(Db::open(&dir.join("empty.db")).unwrap());
         let _ = std::fs::remove_dir_all(&dir);
     }
 
