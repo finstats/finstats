@@ -109,12 +109,27 @@ pub struct Relinked {
     pub duplicates_removed: usize,
 }
 
+/// Every title plays point at that the library no longer has, stepping from one title to the next through the title
+/// index (`idx_pb_item`) — one lookup per title rather than a read of every play, because this runs at every start and
+/// after every library read and nearly always finds nothing.
+const ORPHANS_SQL: &str = "WITH RECURSIVE t(id) AS (
+        SELECT (SELECT MIN(item_id) FROM playbacks)
+        UNION ALL
+        SELECT (SELECT MIN(item_id) FROM playbacks WHERE item_id > t.id) FROM t WHERE t.id IS NOT NULL)
+    SELECT id FROM t WHERE id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM items live WHERE live.id = t.id AND live.removed = 0)";
+
 /// `merge_window_s` is asked for rather than read here so that a caller cannot forget it: the one
 /// thing that rewrites `item_id` is the one thing that can turn an imported play into a duplicate
 /// of a play already here, and the rule has to be re-applied where the ids move.
 pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked> {
     let mut done = Relinked::default();
-    const ORPHAN: &str = "NOT EXISTS (SELECT 1 FROM items live WHERE live.id = p.item_id AND live.removed = 0)";
+    let orphaned: Vec<String> = conn.prepare(ORPHANS_SQL)?.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?;
+    if orphaned.is_empty() {
+        return Ok(done);
+    }
+    // Only the plays of those titles are read from here on, through the title index.
+    let orphaned = serde_json::to_string(&orphaned)?;
+    const ORPHAN: &str = "p.item_id IN (SELECT value FROM json_each(?1))";
 
     // ---- films and other stand-alone titles
     let orphans: Vec<(String, String, String, Option<i64>)> = conn
@@ -123,18 +138,22 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
              FROM playbacks p LEFT JOIN items old ON old.id = p.item_id
              WHERE p.item_type IN ('Movie', 'Video', 'MusicVideo', 'Audio') AND {ORPHAN} GROUP BY p.item_id"
         ))?
-        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+        .query_map([&orphaned], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
         .collect::<Result<_, _>>()?;
     for (old_id, item_type, name, year) in orphans {
         if let Some(new_id) = find_current(conn, &item_type, &name, year)? {
-            done.titles += conn.execute(
-                "UPDATE playbacks SET item_id = ?1,
-                        item_name  = (SELECT name FROM items WHERE id = ?1),
-                        library_id = (SELECT library_id FROM items WHERE id = ?1),
-                        runtime_s  = COALESCE((SELECT runtime_s FROM items WHERE id = ?1), runtime_s)
-                 WHERE item_id = ?2",
-                params![new_id, old_id],
-            )?;
+            let (n, dropped) = move_plays(conn, merge_window_s, &new_id, || {
+                Ok(conn.execute(
+                    "UPDATE playbacks SET item_id = ?1,
+                            item_name  = (SELECT name FROM items WHERE id = ?1),
+                            library_id = (SELECT library_id FROM items WHERE id = ?1),
+                            runtime_s  = COALESCE((SELECT runtime_s FROM items WHERE id = ?1), runtime_s)
+                     WHERE item_id = ?2",
+                    params![new_id, old_id],
+                )?)
+            })?;
+            done.titles += n;
+            done.duplicates_removed += dropped;
         } else {
             // Gone for good, but it can at least be called by its name.
             let cleaned = parse_name(&name).without_tags;
@@ -152,7 +171,7 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
              FROM playbacks p LEFT JOIN items olde ON olde.id = p.item_id LEFT JOIN items olds ON olds.id = p.series_id
              WHERE p.item_type = 'Episode' AND {ORPHAN} GROUP BY p.item_id"
         ))?
-        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
+        .query_map([&orphaned], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
         .collect::<Result<_, _>>()?;
     for (old_id, series_id, series_name, year, season, episode) in orphans {
         let (Some(season), Some(episode)) = (season, episode) else { continue };
@@ -171,28 +190,51 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
             .query_map(params![series_now, season, episode], |r| r.get(0))?
             .collect::<Result<_, _>>()?;
         if let [new_id] = hits.as_slice() {
-            done.episodes += conn.execute(
-                "UPDATE playbacks SET item_id = ?1, series_id = ?2,
-                        season_id   = (SELECT season_id FROM items WHERE id = ?1),
-                        item_name   = (SELECT name FROM items WHERE id = ?1),
-                        series_name = (SELECT name FROM items WHERE id = ?2),
-                        library_id  = (SELECT library_id FROM items WHERE id = ?1),
-                        season_number = ?3, episode_number = ?4,
-                        runtime_s   = COALESCE((SELECT runtime_s FROM items WHERE id = ?1), runtime_s)
-                 WHERE item_id = ?5",
-                params![new_id, series_now, season, episode, old_id],
-            )?;
+            let (n, dropped) = move_plays(conn, merge_window_s, new_id, || {
+                Ok(conn.execute(
+                    "UPDATE playbacks SET item_id = ?1, series_id = ?2,
+                            season_id   = (SELECT season_id FROM items WHERE id = ?1),
+                            item_name   = (SELECT name FROM items WHERE id = ?1),
+                            series_name = (SELECT name FROM items WHERE id = ?2),
+                            library_id  = (SELECT library_id FROM items WHERE id = ?1),
+                            season_number = ?3, episode_number = ?4,
+                            runtime_s   = COALESCE((SELECT runtime_s FROM items WHERE id = ?1), runtime_s)
+                     WHERE item_id = ?5",
+                    params![new_id, series_now, season, episode, old_id],
+                )?)
+            })?;
+            done.episodes += n;
+            done.duplicates_removed += dropped;
         }
     }
-
-    // The check that would have caught a duplicate ran before the ids moved, so it runs again here
-    // at the end of the rewrite rather than at each of the three places that ask for a re-link.
-    done.duplicates_removed = crate::playback::drop_relinked_duplicates(conn, merge_window_s)?;
 
     if done.titles + done.episodes + done.names_cleaned > 0 {
         tracing::info!("re-linked {} title plays and {} episode plays to renamed items; cleaned {} names", done.titles, done.episodes, done.names_cleaned);
     }
+    if done.duplicates_removed > 0 {
+        tracing::info!("removed {} imported plays that re-linking had turned into duplicates of plays already here", done.duplicates_removed);
+    }
     Ok(done)
+}
+
+/// Point one title's orphaned plays at `to`, and re-apply the rule for a play already here to `to`'s plays: the
+/// check that would have caught a duplicate ran before the id moved, and only where plays landed can one have
+/// appeared. One write, so a start killed between the two cannot leave a duplicate behind that no later pass would
+/// look for — once moved, nothing is orphaned any more. A savepoint, because an import or a restore calls this inside
+/// its own transaction. Answers (plays moved, duplicates removed).
+fn move_plays(conn: &Connection, merge_window_s: i64, to: &str, update: impl FnOnce() -> Result<usize>) -> Result<(usize, usize)> {
+    conn.execute_batch("SAVEPOINT relink")?;
+    let done = update().and_then(|moved| Ok((moved, crate::playback::drop_relinked_duplicates(conn, merge_window_s, to)?)));
+    match done {
+        Ok(v) => {
+            conn.execute_batch("RELEASE relink")?;
+            Ok(v)
+        }
+        Err(e) => {
+            let _ = conn.execute_batch("ROLLBACK TO relink; RELEASE relink");
+            Err(e)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -250,5 +292,54 @@ mod tests {
         assert_eq!(get("2").0, "old2", "two films called Twins and no year: ambiguous, leave it");
         assert_eq!(get("3"), ("old3".into(), "Deleted Film (1999)".into()));
         assert_eq!(get("4"), ("e-new".into(), "Pilot".into()));
+    }
+
+    fn migrated() -> Connection {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c
+    }
+
+    #[test]
+    fn finding_what_is_orphaned_walks_the_titles_not_the_plays() {
+        // It runs at every start and after every library read, and nearly always finds nothing. Grouping every play by
+        // title to ask each group whether its title is still there took 3.3 s on a million plays; stepping from one
+        // title to the next through the title index asks one question per title.
+        let c = migrated();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, removed, updated_at) VALUES ('here', 'Movie', 'Sintel', 0, 0), ('gone', 'Movie', 'Old cut', 1, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'here', 'Sintel', 'Movie', 1, 2, 1), ('live', 'u1', 'alice', 'gone', 'Old cut', 'Movie', 3, 4, 1),
+               ('live', 'u1', 'alice', 'never', 'Lost', 'Movie', 5, 6, 1), ('live', 'u2', 'bob', 'never', 'Lost', 'Movie', 7, 8, 1);",
+        )
+        .unwrap();
+        let found: Vec<String> = c.prepare(ORPHANS_SQL).unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(found, ["gone", "never"]);
+        let plan: Vec<String> = c.prepare(&format!("EXPLAIN QUERY PLAN {ORPHANS_SQL}")).unwrap().query_map([], |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
+        assert!(!plan.iter().any(|p| p.starts_with("SCAN playbacks")), "{plan:?}");
+    }
+
+    #[test]
+    fn only_the_titles_plays_were_moved_to_are_swept() {
+        // A duplicate can only appear where re-linking moved a play. Swept over the whole history instead, re-linking
+        // read every imported play at every start and after every library read, under the write lock, to find nothing.
+        let c = migrated();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, production_year, removed, updated_at) VALUES
+                ('new1', 'Movie', 'Big Buck Bunny', 2008, 0, 0), ('i9', 'Movie', 'Sintel', 2010, 0, 0);
+             INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+               (1, 'live',         NULL,   'u1', 'alice', 'new1', 'Big Buck Bunny',        'Movie', 1000, 4600, 3600),
+               (2, 'jellystat',    'js:1', 'u1', 'alice', 'old1', 'Big Buck Bunny (2008)', 'Movie', 1000, 4600, 3600),
+               -- a pair on a title nothing was moved to: not this pass's business
+               (3, 'jellystat',    'js:2', 'u1', 'alice', 'i9',   'Sintel',                'Movie', 9000, 9900, 900),
+               (4, 'streamystats', 'ss:2', 'u1', 'alice', 'i9',   'Sintel',                'Movie', 9000, 9900, 900);",
+        )
+        .unwrap();
+        let r = relink_orphans(&c, 600).unwrap();
+        assert_eq!((r.titles, r.duplicates_removed), (1, 1));
+        let left: Vec<i64> = c.prepare("SELECT id FROM playbacks ORDER BY id").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(left, [1, 3, 4]);
     }
 }

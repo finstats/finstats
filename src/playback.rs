@@ -214,39 +214,47 @@ const SAME_PLAY_SQL: &str = "
     UNION ALL
     SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2 AND ended_at BETWEEN ?4 - ?6 AND ?4 + ?6 AND source <> ?5";
 
-/// Apply [`already_recorded`] again to history that is already written, and take back out what has
+/// Apply [`already_recorded`] again to one title's history that is already written, and take back out what has
 /// become a duplicate since. Answers how many rows went.
 ///
 /// Needed because [`crate::relink`] rewrites `item_id`: a row whose item had been renamed in
 /// Jellyfin matches nothing when it is imported — no other row carries that old id — and is then
 /// pointed at the item that is really there, which is the one an older row from another tracker
 /// already points at. So the duplicate appears *after* the rule ran, and the rule has to run again
-/// wherever ids are rewritten rather than only where rows are written.
+/// wherever ids are rewritten rather than only where rows are written — for the titles plays were
+/// moved onto, the only place one can have appeared.
 ///
 /// Only a row somebody imported is ever removed, and never one finstats recorded itself: its own
 /// row carries a timeline and the counts that go with it, which no import can have. Between two
 /// imported rows the one that arrived first stays. Rows of one tracker are never compared with each
 /// other — a second row of the same item is a restart the viewer really made.
-pub fn drop_relinked_duplicates(conn: &Connection, window: i64) -> Result<usize> {
-    let n = conn.execute(RELINKED_DUPLICATES_SQL, [window.max(0)])?;
-    if n > 0 {
-        tracing::info!("removed {n} imported plays that re-linking had turned into duplicates of plays already here");
-    }
-    Ok(n)
+pub fn drop_relinked_duplicates(conn: &Connection, window: i64, item_id: &str) -> Result<usize> {
+    Ok(conn.execute(&format!("{RELINKED_DUPLICATES_SQL} AND item_id = ?2"), crate::db::rusqlite::params![window.max(0), item_id])?)
 }
 
 /// [`drop_relinked_duplicates`]' rule: the same as [`SAME_PLAY_SQL`]'s, as two index ranges (the same second is inside
 /// either). It runs at every start and after every library read, as one write: in the `ABS(…) <= ?1` form it held the
 /// write lock for 25 s on 150,000 plays, long enough for the collector's own writes to give up.
-const RELINKED_DUPLICATES_SQL: &str = "DELETE FROM playbacks WHERE source <> 'live' AND (
+const RELINKED_DUPLICATES_SQL: &str = crate::relinked_duplicates_sql!("?1");
+
+/// The statement behind [`RELINKED_DUPLICATES_SQL`], for a window given as SQL: a parameter here, and in the migration
+/// that swept every install once, the merge window read from the settings. One text, so the two cannot drift.
+#[macro_export]
+macro_rules! relinked_duplicates_sql {
+    ($window:literal) => {
+        concat!(
+            "DELETE FROM playbacks WHERE source <> 'live' AND (
     EXISTS (SELECT 1 FROM playbacks k
              WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
-               AND k.started_at BETWEEN playbacks.started_at - ?1 AND playbacks.started_at + ?1
+               AND k.started_at BETWEEN playbacks.started_at - ", $window, " AND playbacks.started_at + ", $window, "
                AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id))
     OR EXISTS (SELECT 1 FROM playbacks k
              WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
-               AND k.ended_at BETWEEN playbacks.ended_at - ?1 AND playbacks.ended_at + ?1
-               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id)))";
+               AND k.ended_at BETWEEN playbacks.ended_at - ", $window, " AND playbacks.ended_at + ", $window, "
+               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id)))"
+        )
+    };
+}
 
 /// One thing that happened during a play (pause, skip, track switch…).
 #[derive(Debug, Clone)]
@@ -356,7 +364,7 @@ mod tests {
                (7, 'streamystats', 'ss:5', 'u2', 'bob', 'i1', 'A track', 'Audio', 100, 101, 1);",
         )
         .unwrap();
-        assert_eq!(drop_relinked_duplicates(&c, 600).unwrap(), 2);
+        assert_eq!(drop_relinked_duplicates(&c, 600, "i1").unwrap() + drop_relinked_duplicates(&c, 600, "i2").unwrap(), 2);
         let left: Vec<i64> = c
             .prepare("SELECT id FROM playbacks ORDER BY id")
             .unwrap()
@@ -366,7 +374,30 @@ mod tests {
             .collect();
         assert_eq!(left, [1, 4, 5, 6, 7]);
         // And again changes nothing: there is no duplicate left to find.
-        assert_eq!(drop_relinked_duplicates(&c, 600).unwrap(), 0);
+        assert_eq!(drop_relinked_duplicates(&c, 600, "i1").unwrap() + drop_relinked_duplicates(&c, 600, "i2").unwrap(), 0);
+    }
+
+    #[test]
+    fn the_sweep_for_one_title_leaves_every_other_title_alone() {
+        // Re-linking moves plays onto a handful of titles; only there can a duplicate have appeared. Swept over the
+        // whole history instead, it read every imported play at every start and after every library read — 2 s on a
+        // million plays, all of it under the write lock, to find nothing.
+        let c = conn();
+        c.execute_batch(
+            "DELETE FROM playbacks;
+             INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+               (1, 'jellystat',    'js:1', 'u1', 'alice', 'i1', 'A track', 'Audio', 100, 101, 1),
+               (2, 'streamystats', 'ss:1', 'u1', 'alice', 'i1', 'A track', 'Audio', 100, 101, 1),
+               (3, 'streamystats', 'ss:2', 'u1', 'alice', 'i2', 'A film', 'Movie', 1000, 4600, 3600),
+               (4, 'live',         NULL,   'u1', 'alice', 'i2', 'A film', 'Movie', 1000, 4600, 3600);",
+        )
+        .unwrap();
+        assert_eq!(drop_relinked_duplicates(&c, 600, "i2").unwrap(), 1);
+        let left: Vec<i64> = c.prepare("SELECT id FROM playbacks ORDER BY id").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(left, [1, 2, 4], "the pair on i1 was not asked about");
+        let plan: Vec<String> = c.prepare(&format!("EXPLAIN QUERY PLAN {RELINKED_DUPLICATES_SQL} AND item_id = ?2")).unwrap()
+            .query_map(crate::db::rusqlite::params![600, "i2"], |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
+        assert!(!plan.iter().any(|p| p.starts_with("SCAN playbacks")), "one title's plays, not every play: {plan:?}");
     }
 
     #[test]

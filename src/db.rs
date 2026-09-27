@@ -581,6 +581,9 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     "CREATE INDEX idx_pb_user_item ON playbacks(user_id, item_id, started_at);",
     // 26 — …and the same by where a play ended, for the other half of the rule: two trackers agree about the end.
     "CREATE INDEX idx_pb_user_item_end ON playbacks(user_id, item_id, ended_at);",
+    // 27 — Re-linking sweeps only the titles it moved plays onto. Before, it swept the whole history at every
+    //      start and library read; an install coming from before that sweep existed (2.0.0) is swept once, here.
+    crate::relinked_duplicates_sql!("COALESCE((SELECT json_extract(value, '$.merge_window_s') FROM settings WHERE key = 'settings'), 600)"),
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole
@@ -940,6 +943,33 @@ mod tests {
             let t = if idx.starts_with("idx_api") { "api_keys" } else { "audit" };
             let found: i64 = c.query_row(&format!("SELECT COUNT(*) FROM pragma_index_list('{t}') WHERE name = '{idx}'"), [], |r| r.get(0)).unwrap();
             assert_eq!(found, 1, "{idx}");
+        }
+    }
+
+    #[test]
+    fn an_install_that_never_swept_for_relinked_duplicates_is_swept_once() {
+        // Re-linking now sweeps only the titles it moved plays onto. An install coming from before the sweep existed
+        // (2.0.0) may hold duplicates it never looked for, so the whole history is swept once, here, with the install's
+        // own merge window — and with the default one when the settings never named it.
+        let last = 25; // the sweep (user_version 26), whatever comes after it
+        for (window, kept) in [(Some(30), vec![1, 2, 3]), (None, vec![1, 3])] {
+            let c = Connection::open_in_memory().unwrap();
+            for m in &MIGRATIONS[..last] {
+                c.execute_batch(m).unwrap();
+            }
+            if let Some(w) = window {
+                c.execute("INSERT INTO settings(key, value) VALUES ('settings', ?1)", [format!("{{\"merge_window_s\": {w}}}")]).unwrap();
+            }
+            c.execute_batch(
+                "INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+                   (1, 'live',      NULL,   'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 4600, 3600),
+                   (2, 'jellystat', 'js:1', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1100, 4700, 3600),
+                   (3, 'jellystat', 'js:2', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 90000, 93600, 3600);",
+            )
+            .unwrap();
+            c.execute_batch(MIGRATIONS[last]).unwrap();
+            let left: Vec<i64> = c.prepare("SELECT id FROM playbacks ORDER BY id").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+            assert_eq!(left, kept, "window {window:?}: 100 s apart is the same play at the default 600, two plays at 30");
         }
     }
 
