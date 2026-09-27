@@ -1645,6 +1645,28 @@ fn jellyfin_flags(conn: &Connection, user_id: &str) -> Result<Value> {
     })
 }
 
+/// The local day of a moment, looked up once per quarter hour of UTC rather than once per moment: every UTC offset and
+/// every daylight-saving change in use falls on a whole quarter hour, so a local date cannot change inside one. Asked
+/// in order, as [`concurrency`] asks, a history needs as many lookups as quarter hours it spans, not as plays it holds.
+struct LocalDays<F> {
+    lookup: F,
+    last: Option<(i64, String)>,
+}
+
+impl<F: FnMut(i64) -> Result<String>> LocalDays<F> {
+    fn new(lookup: F) -> Self {
+        Self { lookup, last: None }
+    }
+
+    fn of(&mut self, at: i64) -> Result<&str> {
+        let quarter = at.div_euclid(900);
+        if self.last.as_ref().map(|(q, _)| *q) != Some(quarter) {
+            self.last = Some((quarter, (self.lookup)(quarter * 900)?));
+        }
+        Ok(self.last.as_ref().map(|(_, day)| day.as_str()).unwrap_or_default())
+    }
+}
+
 /// Sweep over play intervals: the most streams (and transcodes) that ever overlapped, and the peak per bucket.
 fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
     // COALESCE, because `play_method` may be NULL — a row restored from a backup written before the
@@ -1671,6 +1693,7 @@ fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
     } else {
         "SELECT date(?1, 'unixepoch', 'localtime')"
     })?;
+    let mut days = LocalDays::new(|at| Ok(date_stmt.query_row([at], |r| r.get(0))?));
     for (at, delta, tc_delta) in points {
         live += delta;
         live_tc += tc_delta;
@@ -1680,9 +1703,13 @@ fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
                 peak_at = Some(at);
             }
             peak_tc = peak_tc.max(live_tc);
-            let date: String = date_stmt.query_row([at], |r| r.get(0))?;
-            let e = per_bucket.entry(date).or_insert(0);
-            *e = (*e).max(live);
+            let date = days.of(at)?;
+            match per_bucket.get_mut(date) {
+                Some(e) => *e = (*e).max(live),
+                None => {
+                    per_bucket.insert(date.to_string(), live);
+                }
+            }
         }
     }
     let series: Vec<Value> = series_template
@@ -1979,6 +2006,44 @@ mod tests {
 
     fn everyone() -> Scope {
         Scope { days: 0, since: None, user_ids: vec![], library_id: None, min_play_s: 0, perms: crate::auth::Perms::ALL }
+    }
+
+    #[test]
+    fn concurrency_is_the_most_streams_at_once_overall_and_per_day() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let at = |sql: &str| -> i64 { c.query_row(&format!("SELECT CAST(strftime('%s', {sql}, 'utc') AS INTEGER)"), [], |r| r.get(0)).unwrap() };
+        let (y, t) = (at("date('now', 'localtime', '-1 day') || ' 10:00:00'"), at("date('now', 'localtime') || ' 00:00:30'"));
+        c.execute(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, play_method, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 'Transcode',  ?1,        ?1 + 3600, 3600),
+               ('live', 'u2', 'bob',   'i2', 'Sintel',         'Movie', 'DirectPlay', ?1 + 1800, ?1 + 5400, 3600),
+               -- starts the second the one before it ends: one stream after another, not two at once
+               ('live', 'u2', 'bob',   'i3', 'Tears of Steel', 'Movie', 'DirectPlay', ?1 + 5400, ?1 + 7200, 1800),
+               ('live', 'u1', 'alice', 'i2', 'Sintel',         'Movie', 'DirectPlay', ?2,        ?2 + 60,   60)",
+            [y, t],
+        )
+        .unwrap();
+        let scope = Scope { days: 2, ..everyone() }.resolve(&c).unwrap();
+        let v = concurrency(&c, &scope, &scope.cond()).unwrap();
+        assert_eq!((v["peak"].as_i64(), v["peak_at"].as_i64(), v["peak_transcodes"].as_i64()), (Some(2), Some(y + 1800), Some(1)));
+        let day = |s: i64| -> String { c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [s], |r| r.get(0)).unwrap() };
+        assert_eq!(v["series"], json!([{ "date": day(y), "peak": 2 }, { "date": day(t), "peak": 1 }]));
+    }
+
+    #[test]
+    fn a_local_day_is_looked_up_once_a_quarter_hour_at_most() {
+        // concurrency() asked SQLite for the local day of every play's start: a million lookups on a million plays.
+        let asked = std::cell::Cell::new(0);
+        let mut days = LocalDays::new(|at| {
+            asked.set(asked.get() + 1);
+            Ok(format!("day {}", at / 86_400))
+        });
+        let seen: Vec<String> = [0, 10, 899, 900, 901, 1799, 86_400, 86_401].into_iter().map(|at| days.of(at).unwrap().to_string()).collect();
+        assert_eq!(seen, ["day 0", "day 0", "day 0", "day 0", "day 0", "day 0", "day 1", "day 1"]);
+        assert_eq!(asked.get(), 3, "three quarter hours: 0–899, 900–1799, and the one starting at 86,400");
     }
 
     #[test]
