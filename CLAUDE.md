@@ -69,7 +69,10 @@ Sonarr/Radarr queues ───────────────────�
 **State & DB access.** `state.rs` holds `AppState` (shared via `Arc` as `App`): DB handle, Jellyfin config,
 `Settings` (one JSON blob in the `settings` table, `#[serde(default)]` so old installs load), the in-memory task
 registry, the live now-playing snapshot, and a `Notify` (`wake`) that background loops select on. All DB work goes
-through `db.call(|conn| …)` (r2d2 pool + `spawn_blocking`); rusqlite is re-exported as `db::rusqlite` — import it from
+through `db.call(|conn| …)` (r2d2 pool + `spawn_blocking`). A page whose queries over the history need nothing from each
+other runs them side by side (`stats::resolved` once, then `apart` per part under `tokio::try_join!`): each is one
+core's work in SQLite, and in sequence the page takes their sum — at most five at once, so the collector keeps a
+connection of the six; rusqlite is re-exported as `db::rusqlite` — import it from
 there, not from the crate, to stay on the version `r2d2_sqlite` uses. **Every `transaction()` on a pooled connection is
 IMMEDIATE** (set in the pool's init): a deferred one that reads before it writes is refused its write outright once anybody
 else commits in between (`SQLITE_BUSY_SNAPSHOT`, which `busy_timeout` does not wait out), and the collector commits all the
@@ -317,7 +320,11 @@ pairs must include the caller and `people` is the caller alone: a companion's na
 Inferred, because `/Sessions` exposes no SyncPlay groups: plays of one item by ≥ 2
 different users starting within `group_window_s` (default 60 — real data shows a third of genuine groups start 6–60 s
 apart) and overlapping ≥ 2 min share `playbacks.group_id` (= lowest play id in the group). `detect()` re-runs per item
-when a play ends, fully after import/start-up, and fully when the setting changes. "Time together" is the
+when a play ends and for the titles re-linking moved plays onto, fully after an import or a restore and when the setting
+changes. **A start regroups only what the last run left behind** (`regroup_at_start`): plays it was still recording when it
+stopped were all saved after that run began, so the key `groups_detected` notes version, window and when, and the next
+start regroups titles with a play ended since — everything only for another version or window. Regrouping the whole
+history at every start took 24 s on ten million plays. "Time together" is the
 second-longest stay in a session. Running streams are grouped separately by `mark_live` (same title,
 different users, starts within the window *or* positions within `max(window, 30)` s), before `/api/now-playing` narrows
 the list to the caller. **Everything here is measured at crowd scale** (the capacity stage in `qa/`): `mark_live` pairs
@@ -325,7 +332,9 @@ streams of one title only, on plain values read once, and names at most `COMPANI
 comparing every stream with every other and listing every companion took 40 s at 10,000 streams and 23.7 GB at 25,000.
 `detect` writes only the plays whose group changed; resetting every group to NULL and writing it back rewrote every grouped
 play of the history at each start, import and play end. The collector finds ended plays with a set (`ended_keys`) and closes
-a pass's ended plays in one transaction, detecting each title once (`close_ended`).
+a pass's ended plays in one transaction, detecting each title once (`close_ended`); the plays a pass sees begin, the
+progress it saves and the devices it saw are likewise one transaction each (`start_plays`, `save_progress`,
+`remember_devices`), never one awaited call per play — a crowd of 100,000 took 13 s to record that way, and one pass ten.
 
 **Search (`fuzzy.rs`).** `/api/search` scores every library title in Rust instead of using `LIKE`: normalised (case,
 accents, punctuation, leading article), every typed word must match some word of the title (exact > prefix > substring
@@ -417,7 +426,9 @@ never by `is_admin`. The recap ignores permissions: own for everyone, any one us
 public IP, looked up **once** from a plain-text service (the only non-Jellyfin request finstats makes by default; setting
 `public_ip_lookup`, override `FINSTATS_PUBLIC_IP_URL`) — at start-up when no `lookup` row exists, or when somebody presses the button —
 plus the manual `home_addresses` setting. Always go through
-`network::classify(conn, ip)`; after the set changes call `network::reclassify`, which re-decides the whole history. The lookup
+`network::classify(conn, ip)`; after the set changes call `network::reclassify`, which re-decides the whole history and
+notes what it decided against (`network_classified`: version and home addresses); a start re-decides only when that differs
+(`reclassify_at_start`), never out of habit. The lookup
 must stay anonymous (no version, no ids in the request) and the docs' privacy claims must stay true to it.
 
 **Security (`geo.rs`, `security.rs`, `/security`).** `geo.rs` reads a MaxMind-format city database through a memory map (`Geo` in `AppState`,
