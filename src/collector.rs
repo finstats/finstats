@@ -94,6 +94,71 @@ fn close_ended(c: &mut crate::db::rusqlite::Connection, finished: &[(i64, PlayRe
     Ok(())
 }
 
+/// A play just seen for the first time, as the database has it: a row of its own, or the row of the same viewing
+/// continued after a short break, with what that row had already counted.
+#[derive(Debug)]
+struct Started {
+    row_id: i64,
+    started_at: i64,
+    watched: f64,
+    paused: f64,
+    /// (pauses, seeks, where it started) of a continued row.
+    counters: Option<(i64, i64, Option<i64>)>,
+}
+
+/// Every play first seen in one pass, written in one transaction: the same person, item and device moments after a play
+/// of theirs ended continue that row, anything else is a row of its own, each with a start event. One awaited call per
+/// play kept a crowd arriving together waiting on the database, one at a time, while nothing new was read.
+fn start_plays(c: &mut crate::db::rusqlite::Connection, plays: Vec<PlayRecord>, now: i64, merge_window_s: i64) -> Result<Vec<Started>> {
+    let tx = c.transaction()?;
+    let mut out = Vec::with_capacity(plays.len());
+    for probe in plays {
+        let start = |detail: Option<&str>| PlayEvent { at: now, kind: "start", position_s: probe.position_s, from_s: None, detail: detail.map(str::to_string) };
+        // Same person, same item, same device, moments later: that's one viewing.
+        let resumed = tx
+            .prepare_cached(
+                "SELECT id, started_at, duration_s, paused_s, pause_count, seek_count, start_position_s FROM playbacks
+                 WHERE source = 'live' AND active = 0 AND user_id = ?1 AND item_id = ?2
+                   AND device_id IS ?3 AND ended_at >= ?4
+                 ORDER BY ended_at DESC LIMIT 1",
+            )?
+            .query_row(params![probe.user_id, probe.item_id, probe.device_id, now - merge_window_s], |r| {
+                Ok(Started {
+                    row_id: r.get(0)?,
+                    started_at: r.get(1)?,
+                    watched: r.get::<_, i64>(2)? as f64,
+                    paused: r.get::<_, i64>(3)? as f64,
+                    counters: Some((r.get(4)?, r.get(5)?, r.get(6)?)),
+                })
+            })
+            .optional()?
+            .filter(|_| merge_window_s > 0);
+        if let Some(continued) = resumed {
+            tx.execute("UPDATE playbacks SET active = 1 WHERE id = ?1", [continued.row_id])?;
+            insert_events(&tx, continued.row_id, &[start(Some("Continued after a short break"))])?;
+            out.push(continued);
+        } else {
+            let row_id = probe.insert(&tx)?.expect("live rows have no source_id and cannot collide");
+            insert_events(&tx, row_id, &[start(None)])?;
+            out.push(Started { row_id, started_at: probe.started_at, watched: 0.0, paused: 0.0, counters: None });
+        }
+    }
+    tx.commit()?;
+    Ok(out)
+}
+
+/// Every play whose progress is due in one pass — its numbers so far and what happened since — in one transaction,
+/// for the same reason as [`start_plays`].
+fn save_progress(c: &mut crate::db::rusqlite::Connection, due: &[(i64, PlayRecord, Vec<PlayEvent>)]) -> Result<()> {
+    let tx = c.transaction()?;
+    for (row_id, rec, events) in due {
+        rec.update_progress(&tx, *row_id)?;
+        insert_events(&tx, *row_id, events)?;
+    }
+    tx.commit()?;
+    Ok(())
+}
+
 /// When each device's row was last written, forgetting any not written for longer than [`DEVICE_REFRESH`]: past that
 /// an entry decides nothing, and a device id is the app's own word — one that invented a new id every time would
 /// otherwise grow the map for as long as finstats runs.
@@ -1114,6 +1179,9 @@ async fn tick(
     forget_stale_devices(devices_seen, tick_at);
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut device_rows: Vec<(String, String, Option<String>, Option<String>, Option<String>, Option<String>)> = vec![];
+    // What this pass has to write, written once after the list is read: one transaction each, not one call per play.
+    let mut due: Vec<(i64, PlayRecord, Vec<PlayEvent>)> = vec![];
+    let mut arrived: Vec<(String, PlayRecord, bool, Option<f64>)> = vec![];
 
     for s in sessions {
         // Remember every device that talks to the server, playing or not.
@@ -1166,46 +1234,23 @@ async fn tick(
 
             if !events.is_empty() || t.last_persist.elapsed() >= PERSIST_EVERY {
                 t.last_persist = tick_at;
-                let (row_id, rec) = (t.row_id, t.rec.clone());
-                app.db
-                    .call(move |c| {
-                        rec.update_progress(c, row_id)?;
-                        insert_events(c, row_id, &events)
-                    })
-                    .await?;
+                due.push((t.row_id, t.rec.clone(), events));
             }
         } else {
-            let probe = rec.clone();
-            let (row_id, started_at, watched, paused, counters) = app
-                .db
-                .call(move |c| {
-                    // Same person, same item, same device, moments later: that's one viewing.
-                    let resumed = c
-                        .query_row(
-                            "SELECT id, started_at, duration_s, paused_s, pause_count, seek_count, start_position_s FROM playbacks
-                             WHERE source = 'live' AND active = 0 AND user_id = ?1 AND item_id = ?2
-                               AND device_id IS ?3 AND ended_at >= ?4
-                             ORDER BY ended_at DESC LIMIT 1",
-                            params![probe.user_id, probe.item_id, probe.device_id, now - merge_window_s],
-                            |r| {
-                                Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, i64>(2)?, r.get::<_, i64>(3)?,
-                                    (r.get::<_, i64>(4)?, r.get::<_, i64>(5)?, r.get::<_, Option<i64>>(6)?)))
-                            },
-                        )
-                        .optional()?;
-                    let start = |detail: Option<&str>| PlayEvent { at: now, kind: "start", position_s: probe.position_s, from_s: None, detail: detail.map(str::to_string) };
-                    if let Some((id, started, dur, paused, counters)) = resumed.filter(|_| merge_window_s > 0) {
-                        c.execute("UPDATE playbacks SET active = 1 WHERE id = ?1", [id])?;
-                        insert_events(c, id, &[start(Some("Continued after a short break"))])?;
-                        return Ok((id, started, dur as f64, paused as f64, Some(counters)));
-                    }
-                    let id = probe.insert(c)?.expect("live rows have no source_id and cannot collide");
-                    insert_events(c, id, &[start(None)])?;
-                    Ok((id, probe.started_at, 0.0, 0.0, None))
-                })
-                .await?;
-            rec.started_at = started_at;
-            if let Some((pauses, seeks, start_position)) = counters {
+            arrived.push((key, rec, is_paused, transcode_progress));
+        }
+    }
+
+    if !due.is_empty() {
+        app.db.call(move |c| save_progress(c, &due)).await?;
+    }
+    if !arrived.is_empty() {
+        let probes: Vec<PlayRecord> = arrived.iter().map(|(_, rec, _, _)| rec.clone()).collect();
+        let started = app.db.call(move |c| start_plays(c, probes, now, merge_window_s)).await?;
+        for ((key, mut rec, is_paused, transcode_progress), s) in arrived.into_iter().zip(started) {
+            let row_id = s.row_id;
+            rec.started_at = s.started_at;
+            if let Some((pauses, seeks, start_position)) = s.counters {
                 rec.pause_count = pauses;
                 rec.seek_count = seeks;
                 rec.start_position_s = start_position;
@@ -1219,7 +1264,7 @@ async fn tick(
             tokio::spawn(async move { crate::notify::raise(&teller, event).await; });
             tracked.insert(
                 key,
-                Tracked { row_id, rec, watched, paused, is_paused, last_tick: tick_at, last_persist: tick_at, transcode_progress },
+                Tracked { row_id, rec, watched: s.watched, paused: s.paused, is_paused, last_tick: tick_at, last_persist: tick_at, transcode_progress },
             );
         }
     }
@@ -1309,6 +1354,56 @@ mod tests {
         assert_eq!(rows, vec![("a".to_string(), 0, Some(1)), ("b".to_string(), 0, Some(1))], "closed, grouped, and the two-second play gone");
         let stops: i64 = c.query_row("SELECT COUNT(*) FROM playback_events WHERE kind = 'stop'", [], |r| r.get(0)).unwrap();
         assert_eq!(stops, 2);
+    }
+
+    fn migrated() -> crate::db::rusqlite::Connection {
+        let c = crate::db::rusqlite::Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c
+    }
+
+    fn playing(user: &str, item: &str, device: &str) -> PlayRecord {
+        PlayRecord {
+            source: "live", active: true, user_id: user.into(), user_name: user.into(), item_id: item.into(), item_name: item.into(), item_type: "Movie".into(),
+            device_id: Some(device.into()), started_at: 5000, ended_at: 5000, play_method: "DirectPlay".into(), ..Default::default()
+        }
+    }
+
+    #[test]
+    fn plays_that_begin_together_are_written_in_one_go_and_a_restart_continues_its_row() {
+        // Each new play was its own awaited database call, one after another: a crowd arriving together kept the
+        // collector waiting on the database for seconds, reading nothing new meanwhile.
+        let mut c = migrated();
+        // bob stopped this a minute ago on the same television: pressing play again is the same viewing.
+        let mut earlier = playing("bob", "film", "tv");
+        (earlier.started_at, earlier.ended_at, earlier.active, earlier.duration_s, earlier.paused_s, earlier.pause_count) = (3000, 4950, false, 1900, 30, 2);
+        let old = earlier.insert(&c).unwrap().unwrap();
+        let started = start_plays(&mut c, vec![playing("alice", "film", "phone"), playing("bob", "film", "tv")], 5000, 600).unwrap();
+        assert_eq!(started.len(), 2);
+        assert!(started[0].row_id != old && started[0].started_at == 5000 && started[0].watched == 0.0 && started[0].counters.is_none());
+        assert_eq!((started[1].row_id, started[1].started_at, started[1].watched, started[1].paused), (old, 3000, 1900.0, 30.0));
+        assert_eq!(started[1].counters, Some((2, 0, None)));
+        let active: i64 = c.query_row("SELECT COUNT(*) FROM playbacks WHERE active = 1", [], |r| r.get(0)).unwrap();
+        assert_eq!(active, 2);
+        let starts: Vec<(i64, Option<String>)> = c.prepare("SELECT playback_id, detail FROM playback_events WHERE kind = 'start' ORDER BY playback_id").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(starts, vec![(old, Some("Continued after a short break".into())), (started[0].row_id, None)]);
+    }
+
+    #[test]
+    fn progress_of_many_plays_is_saved_in_one_go() {
+        let mut c = migrated();
+        let (mut a, mut b) = (playing("alice", "film", "phone"), playing("bob", "other", "tv"));
+        let (ia, ib) = (a.insert(&c).unwrap().unwrap(), b.insert(&c).unwrap().unwrap());
+        (a.duration_s, a.ended_at, b.duration_s, b.ended_at) = (30, 5030, 31, 5031);
+        let pause = PlayEvent { at: 5030, kind: "pause", position_s: Some(30), from_s: None, detail: None };
+        save_progress(&mut c, &[(ia, a, vec![pause]), (ib, b, vec![])]).unwrap();
+        let rows: Vec<(i64, i64)> = c.prepare("SELECT duration_s, ended_at FROM playbacks ORDER BY id").unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(rows, [(30, 5030), (31, 5031)]);
+        let pauses: i64 = c.query_row("SELECT COUNT(*) FROM playback_events WHERE kind = 'pause' AND playback_id = ?1", [ia], |r| r.get(0)).unwrap();
+        assert_eq!(pauses, 1);
     }
 
     #[test]
