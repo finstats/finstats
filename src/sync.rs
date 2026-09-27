@@ -474,7 +474,7 @@ pub fn store_people(conn: &Connection, it: &Value) -> Result<()> {
 /// library read as well as after an import, because history is often imported first: a tracker that
 /// records no item type (neither Jellystat nor Streamystats does) leaves rows guessed or unknown,
 /// and an episode has no season or episode number until something knows the library.
-pub fn backfill_playbacks(conn: &Connection) -> Result<()> {
+pub fn backfill_playbacks(conn: &Connection) -> Result<Vec<String>> {
     conn.execute_batch(
         "UPDATE playbacks SET library_id = COALESCE(
                 (SELECT library_id FROM items WHERE items.id = playbacks.item_id),
@@ -494,10 +494,10 @@ pub fn backfill_playbacks(conn: &Connection) -> Result<()> {
          WHERE source <> 'live' AND item_type <> 'Episode'
            AND EXISTS (SELECT 1 FROM items WHERE items.id = playbacks.item_id AND items.type <> playbacks.item_type);",
     )?;
-    crate::relink::relink_orphans(conn, crate::state::Settings::load(conn)?.merge_window_s)?;
+    let relinked = crate::relink::relink_orphans(conn, crate::state::Settings::load(conn)?.merge_window_s)?;
     // New titles may be what Sonarr, Radarr or a request were waiting for.
     crate::pipeline::link(conn)?;
-    Ok(())
+    Ok(relinked.moved_to)
 }
 
 async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
@@ -655,9 +655,13 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
     }
 
     app.tasks.update(ID, "Linking plays to libraries", Some(1.0));
+    let window = app.settings().group_window_s;
     app.db
         .call(move |c| {
-            backfill_playbacks(c)?;
+            // Re-linked plays keep their times, so nothing else would look at the titles they moved onto again.
+            for title in backfill_playbacks(c)? {
+                crate::groups::detect(c, window, Some(&title))?;
+            }
             db::set_setting(c, "library_synced_at", &started.to_string())
         })
         .await?;
@@ -914,8 +918,10 @@ mod tests {
                 (2, 'streamystats', 'ss:1', 'u1', 'alice', 'old-id', 'A track', 'Audio', 100, 310, 210);",
         )
         .unwrap();
-        backfill_playbacks(&c).unwrap();
-        // Re-linked onto the item that is really there — and then not counted twice.
+        // Re-linked onto the item that is really there, which the library read then regroups: moved plays keep their
+        // times, so nothing else would look at that title again.
+        assert_eq!(backfill_playbacks(&c).unwrap(), ["new-id"]);
+        // …and not counted twice.
         let rows: Vec<(i64, String, String)> = c
             .prepare("SELECT id, source, item_id FROM playbacks ORDER BY id")
             .unwrap()

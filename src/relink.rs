@@ -107,6 +107,9 @@ pub struct Relinked {
     pub names_cleaned: usize,
     /// Plays that re-linking turned into duplicates of plays already here, and so were taken out.
     pub duplicates_removed: usize,
+    /// The titles plays were moved onto, each once. Moved plays keep their times, so nothing that looks for recent
+    /// plays finds them: whoever asked for the re-link regroups these.
+    pub moved_to: Vec<String>,
 }
 
 /// Every title plays point at that the library no longer has, stepping from one title to the next through the title
@@ -154,6 +157,7 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
             })?;
             done.titles += n;
             done.duplicates_removed += dropped;
+            done.moved_to.push(new_id);
         } else {
             // Gone for good, but it can at least be called by its name.
             let cleaned = parse_name(&name).without_tags;
@@ -205,9 +209,12 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
             })?;
             done.episodes += n;
             done.duplicates_removed += dropped;
+            done.moved_to.push(new_id.clone());
         }
     }
 
+    done.moved_to.sort();
+    done.moved_to.dedup();
     if done.titles + done.episodes + done.names_cleaned > 0 {
         tracing::info!("re-linked {} title plays and {} episode plays to renamed items; cleaned {} names", done.titles, done.episodes, done.names_cleaned);
     }
@@ -339,6 +346,8 @@ mod tests {
         .unwrap();
         let r = relink_orphans(&c, 600).unwrap();
         assert_eq!((r.titles, r.duplicates_removed), (1, 1));
+        // …and says where plays landed, so whoever asked can regroup those titles: moved plays keep their old times.
+        assert_eq!(r.moved_to, ["new1"]);
         let left: Vec<i64> = c.prepare("SELECT id FROM playbacks ORDER BY id").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
         assert_eq!(left, [1, 3, 4]);
     }
