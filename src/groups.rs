@@ -161,6 +161,47 @@ pub fn detect(conn: &mut Connection, window_s: i64, only_item: Option<&str>) -> 
     Ok(groups)
 }
 
+/// What a start regrouped: the whole history, or the titles played since the one before.
+#[derive(Debug, PartialEq)]
+pub enum Regrouped {
+    Everything,
+    Titles(usize),
+}
+
+/// Which finstats, with which window, last regrouped at a start, and when that began. Not in a backup (only the `settings`
+/// key is), so a restore never brings another install's record along.
+const REGROUPED_KEY: &str = "groups_detected";
+
+/// The start-up pass. A play that ends regroups its title at once, and an import, a restore or a new window regroup
+/// everything themselves, so a start has only to catch what the last run left behind: plays it was still recording
+/// when it stopped, and every one of those was saved after that run's start — `ended_at` at or past `now` as it was
+/// then. Regrouping the whole history at every start instead took 24 s on ten million plays. A different version of
+/// finstats, or a different window, still regroups everything: the rule itself may be what changed. `now` is when
+/// this pass begins.
+pub fn regroup_at_start(conn: &mut Connection, window_s: i64, now: i64) -> Result<Regrouped> {
+    let version = env!("CARGO_PKG_VERSION");
+    let last: Option<Value> = crate::db::get_setting(conn, REGROUPED_KEY)?.and_then(|s| serde_json::from_str(&s).ok());
+    let since = last.filter(|l| l["version"] == version && l["window_s"] == window_s).and_then(|l| l["at"].as_i64());
+    let done = match since {
+        None => {
+            detect(conn, window_s, None)?;
+            Regrouped::Everything
+        }
+        Some(since) => {
+            let titles: Vec<String> = conn
+                .prepare("SELECT DISTINCT item_id FROM playbacks WHERE ended_at >= ?1 AND item_id IS NOT NULL")?
+                .query_map([since], |r| r.get(0))?
+                .collect::<Result<_, _>>()?;
+            for title in &titles {
+                detect(conn, window_s, Some(title))?;
+            }
+            Regrouped::Titles(titles.len())
+        }
+    };
+    crate::db::set_setting(conn, REGROUPED_KEY, &json!({ "version": version, "window_s": window_s, "at": now }).to_string())?;
+    Ok(done)
+}
+
 // ---------------------------------------------------------------- the fold (2.0)
 //
 // One grouped play as the SELECT hands it over; sessions are folded from these in Rust, and everything
@@ -734,6 +775,40 @@ mod tests {
         let named = live[0]["group"]["with"].as_array().unwrap();
         assert_eq!(named.len(), COMPANIONS_NAMED);
         assert!(named.iter().all(|w| w["user_id"] != "u0"), "a stream is not its own companion");
+    }
+
+    #[test]
+    fn a_start_regroups_only_the_titles_played_since_the_last_one() {
+        // Every start regrouped the whole history — 24 s on ten million plays — although a play ending groups its title
+        // at once. What a start has to catch is only what the last run left behind: plays it was still recording when it
+        // stopped, whose last save came after that run began. A new version or a new window still regroups everything.
+        let mut c = conn();
+        let group_of = |c: &Connection, id: i64| -> Option<i64> { c.query_row("SELECT group_id FROM playbacks WHERE id = ?1", [id], |r| r.get(0)).unwrap() };
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES (1, 'live', 'a', 'a', 'film', 'Film', 'Movie', 1000, 2500, 1500), (2, 'live', 'b', 'b', 'film', 'Film', 'Movie', 1004, 2500, 1496);",
+        )
+        .unwrap();
+        // Nothing recorded yet: everything.
+        assert_eq!(regroup_at_start(&mut c, 60, 5000).unwrap(), Regrouped::Everything);
+        assert_eq!(group_of(&c, 2), Some(1));
+        // Recorded: a title nobody played since is not read again (its group is planted wrong to show it), and the
+        // one played since is.
+        c.execute_batch(
+            "UPDATE playbacks SET group_id = NULL;
+             INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES (3, 'live', 'a', 'a', 'other', 'Other', 'Movie', 5500, 7000, 1500), (4, 'live', 'b', 'b', 'other', 'Other', 'Movie', 5502, 6900, 1398);",
+        )
+        .unwrap();
+        assert_eq!(regroup_at_start(&mut c, 60, 8000).unwrap(), Regrouped::Titles(1));
+        assert_eq!((group_of(&c, 2), group_of(&c, 4)), (None, Some(3)));
+        // Another window, or another version of finstats: everything again.
+        assert_eq!(regroup_at_start(&mut c, 90, 9000).unwrap(), Regrouped::Everything);
+        assert_eq!(group_of(&c, 2), Some(1));
+        c.execute("UPDATE settings SET value = json_set(value, '$.version', '0.0.1') WHERE key = 'groups_detected'", []).unwrap();
+        c.execute("UPDATE playbacks SET group_id = NULL", []).unwrap();
+        assert_eq!(regroup_at_start(&mut c, 90, 9500).unwrap(), Regrouped::Everything);
+        assert_eq!(group_of(&c, 2), Some(1));
     }
 
     #[test]

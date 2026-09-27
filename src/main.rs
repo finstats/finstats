@@ -196,8 +196,12 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
             network::set_manual(c, &Settings::load(c)?.home_addresses)?;
             network::reclassify(c)?;
             let settings_now = Settings::load(c)?;
-            relink::relink_orphans(c, settings_now.merge_window_s)?;
-            groups::detect(c, settings_now.group_window_s, None)?;
+            let began = db::now();
+            // Re-linked plays keep their times, so the start-up regroup would not find the titles they moved onto.
+            for title in relink::relink_orphans(c, settings_now.merge_window_s)?.moved_to {
+                groups::detect(c, settings_now.group_window_s, Some(&title))?;
+            }
+            groups::regroup_at_start(c, settings_now.group_window_s, began)?;
             Ok((stored, Settings::load(c)?, device_id))
         })
         .await?;
