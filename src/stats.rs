@@ -735,32 +735,35 @@ pub async fn activity_delete(State(app): State<App>, Manager(user): Manager, Pat
 
 // ---------------------------------------------------------------- stats endpoints
 
+fn overview_library(c: &Connection, scope: &Scope) -> Result<Option<Map<String, Value>>> {
+    let lib = match &scope.library_id {
+        Some(l) => Cond::default().with("library_id = ?", l.clone()),
+        None => Cond::default(),
+    }
+    .with_raw("removed = 0");
+    one_json(
+        c,
+        &format!(
+            "SELECT COALESCE(SUM(type = 'Movie'), 0) AS movies, COALESCE(SUM(type = 'Series'), 0) AS series,
+                    COALESCE(SUM(type = 'Episode'), 0) AS episodes, COALESCE(SUM(type = 'Audio'), 0) AS tracks,
+                    COALESCE(SUM(size_bytes), 0) AS size_bytes,
+                    (SELECT COUNT(*) FROM users WHERE removed = 0) AS users
+             FROM items {}",
+            lib.sql()
+        ),
+        &lib.args,
+    )
+}
+
 pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<FilterQuery>) -> ApiResult {
-    let out = scoped(&app, &user, &q, |c, scope| {
-        let cond = scope.cond();
-        let previous = scope.previous_cond().map(|p| totals(c, &p)).transpose()?;
-        let (series, bucket) = daily(c, scope, &cond)?;
-        let lib = match &scope.library_id {
-            Some(l) => Cond::default().with("library_id = ?", l.clone()),
-            None => Cond::default(),
-        }
-        .with_raw("removed = 0");
-        let library = one_json(
-            c,
-            &format!(
-                "SELECT COALESCE(SUM(type = 'Movie'), 0) AS movies, COALESCE(SUM(type = 'Series'), 0) AS series,
-                        COALESCE(SUM(type = 'Episode'), 0) AS episodes, COALESCE(SUM(type = 'Audio'), 0) AS tracks,
-                        COALESCE(SUM(size_bytes), 0) AS size_bytes,
-                        (SELECT COUNT(*) FROM users WHERE removed = 0) AS users
-                 FROM items {}",
-                lib.sql()
-            ),
-            &lib.args,
-        )?;
-        Ok(json!({ "totals": totals(c, &cond)?, "previous": previous, "daily": series, "bucket": bucket, "library": library }))
-    })
-    .await?;
-    Ok(Json(out))
+    // The totals and the day-by-day series each read every play in the window, and need nothing from each other.
+    let scope = resolved(&app, &user, &q).await?;
+    let (totals, (series, bucket), (previous, library)) = tokio::try_join!(
+        apart(app.clone(), scope.clone(), |c, s| totals(c, &s.cond())),
+        apart(app.clone(), scope.clone(), |c, s| daily(c, s, &s.cond())),
+        apart(app.clone(), scope.clone(), |c, s| Ok((s.previous_cond().map(|p| totals(c, &p)).transpose()?, overview_library(c, s)?))),
+    )?;
+    Ok(Json(json!({ "totals": totals, "previous": previous, "daily": series, "bucket": bucket, "library": library })))
 }
 
 #[derive(Deserialize)]
@@ -1734,91 +1737,130 @@ fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
     Ok(json!({ "peak": peak, "peak_at": peak_at, "peak_transcodes": peak_tc, "series": series, "bucket": bucket }))
 }
 
+/// A caller's scope, resolved once, for a handler that runs its queries side by side.
+async fn resolved(app: &App, user: &AuthUser, q: &FilterQuery) -> Result<Scope> {
+    let scope = Scope::new(app, user, q);
+    app.db.call(move |c| scope.resolve(c)).await
+}
+
+/// One part of a page on a pooled connection of its own, so that parts which need nothing from each other run side by
+/// side: each is one core's work in SQLite, and one after another a page takes the sum of them.
+async fn apart<T, F>(app: App, scope: Scope, f: F) -> Result<T>
+where
+    T: Send + 'static,
+    F: FnOnce(&Connection, &Scope) -> Result<T> + Send + 'static,
+{
+    app.db.call(move |c| f(c, &scope)).await
+}
+
+fn insight_network(c: &Connection, scope: &Scope) -> Result<Vec<Value>> {
+    if !scope.perms.see_network {
+        return Ok(vec![]);
+    }
+    buckets(c, &scope.cond(), "CASE p.is_local WHEN 1 THEN 'Local' WHEN 0 THEN 'Remote' ELSE 'Unknown' END", "", 3)
+}
+
+/// What actually went over the wire: the transcoded bitrate when transcoding, else the file's.
+fn insight_data_bytes(c: &Connection, scope: &Scope) -> Result<i64> {
+    let cond = scope.cond();
+    Ok(c.query_row(
+        &format!(
+            "SELECT CAST(COALESCE(SUM(COALESCE(json_extract(p.transcode, '$.bitrate'), p.bitrate) / 8.0 * p.duration_s), 0) AS INTEGER)
+             FROM playbacks p {}",
+            cond.sql()
+        ),
+        params_from_iter(cond.args.iter()),
+        |r| r.get(0),
+    )?)
+}
+
+fn insight_client_methods(c: &Connection, scope: &Scope) -> Result<Vec<Map<String, Value>>> {
+    let cm = scope.cond().with_raw("p.client IS NOT NULL");
+    rows_json(
+        c,
+        &format!(
+            "SELECT p.client, COALESCE(SUM(p.play_method = 'DirectPlay'), 0) AS direct_play, COALESCE(SUM(p.play_method = 'DirectStream'), 0) AS direct_stream,
+                    COALESCE(SUM(p.play_method = 'Transcode'), 0) AS transcode, COALESCE(SUM(p.duration_s), 0) AS watch_s
+             FROM playbacks p {} GROUP BY p.client ORDER BY COUNT(*) DESC LIMIT 12",
+            cm.sql()
+        ),
+        &cm.args,
+    )
+}
+
+fn insight_completion(c: &Connection, scope: &Scope) -> Result<Vec<Value>> {
+    let video = scope.cond().with_raw("p.item_type IN ('Movie', 'Episode') AND COALESCE(p.runtime_s, 0) > 0");
+    let comp = one_json(
+        c,
+        &format!(
+            "WITH r AS (SELECT MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / p.runtime_s) AS f FROM playbacks p {})
+             SELECT COALESCE(SUM(f < 0.1), 0) AS a, COALESCE(SUM(f >= 0.1 AND f < 0.5), 0) AS b,
+                    COALESCE(SUM(f >= 0.5 AND f < 0.9), 0) AS c, COALESCE(SUM(f >= 0.9), 0) AS d FROM r",
+            video.sql()
+        ),
+        &video.args,
+    )?
+    .unwrap_or_default();
+    Ok([("Under 10%", "a"), ("10–50%", "b"), ("50–90%", "c"), ("Finished (90%+)", "d")]
+        .iter()
+        .map(|(name, k)| json!({ "name": name, "plays": comp.get(*k).cloned().unwrap_or(json!(0)) }))
+        .collect())
+}
+
+fn insight_behaviour(c: &Connection, scope: &Scope) -> Result<Option<Map<String, Value>>> {
+    let live = scope.cond().with_raw("p.source = 'live' AND p.active = 0");
+    one_json(
+        c,
+        &format!(
+            "SELECT COUNT(*) AS plays_measured, ROUND(COALESCE(AVG(p.pause_count), 0), 2) AS avg_pauses,
+                    ROUND(COALESCE(AVG(p.seek_count), 0), 2) AS avg_seeks,
+                    ROUND(COALESCE(AVG(COALESCE(p.start_position_s, 0) > 30), 0), 3) AS resumed_share
+             FROM playbacks p {}",
+            live.sql()
+        ),
+        &live.args,
+    )
+}
+
+fn insight_failed_logins(c: &Connection, scope: &Scope) -> Result<Vec<Map<String, Value>>> {
+    if !scope.perms.see_server {
+        return Ok(vec![]);
+    }
+    let mut args: Vec<SqlValue> = vec![];
+    let mut wh = "WHERE (e.type LIKE '%AuthenticationFail%' OR e.name LIKE '%failed%login%' OR e.name LIKE '%Failed login%')".to_string();
+    if let Some(s) = scope.since {
+        wh.push_str(" AND e.date >= ?");
+        args.push(s.into());
+    }
+    rows_json(
+        c,
+        &format!(
+            "SELECT e.date, e.name || COALESCE(' · ' || COALESCE(e.short_overview, e.overview), '') AS overview, u.name AS user_name
+             FROM server_events e LEFT JOIN users u ON u.id = e.user_id {wh} ORDER BY e.date DESC LIMIT 10"
+        ),
+        &args,
+    )
+}
+
 pub async fn insights(State(app): State<App>, user: AuthUser, Query(q): Query<FilterQuery>) -> ApiResult {
-    let out = scoped(&app, &user, &q, |c, scope| {
-        let cond = scope.cond();
-        let network = if scope.perms.see_network {
-            buckets(c, &cond, "CASE p.is_local WHEN 1 THEN 'Local' WHEN 0 THEN 'Remote' ELSE 'Unknown' END", "", 3)?
-        } else {
-            vec![]
-        };
-        // What actually went over the wire: the transcoded bitrate when transcoding, else the file's.
-        let data_bytes: i64 = c.query_row(
-            &format!(
-                "SELECT CAST(COALESCE(SUM(COALESCE(json_extract(p.transcode, '$.bitrate'), p.bitrate) / 8.0 * p.duration_s), 0) AS INTEGER)
-                 FROM playbacks p {}",
-                cond.sql()
-            ),
-            params_from_iter(cond.args.iter()),
-            |r| r.get(0),
-        )?;
-        let cm = cond.with_raw("p.client IS NOT NULL");
-        let client_methods = rows_json(
-            c,
-            &format!(
-                "SELECT p.client, COALESCE(SUM(p.play_method = 'DirectPlay'), 0) AS direct_play, COALESCE(SUM(p.play_method = 'DirectStream'), 0) AS direct_stream,
-                        COALESCE(SUM(p.play_method = 'Transcode'), 0) AS transcode, COALESCE(SUM(p.duration_s), 0) AS watch_s
-                 FROM playbacks p {} GROUP BY p.client ORDER BY COUNT(*) DESC LIMIT 12",
-                cm.sql()
-            ),
-            &cm.args,
-        )?;
-        let video = cond.with_raw("p.item_type IN ('Movie', 'Episode') AND COALESCE(p.runtime_s, 0) > 0");
-        let comp = one_json(
-            c,
-            &format!(
-                "WITH r AS (SELECT MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / p.runtime_s) AS f FROM playbacks p {})
-                 SELECT COALESCE(SUM(f < 0.1), 0) AS a, COALESCE(SUM(f >= 0.1 AND f < 0.5), 0) AS b,
-                        COALESCE(SUM(f >= 0.5 AND f < 0.9), 0) AS c, COALESCE(SUM(f >= 0.9), 0) AS d FROM r",
-                video.sql()
-            ),
-            &video.args,
-        )?
-        .unwrap_or_default();
-        let completion: Vec<Value> = [("Under 10%", "a"), ("10–50%", "b"), ("50–90%", "c"), ("Finished (90%+)", "d")]
-            .iter()
-            .map(|(name, k)| json!({ "name": name, "plays": comp.get(*k).cloned().unwrap_or(json!(0)) }))
-            .collect();
-        let live = cond.with_raw("p.source = 'live' AND p.active = 0");
-        let behaviour = one_json(
-            c,
-            &format!(
-                "SELECT COUNT(*) AS plays_measured, ROUND(COALESCE(AVG(p.pause_count), 0), 2) AS avg_pauses,
-                        ROUND(COALESCE(AVG(p.seek_count), 0), 2) AS avg_seeks,
-                        ROUND(COALESCE(AVG(COALESCE(p.start_position_s, 0) > 30), 0), 3) AS resumed_share
-                 FROM playbacks p {}",
-                live.sql()
-            ),
-            &live.args,
-        )?;
-        let failed_logins = if scope.perms.see_server {
-            let mut args: Vec<SqlValue> = vec![];
-            let mut wh = "WHERE (e.type LIKE '%AuthenticationFail%' OR e.name LIKE '%failed%login%' OR e.name LIKE '%Failed login%')".to_string();
-            if let Some(s) = scope.since {
-                wh.push_str(" AND e.date >= ?");
-                args.push(s.into());
-            }
-            rows_json(
-                c,
-                &format!(
-                    "SELECT e.date, e.name || COALESCE(' · ' || COALESCE(e.short_overview, e.overview), '') AS overview, u.name AS user_name
-                     FROM server_events e LEFT JOIN users u ON u.id = e.user_id {wh} ORDER BY e.date DESC LIMIT 10"
-                ),
-                &args,
-            )?
-        } else {
-            vec![]
-        };
-        Ok(json!({
-            "concurrency": concurrency(c, scope, &cond)?,
-            "network": network, "data_bytes": data_bytes,
-            "genres": genre_buckets(c, &cond)?,
-            "client_methods": client_methods, "completion": completion,
-            "behaviour": behaviour, "failed_logins": failed_logins,
-        }))
-    })
-    .await?;
-    Ok(Json(out))
+    // Passes over the history that need nothing from each other, in five groups of about equal cost, each on a
+    // connection of its own (one of the pool's six stays free for the collector). One after another they took the sum
+    // of their times, 4.1 s on a million plays.
+    let scope = resolved(&app, &user, &q).await?;
+    let (concurrency, genres, client_methods, (network, completion, behaviour), (data_bytes, failed_logins)) = tokio::try_join!(
+        apart(app.clone(), scope.clone(), |c, s| concurrency(c, s, &s.cond())),
+        apart(app.clone(), scope.clone(), |c, s| genre_buckets(c, &s.cond())),
+        apart(app.clone(), scope.clone(), insight_client_methods),
+        apart(app.clone(), scope.clone(), |c, s| Ok((insight_network(c, s)?, insight_completion(c, s)?, insight_behaviour(c, s)?))),
+        apart(app.clone(), scope.clone(), |c, s| Ok((insight_data_bytes(c, s)?, insight_failed_logins(c, s)?))),
+    )?;
+    Ok(Json(json!({
+        "concurrency": concurrency,
+        "network": network, "data_bytes": data_bytes,
+        "genres": genres,
+        "client_methods": client_methods, "completion": completion,
+        "behaviour": behaviour, "failed_logins": failed_logins,
+    })))
 }
 
 // ---------------------------------------------------------------- v0.2: what the library is made of
