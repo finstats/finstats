@@ -241,11 +241,17 @@ own backup. A new importer goes through `PlayRecord::insert_imported`, never `in
 
 **Re-linking is the only thing that rewrites `item_id`, so it is the only thing that can turn an imported play into a
 duplicate of one already here** — the `already_recorded` check ran before the id moved. `relink::relink_orphans` therefore
-ends by re-applying the rule (`playback::drop_relinked_duplicates`), and takes `merge_window_s` as an argument so that
-none of its three callers can forget to. Only an imported row is ever removed, never one the collector recorded (its row
-carries a timeline no import can have), and rows of one source are never compared with each other. A real history had 363
-such pairs, 189 rows, mostly music — music being what gets re-added and renamed. **Anything that rewrites which item a
-play points at re-applies the rule, or it re-creates that bug.**
+re-applies the rule (`playback::drop_relinked_duplicates`) to each title it moved plays onto, in one savepoint with the
+move (`move_plays`), and takes `merge_window_s` as an argument so that none of its three callers can forget to. Only an
+imported row is ever removed, never one the collector recorded (its row carries a timeline no import can have), and rows
+of one source are never compared with each other. A real history had 363 such pairs, 189 rows, mostly music — music being
+what gets re-added and renamed. **Anything that rewrites which item a play points at re-applies the rule, or it re-creates
+that bug.** It runs at every start and after every library read and nearly always finds nothing, so it must stay cheap
+when there is nothing: `ORPHANS_SQL` steps from title to title through the title index and it returns at once when no
+title is orphaned; only the plays of orphaned titles are read. Sweeping the whole history instead, and finding orphans by
+grouping every play, took 5 of the 8 seconds of a start on a million plays. Migration 26 swept every install once,
+with its own merge window, for those coming from before the sweep existed; the rule's text is one macro
+(`relinked_duplicates_sql!`) so the statement and the migration cannot drift.
 
 **`sync_libraries` reads a library twice — every item, then the cast and crew of films and shows only — and only the
 first count may be shown to `trustworthy_removal`.** The two cursors were both called `start`, the second shadowing the
@@ -284,7 +290,8 @@ local days, so chart buckets and totals agree), user/library filters, `min_play_
 without `see_everyone` are force-scoped to their own `user_id`, and IPs/device ids/file paths are only sent with `see_network`/`see_server` — enforced server-side**.
 `row_json` maps SQL rows to JSON by column name (`BOOL_COLS` / `JSON_COLS` decide bool and JSON columns), so adding a
 field is usually just adding a column to a SELECT. Local-time bucketing relies on SQLite's `'localtime'` and the
-process `TZ` (the Docker image ships tzdata for this). Do not use `#[serde(flatten)]` in `Query` structs —
+process `TZ` (the Docker image ships tzdata for this); Rust that needs the local day of many moments asks through
+`LocalDays`, once per quarter hour (every offset and clock change falls on one), never once per play. Do not use `#[serde(flatten)]` in `Query` structs —
 serde_urlencoded then hands numbers over as strings and every numeric filter 400s.
 
 **Playback insights (`stats.rs`, 2.0).** Where a title loses its viewers, drawn from where each play stopped. **A stop is
