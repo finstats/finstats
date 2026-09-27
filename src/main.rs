@@ -194,7 +194,7 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
             };
             c.execute("DELETE FROM sessions WHERE expires_at <= ?1", [db::now()])?;
             network::set_manual(c, &Settings::load(c)?.home_addresses)?;
-            network::reclassify(c)?;
+            network::reclassify_at_start(c)?;
             let settings_now = Settings::load(c)?;
             let began = db::now();
             // Re-linked plays keep their times, so the start-up regroup would not find the titles they moved onto.

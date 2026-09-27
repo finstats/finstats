@@ -10,7 +10,7 @@ use std::net::IpAddr;
 use std::time::Duration;
 
 use anyhow::Result;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::db::rusqlite::{Connection, params};
 use crate::db::{self, is_local_ip};
@@ -57,7 +57,8 @@ pub fn classify(conn: &Connection, ip: &str) -> Result<Option<bool>> {
     Ok(Some(conn.prepare_cached("SELECT 1 FROM home_addresses WHERE ip = ?1")?.exists([ip])?))
 }
 
-/// Decide every play's network again. Cheap: one pass over the distinct addresses.
+/// Decide every play's network again. Cheap: one pass over the distinct addresses. Notes what it decided against, so
+/// a start can tell whether anything has changed since ([`reclassify_at_start`]).
 pub fn reclassify(conn: &Connection) -> Result<usize> {
     let ips: Vec<String> = conn
         .prepare("SELECT DISTINCT remote_ip FROM playbacks WHERE remote_ip IS NOT NULL")?
@@ -68,7 +69,28 @@ pub fn reclassify(conn: &Connection) -> Result<usize> {
         let local = classify(conn, &ip)?;
         changed += conn.execute("UPDATE playbacks SET is_local = ?1 WHERE remote_ip = ?2 AND is_local IS NOT ?1", params![local, ip])?;
     }
+    db::set_setting(conn, CLASSIFIED_KEY, &classified_against(conn)?.to_string())?;
     Ok(changed)
+}
+
+/// What the history's networks were last decided against. Not in a backup (only the `settings` key is).
+const CLASSIFIED_KEY: &str = "network_classified";
+
+/// A play is local by the rules of this version of finstats and the set of home addresses; nothing else decides it.
+fn classified_against(conn: &Connection) -> Result<Value> {
+    let homes: Vec<String> = conn.prepare("SELECT ip FROM home_addresses ORDER BY ip")?.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?;
+    Ok(json!({ "version": env!("CARGO_PKG_VERSION"), "homes": homes }))
+}
+
+/// The start-up pass: decide the history again only when what decides it has changed since it was last decided. Every
+/// start re-deciding every play took 5.5 s on ten million plays to change nothing. True when it re-decided.
+pub fn reclassify_at_start(conn: &Connection) -> Result<bool> {
+    let last: Option<Value> = db::get_setting(conn, CLASSIFIED_KEY)?.and_then(|s| serde_json::from_str(&s).ok());
+    if last == Some(classified_against(conn)?) {
+        return Ok(false);
+    }
+    reclassify(conn)?;
+    Ok(true)
 }
 
 /// Note that `ip` was seen as this network's public address. True when it is a new one.
@@ -177,7 +199,8 @@ mod tests {
     fn conn() -> Connection {
         let c = Connection::open_in_memory().unwrap();
         c.execute_batch(
-            "CREATE TABLE home_addresses(ip TEXT PRIMARY KEY, source TEXT NOT NULL, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL);
+            "CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+             CREATE TABLE home_addresses(ip TEXT PRIMARY KEY, source TEXT NOT NULL, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL);
              CREATE TABLE playbacks(id INTEGER PRIMARY KEY, remote_ip TEXT, is_local INTEGER);
              INSERT INTO playbacks(remote_ip, is_local) VALUES ('192.168.1.10', NULL), ('203.0.113.7', 0), ('::ffff:203.0.113.7', 0), ('198.51.100.9', 1), (NULL, NULL), ('not an ip', NULL);",
         )
@@ -209,5 +232,29 @@ mod tests {
         c.execute("DELETE FROM home_addresses WHERE source = 'lookup'", []).unwrap();
         reclassify(&c).unwrap();
         assert_eq!(flags(&c), vec![Some(true), Some(false), Some(false), Some(true), None, None]);
+    }
+
+    #[test]
+    fn a_start_re_decides_the_history_only_when_the_home_addresses_changed() {
+        // Every start re-decided every play's network (5.5 s on ten million plays), although what a play is only
+        // changes with the set of home addresses — or with the rules, which is another version of finstats.
+        let c = conn();
+        let flag = |c: &Connection| -> Option<bool> { c.query_row("SELECT is_local FROM playbacks WHERE remote_ip = '198.51.100.9'", [], |r| r.get(0)).unwrap() };
+        set_manual(&c, &["198.51.100.9".into()]).unwrap();
+        assert!(reclassify_at_start(&c).unwrap(), "never decided: decide");
+        assert_eq!(flag(&c), Some(true));
+        // The same homes: nothing is read again (the flag is planted wrong to show it).
+        c.execute("UPDATE playbacks SET is_local = 0", []).unwrap();
+        set_manual(&c, &["198.51.100.9".into()]).unwrap();
+        assert!(!reclassify_at_start(&c).unwrap());
+        assert_eq!(flag(&c), Some(false));
+        // A new home address, or another version: everything again.
+        remember(&c, "203.0.113.7").unwrap();
+        assert!(reclassify_at_start(&c).unwrap());
+        assert_eq!(flag(&c), Some(true));
+        c.execute("UPDATE settings SET value = json_set(value, '$.version', '0.0.1') WHERE key = 'network_classified'", []).unwrap();
+        c.execute("UPDATE playbacks SET is_local = 0", []).unwrap();
+        assert!(reclassify_at_start(&c).unwrap());
+        assert_eq!(flag(&c), Some(true));
     }
 }
