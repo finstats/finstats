@@ -159,6 +159,29 @@ fn save_progress(c: &mut crate::db::rusqlite::Connection, due: &[(i64, PlayRecor
     Ok(())
 }
 
+/// (device id, user id, name, client, app version, address) of one device.
+type DeviceRow = (String, String, Option<String>, Option<String>, Option<String>, Option<String>);
+
+/// The devices a pass saw that are due a write, in one transaction: one statement each outside a transaction was one
+/// commit each, and a crowd's first pass wrote 100,000 of them in a row.
+fn remember_devices(c: &mut crate::db::rusqlite::Connection, rows: Vec<DeviceRow>, now: i64) -> Result<()> {
+    let tx = c.transaction()?;
+    {
+        let mut stmt = tx.prepare_cached(
+            "INSERT INTO devices(device_id, user_id, device_name, client, app_version, last_ip, first_seen, last_seen)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+             ON CONFLICT(device_id, user_id) DO UPDATE SET
+                device_name = excluded.device_name, client = excluded.client,
+                app_version = excluded.app_version, last_ip = excluded.last_ip, last_seen = excluded.last_seen",
+        )?;
+        for d in rows {
+            stmt.execute(params![d.0, d.1, d.2, d.3, d.4, d.5, now])?;
+        }
+    }
+    tx.commit()?;
+    Ok(())
+}
+
 /// When each device's row was last written, forgetting any not written for longer than [`DEVICE_REFRESH`]: past that
 /// an entry decides nothing, and a device id is the app's own word — one that invented a new id every time would
 /// otherwise grow the map for as long as finstats runs.
@@ -1178,7 +1201,7 @@ async fn tick(
     let tick_at = Instant::now();
     forget_stale_devices(devices_seen, tick_at);
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut device_rows: Vec<(String, String, Option<String>, Option<String>, Option<String>, Option<String>)> = vec![];
+    let mut device_rows: Vec<DeviceRow> = vec![];
     // What this pass has to write, written once after the list is read: one transaction each, not one call per play.
     let mut due: Vec<(i64, PlayRecord, Vec<PlayEvent>)> = vec![];
     let mut arrived: Vec<(String, PlayRecord, bool, Option<f64>)> = vec![];
@@ -1289,21 +1312,7 @@ async fn tick(
     }
 
     if !device_rows.is_empty() {
-        app.db
-            .call(move |c| {
-                let mut stmt = c.prepare_cached(
-                    "INSERT INTO devices(device_id, user_id, device_name, client, app_version, last_ip, first_seen, last_seen)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
-                     ON CONFLICT(device_id, user_id) DO UPDATE SET
-                        device_name = excluded.device_name, client = excluded.client,
-                        app_version = excluded.app_version, last_ip = excluded.last_ip, last_seen = excluded.last_seen",
-                )?;
-                for d in device_rows {
-                    stmt.execute(params![d.0, d.1, d.2, d.3, d.4, d.5, now])?;
-                }
-                Ok(())
-            })
-            .await?;
+        app.db.call(move |c| remember_devices(c, device_rows, now)).await?;
     }
 
     let mut live: Vec<Value> = tracked.iter().map(|(k, t)| live_json(k, t)).collect();
@@ -1404,6 +1413,19 @@ mod tests {
         assert_eq!(rows, [(30, 5030), (31, 5031)]);
         let pauses: i64 = c.query_row("SELECT COUNT(*) FROM playback_events WHERE kind = 'pause' AND playback_id = ?1", [ia], |r| r.get(0)).unwrap();
         assert_eq!(pauses, 1);
+    }
+
+    #[test]
+    fn devices_seen_in_a_pass_are_written_in_one_go_and_a_known_one_is_updated() {
+        // Each device was its own statement outside any transaction, so its own commit: a crowd's first pass wrote
+        // 100,000 commits one after another.
+        let mut c = migrated();
+        let dev = |id: &str, name: &str| (id.to_string(), "u1".to_string(), Some(name.to_string()), Some("Jellyfin Web".to_string()), Some("10.10.0".to_string()), Some("192.168.1.10".to_string()));
+        remember_devices(&mut c, vec![dev("tv", "Living room"), dev("phone", "Pixel")], 1000).unwrap();
+        remember_devices(&mut c, vec![dev("tv", "Lounge")], 2000).unwrap();
+        let rows: Vec<(String, String, i64, i64)> = c.prepare("SELECT device_id, device_name, first_seen, last_seen FROM devices ORDER BY device_id").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(rows, [("phone".into(), "Pixel".into(), 1000, 1000), ("tv".into(), "Lounge".into(), 1000, 2000)]);
     }
 
     #[test]
