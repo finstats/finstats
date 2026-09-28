@@ -70,7 +70,10 @@ pub fn normalize_url_of(input: &str, what: &str) -> Result<String> {
     if !s.starts_with("http://") && !s.starts_with("https://") {
         s = format!("http://{s}");
     }
-    if let Some(i) = s.find("/web") {
+    // Only in the path: the "//" after the scheme would find a host called "web" otherwise.
+    let path_at = s.find("://").map_or(0, |i| i + 3);
+    let path_at = s[path_at..].find('/').map_or(s.len(), |i| path_at + i);
+    if let Some(i) = s[path_at..].find("/web").map(|i| path_at + i) {
         if s[i..].starts_with("/web/") || s.ends_with("/web") {
             s.truncate(i);
         }
@@ -469,6 +472,16 @@ pub fn web_link(base: &str, item_id: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Only a path of `/web` is Jellyfin's web client; a host that happens to be called "web" is not.
+    #[test]
+    fn a_host_called_web_is_a_host_and_the_web_client_path_is_still_dropped() {
+        assert_eq!(normalize_url("http://web:8096/web/").unwrap(), "http://web:8096");
+        assert_eq!(normalize_url("web").unwrap(), "http://web");
+        assert_eq!(normalize_url("https://webhost.example/jf/web/index.html").unwrap(), "https://webhost.example/jf");
+        assert_eq!(normalize_url("http://192.168.1.10:8096/web").unwrap(), "http://192.168.1.10:8096");
+        assert_eq!(normalize_url("http://192.168.1.10:8096/webapp").unwrap(), "http://192.168.1.10:8096/webapp");
+    }
 
     #[test]
     fn a_title_opens_on_its_own_page_in_jellyfins_web_app() {
