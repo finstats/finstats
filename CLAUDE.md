@@ -109,6 +109,9 @@ so a query that silently hides items is a data-loss bug, not a cosmetic one.
 own: `item_detail` answers `language_coverage` (episodes per language, files only), which is what shows a dub that stops half way. finstats never
 claims "dubbed": it does not know a title's original language, so it lists the languages and lets the reader decide. Names come from the browser
 (`languageName` in `dom.js`: `Intl.DisplayNames` plus the bibliographic codes it lacks), so no language table is shipped.
+On the title page the hero names at most four languages per kind, one line each that never wraps, and the Languages card
+(`#languages`, only when the hero could not say it all) lists every one with its episodes: a long show carries two dozen
+subtitle languages, and listing them in the hero pushed the artwork down a screen.
 
 **Jellyfin client (`jellyfin.rs`).** Every request asks for `Accept: application/json; profile="PascalCase"` because
 10.x servers answer PascalCase and newer ones camelCase by default. All JSON access in the codebase assumes

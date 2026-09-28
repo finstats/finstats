@@ -33,7 +33,7 @@ export default function itemPage(ctx) {
     skeleton: () => [h('div', { class: 'item-hero' }, h('span', { class: 'sk sk-poster-lg' }), h('div', { class: 'sk-row-lines' }, sk.line('40%', 28), sk.line('60%'), sk.line('30%'))), sk.tiles(3), sk.cardBlock(240)],
     fetch: () => loadItem(id, days, ctx.signal),
     render: ({ d, recent, key }) => {
-      const it = d.item, t = d.totals || {};
+      const it = d.item, t = d.totals || {}, langs = languages(it);
       ctx.title(it.name);
       const code = episodeCode(it.season_number, it.episode_number);
       const meta = [
@@ -58,7 +58,7 @@ export default function itemPage(ctx) {
           h('div', { class: 'chips' }, meta),
           it.genres && it.genres.length ? h('p', { class: 'item-genres' }, it.genres.join(' · ')) : null,
           Array.isArray(it.studios) && it.studios.length ? h('p', { class: 'item-studios' }, it.studios.slice(0, 4).join(' · ')) : null,
-          languageLines(it),
+          languageLines(langs),
           externalLinks(it.external),
           it.jellyfin_link ? h('p', { class: 'item-open' }, h('a', { class: 'btn btn-primary open-in-jellyfin', href: it.jellyfin_link, target: '_blank', rel: 'noopener noreferrer' },
             icon('play', 14), 'Open in Jellyfin')) : null,
@@ -86,6 +86,7 @@ export default function itemPage(ctx) {
         whoKeepsWatching(it, d.seasons),
         castCard(d.people),
         comingCard(it),
+        languagesCard(langs),
         d.seasons && d.seasons.length ? card({ title: 'Seasons', sub: 'Plays per episode in this range', body: seasons(d.seasons) }) : null,
         card({ title: 'Watched by', cls: 'card-flush', body: watchers(d.watchers) }),
         playedBy(d.played_by),
@@ -138,19 +139,70 @@ function comingCard(it) {
 /**
  * Which languages it can be played in. For a file: its tracks. For a show or a season: each language with how many
  * episodes have it, because a dub that stops after season one is exactly what people want to know before starting.
+ * `total` is null for a file, whose every language covers all of it.
  */
-function languageLines(it) {
+function languages(it) {
   const cov = it.language_coverage;
-  const line = (label, list) => (list && list.length ? h('p', { class: 'item-langs' }, h('span', { class: 'item-langs-label' }, label), list) : null);
-  const box = (...lines) => (lines.some(Boolean) ? h('div', { class: 'item-langs-box' }, lines) : null);
-  const join = (nodes) => nodes.flatMap((n, i) => (i ? [' · ', n] : [n]));
-  if (cov && cov.episodes) {
-    const each = (rows) => join((rows || []).map((r) => h('span', { class: r.episodes < cov.episodes ? 'lang-partial' : null },
-      languageName(r.code), r.episodes < cov.episodes ? h('span', { class: 'muted' }, ` (${num(r.episodes)} of ${num(cov.episodes)} episodes)`) : null)));
-    return box(line('Audio', each(cov.audio)), line('Subtitles', each(cov.subtitles)));
-  }
-  const names = (codes) => join((Array.isArray(codes) ? codes : []).map((c) => h('span', null, languageName(c))));
-  return box(line('Audio', names(it.audio_languages)), line('Subtitles', names(it.subtitle_languages)));
+  if (cov && cov.episodes) return { total: cov.episodes, audio: cov.audio || [], subtitles: cov.subtitles || [] };
+  const files = (codes) => (Array.isArray(codes) ? codes : []).map((code) => ({ code, episodes: null }));
+  return { total: null, audio: files(it.audio_languages), subtitles: files(it.subtitle_languages) };
+}
+const partial = (L, r) => L.total != null && r.episodes < L.total;
+const ofEpisodes = (L, r) => `${num(r.episodes)} of ${num(L.total)} episodes`;
+
+// A long show can carry two dozen subtitle languages. The hero names the first few, most complete first, one line
+// each, and the Languages card further down has all of them: listing them all here pushed the artwork down a screen.
+const HERO_NAMES = 3;
+const heroNames = (rows) => (rows.length <= HERO_NAMES + 1 ? rows : rows.slice(0, HERO_NAMES));
+const needsCard = (L) => [L.audio, L.subtitles].some((rows) => heroNames(rows).length < rows.length || rows.some((r) => partial(L, r)));
+
+function jumpTo(id, text) {
+  return h('a', { class: 'item-langs-more', href: '#' + id, onClick: (e) => {
+    const target = document.getElementById(id);
+    if (!target) return;
+    e.preventDefault();   // a bare #fragment is a history entry, and the router re-mounts the page on popstate
+    target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    target.focus({ preventScroll: true });
+  } }, text);
+}
+
+function languageLines(L) {
+  const card = needsCard(L);
+  const line = (label, rows) => {
+    if (!rows.length) return null;
+    const shown = heroNames(rows), rest = rows.length - shown.length;
+    return h('p', { class: 'item-langs' }, h('span', { class: 'item-langs-label' }, label),
+      h('span', { class: 'item-langs-names' }, shown.flatMap((r, i) => [i ? ' · ' : null,
+        partial(L, r) ? h('span', { class: 'lang-partial', title: ofEpisodes(L, r) }, languageName(r.code)) : languageName(r.code)]).filter((n) => n != null)),
+      rest ? jumpTo('languages', `+${num(rest)} more`) : card && rows.some((r) => partial(L, r)) ? jumpTo('languages', 'by episode') : null);
+  };
+  const lines = [line('Audio', L.audio), line('Subtitles', L.subtitles)].filter(Boolean);
+  return lines.length ? h('div', { class: 'item-langs-box' }, lines) : null;
+}
+
+/** Every language, when the hero could not say it all: the complete ones as a list, the partial ones with how far they go. */
+function languagesCard(L) {
+  if (!needsCard(L)) return null;
+  const mark = (kind, r) => ({ 'data-kind': kind, 'data-lang': r.code, 'data-episodes': r.episodes == null ? null : String(r.episodes) });
+  const group = (kind, label, rows) => {
+    if (!rows.length) return null;
+    const full = rows.filter((r) => !partial(L, r)).sort((a, b) => languageName(a.code).localeCompare(languageName(b.code)));
+    const part = rows.filter((r) => partial(L, r));
+    return h('div', { class: 'lang-group' },
+      h('h3', { class: 'lang-group-title' }, label, h('span', { class: 'lang-group-count mono' }, num(rows.length))),
+      full.length ? [L.total != null && part.length ? h('p', { class: 'lang-sub' }, `In all ${num(L.total)} episodes`) : null,
+        h('ul', { class: 'chips lang-chips' }, full.map((r) => h('li', { class: 'chip', ...mark(kind, r) }, languageName(r.code))))] : null,
+      part.length ? [h('p', { class: 'lang-sub' }, full.length ? 'In some of them' : `In some of the ${num(L.total)} episodes`),
+        h('ul', { class: 'lang-bars' }, part.map((r) => h('li', mark(kind, r),
+          h('span', { class: 'lang-name' }, languageName(r.code)),
+          h('span', { class: 'lang-track', 'aria-hidden': 'true' }, h('span', { class: 'lang-fill', style: { width: Math.max(2, (r.episodes / L.total) * 100) + '%' } })),
+          h('span', { class: 'lang-count mono' }, `${num(r.episodes)} of ${num(L.total)}`))))] : null);
+  };
+  const el = card({ title: 'Languages', id: 'languages', cls: 'card-langs',
+    sub: L.total != null ? `Across the ${num(L.total)} episodes on disk` : 'Tracks in the file',
+    body: h('div', { class: 'grid-2' }, group('audio', 'Audio', L.audio), group('subtitles', 'Subtitles', L.subtitles)) });
+  el.tabIndex = -1;   // the hero's "+n more" moves focus here, so a keyboard continues from the list it asked for
+  return el;
 }
 
 /** Directors first, then the billed cast. Each one opens that person's page. */

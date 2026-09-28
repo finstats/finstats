@@ -1473,10 +1473,29 @@ button.ep[aria-disabled="true"]:hover { filter: none; outline: 0; }
 @media (pointer: coarse) { .wm-svg { touch-action: pan-y; } }
 
 /* ---------------------------------------------------------------- languages on a title */
-.item-langs { color: var(--text-muted); font-size: 13px; }
+/* The hero: one line per kind, never wrapping; whatever does not fit is in the Languages card below. */
+.item-langs { display: flex; align-items: baseline; gap: 10px; min-width: 0; color: var(--text-muted); font-size: 13px; }
 .item-langs + .item-langs { margin-top: 2px; }
-.item-langs-label { display: inline-block; min-width: 68px; color: var(--text-faint); }
-.item-langs .lang-partial { color: var(--text); }
+.item-langs-label { flex: none; min-width: 68px; color: var(--text-faint); }
+.item-langs-names { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.item-langs .lang-partial { text-decoration: underline dotted var(--text-faint); text-underline-offset: 3px; }
+.item-langs-more { flex: none; white-space: nowrap; font-size: 12.5px; }
+/* A nowrap line still counts its whole width towards the hero's minimum, which on a phone pushed the link past the edge. */
+.item-hero-text { max-width: 100%; }
+.card-langs { scroll-margin-top: 14px; }
+.card-langs:focus { outline: none; }
+.lang-group { display: flex; flex-direction: column; gap: 8px; }
+.lang-group-title { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; }
+.lang-group-count { color: var(--text-faint); font-size: 12px; font-weight: 400; }
+.lang-sub { color: var(--text-faint); font-size: 12px; }
+.lang-sub:not(:first-of-type) { margin-top: 6px; }
+.lang-chips { list-style: none; margin: 0; padding: 0; }
+.lang-bars { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, max-content) minmax(60px, 1fr) max-content; gap: 6px 12px; align-items: center; font-size: 13px; }
+.lang-bars li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; }
+.lang-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.lang-track { display: block; height: 6px; border-radius: 3px; background: var(--border-soft); overflow: hidden; }
+.lang-fill { display: block; height: 100%; border-radius: 3px; background: var(--single); }
+.lang-count { color: var(--text-muted); font-size: 12px; text-align: right; }
 .ep-langs { color: var(--text-muted); font-size: 12.5px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------------------------------------------------------------- settings: connections */
