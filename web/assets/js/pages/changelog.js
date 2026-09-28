@@ -8,6 +8,8 @@ import { markVersionSeen } from '../state.js';
 const KINDS = {
   Added: { icon: 'plus', cls: 'cl-added' },
   Changed: { icon: 'sliders', cls: 'cl-changed' },
+  Performance: { icon: 'gauge', cls: 'cl-performance' },
+  Stability: { icon: 'anchor', cls: 'cl-stability' },
   Fixed: { icon: 'check', cls: 'cl-fixed' },
   Removed: { icon: 'x', cls: 'cl-removed' },
 };
@@ -29,9 +31,23 @@ function inline(text) {
   return out;
 }
 
-function longDate(iso) {
+const DAY = { year: 'numeric', month: 'long', day: 'numeric' };
+const day = (iso) => {
   const d = /^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? new Date(iso + 'T12:00:00') : null;
-  return d && !isNaN(d) ? d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : iso || '';
+  return d && !isNaN(d) ? d : null;
+};
+
+function longDate(iso) {
+  const d = day(iso);
+  return d ? d.toLocaleDateString(undefined, DAY) : iso || '';
+}
+
+/** "September 25 – 28, 2026": the locale decides what the two days share; one day reads as one. */
+function days(first, last) {
+  const a = day(first), b = day(last);
+  if (!a || !b || first === last) return longDate(last || first);
+  const f = new Intl.DateTimeFormat(undefined, DAY);
+  return typeof f.formatRange === 'function' ? f.formatRange(a, b) : `${f.format(a)} – ${f.format(b)}`;
 }
 
 function release(r, current) {
@@ -40,7 +56,7 @@ function release(r, current) {
     h('header', { class: 'cl-head' },
       h('h2', { class: 'cl-version mono', id: `cl-${r.version}` }, 'v' + r.version),
       running ? h('span', { class: 'chip cl-running' }, icon('check', 12), 'Running now') : null,
-      r.date ? h('time', { class: 'cl-date', dateTime: r.date }, longDate(r.date)) : null),
+      r.date ? h('time', { class: 'cl-date', dateTime: r.date }, days(r.started || r.date, r.date)) : null),
     r.summary ? h('p', { class: 'cl-summary' }, inline(r.summary)) : null,
     (r.groups || []).filter((g) => g.items && g.items.length).map((g) => {
       const k = KINDS[g.kind] || KINDS.Changed;
@@ -66,7 +82,7 @@ function group(g, current, anchors) {
   const oldest = g.releases[g.releases.length - 1];
   const running = g.releases.some((r) => r.version === current);
   const n = g.releases.length;
-  const dates = newest.date && oldest.date && newest.date !== oldest.date ? `${longDate(oldest.date)} – ${longDate(newest.date)}` : longDate(newest.date);
+  const dates = days(oldest.started || oldest.date, newest.date);
   // The x.y.0 release says what the series was about; fall back to the newest summary.
   // A title line carries no full stop, so it is taken whole; anything that is a sentence
   // gives only its first, so a headline is never an introduction cut off by an ellipsis.
