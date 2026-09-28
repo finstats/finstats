@@ -73,7 +73,9 @@ pub(crate) struct Episode {
     pub first_at: Option<i64>,
 }
 
-pub(crate) fn episodes(conn: &Connection, user_id: &str) -> Result<Vec<Episode>> {
+/// `until`: only what had happened by then — plays ended, flags and marks set — for a published recap,
+/// which must not move while somebody is watching. `None` is everything, as the profile shows it.
+pub(crate) fn episodes(conn: &Connection, user_id: &str, until: Option<i64>) -> Result<Vec<Episode>> {
     let mut stmt = conn.prepare(
         "WITH mine AS (
             SELECT p.item_id, MAX(p.ended_at) AS last_at, MIN(p.started_at) AS first_at,
@@ -81,14 +83,16 @@ pub(crate) fn episodes(conn: &Connection, user_id: &str) -> Result<Vec<Episode>>
                    MIN(CASE WHEN MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0)) >= ?2
                             THEN p.ended_at END) AS seen_at
             FROM playbacks p LEFT JOIN items i ON i.id = p.item_id
-            WHERE p.user_id = ?1 AND p.item_type = 'Episode' GROUP BY p.item_id),
+            WHERE p.user_id = ?1 AND p.item_type = 'Episode' AND (?3 IS NULL OR (p.active = 0 AND p.ended_at <= ?3)) GROUP BY p.item_id),
          touched AS (
-            SELECT series_id FROM playbacks WHERE user_id = ?1 AND item_type = 'Episode' AND series_id IS NOT NULL
+            SELECT series_id FROM playbacks p WHERE user_id = ?1 AND item_type = 'Episode' AND series_id IS NOT NULL AND (?3 IS NULL OR (p.active = 0 AND p.ended_at <= ?3))
             UNION SELECT e.series_id FROM user_items ui JOIN items e ON e.id = ui.item_id WHERE ui.user_id = ?1 AND ui.played = 1 AND e.type = 'Episode'
-            UNION SELECT e.series_id FROM manual_seen ms JOIN items e ON e.id = ms.item_id WHERE ms.user_id = ?1)
+              AND (?3 IS NULL OR ui.last_played_at IS NULL OR ui.last_played_at <= ?3)
+            UNION SELECT e.series_id FROM manual_seen ms JOIN items e ON e.id = ms.item_id WHERE ms.user_id = ?1 AND (?3 IS NULL OR ms.created_at <= ?3))
          SELECT s.id, s.name, s.production_year, s.removed,
                 e.id, COALESCE(e.parent_index_number, 1), e.index_number, e.name,
-                m.frac, m.last_at, COALESCE(ui.played, 0), (ms.item_id IS NOT NULL),
+                m.frac, m.last_at, COALESCE(ui.played AND (?3 IS NULL OR ui.last_played_at IS NULL OR ui.last_played_at <= ?3), 0),
+                (ms.item_id IS NOT NULL AND (?3 IS NULL OR ms.created_at <= ?3)),
                 m.seen_at, m.first_at, ui.last_played_at, ms.created_at
          FROM items e
          JOIN items s ON s.id = e.series_id AND s.type = 'Series'
@@ -101,7 +105,7 @@ pub(crate) fn episodes(conn: &Connection, user_id: &str) -> Result<Vec<Episode>>
            AND (e.removed = 0 OR s.removed = 1)
          ORDER BY s.id, COALESCE(e.parent_index_number, 1), COALESCE(e.index_number, 9999), e.name",
     )?;
-    let mut rows = stmt.query(params![user_id, SEEN_AT])?;
+    let mut rows = stmt.query(params![user_id, SEEN_AT, until])?;
     let mut out = vec![];
     while let Some(r) = rows.next()? {
         let frac: Option<f64> = r.get(8)?;
@@ -131,7 +135,7 @@ pub(crate) fn episodes(conn: &Connection, user_id: &str) -> Result<Vec<Episode>>
 
 fn user_shows(conn: &Connection, user_id: &str) -> Result<Vec<Value>> {
     let mut shows: Vec<Value> = vec![];
-    for e in episodes(conn, user_id)? {
+    for e in episodes(conn, user_id, None)? {
         if shows.last().is_none_or(|s| s["id"] != e.series_id.as_str()) {
             shows.push(json!({
                 "id": e.series_id, "name": e.series_name, "year": e.series_year, "removed": e.series_removed,
@@ -221,7 +225,7 @@ mod tests {
             "CREATE TABLE items(id TEXT PRIMARY KEY, type TEXT, name TEXT, series_id TEXT, parent_index_number INTEGER, index_number INTEGER,
                                 production_year INTEGER, removed INTEGER DEFAULT 0, path TEXT, size_bytes INTEGER, runtime_s INTEGER);
              CREATE TABLE playbacks(id INTEGER PRIMARY KEY, user_id TEXT, item_id TEXT, item_type TEXT, series_id TEXT, started_at INTEGER, ended_at INTEGER,
-                                    duration_s INTEGER, position_s INTEGER, runtime_s INTEGER);
+                                    duration_s INTEGER, position_s INTEGER, runtime_s INTEGER, active INTEGER NOT NULL DEFAULT 0);
              CREATE TABLE user_items(user_id TEXT, item_id TEXT, played INTEGER, last_played_at INTEGER, PRIMARY KEY(user_id, item_id));
              CREATE TABLE manual_seen(user_id TEXT, item_id TEXT, created_at INTEGER, PRIMARY KEY(user_id, item_id));
              INSERT INTO items(id, type, name) VALUES ('s', 'Series', 'Test Show');

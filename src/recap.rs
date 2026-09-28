@@ -220,7 +220,7 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
     out["together"] = together(c, &w, scope_user.as_deref(), until, watch_s)?;
     out["requests"] = requests(c, &w, scope_user.as_deref(), until)?;
     out["finished"] = match &scope_user {
-        Some(u) => finished(c, &w, u, until.unwrap_or_else(db::now))?,
+        Some(u) => finished(c, &w, u, until)?,
         None => Value::Null,
     };
     out["versus"] = match year_json.as_i64() {
@@ -383,10 +383,10 @@ const DROPPED_QUIET_S: i64 = 60 * 86_400;
 /// The shows this person finished in the window — every episode on the server seen, the last of them
 /// inside it — and the ones they began and left, by the same reading of "seen" as the profile's
 /// progress bars (`profile::episodes`).
-fn finished(c: &Connection, w: &Window, user: &str, now: i64) -> Result<Value> {
-    let end = w.to.min(now);
+fn finished(c: &Connection, w: &Window, user: &str, until: Option<i64>) -> Result<Value> {
+    let end = w.to.min(until.unwrap_or_else(db::now));
     let within = |t: i64| t >= w.from && t < end;
-    let eps = crate::profile::episodes(c, user)?;
+    let eps = crate::profile::episodes(c, user, until)?;
     let day = |t: i64| -> Result<String> { Ok(c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [t], |r| r.get(0))?) };
     let (mut done, mut dropped) = (vec![], vec![]);
     for show in eps.chunk_by(|a, b| a.series_id == b.series_id) {
@@ -841,6 +841,31 @@ mod tests {
             crate::db::rusqlite::params![user, ep, series, start, secs],
         )
         .unwrap();
+    }
+
+    /// A published year counts only what had ended a day before (`until`). Finished and dropped shows read
+    /// every play there is, so pressing play on a dropped show took it off the list within seconds — a
+    /// stranger holding the link could see that somebody was watching now.
+    #[test]
+    fn a_published_year_does_not_move_when_somebody_presses_play_today() {
+        let c = year_db();
+        show(&c, "sa", "Dropped Tales", &["a1", "a2", "a3", "a4"]);
+        show(&c, "sb", "Short Show", &["b1"]);
+        episode(&c, "ua", "a1", "2025-03-10", 1000);
+        episode(&c, "ua", "b1", "2025-06-10", 1000);
+        let until = Some(db::now() - 86_400);
+        let finished = |c: &Connection| build(c, Some("ua".into()), 0, "", "2025", until).unwrap()["finished"].clone();
+        let before = finished(&c);
+        assert_eq!(before["dropped_count"], 1, "{before}");
+        let now = db::now();
+        c.execute(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, started_at, ended_at, duration_s, position_s, runtime_s, active)
+             VALUES ('live', 'ua', 'ua', 'a2', 'a2', 'Episode', 'sa', ?1 - 60, ?1, 60, 60, 1000, 1)",
+            [now],
+        )
+        .unwrap();
+        c.execute("INSERT INTO manual_seen(user_id, item_id, created_at) VALUES ('ua', 'a3', ?1), ('ua', 'a4', ?1)", [now]).unwrap();
+        assert_eq!(finished(&c), before, "what happened today is not in a year published a day late");
     }
 
     #[test]
