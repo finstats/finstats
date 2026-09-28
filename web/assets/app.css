@@ -755,6 +755,9 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .item-backdrop img { width: 100%; height: 100%; object-fit: cover; object-position: center 25%; opacity: .34; }
 .item-backdrop::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, var(--bg) 4%, color-mix(in srgb, var(--bg) 55%, transparent) 60%, color-mix(in srgb, var(--bg) 30%, transparent)); }
 .item-hero-text { min-width: 0; display: flex; flex-direction: column; gap: 9px; padding-bottom: 2px; }
+/* The text sits on the bottom of the artwork, where the gradient is darkest; the poster starts at the top, so when the text is the
+   taller of the two (a long synopsis, many studios) the poster stays beside the title instead of sinking to the last line. */
+.item-hero > .poster-lg { align-self: flex-start; }
 .item-series { color: var(--text-muted); font-weight: 500; }
 .item-genres { color: var(--text-muted); font-size: 13px; }
 .item-overview { color: var(--text-muted); max-width: 72ch; }
