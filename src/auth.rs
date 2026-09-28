@@ -323,12 +323,14 @@ fn touch_key(c: &Connection, u: &AuthUser, ip: Option<IpAddr>, now: i64) -> anyh
     Ok(())
 }
 
+/// Behind a proxy, the last `X-Forwarded-For` entry: the one the proxy wrote. Everything before it came
+/// from the client, which may put anything there.
 pub fn client_ip(app: &App, headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
     if app.trust_proxy {
         if let Some(ip) = headers
             .get("x-forwarded-for")
             .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.split(',').next())
+            .and_then(|v| v.rsplit(',').next())
             .and_then(|v| v.trim().parse().ok())
         {
             return ip;
@@ -727,6 +729,23 @@ pub async fn setup(
 mod tests {
     use super::*;
     use crate::state::Settings;
+
+    /// A proxy adds the address it saw to the end of `X-Forwarded-For` and keeps whatever the client
+    /// sent in front of it, so only the last entry is the proxy's word. Reading the first let anybody
+    /// pick a new address per sign-in attempt, and never meet the limit.
+    #[test]
+    fn behind_a_proxy_the_address_is_the_one_the_proxy_saw() {
+        let mut app = crate::state::test_app();
+        std::sync::Arc::get_mut(&mut app).unwrap().trust_proxy = true;
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "10.0.0.7, 203.0.113.9".parse().unwrap());
+        let peer: SocketAddr = "127.0.0.1:40000".parse().unwrap();
+        assert_eq!(client_ip(&app, &headers, peer).to_string(), "203.0.113.9");
+        headers.insert("x-forwarded-for", "203.0.113.9".parse().unwrap());
+        assert_eq!(client_ip(&app, &headers, peer).to_string(), "203.0.113.9");
+        headers.insert("x-forwarded-for", "203.0.113.9, not-an-address".parse().unwrap());
+        assert_eq!(client_ip(&app, &headers, peer).to_string(), "127.0.0.1", "a last entry that is not an address is not trusted");
+    }
 
     fn grants(keys: &[&str]) -> Vec<String> {
         keys.iter().map(|k| k.to_string()).collect()

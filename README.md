@@ -296,7 +296,7 @@ Everything works out of the box. If you want to tune it, **Settings** in the app
 | `FINSTATS_BIND` | `0.0.0.0:8080` | Address to listen on. |
 | `FINSTATS_DATA_DIR` | `/data` | Where the database and poster cache live. |
 | `PUID`, `PGID` | `1000` | The user and group finstats runs as inside the container, and that will own the `data` folder. Set them to the owner of your files if that is not 1000. (`--user` works too; the folder must then already be writable for that user.) |
-| `FINSTATS_TRUST_PROXY` | off | Set to `1` behind a reverse proxy so sign-in rate limiting sees real client addresses. |
+| `FINSTATS_TRUST_PROXY` | off | Set to `1` behind a reverse proxy so sign-in rate limiting sees real client addresses: the last `X-Forwarded-For` entry, the one your proxy adds. |
 | `JELLYFIN_URL` + `JELLYFIN_API_KEY` | – | Skip the setup wizard. Set both or neither. |
 | `FINSTATS_PUBLIC_IP_URL` | – | Your own "what is my IP" service (any URL answering with the caller's address as plain text), used instead of the built-in ones. |
 | `FINSTATS_GEOIP_DB` | – | A city database (`.mmdb`, MaxMind format) to place addresses with, instead of the newest file in `data/geoip/`. |
