@@ -188,6 +188,29 @@ fn remember_devices(c: &mut crate::db::rusqlite::Connection, rows: Vec<DeviceRow
 fn forget_stale_devices(seen: &mut HashMap<(String, String), Instant>, now: Instant) {
     seen.retain(|_, written| now.saturating_duration_since(*written) <= DEVICE_REFRESH);
 }
+/// What a new reading of a play takes from the one before it, ahead of comparing the two: identity, start
+/// and counters are kept, everything else is the new reading's own.
+fn carry_over(prev: &PlayRecord, rec: &mut PlayRecord) {
+    rec.started_at = prev.started_at;
+    rec.start_position_s = prev.start_position_s;
+    rec.pause_count = prev.pause_count;
+    rec.seek_count = prev.seek_count;
+    if rec.transcode.is_none() {
+        // Borrowed details are judged like the reading's own: both streams direct is a remux, not a transcode.
+        rec.transcode = prev.transcode.clone();
+        rec.play_method = crate::media::effective_play_method(Some(&rec.play_method), rec.transcode.as_ref());
+    }
+    // Once a play has needed transcoding it stays a transcode in the statistics — and this
+    // has to happen *before* the comparison, not after it. Applied after, the kept
+    // record said "Transcode" while every reading that followed said what the client had
+    // settled back to, so each one looked like a change: one `transcode` event per second
+    // for the rest of the play, every one of them reading "DirectPlay: <the old reasons>",
+    // a line that contradicts itself and was never true: 144 of them on one play.
+    if prev.play_method == "Transcode" {
+        rec.play_method = "Transcode".into();
+    }
+}
+
 /// Plays shorter than this are accidental clicks; they are dropped when they end.
 const MIN_KEEP_S: i64 = 2;
 /// Reads of the session list that must fail in a row before Jellyfin counts as down. At one a second
@@ -1262,26 +1285,10 @@ async fn tick(
             t.is_paused = is_paused;
             t.transcode_progress = transcode_progress;
 
-            // Keep identity, start and counters; take everything that can change mid-play.
-            rec.started_at = t.rec.started_at;
-            rec.start_position_s = t.rec.start_position_s;
-            rec.pause_count = t.rec.pause_count;
-            rec.seek_count = t.rec.seek_count;
-            if rec.transcode.is_none() {
-                rec.transcode = t.rec.transcode.clone();
-            }
+            carry_over(&t.rec, &mut rec);
             rec.duration_s = t.watched.round() as i64;
             rec.paused_s = t.paused.round() as i64;
             let was_paused = is_paused != pause_flipped;
-            // Once a play has needed transcoding it stays a transcode in the statistics — and this
-            // has to happen *before* the comparison below, not after it. Applied after, the kept
-            // record said "Transcode" while every reading that followed said what the client had
-            // settled back to, so each one looked like a change: one `transcode` event per second
-            // for the rest of the play, every one of them reading "DirectPlay: <the old reasons>",
-            // a line that contradicts itself and was never true: 144 of them on one play.
-            if t.rec.play_method == "Transcode" {
-                rec.play_method = "Transcode".into();
-            }
             let events = diff_events(&t.rec, &mut rec, was_paused, is_paused, dt, now);
             t.rec = rec;
 
@@ -1962,6 +1969,19 @@ mod tests {
         assert!(diff_events(&starts, &mut same, false, false, 1.0, 0).is_empty());
         let mut other = PlayRecord { transcode: Some(json!({ "reasons": ["VideoCodecNotSupported"] })), position_s: Some(103), ..transcoding.clone() };
         assert_eq!(diff_events(&same, &mut other, false, false, 1.0, 0).len(), 1, "a different reason is worth a line");
+    }
+
+    /// A remux (both streams direct) is a direct stream. A reading that says "Transcode" but has lost its
+    /// transcoding details for a moment — a seek restarting the job — borrows the last ones, and must then
+    /// be judged by them too, or the play turns into a transcode for good at the next reading.
+    #[test]
+    fn a_remux_that_loses_its_transcoding_details_for_a_moment_stays_a_direct_stream() {
+        let remux = json!({ "is_video_direct": true, "is_audio_direct": true, "reasons": ["ContainerNotSupported"] });
+        let before = PlayRecord { play_method: "DirectStream".into(), transcode: Some(remux), position_s: Some(100), ..Default::default() };
+        let mut reading = PlayRecord { play_method: "Transcode".into(), transcode: None, position_s: Some(101), ..Default::default() };
+        carry_over(&before, &mut reading);
+        assert_eq!(reading.play_method, "DirectStream");
+        assert!(diff_events(&before, &mut reading, false, false, 1.0, 0).is_empty());
     }
 
     #[test]
