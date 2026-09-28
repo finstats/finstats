@@ -73,7 +73,9 @@ const SECRET_PARAMS: [&str; 14] = ["apikey", "api_key", "api-key", "key", "passk
 /// client and the indexer they could not reach, addresses and all, and those words are shown to everybody who
 /// may see the queue — who may see what is downloading, not the keys it is downloading with.
 pub fn redact(s: &str) -> String {
-    let stop = |c: char| c.is_whitespace() || matches!(c, '/' | '?' | '#' | ')' | '(' | '"' | '\'' | ',' | '<' | '>');
+    // Not '/': a password printed as it was typed may hold one, and the login ends at the last '@' before
+    // the query. Where a path has an '@' of its own, more is blanked than needed, never less.
+    let stop = |c: char| c.is_whitespace() || matches!(c, '?' | '#' | ')' | '(' | '"' | '\'' | ',' | '<' | '>');
     // The login part of every address.
     let mut out = String::with_capacity(s.len());
     let mut rest = s;
@@ -581,6 +583,9 @@ mod tests {
         }
         assert_eq!(redact("Téléchargé http://ü:ö@hôte/?apikey=é&ünd=1 😀"), "Téléchargé http://***@hôte/?apikey=***&ünd=1 😀");
         assert_eq!(redact("http://a:b@"), "http://***@");
+        // A password the client printed as it was typed, slash and all: the login still ends at its last '@'.
+        assert_eq!(redact("at http://admin:pa/ss@10.0.0.5:8080/api/v2?x=1 failed"), "at http://***@10.0.0.5:8080/api/v2?x=1 failed");
+        assert_eq!(redact("at http://admin:p@ss@10.0.0.5/ failed"), "at http://***@10.0.0.5/ failed");
         assert_eq!(redact("?apikey="), "?apikey=***");
     }
 
