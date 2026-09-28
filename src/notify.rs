@@ -784,8 +784,9 @@ fn record(conn: &Connection, event_id: i64, target_id: i64, attempts: i64, outco
             conn.execute("UPDATE notify_targets SET last_ok_at = ?2, last_error = NULL WHERE id = ?1", params![target_id, now])?;
         }
         Err((message, retry_after)) => {
-            // A destination that asked for a delay gets it; otherwise the usual ladder.
-            let wait = retry_after.filter(|s| *s > 0).map(|s| s.min(3_600)).or_else(|| backoff(attempts));
+            // A destination that asked for a delay gets it in place of the usual step; the ladder still
+            // decides when it is given up on.
+            let wait = backoff(attempts).map(|step| retry_after.filter(|s| *s > 0).map_or(step, |s| s.min(3_600)));
             match wait {
                 Some(wait) => conn.execute(
                     "UPDATE notify_deliveries SET attempts = ?3, next_at = ?4, error = ?5 WHERE event_id = ?1 AND target_id = ?2",
@@ -1677,6 +1678,23 @@ pub(crate) mod tests {
         let waits: Vec<Option<i64>> = (1..=5).map(backoff).collect();
         assert_eq!(waits, vec![Some(30), Some(120), Some(600), Some(3_600), None]);
         assert!(waits.iter().flatten().sum::<i64>() > 4_000, "long enough for anything that is coming back");
+    }
+
+    /// Retry-After says when to come back, not whether to: a proxy that answers 503 with it for good must
+    /// be given up on after the same five tries as anything else, not retried for the thirty days kept.
+    #[test]
+    fn a_destination_that_always_asks_for_later_is_still_given_up_on() {
+        let c = conn();
+        let f = bus(&c, vec![target(1, None, &[Kind::NewItems])]);
+        raise_in(&c, &f, &Event::new(Kind::NewItems, "notify:new_items:x:1", "New in the library: Big Buck Bunny", "Big Buck Bunny")).unwrap();
+        let event_id: i64 = c.query_row("SELECT id FROM notify_events", [], |r| r.get(0)).unwrap();
+        record(&c, event_id, 1, 2, Err(("503".into(), Some(60)))).unwrap();
+        let (state, wait): (String, i64) = c.query_row("SELECT state, next_at - ?1 FROM notify_deliveries", [db::now()], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        assert_eq!(state, "queued");
+        assert!((59..=61).contains(&wait), "the delay it asked for is kept: {wait}");
+        record(&c, event_id, 1, 5, Err(("503".into(), Some(60)))).unwrap();
+        let state: String = c.query_row("SELECT state FROM notify_deliveries", [], |r| r.get(0)).unwrap();
+        assert_eq!(state, "failed");
     }
 
     #[test]
