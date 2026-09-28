@@ -306,13 +306,23 @@ pub struct Pair {
 pub fn sessions_for(conn: &Connection, w: &Window, library_id: Option<&str>, user_ids: &[String]) -> Result<Vec<Session>> {
     let mut wh = vec!["p.group_id IS NOT NULL".to_string()];
     let mut args: Vec<SqlValue> = vec![];
-    if let Some(s) = w.since {
-        wh.push("p.started_at >= ?".into());
-        args.push(s.into());
-    }
-    if let Some(u) = w.until {
-        wh.push("p.started_at < ?".into());
-        args.push(u.into());
+    // A session belongs whole to the window it started in: every member of a group whose first play started
+    // inside it, and none of one that started before it — however the members' own starts fall.
+    if w.since.is_some() || w.until.is_some() {
+        let mut inner = vec!["g.group_id IS NOT NULL"];
+        if let Some(s) = w.since {
+            inner.push("g.started_at >= ?");
+            args.push(s.into());
+        }
+        if let Some(u) = w.until {
+            inner.push("g.started_at < ?");
+            args.push(u.into());
+        }
+        if let Some(s) = w.since {
+            inner.push("NOT EXISTS (SELECT 1 FROM playbacks e WHERE e.group_id = g.group_id AND e.started_at < ?)");
+            args.push(s.into());
+        }
+        wh.push(format!("p.group_id IN (SELECT g.group_id FROM playbacks g WHERE {})", inner.join(" AND ")));
     }
     if let Some(l) = library_id {
         wh.push("p.library_id = ?".into());
@@ -702,6 +712,23 @@ mod tests {
         assert_eq!(s.iter().map(|x| x.title_id.as_str()).collect::<Vec<_>>(), ["y"]);
         let year = sessions_for(&c, &Window { since: Some(0), until: Some(31_536_000) }, None, &["a".into()]).unwrap();
         assert_eq!(year.len(), 3, "the recap: one person, one year");
+    }
+
+    /// A session belongs whole to the window it started in: alice pressed play ten seconds before midnight
+    /// on New Year's Eve and bob ten seconds after, and the new year held a session of bob alone — one more
+    /// evening with nobody — while the old year held alice alone.
+    #[test]
+    fn a_session_across_the_edge_of_a_window_is_the_first_windows_and_whole() {
+        let c = conn();
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, group_id) VALUES
+               (1, 'live', 'a', 'A', 'x', 'X', 'Movie', 990, 4000, 3000, 1), (2, 'live', 'b', 'B', 'x', 'X', 'Movie', 1010, 4000, 2990, 1);",
+        )
+        .unwrap();
+        let old = sessions_for(&c, &Window { since: Some(0), until: Some(1000) }, None, &[]).unwrap();
+        assert_eq!(old.iter().map(|s| s.per_user.len()).collect::<Vec<_>>(), [2], "the window it started in has all of it");
+        assert!(sessions_for(&c, &Window { since: Some(1000), until: Some(2000) }, None, &[]).unwrap().is_empty(), "and the next has none of it");
+        assert!(sessions_for(&c, &Window { since: Some(1000), until: None }, None, &["b".into()]).unwrap().is_empty(), "not even for bob");
     }
 
     #[test]
