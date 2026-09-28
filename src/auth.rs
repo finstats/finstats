@@ -463,13 +463,13 @@ pub(crate) const SESSIONS_PER_USER: usize = 30;
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn store_session(c: &Connection, hash: &str, user_id: &str, user_name: &str, is_admin: bool, now: i64, ip: Option<&str>, ua: Option<&str>) -> anyhow::Result<()> {
     c.execute(
-        "INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at, ip, user_agent)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        "INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at, ip, user_agent, seq)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, (SELECT COALESCE(MAX(seq), 0) + 1 FROM sessions WHERE user_id = ?2))",
         params![hash, user_id, user_name, is_admin, now, now + SESSION_TTL_S, ip, ua],
     )?;
     c.execute(
         "DELETE FROM sessions WHERE user_id = ?1 AND token_hash <> ?2 AND token_hash NOT IN (
-           SELECT token_hash FROM sessions WHERE user_id = ?1 AND token_hash <> ?2 ORDER BY created_at DESC LIMIT ?3)",
+           SELECT token_hash FROM sessions WHERE user_id = ?1 AND token_hash <> ?2 ORDER BY created_at DESC, seq DESC LIMIT ?3)",
         params![user_id, hash, SESSIONS_PER_USER as i64 - 1],
     )?;
     Ok(())
@@ -855,6 +855,19 @@ mod key_tests {
         assert!(resolve_session_in(&c, &open(), &format!("t{newest}"), 2000).unwrap().is_some(), "the newest was dropped");
         assert!(resolve_session_in(&c, &open(), "t0", 2000).unwrap().is_none(), "the oldest is still open");
         assert!(resolve_session_in(&c, &open(), "alice", 6000).unwrap().is_some(), "somebody else's session gave way");
+    }
+
+    /// A sign-in loop fits dozens of sessions into one second, and `created_at` is whole seconds: which of
+    /// them gave way was decided by the token's hash, so the oldest could outlive the limit.
+    #[test]
+    fn within_one_second_it_is_still_the_oldest_session_that_gives_way() {
+        let c = conn();
+        for n in 0..(SESSIONS_PER_USER + 20) {
+            store_session(&c, &hash_token(&format!("s{n}")), "u2", "bob", false, 1000, None, None).unwrap();
+        }
+        let open_now = |t: &str| resolve_session_in(&c, &open(), t, 1000).unwrap().is_some();
+        let kept: Vec<usize> = (0..SESSIONS_PER_USER + 20).filter(|n| open_now(&format!("s{n}"))).collect();
+        assert_eq!(kept, (20..SESSIONS_PER_USER + 20).collect::<Vec<_>>(), "the newest thirty, in the order they were made");
     }
 
     #[test]

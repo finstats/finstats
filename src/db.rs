@@ -584,6 +584,10 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     // 27 — Re-linking sweeps only the titles it moved plays onto. Before, it swept the whole history at every
     //      start and library read; an install coming from before that sweep existed (2.0.0) is swept once, here.
     crate::relinked_duplicates_sql!("COALESCE((SELECT json_extract(value, '$.merge_window_s') FROM settings WHERE key = 'settings'), 600)"),
+    // user_version 27 (the labels above run one ahead of it) — The order one person's sessions were made in.
+    //      `created_at` is whole seconds and the table has no rowid, so among sign-ins of one second the one
+    //      that gave way to the limit was picked by its token's hash, not its age.
+    "ALTER TABLE sessions ADD COLUMN seq INTEGER NOT NULL DEFAULT 0;",
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole
