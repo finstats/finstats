@@ -236,7 +236,7 @@ A timeline of everything you have watched
 Ready for everyone
 
 ### Added
-- A ready-made image at `ghcr.io/olayzen/finstats`, for 64-bit Intel/AMD and ARM machines (a Raspberry Pi 4 or 5 works): `:latest` is the newest release, `:1` follows every 1.x update, `:1.0.0` stays where it is, and `:edge` is the development version.
+- A ready-made image, now at `ghcr.io/finstats/finstats`, for 64-bit Intel/AMD and ARM machines (a Raspberry Pi 4 or 5 works): `:latest` is the newest release, a version tag stays where it is, and `:edge` is the development version.
 - Every release appears on the project's GitHub releases page with these patch notes.
 
 ### Changed

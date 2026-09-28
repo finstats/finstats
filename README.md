@@ -228,7 +228,7 @@ services:
 
 The image is published for 64-bit Intel/AMD and ARM machines (a Raspberry Pi 4 or 5 works) at
 [`ghcr.io/finstats/finstats`](https://github.com/finstats/finstats/pkgs/container/finstats). `:latest` is the newest release;
-pin a version such as `:1.0.0`, or `:1` for every 1.x update, if you prefer to choose when to upgrade. `:edge` follows
+pin a version such as `:2.0.0`, or `:2` for every 2.x update, if you prefer to choose when to upgrade. `:edge` follows
 development and may be rough.
 
 Then open **http://your-server:8080** and:
@@ -258,7 +258,7 @@ Your history comes with you, from either one.
 **Streamystats:** open **Settings → Backup & Import**, scroll down to **Backup & Restore** and
 click **Download Backup**.
 
-In finstats, open **Settings**, find the card for the one you used, and drop the file in.
+In finstats, open **Settings → Import**, find the card for the one you used, and drop the file in.
 
 **Ran both?** Import both files. Nothing is counted twice — finstats recognises a play it already
 has, whichever tracker brought it in and whether or not it watched that evening itself.

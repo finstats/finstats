@@ -10,8 +10,8 @@ Fixes go into the newest release. Please check that the problem still exists on 
 
 | Version | Supported |
 |---|---|
-| 1.x (latest) | yes |
-| older | no: update first |
+| 2.x (latest) | yes |
+| 1.x and older | no: update first |
 
 ## Reporting a vulnerability
 

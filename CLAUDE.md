@@ -626,8 +626,8 @@ every bug fixed. It is a local tool and must never be committed; the same goes f
 the top entry's version differs from `Cargo.toml`, or an entry lacks a date/notes/known group — so a version bump
 and its changelog entry land together. Format: `## [x.y.z] - YYYY-MM-DD`, or `- YYYY-MM-DD to YYYY-MM-DD` for a release
 made over several days (`date` stays the release day, `started` the first; the page shows both), then
-`### Added | Changed | Performance | Stability | Fixed | Removed` with one-line bullets (`**bold**` and `` `code` `` are
-rendered). **Performance** is quicker or lighter, **Stability** is something that can no longer crash, halt, leak or lose
+`### Added | Changed | Performance | Stability | Fixed | Removed` with one-line bullets (`**bold**`, `*italic*` and
+`` `code` `` are rendered; a Markdown link is not, so name a doc as `code`). **Performance** is quicker or lighter, **Stability** is something that can no longer crash, halt, leak or lose
 data, **Fixed** is something that gave a wrong answer — a speed-up filed as a fix reads as a bug nobody had. The rules live
 in one test function (`changelog::tests::problems`). An `x.y.0` entry opens with a **short title line**
 and nothing else — "Notifications", "WebSocket session tracking" — which the app shows as that whole series' headline
@@ -673,7 +673,8 @@ change is risky.
 
 The repository is `github.com/finstats/finstats`; images go to `ghcr.io/finstats/finstats`. Up to 1.6.5 both lived
 under the maintainer's personal account; 2.0.0 is the first release from the organisation. Nothing but
-`CHANGELOG.md` (history) may name the old home — a QA static check holds it. `.github/workflows/docker.yml` runs the unit
+the changelog may name the old home any more — a QA static check holds it — and the 25 GitHub releases up to 1.6.5
+were rewritten to match. `.github/workflows/docker.yml` runs the unit
 tests, builds amd64 and arm64 on native runners (no QEMU), and publishes `:edge` from `main` and `:X.Y.Z`, `:X.Y`, `:X`, `:latest` from a
 `vX.Y.Z` tag, then creates the GitHub release from that version's `CHANGELOG.md` section. It refuses a tag that does not match
 `Cargo.toml` or has no changelog entry, so the release commit and its tag must be pushed together. Docs always point at the published
