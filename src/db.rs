@@ -720,6 +720,15 @@ fn refuse_downgrade(conn: &Connection, running: &str) -> Result<()> {
     }
     // No entry: last opened by a release from before versions were recorded (1.0.4 or older).
     let stored = get_setting(conn, VERSION_KEY)?;
+    // Unreadable is refused like newer, since it may be, but said as what it is: only a hand edit makes it.
+    if let Some(s) = stored.as_deref().filter(|s| parse_version(s).is_none()) {
+        bail!(
+            "this database records the last finstats to open it as [{s}], which is not a version finstats can read,\n\
+             so this finstats {running} cannot tell whether the database is newer than it. Nothing was changed.\n\
+             It is the app_version setting. Write the version that last ran here as three numbers, without quotes,\n\
+             and never an older one than that:   sqlite3 finstats.db \"UPDATE settings SET value='x.y.z' WHERE key='app_version'\""
+        )
+    }
     let newer = stored.as_deref().is_some_and(|s| match (parse_version(s), parse_version(running)) {
         (Some(theirs), Some(ours)) => theirs > ours,
         _ => true,
@@ -1052,12 +1061,25 @@ mod tests {
         for (schema, stored) in [(0, None), (n, None), (n, Some("1.0.4")), (n - 1, Some("1.0.3")), (n, Some("0.9.12"))] {
             assert!(refuse_downgrade(&db_at(schema, stored), "1.0.4").is_ok(), "{schema} {stored:?}");
         }
-        // A newer patch, minor or major, a version nobody can read, and a schema from the future: none start.
-        for (schema, stored) in [(n, Some("1.0.5")), (n, Some("1.1.0")), (n, Some("2.0.0")), (n, Some("1.10.0")), (n, Some("next")), (n + 1, None), (n + 1, Some("1.0.4"))] {
+        // A newer patch, minor or major, and a schema from the future: none start.
+        for (schema, stored) in [(n, Some("1.0.5")), (n, Some("1.1.0")), (n, Some("2.0.0")), (n, Some("1.10.0")), (n + 1, None), (n + 1, Some("1.0.4"))] {
             let err = refuse_downgrade(&db_at(schema, stored), "1.0.4").expect_err(&format!("{schema} {stored:?}")).to_string();
             assert!(err.contains("older finstats 1.0.4") && err.contains("finstats restore"), "{err}");
         }
         assert!(refuse_downgrade(&db_at(n, Some("1.1.0")), "1.0.4").unwrap_err().to_string().contains("last used by finstats 1.1.0"));
+    }
+
+    #[test]
+    fn a_version_nobody_can_read_is_named_as_unreadable_not_as_newer() {
+        // Written by hand with JSON quotes, the install refused to start saying it had been "last used by
+        // finstats "2.0.1", and this is the older finstats 2.0.1" — true of neither.
+        let n = MIGRATIONS.len();
+        for stored in ["\"2.0.1\"", "next", ""] {
+            let err = refuse_downgrade(&db_at(n, Some(stored)), "2.0.1").expect_err(stored).to_string();
+            assert!(!err.contains("older finstats"), "{err}");
+            assert!(err.contains(&format!("[{stored}]")) && err.contains("not a version finstats can read"), "{err}");
+            assert!(err.contains("Nothing was changed") && err.contains("key='app_version'") && err.contains("without quotes"), "{err}");
+        }
     }
 
     #[test]
