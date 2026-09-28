@@ -877,16 +877,16 @@ fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bo
 
 async fn restore_stored(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(name): Path<String>, Query(q): Query<RestoreQuery>) -> ApiResult<Response> {
     let path = backup_path(&app, &name)?;
-    if !app.tasks.try_start("restore", "Reading backup") {
-        return Err(ApiError::new(StatusCode::CONFLICT, "A restore is already running"));
+    if !app.tasks.try_start_alone("restore", "Reading backup", &HISTORY_WRITERS) {
+        return Err(ApiError::new(StatusCode::CONFLICT, "A restore or an import is already running"));
     }
     spawn_restore(&app, path, q.settings.unwrap_or(true), false, Actor::from(&user), name);
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
 async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Query(q): Query<RestoreQuery>, req: Request) -> ApiResult<Response> {
-    if !app.tasks.try_start("restore", "Receiving backup") {
-        return Err(ApiError::new(StatusCode::CONFLICT, "A restore is already running"));
+    if !app.tasks.try_start_alone("restore", "Receiving backup", &HISTORY_WRITERS) {
+        return Err(ApiError::new(StatusCode::CONFLICT, "A restore or an import is already running"));
     }
     let path = app.data_dir.join("restore-upload.tmp");
     let received = async {
@@ -917,7 +917,8 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
 
 /// The trackers finstats can take history from, each with its own task so each Settings card can
 /// watch its own import. Only one runs at a time whichever it is: they write to the same tables.
-pub const IMPORT_TASKS: [&str; 2] = ["import", "import_streamystats"];
+/// The two imports and the restore. Each holds the database in one long transaction: only one of them at a time.
+const HISTORY_WRITERS: [&str; 3] = ["import", "import_streamystats", "restore"];
 
 async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
     let path = receive(&app, req, "import", "jellystat-upload.tmp").await?;
@@ -958,8 +959,8 @@ async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req
 
 /// Stream an uploaded export to disk. One import at a time, whichever tracker it came from.
 async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> ApiResult<std::path::PathBuf> {
-    if IMPORT_TASKS.iter().any(|other| *other != task && app.tasks.running(other)) || !app.tasks.try_start(task, "Receiving backup") {
-        return Err(ApiError::new(StatusCode::CONFLICT, "An import is already running"));
+    if !app.tasks.try_start_alone(task, "Receiving backup", &HISTORY_WRITERS) {
+        return Err(ApiError::new(StatusCode::CONFLICT, "An import or a restore is already running"));
     }
     let path = app.data_dir.join(name);
     let received = async {
@@ -1011,19 +1012,17 @@ mod tests {
     }
 
     #[test]
-    fn both_ways_of_importing_history_have_a_task_of_their_own() {
-        // `Tasks::try_start` panics on an id it does not know, and these two are started from
-        // their own Settings card rather than through `RUNNABLE`, so nothing else checks them.
-        let tasks = crate::state::Tasks::new();
-        for id in IMPORT_TASKS {
+    fn both_ways_of_importing_history_and_the_restore_have_a_task_of_their_own() {
+        // `Tasks::try_start` panics on an id it does not know, and these are started from their own
+        // Settings cards rather than through `RUNNABLE`, so nothing else checks them.
+        for id in HISTORY_WRITERS {
             assert!(crate::state::TASK_IDS.contains(&id), "`{id}` would panic in Tasks::try_start");
-            assert!(!tasks.running(id));
-            assert!(tasks.try_start(id, "Receiving backup"));
-            assert!(tasks.running(id));
-            assert!(!tasks.try_start(id, "Receiving backup"), "`{id}` must refuse a second run");
+            let tasks = crate::state::Tasks::new();
+            assert!(tasks.try_start_alone(id, "Receiving backup", &HISTORY_WRITERS));
+            assert!(!tasks.try_start_alone(id, "Receiving backup", &HISTORY_WRITERS), "`{id}` must refuse a second run");
+            // Each one refuses while another is going: they write to the same tables.
+            assert!(HISTORY_WRITERS.iter().all(|other| !tasks.try_start_alone(other, "Receiving backup", &HISTORY_WRITERS)));
         }
-        // Each one refuses while the other is going: they write to the same tables.
-        assert!(IMPORT_TASKS.iter().any(|id| tasks.running(id)));
     }
 
     #[test]

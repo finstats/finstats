@@ -276,13 +276,22 @@ impl Tasks {
         Tasks(Arc::new(Mutex::new(map)))
     }
 
-    pub fn running(&self, id: &str) -> bool {
-        self.0.lock().unwrap().get(id).is_some_and(|t| t.state == "running")
+    /// Like `try_start`, and false as well while any of `exclusive` is running: the check and the claim are
+    /// one step under one lock, so two uploads posted together cannot both pass the check.
+    pub fn try_start_alone(&self, id: &'static str, message: &str, exclusive: &[&str]) -> bool {
+        let map = self.0.lock().unwrap();
+        if exclusive.iter().any(|other| map.get(other).is_some_and(|t| t.state == "running")) {
+            return false;
+        }
+        Self::start_in(map, id, message)
     }
 
     /// Returns false when the task is already running.
     pub fn try_start(&self, id: &'static str, message: &str) -> bool {
-        let mut map = self.0.lock().unwrap();
+        Self::start_in(self.0.lock().unwrap(), id, message)
+    }
+
+    fn start_in(mut map: std::sync::MutexGuard<'_, BTreeMap<&'static str, TaskState>>, id: &'static str, message: &str) -> bool {
         let t = map.get_mut(id).expect("unknown task");
         if t.state == "running" {
             return false;
@@ -423,6 +432,20 @@ mod tests {
         for bad in ["jellyfin.example.com", "ftp://jellyfin.example.com", "javascript:alert(1)", "https://"] {
             assert!(with(bad).is_err(), "{bad} was accepted");
         }
+    }
+
+    /// An import and a restore each hold the database in one long transaction: two at once, and the second
+    /// fails after minutes with "database is locked". Checking the others and claiming the slot is one step.
+    #[test]
+    fn only_one_writer_of_history_at_a_time() {
+        let t = Tasks::new();
+        let writers = ["import", "import_streamystats", "restore"];
+        assert!(t.try_start_alone("import", "Receiving backup", &writers));
+        assert!(!t.try_start_alone("restore", "Reading backup", &writers), "a restore alongside an import");
+        assert!(!t.try_start_alone("import_streamystats", "Receiving backup", &writers));
+        assert!(!t.try_start_alone("import", "Receiving backup", &writers), "the same one twice");
+        t.finish("import", Ok(("done".into(), None)));
+        assert!(t.try_start_alone("restore", "Reading backup", &writers));
     }
 
     /// The scheduler is spawned before the server starts waiting on `halt`: a halt asked for in between
