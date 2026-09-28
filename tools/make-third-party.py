@@ -72,8 +72,9 @@ def main():
 
     notices, index = [], {}
     components, without = [], []
-    for pkg_id in graph(meta):
-        pkg = packages[pkg_id]
+    # In the order the file lists them, not the set's: that order changes with every run, and so did
+    # the order of the texts and which crate's file name a shared text is stored under.
+    for pkg in sorted((packages[i] for i in graph(meta)), key=lambda p: (p["name"].lower(), p["version"])):
         carried = []
         for name, body in texts_of(os.path.dirname(pkg["manifest_path"])):
             key = hashlib.sha256(body.encode()).hexdigest()
