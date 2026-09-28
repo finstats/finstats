@@ -88,8 +88,11 @@ fn close_ended(c: &mut crate::db::rusqlite::Connection, finished: &[(i64, PlayRe
     }
     tx.commit()?;
     for item in titles {
-        // Now that their lengths are known: was any of these watched together with someone?
-        crate::groups::detect(c, group_window_s, Some(&item))?;
+        // Now that their lengths are known: was any of these watched together with someone? The ends are
+        // written by now, so a failure here is logged, not returned: a retry would write a second stop.
+        if let Err(e) = crate::groups::detect(c, group_window_s, Some(&item)) {
+            tracing::warn!("could not look for company on {item}: {e:#}");
+        }
     }
     Ok(())
 }
@@ -1329,23 +1332,33 @@ async fn tick(
         }
     }
 
-    // Whatever is tracked but no longer reported has ended.
-    let mut finished = vec![];
-    for key in ended_keys(tracked.keys(), &seen) {
-        let mut t = tracked.remove(&key).expect("key came from the map");
-        t.rec.active = false;
-        t.rec.duration_s = t.watched.round() as i64;
-        t.rec.paused_s = t.paused.round() as i64;
-        let (row_id, rec) = (t.row_id, t.rec);
-        tracing::info!("{} stopped {} after {}s", rec.user_name, rec.item_name, rec.duration_s);
-        if rec.duration_s >= MIN_KEEP_S {
-            let (teller, event) = (app.clone(), play_event(&rec, false, row_id));
-            tokio::spawn(async move { crate::notify::raise(&teller, event).await; });
+    // Whatever is tracked but no longer reported has ended. It stops being tracked only once its end is
+    // written: a write refused now (an import holding the database) is tried again on the next pass.
+    let ended = ended_keys(tracked.keys(), &seen);
+    if !ended.is_empty() {
+        let finished: Vec<(i64, PlayRecord)> = ended
+            .iter()
+            .map(|key| {
+                let t = &tracked[key];
+                let mut rec = t.rec.clone();
+                rec.active = false;
+                rec.duration_s = t.watched.round() as i64;
+                rec.paused_s = t.paused.round() as i64;
+                (t.row_id, rec)
+            })
+            .collect();
+        let closed = finished.clone();
+        app.db.call(move |c| close_ended(c, &closed, group_window_s)).await?;
+        for key in &ended {
+            tracked.remove(key);
         }
-        finished.push((row_id, rec));
-    }
-    if !finished.is_empty() {
-        app.db.call(move |c| close_ended(c, &finished, group_window_s)).await?;
+        for (row_id, rec) in finished {
+            tracing::info!("{} stopped {} after {}s", rec.user_name, rec.item_name, rec.duration_s);
+            if rec.duration_s >= MIN_KEEP_S {
+                let (teller, event) = (app.clone(), play_event(&rec, false, row_id));
+                tokio::spawn(async move { crate::notify::raise(&teller, event).await; });
+            }
+        }
     }
 
     if !device_rows.is_empty() {
@@ -1361,6 +1374,31 @@ async fn tick(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A play whose end could not be written — the database busy with an import for longer than it waits —
+    /// is still tracked and closed on a later pass. Dropped before the write, it stayed `active` until the
+    /// next restart, with no stop and no group, and a restart of it could not continue its row.
+    #[tokio::test]
+    async fn a_play_whose_end_could_not_be_written_is_closed_on_a_later_pass() {
+        let app = crate::state::test_app();
+        let (mut tracked, mut devices) = (HashMap::new(), HashMap::new());
+        let session = json!({ "Id": "s1", "UserId": "ua", "UserName": "alice", "DeviceId": "d1", "Client": "Jellyfin Web",
+            "NowPlayingItem": { "Id": "m1", "Name": "Big Buck Bunny", "Type": "Movie", "RunTimeTicks": 6_000_000_000i64 },
+            "PlayState": { "IsPaused": false, "PositionTicks": 100_000_000 } });
+        tick(&app, &mut tracked, &mut devices, &[session], 0, 60).await.unwrap();
+        assert_eq!(tracked.len(), 1);
+        tracked.values_mut().for_each(|t| t.watched = 600.0);
+
+        app.db.call(|c| Ok(c.execute_batch("ALTER TABLE playback_events RENAME TO playback_events_away")?)).await.unwrap();
+        assert!(tick(&app, &mut tracked, &mut devices, &[], 0, 60).await.is_err(), "the end could not be written");
+        assert_eq!(tracked.len(), 1, "and the play is still known, to be closed later");
+
+        app.db.call(|c| Ok(c.execute_batch("ALTER TABLE playback_events_away RENAME TO playback_events")?)).await.unwrap();
+        tick(&app, &mut tracked, &mut devices, &[], 0, 60).await.unwrap();
+        assert!(tracked.is_empty());
+        let (active, duration): (i64, i64) = app.db.call(|c| Ok(c.query_row("SELECT active, duration_s FROM playbacks", [], |r| Ok((r.get(0)?, r.get(1)?)))?)).await.unwrap();
+        assert_eq!((active, duration), (0, 600));
+    }
 
     /// "In a row" means in a row: a list that arrives by push or by a safety read proves Jellyfin answers
     /// just as a poll does. Counting only polls let ten stray safety-read timeouts, days apart on an
