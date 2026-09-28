@@ -1,4 +1,4 @@
-import { h, icon, num, duration, dateTime, relEl, relTime } from '../dom.js';
+import { h, icon, num, duration, dateTime, dateOnly, relEl, relTime } from '../dom.js';
 import { api } from '../api.js';
 import { readDays, saveDays, can, rangeLong } from '../state.js';
 import { replaceQuery } from '../router.js';
@@ -212,7 +212,7 @@ export default function securityPage(ctx) {
           card({ title: 'Countries', sub: 'By plays', body: bucketList(o.countries.map((c) => ({ name: c.name, plays: c.plays, watch_s: 0 })), { watch: false, empty: 'Nothing in this range.' }) })),
         h('p', { class: 'attribution' },
           o.database.dbip ? [h('a', { href: 'https://db-ip.com', target: '_blank', rel: 'noopener noreferrer' }, 'IP Geolocation by DB-IP'), ' · '] : null,
-          `${o.database.kind}, built ${dateTime(o.database.built_at).split(',')[0]}`,
+          `${o.database.kind}, built ${dateOnly(o.database.built_at)}`,
           o.addresses_without_place ? ` · ${num(o.addresses_without_place)} ${o.addresses_without_place === 1 ? 'address has' : 'addresses have'} no known place` : '',
           ' · Map outlines: Natural Earth'),
       ];

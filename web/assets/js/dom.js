@@ -198,6 +198,8 @@ const dayfy = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric
 const weekdayf = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
 export const dateTime = (ts) => (ts ? dtf.format(new Date(ts * 1000)) : '–');
+/** The day of a moment, with its year: "Sep 1, 2026". */
+export const dateOnly = (ts) => (ts ? dayfy.format(new Date(ts * 1000)) : '–');
 
 export function relTime(ts) {
   if (!ts) return 'never';

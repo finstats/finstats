@@ -1,6 +1,6 @@
 // Settings → Security: where addresses are placed, and what counts as impossible travel.
 
-import { h, icon, mount, dateTime } from '../dom.js';
+import { h, icon, mount, dateOnly } from '../dom.js';
 import { can } from '../state.js';
 import { api } from '../api.js';
 import { card, sk, setBusy, inlineError } from '../components.js';
@@ -29,7 +29,7 @@ export default {
       const t = store.task('geoip');
       const running = !!t && t.state === 'running';
       const status = dbInfo
-        ? h('p', { class: 'help' }, h('strong', null, dbInfo.kind), `, built ${dateTime(dbInfo.built_at).split(',')[0]}`, dbInfo.file ? [' · ', h('span', { class: 'mono' }, dbInfo.file)] : null)
+        ? h('p', { class: 'help' }, h('strong', null, dbInfo.kind), `, built ${dateOnly(dbInfo.built_at)}`, dbInfo.file ? [' · ', h('span', { class: 'mono' }, dbInfo.file)] : null)
         : h('p', { class: 'help' }, 'None yet. The Security page stays empty until there is one.');
       const err = h('div');
       const get = h('button', { type: 'button', class: 'btn btn-sm', disabled: running || g.from_env }, icon('upload', 13, 'flip-v'), running ? (t.message || 'Downloading…') : dbInfo ? 'Download the newest' : 'Download (about 60 MB)');
