@@ -830,7 +830,8 @@ pub async fn resolve(State(app): State<App>, Manager(user): Manager, Path(id): P
             let Some((kind, user_id, details)) = found else { return Ok(None) };
             let now = db::now();
             tx.execute(
-                "UPDATE security_alerts SET resolved_at = COALESCE(resolved_at, ?1), resolved_by = ?2, note = ?3, muted = ?4 WHERE id = ?5",
+                // A mute is undone by reopening, never by resolving again without the box ticked.
+                "UPDATE security_alerts SET resolved_at = COALESCE(resolved_at, ?1), resolved_by = ?2, note = ?3, muted = MAX(muted, ?4) WHERE id = ?5",
                 params![now, user.name, note, mute && kind == "impossible_travel", id],
             )?;
             let mut also = 0;
