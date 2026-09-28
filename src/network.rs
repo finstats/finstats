@@ -99,7 +99,9 @@ pub fn remember(conn: &Connection, ip: &str) -> Result<bool> {
     let known: bool = conn.prepare_cached("SELECT 1 FROM home_addresses WHERE ip = ?1")?.exists([ip])?;
     conn.execute(
         "INSERT INTO home_addresses(ip, source, first_seen, last_seen) VALUES (?1, 'lookup', ?2, ?2)
-         ON CONFLICT(ip) DO UPDATE SET last_seen = excluded.last_seen",
+         -- A lookup's answer is kept as one even when the same address was typed by hand first: emptying
+         -- the hand-written list must not take it away.
+         ON CONFLICT(ip) DO UPDATE SET source = 'lookup', last_seen = excluded.last_seen",
         params![ip, now],
     )?;
     Ok(!known)
@@ -195,6 +197,18 @@ pub async fn refresh(app: &App) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// An address typed by hand that a lookup then confirms is this network's either way: emptying the
+    /// hand-written list must not take the looked-up answer with it.
+    #[test]
+    fn a_looked_up_address_stays_when_the_same_one_is_taken_off_the_hand_written_list() {
+        let c = conn();
+        set_manual(&c, &["203.0.113.7".to_string()]).unwrap();
+        remember(&c, "203.0.113.7").unwrap();
+        set_manual(&c, &[]).unwrap();
+        let source: Option<String> = c.query_row("SELECT MAX(source) FROM home_addresses WHERE ip = '203.0.113.7'", [], |r| r.get(0)).unwrap();
+        assert_eq!(source.as_deref(), Some("lookup"));
+    }
 
     fn conn() -> Connection {
         let c = Connection::open_in_memory().unwrap();
