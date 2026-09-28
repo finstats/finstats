@@ -508,16 +508,22 @@ pub fn svg(ch: Chapter, y: &StoryYear, posters: &Posters) -> String {
 fn calendar(c: &mut Canvas, days: &[(String, i64)], year: Option<i32>, top: f64) {
     use chrono::{Datelike, NaiveDate};
     let parsed: Vec<(NaiveDate, i64)> = days.iter().filter_map(|(d, s)| Some((NaiveDate::parse_from_str(d, "%Y-%m-%d").ok()?, *s))).collect();
+    let monday = |d: NaiveDate| d - chrono::Duration::days(d.weekday().num_days_from_monday() as i64);
+    let last = year.and_then(|y| NaiveDate::from_ymd_opt(y, 12, 31)).or_else(|| parsed.iter().map(|(d, _)| *d).max());
     // A calendar year opens on its own first week, so an empty January reads as empty, not as missing.
-    let Some(first) = year.and_then(|y| NaiveDate::from_ymd_opt(y, 1, 1)).or_else(|| parsed.iter().map(|(d, _)| *d).min()) else { return };
-    let start = first - chrono::Duration::days(first.weekday().num_days_from_monday() as i64);
+    // "The last 12 months" is longer than the 53 weeks there is room for, and ends on its newest day.
+    let first = match year {
+        Some(y) => NaiveDate::from_ymd_opt(y, 1, 1),
+        None => parsed.iter().map(|(d, _)| *d).min().zip(last).map(|(min, last)| min.max(monday(last) - chrono::Duration::weeks(52))),
+    };
+    let (Some(first), Some(last)) = (first, last) else { return };
+    let start = monday(first);
     let mut sorted: Vec<i64> = parsed.iter().map(|(_, s)| *s).filter(|s| *s > 0).collect();
     sorted.sort_unstable();
     // The 95th percentile tops the scale, as on the recap page: one marathon should not wash out the year.
     let cap = sorted.get(sorted.len().saturating_sub(1) * 95 / 100).copied().unwrap_or(1).max(1);
     let (cell, gap) = (15.0, 3.0);
     let by_day: std::collections::HashMap<NaiveDate, i64> = parsed.iter().copied().collect();
-    let last = year.and_then(|y| NaiveDate::from_ymd_opt(y, 12, 31)).or_else(|| parsed.iter().map(|(d, _)| *d).max()).unwrap_or(first);
     for d in first.iter_days().take_while(|d| *d <= last) {
         let secs = by_day.get(&d).copied().unwrap_or(0);
         let week = (d - start).num_days() / 7;
@@ -538,6 +544,21 @@ mod tests {
 
     fn title(name: &str, id: &str) -> Value {
         json!({ "id": id, "name": name, "sub": "2008", "image_item_id": id, "plays": 3, "watch_s": 5400, "episodes": 2, "item_exists": true })
+    }
+
+    /// "The last 12 months" spans thirteen calendar months and the grid has room for 53 weeks: it is the
+    /// oldest weeks that give way, never the newest.
+    #[test]
+    fn the_last_twelve_months_end_on_the_newest_day() {
+        use chrono::NaiveDate;
+        let last = NaiveDate::from_ymd_opt(2026, 9, 28).unwrap(); // a Monday
+        let days: Vec<(String, i64)> = (0..400).map(|n| ((last - chrono::Duration::days(n)).format("%Y-%m-%d").to_string(), 600)).collect();
+        let mut c = Canvas::new();
+        calendar(&mut c, &days, None, 0.0);
+        let svg = c.finish_sized(W, H);
+        let rightmost = format!(r#"<rect x="{:.1}" y="0.0""#, X + 52.0 * 18.0);
+        assert!(svg.contains(&rightmost), "the newest Monday is not in the last column");
+        assert_eq!(svg.matches(r#"width="15""#).count(), 52 * 7 + 1, "53 weeks up to and including the newest day");
     }
 
     /// A recap as `recap::build` answers it, with everything the story must leave out filled in.
