@@ -59,7 +59,14 @@ function request(method, path, { body, signal, params, quiet401 = false } = {}) 
   else if (method !== 'GET') clearViewCache(); // something was changed; what we remember may be wrong
   if (method !== 'GET') return send(method, path, { body, signal, params, quiet401 });
   const url = path + qs(params);
-  if (inflight.has(url)) return inflight.get(url);
+  // Joined, but only for the answer: if the prefetch is called off (a write clears everything), a page that
+  // still wants it asks for itself, rather than taking that abort for its own and drawing nothing.
+  if (inflight.has(url)) {
+    return inflight.get(url).catch((e) => {
+      if (isAbort(e) && !(signal && signal.aborted)) return send(method, path, { body, signal, params, quiet401 });
+      throw e;
+    });
+  }
   const sent = send(method, path, { body, signal, params, quiet401 });
   if (signal && signal === sharedSignal) {
     inflight.set(url, sent);
