@@ -3,9 +3,94 @@
 Everything that changed in finstats, newest first. This file is compiled into the
 binary and is what the **Patch notes** tab in the app shows.
 
-Format: `## [version] - date`, then `### Added`, `### Changed`, `### Fixed` or `### Removed`
-with one bullet per change. An `x.y.0` release carries a short title line under its heading:
-that title is what the app uses as the headline of the whole series.
+Format: `## [version] - date`, or `## [version] - first day to release day` for a release made
+over several days, then `### Added`, `### Changed`, `### Performance`, `### Stability`, `### Fixed`
+or `### Removed` with one bullet per change. Performance is something that got quicker or lighter,
+Stability something that can no longer crash, halt, leak or lose data, Fixed something that gave a
+wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
+the app uses as the headline of the whole series.
+
+## [2.0.0] - 2026-09-25 to 2026-09-28
+
+Recap 2026, public profiles and watching together
+
+### Added
+- **Who you watched with**, in the recap: evenings in company, the time spent in it, the title that brought people together most, and up to three companions, named in the app and linked to their profiles.
+- **Shows seen to the end**, in the recap: the last episode of each seen that year, by the same reading of "seen" as the profile's progress bars — and the ones begun and left for later, under half seen with nothing played for two months.
+- **What you asked for**, in the recap: Seerr requests made in the year, how many arrived and how many you then watched. Only where requests exist.
+- **The year against the one before**: hours, plays and days, and how much more or less.
+- **The year as a story**: every chapter as a 1080×1920 card, the shape phone stories use — the year, the numbers, top shows, films and music, genres, the persona, hours and days, every day of the year, records, company, shows finished, requests and the year before. Save one, or all of them as a ZIP, from "Share the year as cards".
+- **A card never names anybody else**: cards are drawn from a copy of the year with no field for another person, a rank or an app. In the app a card carries no name at all.
+- **The server's year**, for Jellyfin administrators: every title and total and the persona of the house, with nobody ranked or named. A switch on the recap page, `scope=server` in the API.
+- **"Your year in review is ready"**: a notification in December, once to each person who watched that year.
+- **Public profiles**: a person can publish part of their profile at a link anyone can open without an account — totals and top titles, streaks and when they watch, the whole year as its story of cards, the last ten plays — each part off until its owner switches it on under Settings → Public profile. Devices, addresses, apps, play methods, file paths and other people are never published, whatever is switched on, and the name shown is one the owner types, never their Jellyfin login.
+- **Nothing on a published page is newer than a day**, recent plays and every total alike, so a page someone keeps an eye on never says who is watching right now.
+- **Shareable cards**: every published profile comes with a 1200×630 picture, of the profile and of the year, that Discord, Signal, Mastodon and the rest show when the link is pasted, and that can be downloaded to post. Drawn on the server from what the page shows and nothing more.
+- **A link you can take back**: 22 random characters, reset with one click; the old link then answers exactly like one that never existed.
+- **Public profiles are off until an administrator allows them**: one switch for the whole server, a list of who publishes what, and a way to take a profile down. Publishing, changes, resets and take-downs are in the audit log, and a key cannot make anything public.
+- **Together**, a page of its own: who watches with whom, how much, and how that has changed. Time together, evenings and the share of watch time spent in company, each against the window before; hours in company against hours alone per day or week; every pair of people with their evenings, time together, when they last watched and what they watch most; the titles watched together most; the recent evenings; and, for anyone who may see everyone, each person's time alone against their time in company.
+- Every pair counts: an evening of three counts for each of its three pairs, where the card used to count only the exact set of people. A pair's time together is the shorter of the two stays.
+- The **Watched together** card on the dashboard and on a profile links to the page, and a profile's card says what share of that person's watch time was in company.
+- `GET /api/stats/groups` gains `pairs`, `series`, `people`, `previous`, `bucket`, and `watch_s` and `share` in its totals; the keys it had are unchanged.
+- **Where people stop**, on every film and episode page: the share of plays still watching at each minute, from everyone at the start to whoever reached the end, with the rewinds and subtitle switch-ons of those plays marked on the same axis. The card says how many stops were measured (plays finstats recorded) and how many estimated (imported plays, from how long they ran), and needs three plays before it draws anything.
+- **Who keeps watching**, on a show page: how many people started each episode, in order, and a **Finished** column per episode. "Everyone quits episode three" is people who never press play on episode four.
+- **Files that never play**, on Playback: a film or episode started three times or more that never got past thirty seconds, with who tried and on which apps. Jellyfin's log carries no playback errors, so the plays are the witness; the minimum play length does not apply here, since it is exactly what those plays never reach.
+- **Most rewound** and **Subtitles switched on**, on Playback: titles ranked by backwards skips per play with the minute they cluster in, and by the share of plays where subtitles went on within the first ten minutes. All three lists need *see everyone's activity*. Skips shorter than 20 seconds were never recorded, so a short replay of one line is invisible by design.
+- A seek keeps where it came from as a number beside its label (`from_s` in a play's timeline). Every seek already recorded gets its number from the label, and so does a restored backup from before this.
+- `GET /api/stats/files` for the three lists; `GET /api/items/{id}` gains `insights`, and a show's episodes gain `users` and `finished`.
+- **API keys**: anyone signed in can make keys for themselves under Settings → API keys, for a script, a dashboard or a phone. A key is sent as `Authorization: Bearer fs_…`, is shown once, stored hashed, can carry an expiry, and is revoked with a click — an administrator sees and can revoke everyone's. It resolves to the same person with the same permissions as a sign-in, read live on every request, so losing the right to sign in stops every key at once. A key can neither make nor revoke keys.
+- **A calendar feed**: `GET /api/calendar.ics?key=…` is what Sonarr and Radarr have coming, as an iCalendar a phone can subscribe to. A key with the *calendar* scope opens the feed and nothing else; the feed reads the key from the address because a subscribed calendar can send no header, never the cookie, and names nobody.
+- **An audit log** under Server → Audit, for Jellyfin administrators: every sign-in and failed attempt with its address, every setting or permission changed and to what, every key made, used or revoked, every connection, destination, backup and import, every play deleted and alert resolved — who, from where, through which key, and whether it worked. Kept a year, part of backups. `GET /api/audit` pages through it.
+- **Import from Streamystats**, its own section under Settings beside Jellystat. Take its **Settings → Backup & Import → Download Backup** file and drop it in: years of history arrive in a couple of seconds, and nothing you already have is counted again. `finstats import-streamystats <file>` does it headless, `POST /api/import/streamystats` through the API; one import runs at a time, either kind.
+- **Ran both trackers? Import both files.** A play is recognised as one finstats already has by the tracker's own id for it and, failing that, by the same person watching the same item with either end of the play close to one in the history — so a Jellystat export and a Streamystats export of the same evenings can both be imported, in either order, and an evening finstats watched itself is not imported over either. "Close" is the Merge window under Settings → Collection.
+- Imported rows say what they cannot say. A play Streamystats watched itself keeps nothing about the file — no codec, resolution, bitrate or container — so those stay empty rather than being filled with a guess, and the cards that would show them hide themselves. A play it had taken from Jellystat carries the whole session, and that is read instead: dated by the moment it ended, the only moment either tracker kept, and described as a transcode only when the session really was one.
+- Rows Streamystats wrote because Jellyfin reported an item watched, for a viewing it never saw, are counted and skipped: they are as long as the whole film and would be watch time on an evening nobody watched. The result says how many there were.
+- How Streamystats data is interpreted, field by field, learned from a real export rather than from documentation: `docs/streamystats-import.md`.
+- **Which tracker each play came from**, as a filter on Activity: what finstats recorded itself, what came from Jellystat, what came from Streamystats. Only the ones your history actually holds are offered, and it is scoped like every other list, so somebody who may only see their own plays is only told where their own history came from.
+- **The filters on Activity are dropdowns you tick**, so you can ask for films *and* episodes without music, two play methods, or two people at once, rather than one of each or all of them. Media type gained **Other** now that it can be combined.
+- Several people at once, anywhere the user filter appears — the dashboard, playback, libraries, security and the rest — with the map and every statistic following. A user filter still only ever narrows what somebody may see: without *see everyone's activity* a request is pinned to the caller, whoever the address names and however many.
+- **A light theme**: washi paper, with ink text and a vermilion accent. finstats follows the device's light or dark setting until you pick one.
+- **A theme button beside Sign out** cycles Device, Light and Dark. The choice is kept in this browser and applied before the page is drawn, so it never flashes the other theme.
+- **Open in Jellyfin**: every film, show and episode page has a button that opens that title's page in Jellyfin, in a new tab.
+- **Jellyfin's address for people** under Settings → Jellyfin: where those buttons point, for when the address finstats connects to is not one a browser can reach. Empty keeps the address finstats connects to; only a Jellyfin administrator can set it.
+
+### Changed
+- **finstats has a new home**: `github.com/finstats/finstats`, and the image is `ghcr.io/finstats/finstats`. Change the image name in your `docker run` or compose file to keep getting updates; the data folder stays as it is.
+- **Settings is one section on screen at a time.** The page was fourteen cards in one column and six hundred words of help. Now each section has its own address (`/settings/collection`), a list on the left moves between them, and on a phone the list wraps into chips. Links to the old anchors still land.
+- **A setting is one row**: what it is, one line stating the rule, the control on the right. Numbers in a section save together with one button at the bottom; switches still save themselves. The status cards (Tasks, Outbound connections, Database) and the licences link live under **System**, and the two importers have a section of their own.
+- **Find a setting** from the box in the header — `/` focuses it — by any word in its name; it says which section the setting lives in, and Enter lands on the row.
+- **Settings is for everyone signed in**: the sections that manage the server stay with those who may manage it, and a person who was only allowed notifications can finally reach their own destinations.
+- **The Server page is one section on screen at a time**, the way Settings is: Overview (system and storage), Jobs, Devices, Plugins, Log and Audit, each at its own address. Links to `/server#jobs` still land.
+- **The server log is a section of the Server page** (`/server/log`) rather than a page of its own in the menu; `/events` forwards there with its filters.
+- A notification about a failed job, a failed backup or a connection that stopped answering links to the settings section that holds it, rather than to the top of the page.
+- What your library can tell an imported play — the kind of thing it was, which episode, its runtime, which library it belongs to — is filled in after **every** library read, not only at the moment of an import. History is usually imported before finstats has ever read the library, so those plays used to stay guessed or unknown for good.
+- Restoring a finstats backup no longer adds a play that arrived from a tracker under a different id, and still keeps two genuine viewings of the same thing minutes apart.
+- A play's details name whichever tracker brought it in, rather than calling everything imported a Jellystat play.
+
+### Performance
+- **A restart is near-instant on any history.** Every start worked out who watched together over the whole history and re-decided which plays were local, both to change nothing: 24 s and 5.5 s on ten million plays. A start now does only what the last run left behind, and all of it again only after an update or when the setting behind it changed.
+- **A crowd arriving at once is recorded in seconds.** Each new play, each progress save and each device was written on its own, and each ended play closed with its own look at the title's whole history; a pass now writes each kind at once. 100,000 plays starting together take 3 s, where 25,000 ending together used to take over four minutes.
+- **Now playing stays quick with thousands watching.** Finding who watches together compared every stream with every other and listed every companion by name: forty seconds at 10,000 streams, and gigabytes of memory beyond. Streams are now compared within a title, and each shows a few names and how many others.
+- Working out who watched together rewrote every grouped play of the history each time finstats started, imported or saw a play end; it now writes only what changed. Finding which plays had ended no longer gets slower with the square of the number playing.
+- **Recognising a play the history already has goes through an index**, so an import of 150,000 plays takes seconds, and re-linking after a library read steps through the titles instead of reading every play while holding the database.
+- **Playback insights and the overview are quicker over all time**: their independent parts are worked out side by side, the concurrency chart looks up the local day once per quarter hour instead of once per play, and genres are counted per title. On a million plays: 4.1 s to 2.4 s, and 1.6 s to 1.1 s.
+
+### Stability
+- **A library of television no longer reads as a library that has been gutted.** Reading a library makes two passes — every item, then a smaller one for the cast and crew of films and shows only — and the check that decides whether a read can be trusted to remove what it did not see was looking at the second. On a library of television or music the two counts are nowhere near, so the check refused every read and stopped finstats, and the install restarted and did the same again. Nothing was ever wrongly removed, but no library read could finish. If your Shows or Music library has not been picking up new titles, this is why.
+- An import could fail with "database is locked" when another write — a play being refreshed — landed between its first read and its first write. Both importers take the write lock as they begin, and the database journal no longer stays as large as the largest import ever made.
+- **A database file that is damaged, cut short, somebody else's or read-only is refused at once**, naming the file and saying nothing was changed, instead of 30 silent seconds; another program's database is never written into.
+- A backup or pre-update snapshot interrupted half way no longer leaves a file behind — one that could take a good snapshot's place among the three kept.
+- **Overwriting the place database while finstats runs no longer crashes it**: finstats reads from a private copy of the file.
+- A Jellyfin app that reported a new device id every time could make finstats' memory grow for as long as it ran; devices not seen for five minutes are now forgotten.
+- One person keeps at most 30 signed-in sessions; the oldest is signed out at the next sign-in.
+
+### Fixed
+- **The same evening is no longer counted twice when an item has been renamed.** Re-linking history to a title that was re-added in Jellyfin could turn a play imported from a tracker into a duplicate of one already there, because the check that would have caught it ran before the id moved. It now runs again wherever ids are re-linked. Only imported plays are ever removed, never one finstats recorded itself, and how many went is in the log. The first start of 2.0 sweeps the whole history once for the ones already there.
+- **A session now follows the person as Jellyfin has them now.** An administrator Jellyfin demoted kept full access to finstats for the rest of their 30-day session, and somebody disabled or deleted in Jellyfin stayed signed in. They now lose it as soon as finstats reads Jellyfin's users (every 15 minutes, or at once from Settings), as API keys always do.
+- Signing in writes what Jellyfin says about the person into finstats' user list, so an imported tracker backup can no longer make somebody an administrator before the first read of the users corrects it.
+- Somebody deleted in Jellyfin is marked removed even when two reads of the users fall in the same second.
+- **Download errors never show a download client's password or an indexer's API key**, which Sonarr and Radarr can quote in them.
+- Plays re-linked to a renamed title during a library read were not checked for watching together until the next restart; they now are, at once.
 
 ## [1.6.5] - 2026-09-24
 
