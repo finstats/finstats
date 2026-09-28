@@ -348,11 +348,15 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
 
     if with_settings {
         if let Some(raw) = settings_raw {
-            // Through the type, so a backup cannot plant values this version would refuse.
-            let parsed: Settings = serde_json::from_str(&raw).unwrap_or_default();
-            if parsed.validate().is_ok() {
-                db::set_setting(&tx, "settings", &serde_json::to_string(&parsed)?)?;
-                res.settings_restored = true;
+            // Through the type, so a backup cannot plant values this version would refuse. What cannot be
+            // read at all is left out, never read as the defaults: that would reset every setting there is.
+            match serde_json::from_str::<Settings>(&raw) {
+                Ok(parsed) if parsed.validate().is_ok() => {
+                    db::set_setting(&tx, "settings", &serde_json::to_string(&parsed)?)?;
+                    res.settings_restored = true;
+                }
+                Ok(_) => tracing::warn!("the backup's settings were not restored: this version refuses them"),
+                Err(e) => tracing::warn!("the backup's settings were not restored: {e}"),
             }
         }
     }
@@ -475,6 +479,27 @@ mod tests {
 
         std::fs::write(tmp.join("not.jsonl"), "{\"hello\": 1}\n").unwrap();
         assert!(restore(&plain, &tmp.join("not.jsonl"), false, None).unwrap_err().to_string().contains("not a finstats backup"));
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// Settings this version cannot read are not restored: reading them as "all defaults" would quietly
+    /// reset every setting the install has.
+    #[test]
+    fn settings_that_cannot_be_read_leave_the_install_s_own_alone() {
+        let tmp = std::env::temp_dir().join(format!("finstats-bad-settings-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let target = Db::open(&tmp.join("target.db")).unwrap();
+        db::set_setting(&target.conn().unwrap(), "settings", &serde_json::to_string(&Settings { min_play_s: 42, ..Settings::default() }).unwrap()).unwrap();
+        let file = tmp.join("backup.jsonl");
+        let lines = [
+            json!({ "finstats_backup": FORMAT, "app_version": "2.0.1" }),
+            json!({ "t": "settings", "r": { "key": "settings", "value": r#"{"min_play_s":"soon"}"# } }),
+        ];
+        std::fs::write(&file, lines.iter().map(|l| l.to_string() + "\n").collect::<String>()).unwrap();
+        let r = restore(&target, &file, true, None).unwrap();
+        assert!(!r.settings_restored);
+        assert_eq!(Settings::load(&target.conn().unwrap()).unwrap().min_play_s, 42);
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
