@@ -37,7 +37,7 @@ use crate::media::{self, Streams, int, ticks_to_s};
 use crate::playback::PlayRecord;
 use crate::state::Tasks;
 
-const TASK: &str = "import";
+const TASK: &str = "import_streamystats";
 
 #[derive(Debug, Default, Serialize, Clone)]
 pub struct ImportResult {
@@ -694,6 +694,18 @@ mod tests {
             "hiddenRecommendations": [],
         });
         doc.to_string()
+    }
+
+    /// Its progress belongs on its own card: the Jellystat card watches `import` and keeps its last result.
+    #[test]
+    fn progress_is_reported_on_the_streamystats_task_and_leaves_jellystats_alone() {
+        let db = Db::open_in_memory().unwrap();
+        let tasks = crate::state::Tasks::new();
+        assert!(tasks.try_start("import_streamystats", "Receiving backup"));
+        run(&db, &write("progress.json", &export_file()), Some(&tasks)).unwrap();
+        let task = |id: &str| tasks.snapshot().into_iter().find(|t| t.id == id).unwrap();
+        assert!(task("import").message.is_none(), "the Jellystat card was written to: {:?}", task("import").message);
+        assert_ne!(task("import_streamystats").message.as_deref(), Some("Receiving backup"), "its own card never moved");
     }
 
     #[test]
