@@ -508,57 +508,75 @@ pub async fn download_history(State(app): State<App>, crate::auth::DownloadsView
         .db
         .call(move |c| {
             let since: i64 = c.query_row("SELECT CAST(strftime('%s', date('now', 'localtime', ?1), 'utc') AS INTEGER)", [format!("-{} days", days - 1)], |r| r.get(0))?;
-            let totals = crate::stats::one_json(
-                c,
-                "SELECT COALESCE(SUM(event = 'imported'), 0) AS imported, COALESCE(SUM(event = 'grabbed'), 0) AS grabbed, COALESCE(SUM(event = 'failed'), 0) AS failed,
-                        COALESCE(SUM(CASE WHEN event = 'imported' THEN size_bytes END), 0) AS size_bytes
-                 FROM grabs WHERE at >= ?1",
-                &[since.into()],
-            )?
-            .unwrap_or_default();
-            // Gap-free days, like every other chart here.
-            let rows = crate::stats::rows_json(
-                c,
-                "SELECT date(at, 'unixepoch', 'localtime') AS day, COALESCE(SUM(event = 'imported'), 0) AS imported,
-                        COALESCE(SUM(CASE WHEN event = 'imported' THEN size_bytes END), 0) AS size_bytes, COALESCE(SUM(event = 'failed'), 0) AS failed
-                 FROM grabs WHERE at >= ?1 GROUP BY day",
-                &[since.into()],
-            )?;
-            let found: HashMap<String, Value> = rows.into_iter().filter_map(|r| Some((r.get("day")?.as_str()?.to_string(), Value::Object(r)))).collect();
-            let first: String = c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [since], |r| r.get(0))?;
-            let mut daily = vec![];
-            let mut day = chrono::NaiveDate::parse_from_str(&first, "%Y-%m-%d").unwrap_or_default();
-            let today: String = c.query_row("SELECT date('now', 'localtime')", [], |r| r.get(0))?;
-            let last = chrono::NaiveDate::parse_from_str(&today, "%Y-%m-%d").unwrap_or_default();
-            while day <= last {
-                let key = day.format("%Y-%m-%d").to_string();
-                daily.push(found.get(&key).cloned().unwrap_or_else(|| json!({ "day": key, "imported": 0, "size_bytes": 0, "failed": 0 })));
-                day += chrono::Duration::days(1);
-            }
-            let bucket = |expr: &str| -> Result<Vec<Value>> {
-                Ok(crate::stats::rows_json(
-                    c,
-                    &format!(
-                        "SELECT {expr} AS name, COUNT(*) AS count, COALESCE(SUM(size_bytes), 0) AS size_bytes FROM grabs
-                         WHERE at >= ?1 AND event = 'imported' AND {expr} IS NOT NULL AND {expr} <> '' GROUP BY 1 ORDER BY count DESC, name LIMIT 12"
-                    ),
-                    &[since.into()],
-                )?
-                .into_iter()
-                .map(Value::Object)
-                .collect())
-            };
-            let failures = crate::stats::rows_json(
-                c,
-                "SELECT at, COALESCE(title, source) AS title, source, indexer, media_type FROM grabs WHERE at >= ?1 AND event = 'failed' ORDER BY at DESC LIMIT 20",
-                &[since.into()],
-            )?;
-            Ok(json!({ "days": days, "totals": totals, "daily": daily,
-                       "indexers": bucket("indexer")?, "quality": bucket("quality")?, "clients": bucket("client")?, "protocols": bucket("protocol")?,
-                       "failures": failures.into_iter().map(Value::Object).collect::<Vec<_>>() }))
+            history(c, since, days)
         })
         .await?;
     Ok(Json(out))
+}
+
+fn history(c: &Connection, since: i64, days: i64) -> Result<Value> {
+    let totals = crate::stats::one_json(
+        c,
+        "SELECT COALESCE(SUM(event = 'imported'), 0) AS imported, COALESCE(SUM(event = 'grabbed'), 0) AS grabbed, COALESCE(SUM(event = 'failed'), 0) AS failed,
+                COALESCE(SUM(CASE WHEN event = 'imported' THEN size_bytes END), 0) AS size_bytes
+         FROM grabs WHERE at >= ?1",
+        &[since.into()],
+    )?
+    .unwrap_or_default();
+    // Gap-free days, like every other chart here.
+    let rows = crate::stats::rows_json(
+        c,
+        "SELECT date(at, 'unixepoch', 'localtime') AS day, COALESCE(SUM(event = 'imported'), 0) AS imported,
+                COALESCE(SUM(CASE WHEN event = 'imported' THEN size_bytes END), 0) AS size_bytes, COALESCE(SUM(event = 'failed'), 0) AS failed
+         FROM grabs WHERE at >= ?1 GROUP BY day",
+        &[since.into()],
+    )?;
+    let found: HashMap<String, Value> = rows.into_iter().filter_map(|r| Some((r.get("day")?.as_str()?.to_string(), Value::Object(r)))).collect();
+    let first: String = c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [since], |r| r.get(0))?;
+    let mut daily = vec![];
+    let mut day = chrono::NaiveDate::parse_from_str(&first, "%Y-%m-%d").unwrap_or_default();
+    let today: String = c.query_row("SELECT date('now', 'localtime')", [], |r| r.get(0))?;
+    let last = chrono::NaiveDate::parse_from_str(&today, "%Y-%m-%d").unwrap_or_default();
+    while day <= last {
+        let key = day.format("%Y-%m-%d").to_string();
+        daily.push(found.get(&key).cloned().unwrap_or_else(|| json!({ "day": key, "imported": 0, "size_bytes": 0, "failed": 0 })));
+        day += chrono::Duration::days(1);
+    }
+    // Sonarr and Radarr name the indexer and the protocol only on the grab: an import's are its grab's.
+    let of_grab = |col: &str| {
+        format!("COALESCE(g.{col}, (SELECT x.{col} FROM grabs x WHERE x.service_id = g.service_id AND x.download_id = g.download_id AND x.event = 'grabbed' AND x.{col} IS NOT NULL LIMIT 1))")
+    };
+    let imports = format!(
+        "SELECT g.size_bytes, g.quality, g.client, {} AS indexer, {} AS protocol FROM grabs g WHERE g.at >= ?1 AND g.event = 'imported'",
+        of_grab("indexer"),
+        of_grab("protocol")
+    );
+    let bucket = |expr: &str| -> Result<Vec<Value>> {
+        Ok(crate::stats::rows_json(
+            c,
+            &format!(
+                "SELECT {expr} AS name, COUNT(*) AS count, COALESCE(SUM(size_bytes), 0) AS size_bytes FROM ({imports})
+                 WHERE {expr} IS NOT NULL AND {expr} <> '' GROUP BY 1 ORDER BY count DESC, name LIMIT 12"
+            ),
+            &[since.into()],
+        )?
+        .into_iter()
+        .map(Value::Object)
+        .collect())
+    };
+    // Sonarr writes a record per episode: a season pack that failed is one failure, not one an episode.
+    let failures = crate::stats::rows_json(
+        c,
+        &format!(
+            "SELECT MAX(g.at) AS at, COALESCE(MAX(g.title), MAX(g.source)) AS title, MAX(g.source) AS source, MAX({}) AS indexer, MAX(g.media_type) AS media_type
+             FROM grabs g WHERE g.at >= ?1 AND g.event = 'failed' GROUP BY g.service_id, COALESCE(g.download_id, 'h' || g.history_id) ORDER BY at DESC LIMIT 20",
+            of_grab("indexer")
+        ),
+        &[since.into()],
+    )?;
+    Ok(json!({ "days": days, "totals": totals, "daily": daily,
+               "indexers": bucket("indexer")?, "quality": bucket("quality")?, "clients": bucket("client")?, "protocols": bucket("protocol")?,
+               "failures": failures.into_iter().map(Value::Object).collect::<Vec<_>>() }))
 }
 
 /// Is this poster one the caller could have been shown: on the calendar (which is everyone's), or on a request
@@ -593,6 +611,38 @@ mod tests {
         )
         .unwrap();
         c
+    }
+
+    /// Sonarr and Radarr name the indexer and the protocol only on the grab, and Sonarr writes one record per
+    /// episode: an import's indexer is its grab's, and a season pack that failed is one failure.
+    #[test]
+    fn the_history_names_where_imports_came_from_and_counts_a_failed_pack_once() {
+        let c = conn();
+        let now = crate::db::now();
+        let mut n = 0;
+        let mut grab = |event: &str, dl: &str, size: i64, indexer: Option<&str>, protocol: Option<&str>| {
+            n += 1;
+            c.execute(
+                "INSERT INTO grabs(service_id, history_id, event, at, media_type, title, source, size_bytes, indexer, protocol, download_id)
+                 VALUES (1, ?1, ?2, ?3, 'tv', 'Low Orbit', 'Low.Orbit.S03.1080p', ?4, ?5, ?6, ?7)",
+                params![n, event, now - 3600, size, indexer, protocol, dl],
+            )
+            .unwrap();
+        };
+        for _ in 0..3 {
+            grab("grabbed", "dl1", 3_300, Some("A Tracker"), Some("torrent"));
+        }
+        for size in [1_000, 1_100, 1_200] {
+            grab("imported", "dl1", size, None, None);
+        }
+        for _ in 0..10 {
+            grab("failed", "dl2", 5_000, None, None);
+        }
+        let h = history(&c, now - 86_400, 1).unwrap();
+        let names = |k: &str| h[k].as_array().unwrap().iter().map(|b| (b["name"].as_str().unwrap().to_string(), b["count"].as_i64().unwrap())).collect::<Vec<_>>();
+        assert_eq!(names("indexers"), [("A Tracker".to_string(), 3)], "{h}");
+        assert_eq!(names("protocols"), [("torrent".to_string(), 3)]);
+        assert_eq!(h["failures"].as_array().unwrap().len(), 1, "one pack, one failure: {}", h["failures"]);
     }
 
     #[allow(clippy::too_many_arguments)]
