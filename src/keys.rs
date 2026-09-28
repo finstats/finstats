@@ -30,8 +30,13 @@ pub fn only_a_session(user: &AuthUser) -> Result<(), ApiError> {
     }
 }
 
-pub fn live_keys(c: &Connection, user_id: &str) -> Result<i64> {
-    Ok(c.query_row("SELECT COUNT(*) FROM api_keys WHERE user_id = ?1 AND revoked_at IS NULL", [user_id], |r| r.get(0))?)
+/// Keys that still open something: not revoked, not run out (`auth::resolve_key_in`'s rule).
+pub fn live_keys(c: &Connection, user_id: &str, now: i64) -> Result<i64> {
+    Ok(c.query_row(
+        "SELECT COUNT(*) FROM api_keys WHERE user_id = ?1 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?2)",
+        params![user_id, now],
+        |r| r.get(0),
+    )?)
 }
 
 pub fn may_mint(live: i64) -> bool {
@@ -90,7 +95,7 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Cre
     let made = app
         .db
         .call(move |c| {
-            if !may_mint(live_keys(c, &uid)?) {
+            if !may_mint(live_keys(c, &uid, db::now())?) {
                 return Ok(None);
             }
             let now = db::now();
@@ -158,11 +163,15 @@ mod tests {
         for i in 0..MAX_KEYS_PER_USER {
             mint_key(&c, "u2", &format!("k{i}"), KeyScope::Full, None, 1000).unwrap();
         }
-        assert_eq!(live_keys(&c, "u2").unwrap(), MAX_KEYS_PER_USER);
-        assert!(!may_mint(live_keys(&c, "u2").unwrap()));
-        // A revoked one no longer counts.
+        assert_eq!(live_keys(&c, "u2", 2000).unwrap(), MAX_KEYS_PER_USER);
+        assert!(!may_mint(live_keys(&c, "u2", 2000).unwrap()));
+        // A revoked one no longer counts, and neither does one that has run out: it opens nothing.
         c.execute_batch("UPDATE api_keys SET revoked_at = 1500 WHERE id = 1").unwrap();
-        assert!(may_mint(live_keys(&c, "u2").unwrap()));
+        assert!(may_mint(live_keys(&c, "u2", 2000).unwrap()));
+        mint_key(&c, "u2", "k-again", KeyScope::Full, None, 1000).unwrap();
+        assert!(!may_mint(live_keys(&c, "u2", 2000).unwrap()));
+        c.execute_batch("UPDATE api_keys SET expires_at = 1800 WHERE id = 2").unwrap();
+        assert!(may_mint(live_keys(&c, "u2", 2000).unwrap()), "an expired key still counted");
     }
 
     #[test]
