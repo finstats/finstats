@@ -476,6 +476,16 @@ mod tests {
         assert_eq!(u32at(end + 16) as usize, at, "the directory is where the end record says");
     }
 
+    /// A name or a title is somebody else's text, and XML refuses most control characters outright:
+    /// one of them in a Jellyfin title must not make every card that shows it fail.
+    #[test]
+    fn a_control_character_in_a_name_does_not_break_the_card() {
+        let mut a = profile();
+        a.name = "Al\u{1}ice".into();
+        let png = render_png(&svg(Kind::Profile, &a, &Posters::new()));
+        assert!(png.is_ok(), "{:?}", png.err());
+    }
+
     #[test]
     fn a_card_asks_only_for_the_posters_it_draws() {
         let a = profile();

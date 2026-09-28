@@ -516,6 +516,9 @@ pub fn html_escape(s: &str) -> String {
             '>' => out.push_str("&gt;"),
             '"' => out.push_str("&quot;"),
             '\'' => out.push_str("&#39;"),
+            // Characters XML does not allow at all: one in a title would make a card's SVG unreadable.
+            '\t' | '\n' | '\r' => out.push(ch),
+            c if c < ' ' || c == '\u{FFFE}' || c == '\u{FFFF}' => {}
             c => out.push(c),
         }
     }
