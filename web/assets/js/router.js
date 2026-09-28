@@ -23,7 +23,8 @@ function match(pathname) {
     const m = r.re.exec(pathname);
     if (m) {
       const params = {};
-      r.keys.forEach((k, i) => { params[k] = decodeURIComponent(m[i + 1]); });
+      // A broken %-escape ("/items/%ZZ") is an address nothing lives at, not a reason to stop drawing pages.
+      try { r.keys.forEach((k, i) => { params[k] = decodeURIComponent(m[i + 1]); }); } catch { continue; }
       return { route: r, params };
     }
   }
