@@ -165,7 +165,9 @@ pub fn dir(data_dir: &Path) -> PathBuf {
     data_dir.join("geoip")
 }
 
-/// The file to use: the one named in `FINSTATS_GEOIP_DB`, else the newest `.mmdb` in the folder.
+/// The file to use: the one named in `FINSTATS_GEOIP_DB`, else the newest `.mmdb` in the folder whose name says
+/// it is a city database (MaxMind's and DB-IP's both do), else the newest of any name. `geoipupdate` puts City,
+/// Country and ASN in one folder, and only a city database can place anybody.
 pub fn find(data_dir: &Path) -> Option<PathBuf> {
     if let Some(own) = std::env::var("FINSTATS_GEOIP_DB").ok().map(|p| p.trim().to_string()).filter(|p| !p.is_empty()) {
         return Some(PathBuf::from(own));
@@ -176,7 +178,8 @@ pub fn find(data_dir: &Path) -> Option<PathBuf> {
         .filter(|e| e.path().extension().is_some_and(|x| x.eq_ignore_ascii_case("mmdb")))
         .filter_map(|e| Some((e.metadata().ok()?.modified().ok()?, e.path())))
         .collect();
-    files.sort();
+    let named_city = |p: &PathBuf| p.file_name().is_some_and(|n| n.to_string_lossy().to_ascii_lowercase().contains("city"));
+    files.sort_by_key(|(modified, p)| (named_city(p), *modified));
     files.pop().map(|(_, p)| p)
 }
 
@@ -407,6 +410,28 @@ mod tests {
         let names: Vec<String> = std::fs::read_dir(&dir).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
         assert_eq!(names, ["city.mmdb"], "the copy is reachable by name, or was left behind");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// `geoipupdate` writes City, Country and ASN into one folder; whichever it wrote last was taken, refused as
+    /// not a city database, and lookups stopped altogether with a good city file right beside it.
+    #[test]
+    fn a_city_database_is_found_beside_country_and_asn_ones() {
+        let data = std::env::temp_dir().join(format!("finstats-geo-find-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&data);
+        std::fs::create_dir_all(dir(&data)).unwrap();
+        let at = |name: &str, secs: u64| {
+            let f = std::fs::File::create(dir(&data).join(name)).unwrap();
+            f.set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(secs)).unwrap();
+        };
+        at("mine.mmdb", 1_000);
+        assert_eq!(find(&data), Some(dir(&data).join("mine.mmdb")), "a city database of any name, alone");
+        at("GeoLite2-City.mmdb", 2_000);
+        at("GeoLite2-Country.mmdb", 3_000);
+        at("GeoLite2-ASN.mmdb", 4_000);
+        assert_eq!(find(&data), Some(dir(&data).join("GeoLite2-City.mmdb")));
+        at("dbip-city-lite-2026-09.mmdb", 5_000);
+        assert_eq!(find(&data), Some(dir(&data).join("dbip-city-lite-2026-09.mmdb")), "the newest city database");
+        let _ = std::fs::remove_dir_all(&data);
     }
 
     #[test]
