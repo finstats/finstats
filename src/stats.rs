@@ -41,6 +41,12 @@ pub fn row_json(row: &Row) -> Map<String, Value> {
     out
 }
 
+/// A list's page number from the address: 1 when absent, and never so large that `(page - 1) * per_page`
+/// overflows — past the end is an empty page, never the first one again.
+pub(crate) fn page_number(page: Option<i64>) -> i64 {
+    page.unwrap_or(1).clamp(1, 100_000)
+}
+
 pub(crate) fn rows_json(conn: &Connection, sql: &str, args: &[SqlValue]) -> Result<Vec<Map<String, Value>>> {
     let mut stmt = conn.prepare(sql)?;
     let rows = stmt.query_map(params_from_iter(args.iter()), |r| Ok(row_json(r)))?;
@@ -639,7 +645,7 @@ const ACTIVITY_SORTS: [(&str, &str); 8] = [
 ];
 
 pub async fn activity(State(app): State<App>, user: AuthUser, Query(q): Query<ActivityQuery>) -> ApiResult {
-    let page = q.page.unwrap_or(1).max(1);
+    let page = page_number(q.page);
     let per_page = q.per_page.unwrap_or(50).clamp(1, 200);
     let filter = FilterQuery { days: q.days, user_id: q.user_id.clone(), library_id: q.library_id.clone() };
     let out = scoped(&app, &user, &filter, move |c, scope| {
@@ -1580,7 +1586,7 @@ const EVENT_SORTS: [(&str, &str); 4] =
     [("when", "e.date"), ("event", "e.name COLLATE NOCASE"), ("type", "e.type COLLATE NOCASE"), ("user", "u.name COLLATE NOCASE")];
 
 pub async fn events(State(app): State<App>, ServerViewer(_): ServerViewer, Query(q): Query<EventsQuery>) -> ApiResult {
-    let page = q.page.unwrap_or(1).max(1);
+    let page = page_number(q.page);
     let per_page = q.per_page.unwrap_or(50).clamp(1, 200);
     let out = app
         .db

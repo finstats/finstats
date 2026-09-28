@@ -151,7 +151,7 @@ const SORTS: [(&str, &str); 4] = [("when", "a.at"), ("kind", "a.kind"), ("user",
 
 /// One page of the log, newest first unless asked otherwise, with the kinds it holds for the filter.
 pub fn list(conn: &Connection, q: &AuditQuery) -> Result<Value> {
-    let page = q.page.unwrap_or(1).max(1);
+    let page = crate::stats::page_number(q.page);
     let per_page = q.per_page.unwrap_or(50).clamp(1, 200);
     let mut clauses: Vec<String> = vec![];
     let mut args: Vec<SqlValue> = vec![];
@@ -185,7 +185,6 @@ pub fn list(conn: &Connection, q: &AuditQuery) -> Result<Value> {
     for r in &mut rows {
         let detail = r.get("detail").and_then(Value::as_str).and_then(|d| serde_json::from_str::<Value>(d).ok()).unwrap_or(json!({}));
         r.insert("detail".into(), detail);
-        r.insert("has_image".into(), json!(r.get("has_image").and_then(Value::as_i64).unwrap_or(0) != 0));
     }
     let mut stmt = conn.prepare("SELECT DISTINCT kind FROM audit ORDER BY kind")?;
     let kinds: Vec<String> = stmt.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?;
@@ -214,6 +213,19 @@ mod tests {
 
     fn by(name: &str) -> Actor {
         Actor { user_id: Some(format!("u-{name}")), user_name: Some(name.to_string()), ip: Some("192.168.1.10".parse().unwrap()), key_id: None }
+    }
+
+    /// `rows_json` already reads `has_image` as a bool; read again as a number it was false for everybody,
+    /// and the log showed initials where people have pictures.
+    #[test]
+    fn the_log_says_who_has_a_picture_and_any_page_number_is_answered() {
+        let c = conn();
+        c.execute("INSERT INTO users(id, name, is_admin, image_tag, updated_at) VALUES ('u-alice', 'alice', 1, 'tag1', 1)", []).unwrap();
+        record_in(&c, &Entry::new("sign_in", by("alice"))).unwrap();
+        let page = list(&c, &AuditQuery::default()).unwrap();
+        assert_eq!(page["rows"][0]["has_image"], true, "{page}");
+        let far = list(&c, &AuditQuery { page: Some(i64::MAX), ..AuditQuery::default() }).unwrap();
+        assert_eq!(far["rows"].as_array().map(Vec::len), Some(0), "far past the end is an empty page, not the first one");
     }
 
     #[test]

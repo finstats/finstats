@@ -63,7 +63,6 @@ fn list_in(c: &Connection, user: &AuthUser) -> Result<Vec<Value>> {
     for r in &mut rows {
         let mine = r.get("user_id").and_then(Value::as_str) == Some(user.id.as_str());
         r.insert("mine".into(), json!(mine));
-        r.insert("has_image".into(), json!(r.get("has_image").and_then(Value::as_i64).unwrap_or(0) != 0));
     }
     Ok(rows.into_iter().map(Value::Object).collect())
 }

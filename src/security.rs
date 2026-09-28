@@ -775,7 +775,7 @@ fn alert_json(r: &crate::db::rusqlite::Row) -> crate::db::rusqlite::Result<Value
 pub async fn alerts(State(app): State<App>, user: AuthUser, Query(q): Query<AlertsQuery>) -> ApiResult {
     gate(&user)?;
     let per_page = q.per_page.unwrap_or(25).clamp(1, 100);
-    let page = q.page.unwrap_or(1).max(1);
+    let page = crate::stats::page_number(q.page);
     let who = q.user_id.as_deref().map(norm_id).filter(|s| !s.is_empty());
     let status = q.status.unwrap_or_else(|| "open".into());
     let body = app

@@ -336,7 +336,7 @@ pub struct RequestsQuery {
 
 fn requests_page(conn: &Connection, seen: &Seen, q: &RequestsQuery, min_play: i64) -> Result<Value> {
     let per_page = q.per_page.unwrap_or(25).clamp(1, 100);
-    let page = q.page.unwrap_or(1).clamp(1, 100_000);
+    let page = crate::stats::page_number(q.page);
     let states = match q.status.as_deref() {
         Some("open") => "state IN ('pending', 'approved', 'processing', 'partial')",
         Some("arrived") => "state = 'available'",
