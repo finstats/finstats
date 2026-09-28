@@ -10,6 +10,38 @@ Stability something that can no longer crash, halt, leak or lose data, Fixed som
 wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
 
+## [2.0.3] - 2026-09-28
+
+### Stability
+- **Only one import or restore at a time**: two uploads posted together both passed the check, and a restore never looked at imports; the second waited out the database and failed after minutes of upload.
+- **An address with a broken `%`-escape opens the not-found page**, instead of leaving a spinner for good.
+- **A large page number in a list is an empty page**: it overflowed, and came back as the first page again.
+
+### Fixed
+- **Security:** the Server page gave every device's id to anybody with *see server details*; ids need *see network details* as well, as everywhere else.
+- **Security:** two permission switches flipped before the first had saved sent the same starting list twice, and the second undid the first — a permission taken away stayed granted, a public-profile section switched off stayed published, while both switches showed what was chosen.
+- **Tables sort numbers right in a German or Norwegian browser**: "1,204" was read as 1.204, and anything past a million as text.
+- **A chart's Table view sorts dates, weekdays and positions by when**, not by their letters.
+- **The download history names where imports came from**: Sonarr and Radarr name the indexer and protocol only on the grab, so those breakdowns were always empty. A failed season pack is one failure, not one an episode.
+- **Deleting a play watched together** finds that title's groups again, instead of leaving a "group" of one.
+- **Time together, for one person, is never more than they stayed**: the Together page credited them with the whole evening's.
+- **An evening in company across midnight on New Year's Eve** (or the edge of "last N days") belongs whole to the window it started in, instead of two evenings alone.
+- **Imported episode plays are called by the episode's name** where Jellystat kept only the series'.
+- **Geolocation finds the city database beside the Country and ASN ones** `geoipupdate` writes, instead of switching itself off.
+- **The most-rewound hot spot follows the page's filters**, like its counts.
+- **"Your year is ready"** goes only to people whose recap has something in it.
+- **Resolving a muted alert again keeps its pair muted**; only reopening undoes a mute.
+- **An expired API key no longer counts toward the twenty.**
+- **The session limit lets the oldest session go** even when many sign-ins land in the same second.
+- **A home address found by the lookup stays** when the same one is taken off the typed list.
+- **Pictures in the audit log and the keys list**, where there were only initials.
+- **An administrator's notification list says whose a personal destination is**, instead of "Yours" on everybody's; **Recently sent** shows every destination of its last event.
+- **Esc on a title or a person never leaves finstats**, and closes only the dialog on top.
+- **A page is drawn even when a save cancels the prefetch it was waiting on.**
+- **Now playing shows a paused viewer who scrubs** where they are now, not when they press play.
+- **Removing a connection updates which pages exist**, as saving one does.
+- **The geolocation database's build date keeps its year** in US English.
+
 ## [2.0.2] - 2026-09-28
 
 ### Stability
