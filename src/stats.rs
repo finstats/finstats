@@ -718,22 +718,32 @@ pub async fn activity_detail(State(app): State<App>, user: AuthUser, Path(id): P
     found.map(Json).ok_or_else(|| ApiError::not_found("Play"))
 }
 
+/// Delete one finished play: (title, who, when) of what was deleted, `None` when there was no such play.
+/// Its title's groups are found again: whoever it was watched with may now have watched alone.
+fn delete_play(c: &mut Connection, id: i64, group_window_s: i64) -> Result<Option<(String, String, i64)>> {
+    let gone: Option<(String, String, String, i64)> = c
+        .query_row("SELECT item_id, item_name, user_name, started_at FROM playbacks WHERE id = ?1 AND active = 0", [id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .optional()?;
+    let n = c.execute("DELETE FROM playbacks WHERE id = ?1 AND active = 0", [id])?;
+    let Some((item, title, who, started_at)) = gone.filter(|_| n > 0) else { return Ok(None) };
+    crate::groups::detect(c, group_window_s, Some(&item))?;
+    Ok(Some((title, who, started_at)))
+}
+
 pub async fn activity_delete(State(app): State<App>, Manager(user): Manager, Path(id): Path<i64>) -> ApiResult {
     let actor = crate::audit::Actor::from(&user);
-    let n = app
+    let window = app.settings().group_window_s;
+    let gone = app
         .db
         .call(move |c| {
-            let gone: Option<(String, String, i64)> = c
-                .query_row("SELECT item_name, user_name, started_at FROM playbacks WHERE id = ?1 AND active = 0", [id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
-                .optional()?;
-            let n = c.execute("DELETE FROM playbacks WHERE id = ?1 AND active = 0", [id])?;
-            if let Some((title, who, started_at)) = gone.filter(|_| n > 0) {
+            let gone = delete_play(c, id, window)?;
+            if let Some((title, who, started_at)) = &gone {
                 crate::audit::record_quietly(c, &crate::audit::Entry::new("play_deleted", actor).target(id.to_string()).detail(json!({ "title": title, "user": who, "started_at": started_at })));
             }
-            Ok(n)
+            Ok(gone)
         })
         .await?;
-    if n == 0 {
+    if gone.is_none() {
         return Err(ApiError::not_found("Play"));
     }
     Ok(Json(json!({ "ok": true })))
@@ -2116,6 +2126,26 @@ mod tests {
         assert!(!without.is_empty() && without.iter().all(|d| d["device_id"].is_null() && d["device_name"] == "Living room TV"), "{without:?}");
         let with = user_devices(&c, &scope.cond(), true).unwrap();
         assert_eq!(with[0]["device_id"], "dev-1");
+    }
+
+    /// A play deleted out of a group takes the group with it when the one left is alone: nothing else
+    /// would ever look at that title again, and a "group" of one read as an evening with company.
+    #[test]
+    fn deleting_one_of_two_plays_watched_together_leaves_nobody_in_a_group() {
+        let mut c = conn();
+        c.execute_batch(
+            "DELETE FROM playbacks;
+             INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+               (5, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 4600, 3600),
+               (7, 'live', 'u2', 'bob',   'i1', 'Big Buck Bunny', 'Movie', 1010, 4610, 3600);",
+        )
+        .unwrap();
+        crate::groups::detect(&mut c, 60, None).unwrap();
+        let group = |c: &Connection| c.query_row("SELECT group_id FROM playbacks WHERE id = 7", [], |r| r.get::<_, Option<i64>>(0)).unwrap();
+        assert_eq!(group(&c), Some(5));
+        assert!(delete_play(&mut c, 5, 60).unwrap().is_some());
+        assert_eq!(group(&c), None, "bob watched alone after all");
+        assert!(delete_play(&mut c, 5, 60).unwrap().is_none(), "gone is gone");
     }
 
     #[test]
