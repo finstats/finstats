@@ -28,10 +28,13 @@ export default {
     function row({ id, label, sub, granted, save }) {
       const note = h('span', { class: 'saved-note perm-note', 'aria-live': 'polite' });
       let timer;
+      // One save at a time per row, each built from what the one before it saved: two switches flipped
+      // before the first answer used to send the same starting list twice, and the second undid the first.
+      let queue = Promise.resolve();
       const cells = perms.map((pm) => {
         const inherited = id !== null && defaults.has(pm.key);
         const sw = toggle({ checked: inherited || granted.has(pm.key), labelledby: `perm-h-${pm.key} perm-r-${id || 'all'}`,
-          onChange: async (next, revert) => {
+          onChange: (next, revert) => { queue = queue.then(async () => {
             mount(problem, '');
             const want = new Set(granted); if (next) want.add(pm.key); else want.delete(pm.key);
             note.replaceChildren(spinner(12));
@@ -45,7 +48,7 @@ export default {
               revert(!next); note.replaceChildren();
               mount(problem, inlineError('perm-err', `Couldn’t save: ${e.message}`));
             }
-          } });
+          }); } });
         if (inherited) { sw.disabled = true; sw.classList.add('is-inherited'); sw.title = 'Everyone has this, so it can’t be taken away from one person'; }
         return h('td', { class: 'perm-cell' }, sw);
       });

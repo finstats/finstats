@@ -72,11 +72,18 @@ export default {
     // Like every switch in Settings, each of these saves itself and says so beside itself; the name saves
     // when you leave the field. One request each, carrying the whole choice as it now stands.
     let draft = null, drawnAt = Date.now();
-    async function save(patch) {
-      const next = { ...draft, ...patch, sections: { ...draft.sections, ...(patch.sections || {}) } };
-      mine = await api.put('/me/public-profile', next);
-      draft = pick(mine);
-      drawnAt = Date.now();
+    // One at a time, each from what the last one saved: two switches flipped before the first answer both
+    // started from the same draft, and the second put back a section the first had just switched off.
+    let saving = Promise.resolve();
+    function save(patch) {
+      const run = saving.then(async () => {
+        const next = { ...draft, ...patch, sections: { ...draft.sections, ...(patch.sections || {}) } };
+        mine = await api.put('/me/public-profile', next);
+        draft = pick(mine);
+        drawnAt = Date.now();
+      });
+      saving = run.catch(() => {});
+      return run;
     }
     const pick = (m) => ({ published: m.published, display_name: m.display_name || '', show_avatar: m.show_avatar, sections: { ...m.sections } });
 
