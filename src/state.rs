@@ -232,7 +232,8 @@ impl AppState {
         if slot.is_none() {
             tracing::error!("halting: {reason}");
             *slot = Some(reason);
-            self.halt.notify_waiters();
+            // `notify_one` keeps a permit when nobody is waiting yet (the serve loop may not have started).
+            self.halt.notify_one();
         }
     }
 
@@ -422,5 +423,15 @@ mod tests {
         for bad in ["jellyfin.example.com", "ftp://jellyfin.example.com", "javascript:alert(1)", "https://"] {
             assert!(with(bad).is_err(), "{bad} was accepted");
         }
+    }
+
+    /// The scheduler is spawned before the server starts waiting on `halt`: a halt asked for in between
+    /// must still stop it, not be lost with the process running on.
+    #[tokio::test]
+    async fn a_halt_asked_for_before_anyone_waits_still_stops_the_server() {
+        let app = test_app();
+        app.request_halt("the library read came back empty");
+        let woke = tokio::time::timeout(std::time::Duration::from_millis(200), app.halt.notified()).await;
+        assert!(woke.is_ok(), "the halt was lost");
     }
 }
