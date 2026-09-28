@@ -303,7 +303,7 @@ fn requests(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>) 
         args.push(u.to_string().into());
     }
     let watched_sql = "r.available_at IS NOT NULL AND r.item_id IS NOT NULL AND EXISTS (
-        SELECT 1 FROM playbacks p WHERE p.user_id = r.user_id AND p.item_id = r.item_id AND p.started_at >= r.available_at AND p.ended_at <= ?2)";
+        SELECT 1 FROM playbacks p WHERE p.user_id = r.user_id AND (p.item_id = r.item_id OR p.series_id = r.item_id) AND p.started_at >= r.available_at AND p.ended_at <= ?2)";
     let (made, available, watched): (i64, i64, i64) = c.query_row(
         &format!("SELECT COUNT(*), COALESCE(SUM(r.available_at IS NOT NULL AND r.available_at < ?2), 0), COALESCE(SUM({watched_sql}), 0) FROM requests r WHERE {wh}"),
         params_from_iter(args.iter()),
@@ -904,6 +904,20 @@ mod tests {
         let everyone = &year_of(&c, None, "2025")["requests"];
         assert_eq!(everyone["made"], 4, "the server's year counts everybody's: {everyone}");
         assert!(everyone.get("top").is_none_or(|t| t.as_array().is_some_and(|a| a.iter().all(|x| x.get("user_name").is_none()))));
+    }
+
+    /// A show's request points at the series; its plays point at episodes.
+    #[test]
+    fn a_requested_show_is_watched_when_one_of_its_episodes_is() {
+        let c = year_db();
+        c.execute("INSERT INTO services(id, kind, name, url, secret, created_at) VALUES (9, 'seerr', 'Seerr', 'http://nas:5055', 'k', 1)", []).unwrap();
+        show(&c, "s1", "Sintel Stories", &["e1"]);
+        request(&c, 1, "ua", "Sintel Stories", Some("s1"), "2025-02-01", Some("2025-02-03"));
+        c.execute("UPDATE requests SET media_type = 'tv'", []).unwrap();
+        episode(&c, "ua", "e1", "2025-02-04", 950);
+        let r = &year_of(&c, Some("ua"), "2025")["requests"];
+        assert_eq!(r["watched"], 1, "{r}");
+        assert_eq!(names_of_titles(&r["top"]), ["Sintel Stories"]);
     }
 
     fn names_of_titles(v: &Value) -> Vec<String> {
