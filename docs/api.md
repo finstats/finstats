@@ -391,7 +391,8 @@ Default: the year whose recap is "ready" — the current year during December, o
   "current": "0.4.0",                       // the running version
   "releases": [                             // newest first
     {"version": "0.4.0", "date": "2026-09-19" | null, "summary": "One paragraph." | null,
-     "groups": [ {"kind": "Added" | "Changed" | "Fixed" | "Removed", "items": ["One change. May contain **bold** and `code`."]} ]}
+     "started": "2026-09-17" | null,        // the first day, for a release made over several; `date` is the day it was released
+     "groups": [ {"kind": "Added" | "Changed" | "Performance" | "Stability" | "Fixed" | "Removed", "items": ["One change. May contain **bold** and `code`."]} ]}
   ]
 }
 ```
