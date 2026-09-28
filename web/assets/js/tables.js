@@ -11,18 +11,16 @@
 
 import { h, icon } from './dom.js';
 
-const parts = new Intl.NumberFormat().formatToParts(1234567.8);
-const GROUP = (parts.find((p) => p.type === 'group') || {}).value || ',';
-const DECIMAL = (parts.find((p) => p.type === 'decimal') || {}).value || '.';
-const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const GROUP_RE = new RegExp(`[${esc(GROUP)}\\s\\u00a0\\u202f]`, 'g');
+// The separators the app itself prints with (`num()` in dom.js is en-US), not the browser's: read with a
+// German or Norwegian locale's, "1,204" was 1.204 and "12,345,678" was not a number at all.
+const GROUP_RE = /[,\s\u00a0\u202f]/g;
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 const BYTES = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4, PB: 1024 ** 5 };
 const SCALE = { K: 1e3, M: 1e6, B: 1e9 };
 
 function plainNumber(text) {
-  const t = text.replace(GROUP_RE, '').replace(DECIMAL, '.');
+  const t = text.replace(GROUP_RE, '');
   return /^[-+−]?\d+(\.\d+)?$/.test(t) ? Number(t.replace('−', '-')) : null;
 }
 
