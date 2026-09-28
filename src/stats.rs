@@ -1995,19 +1995,21 @@ pub async fn library_insights(State(app): State<App>, _user: AuthUser, Query(q):
 
 // ---------------------------------------------------------------- v0.2: the Jellyfin server
 
-pub async fn server(State(app): State<App>, ServerViewer(_): ServerViewer) -> ApiResult {
+pub async fn server(State(app): State<App>, ServerViewer(user): ServerViewer) -> ApiResult {
+    let see_network = user.perms.see_network;
     let out = app
         .db
-        .call(|c| {
+        .call(move |c| {
             let mut snapshot: Value = db::get_setting(c, "server_info")?.and_then(|raw| serde_json::from_str(&raw).ok()).unwrap_or_else(|| {
                 json!({ "fetched_at": null, "info": null, "storage": [], "plugins": [], "scheduled_tasks": [] })
             });
+            // A device id is see_network's, here as in every play.
             let devices = rows_json(
                 c,
-                "SELECT d.device_id, d.device_name AS name, d.client AS app, d.app_version, d.user_id AS last_user_id,
+                "SELECT CASE WHEN ?1 THEN d.device_id END AS device_id, d.device_name AS name, d.client AS app, d.app_version, d.user_id AS last_user_id,
                         COALESCE(u.name, d.last_user_name) AS last_user_name, d.last_seen
                  FROM devices d LEFT JOIN users u ON u.id = d.user_id ORDER BY d.last_seen DESC LIMIT 500",
-                &[],
+                &[see_network.into()],
             )?;
             snapshot["devices"] = json!(devices);
             Ok(snapshot)
