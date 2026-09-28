@@ -855,6 +855,26 @@ pub async fn users(State(app): State<App>, user: AuthUser, Query(q): Query<Filte
     Ok(Json(json!({ "users": rows })))
 }
 
+/// The devices somebody played on. The id is `see_network`'s, as in every play (`decorate_play`).
+fn user_devices(c: &Connection, cond: &Cond, see_network: bool) -> Result<Vec<Map<String, Value>>> {
+    let mut rows = rows_json(
+        c,
+        &format!(
+            "SELECT p.device_id, MAX(p.device_name) AS device_name, MAX(p.client) AS client, MAX(p.app_version) AS app_version,
+                    COUNT(*) AS plays, MAX(p.ended_at) AS last_seen
+             FROM playbacks p {} GROUP BY COALESCE(p.device_id, p.device_name) ORDER BY last_seen DESC LIMIT 50",
+            cond.sql()
+        ),
+        &cond.args,
+    )?;
+    if !see_network {
+        for d in &mut rows {
+            d.insert("device_id".into(), Value::Null);
+        }
+    }
+    Ok(rows)
+}
+
 pub async fn user_detail(State(app): State<App>, user: AuthUser, Path(id): Path<String>, Query(q): Query<FilterQuery>) -> ApiResult {
     let id = db::norm_id(&id);
     if !user.perms.see_everyone && user.id != id {
@@ -884,16 +904,7 @@ pub async fn user_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
             obj.remove("active_users");
         }
         let (series, bucket) = daily(c, scope, &cond)?;
-        let devices = rows_json(
-            c,
-            &format!(
-                "SELECT p.device_id, MAX(p.device_name) AS device_name, MAX(p.client) AS client, MAX(p.app_version) AS app_version,
-                        COUNT(*) AS plays, MAX(p.ended_at) AS last_seen
-                 FROM playbacks p {} GROUP BY COALESCE(p.device_id, p.device_name) ORDER BY last_seen DESC LIMIT 50",
-                cond.sql()
-            ),
-            &cond.args,
-        )?;
+        let devices = user_devices(c, &cond, see_network)?;
         let ips: Vec<Value> = if see_network {
             let ipc = cond.with_raw("p.remote_ip IS NOT NULL");
             rows_json(
@@ -2085,6 +2096,18 @@ mod tests {
         assert_eq!((v["peak"].as_i64(), v["peak_at"].as_i64(), v["peak_transcodes"].as_i64()), (Some(2), Some(y + 1800), Some(1)));
         let day = |s: i64| -> String { c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [s], |r| r.get(0)).unwrap() };
         assert_eq!(v["series"], json!([{ "date": day(y), "peak": 2 }, { "date": day(t), "peak": 1 }]));
+    }
+
+    /// A device id is `see_network`'s, like an address: on the user page as everywhere else.
+    #[test]
+    fn a_user_page_names_devices_but_gives_their_ids_only_with_see_network() {
+        let c = conn();
+        c.execute("UPDATE playbacks SET device_id = 'dev-1', device_name = 'Living room TV'", []).unwrap();
+        let scope = everyone().resolve(&c).unwrap();
+        let without = user_devices(&c, &scope.cond(), false).unwrap();
+        assert!(!without.is_empty() && without.iter().all(|d| d["device_id"].is_null() && d["device_name"] == "Living room TV"), "{without:?}");
+        let with = user_devices(&c, &scope.cond(), true).unwrap();
+        assert_eq!(with[0]["device_id"], "dev-1");
     }
 
     #[test]
