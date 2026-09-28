@@ -155,8 +155,9 @@ export function nowPlayingView() {
       }
     } else {
       // Even a correction waits for the beat: set the clock one short and let the next tick land
-      // on the right second, so the number only ever changes in time with the others.
-      for (const l of corrected) l.pos -= 1;
+      // on the right second, so the number only ever changes in time with the others. A paused clock
+      // has no beat coming (the ticker skips it), so a paused viewer who scrubbed is shown at once.
+      for (const l of corrected) { if (l.s.is_paused) paint(l); else l.pos -= 1; }
     }
   }
   return { el: root, update, destroy: () => clearInterval(timer) };
