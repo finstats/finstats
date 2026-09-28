@@ -193,6 +193,40 @@ const MIN_KEEP_S: i64 = 2;
 /// Reads of the session list that must fail in a row before Jellyfin counts as down. At one a second
 /// while something plays, and five seconds apart while nothing does, this is a restart, not a blip.
 const JELLYFIN_DOWN_AFTER: u32 = 10;
+
+/// Whether Jellyfin answers: reads failed in a row, and whether somebody was told it is down. Any list
+/// that arrives — polled, pushed or a safety read — is an answer.
+#[derive(Default)]
+struct Reachable {
+    failures: u32,
+    told_down: bool,
+}
+
+struct Failure {
+    /// The first of a run, and one a minute after that at a one-second beat.
+    log: bool,
+    tell_down: bool,
+}
+
+#[derive(Default, Debug, PartialEq)]
+struct Recovery {
+    was_failing: bool,
+    /// Somebody was told it was down: tell them it is back.
+    tell_back: bool,
+}
+
+impl Reachable {
+    fn failed(&mut self) -> Failure {
+        self.failures += 1;
+        let tell_down = self.failures == JELLYFIN_DOWN_AFTER && !self.told_down;
+        self.told_down |= tell_down;
+        Failure { log: self.failures == 1 || self.failures % 60 == 0, tell_down }
+    }
+
+    fn answered(&mut self) -> Recovery {
+        Recovery { was_failing: std::mem::take(&mut self.failures) > 0, tell_back: std::mem::take(&mut self.told_down) }
+    }
+}
 /// A position that lands further than this from where steady playback would be is a skip.
 const SEEK_TOLERANCE_S: f64 = 20.0;
 
@@ -850,7 +884,7 @@ pub async fn run(app: App) {
 
     let mut tracked: HashMap<String, Tracked> = HashMap::new();
     let mut devices_seen: HashMap<(String, String), Instant> = HashMap::new();
-    let mut failures = 0u32;
+    let mut reach = Reachable::default();
     let mut sock: Option<crate::socket::Handle> = None;
     // The socket said it is carrying. Not "a session list arrived lately": Jellyfin sends one when
     // something changes and nothing at all in between, so on a quiet evening the two are opposites.
@@ -872,7 +906,6 @@ pub async fn run(app: App) {
     let (mut active, mut playing) = (0usize, 0usize);
     let mut socket_error: Option<String> = None;
     // Somebody has been told Jellyfin is not answering, and is owed the news that it is again.
-    let mut told_down = false;
     let mut socket_for: Option<String> = None;
 
     loop {
@@ -1029,11 +1062,9 @@ pub async fn run(app: App) {
 
         match result {
             Ok(sessions) => {
-                if source == Source::Poll {
-                    if failures > 0 {
-                        tracing::info!("connection to Jellyfin restored");
-                    }
-                    failures = 0;
+                let recovery = reach.answered();
+                if recovery.was_failing {
+                    tracing::info!("connection to Jellyfin restored");
                 }
                 if let Err(e) = tick(&app, &mut tracked, &mut devices_seen, &sessions, settings.merge_window_s, settings.group_window_s).await {
                     tracing::error!("collector tick failed: {e:#}");
@@ -1090,19 +1121,18 @@ pub async fn run(app: App) {
                     st.socket_error = socket_error.clone();
                 }
                 // It is answering again, and somebody was told it was not.
-                if std::mem::take(&mut told_down) {
+                if recovery.tell_back {
                     crate::notify::service_state(&app, "Jellyfin", "the server everything comes from", None).await;
                 }
             }
             Err(e) => {
-                failures += 1;
-                if failures == 1 || failures % 60 == 0 {
+                let failure = reach.failed();
+                if failure.log {
                     tracing::warn!("cannot read sessions from Jellyfin: {e:#}");
                 }
                 // Not a blip: a reachable Jellyfin is the one thing finstats cannot do without, and a
                 // play that is never seen cannot be backfilled later.
-                if failures == JELLYFIN_DOWN_AFTER && !told_down {
-                    told_down = true;
+                if failure.tell_down {
                     crate::notify::service_state(&app, "Jellyfin", "the server everything comes from", Some(&format!("{e:#}"))).await;
                 }
                 let mut st = app.collector.write().unwrap();
@@ -1125,7 +1155,7 @@ pub async fn run(app: App) {
             // a person does something, and an idle server is why the socket exists. It is never
             // hurried past the owner's own intervals, only slowed.
             let base = poll_interval_s(settings.active_interval_s, settings.idle_interval_s, playing, active, !socket_live) as u64;
-            let wait = Duration::from_secs(if failures > 0 { (base * failures.min(12) as u64).min(60) } else { base });
+            let wait = Duration::from_secs(if reach.failures > 0 { (base * reach.failures.min(12) as u64).min(60) } else { base });
             // A socket that comes back must be heard while finstats is polling, or it never gets a
             // second chance: this is the only place a waiting poller listens to it.
             match sock.as_mut() {
@@ -1324,6 +1354,26 @@ async fn tick(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// "In a row" means in a row: a list that arrives by push or by a safety read proves Jellyfin answers
+    /// just as a poll does. Counting only polls let ten stray safety-read timeouts, days apart on an
+    /// idle server, add up to "Jellyfin is down".
+    #[test]
+    fn jellyfin_is_down_only_after_reads_that_failed_in_a_row() {
+        let mut h = Reachable::default();
+        for _ in 0..JELLYFIN_DOWN_AFTER - 1 {
+            assert!(!h.failed().tell_down);
+        }
+        assert_eq!(h.answered(), Recovery { was_failing: true, tell_back: false }, "failing, but nobody was told it was down");
+        for _ in 0..JELLYFIN_DOWN_AFTER - 1 {
+            assert!(!h.failed().tell_down, "the count starts again after any answer");
+        }
+        let last = h.failed();
+        assert!(last.tell_down, "ten in a row");
+        assert!(!h.failed().tell_down, "and once");
+        assert_eq!(h.answered(), Recovery { was_failing: true, tell_back: true });
+        assert_eq!(h.answered(), Recovery::default(), "an answer after an answer is not news");
+    }
 
     #[test]
     fn which_plays_ended_is_found_in_one_pass_over_them() {
