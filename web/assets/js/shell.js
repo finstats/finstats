@@ -5,7 +5,7 @@ import { h, icon, num, relTime, dateTime, mount, logo } from './dom.js';
 import { api, isAbort } from './api.js';
 import { state, resetCaches, hasUnseenVersion, onVersionSeen, noteRunningVersion, can, THEMES, themeChoice, setTheme } from './state.js';
 import { hasPipeline } from './pages/pipeline.js';
-import { navigate, onRouteChange } from './router.js';
+import { navigate, onRouteChange, canGoBack } from './router.js';
 import { avatar } from './components.js';
 import { openPalette } from './palette.js';
 
@@ -237,7 +237,8 @@ document.addEventListener('keydown', (e) => {
   if (!target) return;
   e.preventDefault();
   // Going back through history restores the list exactly as it was left (scroll position, filters).
-  if (cameFrom !== null && (target.back || cameFrom === target.up)) history.back();
+  // Only when the entry behind this one is finstats' own: a title opened in a new tab has none.
+  if (canGoBack() && cameFrom !== null && (target.back || cameFrom === target.up)) history.back();
   else navigate(target.up);
 });
 

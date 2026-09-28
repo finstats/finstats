@@ -55,7 +55,7 @@ function finder(visible, current, ctx) {
   const go = (hit) => {
     close(); input.value = '';
     const url = `/settings/${hit.section.key}${hit.id ? '#' + hit.id : ''}`;
-    if (hit.section.key === current) { history.pushState(null, '', url); if (hit.id) reveal(hit.id, true); else window.scrollTo(0, 0); }
+    if (hit.section.key === current) { history.pushState({ depth: ((history.state && history.state.depth) || 0) + 1 }, '', url); if (hit.id) reveal(hit.id, true); else window.scrollTo(0, 0); }
     else navigate(url);
   };
   function paint() {

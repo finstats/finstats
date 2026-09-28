@@ -62,11 +62,17 @@ function teardown() {
   current = null;
 }
 
+// How many of finstats' own pages lie behind this history entry. The entry a tab opened on is 0: going
+// back from there leaves the app, which is not what Esc is for.
+const depth = () => (history.state && history.state.depth) || 0;
+/** Is the history entry behind this one a page of finstats? */
+export const canGoBack = () => depth() > 0;
+
 export function navigate(to, { replace = false, scroll = true } = {}) {
   const url = new URL(to, location.origin);
   const target = url.pathname + url.search + url.hash;
-  if (replace) history.replaceState(null, '', target);
-  else if (target !== location.pathname + location.search + location.hash) history.pushState(null, '', target);
+  if (replace) history.replaceState({ depth: depth() }, '', target);
+  else if (target !== location.pathname + location.search + location.hash) history.pushState({ depth: depth() + 1 }, '', target);
   render(scroll);
 }
 
@@ -75,17 +81,17 @@ export function replaceQuery(params) {
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v != null && v !== '') p.set(k, v);
   const str = p.toString();
-  history.replaceState(null, '', location.pathname + (str ? '?' + str : '') + location.hash);
+  history.replaceState({ depth: depth() }, '', location.pathname + (str ? '?' + str : '') + location.hash);
 }
 
 function render(scroll = true) {
   const url = new URL(location.href);
   const redirect = guard(url);
-  if (redirect) { history.replaceState(null, '', redirect); return render(scroll); }
+  if (redirect) { history.replaceState({ depth: depth() }, '', redirect); return render(scroll); }
 
   let m = match(url.pathname);
   if (m && m.route.perm && !can(m.route.perm)) {
-    history.replaceState(null, '', '/');
+    history.replaceState({ depth: depth() }, '', '/');
     return render(scroll);
   }
   if (!m) m = { route: routes.find((r) => r.pattern === '*'), params: {} };
