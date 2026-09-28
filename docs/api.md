@@ -656,10 +656,11 @@ ids (absent = all); ids that are not ids and cursors that are not cursors are a 
   {"kind": "episodes", "type": "Episode", "id": "<series id>", "name": "The Rookery", "sub": "Season 4" | "3 seasons" | "Specials" | null,
    "image_item_id",                       // the season's poster when it is one season with a poster, else the show's
    "added_at": 0,                         // the newest of them
+   "day": "2026-09-18",                   // the local day they were added, which is what folds them
    "episodes": 3, "seasons": 1,
    "episode_number": 7 | null, "episode_name": "…" | null},   // only when it is a single episode
   {"kind": "item", "type": "Movie" | "MusicAlbum" | "Video" | "MusicVideo" | "Book" | "AudioBook", "id", "name",
-   "sub": "<album artist>" | "<year>" | null, "image_item_id", "added_at": 0}
+   "sub": "<album artist>" | "<year>" | null, "image_item_id", "added_at": 0, "day": "2026-09-18"}
 ] }
 ```
 Newest first. Episodes of one show added on the same local day are one entry, however many seasons they span, so a season pack

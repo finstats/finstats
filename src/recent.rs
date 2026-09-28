@@ -55,7 +55,7 @@ impl Entry {
         let a = &self.newest;
         let Some(series_id) = a.series_id.as_ref().filter(|_| a.item_type == "Episode") else {
             let sub = a.album_artist.clone().or_else(|| a.year.map(|y| y.to_string()));
-            return json!({ "kind": "item", "type": a.item_type, "id": a.id, "name": a.name, "sub": sub, "image_item_id": a.id, "added_at": a.at });
+            return json!({ "kind": "item", "type": a.item_type, "id": a.id, "name": a.name, "sub": sub, "image_item_id": a.id, "added_at": a.at, "day": a.day });
         };
         let one_season = self.seasons.len() == 1;
         let sub = match (one_season, a.season_number) {
@@ -67,7 +67,7 @@ impl Entry {
         let image = if one_season { a.season_image_id.clone() } else { None }.unwrap_or_else(|| series_id.clone());
         json!({
             "kind": "episodes", "type": "Episode", "id": series_id, "name": a.series_name.clone().unwrap_or_else(|| a.name.clone()), "sub": sub,
-            "image_item_id": image, "added_at": a.at, "episodes": self.episodes, "seasons": self.seasons.len(),
+            "image_item_id": image, "added_at": a.at, "day": a.day, "episodes": self.episodes, "seasons": self.seasons.len(),
             // One episode: say which one.
             "episode_number": if self.episodes == 1 { a.episode_number } else { None },
             "episode_name": if self.episodes == 1 { Some(a.name.clone()) } else { None },
@@ -144,9 +144,10 @@ pub fn announce(conn: &Connection, bus: &crate::notify::Fanout) -> Result<usize>
             (Some("episodes"), Some(n)) => format!("{sub}, {n} episode{}", if n == 1 { "" } else { "s" }),
             _ => sub.to_string(),
         };
+        let Some(key) = announce_key(&entry) else { continue };
         let event = crate::notify::Event::new(
             crate::notify::Kind::NewItems,
-            format!("notify:new_items:{id}:{}", at / 86_400),
+            key,
             format!("New in the library: {name}"),
             if what.is_empty() { name.to_string() } else { format!("{name} — {what}") },
         )
@@ -157,6 +158,14 @@ pub fn announce(conn: &Connection, bus: &crate::notify::Fanout) -> Result<usize>
         added += usize::from(crate::notify::raise_in(conn, bus, &event)?);
     }
     Ok(added)
+}
+
+/// One notification per entry of the shelf: its id and the local day it was folded by, as a day number
+/// (which is what the UTC day it used to be keyed by is, on a server that keeps UTC).
+fn announce_key(entry: &Value) -> Option<String> {
+    let day = chrono::NaiveDate::parse_from_str(entry["day"].as_str()?, "%Y-%m-%d").ok()?;
+    let n = (day - chrono::NaiveDate::from_ymd_opt(1970, 1, 1)?).num_days();
+    Some(format!("notify:new_items:{}:{n}", entry["id"].as_str()?))
 }
 
 /// The library is the same for everyone who may sign in, so this is not scoped to the caller.
@@ -188,6 +197,16 @@ mod tests {
         assert_eq!(brief, vec![("ROOKERY", "Season 4", Some(2), 900), ("HARBOUR", "Season 1", Some(2), 890), ("Big Buck Bunny", "2008", None, 870), ("ROOKERY", "Season 4", Some(1), 100)]);
         assert_eq!((out[0]["kind"].as_str(), out[0]["id"].as_str(), out[0]["episode_number"].as_i64()), (Some("episodes"), Some("rookery"), None));
         assert_eq!((out[3]["episode_number"].as_i64(), out[3]["episode_name"].as_str()), (Some(1), Some("Episode 1")), "a single episode says which one");
+    }
+
+    /// One show, one *local* day, one notification — the same day the shelf folds by. Keyed by the UTC
+    /// day instead, an evening's episodes on either side of UTC midnight were announced twice, and two
+    /// local days inside one UTC day only once.
+    #[test]
+    fn an_arrival_is_announced_once_per_local_day_of_the_shelf() {
+        let out = fold(vec![episode("rookery", 4, 3, 900, "2026-09-18"), movie("Big Buck Bunny", 870, "2026-09-18")].into_iter(), 30);
+        assert_eq!(announce_key(&out[0]).as_deref(), Some("notify:new_items:rookery:20714"), "the local day it was folded by, not 1970");
+        assert_eq!(announce_key(&out[1]).as_deref(), Some("notify:new_items:Big Buck Bunny:20714"));
     }
 
     #[test]
