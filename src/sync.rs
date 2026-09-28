@@ -503,6 +503,32 @@ pub fn backfill_playbacks(conn: &Connection) -> Result<Vec<String>> {
     Ok(relinked.moved_to)
 }
 
+/// The libraries Jellyfin lists; `Some(known)` when the read is refused (`whole_set_vanished`).
+pub(crate) fn store_libraries(c: &mut Connection, lib_rows: &[Value], shrink_ok: bool, started: i64) -> Result<Option<i64>> {
+    let tx = c.transaction()?;
+    for l in lib_rows {
+        tx.execute(
+            "INSERT INTO libraries(id, name, collection_type, image_tag, removed, updated_at) VALUES (?1, ?2, ?3, ?4, 0, ?5)
+             ON CONFLICT(id) DO UPDATE SET name = excluded.name, collection_type = excluded.collection_type,
+                image_tag = excluded.image_tag, removed = 0, updated_at = excluded.updated_at",
+            params![l["id"].as_str(), l["name"].as_str(), l["collection_type"].as_str(), l["image_tag"].as_str(), started],
+        )?;
+    }
+    // The same guard as items, at the level above: a Jellyfin that lists no libraries where
+    // finstats knows several is a broken read, not an emptied server.
+    let current: i64 = tx.query_row("SELECT COUNT(*) FROM libraries WHERE removed = 0", [], |r| r.get(0))?;
+    if !shrink_ok && whole_set_vanished(lib_rows.len(), current) {
+        tx.rollback()?;
+        return Ok(Some(current));
+    }
+    tx.execute("UPDATE libraries SET removed = 1 WHERE updated_at < ?1", [started])?;
+    // A library that is gone is never read again, so nothing else would ever say its titles are gone too.
+    // Reversible like any removal: a library that comes back is read, and its titles with it.
+    tx.execute("UPDATE items SET removed = 1 WHERE removed = 0 AND library_id IN (SELECT id FROM libraries WHERE removed = 1)", [])?;
+    tx.commit()?;
+    Ok(None)
+}
+
 async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
     const ID: &str = "sync_libraries";
     app.tasks.update(ID, "Fetching libraries", None);
@@ -523,30 +549,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
 
     let seen_libs = lib_rows.len();
     let shrink_ok = allow_shrink();
-    let refused = app
-        .db
-        .call(move |c| {
-            let tx = c.transaction()?;
-            for l in &lib_rows {
-                tx.execute(
-                    "INSERT INTO libraries(id, name, collection_type, image_tag, removed, updated_at) VALUES (?1, ?2, ?3, ?4, 0, ?5)
-                     ON CONFLICT(id) DO UPDATE SET name = excluded.name, collection_type = excluded.collection_type,
-                        image_tag = excluded.image_tag, removed = 0, updated_at = excluded.updated_at",
-                    params![l["id"].as_str(), l["name"].as_str(), l["collection_type"].as_str(), l["image_tag"].as_str(), started],
-                )?;
-            }
-            // The same guard as items, at the level above: a Jellyfin that lists no libraries where
-            // finstats knows several is a broken read, not an emptied server.
-            let current: i64 = tx.query_row("SELECT COUNT(*) FROM libraries WHERE removed = 0", [], |r| r.get(0))?;
-            if !shrink_ok && whole_set_vanished(seen_libs, current) {
-                tx.rollback()?;
-                return Ok(Some(current));
-            }
-            tx.execute("UPDATE libraries SET removed = 1 WHERE updated_at < ?1", [started])?;
-            tx.commit()?;
-            Ok(None)
-        })
-        .await?;
+    let refused = app.db.call(move |c| store_libraries(c, &lib_rows, shrink_ok, started)).await?;
     if let Some(current) = refused {
         let plural = if seen_libs == 1 { "y" } else { "ies" };
         let msg = format!(
@@ -923,6 +926,25 @@ mod tests {
         }
         assert!(upsert_item(&c, "lib1", &json!({ "Id": "m1", "Name": "Big Buck Bunny", "Type": "Movie" }), 100).unwrap());
         assert!(!upsert_item(&c, "lib1", &json!({ "id": "m2", "name": "Sintel", "type": "Movie" }), 100).unwrap());
+    }
+
+    /// Items are marked removed library by library, as each is read; a library Jellyfin no longer lists is
+    /// never read again, so its titles have to go with it, or they stay in search, on the shelf and in
+    /// the totals for ever, and their plays are never re-linked to where the files went.
+    #[test]
+    fn the_titles_of_a_library_deleted_in_jellyfin_go_with_it() {
+        let mut c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let lib = |id: &str, name: &str| json!({ "id": id, "name": name, "collection_type": "movies" });
+        assert_eq!(store_libraries(&mut c, &[lib("films", "Films"), lib("old", "Old films")], false, 100).unwrap(), None);
+        for (item, library) in [("m1", "films"), ("m2", "old")] {
+            upsert_item(&c, library, &json!({ "Id": item, "Name": item, "Type": "Movie" }), 100).unwrap();
+        }
+        assert_eq!(store_libraries(&mut c, &[lib("films", "Films")], false, 200).unwrap(), None);
+        let removed = |id: &str| c.query_row("SELECT removed FROM items WHERE id = ?1", [id], |r| r.get::<_, i64>(0)).unwrap();
+        assert_eq!((removed("m1"), removed("m2")), (0, 1));
     }
 
     #[test]
