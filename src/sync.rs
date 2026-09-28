@@ -123,7 +123,7 @@ async fn announce_ready_year(app: &App) {
             return Ok(0);
         }
         let bus = crate::notify::Fanout::of(c, &bus_app)?;
-        crate::recap::announce_ready(c, &bus, today)
+        crate::recap::announce_ready(c, &bus, today, bus_app.settings().min_play_s)
     }).await;
     match done {
         Ok(n) if n > 0 => app.notify_wake.notify_one(),

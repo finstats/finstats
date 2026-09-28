@@ -330,7 +330,7 @@ fn requests(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>) 
 }
 
 /// In December the year is ready (`default_year` flips then): tell each person who watched in it, once.
-pub fn announce_ready(c: &Connection, bus: &crate::notify::Fanout, today: NaiveDate) -> Result<usize> {
+pub fn announce_ready(c: &Connection, bus: &crate::notify::Fanout, today: NaiveDate, min_play_s: i64) -> Result<usize> {
     if today.month() != 12 {
         return Ok(0);
     }
@@ -340,9 +340,10 @@ pub fn announce_ready(c: &Connection, bus: &crate::notify::Fanout, today: NaiveD
     let people: Vec<(String, String)> = c
         .prepare(&format!(
             "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) FROM playbacks p LEFT JOIN users u ON u.id = p.user_id
-             WHERE p.started_at >= ?1 AND p.started_at < ?2 AND {NOT_LIVE_TV} GROUP BY p.user_id ORDER BY p.user_id"
+             WHERE p.started_at >= ?1 AND p.started_at < ?2 AND p.duration_s >= ?3 AND {NOT_LIVE_TV} GROUP BY p.user_id ORDER BY p.user_id"
         ))?
-        .query_map([from, to], |r| Ok((r.get(0)?, r.get(1)?)))?
+        // Plays the recap counts: somebody with only clicks under the minimum would be sent to an empty year.
+        .query_map([from, to, min_play_s], |r| Ok((r.get(0)?, r.get(1)?)))?
         .collect::<Result<_, _>>()?;
     let mut told = 0;
     for (user_id, name) in people {
@@ -1002,15 +1003,16 @@ mod tests {
         play(&c, "ua", "m1", "Movie", "2025-03-01", 600, None);
         play(&c, "ub", "m2", "Movie", "2025-06-01", 900, None);
         play(&c, "uc", "m2", "Movie", "2024-06-01", 900, None);   // carol watched nothing in 2025
+        play(&c, "ud", "m2", "Movie", "2025-06-01", 20, None);    // dave only clicked: shorter than a play counts
         let f = bus(&c, vec![target(1, None, &[Kind::RecapReady])]);
         let day = |d: &str| NaiveDate::parse_from_str(d, "%Y-%m-%d").unwrap();
 
-        assert_eq!(announce_ready(&c, &f, day("2025-11-30")).unwrap(), 0, "not before the year is ready");
+        assert_eq!(announce_ready(&c, &f, day("2025-11-30"), 60).unwrap(), 0, "not before the year is ready");
         assert!(told(&c).is_empty());
-        assert_eq!(announce_ready(&c, &f, day("2025-12-01")).unwrap(), 2);
+        assert_eq!(announce_ready(&c, &f, day("2025-12-01"), 60).unwrap(), 2);
         assert_eq!(told(&c), [("notify:recap:2025:ua".into(), "alice".into()), ("notify:recap:2025:ub".into(), "bob".into())]);
-        assert_eq!(announce_ready(&c, &f, day("2025-12-02")).unwrap(), 0, "once a year, however often it is asked");
-        assert_eq!(announce_ready(&c, &f, day("2026-01-05")).unwrap(), 0, "January is not a second December");
+        assert_eq!(announce_ready(&c, &f, day("2025-12-02"), 60).unwrap(), 0, "once a year, however often it is asked");
+        assert_eq!(announce_ready(&c, &f, day("2026-01-05"), 60).unwrap(), 0, "January is not a second December");
         let (title, link): (String, String) = c.query_row("SELECT title, link FROM notify_events WHERE dedupe = 'notify:recap:2025:ua'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         assert_eq!((title.as_str(), link.as_str()), ("Your 2025 in review is ready", "/recap?year=2025"));
     }
