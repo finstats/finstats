@@ -50,5 +50,5 @@ a blank.
 
 ```sh
 docker run --rm -v "$PWD/data:/data" -v /path/to/backup.json:/backup.json:ro \
-  ghcr.io/olayzen/finstats:latest import-streamystats /backup.json
+  ghcr.io/finstats/finstats:latest import-streamystats /backup.json
 ```

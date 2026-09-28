@@ -1,6 +1,6 @@
 services:
   finstats:
-    image: ghcr.io/olayzen/finstats:latest
+    image: ghcr.io/finstats/finstats:latest
     # Building from source instead? Comment the line above out and use:
     # build: .
     container_name: finstats

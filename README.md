@@ -8,9 +8,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/OlaYZen/finstats/releases/latest"><img src="https://img.shields.io/github/v/release/OlaYZen/finstats?label=release&color=8a5cf5" alt="Latest release"></a>
-  <a href="https://github.com/OlaYZen/finstats/pkgs/container/finstats"><img src="https://img.shields.io/badge/image-ghcr.io%2Folayzen%2Ffinstats-8a5cf5" alt="Docker image on the GitHub Container Registry"></a>
-  <a href="https://github.com/OlaYZen/finstats/actions/workflows/docker.yml"><img src="https://img.shields.io/github/actions/workflow/status/OlaYZen/finstats/docker.yml?label=build" alt="Build status"></a>
+  <a href="https://github.com/finstats/finstats/releases/latest"><img src="https://img.shields.io/github/v/release/finstats/finstats?label=release&color=8a5cf5" alt="Latest release"></a>
+  <a href="https://github.com/finstats/finstats/pkgs/container/finstats"><img src="https://img.shields.io/badge/image-ghcr.io%2Ffinstats%2Ffinstats-8a5cf5" alt="Docker image on the GitHub Container Registry"></a>
+  <a href="https://github.com/finstats/finstats/actions/workflows/docker.yml"><img src="https://img.shields.io/github/actions/workflow/status/finstats/finstats/docker.yml?label=build" alt="Build status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-8a5cf5" alt="License: GPL-3.0"></a>
 </p>
 
@@ -204,7 +204,7 @@ docker run -d --name finstats --restart unless-stopped \
   -p 8080:8080 \
   -e TZ=Europe/London \
   -v "$PWD/data:/data" \
-  ghcr.io/olayzen/finstats:latest
+  ghcr.io/finstats/finstats:latest
 ```
 
 <details>
@@ -213,7 +213,7 @@ docker run -d --name finstats --restart unless-stopped \
 ```yaml
 services:
   finstats:
-    image: ghcr.io/olayzen/finstats:latest
+    image: ghcr.io/finstats/finstats:latest
     container_name: finstats
     restart: unless-stopped
     ports:
@@ -227,7 +227,7 @@ services:
 </details>
 
 The image is published for 64-bit Intel/AMD and ARM machines (a Raspberry Pi 4 or 5 works) at
-[`ghcr.io/olayzen/finstats`](https://github.com/OlaYZen/finstats/pkgs/container/finstats). `:latest` is the newest release;
+[`ghcr.io/finstats/finstats`](https://github.com/finstats/finstats/pkgs/container/finstats). `:latest` is the newest release;
 pin a version such as `:1.0.0`, or `:1` for every 1.x update, if you prefer to choose when to upgrade. `:edge` follows
 development and may be rough.
 
@@ -315,14 +315,14 @@ instance has already been collecting. The library is read from Jellyfin again by
 ## Updating
 
 ```sh
-docker pull ghcr.io/olayzen/finstats:latest
+docker pull ghcr.io/finstats/finstats:latest
 docker rm -f finstats
 # …then the same `docker run` as above. With Compose: docker compose pull && docker compose up -d
 ```
 
 Your data lives in the `data` folder and upgrades itself on start-up; finstats also keeps its own weekly
 backups there. After an update, the **Patch notes** tab shows a dot until you have read what changed. The same
-notes are on the [releases page](https://github.com/OlaYZen/finstats/releases) and in [CHANGELOG.md](CHANGELOG.md).
+notes are on the [releases page](https://github.com/finstats/finstats/releases) and in [CHANGELOG.md](CHANGELOG.md).
 
 Updates only go forward. The database remembers the newest version that has opened it, and an older finstats
 refuses to start on it rather than risk your history; the message says how to get going again. To really go back to
@@ -366,16 +366,16 @@ UX patterns collected at [uxgoodpatterns.com](https://uxgoodpatterns.com): forms
 that close three ways, tables you can sort, states for loading, empty and failed.
 
 ```sh
-git clone https://github.com/OlaYZen/finstats.git && cd finstats
+git clone https://github.com/finstats/finstats.git && cd finstats
 cargo build --release
 FINSTATS_DATA_DIR=./data ./target/release/finstats
 cargo test
 docker build -t finstats:dev .          # your own image instead of the published one
 ```
 
-Found a bug or have an idea? [Open an issue](https://github.com/OlaYZen/finstats/issues/new/choose); found a security
+Found a bug or have an idea? [Open an issue](https://github.com/finstats/finstats/issues/new/choose); found a security
 problem? [Report it privately](SECURITY.md). Questions go to
-[Discussions](https://github.com/OlaYZen/finstats/discussions). Everyone taking part follows the
+[Discussions](https://github.com/finstats/finstats/discussions). Everyone taking part follows the
 [code of conduct](CODE_OF_CONDUCT.md).
 
 - [Contributing](CONTRIBUTING.md) — reporting bugs, what fits the project, running it from source or in a local Docker setup, the rules for a change, pull requests

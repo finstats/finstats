@@ -1129,7 +1129,7 @@ unchanged after that; it runs to about half a megabyte of licence text (≈ 55 K
   "version": "1.6.4",                        // the running version
   "components": [
     {"name": "finstats", "version": "1.6.4", "license": "GPL-3.0-only",
-     "repository": "https://github.com/OlaYZen/finstats",
+     "repository": "https://github.com/finstats/finstats",
      "notices": [253],                       // indices into "notices" below; may be empty
      "kind": "app" | "bundled" | "crate"}
   ],

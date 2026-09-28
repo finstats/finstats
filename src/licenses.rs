@@ -16,7 +16,7 @@ const SOURCE: &str = include_str!("../THIRD-PARTY.json");
 /// all but is read by whoever switches it on, and asks to be credited.
 /// Each licence file that really exists on disk is compiled in; nothing here is retyped.
 const BUNDLED: &[(&str, &str, &str, &str, Option<&str>)] = &[
-    ("finstats", env!("CARGO_PKG_VERSION"), "GPL-3.0-only", "https://github.com/OlaYZen/finstats", Some(include_str!("../LICENSE"))),
+    ("finstats", env!("CARGO_PKG_VERSION"), "GPL-3.0-only", "https://github.com/finstats/finstats", Some(include_str!("../LICENSE"))),
     ("Inter", "", "OFL-1.1", "https://github.com/rsms/inter", Some(include_str!("../web/assets/fonts/LICENSE-Inter.txt"))),
     ("Inter (cards)", "4.1", "OFL-1.1", "https://github.com/rsms/inter", Some(include_str!("../fonts/card/LICENSE-Inter.txt"))),
     ("JetBrains Mono", "", "OFL-1.1", "https://github.com/JetBrains/JetBrainsMono", Some(include_str!("../web/assets/fonts/LICENSE-JetBrainsMono.txt"))),

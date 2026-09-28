@@ -23,13 +23,13 @@ You do not have to write Rust. Useful contributions, roughly in order of how oft
 - **A good bug report.** Especially from setups unlike the maintainer's: another Jellyfin version, ARM
   hardware, a reverse proxy, rootless Docker, a NAS, a big library, unusual clients.
 - **Telling us where the docs lost you.** If the README made you guess, that is a bug in the README.
-- **A fix** for something in the [issue list](https://github.com/OlaYZen/finstats/issues).
+- **A fix** for something in the [issue list](https://github.com/finstats/finstats/issues).
 - **A feature**, after talking about it first (see below).
-- **Answering a question** in [Discussions](https://github.com/OlaYZen/finstats/discussions), or showing how you
+- **Answering a question** in [Discussions](https://github.com/finstats/finstats/discussions), or showing how you
   run it. Other people's setups are the best documentation.
 
 A question about installing or running finstats belongs in
-[Discussions → Q&A](https://github.com/OlaYZen/finstats/discussions/categories/q-a), not in an issue.
+[Discussions → Q&A](https://github.com/finstats/finstats/discussions/categories/q-a), not in an issue.
 
 ## What finstats is, and what it will not become
 
@@ -59,7 +59,7 @@ Knowing this saves you from building something that cannot be merged.
 
 ## Reporting a bug
 
-[Open a bug report](https://github.com/OlaYZen/finstats/issues/new?template=bug_report.yml). The form asks
+[Open a bug report](https://github.com/finstats/finstats/issues/new?template=bug_report.yml). The form asks
 for what is needed; the two things that matter most:
 
 - **The finstats version** (bottom right of every page, or the Patch notes tab) and **how you run it**
@@ -75,13 +75,13 @@ piece that shows it.
 
 ## Suggesting a feature
 
-[Open a feature request](https://github.com/OlaYZen/finstats/issues/new?template=feature_request.yml) and
+[Open a feature request](https://github.com/finstats/finstats/issues/new?template=feature_request.yml) and
 describe **the question you could not answer** ("which of my users still use the old Android app?") rather
 than the screen you imagine. There is often a smaller way to answer it, sometimes with data finstats
 already has.
 
 Not sure yet whether it is a feature? Think out loud in
-[Discussions → Ideas](https://github.com/OlaYZen/finstats/discussions/categories/ideas) first. For anything bigger
+[Discussions → Ideas](https://github.com/finstats/finstats/discussions/categories/ideas) first. For anything bigger
 than a bug fix, please **talk before you build**. It is no fun to review, or to write, a
 large pull request that does not fit.
 

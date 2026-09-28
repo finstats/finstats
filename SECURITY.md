@@ -6,7 +6,7 @@ an API key for your Jellyfin server. Reports are taken seriously and handled pri
 ## Supported versions
 
 Fixes go into the newest release. Please check that the problem still exists on the latest version
-(`ghcr.io/olayzen/finstats:latest`) before reporting.
+(`ghcr.io/finstats/finstats:latest`) before reporting.
 
 | Version | Supported |
 |---|---|
@@ -18,7 +18,7 @@ Fixes go into the newest release. Please check that the problem still exists on 
 **Do not open a public issue, discussion or pull request for a vulnerability.**
 
 Use GitHub's private reporting: open the repository's
-[**Security** tab → **Report a vulnerability**](https://github.com/OlaYZen/finstats/security/advisories/new).
+[**Security** tab → **Report a vulnerability**](https://github.com/finstats/finstats/security/advisories/new).
 Only the maintainers can see the report.
 
 If that button is not available to you, open a regular issue that says only *"I would like to report a

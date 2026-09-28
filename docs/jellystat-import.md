@@ -40,5 +40,5 @@ switches, no pause or skip counts, and no resume point. Everything finstats reco
 
 ```sh
 docker run --rm -v "$PWD/data:/data" -v /path/to/backup.jsonl:/backup.jsonl:ro \
-  ghcr.io/olayzen/finstats:latest import-jellystat /backup.jsonl
+  ghcr.io/finstats/finstats:latest import-jellystat /backup.jsonl
 ```

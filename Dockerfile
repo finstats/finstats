@@ -32,7 +32,7 @@ FROM alpine:3.22
 # Ties the published image to its source; the release workflow adds version, revision and date.
 LABEL org.opencontainers.image.title="finstats" \
       org.opencontainers.image.description="Lightweight playback statistics for Jellyfin" \
-      org.opencontainers.image.source="https://github.com/OlaYZen/finstats" \
+      org.opencontainers.image.source="https://github.com/finstats/finstats" \
       org.opencontainers.image.licenses="GPL-3.0-only"
 # tzdata: "plays per day" and the hour-of-day heatmap follow the TZ variable.
 # su-exec: the entrypoint drops from root to the finstats user with it.

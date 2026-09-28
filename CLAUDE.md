@@ -46,7 +46,7 @@ cargo run -- import-streamystats <backup.json>                       # the other
 cargo run -- relink                                                  # re-attach history to renamed items, then exit
 
 for f in $(find web/assets/js -name "*.js"); do node --check "$f"; done   # the only JS check there is
-docker build -t finstats:latest .        # local image; the published one is ghcr.io/olayzen/finstats
+docker build -t finstats:latest .        # local image; the published one is ghcr.io/finstats/finstats
 ```
 
 - **Do not run `cargo fmt`.** The code is deliberately not rustfmt-formatted (hundreds of long lines); formatting
@@ -671,7 +671,9 @@ only lands in the repository while `localhost:8080` still shows the old build is
 by itself before it changes anything (`back_up_before_update`); take a manual `sqlite3 data/finstats.db ".backup …"` too when the
 change is risky.
 
-The repository is `github.com/OlaYZen/finstats`; images go to `ghcr.io/olayzen/finstats`. `.github/workflows/docker.yml` runs the unit
+The repository is `github.com/finstats/finstats`; images go to `ghcr.io/finstats/finstats`. Up to 1.6.5 both lived
+under the maintainer's personal account; 2.0.0 is the first release from the organisation. Nothing but
+`CHANGELOG.md` (history) may name the old home — a QA static check holds it. `.github/workflows/docker.yml` runs the unit
 tests, builds amd64 and arm64 on native runners (no QEMU), and publishes `:edge` from `main` and `:X.Y.Z`, `:X.Y`, `:X`, `:latest` from a
 `vX.Y.Z` tag, then creates the GitHub release from that version's `CHANGELOG.md` section. It refuses a tag that does not match
 `Cargo.toml` or has no changelog entry, so the release commit and its tag must be pushed together. Docs always point at the published
