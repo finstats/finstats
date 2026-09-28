@@ -248,6 +248,23 @@ impl Session {
     }
 
     /// Everything its members watched, added up.
+    /// Time together as the people in `scoped` had it: for each, the shorter of their stay and the longest
+    /// other one (the recap's rule), the longest of those; everybody (`[]`) is `together_s`.
+    pub fn together_for(&self, scoped: &[String]) -> i64 {
+        if scoped.is_empty() {
+            return self.together_s();
+        }
+        self.per_user
+            .iter()
+            .filter(|(id, _)| scoped.contains(id))
+            .map(|(id, me)| {
+                let longest_other = self.per_user.iter().filter(|(o, _)| *o != id).map(|(_, m)| m.duration_s).max().unwrap_or(0);
+                me.duration_s.min(longest_other)
+            })
+            .max()
+            .unwrap_or(0)
+    }
+
     pub fn person_s(&self) -> i64 {
         self.per_user.values().map(|m| m.duration_s).sum()
     }
@@ -398,7 +415,7 @@ pub fn per_bucket(sessions: &[Session], scoped: &[String], mut bucket_of: impl F
     for s in sessions {
         let grouped: i64 = s.per_user.iter().filter(|(id, _)| scoped.is_empty() || scoped.contains(id)).map(|(_, m)| m.duration_s).sum();
         let e = out.entry(bucket_of(s.started_at)?).or_insert((0, 0));
-        e.0 += s.together_s();
+        e.0 += s.together_for(scoped);
         e.1 += grouped;
     }
     Ok(out)
@@ -542,7 +559,7 @@ pub(crate) fn answer(c: &Connection, scope: &Scope) -> Result<Value> {
             let ptotals = watch_totals(c, &pcond)?;
             let (_, _, pshare) = share_of(&before, &scope.user_ids, &ptotals);
             let ppeople: BTreeSet<&str> = before.iter().flat_map(|s| s.per_user.keys().map(String::as_str)).collect();
-            json!({ "sessions": before.len(), "together_s": before.iter().map(Session::together_s).sum::<i64>(), "people": ppeople.len(), "share": pshare })
+            json!({ "sessions": before.len(), "together_s": before.iter().map(|s| s.together_for(&scope.user_ids)).sum::<i64>(), "people": ppeople.len(), "share": pshare })
         }
         _ => Value::Null,
     };
@@ -550,7 +567,7 @@ pub(crate) fn answer(c: &Connection, scope: &Scope) -> Result<Value> {
     Ok(json!({
         "totals": {
             "sessions": sessions.len(),
-            "together_s": sessions.iter().map(Session::together_s).sum::<i64>(),
+            "together_s": sessions.iter().map(|s| s.together_for(&scope.user_ids)).sum::<i64>(),
             "person_s": sessions.iter().map(Session::person_s).sum::<i64>(),
             "people": people_seen.len(),
             "watch_s": watch_s,
@@ -616,6 +633,19 @@ mod tests {
         // Scoped to one person, the grouped watch is that person's alone.
         let mine = per_bucket(&sessions, &["a".into()], |t| Ok(format!("d{}", t / 86_400))).unwrap();
         assert_eq!(mine.get("d0"), Some(&(2500, 3000)));
+    }
+
+    /// Scoped to one person, time together is theirs: at most their own stay, as the recap and the pairs
+    /// count it. The session's second-longest stay put 3,000 s in company on the day of somebody who
+    /// watched 600, more than they watched at all.
+    #[test]
+    fn scoped_to_one_person_time_together_is_never_more_than_they_stayed() {
+        let sessions = fold_sessions(vec![play(1, "a", 3600, 0, "Film"), play(1, "b", 3000, 5, "Film"), play(1, "c", 600, 9, "Film")]);
+        let day = |t: i64| Ok(format!("d{}", t / 86_400));
+        assert_eq!(per_bucket(&sessions, &["c".into()], day).unwrap().get("d0"), Some(&(600, 600)));
+        assert_eq!(per_bucket(&sessions, &["b".into()], day).unwrap().get("d0"), Some(&(3000, 3000)));
+        assert_eq!(per_bucket(&sessions, &[], day).unwrap().get("d0").map(|b| b.0), Some(3000), "everybody: the second-longest stay, as before");
+        assert_eq!(sessions[0].together_for(&["c".into()]), 600);
     }
 
     #[test]
