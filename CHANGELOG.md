@@ -10,6 +10,35 @@ Stability something that can no longer crash, halt, leak or lose data, Fixed som
 wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
 
+## [2.0.2] - 2026-09-28
+
+### Stability
+- **A halt is never lost**: when a library read was refused in the first moments after start-up, before the server was listening for it, the refusal was noted and finstats ran on instead of stopping.
+- **A Jellyfin that answers in a shape finstats cannot read is refused**, not believed: every user, or every title of a library, arriving under keys it does not know (`id` for `Id`) passed the guard with a full count and was then marked removed.
+- **A play's end is never dropped**: when the database was busy past its wait (an import holding it), a play that ended in that moment stayed marked as playing until the next restart. It is written on the next pass now.
+- **Settings a restore cannot read are left alone**: a backup whose settings no longer fitted this version reset every setting on restore — merge window, permissions, home addresses, schedule.
+- **A control character in a name or a title no longer breaks the cards**: the profile card, every story card that showed that title and the ZIP of them answered with an error.
+
+### Fixed
+- **Security:** behind a proxy, the sign-in limit counted the first `X-Forwarded-For` address, which is the one the client sends — a new made-up address per attempt, and the limit never applied. It is the last one now, the one the proxy wrote.
+- **Security:** *Include IP addresses and places* sent addresses to a personal destination whose owner lacks *see network details*, which no page would show them. Somebody else's failed sign-ins now need *see server details* too, as on the Security page.
+- **Notifications stop for somebody disabled or deleted in Jellyfin**: their personal destinations went on being sent everything their old permissions allowed.
+- **A queued notification is asked again before it is sent**: a destination switched off, or an owner who had lost a permission, was still sent what was waiting to be retried.
+- **A destination that always answers `Retry-After` is given up on** after five tries like any other, instead of being retried for thirty days.
+- **Device ids on a person's page** are shown only with *see network details*, as everywhere else.
+- **A published year waits a day for everything**: its finished and dropped shows followed every play, so pressing play on a dropped show changed the public page within seconds.
+- **A requested show counts as watched** when one of its episodes is: every requested show read as never watched, in the Requests chapter and on the Asked card.
+- **The recap's Together chapter leaves Live TV out**, like the rest of the year: a channel left on together could become the top title, and the share could pass 100%.
+- **The Days card of "the last 12 months" ends on the newest day**: the grid dropped the most recent three or four weeks.
+- **A show's new episodes are announced once per evening**: episodes either side of midnight UTC were announced twice on a server east or west of it.
+- **Connecting Seerr does not announce old requests as ready to watch**: a request already available when first read, with no other record of when, read as arriving that moment.
+- **The titles of a library deleted in Jellyfin go with it**: they stayed in search, on the Recently added shelf and in the totals.
+- **A remux stays a direct stream** when a reading loses its transcoding details for a moment (a seek), instead of becoming a transcode for the rest of the play.
+- **"Jellyfin is down" means reads failed in a row**: stray timeouts days apart on a server idle on the socket added up to it.
+- **A Streamystats import shows its progress on its own card**, not over the Jellystat import's last result.
+- **An address whose host starts with "web"** (`http://web:8096`) is read as a host, not cut short as Jellyfin's web client path.
+- **A queue error blanks the whole login** of an address even when the password holds a slash.
+
 ## [2.0.1] - 2026-09-28
 
 ### Changed
