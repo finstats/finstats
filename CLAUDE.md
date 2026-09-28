@@ -286,7 +286,10 @@ their task list to `jobs::observe`, which is the only reason the Jellyfin jobs c
 `200 {"Items":[]}`, must not be read as "the library was emptied". `sync::trustworthy_removal(seen, current)` gates every
 destructive removal (items, libraries, users): a read that comes back empty, or a catastrophic shrink of a sizeable set, is
 refused — the data is kept, the sync fails (task + notification), and `AppState::request_halt` asks the process to stop cleanly
-(exit 70, a reason on stderr) so the operator pins a version or pushes a fix rather than finding a wiped install. Ordinary churn
+(exit 70, a reason on stderr; `notify_one`, because the scheduler can ask before the server is waiting) so the operator pins a
+version or pushes a fix rather than finding a wiped install. The count a guard is shown is what the read could *store*
+(entries with an `Id`), never the raw length of the answer: an answer in unknown keys is an empty read. A library that leaves
+Jellyfin's list takes its titles with it (`store_libraries`), since it is never read again. Ordinary churn
 still applies; `FINSTATS_ALLOW_LIBRARY_SHRINK=1` waves a genuine emptying through (and clears a halt loop). After a library read, `backfill_playbacks` links plays to libraries and
 `relink.rs` re-attaches orphaned plays to renamed items (Jellyfin ids derive from the path): provider-id match
 first, then cleaned title + year, episodes by series + S/E number — only when unambiguous.
@@ -516,8 +519,11 @@ per-destination switch — so the rule holds by construction rather than by care
 kind of message without it. The link is `public_url` + the event's path; empty setting, no link.
 **`wanted_by` is the whole permission rule in one pure place**: a server destination (`owner_id IS NULL`) is not filtered; a
 personal one is checked against its owner's `Perms` (`auth::effective`) — own rows always, somebody else's play or request
-needs `see_everyone`, somebody else's *places* need `see_network` too (`security::gate`'s rule), the server's own business
-needs `see_server`. Managing a personal destination needs the grantable `notify`, and its host must not resolve into a private
+needs `see_everyone`, somebody else's *places* need `see_network` too (`security::gate`'s rule), somebody else's failed
+sign-ins `see_server` as well (the Security page's), the server's own business needs `see_server`. The owner is read live
+(disabled or removed in Jellyfin = told nothing), and **asked again at send time** (`deliverable`): a delivery can wait an
+hour between tries, and the switch "include addresses" is the owner's wish, which on a personal destination also takes
+`see_network`. Managing a personal destination needs the grantable `notify`, and its host must not resolve into a private
 range (`must_be_public`, checked on save **and** before every send, because a public name can be re-pointed later); an
 administrator's may point anywhere.
 **A destination's address is a credential** (a Discord webhook URL carries its token), so `Target` is neither `Serialize` nor
