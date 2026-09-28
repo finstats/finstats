@@ -1338,12 +1338,14 @@ pub async fn file_signals(State(app): State<App>, user: AuthUser, Query(q): Quer
 /// its plan to the index over event kinds. A rewind is a seek that landed before where it left from.
 fn rewound_sql(where_sql: &str) -> String {
     format!(
-        "WITH r AS (SELECT e.playback_id, e.position_s FROM playback_events e WHERE e.kind = 'seek' AND e.from_s > e.position_s)
+        "WITH r AS (SELECT e.playback_id, e.position_s FROM playback_events e WHERE e.kind = 'seek' AND e.from_s > e.position_s),
+              -- the plays the caller asked about: the counts and the hot spot both come from these
+              f AS MATERIALIZED (SELECT p.id, p.item_id, p.item_name, p.item_type, p.series_id, p.series_name FROM playbacks p {where_sql})
          SELECT p.item_id AS id, COALESCE(i.name, MAX(p.item_name)) AS name, MAX(p.item_type) AS type, MAX(p.series_id) AS series_id, MAX(p.series_name) AS series_name,
                 COUNT(DISTINCT p.id) AS plays, COUNT(r.playback_id) AS rewinds, ROUND(COUNT(r.playback_id) * 1.0 / COUNT(DISTINCT p.id), 2) AS per_play,
-                (SELECT (r2.position_s / 60) * 60 FROM r r2 JOIN playbacks p2 ON p2.id = r2.playback_id WHERE p2.item_id = p.item_id
+                (SELECT (r2.position_s / 60) * 60 FROM r r2 JOIN f p2 ON p2.id = r2.playback_id WHERE p2.item_id = p.item_id
                  GROUP BY 1 ORDER BY COUNT(*) DESC, 1 LIMIT 1) AS hot_s
-         FROM playbacks p LEFT JOIN r ON r.playback_id = p.id LEFT JOIN items i ON i.id = p.item_id {where_sql}
+         FROM f p LEFT JOIN r ON r.playback_id = p.id LEFT JOIN items i ON i.id = p.item_id
          GROUP BY p.item_id HAVING COUNT(DISTINCT p.id) >= 2 AND COUNT(r.playback_id) >= 3
          ORDER BY per_play DESC, rewinds DESC LIMIT 15"
     )
@@ -2431,6 +2433,25 @@ mod tests {
         assert_eq!(rows.len(), 1, "{rows:?}");
         assert_eq!((rows[0]["name"].as_str(), rows[0]["plays"].as_i64(), rows[0]["switched_on"].as_i64(), rows[0]["share"].as_f64(), rows[0]["typical_s"].as_i64()),
                    (Some("Clear"), Some(3), Some(2), Some(0.67), Some(350)));
+    }
+
+    /// The hot spot is of the plays the list counts: with the page narrowed to some people (or a week), a
+    /// minute somebody else rewound years ago is not where these people lost the thread.
+    #[test]
+    fn the_hot_spot_follows_the_same_filters_as_the_counts() {
+        let c = conn();
+        with_rewinds(&c);
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, position_s, runtime_s) VALUES
+               (37, 'live', 'u3', 'cat', 'x', 'Mumbled', 'Movie', 1000, 6000, 5000, 5000, 5400);
+             INSERT INTO playback_events(playback_id, at, kind, position_s, from_s, detail) VALUES
+               (37, 1100, 'seek', 3600, 3700, ''), (37, 1200, 'seek', 3610, 3700, ''), (37, 1300, 'seek', 3620, 3700, ''), (37, 1400, 'seek', 3630, 3700, ''), (37, 1500, 'seek', 3640, 3700, '');",
+        )
+        .unwrap();
+        let two = Scope { user_ids: vec!["u1".into(), "u2".into()], ..everyone() };
+        let out = file_signals_for(&c, &two.resolve(&c).unwrap()).unwrap();
+        let mumbled = out["rewound"].as_array().unwrap().iter().find(|r| r["name"] == "Mumbled").cloned().unwrap();
+        assert_eq!((mumbled["rewinds"].as_i64(), mumbled["hot_s"].as_i64()), (Some(4), Some(1260)), "{mumbled}");
     }
 
     #[test]
