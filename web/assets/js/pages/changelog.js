@@ -16,15 +16,17 @@ const KINDS = {
 
 const calm = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Notes may use **bold** and `code`. Built as DOM nodes; nothing is ever parsed as HTML. */
+/** Notes may use **bold**, *italic* and `code`. Built as DOM nodes; nothing is ever parsed as HTML. */
 function inline(text) {
   const out = [];
-  const re = /\*\*([^*]+)\*\*|`([^`]+)`/g;
+  // Bold before italic, so ** is never read as two empty emphases; an italic opens on a letter,
+  // so a lone asterisk in running text stays an asterisk.
+  const re = /\*\*([^*]+)\*\*|\*([^*\s][^*]*?)\*|`([^`]+)`/g;
   let last = 0;
   let m;
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index));
-    out.push(m[1] != null ? h('strong', null, m[1]) : h('code', { class: 'mono cl-code' }, m[2]));
+    out.push(m[1] != null ? h('strong', null, m[1]) : m[2] != null ? h('em', null, m[2]) : h('code', { class: 'mono cl-code' }, m[3]));
     last = re.lastIndex;
   }
   if (last < text.length) out.push(text.slice(last));
