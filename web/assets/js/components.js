@@ -482,7 +482,9 @@ export function playsTable(rows, { showUser = true, onOpen, empty = 'No plays ma
 }
 
 // ---------------------------------------------------------------- modal
-let modalDepth = 0;
+// The open dialogs, newest last. Every one listens for keys on the document, and only the one on top may
+// answer: Esc in the search palette over a play's details used to close both.
+const modalStack = [];
 /** X button, Esc and click-outside all close it; focus returns to the trigger. */
 export function openModal({ title, body, wide = false, onClose, initialFocus, labelId = 'modal-title', bare = false, cls = '' }) {
   const trigger = document.activeElement;
@@ -495,15 +497,16 @@ export function openModal({ title, body, wide = false, onClose, initialFocus, la
 
   function close() {
     if (closed) return;
-    closed = true; modalDepth--;
+    closed = true; modalStack.splice(modalStack.indexOf(onKey), 1);
     document.removeEventListener('keydown', onKey, true);
     overlay.classList.add('is-closing');
     setTimeout(() => overlay.remove(), 140);
-    if (!modalDepth) document.documentElement.classList.remove('no-scroll');
+    if (!modalStack.length) document.documentElement.classList.remove('no-scroll');
     if (trigger && trigger.isConnected && trigger.focus) trigger.focus();
     if (onClose) onClose();
   }
   function onKey(e) {
+    if (modalStack[modalStack.length - 1] !== onKey) return;
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); return; }
     if (e.key !== 'Tab') return;
     const f = dialog.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])');
@@ -517,7 +520,7 @@ export function openModal({ title, body, wide = false, onClose, initialFocus, la
   document.addEventListener('keydown', onKey, true);
   document.body.append(overlay);
   document.documentElement.classList.add('no-scroll');
-  modalDepth++;
+  modalStack.push(onKey);
   requestAnimationFrame(() => (initialFocus && initialFocus.isConnected ? initialFocus : closeBtn.isConnected ? closeBtn : dialog).focus());
   return { close, body: bodyEl, dialog };
 }
