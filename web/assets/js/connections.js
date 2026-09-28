@@ -50,7 +50,15 @@ export function connectionsPanel(ctx) {
     const act = async (fn) => { try { data = await fn(); } catch (e) { rowErr = { id: s.id, text: e.message }; } removing = null; lastSig = ''; render(); };
     const actions = removing === s.id
       ? [h('span', { class: 'muted' }, 'Remove it, and everything finstats read from it?'),
-        h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: (e) => { setBusy(e.currentTarget, true, 'Removing…'); act(() => api.del(`/services/${s.id}`)); } }, 'Remove'),
+        h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: (e) => {
+          setBusy(e.currentTarget, true, 'Removing…');
+          act(async () => {
+            const left = await api.del(`/services/${s.id}`);
+            // Which pages exist depends on what is connected, as after a save.
+            try { state.user = (await api.get('/auth/me')).user; } catch { /* the next navigation will */ }
+            return left;
+          });
+        } }, 'Remove'),
         h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { removing = null; render(); } }, 'Cancel')]
       : [h('button', { type: 'button', class: 'btn btn-sm', onClick: () => { editing = s.id; removing = null; render(); } }, 'Edit'),
         h('button', { type: 'button', class: 'btn btn-sm btn-ghost btn-danger-text', onClick: () => { removing = s.id; render(); } }, 'Remove…')];
