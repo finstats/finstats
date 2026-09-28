@@ -246,7 +246,7 @@ impl Reachable {
         self.failures += 1;
         let tell_down = self.failures == JELLYFIN_DOWN_AFTER && !self.told_down;
         self.told_down |= tell_down;
-        Failure { log: self.failures == 1 || self.failures % 60 == 0, tell_down }
+        Failure { log: self.failures == 1 || self.failures.is_multiple_of(60), tell_down }
     }
 
     fn answered(&mut self) -> Recovery {

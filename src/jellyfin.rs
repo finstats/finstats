@@ -73,10 +73,10 @@ pub fn normalize_url_of(input: &str, what: &str) -> Result<String> {
     // Only in the path: the "//" after the scheme would find a host called "web" otherwise.
     let path_at = s.find("://").map_or(0, |i| i + 3);
     let path_at = s[path_at..].find('/').map_or(s.len(), |i| path_at + i);
-    if let Some(i) = s[path_at..].find("/web").map(|i| path_at + i) {
-        if s[i..].starts_with("/web/") || s.ends_with("/web") {
-            s.truncate(i);
-        }
+    if let Some(i) = s[path_at..].find("/web").map(|i| path_at + i)
+        && (s[i..].starts_with("/web/") || s.ends_with("/web"))
+    {
+        s.truncate(i);
     }
     while s.ends_with('/') {
         s.pop();
