@@ -495,7 +495,12 @@ pub fn backfill_playbacks(conn: &Connection) -> Result<Vec<String>> {
          -- session as it happened, and that is the better answer if the two ever disagree.
          UPDATE playbacks SET item_type = (SELECT type FROM items WHERE items.id = playbacks.item_id)
          WHERE source <> 'live' AND item_type <> 'Episode'
-           AND EXISTS (SELECT 1 FROM items WHERE items.id = playbacks.item_id AND items.type <> playbacks.item_type);",
+           AND EXISTS (SELECT 1 FROM items WHERE items.id = playbacks.item_id AND items.type <> playbacks.item_type);
+
+         -- Jellystat keeps the series' name where an episode's should be; the library knows the episode's.
+         UPDATE playbacks SET item_name = (SELECT name FROM items WHERE items.id = playbacks.item_id)
+         WHERE source <> 'live' AND item_type = 'Episode' AND item_name = series_name
+           AND EXISTS (SELECT 1 FROM items WHERE items.id = playbacks.item_id AND items.name <> '' AND items.name <> playbacks.item_name);",
     )?;
     let relinked = crate::relink::relink_orphans(conn, crate::state::Settings::load(conn)?.merge_window_s)?;
     // New titles may be what Sonarr, Radarr or a request were waiting for.
@@ -945,6 +950,27 @@ mod tests {
         assert_eq!(store_libraries(&mut c, &[lib("films", "Films")], false, 200).unwrap(), None);
         let removed = |id: &str| c.query_row("SELECT removed FROM items WHERE id = ?1", [id], |r| r.get::<_, i64>(0)).unwrap();
         assert_eq!((removed("m1"), removed("m2")), (0, 1));
+    }
+
+    /// Jellystat keeps the series' name where an episode's should be (`NowPlayingItemName`); the library knows
+    /// the episode's. A play finstats recorded itself was named by the session and is left alone.
+    #[test]
+    fn an_imported_episode_play_is_called_what_the_library_calls_the_episode() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, series_id, updated_at) VALUES ('s1', 'Series', 'Big Buck Bunny', NULL, 1), ('e1', 'Episode', 'The Big Meadow', 's1', 1);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, series_name, started_at, ended_at, duration_s) VALUES
+               ('jellystat', 'u1', 'alice', 'e1', 'Big Buck Bunny', 'Episode', 's1', 'Big Buck Bunny', 100, 700, 600),
+               ('live',      'u1', 'alice', 'e1', 'Big Buck Bunny', 'Episode', 's1', 'Big Buck Bunny', 900, 1500, 600);",
+        )
+        .unwrap();
+        backfill_playbacks(&c).unwrap();
+        let names: Vec<(String, String)> = c.prepare("SELECT source, item_name FROM playbacks ORDER BY id").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(names, [("jellystat".to_string(), "The Big Meadow".to_string()), ("live".to_string(), "Big Buck Bunny".to_string())]);
     }
 
     #[test]
