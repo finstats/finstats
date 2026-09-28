@@ -44,6 +44,8 @@ impl Window {
 
 const TITLE_ID: &str = "COALESCE(p.series_id, p.item_id)";
 const NOT_LIVE_TV: &str = "p.item_type NOT IN ('TvChannel', 'LiveTvChannel', 'Program', 'LiveTvProgram')";
+/// The same four, for what is folded in Rust (the group sessions).
+const LIVE_TV: [&str; 4] = ["TvChannel", "LiveTvChannel", "Program", "LiveTvProgram"];
 
 /// Whose year a request is about: `(scope_user, server)`. A recap is one person's year. Everyone gets
 /// their own; only a Jellyfin administrator may open someone else's, or the whole server's (2.0), and
@@ -237,7 +239,11 @@ fn together(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>, 
     let window = crate::groups::Window { since: Some(w.from), until: Some(end) };
     let people: Vec<String> = user.map(|u| vec![u.to_string()]).unwrap_or_default();
     let sessions = crate::groups::sessions_for(c, &window, None, &people)?;
-    let mine: Vec<&crate::groups::Session> = sessions.iter().filter(|s| user.is_none_or(|u| s.per_user.contains_key(u))).collect();
+    let mine: Vec<&crate::groups::Session> = sessions
+        .iter()
+        .filter(|s| user.is_none_or(|u| s.per_user.contains_key(u)))
+        .filter(|s| !s.item["item_type"].as_str().is_some_and(|t| LIVE_TV.contains(&t)))
+        .collect();
     if mine.is_empty() {
         return Ok(Value::Null);
     }
@@ -922,6 +928,21 @@ mod tests {
 
     fn names_of_titles(v: &Value) -> Vec<String> {
         v.as_array().map(|a| a.iter().map(|s| s["title"].as_str().unwrap_or_default().to_string()).collect()).unwrap_or_default()
+    }
+
+    /// The recap leaves Live TV out, and its Together share is of the year it counts: a channel left on
+    /// together must not become the evening's title, or more than the whole year.
+    #[test]
+    fn together_leaves_live_tv_out_like_the_rest_of_the_year() {
+        let c = year_db();
+        for day in ["2025-03-01", "2025-03-02"] {
+            let a = play(&c, "ua", "tv1", "TvChannel", day, 10_800, None);
+            play(&c, "ub", "tv1", "TvChannel", day, 10_800, Some(a));
+            c.execute("UPDATE playbacks SET group_id = ?1 WHERE id = ?1", [a]).unwrap();
+        }
+        play(&c, "ua", "m1", "Movie", "2025-05-01", 600, None);
+        assert!(year_of(&c, Some("ua"), "2025")["together"].is_null(), "a channel is the only company she had");
+        assert!(year_of(&c, None, "2025")["together"].is_null());
     }
 
     #[test]
