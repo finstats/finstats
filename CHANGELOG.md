@@ -10,6 +10,15 @@ Stability something that can no longer crash, halt, leak or lose data, Fixed som
 wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
 
+## [2.0.1] - 2026-09-28
+
+### Changed
+- **A title's languages stay out of the way**: the header names the first three audio and subtitle languages, one line each, and a new **Languages** card lists every one — the complete ones together, the partial ones with how many episodes have them. A long show's two dozen subtitle languages used to push the artwork down a screen.
+
+### Fixed
+- **A title's poster stays beside its name**: when the text next to it ran longer than the poster — a long synopsis, many studios — the poster sank to the bottom of the header, under empty artwork.
+- **A version finstats cannot read is called that**: an `app_version` edited by hand into something unreadable made finstats refuse to start as "the older finstats 2.0.1", which it was not. It still refuses, and now says which value it could not read and how to write it.
+
 ## [2.0.0] - 2026-09-25 to 2026-09-28
 
 Recap 2026, public profiles and watching together
