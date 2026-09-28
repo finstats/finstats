@@ -3,7 +3,7 @@
 // text never wears a series color. A token is a string 'var(--x)', so it goes on through style, never an
 // SVG presentation attribute.
 
-import { h, s, num, bytes, duration, durationExact, dayLabel, dayLabelLong, dayLabelYear, methodLabel, pct, clock } from './dom.js';
+import { h, s, num, bytes, duration, durationExact, dayLabel, dayLabelLong, dayLabelYear, methodLabel, pct, clock, parseDay } from './dom.js';
 import { sortable, plainTable, chartTable } from './tables.js';
 
 export const TYPES = [
@@ -222,7 +222,7 @@ export function columnsTable({ daily, bucket = 'day', series = TYPES }) {
         h('th', null, bucket === 'week' ? 'Week of' : 'Date'), h('th', { class: 'r' }, 'Plays'), h('th', { class: 'r' }, 'Watch time'),
         series.map((t) => h('th', { class: 'r' }, t.label)))),
       h('tbody', null, rows.map((d) => h('tr', null,
-        h('td', { class: 'mono' }, dayLabelYear(d.date)),
+        h('td', { class: 'mono', dataset: { sort: String(parseDay(d.date).getTime()) } }, dayLabelYear(d.date)),
         h('td', { class: 'mono r' }, num(d.plays)),
         h('td', { class: 'mono r', title: durationExact(d.watch_s) }, duration(d.watch_s)),
         series.map((t) => h('td', { class: 'mono r' }, cell(d, t.key)[1] ? duration(cell(d, t.key)[1]) : '–')))))));
@@ -304,7 +304,7 @@ export function heatmapTable({ data }) {
   return chartTable(
     h('table', { class: 'table table-dense' },
       h('thead', null, h('tr', null, h('th', null, 'Plays'), Array.from({ length: 24 }, (_, i) => h('th', { class: 'r' }, String(i).padStart(2, '0'))))),
-      h('tbody', null, DAYS.map((d, i) => h('tr', null, h('th', { scope: 'row' }, d),
+      h('tbody', null, DAYS.map((d, i) => h('tr', null, h('th', { scope: 'row', dataset: { sort: String(i) } }, d),
         Array.from({ length: 24 }, (_, hr) => h('td', { class: 'mono r' }, num((plays[i] && plays[i][hr]) || 0))))))));
 }
 
@@ -457,8 +457,8 @@ export function simpleColumns({ rows, unit = ['item', 'items'], ariaLabel = 'Col
 export function simpleColumnsTable({ rows, head = ['Period', 'Count'] }) {
   return chartTable(h('table', { class: 'table' },
     h('thead', null, h('tr', null, h('th', null, head[0]), h('th', { class: 'r' }, head[1]))),
-    h('tbody', null, (rows || []).slice().reverse().map((d) => h('tr', null,
-      h('td', { class: 'mono' }, d.title || d.label), h('td', { class: 'mono r' }, num(d.value)))))));
+    h('tbody', null, (rows || []).map((d, i) => [d, i]).reverse().map(([d, i]) => h('tr', null,
+      h('td', { class: 'mono', dataset: { sort: String(i) } }, d.title || d.label), h('td', { class: 'mono r' }, num(d.value)))))));
 }
 
 // ---------------------------------------------------------------- retention: a title on a position axis
@@ -558,7 +558,7 @@ export function retentionTable({ runtime_s, bucket_s, curve, rewinds = [], subti
   return chartTable(h('table', { class: 'table' },
     h('thead', null, h('tr', null, h('th', null, 'From'), h('th', { class: 'r' }, 'Still watching'), h('th', { class: 'r' }, 'Rewinds'), h('th', { class: 'r' }, 'Subtitles on'))),
     h('tbody', null, Array.from({ length: n }, (_, i) => h('tr', null,
-      h('td', { class: 'mono' }, clock(edge(i))), h('td', { class: 'mono r' }, pct(pts[i])),
+      h('td', { class: 'mono', dataset: { sort: String(edge(i)) } }, clock(edge(i))), h('td', { class: 'mono r' }, pct(pts[i])),
       h('td', { class: 'mono r' }, num(rewinds[i] || 0)), h('td', { class: 'mono r' }, num(subtitles[i] || 0)))))));
 }
 
