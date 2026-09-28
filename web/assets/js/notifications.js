@@ -244,8 +244,9 @@ export function notificationsPanel(ctx) {
         h('span', { class: 'field-label' }, 'What to send'),
         h('div', { class: 'notify-events' }, groups)),
       h('div', { class: 'field' },
-        h('label', { class: 'check' }, addresses, 'Include IP addresses and places'),
-        h('p', { class: 'help', id: 'notify-addresses-help' }, 'Off: a message says the place is “Oslo, Norway” but never the address it came from. On: the addresses go out too — worth thinking about for a destination somebody else runs, like Discord.'),
+        // Addresses reach a personal destination only with see_network, as they do on every page.
+        can('see_network') ? h('label', { class: 'check' }, addresses, 'Include IP addresses and places') : null,
+        can('see_network') ? h('p', { class: 'help', id: 'notify-addresses-help' }, 'Off: a message says the place is “Oslo, Norway” but never the address it came from. On: the addresses go out too — worth thinking about for a destination somebody else runs, like Discord.') : null,
         isAdmin() ? h('label', { class: 'check' }, certs, 'Accept a self-signed certificate') : null,
         isAdmin() ? h('p', { class: 'help', id: 'notify-certs-help' }, 'Only for an address whose certificate is your own: a service on your own network, or a mail server of your own.') : null,
         existing ? h('label', { class: 'check' }, enabled, 'Switched on') : null),

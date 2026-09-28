@@ -308,6 +308,8 @@ pub struct Stored {
     pub kind: Kind,
     pub severity: String,
     pub at: i64,
+    /// Whose it is, for asking again at send time whether the destination may still be told.
+    pub user_id: Option<String>,
     pub user_name: Option<String>,
     pub title: String,
     pub body: String,
@@ -532,6 +534,16 @@ pub fn wanted_by(t: &Target, kind: Kind, severity: &str, at: i64, about: Option<
     }
 }
 
+/// At send time: `None` = no longer to be sent (switched off, or its owner may no longer see it — a
+/// delivery can wait an hour between tries), else whether the addresses go with it. "Include addresses"
+/// is the owner's wish; on a personal destination it also takes `see_network`, as it does in finstats.
+pub fn deliverable(t: &Target, e: &Stored, owner: Option<Perms>) -> Option<bool> {
+    if !wanted_by(t, e.kind, &e.severity, e.at, e.user_id.as_deref(), owner) {
+        return None;
+    }
+    Some(t.with_addresses && (t.owner_id.is_none() || owner.is_some_and(|p| p.see_network)))
+}
+
 // ---------------------------------------------------------------- raising one
 
 /// Write an event down and queue it for every destination that wants it. `false` when it was already
@@ -687,6 +699,7 @@ fn test_event(user_name: &str, destination: &str) -> Stored {
         kind: Kind::Test,
         severity: INFO.to_string(),
         at: db::now(),
+        user_id: None,
         user_name: Some(user_name.to_string()),
         title: "finstats is connected".to_string(),
         body: format!("A test message from finstats, sent by {user_name}. If you are reading this, this destination works."),
@@ -719,7 +732,7 @@ pub struct Due {
 
 fn due(conn: &Connection, now: i64, limit: usize) -> Result<Vec<Due>> {
     let mut stmt = conn.prepare_cached(
-        "SELECT e.id, e.kind, e.severity, e.at, e.user_name, e.title, e.body, e.link, e.data, e.private, d.target_id, d.attempts
+        "SELECT e.id, e.kind, e.severity, e.at, e.user_name, e.title, e.body, e.link, e.data, e.private, d.target_id, d.attempts, e.user_id
          FROM notify_deliveries d JOIN notify_events e ON e.id = d.event_id
          WHERE d.state = 'queued' AND d.next_at <= ?1 ORDER BY d.next_at, d.event_id LIMIT ?2",
     )?;
@@ -734,6 +747,7 @@ fn due(conn: &Connection, now: i64, limit: usize) -> Result<Vec<Due>> {
                         kind: Kind::from_key(&kind).unwrap_or(Kind::Test),
                         severity: r.get(2)?,
                         at: r.get(3)?,
+                        user_id: r.get(12)?,
                         user_name: r.get(4)?,
                         title: r.get(5)?,
                         body: r.get(6)?,
@@ -812,10 +826,29 @@ async fn drain(app: &App, used: &mut HashMap<i64, (i64, usize)>) {
             }
         };
         let targets = all(app);
+        let settings = app.settings();
+        let fanout = match app.db.call({
+            let targets = targets.clone();
+            move |c| Fanout::build(c, targets, &settings)
+        })
+        .await
+        {
+            Ok(f) => f,
+            Err(e) => {
+                tracing::warn!("could not read who may be told what: {e:#}");
+                return;
+            }
+        };
         for item in batch {
             let Some(target) = targets.iter().find(|t| t.id == item.target_id).cloned() else {
                 // The destination was deleted while this was queued; the row goes with it on the next write.
                 let _ = app.db.call(move |c| Ok(c.execute("DELETE FROM notify_deliveries WHERE target_id = ?1", [item.target_id])?)).await;
+                continue;
+            };
+            let owner = target.owner_id.as_ref().and_then(|o| fanout.perms.get(o).copied());
+            let Some(with_addresses) = deliverable(&target, &item.event, owner) else {
+                let (event_id, target_id) = (item.event.id, target.id);
+                let _ = app.db.call(move |c| Ok(c.execute("DELETE FROM notify_deliveries WHERE event_id = ?1 AND target_id = ?2", params![event_id, target_id])?)).await;
                 continue;
             };
             if over_the_minute(used, target.id, db::now()) {
@@ -824,7 +857,7 @@ async fn drain(app: &App, used: &mut HashMap<i64, (i64, usize)>) {
                 continue;
             }
             let public_url = app.settings().public_url.clone();
-            let msg = message(&item.event, target.with_addresses, Some(&public_url));
+            let msg = message(&item.event, with_addresses, Some(&public_url));
             let outcome = channels::send(app, &target, &msg).await;
             let (event_id, target_id, attempts) = (item.event.id, target.id, item.attempts + 1);
             let outcome = match outcome {
@@ -1440,6 +1473,7 @@ pub(crate) mod tests {
             kind,
             severity: kind.severity().into(),
             at: 1_000,
+            user_id: None,
             user_name: Some("alice".into()),
             title: "Impossible travel: alice".into(),
             body: "Oslo, Norway and London, United Kingdom, 1160 km apart, 40 minutes apart.".into(),
@@ -1505,6 +1539,39 @@ pub(crate) mod tests {
 
         let server_own = target(2, None, &all);
         assert!(wanted_by(&server_own, Kind::Travel, ALERT, 10, Some("uc"), None), "the server's own destination is not filtered");
+    }
+
+    /// "Include addresses" is the owner's wish, not a permission: an address reaches a personal destination
+    /// only when its owner may see addresses in finstats itself.
+    #[test]
+    fn a_personal_destination_is_sent_addresses_only_with_see_network() {
+        let everyone = Perms::from_keys(["sign_in", "notify", "see_everyone"]);
+        let network = Perms::from_keys(["sign_in", "notify", "see_everyone", "see_network"]);
+        let mut t = target(1, Some("ub"), &[Kind::PlayStarted]);
+        t.with_addresses = true;
+        let mut play = stored(Kind::PlayStarted);
+        play.user_id = Some("ua".into());
+        assert_eq!(deliverable(&t, &play, Some(everyone)), Some(false), "no see_network, no address");
+        assert_eq!(deliverable(&t, &play, Some(network)), Some(true));
+        play.user_id = Some("ub".into());
+        assert_eq!(deliverable(&t, &play, Some(Perms::from_keys(["sign_in", "notify"]))), Some(false), "not even one's own: finstats does not show it");
+        let mut server = target(2, None, &[Kind::PlayStarted]);
+        server.with_addresses = true;
+        assert_eq!(deliverable(&server, &play, None), Some(true), "the server's own destination is the administrators' choice");
+    }
+
+    /// A queued delivery waits up to an hour between tries: switching a destination off, or taking away
+    /// what let its owner see the thing, must reach what is still waiting.
+    #[test]
+    fn what_is_still_queued_is_asked_again_before_it_is_sent() {
+        let mut play = stored(Kind::PlayStarted);
+        play.user_id = Some("ua".into());
+        let t = target(1, Some("ub"), &[Kind::PlayStarted]);
+        assert_eq!(deliverable(&t, &play, Some(Perms::from_keys(["sign_in", "see_everyone"]))), Some(false));
+        assert_eq!(deliverable(&t, &play, Some(Perms::from_keys(["sign_in"]))), None, "see_everyone taken away");
+        let mut off = target(2, None, &[Kind::PlayStarted]);
+        off.enabled = false;
+        assert_eq!(deliverable(&off, &play, None), None, "switched off");
     }
 
     #[test]

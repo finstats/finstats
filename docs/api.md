@@ -991,7 +991,7 @@ finstats fills in rather than asking for.
      "options": {"from": "finstats@example.com"},   // what that kind needs beyond those; only email has any
      "has_secret": true,
      "events": ["travel", "new_items"],   // the kinds it asked for
-     "with_addresses": false,             // IP addresses and coordinates only when this is on
+     "with_addresses": false,             // IP addresses and coordinates only when this is on (and, on a personal one, its owner has see_network)
      "min_severity": "info" | "warn" | "alert",
      "accept_invalid_certs": false, "enabled": true, "created_at": 0,
      "last_ok_at": 0 | null, "last_error": "…" | null} ],
