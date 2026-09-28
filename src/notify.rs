@@ -1409,17 +1409,23 @@ pub async fn history(State(app): State<App>, user: AuthUser, Query(q): Query<His
             Ok(rows)
         })
         .await?;
-    // One entry per event, with every delivery of it underneath.
+    Ok(Json(json!({ "events": fold_recent(rows, limit) })))
+}
+
+/// One entry per event, with every delivery of it underneath, at most `limit` events.
+fn fold_recent(rows: Vec<Value>, limit: usize) -> Vec<Value> {
     let mut events: Vec<Value> = vec![];
     for row in rows {
         let id = row["id"].clone();
         let delivery = row["delivery"].clone();
+        let full = events.len() >= limit;
         match events.last_mut().filter(|e| e["id"] == id) {
             Some(existing) => {
                 if let (Some(list), false) = (existing["deliveries"].as_array_mut(), delivery.is_null()) {
                     list.push(delivery);
                 }
             }
+            None if full => break, // the next event would be one too many
             None => {
                 let mut event = row.clone();
                 let map = event.as_object_mut().expect("built as an object");
@@ -1428,11 +1434,8 @@ pub async fn history(State(app): State<App>, user: AuthUser, Query(q): Query<His
                 events.push(event);
             }
         }
-        if events.len() >= limit {
-            break;
-        }
     }
-    Ok(Json(json!({ "events": events })))
+    events
 }
 
 #[cfg(test)]
@@ -1451,6 +1454,15 @@ pub(crate) mod tests {
         )
         .unwrap();
         c
+    }
+
+    /// The last event on the list keeps every destination it went to, like the others.
+    #[test]
+    fn the_last_event_listed_keeps_all_its_deliveries() {
+        let row = |id: i64, target: i64| json!({ "id": id, "title": "t", "delivery": { "target_id": target } });
+        let events = fold_recent(vec![row(9, 1), row(9, 2), row(8, 1), row(8, 2), row(8, 3), row(7, 1)], 2);
+        let deliveries: Vec<usize> = events.iter().map(|e| e["deliveries"].as_array().unwrap().len()).collect();
+        assert_eq!(deliveries, [2, 3]);
     }
 
     pub(crate) fn target(id: i64, owner: Option<&str>, events: &[Kind]) -> Target {
