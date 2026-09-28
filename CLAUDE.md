@@ -624,8 +624,12 @@ every bug fixed. It is a local tool and must never be committed; the same goes f
 
 `CHANGELOG.md` is the single source for the in-app **Patch notes** tab (`changelog.rs` parses it). A test fails if
 the top entry's version differs from `Cargo.toml`, or an entry lacks a date/notes/known group — so a version bump
-and its changelog entry land together. Format: `## [x.y.z] - YYYY-MM-DD`, then `### Added | Changed | Fixed | Removed`
-with one-line bullets (`**bold**` and `` `code` `` are rendered). An `x.y.0` entry opens with a **short title line**
+and its changelog entry land together. Format: `## [x.y.z] - YYYY-MM-DD`, or `- YYYY-MM-DD to YYYY-MM-DD` for a release
+made over several days (`date` stays the release day, `started` the first; the page shows both), then
+`### Added | Changed | Performance | Stability | Fixed | Removed` with one-line bullets (`**bold**` and `` `code` `` are
+rendered). **Performance** is quicker or lighter, **Stability** is something that can no longer crash, halt, leak or lose
+data, **Fixed** is something that gave a wrong answer — a speed-up filed as a fix reads as a bug nobody had. The rules live
+in one test function (`changelog::tests::problems`). An `x.y.0` entry opens with a **short title line**
 and nothing else — "Notifications", "WebSocket session tracking" — which the app shows as that whole series' headline
 (`changelog.js` takes the summary's first sentence, or all of it when there is no full stop, so a title stays whole);
 a test enforces that an `x.y.0` has one. Notes are terse and factual, in the shape of a GitHub changelog: what
