@@ -96,6 +96,8 @@ pub enum Need {
     Person,
     /// About a person *and* where they were: `see_network` as well, which is `security::gate`'s rule.
     Place,
+    /// Attempts on somebody's account: `see_server` on top of `Place`, as on the Security page.
+    SignIns,
     /// About the server itself: `see_server`.
     Server,
 }
@@ -204,7 +206,8 @@ impl Kind {
 
     pub fn need(self) -> Need {
         match self {
-            Kind::Travel | Kind::NewCountry | Kind::FailedSignIns => Need::Place,
+            Kind::Travel | Kind::NewCountry => Need::Place,
+            Kind::FailedSignIns => Need::SignIns,
             Kind::TaskFailed | Kind::BackupFailed | Kind::ServiceDown | Kind::ServiceBack => Need::Server,
             Kind::RequestAvailable | Kind::PlayStarted | Kind::PlayStopped | Kind::RecapReady => Need::Person,
             Kind::NewItems | Kind::Test => Need::Anyone,
@@ -530,6 +533,7 @@ pub fn wanted_by(t: &Target, kind: Kind, severity: &str, at: i64, about: Option<
         Need::Anyone => true,
         Need::Person => own || perms.see_everyone,
         Need::Place => own || (perms.see_everyone && perms.see_network),
+        Need::SignIns => own || (perms.see_everyone && perms.see_network && perms.see_server),
         Need::Server => perms.see_server,
     }
 }
@@ -1532,6 +1536,9 @@ pub(crate) mod tests {
         assert!(may(Kind::Travel, Some("ub"), plain), "an alert about yourself is yours");
         assert!(!may(Kind::Travel, Some("uc"), everyone), "somebody else's places need see_network as well");
         assert!(may(Kind::Travel, Some("uc"), network));
+        assert!(!may(Kind::FailedSignIns, Some("uc"), network), "somebody else's failed sign-ins need see_server too, as on the Security page");
+        assert!(may(Kind::FailedSignIns, Some("uc"), Perms::from_keys(["sign_in", "see_everyone", "see_network", "see_server"])));
+        assert!(may(Kind::FailedSignIns, Some("ub"), plain), "attempts on your own account are yours");
         assert!(!may(Kind::TaskFailed, None, everyone), "the server's business needs see_server");
         assert!(may(Kind::TaskFailed, None, server));
         assert!(may(Kind::NewItems, None, plain), "the library is the same for everyone");
