@@ -117,7 +117,7 @@ pub fn parse(v: &Value) -> Option<Request> {
 }
 
 /// When it arrived, from the best witness there is: Seerr's own note, else the file in the library, else the
-/// moment finstats first saw it available. Never before it was asked for (an "arrived after −3 days" helps nobody):
+/// moment finstats first saw it become available (Seerr's last change to it, when it was available the first time it was read). Never before it was asked for (an "arrived after −3 days" helps nobody):
 /// something that was already there when it was requested arrived at once.
 pub fn available_at(requested_at: i64, media_status: i64, media_added_at: Option<i64>, item_added_at: Option<i64>, seen_available_at: Option<i64>) -> Option<i64> {
     if media_status != MEDIA_AVAILABLE {
@@ -197,12 +197,14 @@ fn store(conn: &Connection, service_id: i64, r: &Request, now: i64) -> Result<()
     conn.prepare_cached(
         "INSERT INTO requests(service_id, request_id, media_type, tmdb_id, tvdb_id, imdb_id, seasons, is_4k, status, media_status, requested_at, updated_at, media_added_at,
                               seen_available_at, seerr_user_id, seerr_user_name, jellyfin_user_id, jellyfin_username, jellyfin_media_id)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, CASE WHEN ?10 = 5 THEN ?14 END, ?15, ?16, ?17, ?18, ?19)
+         -- Already available the first time it is read: it became so some time before, not now. Seerr's own
+         -- last change to it is the latest that can have been, and on a first read of Seerr that is history.
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, CASE WHEN ?10 = 5 THEN ?12 END, ?15, ?16, ?17, ?18, ?19)
          ON CONFLICT(service_id, request_id) DO UPDATE SET
             media_type = excluded.media_type, tmdb_id = excluded.tmdb_id, tvdb_id = excluded.tvdb_id, imdb_id = excluded.imdb_id, seasons = excluded.seasons, is_4k = excluded.is_4k,
             status = excluded.status, media_status = excluded.media_status, requested_at = excluded.requested_at, updated_at = excluded.updated_at, media_added_at = excluded.media_added_at,
             -- the first time it is seen available, and only then
-            seen_available_at = CASE WHEN excluded.media_status = 5 THEN COALESCE(requests.seen_available_at, excluded.seen_available_at) ELSE NULL END,
+            seen_available_at = CASE WHEN excluded.media_status = 5 THEN COALESCE(requests.seen_available_at, ?14) ELSE NULL END,
             seerr_user_id = excluded.seerr_user_id, seerr_user_name = excluded.seerr_user_name, jellyfin_user_id = excluded.jellyfin_user_id,
             jellyfin_username = excluded.jellyfin_username, jellyfin_media_id = excluded.jellyfin_media_id, removed_at = NULL",
     )?
@@ -583,6 +585,30 @@ mod tests {
         c
     }
 
+    /// Connecting Seerr for the first time reads years of requests. One that is already available with no
+    /// witness to when (no `mediaAddedAt`, the film since deleted from the library) arrived some time
+    /// before this read, not now: it is history, not "Ready to watch". One seen waiting and then
+    /// available is news.
+    #[test]
+    fn a_first_read_does_not_announce_old_requests_as_arrivals() {
+        use crate::notify::{Kind, tests::{bus, target}};
+        let c = conn();
+        let now = db::now();
+        let long_ago = now - 2 * 365 * 86_400;
+        let old = Request { id: 50, media_type: "movie".into(), tmdb_id: Some(123), tvdb_id: None, jellyfin_media_id: None, media_status: 5, media_added_at: None,
+                            requested_at: long_ago, updated_at: long_ago + 86_400, seasons: vec![], ..parse(&sample()).unwrap() };
+        let waiting = Request { id: 51, media_status: 3, requested_at: now - 3_600, updated_at: now - 3_600, ..old.clone() };
+        store(&c, 1, &old, now).unwrap();
+        store(&c, 1, &waiting, now).unwrap();
+        crate::pipeline::link(&c).unwrap();
+        let f = bus(&c, vec![target(1, None, &[Kind::RequestAvailable])]);
+        assert_eq!(announce_available(&c, &f).unwrap(), 0, "a first read is not news");
+
+        store(&c, 1, &Request { media_status: 5, ..waiting }, now + 60).unwrap();
+        crate::pipeline::link(&c).unwrap();
+        assert_eq!(announce_available(&c, &f).unwrap(), 1, "seen waiting, then seen available: that one is");
+    }
+
     #[test]
     fn a_request_finds_its_person_its_title_and_the_day_it_arrived() {
         let c = conn();
@@ -608,8 +634,10 @@ mod tests {
         assert_eq!(row(43).0, None, "an ambiguous name links nobody");
         assert_eq!(row(44).0, None, "a display name is not an identity");
 
-        // Seen again, still available: the moment it was first seen stays.
+        // Seen again, still available: what the first sighting noted stays.
+        let seen = || c.query_row("SELECT seen_available_at FROM requests WHERE request_id = 41", [], |r| r.get::<_, i64>(0)).unwrap();
+        let first = seen();
         store(&c, 1, &tv, 99_999).unwrap();
-        assert_eq!(c.query_row("SELECT seen_available_at FROM requests WHERE request_id = 41", [], |r| r.get::<_, i64>(0)).unwrap(), 8000);
+        assert_eq!(seen(), first);
     }
 }
