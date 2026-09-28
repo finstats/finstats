@@ -1088,7 +1088,7 @@ fn target_row(r: &crate::db::rusqlite::Row) -> crate::db::rusqlite::Result<Optio
     let owner_name: Option<String> = r.get(16)?;
     Ok(Some(json!({
         "id": t.id, "kind": t.channel.key(), "label": t.channel.label(), "name": t.name, "shown": t.shown(),
-        "scope": if t.owner_id.is_some() { "me" } else { "server" }, "owner_name": owner_name,
+        "scope": if t.owner_id.is_some() { "me" } else { "server" }, "owner_id": t.owner_id, "owner_name": owner_name,
         "topic": t.topic, "options": t.options, "has_secret": !t.secret.is_empty(), "events": t.events, "with_addresses": t.with_addresses,
         "min_severity": t.min_severity, "accept_invalid_certs": t.accept_invalid_certs, "enabled": t.enabled,
         "created_at": t.created_at, "last_ok_at": last_ok_at, "last_error": last_error,
@@ -1725,6 +1725,10 @@ pub(crate) mod tests {
         assert_eq!(rows[0]["has_secret"], true);
         assert_eq!(rows[0]["scope"], "server");
         assert!(targets_json(&c, Some("ub")).unwrap().is_empty(), "somebody else's destination is not theirs to see");
+        // A personal destination says whose it is, so an administrator's list can tell "yours" from bob's.
+        c.execute("UPDATE notify_targets SET owner_id = 'ub'", []).unwrap();
+        let rows = targets_json(&c, None).unwrap();
+        assert_eq!((rows[0]["scope"].as_str(), rows[0]["owner_id"].as_str(), rows[0]["owner_name"].as_str()), (Some("me"), Some("ub"), Some("bob")));
     }
 
     /// A destination as an API request describes one.

@@ -987,7 +987,7 @@ finstats fills in rather than asking for.
     {"id": 3, "kind": "webhook" | "discord" | "slack" | "telegram" | "email" | "ntfy" | "gotify" | "pushover" | "pushbullet",
      "label": "Discord", "name": "Household",
      "shown": "discord.com/…",            // host, and the topic, chat or mailbox where there is one — never the URL
-     "scope": "server" | "me", "owner_name": "bob" | null,
+     "scope": "server" | "me", "owner_id": "…" | null, "owner_name": "bob" | null,   // "me": a personal destination, not necessarily the caller's
      "topic": "finstats-abc" | null,      // whatever that kind calls it: topic, chat id, user key, mailbox
      "options": {"from": "finstats@example.com"},   // what that kind needs beyond those; only email has any
      "has_secret": true,

@@ -7,7 +7,7 @@
 
 import { h, icon, mount, relTime, dateTime } from './dom.js';
 import { api, isAbort } from './api.js';
-import { isAdmin, can } from './state.js';
+import { isAdmin, can, state } from './state.js';
 import { setBusy, inlineError, formField, errorState, sk } from './components.js';
 import { dataTable } from './tables.js';
 
@@ -98,7 +98,8 @@ export function notificationsPanel(ctx) {
     return h('li', { class: 'conn-row' },
       h('div', { class: 'conn-main' },
         h('div', { class: 'conn-name' }, h('strong', null, t.name), h('span', { class: 'chip' }, t.label),
-          t.scope === 'me' ? h('span', { class: 'chip' }, 'Yours') : t.owner_name ? h('span', { class: 'chip' }, `${t.owner_name}’s`) : null),
+          // "me" is any personal destination; an administrator sees other people's too.
+          t.scope !== 'me' ? null : t.owner_id === state.user?.id ? h('span', { class: 'chip' }, 'Yours') : h('span', { class: 'chip' }, `${t.owner_name || 'Somebody'}’s`)),
         h('div', { class: 'conn-url mono' }, t.shown),
         h('div', { class: 'conn-status' }, statusOf(t)),
         h('p', { class: 'help' }, `${ticked} of ${total} kinds of event`, t.with_addresses ? ' · addresses included' : '', t.min_severity !== 'info' ? ` · ${t.min_severity} and above` : ''),
