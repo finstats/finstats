@@ -499,7 +499,8 @@ impl Fanout {
                 continue;
             }
             let is_admin: Option<bool> =
-                conn.query_row("SELECT is_admin FROM users WHERE id = ?1", [&owner], |r| r.get(0)).optional()?;
+                // Disabled or deleted in Jellyfin: signed out everywhere (`auth::resolve_session_in`), and told nothing.
+                conn.query_row("SELECT is_admin FROM users WHERE id = ?1 AND is_disabled = 0 AND removed = 0", [&owner], |r| r.get(0)).optional()?;
             let Some(is_admin) = is_admin else { continue };
             let grants = crate::auth::stored_grants(conn, &owner)?;
             if let Some(p) = crate::auth::effective(is_admin, &grants, settings) {
@@ -1563,6 +1564,21 @@ pub(crate) mod tests {
         let f = bus(&c, vec![target(2, None, &[Kind::PlayStarted])]);
         assert!(raise_in(&c, &f, &play).unwrap());
         eq_rows(&c, 1);
+    }
+
+    /// A session stops working the moment Jellyfin disables or deletes somebody; their destinations must
+    /// stop with it, or an administrator removed from Jellyfin goes on being sent everything, addresses included.
+    #[test]
+    fn a_destination_of_somebody_disabled_or_removed_in_jellyfin_is_told_nothing() {
+        for gone in ["is_disabled", "removed"] {
+            let c = conn();
+            c.execute(&format!("UPDATE users SET {gone} = 1 WHERE id = 'ua'"), []).unwrap();
+            let f = bus(&c, vec![target(1, Some("ua"), &[Kind::PlayStarted])]);
+            let play = Event::new(Kind::PlayStarted, "notify:play:start:7", "bob started watching", "Big Buck Bunny").about("ub", "bob");
+            raise_in(&c, &f, &play).unwrap();
+            let queued: i64 = c.query_row("SELECT COUNT(*) FROM notify_deliveries", [], |r| r.get(0)).unwrap();
+            assert_eq!(queued, 0, "an administrator whose account is {gone} was still told");
+        }
     }
 
     fn eq_rows(c: &Connection, want: i64) {
