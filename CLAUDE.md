@@ -611,7 +611,10 @@ right — and a QA check holds that budget, because the page it replaced was fou
 `/settings` and the old anchors (`/settings#backups`) forward to the section that holds them (`LEGACY`); a new section's card id stays a valid
 anchor. Sections hide themselves (`visible`) rather than explaining why they are empty.
 Esc is handled globally in `shell.js` (steps back out of `/libraries/:id`, `/users/:id`,
-`/items/:id`); overlays must keep calling `stopPropagation()` on their own Esc.
+`/items/:id`), going back through history only onto an entry of finstats' own: every entry the router writes carries
+`history.state.depth`, and a tab opened on a title has none behind it. Overlays must keep calling `stopPropagation()` on
+their own Esc, and `openModal` keeps a stack: only the dialog on top answers keys. Tables read numbers as `num()` prints
+them (en-US), never with the browser's separators.
 Each screen is held to the UX patterns from <https://uxgoodpatterns.com>. A generated copy, `ux-rules.md`, may sit in the working
 tree for reference; it is someone else's work, is git-ignored and must never be committed. The look is Obsidian's in the dark and washi paper in the light (cream ground, ink text, a vermilion seal for
 the accent, nando for quantities), via the tokens at the top of `app.css`; categorical chart colours follow the entity (Movie/Episode/Audio/Other), never rank.
