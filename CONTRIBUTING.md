@@ -37,7 +37,7 @@ Knowing this saves you from building something that cannot be merged.
 
 - **Read-only towards Jellyfin.** finstats never changes anything on your server and never starts a scan.
   The one write it ever makes is creating its own API key during setup.
-- **Light.** One binary, a bundled SQLite database, about 20 MB of memory. No database server, no queue, no
+- **Light.** One binary, a bundled SQLite database, under 100 MB of memory. No database server, no queue, no
   cache service. A change that needs a second container will not be merged.
 - **Private.** No telemetry, no accounts, nothing loaded from other hosts. By default the only request it makes
   to anything but your Jellyfin is an anonymous "what is my IP" lookup, made once and switchable off; the one other, downloading

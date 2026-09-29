@@ -33,7 +33,8 @@ disk is films nobody has ever pressed play on.
 
 finstats watches your server quietly in the background and turns that into answers. It is a
 lightweight alternative to Jellystat and Streamystats: a single small program with its own
-built-in database, using about **20 MB of memory**. Nothing else to install, nothing to maintain.
+built-in database, using **under 100 MB of memory**, where each of those needs around half a gigabyte.
+Nothing else to install, nothing to maintain.
 
 Already using Jellystat or Streamystats? [Bring your history with you](#moving-from-jellystat-or-streamystats) — it takes seconds.
 
