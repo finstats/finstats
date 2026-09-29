@@ -1429,6 +1429,7 @@ button.ep[aria-disabled="true"]:hover { filter: none; outline: 0; }
 .wm-land { fill: var(--land); stroke: var(--land-edge); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 .wm-land.is-hot { fill: var(--land-hot); stroke: var(--land-hot-edge); }
 .wm-dot { cursor: pointer; outline: none; }
+.wm-tips > * + * { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
 .wm-mark { stroke: var(--bg-sunken); stroke-width: 1.5; vector-effect: non-scaling-stroke; fill-opacity: .88; transition: fill-opacity var(--ease); }
 .wm-dot:hover .wm-mark, .wm-dot:focus-visible .wm-mark { fill-opacity: 1; stroke: var(--text-strong); }
 .wm-home .wm-mark, .wm-key.wm-home { fill: var(--series-2); background: var(--series-2); }

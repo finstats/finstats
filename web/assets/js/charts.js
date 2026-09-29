@@ -53,6 +53,8 @@ export function showTip(rect, content) {
   el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
 }
 export function hideTip() { if (tipEl) tipEl.hidden = true; }
+/** Is a tooltip on screen? Anything may have hidden it since it was shown: a scroll hides every one. */
+export const tipShown = () => !!tipEl && !tipEl.hidden;
 
 function tipRows(title, rows, total) {
   return h('div', null,

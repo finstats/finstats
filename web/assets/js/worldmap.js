@@ -3,7 +3,7 @@
 // Mercator projection: north is straight up wherever you zoom. No tiles, no map service: nothing about a place ever leaves the browser.
 
 import { h, s, icon, num } from './dom.js';
-import { showTip, hideTip } from './charts.js';
+import { showTip, hideTip, tipShown } from './charts.js';
 
 const MIN_W = 70;            // the closest zoom, in map units (the whole world is 2000 wide)
 // How it stays smooth. The coastline is 445 kB of path, and drawing it again is what costs: every change of the viewBox
@@ -60,6 +60,8 @@ export function worldMap({ points, countries = [], onPick, signal }) {
   // `view` is what the frame shows; `drawn` is what the SVG was last drawn for. Between the two is a transform.
   let world = null, project = null, view = null, drawn = null, route = null, hintTimer = 0, settleTimer = 0;
   let placed = [];
+  // The dots as drawn, bottom to top: what the pointer is over is worked out from these (`hover`).
+  let shown = [], hovering = null;
   const hot = new Set(countries);
   let size = { w: 0, h: 0 };
   const measure = () => { const r = frame.getBoundingClientRect(); size = { w: r.width, h: r.height }; };
@@ -151,6 +153,7 @@ export function worldMap({ points, countries = [], onPick, signal }) {
       const d = radiusPx(g.weight) * 1.9 * 2;
       return h('span', { class: 'wm-pulse', style: { ...at(g.xy), width: `${d}px`, height: `${d}px` } });
     }));
+    shown = []; hovering = null;
     dotLayer.replaceChildren(...groups.map((g) => {
       const r = radiusPx(g.weight) * k, one = g.members.length === 1 ? g.members[0] : null;
       const label = one ? one.label : `${g.members.length} places near ${g.members[0].label}`;
@@ -160,9 +163,10 @@ export function worldMap({ points, countries = [], onPick, signal }) {
       const tip = () => (one ? one.tip() : h('div', null, h('div', { class: 'tooltip-title' }, `${g.members.length} places`),
         g.members.slice(0, 6).map((m) => h('div', { class: 'tooltip-row' }, h('span', null, m.label))), h('div', { class: 'tooltip-title' }, 'Click to zoom in')));
       const pick = () => { if (one) { if (onPick) onPick(one); } else fit(g.members, { pad: 1.8, minW: MIN_W }); };
-      node.addEventListener('pointerenter', () => showTip(node.getBoundingClientRect(), tip()));
-      node.addEventListener('pointerleave', hideTip);
-      node.addEventListener('focus', () => showTip(node.getBoundingClientRect(), tip()));
+      // Anchored on the circle itself: the group's box is the circle and whatever else a group ever holds.
+      const mark = node.querySelector('.wm-mark');
+      shown.push({ xy: g.xy, r, tip, mark });
+      node.addEventListener('focus', () => showTip(mark.getBoundingClientRect(), tip()));
       node.addEventListener('blur', hideTip);
       node.addEventListener('click', (e) => { e.stopPropagation(); pick(); });
       node.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); pick(); } });
@@ -184,8 +188,23 @@ export function worldMap({ points, countries = [], onPick, signal }) {
     svg.setPointerCapture(e.pointerId);
     hideTip();
   });
+  // One tooltip for everything under the pointer, worked out from where the dots are rather than from which of two
+  // overlapping circles the browser says was entered: the same spot always says the same thing, and a dot under
+  // another one (home, with somebody playing there) is never out of reach. Top first, anchored on the top one.
+  function hover(e) {
+    if (!world || drag || !shown.length) return;
+    const m = toMap(e), slack = 2 * unitsPerPx();
+    const under = shown.filter((d) => Math.hypot(d.xy[0] - m[0], d.xy[1] - m[1]) <= d.r + slack).reverse();
+    const key = under.map((d) => shown.indexOf(d)).join(',');
+    // Nothing new under the pointer — unless something else (a scroll hides every tooltip) took ours away meanwhile.
+    if (key === hovering && (!under.length || tipShown())) return;
+    hovering = key;
+    if (!under.length) return hideTip();
+    showTip(under[0].mark.getBoundingClientRect(), under.length === 1 ? under[0].tip() : h('div', { class: 'wm-tips' }, under.map((d) => d.tip())));
+  }
+  svg.addEventListener('pointerleave', () => { if (hovering !== null) { hovering = null; hideTip(); } });
   svg.addEventListener('pointermove', (e) => {
-    if (!drag) return;
+    if (!drag) return hover(e);
     const k = unitsPerPx(), dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (Math.abs(dx) + Math.abs(dy) > 3) { drag.moved = true; svg.classList.add('is-dragging'); }
     if (drag.moved) setView({ ...drag.view, x: drag.view.x - dx * k, y: drag.view.y - dy * k });
