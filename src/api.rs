@@ -64,7 +64,7 @@ pub fn router(app: App) -> Router {
         .route("/users/{id}/shows", get(profile::shows))
         .route("/users/{id}/timeline", get(timeline::timeline))
         .route("/me/seen", post(profile::mark_seen))
-        .route("/me/watchlist", post(crate::watchlist::add_mine))
+        .route("/me/watchlist", get(crate::watchlist::list_mine).post(crate::watchlist::add_mine))
         .route("/me/watchlist/keys", get(crate::watchlist::keys_mine))
         .route("/me/watchlist/{id}", delete(crate::watchlist::remove_mine))
         .route("/libraries", get(stats::libraries))

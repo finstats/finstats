@@ -1479,6 +1479,7 @@ written anywhere but finstats' own database, and nothing is audit-logged.
 
 | Method | Path | Body | Response |
 |---|---|---|---|
+| GET | `/api/me/watchlist` | – | `{user: {id, name, has_image}, entries: [Entry]}`, newest first. |
 | POST | `/api/me/watchlist` | `{item_id}`, or `{kind, tmdb_id?, tvdb_id?, imdb_id?, title, year?}` | `{id, created}`: `201` when added, `200` when it was on the list already. |
 | DELETE | `/api/me/watchlist/{id}` | – | `{ok: true}`; `404` when the entry is not the caller's. |
 | GET | `/api/me/watchlist/keys` | – | `{entries: [{id, kind, item_ids, tmdb_id, tvdb_id, imdb_id}]}`, newest first. |
@@ -1493,3 +1494,24 @@ Adding what is already there — the same item, a copy of it in another library,
 answers the entry that is there. `keys` is what a page needs to show the toggle without a request per poster: `item_ids`
 is every item in the library that shares one of the entry's ids (a film in an HD and a 4K library is one title), plus the
 item it was added from.
+
+`Entry`: `{id, kind, title, year, added_at, item_id, tmdb_id, tvdb_id, imdb_id, state, progress, request, next, poster}`.
+`title` and `year` are the snapshot kept with the entry; `item_id` is the title in the library now (the lowest id of its
+copies), `null` when it is not there. `state` is worked out when the list is read and never stored — the first that holds:
+
+| `state` | When |
+|---|---|
+| `watched` | Seen by the profile's rule: a play that reached 80%, Jellyfin's played flag, or a mark by hand. A show when every episode on disk (no specials) is. Stays on the list until its owner removes it. |
+| `started` | In the library and begun: a film played but not that far, a show with some episodes seen or begun. |
+| `on_server` | In the library, not begun. |
+| `requested` | Open in Seerr (pending, approved, processing or partly there). |
+| `coming_up` | Sonarr or Radarr has a date in the next 90 days. |
+| `left_library` | It was in the library and is not any more. |
+| `not_on_server` | None of these. |
+
+`progress` is `{seen, total}` for a show somebody has begun, else `null`; of several copies the one furthest along
+counts. `request` is `{by_you: true}` for the caller's own request, and `{by_you: false, user_name}` for somebody else's —
+which is only ever sent to somebody with `see_everyone`: without it, another person's request is not mentioned at all,
+exactly as on the Pipeline page. `next` is `{day, at, release, season, episode}` from the calendar, `null` without one.
+`poster` is `{item_id}` for a title the library has or had, else `{service_id, media_id}` for one on the calendar or in a
+request the caller may see (served by `/api/img/arr/…`), else `null`.

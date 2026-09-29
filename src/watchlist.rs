@@ -9,7 +9,7 @@
 
 use anyhow::Result;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -212,6 +212,140 @@ fn provider_id(v: Option<Value>) -> Result<Option<String>, Refused> {
     }
 }
 
+/// A request in Seerr that has not arrived yet, as a watchlist may speak of it.
+struct Asked {
+    media_type: String,
+    tmdb_id: Option<String>,
+    tvdb_id: Option<String>,
+    imdb_id: Option<String>,
+    mine: bool,
+    user_name: Option<String>,
+    poster: Option<(i64, i64)>,
+}
+
+impl Asked {
+    fn is_for(&self, k: &Key) -> bool {
+        let same = |a: &Option<String>, b: &Option<String>| a.is_some() && a == b;
+        match k.kind.as_str() {
+            "Movie" => self.media_type == "movie" && (same(&self.tmdb_id, &k.tmdb_id) || same(&self.imdb_id, &k.imdb_id)),
+            _ => self.media_type == "tv" && (same(&self.tvdb_id, &k.tvdb_id) || same(&self.tmdb_id, &k.tmdb_id)),
+        }
+    }
+}
+
+/// What is still open in Seerr, under Pipeline's rule: the caller's own requests, and everybody's only for somebody
+/// who may see everyone's activity. The caller's own come first, so "you asked for it" wins over "bob did".
+fn open_requests(conn: &Connection, user_id: &str, everyone: bool) -> Result<Vec<Asked>> {
+    let sql = format!(
+        "SELECT r.media_type, CAST(r.tmdb_id AS TEXT), CAST(r.tvdb_id AS TEXT), r.imdb_id, COALESCE(r.user_id = ?1, 0), COALESCE(u.name, r.seerr_user_name),
+                r.arr_service_id, r.arr_media_id
+         FROM (SELECT r.*, {} AS state FROM requests r) r LEFT JOIN users u ON u.id = r.user_id
+         WHERE r.state IN ('pending', 'approved', 'processing', 'partial') AND (?2 OR r.user_id = ?1)
+         ORDER BY COALESCE(r.user_id = ?1, 0) DESC, r.requested_at",
+        crate::pipeline::STATE_SQL
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(params![user_id, everyone], |r| {
+        Ok(Asked {
+            media_type: r.get(0)?, tmdb_id: r.get(1)?, tvdb_id: r.get(2)?, imdb_id: r.get(3)?, mine: r.get(4)?, user_name: r.get(5)?,
+            poster: match (r.get::<_, Option<i64>>(6)?, r.get::<_, Option<i64>>(7)?) {
+                (Some(s), Some(m)) => Some((s, m)),
+                _ => None,
+            },
+        })
+    })?;
+    let asked = rows.collect::<Result<_, _>>()?;
+    Ok(asked)
+}
+
+/// Is this calendar entry the title an entry names? A film by its TMDB id, a show by its TVDB or TMDB id.
+fn is_on_calendar(e: &crate::pipeline::Entry, k: &Key) -> bool {
+    let same = |a: Option<i64>, b: &Option<String>| a.is_some_and(|a| b.as_deref() == Some(a.to_string().as_str()));
+    match (k.kind.as_str(), e.kind.as_str()) {
+        ("Movie", "movie") => same(e.tmdb_id, &k.tmdb_id),
+        ("Series", "episode") => same(e.tvdb_id, &k.tvdb_id) || same(e.tmdb_id, &k.tmdb_id),
+        _ => false,
+    }
+}
+
+/// Every entry on `user_id`'s list, newest first, each with what is true of its title now — never stored, so it
+/// cannot go stale. `everyone`: the caller may see everyone's activity, and so who asked for a title in Seerr.
+///
+/// The state is the first of these that holds: `watched` (by the profile's reading of "seen"; a show when every
+/// episode on disk is), `started` or `on_server` (in the library), `requested` (open in Seerr), `coming_up` (Sonarr or
+/// Radarr has a date), `left_library` (it was here and is not any more), `not_on_server`.
+pub fn listing(conn: &Connection, user_id: &str, everyone: bool) -> Result<Vec<Value>> {
+    let keys = keys(conn, user_id)?;
+    let snapshot: HashMap<i64, (Option<String>, String, Option<i64>, i64)> = conn
+        .prepare_cached("SELECT id, item_id, title, year, added_at FROM watchlist WHERE user_id = ?1")?
+        .query_map([user_id], |r| Ok((r.get(0)?, (r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))))?
+        .collect::<Result<_, _>>()?;
+    let every_item: Vec<String> = keys.iter().flat_map(|k| k.item_ids.iter().cloned()).collect();
+    let live: HashSet<String> = conn
+        .prepare_cached("SELECT id FROM items WHERE id IN (SELECT value FROM json_each(?1)) AND removed = 0")?
+        .query_map([serde_json::to_string(&every_item)?], |r| r.get(0))?
+        .collect::<Result<_, _>>()?;
+
+    // How far the caller got: films by the profile's rule, shows as the profile counts them (files only, no specials).
+    let film_items: Vec<String> = keys.iter().filter(|k| k.kind == "Movie").flat_map(|k| k.item_ids.iter().cloned()).collect();
+    let films: HashMap<String, &str> = crate::profile::films(conn, user_id, &film_items)?.into_iter().map(|(id, state, _)| (id, state)).collect();
+    let mut shows: HashMap<String, (i64, i64, i64)> = HashMap::new(); // series → (seen, started, on disk)
+    for e in crate::profile::episodes(conn, user_id, None)? {
+        let s = shows.entry(e.series_id).or_default();
+        s.0 += i64::from(e.state == "seen");
+        s.1 += i64::from(e.state == "started");
+        s.2 += 1;
+    }
+    let requests = open_requests(conn, user_id, everyone)?;
+    let calendar = crate::pipeline::entries_for(conn, 90, user_id, false)?;
+
+    let mut out = vec![];
+    for k in &keys {
+        let Some((item_id, title, year, added_at)) = snapshot.get(&k.id) else { continue };
+        let here = k.item_ids.iter().find(|i| live.contains(*i));
+        // Of several copies, the one furthest along speaks for the title.
+        let (seen, begun, progress) = if k.kind == "Movie" {
+            let rank = |i: &String| match films.get(i).copied() { Some("seen") => 2, Some("started") => 1, _ => 0 };
+            let best = k.item_ids.iter().map(rank).max().unwrap_or(0);
+            (best == 2, best == 1, Value::Null)
+        } else {
+            match k.item_ids.iter().filter_map(|i| shows.get(i)).max_by_key(|s| (s.0, s.2)) {
+                Some(&(seen, started, total)) => (total > 0 && seen == total, seen + started > 0, json!({ "seen": seen, "total": total })),
+                None => (false, false, Value::Null),
+            }
+        };
+        let asked = requests.iter().find(|r| r.is_for(k));
+        let next = calendar.iter().map(|(e, _)| e).find(|e| !e.has_file && is_on_calendar(e, k));
+        let state = if seen {
+            "watched"
+        } else if here.is_some() {
+            if begun { "started" } else { "on_server" }
+        } else if asked.is_some() {
+            "requested"
+        } else if next.is_some() {
+            "coming_up"
+        } else if item_id.is_some() {
+            "left_library"
+        } else {
+            "not_on_server"
+        };
+        let poster = match (here.or(item_id.as_ref()), next, asked.and_then(|a| a.poster)) {
+            (Some(id), _, _) => json!({ "item_id": id }),
+            (None, Some(e), _) => json!({ "service_id": e.service_id, "media_id": e.arr_media_id }),
+            (None, None, Some((s, m))) => json!({ "service_id": s, "media_id": m }),
+            _ => Value::Null,
+        };
+        let request = asked.map(|a| if a.mine { json!({ "by_you": true }) } else { json!({ "by_you": false, "user_name": a.user_name }) });
+        out.push(json!({
+            "id": k.id, "kind": k.kind, "title": title, "year": year, "added_at": added_at, "item_id": here,
+            "tmdb_id": k.tmdb_id, "tvdb_id": k.tvdb_id, "imdb_id": k.imdb_id,
+            "state": state, "progress": progress, "request": request, "poster": poster,
+            "next": next.map(|e| json!({ "day": e.day, "at": e.at, "release": e.release, "season": e.season, "episode": e.episode })),
+        }));
+    }
+    Ok(out)
+}
+
 // ---------------------------------------------------------------- the endpoints: the caller's own list, and nobody else's
 
 impl From<Refused> for ApiError {
@@ -276,6 +410,22 @@ pub async fn remove_mine(State(app): State<App>, user: AuthUser, Path(id): Path<
     Ok(Json(json!({ "ok": true })))
 }
 
+/// `GET /api/me/watchlist` — the caller's list, each entry with its state, and who the caller is for the page's header.
+pub async fn list_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
+    let (uid, everyone) = (user.id.clone(), user.perms.see_everyone);
+    let (who, entries) = app
+        .db
+        .call(move |c| {
+            let who = c
+                .query_row("SELECT name, image_tag IS NOT NULL FROM users WHERE id = ?1", [&uid], |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?)))
+                .optional()?;
+            Ok((who, listing(c, &uid, everyone)?))
+        })
+        .await?;
+    let (name, has_image) = who.unwrap_or_else(|| (user.name.clone(), false));
+    Ok(Json(json!({ "user": { "id": user.id, "name": name, "has_image": has_image }, "entries": entries })))
+}
+
 /// `GET /api/me/watchlist/keys` — what is on the caller's list, for the pages that offer the toggle.
 pub async fn keys_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
     let uid = user.id.clone();
@@ -290,6 +440,7 @@ pub async fn keys_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     fn conn() -> Connection {
         let c = Connection::open_in_memory().unwrap();
@@ -457,5 +608,104 @@ mod tests {
         for bad in [json!(-3), json!(1.5), json!([1]), json!({ "a": 1 }), json!(true)] {
             assert!(provider_id(Some(bad.clone())).is_err(), "{bad}");
         }
+    }
+    /// A household's library, Seerr and calendar, and alice's list with one entry for every state there is.
+    fn household() -> Connection {
+        let c = conn();
+        c.execute_batch(
+            r#"INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 0), ('bob', 'bob', 0);
+               INSERT INTO items(id, type, name, runtime_s, removed, provider_ids, updated_at) VALUES
+                 ('gone', 'Movie', 'Old Cut', 6000, 1, '{"Tmdb":"555"}', 0);
+               UPDATE items SET runtime_s = 6000 WHERE type = 'Movie';
+               INSERT INTO items(id, type, name, series_id, parent_index_number, index_number, path, runtime_s, updated_at) VALUES
+                 ('e1', 'Episode', 'One', 'show', 1, 1, '/e1', 1000, 0), ('e2', 'Episode', 'Two', 'show', 1, 2, '/e2', 1000, 0),
+                 ('e3', 'Episode', 'Three', 'show', 1, 3, '/e3', 1000, 0), ('e4', 'Episode', 'Four', 'show', 1, 4, '/e4', 1000, 0);
+               UPDATE items SET path = NULL WHERE id = 'ep1';
+               INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, started_at, ended_at, duration_s, position_s, runtime_s) VALUES
+                 ('live', 'alice', 'alice', 'bbb4k', 'Big Buck Bunny', 'Movie', NULL, 0, 5500, 5500, 5500, 6000),
+                 ('live', 'alice', 'alice', 'sintel', 'Sintel', 'Movie', NULL, 0, 600, 600, 600, 6000),
+                 ('live', 'alice', 'alice', 'e1', 'One', 'Episode', 'show', 0, 1000, 1000, 1000, 1000),
+                 ('live', 'alice', 'alice', 'e2', 'Two', 'Episode', 'show', 0, 1000, 1000, 1000, 1000);
+               INSERT INTO services(id, kind, name, url, secret, created_at) VALUES (1, 'sonarr', 'Sonarr', 'http://nas:8989', 'k', 1),
+                 (2, 'radarr', 'Radarr', 'http://nas:7878', 'k', 1), (3, 'seerr', 'Seerr', 'http://nas:5055', 'k', 1);
+               INSERT INTO upcoming(service_id, kind, external_id, release, at, series_title, title, season, episode, year, tvdb_id, tmdb_id, arr_media_id)
+                 VALUES (1, 'episode', 71, 'air', CAST(strftime('%s', 'now', '+3 days') AS INTEGER), 'Nightfall Bay', 'Arrival', 1, 1, 2026, 380002, NULL, 12);
+               INSERT INTO requests(service_id, request_id, media_type, tmdb_id, title, status, media_status, requested_at, updated_at, user_id, arr_service_id, arr_media_id) VALUES
+                 (3, 1, 'movie', 990001, 'Winterline', 2, 3, 10, 10, 'alice', 2, 31),
+                 (3, 2, 'movie', 990002, 'Glass Harbour', 1, 2, 10, 10, 'bob', 2, 32);"#,
+        )
+        .unwrap();
+        let t = |kind: &str, tmdb: Option<&str>, tvdb: Option<&str>, title: &str| {
+            Wanted::Title(Title { kind: kind.into(), tmdb_id: tmdb.map(Into::into), tvdb_id: tvdb.map(Into::into), title: title.into(), ..Default::default() })
+        };
+        for (n, w) in [
+            Wanted::Item("bbb".into()),                                   // seen, on the 4K copy
+            Wanted::Item("sintel".into()),                                // a tenth of it
+            Wanted::Item("plain".into()),                                 // in the library, not begun
+            Wanted::Item("show".into()),                                  // two of four episodes
+            Wanted::Item("gone".into()),                                  // left the library
+            t("Movie", Some("990001"), None, "Winterline"),               // alice asked for it
+            t("Movie", Some("990002"), None, "Glass Harbour"),            // bob asked for it
+            t("Series", None, Some("380002"), "Nightfall Bay"),           // Sonarr has a date
+            t("Movie", Some("990003"), None, "Nowhere Yet"),              // none of the above
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            add(&c, "alice", w, 100 + n as i64).unwrap().unwrap();
+        }
+        add(&c, "bob", Wanted::Item("sintel".into()), 1).unwrap().unwrap();
+        c
+    }
+
+    fn states(c: &Connection, everyone: bool) -> Vec<(String, String)> {
+        listing(c, "alice", everyone).unwrap().iter().map(|e| (e["title"].as_str().unwrap().to_string(), e["state"].as_str().unwrap().to_string())).collect()
+    }
+
+    #[test]
+    fn every_entry_says_what_is_true_of_its_title_now() {
+        let c = household();
+        assert_eq!(states(&c, false), [
+            ("Nowhere Yet", "not_on_server"), ("Nightfall Bay", "coming_up"), ("Glass Harbour", "not_on_server"), ("Winterline", "requested"),
+            ("Old Cut", "left_library"), ("Low Orbit", "started"), ("Home Video", "on_server"), ("Sintel", "started"), ("Big Buck Bunny", "watched"),
+        ].map(|(a, b)| (a.to_string(), b.to_string())), "newest first; somebody else's request is not even hinted at");
+        let list = listing(&c, "alice", false).unwrap();
+        let get = |title: &str| list.iter().find(|e| e["title"] == title).unwrap().clone();
+        assert_eq!(get("Low Orbit")["progress"], json!({ "seen": 2, "total": 4 }), "files only: the virtual episode is not one to watch");
+        assert_eq!(get("Winterline")["request"], json!({ "by_you": true }));
+        assert!(get("Nightfall Bay")["next"]["day"].is_string() && get("Nightfall Bay")["next"]["season"] == 1);
+        assert_eq!(get("Nightfall Bay")["poster"], json!({ "service_id": 1, "media_id": 12 }), "a title not in the library has Sonarr's poster");
+        assert_eq!(get("Winterline")["poster"], json!({ "service_id": 2, "media_id": 31 }), "…or Radarr's, from the request");
+        assert_eq!(get("Glass Harbour")["poster"], Value::Null, "not from somebody else's request either");
+        assert_eq!((get("Sintel")["item_id"].as_str(), get("Old Cut")["item_id"].as_str()), (Some("sintel"), None), "a link only to what is there");
+    }
+
+    #[test]
+    fn who_else_asked_is_said_only_to_whoever_may_see_everyone() {
+        let c = household();
+        let list = listing(&c, "alice", true).unwrap();
+        let glass = list.iter().find(|e| e["title"] == "Glass Harbour").unwrap();
+        assert_eq!((glass["state"].as_str(), &glass["request"]), (Some("requested"), &json!({ "by_you": false, "user_name": "bob" })));
+    }
+
+    #[test]
+    fn a_show_is_watched_when_every_episode_on_disk_is() {
+        let c = household();
+        c.execute_batch(
+            "INSERT INTO manual_seen VALUES ('alice', 'e3', 0);
+             INSERT INTO user_items(user_id, item_id, played) VALUES ('alice', 'e4', 1);",
+        )
+        .unwrap();
+        let list = listing(&c, "alice", false).unwrap();
+        let show = list.iter().find(|e| e["title"] == "Low Orbit").unwrap();
+        assert_eq!((show["state"].as_str(), &show["progress"]), (Some("watched"), &json!({ "seen": 4, "total": 4 })));
+    }
+
+    #[test]
+    fn a_list_is_its_owner_s_alone() {
+        let c = household();
+        let bobs = listing(&c, "bob", true).unwrap();
+        assert_eq!(bobs.len(), 1);
+        assert_eq!((bobs[0]["title"].as_str(), bobs[0]["state"].as_str()), (Some("Sintel"), Some("on_server")), "alice's plays are not bob's");
     }
 }

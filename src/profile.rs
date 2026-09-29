@@ -141,6 +141,27 @@ pub(crate) fn episodes(conn: &Connection, user_id: &str, until: Option<i64>) -> 
     Ok(out)
 }
 
+/// How far one person got with each of these films (or any title that stands alone), by the same three sources and
+/// the same 80% as an episode: (item id, "seen" | "started" | "none", which source said seen).
+pub(crate) fn films(conn: &Connection, user_id: &str, item_ids: &[String]) -> Result<Vec<(String, &'static str, Option<&'static str>)>> {
+    let mut stmt = conn.prepare_cached(&format!(
+        "WITH wanted(id) AS (SELECT value FROM json_each(?2)),
+         mine AS (
+            SELECT p.item_id, MAX({PLAY_FRAC}) AS frac
+            FROM playbacks p LEFT JOIN items i ON i.id = p.item_id
+            WHERE p.user_id = ?1 AND p.item_id IN (SELECT id FROM wanted) GROUP BY p.item_id)
+         SELECT w.id, m.frac, COALESCE(ui.played, 0), ms.item_id IS NOT NULL
+         FROM wanted w LEFT JOIN mine m ON m.item_id = w.id
+         LEFT JOIN user_items ui ON ui.user_id = ?1 AND ui.item_id = w.id
+         LEFT JOIN manual_seen ms ON ms.user_id = ?1 AND ms.item_id = w.id"
+    ))?;
+    let rows = stmt.query_map(params![user_id, serde_json::to_string(item_ids)?], |r| {
+        let (state, source) = verdict(r.get(1)?, r.get::<_, i64>(2)? != 0, r.get(3)?);
+        Ok((r.get::<_, String>(0)?, state, source))
+    })?;
+    Ok(rows.collect::<Result<_, _>>()?)
+}
+
 fn user_shows(conn: &Connection, user_id: &str) -> Result<Vec<Value>> {
     let mut shows: Vec<Value> = vec![];
     for e in episodes(conn, user_id, None)? {
@@ -275,5 +296,29 @@ mod tests {
         let s = streaks(&c, "u", 0).unwrap();
         assert_eq!((s["longest"]["days"].as_i64(), s["longest"]["from"].as_str(), s["longest"]["to"].as_str()), (Some(3), Some("2026-01-01"), Some("2026-01-03")));
         assert_eq!((s["current"]["days"].as_i64(), s["active_days"].as_i64()), (Some(0), Some(5)));
+    }
+    #[test]
+    fn a_film_is_seen_by_the_same_rule_as_an_episode() {
+        let c = db();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, runtime_s) VALUES ('m1', 'Movie', 'Watched', 6000), ('m2', 'Movie', 'Begun', 6000),
+                ('m3', 'Movie', 'Flagged', 6000), ('m4', 'Movie', 'Marked', 6000), ('m5', 'Movie', 'Untouched', 6000), ('m6', 'Movie', 'Imported', 6000);
+             INSERT INTO playbacks(user_id, item_id, item_type, started_at, ended_at, duration_s, position_s, runtime_s) VALUES
+                ('u', 'm1', 'Movie', 0, 5000, 5000, 5000, 6000),
+                ('u', 'm2', 'Movie', 0, 900, 900, 900, 6000),
+                ('someone-else', 'm5', 'Movie', 0, 6000, 6000, 6000, 6000);
+             -- an imported play: no position, only how long it ran, and the runtime from the library
+             INSERT INTO playbacks(user_id, item_id, item_type, started_at, ended_at, duration_s) VALUES ('u', 'm6', 'Movie', 0, 5400, 5400);
+             INSERT INTO user_items VALUES ('u', 'm3', 1, NULL);
+             INSERT INTO manual_seen VALUES ('u', 'm4', 0);",
+        )
+        .unwrap();
+        let ids: Vec<String> = ["m1", "m2", "m3", "m4", "m5", "m6"].map(String::from).to_vec();
+        let mut got = films(&c, "u", &ids).unwrap();
+        got.sort();
+        assert_eq!(got, vec![
+            ("m1".into(), "seen", Some("played")), ("m2".into(), "started", None), ("m3".into(), "seen", Some("jellyfin")),
+            ("m4".into(), "seen", Some("manual")), ("m5".into(), "none", None), ("m6".into(), "seen", Some("played")),
+        ]);
     }
 }

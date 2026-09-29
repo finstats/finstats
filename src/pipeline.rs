@@ -234,7 +234,7 @@ pub async fn upcoming(State(app): State<App>, user: AuthUser, Query(q): Query<Up
 // ---------------------------------------------------------------- requests
 
 /// Seerr's two numbers as one word. A request that vanished from Seerr stays "available" if it had arrived.
-const STATE_SQL: &str = "CASE WHEN r.removed_at IS NOT NULL AND r.media_status <> 5 THEN 'removed'
+pub(crate) const STATE_SQL: &str = "CASE WHEN r.removed_at IS NOT NULL AND r.media_status <> 5 THEN 'removed'
       WHEN r.status = 3 THEN 'declined' WHEN r.status = 4 THEN 'failed'
       WHEN r.media_status = 5 THEN 'available' WHEN r.media_status = 4 THEN 'partial'
       WHEN r.status = 1 THEN 'pending' WHEN r.media_status = 3 THEN 'processing' ELSE 'approved' END";
