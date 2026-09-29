@@ -271,6 +271,7 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
     tokio::spawn(downloads::run(app.clone()));
     tokio::spawn(notify::run(app.clone()));
     tokio::spawn(sync::scheduler(app.clone()));
+    tokio::spawn(jobs::run(app.clone()));
     tokio::spawn(api::prune_image_cache(app.clone()));
 
     let bind = env("FINSTATS_BIND").unwrap_or_else(|| "0.0.0.0:8080".into());

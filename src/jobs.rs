@@ -30,6 +30,9 @@ use crate::state::{ApiResult, App};
 
 /// Jellyfin is asked for its task list at most this often, however many people are watching.
 const MIN_GAP_S: i64 = 3;
+/// While a job runs, the backend reads the list this often by itself, so a rate is measured whether or not
+/// anybody has the page open.
+const BUSY_EVERY_S: u64 = 10;
 /// .NET ticks: 10 million to the second.
 const TICKS_PER_S: i64 = 10_000_000;
 
@@ -265,6 +268,12 @@ impl Watch {
         run
     }
 
+    /// How soon the backend should read Jellyfin's jobs again by itself: while it knows of a run in progress, often
+    /// enough to time it; otherwise not at all — the scheduler's five-minute read notices the next run.
+    pub fn next_look(&self) -> Option<std::time::Duration> {
+        (!self.runs.is_empty()).then_some(std::time::Duration::from_secs(BUSY_EVERY_S))
+    }
+
     fn forget(&mut self, running: &[String]) {
         self.runs.retain(|id, _| running.iter().any(|r| r == id));
     }
@@ -354,8 +363,14 @@ pub async fn jobs(axum::extract::State(app): axum::extract::State<App>, _viewer:
             return Ok(axum::Json(answer.clone()));
         }
     }
+    Ok(axum::Json(refresh(&app, now).await))
+}
+
+/// One read of Jellyfin's jobs, timed and kept as the answer the page is served. The endpoint and the backend's
+/// own watch (`run`) both go through here, so what a page is told was measured by the same clock either way.
+async fn refresh(app: &App, now: i64) -> Value {
     let Some(jf) = app.jellyfin() else {
-        return Ok(axum::Json(json!({ "jobs": [], "running": 0, "fetched_at": now, "error": "Not connected to Jellyfin" })));
+        return json!({ "jobs": [], "running": 0, "fetched_at": now, "error": "Not connected to Jellyfin" });
     };
     let tasks = match jf.scheduled_tasks_all().await {
         Ok(tasks) => tasks,
@@ -365,7 +380,7 @@ pub async fn jobs(axum::extract::State(app): axum::extract::State<App>, _viewer:
             let mut answer = stale.unwrap_or_else(|| json!({ "jobs": [], "running": 0 }));
             answer["error"] = json!("Jellyfin did not answer");
             answer["fetched_at"] = json!(now);
-            return Ok(axum::Json(answer));
+            return answer;
         }
     };
     let mut watch = app.jf_jobs.lock().unwrap();
@@ -380,7 +395,29 @@ pub async fn jobs(axum::extract::State(app): axum::extract::State<App>, _viewer:
     let answer = json!({ "jobs": jobs, "running": running, "fetched_at": now });
     watch.fetched_at = now;
     watch.answer = Some(answer.clone());
-    Ok(axum::Json(answer))
+    answer
+}
+
+/// The backend's own watch over Jellyfin's jobs: while one runs, read the list every `BUSY_EVERY_S` so its rate is
+/// measured with nobody looking, and the page is told an estimate the moment it opens. Idle, it makes no request:
+/// the scheduler's five-minute read (`observe`) is what notices the next run, and this looks at what that read left
+/// in memory every few seconds, which costs nothing.
+pub async fn run(app: App) {
+    loop {
+        let next = app.jf_jobs.lock().unwrap().next_look();
+        match next {
+            Some(every) => {
+                let now = db::now();
+                let fresh = app.jf_jobs.lock().unwrap().fetched_at;
+                // A page asking every three seconds has just read it; there is no need to ask again.
+                if now - fresh >= every.as_secs() as i64 {
+                    refresh(&app, now).await;
+                }
+                tokio::time::sleep(every).await;
+            }
+            None => tokio::time::sleep(std::time::Duration::from_secs(5)).await,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -482,6 +519,18 @@ mod tests {
         let run = cold.note("trickplay", 6.0, 303);
         let (gained, over_s) = run.measured();
         assert_eq!(eta_s(6.0, gained, over_s), None, "one reading is nothing to measure between");
+    }
+
+    /// The owner's request: the estimate lives in the backend, so the page is told one the moment it opens. A run is
+    /// timed by finstats itself while it goes on, not only while somebody has the page open.
+    #[test]
+    fn a_running_job_keeps_being_timed_with_nobody_looking() {
+        let mut w = Watch::default();
+        assert_eq!(w.next_look(), None, "nothing running: nothing to time, and no request made for it");
+        w.observe(&[json!({ "Id": "scan", "State": "Running", "CurrentProgressPercentage": 3.0 })], 0);
+        assert_eq!(w.next_look(), Some(std::time::Duration::from_secs(BUSY_EVERY_S)));
+        w.observe(&[json!({ "Id": "scan", "State": "Idle" })], 60);
+        assert_eq!(w.next_look(), None, "the run ended");
     }
 
     #[test]
