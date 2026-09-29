@@ -701,6 +701,7 @@ th[aria-sort="descending"] .th-sort-icon { transform: rotate(180deg); }
 /* ------------------------------------------------------------ facts */
 .facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 20px; }
 .fact { min-width: 0; }
+.fact-wide { grid-column: 1 / -1; }
 .fact dt { font-size: 11.5px; color: var(--text-faint); margin-bottom: 1px; }
 .fact dd { color: var(--text); overflow-wrap: anywhere; }
 .path { font-size: 12px; color: var(--text-muted); }

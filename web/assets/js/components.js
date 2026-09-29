@@ -526,9 +526,11 @@ export function openModal({ title, body, wide = false, onClose, initialFocus, la
 }
 
 // ---------------------------------------------------------------- definition grid
+/** A grid of label/value pairs. `{ wide: true }` gives a pair the whole row: a long value (a file path) squeezed into
+ *  one cell broke onto a line every few characters beside a row left empty. */
 export function facts(pairs) {
   return h('dl', { class: 'facts' }, pairs.filter(Boolean).map(([k, v, opts]) =>
-    h('div', { class: 'fact' }, h('dt', null, k), h('dd', { class: opts && opts.mono ? 'mono' : '' }, v == null || v === '' ? '–' : v))));
+    h('div', { class: ['fact', opts && opts.wide && 'fact-wide'] }, h('dt', null, k), h('dd', { class: opts && opts.mono ? 'mono' : '' }, v == null || v === '' ? '–' : v))));
 }
 
 export { num, compact, duration, durationExact, api };

@@ -72,7 +72,7 @@ export default function itemPage(ctx) {
         it.bitrate ? ['Bitrate', bitrate(it.bitrate), { mono: true }] : null,
         it.bit_depth ? ['Bit depth', it.bit_depth + '-bit', { mono: true }] : null,
         it.framerate ? ['Frame rate', (Math.round(Number(it.framerate) * 1000) / 1000) + ' fps', { mono: true }] : null,
-        can('see_server') && it.path ? ['Path', h('span', { class: 'mono path' }, it.path)] : null,
+        can('see_server') && it.path ? ['Path', h('span', { class: 'mono path' }, it.path), { wide: true }] : null,
       ]);
 
       return [
