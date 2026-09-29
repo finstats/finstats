@@ -291,37 +291,18 @@ impl Jellyfin {
         }
     }
 
-    /// One page of a library's items. Returns (items, total).
-    /// One page of what Jellyfin saved since a moment, ids and image tags only (`artwork::changed_query`).
-    pub async fn changed_page(&self, since: i64, start: usize, limit: usize) -> Result<Vec<Value>> {
-        let mut v = self.get_json("/Items", &crate::artwork::changed_query(since, start, limit)).await?;
+    /// One page of what Jellyfin saved in a library since a moment (`changed_query`).
+    pub async fn changed_page(&self, library_id: &str, since: i64, start: usize, limit: usize) -> Result<Vec<Value>> {
+        let mut v = self.get_json("/Items", &changed_query(library_id, since, start, limit)).await?;
         Ok(match v["Items"].take() {
             Value::Array(a) => a,
             _ => vec![],
         })
     }
 
+    /// One page of a library's items. Returns (items, total).
     pub async fn items_page(&self, library_id: &str, start: usize, limit: usize) -> Result<(Vec<Value>, usize)> {
-        let q = [
-            ("ParentId", library_id.to_string()),
-            ("Recursive", "true".into()),
-            ("IncludeItemTypes", ITEM_TYPES.into()),
-            ("Fields", "Genres,DateCreated,MediaSources,Path,Overview,OriginalTitle,ProviderIds,Studios".into()),
-            // Missing and unaired episodes exist in Jellyfin as virtual items without a file. They are
-            // not part of the library as far as statistics go.
-            ("ExcludeLocationTypes", "Virtual".into()),
-            // With "group movies into collections" on, Jellyfin answers with the BoxSet *instead of* the
-            // films inside it. Everything in a collection would be missing, and then flagged as removed.
-            ("CollapseBoxSetItems", "false".into()),
-            ("EnableUserData", "false".into()),
-            ("EnableImageTypes", "Primary,Backdrop".into()),
-            ("ImageTypeLimit", "1".into()),
-            ("SortBy", "DateCreated,SortName".into()),
-            ("SortOrder", "Ascending".into()),
-            ("StartIndex", start.to_string()),
-            ("Limit", limit.to_string()),
-            ("EnableTotalRecordCount", (start == 0).to_string()),
-        ];
+        let q = library_query(library_id, start, limit);
         let resp = self.get("/Items").query(&q).timeout(Duration::from_secs(180)).send().await?;
         if !resp.status().is_success() {
             bail!("Jellyfin answered {} for /Items", resp.status());
@@ -461,6 +442,44 @@ impl Jellyfin {
     }
 }
 
+/// The library read's question: every real item of one library, with what finstats keeps of it.
+fn library_query(library_id: &str, start: usize, limit: usize) -> Vec<(&'static str, String)> {
+    vec![
+        ("ParentId", library_id.to_string()),
+        ("Recursive", "true".into()),
+        ("IncludeItemTypes", ITEM_TYPES.into()),
+        ("Fields", "Genres,DateCreated,MediaSources,Path,Overview,OriginalTitle,ProviderIds,Studios".into()),
+        // Missing and unaired episodes exist in Jellyfin as virtual items without a file. They are
+        // not part of the library as far as statistics go.
+        ("ExcludeLocationTypes", "Virtual".into()),
+        // With "group movies into collections" on, Jellyfin answers with the BoxSet *instead of* the
+        // films inside it. Everything in a collection would be missing, and then flagged as removed.
+        ("CollapseBoxSetItems", "false".into()),
+        ("EnableUserData", "false".into()),
+        ("EnableImageTypes", "Primary,Backdrop".into()),
+        ("ImageTypeLimit", "1".into()),
+        ("SortBy", "DateCreated,SortName".into()),
+        ("SortOrder", "Ascending".into()),
+        ("StartIndex", start.to_string()),
+        ("Limit", limit.to_string()),
+        ("EnableTotalRecordCount", (start == 0).to_string()),
+    ]
+}
+
+/// What Jellyfin saved in one library since a moment (unix seconds): the library read's question for only the
+/// items changed since, with their cast and crew as well — a few items, where the library read has thousands.
+pub fn changed_query(library_id: &str, since: i64, start: usize, limit: usize) -> Vec<(&'static str, String)> {
+    let since = chrono::DateTime::from_timestamp(since, 0).unwrap_or_default().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    let mut q = library_query(library_id, start, limit);
+    for (k, v) in q.iter_mut() {
+        if *k == "Fields" {
+            v.push_str(",People");
+        }
+    }
+    q.push(("MinDateLastSaved", since));
+    q
+}
+
 /// Jellyfin's own "Scan Media Library" task in a list of tasks: (is it running right now, when it last
 /// finished). `None` when the list holds no such task. Pure, so one read of `/ScheduledTasks` can answer
 /// this and still be worth something to `jobs::observe`.
@@ -480,6 +499,23 @@ pub fn web_link(base: &str, item_id: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_look_for_changes_asks_the_library_reads_question_for_what_was_saved_since() {
+        let q = changed_query("lib1", 1_790_685_895, 0, 200);
+        let get = |k: &str| q.iter().find(|(key, _)| *key == k).map(|(_, v)| v.as_str());
+        assert_eq!(get("MinDateLastSaved"), Some("2026-09-29T12:44:55Z"));
+        assert_eq!(get("ParentId"), Some("lib1"), "an item is stored under its library");
+        let fields = get("Fields").unwrap_or_default();
+        assert!(fields.contains("People"), "cast and crew change too: {fields}");
+        // Everything else is the library read's own question, so a changed item is stored exactly as a read stores it.
+        for (k, v) in library_query("lib1", 0, 200) {
+            if k != "Fields" {
+                assert_eq!(get(k), Some(v.as_str()), "{k}");
+            }
+        }
+        assert!(library_query("lib1", 0, 200).iter().find(|(k, _)| *k == "Fields").is_some_and(|(_, f)| fields.starts_with(f.as_str())));
+    }
 
     /// Only a path of `/web` is Jellyfin's web client; a host that happens to be called "web" is not.
     #[test]

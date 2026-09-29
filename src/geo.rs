@@ -345,22 +345,24 @@ pub fn spawn_download(app: &App) -> bool {
     true
 }
 
-/// With the other small, regular jobs: pick up a file the owner dropped in, and, when allowed, fetch a
-/// newer month once the downloaded one is old.
-pub async fn refresh(app: &App) {
+/// With the other small, regular housekeeping: pick up a file the owner dropped in.
+pub async fn pick_up(app: &App) {
     if load(app) {
         crate::security::refresh_all(app).await;
     }
-    if !app.settings().geoip_download || std::env::var("FINSTATS_GEOIP_DB").is_ok_and(|p| !p.trim().is_empty()) {
-        return;
+}
+
+/// When the `geoip` job's trigger fires: fetch a newer month once the downloaded one is old. The trigger is the
+/// owner's consent — a job without one never reaches DB-IP.
+pub fn download_if_stale(app: &App) -> bool {
+    if std::env::var("FINSTATS_GEOIP_DB").is_ok_and(|p| !p.trim().is_empty()) {
+        return false;
     }
     let stale = match app.geo.get() {
         None => true,
         Some(db) => db.is_dbip() && crate::db::now() - db.built_at > REFRESH_AFTER_S && !candidate_months(chrono::Utc::now().date_naive()).iter().any(|m| db.path.to_string_lossy().contains(m.as_str())),
     };
-    if stale {
-        spawn_download(app);
-    }
+    stale && spawn_download(app)
 }
 
 #[cfg(test)]

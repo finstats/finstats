@@ -112,6 +112,7 @@ pub fn router(app: App) -> Router {
         .route("/services/{id}", axum::routing::put(services::update).delete(services::remove))
         .route("/tasks", get(get_tasks))
         .route("/tasks/{id}/run", post(run_task))
+        .route("/tasks/{id}/triggers", axum::routing::put(put_triggers).delete(reset_triggers))
         // Backups run to hundreds of MB and are streamed to disk, never buffered.
         .route("/import/jellystat", post(import_jellystat).layer(DefaultBodyLimit::disable()))
         .route("/import/streamystats", post(import_streamystats).layer(DefaultBodyLimit::disable()))
@@ -625,7 +626,6 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
     let homes = (next.home_addresses != before.home_addresses).then(|| next.home_addresses.clone());
     let homes_changed = homes.is_some();
     let lookup_switched_on = next.public_ip_lookup && !before.public_ip_lookup;
-    let geoip_switched_on = next.geoip_download && !before.geoip_download;
     let rules_changed = (next.travel_speed_kmh, next.travel_min_km) != (before.travel_speed_kmh, before.travel_min_km);
     app.db
         .call(move |c| {
@@ -646,9 +646,6 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
     app.wake.notify_waiters();
     if lookup_switched_on {
         crate::network::refresh(&app).await;
-    }
-    if geoip_switched_on {
-        crate::geo::refresh(&app).await;
     }
     if rules_changed || homes_changed {
         security::check(&app, None).await;
@@ -671,17 +668,86 @@ async fn get_tasks(State(app): State<App>, Manager(_): Manager) -> ApiResult {
         })
         .await?;
     let collector = app.collector.read().unwrap().clone();
-    Ok(Json(json!({ "tasks": app.tasks.snapshot(), "collector": collector, "db": dbinfo })))
+    let settings = app.settings();
+    let tasks: Vec<Value> = app.tasks.snapshot().iter().map(|t| task_json(t, &settings)).collect();
+    Ok(Json(json!({ "tasks": tasks, "collector": collector, "db": dbinfo, "time_zone": time_zone() })))
+}
+
+/// One job as the Tasks section shows it: how it last went, and when it runs (`schedule`).
+fn task_json(t: &crate::state::TaskState, settings: &Settings) -> Value {
+    use crate::schedule;
+    let schedulable = schedule::SCHEDULED.contains(&t.id);
+    let triggers = if schedulable { schedule::effective(t.id, settings) } else { vec![] };
+    let mut v = serde_json::to_value(t).unwrap_or_default();
+    if let Some(o) = v.as_object_mut() {
+        o.insert("schedulable".into(), json!(schedulable));
+        o.insert("next_at".into(), json!(schedule::next_at(&triggers, db::now(), t.finished_at, &chrono::Local)));
+        o.insert("triggers".into(), json!(triggers));
+        o.insert("custom".into(), json!(settings.schedules.contains_key(t.id)));
+        o.insert("runnable".into(), json!(RUNNABLE.contains(&t.id)));
+        o.insert("can".into(), json!({ "after_scan": schedule::AFTER_SCAN.contains(&t.id), "limit": schedule::takes_limit(t.id) }));
+    }
+    v
+}
+
+/// The zone times of day are in: finstats' own, which is the process's `TZ`.
+fn time_zone() -> String {
+    std::env::var("TZ").ok().filter(|z| !z.trim().is_empty()).unwrap_or_else(|| chrono::Local::now().format("UTC%:z").to_string())
+}
+
+/// `PUT /api/tasks/{id}/triggers` with `{"triggers": [...]}`: the job's own schedule. An empty list means by hand only.
+async fn put_triggers(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>, Json(body): Json<Value>) -> ApiResult {
+    let Some(id) = crate::state::TASK_IDS.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
+    let triggers: Vec<crate::schedule::Trigger> =
+        serde_json::from_value(body["triggers"].clone()).map_err(|e| ApiError::bad_request(format!("Invalid triggers: {e}")))?;
+    crate::schedule::validate(id, &triggers).map_err(ApiError::bad_request)?;
+    let mut next = app.settings();
+    next.schedules.insert(id.to_string(), triggers.clone());
+    save_schedule(&app, &user, id, next, json!({ "triggers": triggers })).await
+}
+
+/// `DELETE /api/tasks/{id}/triggers`: back to the job's defaults.
+async fn reset_triggers(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>) -> ApiResult {
+    let Some(id) = crate::state::TASK_IDS.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
+    let mut next = app.settings();
+    next.schedules.remove(id);
+    save_schedule(&app, &user, id, next, json!({ "reset": true })).await
+}
+
+async fn save_schedule(app: &App, user: &AuthUser, id: &'static str, next: Settings, detail: Value) -> ApiResult {
+    next.validate().map_err(ApiError::bad_request)?;
+    let raw = serde_json::to_string(&next).map_err(anyhow::Error::from)?;
+    app.db.call(move |c| db::set_setting(c, "settings", &raw)).await?;
+    *app.settings.write().unwrap() = next;
+    // The scheduler looks again now: a trigger due in the next minute should not wait for the one after.
+    app.wake.notify_waiters();
+    audit::record(app, audit::Entry::new("task_schedule_changed", Actor::from(user)).target(id).detail(detail));
+    let settings = app.settings();
+    let t = app.tasks.snapshot().into_iter().find(|t| t.id == id).ok_or_else(|| ApiError::not_found("Task"))?;
+    Ok(Json(task_json(&t, &settings)))
 }
 
 /// Every task that can be started by hand. `Tasks::try_start` panics on an id it does not know, so a test
 /// holds this list against `TASK_IDS`.
-const RUNNABLE: [&str; 9] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "sync_artwork", "sync_upcoming", "sync_requests", "sync_grabs"];
+const RUNNABLE: [&str; 11] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "sync_changes", "sync_upcoming", "sync_requests", "sync_grabs", "backup", "geoip"];
+/// The two runnable jobs that are neither a Jellyfin read nor a service read.
+#[cfg(test)]
+const OWN_RUNNERS: [&str; 2] = ["backup", "geoip"];
 
 async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>) -> ApiResult<Response> {
     let Some(id) = RUNNABLE.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
-    // One way in: the Jellyfin reads, then the ones that read from connected services.
-    if !sync::spawn(&app, id) && !services::spawn(&app, id) {
+    let started = match id {
+        "backup" => sync::run_backup(&app, Some(Actor::from(&user))),
+        "geoip" => {
+            if std::env::var("FINSTATS_GEOIP_DB").is_ok_and(|p| !p.trim().is_empty()) {
+                return Err(ApiError::bad_request("The database is set with FINSTATS_GEOIP_DB; replace that file instead"));
+            }
+            crate::geo::spawn_download(&app)
+        }
+        // One way in: the Jellyfin reads, then the ones that read from connected services.
+        _ => sync::spawn(&app, id) || services::spawn(&app, id),
+    };
+    if !started {
         return Err(ApiError::new(StatusCode::CONFLICT, "That task is already running"));
     }
     audit::record(&app, audit::Entry::new("task_run", Actor::from(&user)).target(id));
@@ -820,8 +886,11 @@ async fn list_backups(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -
     let dir = crate::backup::dir(&app.data_dir);
     let backups = tokio::task::spawn_blocking(move || crate::backup::list(&dir)).await.map_err(anyhow::Error::from)?;
     let s = app.settings();
-    let next_at = (s.backup_every_d > 0).then(|| backups.first().and_then(|b| b["created_at"].as_i64()).map(|at| at + s.backup_every_d * 86_400)).flatten();
-    Ok(Json(json!({ "backups": backups, "every_d": s.backup_every_d, "keep": s.backup_keep, "next_at": next_at })))
+    // When the next one is written is the backup task's schedule (Settings → Tasks), measured from its last run.
+    let triggers = crate::schedule::effective("backup", &s);
+    let last = app.tasks.snapshot().into_iter().find(|t| t.id == "backup").and_then(|t| t.finished_at);
+    let next_at = crate::schedule::next_at(&triggers, db::now(), last, &chrono::Local);
+    Ok(Json(json!({ "backups": backups, "scheduled": !triggers.is_empty(), "keep": s.backup_keep, "next_at": next_at })))
 }
 
 async fn create_backup(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin) -> ApiResult<Response> {
@@ -1056,10 +1125,14 @@ mod tests {
     fn every_task_that_can_be_started_is_known_and_has_exactly_one_runner() {
         for id in RUNNABLE {
             assert!(crate::state::TASK_IDS.contains(&id), "`{id}` would panic in Tasks::try_start");
-            assert_eq!(sync::TASKS.contains(&id) as u8 + services::TASKS.contains(&id) as u8, 1, "`{id}` needs one runner");
+            assert_eq!(sync::TASKS.contains(&id) as u8 + services::TASKS.contains(&id) as u8 + OWN_RUNNERS.contains(&id) as u8, 1, "`{id}` needs one runner");
         }
         for id in sync::TASKS.iter().chain(services::TASKS.iter()) {
             assert!(RUNNABLE.contains(id), "`{id}` cannot be started by hand");
+        }
+        // As in Jellyfin, every job that runs by itself also runs when somebody presses Run.
+        for id in crate::schedule::SCHEDULED {
+            assert!(RUNNABLE.contains(&id), "`{id}` is scheduled but cannot be started by hand");
         }
     }
 

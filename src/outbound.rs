@@ -113,9 +113,9 @@ pub fn destinations(
         hosts: vec![host_of(&crate::geo::download_url("YYYY-MM"))],
         why: match geoip_from_env {
             true => "not used: the database is the file FINSTATS_GEOIP_DB names".into(),
-            false => "the monthly download of the file that places addresses on the Security page. Looking an address up never leaves this machine".into(),
+            false => "the download of the monthly file that places addresses on the Security page, when its task is scheduled. Looking an address up never leaves this machine".into(),
         },
-        state: if settings.geoip_download && !geoip_from_env { ON } else { OFF },
+        state: if !crate::schedule::effective("geoip", settings).is_empty() && !geoip_from_env { ON } else { OFF },
         last_at: geoip_built_at,
         error: None,
     });
@@ -273,6 +273,19 @@ mod tests {
         assert_eq!(dest(&list, "notify:2").0, "off", "a destination that is switched off is contacted by nothing");
         let whose = list.iter().find(|d| d.id == "notify:2").map(|d| d.why.clone()).unwrap();
         assert!(whose.contains("bob"), "whose destination it is, is the point of listing it");
+    }
+
+    /// Since 2.0.4 the download is on when its job has a trigger: that is what makes it reach DB-IP.
+    #[test]
+    fn the_geoip_download_is_on_exactly_when_its_job_is_scheduled() {
+        use crate::schedule::{Trigger, When};
+        let with = |settings: &Settings| dest(&destinations(None, &CollectorStatus::default(), settings, &[], None, false, None, &[], &[]), "geoip").0;
+        let mut s = Settings::default();
+        assert_eq!(with(&s), "off");
+        s.schedules.insert("geoip".into(), vec![Trigger::new(When::Weekly { day: 1, at_min: 240 })]);
+        assert_eq!(with(&s), "on", "scheduled by hand, without the old switch");
+        let s = Settings { geoip_download: true, schedules: [("geoip".to_string(), vec![])].into(), ..Default::default() };
+        assert_eq!(with(&s), "off", "the old switch, but every trigger removed");
     }
 
     #[test]

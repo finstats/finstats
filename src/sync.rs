@@ -59,9 +59,14 @@ fn opt_str(v: &Value) -> Option<String> {
 
 /// Runs a task unless it is already running. Returns false in that case.
 /// The tasks that read from Jellyfin. (`services::TASKS` are the ones that read from Sonarr and friends.)
-pub const TASKS: [&str; 6] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "sync_artwork"];
+pub const TASKS: [&str; 6] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "sync_changes"];
 
 pub fn spawn(app: &App, id: &'static str) -> bool {
+    spawn_within(app, id, None)
+}
+
+/// `spawn`, stopped once it has run for `limit` (`schedule::within`): the time limit of the trigger that started it.
+pub fn spawn_within(app: &App, id: &'static str, limit: Option<Duration>) -> bool {
     if !TASKS.contains(&id) {
         return false;
     }
@@ -71,7 +76,7 @@ pub fn spawn(app: &App, id: &'static str) -> bool {
     }
     let app = app.clone();
     tokio::spawn(async move {
-        let outcome = match id {
+        let outcome = crate::schedule::within(limit, async { match id {
             "sync_users" => sync_users(&app, &jf).await,
             "sync_libraries" => {
                 let done = sync_libraries(&app, &jf).await;
@@ -89,9 +94,14 @@ pub fn spawn(app: &App, id: &'static str) -> bool {
             }
             "sync_server" => sync_server(&app, &jf).await,
             "sync_userdata" => sync_userdata(&app, &jf).await,
-            "sync_artwork" => sync_artwork(&app, &jf).await,
+            "sync_changes" => {
+                let done = sync_changes(&app, &jf).await;
+                announce_new_items(&app).await;
+                done
+            }
             other => Err(anyhow!("unknown task {other}")),
-        };
+        } })
+        .await;
         if let Err(e) = &outcome {
             crate::notify::task_failed(&app, id, &format!("{e:#}")).await;
         }
@@ -133,15 +143,10 @@ async fn announce_ready_year(app: &App) {
     }
 }
 
-const LIGHT_EVERY_S: i64 = 900;
-/// The Jellyfin reads started every `LIGHT_EVERY_S`. The library read follows Jellyfin's scan instead, and
-/// `sync_artwork` runs only when somebody starts it.
-const EVERY_QUARTER: [&str; 3] = ["sync_users", "sync_events", "sync_server"];
-const REQUESTS_EVERY_S: i64 = 300;
+/// Housekeeping that is not a job of its own: the server's name and version, a GeoIP file dropped in by hand,
+/// whether every connection still answers, the audit log's age.
+const HOUSEKEEPING_EVERY_S: i64 = 900;
 const SCAN_CHECK_EVERY_S: i64 = 300;
-/// Even when following Jellyfin's scan, re-read once a week: real-time monitoring adds
-/// items without the scan task ever running.
-const SAFETY_NET_S: i64 = 7 * 86_400;
 
 /// Write a backup in the background and thin out old ones. Returns false when one is already being written.
 pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
@@ -178,97 +183,110 @@ pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
     true
 }
 
-/// finstats only ever *reads* from Jellyfin; it never starts a scan there. By default the
-/// (expensive) library read simply follows Jellyfin's own "Scan Media Library" task.
+/// Runs every job on its triggers (`schedule`), looking once a minute or when woken. finstats only ever *reads*
+/// from Jellyfin; it never starts a scan there — "after Jellyfin's library scan" waits for Jellyfin's own.
 pub async fn scheduler(app: App) {
-    let mut last_light = 0i64;
-    let mut last_requests = 0i64;
+    let mut last_housekeeping = 0i64;
     let mut last_scan_check = 0i64;
-    let mut last_library: i64 = app
+    // Jellyfin's "Scan Media Library": (running now, when it last finished), from the last read of its task list.
+    let mut scan: Option<(bool, Option<i64>)> = None;
+    // A library read due while Jellyfin scans waits for the scan to end: read now, it would be half old, half new.
+    let mut deferred_library = false;
+    let newest_backup = crate::backup::newest_at(&crate::backup::dir(&app.data_dir));
+    let known = app
         .db
-        .call(|c| Ok(db::get_setting(c, "library_synced_at")?.and_then(|v| v.parse().ok()).unwrap_or(0)))
-        .await
-        .unwrap_or(0);
+        .call(move |c| {
+            let library_read = db::get_setting(c, "library_synced_at")?.and_then(|v| v.parse().ok());
+            Ok(crate::schedule::seed(crate::schedule::load_runs(c)?, library_read, newest_backup))
+        })
+        .await;
+    match known {
+        Ok(runs) => app.tasks.remember(runs),
+        Err(e) => tracing::warn!("could not read when the jobs last ran: {e:#}"),
+    }
+    let mut saved = String::new();
+    let mut from = db::now();
+    let mut startup = true;
     loop {
-        if let Some(jf) = app.jellyfin() {
-            let now = db::now();
-            let settings = app.settings();
-            if now - last_light >= LIGHT_EVERY_S {
-                // Users, the activity log and server details are tiny; keep them fresh.
-                last_light = now;
+        let now = db::now();
+        let jf = app.jellyfin();
+        if let Some(jf) = &jf {
+            if now - last_housekeeping >= HOUSEKEEPING_EVERY_S {
+                last_housekeeping = now;
                 refresh_server_info(&app).await;
                 announce_ready_year(&app).await;
-                crate::geo::refresh(&app).await;
+                crate::geo::pick_up(&app).await;
                 crate::services::check_all(&app).await;
-                if !crate::services::enabled(&app, crate::services::Kind::is_arr).is_empty() {
-                    crate::services::spawn(&app, "sync_upcoming");
-                    crate::services::spawn(&app, "sync_grabs");
-                }
-                for id in EVERY_QUARTER {
-                    spawn(&app, id);
-                }
                 // A year of finstats' own audit log is enough to answer "who changed this in spring".
                 let _ = app.db.call(|c| crate::audit::thin(c, db::now())).await;
             }
-
-            // Requests change by the hour, not by the quarter: who asked for what should feel current.
-            if now - last_requests >= REQUESTS_EVERY_S && crate::seerr::connected(&app) {
-                last_requests = now;
-                crate::services::spawn(&app, "sync_requests");
-            }
-
-            let timer_due = now - last_library >= settings.sync_interval_h.clamp(1, 168) * 3600;
-            let due = if !settings.follow_jellyfin_scan {
-                timer_due
-            } else if now - last_scan_check >= SCAN_CHECK_EVERY_S {
+            if now - last_scan_check >= SCAN_CHECK_EVERY_S {
                 last_scan_check = now;
                 // One read, two answers: whether a scan is on, and where every running job has got to.
                 // Timing a run costs nothing once the list is in hand, and it is what lets the Jellyfin
                 // jobs card open on an estimate instead of on an ellipsis.
-                match jf.scheduled_tasks().await {
+                scan = match jf.scheduled_tasks().await {
                     Ok(tasks) => {
                         crate::jobs::observe(&app, &tasks);
-                        match crate::jellyfin::scan_status(&tasks) {
-                            Some((true, _)) => false, // mid-scan: a read now would be half old, half new
-                            Some((false, Some(finished))) => {
-                                if finished > last_library {
-                                    tracing::info!("Jellyfin finished a library scan; reading the library");
-                                }
-                                finished > last_library || now - last_library >= SAFETY_NET_S
-                            }
-                            Some((false, None)) => timer_due, // Jellyfin has never scanned: fall back to the timer
-                            None => {
-                                tracing::debug!("Jellyfin lists no library scan task; using the timer");
-                                timer_due
-                            }
-                        }
+                        crate::jellyfin::scan_status(&tasks)
                     }
-                    Err(_) => false,                                 // Jellyfin unreachable; the collector already reports that
-                }
-            } else {
-                false
-            };
-            // Automatic backups: when the newest one on disk is older than the interval. A database
-            // without a single play has nothing worth keeping yet.
-            if settings.backup_every_d > 0 {
-                let dir = crate::backup::dir(&app.data_dir);
-                let newest = crate::backup::newest_at(&dir).unwrap_or(0);
-                if now - newest >= settings.backup_every_d * 86_400 {
-                    let has_plays = app.db.call(|c| Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM playbacks)", [], |r| r.get::<_, bool>(0))?)).await.unwrap_or(false);
-                    if has_plays {
-                        run_backup(&app, None);
-                    }
-                }
-            }
-
-            if due && spawn(&app, "sync_libraries") {
-                last_library = now;
-                spawn(&app, "sync_userdata");
+                    Err(_) => None, // Jellyfin unreachable; the collector already reports that
+                };
             }
         }
+        let scanning = matches!(scan, Some((true, _)));
+        let look = crate::schedule::Look { from, to: now, startup, scan_done: match scan { Some((false, done)) => done, _ => None } };
+        for (task, limit) in crate::schedule::due(&app.settings(), &app.tasks.snapshot(), &look, &chrono::Local) {
+            start_scheduled(&app, task, limit, scanning, &mut deferred_library).await;
+        }
+        if deferred_library && !scanning && spawn(&app, "sync_libraries") {
+            deferred_library = false;
+            tracing::info!("Jellyfin's library scan is over; reading the library");
+        }
+        // What each job last did, kept for the next start — written only when something finished since.
+        let snapshot = app.tasks.snapshot();
+        let finished = serde_json::to_string(&snapshot.iter().map(|t| (t.id, t.finished_at)).collect::<Vec<_>>()).unwrap_or_default();
+        if finished != saved {
+            match app.db.call(move |c| crate::schedule::save_runs(c, &snapshot)).await {
+                Ok(_) => saved = finished,
+                Err(e) => tracing::warn!("could not keep when the jobs last ran: {e:#}"),
+            }
+        }
+        (from, startup) = (now, false);
         tokio::select! {
             _ = app.wake.notified() => { last_scan_check = 0; }
             _ = tokio::time::sleep(Duration::from_secs(60)) => {}
+        }
+    }
+}
+
+/// Starts one job a trigger set off, if there is anything for it to do: a job that reads from a service nobody
+/// connected, or a backup of a database without a single play, is skipped rather than run to say so.
+async fn start_scheduled(app: &App, task: &'static str, limit_s: Option<i64>, scanning: bool, deferred_library: &mut bool) {
+    let limit = limit_s.map(|s| Duration::from_secs(s.max(0) as u64));
+    match task {
+        "sync_libraries" if scanning => {
+            if !*deferred_library {
+                tracing::info!("the library read waits for Jellyfin's library scan to finish");
+            }
+            *deferred_library = true;
+        }
+        "backup" => {
+            let has_plays = app.db.call(|c| Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM playbacks)", [], |r| r.get::<_, bool>(0))?)).await.unwrap_or(false);
+            if has_plays {
+                run_backup(app, None);
+            }
+        }
+        "geoip" => {
+            crate::geo::download_if_stale(app);
+        }
+        "sync_upcoming" | "sync_grabs" if crate::services::enabled(app, crate::services::Kind::is_arr).is_empty() => {}
+        "sync_requests" if !crate::seerr::connected(app) => {}
+        t if TASKS.contains(&t) => {
+            spawn_within(app, t, limit);
+        }
+        t => {
+            crate::services::spawn_within(app, t, limit);
         }
     }
 }
@@ -688,45 +706,88 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
     Ok(format!("{total_items} items in {lib_count} libraries"))
 }
 
-/// The pictures Jellyfin changed since the last look: one read of what it saved since then, of which only the
-/// image tags are kept (`artwork`). A new poster is then fetched the next time somebody looks at it. Started by
-/// hand only ("Run now"): replacing a poster starts no library scan, so until the next library read nothing else
-/// notices it.
-async fn sync_artwork(app: &App, jf: &Jellyfin) -> Result<String> {
-    const ID: &str = "sync_artwork";
+/// How far back each look reaches past the last one: the two clocks may differ a little, and an item saved while
+/// the last look was being answered must not fall between the two.
+const CHANGES_OVERLAP_S: i64 = 600;
+
+/// Where the next look for changes starts: from the last look, else from the last library read (which read
+/// everything), with the overlap. `None` before the library was ever read — that read will bring everything.
+fn changes_from(last_look: Option<i64>, library_read: Option<i64>) -> Option<i64> {
+    let from = last_look.max(library_read)?;
+    Some(from - CHANGES_OVERLAP_S)
+}
+
+/// One page of what Jellyfin saved in a library since the last look, stored as the library read stores an item —
+/// names, overviews, genres, ratings, file details, pictures — and cast and crew for films and shows. Returns how
+/// many titles were stored. Nothing is ever marked removed here: that takes a whole library read.
+pub fn store_changes(c: &Connection, library_id: &str, items: &[Value], now: i64) -> Result<usize> {
+    let mut stored = 0;
+    for it in items {
+        if !upsert_item(c, library_id, it, now)? {
+            continue;
+        }
+        stored += 1;
+        // As the library read keeps them: the cast of films and shows (`people_page`), never of every episode.
+        if matches!(it["Type"].as_str(), Some("Movie" | "Series")) {
+            store_people(c, it)?;
+        }
+    }
+    Ok(stored)
+}
+
+/// Everything Jellyfin changed since the last look — an edited title, a new poster, the cast refreshed — library by
+/// library, without waiting for a library scan: editing metadata in Jellyfin starts none.
+async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
+    const ID: &str = "sync_changes";
     let started = db::now();
-    let from = app
+    let (from, libraries) = app
         .db
         .call(|c| {
             let at = |key: &str| -> Result<Option<i64>> { Ok(db::get_setting(c, key)?.and_then(|v| v.parse().ok())) };
-            Ok(crate::artwork::look_from(at("artwork_checked_at")?, at("library_synced_at")?))
+            let from = changes_from(at("changes_checked_at")?, at("library_synced_at")?);
+            let mut stmt = c.prepare("SELECT id, name FROM libraries WHERE removed = 0 ORDER BY name")?;
+            let libraries = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?.collect::<Result<Vec<_>, _>>()?;
+            Ok((from, libraries))
         })
         .await?;
     let Some(from) = from else { return Ok("Waiting for the first library read".into()) };
-    let (mut looked, mut changed) = (0usize, 0usize);
-    loop {
-        let items = jf.changed_page(from, looked, PAGE).await?;
-        let got = items.len();
-        changed += app
-            .db
-            .call(move |c| {
-                let tx = c.transaction()?;
-                let n = crate::artwork::store_tags(&tx, &items)?;
-                tx.commit()?;
-                Ok(n)
-            })
-            .await?;
-        looked += got;
-        if got < PAGE {
-            break;
+    let mut changed = 0usize;
+    for (lib_id, lib_name) in libraries {
+        let mut looked = 0usize;
+        loop {
+            let items = jf.changed_page(&lib_id, from, looked, PAGE).await?;
+            let got = items.len();
+            let lib = lib_id.clone();
+            changed += app
+                .db
+                .call(move |c| {
+                    let tx = c.transaction()?;
+                    let n = store_changes(&tx, &lib, &items, db::now())?;
+                    tx.commit()?;
+                    Ok(n)
+                })
+                .await?;
+            looked += got;
+            if got < PAGE {
+                break;
+            }
+            app.tasks.update(ID, format!("{lib_name}: {looked} changed items"), None);
         }
-        app.tasks.update(ID, format!("{looked} changed items looked at"), None);
     }
-    app.db.call(move |c| db::set_setting(c, "artwork_checked_at", &started.to_string())).await?;
+    let window = app.settings().group_window_s;
+    app.db
+        .call(move |c| {
+            // A title that arrived since the library read may be one a renamed file became: the same tail as a read.
+            for title in backfill_playbacks(c)? {
+                crate::groups::detect(c, window, Some(&title))?;
+            }
+            db::set_setting(c, "changes_checked_at", &started.to_string())
+        })
+        .await?;
     Ok(match changed {
-        0 => "No new pictures".into(),
-        1 => "1 new picture".into(),
-        n => format!("{n} new pictures"),
+        0 => "Nothing changed".into(),
+        1 => "1 title changed".into(),
+        n => format!("{n} titles changed"),
     })
 }
 
@@ -943,12 +1004,41 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
 mod tests {
     use super::*;
 
-    /// The owner's decision: looking for replaced posters is a job somebody starts, never a timer. The
-    /// library read keeps the tags current on its own schedule.
     #[test]
-    fn the_posters_job_runs_only_when_somebody_starts_it() {
-        assert!(TASKS.contains(&"sync_artwork"), "it can be run by hand");
-        assert!(!EVERY_QUARTER.contains(&"sync_artwork"), "it is started by the quarter-hour timer");
+    fn the_first_look_for_changes_starts_where_the_last_library_read_did() {
+        assert_eq!(changes_from(None, None), None, "the library read will bring everything");
+        assert_eq!(changes_from(None, Some(10_000)), Some(10_000 - CHANGES_OVERLAP_S));
+        assert_eq!(changes_from(Some(20_000), Some(10_000)), Some(20_000 - CHANGES_OVERLAP_S));
+        // A library read after the last look read everything again.
+        assert_eq!(changes_from(Some(10_000), Some(20_000)), Some(20_000 - CHANGES_OVERLAP_S));
+    }
+
+    #[test]
+    fn a_title_edited_in_jellyfin_is_stored_with_its_cast_and_nothing_is_removed() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        upsert_item(&c, "films", &json!({ "Id": "m1", "Name": "Big Buck Bunny", "Type": "Movie", "Overview": "old", "ImageTags": { "Primary": "p-old" } }), 100).unwrap();
+        upsert_item(&c, "films", &json!({ "Id": "m2", "Name": "Sintel", "Type": "Movie" }), 100).unwrap();
+        store_people(&c, &json!({ "Id": "m1", "People": [{ "Id": "a1", "Name": "alice", "Type": "Actor" }] })).unwrap();
+        let answer = [
+            json!({ "Id": "M1", "Name": "Big Buck Bunny (Director's Cut)", "Type": "Movie", "Overview": "new", "ImageTags": { "Primary": "p-new" },
+                    "People": [{ "Id": "b2", "Name": "bob", "Type": "Director" }] }),
+            json!({ "Id": "e1", "Name": "Pilot", "Type": "Episode", "People": [{ "Id": "c3", "Name": "carol", "Type": "Actor" }] }),
+        ];
+        assert_eq!(store_changes(&c, "films", &answer, 200).unwrap(), 2);
+        let (name, overview, tag): (String, String, String) =
+            c.query_row("SELECT name, overview, image_tag FROM items WHERE id = 'm1'", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap();
+        assert_eq!((name.as_str(), overview.as_str(), tag.as_str()), ("Big Buck Bunny (Director's Cut)", "new", "p-new"));
+        let people: Vec<String> = c.prepare("SELECT name FROM item_people WHERE item_id = 'm1'").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(people, ["bob"], "the cast is Jellyfin's current one");
+        let episode_people: i64 = c.query_row("SELECT COUNT(*) FROM item_people WHERE item_id = 'e1'", [], |r| r.get(0)).unwrap();
+        assert_eq!(episode_people, 0, "cast and crew are kept for films and shows only, as the library read keeps them");
+        let library: String = c.query_row("SELECT library_id FROM items WHERE id = 'e1'", [], |r| r.get(0)).unwrap();
+        assert_eq!(library, "films", "a title that arrived since the read is stored under its library");
+        let removed: i64 = c.query_row("SELECT removed FROM items WHERE id = 'm2'", [], |r| r.get(0)).unwrap();
+        assert_eq!(removed, 0, "a title the look did not return is not gone: only a whole library read can say that");
     }
 
     #[test]

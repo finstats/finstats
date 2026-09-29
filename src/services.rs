@@ -342,18 +342,24 @@ pub const TASKS: [&str; 3] = ["sync_upcoming", "sync_requests", "sync_grabs"];
 
 /// Runs a task unless it is already running (or is not one of ours). Returns false in that case.
 pub fn spawn(app: &App, id: &str) -> bool {
+    spawn_within(app, id, None)
+}
+
+/// `spawn`, stopped once it has run for `limit`: the time limit of the trigger that started it.
+pub fn spawn_within(app: &App, id: &str, limit: Option<std::time::Duration>) -> bool {
     let Some(id) = TASKS.into_iter().find(|t| *t == id) else { return false };
     if !app.tasks.try_start(id, "Starting…") {
         return false;
     }
     let app = app.clone();
     tokio::spawn(async move {
-        let outcome = match id {
+        let outcome = crate::schedule::within(limit, async { match id {
             "sync_upcoming" => crate::arr::sync_upcoming(&app).await,
             "sync_requests" => crate::seerr::sync_requests(&app).await,
             "sync_grabs" => crate::arr::sync_grabs(&app).await,
             other => Err(anyhow!("unknown task {other}")),
-        };
+        } })
+        .await;
         if let Err(e) = &outcome {
             crate::notify::task_failed(&app, id, &format!("{e:#}")).await;
         }
