@@ -274,6 +274,33 @@ fn is_on_calendar(e: &crate::pipeline::Entry, k: &Key) -> bool {
     }
 }
 
+/// One entry out of a backup. Its id means nothing here: it is added when the person has nothing standing for its
+/// title, and otherwise only gives the entry that is here its date, when it is the older. `true` when it changed
+/// something. The per-person bound holds here too.
+pub fn restore_row(conn: &Connection, row: &serde_json::Map<String, Value>) -> Result<bool> {
+    let text = |k: &str| row.get(k).and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()).map(str::to_string);
+    let (Some(user_id), Some(kind), Some(title), Some(added_at)) = (text("user_id"), text("kind"), text("title"), row.get("added_at").and_then(Value::as_i64)) else {
+        return Ok(false);
+    };
+    let t = Title { kind, tmdb_id: text("tmdb_id"), tvdb_id: text("tvdb_id"), imdb_id: text("imdb_id"), title, year: row.get("year").and_then(Value::as_i64) };
+    let item_id = text("item_id").map(|i| db::norm_id(&i));
+    if !KINDS.contains(&t.kind.as_str()) || (item_id.is_none() && t.tmdb_id.is_none() && t.tvdb_id.is_none() && t.imdb_id.is_none()) {
+        return Ok(false);
+    }
+    if let Some((id, here)) = already(conn, &user_id, item_id.as_deref(), &t, None)? {
+        return Ok(added_at < here && conn.execute("UPDATE watchlist SET added_at = ?2 WHERE id = ?1", params![id, added_at])? > 0);
+    }
+    let held: i64 = conn.query_row("SELECT COUNT(*) FROM watchlist WHERE user_id = ?1", [&user_id], |r| r.get(0))?;
+    if held >= MAX_ENTRIES {
+        return Ok(false);
+    }
+    conn.execute(
+        "INSERT INTO watchlist(user_id, kind, item_id, tmdb_id, tvdb_id, imdb_id, title, year, added_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        params![user_id, t.kind, item_id, t.tmdb_id, t.tvdb_id, t.imdb_id, t.title, t.year, added_at],
+    )?;
+    Ok(true)
+}
+
 /// Entries the library does not have as far as they know: never attached, or attached to an item that is gone.
 /// Bounded by the per-person cap, and each one's item looked up by its key.
 const WAITING_SQL: &str = "SELECT w.id, w.user_id, w.kind, w.item_id, w.tmdb_id, w.tvdb_id, w.imdb_id, w.added_at

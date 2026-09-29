@@ -38,7 +38,7 @@ const SUFFIX: &str = ".jsonl.gz";
 
 /// In the order they are written, which is also the order they must be read in: a timeline row
 /// needs its play to exist.
-const TABLES: [&str; 9] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit"];
+const TABLES: [&str; 10] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit", "watchlist"];
 
 pub fn dir(data_dir: &Path) -> PathBuf {
     data_dir.join("backups")
@@ -317,6 +317,9 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     res.other_rows += 1;
                 }
             }
+            // Somebody's list: one entry per title and person, the older date kept.
+            "watchlist" if crate::watchlist::restore_row(&tx, row)? => res.other_rows += 1,
+            "watchlist" => {}
             // Its own ids mean nothing here; `dedupe` keeps an alert this database already has from doubling.
             "security_alerts" if insert_row(&tx, table, &known["security_alerts"], row, &["id"], "INSERT OR IGNORE")? => res.other_rows += 1,
             "security_alerts" => {}
@@ -479,6 +482,33 @@ mod tests {
 
         std::fs::write(tmp.join("not.jsonl"), "{\"hello\": 1}\n").unwrap();
         assert!(restore(&plain, &tmp.join("not.jsonl"), false, None).unwrap_err().to_string().contains("not a finstats backup"));
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn a_watchlist_travels_and_is_merged_keeping_the_older_date() {
+        let tmp = std::env::temp_dir().join(format!("finstats-watchlist-backup-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let source = Db::open(&tmp.join("source.db")).unwrap();
+        source.conn().unwrap().execute_batch(
+            "INSERT INTO watchlist(id, user_id, kind, item_id, tmdb_id, title, year, added_at) VALUES (1, 'u1', 'Movie', 'i1', '10378', 'Big Buck Bunny', 2008, 50);
+             INSERT INTO watchlist(id, user_id, kind, tvdb_id, title, added_at) VALUES (2, 'u1', 'Series', '380002', 'Nightfall Bay', 60);
+             INSERT INTO watchlist(id, user_id, kind, imdb_id, title, added_at) VALUES (3, 'u2', 'Movie', 'tt1727587', 'Sintel', 70);",
+        ).unwrap();
+        let made = export(&source, &dir(&tmp), None).unwrap();
+        let file = dir(&tmp).join(&made.name);
+
+        let target = Db::open(&tmp.join("target.db")).unwrap();
+        // Here already: the same film, put on the list later, by its id alone.
+        target.conn().unwrap().execute_batch("INSERT INTO watchlist(id, user_id, kind, tmdb_id, title, added_at) VALUES (1, 'u1', 'Movie', '10378', 'Big Buck Bunny', 80);").unwrap();
+        restore(&target, &file, false, None).unwrap();
+        restore(&target, &file, false, None).unwrap();
+        let c = target.conn().unwrap();
+        let rows: Vec<(String, String, i64)> = c.prepare("SELECT user_id, title, added_at FROM watchlist ORDER BY user_id, added_at").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(rows, [("u1".into(), "Big Buck Bunny".into(), 50), ("u1".into(), "Nightfall Bay".into(), 60), ("u2".into(), "Sintel".into(), 70)],
+            "one entry per title and person, with the older date; twice is once");
         let _ = std::fs::remove_dir_all(&tmp);
     }
 

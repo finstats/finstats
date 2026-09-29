@@ -671,10 +671,11 @@ can bring permissions back. `{name}` must look exactly like `finstats-backup-YYY
 
 **The file** is gzip-compressed JSON Lines. Line 1: `{"finstats_backup": 1, "app_version", "created_at", "server_name", "counts": {table: rows}}`.
 Every other line: `{"t": "<table>", "r": {column: value}}` for `settings` (the one settings row), `playbacks`, `playback_events`,
-`manual_seen`, `user_permissions`, `home_addresses`, `server_events`, `devices`. Rows are matched by column name in both
+`manual_seen`, `user_permissions`, `home_addresses`, `server_events`, `devices`, `security_alerts`, `audit`, `watchlist`. Rows are matched by column name in both
 directions, so backups move between versions. Never in it: the Jellyfin address and API key, sessions, the library.
 Restoring merges: a play already present (same `source_id`, or same user, item and start) is skipped with its timeline;
-restored plays are never `active`, and groups, local/remote and library links are worked out again afterwards.
+restored plays are never `active`, and groups, local/remote and library links are worked out again afterwards. A watchlist
+entry is merged by its title per person (the same item, or the same kind and any one id), keeping the older `added_at`.
 CLI: `finstats backup`, `finstats restore <file>`.
 
 # v1.1 — Timeline
@@ -1515,3 +1516,6 @@ which is only ever sent to somebody with `see_everyone`: without it, another per
 exactly as on the Pipeline page. `next` is `{day, at, release, season, episode}` from the calendar, `null` without one.
 `poster` is `{item_id}` for a title the library has or had, else `{service_id, media_id}` for one on the calendar or in a
 request the caller may see (served by `/api/img/arr/…`), else `null`.
+
+Watchlists are part of a backup — they are somebody's own and Jellyfin cannot give them back — and a restore merges them
+per person and title, keeping the older date, and attaches them to the library as it is.
