@@ -374,6 +374,23 @@ asks Jellyfin to exclude virtual items, and season 0 is skipped). "Seen" merges 
 play ≥ 80%, Jellyfin's played flag (`user_items`), a manual mark (`manual_seen`, written via `POST /api/me/seen` for
 the caller only — finstats never writes to Jellyfin). Streaks are all-time and share `recap::longest_run`.
 
+**Watchlist (`watchlist.rs`, `/users/:id/watchlist`, 2.1).** One person's films and shows to watch, **their own and nobody
+else's**: every endpoint (`/api/me/watchlist*`) acts on the caller and takes no `user_id`, so no permission, not even a Jellyfin
+administrator's, opens another's list (a calendar key is refused by `AuthUser` like everywhere). An entry names its title by the
+item (`item_id`) or, not in the library yet, by provider ids, and keeps a snapshot (kind, title, year, ids) so it reads without the
+library. **Copies are one title**: items sharing an id and a type are the HD and 4K film, the lowest id stands for them (Pipeline's
+rule, not `relink.rs`'s — nothing here rewrites history), and ids that lead to *different* titles attach to nothing (`find_title`).
+`resolve` runs at the end of `backfill_playbacks`, so every library read, metadata look, import and restore attaches waiting
+entries, follows a renamed title, keeps attached snapshots current and merges two entries of one title keeping the older
+`added_at`. **State is worked out at read time and never stored** (`listing`): watched by the profile's one reading of "seen"
+(`profile::films` / `episodes`, one `PLAY_FRAC` and `verdict`), started, on the server, requested (someone else's request only
+with `see_everyone`, Pipeline's rule), coming up (`pipeline::entries_for`), left the library, not on the server. At most
+`MAX_ENTRIES` (1,000) per person. In `backup::TABLES`, merged per person and title on restore. The page and the four toggles
+(title, Upcoming rows, Recently added, search with Ctrl+Enter) read `/api/me/watchlist/keys` once per visit (`watchlist.js`),
+never a request per poster, and show nothing on a server whose `/auth/me` lacks `features.watchlist`. Its notification,
+`watchlist_available`, is `notify::Need::Owner`: the owner's own destinations only, never a server's, and left out of every
+other person's notification history, administrators' included.
+
 **Timeline (`timeline.rs`, `/users/:id/timeline`).** One person's plays, newest first, folded by the pure `fold()`: plays that follow
 each other with the same key (series + season, album + artist, else the item) are one stop. Pages use a `(started_at, id)` cursor
 and only give out a stop once the play after it has been read, so a stop is never split and the stops do not depend on the page

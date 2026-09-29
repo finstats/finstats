@@ -142,6 +142,13 @@ and current day streak.
 
 <br clear="right">
 
+### A watchlist of your own
+Put a film or a show on your watchlist from its page, from Upcoming, from Recently added or from search —
+even one that is not on your server yet, straight from what Sonarr or Radarr is waiting for. Every entry
+says where it stands now: on the server, 5 of 26 episodes, requested, coming up Friday, or watched. When
+something you were waiting for arrives, finstats can tell you. Nobody else sees your list, an administrator
+included, and nothing is written to Jellyfin, Seerr, Sonarr or Radarr.
+
 ### Your year in review
 
 <img src="docs/screenshots/recap.png" alt="Recap: Your 2025, replayed — the top posters fanned out beside the headline, above a waveform of the year with one bar per week" width="100%">
@@ -178,7 +185,7 @@ switched on. The link is random, and resetting it is how you take back one alrea
 - **You decide who sees what.** Let family and friends sign in if you like. By default they get
   their own statistics and recap and nothing else. From there you grant more, per person or for
   everyone: other people's activity, network details like IP addresses, the server pages, or
-  managing finstats itself. No permission opens other people's recaps.
+  managing finstats itself. No permission opens other people's recaps or watchlists.
 - **Nothing about you leaves your network.** No telemetry, no accounts, no fonts or scripts loaded
   from the internet. Posters are fetched from your own Jellyfin. The one outside request finstats
   makes by default is a plain "what is my IP" lookup — asked **once**, so that people watching at home
