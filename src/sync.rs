@@ -527,6 +527,8 @@ pub fn backfill_playbacks(conn: &Connection) -> Result<Vec<String>> {
     let relinked = crate::relink::relink_orphans(conn, crate::state::Settings::load(conn)?.merge_window_s)?;
     // New titles may be what Sonarr, Radarr or a request were waiting for.
     crate::pipeline::link(conn)?;
+    // …and what somebody put on their watchlist before it was here.
+    crate::watchlist::resolve(conn)?;
     Ok(relinked.moved_to)
 }
 

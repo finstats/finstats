@@ -72,7 +72,7 @@ pub fn add(conn: &Connection, user_id: &str, wanted: Wanted, now: i64) -> Result
             Err(why) => return Ok(Err(why)),
         },
     };
-    if let Some(id) = already(conn, user_id, item_id.as_deref(), &t)? {
+    if let Some((id, _)) = already(conn, user_id, item_id.as_deref(), &t, None)? {
         return Ok(Ok((id, false)));
     }
     let held: i64 = conn.query_row("SELECT COUNT(*) FROM watchlist WHERE user_id = ?1", [user_id], |r| r.get(0))?;
@@ -86,9 +86,14 @@ pub fn add(conn: &Connection, user_id: &str, wanted: Wanted, now: i64) -> Result
     Ok(Ok((conn.last_insert_rowid(), true)))
 }
 
+/// One provider id out of an item's `provider_ids` JSON, as text, `NULL` when it has none.
+fn provider_id_sql(column: &str, key: &str) -> String {
+    format!("CASE WHEN json_valid({column}) THEN NULLIF(CAST(json_extract({column}, '$.{key}') AS TEXT), '') END")
+}
+
 /// A film or show in the library as an entry would remember it.
 fn snapshot(conn: &Connection, item_id: &str) -> Result<Option<Title>> {
-    let id = |key: &str| format!("CASE WHEN json_valid(provider_ids) THEN NULLIF(CAST(json_extract(provider_ids, '$.{key}') AS TEXT), '') END");
+    let id = |key: &str| provider_id_sql("provider_ids", key);
     Ok(conn
         .query_row(
             &format!("SELECT type, name, production_year, {}, {}, {} FROM items WHERE id = ?1 AND type IN ('Movie', 'Series')", id("Tmdb"), id("Tvdb"), id("Imdb")),
@@ -123,14 +128,15 @@ fn valid(mut t: Title) -> Result<Title, Refused> {
 }
 
 /// The entry of `user_id`'s that already stands for this title: the same item, or the same kind and any one id.
-fn already(conn: &Connection, user_id: &str, item_id: Option<&str>, t: &Title) -> Result<Option<i64>> {
+/// `except`: an entry not to count, the one being asked about. (id, added at), the oldest if there are several.
+fn already(conn: &Connection, user_id: &str, item_id: Option<&str>, t: &Title, except: Option<i64>) -> Result<Option<(i64, i64)>> {
     Ok(conn
         .query_row(
-            "SELECT id FROM watchlist WHERE user_id = ?1
+            "SELECT id, added_at FROM watchlist WHERE user_id = ?1 AND id IS NOT ?7
                AND (item_id = ?2 OR (kind = ?3 AND (tmdb_id = ?4 OR tvdb_id = ?5 OR imdb_id = ?6)))
              ORDER BY added_at, id LIMIT 1",
-            params![user_id, item_id, t.kind, t.tmdb_id, t.tvdb_id, t.imdb_id],
-            |r| r.get(0),
+            params![user_id, item_id, t.kind, t.tmdb_id, t.tvdb_id, t.imdb_id, except],
+            |r| Ok((r.get(0)?, r.get(1)?)),
         )
         .optional()?)
 }
@@ -178,6 +184,11 @@ pub fn keys(conn: &Connection, user_id: &str) -> Result<Vec<Key>> {
     Ok(out)
 }
 
+const FIND_SQL: &str = "SELECT x.item_id, x.source, x.value FROM item_external x JOIN items i ON i.id = x.item_id AND i.type = ?1 AND i.removed = 0
+     WHERE x.item_id IN (SELECT item_id FROM item_external WHERE source = 'Tmdb' AND value = ?2
+                  UNION SELECT item_id FROM item_external WHERE source = 'Tvdb' AND value = ?3
+                  UNION SELECT item_id FROM item_external WHERE source = 'Imdb' AND value = ?4)";
+
 /// The one live title of `kind` these provider ids can mean, if there is one. Several items that share the ids
 /// are copies of one title (a film in an HD and a 4K library) and the lowest id stands for them, as it does for
 /// Pipeline; ids that lead to *different* titles — two TMDB ids among the candidates, say — mean nothing is
@@ -185,12 +196,7 @@ pub fn keys(conn: &Connection, user_id: &str) -> Result<Vec<Key>> {
 /// `relink.rs` refuses them.
 pub fn find_title(conn: &Connection, t: &Title) -> Result<Option<String>> {
     let rows: Vec<(String, String, String)> = conn
-        .prepare_cached(
-            "SELECT x.item_id, x.source, x.value FROM item_external x JOIN items i ON i.id = x.item_id AND i.type = ?1 AND i.removed = 0
-             WHERE x.item_id IN (SELECT item_id FROM item_external WHERE source = 'Tmdb' AND value = ?2
-                          UNION SELECT item_id FROM item_external WHERE source = 'Tvdb' AND value = ?3
-                          UNION SELECT item_id FROM item_external WHERE source = 'Imdb' AND value = ?4)",
-        )?
+        .prepare_cached(FIND_SQL)?
         .query_map(params![t.kind, t.tmdb_id, t.tvdb_id, t.imdb_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
         .collect::<Result<_, _>>()?;
     let mut said: BTreeMap<&str, &str> = BTreeMap::new();
@@ -266,6 +272,66 @@ fn is_on_calendar(e: &crate::pipeline::Entry, k: &Key) -> bool {
         ("Series", "episode") => same(e.tvdb_id, &k.tvdb_id) || same(e.tmdb_id, &k.tmdb_id),
         _ => false,
     }
+}
+
+/// Entries the library does not have as far as they know: never attached, or attached to an item that is gone.
+/// Bounded by the per-person cap, and each one's item looked up by its key.
+const WAITING_SQL: &str = "SELECT w.id, w.user_id, w.kind, w.item_id, w.tmdb_id, w.tvdb_id, w.imdb_id, w.added_at
+     FROM watchlist w LEFT JOIN items i ON i.id = w.item_id
+     WHERE w.item_id IS NULL OR i.id IS NULL OR i.removed <> 0";
+
+/// After a library read: attach every entry whose title is in the library now — one that was waiting for it, or one
+/// whose title was renamed into a new item — and merge two entries that turn out to be one title, keeping the older.
+/// Answers how many entries were attached.
+pub fn resolve(conn: &Connection) -> Result<usize> {
+    // What the library calls an attached title, first: an id it has learnt may be what makes a waiting entry the same title.
+    let pid = |key: &str| provider_id_sql("i.provider_ids", key);
+    conn.execute(
+        &format!(
+            "UPDATE watchlist SET title = i.name, year = COALESCE(i.production_year, watchlist.year),
+                    tmdb_id = COALESCE({t}, watchlist.tmdb_id), tvdb_id = COALESCE({v}, watchlist.tvdb_id), imdb_id = COALESCE({m}, watchlist.imdb_id)
+             FROM items i WHERE i.id = watchlist.item_id AND i.removed = 0 AND i.type = watchlist.kind
+               AND (watchlist.title, watchlist.year, watchlist.tmdb_id, watchlist.tvdb_id, watchlist.imdb_id)
+                   IS NOT (i.name, COALESCE(i.production_year, watchlist.year), COALESCE({t}, watchlist.tmdb_id), COALESCE({v}, watchlist.tvdb_id), COALESCE({m}, watchlist.imdb_id))",
+            t = pid("Tmdb"),
+            v = pid("Tvdb"),
+            m = pid("Imdb")
+        ),
+        [],
+    )?;
+    let waiting: Vec<(i64, String, Title, i64)> = conn
+        .prepare(WAITING_SQL)?
+        .query_map([], |r| {
+            let t = Title { kind: r.get(2)?, tmdb_id: r.get(4)?, tvdb_id: r.get(5)?, imdb_id: r.get(6)?, ..Default::default() };
+            Ok((r.get(0)?, r.get(1)?, t, r.get(7)?))
+        })?
+        .collect::<Result<_, _>>()?;
+    let mut attached = 0;
+    for (id, user_id, t, added_at) in waiting {
+        let Some(found) = find_title(conn, &t)? else { continue };
+        // Another entry of theirs may already stand for this title — on it, on a copy of it, or by one of its ids.
+        let twin = match snapshot(conn, &found)? {
+            Some(title) => already(conn, &user_id, Some(&found), &title, Some(id))?,
+            None => None,
+        };
+        match twin {
+            Some((other, other_added)) if (other_added, other) < (added_at, id) => {
+                conn.execute("DELETE FROM watchlist WHERE id = ?1", [id])?;
+                conn.execute("UPDATE watchlist SET item_id = ?2 WHERE id = ?1", params![other, found])?;
+            }
+            twin => {
+                if let Some((other, _)) = twin {
+                    conn.execute("DELETE FROM watchlist WHERE id = ?1", [other])?;
+                }
+                conn.execute("UPDATE watchlist SET item_id = ?2 WHERE id = ?1", params![id, found])?;
+            }
+        }
+        attached += 1;
+    }
+    if attached > 0 {
+        tracing::info!("attached {attached} watchlist entries to titles in the library");
+    }
+    Ok(attached)
 }
 
 /// Every entry on `user_id`'s list, newest first, each with what is true of its title now — never stored, so it
@@ -707,5 +773,93 @@ mod tests {
         let bobs = listing(&c, "bob", true).unwrap();
         assert_eq!(bobs.len(), 1);
         assert_eq!((bobs[0]["title"].as_str(), bobs[0]["state"].as_str()), (Some("Sintel"), Some("on_server")), "alice's plays are not bob's");
+    }
+    fn item_of(c: &Connection, id: i64) -> Option<String> {
+        c.query_row("SELECT item_id FROM watchlist WHERE id = ?1", [id], |r| r.get(0)).unwrap()
+    }
+
+    #[test]
+    fn an_entry_finds_its_title_when_the_library_brings_it() {
+        let c = conn();
+        let (id, _) = add(&c, "alice", Wanted::Title(film(Some("990001"), None, "Winterline")), 1).unwrap().unwrap();
+        assert_eq!(resolve(&c).unwrap(), 0, "nothing to find yet");
+        c.execute_batch(r#"INSERT INTO items(id, type, name, production_year, provider_ids, updated_at) VALUES ('win', 'Movie', 'Winterline', 2026, '{"Tmdb":"990001"}', 0);"#).unwrap();
+        crate::pipeline::rebuild_external(&c).unwrap();
+        assert_eq!(resolve(&c).unwrap(), 1);
+        assert_eq!(item_of(&c, id).as_deref(), Some("win"));
+        assert_eq!(resolve(&c).unwrap(), 0, "and once attached, it stays put");
+    }
+
+    #[test]
+    fn a_renamed_title_takes_its_entries_along_and_a_deleted_one_leaves_them_be() {
+        let c = conn();
+        let (id, _) = add(&c, "alice", Wanted::Item("sintel".into()), 1).unwrap().unwrap();
+        // Renamed on disk: Jellyfin makes a new item, the old one is removed.
+        c.execute_batch(r#"UPDATE items SET removed = 1 WHERE id = 'sintel';
+                           INSERT INTO items(id, type, name, provider_ids, updated_at) VALUES ('sintel2', 'Movie', 'Sintel', '{"Tmdb":"45745"}', 0);"#).unwrap();
+        crate::pipeline::rebuild_external(&c).unwrap();
+        assert_eq!(resolve(&c).unwrap(), 1);
+        assert_eq!(item_of(&c, id).as_deref(), Some("sintel2"));
+        // Deleted for good: nothing else has its ids, so it stays where it was — and reads as having left.
+        c.execute_batch("UPDATE items SET removed = 1 WHERE id = 'sintel2';").unwrap();
+        crate::pipeline::rebuild_external(&c).unwrap();
+        assert_eq!(resolve(&c).unwrap(), 0);
+        assert_eq!(item_of(&c, id).as_deref(), Some("sintel2"));
+    }
+
+    #[test]
+    fn ids_that_point_at_two_titles_attach_to_neither() {
+        let c = conn();
+        c.execute("INSERT INTO watchlist(user_id, kind, tmdb_id, imdb_id, title, added_at) VALUES ('alice', 'Movie', '10378', 'tt1727587', 'Muddled', 1)", []).unwrap();
+        assert_eq!(resolve(&c).unwrap(), 0);
+        assert_eq!(item_of(&c, c.last_insert_rowid()), None);
+    }
+
+    #[test]
+    fn two_entries_that_become_one_title_are_merged_keeping_the_older() {
+        let c = conn();
+        // Added from the library while the film had no ids yet…
+        let (newer, _) = add(&c, "alice", Wanted::Item("plain".into()), 50).unwrap().unwrap();
+        // …and earlier, from the calendar, by an id the library did not know then.
+        c.execute("INSERT INTO watchlist(user_id, kind, tmdb_id, title, added_at) VALUES ('alice', 'Movie', '777', 'Home Video', 10)", []).unwrap();
+        let older = c.last_insert_rowid();
+        c.execute_batch(r#"UPDATE items SET provider_ids = '{"Tmdb":"777"}' WHERE id = 'plain';"#).unwrap();
+        crate::pipeline::rebuild_external(&c).unwrap();
+        resolve(&c).unwrap();
+        let left: Vec<(i64, Option<String>, i64)> = c.prepare("SELECT id, item_id, added_at FROM watchlist WHERE user_id = 'alice'").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(left, [(older, Some("plain".to_string()), 10)], "one entry, the older, now attached");
+        assert!(!left.iter().any(|(id, _, _)| *id == newer));
+    }
+
+    #[test]
+    fn an_attached_entry_keeps_up_with_what_the_library_calls_its_title() {
+        let c = conn();
+        let (id, _) = add(&c, "alice", Wanted::Item("plain".into()), 1).unwrap().unwrap();
+        c.execute_batch(r#"UPDATE items SET name = 'Home Video (Restored)', production_year = 2020, provider_ids = '{"Imdb":"tt0000777"}' WHERE id = 'plain';"#).unwrap();
+        resolve(&c).unwrap();
+        let (_, _, t) = row(&c, id);
+        assert_eq!((t.title.as_str(), t.year, t.imdb_id.as_deref()), ("Home Video (Restored)", Some(2020), Some("tt0000777")), "so it still reads right once the title has gone");
+    }
+
+    #[test]
+    fn a_library_read_attaches_entries() {
+        let c = conn();
+        let (id, _) = add(&c, "alice", Wanted::Title(film(Some("990001"), None, "Winterline")), 1).unwrap().unwrap();
+        c.execute_batch(r#"INSERT INTO items(id, type, name, provider_ids, updated_at) VALUES ('win', 'Movie', 'Winterline', '{"Tmdb":"990001"}', 0);"#).unwrap();
+        crate::sync::backfill_playbacks(&c).unwrap();
+        assert_eq!(item_of(&c, id).as_deref(), Some("win"));
+    }
+
+    #[test]
+    fn looking_for_what_to_attach_reads_by_index() {
+        let c = conn();
+        let plan = |sql: &str, args: &[&dyn crate::db::rusqlite::ToSql]| -> String {
+            c.prepare(&format!("EXPLAIN QUERY PLAN {sql}")).unwrap().query_map(args, |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect::<Vec<_>>().join(" | ")
+        };
+        let p = plan(WAITING_SQL, &[]);
+        assert!(p.contains("SEARCH i USING PRIMARY KEY") && !p.contains("SCAN i"), "{p}");
+        let p = plan(FIND_SQL, &[&"Movie", &"1", &"2", &"tt3"]);
+        assert!(p.contains("idx_item_external") && !p.contains("SCAN x") && !p.contains("SCAN item_external"), "{p}");
     }
 }
