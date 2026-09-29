@@ -601,6 +601,9 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         error       TEXT
     ) WITHOUT ROWID;
     "#,
+    // user_version 29 — A person's portrait has an image tag of its own (2.0.4): the cache names a picture after it, and
+    //      a portrait replaced in Jellyfin re-saves the person, not the titles they are in.
+    "ALTER TABLE item_people ADD COLUMN image_tag TEXT;",
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole

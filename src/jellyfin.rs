@@ -300,6 +300,15 @@ impl Jellyfin {
         })
     }
 
+    /// One page of the people Jellyfin saved since a moment (`people_changed_query`).
+    pub async fn changed_people_page(&self, since: i64, start: usize, limit: usize) -> Result<Vec<Value>> {
+        let mut v = self.get_json("/Items", &people_changed_query(since, start, limit)).await?;
+        Ok(match v["Items"].take() {
+            Value::Array(a) => a,
+            _ => vec![],
+        })
+    }
+
     /// One page of a library's items. Returns (items, total).
     pub async fn items_page(&self, library_id: &str, start: usize, limit: usize) -> Result<(Vec<Value>, usize)> {
         let q = library_query(library_id, start, limit);
@@ -480,6 +489,24 @@ pub fn changed_query(library_id: &str, since: i64, start: usize, limit: usize) -
     q
 }
 
+/// The people Jellyfin saved since a moment, with their portraits' tags and nothing else. A portrait replaced in
+/// Jellyfin re-saves the person, never the titles they are in, so `changed_query` cannot see it.
+pub fn people_changed_query(since: i64, start: usize, limit: usize) -> Vec<(&'static str, String)> {
+    let since = chrono::DateTime::from_timestamp(since, 0).unwrap_or_default().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    vec![
+        ("IncludeItemTypes", "Person".into()),
+        ("Recursive", "true".into()),
+        ("MinDateLastSaved", since),
+        ("EnableUserData", "false".into()),
+        ("EnableImageTypes", "Primary".into()),
+        ("ImageTypeLimit", "1".into()),
+        ("SortBy", "SortName".into()),
+        ("StartIndex", start.to_string()),
+        ("Limit", limit.to_string()),
+        ("EnableTotalRecordCount", "false".into()),
+    ]
+}
+
 /// Jellyfin's own "Scan Media Library" task in a list of tasks: (is it running right now, when it last
 /// finished). `None` when the list holds no such task. Pure, so one read of `/ScheduledTasks` can answer
 /// this and still be worth something to `jobs::observe`.
@@ -499,6 +526,18 @@ pub fn web_link(base: &str, item_id: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_look_for_changed_people_asks_for_people_and_their_portraits_only() {
+        let q = people_changed_query(1_790_685_895, 1000, 1000);
+        let get = |k: &str| q.iter().find(|(key, _)| *key == k).map(|(_, v)| v.as_str());
+        assert_eq!(get("MinDateLastSaved"), Some("2026-09-29T12:44:55Z"));
+        assert_eq!(get("IncludeItemTypes"), Some("Person"));
+        assert_eq!(get("Recursive"), Some("true"), "people belong to no library");
+        assert_eq!(get("EnableImageTypes"), Some("Primary"));
+        assert_eq!((get("StartIndex"), get("Limit")), (Some("1000"), Some("1000")));
+        assert!(get("Fields").is_none() && get("ParentId").is_none());
+    }
 
     #[test]
     fn a_look_for_changes_asks_the_library_reads_question_for_what_was_saved_since() {

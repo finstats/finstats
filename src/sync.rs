@@ -487,9 +487,9 @@ pub fn store_people(conn: &Connection, it: &Value) -> Result<()> {
         };
         let (Some(person_id), Some(name)) = (p["Id"].as_str().map(norm_id), opt_str(&p["Name"])) else { continue };
         conn.prepare_cached(
-            "INSERT OR IGNORE INTO item_people(item_id, person_id, kind, name, role, sort, has_image) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT OR IGNORE INTO item_people(item_id, person_id, kind, name, role, sort, has_image, image_tag) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         )?
-        .execute(params![item_id, person_id, kind, name, opt_str(&p["Role"]), sort as i64, opt_str(&p["PrimaryImageTag"]).is_some()])?;
+        .execute(params![item_id, person_id, kind, name, opt_str(&p["Role"]), sort as i64, opt_str(&p["PrimaryImageTag"]).is_some(), opt_str(&p["PrimaryImageTag"])])?;
     }
     Ok(())
 }
@@ -709,6 +709,8 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
 /// How far back each look reaches past the last one: the two clocks may differ a little, and an item saved while
 /// the last look was being answered must not fall between the two.
 const CHANGES_OVERLAP_S: i64 = 600;
+/// People asked for in one page: ids and tags only, so a page this big is small.
+const PEOPLE_PAGE: usize = 1000;
 
 /// Where the next look for changes starts: from the last look, else from the last library read (which read
 /// everything), with the overlap. `None` before the library was ever read — that read will bring everything.
@@ -733,6 +735,30 @@ pub fn store_changes(c: &Connection, library_id: &str, items: &[Value], now: i64
         }
     }
     Ok(stored)
+}
+
+/// Where the look at people starts: where the look at titles does, once every person has been read (`portraits_read`).
+/// Until then — the first look after 2.0.4 added portrait tags — every person is read once, since a portrait replaced
+/// before the last look would otherwise wait for the next library read. It is a mark of a *finished* read, not "some
+/// tag is known": a look that read a few people must not stand in for one that read them all.
+fn people_from(from: i64, portraits_known: bool) -> i64 {
+    if portraits_known { from } else { 0 }
+}
+
+/// The portraits of people Jellyfin saved since the last look, written onto every title they are in. Returns how many
+/// people's portraits changed; a person finstats does not know is passed over.
+pub fn store_portraits(c: &Connection, people: &[Value]) -> Result<usize> {
+    let mut stmt = c.prepare_cached(
+        "UPDATE item_people SET image_tag = ?2, has_image = ?3 WHERE person_id = ?1 AND (image_tag IS NOT ?2 OR has_image != ?3)",
+    )?;
+    let mut changed = 0;
+    for p in people {
+        let Some(id) = p["Id"].as_str().map(norm_id) else { continue };
+        let tag = opt_str(&p["ImageTags"]["Primary"]);
+        let has = tag.is_some();
+        changed += usize::from(stmt.execute(params![id, tag, has])? > 0);
+    }
+    Ok(changed)
 }
 
 /// Everything Jellyfin changed since the last look — an edited title, a new poster, the cast refreshed — library by
@@ -774,6 +800,27 @@ async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
             app.tasks.update(ID, format!("{lib_name}: {looked} changed items"), None);
         }
     }
+    // People are in no library, and a replaced portrait re-saves the person and nothing else. After a scan Jellyfin
+    // has re-saved thousands of them, so this pages through ids and tags only.
+    let known = app.db.call(|c| Ok(db::get_setting(c, "portraits_read")?.is_some())).await?;
+    let since = people_from(from, known);
+    let mut portraits = 0usize;
+    let mut looked = 0usize;
+    loop {
+        let people = jf.changed_people_page(since, looked, PEOPLE_PAGE).await?;
+        let got = people.len();
+        portraits += app.db.call(move |c| {
+            let tx = c.transaction()?;
+            let n = store_portraits(&tx, &people)?;
+            tx.commit()?;
+            Ok(n)
+        }).await?;
+        looked += got;
+        if got < PEOPLE_PAGE {
+            break;
+        }
+        app.tasks.update(ID, format!("People: {looked} looked at"), None);
+    }
     let window = app.settings().group_window_s;
     app.db
         .call(move |c| {
@@ -781,14 +828,24 @@ async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
             for title in backfill_playbacks(c)? {
                 crate::groups::detect(c, window, Some(&title))?;
             }
+            if !known {
+                db::set_setting(c, "portraits_read", &started.to_string())?;
+            }
             db::set_setting(c, "changes_checked_at", &started.to_string())
         })
         .await?;
-    Ok(match changed {
-        0 => "Nothing changed".into(),
-        1 => "1 title changed".into(),
-        n => format!("{n} titles changed"),
-    })
+    Ok(changes_said(changed, portraits))
+}
+
+/// "3 titles and 1 portrait changed".
+fn changes_said(titles: usize, portraits: usize) -> String {
+    let count = |n: usize, one: &str| format!("{n} {one}{}", if n == 1 { "" } else { "s" });
+    match (titles, portraits) {
+        (0, 0) => "Nothing changed".into(),
+        (t, 0) => format!("{} changed", count(t, "title")),
+        (0, p) => format!("{} changed", count(p, "portrait")),
+        (t, p) => format!("{} and {} changed", count(t, "title"), count(p, "portrait")),
+    }
 }
 
 // ---------------------------------------------------------------- server activity log
@@ -1005,6 +1062,33 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_first_look_at_people_reads_everybody_once() {
+        assert_eq!(people_from(10_000, true), 10_000);
+        assert_eq!(people_from(10_000, false), 0, "no portrait's tag known yet: every person, once");
+    }
+
+    #[test]
+    fn a_portrait_replaced_in_jellyfin_reaches_every_title_the_person_is_in() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        for movie in ["m1", "m2"] {
+            store_people(&c, &json!({ "Id": movie, "People": [{ "Id": "p1", "Name": "alice", "Type": "Actor", "PrimaryImageTag": "old" }] })).unwrap();
+        }
+        let tags = |c: &Connection| c.prepare("SELECT DISTINCT image_tag FROM item_people WHERE person_id = 'p1'").unwrap()
+            .query_map([], |r| r.get::<_, Option<String>>(0)).unwrap().map(Result::unwrap).collect::<Vec<_>>();
+        assert_eq!(tags(&c), [Some("old".to_string())], "the library read keeps the portrait's tag");
+        let answer = [json!({ "Id": "P1", "Type": "Person", "ImageTags": { "Primary": "new" } }), json!({ "Id": "p9", "ImageTags": { "Primary": "x" } })];
+        assert_eq!(store_portraits(&c, &answer).unwrap(), 1, "one person finstats knows");
+        assert_eq!(tags(&c), [Some("new".to_string())], "on every title");
+        assert_eq!(store_portraits(&c, &answer).unwrap(), 0, "the same answer twice changes nothing");
+        store_portraits(&c, &[json!({ "Id": "p1", "ImageTags": {} })]).unwrap();
+        let has: i64 = c.query_row("SELECT MAX(has_image) FROM item_people WHERE person_id = 'p1'", [], |r| r.get(0)).unwrap();
+        assert_eq!((tags(&c), has), (vec![None], 0), "a portrait removed in Jellyfin");
+    }
+
+    #[test]
     fn the_first_look_for_changes_starts_where_the_last_library_read_did() {
         assert_eq!(changes_from(None, None), None, "the library read will bring everything");
         assert_eq!(changes_from(None, Some(10_000)), Some(10_000 - CHANGES_OVERLAP_S));
@@ -1184,11 +1268,9 @@ mod tests {
     #[test]
     fn keeps_the_billed_cast_and_directors_and_replaces_them_on_the_next_read() {
         let conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch(
-            "CREATE TABLE item_people(item_id TEXT NOT NULL, person_id TEXT NOT NULL, kind TEXT NOT NULL, name TEXT NOT NULL, role TEXT,
-                                      sort INTEGER NOT NULL, has_image INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (item_id, person_id, kind));",
-        )
-        .unwrap();
+        for m in crate::db::MIGRATIONS {
+            conn.execute_batch(m).unwrap();
+        }
         let mut people: Vec<Value> = (0..20).map(|n| json!({ "Id": format!("a{n}"), "Name": format!("Actor {n}"), "Type": "Actor", "Role": "Extra" })).collect();
         people[0]["PrimaryImageTag"] = json!("tag");
         people.push(json!({ "Id": "d1", "Name": "Jane Doe", "Type": "Director" }));

@@ -45,7 +45,9 @@ fn safe_tag(tag: &str) -> String {
 /// The tag finstats last read for a picture, if it knows the row at all.
 pub fn tag_of(c: &Connection, pic: Picture, id: &str) -> Result<Option<String>> {
     let sql = match pic {
-        Picture::Primary => "SELECT image_tag FROM items WHERE id = ?1",
+        // A title's poster, else a person's portrait: people are no titles, and keep theirs with the cast they are in.
+        Picture::Primary => "SELECT COALESCE((SELECT image_tag FROM items WHERE id = ?1),
+                                             (SELECT image_tag FROM item_people WHERE person_id = ?1 AND image_tag IS NOT NULL LIMIT 1))",
         Picture::Backdrop => "SELECT backdrop_tag FROM items WHERE id = ?1",
         Picture::User => "SELECT image_tag FROM users WHERE id = ?1",
     };
@@ -106,6 +108,9 @@ mod tests {
         assert_eq!(tag_of(&c, Picture::Backdrop, "m1").unwrap().as_deref(), Some("b1"));
         assert_eq!(tag_of(&c, Picture::User, "u1").unwrap().as_deref(), Some("u-tag"));
         assert_eq!(tag_of(&c, Picture::Primary, "nobody-knows").unwrap(), None);
+        // A person is no title: their portrait's tag is kept with the cast they are in.
+        c.execute("INSERT INTO item_people(item_id, person_id, kind, name, sort, has_image, image_tag) VALUES ('m1', 'p1', 'Actor', 'alice', 0, 1, 'face-1')", []).unwrap();
+        assert_eq!(tag_of(&c, Picture::Primary, "p1").unwrap().as_deref(), Some("face-1"));
     }
 
     #[test]
