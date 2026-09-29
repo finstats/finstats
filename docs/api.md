@@ -1526,3 +1526,12 @@ per person and title, keeping the older date, and attaches them to the library a
 
 Every entry gains `tvdb_id` and `tmdb_id` (the show's for an episode, the film's for a release; `null` where the service
 has none), so a title that is not in the library yet can be put on a watchlist by them.
+
+## Notifications: `watchlist_available`
+
+A new event kind (Library group): a film or show somebody put on their watchlist has arrived in the library — once per
+person and title, only for a title that came after it was put on the list, and nothing older than the last few hours.
+It is **only ever somebody's own**: it goes to that person's own destinations and to no other, a server destination
+and an administrator's included, and it is left out of `GET /api/notifications/history` for everyone but that person.
+It is ticked on no destination until its owner ticks it. The catalogue in `GET /api/notifications` marks such kinds
+`own_only: true`; the page offers them only to a destination of one's own.

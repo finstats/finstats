@@ -100,6 +100,9 @@ pub enum Need {
     SignIns,
     /// About the server itself: `see_server`.
     Server,
+    /// Somebody's own and nobody else's — their watchlist (2.1): their own destinations only, whatever anybody else
+    /// may see, and never a destination of the server's.
+    Owner,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -117,14 +120,17 @@ pub enum Kind {
     PlayStopped,
     /// In December: a person's year in review is ready (2.0).
     RecapReady,
+    /// A title somebody was waiting for on their watchlist is in the library (2.1).
+    WatchlistAvailable,
     /// The message the Test button sends. Never ticked, never fanned out: it goes to one destination.
     Test,
 }
 
 impl Kind {
-    pub const ALL: [Kind; 13] = [
+    pub const ALL: [Kind; 14] = [
         Kind::Travel, Kind::NewCountry, Kind::FailedSignIns, Kind::TaskFailed, Kind::BackupFailed, Kind::ServiceDown,
-        Kind::ServiceBack, Kind::NewItems, Kind::RequestAvailable, Kind::PlayStarted, Kind::PlayStopped, Kind::RecapReady, Kind::Test,
+        Kind::ServiceBack, Kind::NewItems, Kind::RequestAvailable, Kind::PlayStarted, Kind::PlayStopped, Kind::RecapReady,
+        Kind::WatchlistAvailable, Kind::Test,
     ];
 
     pub fn key(self) -> &'static str {
@@ -141,6 +147,7 @@ impl Kind {
             Kind::PlayStarted => "play_started",
             Kind::PlayStopped => "play_stopped",
             Kind::RecapReady => "recap_ready",
+            Kind::WatchlistAvailable => "watchlist_available",
             Kind::Test => "test",
         }
     }
@@ -163,6 +170,7 @@ impl Kind {
             Kind::PlayStarted => "Somebody started watching",
             Kind::PlayStopped => "Somebody stopped watching",
             Kind::RecapReady => "The year in review is ready",
+            Kind::WatchlistAvailable => "On your watchlist: now available",
             Kind::Test => "Test message",
         }
     }
@@ -182,6 +190,7 @@ impl Kind {
             Kind::PlayStarted => "A play begins: the title, the person and the device",
             Kind::PlayStopped => "A play ends, with how much of it was watched",
             Kind::RecapReady => "In December, once: a person's year in review is ready to look back on and share",
+            Kind::WatchlistAvailable => "A film or show you were waiting for on your watchlist is in the library. Only ever sent to your own destinations",
             Kind::Test => "Sent by the Test button, and by nothing else",
         }
     }
@@ -190,7 +199,7 @@ impl Kind {
         Some(match self {
             Kind::Travel | Kind::NewCountry | Kind::FailedSignIns => Group::Security,
             Kind::TaskFailed | Kind::BackupFailed | Kind::ServiceDown | Kind::ServiceBack => Group::Housekeeping,
-            Kind::NewItems | Kind::RequestAvailable | Kind::RecapReady => Group::Library,
+            Kind::NewItems | Kind::RequestAvailable | Kind::RecapReady | Kind::WatchlistAvailable => Group::Library,
             Kind::PlayStarted | Kind::PlayStopped => Group::Playback,
             Kind::Test => return None,
         })
@@ -211,6 +220,7 @@ impl Kind {
             Kind::TaskFailed | Kind::BackupFailed | Kind::ServiceDown | Kind::ServiceBack => Need::Server,
             Kind::RequestAvailable | Kind::PlayStarted | Kind::PlayStopped | Kind::RecapReady => Need::Person,
             Kind::NewItems | Kind::Test => Need::Anyone,
+            Kind::WatchlistAvailable => Need::Owner,
         }
     }
 
@@ -219,9 +229,10 @@ impl Kind {
         Kind::ALL.into_iter().filter(|k| k.group().is_some())
     }
 
-    /// What a new destination starts with ticked. The chatty one is left off on purpose.
+    /// What a new destination starts with ticked. The chatty one is left off on purpose, and so is what is only
+    /// ever somebody's own: its owner ticks it on a destination of theirs.
     pub fn default_events() -> Vec<String> {
-        Kind::tickable().filter(|k| k.group() != Some(Group::Playback)).map(|k| k.key().to_string()).collect()
+        Kind::tickable().filter(|k| k.group() != Some(Group::Playback) && k.need() != Need::Owner).map(|k| k.key().to_string()).collect()
     }
 }
 
@@ -526,6 +537,10 @@ pub fn wanted_by(t: &Target, kind: Kind, severity: &str, at: i64, about: Option<
     if at < t.created_at {
         return false;
     }
+    // Somebody's own thing goes to their own destinations and nowhere else, the server's included.
+    if kind.need() == Need::Owner && (t.owner_id.is_none() || t.owner_id.as_deref() != about) {
+        return false;
+    }
     let Some(owner_id) = &t.owner_id else { return true }; // the server's own destination
     let Some(perms) = owner else { return false }; // somebody who may not even sign in
     let own = about.is_some_and(|u| u == owner_id);
@@ -535,6 +550,7 @@ pub fn wanted_by(t: &Target, kind: Kind, severity: &str, at: i64, about: Option<
         Need::Place => own || (perms.see_everyone && perms.see_network),
         Need::SignIns => own || (perms.see_everyone && perms.see_network && perms.see_server),
         Need::Server => perms.see_server,
+        Need::Owner => own,
     }
 }
 
@@ -1067,7 +1083,7 @@ fn catalogue() -> Value {
         .map(|k| {
             json!({ "key": k.key(), "label": k.label(), "what": k.what(), "severity": k.severity(),
                     "group": k.group().map(Group::key), "group_label": k.group().map(Group::label),
-                    "personal": !matches!(k.need(), Need::Anyone) })
+                    "personal": !matches!(k.need(), Need::Anyone), "own_only": k.need() == Need::Owner })
         })
         .collect();
     let channels: Vec<Value> = Channel::ALL
@@ -1380,37 +1396,40 @@ pub async fn history(State(app): State<App>, user: AuthUser, Query(q): Query<His
     gate(&user)?;
     let limit = q.limit.unwrap_or(50).clamp(1, 200);
     let only = (!user.is_admin).then(|| user.id.clone());
-    let rows = app
-        .db
-        .call(move |c| {
-            let mut stmt = c.prepare(
-                "SELECT e.id, e.kind, e.severity, e.at, e.user_name, e.title, e.body, e.historic,
-                        d.target_id, t.name, t.kind, d.state, d.attempts, d.sent_at, d.error
-                 FROM notify_events e
-                 LEFT JOIN notify_deliveries d ON d.event_id = e.id
-                 LEFT JOIN notify_targets t ON t.id = d.target_id
-                 WHERE ?1 IS NULL OR t.owner_id = ?1
-                 ORDER BY e.at DESC, e.id DESC, d.target_id LIMIT ?2",
-            )?;
-            let rows: Vec<Value> = stmt
-                .query_map(params![only, (limit * 4) as i64], |r| {
-                    let kind: String = r.get(1)?;
-                    let target: Option<i64> = r.get(8)?;
-                    Ok(json!({
-                        "id": r.get::<_, i64>(0)?, "kind": kind, "label": Kind::from_key(&kind).map(Kind::label),
-                        "severity": r.get::<_, String>(2)?, "at": r.get::<_, i64>(3)?, "user_name": r.get::<_, Option<String>>(4)?,
-                        "title": r.get::<_, String>(5)?, "body": r.get::<_, String>(6)?, "historic": r.get::<_, bool>(7)?,
-                        "delivery": target.map(|id| json!({ "target_id": id, "target": r.get::<_, Option<String>>(9).ok(),
-                            "channel": r.get::<_, Option<String>>(10).ok(), "state": r.get::<_, Option<String>>(11).ok(),
-                            "attempts": r.get::<_, Option<i64>>(12).ok(), "sent_at": r.get::<_, Option<i64>>(13).ok(),
-                            "error": r.get::<_, Option<String>>(14).ok() })),
-                    }))
-                })?
-                .collect::<Result<_, _>>()?;
-            Ok(rows)
-        })
-        .await?;
+    let caller = user.id.clone();
+    let rows = app.db.call(move |c| recent_rows(c, only.as_deref(), &caller, limit)).await?;
     Ok(Json(json!({ "events": fold_recent(rows, limit) })))
+}
+
+/// What was raised lately, one row per delivery. `only`: just what went to this person's own destinations. Whatever
+/// is only ever somebody's own (a watchlist) is left out unless it is `caller`'s, administrators included.
+fn recent_rows(c: &Connection, only: Option<&str>, caller: &str, limit: usize) -> Result<Vec<Value>> {
+    let private: Vec<&str> = Kind::ALL.into_iter().filter(|k| k.need() == Need::Owner).map(Kind::key).collect();
+    let mut stmt = c.prepare(
+        "SELECT e.id, e.kind, e.severity, e.at, e.user_name, e.title, e.body, e.historic,
+                d.target_id, t.name, t.kind, d.state, d.attempts, d.sent_at, d.error
+         FROM notify_events e
+         LEFT JOIN notify_deliveries d ON d.event_id = e.id
+         LEFT JOIN notify_targets t ON t.id = d.target_id
+         WHERE (?1 IS NULL OR t.owner_id = ?1) AND (e.kind NOT IN (SELECT value FROM json_each(?3)) OR e.user_id = ?4)
+         ORDER BY e.at DESC, e.id DESC, d.target_id LIMIT ?2",
+    )?;
+    let rows: Vec<Value> = stmt
+        .query_map(params![only, (limit * 4) as i64, serde_json::to_string(&private)?, caller], |r| {
+            let kind: String = r.get(1)?;
+            let target: Option<i64> = r.get(8)?;
+            Ok(json!({
+                "id": r.get::<_, i64>(0)?, "kind": kind, "label": Kind::from_key(&kind).map(Kind::label),
+                "severity": r.get::<_, String>(2)?, "at": r.get::<_, i64>(3)?, "user_name": r.get::<_, Option<String>>(4)?,
+                "title": r.get::<_, String>(5)?, "body": r.get::<_, String>(6)?, "historic": r.get::<_, bool>(7)?,
+                "delivery": target.map(|id| json!({ "target_id": id, "target": r.get::<_, Option<String>>(9).ok(),
+                    "channel": r.get::<_, Option<String>>(10).ok(), "state": r.get::<_, Option<String>>(11).ok(),
+                    "attempts": r.get::<_, Option<i64>>(12).ok(), "sent_at": r.get::<_, Option<i64>>(13).ok(),
+                    "error": r.get::<_, Option<String>>(14).ok() })),
+            }))
+        })?
+        .collect::<Result<_, _>>()?;
+    Ok(rows)
 }
 
 /// One entry per event, with every delivery of it underneath, at most `limit` events.
@@ -1560,6 +1579,45 @@ pub(crate) mod tests {
 
         let server_own = target(2, None, &all);
         assert!(wanted_by(&server_own, Kind::Travel, ALERT, 10, Some("uc"), None), "the server's own destination is not filtered");
+    }
+
+    /// A watchlist is its owner's alone (2.1): no permission, however broad, and no destination of the server's is
+    /// told what somebody put on theirs.
+    #[test]
+    fn a_watchlist_arrival_is_told_to_its_owner_alone() {
+        let all = Kind::tickable().collect::<Vec<_>>();
+        let k = Kind::WatchlistAvailable;
+        let mine = target(1, Some("ub"), &all);
+        assert!(wanted_by(&mine, k, k.severity(), 10, Some("ub"), Some(Perms::from_keys(["sign_in"]))), "their own, with nothing granted");
+        assert!(!wanted_by(&mine, k, k.severity(), 10, Some("uc"), Some(Perms::ALL)), "somebody else's, not even to an administrator");
+        assert!(!wanted_by(&target(2, None, &all), k, k.severity(), 10, Some("ub"), None), "nor to a destination of the server's");
+        assert!(Kind::tickable().any(|x| x == k));
+        assert!(!Kind::default_events().contains(&k.key().to_string()), "off until its owner ticks it");
+    }
+
+    #[test]
+    fn the_catalogue_says_which_kinds_only_ever_go_to_one_s_own_destinations() {
+        let own: Vec<String> = catalogue()["events"].as_array().unwrap().iter().filter(|e| e["own_only"] == json!(true)).map(|e| e["key"].as_str().unwrap().to_string()).collect();
+        assert_eq!(own, ["watchlist_available"], "the page offers these only to a destination of one's own, and ticks none of them by itself");
+    }
+
+    #[test]
+    fn an_administrator_s_history_leaves_out_what_was_somebody_s_own_watchlist() {
+        let c = conn();
+        bus(&c, vec![target(1, Some("ub"), &[Kind::WatchlistAvailable, Kind::NewItems]), target(2, None, &[Kind::NewItems])]);
+        c.execute_batch(
+            "INSERT INTO notify_events(id, kind, severity, at, created_at, dedupe, user_id, user_name, title, body, data, private, historic) VALUES
+               (1, 'watchlist_available', 'info', 5, 5, 'w1', 'ub', 'bob', 'Now on the server: Sintel', 'x', '[]', '[]', 0),
+               (2, 'new_items', 'info', 6, 6, 'n1', NULL, NULL, 'New: Big Buck Bunny', 'x', '[]', '[]', 0);
+             INSERT INTO notify_deliveries(event_id, target_id, state, attempts, next_at) VALUES (1, 1, 'sent', 1, 0), (2, 2, 'sent', 1, 0);",
+        )
+        .unwrap();
+        let kinds = |only: Option<&str>, caller: &str| -> Vec<String> {
+            recent_rows(&c, only, caller, 50).unwrap().iter().map(|r| r["kind"].as_str().unwrap().to_string()).collect()
+        };
+        assert_eq!(kinds(None, "ua"), ["new_items"], "an administrator sees every event but somebody else's watchlist");
+        assert_eq!(kinds(Some("ub"), "ub"), ["watchlist_available"], "its owner sees their own");
+        assert_eq!(kinds(None, "ub"), ["new_items", "watchlist_available"], "an administrator's own is theirs to see");
     }
 
     /// "Include addresses" is the owner's wish, not a permission: an address reaches a personal destination

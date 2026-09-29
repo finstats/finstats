@@ -301,6 +301,55 @@ pub fn restore_row(conn: &Connection, row: &serde_json::Map<String, Value>) -> R
     Ok(true)
 }
 
+/// After a library read: tell each person whose watchlist was waiting for a title that it is here — a title that came
+/// after they put it on the list, in the last few hours. Re-derived from that window every time, so saying it twice is
+/// impossible and a missed read loses nothing; anything older is history and says nothing. Only ever to the person's own
+/// destinations (`notify::Need::Owner`).
+pub fn announce(conn: &Connection, bus: &crate::notify::Fanout) -> Result<usize> {
+    use crate::notify::{Event, Kind};
+    if !bus.anyone_wants(Kind::WatchlistAvailable) {
+        return Ok(0);
+    }
+    type Arrived = (String, String, String, String, String, i64);
+    let rows: Vec<Arrived> = conn
+        .prepare_cached(
+            "SELECT w.user_id, COALESCE(u.name, w.user_id), w.kind, i.id, i.name, i.date_created
+             FROM watchlist w JOIN items i ON i.id = w.item_id AND i.removed = 0 LEFT JOIN users u ON u.id = w.user_id
+             WHERE i.date_created >= ?1 AND i.date_created > w.added_at",
+        )?
+        .query_map([db::now() - crate::notify::HISTORIC_S], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
+        .collect::<Result<_, _>>()?;
+    let mut told = 0;
+    for (user_id, user_name, kind, item_id, name, arrived) in rows {
+        let event = Event::new(
+            Kind::WatchlistAvailable,
+            format!("notify:watchlist:{user_id}:{item_id}"),
+            format!("Now on the server: {name}"),
+            format!("The {} on your watchlist is in the library now.", if kind == "Series" { "show" } else { "film" }),
+        )
+        .at(arrived)
+        .field("Title", name)
+        .link(format!("/items/{item_id}"))
+        .about(user_id, user_name);
+        told += usize::from(crate::notify::raise_in(conn, bus, &event)?);
+    }
+    Ok(told)
+}
+
+/// After a library read or a look at what changed: has anything somebody was waiting for arrived?
+pub async fn check_arrivals(app: &App) {
+    let bus_app = app.clone();
+    let done = app.db.call(move |c| {
+        let bus = crate::notify::Fanout::of(c, &bus_app)?;
+        announce(c, &bus)
+    }).await;
+    match done {
+        Ok(n) if n > 0 => app.notify_wake.notify_one(),
+        Ok(_) => {}
+        Err(e) => tracing::warn!("could not announce what arrived for watchlists: {e:#}"),
+    }
+}
+
 /// Entries the library does not have as far as they know: never attached, or attached to an item that is gone.
 /// Bounded by the per-person cap, and each one's item looked up by its key.
 const WAITING_SQL: &str = "SELECT w.id, w.user_id, w.kind, w.item_id, w.tmdb_id, w.tvdb_id, w.imdb_id, w.added_at
@@ -888,5 +937,34 @@ mod tests {
         assert!(p.contains("SEARCH i USING PRIMARY KEY") && !p.contains("SCAN i"), "{p}");
         let p = plan(FIND_SQL, &[&"Movie", &"1", &"2", &"tt3"]);
         assert!(p.contains("idx_item_external") && !p.contains("SCAN x") && !p.contains("SCAN item_external"), "{p}");
+    }
+    #[test]
+    fn an_arrival_is_told_once_to_whoever_was_waiting_for_it() {
+        use crate::notify::{Kind, tests::{bus, target}};
+        let c = conn();
+        let now = db::now();
+        c.execute_batch(
+            r#"INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 0), ('bob', 'bob', 0), ('carol', 'carol', 0);
+               INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('alice', '["sign_in"]', 0), ('bob', '["sign_in"]', 0), ('carol', '["sign_in"]', 0);"#,
+        )
+        .unwrap();
+        // alice put it on her list a day before it came; bob added it from its page once it was here; carol waited for a
+        // title that came two years ago, before this install had anything to tell.
+        c.execute("INSERT INTO watchlist(user_id, kind, tmdb_id, title, added_at) VALUES ('alice', 'Movie', '990001', 'Winterline', ?1)", [now - 86_400]).unwrap();
+        c.execute(r#"INSERT INTO items(id, type, name, provider_ids, date_created, updated_at) VALUES ('win', 'Movie', 'Winterline', '{"Tmdb":"990001"}', ?1, 0)"#, [now - 600]).unwrap();
+        c.execute("UPDATE items SET date_created = ?1 WHERE id = 'sintel'", [now - 2 * 365 * 86_400]).unwrap();
+        c.execute("INSERT INTO watchlist(user_id, kind, tmdb_id, title, added_at) VALUES ('carol', 'Movie', '45745', 'Sintel', ?1)", [now - 3 * 365 * 86_400]).unwrap();
+        crate::pipeline::rebuild_external(&c).unwrap();
+        resolve(&c).unwrap();
+        add(&c, "bob", Wanted::Item("win".into()), now).unwrap().unwrap();
+        let all = [Kind::WatchlistAvailable];
+        let f = bus(&c, vec![target(1, Some("alice"), &all), target(2, Some("bob"), &all), target(3, Some("carol"), &all)]);
+        assert_eq!(announce(&c, &f).unwrap(), 1);
+        assert_eq!(announce(&c, &f).unwrap(), 0, "told once");
+        let told: Vec<(String, String, Option<String>)> = c.prepare("SELECT user_id, title, link FROM notify_events").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(told, [("alice".to_string(), "Now on the server: Winterline".to_string(), Some("/items/win".to_string()))]);
+        let queued: Vec<i64> = c.prepare("SELECT target_id FROM notify_deliveries").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(queued, [1], "to alice's destination and nobody else's");
     }
 }

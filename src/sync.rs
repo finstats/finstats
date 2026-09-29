@@ -81,8 +81,9 @@ pub fn spawn_within(app: &App, id: &'static str, limit: Option<Duration>) -> boo
             "sync_libraries" => {
                 let done = sync_libraries(&app, &jf).await;
                 announce_new_items(&app).await;
-                // An episode arriving is also how a request becomes watchable.
+                // An episode arriving is also how a request becomes watchable, and how a watchlist gets what it waited for.
                 crate::seerr::check_available(&app).await;
+                crate::watchlist::check_arrivals(&app).await;
                 done
             }
             "sync_events" => {
@@ -97,6 +98,7 @@ pub fn spawn_within(app: &App, id: &'static str, limit: Option<Duration>) -> boo
             "sync_changes" => {
                 let done = sync_changes(&app, &jf).await;
                 announce_new_items(&app).await;
+                crate::watchlist::check_arrivals(&app).await;
                 done
             }
             other => Err(anyhow!("unknown task {other}")),
