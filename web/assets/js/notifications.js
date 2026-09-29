@@ -133,7 +133,9 @@ export function notificationsPanel(ctx) {
 
     // One tick per kind of event, grouped the way the catalogue groups them.
     const ticks = new Map();
-    const chosen = existing ? existing.events : data.catalogue.events.filter((e) => e.group !== 'playback').map((e) => e.key);
+    // What is only ever somebody's own (their watchlist) starts unticked, as the chatty playback kinds do.
+    const chosen = existing ? existing.events : data.catalogue.events.filter((e) => e.group !== 'playback' && !e.own_only).map((e) => e.key);
+    const ownOnly = new Map();   // kind → its row, offered only to a destination of one's own
     const groups = data.catalogue.groups.map((g) => {
       const events = data.catalogue.events.filter((e) => e.group === g.key);
       if (!events.length) return null;
@@ -142,7 +144,9 @@ export function notificationsPanel(ctx) {
         events.map((e) => {
           const box = h('input', { type: 'checkbox', id: `notify-ev-${e.key}`, checked: chosen.includes(e.key) });
           ticks.set(e.key, box);
-          return h('label', { class: 'check notify-event' }, box, h('span', null, h('span', { class: 'notify-event-label' }, e.label), h('span', { class: 'help' }, e.what)));
+          const row = h('label', { class: 'check notify-event' }, box, h('span', null, h('span', { class: 'notify-event-label' }, e.label), h('span', { class: 'help' }, e.what)));
+          if (e.own_only) ownOnly.set(e.key, row);
+          return row;
         }));
     });
 
@@ -190,6 +194,13 @@ export function notificationsPanel(ctx) {
       scopeMine.checked = !data.can_add_server;
     }
     kindSel.addEventListener('change', () => { channel = channelOf(kindSel.value); paintKind(); });
+    // A destination of the server's is never sent what is somebody's own, so it is not offered one.
+    function paintScope() {
+      const mine = existing ? existing.scope === 'me' : scopeMine.checked;
+      for (const [key, row] of ownOnly) { row.hidden = !mine; if (!mine) ticks.get(key).checked = false; }
+    }
+    for (const r of [scopeServer, scopeMine]) r.addEventListener('change', paintScope);
+    paintScope();
     for (const f of [url, secret, topic, ...extras.values()]) f.input.addEventListener('input', () => f.setError(''));
     paintKind();
 

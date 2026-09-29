@@ -1649,6 +1649,7 @@ select.input:disabled { opacity: .6; }
 .notify-event input { margin-top: 2px; flex: none; }
 .notify-event .help { margin: 1px 0 0; }
 .notify-event-label { display: block; }
+.notify-event[hidden] { display: none; }
 .notify-what { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 520px; }
 .notify-sent { min-width: 190px; }
 .notify-delivery + .notify-delivery { margin-top: 4px; }
