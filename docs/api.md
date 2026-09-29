@@ -1150,11 +1150,13 @@ enough back to say anything (at least 0.5% ago and at least 5 s ago, within a 15
 or slows down is described by the pace it has now rather than the one it averaged — and a job creeping a percent every
 few minutes is still measurable at all.
 
-**The watching starts before the first call.** The task lists finstats reads anyway — the library-scan check every
-5 minutes, the server details every 15 — feed the same memory, so a run that has been going a while usually has an
-`eta_s` and a `watching_since` well before this endpoint is called for the first time. Those reads are made either way
-and nothing extra is asked of Jellyfin for it; this endpoint's own read is still made only when it is called, and still
-at most every 3 s. Both lists leave out Jellyfin's hidden tasks, so a hidden job is timed only while a page is open.
+**The watching is the backend's, and starts before the first call.** The task lists finstats reads anyway — the
+library-scan check every 5 minutes, the server details every 15 — notice a run, and from then on finstats reads the whole
+list itself every 10 seconds for as long as anything runs (2.0.4), whether or not a page is open. So a page opened on a
+running job is answered with an `eta_s` measured over the last minutes, not one it has to watch into being. Idle, nothing
+extra is asked of Jellyfin. This endpoint's own read is still at most every 3 s, and a page reading it spares the
+backend's. A job Jellyfin reports at 0% the whole time — a library scan's first phase does — has no rate to measure,
+and stays `null` until the percentage moves.
 
 **When nothing has been measured, `eta_s` is `null` and stays `null`.** There is a tempting number to put there — how
 long the last run took, applied to the fraction that is left — and it is a guess: it knows nothing about how much of

@@ -525,7 +525,11 @@ rather than as a stuck page; a percentage that goes backwards is the next run, n
 a time, never a countdown — a daily trigger is in the *server's* local zone, which finstats cannot know — and only an
 interval trigger, measured from the last run, produces `next_at`. The read is live but never more often than
 `MIN_GAP_S` (3 s) however many people watch, hidden tasks included, and read-only like everything else: nothing in the
-code can start or stop a task on Jellyfin.
+code can start or stop a task on Jellyfin. **The estimate is the backend's (2.0.4)**: `jobs::run` reads the list itself every
+`BUSY_EVERY_S` (10 s) while `Watch::next_look` knows of a run, so a page opened on a running job is served an `eta_s` it did not
+have to watch into being — before, only a page's own 3-s reads (and the five-minute scan check) timed a run. Idle it asks
+nothing; the scheduler's read notices the next run. A job Jellyfin reports at 0% throughout has no rate, and the page keeps
+its cycling "ETA…" until the percentage moves.
 
 **Notifications (`notify.rs`, `channels.rs`, `/api/notifications*`, Settings card).** The only thing finstats *sends*. An
 **event** is raised where the thing is noticed and written once — `raise_in` is `INSERT OR IGNORE` on `dedupe`, exactly like
