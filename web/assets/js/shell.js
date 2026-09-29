@@ -3,7 +3,7 @@
 
 import { h, icon, num, relTime, dateTime, mount, logo } from './dom.js';
 import { api, isAbort } from './api.js';
-import { state, resetCaches, hasUnseenVersion, onVersionSeen, noteRunningVersion, can, THEMES, themeChoice, setTheme } from './state.js';
+import { state, resetCaches, hasUnseenVersion, onVersionSeen, noteRunningVersion, can, themeChoice, setTheme } from './state.js';
 import { hasPipeline } from './pages/pipeline.js';
 import { navigate, onRouteChange, canGoBack } from './router.js';
 import { avatar } from './components.js';
@@ -14,6 +14,79 @@ let bare = null;
 
 const THEME_NAME = { device: 'Device', light: 'Light', dark: 'Dark' };
 const THEME_ICON = { device: 'monitor', light: 'sun', dark: 'moon' };
+// The stops of the theme switch, left to right: Device sits in the middle, the one that is neither.
+const THEME_STOPS = ['light', 'device', 'dark'];
+
+/**
+ * The theme as a switch with three stops, like the two-stop ones in Settings: a click on a third of it, a drag of the
+ * knob or the arrow keys pick one. The knob carries the icon of what is chosen, and a new icon moves in when it
+ * changes (CSS, and not at all with reduced motion). A slider to assistive technology: "Theme: Dark".
+ */
+function themeSwitch() {
+  const knob = h('span', { class: 'theme-knob' });
+  const el = h('div', { class: 'theme-switch', role: 'slider', tabindex: '0', 'aria-label': 'Theme', 'aria-valuemin': '0', 'aria-valuemax': '2', 'aria-orientation': 'horizontal' },
+    h('span', { class: 'theme-marks', 'aria-hidden': 'true' }, THEME_STOPS.map(() => h('span', { class: 'theme-mark' }))), knob);
+  let at = THEME_STOPS.indexOf(themeChoice());
+  function paint(animate) {
+    const t = THEME_STOPS[at];
+    el.dataset.at = String(at);
+    el.style.setProperty('--at', String(at));
+    el.setAttribute('aria-valuenow', String(at));
+    el.setAttribute('aria-valuetext', THEME_NAME[t]);
+    el.title = `Theme: ${THEME_NAME[t]}`;
+    if (knob.dataset.icon !== THEME_ICON[t]) {
+      knob.dataset.icon = THEME_ICON[t];
+      mount(knob, icon(THEME_ICON[t], 13, animate ? 'theme-icon is-in' : 'theme-icon'));
+    }
+  }
+  function choose(next) {
+    next = Math.max(0, Math.min(2, next));
+    knob.style.translate = '';
+    if (next === at) return;
+    at = next;
+    setTheme(THEME_STOPS[at]);
+    paint(true);
+  }
+  // Where on the track a pointer is, as a stop: 0, 1 or 2.
+  const stopAt = (clientX) => { const r = el.getBoundingClientRect(); return Math.max(0, Math.min(2, Math.floor(((clientX - r.left) / r.width) * 3))); };
+  let drag = null;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    const r = el.getBoundingClientRect(), k = knob.getBoundingClientRect();
+    // Where the knob sits now (the track's border and the knob's inset are a pixel each), and how far it can go.
+    drag = { x: e.clientX, from: k.left - r.left - 2, max: r.width - k.width - 4, moved: false };
+    el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) < 3) return;
+    drag.moved = true;
+    el.classList.add('is-dragging');
+    // The knob follows the pointer between the two ends; it lands on the nearest stop when let go.
+    knob.style.translate = `${Math.max(0, Math.min(drag.max, drag.from + dx)).toFixed(1)}px 0`;
+  });
+  const letGo = (e) => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    el.classList.remove('is-dragging');
+    if (!d.moved) return choose(stopAt(e.clientX));
+    const k = knob.getBoundingClientRect();
+    choose(stopAt(k.left + k.width / 2));
+    knob.style.translate = '';
+  };
+  el.addEventListener('pointerup', letGo);
+  el.addEventListener('pointercancel', () => { drag = null; el.classList.remove('is-dragging'); knob.style.translate = ''; });
+  el.addEventListener('keydown', (e) => {
+    const step = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[e.key];
+    if (step) { e.preventDefault(); choose(at + step); }
+    else if (e.key === 'Home') { e.preventDefault(); choose(0); }
+    else if (e.key === 'End') { e.preventDefault(); choose(2); }
+  });
+  paint(false);
+  return el;
+}
+
 
 
 function navItems() {
@@ -67,16 +140,6 @@ function buildShell() {
   const searchBtn = h('button', { type: 'button', class: 'search-btn', onClick: () => openPalette(), 'aria-keyshortcuts': 'Control+Space' },
     icon('search', 14), h('span', null, 'Search…'), h('kbd', null, 'Ctrl Space'));
 
-  const themeBtn = h('button', { type: 'button', class: 'icon-btn theme-btn' });
-  const paintTheme = () => {
-    const t = themeChoice(), next = THEMES[(THEMES.indexOf(t) + 1) % THEMES.length];
-    mount(themeBtn, icon(THEME_ICON[t], 15));
-    themeBtn.setAttribute('aria-label', `Theme: ${THEME_NAME[t]}`);
-    themeBtn.title = `Theme: ${THEME_NAME[t]} — switch to ${THEME_NAME[next]}`;
-  };
-  themeBtn.addEventListener('click', () => { setTheme(THEMES[(THEMES.indexOf(themeChoice()) + 1) % THEMES.length]); paintTheme(); });
-  paintTheme();
-
   const logout = h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Sign out', title: 'Sign out' }, icon('logout', 15));
   logout.addEventListener('click', () => signOut(logout));
 
@@ -87,7 +150,7 @@ function buildShell() {
     h('div', { class: 'sidebar-foot' },
       h('a', { class: 'me', href: `/users/${me.id}` }, avatar(me.id, me.name, { size: 26, hasImage: me.has_image }),
         h('span', { class: 'me-text' }, h('span', { class: 'me-name' }, me.name), h('span', { class: 'me-role' }, me.is_admin ? 'Administrator' : 'Viewer'))),
-      themeBtn, logout));
+      themeSwitch(), logout));
 
   const menuBtn = h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Open menu', 'aria-controls': 'sidebar', 'aria-expanded': 'false' }, icon('menu', 18));
   const topbar = h('header', { class: 'topbar' }, menuBtn, h('a', { class: 'brand', href: '/' }, brandMark(), h('span', { class: 'brand-name' }, 'finstats')),
