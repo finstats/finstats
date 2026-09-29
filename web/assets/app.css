@@ -1855,7 +1855,7 @@ body.public { min-height: 100vh; }
 .story-grid { list-style: none; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); margin: 12px 0; }
 .story-grid li { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .story-grid img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: var(--radius-sm); border: 1px solid var(--border-soft); background: var(--bg-sunken); }
-.item-open { margin: 10px 0 2px; }
+.item-open { margin: 10px 0 2px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
 #f-jellyfin_public_url { width: min(320px, 100%); }
 
 /* ---- watchlist: one's own films and shows, grouped by where each stands. Posters on a wide screen; on a phone one
@@ -1886,3 +1886,20 @@ a.wl-poster:hover .poster, a.wl-poster:focus-visible .poster { outline: 2px soli
   .wl-sk { aspect-ratio: auto; height: 84px; }
 }
 
+/* The toggle, wherever a film or a show is offered. Pressed, the bookmark fills in the accent. */
+.wl { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.wl-toggle[hidden] { display: none; }
+.wl-toggle.is-on { color: var(--accent-hi); }
+.wl-toggle.is-on .icon path { fill: currentColor; }
+.wl-error { max-width: 260px; font-size: 12px; line-height: 1.4; color: var(--critical-text); overflow-wrap: anywhere; }
+.wl-error:empty { display: none; }
+/* On a shelf card: over the poster's corner, beside the card's link rather than in it. */
+.shelf > li { position: relative; }
+.shelf .wl { position: absolute; top: 6px; right: 6px; align-items: flex-end; }
+.shelf .wl-toggle { background: color-mix(in srgb, var(--bg-2) 88%, transparent); }
+.shelf .wl-toggle:hover { background: var(--bg-2); }
+.shelf .wl-error { max-width: 120px; padding: 3px 6px; border-radius: var(--radius-sm); background: var(--bg-lift); }
+/* In an agenda row and a search result: at the end of the line. */
+.up-row .wl { flex: none; }
+.palette-opt .wl { margin-left: auto; flex: none; }
+.palette-opt .wl-toggle { width: 26px; height: 26px; }

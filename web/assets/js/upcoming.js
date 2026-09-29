@@ -2,6 +2,7 @@
 
 import { h, icon, mount, initials, episodeCode, parseDay } from './dom.js';
 import { api, imgItem } from './api.js';
+import { watchToggle } from './watchlist.js';
 
 export const RELEASE_LABEL = { air: 'Airs', cinema: 'In cinemas', digital: 'Digital release', physical: 'Disc release' };
 const FINALE_LABEL = { season: 'Season finale', series: 'Series finale', midseason: 'Mid-season finale' };
@@ -46,8 +47,15 @@ export function entryWhat(e) {
 }
 export const entryHref = (e) => (e.item_id ? `/items/${e.item_id}` : null);
 
-/** One line of an agenda. `people`: also say who follows it (only ever sent to those who may know). */
-export function entryRow(e, { people = false } = {}) {
+/** What a watchlist knows this entry's title by: the show or film in the library, else its ids. */
+export function entryTitle(e) {
+  if (e.item_id) return { item_id: e.item_id };
+  return { kind: e.kind === 'episode' ? 'Series' : 'Movie', tmdb_id: e.tmdb_id ?? null, tvdb_id: e.tvdb_id ?? null, title: entryName(e), year: e.year ?? null };
+}
+
+/** One line of an agenda. `people`: also say who follows it (only ever sent to those who may know). `watch`: offer the
+ *  watchlist toggle. */
+export function entryRow(e, { people = false, watch = false } = {}) {
   const href = entryHref(e);
   const title = href ? h('a', { class: 'up-title', href }, entryName(e)) : h('span', { class: 'up-title' }, entryName(e));
   const names = people && e.follower_names && e.follower_names.length ? e.follower_names : null;
@@ -62,6 +70,7 @@ export function entryRow(e, { people = false } = {}) {
         !href ? h('span', { class: 'chip', title: 'Sonarr or Radarr is waiting for it; it is not in your Jellyfin library yet' }, 'New to the library') : null,
         e.you_follow ? h('span', { class: 'sev up-follow' }, icon('heart', 13), 'You watch this') : null,
         names ? h('span', { class: 'up-people', title: names.join(', ') }, icon('users', 13), names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} +${names.length - 2}`) : null)),
+    watch ? watchToggle(entryTitle(e), { compact: true, name: entryName(e) }) : null,
     h('div', { class: 'up-when mono' }, e.at ? timeOfDay(e.at) : ''));
 }
 

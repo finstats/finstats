@@ -199,7 +199,7 @@ function upcomingTab(ctx, root) {
         return emptyState(f.mine ? 'Nothing coming up for the shows watched here' : 'Nothing on the calendar',
           f.mine ? 'A show counts as followed when an episode of it was played in the last four months.' : 'Sonarr and Radarr expect nothing in this period. Only monitored titles count.');
       }
-      return card({ cls: 'card-agenda', body: agenda(list, { people: can('see_everyone') }) });
+      return card({ cls: 'card-agenda', body: agenda(list, { people: can('see_everyone'), watch: true }) });
     },
   });
   const mineBtn = segmented({ label: 'Which titles', size: 'seg-sm', value: f.mine ? 'mine' : 'all',

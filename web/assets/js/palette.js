@@ -5,6 +5,7 @@ import { api, isAbort } from './api.js';
 import { navigate } from './router.js';
 import { openModal, poster, avatar } from './components.js';
 import { pageCommands } from './shell.js';
+import { watchToggle, watchable, pressToggleIn } from './watchlist.js';
 
 let isOpen = false;
 
@@ -21,8 +22,11 @@ export function openPalette() {
   const input = h('input', { class: 'palette-input', type: 'text', placeholder: 'Search movies, shows, actors, users, pages…', autocomplete: 'off',
     role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'palette-list', 'aria-autocomplete': 'list', 'aria-label': 'Search' });
   const list = h('ul', { class: 'palette-list', id: 'palette-list', role: 'listbox' });
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform || '');
+  // Said only while the highlighted result is a film or a show, which is when Ctrl+Enter does anything.
+  const keepHint = h('span', { hidden: true }, h('kbd', null, mac ? '⌘' : 'Ctrl'), h('kbd', null, '↵'), ' to add to your watchlist');
   const hint = h('div', { class: 'palette-foot' },
-    h('span', null, h('kbd', null, '↑'), h('kbd', null, '↓'), ' to move'), h('span', null, h('kbd', null, '↵'), ' to open'), h('span', null, h('kbd', null, 'Esc'), ' to close'));
+    h('span', null, h('kbd', null, '↑'), h('kbd', null, '↓'), ' to move'), h('span', null, h('kbd', null, '↵'), ' to open'), keepHint, h('span', null, h('kbd', null, 'Esc'), ' to close'));
   const body = h('div', { class: 'palette' }, h('div', { class: 'palette-search' }, icon('search', 16), input), list, hint);
 
   const modal = openModal({ title: 'Search', body, bare: true, cls: 'modal-palette', initialFocus: input,
@@ -33,7 +37,7 @@ export function openPalette() {
   function paint(groups, emptyText) {
     results = groups.flatMap((g) => g.rows);
     active = Math.min(active, Math.max(0, results.length - 1));
-    if (!results.length) { mount(list, h('li', { class: 'palette-empty' }, emptyText || 'No results')); input.removeAttribute('aria-activedescendant'); return; }
+    if (!results.length) { mount(list, h('li', { class: 'palette-empty' }, emptyText || 'No results')); input.removeAttribute('aria-activedescendant'); sayHint(); return; }
     let i = 0;
     mount(list, groups.filter((g) => g.rows.length).map((g) => [
       h('li', { class: 'palette-group', role: 'presentation' }, g.title),
@@ -41,10 +45,14 @@ export function openPalette() {
         const idx = i++;
         return h('li', { id: 'pal-' + idx, role: 'option', class: ['palette-opt', idx === active && 'is-active'], 'aria-selected': String(idx === active),
           onPointermove: () => { if (active !== idx) setActive(idx); },
-          onClick: () => go(r) }, r.thumb, h('span', { class: 'palette-label' }, r.label), r.sub ? h('span', { class: 'palette-sub' }, r.sub) : null);
+          onClick: () => go(r) }, r.thumb, h('span', { class: 'palette-label' }, r.label), r.sub ? h('span', { class: 'palette-sub' }, r.sub) : null, r.keep || null);
       })]));
     input.setAttribute('aria-activedescendant', 'pal-' + active);
+    sayHint();
   }
+
+  const activeOpt = () => list.querySelectorAll('.palette-opt')[active];
+  function sayHint() { keepHint.hidden = !(results[active] && results[active].keep); }
 
   function setActive(idx) {
     const opts = list.querySelectorAll('.palette-opt');
@@ -53,6 +61,7 @@ export function openPalette() {
     opts[active]?.classList.add('is-active'); opts[active]?.setAttribute('aria-selected', 'true');
     opts[active]?.scrollIntoView({ block: 'nearest' });
     input.setAttribute('aria-activedescendant', 'pal-' + active);
+    sayHint();
   }
 
   // every typed word has to be in the label, in any order
@@ -76,7 +85,8 @@ export function openPalette() {
         { title: 'Pages', rows: pageRows(q.toLowerCase()) },
         { title: 'Users', rows: (data.users || []).map((u) => ({ label: u.name, href: `/users/${u.id}`, thumb: avatar(u.id, u.name, { size: 24 }) })) },
         { title: 'Library', rows: (data.items || []).map((it) => ({ label: it.name, href: `/items/${it.id}`,
-          sub: [typeName[it.type] || it.type, it.sub || it.year].filter(Boolean).join(' · '), thumb: poster(it.image_item_id || it.id, it.name, { w: 120, cls: 'poster-xs' }) })) },
+          sub: [typeName[it.type] || it.type, it.sub || it.year].filter(Boolean).join(' · '), thumb: poster(it.image_item_id || it.id, it.name, { w: 120, cls: 'poster-xs' }),
+          keep: watchable(it.type) ? watchToggle({ item_id: it.id }, { compact: true, name: it.name, keepFocus: true }) : null })) },
         { title: 'Cast and crew', rows: (data.people || []).map((p) => ({ label: p.name, href: `/people/${p.id}`, sub: credit(p),
           thumb: poster(p.has_image ? p.id : null, p.name, { w: 120, cls: 'poster-xs' }) })) },
       ], `Nothing matches “${q}”.`);
@@ -97,6 +107,7 @@ export function openPalette() {
   input.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); if (results.length) setActive((active + 1) % results.length); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); if (results.length) setActive((active - 1 + results.length) % results.length); }
+    else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); pressToggleIn(activeOpt()); }
     else if (e.key === 'Enter') { e.preventDefault(); if (results[active]) go(results[active]); }
   });
 

@@ -9,6 +9,7 @@ import { recapBanner } from './recap.js';
 import { loadUpcoming, entryCard } from '../upcoming.js';
 import { loadDownloads, downloadsList, nothingDownloading } from '../downloads.js';
 import { groupsCard } from '../widgets.js';
+import { watchToggle, watchable } from '../watchlist.js';
 
 // Coming up: the same loader for the card and the prefetcher. Nothing is asked when no Sonarr or Radarr is connected.
 const hasComing = () => !!(state.user && state.user.features && state.user.features.upcoming);
@@ -176,12 +177,15 @@ export default function dashboard(ctx) {
 
 /** Recently added: one card per arrival. */
 function shelf(items, arrows) {
-  return shelfRow(items.map((it) => h('a', { class: 'shelf-card', href: `/items/${it.id}` },
+  return shelfRow(items.map((it) => [h('a', { class: 'shelf-card', href: `/items/${it.id}` },
     poster(it.image_item_id || it.id, it.name, { w: 300, cls: 'poster-grid' }),
     h('span', { class: 'shelf-when' }, relEl(it.added_at, '')),
     h('span', { class: 'shelf-name' }, it.name),
     it.sub ? h('span', { class: 'shelf-sub' }, it.sub) : null,
-    h('span', { class: 'shelf-sub' }, whatArrived(it)))), arrows, 'Recently added, newest first');
+    h('span', { class: 'shelf-sub' }, whatArrived(it))),
+    // Beside the card's link, not inside it: a button in a link is two controls in one. Episodes fold into their show,
+    // and the show is what goes on a list.
+    it.kind === 'episodes' || watchable(it.type) ? watchToggle({ item_id: it.id }, { compact: true, name: it.name }) : null]), arrows, 'Recently added, newest first');
 }
 
 function whatArrived(it) {
