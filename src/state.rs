@@ -117,11 +117,13 @@ pub struct Settings {
     /// to (a container name, a LAN address). Every "Open in Jellyfin" button points here; empty means the
     /// address finstats connects to.
     pub jellyfin_public_url: String,
+    /// The owner's triggers, one list per job (`schedule`). A job missing here runs on its defaults.
+    pub schedules: std::collections::BTreeMap<String, Vec<crate::schedule::Trigger>>,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { follow_jellyfin_scan: true, allow_user_login: false, default_permissions: vec![], active_interval_s: 1, idle_interval_s: 5, sync_interval_h: 6, merge_window_s: 600, min_play_s: 0, group_window_s: 60, public_ip_lookup: true, home_addresses: vec![], backup_every_d: 7, backup_keep: 5, geoip_download: false, travel_speed_kmh: 900, travel_min_km: 500, public_url: String::new(), public_profiles: false, jellyfin_public_url: String::new() }
+        Self { follow_jellyfin_scan: true, allow_user_login: false, default_permissions: vec![], active_interval_s: 1, idle_interval_s: 5, sync_interval_h: 6, merge_window_s: 600, min_play_s: 0, group_window_s: 60, public_ip_lookup: true, home_addresses: vec![], backup_every_d: 7, backup_keep: 5, geoip_download: false, travel_speed_kmh: 900, travel_min_km: 500, public_url: String::new(), public_profiles: false, jellyfin_public_url: String::new(), schedules: Default::default() }
     }
 }
 
@@ -161,6 +163,9 @@ impl Settings {
             if parsed.is_none() || url.len() > 300 {
                 return Err("Jellyfin's address must start with http:// or https:// and name a host".into());
             }
+        }
+        for (task, triggers) in &self.schedules {
+            crate::schedule::validate(task, triggers)?;
         }
         check("backup_every_d", self.backup_every_d, 0, 365)?;
         check("backup_keep", self.backup_keep, 1, 100)?;
@@ -336,6 +341,19 @@ impl Tasks {
         }
     }
 
+    /// The last finished runs from before a restart, for jobs that have not run since.
+    pub fn remember(&self, runs: Vec<crate::schedule::LastRun>) {
+        let mut map = self.0.lock().unwrap();
+        for run in runs {
+            let Some(t) = map.values_mut().find(|t| t.id == run.task) else { continue };
+            if t.state != "idle" {
+                continue;
+            }
+            t.state = if run.ok { "ok" } else { "error" };
+            (t.started_at, t.finished_at, t.message, t.error) = (run.started_at, run.finished_at, run.message, run.error);
+        }
+    }
+
     pub fn snapshot(&self) -> Vec<TaskState> {
         self.0.lock().unwrap().values().cloned().collect()
     }
@@ -422,6 +440,17 @@ pub type ApiResult<T = Json<Value>> = Result<T, ApiError>;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `PUT /api/settings` takes any key of the blob, `schedules` included, so the rule for a schedule holds there too.
+    #[test]
+    fn a_schedule_is_checked_wherever_it_is_saved() {
+        use crate::schedule::{Trigger, When};
+        let with = |task: &str, list: Vec<Trigger>| Settings { schedules: [(task.to_string(), list)].into(), ..Settings::default() }.validate();
+        assert!(with("backup", vec![Trigger::new(When::Daily { at_min: 180 })]).is_ok());
+        assert!(with("backup", vec![]).is_ok(), "no triggers: by hand only");
+        assert!(with("import", vec![Trigger::new(When::Startup)]).is_err());
+        assert!(with("backup", vec![Trigger::new(When::Interval { every_s: 1 })]).is_err());
+    }
 
     #[test]
     fn jellyfins_address_for_people_is_an_http_address_or_nothing() {

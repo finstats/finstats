@@ -588,6 +588,19 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     //      `created_at` is whole seconds and the table has no rowid, so among sign-ins of one second the one
     //      that gave way to the limit was picked by its token's hash, not its age.
     "ALTER TABLE sessions ADD COLUMN seq INTEGER NOT NULL DEFAULT 0;",
+    // user_version 28 — How each of finstats' own jobs last ended (2.0.4). An interval trigger counts from the
+    //      last run, and a start must not forget it: every job used to run again at every start. Re-readable,
+    //      so not part of a backup.
+    r#"
+    CREATE TABLE task_runs (
+        task        TEXT PRIMARY KEY,
+        state       TEXT NOT NULL,            -- ok | error
+        started_at  INTEGER,
+        finished_at INTEGER,
+        message     TEXT,
+        error       TEXT
+    ) WITHOUT ROWID;
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole

@@ -31,6 +31,7 @@ mod public;
 mod recap;
 mod recent;
 mod relink;
+mod schedule;
 mod security;
 mod seerr;
 mod services;
