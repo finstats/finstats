@@ -108,11 +108,12 @@ connections other than to Jellyfin; `FINSTATS_PUBLIC_IP_URL` points the lookup a
 
 The second is the geolocation database behind the **Security** page. Looking an address up never leaves the machine: finstats
 reads a city database file (`.mmdb`) in its data folder. Getting that file is the only part that can touch the network, and it
-is off by default. With **Settings → Security → Keep the database up to date** on (or the *Download* button), finstats fetches
-DB-IP's free "IP to City Lite" file from `download.db-ip.com`, once now and then monthly: a plain `GET` of a public file with
+is off by default. With a trigger on the **Geolocation database** task (Settings → Tasks), or the *Download* button, finstats
+fetches DB-IP's free "IP to City Lite" file from `download.db-ip.com` — on each trigger only when a newer month is out: a plain `GET` of a public file with
 `User-Agent: finstats`, carrying no address of yours, no version and no identifiers. What DB-IP necessarily learns is that
 something at your address downloaded its public file. Leave it off and put a file into `<data>/geoip/` yourself (DB-IP's, MaxMind's
-GeoLite2-City, or any other in that format; `FINSTATS_GEOIP_DB` names one elsewhere) and finstats asks nobody. The map is drawn
+GeoLite2-City, or any other in that format; `FINSTATS_GEOIP_DB` names one elsewhere) and finstats asks nobody. (Before 2.0.4 this
+was the switch *Keep the database up to date*; an install that had it on keeps a daily trigger.) The map is drawn
 from outlines bundled with finstats; no map tiles or map service are involved, so no coordinate ever leaves the browser.
 
 **Notifications: the one thing finstats sends rather than reads.** Under **Settings → Notifications** you can give finstats somewhere to

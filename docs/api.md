@@ -201,7 +201,7 @@ titles, and breaks ties: more first). Matched like titles, by name only. Open to
 A picture finstats knows the Jellyfin image tag of is cached under that tag and answered with `ETag` and
 `Cache-Control: private, no-cache`: the browser asks again every time and gets `304` while the picture is the same.
 A poster replaced in Jellyfin has a new tag, and so is fetched and sent again. The tags are read by the library read
-and, in between, by the task `sync_artwork` — run by hand only (`POST /api/tasks/sync_artwork/run`; `GET /Items?MinDateLastSaved=…`, ids and tags only).
+and, in between, by the task `sync_changes` (Metadata changes, below).
 Without a known tag (a person's portrait, say) a picture is cached as before: `private, max-age=604800`, no `ETag`.
 
 Both send long-lived `Cache-Control`. Use as `<img loading="lazy">` with an `onerror` fallback.
@@ -214,8 +214,8 @@ Both send long-lived `Cache-Control`. Use as `<img loading="lazy">` with an `one
  "allow_user_login": false,        // let non-admin Jellyfin users sign in and see their own stats
  "active_interval_s": 1,           // session polling while something plays, 1..60 (replaced poll_interval_s in 0.10)
  "idle_interval_s": 5,             // …and while nothing does, 1..60
- "follow_jellyfin_scan": true,     // read the library when Jellyfin's own scan task finishes, not on a timer
- "sync_interval_h": 6,             // library read interval, 1..168 — only used when not following Jellyfin's scan
+ "follow_jellyfin_scan": true,     // since 2.0.4 only the default of the library read's triggers (see Scheduling)
+ "sync_interval_h": 6,             // …the same, when not following Jellyfin's scan
  "merge_window_s": 600,            // resume the same play if it restarts within this window
  "min_play_s": 0,                  // stats ignore plays shorter than this
  "public_url": ""}                 // where finstats answers from outside; only used to put a link in notifications (administrators only, like the access keys)
@@ -231,7 +231,51 @@ Both send long-lived `Cache-Control`. Use as `<img loading="lazy">` with an `one
  "collector": {"connected": true, "last_poll_at": 0, "active_sessions": 1, "error": null},
  "db": {"size_bytes","plays","items","oldest_play_at"}}
 ```
-`POST /api/tasks/{id}/run` (not for `import` or `import_streamystats`) → `202 {ok:true}`; `409` if already running.
+`POST /api/tasks/{id}/run` (not for `import`, `import_streamystats` or `restore`) → `202 {ok:true}`; `409` if already running.
+
+### Scheduling (2.0.4)
+
+Every job that runs by itself carries triggers, the way Jellyfin's scheduled tasks do. `GET /api/tasks` answers
+`"time_zone": "Europe/London"` (the zone times of day are in: finstats' `TZ`) and, on every task:
+
+```jsonc
+{"schedulable": true,              // false for import, import_streamystats and restore: each needs a file
+ "runnable": true,                 // POST /api/tasks/{id}/run starts it
+ "triggers": [{"type": "after_scan"}, {"type": "interval", "every_s": 604800}],
+ "custom": false,                  // false: these are the defaults, from the settings before 2.0.4
+ "next_at": 0 | null,              // the soonest trigger that can be known in advance
+ "can": {"after_scan": true, "limit": true}}
+```
+
+A trigger is one of `{"type": "daily", "at_min": 180}` (minute of the day, 0..1439), `{"type": "weekly", "day": 0, "at_min": 180}`
+(day 0 = Sunday .. 6), `{"type": "interval", "every_s": 3600}` (300 .. 30 days, counted from the end of the last run),
+`{"type": "startup"}` and `{"type": "after_scan"}` (when Jellyfin's *Scan Media Library* has finished since the job last started;
+only `sync_libraries`, `sync_userdata`, `sync_changes`). Any of them may carry `"limit_s"` (60 .. 7 days): a run that takes longer is
+stopped and fails with that reason — not for `backup` or `geoip`, which cannot be stopped half way. At most 16 per job, no duplicates.
+
+| | |
+|---|---|
+| `PUT /api/tasks/{id}/triggers` | `{"triggers": [...]}` → the task as above. An empty list: only by hand. `400` for a trigger the job cannot take, `404` for an unknown job. `manage`. Audited as `task_schedule_changed`. |
+| `DELETE /api/tasks/{id}/triggers` | Back to the job's defaults. |
+
+The triggers live in the settings as `"schedules": {"backup": [...]}` and `PUT /api/settings` checks them by the same rules.
+A job without an entry runs on its defaults, which is what `follow_jellyfin_scan`, `sync_interval_h`, `backup_every_d` and
+`geoip_download` say — those settings are no longer shown, and decide nothing else. Defaults: users, server log, server
+details, Sonarr/Radarr calendars and history every 15 minutes, Seerr requests every 5, metadata changes every hour, the library
+read and watched flags after Jellyfin's scan plus every 7 days (or every `sync_interval_h` hours when not following it), backups
+every `backup_every_d` days, the GeoIP download daily (it fetches only when a newer month is out) when `geoip_download` was on.
+A library read due while Jellyfin is scanning waits for the scan to end. When each job last finished is kept (`task_runs`), so a
+start does not run everything again.
+
+**Metadata changes** (`sync_changes`, 2.0.4): per library,
+`GET /Items?ParentId=…&MinDateLastSaved=…` with the library read's own fields plus `People`, from the last look (else the last
+library read) minus ten minutes. Each title is stored as the library read stores it — names, overviews, genres, ratings, file
+details, image tags — and the cast and crew of films and shows are replaced. It never marks anything removed: only a whole
+library read may. Then the people: `GET /Items?IncludeItemTypes=Person&Recursive=true&MinDateLastSaved=…` (ids and portrait tags,
+1,000 a page — after a scan Jellyfin has re-saved thousands), because replacing a portrait re-saves the person and none of the
+titles they are in; the first look after upgrading reads every person once (settings key `portraits_read` marks it done).
+A portrait's tag is kept on every `item_people` row of that person (migration 29), so `/api/img/item/{person id}`
+is cached under it like a poster. The UI asks for pictures with `v=3` (`v=2`, an earlier step of 2.0.4, still let a portrait be kept for a week).
 
 `POST /api/import/jellystat` — **raw request body** is the `.jsonl` (or legacy `.json`) backup
 (`Content-Type: application/octet-stream`; can be hundreds of MB — use XHR for upload progress).
@@ -615,7 +659,7 @@ can bring permissions back. `{name}` must look exactly like `finstats-backup-YYY
 
 | | |
 |---|---|
-| `GET /api/backups` | `{"backups": [{"name","size_bytes","created_at"}], "every_d": 7, "keep": 5, "next_at": 0\|null}` — newest first |
+| `GET /api/backups` | `{"backups": [{"name","size_bytes","created_at"}], "scheduled": true, "keep": 5, "next_at": 0\|null}` — newest first. `scheduled` and `next_at` come from the `backup` task's triggers (2.0.4; `every_d` is gone). |
 | `POST /api/backups` | Start writing one now. `202`; progress is task `backup` in `/api/tasks`. `409` while one is running. |
 | `GET /api/backups/{name}` | The file (`application/gzip`, `Content-Disposition: attachment`), streamed. |
 | `DELETE /api/backups/{name}` | Remove it. |

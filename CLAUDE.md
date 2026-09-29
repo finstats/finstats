@@ -102,10 +102,8 @@ empty file under a snapshot's name is a valid empty database to SQLite that coun
 **Pictures are cached under their image tag (`artwork.rs`).** `/api/img/item|user` looks up the tag finstats holds
 (`items.image_tag` / `backdrop_tag`, `users.image_tag`), names the disk-cache file after it (`cache_name`; an untagged
 picture keeps the old name) and sends it as the ETag with `private, no-cache`, so a 304 answers before anything is read.
-Replacing a poster in Jellyfin saves the item but starts no scan, so `sync_artwork` — **run by hand only**, the owner's
-decision (a test holds it out of `EVERY_QUARTER`); the library read keeps the tags current on its own schedule — asks
-`/Items?MinDateLastSaved=` from the last look — else the last library read — minus `OVERLAP_S`, and writes only the tags
-(`store_tags`: never `updated_at`, never `removed`, never a row it does not have). Keyed on anything but the tag, a
+Replacing a poster in Jellyfin saves the item but starts no scan; the tags come from the library read and from
+`sync_changes` (below). Keyed on anything but the tag, a
 replaced poster was served from the disk for a week and from the browser for another.
 
 **Library reads must ask for real items.** `items_page` passes `CollapseBoxSetItems=false` (otherwise servers with
@@ -283,12 +281,26 @@ imported before finstats has ever read the library: it runs after every library 
 fills `library_id`, `runtime_s`, season/episode numbers and — for imported rows only — the item type neither tracker
 records. A live row keeps the type the session gave it.
 
-**Sync scheduling (`sync.rs`).** Small reads (users, activity log, server details/devices) run every 15 min. The public-IP
-lookup is **not** among them: it runs once at start-up on an install that has never learned an address, and otherwise only when
-somebody asks (`POST /api/settings/public-ip`, or switching the setting on). The
-expensive library read *follows Jellyfin's own "Scan Media Library" task* (`jellyfin::scan_status` over the 5-minute
-`/ScheduledTasks` read): it runs after that task finishes, never mid-scan, with a weekly safety net; the
-`sync_interval_h` timer is only a fallback (setting `follow_jellyfin_scan`). That read and `sync_server`'s both pass
+**Scheduling (`schedule.rs`, `sync::scheduler`, Settings → Tasks, 2.0.4).** Every job that runs by itself carries triggers the
+way Jellyfin's scheduled tasks do — daily, weekly, interval, start-up — plus one Jellyfin has no need for, **after Jellyfin's
+library scan** (`AFTER_SCAN` jobs only), each with an optional time limit (`within`; not for `backup`/`geoip`, which cannot be
+stopped half way). The owner's lists live in `Settings::schedules`; a job without one runs on `defaults`, which is exactly what
+the settings before 2.0.4 said (`follow_jellyfin_scan` + `sync_interval_h`, `backup_every_d`, `geoip_download`) — those are no
+longer shown and decide nothing else, the owner's decision being **one place schedules a job**. The scheduler looks once a minute
+(or on `wake`); `schedule::due` is the whole decision and is pure: a time of day fires when it falls in the stretch since the last
+look (so a time missed while stopped is not caught up), an interval counts from the end of the last run. **When each job last
+finished is kept** (`task_runs`, migration 28, loaded into `Tasks::remember` and `seed`ed from `library_synced_at` and the newest
+backup), or every start would run everything again. A library read due mid-scan waits for the scan to end (`deferred_library`).
+Housekeeping that is not a job (server name, a dropped-in GeoIP file, `services::check_all`, the audit log's age) stays on a
+15-minute beat. The public-IP lookup is **not** a job: it runs once at start-up on an install that has never learned an address,
+and otherwise only when somebody asks (`POST /api/settings/public-ip`, or switching the setting on). Every scheduled job can also
+be run by hand (`api::RUNNABLE`, a test holds it). **Metadata changes (`sync_changes`)** reads, per library, what Jellyfin saved
+since the last look (`jellyfin::changed_query`: the library read's own question plus `People` and `MinDateLastSaved`, from
+`changes_from` with a ten-minute overlap) and stores it as the library read does (`store_changes`), cast included — editing
+metadata in Jellyfin starts no scan — but never marks anything removed. It then reads the **people** saved since
+(`people_changed_query`, 1,000 a page) and writes their portrait tags onto every title they are in (`store_portraits`,
+`item_people.image_tag`, migration 29): replacing a portrait re-saves the person and none of their titles, and `artwork::tag_of`
+falls back to that tag for a person's id — before that, a replaced portrait stayed a week on disk and a week in the browser. The `/ScheduledTasks` read (every 5 min) and `sync_server`'s both pass
 their task list to `jobs::observe`, which is the only reason the Jellyfin jobs card can open on an ETA: the watch that
 `eta_s` needs is fed by lists finstats already has, never by a request made for it. **A read never wipes what it cannot see.** Marking rows `removed` is destructive (they vanish from every page and stat) and
 `items_page` turns anything it cannot parse into an empty list, so a Jellyfin that changes shape under an upgrade, or answers
@@ -450,7 +462,7 @@ must stay anonymous (no version, no ids in the request) and the docs' privacy cl
 swapped whole when a newer file appears) — of a **private copy** (`private_copy`: copied into `<data>/geoip`, opened, its name removed),
 never of the file itself, because an owner who copies a newer file over the old one truncates what is mapped and the next lookup is
 SIGBUS, which kills the process. The file used is `FINSTATS_GEOIP_DB`, else the newest `.mmdb` in `<data>/geoip/`. Lookups never leave the machine; the
-only network use is the opt-in download of DB-IP's monthly file (`geoip_download`, off by default, task `geoip`), which must stay as anonymous
+only network use is the opt-in download of DB-IP's monthly file (task `geoip`, no trigger by default; a trigger fires `download_if_stale`), which must stay as anonymous
 as the public-IP lookup, and the docs' privacy claims must stay true to both. Every distinct address gets one row in `ip_locations`, keyed by the
 spelling stored in `playbacks`/`server_events` (an all-NULL row = looked up, no place); a changed database empties the table and places everything
 again (`refresh_all`). `server_events.remote_ip` is parsed from the log text by `event_ip` (first word that is an address, because the label
@@ -560,8 +572,8 @@ watchable). Adding a kind of event means a `Kind` arm and one `raise` — never 
 **Backups (`backup.rs`).** gzip JSON Lines, one row per line tagged with its table, matched *by column name* both ways so files move
 between versions; a new table that holds something Jellyfin cannot give back must be added to `backup::TABLES`. Secrets (Jellyfin
 URL/API key, sessions, API keys) and the library are never exported; a test asserts the key is absent. Restore merges (dedupe on `source_id`
-or user+item+start), remaps timeline rows to the new play ids, and re-derives groups, `is_local` and library links. The scheduler
-writes one when the newest file is older than `backup_every_d`; endpoints are `JellyfinAdmin`-only and names go through `valid_name`.
+or user+item+start), remaps timeline rows to the new play ids, and re-derives groups, `is_local` and library links. The `backup`
+task's triggers write one (skipped while there is no play); endpoints are `JellyfinAdmin`-only and names go through `valid_name`.
 A file is written as `<name>.part` and renamed when complete; a `.part` found when the next one starts was a killed backup and is removed.
 
 The response compression layer skips `application/gzip`: re-compressing a backup broke the download in browsers. Anything served
@@ -623,6 +635,12 @@ exporting `{ key, label, sub, group, icon, visible, entries, render(slot, store)
 right — and a QA check holds that budget, because the page it replaced was fourteen cards and six hundred words of help in one column. Bare
 `/settings` and the old anchors (`/settings#backups`) forward to the section that holds them (`LEGACY`); a new section's card id stays a valid
 anchor. Sections hide themselves (`visible`) rather than explaining why they are empty.
+**Tasks (`settings/tasks.js`) is the one section with pages below it**: `/settings/tasks` lists every job Jellyfin-style (a row
+per job, its last run in words, a round Run button; the whole row is the link) and `/settings/tasks/:task` is one job's schedule
+with Jellyfin's *Add trigger* dialog; Esc goes back from a schedule to the list (`escTarget` in `shell.js`), and hovering the
+Run button lights the button, never the row (the row reads as "open"). It repaints from what the rows *say* (`said`), never from the raw answer: a job that is due
+has a `next_at` of "now", which moves every second. Backups, Security and Collection link to their job's schedule; none of them
+holds a timing control of its own any more.
 Esc is handled globally in `shell.js` (steps back out of `/libraries/:id`, `/users/:id`,
 `/items/:id`), going back through history only onto an entry of finstats' own: every entry the router writes carries
 `history.state.depth`, and a tab opened on a title has none behind it. Overlays must keep calling `stopPropagation()` on
