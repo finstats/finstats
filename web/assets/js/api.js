@@ -118,8 +118,10 @@ export function soft(promise) {
   return promise.catch((e) => { if (isAbort(e) || e.status === 401) throw e; return null; });
 }
 
-export const imgItem = (id, w = 120, kind = 'primary') => `/api/img/item/${encodeURIComponent(id)}?kind=${kind}&w=${w}`;
-export const imgUser = (id, w = 96) => `/api/img/user/${encodeURIComponent(id)}?w=${w}`;
+// `v=2`: up to 2.0.3 a picture was sent to be kept for a week without asking again, so at its old address a browser
+// would go on showing a poster replaced in Jellyfin. Since 2.0.4 it asks every time (ETag); the server ignores `v`.
+export const imgItem = (id, w = 120, kind = 'primary') => `/api/img/item/${encodeURIComponent(id)}?kind=${kind}&w=${w}&v=2`;
+export const imgUser = (id, w = 96) => `/api/img/user/${encodeURIComponent(id)}?w=${w}&v=2`;
 
 /**
  * Raw-body upload with progress (fetch can't report upload progress).
