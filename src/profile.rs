@@ -20,6 +20,22 @@ use crate::state::{ApiError, ApiResult, App};
 /// and imported plays (which only know time watched) should not leave holes in a season.
 const SEEN_AT: f64 = 0.8;
 
+/// How far one play `p` got through its title `i`, from 0 to 1: where it stopped, or — for an imported play, which keeps
+/// a length and not a place — how long it ran, against the runtime.
+const PLAY_FRAC: &str = "MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0))";
+
+/// The one reading of "seen", for an episode and a film alike: a play that went far enough, then Jellyfin's played
+/// flag, then a mark by hand; otherwise begun if it was ever played. (state, which source said seen).
+fn verdict(frac: Option<f64>, jellyfin: bool, manual: bool) -> (&'static str, Option<&'static str>) {
+    match (frac.is_some_and(|f| f >= SEEN_AT), jellyfin, manual, frac) {
+        (true, _, _, _) => ("seen", Some("played")),
+        (_, true, _, _) => ("seen", Some("jellyfin")),
+        (_, _, true, _) => ("seen", Some("manual")),
+        (_, _, _, Some(_)) => ("started", None),
+        _ => ("none", None),
+    }
+}
+
 /// Longest and current run of consecutive local days with at least one play, over all time.
 pub fn streaks(conn: &Connection, user_id: &str, min_play_s: i64) -> Result<Value> {
     let mut stmt = conn.prepare(
@@ -76,12 +92,11 @@ pub(crate) struct Episode {
 /// `until`: only what had happened by then — plays ended, flags and marks set — for a published recap,
 /// which must not move while somebody is watching. `None` is everything, as the profile shows it.
 pub(crate) fn episodes(conn: &Connection, user_id: &str, until: Option<i64>) -> Result<Vec<Episode>> {
-    let mut stmt = conn.prepare(
+    let mut stmt = conn.prepare(&format!(
         "WITH mine AS (
             SELECT p.item_id, MAX(p.ended_at) AS last_at, MIN(p.started_at) AS first_at,
-                   MAX(MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0))) AS frac,
-                   MIN(CASE WHEN MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0)) >= ?2
-                            THEN p.ended_at END) AS seen_at
+                   MAX({PLAY_FRAC}) AS frac,
+                   MIN(CASE WHEN {PLAY_FRAC} >= ?2 THEN p.ended_at END) AS seen_at
             FROM playbacks p LEFT JOIN items i ON i.id = p.item_id
             WHERE p.user_id = ?1 AND p.item_type = 'Episode' AND (?3 IS NULL OR (p.active = 0 AND p.ended_at <= ?3)) GROUP BY p.item_id),
          touched AS (
@@ -103,21 +118,14 @@ pub(crate) fn episodes(conn: &Connection, user_id: &str, until: Option<i64>) -> 
            AND COALESCE(e.parent_index_number, 1) > 0
            AND (e.path IS NOT NULL OR e.size_bytes IS NOT NULL)
            AND (e.removed = 0 OR s.removed = 1)
-         ORDER BY s.id, COALESCE(e.parent_index_number, 1), COALESCE(e.index_number, 9999), e.name",
-    )?;
+         ORDER BY s.id, COALESCE(e.parent_index_number, 1), COALESCE(e.index_number, 9999), e.name"
+    ))?;
     let mut rows = stmt.query(params![user_id, SEEN_AT, until])?;
     let mut out = vec![];
     while let Some(r) = rows.next()? {
         let frac: Option<f64> = r.get(8)?;
         let (jellyfin, manual): (bool, bool) = (r.get::<_, i64>(10)? != 0, r.get(11)?);
-        let played = frac.is_some_and(|f| f >= SEEN_AT);
-        let (state, source) = match (played, jellyfin, manual, frac) {
-            (true, _, _, _) => ("seen", Some("played")),
-            (_, true, _, _) => ("seen", Some("jellyfin")),
-            (_, _, true, _) => ("seen", Some("manual")),
-            (_, _, _, Some(_)) => ("started", None),
-            _ => ("none", None),
-        };
+        let (state, source) = verdict(frac, jellyfin, manual);
         out.push(Episode {
             series_id: r.get(0)?, series_name: r.get(1)?, series_year: r.get(2)?, series_removed: r.get::<_, i64>(3)? != 0,
             id: r.get(4)?, season: r.get(5)?, number: r.get(6)?, name: r.get(7)?, state, source, last_at: r.get(9)?,
