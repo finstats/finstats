@@ -168,6 +168,8 @@ fn entry_json(e: &Entry) -> Value {
     json!({
         "kind": e.kind, "release": e.release, "day": e.day, "at": e.at, "series_title": e.series_title, "title": e.title, "season": e.season, "episode": e.episode,
         "finale": e.finale, "year": e.year, "has_file": e.has_file, "item_id": e.item_id, "poster": poster,
+        // What the title is known by where it is not in the library yet: a watchlist holds it by these.
+        "tvdb_id": e.tvdb_id, "tmdb_id": e.tmdb_id,
     })
 }
 
@@ -722,6 +724,16 @@ mod tests {
             [("digital", Some(990002)), ("physical", Some(990002))],
             "the disc date of the film on disk is gone; the one still to come stays, and a digital day is never dropped"
         );
+    }
+
+    #[test]
+    fn an_entry_names_its_title_by_its_ids_so_a_watchlist_can_hold_one_not_here_yet() {
+        let c = conn();
+        add(&c, 1, "episode", 5, "air", 2, Some(370001), None, false);
+        add(&c, 3, "movie", 7, "digital", 3, None, Some(990001), false);
+        link(&c).unwrap();
+        let list = upcoming_json(&c, 14, "ua", false, false).unwrap();
+        assert_eq!((list[0]["tvdb_id"].clone(), list[1]["tmdb_id"].clone(), list[1]["tvdb_id"].clone()), (json!(370001), json!(990001), Value::Null));
     }
 
     #[test]

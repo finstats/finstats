@@ -1519,3 +1519,8 @@ request the caller may see (served by `/api/img/arr/…`), else `null`.
 
 Watchlists are part of a backup — they are somebody's own and Jellyfin cannot give them back — and a restore merges them
 per person and title, keeping the older date, and attaches them to the library as it is.
+
+## `GET /api/upcoming` entries carry their ids
+
+Every entry gains `tvdb_id` and `tmdb_id` (the show's for an episode, the film's for a release; `null` where the service
+has none), so a title that is not in the library yet can be put on a watchlist by them.
