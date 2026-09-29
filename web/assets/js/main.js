@@ -49,6 +49,7 @@ route('/events', events, { perm: 'see_server' });   // forwards to /server/log
 route('/security', securityPage, { perm: 'see_network', prefetch: prefetchSecurity });
 route('/settings', settings);   // every signed-in user has at least their own API keys here
 route('/settings/:section', settings);
+route('/settings/:section/:task', settings);   // a task's own schedule: /settings/tasks/backup
 route('/changelog', changelogPage, { prefetch: prefetchChangelog });
 // Anyone signed in may read the licences; the shortcut to them sits in Settings.
 route('/licenses', licensesPage, { prefetch: prefetchLicenses });

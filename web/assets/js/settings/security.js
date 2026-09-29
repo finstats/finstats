@@ -4,7 +4,8 @@ import { h, icon, mount, dateOnly } from '../dom.js';
 import { can } from '../state.js';
 import { api } from '../api.js';
 import { card, sk, setBusy, inlineError } from '../components.js';
-import { toggleRow, numberForm, settingRow } from './common.js';
+import { numberForm, settingRow } from './common.js';
+import { triggerWords } from './tasks.js';
 
 const TRAVEL_FIELDS = [
   { key: 'travel_speed_kmh', label: 'Impossible travel is faster than', unit: 'km/h', min: 100, max: 5000, help: 'Two sightings of one person that would need more than this raise an alert. 900 is a little above an airliner. 100–5,000.' },
@@ -16,7 +17,7 @@ export default {
   visible: () => can('manage'),
   entries: [
     { id: 'geoip-database', label: 'Geolocation database', hint: 'geoip mmdb city db-ip maxmind download places map' },
-    { id: 'geoip_download', label: 'Keep the database up to date', hint: 'geoip download monthly db-ip' },
+    { id: 'geoip-schedule', label: 'Keep the database up to date', hint: 'geoip download monthly db-ip schedule task' },
     ...TRAVEL_FIELDS.map((f) => ({ id: f.key, label: f.label, hint: 'impossible travel alert speed distance km' })),
   ],
   async render(slot, store) {
@@ -45,8 +46,11 @@ export default {
           help: g.from_env ? 'Set with FINSTATS_GEOIP_DB; replace that file to update it.'
             : `Addresses are placed from a file on this machine, never over the network: the newest .mmdb in ${g.folder || 'the geoip folder'}.`,
           control: [h('div', { class: 'home-known' }, status, h('div', { class: 'form-actions' }, get), err)] }),
-        g.from_env ? null : toggleRow(store, { key: 'geoip_download', label: 'Keep the database up to date', onSaved: paint,
-          help: 'Downloads DB-IP’s free city file (about 60 MB, CC BY 4.0) now and once a month. A plain download, with nothing about you in it.' }),
+        g.from_env ? null : settingRow({ id: 'geoip-schedule', label: 'Keep the database up to date',
+          help: t && t.triggers && t.triggers.length
+            ? `Scheduled: ${t.triggers.map(triggerWords).join(', ')}. A newer month of DB-IP’s free file (CC BY 4.0) is fetched; nothing about you is sent.`
+            : 'Not scheduled. Its task fetches DB-IP’s free city file (about 60 MB, CC BY 4.0) when a newer month is out.',
+          control: h('a', { class: 'btn btn-sm', href: '/settings/tasks/geoip' }, icon('clock', 13), 'Schedule') }),
         numberForm(store, TRAVEL_FIELDS, 'travel-err'));
     };
     paint();

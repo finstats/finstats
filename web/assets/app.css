@@ -847,6 +847,38 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .task-progress { display: flex; flex-direction: column; gap: 5px; margin-top: 5px; max-width: 460px; }
 .task-side { display: flex; align-items: center; gap: 14px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
 
+/* Settings → Tasks: Jellyfin's scheduled-task list in finstats' look — a round icon, the job and how it last went, a
+   round Run button. The whole row opens the job's schedule (the link's ::after covers it; the button sits above). */
+.task-group + .task-group { margin-top: 22px; }
+.task-group-title { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); margin: 0 0 6px; }
+.task-list { display: flex; flex-direction: column; }
+.task-row { position: relative; display: flex; align-items: center; gap: 14px; padding: 11px 10px; border-radius: var(--radius-sm); border-bottom: 1px solid var(--border-soft); }
+.task-row:last-child { border-bottom: 0; }
+.task-row:hover:not(:has(.task-run:hover)), .task-row:has(.task-link:focus-visible) { background: var(--hover); }
+.task-icon { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--accent-wash); color: var(--accent-hi); }
+.task-icon.is-failed { background: var(--crit-wash); color: var(--critical-text); }
+.task-row.is-running .task-icon { color: var(--good); }
+.task-link { color: var(--text); text-decoration: none; }
+.task-link::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.task-link:focus-visible { outline: none; }
+.task-row:has(.task-link:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.task-when { margin: 0; color: var(--text-muted); font-size: 13px; }
+.task-next { color: var(--text-faint); }
+/* The Run button answers the pointer on its own; the row behind it stays still (above), so it never reads as "open". */
+.task-run { position: relative; z-index: 1; flex: none; width: 36px; height: 36px; border-radius: 50%; }
+.task-run:hover:not(:disabled) { background: var(--accent-wash); color: var(--accent-hi); }
+.task-zone { margin-top: 16px; }
+.task-status { display: flex; flex-direction: column; gap: 6px; }
+.task-actions { justify-content: flex-start; flex-wrap: wrap; }
+.trigger-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-sm); max-width: 640px; }
+.trigger-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border-soft); }
+.trigger-row:last-child { border-bottom: 0; }
+.trigger-what { flex: 1; min-width: 0; }
+.trigger-limit { font-size: 12.5px; }
+.trigger-remove { color: var(--critical-text); }
+.trigger-form .input { width: 100%; max-width: 100%; }
+.trigger-form .form-actions { justify-content: flex-end; }
+
 .import-cols { display: grid; gap: 28px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 .steps { list-style: decimal; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--text-muted); font-size: 13.5px; }
 .steps li::marker { color: var(--text-faint); font-family: var(--mono); font-size: 12px; }

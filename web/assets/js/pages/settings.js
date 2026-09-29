@@ -17,14 +17,15 @@ import security from '../settings/security.js';
 import services from '../settings/services.js';
 import backups from '../settings/backups.js';
 import importSection from '../settings/import.js';
+import tasks from '../settings/tasks.js';
 import system from '../settings/system.js';
 import keys from '../settings/keys.js';
 import publicProfile from '../settings/public.js';
 import account from '../settings/account.js';
 
-const SECTIONS = [jellyfin, access, collection, network, security, ...services, backups, importSection, system, keys, publicProfile, account];
+const SECTIONS = [jellyfin, access, collection, network, security, ...services, backups, importSection, tasks, system, keys, publicProfile, account];
 // Where the one-page anchors went, so links and bookmarks from before still land.
-const LEGACY = { connections: 'connections', security: 'security', notifications: 'notifications', outbound: 'system', backups: 'backups', 'import-jellystat': 'import', 'import-streamystats': 'import' };
+const LEGACY = { connections: 'connections', security: 'security', notifications: 'notifications', outbound: 'system', tasks: 'tasks', backups: 'backups', 'import-jellystat': 'import', 'import-streamystats': 'import' };
 // ---------------------------------------------------------------- the finder
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, '');
 const words = (s) => norm(s).split(/[^a-z0-9]+/).filter(Boolean);

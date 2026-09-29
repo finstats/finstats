@@ -13,7 +13,7 @@ export default {
   entries: [
     { id: 'backups', label: 'Back up now', hint: 'backups download delete list' },
     { id: 'restore', label: 'Restore from a file', hint: 'restore upload move new install merge' },
-    { id: 'backup_every_d', label: 'Back up every', hint: 'schedule automatic days' },
+    { id: 'backup-schedule', label: 'When backups are written', hint: 'schedule automatic every days weekly daily task' },
     { id: 'backup_keep', label: 'Keep the newest', hint: 'schedule keep count prune' },
   ],
   async render(slot, store) {
@@ -37,23 +37,21 @@ export default {
 
     function scheduleForm() {
       const s = store.settings;
-      const every = h('input', { class: 'input input-num mono', type: 'text', inputMode: 'numeric', id: 'f-backup-every', value: String(s.backup_every_d), autocomplete: 'off', 'aria-describedby': 'backup_every_d-help' });
       const keep = h('input', { class: 'input input-num mono', type: 'text', inputMode: 'numeric', id: 'f-backup-keep', value: String(s.backup_keep), autocomplete: 'off', 'aria-describedby': 'backup_keep-help' });
       const formErr = h('div'), note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
-      const save = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Save schedule');
+      const save = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Save');
       const form = h('form', { class: 'setting-rows', noValidate: true },
-        settingRow({ id: 'backup_every_d', label: 'Back up every', labelFor: 'f-backup-every', help: '7 is weekly. 0 turns automatic backups off. 0–365.',
-          control: h('div', { class: 'field-input' }, every, h('span', { class: 'unit' }, 'days')) }),
+        settingRow({ id: 'backup-schedule', label: 'When backups are written', help: 'The Backup task’s schedule: daily, weekly, on an interval, or only by hand.',
+          control: h('a', { class: 'btn btn-sm', href: '/settings/tasks/backup' }, icon('clock', 13), 'Schedule') }),
         settingRow({ id: 'backup_keep', label: 'Keep the newest', labelFor: 'f-backup-keep', help: 'Older ones are removed when a new one is written. 1–100.',
           control: h('div', { class: 'field-input' }, keep, h('span', { class: 'unit' }, 'backups')) }),
         h('div', { class: 'form-actions setting-actions' }, save, note), formErr);
       form.addEventListener('submit', async (e) => {
         e.preventDefault(); mount(formErr, '');
-        const a = Number(every.value.trim()), k = Number(keep.value.trim());
-        if (!/^\d+$/.test(every.value.trim()) || a > 365) { mount(formErr, inlineError('bk-e', 'Days must be a whole number from 0 to 365.')); every.focus(); return; }
+        const k = Number(keep.value.trim());
         if (!/^\d+$/.test(keep.value.trim()) || k < 1 || k > 100) { mount(formErr, inlineError('bk-e', 'Keep must be a whole number from 1 to 100.')); keep.focus(); return; }
         setBusy(save, true, 'Saving…');
-        try { await store.put({ backup_every_d: a, backup_keep: k }); await loadBackups(); }
+        try { await store.put({ backup_keep: k }); await loadBackups(); }
         catch (e2) { mount(formErr, inlineError('bk-e', `Couldn’t save: ${e2.message}`)); }
         finally { setBusy(save, false); }
       });
@@ -65,7 +63,7 @@ export default {
       const s = store.settings;
       const bk = store.task('backup'), rs = store.task('restore');
       const busy = (bk && bk.state === 'running') || (rs && rs.state === 'running') || restoreUpload.active;
-      const now = JSON.stringify([backupsData, bk, rs, pending, err, restoreSettings, restoreUpload, s.backup_every_d, s.backup_keep]);
+      const now = JSON.stringify([backupsData, bk, rs, pending, err, restoreSettings, restoreUpload, s.backup_keep]);
       if (now === sig) return;
       sig = now;
 
@@ -89,7 +87,7 @@ export default {
             h('td', { class: 'mono r' }, bytes(b.size_bytes)),
             h('td', null, h('div', { class: 'backup-actions' }, actions)));
         }))))
-        : h('p', { class: 'help' }, s.backup_every_d > 0 ? 'No backups yet. The first one is written by itself once there is something to back up, or make one now.' : 'No backups yet, and automatic backups are off.');
+        : h('p', { class: 'help' }, backupsData.scheduled ? 'No backups yet. The first one is written by itself once there is something to back up, or make one now.' : 'No backups yet, and none are scheduled.');
 
       const restored = rs && rs.state === 'ok' && rs.result ? h('p', { class: 'sev sev-good sev-line' }, icon('check', 13),
         `Restored ${num(rs.result.plays_imported)} plays, ${num(rs.result.plays_skipped)} were already here${rs.result.settings_restored ? '; settings and permissions restored' : ''}.`) : null;
@@ -110,10 +108,10 @@ export default {
 
       mount(body,
         h('div', { class: 'backup-head' },
-          h('p', { class: 'help' }, s.backup_every_d > 0
-            ? [`Written every ${s.backup_every_d === 1 ? 'day' : num(s.backup_every_d) + ' days'}, the newest ${num(s.backup_keep)} kept`,
+          h('p', { class: 'help' }, backupsData.scheduled
+            ? [`Written on the `, h('a', { href: '/settings/tasks/backup' }, 'Backup task’s schedule'), `, the newest ${num(s.backup_keep)} kept`,
               backupsData.next_at ? [', next ', h('span', { title: dateTime(backupsData.next_at) }, untilText(backupsData.next_at)), '.'] : '.']
-            : 'Automatic backups are off.', ' They live in the ', h('span', { class: 'mono' }, 'backups'), ' folder of your data directory.'),
+            : ['No backups are scheduled (', h('a', { href: '/settings/tasks/backup' }, 'schedule them'), ').'], ' They live in the ', h('span', { class: 'mono' }, 'backups'), ' folder of your data directory.'),
           makeNow),
         progressOf(bk, 'Backup progress'), bk && bk.state === 'error' && bk.error ? inlineError('backup-err', `Backup failed: ${bk.error}`) : null,
         table,

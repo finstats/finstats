@@ -16,7 +16,7 @@ const KIND_LABEL = {
   service_added: 'Added a connection', service_changed: 'Changed a connection', service_removed: 'Removed a connection',
   target_added: 'Added a notification destination', target_changed: 'Changed a notification destination', target_removed: 'Removed a notification destination',
   backup_made: 'Backup written', backup_restored: 'Backup restored', backup_deleted: 'Backup deleted', backup_downloaded: 'Backup downloaded',
-  task_run: 'Ran a task', import_started: 'Import started', import_finished: 'Import finished', play_deleted: 'Deleted a play',
+  task_run: 'Ran a task', task_schedule_changed: 'Changed a task’s schedule', import_started: 'Import started', import_finished: 'Import finished', play_deleted: 'Deleted a play',
   alert_resolved: 'Resolved an alert', alert_reopened: 'Reopened an alert',
 };
 const OUTCOME = { failed: ['sev-critical', 'alert', 'Failed'], refused: ['sev-warning', 'alert', 'Refused'] };
@@ -41,7 +41,7 @@ function detailText(e) {
     case 'backup_made': parts.push(d.trigger === 'schedule' ? 'by the schedule' : 'on request'); if (e.target) parts.push(e.target); if (d.plays != null) parts.push(`${num(d.plays)} plays`); if (d.error) parts.push(d.error); break;
     case 'backup_restored': parts.push(e.target || ''); if (d.plays_imported != null) parts.push(`${num(d.plays_imported)} plays restored, ${num(d.plays_skipped)} already here`); if (d.settings_restored) parts.push('settings too'); if (d.error) parts.push(d.error); break;
     case 'backup_deleted': case 'backup_downloaded': parts.push(e.target || ''); break;
-    case 'task_run': parts.push(e.target || ''); break;
+    case 'task_run': case 'task_schedule_changed': parts.push(e.target || ''); break;
     case 'import_started': parts.push(e.target || ''); break;
     case 'import_finished': parts.push(e.target || ''); if (d.plays_imported != null) parts.push(`${num(d.plays_imported)} plays, ${num(d.plays_skipped)} already here`); if (d.error) parts.push(d.error); break;
     case 'play_deleted': parts.push(`${d.title || ''} by ${d.user || ''}`); if (d.started_at) parts.push(dateTime(d.started_at)); break;
