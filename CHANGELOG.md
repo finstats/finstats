@@ -10,6 +10,32 @@ Stability something that can no longer crash, halt, leak or lose data, Fixed som
 wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
 
+## [2.0.4] - 2026-09-29
+
+### Added
+- **Task scheduling, the way Jellyfin does it**: every job finstats does by itself has triggers — daily at a time, weekly on a day, on an interval, at start-up, or after Jellyfin's library scan — each with an optional time limit. Click a task to see and change its schedule; *Add trigger* opens the same dialog Jellyfin has.
+- **Tasks is a section of its own** in Settings, with each job's last run in words ("Last ran 38 minutes ago, taking 6 minutes") and a Run button; it used to sit at the top of System.
+- **Metadata changes**: every hour finstats reads what Jellyfin saved since the last look — names, overviews, genres, ratings, cast and crew, file details and pictures — so an edit in Jellyfin shows up without waiting for a library scan.
+- Backup and the geolocation database can be run from Tasks too; Esc steps back from a task's schedule to the list.
+
+### Changed
+- **The theme is a switch with three stops**, Light · Device · Dark, where the button that cycled through them was: click a third of it, drag the knob or use the arrow keys. The knob carries the choice's icon, which moves in when it changes.
+- **Signing out is under Settings → Account**, which says who is signed in here; the sidebar keeps the theme switch.
+- **The old schedule settings are now triggers**: *Follow Jellyfin's library scan* with its fallback interval, *Back up every N days* and the GeoIP *Keep the database up to date* switch became the matching triggers on their tasks, with the values you had. Collection, Backups and Security link to the schedule instead.
+- A start no longer runs every job again: when each one last finished is kept.
+- A Jellyfin job without an estimate yet reads "about … left", the dots cycling where the time will go, instead of "ETA…".
+
+### Performance
+- **The Security map no longer lags**: dragging and zooming move the map already drawn and draw it once when the gesture settles, and the playing-now pulse no longer makes the whole map repaint 120 times a second while nobody touches it. A drag went from 34 to 60 frames a second on a slow computer.
+
+### Fixed
+- **A poster or a portrait replaced in Jellyfin shows up in finstats**: pictures were cached for a week on the server and another week in the browser, whatever Jellyfin had since. They are now cached under Jellyfin's image tag, so a new picture is a new file, and the browser checks that its copy is current each time it shows one. Replacing a portrait re-saves only the person, so Metadata changes reads the people too.
+- **Server → Jobs shows an estimate as soon as the page opens**: the time left was measured only from readings the page itself made while open, so every visit started on "ETA…" until it had watched the percentage move. finstats now times a running Jellyfin job by itself, every 10 seconds while one runs, and the page is served the estimate. A job Jellyfin reports at 0% the whole time (a library scan's first phase) keeps its dots until it moves: nothing is guessed.
+- **Map tooltips appear on the dot**: in Firefox the playing-now dot's tooltip could land far away, and where dots overlap (somebody playing at home) which tooltip showed depended on a pixel. One tooltip now names everything under the pointer.
+- **The status bar has one hover shape**: every link — the streams, Repo, the version — lights up as the same small box, and the dots between the items sit centred in the gaps. Hovering the version used to light up the dot and the gap before it too.
+- **A file path takes the whole width of its card**: on a title's File card, and for Jellyfin's folders on the Server page, a path was squeezed into one narrow cell and ran down nine lines beside empty space.
+- A dialog fading out no longer swallows a click on the page under it.
+
 ## [2.0.3] - 2026-09-28
 
 ### Stability
