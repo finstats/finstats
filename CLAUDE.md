@@ -99,6 +99,15 @@ version bump warns and continues. `FINSTATS_SKIP_PREUPDATE_BACKUP=1` turns it of
 and renamed when complete, and what a killed start left is swept first: `VACUUM INTO` writes straight into its target, and an
 empty file under a snapshot's name is a valid empty database to SQLite that counted toward the three kept.
 
+**Pictures are cached under their image tag (`artwork.rs`).** `/api/img/item|user` looks up the tag finstats holds
+(`items.image_tag` / `backdrop_tag`, `users.image_tag`), names the disk-cache file after it (`cache_name`; an untagged
+picture keeps the old name) and sends it as the ETag with `private, no-cache`, so a 304 answers before anything is read.
+Replacing a poster in Jellyfin saves the item but starts no scan, so `sync_artwork` — **run by hand only**, the owner's
+decision (a test holds it out of `EVERY_QUARTER`); the library read keeps the tags current on its own schedule — asks
+`/Items?MinDateLastSaved=` from the last look — else the last library read — minus `OVERLAP_S`, and writes only the tags
+(`store_tags`: never `updated_at`, never `removed`, never a row it does not have). Keyed on anything but the tag, a
+replaced poster was served from the disk for a week and from the browser for another.
+
 **Library reads must ask for real items.** `items_page` passes `CollapseBoxSetItems=false` (otherwise servers with
 "group movies into collections" return the BoxSet *instead of* its films, which then get flagged removed) and
 `ExcludeLocationTypes=Virtual` (missing/unaired placeholders). Anything a read does not return is marked `removed`,

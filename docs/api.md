@@ -198,6 +198,12 @@ titles, and breaks ties: more first). Matched like titles, by name only. Open to
 - `GET /api/img/item/{id}?kind=primary|backdrop&w=300` — proxied + cached from Jellyfin. `404` when Jellyfin has none.
 - `GET /api/img/user/{id}?w=96`
 
+A picture finstats knows the Jellyfin image tag of is cached under that tag and answered with `ETag` and
+`Cache-Control: private, no-cache`: the browser asks again every time and gets `304` while the picture is the same.
+A poster replaced in Jellyfin has a new tag, and so is fetched and sent again. The tags are read by the library read
+and, in between, by the task `sync_artwork` — run by hand only (`POST /api/tasks/sync_artwork/run`; `GET /Items?MinDateLastSaved=…`, ids and tags only).
+Without a known tag (a person's portrait, say) a picture is cached as before: `private, max-age=604800`, no `ETag`.
+
 Both send long-lived `Cache-Control`. Use as `<img loading="lazy">` with an `onerror` fallback.
 
 ## Admin 🔒
