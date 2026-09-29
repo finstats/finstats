@@ -1468,3 +1468,28 @@ A new event kind, `recap_ready` (Library group, the person it is about): in Dece
 while it is empty, the address finstats connects to. `jellyfin_public_url` is an http(s) address naming a host
 (`400` otherwise) and, being a link everyone follows, only a Jellyfin administrator may set it (`403` for anyone else).
 
+
+# v2.1 — Watchlist
+
+## Your own list
+
+Every endpoint acts on the caller and takes no `user_id`: nobody — not `see_everyone`, not a Jellyfin administrator —
+reads or changes somebody else's list. A session or a full key may use them; a calendar key is refused `403`. Nothing is
+written anywhere but finstats' own database, and nothing is audit-logged.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| POST | `/api/me/watchlist` | `{item_id}`, or `{kind, tmdb_id?, tvdb_id?, imdb_id?, title, year?}` | `{id, created}`: `201` when added, `200` when it was on the list already. |
+| DELETE | `/api/me/watchlist/{id}` | – | `{ok: true}`; `404` when the entry is not the caller's. |
+| GET | `/api/me/watchlist/keys` | – | `{entries: [{id, kind, item_ids, tmdb_id, tvdb_id, imdb_id}]}`, newest first. |
+
+Only films and shows go on a list: `kind` is `Movie` or `Series`, and an `item_id` that is anything else, or that the
+library does not have, is `404`. A title outside the library needs at least one id — TMDB and TVDB ids are digits and may
+be sent as numbers, an IMDb id is `tt` and digits — and a name of at most 300 characters; `year`, when given, is
+1870–2200. Anything else is `400` with a sentence saying why. If the ids already name a title in the library, the entry
+is attached to it at once. A list holds at most 1,000 titles; one more is `400`.
+
+Adding what is already there — the same item, a copy of it in another library, or the same kind with any one of its ids —
+answers the entry that is there. `keys` is what a page needs to show the toggle without a request per poster: `item_ids`
+is every item in the library that shares one of the entry's ids (a film in an HD and a 4K library is one title), plus the
+item it was added from.

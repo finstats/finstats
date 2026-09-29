@@ -42,6 +42,7 @@ mod story;
 mod streamystats;
 mod sync;
 mod timeline;
+mod watchlist;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;

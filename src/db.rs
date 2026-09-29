@@ -604,6 +604,26 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     // user_version 29 — A person's portrait has an image tag of its own (2.0.4): the cache names a picture after it, and
     //      a portrait replaced in Jellyfin re-saves the person, not the titles they are in.
     "ALTER TABLE item_people ADD COLUMN image_tag TEXT;",
+    // user_version 30 — Watchlists (2.1.0): the films and shows somebody means to watch. An entry names its title by
+    //      the item in the library or, when it is not there yet, by its provider ids, and keeps enough of it (kind,
+    //      title, year, ids) to be read without the library. Somebody's own and not Jellyfin's to give back, so it is
+    //      part of a backup. AUTOINCREMENT: an id a page still holds never comes to mean another entry.
+    r#"
+    CREATE TABLE watchlist (
+        id       INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id  TEXT NOT NULL,
+        kind     TEXT NOT NULL,             -- Movie | Series
+        item_id  TEXT,                      -- the title in the library, once it has been; kept after it is removed
+        tmdb_id  TEXT,
+        tvdb_id  TEXT,
+        imdb_id  TEXT,
+        title    TEXT NOT NULL,
+        year     INTEGER,
+        added_at INTEGER NOT NULL
+    );
+    CREATE INDEX idx_watchlist_user ON watchlist(user_id, added_at);
+    CREATE UNIQUE INDEX idx_watchlist_item ON watchlist(user_id, item_id) WHERE item_id IS NOT NULL;
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole
