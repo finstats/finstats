@@ -263,7 +263,7 @@ pub struct TaskState {
 #[derive(Clone)]
 pub struct Tasks(Arc<Mutex<BTreeMap<&'static str, TaskState>>>);
 
-pub const TASK_IDS: [&str; 13] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "import", "import_streamystats", "backup", "restore", "geoip", "sync_upcoming", "sync_requests", "sync_grabs"];
+pub const TASK_IDS: [&str; 14] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "sync_artwork", "import", "import_streamystats", "backup", "restore", "geoip", "sync_upcoming", "sync_requests", "sync_grabs"];
 
 impl Tasks {
     pub fn new() -> Self {

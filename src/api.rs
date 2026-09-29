@@ -19,6 +19,7 @@ use tokio::io::AsyncWriteExt;
 use tower_http::compression::CompressionLayer;
 use tower_http::compression::predicate::{DefaultPredicate, NotForContentType, Predicate};
 
+use crate::artwork::{self, Picture};
 use crate::audit::{self, Actor};
 use crate::auth::{self, AuthUser, JellyfinAdmin, Manager};
 use crate::state::{ApiError, ApiResult, App, Settings};
@@ -313,20 +314,48 @@ fn valid_id(id: &str) -> Result<String, ApiError> {
     if id.len() == 32 && id.chars().all(|c| c.is_ascii_hexdigit()) { Ok(id) } else { Err(ApiError::not_found("Image")) }
 }
 
-async fn item_image(State(app): State<App>, _user: AuthUser, Path(id): Path<String>, Query(q): Query<ImageQuery>) -> ApiResult<Response> {
-    let id = valid_id(&id)?;
-    let width = pick_width(q.w);
-    let (kind, jf_kind) = match q.kind.as_deref() {
-        Some("backdrop") => ("backdrop", "Backdrop"),
-        _ => ("primary", "Primary"),
-    };
-    cached_image(&app, format!("item-{id}-{kind}-{width}"), format!("/Items/{id}/Images/{jf_kind}"), width).await
+async fn item_image(State(app): State<App>, _user: AuthUser, Path(id): Path<String>, Query(q): Query<ImageQuery>, headers: axum::http::HeaderMap) -> ApiResult<Response> {
+    let pic = if q.kind.as_deref() == Some("backdrop") { Picture::Backdrop } else { Picture::Primary };
+    current_picture(&app, pic, valid_id(&id)?, pick_width(q.w), &headers).await
 }
 
-async fn user_image(State(app): State<App>, _user: AuthUser, Path(id): Path<String>, Query(q): Query<ImageQuery>) -> ApiResult<Response> {
-    let id = valid_id(&id)?;
-    let width = pick_width(q.w.or(Some(96)));
-    cached_image(&app, format!("user-{id}-{width}"), format!("/Users/{id}/Images/Primary"), width).await
+async fn user_image(State(app): State<App>, _user: AuthUser, Path(id): Path<String>, Query(q): Query<ImageQuery>, headers: axum::http::HeaderMap) -> ApiResult<Response> {
+    current_picture(&app, Picture::User, valid_id(&id)?, pick_width(q.w.or(Some(96))), &headers).await
+}
+
+/// A picture through the cache, under the tag finstats last read for it (`artwork`): a poster replaced in
+/// Jellyfin has a new tag and so a new file. With a tag the browser is handed it as the ETag and asks again
+/// every time — a 304, before anything is read, when nothing changed — instead of keeping whatever it had for a week.
+async fn current_picture(app: &App, pic: Picture, id: String, width: u32, headers: &axum::http::HeaderMap) -> ApiResult<Response> {
+    let tag = tag_of(app, pic, &id).await?;
+    let Some(etag) = tag.as_deref().map(artwork::etag) else { return fetch_picture(app, pic, &id, width, None).await };
+    let fresh = artwork::not_modified(headers.get(axum::http::header::IF_NONE_MATCH).and_then(|v| v.to_str().ok()), &etag);
+    let mut r = if fresh { StatusCode::NOT_MODIFIED.into_response() } else { fetch_picture(app, pic, &id, width, tag.as_deref()).await? };
+    r.headers_mut().insert(CACHE_CONTROL, HeaderValue::from_static("private, no-cache"));
+    if let Ok(v) = HeaderValue::from_str(&etag) {
+        r.headers_mut().insert(axum::http::header::ETAG, v);
+    }
+    Ok(r)
+}
+
+/// A picture from the cache or Jellyfin, under the tag finstats knows for it.
+async fn picture(app: &App, pic: Picture, id: String, width: u32) -> ApiResult<Response> {
+    let tag = tag_of(app, pic, &id).await?;
+    fetch_picture(app, pic, &id, width, tag.as_deref()).await
+}
+
+async fn tag_of(app: &App, pic: Picture, id: &str) -> ApiResult<Option<String>> {
+    let id = id.to_string();
+    Ok(app.db.call(move |c| artwork::tag_of(c, pic, &id)).await?)
+}
+
+async fn fetch_picture(app: &App, pic: Picture, id: &str, width: u32, tag: Option<&str>) -> ApiResult<Response> {
+    let path = match pic {
+        Picture::Primary => format!("/Items/{id}/Images/Primary"),
+        Picture::Backdrop => format!("/Items/{id}/Images/Backdrop"),
+        Picture::User => format!("/Users/{id}/Images/Primary"),
+    };
+    cached_image(app, artwork::cache_name(pic, id, width, tag), path, width).await
 }
 
 /// A poster on a published profile, for a reader without an account: only an item the page itself shows.
@@ -336,8 +365,7 @@ async fn public_item_image(State(app): State<App>, Path((token, id)): Path<(Stri
     if !crate::public::listed_images(&a).contains(&id) {
         return Err(ApiError::not_found("Image"));
     }
-    let width = pick_width(q.w);
-    public_image(cached_image(&app, format!("item-{id}-primary-{width}"), format!("/Items/{id}/Images/Primary"), width).await?)
+    public_image(picture(&app, Picture::Primary, id, pick_width(q.w)).await?)
 }
 
 /// The owner's picture, when they chose to show it.
@@ -346,8 +374,7 @@ async fn public_avatar(State(app): State<App>, Path(token): Path<String>) -> Api
     if !p.show_avatar {
         return Err(ApiError::not_found("Image"));
     }
-    let id = valid_id(&p.user_id)?;
-    public_image(cached_image(&app, format!("user-{id}-96"), format!("/Users/{id}/Images/Primary"), 96).await?)
+    public_image(picture(&app, Picture::User, valid_id(&p.user_id)?, 96).await?)
 }
 
 /// Anyone may keep a published poster, but not for long: a profile taken down should stop showing soon.
@@ -488,7 +515,7 @@ pub(crate) async fn draw_story(app: &App, story: &crate::story::StoryYear, ch: c
 /// A poster's bytes through the same cache the pages use; a card without one draws an empty frame.
 async fn poster_bytes(app: &App, id: &str) -> Option<Vec<u8>> {
     let id = valid_id(id).ok()?;
-    let r = cached_image(app, format!("item-{id}-primary-480"), format!("/Items/{id}/Images/Primary"), 480).await.ok()?;
+    let r = picture(app, Picture::Primary, id, 480).await.ok()?;
     axum::body::to_bytes(r.into_body(), 16 << 20).await.ok().map(|b| b.to_vec())
 }
 
@@ -649,7 +676,7 @@ async fn get_tasks(State(app): State<App>, Manager(_): Manager) -> ApiResult {
 
 /// Every task that can be started by hand. `Tasks::try_start` panics on an id it does not know, so a test
 /// holds this list against `TASK_IDS`.
-const RUNNABLE: [&str; 8] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "sync_upcoming", "sync_requests", "sync_grabs"];
+const RUNNABLE: [&str; 9] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "sync_artwork", "sync_upcoming", "sync_requests", "sync_grabs"];
 
 async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>) -> ApiResult<Response> {
     let Some(id) = RUNNABLE.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };

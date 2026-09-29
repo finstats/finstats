@@ -8,6 +8,8 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 pub const APP_NAME: &str = "finstats";
+/// The kinds of item finstats keeps from a library: what can be played, and what holds what can be played.
+pub const ITEM_TYPES: &str = "Movie,Series,Season,Episode,Audio,MusicAlbum,MusicVideo,Video,Book,AudioBook";
 
 #[derive(Clone)]
 pub struct Jellyfin {
@@ -290,14 +292,20 @@ impl Jellyfin {
     }
 
     /// One page of a library's items. Returns (items, total).
+    /// One page of what Jellyfin saved since a moment, ids and image tags only (`artwork::changed_query`).
+    pub async fn changed_page(&self, since: i64, start: usize, limit: usize) -> Result<Vec<Value>> {
+        let mut v = self.get_json("/Items", &crate::artwork::changed_query(since, start, limit)).await?;
+        Ok(match v["Items"].take() {
+            Value::Array(a) => a,
+            _ => vec![],
+        })
+    }
+
     pub async fn items_page(&self, library_id: &str, start: usize, limit: usize) -> Result<(Vec<Value>, usize)> {
         let q = [
             ("ParentId", library_id.to_string()),
             ("Recursive", "true".into()),
-            (
-                "IncludeItemTypes",
-                "Movie,Series,Season,Episode,Audio,MusicAlbum,MusicVideo,Video,Book,AudioBook".into(),
-            ),
+            ("IncludeItemTypes", ITEM_TYPES.into()),
             ("Fields", "Genres,DateCreated,MediaSources,Path,Overview,OriginalTitle,ProviderIds,Studios".into()),
             // Missing and unaired episodes exist in Jellyfin as virtual items without a file. They are
             // not part of the library as far as statistics go.

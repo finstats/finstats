@@ -626,6 +626,7 @@ fn task_label(id: &str) -> &str {
         "sync_events" => "Reading the server log",
         "sync_server" => "Reading the server details",
         "sync_userdata" => "Reading watched and favourites",
+        "sync_artwork" => "Looking for new posters",
         "sync_upcoming" => "Reading the Sonarr and Radarr calendars",
         "sync_requests" => "Reading the requests from Seerr",
         "sync_grabs" => "Reading the download history",

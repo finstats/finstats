@@ -59,7 +59,7 @@ fn opt_str(v: &Value) -> Option<String> {
 
 /// Runs a task unless it is already running. Returns false in that case.
 /// The tasks that read from Jellyfin. (`services::TASKS` are the ones that read from Sonarr and friends.)
-pub const TASKS: [&str; 5] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata"];
+pub const TASKS: [&str; 6] = ["sync_users", "sync_libraries", "sync_events", "sync_server", "sync_userdata", "sync_artwork"];
 
 pub fn spawn(app: &App, id: &'static str) -> bool {
     if !TASKS.contains(&id) {
@@ -89,6 +89,7 @@ pub fn spawn(app: &App, id: &'static str) -> bool {
             }
             "sync_server" => sync_server(&app, &jf).await,
             "sync_userdata" => sync_userdata(&app, &jf).await,
+            "sync_artwork" => sync_artwork(&app, &jf).await,
             other => Err(anyhow!("unknown task {other}")),
         };
         if let Err(e) = &outcome {
@@ -133,6 +134,9 @@ async fn announce_ready_year(app: &App) {
 }
 
 const LIGHT_EVERY_S: i64 = 900;
+/// The Jellyfin reads started every `LIGHT_EVERY_S`. The library read follows Jellyfin's scan instead, and
+/// `sync_artwork` runs only when somebody starts it.
+const EVERY_QUARTER: [&str; 3] = ["sync_users", "sync_events", "sync_server"];
 const REQUESTS_EVERY_S: i64 = 300;
 const SCAN_CHECK_EVERY_S: i64 = 300;
 /// Even when following Jellyfin's scan, re-read once a week: real-time monitoring adds
@@ -200,9 +204,9 @@ pub async fn scheduler(app: App) {
                     crate::services::spawn(&app, "sync_upcoming");
                     crate::services::spawn(&app, "sync_grabs");
                 }
-                spawn(&app, "sync_users");
-                spawn(&app, "sync_events");
-                spawn(&app, "sync_server");
+                for id in EVERY_QUARTER {
+                    spawn(&app, id);
+                }
                 // A year of finstats' own audit log is enough to answer "who changed this in spring".
                 let _ = app.db.call(|c| crate::audit::thin(c, db::now())).await;
             }
@@ -684,6 +688,48 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
     Ok(format!("{total_items} items in {lib_count} libraries"))
 }
 
+/// The pictures Jellyfin changed since the last look: one read of what it saved since then, of which only the
+/// image tags are kept (`artwork`). A new poster is then fetched the next time somebody looks at it. Started by
+/// hand only ("Run now"): replacing a poster starts no library scan, so until the next library read nothing else
+/// notices it.
+async fn sync_artwork(app: &App, jf: &Jellyfin) -> Result<String> {
+    const ID: &str = "sync_artwork";
+    let started = db::now();
+    let from = app
+        .db
+        .call(|c| {
+            let at = |key: &str| -> Result<Option<i64>> { Ok(db::get_setting(c, key)?.and_then(|v| v.parse().ok())) };
+            Ok(crate::artwork::look_from(at("artwork_checked_at")?, at("library_synced_at")?))
+        })
+        .await?;
+    let Some(from) = from else { return Ok("Waiting for the first library read".into()) };
+    let (mut looked, mut changed) = (0usize, 0usize);
+    loop {
+        let items = jf.changed_page(from, looked, PAGE).await?;
+        let got = items.len();
+        changed += app
+            .db
+            .call(move |c| {
+                let tx = c.transaction()?;
+                let n = crate::artwork::store_tags(&tx, &items)?;
+                tx.commit()?;
+                Ok(n)
+            })
+            .await?;
+        looked += got;
+        if got < PAGE {
+            break;
+        }
+        app.tasks.update(ID, format!("{looked} changed items looked at"), None);
+    }
+    app.db.call(move |c| db::set_setting(c, "artwork_checked_at", &started.to_string())).await?;
+    Ok(match changed {
+        0 => "No new pictures".into(),
+        1 => "1 new picture".into(),
+        n => format!("{n} new pictures"),
+    })
+}
+
 // ---------------------------------------------------------------- server activity log
 
 async fn sync_events(app: &App, jf: &Jellyfin) -> Result<String> {
@@ -896,6 +942,14 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The owner's decision: looking for replaced posters is a job somebody starts, never a timer. The
+    /// library read keeps the tags current on its own schedule.
+    #[test]
+    fn the_posters_job_runs_only_when_somebody_starts_it() {
+        assert!(TASKS.contains(&"sync_artwork"), "it can be run by hand");
+        assert!(!EVERY_QUARTER.contains(&"sync_artwork"), "it is started by the quarter-hour timer");
+    }
 
     #[test]
     fn a_user_missing_from_the_read_is_removed_even_by_a_read_in_the_same_second() {
