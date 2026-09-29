@@ -14,6 +14,7 @@ const TASK_LABEL = {
   sync_events: ['Sync server log', 'Jellyfin’s activity log: sign-ins, failed logins, tasks'],
   sync_server: ['Server details', 'Version, storage, plugins, scheduled tasks and devices'],
   sync_userdata: ['Watched & favourites', 'Per-user played flags and favourites from Jellyfin'],
+  sync_artwork: ['Posters', 'Picks up posters and pictures replaced in Jellyfin before the next library read. Only when you run it'],
   import: ['Jellystat import', 'Runs when you upload a Jellystat backup under Import'],
   import_streamystats: ['Streamystats import', 'Runs when you upload a Streamystats backup under Import'],
   backup: ['Backup', 'Writes a finstats backup on the schedule under Backups'],
