@@ -452,6 +452,10 @@ resolved. `scan` runs when a play begins (that user), after the log sync, at sta
 `see_everyone`, writes also `manage`; failed sign-ins additionally `see_server`. The map (`worldmap.js`) is hand-drawn SVG over
 `web/assets/geo/world.json` (Natural Earth, pre-projected by `tools/make-world-map.py`; Mercator, because an equal-area projection leans the north and the owner read it as a tilted map; the formula there and in `worldmap.js` must
 match). No tiles, no map service. The plain wheel scrolls the page; Ctrl+wheel, the buttons and the keys zoom.
+**Drawing the coastline is what costs** (445 kB of path): a gesture only transforms the picture already drawn (`.wm-stage`,
+twice the frame each way so a drag uncovers land) and the viewBox is set once it settles (`draw`); nothing is ever animated
+inside the SVG — the playing-now pulse is HTML above it — because that re-records the whole world every frame. Hover is
+worked out from the dots' positions (`hover`), one tooltip for everything under the pointer, anchored on the top circle.
 
 **Pipeline: the services around Jellyfin (`services.rs`, `arr.rs`, `seerr.rs`, `downloads.rs`, `pipeline.rs`, `/pipeline`).**
 Connections (Sonarr, Radarr, Seerr; several of a kind) live in `services`, secrets and all, and are `JellyfinAdmin`-only. **Download clients are
@@ -615,6 +619,11 @@ Esc is handled globally in `shell.js` (steps back out of `/libraries/:id`, `/use
 `history.state.depth`, and a tab opened on a title has none behind it. Overlays must keep calling `stopPropagation()` on
 their own Esc, and `openModal` keeps a stack: only the dialog on top answers keys. Tables read numbers as `num()` prints
 them (en-US), never with the browser's separators.
+Signing out lives in Settings → Account (`settings/account.js`), not in the sidebar. In the status bar every item is one small box
+(18 px, `--radius-sm`) and every link hovers as that box; the `·` between two items is an element of its own (`.sb-sep`),
+laid out between them so flexbox centres it, never an item's `::before`: inside a link its hover lit the dot up, and placed
+by hand it was never quite centred. It hides with the item after it (`:has`). A long value in a `facts()` grid — a file
+path — takes `{ wide: true }` and the whole row, or it runs down a 190 px cell.
 Each screen is held to the UX patterns from <https://uxgoodpatterns.com>. A generated copy, `ux-rules.md`, may sit in the working
 tree for reference; it is someone else's work, is git-ignored and must never be committed. The look is Obsidian's in the dark and washi paper in the light (cream ground, ink text, a vermilion seal for
 the accent, nando for quantities), via the tokens at the top of `app.css`; categorical chart colours follow the entity (Movie/Episode/Audio/Other), never rank.
@@ -622,7 +631,8 @@ the accent, nando for quantities), via the tokens at the top of `app.css`; categ
 anywhere else (a CSS rule, a chart's `fill`, a `style.background` in JS) is right in one theme and wrong in the other; the QA
 light sweep measures text contrast on every page and fails on it. JS reaches a token as the string `'var(--x)'` through `style`
 (never an SVG presentation attribute). With nothing chosen the device decides (`color-scheme: light dark`); the sidebar's
-theme button cycles Device → Light → Dark and keeps the choice in `localStorage` (`finstats.theme`, absent = Device), which
+theme switch (`themeSwitch` in `shell.js`: three stops Light · Device · Dark, a `role="slider"`; click, drag or keys; its knob's
+icon animates in, never with reduced motion) keeps the choice in `localStorage` (`finstats.theme`, absent = Device), which
 `theme.js` — a classic, blocking script in both pages' `<head>` — puts on `<html data-theme>` before the first paint. The
 server-rendered profile cards (`card.rs`) stay dark.
 
