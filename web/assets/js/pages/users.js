@@ -9,6 +9,7 @@ import { openPlayModal } from '../playmodal.js';
 import { profileAllTime } from './showprogress.js';
 import { dataTable, plainTable } from '../tables.js';
 import { loadUpcoming, agenda } from '../upcoming.js';
+import { hasWatchlist } from '../watchlist.js';
 
 // Loaders are shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
 const loadUsers = (days, signal) => api.get('/users', { days }, { signal });
@@ -60,11 +61,14 @@ export function usersPage(ctx) {
   dv.load();
 }
 
-/** Overview | Timeline, under a person's header. Links, so each view has its own address. */
+/** Overview | Timeline | Watchlist, under a person's header. Links, so each view has its own address. The watchlist is
+ *  only ever one's own, so only one's own profile has the tab. */
 export function userTabs(id, current) {
   const tab = (key, label, href) => h('a', { class: 'seg-btn', href, 'aria-current': key === current ? 'page' : null }, label);
+  const own = hasWatchlist() && state.user && id === state.user.id;
   return h('nav', { class: 'seg entity-tabs', 'aria-label': 'Profile sections' },
-    tab('overview', 'Overview', `/users/${id}`), tab('timeline', 'Timeline', `/users/${id}/timeline`));
+    tab('overview', 'Overview', `/users/${id}`), tab('timeline', 'Timeline', `/users/${id}/timeline`),
+    own ? tab('watchlist', 'Watchlist', `/users/${id}/watchlist`) : null);
 }
 
 // ---------------------------------------------------------------- /users/:id

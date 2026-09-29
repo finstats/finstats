@@ -273,7 +273,7 @@ onRouteChange(() => {
 /** Where Esc leads from this page; null on top-level pages. `back` = prefer the real history entry. */
 function escTarget(path) {
   if (/^\/libraries\/[^/]+/.test(path)) return { up: '/libraries' };
-  if (/^\/users\/[^/]+\/timeline$/.test(path)) return { up: path.replace(/\/timeline$/, '') };
+  if (/^\/users\/[^/]+\/(timeline|watchlist)$/.test(path)) return { up: path.replace(/\/(timeline|watchlist)$/, '') };
   if (/^\/users\/[^/]+/.test(path)) return can('see_everyone') && path !== `/users/${state.user.id}` ? { up: '/users' } : null; // your own profile is a top-level page
   if (/^\/items\/[^/]+/.test(path)) return { up: '/libraries', back: true };     // reached from anywhere, so return to wherever that was
   if (/^\/people\/[^/]+/.test(path)) return { up: '/libraries', back: true };
