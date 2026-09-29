@@ -1485,6 +1485,8 @@ written anywhere but finstats' own database, and nothing is audit-logged.
 | DELETE | `/api/me/watchlist/{id}` | – | `{ok: true}`; `404` when the entry is not the caller's. |
 | GET | `/api/me/watchlist/keys` | – | `{entries: [{id, kind, item_ids, tmdb_id, tvdb_id, imdb_id}]}`, newest first. |
 
+`/api/auth/me` gains `user.features.watchlist: true`; a page offers the list only where it is there.
+
 Only films and shows go on a list: `kind` is `Movie` or `Series`, and an `item_id` that is anything else, or that the
 library does not have, is `404`. A title outside the library needs at least one id — TMDB and TVDB ids are digits and may
 be sent as numbers, an IMDb id is `tt` and digits — and a name of at most 300 characters; `year`, when given, is

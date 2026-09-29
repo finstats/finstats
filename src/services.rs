@@ -389,6 +389,8 @@ pub fn features(app: &App) -> Value {
         // Not a connection, but the same question: is there anything behind the page. Settings offers
         // "Public profile" only once an administrator has allowed them.
         "public_profiles": app.settings().public_profiles,
+        // Always there from 2.1: said so that a page on an older server offers no watchlist it cannot keep.
+        "watchlist": true,
     })
 }
 
@@ -665,5 +667,9 @@ mod tests {
         assert!(refuse(resp.status(), resp.headers(), &svc).to_string().contains("redirect"));
         // Nobody ever knocks on the other door.
         assert!(tokio::time::timeout(Duration::from_millis(300), elsewhere.accept()).await.is_err(), "the redirect was followed");
+    }
+    #[test]
+    fn a_server_says_it_keeps_watchlists_so_an_older_one_shows_no_toggle() {
+        assert_eq!(features(&crate::state::test_app())["watchlist"], serde_json::json!(true));
     }
 }
