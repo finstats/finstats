@@ -159,10 +159,13 @@ function buildShell() {
   const sbDot = h('span', { class: 'sb-dot' });
   const sbStream = h('a', { href: '/', class: 'sb-item sb-link' }, sbDot, h('span', null, 'connecting…'));
   const sbPlays = h('span', { class: 'sb-item' });
-  const sbSync = h('span', { class: 'sb-item' });
+  const sbSync = h('span', { class: 'sb-item sb-sync' });
   const sbRepo = h('a', { class: 'sb-item sb-right sb-link', href: 'https://github.com/finstats/finstats', target: '_blank', rel: 'noopener noreferrer', title: 'finstats on GitHub' }, icon('github', 12), 'Repo');
-  const sbVer = h('a', { class: 'sb-item sb-link', href: '/changelog', title: 'Patch notes' }, state.status && state.status.version ? 'v' + state.status.version : '');
-  const statusbar = h('footer', { class: 'statusbar', role: 'status', 'aria-label': 'Collector status' }, sbStream, sbPlays, sbSync, sbRepo, sbVer);
+  const version = state.status && state.status.version;
+  const sbVerText = h('span', null, version ? 'v' + version : '');
+  const sbVer = h('a', { class: 'sb-item sb-link', href: '/changelog', title: 'Patch notes', hidden: !version }, sbVerText);
+  const sep = () => h('span', { class: 'sb-sep', 'aria-hidden': 'true' }, '·');
+  const statusbar = h('footer', { class: 'statusbar', role: 'status', 'aria-label': 'Collector status' }, sbStream, sep(), sbPlays, sep(), sbSync, sbRepo, sep(), sbVer);
 
   let sbTimer = null, sbAbort = null, dead = false;
   async function pollSummary() {
@@ -180,7 +183,7 @@ function buildShell() {
         sbPlays.textContent = `${num(sum.plays_total)} plays`;
         sbSync.textContent = sum.last_sync_at ? `synced ${relTime(sum.last_sync_at)}` : 'not synced yet';
         sbSync.title = sum.last_sync_at ? 'Last library sync: ' + dateTime(sum.last_sync_at) : '';
-        if (sum.version) { sbVer.textContent = 'v' + sum.version; noteRunningVersion(sum.version); }
+        if (sum.version) { sbVerText.textContent = 'v' + sum.version; sbVer.hidden = false; noteRunningVersion(sum.version); }
       } catch (e) {
         if (!isAbort(e) && e.status !== 401) {
           sbDot.className = 'sb-dot bad';

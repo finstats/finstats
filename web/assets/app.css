@@ -232,11 +232,19 @@ kbd {
   background: var(--bg-sunken); border-top: 1px solid var(--border-soft);
   font: 450 11.5px/1 var(--mono); color: var(--text-faint); white-space: nowrap; overflow: hidden;
 }
-.sb-item { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; height: 100%; color: inherit; }
-.sb-item + .sb-item:not(.sb-right) { padding-left: 0; }
-.sb-item + .sb-item:not(.sb-right)::before { content: "·"; margin-right: 2px; color: var(--separator); }
+/* Every item is the same small box, centred in the bar with room above and below, and every link hovers as that box
+   and nothing more: one shape for the whole bar, like a row of the sidebar. */
+.sb-item { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 18px; padding: 0 6px; border-radius: var(--radius-sm); color: inherit; }
+/* The dot between two items is an element of its own, and a flex item like them: centred between their boxes by the
+   layout itself. As an item's ::before it sat inside that item's hover, and placed by hand it was never quite centred.
+   It goes with the item after it, while that one has nothing to say. */
+.sb-sep { flex: none; width: 16px; text-align: center; color: var(--separator); user-select: none; }
+.sb-sep:has(+ .sb-item:empty), .sb-sep:has(+ [hidden]) { display: none; }
 .sb-item:empty { display: none; }
+.sb-link { transition: background var(--ease), color var(--ease); }
 .sb-link:hover { color: var(--text); text-decoration: none; background: var(--hover); }
+.sb-link:focus-visible { outline-offset: 0; }
+.sb-link .icon { opacity: .85; }
 .sb-right { margin-left: auto; }
 .sb-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
 .sb-dot.ok { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 16%, transparent); }
@@ -1016,7 +1024,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
   .np { flex-direction: row; }
   .poster-np { width: 56px; }
   .shelf { grid-auto-columns: 112px; gap: 12px; }
-  .statusbar .sb-item:nth-child(3) { display: none; }
+  .statusbar .sb-sync, .statusbar .sb-sep:has(+ .sb-sync) { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
