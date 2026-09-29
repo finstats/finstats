@@ -207,6 +207,9 @@ kbd {
   .theme-switch, .theme-knob { transition: none; }
   .theme-icon.is-in { animation: none !important; }
 }
+.account-row { align-items: center; }
+.account-who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.account-name { font-size: 14px; font-weight: 600; color: var(--text); }
 
 .icon-btn {
   display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none;
