@@ -218,15 +218,16 @@ export default function serverPage(ctx) {
     });
   }
 
-  /** "about 4 minutes left" when finstats has watched the percentage move — and, when it has not,
-      "ETA" with three cycling dots after it. The word is what makes the dots mean something: on their own
-      they read as a page still loading rather than as an estimate nobody can give yet. A guess put where
-      an estimate goes would read exactly like an estimate, so there is still no number. */
+  /** "about 4 minutes left" when finstats has watched the percentage move — and, when it has not, the same
+      sentence with three cycling dots where the time will go: "about . left", "about .. left", "about ... left".
+      The words around them are what make the dots mean something: on their own they read as a page still
+      loading. A guess put where an estimate goes would read exactly like an estimate, so there is no number. */
   function leftText(job) {
     if (job.eta_s == null) {
       return h('span', { class: 'job-working' },
-        h('span', { 'aria-hidden': 'true' }, 'ETA'),
+        h('span', { 'aria-hidden': 'true' }, 'about'),
         h('span', { class: 'dots', 'aria-hidden': 'true' }, h('span', null, '.'), h('span', null, '.'), h('span', null, '.')),
+        h('span', { 'aria-hidden': 'true' }, 'left'),
         h('span', { class: 'sr-only' }, 'Working; no estimate yet'));
     }
     if (job.eta_s <= 5) return h('span', null, 'finishing');
