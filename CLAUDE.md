@@ -640,7 +640,8 @@ server-rendered profile cards (`card.rs`) stay dark.
 
 `qa/` (git-ignored, so it may not exist in a fresh clone) holds a local release gate: `qa/run.sh` runs static checks, an API suite
 and a real-browser suite against a throwaway instance built from generated data. Run it before every release and add a check for
-every bug fixed. It is a local tool and must never be committed; the same goes for `ux-rules.md`.
+every bug fixed. The database torture and the soak are not in it — minutes each, one after the other — but `qa/run.sh endurance`:
+run that too before a release, and after work on the database or on anything long-running. It is a local tool and must never be committed; the same goes for `ux-rules.md`.
 
 ## Releases and patch notes
 
