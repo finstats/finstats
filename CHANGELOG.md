@@ -10,6 +10,21 @@ Stability something that can no longer crash, halt, leak or lose data, Fixed som
 wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
 
+## [2.1.0] - 2026-09-29 to 2026-09-30
+
+Watchlist
+
+### Added
+- **A watchlist of your own**: put a film or a show on it from its page, from Upcoming, from Recently added or from search (Ctrl+Enter), and find it under **Watchlist** on your own profile.
+- **Every entry says where it stands now** — on the server, "5 of 26 episodes", requested, "Coming up Friday", not on the server, left the library, or watched — worked out each time you look, with the same reading of "seen" as your show progress. Watched titles stay, in a group of their own, until you take them off.
+- **A title that is not on your server yet** can go on the list straight from what Sonarr or Radarr is waiting for. It is attached to the title by itself when it arrives, and a renamed file takes its entry along.
+- **"On your watchlist: now available"**: a notification for your own destinations when something you were waiting for arrives. Off until you tick it.
+- **Nobody else sees your watchlist**, an administrator included, and its notification goes to your destinations only. Nothing is written to Jellyfin, Seerr, Sonarr or Radarr.
+- Watchlists are part of a backup, and a restore merges them without doubling anything.
+
+### Changed
+- `/api/upcoming` entries carry the TVDB and TMDB ids of their title, and `/api/auth/me` says whether the server keeps watchlists.
+
 ## [2.0.4] - 2026-09-29
 
 ### Added
