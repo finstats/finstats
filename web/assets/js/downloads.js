@@ -10,14 +10,14 @@ import { upcomingPoster } from './upcoming.js';
 export const loadDownloads = (signal, live = true) => api.get('/downloads', live ? { live: 1 } : null, { signal });
 
 const STATE = {
-  downloading: { cls: 'sev-info', icon: 'download', label: 'Downloading' },
-  importing: { cls: 'sev-info', icon: 'inbox', label: 'Importing' },
-  stalled: { cls: 'sev-warning', icon: 'alert', label: 'Stalled' },
-  queued: { cls: 'sev-info', icon: 'clock', label: 'Queued' },
-  paused: { cls: 'sev-info', icon: 'pause', label: 'Paused' },
-  checking: { cls: 'sev-info', icon: 'refresh', label: 'Checking' },
-  failed: { cls: 'sev-critical', icon: 'alert', label: 'Failed' },
-  unknown: { cls: 'sev-info', icon: 'info', label: 'Unknown' },
+  downloading: { cls: 'fui-badge--info', icon: 'download', label: 'Downloading' },
+  importing: { cls: 'fui-badge--info', icon: 'inbox', label: 'Importing' },
+  stalled: { cls: 'fui-badge--warning', icon: 'alert', label: 'Stalled' },
+  queued: { cls: 'fui-badge--info', icon: 'clock', label: 'Queued' },
+  paused: { cls: 'fui-badge--info', icon: 'pause', label: 'Paused' },
+  checking: { cls: 'fui-badge--info', icon: 'refresh', label: 'Checking' },
+  failed: { cls: 'fui-badge--critical', icon: 'alert', label: 'Failed' },
+  unknown: { cls: 'fui-badge--info', icon: 'info', label: 'Unknown' },
 };
 
 export const speed = (bps) => (bps > 0 ? `${bytes(bps)}/s` : '–');
@@ -41,7 +41,7 @@ function row(d) {
         d.item_id ? h('a', { class: 'dl-title', href: `/items/${d.item_id}` }, d.title) : h('span', { class: 'dl-title' }, d.title),
         d.sub ? h('span', { class: 'muted' }, ' · ' + d.sub) : null),
       h('div', { class: 'dl-meta' },
-        h('span', { class: 'sev ' + st.cls }, icon(st.icon, 13), st.label),
+        h('span', { class: 'fui-badge--status ' + st.cls }, icon(st.icon, 13), st.label),
         d.size ? h('span', { class: 'mono' }, `${bytes(d.size * (d.progress || 0))} of ${bytes(d.size)}`) : null,
         d.down_bps > 0 ? h('span', { class: 'mono dl-down' }, icon('download', 12), speed(d.down_bps)) : null,
         d.eta_s ? h('span', { class: 'mono' }, duration(d.eta_s) + ' left') : null,
@@ -61,7 +61,7 @@ export function downloadsList(d, { compact = false, limit = 0 } = {}) {
     h('span', null, `${num(t.downloading || 0)} downloading`),
     t.queued ? h('span', null, `${num(t.queued)} queued`) : null,
     t.importing ? h('span', null, `${num(t.importing)} importing`) : null,
-    t.failed ? h('span', { class: 'sev sev-critical' }, icon('alert', 13), `${num(t.failed)} failed`) : null,
+    t.failed ? h('span', { class: 'fui-badge--status fui-badge--critical' }, icon('alert', 13), `${num(t.failed)} failed`) : null,
     d.at ? h('span', { class: 'muted dl-when' }, 'updated ', relTime(d.at)) : null);
   const problems = (d.problems || []).map((p) => h('p', { class: 'dl-error' }, icon('alert', 13), `${p.service}: ${p.error}`));
   return [totals, ...problems, rows.length ? h('ul', { class: 'dl-list' }, rows.map(row)) : null];

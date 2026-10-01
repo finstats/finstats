@@ -73,7 +73,7 @@ export function profileAllTime({ userId, signal }) {
     const done = s.seen >= s.total;
     const head = h('button', { type: 'button', class: 'show-head', 'aria-expanded': String(isOpen),
       onClick: () => { if (isOpen) open.delete(s.id); else open.add(s.id); paint(); } },
-      h('span', { class: 'show-name' }, s.name, s.removed ? h('span', { class: 'chip' }, 'No longer in library') : null),
+      h('span', { class: 'show-name' }, s.name, s.removed ? h('span', { class: 'fui-chip' }, 'No longer in library') : null),
       h('span', { class: 'show-count mono' }, `${num(s.seen)}/${num(s.total)}`), h('span', { class: 'show-pct mono' }, pct(s.total ? s.seen / s.total : 0)),
       icon('chevronRight', 14, 'show-chev'));
     const unseen = (eps) => eps.filter((e) => e.state !== 'seen').map((e) => e.id);

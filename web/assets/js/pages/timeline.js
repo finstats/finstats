@@ -66,7 +66,7 @@ export function timelinePage(ctx) {
     };
     filterSlot.replaceChildren(h('div', { class: 'filters trail-filter', role: 'group', 'aria-label': 'Libraries' },
       h('span', { class: 'trail-filter-label' }, 'Libraries'),
-      libraries.map((l) => h('button', { type: 'button', class: 'chip chip-btn chip-toggle', 'aria-pressed': String(isOn(l.id)),
+      libraries.map((l) => h('button', { type: 'button', class: 'fui-chip fui-chip--button fui-chip--toggle', 'aria-pressed': String(isOn(l.id)),
         onClick: () => { const next = new Set(all.filter(isOn)); if (next.has(l.id)) next.delete(l.id); else next.add(l.id); set(next); } },
       isOn(l.id) ? icon('check', 12) : null, l.name)),
       picked ? button({ variant: 'ghost', size: 'sm', type: 'button', onClick: () => set(new Set(all)) }, 'Show all') : null));

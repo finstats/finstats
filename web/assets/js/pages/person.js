@@ -33,7 +33,7 @@ export default function personPage(ctx) {
           poster(p.has_image ? p.id : null, p.name, { w: 300, cls: 'poster-lg' }),
           h('div', { class: 'item-hero-text' },
             h('h1', { class: 'page-title' }, p.name),
-            h('div', { class: 'chips' }, p.is_actor ? chip('Actor') : null, p.is_director ? chip('Director') : null,
+            h('div', { class: 'fui-chip__set' }, p.is_actor ? chip('Actor') : null, p.is_director ? chip('Director') : null,
               chip(`${num(p.titles)} ${p.titles === 1 ? 'title' : 'titles'} in the library`)))),
         h('div', { class: 'tiles tiles-3' },
           statTile({ label: 'Watch time', value: duration(t.watch_s), title: durationExact(t.watch_s), hint: 'across everything they are in' }),

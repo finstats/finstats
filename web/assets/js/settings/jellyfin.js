@@ -22,14 +22,14 @@ export default {
     const paint = () => {
       const s = store.settings, c = store.tasks && store.tasks.collector;
       const status = !c ? h('span', { class: 'muted' }, 'Checking…')
-        : c.connected ? h('span', { class: 'sev sev-good' }, icon('check', 13), `Connected · ${num(c.active_sessions)} active ${c.active_sessions === 1 ? 'session' : 'sessions'}`)
-        : h('span', { class: 'sev sev-critical' }, icon('alert', 13), 'Not connected' + (c.error ? ` — ${c.error}` : ''));
+        : c.connected ? h('span', { class: 'fui-badge--status fui-badge--good' }, icon('check', 13), `Connected · ${num(c.active_sessions)} active ${c.active_sessions === 1 ? 'session' : 'sessions'}`)
+        : h('span', { class: 'fui-badge--status fui-badge--critical' }, icon('alert', 13), 'Not connected' + (c.error ? ` — ${c.error}` : ''));
       // With the live connection carrying, each transport does the half it is good at: Jellyfin
       // says when something starts, and finstats asks for the detail while it plays.
       const live = c && c.socket_live;
       const how = !c || !c.connected ? null
-        : live ? h('span', { class: 'sev sev-good' }, icon('activity', 13), 'Told by Jellyfin, live')
-        : h('span', { class: 'sev sev-warning' }, icon('clock', 13), `Asked every ${num(s.active_interval_s)} s while watching, every ${num(s.idle_interval_s)} s otherwise`);
+        : live ? h('span', { class: 'fui-badge--status fui-badge--good' }, icon('activity', 13), 'Told by Jellyfin, live')
+        : h('span', { class: 'fui-badge--status fui-badge--warning' }, icon('clock', 13), `Asked every ${num(s.active_interval_s)} s while watching, every ${num(s.idle_interval_s)} s otherwise`);
       mount(body, facts([
         ['Server', s.server_name],
         ['Address', s.jellyfin_url, { mono: true }],

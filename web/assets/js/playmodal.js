@@ -15,7 +15,7 @@ const EVENT = {
 /** Local / Remote as icon + word (never colour alone). `null` = unknown → nothing. */
 export function networkChip(isLocal) {
   if (isLocal == null) return null;
-  return h('span', { class: 'chip', title: isLocal ? 'Played from your local network' : 'Played from outside your network' },
+  return h('span', { class: 'fui-chip', title: isLocal ? 'Played from your local network' : 'Played from outside your network' },
     icon(isLocal ? 'lan' : 'globe', 12), isLocal ? 'Local' : 'Remote');
 }
 
@@ -73,9 +73,9 @@ export function openPlayModal(play, { onDeleted } = {}) {
         p.series_name ? h('div', { class: 'play-head-sub' }, code ? h('span', { class: 'mono' }, code) : null, code ? ' · ' : null,
           canLink ? h('a', { href: `/items/${p.item_id}`, onClick: close }, p.item_name) : p.item_name) : null,
         h('div', { class: 'play-head-meta' }, methodBadge(p.play_method),
-          p.active ? h('span', { class: 'badge live' }, h('span', { class: 'badge-dot' }), 'Playing now') : null,
-          h('span', { class: 'chip' }, sourceName(p)),
-          canLink ? null : h('span', { class: 'chip' }, 'No longer in library'))));
+          p.active ? h('span', { class: 'fui-badge fui-badge--live' }, h('span', { class: 'fui-badge__dot' }), 'Playing now') : null,
+          h('span', { class: 'fui-chip' }, sourceName(p)),
+          canLink ? null : h('span', { class: 'fui-chip' }, 'No longer in library'))));
 
     const session = facts([
       ['User', h('a', { href: `/users/${p.user_id}`, onClick: close }, p.user_name)],
@@ -112,7 +112,7 @@ export function openPlayModal(play, { onDeleted } = {}) {
       ['Container', t.container, { mono: true }],
       ['Bitrate', bitrate(t.bitrate), { mono: true }],
       ['Hardware', t.hw_accel ? t.hw_accel.toUpperCase() : 'Software', { mono: true }],
-      ['Reasons', t.reasons && t.reasons.length ? h('span', { class: 'chips' }, t.reasons.map((r) => h('span', { class: 'chip' }, humanize(r)))) : '–'],
+      ['Reasons', t.reasons && t.reasons.length ? h('span', { class: 'fui-chip__set' }, t.reasons.map((r) => h('span', { class: 'fui-chip' }, humanize(r)))) : '–'],
     ])] : null;
 
     return [head,

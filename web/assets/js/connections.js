@@ -40,11 +40,11 @@ export function connectionsPanel(ctx) {
   }
 
   function statusOf(s) {
-    if (!s.enabled) return h('span', { class: 'sev sev-info' }, icon('minus', 13), 'Switched off');
-    if (s.last_error) return h('span', { class: 'sev sev-critical' }, icon('alert', 13), h('span', null, 'Not answering: ', s.last_error));
-    if (s.last_ok_at) return h('span', { class: 'sev sev-good' }, icon('check', 13),
+    if (!s.enabled) return h('span', { class: 'fui-badge--status fui-badge--info' }, icon('minus', 13), 'Switched off');
+    if (s.last_error) return h('span', { class: 'fui-badge--status fui-badge--critical' }, icon('alert', 13), h('span', null, 'Not answering: ', s.last_error));
+    if (s.last_ok_at) return h('span', { class: 'fui-badge--status fui-badge--good' }, icon('check', 13),
       h('span', null, 'Connected', s.version ? h('span', { class: 'mono' }, ` · ${s.version}`) : null, ' · checked ', h('span', { title: dateTime(s.last_ok_at) }, relTime(s.last_ok_at))));
-    return h('span', { class: 'sev sev-info' }, icon('clock', 13), 'Not checked yet');
+    return h('span', { class: 'fui-badge--status fui-badge--info' }, icon('clock', 13), 'Not checked yet');
   }
 
   function row(s) {
@@ -65,7 +65,7 @@ export function connectionsPanel(ctx) {
         button({ size: 'sm', variant: 'ghost', tone: 'danger', type: 'button', onClick: () => { removing = s.id; render(); } }, 'Remove…')];
     return h('li', { class: 'conn-row' },
       h('div', { class: 'conn-main' },
-        h('div', { class: 'conn-name' }, h('strong', null, s.name), s.name !== s.label ? h('span', { class: 'chip' }, s.label) : null),
+        h('div', { class: 'conn-name' }, h('strong', null, s.name), s.name !== s.label ? h('span', { class: 'fui-chip' }, s.label) : null),
         h('div', { class: 'conn-url mono' }, s.url),
         h('div', { class: 'conn-status' }, statusOf(s)),
         rowErr && rowErr.id === s.id ? inlineError(`conn-err-${s.id}`, rowErr.text) : null),
@@ -128,7 +128,7 @@ export function connectionsPanel(ctx) {
       setBusy(testBtn, true, 'Testing…');
       try {
         const r = await api.post('/services/test', body());
-        mount(result, h('p', { class: 'sev sev-good test-ok' }, icon('check', 14), h('span', null, 'Connected to ', h('strong', null, r.app || kind.label), r.version ? h('span', { class: 'mono' }, ` · ${r.version}`) : null)));
+        mount(result, h('p', { class: 'fui-badge--status fui-badge--good test-ok' }, icon('check', 14), h('span', null, 'Connected to ', h('strong', null, r.app || kind.label), r.version ? h('span', { class: 'mono' }, ` · ${r.version}`) : null)));
       } catch (e) { place(e); } finally { setBusy(testBtn, false); }
     });
     const el = h('form', { class: 'conn-form', noValidate: true },

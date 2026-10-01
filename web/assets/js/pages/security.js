@@ -10,7 +10,7 @@ import { button } from '../../finui/components/button/button.js';
 
 const PER_PAGE = 5;
 // Status colours always ship with an icon and a word.
-const SEVERITY = { high: { cls: 'sev-critical', icon: 'alert', label: 'High' }, medium: { cls: 'sev-warning', icon: 'alert', label: 'Medium' } };
+const SEVERITY = { high: { cls: 'fui-badge--critical', icon: 'alert', label: 'High' }, medium: { cls: 'fui-badge--warning', icon: 'alert', label: 'Medium' } };
 const KIND = { impossible_travel: 'Impossible travel', new_country: 'New country' };
 
 // Shared with the prefetcher, so a prefetched view has exactly the addresses the page asks for.
@@ -93,7 +93,7 @@ export default function securityPage(ctx) {
       : button({ size: 'sm', type: 'button', onClick: () => resolveDialog(a) }, icon('check', 13), 'Resolve…');
     return h('li', { class: 'alert-row' + (a.resolved_at ? ' is-resolved' : '') },
       h('div', { class: 'alert-head' },
-        h('span', { class: 'sev ' + sev.cls }, icon(sev.icon, 13), sev.label),
+        h('span', { class: 'fui-badge--status ' + sev.cls }, icon(sev.icon, 13), sev.label),
         h('strong', { class: 'alert-kind' }, KIND[a.kind] || a.kind),
         h('a', { class: 'user-cell', href: `/users/${a.user_id}` }, avatar(a.user_id, a.user_name, { size: 20, hasImage: a.has_image }), a.user_name),
         h('span', { class: 'alert-when' }, relEl(a.at))),

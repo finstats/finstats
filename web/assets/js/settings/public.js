@@ -61,7 +61,7 @@ export default {
           h('tbody', null, rows.map((p) => h('tr', null,
             h('td', null, h('span', { class: 'user-cell' }, avatar(p.user_id, p.user_name, { size: 20 }), p.user_name)),
             h('td', null, p.display_name || h('span', { class: 'muted' }, 'no name')),
-            h('td', null, p.published ? Object.keys(SECTION_NAMES).filter((k) => p.sections[k]).map((k) => h('span', { class: 'chip' }, SECTION_NAMES[k])) : h('span', { class: 'muted' }, 'Not published')),
+            h('td', null, p.published ? Object.keys(SECTION_NAMES).filter((k) => p.sections[k]).map((k) => h('span', { class: 'fui-chip' }, SECTION_NAMES[k])) : h('span', { class: 'muted' }, 'Not published')),
             h('td', { 'data-sort': p.updated_at }, relEl(p.updated_at)),
             h('td', null, p.published ? h('div', { class: 'backup-actions' }, confirming === p.user_id
               ? [h('span', { class: 'muted' }, 'Take it down? The link stops working; they can publish again.'),

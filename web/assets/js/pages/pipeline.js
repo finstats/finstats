@@ -52,14 +52,14 @@ const monthShort = new Intl.DateTimeFormat(undefined, { month: 'short' });
 const monthLong = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
 // A colour always comes with an icon and a word.
 const STATE = {
-  pending: { cls: 'sev-warning', icon: 'clock', label: 'Waiting for approval' },
-  approved: { cls: 'sev-info', icon: 'check', label: 'Approved' },
-  processing: { cls: 'sev-info', icon: 'download', label: 'On its way' },
-  partial: { cls: 'sev-info', icon: 'download', label: 'Partly here' },
-  available: { cls: 'sev-good', icon: 'check', label: 'Here' },
-  declined: { cls: 'sev-critical', icon: 'x', label: 'Declined' },
-  failed: { cls: 'sev-critical', icon: 'alert', label: 'Failed' },
-  removed: { cls: 'sev-info', icon: 'minus', label: 'Gone from Seerr' },
+  pending: { cls: 'fui-badge--warning', icon: 'clock', label: 'Waiting for approval' },
+  approved: { cls: 'fui-badge--info', icon: 'check', label: 'Approved' },
+  processing: { cls: 'fui-badge--info', icon: 'download', label: 'On its way' },
+  partial: { cls: 'fui-badge--info', icon: 'download', label: 'Partly here' },
+  available: { cls: 'fui-badge--good', icon: 'check', label: 'Here' },
+  declined: { cls: 'fui-badge--critical', icon: 'x', label: 'Declined' },
+  failed: { cls: 'fui-badge--critical', icon: 'alert', label: 'Failed' },
+  removed: { cls: 'fui-badge--info', icon: 'minus', label: 'Gone from Seerr' },
 };
 const STATUSES = [{ value: '', label: 'All' }, { value: 'open', label: 'Open' }, { value: 'arrived', label: 'Here' }, { value: 'declined', label: 'Refused' }];
 
@@ -129,10 +129,10 @@ function requestsTab(ctx, root) {
             everyone ? h('td', null, r.user_id ? h('a', { class: 'user-cell', href: `/users/${r.user_id}` }, avatar(r.user_id, r.user_name, { size: 22, hasImage: r.has_image }), r.user_name || 'Unknown')
               : h('span', { class: 'user-cell muted', title: 'Seerr does not say which Jellyfin user this is' }, r.user_name || 'Unknown')) : null,
             h('td', { class: 'mono nowrap', title: dateTime(r.requested_at) }, relTime(r.requested_at)),
-            h('td', null, h('span', { class: 'sev ' + st.cls }, icon(st.icon, 13), st.label)),
+            h('td', null, h('span', { class: 'fui-badge--status ' + st.cls }, icon(st.icon, 13), st.label)),
             h('td', { class: 'mono nowrap', 'data-sort': r.arrived_after_s == null ? '' : r.arrived_after_s }, r.arrived_after_s == null ? h('span', { class: 'muted' }, '–') : duration(r.arrived_after_s)),
-            h('td', null, r.watched ? h('span', { class: 'sev sev-good' }, icon('check', 13), everyone ? 'By them' : 'Yes')
-              : r.watched_by_anyone ? h('span', { class: 'sev sev-info' }, icon('users', 13), 'By someone else')
+            h('td', null, r.watched ? h('span', { class: 'fui-badge--status fui-badge--good' }, icon('check', 13), everyone ? 'By them' : 'Yes')
+              : r.watched_by_anyone ? h('span', { class: 'fui-badge--status fui-badge--info' }, icon('users', 13), 'By someone else')
               : r.state === 'available' ? h('span', { class: 'muted' }, 'Not yet') : h('span', { class: 'muted' }, '–')));
         }))), { server: { key: f.sort, dir: f.dir, onSort: (key, dir) => { f.sort = key; f.dir = dir; apply(); } } })
         : emptyState(f.q || f.status || f.userId ? 'No requests match these filters' : 'No requests yet', 'Requests appear here minutes after somebody asks for something in Seerr.');

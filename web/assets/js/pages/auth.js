@@ -58,7 +58,7 @@ export function setupPage(ctx) {
     try {
       const info = await api.post('/setup/test', { url: n.url }, { quiet401: true });
       tested = { url: n.url, ...info };
-      mount(testResult, h('p', { class: 'sev sev-good test-ok' }, icon('check', 14), h('span', null, 'Connected to ', h('strong', null, info.server_name || 'Jellyfin'), info.version ? h('span', { class: 'mono' }, ` · Jellyfin ${info.version}`) : null)));
+      mount(testResult, h('p', { class: 'fui-badge--status fui-badge--good test-ok' }, icon('check', 14), h('span', null, 'Connected to ', h('strong', null, info.server_name || 'Jellyfin'), info.version ? h('span', { class: 'mono' }, ` · Jellyfin ${info.version}`) : null)));
       step2.hidden = false; s2.classList.remove('is-locked'); s1.classList.remove('is-current');
       user.input.focus();
     } catch (err) {

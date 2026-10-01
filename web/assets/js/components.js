@@ -369,10 +369,10 @@ export function avatar(id, name, { size = 28, hasImage = true } = {}) {
 
 export function methodBadge(method) {
   const cls = { DirectPlay: 'm-direct', DirectStream: 'm-stream', Transcode: 'm-transcode' }[method] || '';
-  return h('span', { class: 'badge method ' + cls }, h('span', { class: 'badge-dot' }), methodLabel(method));
+  return h('span', { class: 'fui-badge method ' + cls }, h('span', { class: 'fui-badge__dot' }), methodLabel(method));
 }
 
-export function chip(text, title) { return h('span', { class: 'chip', title }, text); }
+export { chip } from '../finui/components/chip/chip.js';
 
 // ---------------------------------------------------------------- stats
 function deltaEl(cur, prev) {
@@ -450,7 +450,7 @@ export function playsTable(rows, { showUser = true, onOpen, empty = 'No plays ma
         showUser ? h('td', null, h('a', { class: 'user-cell', href: `/users/${p.user_id}`, onClick: (e) => e.stopPropagation() }, avatar(p.user_id, p.user_name, { size: 22 }), h('span', null, p.user_name))) : null,
         h('td', { class: 'td-title' }, h('div', { class: 'title-cell' }, poster(p.image_item_id, p.series_name || p.item_name, { w: 120, cls: 'poster-xs' }), playTitle(p),
           p.group_size > 1 ? h('span', { class: 'group-mark', role: 'img', title: `Watched together · ${p.group_size} people`, 'aria-label': `Watched together by ${p.group_size} people` }, icon('together', 13)) : null)),
-        h('td', { 'data-sort': p.active ? String(Date.now()) : null }, p.active ? h('span', { class: 'badge live' }, h('span', { class: 'badge-dot' }), 'Playing now')
+        h('td', { 'data-sort': p.active ? String(Date.now()) : null }, p.active ? h('span', { class: 'fui-badge fui-badge--live' }, h('span', { class: 'fui-badge__dot' }), 'Playing now')
           : h('span', { class: 'when-cell' }, relEl(p.ended_at || p.started_at), h('span', { class: 'cell-sub mono' }, shortStamp(p.ended_at || p.started_at)))),
         h('td', { class: 'r' }, durEl(p.duration_s)),
         h('td', null, completionEl(p)),

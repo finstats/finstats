@@ -56,7 +56,7 @@ function habits(x) {
     h('div', { class: 'tiles' }, tile('Longest streak', days(x.longest_streak_days)), tile('Days with something on', num(x.active_days))),
     heatmap({ data: x.heatmap }),
     x.genres.length ? h('div', { class: 'pub-genres' }, h('h3', { class: 'pub-sub' }, 'Genres'),
-      h('ul', { class: 'chips' }, x.genres.map((g) => h('li', { class: 'chip' }, g.name, h('span', { class: 'muted' }, duration(g.watch_s)))))) : null);
+      h('ul', { class: 'fui-chip__set' }, x.genres.map((g) => h('li', { class: 'fui-chip' }, g.name, h('span', { class: 'muted' }, duration(g.watch_s)))))) : null);
 }
 
 // What each card of the story is about: its alternative text, and the caption under it.

@@ -90,8 +90,8 @@ export default function activity(ctx) {
         value: f.source, onChange: (v) => { f.source = v; apply(); } }));
   }
 
-  const scopeChip = f.item_id || f.series_id ? h('span', { class: 'chip chip-removable' }, f.series_id ? 'One series' : 'One title',
-    h('button', { type: 'button', class: 'chip-x', 'aria-label': 'Remove title filter', onClick: (e) => { f.item_id = ''; f.series_id = ''; e.target.closest('.chip').remove(); apply(); } }, icon('x', 12))) : null;
+  const scopeChip = f.item_id || f.series_id ? h('span', { class: 'fui-chip fui-chip--removable' }, f.series_id ? 'One series' : 'One title',
+    h('button', { type: 'button', class: 'fui-chip__x', 'aria-label': 'Remove title filter', onClick: (e) => { f.item_id = ''; f.series_id = ''; e.target.closest('.fui-chip').remove(); apply(); } }, icon('x', 12))) : null;
 
   const filters = filterBar({ days: f.days, userId: f.user_id, signal: ctx.signal,
     onDays: (v) => { f.days = v; saveDays(v); apply(); },

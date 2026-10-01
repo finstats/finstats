@@ -45,7 +45,7 @@ export default function dashboard(ctx) {
   const admin = can('see_everyone'); // sees the whole server rather than only themselves
 
   // ---- now playing (live; not scoped by the filters below)
-  const npCount = h('span', { class: 'count-pill mono', hidden: true });
+  const npCount = h('span', { class: 'fui-badge--count mono', hidden: true });
   const npBody = h('div', { class: 'np-wrap' }, h('div', { class: 'np-grid' }, h('div', { class: 'np sk-np' }, h('span', { class: 'sk sk-poster' }),
     h('div', { class: 'sk-row-lines' }, sk.line('50%', 14), sk.line('35%'), sk.line('80%', 8)))));
   let npFirst = true;

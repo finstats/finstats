@@ -108,7 +108,7 @@ function details(f, libraryName) {
       e.episodes > shown.length ? h('p', { class: 'help' }, `and ${plural(e.episodes - shown.length, 'more episode')}`) : null);
   }
   if (f.kind === 'season_drift') {
-    return h('ul', { class: 'health-chips' }, (e.seasons || []).map((r) => h('li', { class: 'chip' }, [`S${r.season}`, r.resolution, r.codec, r.range].filter(Boolean).join(' · '))));
+    return h('ul', { class: 'health-chips' }, (e.seasons || []).map((r) => h('li', { class: 'fui-chip' }, [`S${r.season}`, r.resolution, r.codec, r.range].filter(Boolean).join(' · '))));
   }
   if (f.kind === 'unidentified' && e.path) return facts([['Path', h('span', { class: 'mono path' }, e.path), { wide: true }]]);
   return null;

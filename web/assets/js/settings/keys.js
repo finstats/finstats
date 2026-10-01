@@ -89,7 +89,7 @@ export default {
             : button({ size: 'sm', variant: 'ghost', tone: 'danger', type: 'button', onClick: () => { pending = k.id; paint(); } }, 'Revoke…');
           return h('tr', null,
             h('td', null, k.name),
-            h('td', null, h('span', { class: 'chip' }, k.scope === 'calendar' ? 'Calendar' : 'Everything')),
+            h('td', null, h('span', { class: 'fui-chip' }, k.scope === 'calendar' ? 'Calendar' : 'Everything')),
             admin ? h('td', null, h('span', { class: 'user-cell' }, avatar(k.user_id, k.user_name, { size: 20, hasImage: k.has_image }), k.user_name, k.mine ? h('span', { class: 'muted' }, ' (you)') : null)) : null,
             h('td', { 'data-sort': k.created_at }, relEl(k.created_at)),
             h('td', { 'data-sort': k.last_used_at || 0 }, k.last_used_at ? h('span', { title: k.last_used_ip ? `from ${k.last_used_ip}` : null }, relEl(k.last_used_at)) : h('span', { class: 'muted' }, 'never')),

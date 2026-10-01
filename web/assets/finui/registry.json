@@ -52,6 +52,50 @@
         "core",
         "button"
       ]
+    },
+    {
+      "name": "chip",
+      "category": "primitive",
+      "files": [
+        "components/chip/chip.js",
+        "components/chip/chip.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-hi",
+        "--accent-wash",
+        "--border",
+        "--hover",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "badge",
+      "category": "primitive",
+      "files": [
+        "components/badge/badge.js",
+        "components/badge/badge.css"
+      ],
+      "tokens": [
+        "--accent-hi",
+        "--accent-wash",
+        "--border",
+        "--critical-text",
+        "--good",
+        "--hover",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--warning"
+      ],
+      "requires": [
+        "core"
+      ]
     }
   ]
 }

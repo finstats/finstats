@@ -44,8 +44,8 @@ export default function itemPage(ctx) {
         it.official_rating ? chip(it.official_rating) : null,
         it.community_rating ? chip('★ ' + Number(it.community_rating).toFixed(1), 'Community rating') : null,
         it.runtime_s ? chip(duration(it.runtime_s), 'Runtime') : null,
-        it.video ? h('span', { class: 'chip mono' }, it.video) : null,
-        it.audio ? h('span', { class: 'chip mono' }, it.audio) : null,
+        it.video ? h('span', { class: 'fui-chip mono' }, it.video) : null,
+        it.audio ? h('span', { class: 'fui-chip mono' }, it.audio) : null,
         it.removed ? chip('No longer in library') : null,
       ];
       // An episode shows its own still (16:9); without one it borrows the show's poster.
@@ -57,7 +57,7 @@ export default function itemPage(ctx) {
         h('div', { class: 'item-hero-text' },
           it.series_name && it.series_id ? h('a', { class: 'item-series', href: `/items/${it.series_id}` }, it.series_name, code ? h('span', { class: 'mono' }, ' · ' + code) : null) : null,
           h('h1', { class: 'page-title' }, it.name),
-          h('div', { class: 'chips' }, meta),
+          h('div', { class: 'fui-chip__set' }, meta),
           it.genres && it.genres.length ? h('p', { class: 'item-genres' }, it.genres.join(' · ')) : null,
           Array.isArray(it.studios) && it.studios.length ? h('p', { class: 'item-studios' }, it.studios.slice(0, 4).join(' · ')) : null,
           languageLines(langs),
@@ -192,7 +192,7 @@ function languagesCard(L) {
     return h('div', { class: 'lang-group' },
       h('h3', { class: 'lang-group-title' }, label, h('span', { class: 'lang-group-count mono' }, num(rows.length))),
       full.length ? [L.total != null && part.length ? h('p', { class: 'lang-sub' }, `In all ${num(L.total)} episodes`) : null,
-        h('ul', { class: 'chips lang-chips' }, full.map((r) => h('li', { class: 'chip', ...mark(kind, r) }, languageName(r.code))))] : null,
+        h('ul', { class: 'fui-chip__set lang-chips' }, full.map((r) => h('li', { class: 'fui-chip', ...mark(kind, r) }, languageName(r.code))))] : null,
       part.length ? [h('p', { class: 'lang-sub' }, full.length ? 'In some of them' : `In some of the ${num(L.total)} episodes`),
         h('ul', { class: 'lang-bars' }, part.map((r) => h('li', mark(kind, r),
           h('span', { class: 'lang-name' }, languageName(r.code)),
@@ -219,8 +219,8 @@ function castCard(people) {
 function externalLinks(list) {
   const links = (Array.isArray(list) ? list : []).map((x) => ({ label: x && x.label, url: safeHttps(x && x.url) })).filter((x) => x.url && x.label);
   if (!links.length) return null;
-  return h('div', { class: 'chips' }, links.map((x) =>
-    h('a', { class: 'chip chip-link', href: x.url, target: '_blank', rel: 'noopener noreferrer' }, x.label, icon('external', 11), h('span', { class: 'sr-only' }, ' (opens in a new tab)'))));
+  return h('div', { class: 'fui-chip__set' }, links.map((x) =>
+    h('a', { class: 'fui-chip chip-link', href: x.url, target: '_blank', rel: 'noopener noreferrer' }, x.label, icon('external', 11), h('span', { class: 'sr-only' }, ' (opens in a new tab)'))));
 }
 
 /** Jellyfin's played flags: covers people who watched before finstats existed. */
@@ -232,7 +232,7 @@ function playedBy(rows) {
       h('tbody', null, rows.map((r) => h('tr', null,
         h('td', null, h('a', { class: 'user-cell', href: `/users/${r.user_id}` }, avatar(r.user_id, r.user_name, { size: 22 }), h('span', null, r.user_name || 'Unknown user'))),
         h('td', null, r.last_played_at ? relEl(r.last_played_at) : h('span', { class: 'muted' }, '–')),
-        h('td', null, r.is_favorite ? h('span', { class: 'sev fav' }, icon('heart', 13), 'Favourite') : null)))))) });
+        h('td', null, r.is_favorite ? h('span', { class: 'fui-badge--status fav' }, icon('heart', 13), 'Favourite') : null)))))) });
 }
 
 function watchers(rows) {

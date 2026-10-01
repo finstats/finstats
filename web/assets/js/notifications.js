@@ -63,11 +63,11 @@ export function notificationsPanel(ctx) {
   const channelOf = (key) => data.catalogue.channels.find((c) => c.key === key) || data.catalogue.channels[0];
 
   function statusOf(t) {
-    if (!t.enabled) return h('span', { class: 'sev sev-info' }, icon('minus', 13), 'Switched off');
-    if (t.last_error) return h('span', { class: 'sev sev-critical' }, icon('alert', 13), h('span', null, 'Last message did not arrive: ', t.last_error));
-    if (t.last_ok_at) return h('span', { class: 'sev sev-good' }, icon('check', 13),
+    if (!t.enabled) return h('span', { class: 'fui-badge--status fui-badge--info' }, icon('minus', 13), 'Switched off');
+    if (t.last_error) return h('span', { class: 'fui-badge--status fui-badge--critical' }, icon('alert', 13), h('span', null, 'Last message did not arrive: ', t.last_error));
+    if (t.last_ok_at) return h('span', { class: 'fui-badge--status fui-badge--good' }, icon('check', 13),
       h('span', null, 'Took the last message ', h('span', { title: dateTime(t.last_ok_at) }, relTime(t.last_ok_at))));
-    return h('span', { class: 'sev sev-info' }, icon('clock', 13), 'Nothing sent yet');
+    return h('span', { class: 'fui-badge--status fui-badge--info' }, icon('clock', 13), 'Nothing sent yet');
   }
 
   function row(t) {
@@ -98,14 +98,14 @@ export function notificationsPanel(ctx) {
     const total = data.catalogue.events.length;
     return h('li', { class: 'conn-row' },
       h('div', { class: 'conn-main' },
-        h('div', { class: 'conn-name' }, h('strong', null, t.name), h('span', { class: 'chip' }, t.label),
+        h('div', { class: 'conn-name' }, h('strong', null, t.name), h('span', { class: 'fui-chip' }, t.label),
           // "me" is any personal destination; an administrator sees other people's too.
-          t.scope !== 'me' ? null : t.owner_id === state.user?.id ? h('span', { class: 'chip' }, 'Yours') : h('span', { class: 'chip' }, `${t.owner_name || 'Somebody'}’s`)),
+          t.scope !== 'me' ? null : t.owner_id === state.user?.id ? h('span', { class: 'fui-chip' }, 'Yours') : h('span', { class: 'fui-chip' }, `${t.owner_name || 'Somebody'}’s`)),
         h('div', { class: 'conn-url mono' }, t.shown),
         h('div', { class: 'conn-status' }, statusOf(t)),
         h('p', { class: 'help' }, `${ticked} of ${total} kinds of event`, t.with_addresses ? ' · addresses included' : '', t.min_severity !== 'info' ? ` · ${t.min_severity} and above` : ''),
         rowMsg && rowMsg.id === t.id
-          ? (rowMsg.ok ? h('p', { class: 'sev sev-good' }, icon('check', 13), rowMsg.text) : inlineError(`notify-err-${t.id}`, rowMsg.text))
+          ? (rowMsg.ok ? h('p', { class: 'fui-badge--status fui-badge--good' }, icon('check', 13), rowMsg.text) : inlineError(`notify-err-${t.id}`, rowMsg.text))
           : null),
       h('div', { class: 'conn-actions' }, actions));
   }
@@ -284,7 +284,7 @@ export function notificationsPanel(ctx) {
     const events = (history && history.events) || [];
     if (!events.length) return h('p', { class: 'help' }, 'Nothing has been sent yet. What finstats notices from now on appears here, with how each message went.');
     const delivery = (d) => h('div', { class: 'notify-delivery' },
-      h('span', { class: ['sev', d.state === 'sent' ? 'sev-good' : d.state === 'failed' ? 'sev-critical' : 'sev-info'] },
+      h('span', { class: ['fui-badge--status', d.state === 'sent' ? 'fui-badge--good' : d.state === 'failed' ? 'fui-badge--critical' : 'fui-badge--info'] },
         icon(d.state === 'sent' ? 'check' : d.state === 'failed' ? 'alert' : 'clock', 12),
         `${STATE_LABEL[d.state] || d.state}${d.target ? ' · ' + d.target : ''}`),
       d.error ? h('span', { class: 'cell-sub' }, d.error) : null);

@@ -204,7 +204,7 @@ export default {
         let outcome = null;
         if (task && task.state === 'ok' && task.result) {
           outcome = h('div', { class: 'import-result' },
-            h('div', { class: 'sev sev-good' }, icon('check', 14), 'Import finished', task.finished_at ? h('span', { class: 'muted mono', title: dateTime(task.finished_at) }, ' ' + relTime(task.finished_at)) : null),
+            h('div', { class: 'fui-badge--status fui-badge--good' }, icon('check', 14), 'Import finished', task.finished_at ? h('span', { class: 'muted mono', title: dateTime(task.finished_at) }, ' ' + relTime(task.finished_at)) : null),
             task.message ? h('p', { class: 'help' }, task.message) : null,
             h('table', { class: 'table table-dense result-table' }, h('tbody', null, imp.rows.filter(([k]) => task.result[k] != null).map(([k, label]) =>
               h('tr', null, h('th', { scope: 'row' }, label), h('td', { class: 'mono r' }, num(task.result[k])))))),

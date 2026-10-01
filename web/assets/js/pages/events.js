@@ -7,11 +7,11 @@ import { dataTable } from '../tables.js';
 const PER_PAGE = 50;
 // Status colors always ship with an icon + label.
 const SEVERITY = {
-  error: { cls: 'sev-critical', icon: 'alert', label: 'Error' }, critical: { cls: 'sev-critical', icon: 'alert', label: 'Critical' },
-  fatal: { cls: 'sev-critical', icon: 'alert', label: 'Fatal' },
-  warn: { cls: 'sev-warning', icon: 'alert', label: 'Warning' }, warning: { cls: 'sev-warning', icon: 'alert', label: 'Warning' },
-  information: { cls: 'sev-info', icon: 'info', label: 'Info' }, info: { cls: 'sev-info', icon: 'info', label: 'Info' },
-  debug: { cls: 'sev-info', icon: 'info', label: 'Debug' }, trace: { cls: 'sev-info', icon: 'info', label: 'Trace' },
+  error: { cls: 'fui-badge--critical', icon: 'alert', label: 'Error' }, critical: { cls: 'fui-badge--critical', icon: 'alert', label: 'Critical' },
+  fatal: { cls: 'fui-badge--critical', icon: 'alert', label: 'Fatal' },
+  warn: { cls: 'fui-badge--warning', icon: 'alert', label: 'Warning' }, warning: { cls: 'fui-badge--warning', icon: 'alert', label: 'Warning' },
+  information: { cls: 'fui-badge--info', icon: 'info', label: 'Info' }, info: { cls: 'fui-badge--info', icon: 'info', label: 'Info' },
+  debug: { cls: 'fui-badge--info', icon: 'info', label: 'Debug' }, trace: { cls: 'fui-badge--info', icon: 'info', label: 'Trace' },
 };
 
 // Shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
@@ -32,8 +32,8 @@ export function logView(ctx) {
   const typeSlot = h('span');
 
   function paintType() {
-    typeSlot.replaceChildren(f.type ? h('span', { class: 'chip chip-removable' }, 'Type: ' + f.type,
-      h('button', { type: 'button', class: 'chip-x', 'aria-label': 'Remove type filter', onClick: () => { f.type = ''; apply(); } }, icon('x', 12))) : '');
+    typeSlot.replaceChildren(f.type ? h('span', { class: 'fui-chip fui-chip--removable' }, 'Type: ' + f.type,
+      h('button', { type: 'button', class: 'fui-chip__x', 'aria-label': 'Remove type filter', onClick: () => { f.type = ''; apply(); } }, icon('x', 12))) : '');
   }
   function apply(reset = true) {
     if (reset) f.page = 1;
@@ -55,10 +55,10 @@ export function logView(ctx) {
           const sev = SEVERITY[String(e.severity || '').toLowerCase()] || SEVERITY.info;
           return h('tr', null,
             h('td', { class: 'mono nowrap', title: dateTime(e.date) }, relTime(e.date)),
-            h('td', null, h('span', { class: 'sev ' + sev.cls }, icon(sev.icon, 13), sev.label)),
+            h('td', null, h('span', { class: 'fui-badge--status ' + sev.cls }, icon(sev.icon, 13), sev.label)),
             h('td', null, h('div', { class: 'event-name' }, e.name), e.overview ? h('div', { class: 'event-overview' }, e.overview) : null),
             h('td', null, e.user_id ? h('a', { href: `/users/${e.user_id}` }, e.user_name || 'User') : h('span', { class: 'muted' }, '–')),
-            h('td', null, e.type ? h('button', { type: 'button', class: 'chip chip-btn mono', title: 'Show only this type', onClick: () => { f.type = e.type; apply(); } }, e.type) : null));
+            h('td', null, e.type ? h('button', { type: 'button', class: 'fui-chip fui-chip--button mono', title: 'Show only this type', onClick: () => { f.type = e.type; apply(); } }, e.type) : null));
         }))), { server: { key: f.sort, dir: f.dir, onSort: (key, dir) => { f.sort = key; f.dir = dir; apply(); } } }),
         data.total > PER_PAGE ? pagination({ page: data.page || f.page, perPage: data.per_page || PER_PAGE, total: data.total, onPage: (p) => { f.page = p; apply(false); window.scrollTo({ top: 0 }); } }) : null];
     },

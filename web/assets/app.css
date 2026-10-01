@@ -141,7 +141,7 @@ kbd {
 .section-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px; }
 .section-label { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); margin: 18px 0 8px; }
 .section-label:first-child { margin-top: 0; }
-.count-pill { background: var(--accent-wash); color: var(--accent-hi); border-radius: 99px; padding: 1px 7px; font-size: 11px; }
+
 .result-count { color: var(--text-faint); font-size: 12.5px; font-family: var(--mono); }
 
 .fui-card--flush .empty, .fui-card--flush .sk-rows, .fui-card--flush .error-state { margin: 8px 16px 12px; }
@@ -207,9 +207,7 @@ kbd {
 .entity-tabs .seg-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .trail-filter { margin-bottom: 8px; }
 .trail-filter-label { color: var(--text-faint); font-size: 12px; }
-.chip-toggle { cursor: pointer; font: inherit; font-size: 12px; }
-.chip-toggle[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: var(--accent-wash); color: var(--text); }
-.chip-toggle[aria-pressed="false"] { color: var(--text-faint); }
+
 .trail { --y: 22px; --gap: 26px; --bend: 34px; --line: var(--border-strong); --dot: var(--series-4); padding: 8px var(--bend) 0; }
 .trail-row { position: relative; display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); margin-bottom: var(--gap); }
 .trail-row.is-rev { direction: rtl; }
@@ -307,36 +305,9 @@ kbd {
 .switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
 .switch[aria-checked="true"] .switch-knob { transform: translateX(16px); background: var(--on-fill); }
 
-/* chips & badges */
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; min-height: 22px; border: 1px solid var(--border); border-radius: 99px; background: transparent; color: var(--text-muted); font-size: 12px; white-space: nowrap; }
-.chip.mono { font-size: 11.5px; }
-.chip-btn:hover { border-color: var(--accent); color: var(--text); }
-.chip-removable { padding-right: 3px; border-color: var(--accent); background: var(--accent-wash); color: var(--text); }
-.chip-x { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); }
-.chip-x:hover { background: var(--hover); color: var(--text); }
-.chip-x .icon { pointer-events: none; }
-
-.badge { display: inline-flex; align-items: center; gap: 6px; padding: 1px 8px; min-height: 22px; border-radius: 99px; background: var(--hover); color: var(--text); font-size: 12px; white-space: nowrap; }
-.badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
-.method.m-direct .badge-dot { background: var(--series-1); }
-.method.m-stream .badge-dot { background: var(--series-2); }
-.method.m-transcode .badge-dot { background: var(--series-3); }
-.badge.live .badge-dot { background: var(--good); animation: pulse 2s ease-in-out infinite; }
-.badge.paused { color: var(--text-muted); }
-@keyframes pulse { 50% { opacity: .35; } }
-
-.sev { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); white-space: nowrap; }
-.sev-good .icon { color: var(--good); }
-.sev-warning .icon { color: var(--warning); }
-.sev-critical .icon { color: var(--critical-text); }
-.sev-info .icon { color: var(--text-faint); }
-.sev-info { color: var(--text-muted); }
-.sev-critical { white-space: normal; }
-/* A status line that is a sentence rather than a label wraps. `nowrap` is right for "Connected" next
-   to its tick; on a phone it made the Backups card's "Restored N plays, …" push the whole page sideways. */
-.sev-line { white-space: normal; max-width: 100%; align-items: flex-start; }
-.sev-line .icon { margin-top: 2px; flex: none; }
+.method.m-direct .fui-badge__dot { background: var(--series-1); }
+.method.m-stream .fui-badge__dot { background: var(--series-2); }
+.method.m-transcode .fui-badge__dot { background: var(--series-3); }
 
 /* copy */
 .copy { display: inline-flex; align-items: center; gap: 6px; }
@@ -861,7 +832,7 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .mini-row { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
 .mini-row:first-child { padding-top: 0; }
 .mini-row:last-child { border-bottom: 0; padding-bottom: 0; }
-.mini-row .sev { margin-top: 2px; }
+.mini-row .fui-badge--status { margin-top: 2px; }
 .mini-main { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .mini-when { flex: none; font-size: 12px; white-space: nowrap; }
 
@@ -908,8 +879,6 @@ a.chip-link { color: var(--text-muted); }
 a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decoration: none; }
 .fav .icon { color: var(--fav); }
 
-/* server page */
-.chip-like { padding: 2px 10px; min-height: 24px; border: 1px solid var(--border); border-radius: 99px; }
 .storage { display: flex; flex-direction: column; gap: 16px; }
 .storage-row { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .storage-head, .storage-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; min-width: 0; }
@@ -933,7 +902,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .path, .mono.path { overflow-wrap: anywhere; word-break: break-word; }
 .lib-head > div, .page-header > div, .entity-header > div, .setting-row > div:first-child { min-width: 0; }
 .lib-name, .page-sub, .task-name, .task-msg, .import-msg, .play-head-title, .play-head-sub { overflow-wrap: anywhere; }
-.np-badges .chip, .chips .chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; border-radius: 11px; }
+.np-badges .fui-chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; border-radius: 11px; }
 /* a full-width meter next to a sibling must flex, not claim 100% (see .np-progress) */
 .task-progress > .meter, .import-stage > .meter { flex: none; }
 .completion .meter { flex: none; }
@@ -1341,9 +1310,6 @@ button.ep[aria-disabled="true"]:hover { filter: none; outline: 0; }
 .faces { display: inline-flex; flex: none; }
 .faces > * + * { margin-left: -7px; box-shadow: 0 0 0 2px var(--bg-2); border-radius: 50%; }
 
-.chip-group { display: inline-flex; align-items: center; gap: 5px; color: var(--text); background: var(--accent-wash); border-color: transparent; }
-.chip-group .icon { color: var(--accent-hi); }
-
 /* ------------------------------------------------------------ patch notes: one fold per minor series */
 .cl-series { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); min-width: 0; }
 .cl-series.is-current { border-color: color-mix(in srgb, var(--accent) 55%, var(--border-soft)); }
@@ -1509,8 +1475,8 @@ button.ep[aria-disabled="true"]:hover { filter: none; outline: 0; }
 .conn-main { min-width: 0; flex: 1 1 320px; display: flex; flex-direction: column; gap: 3px; }
 .conn-name { display: flex; align-items: center; gap: 8px; }
 .conn-url { color: var(--text-muted); font-size: 12.5px; overflow-wrap: anywhere; }
-.conn-status .sev { white-space: normal; align-items: flex-start; }
-.conn-status .sev .icon { margin-top: 3px; flex: none; }
+.conn-status .fui-badge--status { white-space: normal; align-items: flex-start; }
+.conn-status .fui-badge--status .icon { margin-top: 3px; flex: none; }
 .conn-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .conn-form { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px; border: 1px solid var(--border-soft); border-radius: var(--radius); background: var(--bg-sunken); }
 .conn-form-title { font-size: 14px; font-weight: 600; margin: 0; }
@@ -1569,7 +1535,7 @@ select.input:disabled { opacity: .6; }
 .notify-what { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 520px; }
 .notify-sent { min-width: 190px; }
 .notify-delivery + .notify-delivery { margin-top: 4px; }
-.notify-delivery .sev { white-space: normal; align-items: flex-start; }
+.notify-delivery .fui-badge--status { white-space: normal; align-items: flex-start; }
 
 /* ---------------------------------------------------------------- pipeline: the agenda of what is coming */
 .card-agenda[hidden] { display: none; }
@@ -1606,7 +1572,7 @@ span.shelf-card { cursor: default; }
 .dl-card[hidden] { display: none; }
 .dl-wrap { padding: 0 16px 8px; }
 .dl-totals { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 10px 0; font-size: 12.5px; color: var(--text-muted); border-bottom: 1px solid var(--border-soft); }
-.dl-totals .sev { white-space: nowrap; }
+.dl-totals .fui-badge--status { white-space: nowrap; }
 .dl-when { margin-left: auto; }
 .dl-list { display: flex; flex-direction: column; }
 .dl-row { display: flex; align-items: flex-start; gap: 12px; padding: 11px 0; min-width: 0; }
@@ -1735,8 +1701,8 @@ body.public { min-height: 100vh; }
 .pub-title .poster { width: 100%; margin-bottom: 4px; }
 .pub-title-name { font-size: 13.5px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
 .pub-title-sub { font-size: 12px; }
-.pub-genres .chips { list-style: none; }
-.pub-genres .chip { gap: 7px; }
+.pub-genres .fui-chip__set { list-style: none; }
+.pub-genres .fui-chip { gap: 7px; }
 .pub-year-line { font-size: 17px; color: var(--text); }
 .pub-year-line strong { font-size: 22px; }
 .pub-persona strong { color: var(--accent-hi); }

@@ -65,12 +65,12 @@ export default function serverPage(ctx) {
     const info = d.info || null;
     const name = (info && info.server_name) || (state.status && state.status.server_name) || 'Jellyfin';
     const chips = [
-      info && info.has_update_available ? h('span', { class: 'sev sev-info chip-like' }, icon('arrowUp', 13), 'Update available') : null,
-      info && info.has_pending_restart ? h('span', { class: 'sev sev-warning chip-like' }, icon('refresh', 13), 'Restart pending') : null,
+      info && info.has_update_available ? h('span', { class: 'fui-badge--status fui-badge--info fui-badge--outlined' }, icon('arrowUp', 13), 'Update available') : null,
+      info && info.has_pending_restart ? h('span', { class: 'fui-badge--status fui-badge--warning fui-badge--outlined' }, icon('refresh', 13), 'Restart pending') : null,
     ].filter(Boolean);
     headerSlot.replaceChildren(pageHeader(name,
       [info && info.version ? `Jellyfin ${info.version}` : 'Your Jellyfin server', d.fetched_at ? ['· details from ', relEl(d.fetched_at, '')] : null],
-      chips.length ? h('div', { class: 'chips' }, chips) : null));
+      chips.length ? h('div', { class: 'fui-chip__set' }, chips) : null));
   }
 
   function render(d) {
@@ -147,12 +147,12 @@ export default function serverPage(ctx) {
         const level = share >= 0.95 ? 'is-critical' : share >= 0.85 ? 'is-warning' : '';
         return h('li', { class: 'storage-row' },
           h('div', { class: 'storage-head' },
-            h('span', { class: 'storage-label' }, x.label || 'Volume', x.kind === 'library' ? h('span', { class: 'chip' }, 'Library') : null),
+            h('span', { class: 'storage-label' }, x.label || 'Volume', x.kind === 'library' ? h('span', { class: 'fui-chip' }, 'Library') : null),
             h('span', { class: 'mono storage-nums' }, `${bytes(x.free_bytes)} free of ${bytes(total)}`)),
           h('div', { class: ['meter meter-block storage-meter', level], role: 'progressbar', 'aria-label': `${x.label || 'Volume'} disk usage`, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(share * 100) },
             h('span', { class: 'meter-fill', style: { width: Math.max(1, share * 100) + '%' } })),
           h('div', { class: 'storage-foot' }, x.path ? h('span', { class: 'mono path' }, x.path) : h('span'),
-            level ? h('span', { class: ['sev', level === 'is-critical' ? 'sev-critical' : 'sev-warning'] }, icon('alert', 13), level === 'is-critical' ? 'Almost full' : 'Getting full')
+            level ? h('span', { class: ['fui-badge--status', level === 'is-critical' ? 'fui-badge--critical' : 'fui-badge--warning'] }, icon('alert', 13), level === 'is-critical' ? 'Almost full' : 'Getting full')
                   : h('span', { class: 'mono muted' }, Math.round(share * 100) + '% used')));
       })) });
   }
@@ -193,7 +193,7 @@ export default function serverPage(ctx) {
         h('tbody', null, rows.map((p) => {
           const ok = !p.status || p.status === 'Active';
           return h('tr', null, h('td', { title: p.description || null }, p.name || '–'), h('td', { class: 'mono' }, p.version || '–'),
-            h('td', null, h('span', { class: ['sev', ok ? 'sev-good' : 'sev-warning'] }, icon(ok ? 'check' : 'alert', 13), p.status || 'Active')));
+            h('td', null, h('span', { class: ['fui-badge--status', ok ? 'fui-badge--good' : 'fui-badge--warning'] }, icon(ok ? 'check' : 'alert', 13), p.status || 'Active')));
         })))) });
   }
 
@@ -203,7 +203,7 @@ export default function serverPage(ctx) {
   const jobsSlot = h('div', { class: 'net-stack' }, sk.rows(3));
   // Built once and kept: the card is redrawn by the page's own refresh, the badge by the jobs poll.
   const jobsCount = h('span', null, '');
-  const jobsBadge = h('span', { class: 'badge live', hidden: true }, h('span', { class: 'badge-dot' }), jobsCount);
+  const jobsBadge = h('span', { class: 'fui-badge fui-badge--live', hidden: true }, h('span', { class: 'fui-badge__dot' }), jobsCount);
   let jobsData = null, jobsAt = 0, jobsErr = null;
 
   async function loadJobs() {
@@ -265,7 +265,7 @@ export default function serverPage(ctx) {
     return h('div', { class: 'job' },
       h('div', { class: 'job-head' },
         h('strong', null, job.name),
-        h('span', { class: 'badge live' }, h('span', { class: 'badge-dot' }), job.state === 'Cancelling' ? 'Stopping' : 'Running'),
+        h('span', { class: 'fui-badge fui-badge--live' }, h('span', { class: 'fui-badge__dot' }), job.state === 'Cancelling' ? 'Stopping' : 'Running'),
         h('span', { class: 'job-pct mono' }, `${pct}%`)),
       h('div', { class: 'meter meter-wide', role: 'progressbar', 'aria-label': `${job.name} progress`, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct },
         h('span', { class: 'meter-fill', style: { width: `${Math.max(pct, 1)}%` } })),
@@ -279,14 +279,14 @@ export default function serverPage(ctx) {
     const when = job.schedule && job.schedule.length ? job.schedule.join(', ') : 'only when something asks for it';
     return h('tr', null,
       h('td', null, h('div', { class: 'job-cell' },
-        h('span', null, job.name, job.hidden ? h('span', { class: 'chip' }, 'hidden') : null),
+        h('span', null, job.name, job.hidden ? h('span', { class: 'fui-chip' }, 'hidden') : null),
         h('span', { class: 'cell-sub job-what' }, job.what))),
       h('td', null, h('div', { class: 'job-cell' },
         h('span', null, when),
         job.next_at ? h('span', { class: 'cell-sub' }, `next ${untilText(job.next_at)}`) : null)),
       h('td', null, h('div', { class: 'job-cell' },
         job.last_run_at ? relEl(job.last_run_at) : h('span', { class: 'muted' }, 'never run'),
-        label ? h('span', { class: 'cell-sub' }, h('span', { class: 'sev ' + cls }, icon(ic, 12), label, job.last_duration_s != null ? ` · ${duration(job.last_duration_s)}` : '')) : null)));
+        label ? h('span', { class: 'cell-sub' }, h('span', { class: 'fui-badge--status ' + cls }, icon(ic, 12), label, job.last_duration_s != null ? ` · ${duration(job.last_duration_s)}` : '')) : null)));
   }
 
   function renderJobs() {

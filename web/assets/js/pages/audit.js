@@ -64,8 +64,8 @@ export function auditView(ctx) {
   const kindSlot = h('span');
 
   function paintKind() {
-    kindSlot.replaceChildren(f.kind ? h('span', { class: 'chip chip-removable' }, 'Kind: ' + (KIND_LABEL[f.kind] || f.kind),
-      h('button', { type: 'button', class: 'chip-x', 'aria-label': 'Remove kind filter', onClick: () => { f.kind = ''; apply(); } }, icon('x', 12))) : '');
+    kindSlot.replaceChildren(f.kind ? h('span', { class: 'fui-chip fui-chip--removable' }, 'Kind: ' + (KIND_LABEL[f.kind] || f.kind),
+      h('button', { type: 'button', class: 'fui-chip__x', 'aria-label': 'Remove kind filter', onClick: () => { f.kind = ''; apply(); } }, icon('x', 12))) : '');
   }
   function apply(reset = true) {
     if (reset) f.page = 1;
@@ -89,8 +89,8 @@ export function auditView(ctx) {
             h('td', { class: 'mono nowrap', title: dateTime(e.at) }, relTime(e.at)),
             h('td', null, e.user_id ? h('span', { class: 'user-cell' }, avatar(e.user_id, e.user_name || '?', { size: 20, hasImage: e.has_image }), h('a', { href: `/users/${e.user_id}` }, e.user_name || 'User'))
               : e.user_name ? h('span', { class: 'muted', title: 'as typed' }, e.user_name) : h('span', { class: 'muted' }, 'finstats')),
-            h('td', null, h('div', { class: 'event-name' }, h('button', { type: 'button', class: 'chip chip-btn', title: 'Show only this kind', onClick: () => { f.kind = e.kind; apply(); } }, KIND_LABEL[e.kind] || e.kind),
-              out ? h('span', { class: 'sev ' + out[0] }, icon(out[1], 12), out[2]) : null, e.key_name ? h('span', { class: 'muted' }, ` via key “${e.key_name}”`) : null)),
+            h('td', null, h('div', { class: 'event-name' }, h('button', { type: 'button', class: 'fui-chip fui-chip--button', title: 'Show only this kind', onClick: () => { f.kind = e.kind; apply(); } }, KIND_LABEL[e.kind] || e.kind),
+              out ? h('span', { class: 'fui-badge--status ' + out[0] }, icon(out[1], 12), out[2]) : null, e.key_name ? h('span', { class: 'muted' }, ` via key “${e.key_name}”`) : null)),
             h('td', { class: 'wrap-cell' }, h('div', { class: 'event-overview' }, detailText(e))),
             h('td', { class: 'mono' }, e.ip || h('span', { class: 'muted' }, '–')));
         }))), { server: { key: f.sort, dir: f.dir, onSort: (key, dir) => { f.sort = key; f.dir = dir; apply(); } } }),

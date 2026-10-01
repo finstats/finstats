@@ -90,7 +90,7 @@ export default {
         }))))
         : h('p', { class: 'help' }, backupsData.scheduled ? 'No backups yet. The first one is written by itself once there is something to back up, or make one now.' : 'No backups yet, and none are scheduled.');
 
-      const restored = rs && rs.state === 'ok' && rs.result ? h('p', { class: 'sev sev-good sev-line' }, icon('check', 13),
+      const restored = rs && rs.state === 'ok' && rs.result ? h('p', { class: 'fui-badge--status fui-badge--good fui-badge--line' }, icon('check', 13),
         `Restored ${num(rs.result.plays_imported)} plays, ${num(rs.result.plays_skipped)} were already here${rs.result.settings_restored ? '; settings and permissions restored' : ''}.`) : null;
       const failed = rs && rs.state === 'error' && rs.error ? inlineError('restore-err', `Restore failed: ${rs.error} Nothing was changed.`) : null;
 

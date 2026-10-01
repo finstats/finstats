@@ -57,7 +57,7 @@ function release(r, current) {
   return h('article', { class: ['cl-release', running && 'is-current'], 'aria-labelledby': `cl-${r.version}`, dataset: { version: r.version } },
     h('header', { class: 'cl-head' },
       h('h2', { class: 'cl-version mono', id: `cl-${r.version}` }, 'v' + r.version),
-      running ? h('span', { class: 'chip cl-running' }, icon('check', 12), 'Running now') : null,
+      running ? h('span', { class: 'fui-chip cl-running' }, icon('check', 12), 'Running now') : null,
       r.date ? h('time', { class: 'cl-date', dateTime: r.date }, days(r.started || r.date, r.date)) : null),
     r.summary ? h('p', { class: 'cl-summary' }, inline(r.summary)) : null,
     (r.groups || []).filter((g) => g.items && g.items.length).map((g) => {
