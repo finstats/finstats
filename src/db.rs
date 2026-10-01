@@ -645,6 +645,14 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         by      TEXT                        -- who said so
     );
     "#,
+    // user_version 34 — Where a file that holds several episodes ends (2.2.0): "S01E01-E02" is numbered 1 and ends at 2,
+    //      and without the end every such file reads as a missing episode beside it. Only a library read brings it, so
+    //      the last one is forgotten — the setting and the kept run both, since 2.0.4 the scheduler goes by the run.
+    r#"
+    ALTER TABLE items ADD COLUMN index_number_end INTEGER;
+    DELETE FROM settings WHERE key = 'library_synced_at';
+    DELETE FROM task_runs WHERE task = 'sync_libraries';
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole

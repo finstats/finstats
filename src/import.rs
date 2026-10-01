@@ -247,8 +247,8 @@ fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult,
                 .prepare_cached(
                     "INSERT OR IGNORE INTO items(id, type, name, series_id, season_id, series_name, index_number,
                         parent_index_number, runtime_s, production_year, premiere_date, date_created,
-                        community_rating, official_rating, removed, updated_at)
-                     VALUES (?1, 'Episode', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, 0)",
+                        community_rating, official_rating, removed, index_number_end, updated_at)
+                     VALUES (?1, 'Episode', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, 0)",
                 )?
                 .execute(params![
                     norm_id(id),
@@ -265,6 +265,7 @@ fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult,
                     d["CommunityRating"].as_f64(),
                     opt_str(&d["OfficialRating"]),
                     d["archived"].as_bool().unwrap_or(false),
+                    d["IndexNumberEnd"].as_i64(),
                 ])? as u64;
             Ok(())
         }
@@ -475,6 +476,18 @@ mod tests {
         let again = run(&db, &file, None).unwrap();
         assert_eq!((again.plays_imported, again.plays_skipped), (0, 2), "the same backup twice is once");
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// An export that kept where a two-episode file ends brings it, so the file reads as no gap before the library is read.
+    #[test]
+    fn an_imported_episode_keeps_where_its_file_ends() {
+        let db = Db::open_in_memory().unwrap();
+        let c = db.conn().unwrap();
+        let mut res = ImportResult::default();
+        let row = json!({ "EpisodeId": "EP-1", "Name": "Pilot", "SeriesId": "SHOW-1", "IndexNumber": 1, "IndexNumberEnd": 2, "ParentIndexNumber": 1 });
+        import_row(&c, "jf_library_episodes", &row, &mut res, 300).unwrap();
+        let end: Option<i64> = c.query_row("SELECT index_number_end FROM items WHERE id = 'ep1'", [], |r| r.get(0)).unwrap();
+        assert_eq!(end, Some(2));
     }
 
     /// A play row as Jellystat writes one, with `extra` laid over it.

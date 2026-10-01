@@ -326,6 +326,30 @@ mod tests {
         assert!(seed(vec![], None, None).is_empty());
     }
 
+    /// 2.2.0 stores where a multi-episode file ends, which only a library read brings: the update forgets the last read,
+    /// so the next look reads the library once, whatever the read's own interval says.
+    #[test]
+    fn the_update_that_stores_where_an_episode_ends_reads_the_library_once() {
+        let c = Connection::open_in_memory().unwrap();
+        let before = crate::db::MIGRATIONS.iter().position(|m| m.contains("index_number_end")).expect("the migration that adds it");
+        for m in &crate::db::MIGRATIONS[..before] {
+            c.execute_batch(m).unwrap();
+        }
+        let now = at(29, 12, 0);
+        c.execute("INSERT INTO task_runs(task, state, started_at, finished_at) VALUES ('sync_libraries', 'ok', ?1, ?1)", [now - 600]).unwrap();
+        crate::db::set_setting(&c, "library_synced_at", &(now - 600).to_string()).unwrap();
+        let due_now = |c: &Connection| {
+            let library_read = crate::db::get_setting(c, "library_synced_at").unwrap().and_then(|v| v.parse().ok());
+            let tasks = crate::state::Tasks::new();
+            tasks.remember(seed(load_runs(c).unwrap(), library_read, None));
+            let look = Look { from: now - 60, to: now, startup: true, scan_done: None };
+            due(&Settings::default(), &tasks.snapshot(), &look, &oslo()).into_iter().any(|(t, _)| t == "sync_libraries")
+        };
+        assert!(!due_now(&c), "read ten minutes ago");
+        c.execute_batch(crate::db::MIGRATIONS[before]).unwrap();
+        assert!(due_now(&c), "the update reads the library again");
+    }
+
     #[tokio::test]
     async fn a_run_past_its_time_limit_is_stopped_and_says_so() {
         let slow = async {

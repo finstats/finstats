@@ -412,9 +412,9 @@ pub fn upsert_item(conn: &Connection, library_id: &str, it: &Value, now: i64) ->
         "INSERT INTO items(id, library_id, type, name, series_id, season_id, series_name, index_number, parent_index_number,
             album, album_artist, runtime_s, production_year, premiere_date, date_created, community_rating, official_rating,
             genres, overview, image_tag, backdrop_tag, container, path, size_bytes, bitrate,
-            video_codec, width, height, video_range, audio_codec, audio_channels, provider_ids, studios, bit_depth, framerate, audio_languages, subtitle_languages, original_title, removed, updated_at)
+            video_codec, width, height, video_range, audio_codec, audio_channels, provider_ids, studios, bit_depth, framerate, audio_languages, subtitle_languages, original_title, index_number_end, removed, updated_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23,
-            ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?33, ?34, ?35, ?36, ?37, ?38, ?39, 0, ?32)
+            ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, 0, ?32)
          ON CONFLICT(id) DO UPDATE SET library_id = excluded.library_id, type = excluded.type, name = excluded.name,
             series_id = excluded.series_id, season_id = excluded.season_id, series_name = excluded.series_name,
             index_number = excluded.index_number, parent_index_number = excluded.parent_index_number,
@@ -429,7 +429,7 @@ pub fn upsert_item(conn: &Connection, library_id: &str, it: &Value, now: i64) ->
             audio_channels = excluded.audio_channels, provider_ids = excluded.provider_ids, studios = excluded.studios,
             bit_depth = excluded.bit_depth, framerate = excluded.framerate,
             audio_languages = excluded.audio_languages, subtitle_languages = excluded.subtitle_languages, original_title = excluded.original_title,
-            removed = 0, updated_at = excluded.updated_at",
+            index_number_end = excluded.index_number_end, removed = 0, updated_at = excluded.updated_at",
     )?
     .execute(params![
         norm_id(id),
@@ -471,6 +471,7 @@ pub fn upsert_item(conn: &Connection, library_id: &str, it: &Value, now: i64) ->
         crate::media::track_languages(&source["MediaStreams"], "Audio"),
         crate::media::track_languages(&source["MediaStreams"], "Subtitle"),
         opt_str(&it["OriginalTitle"]),
+        it["IndexNumberEnd"].as_i64(),
     ])?;
     Ok(true)
 }
@@ -1223,6 +1224,21 @@ mod tests {
         assert_eq!(original(&c).as_deref(), Some("오징어 게임"));
         upsert_item(&c, "shows", &json!({ "Id": "s1", "Name": "Squid Game", "OriginalTitle": " ", "Type": "Series" }), 200).unwrap();
         assert_eq!(original(&c), None, "a read that says none says none");
+    }
+
+    /// One file can hold two episodes ("S01E01-E02"): Jellyfin numbers it 1 and says where it ends, and without the end
+    /// every such file reads as a missing episode beside it.
+    #[test]
+    fn an_episode_keeps_where_its_file_ends() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let end = |c: &Connection| -> Option<i64> { c.query_row("SELECT index_number_end FROM items WHERE id = 'e1'", [], |r| r.get(0)).unwrap() };
+        upsert_item(&c, "shows", &json!({ "Id": "e1", "Name": "Pilot", "Type": "Episode", "IndexNumber": 1, "IndexNumberEnd": 2 }), 100).unwrap();
+        assert_eq!(end(&c), Some(2));
+        upsert_item(&c, "shows", &json!({ "Id": "e1", "Name": "Pilot", "Type": "Episode", "IndexNumber": 1 }), 200).unwrap();
+        assert_eq!(end(&c), None, "a file split in two is one episode again");
     }
 
     #[test]
