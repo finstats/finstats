@@ -11,6 +11,8 @@
 
 use anyhow::Result;
 
+use std::collections::HashMap;
+
 use crate::db::rusqlite::{Connection, OptionalExtension, params};
 
 /// What a raw Jellyfin folder/file name tells us once the decorations are peeled off.
@@ -68,8 +70,62 @@ pub fn parse_name(raw: &str) -> ParsedName {
     out
 }
 
-/// The one live item of `item_type` this name can only mean, if there is exactly one.
-fn find_current(conn: &Connection, item_type: &str, raw_name: &str, known_year: Option<i64>) -> Result<Option<String>> {
+/// A name as two catalogues are compared: without provider tags or a year written into it, folded like search folds
+/// it (case, accents, punctuation — a hyphen and a dash are one), and without a leading article.
+pub fn title_key(name: &str) -> String {
+    let folded = crate::fuzzy::normalize(&parse_name(name).title);
+    ["the ", "a ", "an "].iter().find_map(|a| folded.strip_prefix(a)).map(str::to_string).unwrap_or(folded)
+}
+
+/// Of the titles a name can mean, the one: the only one within a year of `year` — catalogues disagree by a year about
+/// when a film came out — or, of several, the only one of that very year. Without a year, the only one there is.
+fn pick(mut hits: Vec<(String, Option<i64>)>, year: Option<i64>) -> Option<String> {
+    hits.sort();
+    hits.dedup();
+    let near: Vec<&(String, Option<i64>)> = hits.iter().filter(|(_, y)| match (year, y) { (Some(a), Some(b)) => (a - b).abs() <= 1, _ => true }).collect();
+    match near.as_slice() {
+        [(id, _)] => Some(id.clone()),
+        [] => None,
+        _ => match near.iter().filter(|(_, y)| year.is_some() && *y == year).collect::<Vec<_>>().as_slice() {
+            [(id, _)] => Some(id.clone()),
+            _ => None,
+        },
+    }
+}
+
+/// Every live title of a type by `title_key`, of its name and of its original title, read once per re-link and only
+/// when a name as written found nothing.
+#[derive(Default)]
+struct Keys(HashMap<String, ByKey>);
+
+/// Titles (id, year) by `title_key`.
+type ByKey = HashMap<String, Vec<(String, Option<i64>)>>;
+
+impl Keys {
+    fn of(&mut self, conn: &Connection, item_type: &str) -> Result<&ByKey> {
+        if !self.0.contains_key(item_type) {
+            let mut map = ByKey::new();
+            let rows: Vec<(String, String, Option<String>, Option<i64>)> = conn
+                .prepare_cached("SELECT id, name, original_title, production_year FROM items WHERE removed = 0 AND type = ?1")?
+                .query_map([item_type], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+                .collect::<Result<_, _>>()?;
+            for (id, name, original, year) in rows {
+                for key in std::iter::once(title_key(&name)).chain(original.as_deref().map(title_key)) {
+                    if !key.is_empty() {
+                        map.entry(key).or_default().push((id.clone(), year));
+                    }
+                }
+            }
+            self.0.insert(item_type.to_string(), map);
+        }
+        Ok(&self.0[item_type])
+    }
+}
+
+/// The one live item of `item_type` this name can only mean, if there is exactly one: by provider id when the name
+/// carries one, then by the name as written — Jellyfin's or the original-language one it keeps beside it — and last by
+/// the name cleaned of what two catalogues write differently.
+fn find_current(conn: &Connection, keys: &mut Keys, item_type: &str, raw_name: &str, known_year: Option<i64>) -> Result<Option<String>> {
     let parsed = parse_name(raw_name);
     for (key, value) in &parsed.provider_ids {
         let hits: Vec<String> = conn
@@ -80,24 +136,25 @@ fn find_current(conn: &Connection, item_type: &str, raw_name: &str, known_year: 
             return Ok(hits.into_iter().next());
         }
     }
+    // A year, when we have one, must agree within one: remakes share titles.
     let year = parsed.year.or(known_year);
     for name in [&parsed.title, &parsed.without_tags] {
         if name.is_empty() {
             continue;
         }
-        // A year, when we have one, must agree: remakes share titles.
-        let hits: Vec<String> = conn
-            .prepare_cached(
-                "SELECT id FROM items WHERE removed = 0 AND type = ?1 AND name = ?2 COLLATE NOCASE
-                   AND (?3 IS NULL OR production_year IS NULL OR production_year = ?3) LIMIT 2",
-            )?
-            .query_map(params![item_type, name, year], |r| r.get(0))?
+        let hits: Vec<(String, Option<i64>)> = conn
+            .prepare_cached("SELECT id, production_year FROM items WHERE removed = 0 AND type = ?1 AND (name = ?2 COLLATE NOCASE OR original_title = ?2 COLLATE NOCASE)")?
+            .query_map(params![item_type, name], |r| Ok((r.get(0)?, r.get(1)?)))?
             .collect::<Result<_, _>>()?;
-        if hits.len() == 1 {
-            return Ok(hits.into_iter().next());
+        if let Some(id) = pick(hits, year) {
+            return Ok(Some(id));
         }
     }
-    Ok(None)
+    let key = title_key(&parsed.title);
+    if key.is_empty() {
+        return Ok(None);
+    }
+    Ok(pick(keys.of(conn, item_type)?.get(&key).cloned().unwrap_or_default(), year))
 }
 
 #[derive(Debug, Default)]
@@ -132,6 +189,7 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
     }
     // Only the plays of those titles are read from here on, through the title index.
     let orphaned = serde_json::to_string(&orphaned)?;
+    let mut keys = Keys::default();
     const ORPHAN: &str = "p.item_id IN (SELECT value FROM json_each(?1))";
 
     // ---- films and other stand-alone titles
@@ -144,7 +202,7 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
         .query_map([&orphaned], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
         .collect::<Result<_, _>>()?;
     for (old_id, item_type, name, year) in orphans {
-        if let Some(new_id) = find_current(conn, &item_type, &name, year)? {
+        if let Some(new_id) = find_current(conn, &mut keys, &item_type, &name, year)? {
             let (n, dropped) = move_plays(conn, merge_window_s, &new_id, || {
                 Ok(conn.execute(
                     "UPDATE playbacks SET item_id = ?1,
@@ -185,7 +243,7 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
         };
         let series_now = match (series_alive, series_name) {
             (Some(id), _) => Some(id),
-            (None, Some(name)) => find_current(conn, "Series", &name, year)?,
+            (None, Some(name)) => find_current(conn, &mut keys, "Series", &name, year)?,
             _ => None,
         };
         let Some(series_now) = series_now else { continue };
@@ -269,25 +327,19 @@ mod tests {
 
     #[test]
     fn relinks_by_provider_id_then_name_and_never_guesses() {
-        let conn = Connection::open_in_memory().unwrap();
+        let conn = migrated();
         conn.execute_batch(
-            "CREATE TABLE items(id TEXT PRIMARY KEY, type TEXT, name TEXT, production_year INTEGER, removed INTEGER DEFAULT 0,
-                                provider_ids TEXT, library_id TEXT, runtime_s INTEGER, series_id TEXT, season_id TEXT,
-                                parent_index_number INTEGER, index_number INTEGER);
-             CREATE TABLE playbacks(id INTEGER PRIMARY KEY, source TEXT NOT NULL DEFAULT 'live', user_id TEXT, item_id TEXT, item_name TEXT,
-                                    item_type TEXT, series_id TEXT, series_name TEXT, season_id TEXT, season_number INTEGER,
-                                    episode_number INTEGER, library_id TEXT, runtime_s INTEGER, started_at INTEGER, ended_at INTEGER);
-             INSERT INTO items(id, type, name, production_year, provider_ids, library_id) VALUES
-                ('new1', 'Movie', 'Big Buck Bunny', 2008, '{\"Tmdb\":\"10378\"}', 'lib'),
-                ('remakeA', 'Movie', 'Twins', 1988, NULL, 'lib'), ('remakeB', 'Movie', 'Twins', 2024, NULL, 'lib'),
-                ('s-new', 'Series', 'Test Show', 2020, NULL, 'lib');
-             INSERT INTO items(id, type, name, series_id, parent_index_number, index_number, library_id) VALUES ('e-new', 'Episode', 'Pilot', 's-new', 1, 1, 'lib');
-             INSERT INTO playbacks(item_id, item_name, item_type) VALUES
-                ('old1', 'Big Buck Bunny (2008) [tmdbid-10378] [imdbid-tt1254207]', 'Movie'),
-                ('old2', 'Twins', 'Movie'),
-                ('old3', 'Deleted Film (1999) [tmdbid-1]', 'Movie');
-             INSERT INTO playbacks(item_id, item_name, item_type, series_id, series_name, season_number, episode_number)
-                VALUES ('e-old', 'Episode 1', 'Episode', 's-old', 'Test Show', 1, 1);",
+            "INSERT INTO items(id, type, name, production_year, provider_ids, library_id, updated_at) VALUES
+                ('new1', 'Movie', 'Big Buck Bunny', 2008, '{\"Tmdb\":\"10378\"}', 'lib', 1),
+                ('remakeA', 'Movie', 'Twins', 1988, NULL, 'lib', 1), ('remakeB', 'Movie', 'Twins', 2024, NULL, 'lib', 1),
+                ('s-new', 'Series', 'Test Show', 2020, NULL, 'lib', 1);
+             INSERT INTO items(id, type, name, series_id, parent_index_number, index_number, library_id, updated_at) VALUES ('e-new', 'Episode', 'Pilot', 's-new', 1, 1, 'lib', 1);
+             INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+                (1, 'live', 'u', 'u', 'old1', 'Big Buck Bunny (2008) [tmdbid-10378] [imdbid-tt1254207]', 'Movie', 0, 10, 10),
+                (2, 'live', 'u', 'u', 'old2', 'Twins', 'Movie', 100, 110, 10),
+                (3, 'live', 'u', 'u', 'old3', 'Deleted Film (1999) [tmdbid-1]', 'Movie', 200, 210, 10);
+             INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, series_id, series_name, season_number, episode_number, started_at, ended_at, duration_s)
+                VALUES (4, 'live', 'u', 'u', 'e-old', 'Episode 1', 'Episode', 's-old', 'Test Show', 1, 1, 300, 310, 10);",
         )
         .unwrap();
         // Every row here is one finstats recorded itself, so none of them can be a duplicate of
@@ -307,6 +359,80 @@ mod tests {
             c.execute_batch(m).unwrap();
         }
         c
+    }
+
+    /// Where the plays of `old` point after a re-link.
+    fn now_at(c: &Connection, old_name: &str) -> String {
+        c.query_row("SELECT item_id FROM playbacks WHERE item_name = ?1 OR series_name = ?1", [old_name], |r| r.get(0)).unwrap()
+    }
+
+    fn orphan_film(c: &Connection, name: &str) {
+        c.execute("INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES ('jellystat', 'u', 'u', ?1, ?2, 'Movie', 0, 10, 10)",
+            params![format!("gone-{name}"), name]).unwrap();
+    }
+
+    fn orphan_episode(c: &Connection, show: &str, season: i64, episode: i64) {
+        c.execute("INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, series_name, season_number, episode_number, started_at, ended_at, duration_s)
+                   VALUES ('jellystat', 'u', 'u', ?1, 'An episode', 'Episode', ?2, ?3, ?4, ?5, 0, 10, 10)",
+            params![format!("gone-{show}-{season}-{episode}"), format!("gone-{show}"), show, season, episode]).unwrap();
+    }
+
+    /// The same title written another way: other punctuation ("-" for "–"), other case, accents, or a year Jellyfin put
+    /// into the name itself — "JoJo's Bizarre Adventure (2012)".
+    #[test]
+    fn a_title_is_found_however_its_name_is_punctuated_or_dated() {
+        let c = migrated();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, production_year, updated_at) VALUES ('sw1', 'Movie', 'Star Wars: Episode I – The Phantom Menace', 1999, 1),
+                ('poke', 'Movie', 'Pokémon: The First Movie', 1998, 1), ('jojo', 'Series', 'JoJo''s Bizarre Adventure (2012)', 2012, 1);
+             INSERT INTO items(id, type, name, series_id, parent_index_number, index_number, updated_at) VALUES ('jojo11', 'Episode', 'Phantom Blood', 'jojo', 1, 1, 1);",
+        )
+        .unwrap();
+        orphan_film(&c, "Star Wars: Episode I - The Phantom Menace (1999)");
+        orphan_film(&c, "POKEMON: THE FIRST MOVIE");
+        orphan_episode(&c, "JoJo's Bizarre Adventure", 1, 1);
+        relink_orphans(&c, 600).unwrap();
+        assert_eq!(now_at(&c, "Star Wars: Episode I – The Phantom Menace"), "sw1", "a hyphen for a dash");
+        assert_eq!(now_at(&c, "Pokémon: The First Movie"), "poke", "case and accents");
+        assert_eq!(now_at(&c, "JoJo's Bizarre Adventure (2012)"), "jojo11", "a year in the library's name");
+    }
+
+    /// Plex, Tautulli or an old library may know a title by its original-language name — 오징어 게임 for Squid Game — which
+    /// Jellyfin keeps beside its own.
+    #[test]
+    fn a_title_is_found_by_its_original_name() {
+        let c = migrated();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, original_title, production_year, updated_at) VALUES
+                ('squid', 'Series', 'Squid Game', '오징어 게임', 2021, 1),
+                ('quiet', 'Movie', 'All Quiet on the Western Front', 'Im Westen nichts Neues', 2022, 1);
+             INSERT INTO items(id, type, name, series_id, parent_index_number, index_number, updated_at) VALUES ('squid21', 'Episode', 'Bread and Lottery', 'squid', 2, 1, 1);",
+        )
+        .unwrap();
+        orphan_episode(&c, "오징어 게임", 2, 1);
+        orphan_film(&c, "Im Westen nichts Neues (2022)");
+        relink_orphans(&c, 600).unwrap();
+        assert_eq!(now_at(&c, "Squid Game"), "squid21");
+        assert_eq!(now_at(&c, "All Quiet on the Western Front"), "quiet");
+    }
+
+    /// Release years differ by a year between catalogues (Plex has Kingsman in 2014, Jellyfin in 2015); two is a remake.
+    #[test]
+    fn a_year_one_off_is_the_same_title_and_a_name_two_titles_share_is_neither() {
+        let c = migrated();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, production_year, updated_at) VALUES ('kings', 'Movie', 'Kingsman: The Secret Service', 2015, 1),
+                ('twinsA', 'Movie', 'Twins', 1988, 1), ('twinsB', 'Movie', 'Twins', 2024, 1),
+                ('rain1', 'Movie', 'Black Rain', 1989, 1), ('rain2', 'Movie', 'Black Rain', 1990, 1);",
+        )
+        .unwrap();
+        orphan_film(&c, "Kingsman: The Secret Service (2014)");
+        orphan_film(&c, "Twins (1990)");
+        orphan_film(&c, "Black Rain (1989)");
+        relink_orphans(&c, 600).unwrap();
+        assert_eq!(now_at(&c, "Kingsman: The Secret Service"), "kings", "one year apart");
+        assert_eq!(now_at(&c, "Twins (1990)"), "gone-Twins (1990)", "two years from either: neither");
+        assert_eq!(now_at(&c, "Black Rain"), "rain1", "the exact year wins over the one beside it");
     }
 
     #[test]
