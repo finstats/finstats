@@ -333,8 +333,18 @@ pub fn summary(conn: &Connection, library_id: Option<&str>) -> Result<Value> {
         })
         .collect();
     let computed_at = crate::db::get_setting(conn, "health_computed_at")?.and_then(|v| v.parse::<i64>().ok());
+    // Every library with something to look at, whatever the filter: what the filter offers.
+    let libraries: Vec<Value> = conn
+        .prepare(
+            "SELECT l.library_id, lb.name, COUNT(*) FROM health_libraries l JOIN health_findings f ON f.key = l.key
+               LEFT JOIN health_dismissed d ON d.key = f.key AND d.fingerprint = f.fingerprint LEFT JOIN libraries lb ON lb.id = l.library_id
+             WHERE d.key IS NULL GROUP BY l.library_id ORDER BY lb.name IS NULL, lb.name, l.library_id"
+        )?
+        .query_map([], |r| Ok(json!({ "id": r.get::<_, String>(0)?, "name": r.get::<_, Option<String>>(1)?, "count": r.get::<_, i64>(2)? })))?
+        .collect::<Result<_, _>>()?;
     Ok(json!({
         "computed_at": computed_at,
+        "libraries": libraries,
         "total": counts.values().map(|c| c.0).sum::<i64>(),
         "wasted_bytes": counts.values().map(|c| c.2).sum::<i64>(),
         "kinds": kinds,
@@ -1448,6 +1458,11 @@ mod tests {
         assert_eq!(all["kinds"].as_array().unwrap().len(), KINDS.len(), "every kind, so a page can show a quiet one");
         assert_eq!((kind(&all, "copies")["count"].as_i64(), kind(&all, "copies")["wasted_bytes"].as_i64()), (Some(1), Some(3_000_000_000)));
         assert_eq!((all["total"].as_i64(), all["wasted_bytes"].as_i64(), all["computed_at"].as_i64()), (Some(2), Some(3_000_000_000), Some(100)));
+        c.execute("INSERT INTO libraries(id, name, updated_at) VALUES ('films', 'Films', 0), ('shows', 'Shows', 0)", []).unwrap();
+        let libraries = summary(&c, None).unwrap()["libraries"].clone();
+        assert_eq!(libraries, serde_json::json!([{ "id": "films", "name": "Films", "count": 1 }, { "id": "shows", "name": "Shows", "count": 1 }, { "id": "films-2", "name": null, "count": 1 }]),
+            "the libraries that have something to look at, named ones first, for the filter, whatever it is set to");
+        assert_eq!(summary(&c, Some("shows")).unwrap()["libraries"], libraries);
         let shows = summary(&c, Some("shows")).unwrap();
         assert_eq!((kind(&shows, "copies")["count"].as_i64(), kind(&shows, "gap")["count"].as_i64()), (Some(0), Some(1)));
         dismiss(&c, "copies:bbb-a", None, "alice", 110).unwrap();

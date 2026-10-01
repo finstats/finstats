@@ -1602,7 +1602,8 @@ Nothing in an answer is about plays or people; the one name is who dismissed a f
   "computed_at": 1767225600,        // null until the first library read of 2.2.0 has worked them out
   "total": 12,                      // to look at, dismissed ones left out
   "wasted_bytes": 3000000000,       // what copies of the same thing spend twice, dismissed ones left out
-  "kinds": [ {"kind": "gap", "count": 3, "dismissed": 1, "wasted_bytes": 0} ]   // every kind, in the order below
+  "kinds": [ {"kind": "gap", "count": 3, "dismissed": 1, "wasted_bytes": 0} ],  // every kind, in the order below
+  "libraries": [ {"id": "…", "name": "Shows", "count": 7} ]   // every library with something to look at, whatever library_id says
 }
 ```
 
