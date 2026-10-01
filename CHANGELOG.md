@@ -15,7 +15,7 @@ the app uses as the headline of the whole series.
 Watchlist
 
 ### Added
-- **A watchlist of your own**: put a film or a show on it from its page, from Upcoming, from Recently added or from search (Ctrl+Enter), and find it under **Watchlist** on your own profile.
+- **A watchlist of your own**: put a film or a show on it from its page (an episode's or a season's page offers its show), from Upcoming on the dashboard and in Pipeline, from Recently added or from search (Ctrl+Enter), and find it under **Watchlist** on your own profile. On a dashboard poster the button shows while you point at the card.
 - **Every entry says where it stands now** — on the server, "5 of 26 episodes", requested, "Coming up Friday", not on the server, left the library, or watched — worked out each time you look, with the same reading of "seen" as your show progress. Watched titles stay, in a group of their own, until you take them off.
 - **A title that is not on your server yet** can go on the list straight from what Sonarr or Radarr is waiting for. It is attached to the title by itself when it arrives, and a renamed file takes its entry along.
 - **"On your watchlist: now available"**: a notification for your own destinations when something you were waiting for arrives. Off until you tick it.

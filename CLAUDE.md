@@ -392,9 +392,11 @@ entries, follows a renamed title, keeps attached snapshots current and merges ev
 would fail the whole library read). **State is worked out at read time and never stored** (`listing`): watched by the profile's one reading of "seen"
 (`profile::films` / `episodes`, one `PLAY_FRAC` and `verdict`), started, on the server, requested (someone else's request only
 with `see_everyone`, Pipeline's rule), coming up (`pipeline::entries_for`), left the library, not on the server. At most
-`MAX_ENTRIES` (1,000) per person. In `backup::TABLES`, merged per person and title on restore. The page and the four toggles
-(title, Upcoming rows, Recently added, search with Ctrl+Enter) read `/api/me/watchlist/keys` once per visit (`watchlist.js`),
-never a request per poster, and show nothing on a server whose `/auth/me` lacks `features.watchlist`. Its notification,
+`MAX_ENTRIES` (1,000) per person. In `backup::TABLES`, merged per person and title on restore. The page and every toggle
+(a film's or show's page, and an episode's or season's for its show; Pipeline's Upcoming rows; the dashboard's Coming up and
+Recently added cards; search with Ctrl+Enter) read `/api/me/watchlist/keys` once per visit (`watchlist.js`), never a request per
+poster. On a dashboard poster the toggle shows on hover or keyboard focus, and always where `(hover: none) and (pointer: coarse)` —
+not `(hover: hover)` for the opposite, which headless browsers do not report, so the QA journey could not see the rule work. None of it shows on a server whose `/auth/me` lacks `features.watchlist`. Its notification,
 `watchlist_available`, is `notify::Need::Owner`: the owner's own destinations only, never a server's, and left out of every
 other person's notification history, administrators' included. **An arrival is a title that was missing and is here now**
 (`missing`, `arrived_at`, migration 31, noted by `resolve` at every read), never just a new item: a replaced file is a new path and

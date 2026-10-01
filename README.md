@@ -143,7 +143,7 @@ and current day streak.
 <br clear="right">
 
 ### A watchlist of your own
-Put a film or a show on your watchlist from its page, from Upcoming, from Recently added or from search —
+Put a film or a show on your watchlist from its page (an episode's page offers its show), from Upcoming, from Recently added or from search —
 even one that is not on your server yet, straight from what Sonarr or Radarr is waiting for. Every entry
 says where it stands now: on the server, 5 of 26 episodes, requested, coming up Friday, or watched. When
 something you were waiting for arrives, finstats can tell you. Nobody else sees your list, an administrator
