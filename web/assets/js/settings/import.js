@@ -1,16 +1,19 @@
 // Settings → Import: bring the history along from another tracker. One card per tracker, built from
 // its entry in IMPORTERS. Only one import can run at a time, so a card whose own import is not the one
-// going says so rather than offering a drop zone.
+// going says so rather than offering a drop zone. A tracker whose people are not Jellyfin's (`board`:
+// Tautulli, which is Plex) does not import on upload: the upload answers with a wiring board, and the
+// import starts once its wires are drawn.
 
 import { h, icon, num, bytes, relTime, dateTime, mount } from '../dom.js';
 import { can } from '../state.js';
-import { uploadRaw } from '../api.js';
+import { api, uploadRaw } from '../api.js';
 import { card, spinner, inlineError } from '../components.js';
+import { wiringBoard } from './wiring.js';
 
 // The trackers finstats can take history from.
 export const IMPORTERS = [
   {
-    key: 'jellystat', task: 'import', name: 'Jellystat', endpoint: '/import/jellystat', file: 'the .jsonl file',
+    key: 'jellystat', task: 'import', name: 'Jellystat', endpoint: '/import/jellystat', file: 'the .jsonl file', accept: '.jsonl,.json,application/json', pattern: /\.(jsonl|json)$/i,
     title: 'Import from Jellystat', sub: 'Bring your playback history with you',
     steps: [
       ['Open your Jellystat instance.'],
@@ -27,7 +30,7 @@ export const IMPORTERS = [
     note: 'Importing the same backup again is safe — plays that are already here are skipped. Backups that also contain libraries and users work too.',
   },
   {
-    key: 'streamystats', task: 'import_streamystats', name: 'Streamystats', endpoint: '/import/streamystats', file: 'the .json file',
+    key: 'streamystats', task: 'import_streamystats', name: 'Streamystats', endpoint: '/import/streamystats', file: 'the .json file', accept: '.json,application/json', pattern: /\.json$/i,
     title: 'Import from Streamystats', sub: 'Bring your playback history with you',
     steps: [
       ['Open your Streamystats instance.'],
@@ -40,6 +43,21 @@ export const IMPORTERS = [
       ['users', 'Users'], ['sessions_read', 'Sessions read']],
     note: 'Ran both trackers? Import both files — an evening either one already brought in is not counted twice. Streamystats keeps no library data, so titles come from your own Jellyfin.',
   },
+  {
+    key: 'tautulli', task: 'import_tautulli', name: 'Tautulli', endpoint: '/import/tautulli', file: 'the .db or .zip file', accept: '.db,.zip,application/zip', pattern: /\.(db|zip)$/i,
+    board: true,
+    title: 'Import from Tautulli', sub: 'Bring your Plex history over, person by person',
+    steps: [
+      ['Open your Tautulli instance.'],
+      ['Go to ', 'Settings', ' and select ', 'Import & Backups', '.'],
+      ['Under the database backups, click ', 'Backup Database', '.'],
+      ['Download the newest backup — a ', '.db', ' file, or a ', '.zip', ' holding one.'],
+      ['Upload it here, then connect each Plex user to who they are on Jellyfin.'],
+    ],
+    rows: [['plays_imported', 'Plays imported'], ['plays_skipped', 'Already here'], ['users_wired', 'Plex users connected'],
+      ['not_wired', 'Left behind, without a wire'], ['other_media', 'Music and other media, not imported']],
+    note: 'Plex names rarely match Jellyfin’s, so you connect each Plex user yourself. Films and episodes are matched by name; one not on your server yet is kept, and attached when it arrives. The backup holds Plex’s access tokens: finstats never reads them, and removes the file once you import or start over.',
+  },
 ];
 
 // The upload lives outside the page so it keeps going if you navigate away. One at a time, so one
@@ -48,12 +66,18 @@ const upload = { active: false, progress: 0, loaded: 0, total: 0, fileName: '', 
 const uploadSubs = new Set();
 const notifyUpload = () => uploadSubs.forEach((fn) => fn());
 
+// A board waiting for its wires, per importer that draws one: what the upload answered, or what the server still holds.
+const boards = {};
+
 function startUpload(file, imp) {
   Object.assign(upload, { active: true, progress: 0, loaded: 0, total: file.size, fileName: file.name, error: null, doneAt: 0, source: imp.key });
   notifyUpload();
   const handle = uploadRaw(imp.endpoint, file, (p, loaded, total) => { Object.assign(upload, { progress: p, loaded, total }); notifyUpload(); });
   upload.handle = handle;
-  handle.promise.then(() => { Object.assign(upload, { active: false, doneAt: Date.now(), handle: null }); notifyUpload(); })
+  handle.promise.then((data) => {
+    if (imp.board) boards[imp.key] = (data && data.board) || null;
+    Object.assign(upload, { active: false, doneAt: imp.board ? 0 : Date.now(), handle: null }); notifyUpload();
+  })
     .catch((e) => {
       const msg = e.status === -1 ? null
         : e.status === 409 ? 'An import is already running. Wait for it to finish, then try again.'
@@ -76,20 +100,42 @@ export default {
 
     const localErr = {}, sawRunning = {}, sig = {};
     const fileInputs = Object.fromEntries(IMPORTERS.map((imp) => {
-      const input = h('input', { type: 'file', accept: '.jsonl,.json,application/json', class: 'sr-only', id: `import-file-${imp.key}`, tabIndex: -1 });
+      const input = h('input', { type: 'file', accept: imp.accept, class: 'sr-only', id: `import-file-${imp.key}`, tabIndex: -1 });
       input.addEventListener('change', () => { if (input.files[0]) pick(input.files[0], imp); input.value = ''; });
       return [imp.key, input];
     }));
 
     function pick(file, imp) {
       localErr[imp.key] = null;
-      if (!/\.(jsonl|json)$/i.test(file.name)) localErr[imp.key] = `“${file.name}” isn’t a ${imp.name} backup. Choose ${imp.file} you downloaded from ${imp.name}.`;
+      if (!imp.pattern.test(file.name)) localErr[imp.key] = `“${file.name}” isn’t a ${imp.name} backup. Choose ${imp.file} you downloaded from ${imp.name}.`;
       else if (!file.size) localErr[imp.key] = `That file is empty. Download the backup from ${imp.name} again.`;
       if (localErr[imp.key]) { paintAll(); return; }
       sawRunning[imp.key] = false;
       startUpload(file, imp);
       store.poke(1000);
     }
+
+    // The board is kept across repaints — a poll must not throw away the wires being drawn — and torn down when it goes.
+    const views = {};
+    function boardView(imp) {
+      const v = views[imp.key];
+      if (v && v.data === boards[imp.key]) return v.board.el;
+      if (v) v.board.destroy();
+      const board = wiringBoard(boards[imp.key], {
+        onImport: async (wires) => {
+          await api.post(`${imp.endpoint}/run`, { wires });
+          boards[imp.key] = null; sawRunning[imp.key] = false;
+          store.poke(500); paintAll();
+        },
+        onReset: async () => {
+          await api.del(imp.endpoint).catch(() => {});
+          boards[imp.key] = null; paintAll();
+        },
+      });
+      views[imp.key] = { data: boards[imp.key], board };
+      return board.el;
+    }
+    store.ctx.onCleanup(() => { for (const v of Object.values(views)) v.board.destroy(); });
 
     function paint(imp) {
       const task = store.task(imp.task);
@@ -100,7 +146,8 @@ export default {
       // Somebody else's import: this card must not offer to start a second one.
       const elsewhere = IMPORTERS.some((other) => other.key !== imp.key && store.task(other.task) && store.task(other.task).state === 'running');
       const uploading = upload.active && mine;
-      const now = JSON.stringify([task, running, !!justUploaded, uploading, upload.loaded, upload.error && mine, localErr[imp.key], elsewhere]);
+      const waiting = !!(imp.board && boards[imp.key]) && !running;
+      const now = JSON.stringify([task, running, !!justUploaded, uploading, upload.loaded, upload.error && mine, localErr[imp.key], elsewhere, waiting && views[imp.key] ? views[imp.key].data === boards[imp.key] : waiting]);
       if (now === sig[imp.key]) return; // keep the drop zone (and its focus) stable between polls
       sig[imp.key] = now;
 
@@ -113,6 +160,8 @@ export default {
           h('div', { class: 'import-stage-row' }, h('span', { class: 'mono' }, `${Math.round(upload.progress * 100)}% · ${bytes(upload.loaded)} of ${bytes(upload.total)}`),
             h('button', { type: 'button', class: 'btn btn-sm', onClick: () => upload.handle && upload.handle.abort() }, 'Cancel upload')),
           h('p', { class: 'help' }, 'Keep this tab open until the upload finishes. You can browse other finstats pages meanwhile.'));
+      } else if (waiting) {
+        stage = boardView(imp);
       } else if (running || justUploaded) {
         stage = h('div', { class: 'import-stage', role: 'status' },
           h('div', { class: 'import-stage-title' }, spinner(14), running ? 'Importing your history' : 'Upload complete'),
@@ -150,6 +199,8 @@ export default {
           outcome];
       }
 
+      // The board takes the whole card: the wires need the width, and the export steps are done by now.
+      if (waiting) { mount(slots[imp.key], h('h3', { class: 'section-label' }, 'Connect the wires'), stage); return; }
       mount(slots[imp.key],
         h('div', { class: 'import-cols' },
           h('div', null, h('h3', { class: 'section-label' }, `Export from ${imp.name}`),
@@ -166,5 +217,9 @@ export default {
     store.onTasks(paintAll);
     paintAll();
     store.loadTasks().catch(() => {});
+    // A board left waiting — the page closed half-way through the wiring — is picked up where it was.
+    for (const imp of IMPORTERS.filter((i) => i.board)) {
+      api.get(imp.endpoint).then((d) => { boards[imp.key] = d.board || null; paintAll(); }, () => {});
+    }
   },
 };

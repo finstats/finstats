@@ -24,11 +24,12 @@ export const TASK_LABEL = {
   geoip: ['Geolocation database', 'Downloads DB-IP’s free city file when a newer month is out (about 60 MB). Places addresses on the Security page', 'finstats'],
   import: ['Jellystat import', 'Runs when you upload a Jellystat backup under Import', 'finstats'],
   import_streamystats: ['Streamystats import', 'Runs when you upload a Streamystats backup under Import', 'finstats'],
+  import_tautulli: ['Tautulli import', 'Runs when the wires of an uploaded Tautulli backup are connected under Import', 'finstats'],
   restore: ['Restore', 'Runs when you restore a finstats backup under Backups', 'finstats'],
 };
 const GROUPS = ['Jellyfin', 'Sonarr, Radarr and Seerr', 'finstats'];
 // Where a job that runs on an upload is started instead.
-const STARTED_FROM = { import: ['/settings/import', 'Import'], import_streamystats: ['/settings/import', 'Import'], restore: ['/settings/backups#restore', 'Backups'] };
+const STARTED_FROM = { import: ['/settings/import', 'Import'], import_streamystats: ['/settings/import', 'Import'], import_tautulli: ['/settings/import', 'Import'], restore: ['/settings/backups#restore', 'Backups'] };
 const SERVICE_TASKS = { sync_upcoming: 'upcoming' };   // task → the feature it belongs to
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const INTERVALS = [300, 900, 1800, 2700, 3600, 7200, 10800, 14400, 21600, 28800, 43200, 86400, 2 * 86400, 3 * 86400, 7 * 86400, 14 * 86400, 30 * 86400];

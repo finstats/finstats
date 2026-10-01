@@ -78,6 +78,17 @@
   --track: light-dark(#e3dcc9, #3a3a3a);
   --land: light-dark(#e3dcc9, #2b2b2b);
   --land-edge: light-dark(#d8d0bc, #3d3d3d);
+  /* The wiring board's cables (Tautulli import), Fix Wiring's colours first; deeper by day, so they hold on paper. */
+  --wire-0: light-dark(#c62828, #ff5a5a);
+  --wire-1: light-dark(#1f4fc4, #5b8cff);
+  --wire-2: light-dark(#a87b00, #ffd23f);
+  --wire-3: light-dark(#b3168d, #ff62d0);
+  --wire-4: light-dark(#1d7f45, #47d488);
+  --wire-5: light-dark(#0b7d88, #3fd2de);
+  --wire-6: light-dark(#c45a12, #ff9a3d);
+  --wire-7: light-dark(#6237c0, #a98bff);
+  --wire-edge: light-dark(rgb(40 30 10 / .28), rgb(0 0 0 / .6));
+  --wire-hole: light-dark(#3a342b, #0d0d0d);
   --land-hot: light-dark(color-mix(in srgb, #5c3d7a 14%, #e3dcc9), #35304d);
   --land-hot-edge: light-dark(color-mix(in srgb, #5c3d7a 40%, #d8d0bc), #51487a);
   --heat-0: light-dark(#e3dcc9, #2f2f2f);                 /* charts.js' activity grid: empty, then quiet → busy */
@@ -895,6 +906,51 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .dropzone .icon { color: var(--accent-hi); margin-bottom: 4px; }
 .dropzone-title { font-weight: 550; color: var(--text); }
 .dropzone-sub { font-size: 12.5px; color: var(--text-faint); }
+
+/* ---- the wiring board (Tautulli import): Plex users left, Jellyfin users right, cables between. A plug is the coloured
+   end of a cable, a socket a dark hole; the cables are drawn over the gap in one SVG that takes no pointer. */
+.wire-wrap { display: flex; flex-direction: column; gap: 12px; }
+.wire-board { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-sunken); padding: 12px 14px 14px; }
+.wire-head { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 8px; }
+.wire-head span { display: inline-flex; align-items: center; gap: 5px; }
+.wire-panel { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(56px, 22%) minmax(0, 1fr); align-items: start; }
+.wire-panel > .wire-col:first-child { grid-column: 1; }
+.wire-panel > .wire-col:last-child { grid-column: 3; }
+.wire-col { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.wire-row { display: flex; align-items: center; gap: 8px; min-height: 40px; min-width: 0; }
+.wire-col:first-child .wire-row { justify-content: flex-end; text-align: right; }
+.wire-who { display: flex; flex-direction: column; min-width: 0; }
+.wire-name { font-size: 13px; font-weight: 550; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wire-meta { font-size: 11.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wire-row.is-empty .wire-name { color: var(--text-muted); }
+.wire-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.wire-edge { fill: none; stroke: var(--wire-edge); stroke-width: 11; stroke-linecap: round; }
+.wire { fill: none; stroke-width: 7; stroke-linecap: round; }
+.wire.is-live { stroke-dasharray: none; opacity: .9; }
+.wire-plug, .wire-socket { flex: none; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 9px; background: transparent; cursor: pointer;
+  display: grid; place-items: center; touch-action: none; }
+.wire-plug { cursor: grab; }
+.wire-plug:active { cursor: grabbing; }
+.wire-nub { width: 22px; height: 14px; border-radius: 4px; background: var(--wire); box-shadow: inset 0 -3px 0 var(--wire-edge); }
+.wire-plug:hover .wire-nub, .wire-plug.is-picking .wire-nub { transform: translateX(2px); }
+.wire-plug.is-picking { outline: 2px solid var(--accent); outline-offset: 1px; }
+.wire-hole { width: 16px; height: 16px; border-radius: 50%; background: var(--wire-hole); box-shadow: 0 0 0 3px var(--border-strong); }
+.wire-socket.is-wired .wire-hole { background: var(--wire); box-shadow: 0 0 0 3px var(--wire-edge); }
+.wire-board.is-picking .wire-socket .wire-hole { box-shadow: 0 0 0 3px var(--accent); }
+.wire-socket:hover .wire-hole { box-shadow: 0 0 0 3px var(--accent-hi); }
+.wire-socket.is-snapped .wire-hole { animation: wire-snap .32s ease-out; }
+@keyframes wire-snap { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.wire-summary { margin: 0; font-size: 13px; color: var(--text-muted); }
+.wire-error { margin: 0; font-size: 12.5px; color: var(--critical-text); }
+.wire-error:empty { display: none; }
+.wire-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+@media (prefers-reduced-motion: reduce) { .wire-socket.is-snapped .wire-hole { animation: none; } .wire-plug:hover .wire-nub { transform: none; } }
+@media (max-width: 520px) {
+  .wire-board { padding: 10px; }
+  .wire-panel { grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr); }
+  .wire-meta { display: none; }
+  .wire-row .avatar { display: none; }
+}
 .dropzone + .field-error, .field-error + .field-error { margin-top: 10px; }
 .import-stage { display: flex; flex-direction: column; gap: 9px; padding: 16px; border: 1px solid var(--border-soft); border-radius: var(--radius); background: var(--bg); }
 .import-stage-title { display: flex; align-items: center; gap: 8px; font-weight: 550; overflow-wrap: anywhere; }
