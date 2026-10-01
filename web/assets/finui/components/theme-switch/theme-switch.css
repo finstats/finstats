@@ -1,6 +1,6 @@
 /* finui: theme-switch. Moved from app.css; the same rules under finui's names. */
 /* The theme: a switch with three stops (Light · Device · Dark), the family of .fui-toggle. --at is the stop, 0 to 2. */
-.fui-theme-switch { --at: 1; --w: 64px; --k: 22px; position: relative; flex: none; width: var(--w); height: 26px; border: 1px solid var(--border); border-radius: 99px;
+.fui-theme-switch { --at: 1; --w: 64px; --k: 22px; position: relative; flex: none; width: var(--w); height: 26px; border: 1px solid var(--border); border-radius: var(--radius-pill);
   background: var(--track); cursor: pointer; touch-action: none; user-select: none; transition: background 260ms ease, border-color var(--ease); }
 .fui-theme-switch[data-at="0"] { background: color-mix(in srgb, var(--warning) 26%, var(--track)); }
 .fui-theme-switch[data-at="2"] { background: color-mix(in srgb, var(--series-1) 34%, var(--track)); }
@@ -13,7 +13,7 @@
 .fui-theme-switch__mark:nth-child(1) { --i: 0; }
 .fui-theme-switch__mark:nth-child(2) { --i: 1; }
 .fui-theme-switch__mark:nth-child(3) { --i: 2; }
-.fui-theme-switch__knob { position: absolute; top: 1px; left: 1px; width: var(--k); height: var(--k); display: grid; place-items: center; border-radius: 50%;
+.fui-theme-switch__knob { position: absolute; top: 1px; left: 1px; width: var(--k); height: var(--k); display: grid; place-items: center; border-radius: min(50%, var(--radius-pill));
   background: var(--knob); box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow) 35%, transparent), 0 0 0 .5px color-mix(in srgb, var(--shadow) 20%, transparent);
   translate: calc(var(--at) * (var(--w) - var(--k) - 4px) / 2) 0;
   transition: translate 340ms cubic-bezier(.34, 1.4, .5, 1), transform 340ms cubic-bezier(.34, 1.4, .5, 1); }

@@ -1,6 +1,6 @@
 /* finui: field. Moved from app.css; the same rules under finui's names. */
 .fui-field__input {
-  width: 100%; padding: 8px 10px; min-height: 36px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+  width: 100%; padding: 8px 10px; min-height: 36px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text);
   transition: border-color var(--ease), box-shadow var(--ease);
 }
 .fui-field__input::placeholder { color: var(--text-faint); }

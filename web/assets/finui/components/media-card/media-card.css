@@ -7,4 +7,4 @@
 .fui-media-card__sub { font-size: 11.5px; color: var(--text-faint); }
 
 /* The gallery's stand-in for a poster. */
-.fui-media-card__demo-poster { display: block; aspect-ratio: 2 / 3; border-radius: 6px; background: var(--placeholder); }
+.fui-media-card__demo-poster { display: block; aspect-ratio: 2 / 3; border-radius: var(--radius-control); background: var(--placeholder); }

@@ -4,13 +4,13 @@
 .fui-chip--toggle[aria-pressed="false"] { color: var(--text-faint); }
 /* chips & badges */
 .fui-chip__set { display: flex; flex-wrap: wrap; gap: 6px; }
-.fui-chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; min-height: 22px; border: 1px solid var(--border); border-radius: 99px; background: transparent; color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+.fui-chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; min-height: 22px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text-muted); font-size: 12px; white-space: nowrap; }
 .fui-chip.mono { font-size: 11.5px; }
 .fui-chip--button:hover { border-color: var(--accent); color: var(--text); }
 .fui-chip--removable { padding-right: 3px; border-color: var(--accent); background: var(--accent-wash); color: var(--text); }
 .fui-chip__x { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); }
 .fui-chip__x:hover { background: var(--hover); color: var(--text); }
 .fui-chip__x .icon { pointer-events: none; }
-.fui-chip__set .fui-chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; border-radius: 11px; }
+.fui-chip__set .fui-chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; border-radius: min(11px, var(--radius-pill)); }
 .fui-chip--group { display: inline-flex; align-items: center; gap: 5px; color: var(--text); background: var(--accent-wash); border-color: transparent; }
 .fui-chip--group .icon { color: var(--accent-hi); }

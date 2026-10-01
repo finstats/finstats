@@ -4,7 +4,7 @@
 .fui-sections__nav { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .fui-sections__group { display: flex; flex-direction: column; gap: 1px; }
 .fui-sections__group-title { margin: 0 0 4px; padding-left: 10px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-faint); }
-.fui-sections__link { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 6px; color: var(--text-muted); font-size: 13.5px; text-decoration: none; }
+.fui-sections__link { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: var(--radius-control); color: var(--text-muted); font-size: 13.5px; text-decoration: none; }
 .fui-sections__link .icon { color: var(--text-faint); flex: none; }
 .fui-sections__link:hover { background: var(--hover); color: var(--text); text-decoration: none; }
 .fui-sections__link.is-active { background: var(--accent-wash); color: var(--text); }
@@ -19,6 +19,6 @@
   .fui-sections__nav { position: static; flex-direction: row; flex-wrap: wrap; gap: 6px; }
   .fui-sections__group { display: contents; }
   .fui-sections__group-title { display: none; }
-  .fui-sections__link { padding: 5px 11px; border: 1px solid var(--border-soft); border-radius: 99px; font-size: 13px; white-space: nowrap; }
+  .fui-sections__link { padding: 5px 11px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); font-size: 13px; white-space: nowrap; }
   .fui-sections__link.is-active { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
 }

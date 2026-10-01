@@ -1,12 +1,12 @@
 /* finui: skeleton. Moved from app.css; the same rules under finui's names. */
 .fui-card--flush .fui-skeleton__rows { margin: 8px 16px 12px; }
 .fui-skeleton { display: inline-block; border-radius: var(--radius-sm); background: var(--skeleton); animation: fui-skeleton-pulse 1.6s ease-in-out infinite; }
-.fui-skeleton--block { display: block; width: 100%; border-radius: 6px; }
+.fui-skeleton--block { display: block; width: 100%; border-radius: var(--radius-control); }
 .fui-skeleton__rows { display: flex; flex-direction: column; gap: 14px; }
 .fui-skeleton__row { display: flex; align-items: center; gap: 12px; }
 .fui-skeleton__lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.fui-skeleton--thumb { width: 36px; height: 36px; border-radius: 6px; flex: none; }
-.fui-skeleton--poster { width: 76px; aspect-ratio: 2 / 3; border-radius: 6px; flex: none; }
+.fui-skeleton--thumb { width: 36px; height: 36px; border-radius: var(--radius-control); flex: none; }
+.fui-skeleton--poster { width: 76px; aspect-ratio: 2 / 3; border-radius: var(--radius-control); flex: none; }
 .fui-skeleton--poster-lg { width: 168px; aspect-ratio: 2 / 3; border-radius: var(--radius); flex: none; }
 .fui-skeleton--wide { max-width: 440px; }
 @keyframes fui-skeleton-pulse { 50% { opacity: .45; } }

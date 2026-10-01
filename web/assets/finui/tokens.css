@@ -89,8 +89,11 @@
   --rc-heat-4: light-dark(#185657, #b9a5fc);
   --sans: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --radius: 8px;
-  --radius-sm: 4px;
+  --radius: 8px;                                          /* a card, a panel, a list that opens */
+  --radius-sm: 4px;                                       /* a small thing inside one: an option, an icon button */
+  --radius-control: 6px;                                  /* a button, a field, a poster */
+  --radius-lg: 10px;                                      /* a dialog */
+  --radius-pill: 99px;                                    /* chips, badges, toggles, meters: round ends */
   --sidebar-w: 220px;
   --statusbar-h: 26px;
   --ease: 150ms ease;

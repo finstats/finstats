@@ -22,7 +22,7 @@
 .fui-setting-row__foot { margin-top: 14px; }
 .fui-setting-row__notes { display: grid; gap: 6px; margin-top: 14px; }
 .fui-setting-row.is-hit { animation: fui-setting-row-hit 2.4s ease-out both; }
-.fui-setting-row.is-hit { border-radius: 6px; }
+.fui-setting-row.is-hit { border-radius: var(--radius-control); }
 @media (max-width: 820px) {
   .fui-setting-row__control { justify-content: flex-start; width: 100%; }
 }

@@ -1,7 +1,7 @@
 /* finui: button. The rules app.css had for .btn and .icon-btn, under finui's names. */
 .fui-button {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 7px 13px; min-height: 34px;
-  background: var(--hover); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; font-weight: 500; white-space: nowrap;
+  background: var(--hover); border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text); font-size: 13px; font-weight: 500; white-space: nowrap;
   transition: background var(--ease), border-color var(--ease);
 }
 .fui-button:hover { background: var(--btn-hover); text-decoration: none; }

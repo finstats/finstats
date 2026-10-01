@@ -277,4 +277,23 @@ mod tests {
             assert_eq!(dark(token), card.to_lowercase(), "card.rs and {token} must change together");
         }
     }
+
+    /// A corner is a token (`--radius`, `--radius-sm`, `--radius-control`, `--radius-lg`, `--radius-pill`), so a
+    /// preset can square or round every one of them. Only a circle (50%) and a hairline's 1–3 px are left as written.
+    #[test]
+    fn a_component_rounds_its_corners_with_a_token() {
+        let r = registry().unwrap();
+        let mut found = vec![];
+        for f in r.components.iter().flat_map(|c| c.files.iter()).filter(|f| f.ends_with(".css")) {
+            let css = uncommented(&read(&finui().join(f)));
+            for (at, _) in css.match_indices("border-radius:") {
+                let value = css[at + 14..].split([';', '}']).next().unwrap().trim();
+                let tiny = value.strip_suffix("px").and_then(|n| n.parse::<f32>().ok()).is_some_and(|n| n < 4.0);
+                if !(value.contains("var(--radius") || value == "50%" || value == "0" || tiny) {
+                    found.push(format!("{f}: border-radius: {value}"));
+                }
+            }
+        }
+        assert!(found.is_empty(), "corners that are not tokens:\n{}", found.join("\n"));
+    }
 }

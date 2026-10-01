@@ -27,6 +27,7 @@
         "--ease",
         "--hover",
         "--on-fill",
+        "--radius-control",
         "--radius-sm",
         "--text",
         "--text-muted"
@@ -67,6 +68,7 @@
         "--accent-wash",
         "--border",
         "--hover",
+        "--radius-pill",
         "--text",
         "--text-faint",
         "--text-muted"
@@ -89,6 +91,7 @@
         "--critical-text",
         "--good",
         "--hover",
+        "--radius-pill",
         "--text",
         "--text-faint",
         "--text-muted",
@@ -160,6 +163,7 @@
       ],
       "tokens": [
         "--radius",
+        "--radius-control",
         "--radius-sm",
         "--skeleton"
       ],
@@ -184,6 +188,7 @@
         "--critical",
         "--critical-text",
         "--ease",
+        "--radius-control",
         "--text",
         "--text-faint",
         "--text-muted"
@@ -206,6 +211,7 @@
         "--hover",
         "--knob",
         "--on-fill",
+        "--radius-pill",
         "--shadow"
       ],
       "requires": [
@@ -225,6 +231,7 @@
         "--border-soft",
         "--ease",
         "--hover",
+        "--radius-control",
         "--text",
         "--text-muted"
       ],
@@ -250,6 +257,7 @@
         "--ease",
         "--hover",
         "--radius",
+        "--radius-control",
         "--radius-sm",
         "--shadow",
         "--text",
@@ -331,6 +339,7 @@
       ],
       "tokens": [
         "--accent-hi",
+        "--radius-pill",
         "--wash-2"
       ],
       "requires": [
@@ -349,6 +358,7 @@
         "--border-soft",
         "--placeholder",
         "--radius",
+        "--radius-control",
         "--radius-sm",
         "--shadow",
         "--text-faint"
@@ -402,6 +412,8 @@
         "--border",
         "--border-soft",
         "--hover",
+        "--radius-control",
+        "--radius-pill",
         "--text",
         "--text-faint",
         "--text-muted"
@@ -439,6 +451,7 @@
         "--accent-hi",
         "--border-soft",
         "--density",
+        "--radius-control",
         "--text"
       ],
       "requires": [
@@ -459,6 +472,7 @@
         "--border",
         "--border-soft",
         "--ease",
+        "--radius-lg",
         "--shadow"
       ],
       "requires": [
@@ -516,6 +530,7 @@
       "tokens": [
         "--accent",
         "--placeholder",
+        "--radius-control",
         "--text",
         "--text-faint"
       ],
@@ -534,6 +549,7 @@
       "tokens": [
         "--border",
         "--mono",
+        "--radius-control",
         "--radius-sm",
         "--shadow",
         "--text-muted",
@@ -557,6 +573,7 @@
         "--border-strong",
         "--ease",
         "--knob",
+        "--radius-pill",
         "--series-1",
         "--shadow",
         "--text-faint",
