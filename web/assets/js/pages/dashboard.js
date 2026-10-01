@@ -180,7 +180,7 @@ export default function dashboard(ctx) {
 /** Recently added: one card per arrival. */
 function shelf(items, arrows) {
   return shelfRow(items.map((it) => [h('a', { class: 'shelf-card', href: `/items/${it.id}` },
-    poster(it.image_item_id || it.id, it.name, { w: 300, cls: 'poster-grid' }),
+    poster(it.image_item_id || it.id, it.name, { w: 300, cls: 'fui-poster--grid' }),
     h('span', { class: 'shelf-when' }, relEl(it.added_at, '')),
     h('span', { class: 'shelf-name' }, it.name),
     it.sub ? h('span', { class: 'shelf-sub' }, it.sub) : null,

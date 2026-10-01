@@ -161,14 +161,14 @@ export function healthView(ctx) {
   }
 
   function tiles(s) {
-    return h('div', { class: 'tiles health-tiles' }, s.kinds.map((k) => {
+    return h('div', { class: 'fui-stat-tile__grid health-tiles' }, s.kinds.map((k) => {
       const [label, what] = KINDS[k.kind] || [k.kind, ''];
       const on = f.kind === k.kind;
-      return h('button', { type: 'button', class: ['tile tile-pick', !k.count && 'is-quiet'], 'aria-pressed': String(on), title: on ? 'Show every kind' : `Show only ${label.toLowerCase()}`,
+      return h('button', { type: 'button', class: ['fui-stat-tile fui-stat-tile--pressable', !k.count && 'is-quiet'], 'aria-pressed': String(on), title: on ? 'Show every kind' : `Show only ${label.toLowerCase()}`,
         onClick: () => { f.kind = on ? '' : k.kind; f.sort = ''; f.dir = ''; apply(); } },
-        h('span', { class: 'tile-label' }, label),
-        h('span', { class: 'tile-value' }, num(k.count)),
-        h('span', { class: 'tile-foot' }, h('span', { class: 'tile-vs' }, k.kind === 'copies' && k.wasted_bytes ? `${bytes(k.wasted_bytes)} kept twice` : what)));
+        h('span', { class: 'fui-stat-tile__label' }, label),
+        h('span', { class: 'fui-stat-tile__value' }, num(k.count)),
+        h('span', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, k.kind === 'copies' && k.wasted_bytes ? `${bytes(k.wasted_bytes)} kept twice` : what)));
     }));
   }
 
@@ -201,7 +201,7 @@ export function healthView(ctx) {
         h('th', { 'data-key': 'found' }, 'Found'),
         h('th', { 'data-nosort': '' }, ''))),
       h('tbody', null, list.items.map((it) => h('tr', null,
-        h('td', null, h('div', { class: 'title-cell' }, poster(it.image_item_id, it.title, { w: 80, cls: 'poster-sm' }),
+        h('td', null, h('div', { class: 'title-cell' }, poster(it.image_item_id, it.title, { w: 80, cls: 'fui-poster--sm' }),
           h('div', { class: 'play-title' },
             h('a', { class: 'play-title-main', href: `/items/${it.item_id}` }, it.title),
             h('div', { class: 'play-title-sub' }, [f.kind ? null : (KINDS[it.kind] || [it.kind])[0], it.year, ...(it.libraries || []).map((l) => l.name || 'a removed library'),

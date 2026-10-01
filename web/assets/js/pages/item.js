@@ -52,8 +52,8 @@ export default function itemPage(ctx) {
       const still = it.type === 'Episode' && it.has_image;
       const hero = h('div', { class: ['item-hero', it.has_backdrop && 'has-backdrop'] },
         it.has_backdrop ? h('div', { class: 'item-backdrop', 'aria-hidden': 'true' }, h('img', { src: imgItem(it.id, 1280, 'backdrop'), alt: '', decoding: 'async', onError: (e) => e.target.parentNode.remove() })) : null,
-        still ? poster(it.id, it.name, { w: 480, cls: 'poster-lg poster-still' })
-          : poster(it.type === 'Episode' && it.series_id ? it.series_id : it.id, it.name, { w: 300, cls: 'poster-lg' }),
+        still ? poster(it.id, it.name, { w: 480, cls: 'fui-poster--lg fui-poster--still' })
+          : poster(it.type === 'Episode' && it.series_id ? it.series_id : it.id, it.name, { w: 300, cls: 'fui-poster--lg' }),
         h('div', { class: 'item-hero-text' },
           it.series_name && it.series_id ? h('a', { class: 'item-series', href: `/items/${it.series_id}` }, it.series_name, code ? h('span', { class: 'mono' }, ' · ' + code) : null) : null,
           h('h1', { class: 'page-title' }, it.name),
@@ -78,7 +78,7 @@ export default function itemPage(ctx) {
 
       return [
         hero,
-        h('div', { class: 'tiles tiles-3' },
+        h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--three' },
           statTile({ label: 'Watch time', value: duration(t.watch_s), title: durationExact(t.watch_s), hint: ' ' }),
           statTile({ label: 'Plays', value: compact(t.plays), title: num(t.plays), hint: t.last_played_at ? ['last ', relEl(t.last_played_at, '')] : 'Never played' }),
           statTile({ label: 'Watched by', value: `${num(t.users)} ${t.users === 1 ? 'user' : 'users'}`, hint: ' ' })),

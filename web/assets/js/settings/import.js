@@ -175,8 +175,8 @@ export default {
       if (uploading) {
         stage = h('div', { class: 'import-stage', role: 'status' },
           h('div', { class: 'import-stage-title' }, `Uploading ${upload.fileName}`),
-          h('div', { class: 'meter meter-wide', role: 'progressbar', 'aria-label': 'Upload progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(upload.progress * 100) },
-            h('span', { class: 'meter-fill', style: { width: upload.progress * 100 + '%' } })),
+          h('div', { class: 'fui-meter fui-meter--wide', role: 'progressbar', 'aria-label': 'Upload progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(upload.progress * 100) },
+            h('span', { class: 'fui-meter__fill', style: { width: upload.progress * 100 + '%' } })),
           h('div', { class: 'import-stage-row' }, h('span', { class: 'mono' }, `${Math.round(upload.progress * 100)}% · ${bytes(upload.loaded)} of ${bytes(upload.total)}`),
             button({ size: 'sm', type: 'button', onClick: () => upload.handle && upload.handle.abort() }, 'Cancel upload')),
           h('p', { class: 'fui-field__help' }, 'Keep this tab open until the upload finishes. You can browse other finstats pages meanwhile.'));
@@ -185,8 +185,8 @@ export default {
       } else if (running || justUploaded) {
         stage = h('div', { class: 'import-stage', role: 'status' },
           h('div', { class: 'import-stage-title' }, spinner(14), running ? 'Importing your history' : 'Upload complete'),
-          h('div', { class: ['meter meter-wide', !(running && task.progress != null) && 'is-indeterminate'], role: 'progressbar', 'aria-label': 'Import progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': running && task.progress != null ? Math.round(task.progress * 100) : null },
-            h('span', { class: 'meter-fill', style: { width: (running && task.progress != null ? task.progress * 100 : 30) + '%' } })),
+          h('div', { class: ['fui-meter fui-meter--wide', !(running && task.progress != null) && 'is-indeterminate'], role: 'progressbar', 'aria-label': 'Import progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': running && task.progress != null ? Math.round(task.progress * 100) : null },
+            h('span', { class: 'fui-meter__fill', style: { width: (running && task.progress != null ? task.progress * 100 : 30) + '%' } })),
           h('div', { class: 'mono import-msg', 'aria-live': 'polite' }, running ? task.message || 'Reading the backup…' : 'Starting the import…'),
           h('p', { class: 'fui-field__help' }, 'This runs on the server. It’s safe to leave this page.'));
       } else {

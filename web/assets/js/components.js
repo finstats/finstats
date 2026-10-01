@@ -16,6 +16,24 @@ import { errorState } from '../finui/components/error/error.js';
 import { segmented } from '../finui/components/segmented/segmented.js';
 import { combobox } from '../finui/components/combobox/combobox.js';
 export { inlineError, formField } from '../finui/components/field/field.js';
+export { pagination } from '../finui/components/pagination/pagination.js';
+export { statTile } from '../finui/components/stat-tile/stat-tile.js';
+export { facts } from '../finui/components/facts/facts.js';
+export { meter } from '../finui/components/meter/meter.js';
+import { poster as posterOf } from '../finui/components/poster/poster.js';
+import { avatar as avatarOf } from '../finui/components/avatar/avatar.js';
+import { statTile } from '../finui/components/stat-tile/stat-tile.js';
+import { facts } from '../finui/components/facts/facts.js';
+
+/** A title's poster, by its id: finui's poster, given the address finstats serves it at. */
+export function poster(id, name, { w = 120, cls = '', kind = 'primary' } = {}) {
+  return posterOf(id ? imgItem(id, w, kind) : null, name, { cls });
+}
+
+/** A person's picture, by their id. */
+export function avatar(id, name, { size = 28, hasImage = true } = {}) {
+  return avatarOf(id && hasImage !== false ? imgUser(id, size * 2 > 96 ? 192 : 96) : null, name, { size });
+}
 export { segmented } from '../finui/components/segmented/segmented.js';
 export { combobox, multiSelect } from '../finui/components/combobox/combobox.js';
 export { copyButton } from '../finui/components/copy/copy.js';
@@ -143,42 +161,12 @@ export function filterBar({ days, onDays, userId, onUser, signal, extra = [] }) 
     extra);
 }
 
-export function pagination({ page, perPage, total, onPage }) {
-  const pages = Math.max(1, Math.ceil(total / perPage));
-  const from = total ? (page - 1) * perPage + 1 : 0, to = Math.min(total, page * perPage);
-  // Buttons stay enabled; out-of-range clicks are simply ignored (aria-disabled communicates the edge).
-  const mk = (lbl, ic, target, off) => button({ size: 'sm', variant: 'ghost', type: 'button', 'aria-label': lbl, 'aria-disabled': off ? 'true' : null,
-    onClick: () => { if (!off) onPage(target); } }, icon(ic, 14));
-  return h('nav', { class: 'pager', 'aria-label': 'Pagination' },
-    h('span', { class: 'pager-info mono' }, `${num(from)}–${num(to)} of ${num(total)}`),
-    h('div', { class: 'pager-btns' }, mk('Previous page', 'chevronLeft', page - 1, page <= 1),
-      h('span', { class: 'pager-page mono' }, `${page} / ${pages}`),
-      mk('Next page', 'chevronRight', page + 1, page >= pages)));
-}
-
-// ---------------------------------------------------------------- media
-export function poster(id, name, { w = 120, cls = '', kind = 'primary' } = {}) {
-  const box = h('span', { class: 'poster ' + cls, 'aria-hidden': 'true' });
-  const fallback = () => mount(box, h('span', { class: 'poster-fallback' }, initials(name)));
-  if (!id) { fallback(); return box; }
-  box.append(h('img', { src: imgItem(id, w, kind), alt: '', loading: 'lazy', decoding: 'async', onError: fallback }));
-  return box;
-}
-
 /** "Open in Jellyfin": the title's own page there, in a new tab. Null without a link (a title Jellyfin no longer has).
  *  `compact` is the icon alone, for a row of a list, named for screen readers and on hover. */
 export function openInJellyfin(link, { compact = false } = {}) {
   if (!link) return null;
   if (compact) return button({ variant: 'icon', class: 'open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Open in Jellyfin', title: 'Open in Jellyfin' }, icon('external', 15));
   return button({ variant: 'primary', class: 'open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer' }, icon('play', 14), 'Open in Jellyfin');
-}
-
-export function avatar(id, name, { size = 28, hasImage = true } = {}) {
-  const box = h('span', { class: 'avatar', style: { width: size + 'px', height: size + 'px', fontSize: Math.max(10, size * 0.38) + 'px' }, 'aria-hidden': 'true' });
-  const fallback = () => mount(box, initials(name));
-  if (!id || hasImage === false) { fallback(); return box; }
-  box.append(h('img', { src: imgUser(id, size * 2 > 96 ? 192 : 96), alt: '', loading: 'lazy', decoding: 'async', onError: fallback }));
-  return box;
 }
 
 export function methodBadge(method) {
@@ -188,31 +176,12 @@ export function methodBadge(method) {
 
 export { chip } from '../finui/components/chip/chip.js';
 
-// ---------------------------------------------------------------- stats
-function deltaEl(cur, prev) {
-  if (prev == null) return null;
-  if (!prev && !cur) return h('span', { class: 'delta flat' }, icon('minus', 13), 'No change');
-  if (!prev) return h('span', { class: 'delta up' }, icon('trendUp', 13), 'New');
-  const d = (cur - prev) / prev;
-  if (Math.abs(d) < 0.005) return h('span', { class: 'delta flat' }, icon('minus', 13), 'No change');
-  const up = d > 0;
-  return h('span', { class: 'delta ' + (up ? 'up' : 'down') }, icon(up ? 'trendUp' : 'trendDown', 13),
-    `${up ? '+' : '−'}${Math.abs(d) >= 10 ? Math.round(Math.abs(d) * 100) : (Math.abs(d) * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`);
-}
-
-export function statTile({ label, value, title, current, previous, vsLabel, spark, hint }) {
-  return h('div', { class: 'tile' },
-    h('div', { class: 'tile-label' }, label),
-    h('div', { class: 'tile-row' }, h('div', { class: 'tile-value', title }, value), spark || null),
-    h('div', { class: 'tile-foot' }, previous != null ? [deltaEl(current, previous), h('span', { class: 'tile-vs' }, vsLabel)] : hint ? h('span', { class: 'tile-vs' }, hint) : h('span', { class: 'tile-vs' }, ' ')));
-}
-
 /** Ranked poster rows for movies/series/music, avatar rows for users. */
 export function topList(rows, { kind = 'items', empty = 'No plays in this range.' } = {}) {
   if (!rows || !rows.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
   return h('ol', { class: 'toplist' }, rows.map((r, i) => {
     const href = !r.id ? null : kind === 'users' ? `/users/${r.id}` : kind === 'libraries' ? `/libraries/${r.id}` : kind === 'items' ? `/items/${r.id}` : null;
-    const thumb = kind === 'users' ? avatar(r.id, r.name, { size: 36 }) : kind === 'items' ? poster(r.image_item_id, r.name, { w: 120, cls: 'poster-sm' }) : null;
+    const thumb = kind === 'users' ? avatar(r.id, r.name, { size: 36 }) : kind === 'items' ? poster(r.image_item_id, r.name, { w: 120, cls: 'fui-poster--sm' }) : null;
     const name = href ? h('a', { href, class: 'toplist-name' }, r.name) : h('span', { class: 'toplist-name' }, r.name);
     return h('li', { class: 'toplist-row' },
       h('span', { class: 'toplist-rank mono' }, String(i + 1)),
@@ -241,7 +210,7 @@ export function completionEl(p) {
   const stoppedAt = p.position_s != null && p.runtime_s ? `${clock(p.position_s)} / ${clock(p.runtime_s)}` : null;
   return h('span', { class: 'completion-cell' },
     h('span', { class: 'completion', title: stoppedAt ? `Stopped at ${stoppedAt}` : `Stopped at ${pct(c)}` },
-      h('span', { class: 'meter', role: 'img', 'aria-label': `${pct(c)} watched` }, h('span', { class: 'meter-fill', style: { width: c * 100 + '%' } })),
+      h('span', { class: 'fui-meter', role: 'img', 'aria-label': `${pct(c)} watched` }, h('span', { class: 'fui-meter__fill', style: { width: c * 100 + '%' } })),
       h('span', { class: 'mono' }, pct(c))),
     stoppedAt ? h('span', { class: 'cell-sub mono' }, stoppedAt) : null);
 }
@@ -262,7 +231,7 @@ export function playsTable(rows, { showUser = true, onOpen, empty = 'No plays ma
     h('tbody', null, rows.map((p) => {
       const tr = h('tr', { tabindex: 0, class: p.active ? 'is-live' : '', 'aria-label': `Open details for ${p.item_name || 'play'}` },
         showUser ? h('td', null, h('a', { class: 'user-cell', href: `/users/${p.user_id}`, onClick: (e) => e.stopPropagation() }, avatar(p.user_id, p.user_name, { size: 22 }), h('span', null, p.user_name))) : null,
-        h('td', { class: 'td-title' }, h('div', { class: 'title-cell' }, poster(p.image_item_id, p.series_name || p.item_name, { w: 120, cls: 'poster-xs' }), playTitle(p),
+        h('td', { class: 'td-title' }, h('div', { class: 'title-cell' }, poster(p.image_item_id, p.series_name || p.item_name, { w: 120, cls: 'fui-poster--xs' }), playTitle(p),
           p.group_size > 1 ? h('span', { class: 'group-mark', role: 'img', title: `Watched together · ${p.group_size} people`, 'aria-label': `Watched together by ${p.group_size} people` }, icon('together', 13)) : null)),
         h('td', { 'data-sort': p.active ? String(Date.now()) : null }, p.active ? h('span', { class: 'fui-badge fui-badge--live' }, h('span', { class: 'fui-badge__dot' }), 'Playing now')
           : h('span', { class: 'when-cell' }, relEl(p.ended_at || p.started_at), h('span', { class: 'cell-sub mono' }, shortStamp(p.ended_at || p.started_at)))),
@@ -325,11 +294,4 @@ export function openModal({ title, body, wide = false, onClose, initialFocus, la
 }
 
 // ---------------------------------------------------------------- definition grid
-/** A grid of label/value pairs. `{ wide: true }` gives a pair the whole row: a long value (a file path) squeezed into
- *  one cell broke onto a line every few characters beside a row left empty. */
-export function facts(pairs) {
-  return h('dl', { class: 'facts' }, pairs.filter(Boolean).map(([k, v, opts]) =>
-    h('div', { class: ['fact', opts && opts.wide && 'fact-wide'] }, h('dt', null, k), h('dd', { class: opts && opts.mono ? 'mono' : '' }, v == null || v === '' ? '–' : v))));
-}
-
 export { num, compact, duration, durationExact, api };

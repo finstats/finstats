@@ -85,10 +85,10 @@ export function openPalette() {
         { title: 'Pages', rows: pageRows(q.toLowerCase()) },
         { title: 'Users', rows: (data.users || []).map((u) => ({ label: u.name, href: `/users/${u.id}`, thumb: avatar(u.id, u.name, { size: 24 }) })) },
         { title: 'Library', rows: (data.items || []).map((it) => ({ label: it.name, href: `/items/${it.id}`,
-          sub: [typeName[it.type] || it.type, it.sub || it.year].filter(Boolean).join(' · '), thumb: poster(it.image_item_id || it.id, it.name, { w: 120, cls: 'poster-xs' }),
+          sub: [typeName[it.type] || it.type, it.sub || it.year].filter(Boolean).join(' · '), thumb: poster(it.image_item_id || it.id, it.name, { w: 120, cls: 'fui-poster--xs' }),
           keep: watchable(it.type) ? watchToggle({ item_id: it.id }, { compact: true, name: it.name, keepFocus: true }) : null })) },
         { title: 'Cast and crew', rows: (data.people || []).map((p) => ({ label: p.name, href: `/people/${p.id}`, sub: credit(p),
-          thumb: poster(p.has_image ? p.id : null, p.name, { w: 120, cls: 'poster-xs' }) })) },
+          thumb: poster(p.has_image ? p.id : null, p.name, { w: 120, cls: 'fui-poster--xs' }) })) },
       ], `Nothing matches “${q}”.`);
     } catch (e) {
       if (isAbort(e) || e.status === 401) return;

@@ -133,7 +133,7 @@ function rankedList(rows, start = 2, extra = () => null) {
   if (!rows.length) return null;
   return h('ol', { class: 'rc-ranked', start }, rows.map((t, i) => h('li', { class: 'rc-ranked-row' },
     h('span', { class: 'rc-ranked-n mono' }, String(start + i)),
-    poster(t.image_item_id, t.name, { w: 120, cls: 'poster-sm' }),
+    poster(t.image_item_id, t.name, { w: 120, cls: 'fui-poster--sm' }),
     h('div', { class: 'rc-ranked-main' }, titleLink(t, 'rc-ranked-name'), h('span', { class: 'rc-ranked-sub' }, [t.sub, extra(t)].filter(Boolean).join(' · ') || ' ')),
     h('span', { class: 'rc-ranked-val mono', title: durationExact(t.watch_s) }, duration(t.watch_s)))));
 }
@@ -410,7 +410,7 @@ function rhythmChapter(d, v) {
       const rows = months.map((m) => {
         const dt = monthDate(m.month), name = m.top && m.top.name;
         return { label: mShortF.format(dt), title: `${mF.format(dt)}${spansYears ? ' ' + dt.getFullYear() : ''}`, value: m.watch_s, note: name ? `mostly ${name}` : null,
-          foot: h('span', { class: 'rc-col-foot', title: name || null }, m.top ? [poster(m.top.image_item_id, name, { w: 120, cls: 'poster-xs' }), h('span', { class: 'rc-col-foot-name' }, name)] : null) };
+          foot: h('span', { class: 'rc-col-foot', title: name || null }, m.top ? [poster(m.top.image_item_id, name, { w: 120, cls: 'fui-poster--xs' }), h('span', { class: 'rc-col-foot-name' }, name)] : null) };
       });
       mount(title, [em(mF.format(monthDate(best.month))), ' was the big one']);
       mount(lead, [b(duration(best.watch_s)), ' in a single month', best.top && best.top.name ? tail(` — most of it with ${best.top.name}.`) : '.']);

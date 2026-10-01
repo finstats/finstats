@@ -1,0 +1,9 @@
+/* finui: facts. Moved from app.css; the same rules under finui's names. */
+/* ------------------------------------------------------------ facts */
+.fui-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 20px; }
+.fui-facts__item { min-width: 0; }
+.fui-facts__item--wide { grid-column: 1 / -1; }
+.fui-facts__item dt { font-size: 11.5px; color: var(--text-faint); margin-bottom: 1px; }
+.fui-facts__item dd { color: var(--text); overflow-wrap: anywhere; }
+/* Help under facts sits a little apart from them. */
+.fui-facts + .fui-field__help { margin-top: 14px; }

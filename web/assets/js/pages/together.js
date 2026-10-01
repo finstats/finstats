@@ -39,7 +39,7 @@ export default function togetherPage(ctx) {
       // Without "see everyone" the answer is the caller's own company: the people count is their companions.
       const peopleLabel = everyone ? 'People' : 'Watched with';
       const peopleValue = everyone ? t.people : Math.max(0, (t.people || 1) - 1);
-      const tiles = h('div', { class: 'tiles' },
+      const tiles = h('div', { class: 'fui-stat-tile__grid' },
         statTile({ label: 'Time together', value: duration(t.together_s), title: durationExact(t.together_s), current: t.together_s, previous: p && p.together_s, vsLabel: vs, hint: ' ' }),
         statTile({ label: 'Evenings', value: compact(t.sessions), title: num(t.sessions), current: t.sessions, previous: p && p.sessions, vsLabel: vs, hint: ' ' }),
         statTile({ label: peopleLabel, value: compact(peopleValue), title: num(peopleValue), current: peopleValue, previous: p && (everyone ? p.people : Math.max(0, (p.people || 1) - 1)), vsLabel: vs, hint: ' ' }),
@@ -68,7 +68,7 @@ export default function togetherPage(ctx) {
           h('tbody', null, g.recent.map((r) => {
             const code = episodeCode(r.season_number, r.episode_number);
             return h('tr', null,
-              h('td', null, h('span', { class: 'title-cell' }, poster(r.image_item_id, r.series_name || r.item_name, { w: 120, cls: 'poster-sm' }),
+              h('td', null, h('span', { class: 'title-cell' }, poster(r.image_item_id, r.series_name || r.item_name, { w: 120, cls: 'fui-poster--sm' }),
                 h('span', null, h('a', { href: `/items/${r.item_id}` }, r.series_name || r.item_name), code ? h('span', { class: 'cell-sub mono' }, `${code} · ${r.item_name}`) : null))),
               h('td', null, h('span', { class: 'pair-cell' }, faces(r.members), h('span', null, names(r.members, ', ')))),
               h('td', { 'data-sort': r.started_at, title: dateTime(r.started_at) }, relEl(r.started_at)),

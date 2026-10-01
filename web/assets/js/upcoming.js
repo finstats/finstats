@@ -13,8 +13,8 @@ export const loadUpcoming = ({ days = 14, userId = '', mine = false } = {}, sign
 /** A title in the library has its poster there; one that is still to come only Sonarr or Radarr can show (through finstats). */
 export function upcomingPoster(e, { w = 160, cls = '' } = {}) {
   const name = e.series_title || e.title;
-  const box = h('span', { class: 'poster ' + cls, 'aria-hidden': 'true' });
-  const fallback = () => mount(box, h('span', { class: 'poster-fallback' }, initials(name)));
+  const box = h('span', { class: 'fui-poster ' + cls, 'aria-hidden': 'true' });
+  const fallback = () => mount(box, h('span', { class: 'fui-poster__fallback' }, initials(name)));
   const p = e.poster || {};
   const src = p.item_id ? imgItem(p.item_id, w) : p.service_id ? `/api/img/arr/${p.service_id}/${p.media_id}?w=${w}` : null;
   if (!src) { fallback(); return box; }
@@ -60,7 +60,7 @@ export function entryRow(e, { people = false, watch = false } = {}) {
   const title = href ? h('a', { class: 'up-title', href }, entryName(e)) : h('span', { class: 'up-title' }, entryName(e));
   const names = people && e.follower_names && e.follower_names.length ? e.follower_names : null;
   return h('li', { class: 'up-row' },
-    upcomingPoster(e, { w: 96, cls: 'poster-sm' }),
+    upcomingPoster(e, { w: 96, cls: 'fui-poster--sm' }),
     h('div', { class: 'up-main' },
       h('div', { class: 'up-line' }, title, e.kind === 'movie' && e.year ? h('span', { class: 'muted' }, ` (${e.year})`) : null),
       h('div', { class: 'up-what' }, entryWhat(e)),
@@ -88,7 +88,7 @@ export function agenda(entries, opts) {
 
 /** A poster card for the dashboard row. */
 export function entryCard(e) {
-  const inner = [upcomingPoster(e, { w: 300, cls: 'poster-grid' }),
+  const inner = [upcomingPoster(e, { w: 300, cls: 'fui-poster--grid' }),
     h('span', { class: 'shelf-when' }, dayName(e.day), e.at ? ` · ${timeOfDay(e.at)}` : ''),
     h('span', { class: 'shelf-name' }, entryName(e)),
     h('span', { class: 'shelf-sub' }, entryWhat(e)),

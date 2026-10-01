@@ -14,7 +14,7 @@ function streakTiles(s) {
   if (!s) return null;
   const l = s.longest;
   const c = s.current || {};
-  return h('div', { class: 'tiles tiles-3' },
+  return h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--three' },
     statTile({ label: 'Longest day streak', value: l ? `${num(l.days)} ${l.days === 1 ? 'day' : 'days'}` : '–',
       hint: l ? (l.days > 1 ? `${dayLabel(l.from)} – ${dayLabel(l.to, true)}` : dayLabel(l.from, true)) : 'No plays yet' }),
     statTile({ label: 'Current streak', value: c.days ? `${num(c.days)} ${c.days === 1 ? 'day' : 'days'}` : '–',
@@ -87,7 +87,7 @@ export function profileAllTime({ userId, signal }) {
       return null;
     };
     return h('li', { class: ['show-row', isOpen && 'is-open', done && 'is-done'] },
-      s.removed ? h('span', { class: 'poster poster-sm poster-ph', 'aria-hidden': 'true' }, icon('tv', 16)) : h('a', { href: `/items/${s.id}`, tabindex: -1, 'aria-hidden': 'true' }, poster(s.image_item_id, s.name, { w: 160, cls: 'poster-sm' })),
+      s.removed ? h('span', { class: 'fui-poster fui-poster--sm fui-poster--placeholder', 'aria-hidden': 'true' }, icon('tv', 16)) : h('a', { href: `/items/${s.id}`, tabindex: -1, 'aria-hidden': 'true' }, poster(s.image_item_id, s.name, { w: 160, cls: 'fui-poster--sm' })),
       h('div', { class: 'show-main' }, head,
         isOpen ? null : bar(all, { editable: false }),
         isOpen ? h('div', { class: 'show-seasons' },

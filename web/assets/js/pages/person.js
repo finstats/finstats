@@ -30,12 +30,12 @@ export default function personPage(ctx) {
       const watched = titles.filter((x) => x.plays > 0), unwatched = titles.filter((x) => !x.plays);
       return [
         h('div', { class: 'item-hero' },
-          poster(p.has_image ? p.id : null, p.name, { w: 300, cls: 'poster-lg' }),
+          poster(p.has_image ? p.id : null, p.name, { w: 300, cls: 'fui-poster--lg' }),
           h('div', { class: 'item-hero-text' },
             h('h1', { class: 'page-title' }, p.name),
             h('div', { class: 'fui-chip__set' }, p.is_actor ? chip('Actor') : null, p.is_director ? chip('Director') : null,
               chip(`${num(p.titles)} ${p.titles === 1 ? 'title' : 'titles'} in the library`)))),
-        h('div', { class: 'tiles tiles-3' },
+        h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--three' },
           statTile({ label: 'Watch time', value: duration(t.watch_s), title: durationExact(t.watch_s), hint: 'across everything they are in' }),
           statTile({ label: 'Plays', value: compact(t.plays), title: num(t.plays), hint: t.last_played_at ? ['last ', relEl(t.last_played_at, '')] : 'Never played' }),
           statTile({ label: 'Titles watched', value: `${num(t.titles_watched)} of ${num(p.titles)}`, hint: ' ' })),
@@ -54,7 +54,7 @@ function titleGrid(rows, withTime) {
   return h('ul', { class: 'item-grid' }, rows.map((x) => {
     const credit = String(x.kinds || '').includes('Director') ? (String(x.kinds).includes('Actor') ? (x.role ? `Director · as ${x.role}` : 'Director · Actor') : 'Director') : x.role ? `as ${x.role}` : null;
     const inner = [
-      poster(x.id, x.name, { w: 300, cls: 'poster-grid' }),
+      poster(x.id, x.name, { w: 300, cls: 'fui-poster--grid' }),
       h('span', { class: 'item-card-name' }, x.name),
       h('span', { class: 'item-card-sub' }, [TYPE_LABEL[x.type] || x.type, x.year, x.removed ? 'no longer in library' : null].filter(Boolean).join(' · ')),
       credit ? h('span', { class: 'item-card-sub' }, credit) : null,

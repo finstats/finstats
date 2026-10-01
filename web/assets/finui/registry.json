@@ -5,7 +5,8 @@
   "foundation": [
     "tokens.css",
     "base.css",
-    "core.js"
+    "core.js",
+    "format.js"
   ],
   "components": [
     {
@@ -276,6 +277,115 @@
       ],
       "requires": [
         "core"
+      ]
+    },
+    {
+      "name": "stat-tile",
+      "category": "primitive",
+      "files": [
+        "components/stat-tile/stat-tile.js",
+        "components/stat-tile/stat-tile.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--bg-2",
+        "--border",
+        "--border-soft",
+        "--good",
+        "--hover",
+        "--mono",
+        "--radius",
+        "--serious",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--text-strong"
+      ],
+      "requires": [
+        "core",
+        "skeleton"
+      ]
+    },
+    {
+      "name": "facts",
+      "category": "primitive",
+      "files": [
+        "components/facts/facts.js",
+        "components/facts/facts.css"
+      ],
+      "tokens": [
+        "--text",
+        "--text-faint"
+      ],
+      "requires": [
+        "core",
+        "field"
+      ]
+    },
+    {
+      "name": "meter",
+      "category": "primitive",
+      "files": [
+        "components/meter/meter.js",
+        "components/meter/meter.css"
+      ],
+      "tokens": [
+        "--accent-hi",
+        "--wash-2"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "poster",
+      "category": "primitive",
+      "files": [
+        "components/poster/poster.js",
+        "components/poster/poster.css"
+      ],
+      "tokens": [
+        "--bg-sunken",
+        "--border-soft",
+        "--placeholder",
+        "--radius",
+        "--radius-sm",
+        "--shadow",
+        "--text-faint"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "avatar",
+      "category": "primitive",
+      "files": [
+        "components/avatar/avatar.js",
+        "components/avatar/avatar.css"
+      ],
+      "tokens": [
+        "--wash-2",
+        "--wash-2-text"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "pagination",
+      "category": "primitive",
+      "files": [
+        "components/pagination/pagination.js",
+        "components/pagination/pagination.css"
+      ],
+      "tokens": [
+        "--border-soft",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "button"
       ]
     }
   ]

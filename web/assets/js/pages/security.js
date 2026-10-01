@@ -200,7 +200,7 @@ export default function securityPage(ctx) {
       const away = o.places.filter((p) => !p.home);
       const failedTotal = o.failed.reduce((n, x) => n + x.attempts, 0);
       return [
-        h('div', { class: 'tiles' },
+        h('div', { class: 'fui-stat-tile__grid' },
           statTile({ label: 'Open alerts', value: num(o.open_alerts), hint: o.open_alerts ? 'Waiting for a look' : 'All clear' }),
           statTile({ label: 'Countries', value: num(o.countries.length), hint: rangeLong(f.days) }),
           statTile({ label: 'Places away from home', value: num(away.length), hint: rangeLong(f.days) }),

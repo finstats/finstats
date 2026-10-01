@@ -13,8 +13,8 @@ const base = `/api/public/${encodeURIComponent(token)}`;
 const dayF = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 function poster(t, w = 160) {
-  const box = h('span', { class: 'poster', 'aria-hidden': 'true' });
-  const fallback = () => mount(box, h('span', { class: 'poster-fallback' }, initials(t.name)));
+  const box = h('span', { class: 'fui-poster', 'aria-hidden': 'true' });
+  const fallback = () => mount(box, h('span', { class: 'fui-poster__fallback' }, initials(t.name)));
   if (!t.image) fallback();
   else box.append(h('img', { src: `${base}/img/${t.image}?w=${w}`, alt: '', loading: 'lazy', decoding: 'async', onError: fallback }));
   return box;
@@ -40,20 +40,20 @@ function shelf(title, list) {
 
 function totals(t) {
   return section('What they watch', 'pub-totals',
-    h('div', { class: 'tiles' },
+    h('div', { class: 'fui-stat-tile__grid' },
       tile('Hours watched', hours(t.watch_s)), tile('Plays', num(t.plays)),
       tile('Films', num(t.movies)), tile('Episodes', num(t.episodes)), t.tracks ? tile('Songs', num(t.tracks)) : null),
     shelf('Top shows', t.top_series), shelf('Top films', t.top_movies), shelf('Top music', t.top_tracks));
 }
 
 function tile(label, value) {
-  return h('div', { class: 'tile' }, h('span', { class: 'tile-label' }, label), h('span', { class: 'tile-value' }, value));
+  return h('div', { class: 'fui-stat-tile' }, h('span', { class: 'fui-stat-tile__label' }, label), h('span', { class: 'fui-stat-tile__value' }, value));
 }
 
 function habits(x) {
   const days = (n) => `${num(n)} ${Number(n) === 1 ? 'day' : 'days'}`;
   return section('When they watch', 'pub-habits',
-    h('div', { class: 'tiles' }, tile('Longest streak', days(x.longest_streak_days)), tile('Days with something on', num(x.active_days))),
+    h('div', { class: 'fui-stat-tile__grid' }, tile('Longest streak', days(x.longest_streak_days)), tile('Days with something on', num(x.active_days))),
     heatmap({ data: x.heatmap }),
     x.genres.length ? h('div', { class: 'pub-genres' }, h('h3', { class: 'pub-sub' }, 'Genres'),
       h('ul', { class: 'fui-chip__set' }, x.genres.map((g) => h('li', { class: 'fui-chip' }, g.name, h('span', { class: 'muted' }, duration(g.watch_s)))))) : null);
@@ -97,7 +97,7 @@ function page(a) {
   const profileCard = a.totals || a.habits;
   return [
     h('header', { class: 'pub-hero' },
-      a.avatar ? h('span', { class: 'avatar pub-avatar', 'aria-hidden': 'true' }, h('img', { src: `${base}/avatar`, alt: '', onError: (e) => e.target.replaceWith(initials(name)) })) : null,
+      a.avatar ? h('span', { class: 'fui-avatar pub-avatar', 'aria-hidden': 'true' }, h('img', { src: `${base}/avatar`, alt: '', onError: (e) => e.target.replaceWith(initials(name)) })) : null,
       h('div', { class: 'pub-hero-text' }, h('h1', { class: 'page-title' }, name),
         h('p', { class: 'muted' }, 'What they watch, published by them. Everything here is at least a day old.')),
       profileCard ? button({ class: 'pub-card-link', href: `/u/${encodeURIComponent(token)}/card.png`, download: 'finstats-profile.png' }, 'Download as a card') : null),

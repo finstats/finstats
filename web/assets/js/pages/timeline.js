@@ -165,7 +165,7 @@ function stopCell(s, month) {
   return h('div', { class: ['stop', TYPE_CLASS[s.type] || 'is-other', month && 'has-month'], role: 'listitem' },
     month ? h('span', { class: 'stop-month' }, month) : h('span', { class: 'stop-node', 'aria-hidden': 'true' }),
     h('a', { class: 'stop-card', href },
-      poster(s.image_item_id, s.name, { w: 160, cls: 'poster-md' }),
+      poster(s.image_item_id, s.name, { w: 160, cls: 'fui-poster--md' }),
       h('span', { class: 'stop-text' },
         h('span', { class: 'stop-name' }, s.name),
         s.sub ? h('span', { class: 'stop-sub' }, s.sub) : null,

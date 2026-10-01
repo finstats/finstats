@@ -64,7 +64,7 @@ function pick(m, done) {
     if (mine !== asked) return; // an answer to something typed earlier
     mount(list, found.length
       ? found.map((c) => h('button', { type: 'button', class: 'locate-opt', role: 'listitem', 'data-id': c.id, onClick: () => choose(c) },
-        poster(c.id, c.name, { w: 120, cls: 'poster-xs' }), h('span', { class: 'locate-opt-name' }, label(c)),
+        poster(c.id, c.name, { w: 120, cls: 'fui-poster--xs' }), h('span', { class: 'locate-opt-name' }, label(c)),
         h('span', { class: 'locate-opt-kind' }, c.item_type === 'Episode' ? 'Episode' : c.item_type === 'Video' ? 'Video' : 'Film')))
       : h('p', { class: 'locate-none' }, q ? `Nothing in the library matches “${q}”.` : 'Nothing in the library looks like it. Search for it by the name your library uses.'));
   }

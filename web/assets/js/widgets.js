@@ -35,7 +35,7 @@ export function heatmapCard({ data, title = 'When people watch' }) {
 export function overviewTiles({ totals, previous, daily, days, scoped }) {
   const vs = previous ? `vs previous ${days === 365 ? 'year' : days + ' days'}` : null;
   const t = totals || {}, p = previous || null;
-  return h('div', { class: 'tiles' },
+  return h('div', { class: 'fui-stat-tile__grid' },
     statTile({ label: 'Watch time', value: duration(t.watch_s), title: durationExact(t.watch_s), current: t.watch_s, previous: p && p.watch_s, vsLabel: vs,
       hint: rangeLong(days), spark: sparkline((daily || []).map((d) => d.watch_s)) }),
     statTile({ label: 'Plays', value: compact(t.plays), title: num(t.plays), current: t.plays, previous: p && p.plays, vsLabel: vs,
@@ -70,7 +70,7 @@ export function nowPlayingCard(sn) {
   }
 
   return h('article', { class: ['np', sn.is_paused && 'is-paused'], 'data-np-key': sn.key },
-    poster(sn.image_item_id, title, { w: 300, cls: 'poster-np' }),
+    poster(sn.image_item_id, title, { w: 300, cls: 'fui-poster--np' }),
     h('div', { class: 'np-main' },
       h('div', { class: 'np-title' }, h('a', { href: `/items/${sn.series_id || sn.item_id}` }, title)),
       sn.series_name ? h('div', { class: 'np-sub' }, code ? h('span', { class: 'mono' }, code) : null, code ? ' · ' : null, sn.item_name) : null,
@@ -87,8 +87,8 @@ export function nowPlayingCard(sn) {
           sn.group.size - 1 > sn.group.with.length ? ` and ${(sn.group.size - 1 - sn.group.with.length).toLocaleString()} ${sn.group.size - 1 - sn.group.with.length === 1 ? 'other' : 'others'}` : '') : null,
         can('see_network') && sn.remote_ip ? h('span', { class: 'fui-chip mono', title: 'IP address' }, sn.remote_ip) : null),
       h('div', { class: 'np-progress' },
-        h('div', { class: 'meter meter-wide', role: 'progressbar', 'aria-label': 'Playback position', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': prog == null ? null : Math.round(prog * 100) },
-          h('span', { class: 'meter-fill', style: { width: (prog || 0) * 100 + '%' } })),
+        h('div', { class: 'fui-meter fui-meter--wide', role: 'progressbar', 'aria-label': 'Playback position', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': prog == null ? null : Math.round(prog * 100) },
+          h('span', { class: 'fui-meter__fill', style: { width: (prog || 0) * 100 + '%' } })),
         h('span', { class: 'mono np-time' }, sn.runtime_s ? `${clock(sn.position_s)} / ${clock(sn.runtime_s)}` : clock(sn.position_s))),
       details));
 }
@@ -150,8 +150,8 @@ export function nowPlayingView() {
       for (const l of live.values()) {
         const card = root.querySelector(`[data-np-key="${CSS.escape(l.s.key)}"]`);
         l.clockEl = card && card.querySelector('.np-time');
-        l.barEl = card && card.querySelector('.np-progress .meter');
-        l.fillEl = card && card.querySelector('.np-progress .meter-fill');
+        l.barEl = card && card.querySelector('.np-progress .fui-meter');
+        l.fillEl = card && card.querySelector('.np-progress .fui-meter__fill');
         paint(l);
       }
     } else {
@@ -183,21 +183,21 @@ export function insightTiles(ins) {
   const netTotal = net.reduce((a, b) => a + (b.plays || 0), 0);
   const remote = (net.find((b) => b.name === 'Remote') || {}).plays || 0;
   const tiles = [
-    c.peak != null ? h('div', { class: 'tile tile-quiet' },
-      h('div', { class: 'tile-label' }, 'Peak concurrent streams'),
-      h('div', { class: 'tile-value' }, num(c.peak)),
-      h('div', { class: 'tile-foot' }, h('span', { class: 'tile-vs' },
+    c.peak != null ? h('div', { class: 'fui-stat-tile tile-quiet' },
+      h('div', { class: 'fui-stat-tile__label' }, 'Peak concurrent streams'),
+      h('div', { class: 'fui-stat-tile__value' }, num(c.peak)),
+      h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' },
         c.peak_transcodes > 0 ? `${num(c.peak_transcodes)} transcoding at once` : c.peak_at ? h('span', { title: dateTime(c.peak_at) }, relTime(c.peak_at)) : ' '))) : null,
-    ins.data_bytes != null ? h('div', { class: 'tile tile-quiet' },
-      h('div', { class: 'tile-label' }, 'Data streamed'),
-      h('div', { class: 'tile-value', title: num(ins.data_bytes) + ' bytes' }, bytes(ins.data_bytes)),
-      h('div', { class: 'tile-foot' }, h('span', { class: 'tile-vs' }, 'estimated from stream bitrates'))) : null,
-    can('see_network') && netTotal > 0 ? h('div', { class: 'tile tile-quiet' },
-      h('div', { class: 'tile-label' }, 'Remote plays'),
-      h('div', { class: 'tile-value' }, Math.round((remote / netTotal) * 100) + '%'),
-      h('div', { class: 'tile-foot' }, h('span', { class: 'tile-vs' }, `${num(remote)} of ${num(netTotal)} plays`))) : null,
+    ins.data_bytes != null ? h('div', { class: 'fui-stat-tile tile-quiet' },
+      h('div', { class: 'fui-stat-tile__label' }, 'Data streamed'),
+      h('div', { class: 'fui-stat-tile__value', title: num(ins.data_bytes) + ' bytes' }, bytes(ins.data_bytes)),
+      h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, 'estimated from stream bitrates'))) : null,
+    can('see_network') && netTotal > 0 ? h('div', { class: 'fui-stat-tile tile-quiet' },
+      h('div', { class: 'fui-stat-tile__label' }, 'Remote plays'),
+      h('div', { class: 'fui-stat-tile__value' }, Math.round((remote / netTotal) * 100) + '%'),
+      h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, `${num(remote)} of ${num(netTotal)} plays`))) : null,
   ].filter(Boolean);
-  return tiles.length ? h('div', { class: 'tiles tiles-quiet' }, tiles) : null;
+  return tiles.length ? h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--quiet' }, tiles) : null;
 }
 
 /** Genres as the ranked list (the actual numbers, the default) or as a radar (the shape of someone's taste). The choice is remembered. */
@@ -216,7 +216,7 @@ export function genresCard(genres, { sub = 'By watch time' } = {}) {
 /** The titles watched together most, as a ranked list with posters. */
 export function titlesList(titles, n = 5) {
   return h('ol', { class: 'toplist' }, (titles || []).slice(0, n).map((x, i) => h('li', { class: 'toplist-row' },
-    h('span', { class: 'toplist-rank mono' }, String(i + 1)), poster(x.image_item_id, x.name, { w: 120, cls: 'poster-sm' }),
+    h('span', { class: 'toplist-rank mono' }, String(i + 1)), poster(x.image_item_id, x.name, { w: 120, cls: 'fui-poster--sm' }),
     h('div', { class: 'toplist-main' }, h('a', { class: 'toplist-name', href: `/items/${x.id}` }, x.name), h('div', { class: 'toplist-sub' }, `${num(x.sessions)} ${x.sessions === 1 ? 'evening' : 'evenings'}`)),
     h('div', { class: 'toplist-nums' }, h('span', { class: 'mono toplist-watch', title: durationExact(x.together_s) }, duration(x.together_s))))));
 }
@@ -266,7 +266,7 @@ function libItemRows(items, { empty, showAdded = false }) {
   if (!items || !items.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
   return h('ol', { class: 'toplist' }, items.map((it, i) => h('li', { class: 'toplist-row' },
     h('span', { class: 'toplist-rank mono' }, String(i + 1)),
-    poster(it.image_item_id || it.id, it.name, { w: 120, cls: 'poster-sm' }),
+    poster(it.image_item_id || it.id, it.name, { w: 120, cls: 'fui-poster--sm' }),
     h('div', { class: 'toplist-main' }, it.id ? h('a', { href: `/items/${it.id}`, class: 'toplist-name' }, it.name) : h('span', { class: 'toplist-name' }, it.name),
       h('div', { class: 'toplist-sub' }, [it.year, it.type === 'Series' ? 'Series' : null, showAdded && it.date_created ? 'added ' + relTime(it.date_created) : null].filter(Boolean).join(' · ') || ' ')),
     h('div', { class: 'toplist-nums' }, h('span', { class: 'mono toplist-watch' }, it.size_bytes ? bytes(it.size_bytes) : '–')))));
@@ -291,13 +291,13 @@ export function libraryInsights(d, { scoped = false } = {}) {
   return h('section', { class: 'subsection stack' },
     h('div', null, h('h2', { class: 'subsection-title' }, scoped ? 'What this library is made of' : 'What your library is made of'),
       h('p', { class: 'subsection-sub' }, 'About the files themselves — the time range above doesn’t apply here.')),
-    h('div', { class: 'tiles tiles-3' },
-      h('div', { class: 'tile' }, h('div', { class: 'tile-label' }, 'Files'), h('div', { class: 'tile-value' }, compact(t.files)),
-        h('div', { class: 'tile-foot' }, h('span', { class: 'tile-vs' }, counts.map(([k, v]) => `${num(v)} ${k.toLowerCase()}`).join(' · ') || ' '))),
-      h('div', { class: 'tile' }, h('div', { class: 'tile-label' }, 'Total size'), h('div', { class: 'tile-value' }, bytes(t.size_bytes)),
-        h('div', { class: 'tile-foot' }, h('span', { class: 'tile-vs' }, t.files > 0 && t.size_bytes > 0 ? `${bytes(t.size_bytes / t.files)} per file on average` : ' '))),
-      h('div', { class: 'tile' }, h('div', { class: 'tile-label' }, 'Total runtime'), h('div', { class: 'tile-value', title: durationExact(t.runtime_s) }, duration(t.runtime_s)),
-        h('div', { class: 'tile-foot' }, h('span', { class: 'tile-vs' }, 'to play everything once')))),
+    h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--three' },
+      h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, 'Files'), h('div', { class: 'fui-stat-tile__value' }, compact(t.files)),
+        h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, counts.map(([k, v]) => `${num(v)} ${k.toLowerCase()}`).join(' · ') || ' '))),
+      h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, 'Total size'), h('div', { class: 'fui-stat-tile__value' }, bytes(t.size_bytes)),
+        h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, t.files > 0 && t.size_bytes > 0 ? `${bytes(t.size_bytes / t.files)} per file on average` : ' '))),
+      h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, 'Total runtime'), h('div', { class: 'fui-stat-tile__value', title: durationExact(t.runtime_s) }, duration(t.runtime_s)),
+        h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, 'to play everything once')))),
     h('div', { class: 'grid-3' },
       b('Resolutions', 'Video files', d.resolutions),
       b('Video codecs', 'Video files', d.video_codecs, upper),

@@ -35,7 +35,7 @@ function row(d) {
   const st = STATE[d.state] || STATE.unknown;
   const who = d.requested_by;
   return h('li', { class: 'dl-row' },
-    upcomingPoster({ poster: d.poster, title: d.title, series_title: null }, { w: 96, cls: 'poster-sm' }),
+    upcomingPoster({ poster: d.poster, title: d.title, series_title: null }, { w: 96, cls: 'fui-poster--sm' }),
     h('div', { class: 'dl-main' },
       h('div', { class: 'dl-line' },
         d.item_id ? h('a', { class: 'dl-title', href: `/items/${d.item_id}` }, d.title) : h('span', { class: 'dl-title' }, d.title),

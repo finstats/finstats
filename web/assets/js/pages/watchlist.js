@@ -80,7 +80,7 @@ export function watchlistPage(ctx) {
 
   function cardFor(e) {
     const href = e.item_id ? `/items/${e.item_id}` : null;
-    const art = e.poster && e.poster.item_id ? poster(e.poster.item_id, e.title, { w: 300, cls: 'poster-grid' }) : upcomingPoster(e, { w: 300, cls: 'poster-grid' });
+    const art = e.poster && e.poster.item_id ? poster(e.poster.item_id, e.title, { w: 300, cls: 'fui-poster--grid' }) : upcomingPoster(e, { w: 300, cls: 'fui-poster--grid' });
     const remove = button({ variant: 'icon', class: 'wl-remove', type: 'button', 'aria-label': `Remove ${e.title} from your watchlist`, title: 'Remove from your watchlist',
       onClick: async () => {
         remove.disabled = true;

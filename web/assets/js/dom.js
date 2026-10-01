@@ -2,9 +2,12 @@
 // through text nodes — never innerHTML.
 
 import { h, s, clear, mount, icon } from '../finui/core.js';
+import { num, initials } from '../finui/format.js';
+
+const nf = new Intl.NumberFormat('en-US');   // the other formatters' numbers, the way num() prints them
 
 // finui's builder and icons, for the modules that still import them from here.
-export { h, s, clear, mount, icon };
+export { h, s, clear, mount, icon, num, initials };
 
 /** The finstats logo. One source for favicon, sidebar and sign-in: /assets/logo.svg. */
 export function logo(size = 24) {
@@ -12,8 +15,6 @@ export function logo(size = 24) {
 }
 
 // ---------------------------------------------------------------- formatting
-const nf = new Intl.NumberFormat('en-US');
-export const num = (n) => nf.format(Math.round(Number(n) || 0));
 
 export function compact(n) {
   n = Number(n) || 0;
@@ -128,12 +129,6 @@ export const pct = (x, digits = 0) => (x == null ? '–' : (x * 100).toFixed(dig
  *  for every page, so a tracker added to finstats is not missing from one of them. */
 export const TRACKERS = { live: 'finstats', jellystat: 'Jellystat', streamystats: 'Streamystats', tautulli: 'Tautulli' };
 
-export function initials(name) {
-  const parts = String(name || '?').trim().split(/\s+/).filter(Boolean);
-  const a = parts[0]?.[0] || '?';
-  const b = parts.length > 1 ? parts[parts.length - 1][0] : '';
-  return (a + b).toUpperCase();
-}
 
 export function episodeCode(season, episode) {
   if (season == null && episode == null) return '';

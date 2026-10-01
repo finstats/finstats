@@ -589,7 +589,8 @@ export const methodLegend = () => legend(METHODS.map((m) => ({ color: m.color, l
 export function sparkline(values, { w = 104, hgt = 30 } = {}) {
   const v = (values || []).map((x) => Number(x) || 0);
   if (v.length < 2 || Math.max(...v) <= 0) return null;
-  const max = Math.max(...v), pad = 4;
+  // The last point is a dot of radius 3.5 with a 2 px ring: 5 px of room keeps all of it inside the drawing.
+  const max = Math.max(...v), pad = 5;
   const x = (i) => pad + (i / (v.length - 1)) * (w - pad * 2);
   const y = (val) => hgt - pad - (val / max) * (hgt - pad * 2);
   const pts = v.map((val, i) => `${x(i).toFixed(1)},${y(val).toFixed(1)}`).join(' ');

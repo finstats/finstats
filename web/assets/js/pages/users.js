@@ -113,7 +113,7 @@ export function userPage(ctx) {
             u.last_activity_at ? [' · last seen ', relEl(u.last_activity_at, '')] : null))));
       const t = d.totals || {};
       return [
-        h('div', { class: 'tiles' },
+        h('div', { class: 'fui-stat-tile__grid' },
           statTile({ label: 'Watch time', value: duration(t.watch_s), title: durationExact(t.watch_s), hint: ' ' }),
           statTile({ label: 'Plays', value: compact(t.plays), title: num(t.plays), hint: `${num(t.distinct_items)} different titles` }),
           statTile({ label: 'Movies', value: compact(t.movies), hint: 'plays' }),

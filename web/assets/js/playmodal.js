@@ -67,7 +67,7 @@ export function openPlayModal(play, { onDeleted } = {}) {
     const close = () => modal.close();
     const titleMain = p.series_name || p.item_name || 'Unknown item';
     const head = h('div', { class: 'play-head' },
-      poster(p.image_item_id, titleMain, { w: 300, cls: 'poster-md' }),
+      poster(p.image_item_id, titleMain, { w: 300, cls: 'fui-poster--md' }),
       h('div', { class: 'play-head-text' },
         h('div', { class: 'play-head-title' }, canLink && (p.series_id || p.item_id) ? h('a', { href: `/items/${p.series_id || p.item_id}`, onClick: close }, titleMain) : titleMain),
         p.series_name ? h('div', { class: 'play-head-sub' }, code ? h('span', { class: 'mono' }, code) : null, code ? ' · ' : null,

@@ -90,7 +90,7 @@ function seasonsText(r) {
 
 function titleCell(r) {
   const name = r.title || 'Unknown title';
-  const inner = [upcomingPoster({ poster: r.poster, title: name, series_title: null }, { w: 96, cls: 'poster-sm' }),
+  const inner = [upcomingPoster({ poster: r.poster, title: name, series_title: null }, { w: 96, cls: 'fui-poster--sm' }),
     h('span', { class: 'req-title-text' },
       h('span', { class: 'req-title-name' }, name, r.year ? h('span', { class: 'muted' }, ` (${r.year})`) : null),
       h('span', { class: 'req-title-sub' }, [seasonsText(r), r.is_4k ? '4K' : null].filter(Boolean).join(' · ') || (r.media_type === 'movie' ? 'Film' : 'Series')))];
@@ -143,7 +143,7 @@ function requestsTab(ctx, root) {
       });
       const never = summary.never_played || [];
       return [
-        h('div', { class: 'tiles' },
+        h('div', { class: 'fui-stat-tile__grid' },
           statTile({ label: 'Titles asked for', value: num(t.titles), hint: t.requests !== t.titles ? `${num(t.requests)} requests in all` : ' ' }),
           statTile({ label: 'Still waiting', value: num(t.open), hint: t.open ? 'Not here yet' : 'Nothing outstanding' }),
           statTile({ label: 'Typical wait', value: summary.median_arrive_s == null ? '–' : duration(summary.median_arrive_s), hint: 'Median, asked to available' }),
@@ -231,7 +231,7 @@ function historySection(ctx) {
       const daily = (d.daily || []).map((x) => ({ label: dayLabel(x.day), title: dayLabelLong(x.day), value: Math.round((x.size_bytes / 1e9) * 10) / 10 }));
       const bucket = (title, sub, rows, unit) => card({ title, sub, body: libBucketList(rows, { unit }) });
       return [
-        h('div', { class: 'tiles' },
+        h('div', { class: 'fui-stat-tile__grid' },
           statTile({ label: 'Arrived', value: num(t.imported), hint: `in the last ${days === 365 ? 'year' : days + ' days'}` }),
           statTile({ label: 'Downloaded', value: bytes(t.size_bytes), hint: t.imported ? `${bytes(t.size_bytes / t.imported)} on average` : ' ' }),
           statTile({ label: 'Failed', value: num(t.failed), hint: t.grabbed ? `of ${num(t.grabbed)} grabbed` : ' ' })),

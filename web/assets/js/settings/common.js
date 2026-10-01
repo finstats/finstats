@@ -140,7 +140,7 @@ export function numberForm(store, FIELDS, errId) {
 export function progressOf(t, label) {
   if (!t || t.state !== 'running') return null;
   return h('div', { class: 'task-progress' },
-    h('div', { class: ['meter meter-wide', t.progress == null && 'is-indeterminate'], role: 'progressbar', 'aria-label': label, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': t.progress == null ? null : Math.round(t.progress * 100) },
-      h('span', { class: 'meter-fill', style: { width: (t.progress == null ? 30 : t.progress * 100) + '%' } })),
+    h('div', { class: ['fui-meter fui-meter--wide', t.progress == null && 'is-indeterminate'], role: 'progressbar', 'aria-label': label, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': t.progress == null ? null : Math.round(t.progress * 100) },
+      h('span', { class: 'fui-meter__fill', style: { width: (t.progress == null ? 30 : t.progress * 100) + '%' } })),
     h('span', { class: 'mono task-msg' }, t.message || 'Working…'));
 }

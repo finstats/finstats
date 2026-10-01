@@ -149,8 +149,8 @@ export default function serverPage(ctx) {
           h('div', { class: 'storage-head' },
             h('span', { class: 'storage-label' }, x.label || 'Volume', x.kind === 'library' ? h('span', { class: 'fui-chip' }, 'Library') : null),
             h('span', { class: 'mono storage-nums' }, `${bytes(x.free_bytes)} free of ${bytes(total)}`)),
-          h('div', { class: ['meter meter-block storage-meter', level], role: 'progressbar', 'aria-label': `${x.label || 'Volume'} disk usage`, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(share * 100) },
-            h('span', { class: 'meter-fill', style: { width: Math.max(1, share * 100) + '%' } })),
+          h('div', { class: ['fui-meter fui-meter--block storage-meter', level], role: 'progressbar', 'aria-label': `${x.label || 'Volume'} disk usage`, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(share * 100) },
+            h('span', { class: 'fui-meter__fill', style: { width: Math.max(1, share * 100) + '%' } })),
           h('div', { class: 'storage-foot' }, x.path ? h('span', { class: 'mono path' }, x.path) : h('span'),
             level ? h('span', { class: ['fui-badge--status', level === 'is-critical' ? 'fui-badge--critical' : 'fui-badge--warning'] }, icon('alert', 13), level === 'is-critical' ? 'Almost full' : 'Getting full')
                   : h('span', { class: 'mono muted' }, Math.round(share * 100) + '% used')));
@@ -267,8 +267,8 @@ export default function serverPage(ctx) {
         h('strong', null, job.name),
         h('span', { class: 'fui-badge fui-badge--live' }, h('span', { class: 'fui-badge__dot' }), job.state === 'Cancelling' ? 'Stopping' : 'Running'),
         h('span', { class: 'job-pct mono' }, `${pct}%`)),
-      h('div', { class: 'meter meter-wide', role: 'progressbar', 'aria-label': `${job.name} progress`, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct },
-        h('span', { class: 'meter-fill', style: { width: `${Math.max(pct, 1)}%` } })),
+      h('div', { class: 'fui-meter fui-meter--wide', role: 'progressbar', 'aria-label': `${job.name} progress`, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct },
+        h('span', { class: 'fui-meter__fill', style: { width: `${Math.max(pct, 1)}%` } })),
       h('div', { class: 'job-meta' }, leftText(job), stillText(job), watchedText(job),
         job.last_duration_s ? h('span', { class: 'muted' }, ['· last time it took ', duration(job.last_duration_s)]) : null),
       h('p', { class: 'fui-field__help job-what' }, job.what));

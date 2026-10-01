@@ -121,8 +121,8 @@ export default {
           h('div', { class: 'setting-label' }, 'Restore from a file'),
           h('p', { class: 'fui-field__help' }, 'Restoring merges: plays already here are skipped, so it is safe to do twice. A backup holds everyone’s history and addresses, never your Jellyfin API key.'),
           restoreUpload.active
-            ? h('div', { class: 'task-progress' }, h('div', { class: 'meter meter-wide', role: 'progressbar', 'aria-label': 'Upload progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(restoreUpload.progress * 100) },
-              h('span', { class: 'meter-fill', style: { width: restoreUpload.progress * 100 + '%' } })), h('span', { class: 'mono task-msg' }, `Uploading ${restoreUpload.name} · ${Math.round(restoreUpload.progress * 100)}%`))
+            ? h('div', { class: 'task-progress' }, h('div', { class: 'fui-meter fui-meter--wide', role: 'progressbar', 'aria-label': 'Upload progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(restoreUpload.progress * 100) },
+              h('span', { class: 'fui-meter__fill', style: { width: restoreUpload.progress * 100 + '%' } })), h('span', { class: 'mono task-msg' }, `Uploading ${restoreUpload.name} · ${Math.round(restoreUpload.progress * 100)}%`))
             : h('div', { class: 'backup-restore' }, file, button({ tag: 'label', disabled: busy, htmlFor: busy ? null : 'restore-file' }, icon('upload', 13), 'Choose a backup file…'), keepSettings),
           progressOf(rs, 'Restore progress'), restored, failed),
         scheduleForm());

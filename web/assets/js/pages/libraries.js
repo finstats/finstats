@@ -91,10 +91,10 @@ export function libraryPage(ctx) {
       ctx.title(l.name);
       headerSlot.replaceChildren(pageHeader(l.name, [KIND[l.collection_type] || 'Library', counts(l), l.size_bytes ? bytes(l.size_bytes) : null, l.removed ? 'removed from Jellyfin' : null].filter(Boolean).join(' · '), libraryArt(l, 480, 'lib-art lib-art-lg')));
       return [
-        h('div', { class: 'tiles tiles-3' },
-          h('div', { class: 'tile' }, h('div', { class: 'tile-label' }, 'Watch time'), h('div', { class: 'tile-value' }, durEl(l.watch_s, ''))),
-          h('div', { class: 'tile' }, h('div', { class: 'tile-label' }, 'Plays'), h('div', { class: 'tile-value' }, num(l.plays))),
-          h('div', { class: 'tile' }, h('div', { class: 'tile-label' }, 'Last played'), h('div', { class: 'tile-value' }, l.last_played_at ? relEl(l.last_played_at, '') : 'Never'))),
+        h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--three' },
+          h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, 'Watch time'), h('div', { class: 'fui-stat-tile__value' }, durEl(l.watch_s, ''))),
+          h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, 'Plays'), h('div', { class: 'fui-stat-tile__value' }, num(l.plays))),
+          h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, 'Last played'), h('div', { class: 'fui-stat-tile__value' }, l.last_played_at ? relEl(l.last_played_at, '') : 'Never'))),
         activityCard({ daily: d.daily, bucket: d.bucket }),
         card({ title: 'Most watched', sub: 'By watch time', body: topList(d.top) }),
         card({ title: 'Recently added', body: itemGrid(d.recently_added),
@@ -129,7 +129,7 @@ function healthSlot(ctx, libraryId) {
 export function itemGrid(items) {
   if (!items || !items.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, 'Nothing added yet.');
   return h('ul', { class: 'item-grid' }, items.map((it) => h('li', null, h('a', { class: 'item-card', href: `/items/${it.id}` },
-    poster(it.image_item_id || it.id, it.name, { w: 300, cls: 'poster-grid' }),
+    poster(it.image_item_id || it.id, it.name, { w: 300, cls: 'fui-poster--grid' }),
     h('span', { class: 'item-card-name' }, it.name),
     h('span', { class: 'item-card-sub' }, [it.sub || it.year, it.date_created ? 'added ' + relTime(it.date_created) : null].filter(Boolean).join(' · '))))));
 }
@@ -154,7 +154,7 @@ function titleSub(t) {
   return [t.year, t.runtime_s ? duration(t.runtime_s) : null].filter(Boolean).join(' · ');
 }
 const titleCard = (t) => h('li', null, h('a', { class: 'item-card', href: `/items/${t.id}` },
-  poster(t.has_image ? t.image_item_id : null, t.name, { w: 300, cls: 'poster-grid' }),
+  poster(t.has_image ? t.image_item_id : null, t.name, { w: 300, cls: 'fui-poster--grid' }),
   h('span', { class: 'item-card-name' }, t.name),
   h('span', { class: 'item-card-sub' }, titleSub(t))));
 

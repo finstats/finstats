@@ -6,8 +6,8 @@ import { h } from '../../core.js';
 export const sk = {
   line: (w = '60%', hgt = 12) => h('span', { class: 'fui-skeleton', style: { width: w, height: hgt + 'px' } }),
   block: (hgt = 120) => h('div', { class: 'fui-skeleton fui-skeleton--block', style: { height: hgt + 'px' } }),
-  tiles: (n = 4) => h('div', { class: 'tiles' }, Array.from({ length: n }, () =>
-    h('div', { class: 'tile' }, sk.line('45%', 11), sk.line('60%', 26), sk.line('35%', 10)))),
+  tiles: (n = 4) => h('div', { class: 'fui-stat-tile__grid' }, Array.from({ length: n }, () =>
+    h('div', { class: 'fui-stat-tile' }, sk.line('45%', 11), sk.line('60%', 26), sk.line('35%', 10)))),
   rows: (n = 5) => h('div', { class: 'fui-skeleton__rows' }, Array.from({ length: Math.min(n, 5) }, () =>
     h('div', { class: 'fui-skeleton__row' }, h('span', { class: 'fui-skeleton fui-skeleton--thumb' }), h('div', { class: 'fui-skeleton__lines' }, sk.line('55%'), sk.line('30%', 10))))),
   tableRows: (n = 5) => h('div', { class: 'fui-skeleton__rows' }, Array.from({ length: Math.min(n, 5) }, () =>
