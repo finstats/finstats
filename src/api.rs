@@ -119,6 +119,8 @@ pub fn router(app: App) -> Router {
         // Backups run to hundreds of MB and are streamed to disk, never buffered.
         .route("/import/jellystat", post(import_jellystat).layer(DefaultBodyLimit::disable()))
         .route("/import/streamystats", post(import_streamystats).layer(DefaultBodyLimit::disable()))
+        .route("/import/tautulli", get(tautulli_board).post(tautulli_upload).delete(tautulli_cancel).layer(DefaultBodyLimit::disable()))
+        .route("/import/tautulli/run", post(tautulli_run))
         .route("/backups", get(list_backups).post(create_backup))
         .route("/backups/restore", post(restore_upload).layer(DefaultBodyLimit::disable()))
         .route("/backups/{name}", get(download_backup).delete(delete_backup))
@@ -1023,7 +1025,7 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
 /// The trackers finstats can take history from, each with its own task so each Settings card can
 /// watch its own import. Only one runs at a time whichever it is: they write to the same tables.
 /// The two imports and the restore. Each holds the database in one long transaction: only one of them at a time.
-const HISTORY_WRITERS: [&str; 3] = ["import", "import_streamystats", "restore"];
+const HISTORY_WRITERS: [&str; 4] = ["import", "import_streamystats", "import_tautulli", "restore"];
 
 async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
     let path = receive(&app, req, "import", "jellystat-upload.tmp").await?;
@@ -1062,25 +1064,120 @@ async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
+/// A history import or a restore is going: nothing may start another, and nothing may swap the file one is reading.
+fn history_being_written(app: &App) -> bool {
+    app.tasks.snapshot().iter().any(|t| HISTORY_WRITERS.contains(&t.id) && t.state == "running")
+}
+
+/// `GET /api/import/tautulli` — the wiring board of a Tautulli backup waiting for its wires, or `null`.
+async fn tautulli_board(State(app): State<App>, Manager(_): Manager) -> ApiResult {
+    let path = app.data_dir.join(crate::tautulli::UPLOAD);
+    if !path.exists() {
+        return Ok(Json(json!({ "board": null })));
+    }
+    let db = app.db.clone();
+    let board = tokio::task::spawn_blocking(move || crate::tautulli::board(&db, &path)).await.map_err(anyhow::Error::from)?;
+    Ok(Json(json!({ "board": board.ok() })))
+}
+
+/// `POST /api/import/tautulli` — the backup (`.db`, or the zip Tautulli's download gives) as the raw body. Nothing is
+/// imported yet: the backup waits for its wires, and the answer is the board to draw them on.
+async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult {
+    if history_being_written(&app) {
+        return Err(ApiError::new(StatusCode::CONFLICT, "An import or a restore is already running"));
+    }
+    let path = app.data_dir.join(crate::tautulli::UPLOAD);
+    let part = path.with_extension("part");
+    let received = store_upload(req, &part).await;
+    let fail = |msg: String| {
+        let _ = std::fs::remove_file(&part);
+        Err(ApiError::bad_request(msg))
+    };
+    match received {
+        Ok(0) => return fail("The uploaded file was empty".into()),
+        Err(e) => return fail(format!("{e:#}")),
+        Ok(total) => tracing::info!("received a Tautulli backup ({:.1} MB)", total as f64 / 1e6),
+    }
+    let (db, checked) = (app.db.clone(), part.clone());
+    let board = tokio::task::spawn_blocking(move || {
+        crate::tautulli::unpack(&checked)?;
+        crate::tautulli::open(&checked)?;
+        std::fs::rename(&checked, &path)?;
+        crate::tautulli::board(&db, &path)
+    })
+    .await
+    .map_err(anyhow::Error::from)?;
+    match board {
+        Ok(board) => Ok(Json(json!({ "board": board }))),
+        Err(e) => fail(format!("{e:#}")),
+    }
+}
+
+/// `DELETE /api/import/tautulli` — put a waiting board away without importing anything.
+async fn tautulli_cancel(State(app): State<App>, Manager(_): Manager) -> ApiResult {
+    if history_being_written(&app) {
+        return Err(ApiError::new(StatusCode::CONFLICT, "An import or a restore is already running"));
+    }
+    crate::tautulli::sweep(&app.data_dir, std::time::Duration::ZERO);
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[derive(Deserialize)]
+struct TautulliWires {
+    wires: Vec<crate::tautulli::Wire>,
+}
+
+/// `POST /api/import/tautulli/run` with `{"wires": [{"plex_user_id", "jellyfin_user_id"}]}` — import the wired Plex
+/// users' history. The backup is removed afterwards, whatever the outcome: it holds every Plex user's tokens.
+async fn tautulli_run(State(app): State<App>, Manager(user): Manager, Json(body): Json<TautulliWires>) -> ApiResult<Response> {
+    let path = app.data_dir.join(crate::tautulli::UPLOAD);
+    if !path.exists() {
+        return Err(ApiError::new(StatusCode::CONFLICT, "No Tautulli backup is waiting. Upload one first."));
+    }
+    let (db, at, wires) = (app.db.clone(), path.clone(), body.wires.clone());
+    let wrong = tokio::task::spawn_blocking(move || crate::tautulli::check(&db, &at, &wires)).await.map_err(anyhow::Error::from)??;
+    if let Err(why) = wrong {
+        return Err(ApiError::bad_request(why));
+    }
+    if !app.tasks.try_start_alone(crate::tautulli::TASK, "Importing", &HISTORY_WRITERS) {
+        return Err(ApiError::new(StatusCode::CONFLICT, "An import or a restore is already running"));
+    }
+    let actor = Actor::from(&user);
+    audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("tautulli").detail(json!({ "wires": body.wires.len() }))).await;
+    let worker = app.clone();
+    tokio::task::spawn_blocking(move || {
+        let outcome = crate::tautulli::run(&worker.db, &path, &body.wires, Some(&worker.tasks));
+        crate::tautulli::sweep(&worker.data_dir, std::time::Duration::ZERO);
+        import_finished(&worker, actor, "tautulli", outcome.as_ref().map(|r| (r.plays_imported, r.plays_skipped)).map_err(|e| format!("{e:#}")));
+        worker.tasks.finish(
+            crate::tautulli::TASK,
+            outcome.map(|r| (format!("Imported {} plays ({} already present)", r.plays_imported, r.plays_skipped), serde_json::to_value(&r).ok())),
+        );
+    });
+    Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
+}
+
+/// Write an upload's body to `path` as it arrives: how many bytes it was.
+async fn store_upload(req: Request, path: &std::path::Path) -> anyhow::Result<u64> {
+    let mut file = tokio::fs::File::create(path).await?;
+    let mut stream = req.into_body().into_data_stream();
+    let mut total = 0u64;
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| anyhow::anyhow!("The upload was interrupted: {e}"))?;
+        total += chunk.len() as u64;
+        file.write_all(&chunk).await?;
+    }
+    file.flush().await?;
+    Ok(total)
+}
+
 /// Stream an uploaded export to disk. One import at a time, whichever tracker it came from.
 async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> ApiResult<std::path::PathBuf> {
     if !app.tasks.try_start_alone(task, "Receiving backup", &HISTORY_WRITERS) {
         return Err(ApiError::new(StatusCode::CONFLICT, "An import or a restore is already running"));
     }
     let path = app.data_dir.join(name);
-    let received = async {
-        let mut file = tokio::fs::File::create(&path).await?;
-        let mut stream = req.into_body().into_data_stream();
-        let mut total = 0u64;
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk.map_err(|e| anyhow::anyhow!("The upload was interrupted: {e}"))?;
-            total += chunk.len() as u64;
-            file.write_all(&chunk).await?;
-        }
-        file.flush().await?;
-        anyhow::Ok(total)
-    }
-    .await;
+    let received = store_upload(req, &path).await;
 
     match received {
         Ok(0) => {

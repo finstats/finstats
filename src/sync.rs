@@ -221,6 +221,10 @@ pub async fn scheduler(app: App) {
                 crate::services::check_all(&app).await;
                 // A year of finstats' own audit log is enough to answer "who changed this in spring".
                 let _ = app.db.call(|c| crate::audit::thin(c, db::now())).await;
+                // A Tautulli backup holds every Plex user's tokens: one left waiting for its wires does not wait for ever.
+                if crate::tautulli::sweep(&app.data_dir, Duration::from_secs(6 * 3600)) {
+                    tracing::info!("removed a Tautulli backup that waited six hours for its wires");
+                }
             }
             if now - last_scan_check >= SCAN_CHECK_EVERY_S {
                 last_scan_check = now;

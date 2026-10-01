@@ -41,6 +41,7 @@ mod stats;
 mod story;
 mod streamystats;
 mod sync;
+mod tautulli;
 mod timeline;
 mod watchlist;
 
@@ -173,6 +174,10 @@ fn main() -> Result<()> {
 }
 
 async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
+    // A Tautulli backup waits for its wires only while somebody is drawing them: it holds every Plex user's tokens.
+    if tautulli::sweep(&data_dir, std::time::Duration::ZERO) {
+        tracing::info!("removed a Tautulli backup left waiting for its wires before this start");
+    }
     let (config, settings, device_id) = db
         .call(|c| {
             let device_id = match db::get_setting(c, "device_id")? {
