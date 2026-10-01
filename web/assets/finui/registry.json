@@ -7,5 +7,32 @@
     "base.css",
     "core.js"
   ],
-  "components": []
+  "components": [
+    {
+      "name": "button",
+      "category": "primitive",
+      "files": [
+        "components/button/button.js",
+        "components/button/button.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-hover",
+        "--border",
+        "--btn-hover",
+        "--critical",
+        "--critical-hover",
+        "--critical-text",
+        "--ease",
+        "--hover",
+        "--on-fill",
+        "--radius-sm",
+        "--text",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
+    }
+  ]
 }

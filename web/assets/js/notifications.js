@@ -10,6 +10,7 @@ import { api, isAbort } from './api.js';
 import { isAdmin, can, state } from './state.js';
 import { setBusy, inlineError, formField, errorState, sk } from './components.js';
 import { dataTable } from './tables.js';
+import { button } from '../finui/components/button/button.js';
 
 const SECRET_HELP = {
   webhook: 'Sent as “Authorization: Bearer …”. Leave empty if your receiver needs no header.',
@@ -75,7 +76,7 @@ export function notificationsPanel(ctx) {
       removing = null; lastSig = '';
       await load();
     };
-    const test = h('button', { type: 'button', class: 'btn btn-sm' }, 'Test');
+    const test = button({ size: 'sm', type: 'button' }, 'Test');
     test.addEventListener('click', async () => {
       setBusy(test, true, 'Sending…');
       try {
@@ -88,11 +89,11 @@ export function notificationsPanel(ctx) {
     });
     const actions = removing === t.id
       ? [h('span', { class: 'muted' }, 'Remove this destination?'),
-        h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: (e) => { setBusy(e.currentTarget, true, 'Removing…'); act(() => api.del(`/notifications/targets/${t.id}`)); } }, 'Remove'),
-        h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { removing = null; render(); } }, 'Cancel')]
+        button({ size: 'sm', variant: 'danger', type: 'button', onClick: (e) => { setBusy(e.currentTarget, true, 'Removing…'); act(() => api.del(`/notifications/targets/${t.id}`)); } }, 'Remove'),
+        button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => { removing = null; render(); } }, 'Cancel')]
       : [test,
-        h('button', { type: 'button', class: 'btn btn-sm', onClick: () => { editing = t.id; removing = null; rowMsg = null; render(); } }, 'Edit'),
-        h('button', { type: 'button', class: 'btn btn-sm btn-ghost btn-danger-text', onClick: () => { removing = t.id; render(); } }, 'Remove…')];
+        button({ size: 'sm', type: 'button', onClick: () => { editing = t.id; removing = null; rowMsg = null; render(); } }, 'Edit'),
+        button({ size: 'sm', variant: 'ghost', tone: 'danger', type: 'button', onClick: () => { removing = t.id; render(); } }, 'Remove…')];
     const ticked = t.events.length;
     const total = data.catalogue.events.length;
     return h('li', { class: 'conn-row' },
@@ -129,7 +130,7 @@ export function notificationsPanel(ctx) {
     const scopeServer = h('input', { type: 'radio', name: 'notify-scope', id: 'notify-scope-server', checked: true });
     const scopeMine = h('input', { type: 'radio', name: 'notify-scope', id: 'notify-scope-me' });
     const formErr = h('div');
-    const saveBtn = h('button', { type: 'submit', class: 'btn btn-primary' }, existing ? 'Save' : 'Add destination');
+    const saveBtn = button({ variant: 'primary', type: 'submit' }, existing ? 'Save' : 'Add destination');
 
     // One tick per kind of event, grouped the way the catalogue groups them.
     const ticks = new Map();
@@ -263,7 +264,7 @@ export function notificationsPanel(ctx) {
         isAdmin() ? h('p', { class: 'help', id: 'notify-certs-help' }, 'Only for an address whose certificate is your own: a service on your own network, or a mail server of your own.') : null,
         existing ? h('label', { class: 'check' }, enabled, 'Switched on') : null),
       formErr,
-      h('div', { class: 'form-actions' }, saveBtn, h('button', { type: 'button', class: 'btn btn-ghost', onClick: () => { editing = null; render(); } }, 'Cancel')));
+      h('div', { class: 'form-actions' }, saveBtn, button({ variant: 'ghost', type: 'button', onClick: () => { editing = null; render(); } }, 'Cancel')));
     el.addEventListener('submit', async (e) => {
       e.preventDefault();
       mount(formErr, '');
@@ -311,7 +312,7 @@ export function notificationsPanel(ctx) {
       help: 'Used only to put a link in the messages finstats sends, since it cannot know from the inside how you reach it. Leave it empty and messages carry no link.' });
     field.input.value = data.public_url || '';
     field.input.placeholder = 'https://finstats.example';
-    const save = h('button', { type: 'button', class: 'btn btn-sm' }, 'Save');
+    const save = button({ size: 'sm', type: 'button' }, 'Save');
     save.addEventListener('click', async () => {
       setBusy(save, true, 'Saving…');
       try {
@@ -336,7 +337,7 @@ export function notificationsPanel(ctx) {
       publicUrlField(),
       targets.length ? h('ul', { class: 'conn-list' }, targets.map(row)) : h('p', { class: 'help' }, 'No destinations yet.'),
       editing === null
-        ? h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onClick: () => { editing = 'new'; removing = null; rowMsg = null; render(); } }, icon('plus', 14), 'Add a destination'))
+        ? h('div', { class: 'form-actions' }, button({ type: 'button', onClick: () => { editing = 'new'; removing = null; rowMsg = null; render(); } }, icon('plus', 14), 'Add a destination'))
         : form(existing),
       h('div', null, h('h3', { class: 'section-label' }, 'Recently sent'), sentTable()));
     if (editing !== null) { const first = root.querySelector(existing ? '#notify-name' : '#notify-kind'); if (first) first.focus(); }

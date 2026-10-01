@@ -9,6 +9,7 @@ import { state, isAdmin, userList } from '../state.js';
 import { replaceQuery } from '../router.js';
 import { dataView, segmented, poster, emptyState, sk, combobox, openModal, avatar } from '../components.js';
 import { showTip, hideTip } from '../charts.js';
+import { button } from '../../finui/components/button/button.js';
 
 const BAR = 'var(--single)'; // the single series hue used everywhere else in finstats
 const BAR_PEAK = 'var(--peak)'; // emphasis: the extreme, nothing else
@@ -661,7 +662,7 @@ function openStory(d, params) {
         h('img', { src, alt: `${CARD_NAMES[key] || key}, as a card`, loading: 'lazy', decoding: 'async', width: 1080, height: 1920 }),
         h('span', { class: 'help' }, CARD_NAMES[key] || key, ' · ', h('a', { href: src, download: `finstats-${slug}-${key}.png` }, 'Download')));
     })),
-    h('div', { class: 'form-actions' }, h('a', { class: 'btn btn-primary', href: `/api/recap/cards.zip?${q}`, download: `finstats-${slug}.zip` }, icon('download', 13), 'Download every card')));
+    h('div', { class: 'form-actions' }, button({ variant: 'primary', href: `/api/recap/cards.zip?${q}`, download: `finstats-${slug}.zip` }, icon('download', 13), 'Download every card')));
   openModal({ title: 'The year as cards', body, wide: true, cls: 'story-modal' });
 }
 
@@ -698,8 +699,8 @@ function outroChapter(d, v, periodLabel) {
     h('h2', { class: 'rc-title' }, isYear ? ['That was ', em(periodLabel)] : ['That was the last ', em('12 months')]),
     h('dl', { class: 'rc-credits-list' }, rows),
     h('p', { class: 'rc-credits-line' }, v.you ? 'Everything you watch from here on is already counting towards the next one.' : `Everything ${v.who} watches from here on is already counting towards the next one.`),
-    h('div', { class: 'rc-outro-links' }, h('a', { class: 'btn', href: '/activity' }, icon('activity', 14), 'See all activity'),
-      d.scope && d.scope.user_id ? h('a', { class: 'btn btn-ghost', href: `/users/${d.scope.user_id}` }, icon('user', 14), v.you ? 'Your profile' : `${v.your} profile`) : null));
+    h('div', { class: 'rc-outro-links' }, button({ href: '/activity' }, icon('activity', 14), 'See all activity'),
+      d.scope && d.scope.user_id ? button({ variant: 'ghost', href: `/users/${d.scope.user_id}` }, icon('user', 14), v.you ? 'Your profile' : `${v.your} profile`) : null));
 }
 
 // ---------------------------------------------------------------- page
@@ -788,7 +789,7 @@ export default function recapPage(ctx) {
         return [h('div', { class: 'rc-empty-picker' }, picker),
           emptyState(`Nothing was played in ${year === 'last12' ? 'the last 12 months' : label}.`, `${v.who} didn’t play anything in this period. Pick another one above.`)];
       }
-      const share = d.story && d.story.length ? h('button', { type: 'button', class: 'btn rc-share', onClick: () => openStory(d, { year: String(d.year), user_id: scope ? '' : userId, scope }) },
+      const share = d.story && d.story.length ? button({ class: 'rc-share', type: 'button', onClick: () => openStory(d, { year: String(d.year), user_id: scope ? '' : userId, scope }) },
         icon('share', 14), 'Share the year as cards') : null;
       const story = buildStory(d, me, label, picker, share);
       // Observe after mount so the first screen reveals immediately.

@@ -9,6 +9,7 @@ import { state, isAdmin } from '../state.js';
 import { card, sk, toggle, spinner, setBusy, inlineError, errorState, copyButton, avatar } from '../components.js';
 import { plainTable } from '../tables.js';
 import { settingRow, toggleRow } from './common.js';
+import { button } from '../../finui/components/button/button.js';
 
 const SECTIONS = [
   ['totals', 'Totals and top titles', 'Hours, plays, and your top shows, films and music with their posters.'],
@@ -64,9 +65,9 @@ export default {
             h('td', { 'data-sort': p.updated_at }, relEl(p.updated_at)),
             h('td', null, p.published ? h('div', { class: 'backup-actions' }, confirming === p.user_id
               ? [h('span', { class: 'muted' }, 'Take it down? The link stops working; they can publish again.'),
-                h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: async (ev) => { setBusy(ev.currentTarget, true, 'Taking down…'); try { await api.del(`/public-profiles/${p.user_id}`); } catch (e) { err = e.message; } confirming = null; await load(); } }, 'Take down'),
-                h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { confirming = null; paint(); } }, 'Cancel')]
-              : h('button', { type: 'button', class: 'btn btn-sm btn-ghost btn-danger-text', onClick: () => { confirming = p.user_id; paint(); } }, 'Take down…')) : null)))))) : null);
+                button({ size: 'sm', variant: 'danger', type: 'button', onClick: async (ev) => { setBusy(ev.currentTarget, true, 'Taking down…'); try { await api.del(`/public-profiles/${p.user_id}`); } catch (e) { err = e.message; } confirming = null; await load(); } }, 'Take down'),
+                button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => { confirming = null; paint(); } }, 'Cancel')]
+              : button({ size: 'sm', variant: 'ghost', tone: 'danger', type: 'button', onClick: () => { confirming = p.user_id; paint(); } }, 'Take down…')) : null)))))) : null);
     }
 
     // Like every switch in Settings, each of these saves itself and says so beside itself; the name saves
@@ -129,12 +130,12 @@ export default {
       return h('div', { class: 'pub-link-box' },
         h('div', { class: 'setting-label' }, m.published ? 'Your link' : 'Your link (not published: it opens nothing)'),
         h('div', { class: 'key-line pub-link' }, h('code', { class: 'mono key-token' }, url), copyButton(url, 'Copy link'),
-          m.published ? h('a', { class: 'btn btn-sm btn-ghost', href: path, target: '_blank', rel: 'noopener' }, icon('external', 13), 'Open') : null),
+          m.published ? button({ size: 'sm', variant: 'ghost', href: path, target: '_blank', rel: 'noopener' }, icon('external', 13), 'Open') : null),
         h('div', { class: 'backup-actions' }, resetting
           ? [h('span', { class: 'muted' }, 'Reset it? Every copy of the old link stops working.'),
-            h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: async (ev) => { setBusy(ev.currentTarget, true, 'Resetting…'); try { mine = await api.post('/me/public-profile/reset', {}); drawnAt = Date.now(); } catch (e) { err = e.message; } confirming = null; paintTop(); } }, 'Reset'),
-            h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { confirming = null; paintTop(); } }, 'Cancel')]
-          : h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { confirming = 'reset'; paintTop(); } }, 'Reset link…')));
+            button({ size: 'sm', variant: 'danger', type: 'button', onClick: async (ev) => { setBusy(ev.currentTarget, true, 'Resetting…'); try { mine = await api.post('/me/public-profile/reset', {}); drawnAt = Date.now(); } catch (e) { err = e.message; } confirming = null; paintTop(); } }, 'Reset'),
+            button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => { confirming = null; paintTop(); } }, 'Cancel')]
+          : button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => { confirming = 'reset'; paintTop(); } }, 'Reset link…')));
     }
 
     function form(m) {

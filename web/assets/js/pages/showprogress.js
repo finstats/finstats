@@ -5,6 +5,7 @@
 import { h, icon, mount, num, pct, parseDay } from '../dom.js';
 import { api, isAbort } from '../api.js';
 import { card, segmented, poster, statTile, emptyState, errorState, inlineError, sk, setBusy } from '../components.js';
+import { button } from '../../finui/components/button/button.js';
 
 const PAGE = 6;
 const dayLabel = (iso, withYear) => parseDay(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}) });
@@ -81,8 +82,8 @@ export function profileAllTime({ userId, signal }) {
       if (!data.editable) return null;
       const todo = unseen(eps);
       const undo = manual(eps);
-      if (todo.length) { const b = h('button', { type: 'button', class: 'btn btn-ghost btn-sm' }, icon('check', 13), label); b.addEventListener('click', () => toggle(todo, true, b)); return b; }
-      if (undo.length) { const b = h('button', { type: 'button', class: 'btn btn-ghost btn-sm' }, 'Undo my marks'); b.addEventListener('click', () => toggle(undo, false, b)); return b; }
+      if (todo.length) { const b = button({ variant: 'ghost', size: 'sm', type: 'button' }, icon('check', 13), label); b.addEventListener('click', () => toggle(todo, true, b)); return b; }
+      if (undo.length) { const b = button({ variant: 'ghost', size: 'sm', type: 'button' }, 'Undo my marks'); b.addEventListener('click', () => toggle(undo, false, b)); return b; }
       return null;
     };
     return h('li', { class: ['show-row', isOpen && 'is-open', done && 'is-done'] },
@@ -109,7 +110,7 @@ export function profileAllTime({ userId, signal }) {
     const body = !shows.length ? emptyState('No shows yet.', 'Episodes show up here once something from a series has been played.')
       : !list.length ? emptyState(filter === 'finished' ? 'No finished shows yet.' : 'Nothing in progress. Everything started has been finished.')
       : [h('ul', { class: 'show-list' }, list.slice(0, shown).map(row)),
-        list.length > shown ? h('button', { type: 'button', class: 'btn btn-ghost show-more', onClick: () => { shown = list.length; paint(); } }, `Show all ${num(list.length)}`) : null];
+        list.length > shown ? button({ variant: 'ghost', class: 'show-more', type: 'button', onClick: () => { shown = list.length; paint(); } }, `Show all ${num(list.length)}`) : null];
     mount(tiles, streakTiles(data.streaks));
     mount(showsEl,
       card({ title: 'Shows', sub: 'Episodes seen, out of those on the server. All time.',

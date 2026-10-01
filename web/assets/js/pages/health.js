@@ -10,6 +10,7 @@ import { can } from '../state.js';
 import { replaceQuery } from '../router.js';
 import { card, dataView, sk, pagination, emptyState, poster, facts, openModal, setBusy, inlineError, openInJellyfin } from '../components.js';
 import { dataTable } from '../tables.js';
+import { button } from '../../finui/components/button/button.js';
 
 /** Each kind as the page names it, with one line saying what it is. In the order the server lists them. */
 export const KINDS = {
@@ -131,13 +132,13 @@ export function healthView(ctx) {
     const note = h('input', { class: 'input', type: 'text', maxLength: 500, id: 'health-note', autocomplete: 'off', placeholder: 'Why it is fine, for whoever looks next' });
     const error = inlineError('health-error', '');
     error.hidden = true;
-    const save = h('button', { type: 'submit', class: 'btn btn-primary' }, icon('check', 14), 'Dismiss');
+    const save = button({ variant: 'primary', type: 'submit' }, icon('check', 14), 'Dismiss');
     const form = h('form', { class: 'stack-sm' },
       h('p', { class: 'help' }, `${item.title}: ${describe(item)}.`),
       h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'health-note' }, 'Note (optional)'), note),
       h('p', { class: 'help' }, 'It comes back by itself if the files behind it change.'),
       error,
-      h('div', { class: 'form-actions' }, save, h('button', { type: 'button', class: 'btn btn-ghost', onClick: () => modal.close() }, 'Cancel')));
+      h('div', { class: 'form-actions' }, save, button({ variant: 'ghost', type: 'button', onClick: () => modal.close() }, 'Cancel')));
     const modal = openModal({ title: 'Dismiss finding', body: form, initialFocus: note });
     form.addEventListener('submit', async (ev) => {
       ev.preventDefault();
@@ -180,7 +181,7 @@ export function healthView(ctx) {
     select.addEventListener('change', () => { f.library_id = select.value; apply(); });
     const aside = s.kinds.reduce((n, k) => n + k.dismissed, 0);
     const toggle = aside || f.dismissed
-      ? h('button', { type: 'button', class: 'btn btn-sm btn-ghost', 'aria-pressed': String(f.dismissed), onClick: () => { f.dismissed = !f.dismissed; apply(); } },
+      ? button({ size: 'sm', variant: 'ghost', type: 'button', 'aria-pressed': String(f.dismissed), onClick: () => { f.dismissed = !f.dismissed; apply(); } },
         icon(f.dismissed ? 'chevronLeft' : 'inbox', 13), f.dismissed ? 'Back to what to look at' : `Set aside (${num(aside)})`)
       : null;
     return h('div', { class: 'filters' }, libs.length > 1 || f.library_id ? select : null, toggle);
@@ -211,8 +212,8 @@ export function healthView(ctx) {
         h('td', { class: 'mono nowrap', title: dateTime(it.found_at) }, relTime(it.found_at)),
         h('td', { class: 'health-actions' },
           manage ? (it.dismissed
-            ? h('button', { type: 'button', class: 'btn btn-sm', onClick: (e) => bringBack(e.currentTarget, it) }, icon('refresh', 13), 'Bring back')
-            : h('button', { type: 'button', class: 'btn btn-sm', onClick: () => dismissDialog(it) }, icon('check', 13), 'Dismiss…')) : null,
+            ? button({ size: 'sm', type: 'button', onClick: (e) => bringBack(e.currentTarget, it) }, icon('refresh', 13), 'Bring back')
+            : button({ size: 'sm', type: 'button', onClick: () => dismissDialog(it) }, icon('check', 13), 'Dismiss…')) : null,
           openInJellyfin(it.jellyfin_link, { compact: true })))))), { server });
   }
 

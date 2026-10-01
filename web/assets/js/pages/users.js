@@ -10,6 +10,7 @@ import { profileAllTime } from './showprogress.js';
 import { dataTable, plainTable } from '../tables.js';
 import { loadUpcoming, agenda } from '../upcoming.js';
 import { hasWatchlist } from '../watchlist.js';
+import { button } from '../../finui/components/button/button.js';
 
 // Loaders are shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
 const loadUsers = (days, signal) => api.get('/users', { days }, { signal });
@@ -83,7 +84,7 @@ export function userPage(ctx) {
   // Loads on its own and is slotted into every render below, like the all-time cards. Hidden when there is nothing to wait for.
   const comingBody = h('div');
   const comingCard = card({ title: 'Coming up', sub: 'New episodes of the shows watched here, in the next 30 days', cls: 'card-agenda', body: comingBody,
-    actions: h('a', { class: 'btn btn-ghost btn-sm', href: `/pipeline?tab=upcoming&mine=1${can('see_everyone') ? `&user_id=${encodeURIComponent(id)}` : ''}` }, 'Calendar') });
+    actions: button({ variant: 'ghost', size: 'sm', href: `/pipeline?tab=upcoming&mine=1${can('see_everyone') ? `&user_id=${encodeURIComponent(id)}` : ''}` }, 'Calendar') });
   comingCard.hidden = true;
   if (hasComing()) {
     dataView({
@@ -107,7 +108,7 @@ export function userPage(ctx) {
       headerSlot.replaceChildren(h('header', { class: 'page-header entity-header' },
         avatar(u.id, u.name, { size: 56, hasImage: u.has_image }),
         h('div', null, h('h1', { class: 'page-title' }, u.name),
-          isAdmin() && state.user && u.id !== state.user.id ? h('a', { class: 'btn btn-ghost btn-sm entity-action', href: `/recap?user=${encodeURIComponent(u.id)}` }, icon('recap', 14), 'Open recap') : null,
+          isAdmin() && state.user && u.id !== state.user.id ? button({ variant: 'ghost', size: 'sm', class: 'entity-action', href: `/recap?user=${encodeURIComponent(u.id)}` }, icon('recap', 14), 'Open recap') : null,
           h('p', { class: 'page-sub' }, [u.is_admin ? 'Administrator' : 'User', u.is_disabled ? 'disabled' : null, u.removed ? 'removed from Jellyfin' : null].filter(Boolean).join(' · '),
             u.last_activity_at ? [' · last seen ', relEl(u.last_activity_at, '')] : null))));
       const t = d.totals || {};
@@ -133,7 +134,7 @@ export function userPage(ctx) {
         card({ title: 'Devices', cls: 'card-flush', body: devicesTable(d.devices) }),
         can('see_network') ? card({ title: 'IP addresses', sub: 'Where this user has played from', cls: 'card-flush', body: ipsTable(d.ips) }) : null,
         card({ title: 'Recent plays', cls: 'card-flush',
-          actions: h('a', { class: 'btn btn-ghost btn-sm', href: `/activity?user_id=${encodeURIComponent(id)}&days=${days}` }, 'View all'),
+          actions: button({ variant: 'ghost', size: 'sm', href: `/activity?user_id=${encodeURIComponent(id)}&days=${days}` }, 'View all'),
           body: playsTable(recent.rows, { showUser: false, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }), empty: 'No plays in this range.' }) }),
       ];
     },

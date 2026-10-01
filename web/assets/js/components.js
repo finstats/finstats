@@ -4,6 +4,7 @@ import { h, icon, num, compact, duration, durationExact, durEl, relEl, initials,
 import { api, imgItem, imgUser, isAbort, recordRequests, viewCacheGet, viewCacheSet } from './api.js';
 import { RANGES, userList, can } from './state.js';
 import { dataTable } from './tables.js';
+import { button } from '../finui/components/button/button.js';
 
 // ---------------------------------------------------------------- layout bits
 export function pageHeader(title, sub, right) {
@@ -25,7 +26,7 @@ export function chartCard({ title, sub, controls, chart, table, cls = '' }) {
   let showTable = false;
   const body = h('div');
   const label = h('span', null, 'Table');
-  const toggle = h('button', { type: 'button', class: 'btn btn-ghost btn-sm', 'aria-pressed': 'false',
+  const toggle = button({ variant: 'ghost', size: 'sm', type: 'button', 'aria-pressed': 'false',
     onClick: () => { showTable = !showTable; render(); } }, icon('table', 14), label);
   function render() {
     toggle.setAttribute('aria-pressed', String(showTable));
@@ -45,7 +46,7 @@ export function emptyState(title, text, action) {
 export function errorState(err, retry) {
   return h('div', { class: 'error-state', role: 'alert' }, icon('alert', 18),
     h('div', null, h('p', { class: 'error-title' }, 'Couldn’t load this'), h('p', { class: 'error-text' }, err.message || String(err))),
-    retry ? h('button', { type: 'button', class: 'btn btn-sm', onClick: retry }, icon('refresh', 14), 'Try again') : null);
+    retry ? button({ size: 'sm', type: 'button', onClick: retry }, icon('refresh', 14), 'Try again') : null);
 }
 
 export function inlineError(id, text) {
@@ -356,7 +357,7 @@ export function pagination({ page, perPage, total, onPage }) {
   const pages = Math.max(1, Math.ceil(total / perPage));
   const from = total ? (page - 1) * perPage + 1 : 0, to = Math.min(total, page * perPage);
   // Buttons stay enabled; out-of-range clicks are simply ignored (aria-disabled communicates the edge).
-  const mk = (lbl, ic, target, off) => h('button', { type: 'button', class: 'btn btn-sm btn-ghost', 'aria-label': lbl, 'aria-disabled': off ? 'true' : null,
+  const mk = (lbl, ic, target, off) => button({ size: 'sm', variant: 'ghost', type: 'button', 'aria-label': lbl, 'aria-disabled': off ? 'true' : null,
     onClick: () => { if (!off) onPage(target); } }, icon(ic, 14));
   return h('nav', { class: 'pager', 'aria-label': 'Pagination' },
     h('span', { class: 'pager-info mono' }, `${num(from)}–${num(to)} of ${num(total)}`),
@@ -378,8 +379,8 @@ export function poster(id, name, { w = 120, cls = '', kind = 'primary' } = {}) {
  *  `compact` is the icon alone, for a row of a list, named for screen readers and on hover. */
 export function openInJellyfin(link, { compact = false } = {}) {
   if (!link) return null;
-  if (compact) return h('a', { class: 'icon-btn open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Open in Jellyfin', title: 'Open in Jellyfin' }, icon('external', 15));
-  return h('a', { class: 'btn btn-primary open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer' }, icon('play', 14), 'Open in Jellyfin');
+  if (compact) return button({ variant: 'icon', class: 'open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Open in Jellyfin', title: 'Open in Jellyfin' }, icon('external', 15));
+  return button({ variant: 'primary', class: 'open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer' }, icon('play', 14), 'Open in Jellyfin');
 }
 
 export function avatar(id, name, { size = 28, hasImage = true } = {}) {
@@ -496,7 +497,7 @@ const modalStack = [];
 /** X button, Esc and click-outside all close it; focus returns to the trigger. */
 export function openModal({ title, body, wide = false, onClose, initialFocus, labelId = 'modal-title', bare = false, cls = '' }) {
   const trigger = document.activeElement;
-  const closeBtn = h('button', { type: 'button', class: 'icon-btn modal-x', 'aria-label': 'Close' }, icon('x', 16));
+  const closeBtn = button({ variant: 'icon', class: 'modal-x', type: 'button', 'aria-label': 'Close' }, icon('x', 16));
   const bodyEl = h('div', { class: bare ? '' : 'modal-body' }, body);
   const dialog = h('div', { class: ['modal', wide && 'modal-wide', cls], role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': bare ? null : labelId, 'aria-label': bare ? title : null },
     bare ? null : h('div', { class: 'modal-head' }, h('h2', { class: 'modal-title', id: labelId }, title), closeBtn), bodyEl);

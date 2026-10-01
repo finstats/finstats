@@ -4,6 +4,7 @@ import { h, icon, num, compact, bytes, duration, durationExact, clock, bitrate, 
 import { columnsChart, columnsTable, heatmap, heatmapTable, sparkline, bucketList, libBucketList, simpleColumns, simpleColumnsTable, radarChart } from './charts.js';
 import { card, chartCard, segmented, statTile, poster, avatar, methodBadge, facts } from './components.js';
 import { rangeLong, can } from './state.js';
+import { button } from '../finui/components/button/button.js';
 
 const METRICS = [{ value: 'watch_s', label: 'Watch time' }, { value: 'plays', label: 'Plays' }];
 
@@ -226,7 +227,7 @@ export function groupsCard(g, { title = 'Watched together', forUser = null } = {
   const t = g.totals;
   // The person's own share of watch time spent in company, when the answer carries them.
   const me = forUser && Array.isArray(g.people) ? g.people.find((p) => p.user_id === forUser) : null;
-  const link = h('a', { class: 'btn btn-ghost btn-sm', href: forUser ? `/together?user_id=${encodeURIComponent(forUser)}` : '/together' }, 'Together', icon('chevronRight', 14));
+  const link = button({ variant: 'ghost', size: 'sm', href: forUser ? `/together?user_id=${encodeURIComponent(forUser)}` : '/together' }, 'Together', icon('chevronRight', 14));
   const faces = (members) => h('span', { class: 'faces' }, members.filter((m) => m.user_id !== forUser).map((m) => avatar(m.user_id, m.user_name, { size: 22, hasImage: m.has_image })));
   const names = (members) => members.filter((m) => m.user_id !== forUser).map((m) => m.user_name).join(forUser ? ', ' : ' + ');
   return card({ title, sub: 'People who pressed play on the same thing at the same time', actions: link,
@@ -249,7 +250,7 @@ export function groupsCard(g, { title = 'Watched together', forUser = null } = {
 export function failedLoginsCard(rows) {
   if (!can('see_server') || !Array.isArray(rows) || !rows.length) return null;
   return card({ title: 'Failed sign-ins', sub: 'Most recent attempts on your Jellyfin server',
-    actions: h('a', { class: 'btn btn-ghost btn-sm', href: '/server/log' }, 'Server log', icon('chevronRight', 14)),
+    actions: button({ variant: 'ghost', size: 'sm', href: '/server/log' }, 'Server log', icon('chevronRight', 14)),
     body: h('ul', { class: 'mini-list' }, rows.map((r) => h('li', { class: 'mini-row' },
       h('span', { class: 'sev sev-warning' }, icon('alert', 13)),
       h('span', { class: 'mini-main' }, r.overview || 'Failed sign-in', r.user_name ? h('span', { class: 'muted' }, ' · ' + r.user_name) : null),
@@ -349,8 +350,8 @@ export function shelfRow(cards, arrows, label) {
   const from = () => (frame ? target : list.scrollLeft); // mid-glide, the next input continues from where the glide is heading
   const page = (dir) => glide(from() + dir * Math.max(step(), list.clientWidth - step()));
 
-  const prev = h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Scroll back', onClick: () => page(-1) }, icon('chevronLeft', 16));
-  const next = h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Scroll on', onClick: () => page(1) }, icon('chevronRight', 16));
+  const prev = button({ variant: 'icon', type: 'button', 'aria-label': 'Scroll back', onClick: () => page(-1) }, icon('chevronLeft', 16));
+  const next = button({ variant: 'icon', type: 'button', 'aria-label': 'Scroll on', onClick: () => page(1) }, icon('chevronRight', 16));
   arrows.replaceChildren(prev, next);
 
   // Shift + wheel (a mouse has no sideways wheel). A trackpad's own sideways swipe and the

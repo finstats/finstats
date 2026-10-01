@@ -10,6 +10,7 @@ import { h, icon, num, mount } from '../dom.js';
 import { api } from '../api.js';
 import { pageHeader, card, dataView, sk, emptyState } from '../components.js';
 import { dataTable, plainTable } from '../tables.js';
+import { button } from '../../finui/components/button/button.js';
 
 const calm = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -118,7 +119,7 @@ export default function licensesPage(ctx) {
         h('div', { class: 'stack lic-main' },
           app ? card({ title: 'finstats itself', sub: `v${app.version} · ${app.license}`, id: 'lic-app', actions: source(app.repository),
             body: [h('p', { class: 'help' }, 'finstats is released under the GNU General Public License, version 3. You may use, study, share and change it; anything you pass on must stay under the same licence and carry its source.'),
-              app.notices.length ? h('button', { type: 'button', class: 'btn btn-sm', onClick: () => go(app) }, icon('log', 14), 'Read the full licence') : null] }) : null,
+              app.notices.length ? button({ size: 'sm', type: 'button', onClick: () => go(app) }, icon('log', 14), 'Read the full licence') : null] }) : null,
           bundled.length ? card({ title: 'Bundled with finstats', sub: 'Fonts, map data and the geolocation database — not code, but shipped or read all the same', id: 'lic-bundled',
             body: componentTable(bundled, go) }) : null,
           card({ title: 'Rust crates', sub: `${num(crates.length)} ${crates.length === 1 ? 'crate' : 'crates'} the binary is built from · pick one to read its licence`, id: 'lic-crates',

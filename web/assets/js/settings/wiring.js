@@ -5,6 +5,7 @@
 // and a Plex user left without a wire is not imported.
 import { h, s, num, mount, icon } from '../dom.js';
 import { avatar } from '../components.js';
+import { button } from '../../finui/components/button/button.js';
 
 const COLOURS = 8; // --wire-0 … --wire-7, the panel's wire colours
 
@@ -70,8 +71,8 @@ export function wiringBoard(board, { onImport, onReset }) {
     h('div', { class: 'wire-panel' }, plexCol, layer, jfCol));
   const summary = h('p', { class: 'wire-summary' });
   const failed = h('p', { class: 'wire-error', role: 'alert' });
-  const importBtn = h('button', { type: 'button', class: 'btn btn-primary wire-import', onClick: start });
-  const resetBtn = h('button', { type: 'button', class: 'btn wire-reset', onClick: () => onReset() }, 'Start over');
+  const importBtn = button({ variant: 'primary', class: 'wire-import', type: 'button', onClick: start });
+  const resetBtn = button({ class: 'wire-reset', type: 'button', onClick: () => onReset() }, 'Start over');
   const root = h('div', { class: 'wire-wrap' },
     h('p', { class: 'help' }, 'Drag a wire from each Plex user to who they are on Jellyfin — or click one, then the other. Several Plex users may go to one person. A Plex user without a wire is not imported.'),
     el, said, summary, failed, h('div', { class: 'wire-actions' }, resetBtn, importBtn));

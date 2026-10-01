@@ -8,6 +8,7 @@ import { hasPipeline } from './pages/pipeline.js';
 import { navigate, onRouteChange, canGoBack } from './router.js';
 import { avatar } from './components.js';
 import { openPalette } from './palette.js';
+import { button } from '../finui/components/button/button.js';
 
 let shell = null; // {el, content, navLinks, destroy, userId}
 let bare = null;
@@ -140,9 +141,9 @@ function buildShell() {
         h('span', { class: 'me-text' }, h('span', { class: 'me-name' }, me.name), h('span', { class: 'me-role' }, me.is_admin ? 'Administrator' : 'Viewer'))),
       themeSwitch()));
 
-  const menuBtn = h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Open menu', 'aria-controls': 'sidebar', 'aria-expanded': 'false' }, icon('menu', 18));
+  const menuBtn = button({ variant: 'icon', type: 'button', 'aria-label': 'Open menu', 'aria-controls': 'sidebar', 'aria-expanded': 'false' }, icon('menu', 18));
   const topbar = h('header', { class: 'topbar' }, menuBtn, h('a', { class: 'brand', href: '/' }, brandMark(), h('span', { class: 'brand-name' }, 'finstats')),
-    h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Search', onClick: () => openPalette() }, icon('search', 18)));
+    button({ variant: 'icon', type: 'button', 'aria-label': 'Search', onClick: () => openPalette() }, icon('search', 18)));
   const scrim = h('div', { class: 'scrim', hidden: true });
   const setDrawer = (open) => {
     el.classList.toggle('drawer-open', open);

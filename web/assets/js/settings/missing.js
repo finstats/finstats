@@ -5,6 +5,7 @@
 import { h, icon, num, mount, debounce, episodeCode, TRACKERS } from '../dom.js';
 import { api } from '../api.js';
 import { openModal, poster } from '../components.js';
+import { button } from '../../finui/components/button/button.js';
 
 /** A title as one line: "The Empire Strikes Back (1980)", "The Grand Tour · S00E05 · A Massive Hunt". */
 const label = (t) => (t.item_type === 'Episode'
@@ -38,7 +39,7 @@ export function missingCard(slot, card, { empty = null } = {}) {
         h('span', { class: 'locate-what' }, h('span', { class: 'locate-name' }, text),
           h('span', { class: 'locate-meta' }, `${num(m.plays)} play${m.plays === 1 ? '' : 's'}${fromWhere(m)}`,
             likely ? [' · probably ', h('strong', null, label(likely))] : ' · nothing in the library looks like it')),
-        h('button', { type: 'button', class: 'btn btn-sm locate-btn', onClick: () => pick(m, refresh) }, icon('search', 13), 'Locate'));
+        button({ size: 'sm', class: 'locate-btn', type: 'button', onClick: () => pick(m, refresh) }, icon('search', 13), 'Locate'));
     };
     mount(slot,
       h('p', { class: 'help' }, `${num(list.length)} title${list.length === 1 ? '' : 's'} in your history ${list.length === 1 ? 'isn’t' : 'aren’t'} in your library under that name — usually because the server it was imported from called ${list.length === 1 ? 'it' : 'them'} something else. Locate one to attach its plays; anything you leave stays in your history as it is.`),

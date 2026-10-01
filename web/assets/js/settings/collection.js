@@ -4,6 +4,7 @@ import { h, icon, mount } from '../dom.js';
 import { can } from '../state.js';
 import { card, sk } from '../components.js';
 import { numberForm, settingRow } from './common.js';
+import { button } from '../../finui/components/button/button.js';
 
 const FIELDS = [
   { key: 'active_interval_s', label: 'While someone is watching, check every', unit: 'seconds', min: 1, max: 60, help: 'Pauses, skips and track changes are recorded to this precision. 1–60.' },
@@ -26,7 +27,7 @@ export default {
     mount(body,
       settingRow({ id: 'library-read', label: 'When the library is read',
         help: 'After Jellyfin’s own library scan, unless you change it. finstats never starts a scan.',
-        control: h('a', { class: 'btn btn-sm', href: '/settings/tasks/sync_libraries' }, icon('clock', 13), 'Schedule') }),
+        control: button({ size: 'sm', href: '/settings/tasks/sync_libraries' }, icon('clock', 13), 'Schedule') }),
       numberForm(store, FIELDS, 'collect-err'));
   },
 };

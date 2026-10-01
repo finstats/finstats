@@ -7,6 +7,7 @@ import { dataView, sk, avatar, poster, emptyState, errorState } from '../compone
 import { state } from '../state.js';
 import { userTabs } from './users.js';
 import { dayName, upcomingPoster } from '../upcoming.js';
+import { button } from '../../finui/components/button/button.js';
 
 const loadWatchlist = (signal) => api.get('/me/watchlist', null, { signal });
 export const prefetchWatchlist = ({ signal }) => [() => loadWatchlist(signal)];
@@ -80,7 +81,7 @@ export function watchlistPage(ctx) {
   function cardFor(e) {
     const href = e.item_id ? `/items/${e.item_id}` : null;
     const art = e.poster && e.poster.item_id ? poster(e.poster.item_id, e.title, { w: 300, cls: 'poster-grid' }) : upcomingPoster(e, { w: 300, cls: 'poster-grid' });
-    const remove = h('button', { type: 'button', class: 'icon-btn wl-remove', 'aria-label': `Remove ${e.title} from your watchlist`, title: 'Remove from your watchlist',
+    const remove = button({ variant: 'icon', class: 'wl-remove', type: 'button', 'aria-label': `Remove ${e.title} from your watchlist`, title: 'Remove from your watchlist',
       onClick: async () => {
         remove.disabled = true;
         try { await api.del(`/me/watchlist/${e.id}`); dv.load(); } catch (err) { remove.disabled = false; mountError(err); }

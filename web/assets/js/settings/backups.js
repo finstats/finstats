@@ -6,6 +6,7 @@ import { isAdmin } from '../state.js';
 import { card, sk, setBusy, inlineError, errorState } from '../components.js';
 import { plainTable } from '../tables.js';
 import { progressOf, settingRow } from './common.js';
+import { button } from '../../finui/components/button/button.js';
 
 export default {
   key: 'backups', label: 'Backups', sub: 'Keep your history safe, or move it', group: 'Data', icon: 'database',
@@ -39,10 +40,10 @@ export default {
       const s = store.settings;
       const keep = h('input', { class: 'input input-num mono', type: 'text', inputMode: 'numeric', id: 'f-backup-keep', value: String(s.backup_keep), autocomplete: 'off', 'aria-describedby': 'backup_keep-help' });
       const formErr = h('div'), note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
-      const save = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Save');
+      const save = button({ variant: 'primary', type: 'submit' }, 'Save');
       const form = h('form', { class: 'setting-rows', noValidate: true },
         settingRow({ id: 'backup-schedule', label: 'When backups are written', help: 'The Backup task’s schedule: daily, weekly, on an interval, or only by hand.',
-          control: h('a', { class: 'btn btn-sm', href: '/settings/tasks/backup' }, icon('clock', 13), 'Schedule') }),
+          control: button({ size: 'sm', href: '/settings/tasks/backup' }, icon('clock', 13), 'Schedule') }),
         settingRow({ id: 'backup_keep', label: 'Keep the newest', labelFor: 'f-backup-keep', help: 'Older ones are removed when a new one is written. 1–100.',
           control: h('div', { class: 'field-input' }, keep, h('span', { class: 'unit' }, 'backups')) }),
         h('div', { class: 'form-actions setting-actions' }, save, note), formErr);
@@ -73,15 +74,15 @@ export default {
         h('tbody', null, rows.map((b) => {
           const mine = pending && pending.name === b.name ? pending.action : null;
           const ask = (action) => () => { pending = { name: b.name, action }; sig = ''; paint(); };
-          const cancel = h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { pending = null; sig = ''; paint(); } }, 'Cancel');
+          const cancel = button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => { pending = null; sig = ''; paint(); } }, 'Cancel');
           const actions = mine === 'delete'
-            ? [h('span', { class: 'muted' }, 'Delete this backup?'), h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: () => act(() => api.del(`/backups/${b.name}`)) }, 'Delete'), cancel]
+            ? [h('span', { class: 'muted' }, 'Delete this backup?'), button({ size: 'sm', variant: 'danger', type: 'button', onClick: () => act(() => api.del(`/backups/${b.name}`)) }, 'Delete'), cancel]
             : mine === 'restore'
               ? [h('span', { class: 'muted' }, restoreSettings ? 'Merge its history in and replace settings and permissions?' : 'Merge its history in?'),
-                h('button', { type: 'button', class: 'btn btn-sm btn-primary', onClick: () => act(() => api.post(`/backups/${b.name}/restore?settings=${restoreSettings}`)) }, 'Restore'), cancel]
-              : [h('a', { class: 'btn btn-sm', href: `/api/backups/${b.name}`, download: b.name }, icon('upload', 12, 'flip-v'), 'Download'),
-                h('button', { type: 'button', class: 'btn btn-sm btn-ghost', disabled: busy, onClick: ask('restore') }, 'Restore'),
-                h('button', { type: 'button', class: 'icon-btn', 'aria-label': `Delete the backup from ${dateTime(b.created_at)}`, title: 'Delete', disabled: busy, onClick: ask('delete') }, icon('trash', 14))];
+                button({ size: 'sm', variant: 'primary', type: 'button', onClick: () => act(() => api.post(`/backups/${b.name}/restore?settings=${restoreSettings}`)) }, 'Restore'), cancel]
+              : [button({ size: 'sm', href: `/api/backups/${b.name}`, download: b.name }, icon('upload', 12, 'flip-v'), 'Download'),
+                button({ size: 'sm', variant: 'ghost', type: 'button', disabled: busy, onClick: ask('restore') }, 'Restore'),
+                button({ variant: 'icon', type: 'button', 'aria-label': `Delete the backup from ${dateTime(b.created_at)}`, title: 'Delete', disabled: busy, onClick: ask('delete') }, icon('trash', 14))];
           return h('tr', null,
             h('td', null, h('span', { class: 'when-cell' }, h('time', { dateTime: new Date(b.created_at * 1000).toISOString(), title: b.name }, dateTime(b.created_at)), h('span', { class: 'cell-sub mono' }, relTime(b.created_at)))),
             h('td', { class: 'mono r' }, bytes(b.size_bytes)),
@@ -93,7 +94,7 @@ export default {
         `Restored ${num(rs.result.plays_imported)} plays, ${num(rs.result.plays_skipped)} were already here${rs.result.settings_restored ? '; settings and permissions restored' : ''}.`) : null;
       const failed = rs && rs.state === 'error' && rs.error ? inlineError('restore-err', `Restore failed: ${rs.error} Nothing was changed.`) : null;
 
-      const makeNow = h('button', { type: 'button', class: 'btn', disabled: busy, onClick: () => act(() => api.post('/backups')) }, icon('plus', 13), 'Back up now');
+      const makeNow = button({ type: 'button', disabled: busy, onClick: () => act(() => api.post('/backups')) }, icon('plus', 13), 'Back up now');
       const file = h('input', { type: 'file', class: 'sr-only', id: 'restore-file', accept: '.gz,.jsonl,application/gzip', tabindex: -1 });
       file.addEventListener('change', () => {
         const f = file.files && file.files[0];
@@ -122,7 +123,7 @@ export default {
           restoreUpload.active
             ? h('div', { class: 'task-progress' }, h('div', { class: 'meter meter-wide', role: 'progressbar', 'aria-label': 'Upload progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(restoreUpload.progress * 100) },
               h('span', { class: 'meter-fill', style: { width: restoreUpload.progress * 100 + '%' } })), h('span', { class: 'mono task-msg' }, `Uploading ${restoreUpload.name} · ${Math.round(restoreUpload.progress * 100)}%`))
-            : h('div', { class: 'backup-restore' }, file, h('label', { class: ['btn', busy && 'is-disabled'], htmlFor: busy ? null : 'restore-file' }, icon('upload', 13), 'Choose a backup file…'), keepSettings),
+            : h('div', { class: 'backup-restore' }, file, button({ tag: 'label', disabled: busy, htmlFor: busy ? null : 'restore-file' }, icon('upload', 13), 'Choose a backup file…'), keepSettings),
           progressOf(rs, 'Restore progress'), restored, failed),
         scheduleForm());
     }

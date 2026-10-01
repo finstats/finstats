@@ -27,6 +27,7 @@ import togetherPage, { prefetchTogether } from './pages/together.js';
 import changelogPage, { prefetchChangelog } from './pages/changelog.js';
 import licensesPage, { prefetchLicenses } from './pages/licenses.js';
 import { setupPage, loginPage } from './pages/auth.js';
+import { button } from '../finui/components/button/button.js';
 
 route('/setup', setupPage, { bare: true });
 route('/login', loginPage, { bare: true });
@@ -58,7 +59,7 @@ route('/licenses', licensesPage, { prefetch: prefetchLicenses });
 route('*', (ctx) => {
   ctx.title('Not found');
   ctx.root.append(pageHeader('Page not found'), emptyState('There’s nothing at this address.', 'It may have been a link to something that was removed.',
-    h('a', { class: 'btn', href: '/' }, icon('home', 14), 'Go to the dashboard')));
+    button({ href: '/' }, icon('home', 14), 'Go to the dashboard')));
 });
 
 setLayout(layout);
@@ -85,7 +86,7 @@ async function boot() {
     app.replaceChildren(h('main', { class: 'bare' }, h('div', { class: 'auth-card' },
       h('h1', { class: 'auth-title' }, 'finstats isn’t responding'),
       h('p', { class: 'auth-sub' }, e.message),
-      h('button', { type: 'button', class: 'btn btn-primary', onClick: () => location.reload() }, icon('refresh', 14), 'Try again'))));
+      button({ variant: 'primary', type: 'button', onClick: () => location.reload() }, icon('refresh', 14), 'Try again'))));
     return;
   }
   startPrefetching();

@@ -8,6 +8,7 @@ import { api } from '../api.js';
 import { can, state } from '../state.js';
 import { card, sk, spinner, inlineError, errorState, openModal, setBusy } from '../components.js';
 import { progressOf } from './common.js';
+import { button } from '../../finui/components/button/button.js';
 
 /** What each job is called and does, and the group it is listed under. */
 export const TASK_LABEL = {
@@ -93,7 +94,7 @@ function runButton(t, store, paint) {
   if (!t.runnable) return null;
   const name = nameOf(t.id);
   const running = t.state === 'running' || runBusy.has(t.id);
-  const btn = h('button', { type: 'button', class: 'icon-btn task-run', 'aria-label': `Run ${name}`, title: running ? 'Running…' : 'Run now', disabled: running },
+  const btn = button({ variant: 'icon', class: 'task-run', type: 'button', 'aria-label': `Run ${name}`, title: running ? 'Running…' : 'Run now', disabled: running },
     running ? spinner(14) : icon('play', 14));
   btn.addEventListener('click', async (e) => {
     e.preventDefault(); e.stopPropagation();
@@ -161,7 +162,7 @@ function taskView(slot, store, id) {
 
   function paint(force = false) {
     const t = store.task(id);
-    if (!t) { mount(body, h('p', { class: 'help' }, 'There is no such task.'), h('a', { class: 'btn', href: '/settings/tasks' }, 'All tasks')); return; }
+    if (!t) { mount(body, h('p', { class: 'help' }, 'There is no such task.'), button({ href: '/settings/tasks' }, 'All tasks')); return; }
     const now = JSON.stringify([said(t), t.triggers, t.custom, t.next_at && dateTime(t.next_at), err, [...runBusy], runErr[id]]);
     if (!force && now === sig) return;
     sig = now;
@@ -170,7 +171,7 @@ function taskView(slot, store, id) {
       progressOf(t, name + ' progress'),
       t.state === 'error' && t.error ? inlineError('task-err', t.error) : null,
       runErr[id] ? inlineError('task-run-err', `Couldn’t start: ${runErr[id]}`) : null);
-    const run = t.runnable ? h('button', { type: 'button', class: 'btn', disabled: t.state === 'running' || runBusy.has(id) }, icon('play', 12), t.state === 'running' ? 'Running…' : 'Run now') : null;
+    const run = t.runnable ? button({ type: 'button', disabled: t.state === 'running' || runBusy.has(id) }, icon('play', 12), t.state === 'running' ? 'Running…' : 'Run now') : null;
     if (run) run.addEventListener('click', () => runButton(t, store, paint).click());
 
     if (!t.schedulable) {
@@ -178,9 +179,9 @@ function taskView(slot, store, id) {
       mount(body, status, h('p', { class: 'help' }, 'This one has no schedule: it needs a file. It runs when you upload one under ', h('a', { href }, where), '.'));
       return;
     }
-    const add = h('button', { type: 'button', class: 'btn btn-primary' }, icon('plus', 13), 'Add trigger');
+    const add = button({ variant: 'primary', type: 'button' }, icon('plus', 13), 'Add trigger');
     add.addEventListener('click', () => addDialog(t, (trigger) => save([...t.triggers, trigger])));
-    const reset = t.custom ? h('button', { type: 'button', class: 'btn btn-ghost' }, 'Back to the defaults') : null;
+    const reset = t.custom ? button({ variant: 'ghost', type: 'button' }, 'Back to the defaults') : null;
     if (reset) reset.addEventListener('click', async () => {
       setBusy(reset, true, 'Resetting…'); err = null;
       try { await api.del(`/tasks/${id}/triggers`); } catch (e) { err = e.message; }
@@ -189,7 +190,7 @@ function taskView(slot, store, id) {
     const list = t.triggers.length
       ? h('ul', { class: 'trigger-list', id: 'task-triggers' }, t.triggers.map((g, i) => {
         const words = triggerWords(g);
-        const remove = h('button', { type: 'button', class: 'icon-btn trigger-remove', 'aria-label': `Remove “${words}”`, title: 'Remove' }, icon('minus', 14));
+        const remove = button({ variant: 'icon', class: 'trigger-remove', type: 'button', 'aria-label': `Remove “${words}”`, title: 'Remove' }, icon('minus', 14));
         remove.addEventListener('click', () => { remove.disabled = true; save(t.triggers.filter((_, j) => j !== i)); });
         return h('li', { class: 'trigger-row' }, h('span', { class: 'trigger-what' }, words),
           g.limit_s ? h('span', { class: 'trigger-limit muted' }, `stops after ${limitWords(g.limit_s)}`) : null, remove);
@@ -221,8 +222,8 @@ function addDialog(t, onAdd) {
   const limitField = limit ? h('div', { class: 'field' }, h('label', { class: 'field-label', htmlFor: 'trigger-limit' }, 'Time limit (hours)'), limit,
     h('p', { class: 'help', id: 'trigger-limit-help' }, 'A run that takes longer is stopped. Empty: no limit.')) : null;
   const formErr = h('div');
-  const addBtn = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Add');
-  const cancel = h('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancel');
+  const addBtn = button({ variant: 'primary', type: 'submit' }, 'Add');
+  const cancel = button({ variant: 'ghost', type: 'button' }, 'Cancel');
   const form = h('form', { class: 'stack trigger-form', noValidate: true }, type.field, day.field, time.field, every_.field, limitField, formErr,
     h('div', { class: 'form-actions' }, cancel, addBtn));
   const show = () => {

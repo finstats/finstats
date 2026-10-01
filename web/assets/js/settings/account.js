@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import { state, resetCaches } from '../state.js';
 import { navigate } from '../router.js';
 import { card, avatar, setBusy } from '../components.js';
+import { button } from '../../finui/components/button/button.js';
 
 async function signOut(btn) {
   setBusy(btn, true, 'Signing out…');
@@ -23,7 +24,7 @@ export default {
   ],
   async render(slot) {
     const me = state.user;
-    const out = h('button', { type: 'button', class: 'btn', id: 'sign-out' }, icon('logout', 14), 'Sign out');
+    const out = button({ type: 'button', id: 'sign-out' }, icon('logout', 14), 'Sign out');
     out.addEventListener('click', () => signOut(out));
     mount(slot, card({
       title: 'Account', id: 'account', sub: 'Signing out ends the session in this browser; API keys and other browsers keep working',

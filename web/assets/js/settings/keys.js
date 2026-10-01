@@ -7,6 +7,7 @@ import { api, isAbort } from '../api.js';
 import { isAdmin } from '../state.js';
 import { card, sk, setBusy, inlineError, errorState, formField, segmented, copyButton, avatar } from '../components.js';
 import { plainTable } from '../tables.js';
+import { button } from '../../finui/components/button/button.js';
 
 const SCOPE_LABEL = { full: 'Everything you may see', calendar: 'Calendar feed only' };
 const EXPIRY = [['', 'Never'], ['30', '30 days'], ['90', '90 days'], ['365', 'A year']];
@@ -43,7 +44,7 @@ export default {
           h('div', { class: 'key-line' }, h('code', { class: 'mono key-token' }, feedUrl(k.key)), copyButton(feedUrl(k.key), 'Copy address')),
           settings && !base ? h('p', { class: 'help' }, 'finstats does not know its own address yet, so this one only works from inside. Set it under Notifications for a link that works from your phone.') : null]
         : h('p', { class: 'help' }, ['Send it as ', h('code', { class: 'mono' }, 'Authorization: Bearer ' + k.key.slice(0, 7) + '…'), ' with every request.']),
-        h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn btn-sm', onClick: () => { revealed = null; paint(); } }, 'Done')));
+        h('div', { class: 'form-actions' }, button({ size: 'sm', type: 'button', onClick: () => { revealed = null; paint(); } }, 'Done')));
     }
 
     function makeForm() {
@@ -53,7 +54,7 @@ export default {
       const scopeHelp = (v) => SCOPE_LABEL[v] + (v === 'calendar' ? ': a key you can put in a subscription address safely.' : ': the same as you signed in, for scripts and other tools.');
       const scopePick = segmented({ label: 'What it opens', value: scope, size: 'sm', options: [{ value: 'full', label: 'Everything' }, { value: 'calendar', label: 'Calendar only' }], onChange: (v) => { scope = v; help.textContent = scopeHelp(v); } });
       const help = h('p', { class: 'help' }, scopeHelp(scope));
-      const save = h('button', { type: 'submit', class: 'btn btn-primary' }, icon('plus', 13), 'Make a key');
+      const save = button({ variant: 'primary', type: 'submit' }, icon('plus', 13), 'Make a key');
       const formErr = h('div');
       const form = h('form', { class: 'key-form', id: 'key-new', noValidate: true },
         h('div', { class: 'key-form-row' }, name.el, h('div', { class: 'field' }, h('label', { class: 'field-label', htmlFor: 'key-expiry' }, 'Expires'), expiry)),
@@ -83,9 +84,9 @@ export default {
           const ask = pending === k.id;
           const actions = ask
             ? [h('span', { class: 'muted' }, 'Revoke it? Anything using it stops at once.'),
-              h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: async (ev) => { setBusy(ev.currentTarget, true, 'Revoking…'); try { await api.del(`/keys/${k.id}`); } catch (e) { err = e.message; } pending = null; await load(); } }, 'Revoke'),
-              h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { pending = null; paint(); } }, 'Cancel')]
-            : h('button', { type: 'button', class: 'btn btn-sm btn-ghost btn-danger-text', onClick: () => { pending = k.id; paint(); } }, 'Revoke…');
+              button({ size: 'sm', variant: 'danger', type: 'button', onClick: async (ev) => { setBusy(ev.currentTarget, true, 'Revoking…'); try { await api.del(`/keys/${k.id}`); } catch (e) { err = e.message; } pending = null; await load(); } }, 'Revoke'),
+              button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => { pending = null; paint(); } }, 'Cancel')]
+            : button({ size: 'sm', variant: 'ghost', tone: 'danger', type: 'button', onClick: () => { pending = k.id; paint(); } }, 'Revoke…');
           return h('tr', null,
             h('td', null, k.name),
             h('td', null, h('span', { class: 'chip' }, k.scope === 'calendar' ? 'Calendar' : 'Everything')),

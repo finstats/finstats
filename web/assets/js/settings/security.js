@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import { card, sk, setBusy, inlineError } from '../components.js';
 import { numberForm, settingRow } from './common.js';
 import { triggerWords } from './tasks.js';
+import { button } from '../../finui/components/button/button.js';
 
 const TRAVEL_FIELDS = [
   { key: 'travel_speed_kmh', label: 'Impossible travel is faster than', unit: 'km/h', min: 100, max: 5000, help: 'Two sightings of one person that would need more than this raise an alert. 900 is a little above an airliner. 100–5,000.' },
@@ -33,7 +34,7 @@ export default {
         ? h('p', { class: 'help' }, h('strong', null, dbInfo.kind), `, built ${dateOnly(dbInfo.built_at)}`, dbInfo.file ? [' · ', h('span', { class: 'mono' }, dbInfo.file)] : null)
         : h('p', { class: 'help' }, 'None yet. The Security page stays empty until there is one.');
       const err = h('div');
-      const get = h('button', { type: 'button', class: 'btn btn-sm', disabled: running || g.from_env }, icon('upload', 13, 'flip-v'), running ? (t.message || 'Downloading…') : dbInfo ? 'Download the newest' : 'Download (about 60 MB)');
+      const get = button({ size: 'sm', type: 'button', disabled: running || g.from_env }, icon('upload', 13, 'flip-v'), running ? (t.message || 'Downloading…') : dbInfo ? 'Download the newest' : 'Download (about 60 MB)');
       get.addEventListener('click', async () => {
         mount(err, '');
         setBusy(get, true, 'Starting…');
@@ -50,7 +51,7 @@ export default {
           help: t && t.triggers && t.triggers.length
             ? `Scheduled: ${t.triggers.map(triggerWords).join(', ')}. A newer month of DB-IP’s free file (CC BY 4.0) is fetched; nothing about you is sent.`
             : 'Not scheduled. Its task fetches DB-IP’s free city file (about 60 MB, CC BY 4.0) when a newer month is out.',
-          control: h('a', { class: 'btn btn-sm', href: '/settings/tasks/geoip' }, icon('clock', 13), 'Schedule') }),
+          control: button({ size: 'sm', href: '/settings/tasks/geoip' }, icon('clock', 13), 'Schedule') }),
         numberForm(store, TRAVEL_FIELDS, 'travel-err'));
     };
     paint();

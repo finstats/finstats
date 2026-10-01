@@ -5,6 +5,7 @@
 
 import { h, mount, logo, num, duration, initials, parseDay } from '../dom.js';
 import { heatmap } from '../charts.js';
+import { button } from '../../finui/components/button/button.js';
 
 const token = location.pathname.split('/')[2] || '';
 const root = document.getElementById('public');
@@ -77,8 +78,8 @@ function recap(r, story) {
         h('img', { src: `${base}/recap/${key}`, alt: `${CHAPTER[key] || key}, as a card`, loading: 'lazy', decoding: 'async', width: 1080, height: 1920 })),
       h('span', { class: 'pub-title-sub muted' }, CHAPTER[key] || key, ' · ', h('a', { href: `${base}/recap/${key}`, download: `finstats-${slug}-${key}.png` }, 'Download'))))) : null,
     h('div', { class: 'pub-actions' },
-      (story || []).length ? h('a', { class: 'btn', href: `${base}/recap.zip`, download: `finstats-${slug}.zip` }, 'Download every card') : null,
-      h('a', { class: 'btn pub-card-link', href: `${base}/card.png?kind=recap`, download: `finstats-${slug}.png` }, 'Download the wide card')));
+      (story || []).length ? button({ href: `${base}/recap.zip`, download: `finstats-${slug}.zip` }, 'Download every card') : null,
+      button({ class: 'pub-card-link', href: `${base}/card.png?kind=recap`, download: `finstats-${slug}.png` }, 'Download the wide card')));
 }
 
 function recent(list) {
@@ -99,7 +100,7 @@ function page(a) {
       a.avatar ? h('span', { class: 'avatar pub-avatar', 'aria-hidden': 'true' }, h('img', { src: `${base}/avatar`, alt: '', onError: (e) => e.target.replaceWith(initials(name)) })) : null,
       h('div', { class: 'pub-hero-text' }, h('h1', { class: 'page-title' }, name),
         h('p', { class: 'muted' }, 'What they watch, published by them. Everything here is at least a day old.')),
-      profileCard ? h('a', { class: 'btn pub-card-link', href: `/u/${encodeURIComponent(token)}/card.png`, download: 'finstats-profile.png' }, 'Download as a card') : null),
+      profileCard ? button({ class: 'pub-card-link', href: `/u/${encodeURIComponent(token)}/card.png`, download: 'finstats-profile.png' }, 'Download as a card') : null),
     a.totals ? totals(a.totals) : null,
     a.habits ? habits(a.habits) : null,
     a.recap ? recap(a.recap, a.story) : null,

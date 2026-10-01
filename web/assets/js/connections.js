@@ -6,6 +6,7 @@ import { h, icon, mount, relTime, dateTime } from './dom.js';
 import { api, isAbort } from './api.js';
 import { state } from './state.js';
 import { setBusy, inlineError, formField, errorState, sk } from './components.js';
+import { button } from '../finui/components/button/button.js';
 
 const SECRET_HELP = {
   sonarr: 'Sonarr → Settings → General → Security → API Key.',
@@ -50,7 +51,7 @@ export function connectionsPanel(ctx) {
     const act = async (fn) => { try { data = await fn(); } catch (e) { rowErr = { id: s.id, text: e.message }; } removing = null; lastSig = ''; render(); };
     const actions = removing === s.id
       ? [h('span', { class: 'muted' }, 'Remove it, and everything finstats read from it?'),
-        h('button', { type: 'button', class: 'btn btn-sm btn-danger', onClick: (e) => {
+        button({ size: 'sm', variant: 'danger', type: 'button', onClick: (e) => {
           setBusy(e.currentTarget, true, 'Removing…');
           act(async () => {
             const left = await api.del(`/services/${s.id}`);
@@ -59,9 +60,9 @@ export function connectionsPanel(ctx) {
             return left;
           });
         } }, 'Remove'),
-        h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => { removing = null; render(); } }, 'Cancel')]
-      : [h('button', { type: 'button', class: 'btn btn-sm', onClick: () => { editing = s.id; removing = null; render(); } }, 'Edit'),
-        h('button', { type: 'button', class: 'btn btn-sm btn-ghost btn-danger-text', onClick: () => { removing = s.id; render(); } }, 'Remove…')];
+        button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => { removing = null; render(); } }, 'Cancel')]
+      : [button({ size: 'sm', type: 'button', onClick: () => { editing = s.id; removing = null; render(); } }, 'Edit'),
+        button({ size: 'sm', variant: 'ghost', tone: 'danger', type: 'button', onClick: () => { removing = s.id; render(); } }, 'Remove…')];
     return h('li', { class: 'conn-row' },
       h('div', { class: 'conn-main' },
         h('div', { class: 'conn-name' }, h('strong', null, s.name), s.name !== s.label ? h('span', { class: 'chip' }, s.label) : null),
@@ -82,8 +83,8 @@ export function connectionsPanel(ctx) {
     const enabled = h('input', { type: 'checkbox', id: 'conn-enabled' });
     const result = h('div', { 'aria-live': 'polite' });
     const formErr = h('div');
-    const testBtn = h('button', { type: 'button', class: 'btn' }, 'Test connection');
-    const saveBtn = h('button', { type: 'submit', class: 'btn btn-primary' }, existing ? 'Save' : 'Test and save');
+    const testBtn = button({ type: 'button' }, 'Test connection');
+    const saveBtn = button({ variant: 'primary', type: 'submit' }, existing ? 'Save' : 'Test and save');
 
     function paintKind() {
       kindHelp.textContent = kind.what;
@@ -140,7 +141,7 @@ export function connectionsPanel(ctx) {
           h('p', { class: 'help', id: 'conn-certs-help' }, 'Only for an https:// address whose certificate is your own. finstats then does not verify who answers at this address. Leave it off otherwise.'),
           existing ? h('label', { class: 'check' }, enabled, 'Switched on') : null)),
       result, formErr,
-      h('div', { class: 'form-actions' }, saveBtn, testBtn, h('button', { type: 'button', class: 'btn btn-ghost', onClick: () => { editing = null; render(); } }, 'Cancel')));
+      h('div', { class: 'form-actions' }, saveBtn, testBtn, button({ variant: 'ghost', type: 'button', onClick: () => { editing = null; render(); } }, 'Cancel')));
     el.addEventListener('submit', async (e) => {
       e.preventDefault();
       mount(formErr, '');
@@ -167,7 +168,7 @@ export function connectionsPanel(ctx) {
       h('p', { class: 'help' }, 'finstats only reads from these services: it never approves a request, starts a search or touches a download. Keys and passwords are stored in finstats’ own database, are never shown again and are never part of a backup.'),
       list,
       editing === null
-        ? h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onClick: () => { editing = 'new'; removing = null; render(); } }, icon('plus', 14), 'Add a connection'))
+        ? h('div', { class: 'form-actions' }, button({ type: 'button', onClick: () => { editing = 'new'; removing = null; render(); } }, icon('plus', 14), 'Add a connection'))
         : form(existing));
     if (editing !== null) { const first = root.querySelector(existing ? '#conn-name' : '#conn-kind'); if (first) first.focus(); }
   }

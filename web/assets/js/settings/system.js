@@ -5,6 +5,7 @@ import { h, icon, num, bytes, relTime, dateTime, mount } from '../dom.js';
 import { api, isAbort } from '../api.js';
 import { isAdmin, can } from '../state.js';
 import { card, sk, errorState, facts } from '../components.js';
+import { button } from '../../finui/components/button/button.js';
 
 const STATE_LABEL = { always: ['is-always', 'Always on'], on: ['is-on', 'On'], off: ['', 'Off'] };
 
@@ -25,7 +26,7 @@ export default {
       // finstats' own licence and every third-party one, on their own page: it is half a megabyte
       // of licence text, which belongs where somebody goes looking for it, not in a settings card.
       card({ title: 'Licences', sub: 'GNU GPL v3, on open-source Rust crates, two fonts and public-domain map data', id: 'licences',
-        body: h('a', { class: 'btn', href: '/licenses' }, icon('log', 14), 'Third-party licences', icon('chevronRight', 14)) }));
+        body: button({ href: '/licenses' }, icon('log', 14), 'Third-party licences', icon('chevronRight', 14)) }));
 
     function paintDb() {
       const d = store.tasks && store.tasks.db;

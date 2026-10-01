@@ -5,6 +5,7 @@
 import { h, icon } from './dom.js';
 import { api, isAbort, onViewCacheCleared } from './api.js';
 import { state } from './state.js';
+import { button } from '../finui/components/button/button.js';
 
 /** An older server says nothing about watchlists, and then no page offers one. */
 export const hasWatchlist = () => !!(state.user && state.user.features && state.user.features.watchlist);
@@ -44,7 +45,7 @@ export function watchToggle(t, { compact = false, name = '', keepFocus = false, 
   const [addWords, onWords] = ofShow ? ['Add show to watchlist', 'Show is on your watchlist'] : ['Add to watchlist', 'On your watchlist'];
   const label = compact ? null : h('span', null, addWords);
   const note = h('span', { class: 'wl-error', role: 'status' });
-  const btn = h('button', { type: 'button', class: ['wl-toggle', compact ? 'icon-btn wl-compact' : 'btn btn-sm'], hidden: true, 'aria-pressed': 'false',
+  const btn = button({ variant: compact ? 'icon' : 'default', class: ['wl-toggle', compact && 'wl-compact'], hidden: true, 'aria-pressed': 'false',
     onMousedown: keepFocus ? (e) => e.preventDefault() : null }, icon('bookmark', compact ? 16 : 14), label);
   let entry = null;
   btn._wl = {

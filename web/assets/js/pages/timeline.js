@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { replaceQuery } from '../router.js';
 import { dataView, sk, avatar, poster, emptyState, errorState } from '../components.js';
 import { userTabs } from './users.js';
+import { button } from '../../finui/components/button/button.js';
 
 const COL_MIN = 330;   // a stop is never narrower than this in the snake
 const LINE_BELOW = 620; // below this width the trail is a straight line
@@ -68,7 +69,7 @@ export function timelinePage(ctx) {
       libraries.map((l) => h('button', { type: 'button', class: 'chip chip-btn chip-toggle', 'aria-pressed': String(isOn(l.id)),
         onClick: () => { const next = new Set(all.filter(isOn)); if (next.has(l.id)) next.delete(l.id); else next.add(l.id); set(next); } },
       isOn(l.id) ? icon('check', 12) : null, l.name)),
-      picked ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: () => set(new Set(all)) }, 'Show all') : null));
+      picked ? button({ variant: 'ghost', size: 'sm', type: 'button', onClick: () => set(new Set(all)) }, 'Show all') : null));
   }
 
   /** The trail plus its "older" control; further pages are appended in place. */
@@ -78,7 +79,7 @@ export function timelinePage(ctx) {
     const box = h('div', null, trail.el, foot);
     let next = first.next, busy = false;
 
-    const more = h('button', { type: 'button', class: 'btn', onClick: () => loadMore() }, 'Show older');
+    const more = button({ type: 'button', onClick: () => loadMore() }, 'Show older');
     const watcher = 'IntersectionObserver' in window ? new IntersectionObserver((e) => { if (e.some((x) => x.isIntersecting)) loadMore(); }, { rootMargin: '600px' }) : null;
     ctx.signal.addEventListener('abort', () => watcher && watcher.disconnect());
 

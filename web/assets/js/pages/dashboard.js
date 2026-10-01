@@ -10,6 +10,7 @@ import { loadUpcoming, entryCard, entryTitle, entryName } from '../upcoming.js';
 import { loadDownloads, downloadsList, nothingDownloading } from '../downloads.js';
 import { groupsCard } from '../widgets.js';
 import { watchToggle, watchable } from '../watchlist.js';
+import { button } from '../../finui/components/button/button.js';
 
 // Coming up: the same loader for the card and the prefetcher. Nothing is asked when no Sonarr or Radarr is connected.
 const hasComing = () => !!(state.user && state.user.features && state.user.features.upcoming);
@@ -85,7 +86,7 @@ export default function dashboard(ctx) {
   // ---- downloading now: live, and only for people who may see it. Polled while this page is open.
   const dlBody = h('div');
   const dlCard = card({ title: 'Downloading now', sub: 'From Sonarr, Radarr and your torrent client', cls: 'dl-card',
-    actions: h('a', { class: 'btn btn-ghost btn-sm', href: '/pipeline?tab=downloads' }, 'All downloads'), body: dlBody });
+    actions: button({ variant: 'ghost', size: 'sm', href: '/pipeline?tab=downloads' }, 'All downloads'), body: dlBody });
   dlCard.hidden = true;
   if (hasDownloads()) {
     const dlView = dataView({
@@ -105,7 +106,7 @@ export default function dashboard(ctx) {
   const comingBody = h('div');
   const comingArrows = h('span', { class: 'shelf-arrows', hidden: true });
   const comingCard = card({ title: 'Coming up', sub: 'The next seven days in Sonarr and Radarr', cls: 'shelf-section', body: comingBody,
-    actions: [comingArrows, h('a', { class: 'btn btn-ghost btn-sm', href: '/pipeline?tab=upcoming' }, 'Calendar')] });
+    actions: [comingArrows, button({ variant: 'ghost', size: 'sm', href: '/pipeline?tab=upcoming' }, 'Calendar')] });
   comingCard.hidden = true;
   if (hasComing()) {
     dataView({
@@ -134,8 +135,8 @@ export default function dashboard(ctx) {
           can('manage') ? 'finstats is now watching your Jellyfin server — new plays show up here as they happen. You can also bring in the history you already have, from Jellystat or Streamystats.'
                 : 'Your plays show up here as they happen.',
           can('manage') ? h('div', { class: 'empty-buttons' },
-            h('a', { class: 'btn btn-primary', href: '/settings/import#import-jellystat' }, icon('upload', 14), 'Import from Jellystat'),
-            h('a', { class: 'btn', href: '/settings/import#import-streamystats' }, icon('upload', 14), 'Import from Streamystats')) : null), dlCard, shelfCard, comingCard];
+            button({ variant: 'primary', href: '/settings/import#import-jellystat' }, icon('upload', 14), 'Import from Jellystat'),
+            button({ href: '/settings/import#import-streamystats' }, icon('upload', 14), 'Import from Streamystats')) : null), dlCard, shelfCard, comingCard];
       }
       const usersMode = admin && !userId;
       return [
@@ -153,7 +154,7 @@ export default function dashboard(ctx) {
         insights ? h('div', { class: 'grid-heat' }, heatmapCard({ data: heat }), genresCard(insights.genres)) : heatmapCard({ data: heat }),
         groupsCard(groups, { forUser: userId || (admin ? null : state.user.id) }),
         insights ? failedLoginsCard(insights.failed_logins) : null,
-        card({ title: 'Recent activity', actions: h('a', { class: 'btn btn-ghost btn-sm', href: '/activity' }, 'View all', icon('chevronRight', 14)),
+        card({ title: 'Recent activity', actions: button({ variant: 'ghost', size: 'sm', href: '/activity' }, 'View all', icon('chevronRight', 14)),
           cls: 'card-flush', body: playsTable(recent.rows, { showUser: admin, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }), empty: 'No plays in this range.' }) }),
       ];
     },

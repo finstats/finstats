@@ -4,6 +4,7 @@
 
 import { h, s, icon, num } from './dom.js';
 import { showTip, hideTip, tipShown } from './charts.js';
+import { button } from '../finui/components/button/button.js';
 
 const MIN_W = 70;            // the closest zoom, in map units (the whole world is 2000 wide)
 // How it stays smooth. The coastline is 445 kB of path, and drawing it again is what costs: every change of the viewBox
@@ -46,9 +47,9 @@ export function worldMap({ points, countries = [], onPick, signal }) {
   svg.append(land, routeLayer, dotLayer);
   const hint = h('div', { class: 'wm-hint', hidden: true }, 'Hold Ctrl and scroll to zoom');
   const status = h('div', { class: 'wm-status' }, 'Loading the map…');
-  const zoomIn = h('button', { type: 'button', class: 'btn btn-sm wm-btn', 'aria-label': 'Zoom in', title: 'Zoom in (+)' }, icon('plus', 14));
-  const zoomOut = h('button', { type: 'button', class: 'btn btn-sm wm-btn', 'aria-label': 'Zoom out', title: 'Zoom out (−)' }, icon('minus', 14));
-  const fitBtn = h('button', { type: 'button', class: 'btn btn-sm wm-btn', 'aria-label': 'Show every dot', title: 'Show every dot (0)' }, icon('compass', 14));
+  const zoomIn = button({ size: 'sm', class: 'wm-btn', type: 'button', 'aria-label': 'Zoom in', title: 'Zoom in (+)' }, icon('plus', 14));
+  const zoomOut = button({ size: 'sm', class: 'wm-btn', type: 'button', 'aria-label': 'Zoom out', title: 'Zoom out (−)' }, icon('minus', 14));
+  const fitBtn = button({ size: 'sm', class: 'wm-btn', type: 'button', 'aria-label': 'Show every dot', title: 'Show every dot (0)' }, icon('compass', 14));
   const pulses = h('div', { class: 'wm-pulses', 'aria-hidden': 'true' });
   const stage = h('div', { class: 'wm-stage' }, svg, pulses);
   const frame = h('div', { class: 'wm-frame' }, stage, status, hint, h('div', { class: 'wm-controls' }, zoomIn, zoomOut, fitBtn));

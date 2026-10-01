@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import { state, resetCaches } from '../state.js';
 import { navigate } from '../router.js';
 import { setBusy, inlineError, formField as field } from '../components.js';
+import { button } from '../../finui/components/button/button.js';
 
 function brand() {
   return h('div', { class: 'auth-brand' }, logo(34), h('span', { class: 'brand-name' }, 'finstats'));
@@ -26,13 +27,13 @@ export function setupPage(ctx) {
 
   const url = field({ id: 'jf-url', label: 'Jellyfin address', placeholder: 'http://jellyfin:8096', inputMode: 'url', autocomplete: 'url',
     help: 'The address finstats can reach Jellyfin on. In Docker this is often the container name.' });
-  const testBtn = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Test connection');
+  const testBtn = button({ variant: 'primary', type: 'submit' }, 'Test connection');
   const testResult = h('div', { 'aria-live': 'polite' });
   const step1 = h('form', { class: 'auth-form', noValidate: true }, url.el, h('div', { class: 'form-actions' }, testBtn), testResult);
 
   const user = field({ id: 'username', label: 'Jellyfin admin username', autocomplete: 'username' });
   const pass = field({ id: 'password', label: 'Password', type: 'password', autocomplete: 'current-password' });
-  const finishBtn = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Finish setup');
+  const finishBtn = button({ variant: 'primary', type: 'submit' }, 'Finish setup');
   const finishErr = h('div');
   const step2 = h('form', { class: 'auth-form', noValidate: true, hidden: true },
     user.el, pass.el,
@@ -102,7 +103,7 @@ export function loginPage(ctx) {
   const server = state.status && state.status.server_name;
   const user = field({ id: 'username', label: 'Username', autocomplete: 'username' });
   const pass = field({ id: 'password', label: 'Password', type: 'password', autocomplete: 'current-password' });
-  const btn = h('button', { type: 'submit', class: 'btn btn-primary btn-block' }, 'Sign in');
+  const btn = button({ variant: 'primary', block: true, type: 'submit' }, 'Sign in');
   const formErr = h('div');
   const form = h('form', { class: 'auth-form', noValidate: true }, user.el, pass.el, formErr, btn);
 

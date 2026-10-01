@@ -11,6 +11,7 @@ import { logView, prefetchEvents } from './events.js';
 import { auditView, prefetchAudit } from './audit.js';
 import { healthView, prefetchHealth } from './health.js';
 import { isAdmin } from '../state.js';
+import { button } from '../../finui/components/button/button.js';
 
 const RESULT = {
   Completed: ['sev-good', 'check', 'Completed'],
@@ -99,7 +100,7 @@ export default function serverPage(ctx) {
   // ---- nothing fetched yet
   function fetchPrompt() {
     const err = h('div');
-    const btn = h('button', { type: 'button', class: 'btn btn-primary' }, icon('refresh', 14), 'Fetch server details');
+    const btn = button({ variant: 'primary', type: 'button' }, icon('refresh', 14), 'Fetch server details');
     btn.addEventListener('click', async () => {
       mount(err);
       setBusy(btn, true, 'Fetching…');

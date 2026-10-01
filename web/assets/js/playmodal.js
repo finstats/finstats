@@ -4,6 +4,7 @@ import { h, icon, num, duration, durationExact, dateTime, timeOfDay, clock, bitr
 import { api, isAbort } from './api.js';
 import { can } from './state.js';
 import { openModal, copyButton, methodBadge, facts, errorState, sk, poster, setBusy, inlineError } from './components.js';
+import { button } from '../finui/components/button/button.js';
 
 const res = (w, hgt) => (w && hgt ? `${w}×${hgt}` : null);
 const EVENT = {
@@ -126,11 +127,11 @@ export function openPlayModal(play, { onDeleted } = {}) {
   // Destructive action: inline two-step inside the modal, explicit Cancel/Delete.
   function deleteRow(p) {
     const row = h('div', { class: 'danger-row' });
-    const idle = () => mount(row, h('button', { type: 'button', class: 'btn btn-ghost btn-sm btn-danger-text', onClick: confirm }, icon('trash', 14), 'Delete this play'));
+    const idle = () => mount(row, button({ variant: 'ghost', size: 'sm', tone: 'danger', type: 'button', onClick: confirm }, icon('trash', 14), 'Delete this play'));
     function confirm() {
       const err = h('div');
-      const del = h('button', { type: 'button', class: 'btn btn-sm btn-danger' }, 'Delete play');
-      const cancel = h('button', { type: 'button', class: 'btn btn-sm', onClick: () => { idle(); row.querySelector('button').focus(); } }, 'Cancel');
+      const del = button({ size: 'sm', variant: 'danger', type: 'button' }, 'Delete play');
+      const cancel = button({ size: 'sm', type: 'button', onClick: () => { idle(); row.querySelector('button').focus(); } }, 'Cancel');
       del.addEventListener('click', async () => {
         setBusy(del, true, 'Deleting…'); cancel.disabled = true;
         try {

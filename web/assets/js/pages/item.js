@@ -9,6 +9,7 @@ import { openPlayModal } from '../playmodal.js';
 import { plainTable } from '../tables.js';
 import { agenda } from '../upcoming.js';
 import { watchToggle, watchable } from '../watchlist.js';
+import { button } from '../../finui/components/button/button.js';
 
 const TYPE_LABEL = { Movie: 'Movie', Series: 'Series', Episode: 'Episode', Season: 'Season', Audio: 'Track', MusicAlbum: 'Album' };
 
@@ -91,7 +92,7 @@ export default function itemPage(ctx) {
         card({ title: 'Watched by', cls: 'card-flush', body: watchers(d.watchers) }),
         playedBy(d.played_by),
         card({ title: 'Recent plays', cls: 'card-flush',
-          actions: h('a', { class: 'btn btn-ghost btn-sm', href: `/activity?${key}=${encodeURIComponent(id)}&days=${days}` }, 'View all'),
+          actions: button({ variant: 'ghost', size: 'sm', href: `/activity?${key}=${encodeURIComponent(id)}&days=${days}` }, 'View all'),
           body: playsTable(recent.rows, { showUser: can('see_everyone'), onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }), empty: 'No plays in this range.' }) }),
         file.children.length ? card({ title: 'File', body: file }) : null,
       ];

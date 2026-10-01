@@ -9,6 +9,7 @@ import { can } from '../state.js';
 import { api, uploadRaw } from '../api.js';
 import { card, spinner, inlineError } from '../components.js';
 import { wiringBoard } from './wiring.js';
+import { button } from '../../finui/components/button/button.js';
 
 // The trackers finstats can take history from.
 export const IMPORTERS = [
@@ -177,7 +178,7 @@ export default {
           h('div', { class: 'meter meter-wide', role: 'progressbar', 'aria-label': 'Upload progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(upload.progress * 100) },
             h('span', { class: 'meter-fill', style: { width: upload.progress * 100 + '%' } })),
           h('div', { class: 'import-stage-row' }, h('span', { class: 'mono' }, `${Math.round(upload.progress * 100)}% · ${bytes(upload.loaded)} of ${bytes(upload.total)}`),
-            h('button', { type: 'button', class: 'btn btn-sm', onClick: () => upload.handle && upload.handle.abort() }, 'Cancel upload')),
+            button({ size: 'sm', type: 'button', onClick: () => upload.handle && upload.handle.abort() }, 'Cancel upload')),
           h('p', { class: 'help' }, 'Keep this tab open until the upload finishes. You can browse other finstats pages meanwhile.'));
       } else if (waiting) {
         stage = boardView(imp);
@@ -207,7 +208,7 @@ export default {
             task.message ? h('p', { class: 'help' }, task.message) : null,
             h('table', { class: 'table table-dense result-table' }, h('tbody', null, imp.rows.filter(([k]) => task.result[k] != null).map(([k, label]) =>
               h('tr', null, h('th', { scope: 'row' }, label), h('td', { class: 'mono r' }, num(task.result[k])))))),
-            h('a', { class: 'btn btn-sm', href: '/' }, 'See your stats', icon('chevronRight', 14)));
+            button({ size: 'sm', href: '/' }, 'See your stats', icon('chevronRight', 14)));
         } else if (task && task.state === 'error') {
           outcome = h('div', { class: 'import-result' }, inlineError(`import-task-err-${imp.key}`, `The import failed: ${task.error || task.message || 'unknown error'}`),
             h('p', { class: 'help' }, `Nothing was half-imported. Check that the file is an unmodified ${imp.name} backup, then upload it again.`));

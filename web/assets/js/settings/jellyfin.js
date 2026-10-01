@@ -4,6 +4,7 @@ import { h, icon, num, relTime, dateTime, mount } from '../dom.js';
 import { can, isAdmin } from '../state.js';
 import { card, sk, facts, setBusy, inlineError } from '../components.js';
 import { settingRow } from './common.js';
+import { button } from '../../finui/components/button/button.js';
 
 export default {
   key: 'jellyfin', label: 'Jellyfin', sub: 'The server finstats reads from', icon: 'server',
@@ -56,7 +57,7 @@ function peopleAddress(store) {
     value: current, placeholder: store.settings.jellyfin_url || 'https://jellyfin.example.com', disabled: !isAdmin(), 'aria-describedby': 'jellyfin_public_url-help' });
   const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
   const err = h('div');
-  const save = h('button', { type: 'button', class: 'btn btn-sm' }, 'Save');
+  const save = button({ size: 'sm', type: 'button' }, 'Save');
   save.addEventListener('click', async () => {
     mount(err, ''); setBusy(save, true, 'Saving…');
     try {

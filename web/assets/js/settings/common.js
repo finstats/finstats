@@ -7,6 +7,7 @@
 import { h, icon, num, mount } from '../dom.js';
 import { api, isAbort } from '../api.js';
 import { toggle, spinner, inlineError, setBusy } from '../components.js';
+import { button } from '../../finui/components/button/button.js';
 
 /** One place for the answers several sections read, fetched once per visit and polled only if asked. */
 export function createStore(ctx) {
@@ -102,7 +103,7 @@ export function numberForm(store, FIELDS, errId) {
   });
   const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
   const formErr = h('div');
-  const save = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Save changes');
+  const save = button({ variant: 'primary', type: 'submit' }, 'Save changes');
   let noteTimer;
   const form = h('form', { class: 'setting-rows', noValidate: true }, rows, h('div', { class: 'form-actions setting-actions' }, save, note), formErr);
   form.addEventListener('submit', async (e) => {

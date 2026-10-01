@@ -7,6 +7,7 @@ import { can } from '../state.js';
 import { api } from '../api.js';
 import { card, sk, setBusy, inlineError } from '../components.js';
 import { toggleRow, settingRow } from './common.js';
+import { button } from '../../finui/components/button/button.js';
 
 export default {
   key: 'network', label: 'Home network', sub: 'Which plays count as local', group: 'Tracking', icon: 'lan',
@@ -31,7 +32,7 @@ export default {
 
       // The only thing that ever asks again, because a person pressed it.
       const lookupErr = h('div');
-      const lookup = h('button', { type: 'button', class: 'btn btn-sm' }, 'Look up now');
+      const lookup = button({ size: 'sm', type: 'button' }, 'Look up now');
       lookup.addEventListener('click', async () => {
         mount(lookupErr, '');
         setBusy(lookup, true, 'Asking…');
@@ -44,7 +45,7 @@ export default {
         placeholder: '203.0.113.7' }, (s.home_addresses || []).join('\n'));
       const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
       const err = h('div');
-      const save = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Save addresses');
+      const save = button({ variant: 'primary', type: 'submit' }, 'Save addresses');
       const form = h('form', { class: 'setting-rows', noValidate: true },
         settingRow({ id: 'home_addresses', label: 'Other addresses that count as home', labelFor: 'f-home',
           help: 'One per line: an earlier address of yours, a second home, a VPN exit. Your history is sorted again when you save.',

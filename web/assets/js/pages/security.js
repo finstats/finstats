@@ -6,6 +6,7 @@ import { pageHeader, card, filterBar, dataView, sk, emptyState, statTile, segmen
 import { bucketList } from '../charts.js';
 import { dataTable } from '../tables.js';
 import { worldMap, placeTip } from '../worldmap.js';
+import { button } from '../../finui/components/button/button.js';
 
 const PER_PAGE = 5;
 // Status colours always ship with an icon and a word.
@@ -60,13 +61,13 @@ export default function securityPage(ctx) {
     const mute = h('input', { type: 'checkbox' });
     const error = inlineError('alert-error', '');
     error.hidden = true;
-    const save = h('button', { type: 'submit', class: 'btn btn-primary' }, icon('check', 14), 'Resolve');
+    const save = button({ variant: 'primary', type: 'submit' }, icon('check', 14), 'Resolve');
     const form = h('form', { class: 'stack-sm' },
       h('p', { class: 'help' }, `${a.user_name}: ${travel ? travelSentence(a.details) : 'first seen in ' + (a.details.country || a.details.country_code)}.`),
       h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'alert-note' }, 'Note (optional)'), note),
       travel ? h('label', { class: 'check' }, mute, `Never report ${a.details.from.place} and ${a.details.to.place} for ${a.user_name} again`) : null,
       error,
-      h('div', { class: 'form-actions' }, save, h('button', { type: 'button', class: 'btn btn-ghost', onClick: () => modal.close() }, 'Cancel')));
+      h('div', { class: 'form-actions' }, save, button({ variant: 'ghost', type: 'button', onClick: () => modal.close() }, 'Cancel')));
     const modal = openModal({ title: 'Resolve alert', body: form, initialFocus: note });
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -86,10 +87,10 @@ export default function securityPage(ctx) {
   function alertRow(a, manage) {
     const sev = SEVERITY[a.severity] || SEVERITY.medium, d = a.details || {};
     const travel = a.kind === 'impossible_travel' && d.from && d.to;
-    const showBtn = d.to ? h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: () => map && map.show(travel ? [d.from, d.to] : [d.to], { line: !!travel }) }, icon('compass', 13), 'Show on map') : null;
+    const showBtn = d.to ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => map && map.show(travel ? [d.from, d.to] : [d.to], { line: !!travel }) }, icon('compass', 13), 'Show on map') : null;
     const act = !manage ? null : a.resolved_at
-      ? h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: async (e) => { setBusy(e.currentTarget, true, 'Reopening…'); try { await api.post(`/security/alerts/${a.id}/reopen`); } finally { dv.load(); } } }, icon('refresh', 13), 'Reopen')
-      : h('button', { type: 'button', class: 'btn btn-sm', onClick: () => resolveDialog(a) }, icon('check', 13), 'Resolve…');
+      ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: async (e) => { setBusy(e.currentTarget, true, 'Reopening…'); try { await api.post(`/security/alerts/${a.id}/reopen`); } finally { dv.load(); } } }, icon('refresh', 13), 'Reopen')
+      : button({ size: 'sm', type: 'button', onClick: () => resolveDialog(a) }, icon('check', 13), 'Resolve…');
     return h('li', { class: 'alert-row' + (a.resolved_at ? ' is-resolved' : '') },
       h('div', { class: 'alert-head' },
         h('span', { class: 'sev ' + sev.cls }, icon(sev.icon, 13), sev.label),
@@ -107,7 +108,7 @@ export default function securityPage(ctx) {
     const tabs = segmented({ label: 'Which alerts', size: 'seg-sm', value: f.status, options: [{ value: 'open', label: `Open${alerts.open ? ` (${num(alerts.open)})` : ''}` }, { value: 'resolved', label: 'Resolved' }, { value: 'all', label: 'All' }],
       onChange: (v) => { f.status = v; f.page = 1; reload(); } });
     const resolveAll = manage && f.status === 'open' && alerts.open > 1 && !f.userId
-      ? h('button', { type: 'button', class: 'btn btn-sm btn-ghost', onClick: async (e) => { setBusy(e.currentTarget, true, 'Resolving…'); try { await api.post('/security/alerts/resolve-all'); } finally { dv.load(); } } }, icon('check', 13), 'Resolve all')
+      ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: async (e) => { setBusy(e.currentTarget, true, 'Resolving…'); try { await api.post('/security/alerts/resolve-all'); } finally { dv.load(); } } }, icon('check', 13), 'Resolve all')
       : null;
     const body = alerts.rows.length
       ? [h('ul', { class: 'alert-list' }, alerts.rows.map((a) => alertRow(a, manage))),
@@ -137,7 +138,7 @@ export default function securityPage(ctx) {
   function pickedPanel(slot, point) {
     const d = point.data;
     const head = h('div', { class: 'picked-head' }, h('strong', null, point.label),
-      h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Close place details', onClick: () => slot.replaceChildren() }, icon('x', 14)));
+      button({ variant: 'icon', type: 'button', 'aria-label': 'Close place details', onClick: () => slot.replaceChildren() }, icon('x', 14)));
     let body;
     if (d.failed) {
       body = [h('p', { class: 'help' }, `${num(d.attempts)} failed ${d.attempts === 1 ? 'sign-in' : 'sign-ins'}, last ${relTime(d.last_at)}.`), h('ul', { class: 'picked-list' }, d.events.map((e) => h('li', null, e))),
@@ -162,11 +163,11 @@ export default function securityPage(ctx) {
         h('td', { class: 'mono', 'data-sort': p.watch_s }, duration(p.watch_s)),
         h('td', { class: 'mono' }, num(p.sign_ins)),
         h('td', { class: 'mono nowrap', 'data-sort': p.last_seen, title: dateTime(p.last_seen) }, relTime(p.last_seen)),
-        h('td', null, h('button', { type: 'button', class: 'btn btn-sm btn-ghost', 'aria-label': `Show ${p.label} on the map`, onClick: () => map && map.show([p]) }, icon('compass', 13))))))));
+        h('td', null, button({ size: 'sm', variant: 'ghost', type: 'button', 'aria-label': `Show ${p.label} on the map`, onClick: () => map && map.show([p]) }, icon('compass', 13))))))));
   }
 
   function noDatabase(o) {
-    const btn = o.can_manage ? h('button', { type: 'button', class: 'btn btn-primary', onClick: async (e) => {
+    const btn = o.can_manage ? button({ variant: 'primary', type: 'button', onClick: async (e) => {
       const b = e.currentTarget;
       setBusy(b, true, 'Downloading…');
       try {
