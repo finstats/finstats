@@ -918,29 +918,39 @@ fn folder(label: &str, kind: &str, f: &Value) -> Option<Value> {
     (free >= 0 && used >= 0 && free + used > 0).then(|| json!({ "label": label, "path": f["Path"], "free_bytes": free, "used_bytes": used, "kind": kind }))
 }
 
-async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
-    const ID: &str = "sync_server";
-    app.tasks.update(ID, "Reading server details", None);
-    let info = jf.system_info().await?;
-    let storage_raw = jf.storage().await;
-    let plugins = jf.plugins().await.unwrap_or_default();
-    let tasks = jf.scheduled_tasks().await.unwrap_or_default();
-    crate::jobs::observe(app, &tasks);
-    app.tasks.update(ID, "Reading devices", Some(0.6));
-    let devices = jf.devices().await.unwrap_or_default();
-
+/// The library's folders and Jellyfin's own, as the Server page lists them.
+fn storage_of(st: &Value) -> Vec<Value> {
     let mut storage: Vec<Value> = vec![];
-    if let Some(st) = &storage_raw {
-        for lib in st["Libraries"].as_array().map(Vec::as_slice).unwrap_or_default() {
-            let name = lib["Name"].as_str().unwrap_or("Library");
-            storage.extend(lib["Folders"].as_array().map(Vec::as_slice).unwrap_or_default().iter().filter_map(|f| folder(name, "library", f)));
-        }
-        for (key, label) in [("ProgramDataFolder", "Program data"), ("CacheFolder", "Cache"), ("TranscodingTempFolder", "Transcodes"), ("InternalMetadataFolder", "Metadata"), ("LogFolder", "Logs")] {
-            storage.extend(folder(label, "system", &st[key]));
-        }
+    for lib in st["Libraries"].as_array().map(Vec::as_slice).unwrap_or_default() {
+        let name = lib["Name"].as_str().unwrap_or("Library");
+        storage.extend(lib["Folders"].as_array().map(Vec::as_slice).unwrap_or_default().iter().filter_map(|f| folder(name, "library", f)));
     }
-    let snapshot = json!({
-        "fetched_at": db::now(),
+    for (key, label) in [("ProgramDataFolder", "Program data"), ("CacheFolder", "Cache"), ("TranscodingTempFolder", "Transcodes"), ("InternalMetadataFolder", "Metadata"), ("LogFolder", "Logs")] {
+        storage.extend(folder(label, "system", &st[key]));
+    }
+    storage
+}
+
+/// What the Server page shows of Jellyfin. A part that could not be read this time (`None`) keeps what `previous`
+/// had: read as empty, one timed-out request emptied a list until the next read. A part that answered empty is empty.
+fn server_snapshot(info: &Value, storage: Option<Vec<Value>>, plugins: Option<&[Value]>, tasks: Option<&[Value]>, previous: Option<&Value>, now: i64) -> Value {
+    let kept = |part: &str| previous.and_then(|p| p.get(part)).filter(|v| v.is_array()).cloned().unwrap_or_else(|| json!([]));
+    let plugins = plugins.map(|all| all.iter().map(|p| json!({ "name": p["Name"], "version": p["Version"], "status": p["Status"], "description": p["Description"] })).collect::<Vec<_>>());
+    let tasks = tasks.map(|all| {
+        all.iter()
+            .map(|t| {
+                let last = &t["LastExecutionResult"];
+                let (start, end) = (last["StartTimeUtc"].as_str().and_then(parse_ts), last["EndTimeUtc"].as_str().and_then(parse_ts));
+                json!({
+                    "name": t["Name"], "category": t["Category"], "state": t["State"],
+                    "last_result": last["Status"], "last_run_at": end.or(start),
+                    "last_duration_s": start.zip(end).map(|(s, e)| (e - s).max(0)),
+                })
+            })
+            .collect::<Vec<_>>()
+    });
+    json!({
+        "fetched_at": now,
         "info": {
             "server_name": info["ServerName"], "version": info["Version"],
             "operating_system": opt_str(&info["OperatingSystemDisplayName"]).or_else(|| opt_str(&info["OperatingSystem"])),
@@ -951,19 +961,32 @@ async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
             "program_data_path": info["ProgramDataPath"], "log_path": info["LogPath"],
             "encoder_location": info["EncoderLocation"],
         },
-        "storage": storage,
-        "plugins": plugins.iter().map(|p| json!({ "name": p["Name"], "version": p["Version"], "status": p["Status"], "description": p["Description"] })).collect::<Vec<_>>(),
-        "scheduled_tasks": tasks.iter().map(|t| {
-            let last = &t["LastExecutionResult"];
-            let (start, end) = (last["StartTimeUtc"].as_str().and_then(parse_ts), last["EndTimeUtc"].as_str().and_then(parse_ts));
-            json!({
-                "name": t["Name"], "category": t["Category"], "state": t["State"],
-                "last_result": last["Status"], "last_run_at": end.or(start),
-                "last_duration_s": start.zip(end).map(|(s, e)| (e - s).max(0)),
-            })
-        }).collect::<Vec<_>>(),
-    });
+        "storage": storage.map_or_else(|| kept("storage"), Value::from),
+        "plugins": plugins.map_or_else(|| kept("plugins"), Value::from),
+        "scheduled_tasks": tasks.map_or_else(|| kept("scheduled_tasks"), Value::from),
+    })
+}
 
+async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
+    const ID: &str = "sync_server";
+    app.tasks.update(ID, "Reading server details", None);
+    let info = jf.system_info().await?;
+    // Each of these may fail on its own, and what could not be read keeps the last reading (`server_snapshot`).
+    let unread = |what: &str, e: &anyhow::Error| tracing::warn!("could not read Jellyfin's {what}; keeping the last reading: {e:#}");
+    let storage = jf.storage().await.map(|st| storage_of(&st));
+    if storage.is_none() {
+        tracing::warn!("could not read Jellyfin's storage; keeping the last reading");
+    }
+    let plugins = jf.plugins().await.inspect_err(|e| unread("plugins", e)).ok();
+    let tasks = jf.scheduled_tasks().await.inspect_err(|e| unread("scheduled tasks", e)).ok();
+    if let Some(tasks) = &tasks {
+        crate::jobs::observe(app, tasks);
+    }
+    app.tasks.update(ID, "Reading devices", Some(0.6));
+    let devices = jf.devices().await.unwrap_or_default();
+    let previous: Option<Value> = app.db.call(|c| Ok(db::get_setting(c, "server_info")?.and_then(|raw| serde_json::from_str(&raw).ok()))).await?;
+    let plugin_count = plugins.as_ref().map(Vec::len);
+    let snapshot = server_snapshot(&info, storage, plugins.as_deref(), tasks.as_deref(), previous.as_ref(), db::now());
     let device_count = devices.len();
     app.db
         .call(move |c| {
@@ -995,7 +1018,10 @@ async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
             Ok(())
         })
         .await?;
-    Ok(format!("{device_count} devices, {} plugins", plugins.len()))
+    Ok(match plugin_count {
+        Some(n) => format!("{device_count} devices, {n} plugins"),
+        None => format!("{device_count} devices; the plugins could not be read"),
+    })
 }
 
 // ---------------------------------------------------------------- per-user played & favourite flags
@@ -1064,6 +1090,30 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A part of the server's details that could not be read this time keeps what the last read found. Read as
+    /// empty, one timed-out request emptied the plugin, task or storage list on the Server page until the next read.
+    #[test]
+    fn a_part_of_the_server_details_that_could_not_be_read_keeps_the_last_reading() {
+        let info = json!({ "ServerName": "Jellyfin", "Version": "10.11.0" });
+        let before = server_snapshot(
+            &info,
+            Some(vec![json!({ "name": "Movies", "kind": "library" })]),
+            Some(&[json!({ "Name": "Playback Reporting", "Version": "16.0" })]),
+            Some(&[json!({ "Name": "Scan Media Library", "Category": "Library", "State": "Idle" })]),
+            None,
+            100,
+        );
+        let after = server_snapshot(&info, None, None, None, Some(&before), 200);
+        assert_eq!(after["fetched_at"], 200);
+        for part in ["storage", "plugins", "scheduled_tasks"] {
+            assert_eq!(after[part], before[part], "{part} kept");
+            assert_eq!(after[part].as_array().map(Vec::len), Some(1), "{part}");
+        }
+        let fresh = server_snapshot(&info, Some(vec![]), Some(&[]), Some(&[]), Some(&before), 300);
+        assert_eq!((fresh["storage"].clone(), fresh["plugins"].clone()), (json!([]), json!([])), "a read that answered empty is empty");
+        assert_eq!(server_snapshot(&info, None, None, None, None, 1)["plugins"], json!([]), "nothing to keep: empty");
+    }
 
     #[test]
     fn the_first_look_at_people_reads_everybody_once() {
