@@ -1894,9 +1894,14 @@ a.wl-poster:hover .poster, a.wl-poster:focus-visible .poster { outline: 2px soli
 .wl-toggle.is-on .icon path { fill: currentColor; }
 .wl-error { max-width: 260px; font-size: 12px; line-height: 1.4; color: var(--critical-text); overflow-wrap: anywhere; }
 .wl-error:empty { display: none; }
-/* On a shelf card: over the poster's corner, beside the card's link rather than in it. */
+/* On a shelf card: over the poster's corner, beside the card's link rather than in it, and out of the way of the poster
+   until a pointer rests on the card or the keyboard reaches it. Where the main input is a finger there is no resting on
+   anything, so there it always shows. */
 .shelf > li { position: relative; }
-.shelf .wl { position: absolute; top: 6px; right: 6px; align-items: flex-end; }
+.shelf .wl { position: absolute; top: 6px; right: 6px; align-items: flex-end; opacity: 0; transition: opacity .12s ease; }
+.shelf > li:hover .wl, .shelf > li:focus-within .wl, .shelf .wl:has(.wl-error:not(:empty)) { opacity: 1; }
+@media (hover: none) and (pointer: coarse) { .shelf .wl { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .shelf .wl { transition: none; } }
 .shelf .wl-toggle { background: color-mix(in srgb, var(--bg-2) 88%, transparent); }
 .shelf .wl-toggle:hover { background: var(--bg-2); }
 .shelf .wl-error { max-width: 120px; padding: 3px 6px; border-radius: var(--radius-sm); background: var(--bg-lift); }
