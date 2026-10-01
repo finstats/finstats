@@ -298,8 +298,8 @@ title too, and an episode by its own name anywhere (`title_key`), so a moved spe
 request (`Library`). The owner picks; `locate()` moves the plays through `relink::move_plays` (the same savepoint and
 duplicate rule) by `move_onto`, which also gives them the target's type and place — a film may be located as an episode,
 since anime films are often a show's special, but never as a whole show — and keeps the choice in `located` (migration 33),
-which `relink_orphans` consults **before any rule**, so a re-import attaches by itself. Not in a backup yet: a lost choice
-is one more click, not lost history.
+which `relink_orphans` consults **before any rule**, so a re-import attaches by itself. It is the owner's and not
+Jellyfin's to give back, so it is in `backup::TABLES`, restored before the restore's own re-link.
 
 **`sync_libraries` reads a library twice — every item, then the cast and crew of films and shows only — and only the
 first count may be shown to `trustworthy_removal`.** The two cursors were both called `start`, the second shadowing the

@@ -38,7 +38,7 @@ const SUFFIX: &str = ".jsonl.gz";
 
 /// In the order they are written, which is also the order they must be read in: a timeline row
 /// needs its play to exist.
-const TABLES: [&str; 10] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit", "watchlist"];
+const TABLES: [&str; 11] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit", "watchlist", "located"];
 
 pub fn dir(data_dir: &Path) -> PathBuf {
     data_dir.join("backups")
@@ -311,7 +311,8 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     res.other_rows += 1;
                 }
             }
-            "manual_seen" | "home_addresses" | "server_events" | "devices" => {
+            // `located`: where the owner said a title is. A choice this database already has for the same id stands.
+            "manual_seen" | "home_addresses" | "server_events" | "devices" | "located" => {
                 let t = TABLES.iter().find(|t| **t == table).copied().unwrap_or("devices");
                 if insert_row(&tx, t, &known[t], row, &[], "INSERT OR IGNORE")? {
                     res.other_rows += 1;
@@ -509,6 +510,30 @@ mod tests {
             .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap().map(Result::unwrap).collect();
         assert_eq!(rows, [("u1".into(), "Big Buck Bunny".into(), 50), ("u1".into(), "Nightfall Bay".into(), 60), ("u2".into(), "Sintel".into(), 70)],
             "one entry per title and person, with the older date; twice is once");
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// Where the owner located a title is theirs and not Jellyfin's to give back: it travels with a backup, and the plays
+    /// it is about are attached by it as they are restored.
+    #[test]
+    fn where_a_title_was_located_travels_and_attaches_what_is_restored() {
+        let tmp = std::env::temp_dir().join(format!("finstats-located-backup-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let source = Db::open(&tmp.join("source.db")).unwrap();
+        source.conn().unwrap().execute_batch(
+            "INSERT INTO located(from_id, to_id, at, by) VALUES ('plex:5', 'empire', 100, 'u1');
+             INSERT INTO playbacks(source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES ('tautulli', 'tautulli:1', 'u1', 'alice', 'plex:5', 'Star Wars: Episode V - The Empire Strikes Back (1980)', 'Movie', 1000, 2000, 1000);",
+        ).unwrap();
+        let made = export(&source, &dir(&tmp), None).unwrap();
+        let target = Db::open(&tmp.join("target.db")).unwrap();
+        target.conn().unwrap().execute_batch("INSERT INTO items(id, type, name, production_year, updated_at) VALUES ('empire', 'Movie', 'The Empire Strikes Back', 1980, 1)").unwrap();
+        restore(&target, &dir(&tmp).join(&made.name), false, None).unwrap();
+        let c = target.conn().unwrap();
+        let to: String = c.query_row("SELECT to_id FROM located WHERE from_id = 'plex:5'", [], |r| r.get(0)).unwrap();
+        let at: String = c.query_row("SELECT item_id FROM playbacks WHERE source_id = 'tautulli:1'", [], |r| r.get(0)).unwrap();
+        assert_eq!((to.as_str(), at.as_str()), ("empire", "empire"));
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
