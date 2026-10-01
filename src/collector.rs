@@ -74,14 +74,16 @@ fn ended_keys<'a>(tracked: impl Iterator<Item = &'a String>, seen: &std::collect
 /// Every play that ended in one pass, closed in one transaction — a play too short to keep deleted, the rest given their
 /// final numbers and a stop event — and then each title's groups worked out once, not once per play. One call and one
 /// detection per play closed 245 plays a second, so a crowd ending together held up the collector for minutes.
-fn close_ended(c: &mut crate::db::rusqlite::Connection, finished: &[(i64, PlayRecord)], group_window_s: i64) -> Result<()> {
+fn close_ended(c: &mut crate::db::rusqlite::Connection, finished: &[(i64, PlayRecord, Vec<PlayEvent>)], group_window_s: i64) -> Result<()> {
     let mut titles = std::collections::BTreeSet::new();
     let tx = c.transaction()?;
-    for (row_id, rec) in finished {
+    for (row_id, rec, unsaved) in finished {
         if rec.duration_s < MIN_KEEP_S {
             tx.execute("DELETE FROM playbacks WHERE id = ?1", [row_id])?;
         } else {
             rec.update_progress(&tx, *row_id)?;
+            // What a failed save still held, then the end.
+            insert_events(&tx, *row_id, unsaved)?;
             insert_events(&tx, *row_id, &[PlayEvent { at: rec.ended_at, kind: "stop", position_s: rec.position_s, from_s: None, detail: None }])?;
         }
         titles.insert(rec.item_id.clone());
@@ -265,6 +267,9 @@ struct Tracked {
     last_tick: Instant,
     last_persist: Instant,
     transcode_progress: Option<f64>,
+    /// What passes saw that is not written yet. Kept until a write succeeds: the record has already moved on, so a
+    /// change seen once is never seen again, and a failed write that took it along lost it.
+    unsaved: Vec<PlayEvent>,
 }
 
 fn opt_str(v: &Value) -> Option<String> {
@@ -1260,6 +1265,7 @@ async fn tick(
     let mut device_rows: Vec<DeviceRow> = vec![];
     // What this pass has to write, written once after the list is read: one transaction each, not one call per play.
     let mut due: Vec<(i64, PlayRecord, Vec<PlayEvent>)> = vec![];
+    let mut due_keys: Vec<String> = vec![];
     let mut arrived: Vec<(String, PlayRecord, bool, Option<f64>)> = vec![];
 
     for s in sessions {
@@ -1292,12 +1298,12 @@ async fn tick(
             rec.duration_s = t.watched.round() as i64;
             rec.paused_s = t.paused.round() as i64;
             let was_paused = is_paused != pause_flipped;
-            let events = diff_events(&t.rec, &mut rec, was_paused, is_paused, dt, now);
+            t.unsaved.extend(diff_events(&t.rec, &mut rec, was_paused, is_paused, dt, now));
             t.rec = rec;
 
-            if !events.is_empty() || t.last_persist.elapsed() >= PERSIST_EVERY {
-                t.last_persist = tick_at;
-                due.push((t.row_id, t.rec.clone(), events));
+            if !t.unsaved.is_empty() || t.last_persist.elapsed() >= PERSIST_EVERY {
+                due.push((t.row_id, t.rec.clone(), t.unsaved.clone()));
+                due_keys.push(key.clone());
             }
         } else {
             arrived.push((key, rec, is_paused, transcode_progress));
@@ -1306,6 +1312,11 @@ async fn tick(
 
     if !due.is_empty() {
         app.db.call(move |c| save_progress(c, &due)).await?;
+        for key in &due_keys {
+            if let Some(t) = tracked.get_mut(key) {
+                (t.last_persist, t.unsaved) = (tick_at, vec![]);
+            }
+        }
     }
     if !arrived.is_empty() {
         let probes: Vec<PlayRecord> = arrived.iter().map(|(_, rec, _, _)| rec.clone()).collect();
@@ -1327,7 +1338,7 @@ async fn tick(
             tokio::spawn(async move { crate::notify::raise(&teller, event).await; });
             tracked.insert(
                 key,
-                Tracked { row_id, rec, watched: s.watched, paused: s.paused, is_paused, last_tick: tick_at, last_persist: tick_at, transcode_progress },
+                Tracked { row_id, rec, watched: s.watched, paused: s.paused, is_paused, last_tick: tick_at, last_persist: tick_at, transcode_progress, unsaved: vec![] },
             );
         }
     }
@@ -1336,7 +1347,7 @@ async fn tick(
     // written: a write refused now (an import holding the database) is tried again on the next pass.
     let ended = ended_keys(tracked.keys(), &seen);
     if !ended.is_empty() {
-        let finished: Vec<(i64, PlayRecord)> = ended
+        let finished: Vec<(i64, PlayRecord, Vec<PlayEvent>)> = ended
             .iter()
             .map(|key| {
                 let t = &tracked[key];
@@ -1344,7 +1355,7 @@ async fn tick(
                 rec.active = false;
                 rec.duration_s = t.watched.round() as i64;
                 rec.paused_s = t.paused.round() as i64;
-                (t.row_id, rec)
+                (t.row_id, rec, t.unsaved.clone())
             })
             .collect();
         let closed = finished.clone();
@@ -1352,7 +1363,7 @@ async fn tick(
         for key in &ended {
             tracked.remove(key);
         }
-        for (row_id, rec) in finished {
+        for (row_id, rec, _) in finished {
             tracing::info!("{} stopped {} after {}s", rec.user_name, rec.item_name, rec.duration_s);
             if rec.duration_s >= MIN_KEEP_S {
                 let (teller, event) = (app.clone(), play_event(&rec, false, row_id));
@@ -1398,6 +1409,44 @@ mod tests {
         assert!(tracked.is_empty());
         let (active, duration): (i64, i64) = app.db.call(|c| Ok(c.query_row("SELECT active, duration_s FROM playbacks", [], |r| Ok((r.get(0)?, r.get(1)?)))?)).await.unwrap();
         assert_eq!((active, duration), (0, 600));
+    }
+
+    /// A pause seen on a pass whose save failed is written by a later pass. The play's record moved on before the
+    /// write, so a failed one lost what that pass saw: the pause was never a change again, and never an event.
+    #[tokio::test]
+    async fn what_a_pass_saw_is_written_later_when_its_save_failed() {
+        let app = crate::state::test_app();
+        let (mut tracked, mut devices) = (HashMap::new(), HashMap::new());
+        let session = |paused: bool| json!({ "Id": "s1", "UserId": "ua", "UserName": "alice", "DeviceId": "d1", "Client": "Jellyfin Web",
+            "NowPlayingItem": { "Id": "m1", "Name": "Big Buck Bunny", "Type": "Movie", "RunTimeTicks": 6_000_000_000i64 },
+            "PlayState": { "IsPaused": paused, "PositionTicks": 100_000_000 } });
+        tick(&app, &mut tracked, &mut devices, &[session(false)], 0, 60).await.unwrap();
+
+        app.db.call(|c| Ok(c.execute_batch("ALTER TABLE playback_events RENAME TO playback_events_away")?)).await.unwrap();
+        assert!(tick(&app, &mut tracked, &mut devices, &[session(true)], 0, 60).await.is_err(), "the pause could not be written");
+
+        app.db.call(|c| Ok(c.execute_batch("ALTER TABLE playback_events_away RENAME TO playback_events")?)).await.unwrap();
+        tick(&app, &mut tracked, &mut devices, &[session(true)], 0, 60).await.unwrap();
+        let kinds: Vec<String> = app.db.call(|c| Ok(c.prepare("SELECT kind FROM playback_events ORDER BY id")?.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?)).await.unwrap();
+        assert_eq!(kinds, ["start", "pause"], "the pause written once, by the pass after");
+    }
+
+    /// …and when the play ends before another save comes round, its end writes it.
+    #[tokio::test]
+    async fn what_a_failed_save_held_is_written_when_the_play_ends() {
+        let app = crate::state::test_app();
+        let (mut tracked, mut devices) = (HashMap::new(), HashMap::new());
+        let session = |paused: bool| json!({ "Id": "s1", "UserId": "ua", "UserName": "alice", "DeviceId": "d1", "Client": "Jellyfin Web",
+            "NowPlayingItem": { "Id": "m1", "Name": "Big Buck Bunny", "Type": "Movie", "RunTimeTicks": 6_000_000_000i64 },
+            "PlayState": { "IsPaused": paused, "PositionTicks": 100_000_000 } });
+        tick(&app, &mut tracked, &mut devices, &[session(false)], 0, 60).await.unwrap();
+        tracked.values_mut().for_each(|t| t.watched = 600.0);
+        app.db.call(|c| Ok(c.execute_batch("ALTER TABLE playback_events RENAME TO playback_events_away")?)).await.unwrap();
+        assert!(tick(&app, &mut tracked, &mut devices, &[session(true)], 0, 60).await.is_err());
+        app.db.call(|c| Ok(c.execute_batch("ALTER TABLE playback_events_away RENAME TO playback_events")?)).await.unwrap();
+        tick(&app, &mut tracked, &mut devices, &[], 0, 60).await.unwrap();
+        let kinds: Vec<String> = app.db.call(|c| Ok(c.prepare("SELECT kind FROM playback_events ORDER BY id")?.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?)).await.unwrap();
+        assert_eq!(kinds, ["start", "pause", "stop"]);
     }
 
     /// "In a row" means in a row: a list that arrives by push or by a safety read proves Jellyfin answers
@@ -1450,7 +1499,7 @@ mod tests {
             let mut rec = play(user, item, started);
             let id = rec.insert(&c).unwrap().unwrap();
             (rec.active, rec.duration_s, rec.ended_at) = (false, watched, started + watched);
-            finished.push((id, rec));
+            finished.push((id, rec, vec![]));
         }
         close_ended(&mut c, &finished, 60).unwrap();
         let rows: Vec<(String, i64, Option<i64>)> = c.prepare("SELECT user_id, active, group_id FROM playbacks ORDER BY id").unwrap()
