@@ -105,7 +105,7 @@ function details(f, libraryName) {
   if (f.kind === 'copies' && e.examples) {
     const shown = e.examples.slice(0, 3);
     return h('div', { class: 'health-files' }, shown.map((x) => h('div', null, h('p', { class: 'health-sub' }, episodeCode(x.season, x.episode)), x.files.map(file))),
-      e.episodes > shown.length ? h('p', { class: 'help' }, `and ${plural(e.episodes - shown.length, 'more episode')}`) : null);
+      e.episodes > shown.length ? h('p', { class: 'fui-field__help' }, `and ${plural(e.episodes - shown.length, 'more episode')}`) : null);
   }
   if (f.kind === 'season_drift') {
     return h('ul', { class: 'health-chips' }, (e.seasons || []).map((r) => h('li', { class: 'fui-chip' }, [`S${r.season}`, r.resolution, r.codec, r.range].filter(Boolean).join(' · '))));
@@ -129,14 +129,14 @@ export function healthView(ctx) {
   }
 
   function dismissDialog(item) {
-    const note = h('input', { class: 'input', type: 'text', maxLength: 500, id: 'health-note', autocomplete: 'off', placeholder: 'Why it is fine, for whoever looks next' });
+    const note = h('input', { class: 'fui-field__input', type: 'text', maxLength: 500, id: 'health-note', autocomplete: 'off', placeholder: 'Why it is fine, for whoever looks next' });
     const error = inlineError('health-error', '');
     error.hidden = true;
     const save = button({ variant: 'primary', type: 'submit' }, icon('check', 14), 'Dismiss');
     const form = h('form', { class: 'stack-sm' },
-      h('p', { class: 'help' }, `${item.title}: ${describe(item)}.`),
-      h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'health-note' }, 'Note (optional)'), note),
-      h('p', { class: 'help' }, 'It comes back by itself if the files behind it change.'),
+      h('p', { class: 'fui-field__help' }, `${item.title}: ${describe(item)}.`),
+      h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', for: 'health-note' }, 'Note (optional)'), note),
+      h('p', { class: 'fui-field__help' }, 'It comes back by itself if the files behind it change.'),
       error,
       h('div', { class: 'form-actions' }, save, button({ variant: 'ghost', type: 'button', onClick: () => modal.close() }, 'Cancel')));
     const modal = openModal({ title: 'Dismiss finding', body: form, initialFocus: note });
@@ -174,7 +174,7 @@ export function healthView(ctx) {
 
   function controls(s) {
     const libs = s.libraries || [];
-    const select = h('select', { class: 'input', 'aria-label': 'Library' },
+    const select = h('select', { class: 'fui-field__input', 'aria-label': 'Library' },
       h('option', { value: '' }, 'All libraries'),
       libs.map((l) => h('option', { value: l.id, selected: l.id === f.library_id }, `${l.name || 'A library Jellyfin no longer lists'} (${num(l.count)})`)),
       f.library_id && !libs.some((l) => l.id === f.library_id) ? h('option', { value: f.library_id, selected: true }, 'This library (nothing to look at)') : null);
@@ -232,7 +232,7 @@ export function healthView(ctx) {
         : f.dismissed ? emptyState('Nothing set aside', filtered ? 'Nothing of this kind was dismissed here.' : 'A dismissed finding waits here until somebody brings it back, or its files change.')
           : emptyState(filtered ? 'Nothing here' : 'Nothing to look at', filtered ? 'Nothing of this kind was found in this part of the library.' : 'No holes, no copies, nothing too thin, and every season alike.');
       const thinNote = (!f.kind || f.kind === 'thin') && list.items.some((it) => it.kind === 'thin')
-        ? h('p', { class: 'help' }, 'Jellyfin keeps the first version of an item for finstats to read, so an item with several versions is judged by its first.') : null;
+        ? h('p', { class: 'fui-field__help' }, 'Jellyfin keeps the first version of an item for finstats to read, so an item with several versions is judged by its first.') : null;
       return [tiles(s), controls(s), count, card({ cls: 'fui-card--flush', id: 'health', body }), thinNote];
     },
   });

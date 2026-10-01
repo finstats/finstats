@@ -49,10 +49,10 @@ function finder(visible, current, ctx) {
     { section: s, id: null, label: s.label, where: s.sub, labelWords: words(s.label), hintWords: words(s.sub) },
     ...(s.entries || []).map((e) => ({ section: s, id: e.id, label: e.label, where: s.label, labelWords: words(e.label), hintWords: words(`${e.hint || ''} ${s.label}`) })),
   ]);
-  const input = h('input', { class: 'input input-search settings-find', type: 'search', placeholder: 'Find a setting…', 'aria-label': 'Find a setting', autocomplete: 'off',
+  const input = h('input', { class: 'fui-field__input fui-field__input--search settings-find', type: 'search', placeholder: 'Find a setting…', 'aria-label': 'Find a setting', autocomplete: 'off',
     role: 'combobox', 'aria-expanded': 'false', 'aria-controls': 'settings-hits', 'aria-autocomplete': 'list', 'aria-keyshortcuts': '/' });
   const list = h('ul', { class: 'settings-hits', id: 'settings-hits', role: 'listbox', 'aria-label': 'Matching settings', hidden: true });
-  const wrap = h('div', { class: 'search-field settings-finder' }, icon('search', 14), input, h('kbd', { class: 'settings-find-key', 'aria-hidden': 'true' }, '/'), list);
+  const wrap = h('div', { class: 'fui-field__search settings-finder' }, icon('search', 14), input, h('kbd', { class: 'settings-find-key', 'aria-hidden': 'true' }, '/'), list);
   let hits = [], sel = -1;
 
   const go = (hit) => {

@@ -166,6 +166,117 @@
         "core",
         "card"
       ]
+    },
+    {
+      "name": "field",
+      "category": "primitive",
+      "files": [
+        "components/field/field.js",
+        "components/field/field.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-wash",
+        "--bg",
+        "--border",
+        "--border-strong",
+        "--critical",
+        "--critical-text",
+        "--ease",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "toggle",
+      "category": "primitive",
+      "files": [
+        "components/toggle/toggle.js",
+        "components/toggle/toggle.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--border",
+        "--ease",
+        "--hover",
+        "--knob",
+        "--on-fill",
+        "--shadow"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "segmented",
+      "category": "primitive",
+      "files": [
+        "components/segmented/segmented.js",
+        "components/segmented/segmented.css"
+      ],
+      "tokens": [
+        "--bg-sunken",
+        "--border",
+        "--border-soft",
+        "--ease",
+        "--hover",
+        "--text",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "combobox",
+      "category": "primitive",
+      "files": [
+        "components/combobox/combobox.js",
+        "components/combobox/combobox.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-hi",
+        "--accent-wash",
+        "--bg-2",
+        "--bg-sunken",
+        "--border",
+        "--border-soft",
+        "--ease",
+        "--hover",
+        "--radius",
+        "--radius-sm",
+        "--shadow",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "copy",
+      "category": "primitive",
+      "files": [
+        "components/copy/copy.js",
+        "components/copy/copy.css"
+      ],
+      "tokens": [
+        "--good",
+        "--hover",
+        "--radius-sm",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
     }
   ]
 }

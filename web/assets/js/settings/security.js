@@ -31,8 +31,8 @@ export default {
       const t = store.task('geoip');
       const running = !!t && t.state === 'running';
       const status = dbInfo
-        ? h('p', { class: 'help' }, h('strong', null, dbInfo.kind), `, built ${dateOnly(dbInfo.built_at)}`, dbInfo.file ? [' · ', h('span', { class: 'mono' }, dbInfo.file)] : null)
-        : h('p', { class: 'help' }, 'None yet. The Security page stays empty until there is one.');
+        ? h('p', { class: 'fui-field__help' }, h('strong', null, dbInfo.kind), `, built ${dateOnly(dbInfo.built_at)}`, dbInfo.file ? [' · ', h('span', { class: 'mono' }, dbInfo.file)] : null)
+        : h('p', { class: 'fui-field__help' }, 'None yet. The Security page stays empty until there is one.');
       const err = h('div');
       const get = button({ size: 'sm', type: 'button', disabled: running || g.from_env }, icon('upload', 13, 'flip-v'), running ? (t.message || 'Downloading…') : dbInfo ? 'Download the newest' : 'Download (about 60 MB)');
       get.addEventListener('click', async () => {

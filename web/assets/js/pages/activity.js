@@ -65,7 +65,7 @@ export default function activity(ctx) {
     dv.load();
   }
 
-  const search = h('input', { class: 'input input-search', type: 'search', placeholder: 'Search titles…', value: f.q, 'aria-label': 'Search titles', autocomplete: 'off' });
+  const search = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: 'Search titles…', value: f.q, 'aria-label': 'Search titles', autocomplete: 'off' });
   const onSearch = debounce(() => { f.q = search.value.trim(); apply(); }, 250);
   search.addEventListener('input', onSearch);
   ctx.onCleanup(() => onSearch.cancel());
@@ -100,7 +100,7 @@ export default function activity(ctx) {
       multiSelect({ label: 'Play method', allLabel: 'All methods', options: METHODS, value: f.method, onChange: (v) => { f.method = v; apply(); } }),
       multiSelect({ label: 'Media type', allLabel: 'All types', options: TYPES, value: f.type, onChange: (v) => { f.type = v; apply(); } }),
       sourceSlot,
-      h('div', { class: 'search-field' }, icon('search', 14), search),
+      h('div', { class: 'fui-field__search' }, icon('search', 14), search),
       scopeChip,
     ] });
 

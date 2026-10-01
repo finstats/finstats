@@ -64,13 +64,13 @@ export function logView(ctx) {
     },
   });
 
-  const search = h('input', { class: 'input input-search', type: 'search', placeholder: 'Search the log…', value: f.q, 'aria-label': 'Search the log', autocomplete: 'off' });
+  const search = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: 'Search the log…', value: f.q, 'aria-label': 'Search the log', autocomplete: 'off' });
   const onSearch = debounce(() => { f.q = search.value.trim(); apply(); }, 250);
   search.addEventListener('input', onSearch);
   ctx.onCleanup(() => onSearch.cancel());
 
   paintType();
   dv.load();
-  return [h('div', { class: 'filters' }, h('div', { class: 'search-field' }, icon('search', 14), search), typeSlot),
+  return [h('div', { class: 'filters' }, h('div', { class: 'fui-field__search' }, icon('search', 14), search), typeSlot),
     summary, card({ cls: 'fui-card--flush', id: 'log', body: view })];
 }

@@ -65,9 +65,9 @@ export function usersPage(ctx) {
 /** Overview | Timeline | Watchlist, under a person's header. Links, so each view has its own address. The watchlist is
  *  only ever one's own, so only one's own profile has the tab. */
 export function userTabs(id, current) {
-  const tab = (key, label, href) => h('a', { class: 'seg-btn', href, 'aria-current': key === current ? 'page' : null }, label);
+  const tab = (key, label, href) => h('a', { class: 'fui-segmented__option', href, 'aria-current': key === current ? 'page' : null }, label);
   const own = hasWatchlist() && state.user && id === state.user.id;
-  return h('nav', { class: 'seg entity-tabs', 'aria-label': 'Profile sections' },
+  return h('nav', { class: 'fui-segmented entity-tabs', 'aria-label': 'Profile sections' },
     tab('overview', 'Overview', `/users/${id}`), tab('timeline', 'Timeline', `/users/${id}/timeline`),
     own ? tab('watchlist', 'Watchlist', `/users/${id}/watchlist`) : null);
 }

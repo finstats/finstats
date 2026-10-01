@@ -38,27 +38,27 @@ export default {
       const isCal = k.scope === 'calendar';
       return h('div', { class: 'key-reveal', role: 'status' },
         h('div', { class: 'setting-label' }, `Your new key “${k.name}”`),
-        h('p', { class: 'help' }, 'Shown once. Copy it now; finstats keeps only a hash of it.'),
+        h('p', { class: 'fui-field__help' }, 'Shown once. Copy it now; finstats keeps only a hash of it.'),
         h('div', { class: 'key-line' }, h('code', { class: 'mono key-token' }, k.key), copyButton(k.key, 'Copy key')),
-        isCal ? [h('p', { class: 'help' }, 'Subscribe your calendar to this address. It opens the feed and nothing else.'),
+        isCal ? [h('p', { class: 'fui-field__help' }, 'Subscribe your calendar to this address. It opens the feed and nothing else.'),
           h('div', { class: 'key-line' }, h('code', { class: 'mono key-token' }, feedUrl(k.key)), copyButton(feedUrl(k.key), 'Copy address')),
-          settings && !base ? h('p', { class: 'help' }, 'finstats does not know its own address yet, so this one only works from inside. Set it under Notifications for a link that works from your phone.') : null]
-        : h('p', { class: 'help' }, ['Send it as ', h('code', { class: 'mono' }, 'Authorization: Bearer ' + k.key.slice(0, 7) + '…'), ' with every request.']),
+          settings && !base ? h('p', { class: 'fui-field__help' }, 'finstats does not know its own address yet, so this one only works from inside. Set it under Notifications for a link that works from your phone.') : null]
+        : h('p', { class: 'fui-field__help' }, ['Send it as ', h('code', { class: 'mono' }, 'Authorization: Bearer ' + k.key.slice(0, 7) + '…'), ' with every request.']),
         h('div', { class: 'form-actions' }, button({ size: 'sm', type: 'button', onClick: () => { revealed = null; paint(); } }, 'Done')));
     }
 
     function makeForm() {
       const name = formField({ id: 'key-name', label: 'Name', autocomplete: 'off', placeholder: 'Laptop script, Phone calendar…' });
-      const expiry = h('select', { class: 'input', id: 'key-expiry', 'aria-label': 'Expires' }, EXPIRY.map(([v, l]) => h('option', { value: v }, l)));
+      const expiry = h('select', { class: 'fui-field__input', id: 'key-expiry', 'aria-label': 'Expires' }, EXPIRY.map(([v, l]) => h('option', { value: v }, l)));
       // One sentence per scope, from one place: the form is rebuilt after a key is made and the choice survives it.
       const scopeHelp = (v) => SCOPE_LABEL[v] + (v === 'calendar' ? ': a key you can put in a subscription address safely.' : ': the same as you signed in, for scripts and other tools.');
-      const scopePick = segmented({ label: 'What it opens', value: scope, size: 'sm', options: [{ value: 'full', label: 'Everything' }, { value: 'calendar', label: 'Calendar only' }], onChange: (v) => { scope = v; help.textContent = scopeHelp(v); } });
-      const help = h('p', { class: 'help' }, scopeHelp(scope));
+      const scopePick = segmented({ label: 'What it opens', value: scope, options: [{ value: 'full', label: 'Everything' }, { value: 'calendar', label: 'Calendar only' }], onChange: (v) => { scope = v; help.textContent = scopeHelp(v); } });
+      const help = h('p', { class: 'fui-field__help' }, scopeHelp(scope));
       const save = button({ variant: 'primary', type: 'submit' }, icon('plus', 13), 'Make a key');
       const formErr = h('div');
       const form = h('form', { class: 'key-form', id: 'key-new', noValidate: true },
-        h('div', { class: 'key-form-row' }, name.el, h('div', { class: 'field' }, h('label', { class: 'field-label', htmlFor: 'key-expiry' }, 'Expires'), expiry)),
-        h('div', { class: 'field' }, h('div', { class: 'field-label' }, 'What it opens'), scopePick, help),
+        h('div', { class: 'key-form-row' }, name.el, h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', htmlFor: 'key-expiry' }, 'Expires'), expiry)),
+        h('div', { class: 'fui-field' }, h('div', { class: 'fui-field__label' }, 'What it opens'), scopePick, help),
         h('div', { class: 'form-actions' }, save), formErr);
       form.addEventListener('submit', async (e) => {
         e.preventDefault(); mount(formErr, ''); name.setError('');
@@ -104,10 +104,10 @@ export default {
       const mine = rows.filter((k) => k.mine).length;
       mount(body,
         revealed ? revealBox(revealed) : null,
-        rows.length ? table(rows) : h('p', { class: 'help' }, 'No keys yet.'),
+        rows.length ? table(rows) : h('p', { class: 'fui-field__help' }, 'No keys yet.'),
         err ? inlineError('keys-err', err) : null,
         h('div', null, h('h3', { class: 'section-label' }, 'Make a key'), makeForm()),
-        h('p', { class: 'help setting-foot' }, `${num(mine)} of yours, ${num(20)} at most. A key is stored only as a hash, is never part of a backup, and cannot make or revoke keys itself.`));
+        h('p', { class: 'fui-field__help setting-foot' }, `${num(mine)} of yours, ${num(20)} at most. A key is stored only as a hash, is never part of a backup, and cannot make or revoke keys itself.`));
       err = null;
     }
     await load();

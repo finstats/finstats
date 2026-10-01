@@ -64,7 +64,7 @@ export function settingRow({ id, label, help, control, labelFor, error }) {
     ? h('label', { class: 'setting-label', id: `${id}-label`, htmlFor: labelFor }, label)
     : h('div', { class: 'setting-label', id: `${id}-label` }, label);
   return [h('div', { class: 'setting-row', id },
-    h('div', null, labelEl, help ? h('p', { class: 'help', id: `${id}-help` }, help) : null),
+    h('div', null, labelEl, help ? h('p', { class: 'fui-field__help', id: `${id}-help` }, help) : null),
     h('div', { class: 'setting-control' }, control)), error || null];
 }
 
@@ -94,12 +94,12 @@ export function numberForm(store, FIELDS, errId) {
   const inputs = {};
   const errs = {};
   const rows = FIELDS.flatMap((f) => {
-    const input = h('input', { class: 'input input-num mono', type: 'text', inputMode: 'numeric', id: 'f-' + f.key, name: f.key, value: String(store.settings[f.key] ?? ''),
+    const input = h('input', { class: 'fui-field__input fui-field__input--num mono', type: 'text', inputMode: 'numeric', id: 'f-' + f.key, name: f.key, value: String(store.settings[f.key] ?? ''),
       autocomplete: 'off', 'aria-describedby': `${f.key}-help` });
     inputs[f.key] = input;
     errs[f.key] = h('div');
     return settingRow({ id: f.key, label: f.label, help: f.help, labelFor: 'f-' + f.key,
-      control: h('div', { class: 'field-input' }, input, h('span', { class: 'unit' }, f.unit)), error: errs[f.key] });
+      control: h('div', { class: 'fui-field__row' }, input, h('span', { class: 'unit' }, f.unit)), error: errs[f.key] });
   });
   const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
   const formErr = h('div');

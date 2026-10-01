@@ -179,11 +179,11 @@ export function libraryTitlesPage(ctx) {
     dv.load();
   }
 
-  const search = h('input', { class: 'input input-search', type: 'search', placeholder: 'Find a title…', value: f.q, 'aria-label': 'Find a title in this library', autocomplete: 'off' });
+  const search = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: 'Find a title…', value: f.q, 'aria-label': 'Find a title in this library', autocomplete: 'off' });
   const onSearch = debounce(() => { f.q = search.value.trim(); apply(); }, 250);
   search.addEventListener('input', onSearch);
   ctx.onCleanup(() => onSearch.cancel());
-  const sortPick = h('div', { class: 'titles-sort' }, segmented({ label: 'Sort by', size: 'seg-sm', value: f.sort, options: TITLE_SORTS,
+  const sortPick = h('div', { class: 'titles-sort' }, segmented({ label: 'Sort by', size: 'sm', value: f.sort, options: TITLE_SORTS,
     onChange: (v) => { const x = TITLE_SORTS.find((o) => o.value === v); f.sort = x.value; f.dir = x.dir; apply(); } }));
   const kindSlot = h('div', { class: 'titles-kinds' });
   const count = h('p', { class: 'result-count', 'aria-live': 'polite' });
@@ -195,7 +195,7 @@ export function libraryTitlesPage(ctx) {
     render: (d) => {
       if (observer) observer.disconnect();
       count.textContent = `${num(d.total)} title${d.total === 1 ? '' : 's'}`;
-      mount(kindSlot, d.types.length > 1 ? segmented({ label: 'Kind', size: 'seg-sm', value: f.type,
+      mount(kindSlot, d.types.length > 1 ? segmented({ label: 'Kind', size: 'sm', value: f.type,
         options: [{ value: '', label: 'All' }, ...d.types.map((t) => ({ value: t.type, label: `${TITLE_KIND[t.type] || t.type} (${num(t.count)})` }))],
         onChange: (v) => { f.type = v; apply(); } }) : null);
       if (!d.items.length) return emptyState(f.q || f.type ? 'Nothing matches' : 'Nothing here yet', f.q || f.type ? 'No title in this library has every word you typed.' : 'Titles appear here after finstats reads the library.');
@@ -228,6 +228,6 @@ export function libraryTitlesPage(ctx) {
   });
 
   ctx.root.append(back, headerSlot,
-    h('div', { class: 'filters' }, h('div', { class: 'search-field titles-search' }, icon('search', 14), search), sortPick, kindSlot), count, view);
+    h('div', { class: 'filters' }, h('div', { class: 'fui-field__search titles-search' }, icon('search', 14), search), sortPick, kindSlot), count, view);
   dv.load();
 }

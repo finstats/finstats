@@ -655,12 +655,12 @@ function openStory(d, params) {
   const q = new URLSearchParams(Object.entries(params).filter(([, x]) => x));
   const slug = String(d.year || 'recap').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const body = h('div', { class: 'story-body' },
-    h('p', { class: 'help' }, 'Each chapter as a picture, the shape phone stories use. Other people are never named on a card.'),
+    h('p', { class: 'fui-field__help' }, 'Each chapter as a picture, the shape phone stories use. Other people are never named on a card.'),
     h('ol', { class: 'story-grid' }, (d.story || []).map((key) => {
       const src = `/api/recap/cards/${key}?${q}`;
       return h('li', null,
         h('img', { src, alt: `${CARD_NAMES[key] || key}, as a card`, loading: 'lazy', decoding: 'async', width: 1080, height: 1920 }),
-        h('span', { class: 'help' }, CARD_NAMES[key] || key, ' · ', h('a', { href: src, download: `finstats-${slug}-${key}.png` }, 'Download')));
+        h('span', { class: 'fui-field__help' }, CARD_NAMES[key] || key, ' · ', h('a', { href: src, download: `finstats-${slug}-${key}.png` }, 'Download')));
     })),
     h('div', { class: 'form-actions' }, button({ variant: 'primary', href: `/api/recap/cards.zip?${q}`, download: `finstats-${slug}.zip` }, icon('download', 13), 'Download every card')));
   openModal({ title: 'The year as cards', body, wide: true, cls: 'story-modal' });
@@ -760,7 +760,7 @@ export default function recapPage(ctx) {
   const people = isAdmin() ? combobox({ value: userId, allLabel: 'My recap', placeholder: 'My recap', label: 'Whose recap',
     load: () => userList(ctx.signal).then((us) => us.filter((u) => !me || u.id !== me.id).map((u) => ({ value: u.id, label: u.name }))),
     onChange: (val) => { userId = val; year = ''; sync(); dv.load(); } }) : null;
-  const scopeSwitch = isAdmin() ? h('div', { class: 'rc-scope' }, segmented({ label: 'Whose year', size: 'sm', value: scope || 'user',
+  const scopeSwitch = isAdmin() ? h('div', { class: 'rc-scope' }, segmented({ label: 'Whose year', value: scope || 'user',
     options: [{ value: 'user', label: 'A person' }, { value: 'server', label: 'Server' }],
     onChange: (val) => { scope = val === 'server' ? 'server' : ''; people.hidden = !!scope; sync(); dv.load(); } })) : null;
   if (people) people.hidden = !!scope;

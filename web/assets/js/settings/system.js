@@ -50,13 +50,13 @@ export default {
           return h('div', { class: 'out-row' },
             h('div', { class: 'out-head' }, h('span', { class: 'out-what' }, d.what), h('span', { class: 'out-state ' + cls }, label)),
             d.hosts && d.hosts.length ? h('div', { class: 'out-hosts mono' }, d.hosts.join(', ')) : null,
-            h('p', { class: 'help' }, d.why),
-            d.last_at ? h('p', { class: 'help' }, ['Last answered ', h('span', { title: dateTime(d.last_at) }, relTime(d.last_at))]) : null,
-            d.error ? h('p', { class: 'help' }, `Last attempt failed: ${d.error}`) : null);
+            h('p', { class: 'fui-field__help' }, d.why),
+            d.last_at ? h('p', { class: 'fui-field__help' }, ['Last answered ', h('span', { title: dateTime(d.last_at) }, relTime(d.last_at))]) : null,
+            d.error ? h('p', { class: 'fui-field__help' }, `Last attempt failed: ${d.error}`) : null);
         });
         const off = (data.total || 0) - (data.reachable || 0);
         mount(outboundSlot, rows,
-          h('p', { class: 'help' }, `${num(data.reachable || 0)} of ${num(data.total || 0)} switched on${off ? `, ${num(off)} off` : ''}. finstats never sends anything about you or your server to any of these, and there is nothing else: no telemetry, no update check, no fonts or scripts from the internet.`));
+          h('p', { class: 'fui-field__help' }, `${num(data.reachable || 0)} of ${num(data.total || 0)} switched on${off ? `, ${num(off)} off` : ''}. finstats never sends anything about you or your server to any of these, and there is nothing else: no telemetry, no update check, no fonts or scripts from the internet.`));
       } catch (e) {
         if (isAbort(e) || e.status === 401 || e.status === 403) return;
         mount(outboundSlot, errorState(e, loadOutbound));

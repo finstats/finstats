@@ -142,7 +142,7 @@ export function dataTable(table, { server = null, filter = 'auto', cls = '', lab
   if (!wantFilter) return scroll;
 
   const none = h('p', { class: 'dt-none', hidden: true }, 'No rows match.');
-  const input = h('input', { class: 'input input-search', type: 'search', placeholder: label + '…', 'aria-label': label, autocomplete: 'off' });
+  const input = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: label + '…', 'aria-label': label, autocomplete: 'off' });
   const texts = new Map(rows.map((r) => [r, r.textContent.toLowerCase()]));
   input.addEventListener('input', () => {
     const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
@@ -152,7 +152,7 @@ export function dataTable(table, { server = null, filter = 'auto', cls = '', lab
   });
   // Esc clears the field first; only an empty field lets the page's own Esc through.
   input.addEventListener('keydown', (e) => { if (e.key === 'Escape' && input.value) { e.stopPropagation(); input.value = ''; input.dispatchEvent(new Event('input')); } });
-  return h('div', { class: 'dt' }, h('div', { class: 'dt-tools' }, h('div', { class: 'search-field' }, icon('search', 14), input)), scroll, none);
+  return h('div', { class: 'dt' }, h('div', { class: 'dt-tools' }, h('div', { class: 'fui-field__search' }, icon('search', 14), input)), scroll, none);
 }
 
 /** Sortable, without the row filter: short lists, and tables that already have a search of their own. */

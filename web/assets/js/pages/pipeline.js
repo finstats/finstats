@@ -41,8 +41,8 @@ export const prefetchPipeline = ({ query, signal }) => {
 function tabBar(current) {
   const tabs = pipelineTabs();
   if (tabs.length < 2) return null;
-  return h('nav', { class: 'seg entity-tabs', 'aria-label': 'Pipeline sections' }, tabs.map((t) =>
-    h('a', { class: 'seg-btn', href: `/pipeline?tab=${t.key}`, 'aria-current': t.key === current ? 'page' : null }, t.label)));
+  return h('nav', { class: 'fui-segmented entity-tabs', 'aria-label': 'Pipeline sections' }, tabs.map((t) =>
+    h('a', { class: 'fui-segmented__option', href: `/pipeline?tab=${t.key}`, 'aria-current': t.key === current ? 'page' : null }, t.label)));
 }
 
 // ---------------------------------------------------------------- requests
@@ -170,7 +170,7 @@ function requestsTab(ctx, root) {
     },
   });
 
-  const search = h('input', { class: 'input input-search', type: 'search', placeholder: 'Search titles…', value: f.q, 'aria-label': 'Search requests', autocomplete: 'off' });
+  const search = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: 'Search titles…', value: f.q, 'aria-label': 'Search requests', autocomplete: 'off' });
   const onSearch = debounce(() => { f.q = search.value.trim(); apply(); }, 250);
   search.addEventListener('input', onSearch);
   ctx.onCleanup(() => onSearch.cancel());
@@ -178,7 +178,7 @@ function requestsTab(ctx, root) {
     h('div', { class: 'filters', role: 'group', 'aria-label': 'Filters' },
       segmented({ label: 'Which requests', value: f.status, options: STATUSES, onChange: (v) => { f.status = v; apply(); } }),
       can('see_everyone') ? userCombobox({ value: f.userId, signal: ctx.signal, onChange: (u) => { f.userId = u; apply(); } }) : null,
-      h('div', { class: 'search-field' }, icon('search', 14), search)),
+      h('div', { class: 'fui-field__search' }, icon('search', 14), search)),
     view);
   dv.load();
 }
@@ -203,7 +203,7 @@ function upcomingTab(ctx, root) {
       return card({ cls: 'card-agenda', body: agenda(list, { people: can('see_everyone'), watch: true }) });
     },
   });
-  const mineBtn = segmented({ label: 'Which titles', size: 'seg-sm', value: f.mine ? 'mine' : 'all',
+  const mineBtn = segmented({ label: 'Which titles', size: 'sm', value: f.mine ? 'mine' : 'all',
     options: [{ value: 'all', label: 'Everything' }, { value: 'mine', label: f.userId ? 'Only what they watch' : 'Only what I watch' }],
     onChange: (v) => { f.mine = v === 'mine'; apply(); } });
   root.append(
@@ -254,7 +254,7 @@ function historySection(ctx) {
   });
   const el = h('section', { class: 'dl-history' },
     h('div', { class: 'filters' }, h('h2', { class: 'section-title' }, 'What came in'),
-      segmented({ label: 'How far back', size: 'seg-sm', value: days, options: HISTORY_SPANS, onChange: (v) => { days = v; store.set('finstats.grabDays', String(v)); dv.load(); } })),
+      segmented({ label: 'How far back', size: 'sm', value: days, options: HISTORY_SPANS, onChange: (v) => { days = v; store.set('finstats.grabDays', String(v)); dv.load(); } })),
     view);
   dv.load();
   return el;

@@ -42,7 +42,7 @@ export function missingCard(slot, card, { empty = null } = {}) {
         button({ size: 'sm', class: 'locate-btn', type: 'button', onClick: () => pick(m, refresh) }, icon('search', 13), 'Locate'));
     };
     mount(slot,
-      h('p', { class: 'help' }, `${num(list.length)} title${list.length === 1 ? '' : 's'} in your history ${list.length === 1 ? 'isn’t' : 'aren’t'} in your library under that name — usually because the server it was imported from called ${list.length === 1 ? 'it' : 'them'} something else. Locate one to attach its plays; anything you leave stays in your history as it is.`),
+      h('p', { class: 'fui-field__help' }, `${num(list.length)} title${list.length === 1 ? '' : 's'} in your history ${list.length === 1 ? 'isn’t' : 'aren’t'} in your library under that name — usually because the server it was imported from called ${list.length === 1 ? 'it' : 'them'} something else. Locate one to attach its plays; anything you leave stays in your history as it is.`),
       films.length ? h('ul', { class: 'locate-list' }, films.map((m) => row(m, m.name))) : null,
       [...shows].map(([show, eps]) => h('div', { class: 'locate-show' }, h('h3', { class: 'section-label' }, show),
         h('ul', { class: 'locate-list' }, eps.map((m) => row(m, [episodeCode(m.season, m.episode), m.name].filter(Boolean).join(' · ')))))));
@@ -53,7 +53,7 @@ export function missingCard(slot, card, { empty = null } = {}) {
 
 /** The picker for one missing title: its likeliest places at once, and a search for anything else. */
 function pick(m, done) {
-  const input = h('input', { type: 'search', class: 'input', placeholder: 'Search films and episodes', 'aria-label': 'Search the library', autocomplete: 'off' });
+  const input = h('input', { type: 'search', class: 'fui-field__input', placeholder: 'Search films and episodes', 'aria-label': 'Search the library', autocomplete: 'off' });
   const list = h('div', { class: 'locate-opts', role: 'list' });
   const said = h('p', { class: 'wire-error', role: 'alert' });
   let modal = null, asked = 0;
@@ -84,7 +84,7 @@ function pick(m, done) {
   modal = openModal({
     title: `Where is “${m.name}”?`,
     body: h('div', { class: 'locate-pick' },
-      h('p', { class: 'help' }, `${num(m.plays)} play${m.plays === 1 ? '' : 's'} of ${m.item_type === 'Episode' ? [m.series_name, episodeCode(m.season, m.episode)].filter(Boolean).join(' ') : 'this film'} will move to the title you choose, and a re-import of the same history will find it by itself.`),
+      h('p', { class: 'fui-field__help' }, `${num(m.plays)} play${m.plays === 1 ? '' : 's'} of ${m.item_type === 'Episode' ? [m.series_name, episodeCode(m.season, m.episode)].filter(Boolean).join(' ') : 'this film'} will move to the title you choose, and a re-import of the same history will find it by itself.`),
       input, list, said),
     initialFocus: input,
   });

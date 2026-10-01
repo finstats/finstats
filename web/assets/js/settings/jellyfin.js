@@ -40,9 +40,9 @@ export default {
         live ? ['Asking right now', c.transport === 'poll' ? 'Yes — something is playing' : 'No — nothing is playing, or everything is paused'] : null,
       ]),
       h('div', { class: 'setting-notes' },
-      live ? h('p', { class: 'help' }, `Nothing is asked for while nothing plays or everything is paused; while something runs finstats asks every ${num(s.active_interval_s)} s, which is what keeps pauses and skips exact.`)
-        : c && c.socket_error ? h('p', { class: 'help' }, `The live connection is not carrying: ${c.socket_error}. finstats keeps trying; nothing is missed meanwhile.`) : null,
-      h('p', { class: 'help' }, 'Connected with its own API key, made during setup. To point finstats at another server, start it with a fresh data directory.')));
+      live ? h('p', { class: 'fui-field__help' }, `Nothing is asked for while nothing plays or everything is paused; while something runs finstats asks every ${num(s.active_interval_s)} s, which is what keeps pauses and skips exact.`)
+        : c && c.socket_error ? h('p', { class: 'fui-field__help' }, `The live connection is not carrying: ${c.socket_error}. finstats keeps trying; nothing is missed meanwhile.`) : null,
+      h('p', { class: 'fui-field__help' }, 'Connected with its own API key, made during setup. To point finstats at another server, start it with a fresh data directory.')));
     };
     paint();
     store.onTasks(paint);
@@ -53,7 +53,7 @@ export default {
 /** Where "Open in Jellyfin" points. Only a Jellyfin administrator may change it: it is a link everyone follows. */
 function peopleAddress(store) {
   const current = store.settings.jellyfin_public_url || '';
-  const input = h('input', { class: 'input', id: 'f-jellyfin_public_url', type: 'url', inputMode: 'url', autocomplete: 'off', spellcheck: false,
+  const input = h('input', { class: 'fui-field__input', id: 'f-jellyfin_public_url', type: 'url', inputMode: 'url', autocomplete: 'off', spellcheck: false,
     value: current, placeholder: store.settings.jellyfin_url || 'https://jellyfin.example.com', disabled: !isAdmin(), 'aria-describedby': 'jellyfin_public_url-help' });
   const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
   const err = h('div');
@@ -70,6 +70,6 @@ function peopleAddress(store) {
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save.click(); } });
   return settingRow({ id: 'jellyfin_public_url', label: 'Jellyfin’s address for people', labelFor: 'f-jellyfin_public_url',
     help: 'Where the “Open in Jellyfin” buttons go. Leave empty to use the address finstats connects to.',
-    control: h('div', { class: 'field-input' }, note, input, isAdmin() ? save : null), error: err });
+    control: h('div', { class: 'fui-field__row' }, note, input, isAdmin() ? save : null), error: err });
 }
 

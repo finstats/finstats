@@ -96,7 +96,7 @@ export function profileAllTime({ userId, signal }) {
               h('span', { class: 'mono season-count' }, `${num(se.seen)}/${num(se.total)} (${pct(se.total ? se.seen / se.total : 0)})`), markBtn(se.episodes, 'Mark season as seen')),
             bar(se.episodes, { seasonNo: se.season_number, editable: data.editable, onToggle: (ids, seen) => toggle(ids, seen) }))),
           data.editable ? h('div', { class: 'season-foot' }, markBtn(all, 'Mark the whole show as seen'),
-            h('span', { class: 'help' }, 'Click an episode to mark it. Marks stay in finstats and never change anything in Jellyfin.')) : null) : null));
+            h('span', { class: 'fui-field__help' }, 'Click an episode to mark it. Marks stay in finstats and never change anything in Jellyfin.')) : null) : null));
   }
 
   function paint() {

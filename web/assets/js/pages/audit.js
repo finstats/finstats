@@ -98,13 +98,13 @@ export function auditView(ctx) {
     },
   });
 
-  const search = h('input', { class: 'input input-search', type: 'search', placeholder: 'Search the audit log…', value: f.q, 'aria-label': 'Search the audit log', autocomplete: 'off' });
+  const search = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: 'Search the audit log…', value: f.q, 'aria-label': 'Search the audit log', autocomplete: 'off' });
   const onSearch = debounce(() => { f.q = search.value.trim(); apply(); }, 250);
   search.addEventListener('input', onSearch);
   ctx.onCleanup(() => onSearch.cancel());
 
   paintKind();
   dv.load();
-  return [h('div', { class: 'filters' }, h('div', { class: 'search-field' }, icon('search', 14), search), kindSlot),
+  return [h('div', { class: 'filters' }, h('div', { class: 'fui-field__search' }, icon('search', 14), search), kindSlot),
     summary, card({ cls: 'fui-card--flush', id: 'audit', body: view })];
 }

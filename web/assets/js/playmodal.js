@@ -29,7 +29,7 @@ function timeline(p) {
   if (!events.length) {
     const why = imported(p) ? `${sourceName(p)}, which records one row per play and nothing of what happens during it.`
       : 'Nothing was recorded during this play.';
-    return h('p', { class: 'help' }, why);
+    return h('p', { class: 'fui-field__help' }, why);
   }
   return h('ol', { class: 'timeline' }, events.map((e) => {
     const [label, ic] = EVENT[e.kind] || [humanize(e.kind || 'Event'), 'info'];
@@ -92,9 +92,9 @@ export function openPlayModal(play, { onDeleted } = {}) {
     const device = facts([
       ['Client', [p.client, p.app_version].filter(Boolean).join(' ') || '–'],
       ['Device', p.device_name],
-      p.device_id ? ['Device ID', h('span', { class: 'copy-row' }, h('span', { class: 'mono trunc' }, p.device_id), copyButton(p.device_id, 'Copy device ID'))] : null,
+      p.device_id ? ['Device ID', h('span', { class: 'fui-copy__row' }, h('span', { class: 'mono trunc' }, p.device_id), copyButton(p.device_id, 'Copy device ID'))] : null,
       p.watched_with && p.watched_with.length ? ['Watched with', h('span', null, p.watched_with.map((w, i) => [i ? ', ' : '', h('a', { href: `/users/${w.user_id}` }, w.user_name)]))] : null,
-      can('see_network') ? ['IP address', p.remote_ip ? h('span', { class: 'copy-row' }, h('span', { class: 'mono' }, p.remote_ip), copyButton(p.remote_ip, 'Copy IP address'), networkChip(p.is_local)) : '–'] : null,
+      can('see_network') ? ['IP address', p.remote_ip ? h('span', { class: 'fui-copy__row' }, h('span', { class: 'mono' }, p.remote_ip), copyButton(p.remote_ip, 'Copy IP address'), networkChip(p.is_local)) : '–'] : null,
     ]);
 
     const media = facts([

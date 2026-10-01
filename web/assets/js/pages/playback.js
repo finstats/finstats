@@ -32,7 +32,7 @@ export default function playback(ctx) {
     render: ({ d, ins, files }) => {
       const methodsCard = chartCard({
         title: 'Play methods', sub: 'Direct play streams the file untouched; transcoding costs server CPU or GPU',
-        controls: segmented({ label: 'Measure', size: 'seg-sm', value: metric, options: [{ value: 'plays', label: 'Plays' }, { value: 'watch_s', label: 'Watch time' }],
+        controls: segmented({ label: 'Measure', size: 'sm', value: metric, options: [{ value: 'plays', label: 'Plays' }, { value: 'watch_s', label: 'Watch time' }],
           onChange: (v) => { metric = v; store.set('finstats.methodMetric', v); methodsCard.rerender(); } }),
         chart: () => methodsBar(d.methods, metric),
         table: () => methodsTable(d.methods),

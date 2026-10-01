@@ -57,15 +57,15 @@ export default function securityPage(ctx) {
 
   function resolveDialog(a) {
     const travel = a.kind === 'impossible_travel';
-    const note = h('input', { class: 'input', type: 'text', maxLength: 500, placeholder: 'On holiday, a VPN, a phone on mobile data…', id: 'alert-note', autocomplete: 'off' });
+    const note = h('input', { class: 'fui-field__input', type: 'text', maxLength: 500, placeholder: 'On holiday, a VPN, a phone on mobile data…', id: 'alert-note', autocomplete: 'off' });
     const mute = h('input', { type: 'checkbox' });
     const error = inlineError('alert-error', '');
     error.hidden = true;
     const save = button({ variant: 'primary', type: 'submit' }, icon('check', 14), 'Resolve');
     const form = h('form', { class: 'stack-sm' },
-      h('p', { class: 'help' }, `${a.user_name}: ${travel ? travelSentence(a.details) : 'first seen in ' + (a.details.country || a.details.country_code)}.`),
-      h('div', { class: 'field' }, h('label', { class: 'field-label', for: 'alert-note' }, 'Note (optional)'), note),
-      travel ? h('label', { class: 'check' }, mute, `Never report ${a.details.from.place} and ${a.details.to.place} for ${a.user_name} again`) : null,
+      h('p', { class: 'fui-field__help' }, `${a.user_name}: ${travel ? travelSentence(a.details) : 'first seen in ' + (a.details.country || a.details.country_code)}.`),
+      h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', for: 'alert-note' }, 'Note (optional)'), note),
+      travel ? h('label', { class: 'fui-field__check' }, mute, `Never report ${a.details.from.place} and ${a.details.to.place} for ${a.user_name} again`) : null,
       error,
       h('div', { class: 'form-actions' }, save, button({ variant: 'ghost', type: 'button', onClick: () => modal.close() }, 'Cancel')));
     const modal = openModal({ title: 'Resolve alert', body: form, initialFocus: note });
@@ -105,7 +105,7 @@ export default function securityPage(ctx) {
   }
 
   function alertsCard(alerts, manage) {
-    const tabs = segmented({ label: 'Which alerts', size: 'seg-sm', value: f.status, options: [{ value: 'open', label: `Open${alerts.open ? ` (${num(alerts.open)})` : ''}` }, { value: 'resolved', label: 'Resolved' }, { value: 'all', label: 'All' }],
+    const tabs = segmented({ label: 'Which alerts', size: 'sm', value: f.status, options: [{ value: 'open', label: `Open${alerts.open ? ` (${num(alerts.open)})` : ''}` }, { value: 'resolved', label: 'Resolved' }, { value: 'all', label: 'All' }],
       onChange: (v) => { f.status = v; f.page = 1; reload(); } });
     const resolveAll = manage && f.status === 'open' && alerts.open > 1 && !f.userId
       ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: async (e) => { setBusy(e.currentTarget, true, 'Resolving…'); try { await api.post('/security/alerts/resolve-all'); } finally { dv.load(); } } }, icon('check', 13), 'Resolve all')
@@ -141,12 +141,12 @@ export default function securityPage(ctx) {
       button({ variant: 'icon', type: 'button', 'aria-label': 'Close place details', onClick: () => slot.replaceChildren() }, icon('x', 14)));
     let body;
     if (d.failed) {
-      body = [h('p', { class: 'help' }, `${num(d.attempts)} failed ${d.attempts === 1 ? 'sign-in' : 'sign-ins'}, last ${relTime(d.last_at)}.`), h('ul', { class: 'picked-list' }, d.events.map((e) => h('li', null, e))),
+      body = [h('p', { class: 'fui-field__help' }, `${num(d.attempts)} failed ${d.attempts === 1 ? 'sign-in' : 'sign-ins'}, last ${relTime(d.last_at)}.`), h('ul', { class: 'picked-list' }, d.events.map((e) => h('li', null, e))),
         can('see_server') ? h('a', { href: '/server/log?type=AuthenticationFailed' }, 'Open the server log') : null];
     } else if (d.live) {
-      body = h('p', { class: 'help' }, `${d.user_name} is playing ${d.series_name ? d.series_name + ' · ' : ''}${d.item_name}${d.device_name ? ' on ' + d.device_name : ''}.`);
+      body = h('p', { class: 'fui-field__help' }, `${d.user_name} is playing ${d.series_name ? d.series_name + ' · ' : ''}${d.item_name}${d.device_name ? ' on ' + d.device_name : ''}.`);
     } else {
-      body = [h('p', { class: 'help' }, `${num(d.plays)} ${d.plays === 1 ? 'play' : 'plays'} (${duration(d.watch_s)})${d.sign_ins ? `, ${num(d.sign_ins)} sign-ins` : ''}${d.addresses ? ` from ${num(d.addresses)} ${d.addresses === 1 ? 'address' : 'addresses'}` : ''}. Last seen ${relTime(d.last_seen)}.`),
+      body = [h('p', { class: 'fui-field__help' }, `${num(d.plays)} ${d.plays === 1 ? 'play' : 'plays'} (${duration(d.watch_s)})${d.sign_ins ? `, ${num(d.sign_ins)} sign-ins` : ''}${d.addresses ? ` from ${num(d.addresses)} ${d.addresses === 1 ? 'address' : 'addresses'}` : ''}. Last seen ${relTime(d.last_seen)}.`),
         h('ul', { class: 'picked-list' }, d.users.map((u) => h('li', null, h('a', { class: 'user-cell', href: `/users/${u.id}` }, avatar(u.id, u.name, { size: 20 }), u.name),
           h('span', { class: 'mono muted' }, `${num(u.plays)} ${u.plays === 1 ? 'play' : 'plays'}${u.sign_ins ? ` · ${num(u.sign_ins)} sign-ins` : ''}`))))];
     }
@@ -181,7 +181,7 @@ export default function securityPage(ctx) {
         ctx.onCleanup(() => clearInterval(wait));
       } catch (err) { setBusy(b, false); note.textContent = err.message; }
     } }, icon('upload', 14), 'Download the database (about 60 MB)') : null;
-    const note = h('p', { class: 'help', 'aria-live': 'polite' });
+    const note = h('p', { class: 'fui-field__help', 'aria-live': 'polite' });
     return emptyState('No geolocation database yet',
       'Places come from a city database that finstats reads locally; no address is ever sent anywhere. Download DB-IP’s free one here, or put any MaxMind-format city file (.mmdb) into the geoip folder of the data directory. Settings → Security keeps it up to date.',
       h('div', { class: 'fui-empty__action' }, btn, note));

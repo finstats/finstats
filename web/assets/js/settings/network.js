@@ -28,7 +28,7 @@ export default {
       const list = known.length
         ? h('ul', { class: 'home-ips' }, known.map((a) => h('li', null, h('span', { class: 'mono' }, a.ip),
           h('span', { class: 'muted' }, a.source === 'manual' ? 'added by you' : ['found automatically · last seen ', h('span', { title: dateTime(a.last_seen) }, relTime(a.last_seen))]))))
-        : h('p', { class: 'help' }, s.public_ip_lookup ? 'None learned yet; finstats looks one up within a few minutes of starting.' : 'None. Private addresses (192.168.x.x, 10.x.x.x and the like) always count as local.');
+        : h('p', { class: 'fui-field__help' }, s.public_ip_lookup ? 'None learned yet; finstats looks one up within a few minutes of starting.' : 'None. Private addresses (192.168.x.x, 10.x.x.x and the like) always count as local.');
 
       // The only thing that ever asks again, because a person pressed it.
       const lookupErr = h('div');
@@ -41,7 +41,7 @@ export default {
         finally { setBusy(lookup, false); }
       });
 
-      const input = h('textarea', { class: 'input home-input mono', id: 'f-home', rows: 2, spellcheck: false, autocomplete: 'off', 'aria-describedby': 'home_addresses-help',
+      const input = h('textarea', { class: 'fui-field__input home-input mono', id: 'f-home', rows: 2, spellcheck: false, autocomplete: 'off', 'aria-describedby': 'home_addresses-help',
         placeholder: '203.0.113.7' }, (s.home_addresses || []).join('\n'));
       const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
       const err = h('div');
@@ -67,7 +67,7 @@ export default {
         settingRow({ id: 'known-home', label: 'Known home addresses', help: 'Public addresses of this household, past and present.',
           control: [h('div', { class: 'home-known' }, list, s.public_ip_lookup ? h('div', { class: 'form-actions' }, lookup) : null, lookupErr)] }),
         form,
-        h('p', { class: 'help setting-foot' }, `That request goes to ${services.join(' or ') || 'nowhere: no service is configured'} and says nothing about you or your server. With it and the geolocation download under Security both off, finstats makes no outside requests at all.`));
+        h('p', { class: 'fui-field__help setting-foot' }, `That request goes to ${services.join(' or ') || 'nowhere: no service is configured'} and says nothing about you or your server. With it and the geolocation download under Security both off, finstats makes no outside requests at all.`));
     };
     paint();
   },

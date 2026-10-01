@@ -31,7 +31,7 @@ function viewer(notices, components) {
   const version = h('span', { class: 'mono lic-view-ver' });
   const sub = h('span');
   const tabs = h('div', { class: 'lic-tabs' });
-  const shared = h('p', { class: 'help lic-shared' });
+  const shared = h('p', { class: 'fui-field__help lic-shared' });
   const body = h('pre', { class: 'lic-body', tabIndex: 0, 'aria-label': 'Licence text' });
   const el = card({ title: [name, version], sub, actions: tabs, body: [shared, body], id: 'lic-view', cls: 'lic-view' });
 
@@ -118,7 +118,7 @@ export default function licensesPage(ctx) {
       return h('div', { class: 'lic-wrap' },
         h('div', { class: 'stack lic-main' },
           app ? card({ title: 'finstats itself', sub: `v${app.version} · ${app.license}`, id: 'lic-app', actions: source(app.repository),
-            body: [h('p', { class: 'help' }, 'finstats is released under the GNU General Public License, version 3. You may use, study, share and change it; anything you pass on must stay under the same licence and carry its source.'),
+            body: [h('p', { class: 'fui-field__help' }, 'finstats is released under the GNU General Public License, version 3. You may use, study, share and change it; anything you pass on must stay under the same licence and carry its source.'),
               app.notices.length ? button({ size: 'sm', type: 'button', onClick: () => go(app) }, icon('log', 14), 'Read the full licence') : null] }) : null,
           bundled.length ? card({ title: 'Bundled with finstats', sub: 'Fonts, map data and the geolocation database — not code, but shipped or read all the same', id: 'lic-bundled',
             body: componentTable(bundled, go) }) : null,

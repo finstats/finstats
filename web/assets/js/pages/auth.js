@@ -37,12 +37,12 @@ export function setupPage(ctx) {
   const finishErr = h('div');
   const step2 = h('form', { class: 'auth-form', noValidate: true, hidden: true },
     user.el, pass.el,
-    h('p', { class: 'help' }, icon('shield', 13), ' finstats signs in once to create its own API key. Your password is never stored.'),
+    h('p', { class: 'fui-field__help' }, icon('shield', 13), ' finstats signs in once to create its own API key. Your password is never stored.'),
     h('div', { class: 'form-actions' }, finishBtn), finishErr);
 
   const s1 = h('li', { class: 'wizard-step is-current' }, h('h2', { class: 'wizard-title' }, 'Connect to Jellyfin'), step1);
   const s2 = h('li', { class: 'wizard-step is-locked' }, h('h2', { class: 'wizard-title' }, 'Sign in as an administrator'),
-    h('p', { class: 'help wizard-locked-note' }, 'Test the connection first.'), step2);
+    h('p', { class: 'fui-field__help wizard-locked-note' }, 'Test the connection first.'), step2);
 
   url.input.addEventListener('input', () => {
     if (tested) { tested = null; mount(testResult, ''); step2.hidden = true; s2.classList.add('is-locked'); s1.classList.add('is-current'); }

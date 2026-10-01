@@ -103,7 +103,7 @@ export function notificationsPanel(ctx) {
           t.scope !== 'me' ? null : t.owner_id === state.user?.id ? h('span', { class: 'fui-chip' }, 'Yours') : h('span', { class: 'fui-chip' }, `${t.owner_name || 'Somebody'}’s`)),
         h('div', { class: 'conn-url mono' }, t.shown),
         h('div', { class: 'conn-status' }, statusOf(t)),
-        h('p', { class: 'help' }, `${ticked} of ${total} kinds of event`, t.with_addresses ? ' · addresses included' : '', t.min_severity !== 'info' ? ` · ${t.min_severity} and above` : ''),
+        h('p', { class: 'fui-field__help' }, `${ticked} of ${total} kinds of event`, t.with_addresses ? ' · addresses included' : '', t.min_severity !== 'info' ? ` · ${t.min_severity} and above` : ''),
         rowMsg && rowMsg.id === t.id
           ? (rowMsg.ok ? h('p', { class: 'fui-badge--status fui-badge--good' }, icon('check', 13), rowMsg.text) : inlineError(`notify-err-${t.id}`, rowMsg.text))
           : null),
@@ -113,8 +113,8 @@ export function notificationsPanel(ctx) {
   function form(existing) {
     const channels = data.catalogue.channels;
     let channel = existing ? channelOf(existing.kind) : channels[0];
-    const kindSel = h('select', { class: 'input', id: 'notify-kind', 'aria-describedby': 'notify-kind-help' }, channels.map((c) => h('option', { value: c.key }, c.label)));
-    const kindHelp = h('p', { class: 'help', id: 'notify-kind-help' });
+    const kindSel = h('select', { class: 'fui-field__input', id: 'notify-kind', 'aria-describedby': 'notify-kind-help' }, channels.map((c) => h('option', { value: c.key }, c.label)));
+    const kindHelp = h('p', { class: 'fui-field__help', id: 'notify-kind-help' });
     const name = formField({ id: 'notify-name', label: 'Name (optional)', autocomplete: 'off', help: 'Shown in finstats: “Household channel”, “My phone”.' });
     const url = formField({ id: 'notify-url', label: 'Address', autocomplete: 'off', inputMode: 'url', help: ' ' });
     const topic = formField({ id: 'notify-topic', label: 'Topic', autocomplete: 'off', help: ' ' });
@@ -123,7 +123,7 @@ export function notificationsPanel(ctx) {
     const extras = new Map(extraKeys.map((key) => [key, formField({ id: `notify-x-${key}`, label: key, autocomplete: 'off', help: ' ' })]));
     const specOf = (key) => (channel.extras || []).find((e) => e.key === key);
     const secret = formField({ id: 'notify-secret', label: 'Token', type: 'password', autocomplete: 'new-password', help: ' ' });
-    const severity = h('select', { class: 'input', id: 'notify-sev' }, data.catalogue.severities.map((s) => h('option', { value: s }, { info: 'Everything', warn: 'Warnings and alerts', alert: 'Alerts only' }[s] || s)));
+    const severity = h('select', { class: 'fui-field__input', id: 'notify-sev' }, data.catalogue.severities.map((s) => h('option', { value: s }, { info: 'Everything', warn: 'Warnings and alerts', alert: 'Alerts only' }[s] || s)));
     const addresses = h('input', { type: 'checkbox', id: 'notify-addresses', 'aria-describedby': 'notify-addresses-help' });
     const certs = h('input', { type: 'checkbox', id: 'notify-certs', 'aria-describedby': 'notify-certs-help' });
     const enabled = h('input', { type: 'checkbox', id: 'notify-enabled' });
@@ -145,7 +145,7 @@ export function notificationsPanel(ctx) {
         events.map((e) => {
           const box = h('input', { type: 'checkbox', id: `notify-ev-${e.key}`, checked: chosen.includes(e.key) });
           ticks.set(e.key, box);
-          const row = h('label', { class: 'check notify-event' }, box, h('span', null, h('span', { class: 'notify-event-label' }, e.label), h('span', { class: 'help' }, e.what)));
+          const row = h('label', { class: 'fui-field__check notify-event' }, box, h('span', null, h('span', { class: 'notify-event-label' }, e.label), h('span', { class: 'fui-field__help' }, e.what)));
           if (e.own_only) ownOnly.set(e.key, row);
           return row;
         }));
@@ -156,25 +156,25 @@ export function notificationsPanel(ctx) {
       // A channel finstats already knows the address of asks for no address at all.
       url.el.hidden = !!channel.fixed_url;
       url.input.placeholder = existing && existing.kind === channel.key ? 'Unchanged' : channel.example;
-      url.el.querySelector('.help').textContent = ADDRESS_HELP[channel.key] || `The address finstats posts to, like ${channel.example}.`;
+      url.el.querySelector('.fui-field__help').textContent = ADDRESS_HELP[channel.key] || `The address finstats posts to, like ${channel.example}.`;
       topic.el.hidden = !channel.needs_topic;
       if (channel.needs_topic) {
-        topic.el.querySelector('.field-label').textContent = channel.topic_label;
-        topic.el.querySelector('.help').textContent = channel.topic_help;
+        topic.el.querySelector('.fui-field__label').textContent = channel.topic_label;
+        topic.el.querySelector('.fui-field__help').textContent = channel.topic_help;
         topic.input.placeholder = channel.topic_example;
       }
       for (const [key, field] of extras) {
         const spec = specOf(key);
         field.el.hidden = !spec;
         if (!spec) continue;
-        field.el.querySelector('.field-label').textContent = spec.label;
-        field.el.querySelector('.help').textContent = spec.help;
+        field.el.querySelector('.fui-field__label').textContent = spec.label;
+        field.el.querySelector('.fui-field__help').textContent = spec.help;
         field.input.placeholder = spec.example;
       }
       secret.el.hidden = !channel.secret_label;
       if (channel.secret_label) {
-        secret.el.querySelector('.field-label').textContent = channel.secret_label;
-        secret.el.querySelector('.help').textContent = (existing && existing.has_secret ? 'Leave empty to keep the stored one. ' : '') + (SECRET_HELP[channel.key] || '');
+        secret.el.querySelector('.fui-field__label').textContent = channel.secret_label;
+        secret.el.querySelector('.fui-field__help').textContent = (existing && existing.has_secret ? 'Leave empty to keep the stored one. ' : '') + (SECRET_HELP[channel.key] || '');
         secret.input.placeholder = existing && existing.has_secret ? 'Unchanged' : '';
       }
     }
@@ -245,24 +245,24 @@ export function notificationsPanel(ctx) {
     const el = h('form', { class: 'conn-form', noValidate: true },
       h('h3', { class: 'conn-form-title' }, existing ? `Edit ${existing.name}` : 'Add a destination'),
       h('div', { class: 'form-grid' },
-        h('div', { class: 'field' }, h('label', { class: 'field-label', htmlFor: 'notify-kind' }, 'Kind'), kindSel, kindHelp),
+        h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', htmlFor: 'notify-kind' }, 'Kind'), kindSel, kindHelp),
         name.el, url.el, topic.el, ...[...extras.values()].map((f) => f.el), secret.el,
         !existing && data.can_add_server
-          ? h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Who it is for'),
-            h('label', { class: 'check' }, scopeServer, 'The server — everything you ticked, about anybody'),
-            h('label', { class: 'check' }, scopeMine, 'Just me — only what I may already see'))
+          ? h('div', { class: 'fui-field' }, h('span', { class: 'fui-field__label' }, 'Who it is for'),
+            h('label', { class: 'fui-field__check' }, scopeServer, 'The server — everything you ticked, about anybody'),
+            h('label', { class: 'fui-field__check' }, scopeMine, 'Just me — only what I may already see'))
           : null,
-        h('div', { class: 'field' }, h('label', { class: 'field-label', htmlFor: 'notify-sev' }, 'How much'), severity)),
-      h('div', { class: 'field' },
-        h('span', { class: 'field-label' }, 'What to send'),
+        h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', htmlFor: 'notify-sev' }, 'How much'), severity)),
+      h('div', { class: 'fui-field' },
+        h('span', { class: 'fui-field__label' }, 'What to send'),
         h('div', { class: 'notify-events' }, groups)),
-      h('div', { class: 'field' },
+      h('div', { class: 'fui-field' },
         // Addresses reach a personal destination only with see_network, as they do on every page.
-        can('see_network') ? h('label', { class: 'check' }, addresses, 'Include IP addresses and places') : null,
-        can('see_network') ? h('p', { class: 'help', id: 'notify-addresses-help' }, 'Off: a message says the place is “Oslo, Norway” but never the address it came from. On: the addresses go out too — worth thinking about for a destination somebody else runs, like Discord.') : null,
-        isAdmin() ? h('label', { class: 'check' }, certs, 'Accept a self-signed certificate') : null,
-        isAdmin() ? h('p', { class: 'help', id: 'notify-certs-help' }, 'Only for an address whose certificate is your own: a service on your own network, or a mail server of your own.') : null,
-        existing ? h('label', { class: 'check' }, enabled, 'Switched on') : null),
+        can('see_network') ? h('label', { class: 'fui-field__check' }, addresses, 'Include IP addresses and places') : null,
+        can('see_network') ? h('p', { class: 'fui-field__help', id: 'notify-addresses-help' }, 'Off: a message says the place is “Oslo, Norway” but never the address it came from. On: the addresses go out too — worth thinking about for a destination somebody else runs, like Discord.') : null,
+        isAdmin() ? h('label', { class: 'fui-field__check' }, certs, 'Accept a self-signed certificate') : null,
+        isAdmin() ? h('p', { class: 'fui-field__help', id: 'notify-certs-help' }, 'Only for an address whose certificate is your own: a service on your own network, or a mail server of your own.') : null,
+        existing ? h('label', { class: 'fui-field__check' }, enabled, 'Switched on') : null),
       formErr,
       h('div', { class: 'form-actions' }, saveBtn, button({ variant: 'ghost', type: 'button', onClick: () => { editing = null; render(); } }, 'Cancel')));
     el.addEventListener('submit', async (e) => {
@@ -282,7 +282,7 @@ export function notificationsPanel(ctx) {
 
   function sentTable() {
     const events = (history && history.events) || [];
-    if (!events.length) return h('p', { class: 'help' }, 'Nothing has been sent yet. What finstats notices from now on appears here, with how each message went.');
+    if (!events.length) return h('p', { class: 'fui-field__help' }, 'Nothing has been sent yet. What finstats notices from now on appears here, with how each message went.');
     const delivery = (d) => h('div', { class: 'notify-delivery' },
       h('span', { class: ['fui-badge--status', d.state === 'sent' ? 'fui-badge--good' : d.state === 'failed' ? 'fui-badge--critical' : 'fui-badge--info'] },
         icon(d.state === 'sent' ? 'check' : d.state === 'failed' ? 'alert' : 'clock', 12),
@@ -333,9 +333,9 @@ export function notificationsPanel(ctx) {
       ? 'finstats sends nothing anywhere until you add a destination here, and then only the kinds of event you tick for it. Addresses and tokens are stored in finstats’ own database, are never shown again and are never part of a backup.'
       : 'Your own destination is sent only what you can already see in finstats, and it must point at a public address.';
     mount(root,
-      h('p', { class: 'help' }, intro),
+      h('p', { class: 'fui-field__help' }, intro),
       publicUrlField(),
-      targets.length ? h('ul', { class: 'conn-list' }, targets.map(row)) : h('p', { class: 'help' }, 'No destinations yet.'),
+      targets.length ? h('ul', { class: 'conn-list' }, targets.map(row)) : h('p', { class: 'fui-field__help' }, 'No destinations yet.'),
       editing === null
         ? h('div', { class: 'form-actions' }, button({ type: 'button', onClick: () => { editing = 'new'; removing = null; rowMsg = null; render(); } }, icon('plus', 14), 'Add a destination'))
         : form(existing),

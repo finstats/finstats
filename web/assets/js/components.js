@@ -13,6 +13,13 @@ export { sk } from '../finui/components/skeleton/skeleton.js';
 import { spinner } from '../finui/components/spinner/spinner.js';
 import { emptyState } from '../finui/components/empty/empty.js';
 import { errorState } from '../finui/components/error/error.js';
+import { segmented } from '../finui/components/segmented/segmented.js';
+import { combobox } from '../finui/components/combobox/combobox.js';
+export { inlineError, formField } from '../finui/components/field/field.js';
+export { segmented } from '../finui/components/segmented/segmented.js';
+export { combobox, multiSelect } from '../finui/components/combobox/combobox.js';
+export { copyButton } from '../finui/components/copy/copy.js';
+export { toggle } from '../finui/components/toggle/toggle.js';
 
 // ---------------------------------------------------------------- layout bits
 export function pageHeader(title, sub, right) {
@@ -22,27 +29,6 @@ export function pageHeader(title, sub, right) {
 }
 
 export { card, chartCard } from '../finui/components/card/card.js';
-
-export function inlineError(id, text) {
-  return h('p', { class: 'field-error', id, role: 'alert' }, icon('alert', 14), h('span', null, text));
-}
-
-/** A labelled input with help text and a place for its error. `setError('')` clears it. */
-export function formField({ id, label, type = 'text', autocomplete, placeholder, inputMode, help }) {
-  const input = h('input', { class: 'input', id, name: id, type, autocomplete, placeholder, inputMode, autocapitalize: 'none', autocorrect: 'off', spellcheck: false,
-    'aria-describedby': help ? id + '-help' : null });
-  const err = h('div');
-  const el = h('div', { class: 'field' }, h('label', { htmlFor: id, class: 'field-label' }, label), input, help ? h('p', { class: 'help', id: id + '-help' }, help) : null, err);
-  return {
-    el, input,
-    setError(msg) {
-      input.setAttribute('aria-invalid', msg ? 'true' : 'false');
-      input.setAttribute('aria-describedby', [msg ? id + '-err' : null, help ? id + '-help' : null].filter(Boolean).join(' '));
-      mount(err, msg ? inlineError(id + '-err', msg) : '');
-    },
-  };
-}
-
 
 /** Put a button into / out of its busy state (disabled only while the request runs). */
 export function setBusy(btn, busy, busyLabel) {
@@ -132,38 +118,6 @@ export function dataView({ container, skeleton, fetch, render, signal }) {
 
 // ---------------------------------------------------------------- controls
 /** Visible options instead of a dropdown (2–5 choices). */
-export function segmented({ options, value, onChange, label, size = '' }) {
-  let currentValue = value;
-  const group = h('div', { class: 'seg ' + size, role: 'radiogroup', 'aria-label': label });
-  const btns = options.map((o) => h('button', { type: 'button', class: 'seg-btn', role: 'radio', title: o.title || null,
-    onClick: () => select(o.value, true) }, o.label));
-  function paint() {
-    btns.forEach((b, i) => {
-      const on = options[i].value === currentValue;
-      b.setAttribute('aria-checked', String(on));
-      b.tabIndex = on ? 0 : -1;
-    });
-  }
-  function select(v, fire) {
-    if (v === currentValue) return;
-    currentValue = v; paint();
-    if (fire) onChange(v);
-  }
-  group.addEventListener('keydown', (e) => {
-    const dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-    if (!dir) return;
-    e.preventDefault();
-    const i = options.findIndex((o) => o.value === currentValue);
-    const n = (i + dir + options.length) % options.length;
-    select(options[n].value, true);
-    btns[n].focus();
-  });
-  group.append(...btns);
-  paint();
-  group.setValue = (v) => select(v, false);
-  return group;
-}
-
 export function rangeControl(days, onChange) {
   return segmented({ label: 'Time range', value: days, onChange,
     options: RANGES.map((r) => ({ value: r.value, label: r.label, title: r.long })) });
@@ -177,102 +131,6 @@ export function rangeControl(days, onChange) {
 /// caller that already passes its filter straight into the query string needs no change at all.
 /// `searchable` is worth having for a list of people and only noise for a list of four, and a list
 /// you tick stays open while you tick it.
-export function combobox({ value = '', onChange, placeholder = 'All users', allLabel = 'All users', load, label = 'User',
-                           multiple = false, searchable = true, iconName = 'user' }) {
-  let options = [];
-  let open = false, activeIdx = 0, filtered = [];
-  // Inside, always a list of chosen values; outside, always the comma-separated string a URL holds.
-  const split = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean);
-  let chosen = split(value);
-  const uid = 'cb' + Math.random().toString(36).slice(2, 8);
-  const btnLabel = h('span', { class: 'combo-label' }, placeholder);
-  const btn = h('button', { type: 'button', class: 'combo-btn', 'aria-haspopup': 'listbox', 'aria-expanded': 'false', 'aria-label': label },
-    iconName ? icon(iconName, 14) : null, btnLabel, icon('chevronDown', 14, 'combo-caret'));
-  const input = h('input', { class: 'combo-input', type: 'text', placeholder: 'Type to filter…', autocomplete: 'off', spellcheck: false,
-    role: 'combobox', 'aria-controls': uid, 'aria-expanded': 'true', 'aria-autocomplete': 'list', 'aria-label': 'Filter ' + label.toLowerCase() + 's' });
-  const list = h('ul', { class: 'combo-list', role: 'listbox', id: uid, tabindex: -1, 'aria-multiselectable': multiple ? 'true' : null });
-  const search = searchable ? h('div', { class: 'combo-search' }, icon('search', 14), input) : null;
-  const pop = h('div', { class: 'combo-pop', hidden: true }, search, list);
-  const root = h('div', { class: ['combo', multiple && 'is-multi'] }, btn, pop);
-
-  const isOn = (v) => (v ? chosen.includes(v) : chosen.length === 0);
-
-  function paintLabel() {
-    const named = chosen.map((v) => (options.find((x) => x.value === v) || {}).label).filter(Boolean);
-    // One is named; several are the first and a count, so the button never grows with the choice.
-    btnLabel.textContent = !chosen.length ? allLabel
-      : named.length === 0 ? placeholder
-      : named.length === 1 ? named[0]
-      : `${named[0]} +${named.length - 1}`;
-    root.classList.toggle('has-value', chosen.length > 0);
-  }
-  function renderList() {
-    const q = searchable ? input.value.trim().toLowerCase() : '';
-    const all = [{ value: '', label: allLabel }, ...options];
-    filtered = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : all;
-    activeIdx = Math.min(activeIdx, Math.max(0, filtered.length - 1));
-    if (!filtered.length) { mount(list, h('li', { class: 'combo-empty' }, 'No results')); input.removeAttribute('aria-activedescendant'); return; }
-    mount(list, filtered.map((o, i) => h('li', { id: `${uid}-${i}`, role: 'option', class: ['combo-opt', i === activeIdx && 'is-active'],
-      'aria-selected': String(isOn(o.value)),
-      onPointerdown: (e) => { e.preventDefault(); choose(o); },
-      onPointermove: () => { if (activeIdx !== i) { activeIdx = i; renderList(); } } },
-      h('span', null, o.label), isOn(o.value) ? icon('check', 14) : null)));
-    (searchable ? input : list).setAttribute('aria-activedescendant', `${uid}-${activeIdx}`);
-    list.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
-  }
-  function choose(o) {
-    const before = chosen.join(',');
-    if (!multiple) {
-      chosen = o.value ? [o.value] : [];
-    } else if (!o.value) {
-      chosen = []; // "All" is not one more thing to tick: it is nothing ticked.
-    } else {
-      chosen = chosen.includes(o.value) ? chosen.filter((v) => v !== o.value) : [...chosen, o.value];
-    }
-    paintLabel();
-    // Ticking several means staying open; choosing one means you are done.
-    if (multiple) renderList(); else close(true);
-    if (chosen.join(',') !== before) onChange(chosen.join(','));
-  }
-  function openPop() {
-    if (open) return;
-    open = true; pop.hidden = false; btn.setAttribute('aria-expanded', 'true');
-    input.value = ''; activeIdx = 0; renderList();
-    (searchable ? input : list).focus();
-    document.addEventListener('pointerdown', outside, true);
-  }
-  function close(refocus) {
-    if (!open) return;
-    open = false; pop.hidden = true; btn.setAttribute('aria-expanded', 'false');
-    input.value = ''; // search is cleared on close; the button keeps the full selected label
-    document.removeEventListener('pointerdown', outside, true);
-    if (refocus) btn.focus();
-  }
-  const outside = (e) => { if (!root.contains(e.target)) close(false); };
-  btn.addEventListener('click', () => (open ? close(true) : openPop()));
-  input.addEventListener('input', () => { activeIdx = 0; renderList(); });
-  const keys = (e) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(filtered.length - 1, activeIdx + 1); renderList(); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(0, activeIdx - 1); renderList(); }
-    else if (e.key === 'Enter' || (!searchable && e.key === ' ')) { e.preventDefault(); if (filtered[activeIdx]) choose(filtered[activeIdx]); }
-    // The overlay's own Escape: `shell.js` handles it globally and would step back a page.
-    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); }
-    else if (e.key === 'Tab') close(false);
-  };
-  input.addEventListener('keydown', keys);
-  list.addEventListener('keydown', keys);
-
-  paintLabel();
-  Promise.resolve(load()).then((opts) => { options = opts || []; paintLabel(); if (open) renderList(); }).catch(() => {});
-  return root;
-}
-
-/// A dropdown of a known handful of options, ticked rather than chosen: media types, play methods,
-/// which tracker recorded a play. No search — for four options it is only noise.
-export function multiSelect({ options, value, onChange, label, allLabel, iconName = null }) {
-  return combobox({ value, onChange, label, allLabel, placeholder: allLabel, iconName, multiple: true, searchable: false, load: () => options });
-}
-
 export function userCombobox({ value, onChange, signal, multiple = false }) {
   return combobox({ value, onChange, multiple, load: () => userList(signal).then((us) => us.map((u) => ({ value: u.id, label: u.name }))) });
 }
@@ -283,35 +141,6 @@ export function filterBar({ days, onDays, userId, onUser, signal, extra = [] }) 
     rangeControl(days, onDays),
     onUser && can('see_everyone') ? userCombobox({ value: userId || '', onChange: onUser, signal, multiple: true }) : null,
     extra);
-}
-
-export function copyButton(text, label = 'Copy') {
-  let timer = null;
-  const btn = h('button', { type: 'button', class: 'copy-btn', 'aria-label': label, title: label }, icon('copy', 13));
-  const note = h('span', { class: 'copy-note', 'aria-live': 'polite' });
-  btn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    let ok = true;
-    try { await navigator.clipboard.writeText(text); } catch { ok = false; }
-    btn.replaceChildren(icon(ok ? 'check' : 'x', 13));
-    btn.classList.toggle('is-ok', ok);
-    note.textContent = ok ? 'Copied' : 'Copy failed — select the text instead';
-    clearTimeout(timer);
-    timer = setTimeout(() => { btn.replaceChildren(icon('copy', 13)); btn.classList.remove('is-ok'); note.textContent = ''; }, 2000);
-  });
-  return h('span', { class: 'copy' }, btn, note);
-}
-
-/** Immediate-effect setting → toggle switch. */
-export function toggle({ checked, onChange, labelledby, describedby }) {
-  const btn = h('button', { type: 'button', class: 'switch', role: 'switch', 'aria-checked': String(!!checked),
-    'aria-labelledby': labelledby, 'aria-describedby': describedby }, h('span', { class: 'switch-knob' }));
-  btn.addEventListener('click', () => {
-    const next = btn.getAttribute('aria-checked') !== 'true';
-    btn.setAttribute('aria-checked', String(next));
-    onChange(next, (v) => btn.setAttribute('aria-checked', String(v)));
-  });
-  return btn;
 }
 
 export function pagination({ page, perPage, total, onPage }) {

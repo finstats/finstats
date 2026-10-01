@@ -69,7 +69,7 @@ export default {
     paint();
 
     mount(body,
-      h('p', { class: 'help perm-intro' }, 'Jellyfin administrators', admins.length ? [' (', admins.map((u) => u.name).join(', '), ')'] : null,
+      h('p', { class: 'fui-field__help perm-intro' }, 'Jellyfin administrators', admins.length ? [' (', admins.map((u) => u.name).join(', '), ')'] : null,
         ' always have full access. Everyone else gets what you switch on here; recaps stay each person’s own.'),
       dataTable(
         h('table', { class: 'perm-table' },

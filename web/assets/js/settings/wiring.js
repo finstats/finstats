@@ -74,7 +74,7 @@ export function wiringBoard(board, { onImport, onReset }) {
   const importBtn = button({ variant: 'primary', class: 'wire-import', type: 'button', onClick: start });
   const resetBtn = button({ class: 'wire-reset', type: 'button', onClick: () => onReset() }, 'Start over');
   const root = h('div', { class: 'wire-wrap' },
-    h('p', { class: 'help' }, 'Drag a wire from each Plex user to who they are on Jellyfin — or click one, then the other. Several Plex users may go to one person. A Plex user without a wire is not imported.'),
+    h('p', { class: 'fui-field__help' }, 'Drag a wire from each Plex user to who they are on Jellyfin — or click one, then the other. Several Plex users may go to one person. A Plex user without a wire is not imported.'),
     el, said, summary, failed, h('div', { class: 'wire-actions' }, resetBtn, importBtn));
 
   // ---- wiring

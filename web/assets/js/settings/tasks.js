@@ -137,7 +137,7 @@ function listView(slot, store) {
               h('p', { class: 'sr-only' }, what)),
             runButton(t, store, paint));
         })));
-    }), h('p', { class: 'help task-zone' }, `Times of day are in ${store.tasks.time_zone || 'finstats’ time zone'}.`));
+    }), h('p', { class: 'fui-field__help task-zone' }, `Times of day are in ${store.tasks.time_zone || 'finstats’ time zone'}.`));
   }
   store.onTasks(() => paint());
   return store.loadTasks().then(() => paint(true));
@@ -162,7 +162,7 @@ function taskView(slot, store, id) {
 
   function paint(force = false) {
     const t = store.task(id);
-    if (!t) { mount(body, h('p', { class: 'help' }, 'There is no such task.'), button({ href: '/settings/tasks' }, 'All tasks')); return; }
+    if (!t) { mount(body, h('p', { class: 'fui-field__help' }, 'There is no such task.'), button({ href: '/settings/tasks' }, 'All tasks')); return; }
     const now = JSON.stringify([said(t), t.triggers, t.custom, t.next_at && dateTime(t.next_at), err, [...runBusy], runErr[id]]);
     if (!force && now === sig) return;
     sig = now;
@@ -176,7 +176,7 @@ function taskView(slot, store, id) {
 
     if (!t.schedulable) {
       const [href, where] = STARTED_FROM[id] || ['/settings', 'Settings'];
-      mount(body, status, h('p', { class: 'help' }, 'This one has no schedule: it needs a file. It runs when you upload one under ', h('a', { href }, where), '.'));
+      mount(body, status, h('p', { class: 'fui-field__help' }, 'This one has no schedule: it needs a file. It runs when you upload one under ', h('a', { href }, where), '.'));
       return;
     }
     const add = button({ variant: 'primary', type: 'button' }, icon('plus', 13), 'Add trigger');
@@ -195,11 +195,11 @@ function taskView(slot, store, id) {
         return h('li', { class: 'trigger-row' }, h('span', { class: 'trigger-what' }, words),
           g.limit_s ? h('span', { class: 'trigger-limit muted' }, `stops after ${limitWords(g.limit_s)}`) : null, remove);
       }))
-      : h('div', { id: 'task-triggers' }, h('p', { class: 'help' }, 'No triggers: it runs only when you press Run now.'));
+      : h('div', { id: 'task-triggers' }, h('p', { class: 'fui-field__help' }, 'No triggers: it runs only when you press Run now.'));
     mount(body, status,
       h('div', { class: 'form-actions task-actions' }, add, run, reset),
-      h('div', { class: 'field' }, h('div', { class: 'field-label' }, 'Runs'), list, err ? inlineError('trigger-err', err) : null),
-      h('p', { class: 'help' }, `Times of day are in ${store.tasks.time_zone || 'finstats’ time zone'}. `,
+      h('div', { class: 'fui-field' }, h('div', { class: 'fui-field__label' }, 'Runs'), list, err ? inlineError('trigger-err', err) : null),
+      h('p', { class: 'fui-field__help' }, `Times of day are in ${store.tasks.time_zone || 'finstats’ time zone'}. `,
         t.next_at ? `Next run: ${dateTime(t.next_at)}.` : ''));
   }
   store.onTasks(() => paint());
@@ -210,17 +210,17 @@ function taskView(slot, store, id) {
 function addDialog(t, onAdd) {
   const opt = (value, label, selected = false) => h('option', { value, selected }, label);
   const select = (id, label, options) => {
-    const el = h('select', { class: 'input', id }, options);
-    return { el, field: h('div', { class: 'field' }, h('label', { class: 'field-label', htmlFor: id }, label), el) };
+    const el = h('select', { class: 'fui-field__input', id }, options);
+    return { el, field: h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', htmlFor: id }, label), el) };
   };
   const type = select('trigger-type', 'Trigger type', [opt('daily', 'Daily'), opt('weekly', 'Weekly'), opt('interval', 'On an interval'), opt('startup', 'On application startup'),
     t.can.after_scan ? opt('after_scan', 'After Jellyfin’s library scan') : null]);
   const day = select('trigger-day', 'Day of week', DAYS.map((d, i) => opt(String(i), d)));
   const time = select('trigger-time', 'Time', Array.from({ length: 96 }, (_, i) => opt(String(i * 15), timeWords(i * 15), i * 15 === 180)));
   const every_ = select('trigger-every', 'Every', INTERVALS.map((s) => opt(String(s), every(s).replace(/^(day|hour)$/, '1 $1'), s === 3600)));
-  const limit = t.can.limit ? h('input', { class: 'input input-num mono', id: 'trigger-limit', type: 'number', min: '0.25', max: '168', step: '0.25', inputMode: 'decimal', 'aria-describedby': 'trigger-limit-help' }) : null;
-  const limitField = limit ? h('div', { class: 'field' }, h('label', { class: 'field-label', htmlFor: 'trigger-limit' }, 'Time limit (hours)'), limit,
-    h('p', { class: 'help', id: 'trigger-limit-help' }, 'A run that takes longer is stopped. Empty: no limit.')) : null;
+  const limit = t.can.limit ? h('input', { class: 'fui-field__input fui-field__input--num mono', id: 'trigger-limit', type: 'number', min: '0.25', max: '168', step: '0.25', inputMode: 'decimal', 'aria-describedby': 'trigger-limit-help' }) : null;
+  const limitField = limit ? h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', htmlFor: 'trigger-limit' }, 'Time limit (hours)'), limit,
+    h('p', { class: 'fui-field__help', id: 'trigger-limit-help' }, 'A run that takes longer is stopped. Empty: no limit.')) : null;
   const formErr = h('div');
   const addBtn = button({ variant: 'primary', type: 'submit' }, 'Add');
   const cancel = button({ variant: 'ghost', type: 'button' }, 'Cancel');

@@ -136,7 +136,7 @@ export default function serverPage(ctx) {
   function storageCard(storage) {
     const rows = (Array.isArray(storage) ? storage : []).filter((x) => x && x.used_bytes >= 0 && x.free_bytes >= 0 && x.used_bytes + x.free_bytes > 0);
     if (!rows.length) {
-      return card({ title: 'Storage', id: 'storage', body: h('p', { class: 'help' }, 'This Jellyfin version doesn’t report disk usage (it arrived in 10.11).') });
+      return card({ title: 'Storage', id: 'storage', body: h('p', { class: 'fui-field__help' }, 'This Jellyfin version doesn’t report disk usage (it arrived in 10.11).') });
     }
     const order = { library: 0, system: 1 };
     rows.sort((a, b) => (order[a.kind] ?? 2) - (order[b.kind] ?? 2));
@@ -178,11 +178,11 @@ export default function serverPage(ctx) {
     };
     const onInput = debounce((v) => { deviceFilter = v; paint(); }, 150);
     ctx.onCleanup(() => onInput.cancel());
-    const input = h('input', { class: 'input input-search', type: 'search', placeholder: 'Filter devices…', 'aria-label': 'Filter devices', value: deviceFilter, spellcheck: false,
+    const input = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: 'Filter devices…', 'aria-label': 'Filter devices', value: deviceFilter, spellcheck: false,
       onInput: (e) => onInput(e.target.value) });
     paint();
     return card({ title: ['Devices ', count], id: 'devices', sub: 'Every device that has signed in to Jellyfin',
-      actions: all.length > 5 ? h('div', { class: 'search-field search-field-sm' }, icon('search', 14), input) : null, cls: 'fui-card--flush', body });
+      actions: all.length > 5 ? h('div', { class: 'fui-field__search fui-field__search--sm' }, icon('search', 14), input) : null, cls: 'fui-card--flush', body });
   }
 
   function pluginsCard(plugins) {
@@ -271,7 +271,7 @@ export default function serverPage(ctx) {
         h('span', { class: 'meter-fill', style: { width: `${Math.max(pct, 1)}%` } })),
       h('div', { class: 'job-meta' }, leftText(job), stillText(job), watchedText(job),
         job.last_duration_s ? h('span', { class: 'muted' }, ['· last time it took ', duration(job.last_duration_s)]) : null),
-      h('p', { class: 'help job-what' }, job.what));
+      h('p', { class: 'fui-field__help job-what' }, job.what));
   }
 
   function jobRow(job) {
@@ -295,8 +295,8 @@ export default function serverPage(ctx) {
     const running = jobs.filter((j) => j.running);
     const idle = jobs.filter((j) => !j.running);
     mount(jobsSlot,
-      jobsData && jobsData.error ? h('p', { class: 'help' }, `Jellyfin did not answer just now (${jobsData.error}); this is the last thing it said.`) : null,
-      running.length ? h('div', { class: 'job-list' }, running.map(runningJob)) : h('p', { class: 'help' }, 'Nothing is running on Jellyfin right now.'),
+      jobsData && jobsData.error ? h('p', { class: 'fui-field__help' }, `Jellyfin did not answer just now (${jobsData.error}); this is the last thing it said.`) : null,
+      running.length ? h('div', { class: 'job-list' }, running.map(runningJob)) : h('p', { class: 'fui-field__help' }, 'Nothing is running on Jellyfin right now.'),
       idle.length
         ? plainTable(h('table', { class: 'table jobs-table' },
           h('thead', null, h('tr', null, h('th', null, 'Job'), h('th', null, 'Runs'), h('th', null, 'Last run'))),

@@ -16,7 +16,7 @@ export function activityCard({ daily, bucket, title = 'Activity' }) {
   const el = chartCard({
     title,
     sub: bucket === 'week' ? 'Per week, by media type' : 'Per day, by media type',
-    controls: segmented({ label: 'Measure', size: 'seg-sm', value: metric, options: METRICS,
+    controls: segmented({ label: 'Measure', size: 'sm', value: metric, options: METRICS,
       onChange: (v) => { metric = v; store.set('finstats.metric', v); el.rerender(); } }),
     chart: () => columnsChart({ daily, bucket, metric }),
     table: () => columnsTable({ daily, bucket }),
@@ -209,7 +209,7 @@ export function genresCard(genres, { sub = 'By watch time' } = {}) {
     : bucketList(genres, { empty: 'No genre information for these plays yet.' }));
   paint();
   return card({ title: 'Genres', sub, body,
-    actions: segmented({ label: 'Genres view', value: view, size: 'sm', options: [{ value: 'list', label: 'List' }, { value: 'radar', label: 'Radar' }],
+    actions: segmented({ label: 'Genres view', value: view, options: [{ value: 'list', label: 'List' }, { value: 'radar', label: 'Radar' }],
       onChange: (v) => { view = v; store.set('finstats.genresView', v); paint(); } }) });
 }
 
@@ -321,7 +321,7 @@ export function libraryInsights(d, { scoped = false } = {}) {
       card({ title: 'Never watched',
         sub: un && un.count > 0 ? `${num(un.count)} ${un.count === 1 ? 'title' : 'titles'} · ${bytes(un.size_bytes)} nobody has played` : 'Everything has been played at least once',
         body: [libItemRows(un && un.items, { empty: 'Nothing unwatched — or no file sizes known yet.', showAdded: true }),
-          h('p', { class: 'help fui-card__note' }, 'Combines plays recorded by finstats with Jellyfin’s own played flags, so history from before finstats counts too.')] })));
+          h('p', { class: 'fui-field__help fui-card__note' }, 'Combines plays recorded by finstats with Jellyfin’s own played flags, so history from before finstats counts too.')] })));
 }
 
 // ---------------------------------------------------------------- a shelf: posters in a row

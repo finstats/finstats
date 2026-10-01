@@ -106,7 +106,7 @@ export default {
       let n = 0;
       try { n = ((await api.get('/library/missing')).missing || []).length; } catch { /* nothing to point at */ }
       pointerBox.hidden = !n;
-      mount(pointer, n ? h('p', { class: 'help' }, `${num(n)} title${n === 1 ? '' : 's'} in your history ${n === 1 ? 'doesn’t' : 'don’t'} match anything in your library — usually a name the other server used. `,
+      mount(pointer, n ? h('p', { class: 'fui-field__help' }, `${num(n)} title${n === 1 ? '' : 's'} in your history ${n === 1 ? 'doesn’t' : 'don’t'} match anything in your library — usually a name the other server used. `,
         h('a', { href: '/settings/unlinked' }, 'Link them under Unlinked media'), '.') : null);
     }
     unlinked();
@@ -179,7 +179,7 @@ export default {
             h('span', { class: 'meter-fill', style: { width: upload.progress * 100 + '%' } })),
           h('div', { class: 'import-stage-row' }, h('span', { class: 'mono' }, `${Math.round(upload.progress * 100)}% · ${bytes(upload.loaded)} of ${bytes(upload.total)}`),
             button({ size: 'sm', type: 'button', onClick: () => upload.handle && upload.handle.abort() }, 'Cancel upload')),
-          h('p', { class: 'help' }, 'Keep this tab open until the upload finishes. You can browse other finstats pages meanwhile.'));
+          h('p', { class: 'fui-field__help' }, 'Keep this tab open until the upload finishes. You can browse other finstats pages meanwhile.'));
       } else if (waiting) {
         stage = boardView(imp);
       } else if (running || justUploaded) {
@@ -188,7 +188,7 @@ export default {
           h('div', { class: ['meter meter-wide', !(running && task.progress != null) && 'is-indeterminate'], role: 'progressbar', 'aria-label': 'Import progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': running && task.progress != null ? Math.round(task.progress * 100) : null },
             h('span', { class: 'meter-fill', style: { width: (running && task.progress != null ? task.progress * 100 : 30) + '%' } })),
           h('div', { class: 'mono import-msg', 'aria-live': 'polite' }, running ? task.message || 'Reading the backup…' : 'Starting the import…'),
-          h('p', { class: 'help' }, 'This runs on the server. It’s safe to leave this page.'));
+          h('p', { class: 'fui-field__help' }, 'This runs on the server. It’s safe to leave this page.'));
       } else {
         const input = fileInputs[imp.key];
         const drop = h('label', { class: ['dropzone', elsewhere && 'is-disabled'], htmlFor: elsewhere ? null : input.id, tabindex: elsewhere ? -1 : 0, role: 'button', 'aria-disabled': elsewhere ? 'true' : null, 'aria-label': `Choose a ${imp.name} backup file` },
@@ -205,13 +205,13 @@ export default {
         if (task && task.state === 'ok' && task.result) {
           outcome = h('div', { class: 'import-result' },
             h('div', { class: 'fui-badge--status fui-badge--good' }, icon('check', 14), 'Import finished', task.finished_at ? h('span', { class: 'muted mono', title: dateTime(task.finished_at) }, ' ' + relTime(task.finished_at)) : null),
-            task.message ? h('p', { class: 'help' }, task.message) : null,
+            task.message ? h('p', { class: 'fui-field__help' }, task.message) : null,
             h('table', { class: 'table table-dense result-table' }, h('tbody', null, imp.rows.filter(([k]) => task.result[k] != null).map(([k, label]) =>
               h('tr', null, h('th', { scope: 'row' }, label), h('td', { class: 'mono r' }, num(task.result[k])))))),
             button({ size: 'sm', href: '/' }, 'See your stats', icon('chevronRight', 14)));
         } else if (task && task.state === 'error') {
           outcome = h('div', { class: 'import-result' }, inlineError(`import-task-err-${imp.key}`, `The import failed: ${task.error || task.message || 'unknown error'}`),
-            h('p', { class: 'help' }, `Nothing was half-imported. Check that the file is an unmodified ${imp.name} backup, then upload it again.`));
+            h('p', { class: 'fui-field__help' }, `Nothing was half-imported. Check that the file is an unmodified ${imp.name} backup, then upload it again.`));
         }
         stage = [drop,
           localErr[imp.key] ? inlineError(`import-local-err-${imp.key}`, localErr[imp.key]) : null,
@@ -226,7 +226,7 @@ export default {
           h('div', null, h('h3', { class: 'section-label' }, `Export from ${imp.name}`),
             h('ol', { class: 'steps' }, imp.steps.map((parts) => h('li', null, parts.map((part, i) => (i % 2 ? h('strong', null, part) : part)))))),
           h('div', null, h('h3', { class: 'section-label' }, 'Upload the backup'), fileInputs[imp.key], stage,
-            h('p', { class: 'help import-note' }, icon('info', 13), ' ', imp.note))));
+            h('p', { class: 'fui-field__help import-note' }, icon('info', 13), ' ', imp.note))));
     }
     const paintAll = () => { for (const imp of IMPORTERS) paint(imp); };
 

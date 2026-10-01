@@ -120,7 +120,7 @@ export default {
       if (!cards.length) return null;
       return h('div', { class: 'pub-preview' }, cards.map(([label, src]) => h('figure', null,
         h('img', { src, alt: `${label}: what a chat app shows under your link`, loading: 'lazy', width: 600, height: 315 }),
-        h('figcaption', { class: 'help' }, label, ' · ', h('a', { href: src, download: '' }, 'Download')))));
+        h('figcaption', { class: 'fui-field__help' }, label, ' · ', h('a', { href: src, download: '' }, 'Download')))));
     }
 
     function linkBox(m) {
@@ -140,7 +140,7 @@ export default {
 
     function form(m) {
       draft = pick(m);
-      const name = h('input', { class: 'input', id: 'pub-name', name: 'pub-name', type: 'text', maxLength: 60, autocomplete: 'off',
+      const name = h('input', { class: 'fui-field__input', id: 'pub-name', name: 'pub-name', type: 'text', maxLength: 60, autocomplete: 'off',
         placeholder: 'Leave empty to show no name', value: draft.display_name, 'aria-describedby': 'pub-name-row-help' });
       const nameNote = h('span', { class: 'saved-note', 'aria-live': 'polite' });
       const nameErr = h('div');
@@ -167,7 +167,7 @@ export default {
     function paintOwn() {
       if (!mine) return;
       if (!mine.server_enabled) {
-        mount(own, h('p', { class: 'help' }, isAdmin() ? 'Allow public profiles above to publish your own.' : 'An administrator has not allowed public profiles.'));
+        mount(own, h('p', { class: 'fui-field__help' }, isAdmin() ? 'Allow public profiles above to publish your own.' : 'An administrator has not allowed public profiles.'));
         return;
       }
       paintTop();

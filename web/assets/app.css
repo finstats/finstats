@@ -53,7 +53,7 @@ kbd {
 .me-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .me-name { font-size: 13px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .me-role { font-size: 11px; color: var(--text-faint); }
-/* The theme: a switch with three stops (Light · Device · Dark), the family of .switch. --at is the stop, 0 to 2. */
+/* The theme: a switch with three stops (Light · Device · Dark), the family of .fui-toggle. --at is the stop, 0 to 2. */
 .theme-switch { --at: 1; --w: 64px; --k: 22px; position: relative; flex: none; width: var(--w); height: 26px; border: 1px solid var(--border); border-radius: 99px;
   background: var(--track); cursor: pointer; touch-action: none; user-select: none; transition: background 260ms ease, border-color var(--ease); }
 .theme-switch[data-at="0"] { background: color-mix(in srgb, var(--warning) 26%, var(--track)); }
@@ -155,28 +155,10 @@ kbd {
 
 /* ------------------------------------------------------------ inputs (buttons are finui's) */
 
-.input {
-  width: 100%; padding: 8px 10px; min-height: 36px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text);
-  transition: border-color var(--ease), box-shadow var(--ease);
-}
-.input::placeholder { color: var(--text-faint); }
-.input:hover { border-color: var(--border-strong); }
-.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
-.input[aria-invalid="true"] { border-color: var(--critical); }
-.input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--critical) 18%, transparent); }
-.input-num { width: 110px; text-align: right; }
-.search-field { position: relative; display: flex; align-items: center; min-width: 200px; flex: 1 1 200px; max-width: 320px; }
-.search-field > .icon { position: absolute; left: 10px; color: var(--text-faint); pointer-events: none; }
-.input-search { padding-left: 30px; min-height: 32px; padding-top: 5px; padding-bottom: 5px; font-size: 13px; }
-.input-search::-webkit-search-cancel-button { filter: invert(.6); }
+ .setting-label { font-size: 13px; font-weight: 550; color: var(--text); }
 
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field-label, .setting-label { font-size: 13px; font-weight: 550; color: var(--text); }
-.field-input { display: flex; align-items: center; gap: 8px; }
 .unit { color: var(--text-faint); font-size: 12.5px; }
-.help { color: var(--text-faint); font-size: 12.5px; line-height: 1.5; }
-.field-error { display: flex; align-items: flex-start; gap: 6px; color: var(--critical-text); font-size: 12.5px; margin-top: 2px; }
-.field-error .icon { margin-top: 2px; }
+
 .form-actions { display: flex; align-items: center; gap: 12px; }
 .saved-note { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 12.5px; min-height: 18px; }
 .saved-note .icon { color: var(--good); }
@@ -198,7 +180,7 @@ kbd {
 /* ---- timeline: a trail of stops. Rows alternate direction (the row is rtl, its cards are not), a bend joins
    each row to the next; below 620px (.is-line, set from JS) it is one straight line down the left. */
 .content > .entity-tabs { margin-top: 14px; }
-.entity-tabs .seg-btn { text-decoration: none; display: inline-flex; align-items: center; }
+.entity-tabs .fui-segmented__option { text-decoration: none; display: inline-flex; align-items: center; }
 .trail-filter { margin-bottom: 8px; }
 .trail-filter-label { color: var(--text-faint); font-size: 12px; }
 
@@ -251,69 +233,14 @@ kbd {
 .trail.is-line .stop-node { top: 28px; left: 11px; }
 .trail.is-line .stop-month { top: 12px; left: 0; transform: translateY(-50%); }
 
-/* segmented control */
-.seg { display: inline-flex; padding: 2px; gap: 2px; background: var(--bg-sunken); border: 1px solid var(--border-soft); border-radius: 7px; max-width: 100%; overflow-x: auto; }
-.seg-btn {
-  padding: 4px 11px; min-height: 26px; background: transparent; border: 0; border-radius: 5px; color: var(--text-muted);
-  font-size: 12.5px; font-weight: 500; white-space: nowrap; transition: background var(--ease), color var(--ease);
-}
-.seg-btn:hover { color: var(--text); }
-.seg-btn[aria-checked="true"], .seg-btn[aria-current="page"] { background: var(--hover); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
-.seg-sm .seg-btn { padding: 2px 9px; min-height: 22px; font-size: 12px; }
-
 .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 /* A filter the server decides the existence of (which tracker a play came from) sits in a slot that
    is filled once the answer arrives. Empty, it must not take a gap of its own. */
 .seg-slot:empty { display: none; }
 
-/* combobox */
-.combo { position: relative; }
-.combo-btn {
-  display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 4px 9px; max-width: 240px;
-  background: var(--bg-sunken); border: 1px solid var(--border-soft); border-radius: 7px; color: var(--text-muted); font-size: 12.5px; font-weight: 500;
-}
-.combo-btn:hover { border-color: var(--border); color: var(--text); }
-.combo.has-value .combo-btn { color: var(--text); border-color: var(--accent); background: var(--accent-wash); }
-.combo-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.combo-caret { color: var(--text-faint); }
-.combo-pop {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: 260px; max-width: calc(100vw - 32px);
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow) 50%, transparent); overflow: hidden;
-  animation: fade var(--ease);
-}
-.combo-search { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); color: var(--text-faint); }
-.combo-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; font-size: 13px; }
-.combo-list { max-height: 260px; overflow-y: auto; padding: 4px; }
-.combo-opt { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; }
-.combo-opt.is-active { background: var(--hover); }
-.combo-opt[aria-selected="true"] { color: var(--accent-hi); }
-.combo-empty { padding: 14px 10px; color: var(--text-faint); font-size: 13px; text-align: center; }
-/* A list you tick: it takes the focus itself, having no search box to hold it, and the active row is
-   what shows where you are — so no focus ring on the list as well. */
-.combo-list:focus { outline: none; }
-.combo.is-multi .combo-opt[aria-selected="true"] { background: var(--accent-wash); }
-
-/* toggle switch */
-.switch { position: relative; width: 38px; height: 22px; flex: none; padding: 0; border: 1px solid var(--border); border-radius: 99px; background: var(--hover); transition: background var(--ease), border-color var(--ease); }
-.switch-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--knob); box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 30%, transparent); transition: transform var(--ease), background var(--ease); }
-.switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
-.switch[aria-checked="true"] .switch-knob { transform: translateX(16px); background: var(--on-fill); }
-
 .method.m-direct .fui-badge__dot { background: var(--series-1); }
 .method.m-stream .fui-badge__dot { background: var(--series-2); }
 .method.m-transcode .fui-badge__dot { background: var(--series-3); }
-
-/* copy */
-.copy { display: inline-flex; align-items: center; gap: 6px; }
-.copy-row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
-/* An address is one word: never break it in the middle. What follows it wraps underneath instead. */
-.copy-row > .mono:not(.trunc) { white-space: nowrap; overflow-wrap: normal; }
-/* A truncated value gives way instead: it shrinks to its ellipsis, so the copy button stays beside it and never wraps under it. */
-.copy-row > .trunc { flex: 1 1 0; }
-.copy-btn { display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-faint); }
-.copy-btn:hover { background: var(--hover); color: var(--text); }
-.copy-btn.is-ok { color: var(--good); }
-.copy-note { font-size: 12px; color: var(--text-muted); }
 
 /* ------------------------------------------------------------ tiles */
 .tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); }
@@ -461,7 +388,7 @@ th[aria-sort="descending"] .th-sort-icon { transform: rotate(180deg); }
 .dt { min-width: 0; }
 .dt-tools { display: flex; justify-content: flex-end; padding: 0 0 10px; }
 .fui-card--flush .dt-tools { padding: 10px 12px; border-bottom: 1px solid var(--border-soft); }
-.dt-tools .search-field { width: min(100%, 240px); }
+.dt-tools .fui-field__search { width: min(100%, 240px); }
 .dt-none { margin: 0; padding: 18px 16px; color: var(--text-faint); font-size: 13px; text-align: center; }
 
 .buckets thead th { padding: 0 0 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); text-align: left; white-space: nowrap; }
@@ -622,11 +549,11 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 /* ------------------------------------------------------------ settings */
 .settings .fui-card__body { max-width: 100%; }
 .setting-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
-.setting-row .help { max-width: 62ch; margin-top: 2px; }
+.setting-row .fui-field__help { max-width: 62ch; margin-top: 2px; }
 .setting-control { display: flex; align-items: center; gap: 10px; flex: none; }
 .form-grid { display: grid; gap: 18px 28px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 .form-grid .form-actions, .form-grid > div:last-child { grid-column: 1 / -1; }
-.facts + .help { margin-top: 14px; }
+.facts + .fui-field__help { margin-top: 14px; }
 
 .tasks { display: flex; flex-direction: column; }
 .task { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border-soft); }
@@ -667,7 +594,7 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .trigger-what { flex: 1; min-width: 0; }
 .trigger-limit { font-size: 12.5px; }
 .trigger-remove { color: var(--critical-text); }
-.trigger-form .input { width: 100%; max-width: 100%; }
+.trigger-form .fui-field__input { width: 100%; max-width: 100%; }
 .trigger-form .form-actions { justify-content: flex-end; }
 
 .import-cols { display: grid; gap: 28px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
@@ -735,7 +662,7 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .locate-show { margin-top: 14px; }
 .locate-show .section-label { margin-bottom: 2px; }
 .locate-pick { display: flex; flex-direction: column; gap: 10px; }
-.locate-pick .input { width: 100%; }
+.locate-pick .fui-field__input { width: 100%; }
 .locate-opts { display: flex; flex-direction: column; gap: 4px; max-height: min(52vh, 420px); overflow-y: auto; }
 .locate-opt { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid transparent;
   border-radius: var(--radius-sm); background: none; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
@@ -753,7 +680,7 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
   .wire-meta { display: none; }
   .wire-row .avatar { display: none; }
 }
-.dropzone + .field-error, .field-error + .field-error { margin-top: 10px; }
+.dropzone + .fui-field__error { margin-top: 10px; }
 .import-stage { display: flex; flex-direction: column; gap: 9px; padding: 16px; border: 1px solid var(--border-soft); border-radius: var(--radius); background: var(--bg); }
 .import-stage-title { display: flex; align-items: center; gap: 8px; font-weight: 550; overflow-wrap: anywhere; }
 .import-stage-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; color: var(--text-muted); font-size: 12px; }
@@ -772,7 +699,7 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .auth-title { font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: var(--text-strong); }
 .auth-sub { color: var(--text-muted); margin-bottom: 14px; }
 .auth-form { display: flex; flex-direction: column; gap: 14px; }
-.auth-form .help .icon { color: var(--accent-hi); }
+.auth-form .fui-field__help .icon { color: var(--accent-hi); }
 .wizard { list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 22px; }
 .wizard-step { counter-increment: step; display: flex; flex-direction: column; gap: 12px; }
 .wizard-title { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
@@ -864,7 +791,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .storage-meter.is-warning .meter-fill { background: var(--warning); }
 .storage-meter.is-critical { background: var(--crit-wash); }
 .storage-meter.is-critical .meter-fill { background: var(--critical); }
-.search-field-sm { min-width: 160px; flex: 0 1 240px; }
+
 .wrap-cell { overflow-wrap: anywhere; min-width: 120px; }
 
 /* long unbroken strings never push a card wider than its column */
@@ -901,7 +828,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
   .sb-item { padding: 0 6px; }
   .overlay { padding-top: 5vh; }
   .palette-foot { display: none; }
-  .search-field { max-width: none; }
+  
   .grid-heat { grid-template-columns: minmax(0, 1fr); }
   .subsection { margin-top: 32px; padding-top: 22px; }
   .strip-note { text-align: left; }
@@ -944,7 +871,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .rc-chapter > .rc-eyebrow + .rc-title { margin-top: 14px; }
 .rc-chapter > .rc-title + .rc-lead { margin-top: 18px; }
 .rc-chapter > .rc-mark + * { margin-top: 0; }
-.rc-chapter > .seg { display: flex; width: max-content; }
+.rc-chapter > .fui-segmented { display: flex; width: max-content; }
 .rc-subhead { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); }
 .rc-note { color: var(--text-faint); font-size: 12.5px; max-width: 70ch; }
 .rc-link { color: inherit; text-decoration: none; border-radius: var(--radius-sm); }
@@ -1180,12 +1107,11 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 
 /* ------------------------------------------------------------ settings: backups */
 .backup-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 20px; }
-.backup-head .help { flex: 1 1 320px; margin: 0; }
+.backup-head .fui-field__help { flex: 1 1 320px; margin: 0; }
 .backups td { white-space: nowrap; }
 .backup-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; white-space: normal; }
 .backup-restore { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 8px; }
-.check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
-.check input { width: 15px; height: 15px; accent-color: var(--accent); }
+
 .flip-v { transform: scaleY(-1); }
 
 /* ------------------------------------------------------------ settings: home network */
@@ -1193,7 +1119,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 /* A grid item will not shrink below its content unless it is allowed to: without this a table in its own
    scroll box widens the card instead of scrolling inside it. */
 .net-stack > * { min-width: 0; }
-.net-stack > .field { margin: 0; }
+.net-stack > .fui-field { margin: 0; }
 .home-ips { list-style: none; display: grid; gap: 6px; margin: 6px 0 0; padding: 0; font-size: 13px; }
 .home-ips li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
 .home-input { width: min(100%, 360px); min-height: 58px; resize: vertical; }
@@ -1222,10 +1148,9 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .perm-name { font-weight: 550; color: var(--text); }
 .perm-sub { display: block; margin-top: 1px; color: var(--text-faint); font-size: 12px; }
 .perm-cell { padding: 9px 12px; text-align: center; }
-.perm-cell .switch { vertical-align: middle; }
+.perm-cell .fui-toggle { vertical-align: middle; }
 .perm-saved { width: 76px; padding-left: 4px; white-space: nowrap; }
-.switch:disabled { cursor: not-allowed; }
-.switch.is-inherited { opacity: .45; }
+
 .perm-legend { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 16px; margin: 16px 0 0; font-size: 12.5px; }
 .perm-legend dt { color: var(--text); font-weight: 550; }
 .perm-legend dd { margin: 0; color: var(--text-muted); }
@@ -1266,7 +1191,7 @@ button.ep[aria-disabled="true"]:hover { filter: none; outline: 0; }
 .season-name { flex: none; }
 .season-count { margin-left: auto; font-size: 12px; color: var(--text-faint); }
 .season-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding-top: 2px; }
-.season-foot .help { margin: 0; }
+.season-foot .fui-field__help { margin: 0; }
 .show-more { margin-top: 6px; }
 
 /* ------------------------------------------------------------ watched together */
@@ -1449,11 +1374,10 @@ button.ep[aria-disabled="true"]:hover { filter: none; outline: 0; }
 .conn-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .conn-form { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px; border: 1px solid var(--border-soft); border-radius: var(--radius); background: var(--bg-sunken); }
 .conn-form-title { font-size: 14px; font-weight: 600; margin: 0; }
-.conn-form .check + .help { margin-bottom: 8px; }
-select.input { appearance: none; padding-right: 30px; background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
-select.input:disabled { opacity: .6; }
+.conn-form .fui-field__check + .fui-field__help { margin-bottom: 8px; }
+
 .conn-form, .conn-form .form-grid > * { min-width: 0; }
-.conn-form .input { width: 100%; max-width: 100%; }
+.conn-form .fui-field__input { width: 100%; max-width: 100%; }
 
 /* ---------------------------------------------------------------- server: Jellyfin's own jobs */
 .job-list { display: flex; flex-direction: column; gap: 14px; }
@@ -1492,13 +1416,13 @@ select.input:disabled { opacity: .6; }
 
 /* ---------------------------------------------------------------- settings: notifications */
 .notify-public { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-.notify-public .field { flex: 1 1 320px; min-width: 0; }
+.notify-public .fui-field { flex: 1 1 320px; min-width: 0; }
 .notify-events { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 24px; }
 .notify-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .notify-group .section-label { margin: 0; }
 .notify-event { align-items: flex-start; gap: 10px; }
 .notify-event input { margin-top: 2px; flex: none; }
-.notify-event .help { margin: 1px 0 0; }
+.notify-event .fui-field__help { margin: 1px 0 0; }
 .notify-event-label { display: block; }
 .notify-event[hidden] { display: none; }
 .notify-what { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 520px; }
@@ -1620,7 +1544,7 @@ span.shelf-card { cursor: default; }
 .setting-control .unit { min-width: 64px; }
 .setting-control .home-input { width: 280px; max-width: 100%; }
 .setting-control .home-known { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: min(100%, 280px); max-width: 420px; }
-.setting-control .home-known .help { margin: 0; }
+.setting-control .home-known .fui-field__help { margin: 0; }
 .setting-actions { justify-content: flex-end; padding-top: 12px; }
 .setting-foot { margin-top: 14px; }
 .setting-notes { display: grid; gap: 6px; margin-top: 14px; }

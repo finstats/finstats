@@ -74,8 +74,8 @@ export function connectionsPanel(ctx) {
   function form(existing) {
     const kinds = data.kinds;
     let kind = existing ? kinds.find((k) => k.key === existing.kind) : kinds[0];
-    const kindSel = h('select', { class: 'input', id: 'conn-kind', 'aria-describedby': 'conn-kind-help' }, kinds.map((k) => h('option', { value: k.key }, k.label)));
-    const kindHelp = h('p', { class: 'help', id: 'conn-kind-help' });
+    const kindSel = h('select', { class: 'fui-field__input', id: 'conn-kind', 'aria-describedby': 'conn-kind-help' }, kinds.map((k) => h('option', { value: k.key }, k.label)));
+    const kindHelp = h('p', { class: 'fui-field__help', id: 'conn-kind-help' });
     const name = formField({ id: 'conn-name', label: 'Name (optional)', autocomplete: 'off', help: 'Shown in finstats. Useful with two of a kind: “Radarr 4K”.' });
     const url = formField({ id: 'conn-url', label: 'Address', autocomplete: 'off', inputMode: 'url' });
     const secret = formField({ id: 'conn-secret', label: 'API key', type: 'password', autocomplete: 'new-password', help: ' ' });
@@ -89,7 +89,7 @@ export function connectionsPanel(ctx) {
     function paintKind() {
       kindHelp.textContent = kind.what;
       url.input.placeholder = kind.example;
-      secret.el.querySelector('.help').textContent = (existing && existing.has_secret ? 'Leave empty to keep the stored one. ' : '') + (SECRET_HELP[kind.key] || '');
+      secret.el.querySelector('.fui-field__help').textContent = (existing && existing.has_secret ? 'Leave empty to keep the stored one. ' : '') + (SECRET_HELP[kind.key] || '');
       secret.input.placeholder = existing && existing.has_secret ? 'Unchanged' : '';
     }
     if (existing) {
@@ -134,12 +134,12 @@ export function connectionsPanel(ctx) {
     const el = h('form', { class: 'conn-form', noValidate: true },
       h('h3', { class: 'conn-form-title' }, existing ? `Edit ${existing.name}` : 'Add a connection'),
       h('div', { class: 'form-grid' },
-        h('div', { class: 'field' }, h('label', { class: 'field-label', htmlFor: 'conn-kind' }, 'Service'), kindSel, kindHelp),
+        h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', htmlFor: 'conn-kind' }, 'Service'), kindSel, kindHelp),
         name.el, url.el, secret.el,
-        h('div', { class: 'field' },
-          h('label', { class: 'check' }, certs, 'Accept a self-signed certificate'),
-          h('p', { class: 'help', id: 'conn-certs-help' }, 'Only for an https:// address whose certificate is your own. finstats then does not verify who answers at this address. Leave it off otherwise.'),
-          existing ? h('label', { class: 'check' }, enabled, 'Switched on') : null)),
+        h('div', { class: 'fui-field' },
+          h('label', { class: 'fui-field__check' }, certs, 'Accept a self-signed certificate'),
+          h('p', { class: 'fui-field__help', id: 'conn-certs-help' }, 'Only for an https:// address whose certificate is your own. finstats then does not verify who answers at this address. Leave it off otherwise.'),
+          existing ? h('label', { class: 'fui-field__check' }, enabled, 'Switched on') : null)),
       result, formErr,
       h('div', { class: 'form-actions' }, saveBtn, testBtn, button({ variant: 'ghost', type: 'button', onClick: () => { editing = null; render(); } }, 'Cancel')));
     el.addEventListener('submit', async (e) => {
@@ -162,10 +162,10 @@ export function connectionsPanel(ctx) {
     if (!data) return;
     const list = data.services.length
       ? h('ul', { class: 'conn-list' }, data.services.map(row))
-      : h('p', { class: 'help' }, 'Nothing connected yet. With Sonarr and Radarr, finstats knows what is coming and what is downloading; with Seerr, who asked for what.');
+      : h('p', { class: 'fui-field__help' }, 'Nothing connected yet. With Sonarr and Radarr, finstats knows what is coming and what is downloading; with Seerr, who asked for what.');
     const existing = typeof editing === 'number' ? data.services.find((s) => s.id === editing) : null;
     mount(root,
-      h('p', { class: 'help' }, 'finstats only reads from these services: it never approves a request, starts a search or touches a download. Keys and passwords are stored in finstats’ own database, are never shown again and are never part of a backup.'),
+      h('p', { class: 'fui-field__help' }, 'finstats only reads from these services: it never approves a request, starts a search or touches a download. Keys and passwords are stored in finstats’ own database, are never shown again and are never part of a backup.'),
       list,
       editing === null
         ? h('div', { class: 'form-actions' }, button({ type: 'button', onClick: () => { editing = 'new'; removing = null; render(); } }, icon('plus', 14), 'Add a connection'))

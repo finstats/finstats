@@ -38,14 +38,14 @@ export default {
 
     function scheduleForm() {
       const s = store.settings;
-      const keep = h('input', { class: 'input input-num mono', type: 'text', inputMode: 'numeric', id: 'f-backup-keep', value: String(s.backup_keep), autocomplete: 'off', 'aria-describedby': 'backup_keep-help' });
+      const keep = h('input', { class: 'fui-field__input fui-field__input--num mono', type: 'text', inputMode: 'numeric', id: 'f-backup-keep', value: String(s.backup_keep), autocomplete: 'off', 'aria-describedby': 'backup_keep-help' });
       const formErr = h('div'), note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
       const save = button({ variant: 'primary', type: 'submit' }, 'Save');
       const form = h('form', { class: 'setting-rows', noValidate: true },
         settingRow({ id: 'backup-schedule', label: 'When backups are written', help: 'The Backup task’s schedule: daily, weekly, on an interval, or only by hand.',
           control: button({ size: 'sm', href: '/settings/tasks/backup' }, icon('clock', 13), 'Schedule') }),
         settingRow({ id: 'backup_keep', label: 'Keep the newest', labelFor: 'f-backup-keep', help: 'Older ones are removed when a new one is written. 1–100.',
-          control: h('div', { class: 'field-input' }, keep, h('span', { class: 'unit' }, 'backups')) }),
+          control: h('div', { class: 'fui-field__row' }, keep, h('span', { class: 'unit' }, 'backups')) }),
         h('div', { class: 'form-actions setting-actions' }, save, note), formErr);
       form.addEventListener('submit', async (e) => {
         e.preventDefault(); mount(formErr, '');
@@ -88,7 +88,7 @@ export default {
             h('td', { class: 'mono r' }, bytes(b.size_bytes)),
             h('td', null, h('div', { class: 'backup-actions' }, actions)));
         }))))
-        : h('p', { class: 'help' }, backupsData.scheduled ? 'No backups yet. The first one is written by itself once there is something to back up, or make one now.' : 'No backups yet, and none are scheduled.');
+        : h('p', { class: 'fui-field__help' }, backupsData.scheduled ? 'No backups yet. The first one is written by itself once there is something to back up, or make one now.' : 'No backups yet, and none are scheduled.');
 
       const restored = rs && rs.state === 'ok' && rs.result ? h('p', { class: 'fui-badge--status fui-badge--good fui-badge--line' }, icon('check', 13),
         `Restored ${num(rs.result.plays_imported)} plays, ${num(rs.result.plays_skipped)} were already here${rs.result.settings_restored ? '; settings and permissions restored' : ''}.`) : null;
@@ -104,12 +104,12 @@ export default {
           .catch((e) => { err = e.status === 413 ? 'The server rejected the file as too large. Behind a reverse proxy, raise its upload limit and try again.' : e.message; })
           .finally(() => { restoreUpload.active = false; sig = ''; store.poke(1000); paint(); });
       });
-      const keepSettings = h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: restoreSettings, onChange: (e) => { restoreSettings = e.target.checked; sig = ''; paint(); } }),
+      const keepSettings = h('label', { class: 'fui-field__check' }, h('input', { type: 'checkbox', checked: restoreSettings, onChange: (e) => { restoreSettings = e.target.checked; sig = ''; paint(); } }),
         h('span', null, 'Also restore settings and permissions'));
 
       mount(body,
         h('div', { class: 'backup-head' },
-          h('p', { class: 'help' }, backupsData.scheduled
+          h('p', { class: 'fui-field__help' }, backupsData.scheduled
             ? [`Written on the `, h('a', { href: '/settings/tasks/backup' }, 'Backup task’s schedule'), `, the newest ${num(s.backup_keep)} kept`,
               backupsData.next_at ? [', next ', h('span', { title: dateTime(backupsData.next_at) }, untilText(backupsData.next_at)), '.'] : '.']
             : ['No backups are scheduled (', h('a', { href: '/settings/tasks/backup' }, 'schedule them'), ').'], ' They live in the ', h('span', { class: 'mono' }, 'backups'), ' folder of your data directory.'),
@@ -117,9 +117,9 @@ export default {
         progressOf(bk, 'Backup progress'), bk && bk.state === 'error' && bk.error ? inlineError('backup-err', `Backup failed: ${bk.error}`) : null,
         table,
         err ? inlineError('backups-err', err) : null,
-        h('div', { class: 'field', id: 'restore' },
+        h('div', { class: 'fui-field', id: 'restore' },
           h('div', { class: 'setting-label' }, 'Restore from a file'),
-          h('p', { class: 'help' }, 'Restoring merges: plays already here are skipped, so it is safe to do twice. A backup holds everyone’s history and addresses, never your Jellyfin API key.'),
+          h('p', { class: 'fui-field__help' }, 'Restoring merges: plays already here are skipped, so it is safe to do twice. A backup holds everyone’s history and addresses, never your Jellyfin API key.'),
           restoreUpload.active
             ? h('div', { class: 'task-progress' }, h('div', { class: 'meter meter-wide', role: 'progressbar', 'aria-label': 'Upload progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(restoreUpload.progress * 100) },
               h('span', { class: 'meter-fill', style: { width: restoreUpload.progress * 100 + '%' } })), h('span', { class: 'mono task-msg' }, `Uploading ${restoreUpload.name} · ${Math.round(restoreUpload.progress * 100)}%`))
