@@ -624,6 +624,14 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE INDEX idx_watchlist_user ON watchlist(user_id, added_at);
     CREATE UNIQUE INDEX idx_watchlist_item ON watchlist(user_id, item_id) WHERE item_id IS NOT NULL;
     "#,
+    // user_version 31 — Whether an entry's title was missing from the library at the last look, and when it came (2.1.0).
+    //      An arrival is a title that was not here and now is: a new item alone also means a replaced file (a new path
+    //      is a new id), which announced "now on the server" for titles that never left.
+    r#"
+    ALTER TABLE watchlist ADD COLUMN missing INTEGER NOT NULL DEFAULT 1;
+    ALTER TABLE watchlist ADD COLUMN arrived_at INTEGER;
+    UPDATE watchlist SET missing = NOT EXISTS (SELECT 1 FROM items i WHERE i.id = watchlist.item_id AND i.removed = 0);
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole

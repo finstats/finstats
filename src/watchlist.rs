@@ -80,8 +80,8 @@ pub fn add(conn: &Connection, user_id: &str, wanted: Wanted, now: i64) -> Result
         return Ok(Err(Refused::Full));
     }
     conn.execute(
-        "INSERT INTO watchlist(user_id, kind, item_id, tmdb_id, tvdb_id, imdb_id, title, year, added_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        params![user_id, t.kind, item_id, t.tmdb_id, t.tvdb_id, t.imdb_id, t.title, t.year, now],
+        "INSERT INTO watchlist(user_id, kind, item_id, tmdb_id, tvdb_id, imdb_id, title, year, added_at, missing) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        params![user_id, t.kind, item_id, t.tmdb_id, t.tvdb_id, t.imdb_id, t.title, t.year, now, item_id.is_none()],
     )?;
     Ok(Ok((conn.last_insert_rowid(), true)))
 }
@@ -303,11 +303,14 @@ pub fn restore_row(conn: &Connection, row: &serde_json::Map<String, Value>) -> R
         "INSERT INTO watchlist(user_id, kind, item_id, tmdb_id, tvdb_id, imdb_id, title, year, added_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![user_id, t.kind, item_id, t.tmdb_id, t.tvdb_id, t.imdb_id, t.title, t.year, added_at],
     )?;
+    // Whether it is here is this library's to say, not the backup's.
+    conn.execute(&format!("UPDATE watchlist SET missing = {GONE} WHERE id = ?1"), [conn.last_insert_rowid()])?;
     Ok(true)
 }
 
-/// After a library read: tell each person whose watchlist was waiting for a title that it is here — a title that came
-/// after they put it on the list, in the last few hours. Re-derived from that window every time, so saying it twice is
+/// After a library read: tell each person whose watchlist was waiting for a title that it is here — a title that was
+/// missing at a library read and came after they put it on the list, in the last few hours. A new item alone is not an
+/// arrival: a replaced file is a new path and so a new item, of a title that never left. Re-derived from that window every time, so saying it twice is
 /// impossible and a missed read loses nothing; anything older is history and says nothing. Only ever to the person's own
 /// destinations (`notify::Need::Owner`).
 pub fn announce(conn: &Connection, bus: &crate::notify::Fanout) -> Result<usize> {
@@ -320,7 +323,7 @@ pub fn announce(conn: &Connection, bus: &crate::notify::Fanout) -> Result<usize>
         .prepare_cached(
             "SELECT w.user_id, COALESCE(u.name, w.user_id), w.kind, i.id, i.name, i.date_created
              FROM watchlist w JOIN items i ON i.id = w.item_id AND i.removed = 0 LEFT JOIN users u ON u.id = w.user_id
-             WHERE i.date_created >= ?1 AND i.date_created > w.added_at",
+             WHERE w.arrived_at >= ?1 AND i.date_created >= ?1 AND i.date_created > w.added_at",
         )?
         .query_map([db::now() - crate::notify::HISTORIC_S], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
         .collect::<Result<_, _>>()?;
@@ -354,6 +357,9 @@ pub async fn check_arrivals(app: &App) {
         Err(e) => tracing::warn!("could not announce what arrived for watchlists: {e:#}"),
     }
 }
+
+/// An entry's title is not in the library: never attached, or attached to an item that is gone.
+const GONE: &str = "NOT EXISTS (SELECT 1 FROM items i WHERE i.id = watchlist.item_id AND i.removed = 0)";
 
 /// Entries the library does not have as far as they know: never attached, or attached to an item that is gone.
 /// Bounded by the per-person cap, and each one's item looked up by its key.
@@ -401,16 +407,22 @@ pub fn resolve(conn: &Connection) -> Result<usize> {
         };
         same.push((id, added_at));
         let (keep, _) = same.iter().copied().min_by_key(|&(e, at)| (at, e)).expect("holds this entry");
+        // If any of them had the title here at the last look, the one kept had it too: merging is not an arrival.
+        let ids = serde_json::to_string(&same.iter().map(|&(e, _)| e).collect::<Vec<_>>())?;
+        let missing: bool = conn.query_row("SELECT MIN(missing) FROM watchlist WHERE id IN (SELECT value FROM json_each(?1))", [&ids], |r| r.get(0))?;
         for &(e, _) in same.iter().filter(|&&(e, _)| e != keep) {
             conn.execute("DELETE FROM watchlist WHERE id = ?1", [e])?;
             merged.insert(e);
         }
-        conn.execute("UPDATE watchlist SET item_id = ?2 WHERE id = ?1", params![keep, found])?;
+        conn.execute("UPDATE watchlist SET item_id = ?2, missing = ?3 WHERE id = ?1", params![keep, found, missing])?;
         attached += 1;
     }
     if attached > 0 {
         tracing::info!("attached {attached} watchlist entries to titles in the library");
     }
+    // What was missing at the last look and is here now has arrived; then note what is missing now, for the next one.
+    conn.execute(&format!("UPDATE watchlist SET arrived_at = ?1, missing = 0 WHERE missing = 1 AND NOT {GONE}"), [db::now()])?;
+    conn.execute(&format!("UPDATE watchlist SET missing = 1 WHERE missing = 0 AND {GONE}"), [])?;
     Ok(attached)
 }
 
@@ -960,6 +972,85 @@ mod tests {
         let p = plan(FIND_SQL, &[&"Movie", &"1", &"2", &"tt3"]);
         assert!(p.contains("idx_item_external") && !p.contains("SCAN x") && !p.contains("SCAN item_external"), "{p}");
     }
+    /// alice's on-the-server film, its file upgraded. A new file is a new path, and so a new item with a fresh DateCreated,
+    /// which once read as "Now on the server" for a title that never left — at every upgrade, watched or not.
+    #[test]
+    fn a_title_that_never_left_is_not_an_arrival_when_its_file_is_replaced() {
+        use crate::notify::{Kind, tests::{bus, target}};
+        let c = conn();
+        let now = db::now();
+        c.execute_batch(r#"INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 0);
+               INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('alice', '["sign_in"]', 0);"#).unwrap();
+        c.execute("UPDATE items SET date_created = ?1 WHERE id = 'sintel'", [now - 365 * 86_400]).unwrap();
+        add(&c, "alice", Wanted::Item("sintel".into()), now - 7 * 86_400).unwrap().unwrap();
+        resolve(&c).unwrap();
+        // One library read later: the old file is gone and the upgrade is there under a new id.
+        c.execute("UPDATE items SET removed = 1 WHERE id = 'sintel'", []).unwrap();
+        c.execute(r#"INSERT INTO items(id, type, name, provider_ids, date_created, updated_at) VALUES ('sintel2', 'Movie', 'Sintel', '{"Tmdb":"45745","Imdb":"tt1727587"}', ?1, 0)"#, [now - 600]).unwrap();
+        crate::pipeline::rebuild_external(&c).unwrap();
+        resolve(&c).unwrap();
+        let f = bus(&c, vec![target(1, Some("alice"), &[Kind::WatchlistAvailable])]);
+        assert_eq!(announce(&c, &f).unwrap(), 0, "it never left");
+    }
+
+    /// The other side of the rule: a title that really left — missing at a library read — and came back is an arrival.
+    #[test]
+    fn a_title_that_left_and_came_back_is_an_arrival() {
+        use crate::notify::{Kind, tests::{bus, target}};
+        let c = conn();
+        let now = db::now();
+        c.execute_batch(r#"INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 0);
+               INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('alice', '["sign_in"]', 0);"#).unwrap();
+        c.execute("UPDATE items SET date_created = ?1 WHERE id = 'sintel'", [now - 365 * 86_400]).unwrap();
+        add(&c, "alice", Wanted::Item("sintel".into()), now - 7 * 86_400).unwrap().unwrap();
+        c.execute("UPDATE items SET removed = 1 WHERE id = 'sintel'", []).unwrap();
+        resolve(&c).unwrap();
+        c.execute(r#"INSERT INTO items(id, type, name, provider_ids, date_created, updated_at) VALUES ('sintel2', 'Movie', 'Sintel', '{"Tmdb":"45745"}', ?1, 0)"#, [now - 600]).unwrap();
+        crate::pipeline::rebuild_external(&c).unwrap();
+        resolve(&c).unwrap();
+        let f = bus(&c, vec![target(1, Some("alice"), &[Kind::WatchlistAvailable])]);
+        assert_eq!(announce(&c, &f).unwrap(), 1);
+    }
+
+    /// Two entries found to be one title, one of them on it all along: the title was here, so nothing arrived.
+    #[test]
+    fn merging_an_entry_into_one_that_had_its_title_is_not_an_arrival() {
+        use crate::notify::{Kind, tests::{bus, target}};
+        let c = conn();
+        let now = db::now();
+        c.execute_batch(r#"INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 0);
+               INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('alice', '["sign_in"]', 0);"#).unwrap();
+        c.execute("UPDATE items SET date_created = ?1 WHERE id = 'plain'", [now - 600]).unwrap();
+        add(&c, "alice", Wanted::Item("plain".into()), now - 300).unwrap().unwrap();
+        add(&c, "alice", Wanted::Title(film(Some("777"), None, "Home Video")), now - 3_600).unwrap().unwrap();
+        resolve(&c).unwrap();
+        c.execute_batch(r#"UPDATE items SET provider_ids = '{"Tmdb":"777"}' WHERE id = 'plain';"#).unwrap();
+        crate::pipeline::rebuild_external(&c).unwrap();
+        resolve(&c).unwrap();
+        let f = bus(&c, vec![target(1, Some("alice"), &[Kind::WatchlistAvailable])]);
+        assert_eq!(announce(&c, &f).unwrap(), 0);
+    }
+
+    /// Entries from before the rule learn where they stand from the library as it is, so nothing already here is an arrival.
+    #[test]
+    fn the_migration_marks_what_is_missing_from_the_library_as_it_is() {
+        let c = Connection::open_in_memory().unwrap();
+        let at = crate::db::MIGRATIONS.len() - 1;
+        for m in &crate::db::MIGRATIONS[..at] {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, removed, updated_at) VALUES ('here', 'Movie', 'Here', 0, 0), ('gone', 'Movie', 'Gone', 1, 0);
+             INSERT INTO watchlist(user_id, kind, item_id, tmdb_id, title, added_at) VALUES
+               ('alice', 'Movie', 'here', NULL, 'Here', 1), ('alice', 'Movie', 'gone', NULL, 'Gone', 1), ('alice', 'Movie', NULL, '1', 'Waiting', 1);",
+        )
+        .unwrap();
+        c.execute_batch(crate::db::MIGRATIONS[at]).unwrap();
+        let missing: Vec<(String, bool)> = c.prepare("SELECT title, missing FROM watchlist ORDER BY id").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(missing, [("Here".into(), false), ("Gone".into(), true), ("Waiting".into(), true)]);
+    }
+
     #[test]
     fn an_arrival_is_told_once_to_whoever_was_waiting_for_it() {
         use crate::notify::{Kind, tests::{bus, target}};
