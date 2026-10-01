@@ -49,9 +49,9 @@ export function timelinePage(ctx) {
 
   function paintHeader(u) {
     ctx.title(`${u.name} · Timeline`);
-    headerSlot.replaceChildren(h('header', { class: 'page-header entity-header' },
+    headerSlot.replaceChildren(h('header', { class: 'fui-page-header entity-header' },
       avatar(u.id, u.name, { size: 56, hasImage: u.has_image }),
-      h('div', null, h('h1', { class: 'page-title' }, u.name), h('p', { class: 'page-sub' }, 'Everything watched, newest first'))));
+      h('div', null, h('h1', { class: 'fui-page-header__title' }, u.name), h('p', { class: 'fui-page-header__sub' }, 'Everything watched, newest first'))));
   }
 
   function paintFilter(libraries) {
@@ -113,7 +113,7 @@ export function timelinePage(ctx) {
     return box;
   }
 
-  headerSlot.append(h('header', { class: 'page-header entity-header' }, h('span', { class: 'fui-skeleton', style: { width: '56px', height: '56px', borderRadius: '50%' } }), h('div', null, sk.line('180px', 26))));
+  headerSlot.append(h('header', { class: 'fui-page-header entity-header' }, h('span', { class: 'fui-skeleton', style: { width: '56px', height: '56px', borderRadius: '50%' } }), h('div', null, sk.line('180px', 26))));
   ctx.root.append(headerSlot, userTabs(id, 'timeline'), filterSlot, view);
   dv.load();
 }

@@ -56,7 +56,7 @@ export default function itemPage(ctx) {
           : poster(it.type === 'Episode' && it.series_id ? it.series_id : it.id, it.name, { w: 300, cls: 'fui-poster--lg' }),
         h('div', { class: 'item-hero-text' },
           it.series_name && it.series_id ? h('a', { class: 'item-series', href: `/items/${it.series_id}` }, it.series_name, code ? h('span', { class: 'mono' }, ' · ' + code) : null) : null,
-          h('h1', { class: 'page-title' }, it.name),
+          h('h1', { class: 'fui-page-header__title' }, it.name),
           h('div', { class: 'fui-chip__set' }, meta),
           it.genres && it.genres.length ? h('p', { class: 'item-genres' }, it.genres.join(' · ')) : null,
           Array.isArray(it.studios) && it.studios.length ? h('p', { class: 'item-studios' }, it.studios.slice(0, 4).join(' · ')) : null,
@@ -227,7 +227,7 @@ function externalLinks(list) {
 function playedBy(rows) {
   if (!Array.isArray(rows) || !rows.length) return null;
   return card({ title: 'Marked played in Jellyfin', sub: 'Jellyfin’s own flags, including history from before finstats', cls: 'fui-card--flush',
-    body: plainTable(h('table', { class: 'table' },
+    body: plainTable(h('table', { class: 'fui-data-table' },
       h('thead', null, h('tr', null, h('th', null, 'User'), h('th', null, 'Last played'), h('th', null, h('span', { class: 'sr-only' }, 'Favourite')))),
       h('tbody', null, rows.map((r) => h('tr', null,
         h('td', null, h('a', { class: 'user-cell', href: `/users/${r.user_id}` }, avatar(r.user_id, r.user_name, { size: 22 }), h('span', null, r.user_name || 'Unknown user'))),
@@ -237,7 +237,7 @@ function playedBy(rows) {
 
 function watchers(rows) {
   if (!rows || !rows.length) return emptyState('Nobody has played this in the selected range.');
-  return plainTable(h('table', { class: 'table' },
+  return plainTable(h('table', { class: 'fui-data-table' },
     h('thead', null, h('tr', null, h('th', null, 'User'), h('th', { class: 'r' }, 'Plays'), h('th', { class: 'r' }, 'Watch time'), h('th', null, 'Last played'))),
     h('tbody', null, rows.map((w) => h('tr', null,
       h('td', null, h('a', { class: 'user-cell', href: `/users/${w.user_id}` }, avatar(w.user_id, w.user_name, { size: 22 }), h('span', null, w.user_name))),
@@ -253,7 +253,7 @@ function seasons(list) {
     const det = h('details', { class: 'season' },
       h('summary', null, icon('chevronRight', 14), h('span', { class: 'season-name' }, sn.name || `Season ${sn.season_number}`),
         h('span', { class: 'season-meta mono' }, `${num(sn.episodes.length)} ep · ${num(plays)} ${plays === 1 ? 'play' : 'plays'}`)),
-      plainTable(h('table', { class: 'table table-dense episodes' },
+      plainTable(h('table', { class: 'fui-data-table fui-data-table--dense episodes' },
         h('thead', null, h('tr', null, h('th', null, '#'), h('th', null, 'Episode'), withAudio ? h('th', null, 'Audio') : null, h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Share')), h('th', { class: 'r' }, 'Plays'), withFinished ? h('th', { class: 'r' }, 'Finished') : null, h('th', { class: 'r' }, 'Watch time'))),
         h('tbody', null, sn.episodes.map((e) => h('tr', null,
           h('td', { class: 'mono muted ep-num' }, e.episode_number != null ? String(e.episode_number) : '–'),

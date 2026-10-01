@@ -56,7 +56,7 @@ export default {
       mount(server,
         toggleRow(store, { key: 'public_profiles', label: 'Allow public profiles',
           help: 'People may publish parts of their own profile at a link. Off: every link stops working at once.', onSaved: load }),
-        rows.length ? plainTable(h('table', { class: 'table table-dense pub-list' },
+        rows.length ? plainTable(h('table', { class: 'fui-data-table fui-data-table--dense pub-list' },
           h('thead', null, h('tr', null, h('th', null, 'Who'), h('th', null, 'Shown as'), h('th', null, 'Sections'), h('th', null, 'Changed'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Actions')))),
           h('tbody', null, rows.map((p) => h('tr', null,
             h('td', null, h('span', { class: 'user-cell' }, avatar(p.user_id, p.user_name, { size: 20 }), p.user_name)),
@@ -128,7 +128,7 @@ export default {
       const path = pathOf(m.url);
       const resetting = confirming === 'reset';
       return h('div', { class: 'pub-link-box' },
-        h('div', { class: 'setting-label' }, m.published ? 'Your link' : 'Your link (not published: it opens nothing)'),
+        h('div', { class: 'fui-setting-row__label' }, m.published ? 'Your link' : 'Your link (not published: it opens nothing)'),
         h('div', { class: 'key-line pub-link' }, h('code', { class: 'mono key-token' }, url), copyButton(url, 'Copy link'),
           m.published ? button({ size: 'sm', variant: 'ghost', href: path, target: '_blank', rel: 'noopener' }, icon('external', 13), 'Open') : null),
         h('div', { class: 'backup-actions' }, resetting
@@ -147,7 +147,7 @@ export default {
       const saveName = savedNote(nameNote, nameErr, () => save({ display_name: name.value.trim() }));
       name.addEventListener('change', () => { if (name.value.trim() !== draft.display_name) saveName().catch(() => {}); });
       name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); name.blur(); } });
-      return h('div', { class: 'setting-rows', id: 'pub-form' },
+      return h('div', { class: 'fui-setting-row__rows', id: 'pub-form' },
         switchRow('pub-published', 'Publish my profile', 'Anyone with the link can read what is switched on below, without signing in.', draft.published, (v) => ({ published: v })),
         settingRow({ id: 'pub-name-row', label: 'Name shown', help: 'Your Jellyfin user name is never shown unless you type it here.', labelFor: 'pub-name', control: [nameNote, name], error: nameErr }),
         switchRow('pub-avatar', 'Show my picture', 'Your Jellyfin picture next to the name.', draft.show_avatar, (v) => ({ show_avatar: v })),

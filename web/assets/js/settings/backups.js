@@ -41,12 +41,12 @@ export default {
       const keep = h('input', { class: 'fui-field__input fui-field__input--num mono', type: 'text', inputMode: 'numeric', id: 'f-backup-keep', value: String(s.backup_keep), autocomplete: 'off', 'aria-describedby': 'backup_keep-help' });
       const formErr = h('div'), note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
       const save = button({ variant: 'primary', type: 'submit' }, 'Save');
-      const form = h('form', { class: 'setting-rows', noValidate: true },
+      const form = h('form', { class: 'fui-setting-row__rows', noValidate: true },
         settingRow({ id: 'backup-schedule', label: 'When backups are written', help: 'The Backup task’s schedule: daily, weekly, on an interval, or only by hand.',
           control: button({ size: 'sm', href: '/settings/tasks/backup' }, icon('clock', 13), 'Schedule') }),
         settingRow({ id: 'backup_keep', label: 'Keep the newest', labelFor: 'f-backup-keep', help: 'Older ones are removed when a new one is written. 1–100.',
           control: h('div', { class: 'fui-field__row' }, keep, h('span', { class: 'unit' }, 'backups')) }),
-        h('div', { class: 'form-actions setting-actions' }, save, note), formErr);
+        h('div', { class: 'form-actions fui-setting-row__actions' }, save, note), formErr);
       form.addEventListener('submit', async (e) => {
         e.preventDefault(); mount(formErr, '');
         const k = Number(keep.value.trim());
@@ -69,7 +69,7 @@ export default {
       sig = now;
 
       const rows = backupsData.backups || [];
-      const table = rows.length ? plainTable(h('table', { class: 'table backups' },
+      const table = rows.length ? plainTable(h('table', { class: 'fui-data-table backups' },
         h('thead', null, h('tr', null, h('th', null, 'Made'), h('th', { class: 'r' }, 'Size'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Actions')))),
         h('tbody', null, rows.map((b) => {
           const mine = pending && pending.name === b.name ? pending.action : null;
@@ -118,7 +118,7 @@ export default {
         table,
         err ? inlineError('backups-err', err) : null,
         h('div', { class: 'fui-field', id: 'restore' },
-          h('div', { class: 'setting-label' }, 'Restore from a file'),
+          h('div', { class: 'fui-setting-row__label' }, 'Restore from a file'),
           h('p', { class: 'fui-field__help' }, 'Restoring merges: plays already here are skipped, so it is safe to do twice. A backup holds everyone’s history and addresses, never your Jellyfin API key.'),
           restoreUpload.active
             ? h('div', { class: 'task-progress' }, h('div', { class: 'fui-meter fui-meter--wide', role: 'progressbar', 'aria-label': 'Upload progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(restoreUpload.progress * 100) },

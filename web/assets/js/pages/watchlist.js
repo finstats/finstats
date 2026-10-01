@@ -73,9 +73,9 @@ export function watchlistPage(ctx) {
 
   function paintHeader(u) {
     ctx.title(`${u.name} · Watchlist`);
-    headerSlot.replaceChildren(h('header', { class: 'page-header entity-header' },
+    headerSlot.replaceChildren(h('header', { class: 'fui-page-header entity-header' },
       avatar(u.id, u.name, { size: 56, hasImage: u.has_image }),
-      h('div', null, h('h1', { class: 'page-title' }, u.name), h('p', { class: 'page-sub' }, 'Films and shows to watch, newest first. Only you can see this list.'))));
+      h('div', null, h('h1', { class: 'fui-page-header__title' }, u.name), h('p', { class: 'fui-page-header__sub' }, 'Films and shows to watch, newest first. Only you can see this list.'))));
   }
 
   function cardFor(e) {
@@ -97,7 +97,7 @@ export function watchlistPage(ctx) {
 
   function mountError(err) { view.prepend(errorState(err, () => dv.load())); }
 
-  headerSlot.append(h('header', { class: 'page-header entity-header' }, h('span', { class: 'fui-skeleton wl-sk-avatar' }), h('div', null, sk.line('180px', 26))));
+  headerSlot.append(h('header', { class: 'fui-page-header entity-header' }, h('span', { class: 'fui-skeleton wl-sk-avatar' }), h('div', null, sk.line('180px', 26))));
   ctx.root.append(headerSlot, userTabs(me, 'watchlist'), view);
   dv.load();
 }

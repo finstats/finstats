@@ -1,0 +1,29 @@
+/* finui: setting-row. Moved from app.css; the same rules under finui's names. */
+.fui-setting-row__label { font-size: 13px; font-weight: 550; color: var(--text); }
+/* The control sits on the middle of the name and help: aligned to the top, a switch hung there while a field, about as
+   tall as the text, looked centred by chance. */
+.fui-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.fui-setting-row .fui-field__help { max-width: 62ch; margin-top: 2px; }
+.fui-setting-row__control { display: flex; align-items: center; gap: 10px; flex: none; }
+.fui-setting-row > div:first-child { min-width: 0; }
+@media (max-width: 820px) {
+  .fui-setting-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
+/* A setting is one row: what it is on the left, the control on the right, one line of help under the label. */
+.fui-setting-row__rows { display: flex; flex-direction: column; }
+/* Rows stand apart by themselves, a line between two, wherever they are: once only a Settings section spaced them, and
+   anywhere else two rows sat flush and a tall control touched the next. Room grows with the density. */
+.fui-setting-row__rows > .fui-setting-row { padding: calc(var(--density) * 12px) 0; border-top: 1px solid var(--border-soft); }
+.fui-setting-row__rows > .fui-setting-row:first-child { padding-top: 0; border-top: 0; }
+.fui-setting-row__rows > form.fui-setting-row__rows:not(:first-child) { border-top: 1px solid var(--border-soft); padding-top: calc(var(--density) * 12px); margin-top: 2px; }
+.fui-setting-row__rows > form.fui-setting-row__rows:not(:first-child) > .fui-setting-row:first-child { padding-top: 0; }
+.fui-setting-row__control { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex: none; min-width: 0; }
+.fui-setting-row__actions { justify-content: flex-end; padding-top: 12px; }
+.fui-setting-row__foot { margin-top: 14px; }
+.fui-setting-row__notes { display: grid; gap: 6px; margin-top: 14px; }
+.fui-setting-row.is-hit { animation: fui-setting-row-hit 2.4s ease-out both; }
+.fui-setting-row.is-hit { border-radius: 6px; }
+@media (max-width: 820px) {
+  .fui-setting-row__control { justify-content: flex-start; width: 100%; }
+}
+@keyframes fui-setting-row-hit { 0%, 60% { box-shadow: inset 3px 0 0 var(--accent-hi); background: color-mix(in srgb, var(--accent) 10%, transparent); } 100% { box-shadow: none; background: transparent; } }

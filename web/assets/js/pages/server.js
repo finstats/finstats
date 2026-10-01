@@ -50,7 +50,7 @@ export default function serverPage(ctx) {
   if (!section) return;
   ctx.title(`${section.label} · Server`);
   const headerSlot = h('div', null, pageHeader('Server', section.sub));
-  const view = h('div', { class: 'section-body stack' });
+  const view = h('div', { class: 'fui-sections__body stack' });
   let deviceFilter = '';
 
   const dv = dataView({
@@ -168,7 +168,7 @@ export default function serverPage(ctx) {
       count.textContent = q ? `${num(rows.length)} of ${num(all.length)}` : num(all.length);
       if (!all.length) return mount(body, emptyState('No devices known yet.'));
       if (!rows.length) return mount(body, emptyState('No devices match', 'Try a device, app or user name.'));
-      mount(body, plainTable(h('table', { class: 'table' },
+      mount(body, plainTable(h('table', { class: 'fui-data-table' },
         h('thead', null, h('tr', null, h('th', null, 'Device'), h('th', null, 'App'), h('th', null, 'Last user'), h('th', null, 'Last seen'))),
         h('tbody', null, rows.map((d) => h('tr', null,
           h('td', { class: 'wrap-cell' }, d.name || 'Unknown device'),
@@ -188,7 +188,7 @@ export default function serverPage(ctx) {
   function pluginsCard(plugins) {
     const rows = Array.isArray(plugins) ? plugins : [];
     return card({ title: 'Plugins', id: 'plugins', cls: 'fui-card--flush', body: !rows.length ? emptyState('No plugins reported.') :
-      plainTable(h('table', { class: 'table' },
+      plainTable(h('table', { class: 'fui-data-table' },
         h('thead', null, h('tr', null, h('th', null, 'Plugin'), h('th', null, 'Version'), h('th', null, 'Status'))),
         h('tbody', null, rows.map((p) => {
           const ok = !p.status || p.status === 'Active';
@@ -298,7 +298,7 @@ export default function serverPage(ctx) {
       jobsData && jobsData.error ? h('p', { class: 'fui-field__help' }, `Jellyfin did not answer just now (${jobsData.error}); this is the last thing it said.`) : null,
       running.length ? h('div', { class: 'job-list' }, running.map(runningJob)) : h('p', { class: 'fui-field__help' }, 'Nothing is running on Jellyfin right now.'),
       idle.length
-        ? plainTable(h('table', { class: 'table jobs-table' },
+        ? plainTable(h('table', { class: 'fui-data-table jobs-table' },
           h('thead', null, h('tr', null, h('th', null, 'Job'), h('th', null, 'Runs'), h('th', null, 'Last run'))),
           h('tbody', null, idle.map(jobRow))))
         : null);

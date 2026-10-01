@@ -39,7 +39,7 @@ export default {
         c && c.last_poll_at ? ['Last checked', h('span', { title: dateTime(c.last_poll_at) }, relTime(c.last_poll_at)), { mono: true }] : null,
         live ? ['Asking right now', c.transport === 'poll' ? 'Yes — something is playing' : 'No — nothing is playing, or everything is paused'] : null,
       ]),
-      h('div', { class: 'setting-notes' },
+      h('div', { class: 'fui-setting-row__notes' },
       live ? h('p', { class: 'fui-field__help' }, `Nothing is asked for while nothing plays or everything is paused; while something runs finstats asks every ${num(s.active_interval_s)} s, which is what keeps pauses and skips exact.`)
         : c && c.socket_error ? h('p', { class: 'fui-field__help' }, `The live connection is not carrying: ${c.socket_error}. finstats keeps trying; nothing is missed meanwhile.`) : null,
       h('p', { class: 'fui-field__help' }, 'Connected with its own API key, made during setup. To point finstats at another server, start it with a fresh data directory.')));

@@ -70,7 +70,7 @@ function licenceCell(c, go) {
  *  whichever one is being read. */
 function componentTable(rows, go, label) {
   const withSource = !label;
-  const table = h('table', { class: 'table table-dense lic-table' },
+  const table = h('table', { class: 'fui-data-table fui-data-table--dense lic-table' },
     h('thead', null, h('tr', null,
       h('th', { scope: 'col' }, 'Component'),
       h('th', { scope: 'col' }, 'Version'),

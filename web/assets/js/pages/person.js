@@ -32,7 +32,7 @@ export default function personPage(ctx) {
         h('div', { class: 'item-hero' },
           poster(p.has_image ? p.id : null, p.name, { w: 300, cls: 'fui-poster--lg' }),
           h('div', { class: 'item-hero-text' },
-            h('h1', { class: 'page-title' }, p.name),
+            h('h1', { class: 'fui-page-header__title' }, p.name),
             h('div', { class: 'fui-chip__set' }, p.is_actor ? chip('Actor') : null, p.is_director ? chip('Director') : null,
               chip(`${num(p.titles)} ${p.titles === 1 ? 'title' : 'titles'} in the library`)))),
         h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--three' },
@@ -65,7 +65,7 @@ function titleGrid(rows, withTime) {
 }
 
 function watchers(rows) {
-  return plainTable(h('table', { class: 'table' },
+  return plainTable(h('table', { class: 'fui-data-table' },
     h('thead', null, h('tr', null, h('th', null, 'User'), h('th', { class: 'r' }, 'Plays'), h('th', { class: 'r' }, 'Watch time'), h('th', null, 'Last played'))),
     h('tbody', null, rows.map((w) => h('tr', null,
       h('td', null, h('a', { class: 'user-cell', href: `/users/${w.user_id}` }, avatar(w.user_id, w.user_name, { size: 22 }), h('span', null, w.user_name))),

@@ -219,7 +219,7 @@ export function columnsTable({ daily, bucket = 'day', series = TYPES }) {
   const rows = (daily || []).slice().reverse();
   const cell = (d, key) => ((d.by_type && d.by_type[key]) || [0, 0]);
   return chartTable(
-    h('table', { class: 'table' },
+    h('table', { class: 'fui-data-table' },
       h('thead', null, h('tr', null,
         h('th', null, bucket === 'week' ? 'Week of' : 'Date'), h('th', { class: 'r' }, 'Plays'), h('th', { class: 'r' }, 'Watch time'),
         series.map((t) => h('th', { class: 'r' }, t.label)))),
@@ -304,7 +304,7 @@ export function heatmap({ data, metric = 'plays' }) {
 export function heatmapTable({ data }) {
   const plays = (data && data.plays) || [];
   return chartTable(
-    h('table', { class: 'table table-dense' },
+    h('table', { class: 'fui-data-table fui-data-table--dense' },
       h('thead', null, h('tr', null, h('th', null, 'Plays'), Array.from({ length: 24 }, (_, i) => h('th', { class: 'r' }, String(i).padStart(2, '0'))))),
       h('tbody', null, DAYS.map((d, i) => h('tr', null, h('th', { scope: 'row', dataset: { sort: String(i) } }, d),
         Array.from({ length: 24 }, (_, hr) => h('td', { class: 'mono r' }, num((plays[i] && plays[i][hr]) || 0))))))));
@@ -457,7 +457,7 @@ export function simpleColumns({ rows, unit = ['item', 'items'], ariaLabel = 'Col
 }
 
 export function simpleColumnsTable({ rows, head = ['Period', 'Count'] }) {
-  return chartTable(h('table', { class: 'table' },
+  return chartTable(h('table', { class: 'fui-data-table' },
     h('thead', null, h('tr', null, h('th', null, head[0]), h('th', { class: 'r' }, head[1]))),
     h('tbody', null, (rows || []).map((d, i) => [d, i]).reverse().map(([d, i]) => h('tr', null,
       h('td', { class: 'mono', dataset: { sort: String(i) } }, d.title || d.label), h('td', { class: 'mono r' }, num(d.value)))))));
@@ -557,7 +557,7 @@ export function retentionTable({ runtime_s, bucket_s, curve, rewinds = [], subti
   const pts = curve || [];
   const n = Math.max(0, pts.length - 1);
   const edge = (k) => Math.min(k * bucket_s, runtime_s);
-  return chartTable(h('table', { class: 'table' },
+  return chartTable(h('table', { class: 'fui-data-table' },
     h('thead', null, h('tr', null, h('th', null, 'From'), h('th', { class: 'r' }, 'Still watching'), h('th', { class: 'r' }, 'Rewinds'), h('th', { class: 'r' }, 'Subtitles on'))),
     h('tbody', null, Array.from({ length: n }, (_, i) => h('tr', null,
       h('td', { class: 'mono', dataset: { sort: String(edge(i)) } }, clock(edge(i))), h('td', { class: 'mono r' }, pct(pts[i])),
@@ -570,7 +570,7 @@ export function clientMethods(rows) {
   const data = (rows || []).filter((r) => r && ((r.direct_play || 0) + (r.direct_stream || 0) + (r.transcode || 0)) > 0);
   if (!data.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, 'No plays in this range.');
   const keys = ['direct_play', 'direct_stream', 'transcode'];
-  return plainTable(h('table', { class: 'table table-dense cm-table' },
+  return plainTable(h('table', { class: 'fui-data-table fui-data-table--dense cm-table' },
     h('thead', null, h('tr', null, h('th', null, 'Client'), h('th', { class: 'cm-barcol', 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Split')),
       METHODS.map((m) => h('th', { class: 'r' }, methodLabel(m.key))))),
     h('tbody', null, data.map((r) => {

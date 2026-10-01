@@ -107,7 +107,7 @@ export default function settings(ctx) {
   if (!section) return;
   ctx.title(`${section.label} · Settings`);
   const store = createStore(ctx);
-  const slot = h('div', { class: 'section-body stack' });
+  const slot = h('div', { class: 'fui-sections__body stack' });
   ctx.root.append(pageHeader('Settings', section.sub, finder(visible, section.key, ctx)),
     sectionLayout(sectionNav('/settings', visible, section.key, 'Settings sections'), slot));
   section.render(slot, store)

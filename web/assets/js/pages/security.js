@@ -154,7 +154,7 @@ export default function securityPage(ctx) {
   }
 
   function placesTable(places) {
-    return dataTable(h('table', { class: 'table' },
+    return dataTable(h('table', { class: 'fui-data-table' },
       h('thead', null, h('tr', null, h('th', null, 'Place'), h('th', null, 'People'), h('th', { 'data-first': 'desc' }, 'Plays'), h('th', { 'data-first': 'desc' }, 'Watch time'), h('th', { 'data-first': 'desc' }, 'Sign-ins'), h('th', { 'data-first': 'desc' }, 'Last seen'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Map')))),
       h('tbody', null, places.map((p) => h('tr', null,
         h('td', null, h('span', { class: 'place-cell' }, icon(p.home ? 'home' : 'globe', 13), p.home ? `Home (${p.label})` : p.label)),

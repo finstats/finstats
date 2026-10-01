@@ -21,7 +21,7 @@ export default {
     ...FIELDS.map((f) => ({ id: f.key, label: f.label, hint: `${f.key.replace(/_/g, ' ')} interval poll ${f.unit}` })),
   ],
   async render(slot, store) {
-    const body = h('div', { class: 'setting-rows' }, sk.rows(3));
+    const body = h('div', { class: 'fui-setting-row__rows' }, sk.rows(3));
     mount(slot, card({ title: 'Collection', sub: 'How closely plays are followed, and what counts as one', body, id: 'collection' }));
     await store.loadSettings();
     mount(body,

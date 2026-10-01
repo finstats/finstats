@@ -99,7 +99,7 @@ function insightCards(ins) {
 function fileCards(files) {
   if (!files || !can('see_everyone')) return null;
   const title = (r) => h('a', { href: `/items/${r.id}` }, r.series_name ? `${r.series_name} · ${r.name}` : r.name);
-  const table = (head, rows, cells) => plainTable(h('table', { class: 'table table-dense' },
+  const table = (head, rows, cells) => plainTable(h('table', { class: 'fui-data-table fui-data-table--dense' },
     h('thead', null, h('tr', null, head.map(([label, right]) => h('th', { class: right ? 'r' : null }, label)))),
     h('tbody', null, rows.map((r) => h('tr', null, h('td', { class: 'bucket-name', title: r.series_name ? `${r.series_name} · ${r.name}` : r.name }, title(r)), cells(r))))));
   const r = (x) => h('td', { class: 'mono r' }, x);
@@ -119,7 +119,7 @@ function fileCards(files) {
 function methodsTable(methods) {
   const rows = methods || [];
   const total = rows.reduce((a, m) => a + (m.plays || 0), 0);
-  return chartTable(h('table', { class: 'table' },
+  return chartTable(h('table', { class: 'fui-data-table' },
     h('thead', null, h('tr', null, h('th', null, 'Method'), h('th', { class: 'r' }, 'Plays'), h('th', { class: 'r' }, 'Share'), h('th', { class: 'r' }, 'Watch time'))),
     h('tbody', null, rows.map((m) => h('tr', null, h('td', null, humanize(m.name)), h('td', { class: 'mono r' }, num(m.plays)),
       h('td', { class: 'mono r' }, total ? pct(m.plays / total, 1) : '–'), h('td', { class: 'mono r' }, duration(m.watch_s)))))));

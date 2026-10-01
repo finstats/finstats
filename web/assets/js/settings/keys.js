@@ -37,7 +37,7 @@ export default {
     function revealBox(k) {
       const isCal = k.scope === 'calendar';
       return h('div', { class: 'key-reveal', role: 'status' },
-        h('div', { class: 'setting-label' }, `Your new key “${k.name}”`),
+        h('div', { class: 'fui-setting-row__label' }, `Your new key “${k.name}”`),
         h('p', { class: 'fui-field__help' }, 'Shown once. Copy it now; finstats keeps only a hash of it.'),
         h('div', { class: 'key-line' }, h('code', { class: 'mono key-token' }, k.key), copyButton(k.key, 'Copy key')),
         isCal ? [h('p', { class: 'fui-field__help' }, 'Subscribe your calendar to this address. It opens the feed and nothing else.'),
@@ -78,7 +78,7 @@ export default {
 
     function table(rows) {
       const admin = isAdmin();
-      return plainTable(h('table', { class: 'table table-dense keys' },
+      return plainTable(h('table', { class: 'fui-data-table fui-data-table--dense keys' },
         h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', null, 'Opens'), admin ? h('th', null, 'Owner') : null, h('th', null, 'Made'), h('th', null, 'Last used'), h('th', null, 'Expires'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Actions')))),
         h('tbody', null, rows.map((k) => {
           const ask = pending === k.id;
@@ -107,7 +107,7 @@ export default {
         rows.length ? table(rows) : h('p', { class: 'fui-field__help' }, 'No keys yet.'),
         err ? inlineError('keys-err', err) : null,
         h('div', null, h('h3', { class: 'section-label' }, 'Make a key'), makeForm()),
-        h('p', { class: 'fui-field__help setting-foot' }, `${num(mine)} of yours, ${num(20)} at most. A key is stored only as a hash, is never part of a backup, and cannot make or revoke keys itself.`));
+        h('p', { class: 'fui-field__help fui-setting-row__foot' }, `${num(mine)} of yours, ${num(20)} at most. A key is stored only as a hash, is never part of a backup, and cannot make or revoke keys itself.`));
       err = null;
     }
     await load();

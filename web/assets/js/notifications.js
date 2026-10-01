@@ -299,7 +299,7 @@ export function notificationsPanel(ctx) {
         h('span', { class: 'cell-sub' }, e.label || e.kind))),
       h('td', null, h('div', { class: 'notify-what' }, h('span', null, e.title), e.body ? h('span', { class: 'cell-sub' }, e.body) : null)),
       h('td', { class: 'notify-sent' }, went(e)));
-    const table = h('table', { class: 'table' },
+    const table = h('table', { class: 'fui-data-table' },
       h('thead', null, h('tr', null, h('th', null, 'When'), h('th', null, 'What'), h('th', { class: 'notify-sent' }, 'Sent to'))),
       h('tbody', null, events.map(line)));
     // Its own scroll box: a message and where it went are wide, and the card must not push the page sideways.

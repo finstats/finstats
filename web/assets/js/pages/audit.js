@@ -81,7 +81,7 @@ export function auditView(ctx) {
     render: (data) => {
       summary.textContent = `${num(data.total)} ${data.total === 1 ? 'entry' : 'entries'}`;
       if (!data.rows.length) return emptyState(f.q || f.kind ? 'No entries match these filters.' : 'Nothing recorded yet', f.q || f.kind ? null : 'Sign-ins, settings changes, keys and backups are written down here from now on.');
-      return [dataTable(h('table', { class: 'table audit' },
+      return [dataTable(h('table', { class: 'fui-data-table audit' },
         h('thead', null, h('tr', null, h('th', { 'data-key': 'when', 'data-first': 'desc' }, 'When'), h('th', { 'data-key': 'user' }, 'Who'), h('th', { 'data-key': 'kind' }, 'What'), h('th', { 'data-nosort': '' }, 'Detail'), h('th', { 'data-nosort': '' }, 'From'))),
         h('tbody', null, data.rows.map((e) => {
           const out = OUTCOME[e.outcome];

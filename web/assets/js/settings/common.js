@@ -58,15 +58,8 @@ export function createStore(ctx) {
   return store;
 }
 
-/** The two-sided row every setting sits in: what it is on the left, the control on the right. */
-export function settingRow({ id, label, help, control, labelFor, error }) {
-  const labelEl = labelFor
-    ? h('label', { class: 'setting-label', id: `${id}-label`, htmlFor: labelFor }, label)
-    : h('div', { class: 'setting-label', id: `${id}-label` }, label);
-  return [h('div', { class: 'setting-row', id },
-    h('div', null, labelEl, help ? h('p', { class: 'fui-field__help', id: `${id}-help` }, help) : null),
-    h('div', { class: 'setting-control' }, control)), error || null];
-}
+export { settingRow } from '../../finui/components/setting-row/setting-row.js';
+import { settingRow } from '../../finui/components/setting-row/setting-row.js';
 
 /** An immediate-effect setting: a switch that saves on change and confirms next to itself. */
 export function toggleRow(store, { key, label, help, onSaved }) {
@@ -105,7 +98,7 @@ export function numberForm(store, FIELDS, errId) {
   const formErr = h('div');
   const save = button({ variant: 'primary', type: 'submit' }, 'Save changes');
   let noteTimer;
-  const form = h('form', { class: 'setting-rows', noValidate: true }, rows, h('div', { class: 'form-actions setting-actions' }, save, note), formErr);
+  const form = h('form', { class: 'fui-setting-row__rows', noValidate: true }, rows, h('div', { class: 'form-actions fui-setting-row__actions' }, save, note), formErr);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     mount(formErr, '');

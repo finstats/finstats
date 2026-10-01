@@ -193,7 +193,7 @@ export function healthView(ctx) {
     const libraryName = (id) => (id ? names.get(id) || null : null);
     const withWasted = f.kind === 'copies';
     const server = { key: f.sort, dir: f.dir, onSort: (key, dir) => { f.sort = key; f.dir = dir; apply(); } };
-    return dataTable(h('table', { class: 'table health' },
+    return dataTable(h('table', { class: 'fui-data-table health' },
       h('thead', null, h('tr', null,
         h('th', { 'data-key': 'title', 'data-first': 'asc' }, 'Title'),
         h('th', { 'data-nosort': '' }, 'What'),

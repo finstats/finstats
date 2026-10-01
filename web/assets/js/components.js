@@ -17,6 +17,8 @@ import { segmented } from '../finui/components/segmented/segmented.js';
 import { combobox } from '../finui/components/combobox/combobox.js';
 export { inlineError, formField } from '../finui/components/field/field.js';
 export { pagination } from '../finui/components/pagination/pagination.js';
+export { pageHeader } from '../finui/components/page-header/page-header.js';
+export { openModal } from '../finui/components/modal/modal.js';
 export { statTile } from '../finui/components/stat-tile/stat-tile.js';
 export { facts } from '../finui/components/facts/facts.js';
 export { meter } from '../finui/components/meter/meter.js';
@@ -40,12 +42,6 @@ export { copyButton } from '../finui/components/copy/copy.js';
 export { toggle } from '../finui/components/toggle/toggle.js';
 
 // ---------------------------------------------------------------- layout bits
-export function pageHeader(title, sub, right) {
-  return h('header', { class: 'page-header' },
-    h('div', null, h('h1', { class: 'page-title' }, title), sub ? h('p', { class: 'page-sub' }, sub) : null),
-    right ? h('div', { class: 'page-header-right' }, right) : null);
-}
-
 export { card, chartCard } from '../finui/components/card/card.js';
 
 /** Put a button into / out of its busy state (disabled only while the request runs). */
@@ -224,7 +220,7 @@ export function playsTable(rows, { showUser = true, onOpen, empty = 'No plays ma
   const admin = can('see_network'); // the IP column
   // data-first: the direction a first click gives, so it matches what the browser-side tables do.
   const th = (key, label, first, cls) => h('th', { class: cls || null, 'data-key': key, 'data-first': first }, label);
-  return dataTable(h('table', { class: 'table table-hover plays' },
+  return dataTable(h('table', { class: 'fui-data-table fui-data-table--hover plays' },
     h('thead', null, h('tr', null,
       showUser ? th('user', 'User', 'asc') : null, th('title', 'Title', 'asc'), th('when', 'When', 'desc'), th('watched', 'Watched', 'desc', 'r'),
       th('progress', 'Progress', 'desc'), th('client', 'Client', 'asc'), th('method', 'Method', 'asc'), admin ? th('ip', 'IP address', 'asc') : null)),
@@ -252,46 +248,5 @@ export function playsTable(rows, { showUser = true, onOpen, empty = 'No plays ma
 // ---------------------------------------------------------------- modal
 // The open dialogs, newest last. Every one listens for keys on the document, and only the one on top may
 // answer: Esc in the search palette over a play's details used to close both.
-const modalStack = [];
-/** X button, Esc and click-outside all close it; focus returns to the trigger. */
-export function openModal({ title, body, wide = false, onClose, initialFocus, labelId = 'modal-title', bare = false, cls = '' }) {
-  const trigger = document.activeElement;
-  const closeBtn = button({ variant: 'icon', class: 'modal-x', type: 'button', 'aria-label': 'Close' }, icon('x', 16));
-  const bodyEl = h('div', { class: bare ? '' : 'modal-body' }, body);
-  const dialog = h('div', { class: ['modal', wide && 'modal-wide', cls], role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': bare ? null : labelId, 'aria-label': bare ? title : null },
-    bare ? null : h('div', { class: 'modal-head' }, h('h2', { class: 'modal-title', id: labelId }, title), closeBtn), bodyEl);
-  const overlay = h('div', { class: 'overlay' }, dialog);
-  let closed = false;
-
-  function close() {
-    if (closed) return;
-    closed = true; modalStack.splice(modalStack.indexOf(onKey), 1);
-    document.removeEventListener('keydown', onKey, true);
-    overlay.classList.add('is-closing');
-    setTimeout(() => overlay.remove(), 140);
-    if (!modalStack.length) document.documentElement.classList.remove('no-scroll');
-    if (trigger && trigger.isConnected && trigger.focus) trigger.focus();
-    if (onClose) onClose();
-  }
-  function onKey(e) {
-    if (modalStack[modalStack.length - 1] !== onKey) return;
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); return; }
-    if (e.key !== 'Tab') return;
-    const f = dialog.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])');
-    if (!f.length) return;
-    const first = f[0], last = f[f.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  }
-  closeBtn.addEventListener('click', close);
-  overlay.addEventListener('pointerdown', (e) => { if (e.target === overlay) close(); });
-  document.addEventListener('keydown', onKey, true);
-  document.body.append(overlay);
-  document.documentElement.classList.add('no-scroll');
-  modalStack.push(onKey);
-  requestAnimationFrame(() => (initialFocus && initialFocus.isConnected ? initialFocus : closeBtn.isConnected ? closeBtn : dialog).focus());
-  return { close, body: bodyEl, dialog };
-}
-
 // ---------------------------------------------------------------- definition grid
 export { num, compact, duration, durationExact, api };

@@ -28,7 +28,7 @@ export default {
     out.addEventListener('click', () => signOut(out));
     mount(slot, card({
       title: 'Account', id: 'account', sub: 'Signing out ends the session in this browser; API keys and other browsers keep working',
-      body: h('div', { class: 'setting-row account-row' },
+      body: h('div', { class: 'fui-setting-row account-row' },
         h('div', { class: 'account-who' }, avatar(me.id, me.name, { size: 36, hasImage: me.has_image }),
           h('div', { class: 'me-text' }, h('span', { class: 'account-name' }, me.name), h('span', { class: 'me-role' }, me.is_admin ? 'Jellyfin administrator' : 'Signed in with Jellyfin'))),
         out),

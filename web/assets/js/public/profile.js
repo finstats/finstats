@@ -98,7 +98,7 @@ function page(a) {
   return [
     h('header', { class: 'pub-hero' },
       a.avatar ? h('span', { class: 'fui-avatar pub-avatar', 'aria-hidden': 'true' }, h('img', { src: `${base}/avatar`, alt: '', onError: (e) => e.target.replaceWith(initials(name)) })) : null,
-      h('div', { class: 'pub-hero-text' }, h('h1', { class: 'page-title' }, name),
+      h('div', { class: 'pub-hero-text' }, h('h1', { class: 'fui-page-header__title' }, name),
         h('p', { class: 'muted' }, 'What they watch, published by them. Everything here is at least a day old.')),
       profileCard ? button({ class: 'pub-card-link', href: `/u/${encodeURIComponent(token)}/card.png`, download: 'finstats-profile.png' }, 'Download as a card') : null),
     a.totals ? totals(a.totals) : null,
@@ -116,7 +116,7 @@ async function load() {
     mount(root, ...page(await r.json()));
   } catch {
     document.title = 'Not found';
-    mount(root, h('div', { class: 'pub-gone' }, h('h1', { class: 'page-title' }, 'There is no profile here'),
+    mount(root, h('div', { class: 'pub-gone' }, h('h1', { class: 'fui-page-header__title' }, 'There is no profile here'),
       h('p', { class: 'muted' }, 'The link may have been reset, or its owner stopped publishing.')));
   }
 }

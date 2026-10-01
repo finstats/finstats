@@ -22,7 +22,7 @@ export default {
     ...TRAVEL_FIELDS.map((f) => ({ id: f.key, label: f.label, hint: 'impossible travel alert speed distance km' })),
   ],
   async render(slot, store) {
-    const body = h('div', { class: 'setting-rows' }, sk.rows(3));
+    const body = h('div', { class: 'fui-setting-row__rows' }, sk.rows(3));
     mount(slot, card({ title: 'Security', sub: 'Where addresses are placed, and what counts as impossible travel', body, id: 'security' }));
     await store.loadSettings();
     let geoWasRunning = false, geoSig = null;

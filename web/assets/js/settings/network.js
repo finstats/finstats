@@ -18,7 +18,7 @@ export default {
     { id: 'home_addresses', label: 'Other addresses that count as home', hint: 'vpn second home ip manual local' },
   ],
   async render(slot, store) {
-    const body = h('div', { class: 'setting-rows' }, sk.rows(3));
+    const body = h('div', { class: 'fui-setting-row__rows' }, sk.rows(3));
     mount(slot, card({ title: 'Home network', sub: 'Which plays count as local and which as remote', body, id: 'network' }));
     await store.loadSettings();
     const paint = () => {
@@ -46,11 +46,11 @@ export default {
       const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
       const err = h('div');
       const save = button({ variant: 'primary', type: 'submit' }, 'Save addresses');
-      const form = h('form', { class: 'setting-rows', noValidate: true },
+      const form = h('form', { class: 'fui-setting-row__rows', noValidate: true },
         settingRow({ id: 'home_addresses', label: 'Other addresses that count as home', labelFor: 'f-home',
           help: 'One per line: an earlier address of yours, a second home, a VPN exit. Your history is sorted again when you save.',
           control: input, error: err }),
-        h('div', { class: 'form-actions setting-actions' }, save, note));
+        h('div', { class: 'form-actions fui-setting-row__actions' }, save, note));
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         mount(err, '');
@@ -67,7 +67,7 @@ export default {
         settingRow({ id: 'known-home', label: 'Known home addresses', help: 'Public addresses of this household, past and present.',
           control: [h('div', { class: 'home-known' }, list, s.public_ip_lookup ? h('div', { class: 'form-actions' }, lookup) : null, lookupErr)] }),
         form,
-        h('p', { class: 'fui-field__help setting-foot' }, `That request goes to ${services.join(' or ') || 'nowhere: no service is configured'} and says nothing about you or your server. With it and the geolocation download under Security both off, finstats makes no outside requests at all.`));
+        h('p', { class: 'fui-field__help fui-setting-row__foot' }, `That request goes to ${services.join(' or ') || 'nowhere: no service is configured'} and says nothing about you or your server. With it and the geolocation download under Security both off, finstats makes no outside requests at all.`));
     };
     paint();
   },

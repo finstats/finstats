@@ -41,7 +41,7 @@ export function usersPage(ctx) {
     render: (data) => {
       const users = (data.users || []).slice().sort((a, b) => (b.watch_s || 0) - (a.watch_s || 0));
       if (!users.length) return emptyState('No users yet', 'Users appear after the first sync with Jellyfin.');
-      return dataTable(h('table', { class: 'table table-hover' },
+      return dataTable(h('table', { class: 'fui-data-table fui-data-table--hover' },
         h('thead', null, h('tr', null, h('th', null, 'User'), h('th', { class: 'r' }, 'Plays'), h('th', { class: 'r' }, 'Watch time'),
           h('th', null, 'Last played'), h('th', null, 'Last title'), h('th', null, 'Last client'), h('th', null, 'Last seen on Jellyfin'))),
         h('tbody', null, users.map((u) => h('tr', { class: u.removed || u.is_disabled ? 'is-dim' : '' },
@@ -105,11 +105,11 @@ export function userPage(ctx) {
     render: ({ detail: d, recent, groups }) => {
       const u = d.user;
       ctx.title(u.name);
-      headerSlot.replaceChildren(h('header', { class: 'page-header entity-header' },
+      headerSlot.replaceChildren(h('header', { class: 'fui-page-header entity-header' },
         avatar(u.id, u.name, { size: 56, hasImage: u.has_image }),
-        h('div', null, h('h1', { class: 'page-title' }, u.name),
+        h('div', null, h('h1', { class: 'fui-page-header__title' }, u.name),
           isAdmin() && state.user && u.id !== state.user.id ? button({ variant: 'ghost', size: 'sm', class: 'entity-action', href: `/recap?user=${encodeURIComponent(u.id)}` }, icon('recap', 14), 'Open recap') : null,
-          h('p', { class: 'page-sub' }, [u.is_admin ? 'Administrator' : 'User', u.is_disabled ? 'disabled' : null, u.removed ? 'removed from Jellyfin' : null].filter(Boolean).join(' · '),
+          h('p', { class: 'fui-page-header__sub' }, [u.is_admin ? 'Administrator' : 'User', u.is_disabled ? 'disabled' : null, u.removed ? 'removed from Jellyfin' : null].filter(Boolean).join(' · '),
             u.last_activity_at ? [' · last seen ', relEl(u.last_activity_at, '')] : null))));
       const t = d.totals || {};
       return [
@@ -143,7 +143,7 @@ export function userPage(ctx) {
   // Streaks and show progress cover all time and load on their own. The streaks sit under the header;
   // the shows card is slotted into the page further down (the same node on every re-render).
   ctx.root.append(headerSlot, userTabs(id, 'overview'), allTime.tiles, filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view);
-  headerSlot.append(h('header', { class: 'page-header entity-header' }, h('span', { class: 'fui-skeleton', style: { width: '56px', height: '56px', borderRadius: '50%' } }), h('div', null, sk.line('180px', 26))));
+  headerSlot.append(h('header', { class: 'fui-page-header entity-header' }, h('span', { class: 'fui-skeleton', style: { width: '56px', height: '56px', borderRadius: '50%' } }), h('div', null, sk.line('180px', 26))));
   dv.load();
 }
 
@@ -159,7 +159,7 @@ function jellyfinStrip(j) {
 
 function devicesTable(devices) {
   if (!devices || !devices.length) return emptyState('No devices in this range.');
-  return plainTable(h('table', { class: 'table' },
+  return plainTable(h('table', { class: 'fui-data-table' },
     h('thead', null, h('tr', null, h('th', null, 'Device'), h('th', null, 'Client'), h('th', null, 'Version'), h('th', { class: 'r' }, 'Plays'), h('th', null, 'Last used'))),
     h('tbody', null, devices.map((d) => h('tr', null,
       h('td', null, d.device_name || '–'), h('td', null, d.client || '–'), h('td', { class: 'mono' }, d.app_version || '–'),
@@ -168,7 +168,7 @@ function devicesTable(devices) {
 
 function ipsTable(ips) {
   if (!ips || !ips.length) return emptyState('No IP addresses recorded in this range.');
-  return plainTable(h('table', { class: 'table' },
+  return plainTable(h('table', { class: 'fui-data-table' },
     h('thead', null, h('tr', null, h('th', null, 'IP address'), h('th', null, 'Network'), h('th', { class: 'r' }, 'Plays'), h('th', null, 'First seen'), h('th', null, 'Last seen'))),
     h('tbody', null, ips.map((ip) => h('tr', null,
       h('td', { class: 'mono' }, ip.ip), h('td', null, chip(ip.is_local ? 'Local' : 'Remote')),

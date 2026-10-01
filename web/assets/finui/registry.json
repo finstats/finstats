@@ -387,6 +387,108 @@
         "core",
         "button"
       ]
+    },
+    {
+      "name": "sections",
+      "category": "pattern",
+      "files": [
+        "components/sections/sections.js",
+        "components/sections/sections.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-hi",
+        "--accent-wash",
+        "--border",
+        "--border-soft",
+        "--hover",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "card",
+        "setting-row"
+      ]
+    },
+    {
+      "name": "page-header",
+      "category": "pattern",
+      "files": [
+        "components/page-header/page-header.js",
+        "components/page-header/page-header.css"
+      ],
+      "tokens": [
+        "--text-muted",
+        "--text-strong"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "setting-row",
+      "category": "pattern",
+      "files": [
+        "components/setting-row/setting-row.js",
+        "components/setting-row/setting-row.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-hi",
+        "--border-soft",
+        "--density",
+        "--text"
+      ],
+      "requires": [
+        "core",
+        "field"
+      ]
+    },
+    {
+      "name": "modal",
+      "category": "pattern",
+      "files": [
+        "components/modal/modal.js",
+        "components/modal/modal.css"
+      ],
+      "tokens": [
+        "--backdrop",
+        "--bg-2",
+        "--border",
+        "--border-soft",
+        "--ease",
+        "--shadow"
+      ],
+      "requires": [
+        "core",
+        "button"
+      ]
+    },
+    {
+      "name": "data-table",
+      "category": "pattern",
+      "files": [
+        "components/data-table/data-table.js",
+        "components/data-table/data-table.css"
+      ],
+      "tokens": [
+        "--accent-hi",
+        "--border-soft",
+        "--ease",
+        "--hover",
+        "--radius-sm",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--tint"
+      ],
+      "requires": [
+        "core",
+        "card",
+        "field"
+      ]
     }
   ]
 }

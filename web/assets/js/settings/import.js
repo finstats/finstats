@@ -206,7 +206,7 @@ export default {
           outcome = h('div', { class: 'import-result' },
             h('div', { class: 'fui-badge--status fui-badge--good' }, icon('check', 14), 'Import finished', task.finished_at ? h('span', { class: 'muted mono', title: dateTime(task.finished_at) }, ' ' + relTime(task.finished_at)) : null),
             task.message ? h('p', { class: 'fui-field__help' }, task.message) : null,
-            h('table', { class: 'table table-dense result-table' }, h('tbody', null, imp.rows.filter(([k]) => task.result[k] != null).map(([k, label]) =>
+            h('table', { class: 'fui-data-table fui-data-table--dense result-table' }, h('tbody', null, imp.rows.filter(([k]) => task.result[k] != null).map(([k, label]) =>
               h('tr', null, h('th', { scope: 'row' }, label), h('td', { class: 'mono r' }, num(task.result[k])))))),
             button({ size: 'sm', href: '/' }, 'See your stats', icon('chevronRight', 14)));
         } else if (task && task.state === 'error') {

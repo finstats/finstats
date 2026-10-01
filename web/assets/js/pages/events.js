@@ -49,7 +49,7 @@ export function logView(ctx) {
     render: (data) => {
       summary.textContent = `${num(data.total)} ${data.total === 1 ? 'entry' : 'entries'}`;
       if (!data.rows.length) return emptyState(f.q || f.type ? 'No log entries match these filters.' : 'No log entries yet', f.q || f.type ? null : 'Entries arrive with the next “Sync server log” task.');
-      return [dataTable(h('table', { class: 'table events' },
+      return [dataTable(h('table', { class: 'fui-data-table events' },
         h('thead', null, h('tr', null, h('th', { 'data-key': 'when', 'data-first': 'desc' }, 'When'), h('th', { 'data-nosort': '' }, 'Level'), h('th', { 'data-key': 'event' }, 'Event'), h('th', { 'data-key': 'user' }, 'User'), h('th', { 'data-key': 'type' }, 'Type'))),
         h('tbody', null, data.rows.map((e) => {
           const sev = SEVERITY[String(e.severity || '').toLowerCase()] || SEVERITY.info;
