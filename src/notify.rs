@@ -647,6 +647,9 @@ fn task_label(id: &str) -> &str {
         "sync_requests" => "Reading the requests from Seerr",
         "sync_grabs" => "Reading the download history",
         "import" => "The Jellystat import",
+        "import_streamystats" => "The Streamystats import",
+        "import_tautulli" => "The Tautulli import",
+        "restore" => "Restoring a backup",
         "backup" => "Writing a backup",
         "geoip" => "The geolocation database",
         other => other,
@@ -1579,6 +1582,14 @@ pub(crate) mod tests {
 
         let server_own = target(2, None, &all);
         assert!(wanted_by(&server_own, Kind::Travel, ALERT, 10, Some("uc"), None), "the server's own destination is not filtered");
+    }
+
+    /// A failed job is announced by what it is called for somebody who never reads the log, never by its id.
+    #[test]
+    fn every_task_has_a_name_for_its_failure_notice() {
+        for id in crate::state::TASK_IDS {
+            assert_ne!(task_label(id), id, "`{id}` would be announced by its id");
+        }
     }
 
     /// A watchlist is its owner's alone (2.1): no permission, however broad, and no destination of the server's is
