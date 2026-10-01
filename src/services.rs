@@ -287,10 +287,14 @@ fn load(conn: &Connection) -> Result<Vec<(Service, Health)>> {
 /// Read the connections into memory: at start-up and after every change. Loops ask memory, not the database.
 pub async fn reload(app: &App) -> Result<()> {
     let rows = app.db.call(|c| load(c)).await?;
-    let mut health = app.service_health.write().unwrap();
-    health.retain(|id, _| rows.iter().any(|(s, _)| s.id == *id));
-    for (svc, stored) in &rows {
-        health.entry(svc.id).or_insert_with(|| stored.clone());
+    // One lock at a time: the outbound page holds the connections while it asks for each one's health, and
+    // holding the health here while waiting for the connections was the other half of a deadlock.
+    {
+        let mut health = app.service_health.write().unwrap();
+        health.retain(|id, _| rows.iter().any(|(s, _)| s.id == *id));
+        for (svc, stored) in &rows {
+            health.entry(svc.id).or_insert_with(|| stored.clone());
+        }
     }
     *app.services.write().unwrap() = Arc::new(rows.into_iter().map(|(s, _)| Arc::new(s)).collect());
     Ok(())
@@ -671,5 +675,20 @@ mod tests {
     #[test]
     fn a_server_says_it_keeps_watchlists_so_an_older_one_shows_no_toggle() {
         assert_eq!(features(&crate::state::test_app())["watchlist"], serde_json::json!(true));
+    }
+
+    /// The outbound page holds the connections and asks for each one's health; a reload must never hold the health
+    /// while it waits for the connections, or the two wait for each other for good.
+    #[test]
+    fn a_reload_never_holds_the_health_while_it_waits_for_the_connections() {
+        let app = crate::state::test_app();
+        let other = app.clone();
+        let reading = app.services.read().unwrap();
+        let worker = std::thread::spawn(move || tokio::runtime::Runtime::new().unwrap().block_on(reload(&other)).unwrap());
+        std::thread::sleep(Duration::from_millis(300));
+        let free = app.service_health.try_read().is_ok();
+        drop(reading);
+        worker.join().unwrap();
+        assert!(free, "the reload sat on the health while it waited for the connections");
     }
 }

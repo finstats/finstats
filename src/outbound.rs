@@ -163,10 +163,8 @@ pub async fn outbound(
     let geoip_from_env = geo_status["from_env"].as_bool().unwrap_or(false);
     let geoip_built_at = geo_status["database"]["built_at"].as_i64();
 
-    let services: Vec<_> = app
-        .services
-        .read()
-        .unwrap()
+    // The connections as a snapshot, so their lock is not held while each one's health is asked for.
+    let services: Vec<_> = crate::services::all(&app)
         .iter()
         .map(|s| {
             let health = app.service_health.read().unwrap().get(&s.id).cloned();
