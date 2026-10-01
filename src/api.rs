@@ -606,46 +606,49 @@ async fn lookup_public_ip(State(app): State<App>, Manager(_): Manager) -> ApiRes
 }
 
 async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch): Json<Value>) -> ApiResult {
-    let mut merged = serde_json::to_value(app.settings()).map_err(anyhow::Error::from)?;
-    let (Some(target), Some(patch)) = (merged.as_object_mut(), patch.as_object()) else {
+    let Some(patch) = patch.as_object() else {
         return Err(ApiError::bad_request("Expected a JSON object"));
     };
     // Who gets in and what everyone may see is an administrator's call: a manager must not be able to promote themselves.
     if !user.is_admin && ACCESS_KEYS.iter().any(|k| patch.contains_key(*k)) {
         return Err(ApiError::forbidden());
     }
-    for (k, v) in patch {
-        if target.contains_key(k) {
-            target.insert(k.clone(), v.clone());
-        }
-    }
-    let next: Settings = serde_json::from_value(merged).map_err(|e| ApiError::bad_request(format!("Invalid settings: {e}")))?;
-    next.validate().map_err(ApiError::bad_request)?;
-    let raw = serde_json::to_string(&next).map_err(anyhow::Error::from)?;
-    let regroup = (next.group_window_s != app.settings().group_window_s).then_some(next.group_window_s);
-    let before = app.settings();
+    let (before, next) = app
+        .update_settings(|s| {
+            let mut merged = serde_json::to_value(&*s).map_err(anyhow::Error::from)?;
+            let target = merged.as_object_mut().expect("the settings are an object");
+            for (k, v) in patch {
+                if target.contains_key(k) {
+                    target.insert(k.clone(), v.clone());
+                }
+            }
+            *s = serde_json::from_value(merged).map_err(|e| ApiError::bad_request(format!("Invalid settings: {e}")))?;
+            Ok(())
+        })
+        .await?;
     // What changed, for the audit log: the blob holds no secret, so the diff is the whole story.
     let changed = crate::audit::changed_keys(&serde_json::to_value(&before).unwrap_or_default(), &serde_json::to_value(&next).unwrap_or_default());
+    let regroup = (next.group_window_s != before.group_window_s).then_some(next.group_window_s);
     let homes = (next.home_addresses != before.home_addresses).then(|| next.home_addresses.clone());
     let homes_changed = homes.is_some();
     let lookup_switched_on = next.public_ip_lookup && !before.public_ip_lookup;
     let rules_changed = (next.travel_speed_kmh, next.travel_min_km) != (before.travel_speed_kmh, before.travel_min_km);
-    app.db
-        .call(move |c| {
-            db::set_setting(c, "settings", &raw)?;
-            // A different window means different groups, for the whole history.
-            if let Some(window) = regroup {
-                groups::detect(c, window, None)?;
-            }
-            // Home addresses decide which plays were local, for the whole history.
-            if let Some(list) = &homes {
-                crate::network::set_manual(c, list)?;
-                crate::network::reclassify(c)?;
-            }
-            Ok(())
-        })
-        .await?;
-    *app.settings.write().unwrap() = next;
+    if regroup.is_some() || homes.is_some() {
+        app.db
+            .call(move |c| {
+                // A different window means different groups, for the whole history.
+                if let Some(window) = regroup {
+                    groups::detect(c, window, None)?;
+                }
+                // Home addresses decide which plays were local, for the whole history.
+                if let Some(list) = &homes {
+                    crate::network::set_manual(c, list)?;
+                    crate::network::reclassify(c)?;
+                }
+                Ok(())
+            })
+            .await?;
+    }
     app.wake.notify_waiters();
     if lookup_switched_on {
         crate::network::refresh(&app).await;
@@ -704,24 +707,22 @@ async fn put_triggers(State(app): State<App>, Manager(user): Manager, Path(id): 
     let triggers: Vec<crate::schedule::Trigger> =
         serde_json::from_value(body["triggers"].clone()).map_err(|e| ApiError::bad_request(format!("Invalid triggers: {e}")))?;
     crate::schedule::validate(id, &triggers).map_err(ApiError::bad_request)?;
-    let mut next = app.settings();
-    next.schedules.insert(id.to_string(), triggers.clone());
-    save_schedule(&app, &user, id, next, json!({ "triggers": triggers })).await
+    let detail = json!({ "triggers": triggers });
+    save_schedule(&app, &user, id, move |s| _ = s.schedules.insert(id.to_string(), triggers), detail).await
 }
 
 /// `DELETE /api/tasks/{id}/triggers`: back to the job's defaults.
 async fn reset_triggers(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>) -> ApiResult {
     let Some(id) = crate::state::TASK_IDS.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
-    let mut next = app.settings();
-    next.schedules.remove(id);
-    save_schedule(&app, &user, id, next, json!({ "reset": true })).await
+    save_schedule(&app, &user, id, |s| _ = s.schedules.remove(id), json!({ "reset": true })).await
 }
 
-async fn save_schedule(app: &App, user: &AuthUser, id: &'static str, next: Settings, detail: Value) -> ApiResult {
-    next.validate().map_err(ApiError::bad_request)?;
-    let raw = serde_json::to_string(&next).map_err(anyhow::Error::from)?;
-    app.db.call(move |c| db::set_setting(c, "settings", &raw)).await?;
-    *app.settings.write().unwrap() = next;
+async fn save_schedule(app: &App, user: &AuthUser, id: &'static str, change: impl FnOnce(&mut Settings), detail: Value) -> ApiResult {
+    app.update_settings(|s| {
+        change(s);
+        Ok(())
+    })
+    .await?;
     // The scheduler looks again now: a trigger due in the next minute should not wait for the one after.
     app.wake.notify_waiters();
     audit::record(app, audit::Entry::new("task_schedule_changed", Actor::from(user)).target(id).detail(detail));
@@ -821,12 +822,13 @@ async fn get_permissions(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin
 
 async fn put_default_permissions(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Json(body): Json<PermissionsBody>) -> ApiResult {
     let keys = clean_permissions(body.permissions)?;
-    let mut next = app.settings();
-    next.allow_user_login = keys.iter().any(|k| k == auth::SIGN_IN);
-    next.default_permissions = keys.into_iter().filter(|k| k != auth::SIGN_IN).collect();
-    let raw = serde_json::to_string(&next).map_err(anyhow::Error::from)?;
-    app.db.call(move |c| db::set_setting(c, "settings", &raw)).await?;
-    *app.settings.write().unwrap() = next.clone();
+    let (_, next) = app
+        .update_settings(|s| {
+            s.allow_user_login = keys.iter().any(|k| k == auth::SIGN_IN);
+            s.default_permissions = keys.into_iter().filter(|k| k != auth::SIGN_IN).collect();
+            Ok(())
+        })
+        .await?;
     audit::record(&app, audit::Entry::new("permissions_changed", Actor::from(&user)).target("defaults").detail(json!({ "permissions": defaults_as_keys(&next) })));
     Ok(Json(json!({ "defaults": defaults_as_keys(&next) })))
 }
@@ -948,6 +950,9 @@ fn import_finished(app: &App, actor: Actor, tracker: &str, outcome: Result<(u64,
 fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bool, actor: Actor, source: String) {
     let worker = app.clone();
     tokio::task::spawn_blocking(move || {
+        // A restore that brings settings is a change to them like any other: nothing else may write the blob over
+        // it, or hold the one it replaces in memory, until the restored one is the one in use.
+        let _settings = with_settings.then(|| worker.settings_write.blocking_lock());
         let outcome = crate::backup::restore(&worker.db, &path, with_settings, Some((&worker.tasks, "restore")));
         if remove_after {
             let _ = std::fs::remove_file(&path);
@@ -960,9 +965,10 @@ fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bo
             audit::record_quietly(&c, &entry);
         }
         if outcome.is_ok() {
-            if let Ok(conn) = worker.db.conn() {
-                if let Ok(loaded) = Settings::load(&conn) {
-                    *worker.settings.write().unwrap() = loaded;
+            if with_settings {
+                match worker.db.conn().and_then(|c| Settings::load(&c)) {
+                    Ok(loaded) => *worker.settings.write().unwrap() = loaded,
+                    Err(e) => tracing::warn!("the restored settings could not be loaded; the ones in use stay until a restart: {e:#}"),
                 }
             }
             worker.wake.notify_waiters();

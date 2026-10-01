@@ -231,6 +231,7 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
         trust_proxy: env("FINSTATS_TRUST_PROXY").is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true")),
         config: RwLock::new(config),
         settings: RwLock::new(settings),
+        settings_write: tokio::sync::Mutex::new(()),
         tasks: Tasks::new(),
         live: RwLock::new(vec![]),
         collector: RwLock::new(CollectorStatus::default()),

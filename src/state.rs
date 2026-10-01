@@ -24,6 +24,8 @@ pub struct AppState {
     pub trust_proxy: bool,
     pub config: RwLock<Option<JfConfig>>,
     pub settings: RwLock<Settings>,
+    /// Held by whoever is changing the settings, from reading them to publishing the result (`update_settings`).
+    pub settings_write: tokio::sync::Mutex<()>,
     pub tasks: Tasks,
     pub live: RwLock<Vec<Value>>,
     pub collector: RwLock<CollectorStatus>,
@@ -240,6 +242,21 @@ impl AppState {
         self.settings.read().unwrap().clone()
     }
 
+    /// The one way to change the settings: read what is current, change it, check it, store it and let everyone see it,
+    /// one change at a time. Each writes the whole blob, so two at once — the settings page and a task's schedule, say —
+    /// lost whichever was stored first. (before, after); a change that is refused or fails changes nothing.
+    pub async fn update_settings(&self, change: impl FnOnce(&mut Settings) -> Result<(), ApiError>) -> Result<(Settings, Settings), ApiError> {
+        let _one_at_a_time = self.settings_write.lock().await;
+        let before = self.settings();
+        let mut next = before.clone();
+        change(&mut next)?;
+        next.validate().map_err(ApiError::bad_request)?;
+        let raw = serde_json::to_string(&next).map_err(anyhow::Error::from)?;
+        self.db.call(move |c| db::set_setting(c, "settings", &raw)).await?;
+        *self.settings.write().unwrap() = next.clone();
+        Ok((before, next))
+    }
+
     /// Refuse to go on: keep whatever is already stored, record why, and ask the serve loop to shut
     /// down cleanly. Only the first reason is kept — the first thing to notice a broken read is the
     /// one that matters, and a flood of follow-on errors must not bury it. Safe to call from anywhere,
@@ -383,6 +400,7 @@ pub fn test_app() -> App {
         trust_proxy: false,
         config: RwLock::new(None),
         settings: RwLock::new(Settings::default()),
+        settings_write: tokio::sync::Mutex::new(()),
         tasks: Tasks::new(),
         live: RwLock::new(vec![]),
         collector: RwLock::new(CollectorStatus::default()),
@@ -465,6 +483,41 @@ mod tests {
         assert!(format!("{err:#}").contains("active_interval_s"), "says which setting: {err:#}");
         db::set_setting(&c, "settings", r#"{"min_play_s": 42}"#).unwrap();
         assert_eq!(Settings::load(&c).unwrap().min_play_s, 42, "a key that is missing is still its default");
+    }
+
+    /// Two changes to the settings at once — the settings page and a task's schedule, say — each wrote the whole
+    /// blob as it had read it, and whichever wrote last took the other's change with it.
+    #[tokio::test]
+    async fn changes_to_the_settings_made_at_once_all_land() {
+        let app = test_app();
+        let changes: Vec<_> = (1..=10)
+            .map(|i| {
+                let app = app.clone();
+                tokio::spawn(async move { app.update_settings(move |s| {
+                    s.home_addresses.push(format!("192.168.1.{i}"));
+                    Ok(())
+                }).await.map(|_| ()).map_err(|e| e.1) })
+            })
+            .collect();
+        for change in changes {
+            change.await.unwrap().unwrap();
+        }
+        assert_eq!(app.settings().home_addresses.len(), 10, "in memory");
+        let stored = app.db.call(|c| Settings::load(c)).await.unwrap();
+        assert_eq!(stored.home_addresses.len(), 10, "in the database");
+    }
+
+    #[tokio::test]
+    async fn a_change_that_breaks_a_rule_changes_nothing() {
+        let app = test_app();
+        let refused = app.update_settings(|s| {
+            s.min_play_s = -1;
+            Ok(())
+        })
+        .await;
+        assert!(refused.is_err());
+        assert_eq!(app.settings().min_play_s, Settings::default().min_play_s);
+        assert_eq!(app.db.call(|c| db::get_setting(c, "settings")).await.unwrap(), None, "nothing stored");
     }
 
     /// `PUT /api/settings` takes any key of the blob, `schedules` included, so the rule for a schedule holds there too.
