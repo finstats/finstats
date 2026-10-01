@@ -20,11 +20,12 @@ import importSection from '../settings/import.js';
 import unlinked from '../settings/unlinked.js';
 import tasks from '../settings/tasks.js';
 import system from '../settings/system.js';
+import appearance from '../settings/appearance.js';
 import keys from '../settings/keys.js';
 import publicProfile from '../settings/public.js';
 import account from '../settings/account.js';
 
-const SECTIONS = [jellyfin, access, collection, network, security, ...services, backups, importSection, unlinked, tasks, system, keys, publicProfile, account];
+const SECTIONS = [jellyfin, access, collection, network, security, ...services, backups, importSection, unlinked, tasks, system, keys, appearance, publicProfile, account];
 // Where the one-page anchors went, so links and bookmarks from before still land.
 const LEGACY = { connections: 'connections', security: 'security', notifications: 'notifications', outbound: 'system', tasks: 'tasks', backups: 'backups', 'import-jellystat': 'import', 'import-streamystats': 'import', 'import-missing': 'unlinked' };
 // ---------------------------------------------------------------- the finder
