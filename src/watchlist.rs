@@ -130,15 +130,20 @@ fn valid(mut t: Title) -> Result<Title, Refused> {
 /// The entry of `user_id`'s that already stands for this title: the same item, or the same kind and any one id.
 /// `except`: an entry not to count, the one being asked about. (id, added at), the oldest if there are several.
 fn already(conn: &Connection, user_id: &str, item_id: Option<&str>, t: &Title, except: Option<i64>) -> Result<Option<(i64, i64)>> {
-    Ok(conn
-        .query_row(
+    Ok(standing_for(conn, user_id, item_id, t, except)?.into_iter().next())
+}
+
+/// Every entry of `user_id`'s that stands for this title, oldest first, as `already` counts them.
+fn standing_for(conn: &Connection, user_id: &str, item_id: Option<&str>, t: &Title, except: Option<i64>) -> Result<Vec<(i64, i64)>> {
+    let rows = conn
+        .prepare_cached(
             "SELECT id, added_at FROM watchlist WHERE user_id = ?1 AND id IS NOT ?7
                AND (item_id = ?2 OR (kind = ?3 AND (tmdb_id = ?4 OR tvdb_id = ?5 OR imdb_id = ?6)))
-             ORDER BY added_at, id LIMIT 1",
-            params![user_id, item_id, t.kind, t.tmdb_id, t.tvdb_id, t.imdb_id, except],
-            |r| Ok((r.get(0)?, r.get(1)?)),
-        )
-        .optional()?)
+             ORDER BY added_at, id",
+        )?
+        .query_map(params![user_id, item_id, t.kind, t.tmdb_id, t.tvdb_id, t.imdb_id, except], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<Result<_, _>>()?;
+    Ok(rows)
 }
 
 /// Take an entry off `user_id`'s list. `false` when there is no such entry of theirs.
@@ -382,26 +387,25 @@ pub fn resolve(conn: &Connection) -> Result<usize> {
             Ok((r.get(0)?, r.get(1)?, t, r.get(7)?))
         })?
         .collect::<Result<_, _>>()?;
-    let mut attached = 0;
+    let (mut attached, mut merged) = (0, HashSet::new());
     for (id, user_id, t, added_at) in waiting {
-        let Some(found) = find_title(conn, &t)? else { continue };
-        // Another entry of theirs may already stand for this title — on it, on a copy of it, or by one of its ids.
-        let twin = match snapshot(conn, &found)? {
-            Some(title) => already(conn, &user_id, Some(&found), &title, Some(id))?,
-            None => None,
-        };
-        match twin {
-            Some((other, other_added)) if (other_added, other) < (added_at, id) => {
-                conn.execute("DELETE FROM watchlist WHERE id = ?1", [id])?;
-                conn.execute("UPDATE watchlist SET item_id = ?2 WHERE id = ?1", params![other, found])?;
-            }
-            twin => {
-                if let Some((other, _)) = twin {
-                    conn.execute("DELETE FROM watchlist WHERE id = ?1", [other])?;
-                }
-                conn.execute("UPDATE watchlist SET item_id = ?2 WHERE id = ?1", params![id, found])?;
-            }
+        if merged.contains(&id) {
+            continue; // folded into an older entry of the same title already
         }
+        let Some(found) = find_title(conn, &t)? else { continue };
+        // Other entries of theirs may already stand for this title — on it, on a copy of it, or by one of its ids. All of
+        // them are one entry now, the oldest, and the rest go before it moves: one of them may hold the item.
+        let mut same = match snapshot(conn, &found)? {
+            Some(title) => standing_for(conn, &user_id, Some(&found), &title, Some(id))?,
+            None => vec![],
+        };
+        same.push((id, added_at));
+        let (keep, _) = same.iter().copied().min_by_key(|&(e, at)| (at, e)).expect("holds this entry");
+        for &(e, _) in same.iter().filter(|&&(e, _)| e != keep) {
+            conn.execute("DELETE FROM watchlist WHERE id = ?1", [e])?;
+            merged.insert(e);
+        }
+        conn.execute("UPDATE watchlist SET item_id = ?2 WHERE id = ?1", params![keep, found])?;
         attached += 1;
     }
     if attached > 0 {
@@ -906,6 +910,24 @@ mod tests {
             .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap().map(Result::unwrap).collect();
         assert_eq!(left, [(older, Some("plain".to_string()), 10)], "one entry, the older, now attached");
         assert!(!left.iter().any(|(id, _, _)| *id == newer));
+    }
+
+    /// Three entries of one title — one on its item, two waiting by ids the others did not share — are one entry after a
+    /// library read. Merging only the oldest twin moved a waiting entry onto the item another entry still held, the
+    /// unique index refused it, and with it every library read, import and restore that came after.
+    #[test]
+    fn three_entries_that_become_one_title_are_merged_into_the_oldest() {
+        let c = conn();
+        c.execute_batch(
+            "INSERT INTO watchlist(user_id, kind, item_id, title, added_at) VALUES ('alice', 'Movie', 'sintel', 'Sintel', 30);
+             INSERT INTO watchlist(user_id, kind, tmdb_id, title, added_at) VALUES ('alice', 'Movie', '45745', 'Sintel', 10);
+             INSERT INTO watchlist(user_id, kind, imdb_id, title, added_at) VALUES ('alice', 'Movie', 'tt1727587', 'Sintel', 20);",
+        )
+        .unwrap();
+        resolve(&c).unwrap();
+        let left: Vec<(Option<String>, i64)> = c.prepare("SELECT item_id, added_at FROM watchlist WHERE user_id = 'alice'").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(left, [(Some("sintel".to_string()), 10)], "one entry, the oldest, on the title");
     }
 
     #[test]
