@@ -944,6 +944,27 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .wire-error { margin: 0; font-size: 12.5px; color: var(--critical-text); }
 .wire-error:empty { display: none; }
 .wire-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+/* ---- "Not in your library": a row per missing title, and the picker that locates it */
+.locate-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.locate-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border-soft); }
+.locate-row:first-child { border-top: 0; }
+.locate-what { display: flex; flex-direction: column; min-width: 0; }
+.locate-name { font-size: 13.5px; font-weight: 550; color: var(--text); overflow-wrap: anywhere; }
+.locate-meta { font-size: 12px; color: var(--text-faint); }
+.locate-meta strong { font-weight: 550; color: var(--text-muted); }
+.locate-btn { flex: none; }
+.locate-show { margin-top: 14px; }
+.locate-show .section-label { margin-bottom: 2px; }
+.locate-pick { display: flex; flex-direction: column; gap: 10px; }
+.locate-pick .input { width: 100%; }
+.locate-opts { display: flex; flex-direction: column; gap: 4px; max-height: min(52vh, 420px); overflow-y: auto; }
+.locate-opt { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid transparent;
+  border-radius: var(--radius-sm); background: none; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.locate-opt:hover, .locate-opt:focus-visible { background: var(--hover); border-color: var(--border-soft); }
+.locate-opt:first-child { border-color: var(--border); }
+.locate-opt-name { font-size: 13px; overflow-wrap: anywhere; }
+.locate-opt-kind { font-size: 11.5px; color: var(--text-faint); }
+.locate-none { margin: 8px 0; font-size: 13px; color: var(--text-muted); }
 @media (prefers-reduced-motion: reduce) { .wire-socket.is-snapped .wire-hole { animation: none; } .wire-plug:hover .wire-nub { transform: none; } }
 @media (max-width: 520px) {
   .wire-board { padding: 10px; }

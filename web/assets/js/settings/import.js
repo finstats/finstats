@@ -9,6 +9,7 @@ import { can } from '../state.js';
 import { api, uploadRaw } from '../api.js';
 import { card, spinner, inlineError } from '../components.js';
 import { wiringBoard } from './wiring.js';
+import { missingCard } from './missing.js';
 
 // The trackers finstats can take history from.
 export const IMPORTERS = [
@@ -96,7 +97,20 @@ export default {
   entries: IMPORTERS.map((i) => ({ id: `import-${i.key}`, label: i.title, hint: `${i.name} backup upload history tracker` })),
   async render(slot, store) {
     const slots = Object.fromEntries(IMPORTERS.map((i) => [i.key, h('div')]));
-    mount(slot, IMPORTERS.map((i) => card({ title: i.title, sub: i.sub, body: slots[i.key], id: `import-${i.key}` })));
+    // What the history has that the library does not, under that name: after the importers, because imports are where
+    // most of it comes from.
+    const missingSlot = h('div');
+    const missingBox = card({ title: 'Not in your library', sub: 'Plays whose title your library calls something else, or no longer has', body: missingSlot, id: 'import-missing' });
+    missingBox.hidden = true;
+    mount(slot, IMPORTERS.map((i) => card({ title: i.title, sub: i.sub, body: slots[i.key], id: `import-${i.key}` })), missingBox);
+    const missing = missingCard(missingSlot, missingBox);
+    // An import that finishes may have brought titles the library does not have, or found some that were missing.
+    let finished = '';
+    store.onTasks(() => {
+      const now = JSON.stringify(IMPORTERS.map((i) => { const t = store.task(i.task); return t && t.state === 'ok' ? t.finished_at : null; }));
+      if (finished && now !== finished) missing.refresh();
+      finished = now;
+    });
 
     const localErr = {}, sawRunning = {}, sig = {};
     const fileInputs = Object.fromEntries(IMPORTERS.map((imp) => {
