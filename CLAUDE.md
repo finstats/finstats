@@ -381,15 +381,18 @@ item (`item_id`) or, not in the library yet, by provider ids, and keeps a snapsh
 library. **Copies are one title**: items sharing an id and a type are the HD and 4K film, the lowest id stands for them (Pipeline's
 rule, not `relink.rs`'s — nothing here rewrites history), and ids that lead to *different* titles attach to nothing (`find_title`).
 `resolve` runs at the end of `backfill_playbacks`, so every library read, metadata look, import and restore attaches waiting
-entries, follows a renamed title, keeps attached snapshots current and merges two entries of one title keeping the older
-`added_at`. **State is worked out at read time and never stored** (`listing`): watched by the profile's one reading of "seen"
+entries, follows a renamed title, keeps attached snapshots current and merges every entry of one title into the oldest
+`added_at` (all of them, before the survivor moves: one may hold the item, and the unique `(user_id, item_id)` index refusing it
+would fail the whole library read). **State is worked out at read time and never stored** (`listing`): watched by the profile's one reading of "seen"
 (`profile::films` / `episodes`, one `PLAY_FRAC` and `verdict`), started, on the server, requested (someone else's request only
 with `see_everyone`, Pipeline's rule), coming up (`pipeline::entries_for`), left the library, not on the server. At most
 `MAX_ENTRIES` (1,000) per person. In `backup::TABLES`, merged per person and title on restore. The page and the four toggles
 (title, Upcoming rows, Recently added, search with Ctrl+Enter) read `/api/me/watchlist/keys` once per visit (`watchlist.js`),
 never a request per poster, and show nothing on a server whose `/auth/me` lacks `features.watchlist`. Its notification,
 `watchlist_available`, is `notify::Need::Owner`: the owner's own destinations only, never a server's, and left out of every
-other person's notification history, administrators' included.
+other person's notification history, administrators' included. **An arrival is a title that was missing and is here now**
+(`missing`, `arrived_at`, migration 31, noted by `resolve` at every read), never just a new item: a replaced file is a new path and
+so a new Jellyfin id with a fresh `DateCreated`, and judged by the item alone every Radarr upgrade said "now on the server".
 
 **Timeline (`timeline.rs`, `/users/:id/timeline`).** One person's plays, newest first, folded by the pure `fold()`: plays that follow
 each other with the same key (series + season, album + artist, else the item) are one stop. Pages use a `(started_at, id)` cursor
