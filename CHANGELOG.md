@@ -10,12 +10,30 @@ Stability something that can no longer crash, halt, leak or lose data, Fixed som
 wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
 
-## [2.1.0] - 2026-09-29 to 2026-10-01
+## [2.1.1] - 2026-10-01
+
+### Changed
+- **The watchlist is offered wherever a title is**: on the dashboard's Coming up cards, as in Pipeline → Upcoming, and on an episode's or a season's page, which puts its show on the list.
+- On a dashboard poster the watchlist button shows while you point at the card or reach it with the keyboard, instead of covering every poster's corner; on a touch screen it is always there.
+
+### Stability
+- Saving a Sonarr, Radarr or Seerr connection while somebody had **Settings → Outbound** open could leave both waiting on each other for good.
+- **Settings that cannot be read stop finstats at start-up**, naming the setting at fault, instead of quietly resetting every setting to its default.
+- **Two changes to the settings at once** — the settings page and a task's schedule, say — no longer undo each other.
+- A pause, seek or track change seen while the database was busy is written on the next pass instead of lost.
+- A library read no longer fails on a watchlist holding several entries that turn out to be one title.
+
+### Fixed
+- **A replaced file is not "now on the server"**: upgrading the file of a film on somebody's watchlist no longer tells them it has just arrived.
+- One failed read of Jellyfin's plugins, scheduled tasks or storage no longer empties that list on the Server page until the next read.
+- **A Streamystats play stops where it stopped on every page**: a title's drop-off curve and an episode's "finished" went by its length instead, and counted it as estimated.
+
+## [2.1.0] - 2026-09-29 to 2026-09-30
 
 Watchlist
 
 ### Added
-- **A watchlist of your own**: put a film or a show on it from its page (an episode's or a season's page offers its show), from Upcoming on the dashboard and in Pipeline, from Recently added or from search (Ctrl+Enter), and find it under **Watchlist** on your own profile. On a dashboard poster the button shows while you point at the card.
+- **A watchlist of your own**: put a film or a show on it from its page, from Upcoming, from Recently added or from search (Ctrl+Enter), and find it under **Watchlist** on your own profile.
 - **Every entry says where it stands now** — on the server, "5 of 26 episodes", requested, "Coming up Friday", not on the server, left the library, or watched — worked out each time you look, with the same reading of "seen" as your show progress. Watched titles stay, in a group of their own, until you take them off.
 - **A title that is not on your server yet** can go on the list straight from what Sonarr or Radarr is waiting for. It is attached to the title by itself when it arrives, and a renamed file takes its entry along.
 - **"On your watchlist: now available"**: a notification for your own destinations when something you were waiting for arrives. Off until you tick it.
@@ -24,16 +42,6 @@ Watchlist
 
 ### Changed
 - `/api/upcoming` entries carry the TVDB and TMDB ids of their title, and `/api/auth/me` says whether the server keeps watchlists.
-
-### Stability
-- Saving a Sonarr, Radarr or Seerr connection while somebody had **Settings → Outbound** open could leave both waiting on each other for good.
-- **Settings that cannot be read stop finstats at start-up**, naming the setting at fault, instead of quietly resetting every setting to its default.
-- **Two changes to the settings at once** — the settings page and a task's schedule, say — no longer undo each other.
-- A pause, seek or track change seen while the database was busy is written on the next pass instead of lost.
-
-### Fixed
-- One failed read of Jellyfin's plugins, scheduled tasks or storage no longer empties that list on the Server page until the next read.
-- **A Streamystats play stops where it stopped on every page**: a title's drop-off curve and an episode's "finished" went by its length instead, and counted it as estimated.
 
 ## [2.0.4] - 2026-09-29
 
