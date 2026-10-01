@@ -1219,8 +1219,8 @@ A film or episode answers where its plays stopped:
   "runtime_s": 7020,             // the axis: the item's runtime, or the longest a play reported
   "bucket_s": 120,               // the grid: 30 s for a short episode, 120 s for a film, never more than 60 buckets
   "plays": 41,
-  "measured": 9,                 // plays finstats recorded: the stop is where playback was when it ended
-  "estimated": 32,               // imported plays: a tracker keeps how long it ran, so the stop is taken as that, from 0:00
+  "measured": 9,                 // plays that know where they stopped (finstats' own, Streamystats' with a runtime): the stop is that
+  "estimated": 32,               // the rest (Jellystat keeps how long it ran): the stop is taken as that, from 0:00
   "curve": [1.0, 0.98, …],       // share still watching at each bucket edge, from the start to the runtime (n + 1 points)
   "rewinds": [0, 0, 3, …],       // per bucket: seeks that landed there from further on (n counts)
   "subtitles": [0, 2, …]         // per bucket: plays whose first subtitle change, to a track, happened there

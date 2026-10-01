@@ -67,7 +67,10 @@ Sonarr/Radarr queues ───────────────────�
 ```
 
 **State & DB access.** `state.rs` holds `AppState` (shared via `Arc` as `App`): DB handle, Jellyfin config,
-`Settings` (one JSON blob in the `settings` table, `#[serde(default)]` so old installs load), the in-memory task
+`Settings` (one JSON blob in the `settings` table, `#[serde(default)]` so old installs load — and a blob that still cannot be
+read is an error naming the key at fault, never "all defaults", which reset every setting silently and the next save wrote the
+defaults back; **every change goes through `AppState::update_settings`**, which reads, changes, validates, stores and publishes
+under one lock, because each write is the whole blob and two at once lost one), the in-memory task
 registry, the live now-playing snapshot, and a `Notify` (`wake`) that background loops select on. All DB work goes
 through `db.call(|conn| …)` (r2d2 pool + `spawn_blocking`). A page whose queries over the history need nothing from each
 other runs them side by side (`stats::resolved` once, then `apart` per part under `tokio::try_join!`): each is one
@@ -325,8 +328,11 @@ process `TZ` (the Docker image ships tzdata for this); Rust that needs the local
 serde_urlencoded then hands numbers over as strings and every numeric filter 400s.
 
 **Playback insights (`stats.rs`, 2.0).** Where a title loses its viewers, drawn from where each play stopped. **A stop is
-`position_s` for a play finstats recorded and `duration_s` for an imported one** (a tracker keeps a length, not a place; the play is
-taken to have started at 0:00), and the two are never mixed silently: every curve carries `measured` and `estimated`. The grid
+`position_s` where the play has one and `duration_s` otherwise** (finstats' own plays and Streamystats rows that kept their runtime
+know where they stopped; Jellystat keeps a length, not a place, so the play is taken to have started at 0:00), and the two are
+never mixed silently: every curve carries `measured` and `estimated`. The rule is `playback::STOP_S` / `STOP_MEASURED` /
+`PLAY_FRAC`, and every page uses it — the curve once trusted only finstats' own positions while the activity list and the profile
+trusted Streamystats' too, so one play finished on one page and stopped twenty minutes in on another. The grid
 (`bucket_width`) keeps any runtime to sixty points; under `MIN_CURVE_PLAYS` (3) or without a runtime there is no curve, not a thin
 one. Events exist only for live plays, so rewinds (a seek whose `from_s` is past its `position_s`) and subtitle switch-ons (a play's
 *first* subtitle change, to a track — the state before it is never an event, so a later language change is not a second switch-on)
