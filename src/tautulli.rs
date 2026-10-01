@@ -185,7 +185,7 @@ pub fn open(path: &Path) -> Result<Connection> {
 
 /// What the board needs, and nothing else from `users`: never a token, never an address.
 const PLEX_USERS_SQL: &str = "WITH people AS (SELECT user_id FROM users UNION SELECT DISTINCT user_id FROM session_history WHERE user_id IS NOT NULL)
-    SELECT p.user_id,
+    SELECT CAST(p.user_id AS INTEGER),
            COALESCE(NULLIF(TRIM(u.friendly_name), ''), NULLIF(TRIM(u.username), ''), (SELECT MAX(h.user) FROM session_history h WHERE h.user_id = p.user_id), 'Plex user ' || p.user_id) AS name,
            (SELECT COUNT(DISTINCT h.reference_id) FROM session_history h WHERE h.user_id = p.user_id AND h.media_type IN ('movie', 'episode')),
            (SELECT MIN(h.started) FROM session_history h WHERE h.user_id = p.user_id),
@@ -253,6 +253,7 @@ pub fn check(db: &Db, path: &Path, wires: &[Wire]) -> Result<Result<(), String>>
 /// One row of `session_history`, with its metadata and its media info.
 #[derive(Debug, Default)]
 struct Session {
+    id: i64,
     reference_id: i64,
     started: i64,
     stopped: i64,
@@ -322,27 +323,51 @@ fn sessions_sql(t: &Connection) -> Result<String> {
     let mut picked: Vec<String> = COLUMNS.iter().map(|(a, c)| if have.contains(&(a.to_string(), c.to_string())) { format!("{a}.{c}") } else { "NULL".into() }).collect();
     picked.push(if have.contains(&("i".into(), "stream_audio_decision".into())) { "i.stream_audio_decision".into() } else { "NULL".into() });
     picked.push(if have.contains(&("i".into(), "stream_bitrate".into())) { "i.stream_bitrate".into() } else { "NULL".into() });
+    picked.push("h.id".into());
     let info = if have.iter().any(|(a, _)| a == "i") { "LEFT JOIN session_history_media_info i ON i.id = h.id" } else { "LEFT JOIN (SELECT NULL AS id) i ON 0" };
     Ok(format!(
         "SELECT {} FROM session_history h LEFT JOIN session_history_metadata m ON m.id = h.id {info}
          WHERE h.reference_id IS NOT NULL AND h.started IS NOT NULL AND h.stopped IS NOT NULL
-         ORDER BY h.reference_id, h.started, h.id",
+         ORDER BY h.reference_id, h.media_type, h.rating_key, h.started, h.id",
         picked.join(", ")
     ))
 }
 
+/// A number as Tautulli keeps it: an integer, or text — an empty string where it has none, and some numbers written
+/// out — and nothing else. A strict read failed the whole import on the first film without a show number.
+fn num(r: &rusqlite::Row, i: usize) -> rusqlite::Result<Option<i64>> {
+    use rusqlite::types::ValueRef;
+    Ok(match r.get_ref(i)? {
+        ValueRef::Integer(n) => Some(n),
+        ValueRef::Real(f) => Some(f as i64),
+        ValueRef::Text(t) => std::str::from_utf8(t).ok().map(str::trim).and_then(|t| t.parse::<i64>().ok().or_else(|| t.parse::<f64>().ok().map(|f| f as i64))),
+        ValueRef::Null | ValueRef::Blob(_) => None,
+    })
+}
+
 fn session_of(r: &rusqlite::Row) -> rusqlite::Result<Session> {
-    let text = |i: usize| -> rusqlite::Result<Option<String>> { Ok(r.get::<_, Option<String>>(i)?.map(|s| s.trim().to_string()).filter(|s| !s.is_empty())) };
+    use rusqlite::types::ValueRef;
+    // Text as leniently as numbers: a version or a container written as a number is still what it says.
+    let text = |i: usize| -> rusqlite::Result<Option<String>> {
+        Ok(match r.get_ref(i)? {
+            ValueRef::Text(t) => Some(String::from_utf8_lossy(t).trim().to_string()),
+            ValueRef::Integer(n) => Some(n.to_string()),
+            ValueRef::Real(f) => Some(f.to_string()),
+            ValueRef::Null | ValueRef::Blob(_) => None,
+        }
+        .filter(|s| !s.is_empty()))
+    };
     Ok(Session {
-        reference_id: r.get(0)?,
-        started: r.get(1)?,
-        stopped: r.get(2)?,
-        paused: r.get::<_, Option<i64>>(3)?.unwrap_or(0).max(0),
-        user_id: r.get::<_, Option<i64>>(4)?.unwrap_or(-1),
+        id: num(r, 44)?.unwrap_or_default(),
+        reference_id: num(r, 0)?.unwrap_or_default(),
+        started: num(r, 1)?.unwrap_or_default(),
+        stopped: num(r, 2)?.unwrap_or_default(),
+        paused: num(r, 3)?.unwrap_or(0).max(0),
+        user_id: num(r, 4)?.unwrap_or(-1),
         media_type: text(5)?.unwrap_or_default(),
-        rating_key: r.get(6)?,
-        show_key: r.get(7)?,
-        view_offset_ms: r.get(8)?,
+        rating_key: num(r, 6)?,
+        show_key: num(r, 7)?,
+        view_offset_ms: num(r, 8)?,
         ip: text(9)?,
         player: text(10)?,
         product: text(11)?,
@@ -350,22 +375,22 @@ fn session_of(r: &rusqlite::Row) -> rusqlite::Result<Session> {
         machine_id: text(13)?,
         title: text(14)?,
         show: text(15)?,
-        season: r.get(16)?,
-        episode: r.get(17)?,
-        year: r.get(18)?,
-        duration_ms: r.get(19)?,
-        live: r.get::<_, Option<i64>>(20)?.unwrap_or(0) != 0,
+        season: num(r, 16)?,
+        episode: num(r, 17)?,
+        year: num(r, 18)?,
+        duration_ms: num(r, 19)?,
+        live: num(r, 20)?.unwrap_or(0) != 0,
         decision: text(21)?,
         container: text(22)?,
         streams: Streams {
-            bitrate: r.get::<_, Option<i64>>(23)?.map(|kbps| kbps * 1000),
+            bitrate: num(r, 23)?.map(|kbps| kbps * 1000),
             video_codec: text(24)?,
-            width: r.get(25)?,
-            height: r.get(26)?,
+            width: num(r, 25)?,
+            height: num(r, 26)?,
             video_range: text(27)?,
-            bit_depth: r.get(28)?,
+            bit_depth: num(r, 28)?,
             audio_codec: text(29)?,
-            audio_channels: r.get(30)?,
+            audio_channels: num(r, 30)?,
             audio_language: text(31)?,
             subtitle_codec: text(32)?,
             subtitle_language: text(33)?,
@@ -374,13 +399,13 @@ fn session_of(r: &rusqlite::Row) -> rusqlite::Result<Session> {
             container: text(34)?,
             video_codec: text(35)?,
             audio_codec: text(36)?,
-            audio_channels: r.get(37)?,
-            width: r.get(38)?,
-            height: r.get(39)?,
+            audio_channels: num(r, 37)?,
+            width: num(r, 38)?,
+            height: num(r, 39)?,
             hw: text(40)?,
             video_decision: text(41)?,
             audio_decision: text(42)?,
-            bitrate: r.get::<_, Option<i64>>(43)?.map(|kbps| kbps * 1000),
+            bitrate: num(r, 43)?.map(|kbps| kbps * 1000),
         },
     })
 }
@@ -405,7 +430,7 @@ fn served(s: &Session) -> (String, Option<Value>) {
     (crate::media::effective_play_method(Some(reported), Some(&transcode)), Some(transcode))
 }
 
-/// One viewing — every row of one `reference_id` — as a play of `user` (Jellyfin id, Jellyfin name).
+/// One viewing — the rows of one `reference_id` and one title — as a play of `user` (Jellyfin id, Jellyfin name).
 fn record(rows: &[Session], user: (&str, &str)) -> PlayRecord {
     let (head, last) = (&rows[0], rows.iter().max_by_key(|s| s.stopped).expect("a viewing has a row"));
     let runtime_s = head.duration_ms.filter(|d| *d > 0).map(|d| d / 1000);
@@ -419,7 +444,8 @@ fn record(rows: &[Session], user: (&str, &str)) -> PlayRecord {
     let (play_method, transcode) = served(head);
     PlayRecord {
         source: "tautulli",
-        source_id: Some(format!("tautulli:{}", head.reference_id)),
+        // The viewing's first row, which is its reference for every chain but one Plex began with a theme song.
+        source_id: Some(format!("tautulli:{}", head.id)),
         active: false,
         user_id: user.0.to_string(),
         user_name: user.1.to_string(),
@@ -494,7 +520,9 @@ pub fn run(db: &Db, path: &Path, wires: &[Wire], tasks: Option<&Tasks>) -> Resul
     };
     while let Some(r) = rows.next()? {
         let s = session_of(r)?;
-        if viewing.first().is_some_and(|v| v.reference_id != s.reference_id) {
+        // One viewing is one reference and one title: Plex plays a show's theme while the show is open, and Tautulli
+        // chains the episode that follows onto it.
+        if viewing.first().is_some_and(|v| (v.reference_id, &v.media_type, v.rating_key) != (s.reference_id, &s.media_type, s.rating_key)) {
             take(&mut viewing, &mut res)?;
         }
         viewing.push(s);
@@ -740,6 +768,48 @@ mod tests {
         assert_eq!((client.as_str(), device.as_str(), ip.as_str(), codec.as_str()), ("Plex for LG", "Living Room TV", "192.168.1.10", "h264"));
         let t: Value = serde_json::from_str(&transcode.unwrap()).unwrap();
         assert_eq!((t["is_video_direct"].as_bool(), t["is_audio_direct"].as_bool(), t["audio_codec"].as_str()), (Some(true), Some(false), Some("aac")));
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// Plex plays a show's theme while the show is open, and Tautulli chains the episode that follows onto it: one
+    /// reference, a track and then an episode. The episode is a viewing of its own, not music.
+    #[test]
+    fn an_episode_chained_onto_its_theme_song_is_still_an_episode() {
+        let dir = temp("theme");
+        let path = backup(&dir);
+        {
+            let c = Connection::open(&path).unwrap();
+            let theme = session(&c, 0, 101, "track", 9, "Low Orbit Theme", None, None, 1000, 1030, 0, 30_000, 30_000, "direct play");
+            session(&c, theme, 101, "episode", 11, "Pilot", Some(("Low Orbit", 10, 1, 1)), Some(2021), 1030, 2830, 0, 1_800_000, 1_800_000, "direct play");
+        }
+        assert_eq!(plex_users(&open(&path).unwrap()).unwrap()[0].plays, 1, "the board counts it");
+        let db = finstats(&dir);
+        let res = run(&db, &path, &[wire(101, "ja")], None).unwrap();
+        assert_eq!((res.plays_imported, res.other_media), (1, 1), "the episode comes in, the theme does not");
+        assert_eq!(plays(&db)[0].2, "ep11");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// Tautulli writes an empty string where it has no number, and some numbers as text: both are read for what they say.
+    #[test]
+    fn a_number_kept_as_text_is_a_number_and_an_empty_one_is_none() {
+        let dir = temp("text");
+        let path = backup(&dir);
+        {
+            let c = Connection::open(&path).unwrap();
+            let id = session(&c, 0, 101, "movie", 1, "Big Buck Bunny", None, Some(2008), 1000, 1600, 0, 600_000, 600_000, "direct play");
+            c.execute_batch(&format!(
+                "UPDATE session_history SET grandparent_rating_key = '' WHERE id = {id};
+                 UPDATE session_history_metadata SET media_index = '', parent_media_index = '', year = '2008' WHERE id = {id};
+                 UPDATE session_history_media_info SET width = '1920', height = '', bitrate = ' 8000 ', transcode_width = '' WHERE id = {id};"
+            ))
+            .unwrap();
+        }
+        let db = finstats(&dir);
+        assert_eq!(run(&db, &path, &[wire(101, "ja")], None).unwrap().plays_imported, 1);
+        let (item, width, height, bitrate): (String, Option<i64>, Option<i64>, Option<i64>) =
+            db.conn().unwrap().query_row("SELECT item_id, width, height, bitrate FROM playbacks", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).unwrap();
+        assert_eq!((item.as_str(), width, height, bitrate), ("film1", Some(1920), None, Some(8_000_000)), "the year in text still finds the film");
         let _ = std::fs::remove_dir_all(dir);
     }
 
