@@ -1850,3 +1850,8 @@ a.wl-poster:hover .poster, a.wl-poster:focus-visible .poster { outline: 2px soli
 .health-actions { white-space: nowrap; text-align: right; }
 .health-actions > * + * { margin-left: 4px; }
 .health-card .card-body p { margin: 0; }
+
+/* ---------------------------------------------------------------- everything in a library (/libraries/:id/titles) */
+.titles-grid { margin-top: 4px; }
+.titles-tail { display: grid; justify-items: center; gap: 8px; padding: 8px 0 16px; }
+
