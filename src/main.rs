@@ -12,6 +12,7 @@ mod db;
 mod downloads;
 mod fuzzy;
 mod geo;
+mod finui;
 mod groups;
 mod health;
 mod ical;

@@ -1,0 +1,105 @@
+/* finui: tokens. Every colour finstats uses, and nothing else may name one (a cargo test holds it). */
+
+/* Every colour is one token, light and dark side by side: light-dark(light, dark). Light is washi paper by day —
+   cream ground, ink text, a vermilion seal for the accent, and dyes for the rest: nando for quantities, matcha for
+   success, brass for a warning, murasaki/nando/shu/ai for the four kinds of media. Its accents are darker than a
+   dark theme's on purpose: the same hues at glowing-on-black lightness fail contrast on cream. Dark is Obsidian's.
+   With nothing chosen the device decides; data-theme on <html> is a choice made in this browser (theme.js applies
+   it before the first paint). --bg has a twin: the light theme-color meta tag in index.html and public.html. */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#efe9dc, #1e1e1e);                     /* the page ground (washi: paper) */
+  --page-glow: light-dark(#fbf7ec, transparent);          /* light falling on the top of the page */
+  --page-bg: radial-gradient(1100px 620px at 50% -12%, var(--page-glow) 0%, transparent 62%), var(--bg);
+  --bg-2: light-dark(#fbf8f1, #262626);                   /* a card or panel (paper-card) */
+  --bg-lift: light-dark(#fffdf7, #121212);                /* lifted further: tooltips (paper-lift) */
+  --bg-sunken: light-dark(#e7e0ce, #181818);              /* sidebar, status bar (paper-sunk) */
+  --hover: light-dark(rgba(0, 0, 0, .07), #2f2f2f);       /* the pressed/hover wash (press) */
+  --btn-hover: light-dark(rgba(0, 0, 0, .11), #383838);
+  --border: light-dark(#d8d0bc, #363636);                 /* hairline */
+  --border-soft: light-dark(#d8d0bc, #2c2c2c);
+  --border-strong: light-dark(#bfb59b, #4a4a4a);          /* hairline on hover */
+  --text: light-dark(#24211c, #dadada);                   /* ink */
+  --text-muted: light-dark(#5b564c, #a8a8a8);             /* ink-soft */
+  --text-faint: light-dark(#6f6859, #7d7d7d);             /* ink-mute */
+  --text-strong: light-dark(#24211c, #ececec);
+  --text-hero: light-dark(#24211c, #f4f2fc);
+  --tint: light-dark(#000000, #ffffff);                   /* a wash over a surface: color-mix(… var(--tint) n%, transparent) */
+  --shadow: light-dark(rgba(60, 50, 30, .42), #000000);   /* shadows mix this: warm and soft on paper */
+  --backdrop: light-dark(rgba(36, 33, 28, .42), rgba(0, 0, 0, .6));   /* behind a dialog: ink, thinned */
+  --accent: light-dark(#b23a26, #8a5cf5);                 /* shu, the seal */
+  --accent-hi: light-dark(#9a2f1d, #a68af9);              /* links, the page one is on (shu-2) */
+  --accent-wash: light-dark(color-mix(in srgb, #b23a26 10%, transparent), rgba(138, 92, 245, .14));
+  --selection: light-dark(color-mix(in srgb, #b23a26 22%, transparent), rgba(138, 92, 245, .4));
+  --good: light-dark(#4f6b22, #0ca30c);                   /* matcha */
+  --warning: light-dark(#8a6410, #fab219);                /* brass */
+  --serious: light-dark(#7a5230, #ec835a);                /* kuri */
+  --critical: light-dark(#9a2f1d, #d03b3b);               /* shu-2 */
+  --critical-text: light-dark(#7e2717, #f08a8a);          /* shu-3 */
+  --series-1: light-dark(#5c3d7a, #9085e9);               /* Movie: murasaki */
+  --series-2: light-dark(#236e70, #199e70);               /* Episode: nando */
+  --series-3: light-dark(#b23a26, #d95926);               /* Music: shu */
+  --series-4: light-dark(#2b4570, #3987e5);               /* Other: ai */
+  --single: light-dark(#236e70, #9085e9);                 /* one series, a quantity: nando */
+  --peak: light-dark(#185657, #b49dfb);                   /* the extreme of it (nando-2) */
+  --spark: light-dark(#236e70, #6a5fb0);
+  --alone: light-dark(#6f6859, #5a6275);
+  --grid: light-dark(#e3dcc9, #303030);
+  --axis: light-dark(#c8bfa6, #454545);                   /* guide */
+  --scrollbar: light-dark(#bfb59b, #444444);
+  --separator: light-dark(#bfb59b, #5a5a5a);
+  --knob: light-dark(#fffdf7, #cfcfcf);
+  --theme-sun: light-dark(#b8660a, #8a4b00);      /* the icons in the theme switch's knob, on --knob */
+  --theme-moon: light-dark(#4b3f9e, #3b2f86);
+  --theme-device: light-dark(#5f5a4e, #3a3a3a);
+  --wash-2: light-dark(#e7e0ce, #3a3552);                 /* avatars, meter tracks */
+  --wash-2-text: light-dark(#2b4570, #cfc6f7);            /* ai */
+  --warn-wash: light-dark(color-mix(in srgb, #8a6410 18%, #fbf8f1), #4a3d1a);
+  --crit-wash: light-dark(color-mix(in srgb, #9a2f1d 16%, #fbf8f1), #4a2222);
+  --placeholder: light-dark(#e3dcc9, #303030);            /* gap-empty: absence, not zero */
+  --skeleton: light-dark(#e7e0ce, #313131);
+  --tooltip-bg: var(--bg-lift);
+  --track: light-dark(#e3dcc9, #3a3a3a);
+  --land: light-dark(#e3dcc9, #2b2b2b);
+  --land-edge: light-dark(#d8d0bc, #3d3d3d);
+  /* The wiring board's cables (Tautulli import), Fix Wiring's colours first; deeper by day, so they hold on paper. */
+  --wire-0: light-dark(#c62828, #ff5a5a);
+  --wire-1: light-dark(#1f4fc4, #5b8cff);
+  --wire-2: light-dark(#a87b00, #ffd23f);
+  --wire-3: light-dark(#b3168d, #ff62d0);
+  --wire-4: light-dark(#1d7f45, #47d488);
+  --wire-5: light-dark(#0b7d88, #3fd2de);
+  --wire-6: light-dark(#c45a12, #ff9a3d);
+  --wire-7: light-dark(#6237c0, #a98bff);
+  --wire-edge: light-dark(rgb(40 30 10 / .28), rgb(0 0 0 / .6));
+  --wire-hole: light-dark(#3a342b, #0d0d0d);
+  --land-hot: light-dark(color-mix(in srgb, #5c3d7a 14%, #e3dcc9), #35304d);
+  --land-hot-edge: light-dark(color-mix(in srgb, #5c3d7a 40%, #d8d0bc), #51487a);
+  --heat-0: light-dark(#e3dcc9, #2f2f2f);                 /* charts.js' activity grid: empty, then quiet → busy */
+  --heat-1: light-dark(color-mix(in srgb, #236e70 14%, #fbf8f1), #3a3358);
+  --heat-2: light-dark(color-mix(in srgb, #236e70 30%, #fbf8f1), #4b3f80);
+  --heat-3: light-dark(color-mix(in srgb, #236e70 48%, #fbf8f1), #5e4ba8);
+  --heat-4: light-dark(color-mix(in srgb, #236e70 66%, #fbf8f1), #7459d0);
+  --heat-5: light-dark(color-mix(in srgb, #236e70 84%, #fbf8f1), #8f6ff0);
+  --heat-6: light-dark(#185657, #b49dfb);
+  --rc-heat-0: light-dark(#e3dcc9, rgba(255, 255, 255, .055));   /* the recap's year grid */
+  --rc-heat-1: light-dark(color-mix(in srgb, #236e70 22%, #fbf8f1), #3a2f6b);
+  --rc-heat-2: light-dark(color-mix(in srgb, #236e70 50%, #fbf8f1), #5b47ad);
+  --rc-heat-3: light-dark(#236e70, #8067e0);
+  --rc-heat-4: light-dark(#185657, #b9a5fc);
+  --sans: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 8px;
+  --radius-sm: 4px;
+  --sidebar-w: 220px;
+  --statusbar-h: 26px;
+  --ease: 150ms ease;
+  /* Colours that were literals in app.css, as tokens with the values they had. */
+  --on-fill: light-dark(#fff, #fff);                     /* text and knobs on a coloured fill or a picture */
+  --picture-shade: light-dark(rgba(0, 0, 0, .7), rgba(0, 0, 0, .7));   /* a shadow that lifts --on-fill text off a picture */
+  --accent-hover: light-dark(#9a2f1d, #7a4ce6);          /* a primary button under the pointer: shu-2 by day */
+  --critical-hover: light-dark(#b93232, #b93232);        /* a danger button under the pointer */
+  --fav: light-dark(#d55181, #d55181);                   /* a favourite's heart */
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }

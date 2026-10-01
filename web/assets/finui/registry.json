@@ -1,0 +1,10 @@
+{
+  "name": "finui",
+  "license": "GPL-3.0-only",
+  "prefix": "fui-",
+  "foundation": [
+    "tokens.css",
+    "base.css"
+  ],
+  "components": []
+}

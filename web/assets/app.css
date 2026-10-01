@@ -1,138 +1,5 @@
 /* finstats — Obsidian's look, dark and light. */
-
-@font-face {
-  font-family: "Inter Variable"; font-style: normal; font-weight: 100 900; font-display: swap;
-  src: url("/assets/fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: "Inter Variable"; font-style: normal; font-weight: 100 900; font-display: swap;
-  src: url("/assets/fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: "JetBrains Mono Variable"; font-style: normal; font-weight: 100 800; font-display: swap;
-  src: url("/assets/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-/* Every colour is one token, light and dark side by side: light-dark(light, dark). Light is washi paper by day —
-   cream ground, ink text, a vermilion seal for the accent, and dyes for the rest: nando for quantities, matcha for
-   success, brass for a warning, murasaki/nando/shu/ai for the four kinds of media. Its accents are darker than a
-   dark theme's on purpose: the same hues at glowing-on-black lightness fail contrast on cream. Dark is Obsidian's.
-   With nothing chosen the device decides; data-theme on <html> is a choice made in this browser (theme.js applies
-   it before the first paint). --bg has a twin: the light theme-color meta tag in index.html and public.html. */
-:root {
-  color-scheme: light dark;
-  --bg: light-dark(#efe9dc, #1e1e1e);                     /* the page ground (washi: paper) */
-  --page-glow: light-dark(#fbf7ec, transparent);          /* light falling on the top of the page */
-  --page-bg: radial-gradient(1100px 620px at 50% -12%, var(--page-glow) 0%, transparent 62%), var(--bg);
-  --bg-2: light-dark(#fbf8f1, #262626);                   /* a card or panel (paper-card) */
-  --bg-lift: light-dark(#fffdf7, #121212);                /* lifted further: tooltips (paper-lift) */
-  --bg-sunken: light-dark(#e7e0ce, #181818);              /* sidebar, status bar (paper-sunk) */
-  --hover: light-dark(rgba(0, 0, 0, .07), #2f2f2f);       /* the pressed/hover wash (press) */
-  --btn-hover: light-dark(rgba(0, 0, 0, .11), #383838);
-  --border: light-dark(#d8d0bc, #363636);                 /* hairline */
-  --border-soft: light-dark(#d8d0bc, #2c2c2c);
-  --border-strong: light-dark(#bfb59b, #4a4a4a);          /* hairline on hover */
-  --text: light-dark(#24211c, #dadada);                   /* ink */
-  --text-muted: light-dark(#5b564c, #a8a8a8);             /* ink-soft */
-  --text-faint: light-dark(#6f6859, #7d7d7d);             /* ink-mute */
-  --text-strong: light-dark(#24211c, #ececec);
-  --text-hero: light-dark(#24211c, #f4f2fc);
-  --tint: light-dark(#000000, #ffffff);                   /* a wash over a surface: color-mix(… var(--tint) n%, transparent) */
-  --shadow: light-dark(rgba(60, 50, 30, .42), #000000);   /* shadows mix this: warm and soft on paper */
-  --backdrop: light-dark(rgba(36, 33, 28, .42), rgba(0, 0, 0, .6));   /* behind a dialog: ink, thinned */
-  --accent: light-dark(#b23a26, #8a5cf5);                 /* shu, the seal */
-  --accent-hi: light-dark(#9a2f1d, #a68af9);              /* links, the page one is on (shu-2) */
-  --accent-wash: light-dark(color-mix(in srgb, #b23a26 10%, transparent), rgba(138, 92, 245, .14));
-  --selection: light-dark(color-mix(in srgb, #b23a26 22%, transparent), rgba(138, 92, 245, .4));
-  --good: light-dark(#4f6b22, #0ca30c);                   /* matcha */
-  --warning: light-dark(#8a6410, #fab219);                /* brass */
-  --serious: light-dark(#7a5230, #ec835a);                /* kuri */
-  --critical: light-dark(#9a2f1d, #d03b3b);               /* shu-2 */
-  --critical-text: light-dark(#7e2717, #f08a8a);          /* shu-3 */
-  --series-1: light-dark(#5c3d7a, #9085e9);               /* Movie: murasaki */
-  --series-2: light-dark(#236e70, #199e70);               /* Episode: nando */
-  --series-3: light-dark(#b23a26, #d95926);               /* Music: shu */
-  --series-4: light-dark(#2b4570, #3987e5);               /* Other: ai */
-  --single: light-dark(#236e70, #9085e9);                 /* one series, a quantity: nando */
-  --peak: light-dark(#185657, #b49dfb);                   /* the extreme of it (nando-2) */
-  --spark: light-dark(#236e70, #6a5fb0);
-  --alone: light-dark(#6f6859, #5a6275);
-  --grid: light-dark(#e3dcc9, #303030);
-  --axis: light-dark(#c8bfa6, #454545);                   /* guide */
-  --scrollbar: light-dark(#bfb59b, #444444);
-  --separator: light-dark(#bfb59b, #5a5a5a);
-  --knob: light-dark(#fffdf7, #cfcfcf);
-  --theme-sun: light-dark(#b8660a, #8a4b00);      /* the icons in the theme switch's knob, on --knob */
-  --theme-moon: light-dark(#4b3f9e, #3b2f86);
-  --theme-device: light-dark(#5f5a4e, #3a3a3a);
-  --wash-2: light-dark(#e7e0ce, #3a3552);                 /* avatars, meter tracks */
-  --wash-2-text: light-dark(#2b4570, #cfc6f7);            /* ai */
-  --warn-wash: light-dark(color-mix(in srgb, #8a6410 18%, #fbf8f1), #4a3d1a);
-  --crit-wash: light-dark(color-mix(in srgb, #9a2f1d 16%, #fbf8f1), #4a2222);
-  --placeholder: light-dark(#e3dcc9, #303030);            /* gap-empty: absence, not zero */
-  --skeleton: light-dark(#e7e0ce, #313131);
-  --tooltip-bg: var(--bg-lift);
-  --track: light-dark(#e3dcc9, #3a3a3a);
-  --land: light-dark(#e3dcc9, #2b2b2b);
-  --land-edge: light-dark(#d8d0bc, #3d3d3d);
-  /* The wiring board's cables (Tautulli import), Fix Wiring's colours first; deeper by day, so they hold on paper. */
-  --wire-0: light-dark(#c62828, #ff5a5a);
-  --wire-1: light-dark(#1f4fc4, #5b8cff);
-  --wire-2: light-dark(#a87b00, #ffd23f);
-  --wire-3: light-dark(#b3168d, #ff62d0);
-  --wire-4: light-dark(#1d7f45, #47d488);
-  --wire-5: light-dark(#0b7d88, #3fd2de);
-  --wire-6: light-dark(#c45a12, #ff9a3d);
-  --wire-7: light-dark(#6237c0, #a98bff);
-  --wire-edge: light-dark(rgb(40 30 10 / .28), rgb(0 0 0 / .6));
-  --wire-hole: light-dark(#3a342b, #0d0d0d);
-  --land-hot: light-dark(color-mix(in srgb, #5c3d7a 14%, #e3dcc9), #35304d);
-  --land-hot-edge: light-dark(color-mix(in srgb, #5c3d7a 40%, #d8d0bc), #51487a);
-  --heat-0: light-dark(#e3dcc9, #2f2f2f);                 /* charts.js' activity grid: empty, then quiet → busy */
-  --heat-1: light-dark(color-mix(in srgb, #236e70 14%, #fbf8f1), #3a3358);
-  --heat-2: light-dark(color-mix(in srgb, #236e70 30%, #fbf8f1), #4b3f80);
-  --heat-3: light-dark(color-mix(in srgb, #236e70 48%, #fbf8f1), #5e4ba8);
-  --heat-4: light-dark(color-mix(in srgb, #236e70 66%, #fbf8f1), #7459d0);
-  --heat-5: light-dark(color-mix(in srgb, #236e70 84%, #fbf8f1), #8f6ff0);
-  --heat-6: light-dark(#185657, #b49dfb);
-  --rc-heat-0: light-dark(#e3dcc9, rgba(255, 255, 255, .055));   /* the recap's year grid */
-  --rc-heat-1: light-dark(color-mix(in srgb, #236e70 22%, #fbf8f1), #3a2f6b);
-  --rc-heat-2: light-dark(color-mix(in srgb, #236e70 50%, #fbf8f1), #5b47ad);
-  --rc-heat-3: light-dark(#236e70, #8067e0);
-  --rc-heat-4: light-dark(#185657, #b9a5fc);
-  --sans: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --radius: 8px;
-  --radius-sm: 4px;
-  --sidebar-w: 220px;
-  --statusbar-h: 26px;
-  --ease: 150ms ease;
-}
-:root[data-theme="light"] { color-scheme: light; }
-:root[data-theme="dark"] { color-scheme: dark; }
-
-*, *::before, *::after { box-sizing: border-box; }
-html { background: var(--bg); -webkit-text-size-adjust: 100%; scrollbar-color: var(--scrollbar) var(--bg); }
-html.no-scroll { overflow: hidden; }
-body {
-  margin: 0; background: var(--page-bg); background-attachment: fixed; color: var(--text);
-  font: 400 14px/1.5 var(--sans); font-feature-settings: "cv11", "ss03"; -webkit-font-smoothing: antialiased;
-}
-h1, h2, h3, p, ul, ol, dl, dd, figure { margin: 0; }
-ul, ol { padding: 0; list-style: none; }
-a { color: var(--accent-hi); text-decoration: none; }
-a:hover { text-decoration: underline; text-underline-offset: 2px; }
-button, input, select { font: inherit; color: inherit; }
-button { cursor: pointer; }
-img { max-width: 100%; display: block; }
-strong { font-weight: 600; color: var(--text); }
-table { border-collapse: collapse; width: 100%; }
-[hidden] { display: none !important; }
-:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; border-radius: var(--radius-sm); }
-::selection { background: var(--selection); }
+/* The tokens, the fonts and the reset are finui's: /assets/finui.css, linked before this file. */
 
 .mono { font-family: var(--mono); font-size: .92em; font-variant-ligatures: none; }
 .muted { color: var(--text-faint); }
@@ -308,16 +175,16 @@ kbd {
 }
 .btn:hover { background: var(--btn-hover); text-decoration: none; }
 .btn:disabled { opacity: .65; cursor: progress; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-primary:hover { background: #7a4ce6; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-fill); }
+.btn-primary:hover { background: var(--accent-hover); }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
 .btn-ghost:hover { background: var(--hover); color: var(--text); }
 .btn-ghost[aria-disabled="true"] { opacity: .35; cursor: default; }
 .btn-ghost[aria-disabled="true"]:hover { background: transparent; }
 .btn-sm { padding: 4px 9px; min-height: 28px; font-size: 12.5px; }
 .btn-block { width: 100%; }
-.btn-danger { background: var(--critical); border-color: var(--critical); color: #fff; }
-.btn-danger:hover { background: #b93232; }
+.btn-danger { background: var(--critical); border-color: var(--critical); color: var(--on-fill); }
+.btn-danger:hover { background: var(--critical-hover); }
 .btn-danger-text { color: var(--critical-text); }
 
 .input {
@@ -471,7 +338,7 @@ kbd {
 .switch { position: relative; width: 38px; height: 22px; flex: none; padding: 0; border: 1px solid var(--border); border-radius: 99px; background: var(--hover); transition: background var(--ease), border-color var(--ease); }
 .switch-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--knob); box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 30%, transparent); transition: transform var(--ease), background var(--ease); }
 .switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
-.switch[aria-checked="true"] .switch-knob { transform: translateX(16px); background: #fff; }
+.switch[aria-checked="true"] .switch-knob { transform: translateX(16px); background: var(--on-fill); }
 
 /* chips & badges */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1074,7 +941,7 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .item-studios { color: var(--text-faint); font-size: 12.5px; }
 a.chip-link { color: var(--text-muted); }
 a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decoration: none; }
-.fav .icon { color: var(--series-5, #d55181); }
+.fav .icon { color: var(--fav); }
 
 /* server page */
 .chip-like { padding: 2px 10px; min-height: 24px; border: 1px solid var(--border); border-radius: 99px; }
@@ -1298,7 +1165,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .rc-person-photo { width: 100%; border-radius: 12px; filter: saturate(.85); transition: filter var(--ease), transform var(--ease); }
 .rc-person:hover .rc-person-photo { filter: none; transform: translateY(-3px); }
 .rc-person-photo .poster-fallback { font-size: clamp(22px, 3vw, 40px); font-weight: 700; }
-.rc-person-n { position: absolute; z-index: 1; top: 10px; left: 12px; color: #fff; font-size: clamp(15px, 1.8vw, 22px); font-weight: 700; text-shadow: 0 1px 10px rgba(0, 0, 0, .7); }
+.rc-person-n { position: absolute; z-index: 1; top: 10px; left: 12px; color: var(--on-fill); font-size: clamp(15px, 1.8vw, 22px); font-weight: 700; text-shadow: 0 1px 10px var(--picture-shade); }
 .rc-person:first-child .rc-person-n { color: var(--accent-hi); }
 .rc-person-name { margin-top: 12px; font-size: 15px; font-weight: 650; line-height: 1.25; color: var(--text-strong); overflow-wrap: anywhere; }
 .rc-person-sub { margin-top: 4px; color: var(--text-faint); font-size: 11.5px; }
@@ -1609,7 +1476,7 @@ button.ep[aria-disabled="true"]:hover { filter: none; outline: 0; }
   animation: wm-pulse 2.2s ease-out infinite; will-change: transform, opacity; }
 @keyframes wm-pulse { from { transform: translate(-50%, -50%) scale(.45); opacity: .45; } to { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .wm-pulse { animation: none; } }
-.wm-count { fill: #fff; font-family: var(--mono); font-weight: 650; text-anchor: middle; pointer-events: none; }
+.wm-count { fill: var(--on-fill); font-family: var(--mono); font-weight: 650; text-anchor: middle; pointer-events: none; }
 .wm-route { fill: none; stroke: var(--critical-text); stroke-width: 2; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke; pointer-events: none; }
 .wm-route-end { fill: none; stroke: var(--critical-text); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
 .wm-key { width: 10px; height: 10px; border-radius: 50%; flex: none; }

@@ -28,7 +28,7 @@ use crate::{changelog, db, groups, import, pipeline, profile, recap, recent, sec
 
 #[derive(RustEmbed)]
 #[folder = "$CARGO_MANIFEST_DIR/web"]
-struct WebAssets;
+pub(crate) struct WebAssets;
 
 pub fn router(app: App) -> Router {
     let api = Router::new()
@@ -209,6 +209,21 @@ async fn security_headers(req: Request, next: Next) -> Response {
 
 async fn static_handler(uri: Uri) -> Response {
     let path = uri.path().trim_start_matches('/');
+    // finui's styles, every component's file in one answer: one request on the critical path, no build step.
+    if path == "assets/finui.css" {
+        return match crate::finui::served() {
+            Ok((css, etag)) => Response::builder()
+                .header(CONTENT_TYPE, "text/css; charset=utf-8")
+                .header(CACHE_CONTROL, "no-cache")
+                .header("etag", etag)
+                .body(Body::from(css.as_str().to_owned()))
+                .unwrap(),
+            Err(e) => {
+                tracing::error!("finui.css: {e:#}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        };
+    }
     // The public page is a template with holes in it; it is only ever served filled, from `/u/{token}`.
     if let Some(file) = WebAssets::get(path).filter(|_| !path.is_empty() && path != "public.html") {
         let mime = mime_guess::from_path(path).first_or_octet_stream();
