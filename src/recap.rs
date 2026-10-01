@@ -503,20 +503,31 @@ fn top_titles(c: &Connection, w: &Window, item_type: &str) -> Result<Vec<Map<Str
 
 /// The people seen (or, for directors, watched) the most: watch time across every title they are in.
 fn people(c: &Connection, w: &Window, kind: &str) -> Result<Vec<Map<String, Value>>> {
+    // How long each title was watched, added up once; the five; and each one's title out of those sums. Asked the way it
+    // reads — "which of their titles was watched most", for everybody in the year — it walked every title of theirs in
+    // the library against every play of the year: 132 ms of a real recap, and seconds in a big one.
     let mut args = w.args.clone();
+    args.extend(w.args.iter().cloned());
+    args.push(kind.to_string().into());
     args.push(kind.to_string().into());
     rows_json(
         c,
         &format!(
-            "SELECT ip.person_id AS id, MAX(ip.name) AS name, MAX(ip.has_image) AS has_image, COUNT(*) AS plays,
-                    COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT ip.item_id) AS titles,
+            "WITH watched AS MATERIALIZED (
+                SELECT {TITLE_ID} AS item_id, SUM(p.duration_s) AS watch_s FROM playbacks p {wh} GROUP BY 1),
+             five AS (
+                SELECT ip.person_id AS id, MAX(ip.name) AS name, MAX(ip.has_image) AS has_image, COUNT(*) AS plays,
+                       COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT ip.item_id) AS titles
+                FROM playbacks p JOIN item_people ip ON ip.item_id = {TITLE_ID} {wh} AND ip.kind = ?
+                GROUP BY ip.person_id ORDER BY watch_s DESC LIMIT 5)
+             SELECT five.*,
                     (SELECT COALESCE(i.name, 'Unknown title') FROM items i WHERE i.id = (
-                        SELECT ip2.item_id FROM playbacks p JOIN item_people ip2 ON ip2.item_id = {TITLE_ID} {wh}
-                           AND ip2.person_id = ip.person_id AND ip2.kind = ip.kind GROUP BY ip2.item_id ORDER BY SUM(p.duration_s) DESC LIMIT 1)) AS top_title
-             FROM playbacks p JOIN item_people ip ON ip.item_id = {TITLE_ID} {wh} AND ip.kind = ? GROUP BY ip.person_id ORDER BY watch_s DESC LIMIT 5",
+                        SELECT t.item_id FROM watched t JOIN item_people ip2 ON ip2.item_id = t.item_id AND ip2.person_id = five.id AND ip2.kind = ?
+                        ORDER BY t.watch_s DESC LIMIT 1)) AS top_title
+             FROM five ORDER BY watch_s DESC",
             wh = w.wh
         ),
-        &[w.args.clone(), args].concat(),
+        &args,
     )
 }
 
@@ -793,6 +804,80 @@ mod tests {
 
     fn year_of(c: &Connection, user: Option<&str>, year: &str) -> Value {
         build(c, user.map(str::to_string), 0, "", year, None).unwrap()
+    }
+
+    /// The people of a year: who was watched longest, in how many titles, and in which most — counted per title, an
+    /// episode for its show.
+    #[test]
+    fn the_people_of_a_year_are_the_ones_watched_longest_each_with_their_title() {
+        let c = year_db();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, updated_at) VALUES ('s1', 'Series', 'Low Orbit', 1);
+             INSERT INTO item_people(item_id, person_id, kind, name, sort, has_image) VALUES
+               ('s1', 'pa', 'Actor', 'Ada', 0, 1), ('s1', 'pb', 'Actor', 'Ben', 1, 0),
+               ('m1', 'pa', 'Actor', 'Ada', 0, 1), ('m1', 'pc', 'Actor', 'Cy', 1, 0), ('m2', 'pd', 'Director', 'Dee', 0, 0);",
+        )
+        .unwrap();
+        for day in ["2025-03-01", "2025-03-02", "2025-03-03"] {
+            let id = play(&c, "ua", "e1", "Episode", day, 3600, None);
+            c.execute("UPDATE playbacks SET series_id = 's1' WHERE id = ?1", [id]).unwrap();
+        }
+        play(&c, "ua", "m1", "Movie", "2025-04-01", 2 * 3600, None);
+        play(&c, "ua", "m2", "Movie", "2025-04-02", 1800, None);
+        let y = year_of(&c, Some("ua"), "2025");
+        let people = |kind: &str| -> Vec<(String, i64, i64, String, bool)> {
+            y["people"][kind].as_array().unwrap().iter().map(|p| {
+                (p["name"].as_str().unwrap().into(), p["watch_s"].as_i64().unwrap(), p["titles"].as_i64().unwrap(), p["top_title"].as_str().unwrap().into(), p["has_image"].as_bool().unwrap())
+            }).collect()
+        };
+        assert_eq!(people("actors"), vec![
+            ("Ada".into(), 5 * 3600, 2, "Low Orbit".into(), true),
+            ("Ben".into(), 3 * 3600, 1, "Low Orbit".into(), false),
+            ("Cy".into(), 2 * 3600, 1, "Big Buck Bunny".into(), false),
+        ]);
+        assert_eq!(people("directors"), vec![("Dee".into(), 1800, 1, "Sintel".into(), false)]);
+    }
+
+    /// A real year is shows: episodes counted for their show, which no index can find by, and hundreds of actors. The
+    /// top five are found without looking up the favourite title of every one of them — that was a scan of the year
+    /// per actor, and most of what a recap cost (132 ms of a real one, 4 ms without).
+    #[test]
+    fn a_year_of_shows_and_three_thousand_actors_finds_its_five_at_once() {
+        let c = year_db();
+        // Each actor is in their show and in forty films nobody played this year, as actors in a real library are.
+        let tx = c.unchecked_transaction().unwrap();
+        for s in 0..300 {
+            tx.execute("INSERT INTO items(id, type, name, updated_at) VALUES (?1, 'Series', ?1, 1)", [format!("s{s}")]).unwrap();
+            for a in 0..10 {
+                let person = format!("p{s}-{a}");
+                for title in std::iter::once(format!("s{s}")).chain((0..40).map(|f| format!("f{}", (s * 10 + a + f * 7) % 2000))) {
+                    tx.execute("INSERT OR IGNORE INTO item_people(item_id, person_id, kind, name, sort, has_image) VALUES (?1, ?2, 'Actor', ?2, ?3, 0)",
+                        crate::db::rusqlite::params![title, person, a]).unwrap();
+                }
+            }
+        }
+        tx.commit().unwrap();
+        let start = at(&c, "2025-05-01");
+        let tx = c.unchecked_transaction().unwrap();
+        for s in 0..300 {
+            for e in 0..10 {
+                tx.execute(
+                    "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, started_at, ended_at, duration_s)
+                     VALUES ('live', 'ua', 'ua', ?1, 'An episode', 'Episode', ?2, ?3, ?3 + 60, ?4)",
+                    crate::db::rusqlite::params![format!("s{s}e{e}"), format!("s{s}"), start + s * 100 + e, 60 + s],
+                ).unwrap();
+            }
+        }
+        tx.commit().unwrap();
+        let (from, to) = (at(&c, "2025-01-01") - 43_200, at(&c, "2026-01-01") - 43_200);
+        let wh = format!("WHERE {NOT_LIVE_TV}");
+        let w = Window { wh: format!("{wh} AND p.started_at >= ? AND p.started_at < ?"), args: vec![from.into(), to.into()], scope_wh: wh, scope_args: vec![], from, to };
+        let started = std::time::Instant::now();
+        let five = people(&c, &w, "Actor").unwrap();
+        let took = started.elapsed();
+        assert_eq!(five.len(), 5);
+        assert_eq!(five[0]["top_title"], "s299", "the longest-watched show's people come first");
+        assert!(took < std::time::Duration::from_millis(300), "took {took:?}");
     }
 
     #[test]
