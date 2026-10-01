@@ -635,6 +635,16 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     // user_version 32 — A title's original-language name, beside the one Jellyfin shows (2.1.2): Plex, Tautulli or an old
     //      library may know Squid Game only as 오징어 게임, and a title is found by either. Filled by the next library read.
     "ALTER TABLE items ADD COLUMN original_title TEXT;",
+    // user_version 33 — Where the owner located a title the library did not have under its name (2.1.2): plays move
+    //      to it, and anything that comes under the same id again — a re-import — is attached by the choice.
+    r#"
+    CREATE TABLE located (
+        from_id TEXT PRIMARY KEY,           -- the id plays pointed at that the library does not have
+        to_id   TEXT NOT NULL,              -- the title the owner said it is
+        at      INTEGER NOT NULL,
+        by      TEXT                        -- who said so
+    );
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole

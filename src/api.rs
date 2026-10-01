@@ -121,6 +121,9 @@ pub fn router(app: App) -> Router {
         .route("/import/streamystats", post(import_streamystats).layer(DefaultBodyLimit::disable()))
         .route("/import/tautulli", get(tautulli_board).post(tautulli_upload).delete(tautulli_cancel).layer(DefaultBodyLimit::disable()))
         .route("/import/tautulli/run", post(tautulli_run))
+        .route("/library/missing", get(library_missing))
+        .route("/library/missing/{id}/candidates", get(missing_candidates))
+        .route("/library/locate", post(locate_title))
         .route("/backups", get(list_backups).post(create_backup))
         .route("/backups/restore", post(restore_upload).layer(DefaultBodyLimit::disable()))
         .route("/backups/{name}", get(download_backup).delete(delete_backup))
@@ -1062,6 +1065,77 @@ async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req
         );
     });
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
+}
+
+/// `GET /api/library/missing` — every film, video and episode plays point at that the library does not have, each with
+/// the three titles it most likely is.
+async fn library_missing(State(app): State<App>, Manager(_): Manager) -> ApiResult {
+    let missing = app
+        .db
+        .call(|c| {
+            let lib = crate::locate::Library::load(c)?;
+            Ok(crate::locate::missing(c)?
+                .into_iter()
+                .map(|m| {
+                    let suggestions = crate::locate::candidates(&lib, &m, None, 3);
+                    let mut v = serde_json::to_value(&m).unwrap_or_default();
+                    v["suggestions"] = json!(suggestions);
+                    v
+                })
+                .collect::<Vec<_>>())
+        })
+        .await?;
+    Ok(Json(json!({ "missing": missing })))
+}
+
+#[derive(Deserialize)]
+struct CandidatesQuery {
+    q: Option<String>,
+}
+
+/// `GET /api/library/missing/{id}/candidates?q=` — up to eight titles a missing one might be: by its names, or by `q`.
+async fn missing_candidates(State(app): State<App>, Manager(_): Manager, Path(id): Path<String>, Query(q): Query<CandidatesQuery>) -> ApiResult {
+    let found = app
+        .db
+        .call(move |c| {
+            let Some(m) = crate::locate::missing(c)?.into_iter().find(|m| m.id == id) else { return Ok(None) };
+            Ok(Some(crate::locate::candidates(&crate::locate::Library::load(c)?, &m, q.q.as_deref(), 8)))
+        })
+        .await?;
+    let candidates = found.ok_or_else(|| ApiError::not_found("Missing title"))?;
+    Ok(Json(json!({ "candidates": candidates })))
+}
+
+#[derive(Deserialize)]
+struct LocateBody {
+    from: String,
+    to: String,
+}
+
+/// `POST /api/library/locate` with `{"from", "to"}` — the plays of a missing title are of `to`. They move, the choice
+/// is kept for a re-import, and the title's groups are worked out again.
+async fn locate_title(State(app): State<App>, Manager(user): Manager, Json(body): Json<LocateBody>) -> ApiResult {
+    let (window, group_window) = { let s = app.settings(); (s.merge_window_s, s.group_window_s) };
+    let (from, to, by) = (body.from.clone(), body.to.clone(), user.id.clone());
+    let done = app
+        .db
+        .call(move |c| {
+            let tx = c.transaction()?;
+            let done = crate::locate::locate(&tx, &from, &to, &by, window)?;
+            tx.commit()?;
+            if done.is_ok() {
+                groups::detect(c, group_window, Some(&to))?;
+            }
+            Ok(done)
+        })
+        .await?;
+    let moved = done.map_err(|why| match why {
+        crate::locate::Refused::NotMissing => ApiError::not_found("Missing title"),
+        crate::locate::Refused::NoSuchTitle => ApiError::not_found("Title"),
+        crate::locate::Refused::WrongKind => ApiError::bad_request("A play is of a film, a video or an episode, never of a whole show or season"),
+    })?;
+    audit::record(&app, audit::Entry::new("title_located", Actor::from(&user)).target(body.from).detail(json!({ "to": body.to, "plays": moved })));
+    Ok(Json(json!({ "moved": moved })))
 }
 
 /// A history import or a restore is going: nothing may start another, and nothing may swap the file one is reading.

@@ -172,7 +172,7 @@ pub struct Relinked {
 /// Every title plays point at that the library no longer has, stepping from one title to the next through the title
 /// index (`idx_pb_item`) — one lookup per title rather than a read of every play, because this runs at every start and
 /// after every library read and nearly always finds nothing.
-const ORPHANS_SQL: &str = "WITH RECURSIVE t(id) AS (
+pub(crate) const ORPHANS_SQL: &str = "WITH RECURSIVE t(id) AS (
         SELECT (SELECT MIN(item_id) FROM playbacks)
         UNION ALL
         SELECT (SELECT MIN(item_id) FROM playbacks WHERE item_id > t.id) FROM t WHERE t.id IS NOT NULL)
@@ -202,6 +202,13 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
         .query_map([&orphaned], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
         .collect::<Result<_, _>>()?;
     for (old_id, item_type, name, year) in orphans {
+        // The owner said where this one is (`locate`): that, before any rule.
+        if let Some(to) = crate::locate::located(conn, &old_id)? {
+            let (n, dropped) = crate::locate::move_onto(conn, merge_window_s, &old_id, &to)?;
+            (done.titles, done.duplicates_removed) = (done.titles + n, done.duplicates_removed + dropped);
+            done.moved_to.push(to);
+            continue;
+        }
         if let Some(new_id) = find_current(conn, &mut keys, &item_type, &name, year)? {
             let (n, dropped) = move_plays(conn, merge_window_s, &new_id, || {
                 Ok(conn.execute(
@@ -236,6 +243,12 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
         .query_map([&orphaned], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
         .collect::<Result<_, _>>()?;
     for (old_id, series_id, series_name, year, season, episode) in orphans {
+        if let Some(to) = crate::locate::located(conn, &old_id)? {
+            let (n, dropped) = crate::locate::move_onto(conn, merge_window_s, &old_id, &to)?;
+            (done.episodes, done.duplicates_removed) = (done.episodes + n, done.duplicates_removed + dropped);
+            done.moved_to.push(to);
+            continue;
+        }
         let (Some(season), Some(episode)) = (season, episode) else { continue };
         let series_alive: Option<String> = match &series_id {
             Some(id) => conn.query_row("SELECT id FROM items WHERE id = ?1 AND removed = 0", [id], |r| r.get(0)).optional()?,
@@ -287,7 +300,7 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
 /// appeared. One write, so a start killed between the two cannot leave a duplicate behind that no later pass would
 /// look for — once moved, nothing is orphaned any more. A savepoint, because an import or a restore calls this inside
 /// its own transaction. Answers (plays moved, duplicates removed).
-fn move_plays(conn: &Connection, merge_window_s: i64, to: &str, update: impl FnOnce() -> Result<usize>) -> Result<(usize, usize)> {
+pub(crate) fn move_plays(conn: &Connection, merge_window_s: i64, to: &str, update: impl FnOnce() -> Result<usize>) -> Result<(usize, usize)> {
     conn.execute_batch("SAVEPOINT relink")?;
     let done = update().and_then(|moved| Ok((moved, crate::playback::drop_relinked_duplicates(conn, merge_window_s, to)?)));
     match done {

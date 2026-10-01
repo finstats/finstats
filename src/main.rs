@@ -19,6 +19,7 @@ mod jellyfin;
 mod jobs;
 mod keys;
 mod licenses;
+mod locate;
 mod mail;
 mod media;
 mod network;
