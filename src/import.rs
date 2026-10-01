@@ -306,13 +306,25 @@ fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult,
 }
 
 fn import_play(conn: &Connection, d: &Value, res: &mut ImportResult, merge_window_s: i64) -> Result<()> {
+    let imported = match record(conn, d)? {
+        Some(rec) => rec.insert_imported(conn, merge_window_s)?.is_some(),
+        None => false,
+    };
+    match imported {
+        true => res.plays_imported += 1,
+        false => res.plays_skipped += 1,
+    }
+    Ok(())
+}
+
+/// One row of `jf_playback_activity` as a play, by the rules at the top of this file; `None` for a row that cannot
+/// be one (no id, person, item or date). Reads the library only for the type of an item that is not an episode.
+fn record(conn: &Connection, d: &Value) -> Result<Option<PlayRecord>> {
     let (Some(source_id), Some(user_id), Some(np_id)) = (d["Id"].as_str(), d["UserId"].as_str(), d["NowPlayingItemId"].as_str()) else {
-        res.plays_skipped += 1;
-        return Ok(());
+        return Ok(None);
     };
     let Some(ended_at) = d["ActivityDateInserted"].as_str().and_then(parse_ts) else {
-        res.plays_skipped += 1;
-        return Ok(());
+        return Ok(None);
     };
     let duration_s = int(&d["PlaybackDuration"]).unwrap_or(0).max(0);
     let play_state = &d["PlayState"];
@@ -344,7 +356,7 @@ fn import_play(conn: &Connection, d: &Value, res: &mut ImportResult, merge_windo
             })
     };
 
-    let rec = PlayRecord {
+    Ok(Some(PlayRecord {
         source: "jellystat",
         source_id: Some(format!("jellystat:{source_id}")),
         active: false,
@@ -376,12 +388,7 @@ fn import_play(conn: &Connection, d: &Value, res: &mut ImportResult, merge_windo
         pause_count: 0,
         seek_count: 0,
         start_position_s: None,
-    };
-    match rec.insert_imported(conn, merge_window_s)? {
-        Some(_) => res.plays_imported += 1,
-        None => res.plays_skipped += 1,
-    }
-    Ok(())
+    }))
 }
 
 /// Cross-table fix-ups that don't depend on the order tables appear in the backup. What the library
@@ -399,6 +406,7 @@ pub(crate) fn finalize(conn: &Connection) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     use std::path::PathBuf;
 
     /// A backup in a folder of its own, and a fresh database beside it.
@@ -464,6 +472,76 @@ mod tests {
         let again = run(&db, &file, None).unwrap();
         assert_eq!((again.plays_imported, again.plays_skipped), (0, 2), "the same backup twice is once");
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// A play row as Jellystat writes one, with `extra` laid over it.
+    fn play(extra: Value) -> Value {
+        let mut d = json!({ "Id": "p1", "UserId": "AAAA-1111", "UserName": "alice", "NowPlayingItemId": "ITEM-1",
+            "NowPlayingItemName": "Big Buck Bunny", "ActivityDateInserted": "2026-03-01T21:00:00.000Z", "PlaybackDuration": "600" });
+        for (k, v) in extra.as_object().unwrap() {
+            d[k] = v.clone();
+        }
+        d
+    }
+
+    fn library() -> Db {
+        let db = Db::open_in_memory().unwrap();
+        db.conn().unwrap().execute_batch("INSERT INTO items(id, type, name, updated_at) VALUES ('item1', 'MusicVideo', 'Big Buck Bunny', 1)").unwrap();
+        db
+    }
+
+    #[test]
+    fn a_row_without_an_id_a_person_an_item_or_a_date_is_not_a_play() {
+        let db = library();
+        let c = db.conn().unwrap();
+        assert!(record(&c, &play(json!({}))).unwrap().is_some());
+        for (key, value) in [("Id", Value::Null), ("UserId", Value::Null), ("NowPlayingItemId", Value::Null), ("ActivityDateInserted", Value::Null), ("ActivityDateInserted", "yesterday".into())] {
+            assert!(record(&c, &play(json!({ key: value }))).unwrap().is_none(), "{key} = {value}");
+        }
+    }
+
+    /// Jellystat records no type. The library knows the ones it has; anything else is typed by what its stream was.
+    #[test]
+    fn a_title_the_library_does_not_know_is_typed_by_what_its_stream_looked_like() {
+        let db = library();
+        let c = db.conn().unwrap();
+        let video = json!([{ "Type": "Video", "Codec": "h264" }, { "Type": "Audio", "Codec": "aac" }]);
+        let audio = json!([{ "Type": "Audio", "Codec": "flac" }]);
+        let typed = |extra: Value| record(&c, &play(extra)).unwrap().unwrap();
+        assert_eq!(typed(json!({ "MediaStreams": video })).item_type, "MusicVideo", "the library's type, whatever the stream");
+        let elsewhere = |mut extra: Value| {
+            extra["NowPlayingItemId"] = json!("GONE-1");
+            typed(extra)
+        };
+        assert_eq!(elsewhere(json!({ "MediaStreams": video })).item_type, "TvChannel", "a picture with no file behind it is a channel");
+        let film = elsewhere(json!({ "MediaStreams": video, "OriginalContainer": "mkv,webm" }));
+        assert_eq!((film.item_type.as_str(), film.container.as_deref()), ("Movie", Some("mkv")), "with a file it was a film, in the first container named");
+        assert_eq!(elsewhere(json!({ "MediaStreams": audio })).item_type, "Audio");
+        assert_eq!(elsewhere(json!({ "MediaStreams": video, "EpisodeId": "EP-1" })).item_type, "Episode", "an episode id says it all");
+    }
+
+    /// The same remux rule as a live play: a "transcode" that copied both picture and sound is a direct stream.
+    #[test]
+    fn a_transcode_that_copied_picture_and_sound_is_a_direct_stream() {
+        let db = library();
+        let c = db.conn().unwrap();
+        let method = |extra: Value| record(&c, &play(extra)).unwrap().unwrap().play_method;
+        let copied = json!({ "IsVideoDirect": true, "IsAudioDirect": true, "VideoCodec": "h264", "AudioCodec": "aac" });
+        let converted = json!({ "IsVideoDirect": false, "IsAudioDirect": true, "VideoCodec": "h264", "AudioCodec": "aac" });
+        assert_eq!(method(json!({ "PlayMethod": "Transcode", "TranscodingInfo": copied })), "DirectStream");
+        assert_eq!(method(json!({ "PlayMethod": "Transcode", "TranscodingInfo": converted })), "Transcode");
+        assert_eq!(method(json!({ "PlayState": { "PlayMethod": "DirectStream" } })), "DirectStream", "or as the play state says it");
+        assert_eq!(method(json!({})), "DirectPlay", "said nowhere: played directly");
+    }
+
+    #[test]
+    fn a_length_that_cannot_be_one_is_none_at_all() {
+        let db = library();
+        let c = db.conn().unwrap();
+        for length in [json!("-30"), Value::Null, json!("soon")] {
+            let rec = record(&c, &play(json!({ "PlaybackDuration": length }))).unwrap().unwrap();
+            assert_eq!((rec.duration_s, rec.started_at), (0, rec.ended_at), "{length}");
+        }
     }
 
     #[test]
