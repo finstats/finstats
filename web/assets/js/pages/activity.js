@@ -1,4 +1,4 @@
-import { h, icon, debounce, num, mount } from '../dom.js';
+import { h, icon, debounce, num, mount, TRACKERS } from '../dom.js';
 import { api } from '../api.js';
 import { readDays, saveDays, rangeLong, can } from '../state.js';
 import { replaceQuery } from '../router.js';
@@ -15,7 +15,7 @@ const TYPES = [
 ];
 // Which tracker a play came from. Only offered for the ones this history actually holds, which the
 // answer lists: an install that has never imported anything has nothing to choose between.
-const SOURCES = { live: 'finstats', jellystat: 'Jellystat', streamystats: 'Streamystats' };
+const SOURCES = TRACKERS;
 const PER_PAGE = 50;
 
 export const loadActivity = (f, signal) => api.get('/activity', { ...f, per_page: PER_PAGE }, { signal });

@@ -1,6 +1,6 @@
 // Detail modal for one play (GET /api/activity/{id}).
 
-import { h, icon, num, duration, durationExact, dateTime, timeOfDay, clock, bitrate, pct, humanize, episodeCode, mount } from './dom.js';
+import { h, icon, num, duration, durationExact, dateTime, timeOfDay, clock, bitrate, pct, humanize, episodeCode, mount, TRACKERS } from './dom.js';
 import { api, isAbort } from './api.js';
 import { can } from './state.js';
 import { openModal, copyButton, methodBadge, facts, errorState, sk, poster, setBusy, inlineError } from './components.js';
@@ -20,9 +20,8 @@ export function networkChip(isLocal) {
 
 // Where a play came from. Anything but 'live' is history somebody brought with them: one row per
 // play, so there is no timeline behind it and no pause or skip count.
-const SOURCE = { live: 'Recorded by finstats', jellystat: 'Imported from Jellystat', streamystats: 'Imported from Streamystats' };
 const imported = (p) => p.source && p.source !== 'live';
-const sourceName = (p) => SOURCE[p.source] || 'Imported';
+const sourceName = (p) => (!imported(p) ? 'Recorded by finstats' : TRACKERS[p.source] ? `Imported from ${TRACKERS[p.source]}` : 'Imported');
 
 function timeline(p) {
   const events = Array.isArray(p.events) ? p.events : [];

@@ -247,6 +247,10 @@ export const dayLabelYear = (str) => dayfy.format(parseDay(str));
 
 export const pct = (x, digits = 0) => (x == null ? '–' : (x * 100).toFixed(digits) + '%');
 
+/** Where a play came from, by the `source` the server gives it: finstats itself, or a tracker it imports from. One list
+ *  for every page, so a tracker added to finstats is not missing from one of them. */
+export const TRACKERS = { live: 'finstats', jellystat: 'Jellystat', streamystats: 'Streamystats', tautulli: 'Tautulli' };
+
 export function initials(name) {
   const parts = String(name || '?').trim().split(/\s+/).filter(Boolean);
   const a = parts[0]?.[0] || '?';
