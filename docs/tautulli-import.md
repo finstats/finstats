@@ -48,7 +48,7 @@ title that was renamed. A match must be unambiguous, and it is forgiving where c
 - The year may be one off, as catalogues often disagree by a year about when a film came out.
 
 A title known by another name altogether — *Fast & Furious 7* where Jellyfin has *Furious 7* — is
-not guessed at. Those are listed under **Settings → Import → Not in your library**, each with where it most
+not guessed at. Those are listed under **Settings → Unlinked media**, each with where it most
 likely is: press **Locate**, pick the title, and its plays attach. finstats remembers the choice, so importing
 the same backup again attaches it by itself. A play of something not on your server is kept
 under its name, and attached the moment the title arrives.

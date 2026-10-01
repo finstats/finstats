@@ -328,6 +328,7 @@ import, whose server named things differently — films by name first, then epis
 ```jsonc
 {"missing": [{"id": "plex:5", "item_type": "Movie" | "Video" | "Episode", "name": "Star Wars: Episode V - The Empire Strikes Back (1980)",
               "series_name": null, "season": null, "episode": null, "plays": 2, "last_at": 0,
+              "sources": ["tautulli"],      // where its plays came from, in the order Activity's tracker filter lists them
               "suggestions": [ /* up to 3 candidates, likeliest first; see below */ ]}]}
 ```
 

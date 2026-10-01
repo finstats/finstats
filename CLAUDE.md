@@ -289,7 +289,7 @@ grouping every play, took 5 of the 8 seconds of a start on a million plays. Migr
 with its own merge window, for those coming from before the sweep existed; the rule's text is one macro
 (`relinked_duplicates_sql!`) so the statement and the migration cannot drift.
 
-**Locating what a rule cannot find (`locate.rs`, Settings → Import → "Not in your library", 2.1.2).** `relink` attaches
+**Locating what a rule cannot find (`locate.rs`, Settings → Unlinked media, 2.1.2).** `relink` attaches
 only what a name rule finds without guessing; the rest — Plex's "Star Wars: Episode V - The Empire Strikes Back" is
 Jellyfin's "The Empire Strikes Back", TVDB moved an episode into another show's specials — is listed by `missing()` (orphans
 through `relink::ORPHANS_SQL`, films and episodes only) with suggestions from `candidates()`: `fuzzy::Query` scored **both

@@ -275,7 +275,7 @@ In finstats, open **Settings → Import**, find the card for the one you used, a
 wiring board: Plex users on one side, Jellyfin users on the other. Drag a wire from each Plex user to
 who they are now — or click one, then the other. Anybody you leave unwired is not imported, and two
 Plex accounts can go into one person. Films and episodes are matched to your library by name; music
-is left out. Anything it cannot place — a film Plex called something else — waits under **Not in your library**
+is left out. Anything it cannot place — a film Plex called something else — waits under **Settings → Unlinked media**
 with its likeliest match already found, one **Locate** away.
 
 **Ran both?** Import both files. Nothing is counted twice — finstats recognises a play it already
