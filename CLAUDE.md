@@ -336,7 +336,12 @@ version or pushes a fix rather than finding a wiped install. The count a guard i
 Jellyfin's list takes its titles with it (`store_libraries`), since it is never read again. Ordinary churn
 still applies; `FINSTATS_ALLOW_LIBRARY_SHRINK=1` waves a genuine emptying through (and clears a halt loop). After a library read, `backfill_playbacks` links plays to libraries and
 `relink.rs` re-attaches orphaned plays to renamed items (Jellyfin ids derive from the path): provider-id match
-first, then cleaned title + year, episodes by series + S/E number — only when unambiguous.
+first, then the name as written against Jellyfin's name **or its original-language name** (`items.original_title`, migration
+32 — Plex and Tautulli often know a title only by that: 오징어 게임 for Squid Game), then the name cleaned as search cleans it
+(`title_key`: `fuzzy::normalize`, no year in the name, no leading article — "- " and "– " are one), episodes by series + S/E
+number — only when unambiguous. A year may be one off (catalogues disagree: Kingsman is 2014 to Plex and 2015 to Jellyfin)
+and of several within one the exact year wins (`pick`); two off is a remake. The cleaned index (`Keys`) is read once per
+re-link and only when a name as written found nothing, because re-linking runs at every start and after every library read.
 
 **Stats layer (`stats.rs`).** Every query goes through `Scope` → `Cond`: the time window ("last N days" = N full
 local days, so chart buckets and totals agree), user/library filters, `min_play_s`, and the rule that **non-admins

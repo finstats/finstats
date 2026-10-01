@@ -38,7 +38,17 @@ Learned from a real backup rather than from documentation:
 
 With no provider ids to go by, a film is matched to your library by its **title and year**, and an
 episode by its **show and its season and episode number** — the same rule finstats uses to follow a
-title that was renamed. A match must be unambiguous. A play of something not on your server is kept
+title that was renamed. A match must be unambiguous, and it is forgiving where catalogues differ:
+
+- A name matches Jellyfin's title **or its original-language title**, so a show Plex knew as
+  오징어 게임 is found as Squid Game, and a film Plex knew as *Im Westen nichts Neues* as *All Quiet on
+  the Western Front*.
+- Case, accents, punctuation (a hyphen for a dash), a year written into the name — "JoJo's Bizarre
+  Adventure (2012)" — and a leading "The" do not matter.
+- The year may be one off, as catalogues often disagree by a year about when a film came out.
+
+A title known by another name altogether — *Fast & Furious 7* where Jellyfin has *Furious 7* — is
+not guessed at. A play of something not on your server is kept
 under its name, and attached the moment the title arrives.
 
 **Music, clips, photos and Live TV are not imported.** A track's name alone does not say which
