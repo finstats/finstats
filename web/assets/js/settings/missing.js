@@ -1,8 +1,8 @@
-// Settings → Import, "Not in your library": titles plays point at that the library does not have under that name — a Plex
+// Settings → Unlinked media (and a pointer to it from Import): titles plays point at that the library does not have under that name — a Plex
 // history calls a film what Plex called it, a guide moves an episode into the specials — each with where it most likely
 // is, and Locate to say where it is. The choice moves the plays (`POST /library/locate`) and is kept, so the same history
 // imported again attaches by itself. The card is there only while something is missing.
-import { h, icon, num, mount, debounce, episodeCode } from '../dom.js';
+import { h, icon, num, mount, debounce, episodeCode, TRACKERS } from '../dom.js';
 import { api } from '../api.js';
 import { openModal, poster } from '../components.js';
 
@@ -11,13 +11,20 @@ const label = (t) => (t.item_type === 'Episode'
   ? [t.series_name, episodeCode(t.season, t.episode), t.name].filter(Boolean).join(' · ')
   : t.year ? `${t.name} (${t.year})` : t.name);
 
-/** Fill `slot` with the missing titles; `card` is hidden while there are none. Answers `{ refresh }`. */
-export function missingCard(slot, card) {
+/** Where a title's plays came from, in words: "from Tautulli", "from Jellystat and Tautulli". */
+const fromWhere = (m) => {
+  const names = (m.sources || []).map((s) => TRACKERS[s] || s);
+  return names.length ? ` · from ${names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]}` : '';
+};
+
+/** Fill `slot` with the missing titles. With nothing missing, `card` hides — or, given `empty`, says that instead.
+ *  Answers `{ refresh }`. */
+export function missingCard(slot, card, { empty = null } = {}) {
   async function refresh() {
     let list;
     try { list = (await api.get('/library/missing')).missing || []; } catch { list = []; }
-    card.hidden = !list.length;
-    if (!list.length) { mount(slot); return; }
+    card.hidden = !list.length && !empty;
+    if (!list.length) { mount(slot, empty ? h('p', { class: 'locate-done' }, icon('check', 14), empty) : null); return; }
     const films = list.filter((m) => m.item_type !== 'Episode');
     const shows = new Map();
     for (const m of list.filter((x) => x.item_type === 'Episode')) {
@@ -29,7 +36,7 @@ export function missingCard(slot, card) {
       const likely = m.suggestions && m.suggestions[0];
       return h('li', { class: 'locate-row', 'data-missing': m.id },
         h('span', { class: 'locate-what' }, h('span', { class: 'locate-name' }, text),
-          h('span', { class: 'locate-meta' }, `${num(m.plays)} play${m.plays === 1 ? '' : 's'}`,
+          h('span', { class: 'locate-meta' }, `${num(m.plays)} play${m.plays === 1 ? '' : 's'}${fromWhere(m)}`,
             likely ? [' · probably ', h('strong', null, label(likely))] : ' · nothing in the library looks like it')),
         h('button', { type: 'button', class: 'btn btn-sm locate-btn', onClick: () => pick(m, refresh) }, icon('search', 13), 'Locate'));
     };

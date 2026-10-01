@@ -9,7 +9,6 @@ import { can } from '../state.js';
 import { api, uploadRaw } from '../api.js';
 import { card, spinner, inlineError } from '../components.js';
 import { wiringBoard } from './wiring.js';
-import { missingCard } from './missing.js';
 
 // The trackers finstats can take history from.
 export const IMPORTERS = [
@@ -97,18 +96,24 @@ export default {
   entries: IMPORTERS.map((i) => ({ id: `import-${i.key}`, label: i.title, hint: `${i.name} backup upload history tracker` })),
   async render(slot, store) {
     const slots = Object.fromEntries(IMPORTERS.map((i) => [i.key, h('div')]));
-    // What the history has that the library does not, under that name: after the importers, because imports are where
-    // most of it comes from.
-    const missingSlot = h('div');
-    const missingBox = card({ title: 'Not in your library', sub: 'Plays whose title your library calls something else, or no longer has', body: missingSlot, id: 'import-missing' });
-    missingBox.hidden = true;
-    mount(slot, IMPORTERS.map((i) => card({ title: i.title, sub: i.sub, body: slots[i.key], id: `import-${i.key}` })), missingBox);
-    const missing = missingCard(missingSlot, missingBox);
-    // An import that finishes may have brought titles the library does not have, or found some that were missing.
+    // What an import could not match is linked under Settings → Unlinked media: said here while there is any.
+    const pointer = h('div');
+    const pointerBox = card({ title: 'Unlinked media', body: pointer, id: 'import-unlinked' });
+    pointerBox.hidden = true;
+    mount(slot, IMPORTERS.map((i) => card({ title: i.title, sub: i.sub, body: slots[i.key], id: `import-${i.key}` })), pointerBox);
+    async function unlinked() {
+      let n = 0;
+      try { n = ((await api.get('/library/missing')).missing || []).length; } catch { /* nothing to point at */ }
+      pointerBox.hidden = !n;
+      mount(pointer, n ? h('p', { class: 'help' }, `${num(n)} title${n === 1 ? '' : 's'} in your history ${n === 1 ? 'doesn’t' : 'don’t'} match anything in your library — usually a name the other server used. `,
+        h('a', { href: '/settings/unlinked' }, 'Link them under Unlinked media'), '.') : null);
+    }
+    unlinked();
+    // An import that finishes may have left titles that did not match, or matched some that had not.
     let finished = '';
     store.onTasks(() => {
       const now = JSON.stringify(IMPORTERS.map((i) => { const t = store.task(i.task); return t && t.state === 'ok' ? t.finished_at : null; }));
-      if (finished && now !== finished) missing.refresh();
+      if (finished && now !== finished) unlinked();
       finished = now;
     });
 

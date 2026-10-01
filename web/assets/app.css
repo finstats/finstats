@@ -965,6 +965,8 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .locate-opt-name { font-size: 13px; overflow-wrap: anywhere; }
 .locate-opt-kind { font-size: 11.5px; color: var(--text-faint); }
 .locate-none { margin: 8px 0; font-size: 13px; color: var(--text-muted); }
+.locate-done { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 13px; color: var(--text-muted); }
+.locate-done .icon { color: var(--good); }
 @media (prefers-reduced-motion: reduce) { .wire-socket.is-snapped .wire-hole { animation: none; } .wire-plug:hover .wire-nub { transform: none; } }
 @media (max-width: 520px) {
   .wire-board { padding: 10px; }
