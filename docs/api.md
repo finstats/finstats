@@ -320,6 +320,28 @@ for no wire, a Plex user wired twice, or either end naming somebody who is not t
 backup is waiting. The file is removed when the import ends, whatever its outcome, and also at
 start-up and after six hours of waiting.
 
+**Titles the library does not have under that name.** All three need `manage`.
+
+`GET /api/library/missing` → every film, video and episode plays point at that the library lacks — usually from an
+import, whose server named things differently — films by name first, then episodes by show, season and number:
+
+```jsonc
+{"missing": [{"id": "plex:5", "item_type": "Movie" | "Video" | "Episode", "name": "Star Wars: Episode V - The Empire Strikes Back (1980)",
+              "series_name": null, "season": null, "episode": null, "plays": 2, "last_at": 0,
+              "suggestions": [ /* up to 3 candidates, likeliest first; see below */ ]}]}
+```
+
+`GET /api/library/missing/{id}/candidates?q=` → `{"candidates": [{"id", "item_type", "name", "year", "series_name", "season",
+"episode"}]}`, at most 8: without `q`, worked out from its names (fuzzy, either way round, by Jellyfin's original title
+too, and for an episode by its own name wherever a guide moved it); with `q`, every film and episode matching what was
+typed. `404` when nothing is missing under that id.
+
+`POST /api/library/locate` with `{"from": "plex:5", "to": "<item id>"}` → `{"moved": 2}`: the plays of `from` become plays
+of `to`, named, typed and placed as the library has it (a film may be located as a show's special, and the other way
+round), under the same rule for a play the history already has as re-linking. The choice is kept, so plays arriving under
+`from` again — a re-import — are attached by it. `404` when `from` is not missing or `to` is not in the library, `400`
+when `to` is a whole show or season. Recorded in the audit log as `title_located`.
+
 **One import runs at a time**, any kind: they write to the same tables, so whichever is not running
 answers `409` while another is.
 

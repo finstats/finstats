@@ -289,6 +289,18 @@ grouping every play, took 5 of the 8 seconds of a start on a million plays. Migr
 with its own merge window, for those coming from before the sweep existed; the rule's text is one macro
 (`relinked_duplicates_sql!`) so the statement and the migration cannot drift.
 
+**Locating what a rule cannot find (`locate.rs`, Settings → Import → "Not in your library", 2.1.2).** `relink` attaches
+only what a name rule finds without guessing; the rest — Plex's "Star Wars: Episode V - The Empire Strikes Back" is
+Jellyfin's "The Empire Strikes Back", TVDB moved an episode into another show's specials — is listed by `missing()` (orphans
+through `relink::ORPHANS_SQL`, films and episodes only) with suggestions from `candidates()`: `fuzzy::Query` scored **both
+ways round** (search's own direction needs every typed word in the title, which a longer Plex name never is), the original
+title too, and an episode by its own name anywhere (`title_key`), so a moved special is found. The library is read once per
+request (`Library`). The owner picks; `locate()` moves the plays through `relink::move_plays` (the same savepoint and
+duplicate rule) by `move_onto`, which also gives them the target's type and place — a film may be located as an episode,
+since anime films are often a show's special, but never as a whole show — and keeps the choice in `located` (migration 33),
+which `relink_orphans` consults **before any rule**, so a re-import attaches by itself. Not in a backup yet: a lost choice
+is one more click, not lost history.
+
 **`sync_libraries` reads a library twice — every item, then the cast and crew of films and shows only — and only the
 first count may be shown to `trustworthy_removal`.** The two cursors were both called `start`, the second shadowing the
 first, so the guard compared a library's *shows* against its *items*: equal on a film library, 223 against 16,744 on a
