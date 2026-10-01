@@ -10,6 +10,24 @@ Stability something that can no longer crash, halt, leak or lose data, Fixed som
 wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
 
+## [2.1.2] - 2026-10-01
+
+### Added
+- **Import from Tautulli**: bring your Plex history over. Upload Tautulli's database backup — the `.db`, or the `.zip` holding it — under **Settings → Import**; its plays have a place of their own in Activity's *Recorded by* filter.
+- **A wiring board to say who is who**: Plex users on one side, Jellyfin users on the other. Drag a wire from each Plex user to who they are now, or click one and then the other, or use the keyboard. Anybody left unwired is not imported, and two Plex accounts can go into one person.
+- Films and episodes are matched to your library by name — a film by its title and year, an episode by its show and number — and one not on your server yet is kept and attached when it arrives. A resumed viewing is one play; music is not imported.
+- The backup holds Plex's access tokens: finstats never reads them, and removes the file once you import or start over.
+- **Unlinked media** under **Settings → Data**: every title from Tautulli, Jellystat or Streamystats that matches nothing in your library, with where it came from and where it most likely is already found. **Locate** links it from the best guesses or a search — a film can be located as a show's special — and finstats remembers the choice, so the same history imported again links itself. Choices are part of a backup.
+
+### Performance
+- **The recap opens three to five times faster**: the year's most watched actors and directors were worked out by rescanning the year once for every person in it. Measured on a real history, a year went from 0.29 s to 0.09 s and the last 12 months from 0.53 s to 0.12 s.
+
+### Fixed
+- **Imported history finds titles that go by another name**: a play matches a title's original-language name too, so a show Plex or Tautulli knew as 오징어 게임 attaches to Squid Game, and *Im Westen nichts Neues* to *All Quiet on the Western Front*. Your library's original titles are read at its next scan.
+- Names are compared the way search compares them — case, accents, punctuation, a year written into the name, a leading "The" — and a release year may be one off, so "Star Wars: Episode I - The Phantom Menace" finds "… – The Phantom Menace" and a 2014 Kingsman finds the 2015 one. A title known by another name altogether is still never guessed at.
+- A failed Streamystats import or restore was announced in notifications by its internal name.
+- The recap's *Share the year as cards* button and the viewer rank beside it had no space between them.
+
 ## [2.1.1] - 2026-10-01
 
 ### Changed
