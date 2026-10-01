@@ -203,9 +203,10 @@ Any doubt falls back to polling on the next pass, because a play that is never s
 The handshake cannot ask for `profile="PascalCase"` the way every HTTP read does, so `socket.rs` re-cases keys and
 holds the first pushed snapshot against one real `/Sessions` read before a row is written from it.
 
-**One play-row shape, three producers.** `playback.rs::PlayRecord` + `media.rs` (stream/transcode extraction, labels,
-`effective_play_method`) are shared by the live `collector.rs`, the Jellystat `import.rs` and the Streamystats
-`streamystats.rs`, so every source produces identical columns. A fourth tracker is a reader, not new architecture.
+**One play-row shape, four producers.** `playback.rs::PlayRecord` + `media.rs` (stream/transcode extraction, labels,
+`effective_play_method`) are shared by the live `collector.rs`, the Jellystat `import.rs`, the Streamystats
+`streamystats.rs` and the Tautulli `tautulli.rs`, so every source produces identical columns. A fifth tracker is a reader,
+not new architecture.
 The collector inserts a row the moment a play is first seen (`active = 1`), refreshes
 it every 30 s, counts only un-paused time, merges a restart within `merge_window_s` into the same row, and diffs
 consecutive sightings into `playback_events` (pause/seek/track/transcode timeline). **An event is a change, so the two
@@ -240,7 +241,26 @@ counts only where the row also keeps the `runtimeTicks` it is a position in. `is
 backup and means nothing. **Nothing is invented to fill a gap**: an item neither the row nor the library can type is left
 `Unknown`, not guessed. The file is walked with a `DeserializeSeed` rather than loaded, one transaction.
 
-**One rule for a play the history already has (`playback::already_recorded`), shared by both importers and the backup
+**Tautulli import (`tautulli.rs`, `docs/tautulli-import.md`, 2.1.2) is Plex's history, so nothing in it shares an id with
+Jellyfin — and nothing is guessed.** It runs in two steps: `POST /api/import/tautulli` only stores the backup (`.db`, or the
+zip Tautulli's download gives; `unpack` reads the one `.db` out of the central directory, stored or deflated) as
+`tautulli-upload.db` and answers the **wiring board** (`settings/wiring.js`: Plex users left, Jellyfin users right, the owner
+drags a cable from each — or clicks, or Enter and the arrows); `POST …/run` with the wires imports. A Plex user **without a wire
+is not imported** and several may go into one Jellyfin user (`check_wires`: one wire per Plex user; the owner's decisions,
+with every wire starting unplugged — no matching by name). The backup's `users` table holds every Plex user's tokens and e-mail:
+`PLEX_USERS_SQL` reads ids, names and counts only, and the file is removed after the import (whatever its outcome), on cancel,
+at start-up and after six hours (`sweep`). **Titles carry no provider id** (`plex://`, `local://`), so a play is written under
+a stand-in id (`plex:<rating key>`, its show `plex:<grandparent>`) with the names Jellyfin would give it, a film as
+`Title (2008)` so the year travels, and `relink` attaches it during the import's own `finalize` — or at any later library read
+when the title arrives: one matching rule, not two. **A viewing is one `reference_id` and one title**: a resumed play chains its
+rows by `reference_id`, but Plex plays a show's theme while the show is open and Tautulli chains the episode onto that track —
+grouping by reference alone counted those episodes as music. `source_id` is the viewing's first row (`tautulli:<id>`), which
+is its reference everywhere else. **Read every value leniently** (`num`, `text`): Tautulli writes `''` where it has no number
+and some numbers as text, and a strict read failed a whole real import on the first film without an episode number. Music,
+clips, photos and Live TV are counted (`other_media`) and not imported. Learned from a real backup: 1,390 rows, 1,031
+viewings, 721 films and episodes, every one of them imported.
+
+**One rule for a play the history already has (`playback::already_recorded`), shared by every importer and the backup
 restore.** `source_id` stops a file being imported twice and says nothing about the same evening arriving from another
 tracker under another id. So: its own id first, else the same person, the same item, and one of the play's **two ends**
 close enough. **Between** sources that is `merge_window_s` at *either* end, because the trackers disagree about the

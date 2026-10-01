@@ -36,7 +36,7 @@ lightweight alternative to Jellystat and Streamystats: a single small program wi
 built-in database, using **under 100 MB of memory**, where each of those needs around half a gigabyte.
 Nothing else to install, nothing to maintain.
 
-Already using Jellystat or Streamystats? [Bring your history with you](#moving-from-jellystat-or-streamystats) — it takes seconds.
+Already using Jellystat or Streamystats, or coming from Plex with Tautulli? [Bring your history with you](#moving-from-jellystat-streamystats-or-tautulli) — it takes seconds.
 
 ## What you get
 
@@ -252,9 +252,9 @@ Set `TZ` to your own timezone so "today" and "evening" mean what you expect.
 > Inside a container, `localhost` is the container itself. Use your server's address
 > (for example `http://192.168.1.10:8096`) or the Jellyfin container's name.
 
-## Moving from Jellystat or Streamystats
+## Moving from Jellystat, Streamystats or Tautulli
 
-Your history comes with you, from either one.
+Your history comes with you, from any of them.
 
 **Jellystat:**
 
@@ -266,7 +266,16 @@ Your history comes with you, from either one.
 **Streamystats:** open **Settings → Backup & Import**, scroll down to **Backup & Restore** and
 click **Download Backup**.
 
+**Tautulli** (coming from Plex): open **Settings → Import & Backups**, click **Backup Database**, and
+download the newest backup — the `.db` file, or the `.zip` holding it.
+
 In finstats, open **Settings → Import**, find the card for the one you used, and drop the file in.
+
+**From Tautulli you say who is who.** Plex names rarely match Jellyfin's, so the upload becomes a
+wiring board: Plex users on one side, Jellyfin users on the other. Drag a wire from each Plex user to
+who they are now — or click one, then the other. Anybody you leave unwired is not imported, and two
+Plex accounts can go into one person. Films and episodes are matched to your library by name; music
+is left out.
 
 **Ran both?** Import both files. Nothing is counted twice — finstats recognises a play it already
 has, whichever tracker brought it in and whether or not it watched that evening itself.
@@ -275,7 +284,8 @@ Large backups are no problem — a 350 MB file imports in a few seconds — and 
 twice is safe. One thing to know: neither tracker recorded what happens *during* a play, so imported
 history has no pause-and-skip timelines. Everything finstats records from now on does.
 [How Jellystat data is interpreted →](docs/jellystat-import.md) ·
-[How Streamystats data is interpreted →](docs/streamystats-import.md)
+[How Streamystats data is interpreted →](docs/streamystats-import.md) ·
+[How Tautulli data is interpreted →](docs/tautulli-import.md)
 
 ## Settings
 
@@ -388,7 +398,7 @@ problem? [Report it privately](SECURITY.md). Questions go to
 
 - [Contributing](CONTRIBUTING.md) — reporting bugs, what fits the project, running it from source or in a local Docker setup, the rules for a change, pull requests
 - [HTTP API](docs/api.md) — the contract the web UI is built on
-- [How Jellystat data is interpreted](docs/jellystat-import.md) and [how Streamystats data is interpreted](docs/streamystats-import.md)
+- How [Jellystat](docs/jellystat-import.md), [Streamystats](docs/streamystats-import.md) and [Tautulli](docs/tautulli-import.md) data is interpreted
 - [Security model](docs/security.md)
 - [Patch notes](CHANGELOG.md)
 

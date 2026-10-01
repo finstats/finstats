@@ -290,8 +290,38 @@ where `marked_watched` counts rows that were never a play — Jellyfin reported 
 Streamystats wrote a row as long as the whole runtime for a viewing nobody saw. Those are never
 imported. A Streamystats export carries no libraries, items or users of its own.
 
-**One import runs at a time**, either kind: both write to the same tables, so whichever is not
-running answers `409` while the other is.
+**Tautulli** (Plex's history) imports in two steps, because its people are not Jellyfin's: nobody is
+guessed, the owner wires each Plex user to a Jellyfin user. All four need `manage`.
+
+`POST /api/import/tautulli` — **raw request body** is the backup: Tautulli's `.db`, or the `.zip`
+holding it. Nothing is imported: the file waits for its wires (one at a time; a new upload replaces
+it) and the answer is the board:
+
+```jsonc
+{"board": {
+  "plex_users": [{"id": 101, "name": "Robin", "plays": 12, "first_at": 0 | null, "last_at": 0 | null}],
+  // plays: viewings that would come in (films and episodes); a user with none is still listed
+  "jellyfin_users": [{"id": "…", "name": "alice", "has_image": true}]
+}}
+```
+
+Never a Plex token or e-mail address — the backup holds both, and they are never read. `400` for an
+empty file or one that is not a Tautulli database; `409` while an import or a restore runs.
+
+`GET /api/import/tautulli` → `{"board": … | null}`: the board of a backup still waiting for its wires.
+`DELETE /api/import/tautulli` → `{ok:true}`: put it away, removing the file.
+
+`POST /api/import/tautulli/run` with `{"wires": [{"plex_user_id": 101, "jellyfin_user_id": "…"}]}` →
+`202 {ok:true}`, then task `import_tautulli`, whose `result` holds
+`{"plays_imported","plays_skipped","not_wired","other_media","users_wired"}` — `not_wired`: viewings
+of Plex users without a wire, which stay behind; `other_media`: music, clips, photos and Live TV,
+which are not imported. A Plex user may have one wire; several may go into one Jellyfin user. `400`
+for no wire, a Plex user wired twice, or either end naming somebody who is not there; `409` when no
+backup is waiting. The file is removed when the import ends, whatever its outcome, and also at
+start-up and after six hours of waiting.
+
+**One import runs at a time**, any kind: they write to the same tables, so whichever is not running
+answers `409` while another is.
 
 Re-importing the same backup is safe: a play is recognised by the tracker's own id for it and,
 failing that, by the same person watching the same item with either end of the play within
