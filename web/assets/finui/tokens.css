@@ -94,11 +94,15 @@
   --radius-control: 6px;                                  /* a button, a field, a poster */
   --radius-lg: 10px;                                      /* a dialog */
   --radius-pill: 99px;                                    /* chips, badges, toggles, meters: round ends */
+  --density: 1;                                           /* the size of controls and the room in cards, as a factor */
+  --card-shadow: none;                                    /* what lifts a card off the page: nothing, by default */
+  --icon-stroke: 1.75;                                    /* the width an icon is drawn with */
   --sidebar-w: 220px;
   --statusbar-h: 26px;
   --ease: 150ms ease;
   /* Colours that were literals in app.css, as tokens with the values they had. */
   --on-fill: light-dark(#fff, #fff);                     /* text and knobs on a coloured fill or a picture */
+  --on-accent: light-dark(#fff, #fff);                   /* text and knobs on the accent: a light accent takes ink */
   --picture-shade: light-dark(rgba(0, 0, 0, .7), rgba(0, 0, 0, .7));   /* a shadow that lifts --on-fill text off a picture */
   --accent-hover: light-dark(#9a2f1d, #7a4ce6);          /* a primary button under the pointer: shu-2 by day */
   --critical-hover: light-dark(#b93232, #b93232);        /* a danger button under the pointer */

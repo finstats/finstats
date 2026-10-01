@@ -2,7 +2,7 @@
 /* combobox */
 .fui-combobox { position: relative; }
 .fui-combobox__button {
-  display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 4px 9px; max-width: 240px;
+  display: inline-flex; align-items: center; gap: 7px; min-height: calc(var(--density) * 32px); padding: calc(var(--density) * 4px) calc(var(--density) * 9px); max-width: 240px;
   background: var(--bg-sunken); border: 1px solid var(--border-soft); border-radius: calc(var(--radius-control) + 1px); color: var(--text-muted); font-size: 12.5px; font-weight: 500;
 }
 .fui-combobox__button:hover { border-color: var(--border); color: var(--text); }

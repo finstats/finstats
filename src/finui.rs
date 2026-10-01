@@ -52,14 +52,15 @@ pub fn stylesheet() -> anyhow::Result<String> {
     Ok(out)
 }
 
+fn tagged(css: String) -> (std::sync::Arc<String>, String) {
+    use sha2::Digest;
+    let etag = format!("\"{}\"", hex::encode(&sha2::Sha256::digest(css.as_bytes())[..8]));
+    (std::sync::Arc::new(css), etag)
+}
+
 /// `/assets/finui.css`, with its ETag. A release build reads the embed once; a debug build reads the files again
 /// on every request, so an edit shows on the next refresh as it does for every other file.
 pub fn served() -> anyhow::Result<(std::sync::Arc<String>, String)> {
-    fn tagged(css: String) -> (std::sync::Arc<String>, String) {
-        use sha2::Digest;
-        let etag = format!("\"{}\"", hex::encode(&sha2::Sha256::digest(css.as_bytes())[..8]));
-        (std::sync::Arc::new(css), etag)
-    }
     if cfg!(debug_assertions) {
         return Ok(tagged(stylesheet()?));
     }

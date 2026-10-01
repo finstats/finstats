@@ -1,6 +1,6 @@
 /* finui: field. Moved from app.css; the same rules under finui's names. */
 .fui-field__input {
-  width: 100%; padding: 8px 10px; min-height: 36px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text);
+  width: 100%; padding: calc(var(--density) * 8px) calc(var(--density) * 10px); min-height: calc(var(--density) * 36px); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text);
   transition: border-color var(--ease), box-shadow var(--ease);
 }
 .fui-field__input::placeholder { color: var(--text-faint); }
@@ -11,7 +11,7 @@
 .fui-field__input--num { width: 110px; text-align: right; }
 .fui-field__search { position: relative; display: flex; align-items: center; min-width: 200px; flex: 1 1 200px; max-width: 320px; }
 .fui-field__search > .icon { position: absolute; left: 10px; color: var(--text-faint); pointer-events: none; }
-.fui-field__input--search { padding-left: 30px; min-height: 32px; padding-top: 5px; padding-bottom: 5px; font-size: 13px; }
+.fui-field__input--search { padding-left: 30px; min-height: calc(var(--density) * 32px); padding-top: calc(var(--density) * 5px); padding-bottom: calc(var(--density) * 5px); font-size: 13px; }
 .fui-field__input--search::-webkit-search-cancel-button { filter: invert(.6); }
 .fui-field { display: flex; flex-direction: column; gap: 6px; }
 .fui-field__label { font-size: 13px; font-weight: 550; color: var(--text); }
