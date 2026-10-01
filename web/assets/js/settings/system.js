@@ -16,6 +16,7 @@ export default {
     { id: 'outbound', label: 'Outbound connections', hint: 'privacy what finstats reaches hosts telemetry' },
     { id: 'database', label: 'Database', hint: 'size on disk plays items oldest' },
     { id: 'licences', label: 'Licences', hint: 'gpl third-party open source fonts map' },
+    { id: 'components', label: 'Component gallery', hint: 'FinUI finui components gallery design system create customize preset theme' },
   ],
   async render(slot, store) {
     const outboundSlot = h('div', { class: 'net-stack' }, sk.rows(3));
@@ -26,7 +27,10 @@ export default {
       // finstats' own licence and every third-party one, on their own page: it is half a megabyte
       // of licence text, which belongs where somebody goes looking for it, not in a settings card.
       card({ title: 'Licences', sub: 'GNU GPL v3, on open-source Rust crates, two fonts and public-domain map data', id: 'licences',
-        body: button({ href: '/licenses' }, icon('log', 14), 'Third-party licences', icon('chevronRight', 14)) }));
+        body: button({ href: '/licenses' }, icon('log', 14), 'Third-party licences', icon('chevronRight', 14)) }),
+      // FinUI is its own project: its gallery and FinUI create are a static site of its own, not a page of finstats.
+      card({ title: 'Components', sub: 'FinUI, the components this interface is built from: every one in both themes, and FinUI create to make them yours', id: 'components',
+        body: button({ href: 'https://finstats.github.io/finui/', target: '_blank', rel: 'noopener noreferrer' }, icon('layers', 14), 'FinUI', icon('external', 14)) }));
 
     function paintDb() {
       const d = store.tasks && store.tasks.db;
