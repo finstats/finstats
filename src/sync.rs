@@ -412,9 +412,9 @@ pub fn upsert_item(conn: &Connection, library_id: &str, it: &Value, now: i64) ->
         "INSERT INTO items(id, library_id, type, name, series_id, season_id, series_name, index_number, parent_index_number,
             album, album_artist, runtime_s, production_year, premiere_date, date_created, community_rating, official_rating,
             genres, overview, image_tag, backdrop_tag, container, path, size_bytes, bitrate,
-            video_codec, width, height, video_range, audio_codec, audio_channels, provider_ids, studios, bit_depth, framerate, audio_languages, subtitle_languages, removed, updated_at)
+            video_codec, width, height, video_range, audio_codec, audio_channels, provider_ids, studios, bit_depth, framerate, audio_languages, subtitle_languages, original_title, removed, updated_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23,
-            ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?33, ?34, ?35, ?36, ?37, ?38, 0, ?32)
+            ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?33, ?34, ?35, ?36, ?37, ?38, ?39, 0, ?32)
          ON CONFLICT(id) DO UPDATE SET library_id = excluded.library_id, type = excluded.type, name = excluded.name,
             series_id = excluded.series_id, season_id = excluded.season_id, series_name = excluded.series_name,
             index_number = excluded.index_number, parent_index_number = excluded.parent_index_number,
@@ -428,7 +428,8 @@ pub fn upsert_item(conn: &Connection, library_id: &str, it: &Value, now: i64) ->
             video_range = excluded.video_range, audio_codec = excluded.audio_codec,
             audio_channels = excluded.audio_channels, provider_ids = excluded.provider_ids, studios = excluded.studios,
             bit_depth = excluded.bit_depth, framerate = excluded.framerate,
-            audio_languages = excluded.audio_languages, subtitle_languages = excluded.subtitle_languages, removed = 0, updated_at = excluded.updated_at",
+            audio_languages = excluded.audio_languages, subtitle_languages = excluded.subtitle_languages, original_title = excluded.original_title,
+            removed = 0, updated_at = excluded.updated_at",
     )?
     .execute(params![
         norm_id(id),
@@ -469,6 +470,7 @@ pub fn upsert_item(conn: &Connection, library_id: &str, it: &Value, now: i64) ->
         framerate,
         crate::media::track_languages(&source["MediaStreams"], "Audio"),
         crate::media::track_languages(&source["MediaStreams"], "Subtitle"),
+        opt_str(&it["OriginalTitle"]),
     ])?;
     Ok(true)
 }
@@ -1209,6 +1211,20 @@ mod tests {
 
     /// The library guard counts what a read stored, and an item without an id stores nothing: a page of
     /// items in keys finstats cannot read must count as an empty read, not a full one.
+    /// A title's original-language name is kept beside Jellyfin's, so a history that knew it only by that name finds it.
+    #[test]
+    fn a_title_keeps_its_original_name() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let original = |c: &Connection| -> Option<String> { c.query_row("SELECT original_title FROM items WHERE id = 's1'", [], |r| r.get(0)).unwrap() };
+        upsert_item(&c, "shows", &json!({ "Id": "s1", "Name": "Squid Game", "OriginalTitle": "오징어 게임", "Type": "Series" }), 100).unwrap();
+        assert_eq!(original(&c).as_deref(), Some("오징어 게임"));
+        upsert_item(&c, "shows", &json!({ "Id": "s1", "Name": "Squid Game", "OriginalTitle": " ", "Type": "Series" }), 200).unwrap();
+        assert_eq!(original(&c), None, "a read that says none says none");
+    }
+
     #[test]
     fn an_item_finstats_cannot_read_is_not_counted_as_read() {
         let c = Connection::open_in_memory().unwrap();

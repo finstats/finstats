@@ -1035,7 +1035,7 @@ mod tests {
     #[test]
     fn the_migration_marks_what_is_missing_from_the_library_as_it_is() {
         let c = Connection::open_in_memory().unwrap();
-        let at = crate::db::MIGRATIONS.len() - 1;
+        let at = crate::db::MIGRATIONS.iter().position(|m| m.contains("ADD COLUMN missing")).expect("the watchlist's missing column");
         for m in &crate::db::MIGRATIONS[..at] {
             c.execute_batch(m).unwrap();
         }

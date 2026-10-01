@@ -632,6 +632,9 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     ALTER TABLE watchlist ADD COLUMN arrived_at INTEGER;
     UPDATE watchlist SET missing = NOT EXISTS (SELECT 1 FROM items i WHERE i.id = watchlist.item_id AND i.removed = 0);
     "#,
+    // user_version 32 — A title's original-language name, beside the one Jellyfin shows (2.1.2): Plex, Tautulli or an old
+    //      library may know Squid Game only as 오징어 게임, and a title is found by either. Filled by the next library read.
+    "ALTER TABLE items ADD COLUMN original_title TEXT;",
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole
