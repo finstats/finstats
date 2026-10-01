@@ -18,6 +18,7 @@ const KIND_LABEL = {
   backup_made: 'Backup written', backup_restored: 'Backup restored', backup_deleted: 'Backup deleted', backup_downloaded: 'Backup downloaded',
   task_run: 'Ran a task', task_schedule_changed: 'Changed a task’s schedule', import_started: 'Import started', import_finished: 'Import finished', play_deleted: 'Deleted a play', title_located: 'Located a missing title',
   alert_resolved: 'Resolved an alert', alert_reopened: 'Reopened an alert',
+  finding_dismissed: 'Dismissed a library finding', finding_undismissed: 'Brought back a library finding',
 };
 const OUTCOME = { failed: ['sev-critical', 'alert', 'Failed'], refused: ['sev-warning', 'alert', 'Refused'] };
 
@@ -48,6 +49,8 @@ function detailText(e) {
     case 'title_located': parts.push(`${num(d.plays || 0)} play${d.plays === 1 ? '' : 's'} moved`); break;
     case 'alert_resolved': parts.push(e.target === 'all' ? `${num(d.resolved || 0)} alerts` : `alert ${e.target}`); if (d.muted) parts.push('muted'); break;
     case 'alert_reopened': parts.push(`alert ${e.target}`); break;
+    case 'finding_dismissed': parts.push(e.target || ''); if (d.note) parts.push(d.note); break;
+    case 'finding_undismissed': parts.push(e.target || ''); break;
     default: break;
   }
   return parts.filter(Boolean).join(' · ');

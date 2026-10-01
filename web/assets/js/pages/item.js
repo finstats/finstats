@@ -2,7 +2,7 @@ import { h, icon, num, bytes, bitrate, duration, durationExact, durEl, relEl, da
 import { api, imgItem } from '../api.js';
 import { readDays, saveDays, can } from '../state.js';
 import { replaceQuery } from '../router.js';
-import { card, chartCard, filterBar, dataView, sk, poster, avatar, chip, statTile, playsTable, emptyState, facts } from '../components.js';
+import { card, chartCard, filterBar, dataView, sk, poster, avatar, chip, statTile, playsTable, emptyState, facts, openInJellyfin } from '../components.js';
 import { retentionChart, retentionTable, simpleColumns, simpleColumnsTable } from '../charts.js';
 import { activityCard } from '../widgets.js';
 import { openPlayModal } from '../playmodal.js';
@@ -270,8 +270,7 @@ function seasons(list) {
 /** Open in Jellyfin, and the watchlist toggle: for a film or a show itself, for an episode or a season its show (a list
  *  holds films and shows). The row is left out when neither applies. */
 function itemActions(it) {
-  const open = it.jellyfin_link ? h('a', { class: 'btn btn-primary open-in-jellyfin', href: it.jellyfin_link, target: '_blank', rel: 'noopener noreferrer' },
-    icon('play', 14), 'Open in Jellyfin') : null;
+  const open = openInJellyfin(it.jellyfin_link);
   const keep = watchable(it.type) ? watchToggle({ item_id: it.id })
     : (it.type === 'Episode' || it.type === 'Season') && it.series_id ? watchToggle({ item_id: it.series_id }, { ofShow: true }) : null;
   return open || keep ? h('p', { class: 'item-open' }, open, keep) : null;

@@ -1,9 +1,10 @@
 import { h, icon, num, bytes, durEl, relEl, relTime, dateTime } from '../dom.js';
 import { api, soft, imgItem } from '../api.js';
-import { readDays, saveDays } from '../state.js';
+import { readDays, saveDays, can } from '../state.js';
 import { replaceQuery } from '../router.js';
 import { pageHeader, card, filterBar, dataView, sk, emptyState, topList, poster } from '../components.js';
 import { activityCard, libraryInsights } from '../widgets.js';
+import { KINDS as HEALTH_KINDS } from './health.js';
 
 const KIND = { movies: 'Movies', tvshows: 'Shows', music: 'Music', musicvideos: 'Music videos', homevideos: 'Home videos', books: 'Books', boxsets: 'Collections', mixed: 'Mixed' };
 const KIND_ICON = { movies: 'film', tvshows: 'play', music: 'activity' };
@@ -30,7 +31,10 @@ const loadLibraries = (days, signal) => api.get('/libraries', { days }, { signal
 const loadLibrary = (id, days, signal) => api.get(`/libraries/${id}`, { days }, { signal });
 const loadMakeup = (libraryId, signal) => soft(api.get('/library/insights', libraryId ? { library_id: libraryId } : null, { signal }));
 export const prefetchLibraries = ({ query, signal }) => [() => loadLibraries(readDays(query), signal), () => loadMakeup(null, signal)];
-export const prefetchLibrary = ({ params, query, signal }) => [() => loadLibrary(params.id, readDays(query), signal), () => loadMakeup(params.id, signal)];
+// Library health is for those who may see the server; for anyone else the page asks nothing about it.
+const loadHealth = (libraryId, signal) => soft(api.get('/library/health', { library_id: libraryId }, { signal }));
+export const prefetchLibrary = ({ params, query, signal }) => [() => loadLibrary(params.id, readDays(query), signal), () => loadMakeup(params.id, signal),
+  ...(can('see_server') ? [() => loadHealth(params.id, signal)] : [])];
 
 export function librariesPage(ctx) {
   ctx.title('Libraries');
@@ -97,8 +101,27 @@ export function libraryPage(ctx) {
     },
   });
   ctx.root.append(h('a', { class: 'back-link', href: '/libraries' }, icon('chevronLeft', 14), 'Libraries'), headerSlot,
-    filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view, makeupSlot(ctx, id));
+    filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view, healthSlot(ctx, id), makeupSlot(ctx, id));
   dv.load();
+}
+
+/** "7 things to look at": this library's share of Library health, leading to it. Nothing at all when there is nothing,
+ *  or for someone who may not see the server. */
+function healthSlot(ctx, libraryId) {
+  if (!can('see_server')) return null;
+  const slot = h('div');
+  dataView({
+    container: slot, signal: ctx.signal,
+    skeleton: () => h('div'),
+    fetch: () => loadHealth(libraryId, ctx.signal),
+    render: (d) => {
+      if (!d || !d.total) return null;
+      const kinds = d.kinds.filter((k) => k.count).map((k) => `${num(k.count)} ${(HEALTH_KINDS[k.kind] || [k.kind])[0].toLowerCase()}`);
+      return card({ cls: 'health-card', title: 'Library health', body: h('p', null,
+        h('a', { href: `/server/health?library_id=${encodeURIComponent(libraryId)}` }, `${num(d.total)} ${d.total === 1 ? 'thing' : 'things'} to look at`), `: ${kinds.join(', ')}.`) });
+    },
+  }).load();
+  return slot;
 }
 
 export function itemGrid(items) {

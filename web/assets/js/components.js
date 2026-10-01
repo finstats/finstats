@@ -374,6 +374,14 @@ export function poster(id, name, { w = 120, cls = '', kind = 'primary' } = {}) {
   return box;
 }
 
+/** "Open in Jellyfin": the title's own page there, in a new tab. Null without a link (a title Jellyfin no longer has).
+ *  `compact` is the icon alone, for a row of a list, named for screen readers and on hover. */
+export function openInJellyfin(link, { compact = false } = {}) {
+  if (!link) return null;
+  if (compact) return h('a', { class: 'icon-btn open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Open in Jellyfin', title: 'Open in Jellyfin' }, icon('external', 15));
+  return h('a', { class: 'btn btn-primary open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer' }, icon('play', 14), 'Open in Jellyfin');
+}
+
 export function avatar(id, name, { size = 28, hasImage = true } = {}) {
   const box = h('span', { class: 'avatar', style: { width: size + 'px', height: size + 'px', fontSize: Math.max(10, size * 0.38) + 'px' }, 'aria-hidden': 'true' });
   const fallback = () => mount(box, initials(name));

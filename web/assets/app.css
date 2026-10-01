@@ -524,6 +524,11 @@ kbd {
 .tile-value { font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -.02em; color: var(--text-strong); white-space: nowrap; }
 .tile-foot { display: flex; align-items: center; gap: 7px; font-size: 12px; min-height: 18px; flex-wrap: wrap; }
 .tile-vs { color: var(--text-faint); }
+/* A tile that is also a choice (Library health's kinds): pressed is the list below it. */
+.tile-pick { font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+.tile-pick:hover { border-color: var(--border); background: var(--hover); }
+.tile-pick[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tile-pick.is-quiet .tile-value { color: var(--text-faint); }
 .delta { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 11.5px; color: var(--text); }
 .delta.up .icon { color: var(--good); }
 .delta.down .icon { color: var(--serious); }
@@ -1990,3 +1995,17 @@ a.wl-poster:hover .poster, a.wl-poster:focus-visible .poster { outline: 2px soli
 .up-row .wl { flex: none; }
 .palette-opt .wl { margin-left: auto; flex: none; }
 .palette-opt .wl-toggle { width: 26px; height: 26px; }
+
+/* Library health (Server → Library health) */
+.health-tiles { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.health-tiles .tile-foot { min-height: 34px; align-items: flex-start; }
+.health-what { min-width: 220px; max-width: 460px; }
+.health-what > p { margin: 0; }
+.health-files { display: grid; gap: 10px; margin-top: 8px; }
+.health-files .facts { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px 14px; }
+.health-sub { margin: 0 0 4px; font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
+.health-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0 0; padding: 0; list-style: none; }
+.health-aside { margin: 6px 0 0; display: flex; gap: 5px; align-items: baseline; font-size: 12.5px; color: var(--text-muted); }
+.health-actions { white-space: nowrap; text-align: right; }
+.health-actions > * + * { margin-left: 4px; }
+.health-card .card-body p { margin: 0; }

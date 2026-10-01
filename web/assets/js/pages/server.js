@@ -9,6 +9,7 @@ import { plainTable } from '../tables.js';
 import { reveal, pickSection, sectionNav, sectionLayout } from '../sections.js';
 import { logView, prefetchEvents } from './events.js';
 import { auditView, prefetchAudit } from './audit.js';
+import { healthView, prefetchHealth } from './health.js';
 import { isAdmin } from '../state.js';
 
 const RESULT = {
@@ -20,13 +21,21 @@ const RESULT = {
 
 // Shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
 const loadServer = (signal) => api.get('/server', null, { signal });
-export const prefetchServer = (c) => (c.params && c.params.section === 'log' ? prefetchEvents(c) : c.params && c.params.section === 'audit' ? prefetchAudit(c) : [() => loadServer(c.signal)]);
+export const prefetchServer = (c) => {
+  const section = c.params && c.params.section;
+  if (section === 'log') return prefetchEvents(c);
+  if (section === 'audit') return prefetchAudit(c);
+  if (section === 'health') return prefetchHealth(c);
+  return [() => loadServer(c.signal)];
+};
 
 const SECTIONS = [
   { key: 'overview', label: 'Overview', sub: 'Version, system and storage', icon: 'server' },
   { key: 'jobs', label: 'Jobs', sub: 'What Jellyfin is doing, live', icon: 'clock' },
   { key: 'devices', label: 'Devices', sub: 'Every device that has signed in', icon: 'monitor' },
   { key: 'plugins', label: 'Plugins', sub: 'What is installed on Jellyfin', icon: 'layers' },
+  // Not the image's HEALTHCHECK: what is wrong with the files, found by comparing them with their neighbours.
+  { key: 'health', label: 'Library health', sub: 'Holes in seasons, copies, thin files and seasons that differ, found by comparing each file with its neighbours', icon: 'gauge' },
   { key: 'log', label: 'Log', sub: 'Jellyfin’s own activity log: sign-ins, failed logins, playback, tasks', icon: 'log' },
   // finstats' own doings, for administrators: it names who changed what.
   { key: 'audit', label: 'Audit', sub: 'What changed in finstats, and who did it', icon: 'shield', visible: () => isAdmin() },
@@ -298,9 +307,9 @@ export default function serverPage(ctx) {
   }
 
   ctx.root.append(headerSlot, sectionLayout(sectionNav('/server', visible, section.key, 'Server sections'), view));
-  if (section.key === 'log' || section.key === 'audit') {
-    // The logs are their own requests with their own filters; the server details only name the page.
-    view.append(...(section.key === 'log' ? logView(ctx) : auditView(ctx)));
+  if (section.key === 'log' || section.key === 'audit' || section.key === 'health') {
+    // The logs and Library health are their own requests with their own filters; the server details only name the page.
+    view.append(...(section.key === 'log' ? logView(ctx) : section.key === 'audit' ? auditView(ctx) : healthView(ctx)));
     loadServer(ctx.signal).then((d) => { if (!ctx.signal.aborted) paintHeader(d); }).catch(() => {});
   } else dv.load();
   if (section.key === 'jobs') {
