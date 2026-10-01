@@ -1047,13 +1047,17 @@ fn language_coverage(c: &Connection, item_type: &str, id: &str) -> Result<Option
     Ok(Some(json!({ "episodes": total, "audio": audio, "subtitles": subtitles })))
 }
 
+/// Where people open Jellyfin: the address an administrator gave, else the one finstats connects to.
+pub(crate) fn jellyfin_base(app: &App) -> Option<String> {
+    Some(app.settings().jellyfin_public_url.trim().to_string())
+        .filter(|u| !u.is_empty())
+        .or_else(|| app.config.read().unwrap().as_ref().map(|c| c.url.clone()))
+}
+
 pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<String>, Query(q): Query<FilterQuery>) -> ApiResult {
     let id = db::norm_id(&id);
     let (caller, min_play) = (user.id.clone(), app.settings().min_play_s.max(120));
-    // Where people open Jellyfin: the address an administrator gave, else the one finstats connects to.
-    let jellyfin_base = Some(app.settings().jellyfin_public_url.trim().to_string())
-        .filter(|u| !u.is_empty())
-        .or_else(|| app.config.read().unwrap().as_ref().map(|c| c.url.clone()));
+    let jellyfin_base = jellyfin_base(&app);
     let out = scoped(&app, &user, &q, move |c, scope| {
         let mut requested: Option<Value> = None;
         let item = one_json(

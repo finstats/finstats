@@ -6,10 +6,16 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
+use axum::Json;
+use axum::extract::{Query, State};
+use serde::Deserialize;
 use serde_json::{Value, json};
 
-use crate::db::rusqlite::{Connection, OptionalExtension, params};
+use crate::auth::{Manager, ServerViewer};
+use crate::db::rusqlite::{Connection, OptionalExtension, params, params_from_iter, types::Value as SqlValue};
 use sha2::{Digest, Sha256};
+
+use crate::state::{ApiError, ApiResult, App};
 
 /// One live item, as much of it as the rules read.
 #[derive(Debug, Clone, Default)]
@@ -184,12 +190,12 @@ pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
     tx.execute_batch("DELETE FROM health_findings; DELETE FROM health_libraries;")?;
     {
         let mut row = tx.prepare("INSERT INTO health_findings(key, kind, item_id, title, evidence, fingerprint, wasted_bytes, found_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)")?;
-        let mut lib = tx.prepare("INSERT OR IGNORE INTO health_libraries(library_id, key) VALUES (?1, ?2)")?;
+        let mut lib = tx.prepare("INSERT OR IGNORE INTO health_libraries(key, library_id) VALUES (?1, ?2)")?;
         for f in &found {
             let at = first.get(&f.key).copied().unwrap_or(now);
             row.execute(params![f.key, f.kind, f.item_id, f.title, f.evidence.to_string(), f.fingerprint, f.wasted_bytes, at])?;
             for l in &f.libraries {
-                lib.execute(params![l, f.key])?;
+                lib.execute(params![f.key, l])?;
             }
         }
     }
@@ -207,9 +213,6 @@ pub fn after_changes(conn: &mut Connection, now: i64) -> Result<Option<usize>> {
     recompute(conn, now).map(Some)
 }
 
-/// A finding `f` that is dismissed: the owner set it aside as it is now.
-pub const DISMISSED_SQL: &str = "EXISTS (SELECT 1 FROM health_dismissed d WHERE d.key = f.key AND d.fingerprint = f.fingerprint)";
-
 /// Sets a finding aside as it stands. `false` when there is no such finding.
 pub fn dismiss(conn: &Connection, key: &str, note: Option<&str>, by: &str, now: i64) -> Result<bool> {
     let Some(fingerprint) = conn.query_row("SELECT fingerprint FROM health_findings WHERE key = ?1", [key], |r| r.get::<_, String>(0)).optional()? else { return Ok(false) };
@@ -225,6 +228,204 @@ pub fn dismiss(conn: &Connection, key: &str, note: Option<&str>, by: &str, now: 
 /// Brings a dismissed finding back. `false` when it was not dismissed.
 pub fn undismiss(conn: &Connection, key: &str) -> Result<bool> {
     Ok(conn.execute("DELETE FROM health_dismissed WHERE key = ?1", [key])? > 0)
+}
+
+// ---------------------------------------------------------------- read
+
+/// Every kind of finding, in the order a page shows them.
+pub const KINDS: [&str; 8] = ["gap", "season_drift", "episode_drift", "copies", "versions", "thin", "dub", "unidentified"];
+/// Findings in one page of a list.
+pub const PAGE_SIZE: i64 = 25;
+/// What a list may be sorted by; anything else is the default order.
+const SORTS: [(&str, &str); 4] = [("title", "f.title"), ("wasted", "f.wasted_bytes"), ("found", "f.found_at"), ("kind", "f.kind")];
+
+/// Which findings a list shows.
+#[derive(Debug, Clone, Default)]
+pub struct Listing {
+    pub kind: Option<String>,
+    pub library_id: Option<String>,
+    /// The ones set aside, instead of the ones still to look at.
+    pub dismissed: bool,
+    pub sort: Option<String>,
+    pub dir: Option<String>,
+    pub page: i64,
+}
+
+/// The WHERE of a list or a count over `health_findings f` joined to its dismissal `d`.
+fn listing_where(l: &Listing) -> (String, Vec<SqlValue>) {
+    let mut clauses = vec![if l.dismissed { "d.key IS NOT NULL" } else { "d.key IS NULL" }.to_string()];
+    let mut args: Vec<SqlValue> = vec![];
+    if let Some(k) = l.kind.as_deref().filter(|k| !k.is_empty()) {
+        clauses.push("f.kind = ?".into());
+        args.push(k.to_string().into());
+    }
+    if let Some(lib) = l.library_id.as_deref().filter(|k| !k.is_empty()) {
+        clauses.push("f.key IN (SELECT key FROM health_libraries WHERE library_id = ?)".into());
+        args.push(crate::db::norm_id(lib).into());
+    }
+    (clauses.join(" AND "), args)
+}
+
+/// The findings, each with its dismissal when the owner set it aside as it is now.
+const FINDINGS_FROM: &str = "FROM health_findings f LEFT JOIN health_dismissed d ON d.key = f.key AND d.fingerprint = f.fingerprint";
+
+/// One page of findings, in `order`.
+fn listing_sql(l: &Listing, order: &str) -> (String, Vec<SqlValue>) {
+    let (wh, mut args) = listing_where(l);
+    args.push(PAGE_SIZE.into());
+    args.push(((l.page.max(1) - 1) * PAGE_SIZE).into());
+    let sql = format!(
+        "SELECT f.key, f.kind, f.item_id, f.title, f.evidence, f.wasted_bytes, f.found_at, i.production_year, COALESCE(i.series_id, f.item_id), COALESCE(i.removed, 1),
+                d.note, d.at, d.by, d.key IS NOT NULL,
+                (SELECT json_group_array(json_object('id', l.library_id, 'name', lb.name)) FROM health_libraries l LEFT JOIN libraries lb ON lb.id = l.library_id WHERE l.key = f.key)
+         {FINDINGS_FROM} LEFT JOIN items i ON i.id = f.item_id
+         WHERE {wh} ORDER BY {order} LIMIT ? OFFSET ?"
+    );
+    (sql, args)
+}
+
+/// A page of findings, with the evidence as JSON and an "Open in Jellyfin" link when `jellyfin` is where people open it.
+/// Nothing in it is about plays or people: who dismissed a finding is the only name.
+pub fn list(conn: &Connection, l: &Listing, jellyfin: Option<&str>) -> Result<Value> {
+    let (wh, args) = listing_where(l);
+    let total: i64 = conn.query_row(&format!("SELECT COUNT(*) {FINDINGS_FROM} WHERE {wh}"), params_from_iter(args.iter()), |r| r.get(0))?;
+    let order = crate::stats::order_by(&SORTS, l.sort.as_deref(), l.dir.as_deref(), "f.title, f.key");
+    let (sql, args) = listing_sql(l, &order);
+    let mut stmt = conn.prepare(&sql)?;
+    let items = stmt
+        .query_map(params_from_iter(args.iter()), |r| {
+            let parse = |raw: Option<String>| raw.and_then(|t| serde_json::from_str::<Value>(&t).ok()).unwrap_or(Value::Null);
+            let item_id: String = r.get(2)?;
+            let removed: bool = r.get(9)?;
+            Ok(json!({
+                "key": r.get::<_, String>(0)?, "kind": r.get::<_, String>(1)?, "item_id": item_id, "title": r.get::<_, String>(3)?,
+                "evidence": parse(r.get(4)?), "wasted_bytes": r.get::<_, Option<i64>>(5)?, "found_at": r.get::<_, i64>(6)?,
+                "year": r.get::<_, Option<i64>>(7)?, "image_item_id": r.get::<_, String>(8)?, "removed": removed,
+                "note": r.get::<_, Option<String>>(10)?, "dismissed_at": r.get::<_, Option<i64>>(11)?, "dismissed_by": r.get::<_, Option<String>>(12)?,
+                "dismissed": r.get::<_, bool>(13)?, "libraries": parse(r.get(14)?),
+                "jellyfin_link": jellyfin.filter(|_| !removed).map(|b| crate::jellyfin::web_link(b, &item_id)),
+            }))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(json!({ "total": total, "page": l.page.max(1), "page_size": PAGE_SIZE, "items": items }))
+}
+
+/// How many findings of each kind there are to look at, how many are set aside, and the space copies spend twice.
+pub fn summary(conn: &Connection, library_id: Option<&str>) -> Result<Value> {
+    let all = Listing { library_id: library_id.map(String::from), ..Default::default() };
+    let (mut wh, args) = listing_where(&all);
+    wh = wh.replacen("d.key IS NULL", "1", 1);
+    let mut counts: BTreeMap<String, (i64, i64, i64)> = BTreeMap::new();
+    let sql = format!(
+        "SELECT f.kind, COALESCE(SUM(d.key IS NULL), 0), COALESCE(SUM(d.key IS NOT NULL), 0), COALESCE(SUM(CASE WHEN d.key IS NULL THEN f.wasted_bytes END), 0)
+         {FINDINGS_FROM} WHERE {wh} GROUP BY f.kind"
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    for row in stmt.query_map(params_from_iter(args.iter()), |r| Ok((r.get::<_, String>(0)?, (r.get(1)?, r.get(2)?, r.get(3)?))))? {
+        let (k, v) = row?;
+        counts.insert(k, v);
+    }
+    let kinds: Vec<Value> = KINDS
+        .iter()
+        .map(|k| {
+            let (count, dismissed, wasted) = counts.get(*k).copied().unwrap_or_default();
+            json!({ "kind": k, "count": count, "dismissed": dismissed, "wasted_bytes": wasted })
+        })
+        .collect();
+    let computed_at = crate::db::get_setting(conn, "health_computed_at")?.and_then(|v| v.parse::<i64>().ok());
+    Ok(json!({
+        "computed_at": computed_at,
+        "total": counts.values().map(|c| c.0).sum::<i64>(),
+        "wasted_bytes": counts.values().map(|c| c.2).sum::<i64>(),
+        "kinds": kinds,
+    }))
+}
+
+// ---------------------------------------------------------------- HTTP
+
+/// Who may set a finding aside: somebody who manages finstats and may read the finding in the first place.
+pub fn may_dismiss(perms: &crate::auth::Perms) -> bool {
+    perms.manage && perms.see_server
+}
+
+/// A note on a dismissal is a line, not a document.
+const NOTE_MAX: usize = 500;
+
+#[derive(Deserialize)]
+pub struct SummaryQuery {
+    library_id: Option<String>,
+}
+
+/// `GET /api/library/health?library_id=` — how many findings of each kind, and the space copies spend twice.
+pub async fn get_summary(State(app): State<App>, ServerViewer(_): ServerViewer, Query(q): Query<SummaryQuery>) -> ApiResult {
+    let library = q.library_id.filter(|l| !l.is_empty());
+    Ok(Json(app.db.call(move |c| summary(c, library.as_deref())).await?))
+}
+
+#[derive(Deserialize)]
+pub struct FindingsQuery {
+    kind: Option<String>,
+    library_id: Option<String>,
+    dismissed: Option<String>,
+    sort: Option<String>,
+    dir: Option<String>,
+    page: Option<i64>,
+}
+
+/// `GET /api/library/health/findings?kind=&library_id=&dismissed=&sort=&dir=&page=` — one page of findings.
+pub async fn get_findings(State(app): State<App>, ServerViewer(_): ServerViewer, Query(q): Query<FindingsQuery>) -> ApiResult {
+    let l = Listing {
+        kind: q.kind,
+        library_id: q.library_id,
+        dismissed: matches!(q.dismissed.as_deref(), Some("1" | "true")),
+        sort: q.sort,
+        dir: q.dir,
+        page: q.page.unwrap_or(1),
+    };
+    let jellyfin = crate::stats::jellyfin_base(&app);
+    Ok(Json(app.db.call(move |c| list(c, &l, jellyfin.as_deref())).await?))
+}
+
+#[derive(Deserialize)]
+pub struct DismissBody {
+    key: String,
+    note: Option<String>,
+}
+
+/// `POST /api/library/health/dismiss` with `{"key", "note"}` — set a finding aside as it stands.
+pub async fn post_dismiss(State(app): State<App>, Manager(user): Manager, Json(body): Json<DismissBody>) -> ApiResult {
+    if !may_dismiss(&user.perms) {
+        return Err(ApiError::not_permitted("see the server"));
+    }
+    let note = body.note.map(|n| n.trim().to_string()).filter(|n| !n.is_empty());
+    if note.as_ref().is_some_and(|n| n.chars().count() > NOTE_MAX) {
+        return Err(ApiError::bad_request(format!("A note is at most {NOTE_MAX} characters")));
+    }
+    let (key, by, said) = (body.key.clone(), user.name.clone(), note.clone());
+    let done = app.db.call(move |c| dismiss(c, &key, said.as_deref(), &by, crate::db::now())).await?;
+    if !done {
+        return Err(ApiError::not_found("Finding"));
+    }
+    crate::audit::record(&app, crate::audit::Entry::new("finding_dismissed", crate::audit::Actor::from(&user)).target(body.key).detail(json!({ "note": note })));
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[derive(Deserialize)]
+pub struct UndismissBody {
+    key: String,
+}
+
+/// `POST /api/library/health/undismiss` with `{"key"}` — bring a dismissed finding back.
+pub async fn post_undismiss(State(app): State<App>, Manager(user): Manager, Json(body): Json<UndismissBody>) -> ApiResult {
+    if !may_dismiss(&user.perms) {
+        return Err(ApiError::not_permitted("see the server"));
+    }
+    let key = body.key.clone();
+    if !app.db.call(move |c| undismiss(c, &key)).await? {
+        return Err(ApiError::not_found("Dismissed finding"));
+    }
+    crate::audit::record(&app, crate::audit::Entry::new("finding_undismissed", crate::audit::Actor::from(&user)).target(body.key));
+    Ok(Json(json!({ "ok": true })))
 }
 
 // ---------------------------------------------------------------- gaps
@@ -1140,7 +1341,8 @@ mod tests {
     }
 
     fn dismissed(c: &crate::db::rusqlite::Connection) -> Vec<String> {
-        c.prepare(&format!("SELECT f.key FROM health_findings f WHERE {DISMISSED_SQL} ORDER BY 1")).unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect()
+        let set_aside = list(c, &Listing { dismissed: true, page: 1, ..Default::default() }, None).unwrap();
+        set_aside["items"].as_array().unwrap().iter().map(|f| f["key"].as_str().unwrap().to_string()).collect()
     }
 
     #[test]
@@ -1227,6 +1429,92 @@ mod tests {
         recompute(&mut c, 200).unwrap();
         println!("recompute over 25,000 episodes and 5,000 films: {n} findings, {first:?} first, {:?} again", started.elapsed());
         assert!(first < std::time::Duration::from_secs(2));
+        let started = std::time::Instant::now();
+        let s = summary(&c, None).unwrap();
+        let page = list(&c, &Listing { kind: Some("copies".into()), sort: Some("wasted".into()), page: 1, ..Default::default() }, None).unwrap();
+        let all = list(&c, &Listing { page: 1, ..Default::default() }, None).unwrap();
+        let answered = started.elapsed();
+        println!("summary and two pages: {answered:?} ({} findings, {} copies)", s["total"], page["total"]);
+        assert_eq!(all["total"], s["total"]);
+        assert!(answered < std::time::Duration::from_millis(100));
+    }
+
+    #[test]
+    fn the_summary_counts_each_kind_and_the_space_copies_take() {
+        let mut c = stocked();
+        recompute(&mut c, 100).unwrap();
+        let all = summary(&c, None).unwrap();
+        let kind = |s: &Value, k: &str| s["kinds"].as_array().unwrap().iter().find(|x| x["kind"] == k).cloned().unwrap();
+        assert_eq!(all["kinds"].as_array().unwrap().len(), KINDS.len(), "every kind, so a page can show a quiet one");
+        assert_eq!((kind(&all, "copies")["count"].as_i64(), kind(&all, "copies")["wasted_bytes"].as_i64()), (Some(1), Some(3_000_000_000)));
+        assert_eq!((all["total"].as_i64(), all["wasted_bytes"].as_i64(), all["computed_at"].as_i64()), (Some(2), Some(3_000_000_000), Some(100)));
+        let shows = summary(&c, Some("shows")).unwrap();
+        assert_eq!((kind(&shows, "copies")["count"].as_i64(), kind(&shows, "gap")["count"].as_i64()), (Some(0), Some(1)));
+        dismiss(&c, "copies:bbb-a", None, "alice", 110).unwrap();
+        let after = summary(&c, None).unwrap();
+        assert_eq!((kind(&after, "copies")["count"].as_i64(), kind(&after, "copies")["dismissed"].as_i64(), after["wasted_bytes"].as_i64()), (Some(0), Some(1), Some(0)));
+    }
+
+    #[test]
+    fn the_list_is_filtered_paged_and_sorted_on_the_server() {
+        let mut c = generated();
+        recompute(&mut c, 100).unwrap();
+        let q = |kind: Option<&str>, library: Option<&str>, sort: Option<&str>, page: i64| Listing {
+            kind: kind.map(String::from), library_id: library.map(String::from), dismissed: false, sort: sort.map(String::from), dir: None, page,
+        };
+        let gaps = list(&c, &q(Some("gap"), None, None, 1), None).unwrap();
+        assert_eq!(gaps["total"].as_i64(), Some(39), "every 13th of 500 shows has a hole");
+        assert_eq!(gaps["items"].as_array().unwrap().len(), PAGE_SIZE as usize);
+        let first = &gaps["items"][0];
+        assert_eq!((first["kind"].as_str(), first["title"].as_str(), first["item_id"].as_str()), (Some("gap"), Some("Show 0"), Some("show0000")));
+        assert_eq!(first["evidence"]["missing"], serde_json::json!([[4, 4]]), "evidence is JSON, not text");
+        assert_eq!(first["libraries"], serde_json::json!([{ "id": "shows", "name": null }]));
+        assert_eq!(first["dismissed"], false);
+        let second = list(&c, &q(Some("gap"), None, None, 2), None).unwrap();
+        assert_eq!(second["items"].as_array().unwrap().len(), 39 - PAGE_SIZE as usize);
+
+        let copies = list(&c, &q(Some("copies"), None, Some("wasted"), 1), None).unwrap();
+        let wasted: Vec<i64> = copies["items"].as_array().unwrap().iter().map(|i| i["wasted_bytes"].as_i64().unwrap()).collect();
+        assert!(!wasted.is_empty() && wasted.windows(2).all(|w| w[0] >= w[1]), "largest first: {wasted:?}");
+        let sneaky = list(&c, &Listing { sort: Some("f.key; DROP TABLE items".into()), ..q(Some("copies"), None, None, 1) }, None).unwrap();
+        assert_eq!(sneaky["total"], copies["total"], "an unknown sort is the default order");
+
+        let odd = list(&c, &q(Some("thin"), Some("films"), None, 1), Some("https://jellyfin.example.com")).unwrap();
+        assert!(odd["total"].as_i64().unwrap() > 0);
+        assert_eq!(odd["items"][0]["jellyfin_link"].as_str(), Some(format!("https://jellyfin.example.com/web/#/details?id={}", odd["items"][0]["item_id"].as_str().unwrap()).as_str()));
+        assert_eq!(list(&c, &q(Some("thin"), Some("shows"), None, 1), None).unwrap()["total"], 0);
+
+        dismiss(&c, "gap:show0000:2", Some("never aired"), "alice", 110).unwrap();
+        let set_aside = list(&c, &Listing { dismissed: true, ..q(None, None, None, 1) }, None).unwrap();
+        assert_eq!(set_aside["total"], 1);
+        assert_eq!((set_aside["items"][0]["note"].as_str(), set_aside["items"][0]["dismissed_by"].as_str()), (Some("never aired"), Some("alice")));
+        assert_eq!(list(&c, &q(Some("gap"), None, None, 1), None).unwrap()["total"], 38);
+    }
+
+    #[test]
+    fn a_page_of_findings_is_read_by_index() {
+        let mut c = generated();
+        recompute(&mut c, 100).unwrap();
+        let plan = |l: &Listing| -> String {
+            let (sql, args) = listing_sql(l, "f.key");
+            let sql = format!("EXPLAIN QUERY PLAN {sql}");
+            let mut stmt = c.prepare(&sql).unwrap();
+            stmt.query_map(crate::db::rusqlite::params_from_iter(args.iter()), |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect::<Vec<_>>().join(" | ")
+        };
+        let by_kind = plan(&Listing { kind: Some("gap".into()), library_id: None, dismissed: false, sort: None, dir: None, page: 1 });
+        assert!(by_kind.contains("idx_health_kind"), "{by_kind}");
+        let by_library = plan(&Listing { kind: Some("gap".into()), library_id: Some("shows".into()), dismissed: false, sort: None, dir: None, page: 1 });
+        assert!(by_library.contains("idx_health_kind") || by_library.contains("idx_health_libraries_library"), "{by_library}");
+        assert!(!by_library.contains("SCAN health_libraries") && !by_kind.contains("SCAN f"), "{by_kind} / {by_library}");
+    }
+
+    #[test]
+    fn setting_a_finding_aside_takes_managing_and_seeing_the_server() {
+        use crate::auth::Perms;
+        assert!(may_dismiss(&Perms::ALL));
+        assert!(may_dismiss(&Perms { manage: true, see_server: true, ..Default::default() }));
+        assert!(!may_dismiss(&Perms { manage: true, ..Default::default() }), "a finding one may not read is not one to set aside");
+        assert!(!may_dismiss(&Perms { see_server: true, see_everyone: true, see_network: true, ..Default::default() }));
     }
 
     #[test]

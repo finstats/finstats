@@ -1588,3 +1588,62 @@ It is **only ever somebody's own**: it goes to that person's own destinations an
 and an administrator's included, and it is left out of `GET /api/notifications/history` for everyone but that person.
 It is ticked on no destination until its owner ticks it. The catalogue in `GET /api/notifications` marks such kinds
 `own_only: true`; the page offers them only to a destination of one's own.
+
+## Library health 🔒 *see server details*
+
+What is wrong with a file only shows beside its neighbours. finstats works the findings out after every library read
+and every look for metadata changes, never on a request, and only reports: nothing here changes anything in Jellyfin.
+Nothing in an answer is about plays or people; the one name is who dismissed a finding.
+
+`GET /api/library/health?library_id=` →
+
+```jsonc
+{
+  "computed_at": 1767225600,        // null until the first library read of 2.2.0 has worked them out
+  "total": 12,                      // to look at, dismissed ones left out
+  "wasted_bytes": 3000000000,       // what copies of the same thing spend twice, dismissed ones left out
+  "kinds": [ {"kind": "gap", "count": 3, "dismissed": 1, "wasted_bytes": 0} ]   // every kind, in the order below
+}
+```
+
+`GET /api/library/health/findings?kind=&library_id=&dismissed=&sort=&dir=&page=` → one page of 25:
+`{"total", "page", "page_size", "items": [Finding]}`. `dismissed=1` lists the ones set aside instead of the ones to look at.
+`sort` is `title` (default), `wasted`, `found` or `kind`; anything else is the default order.
+
+```jsonc
+// Finding
+{
+  "key": "gap:{series id}:1",       // kind and subjects: the same at every recompute
+  "kind": "gap", "item_id": "…",    // where a click leads: the film, the show, or the episode
+  "title": "Low Orbit", "year": 2020, "image_item_id": "…", "removed": false,
+  "libraries": [{"id": "…", "name": "Shows"}],
+  "evidence": { … },                // by kind, below
+  "wasted_bytes": null,             // copies only
+  "found_at": 1767225600,           // first found; a rescan keeps it
+  "dismissed": false, "note": null, "dismissed_at": null, "dismissed_by": null,
+  "jellyfin_link": "https://jellyfin.example.com/web/#/details?id=…"
+}
+```
+
+| `kind` | `evidence` |
+|---|---|
+| `gap` | `{season, from, to, files, missing: [[4, 5], [8, 8]]}` — episode numbers missing between a season's lowest and highest file. A file of several episodes counts whole; season 0 and episodes without a number are left out, and nothing is said about the end of a season. |
+| `season_drift` | `{differs: ["resolution", "range", "codec"], seasons: [{season, episodes, resolution, range, codec}]}` — each season's usual look; one finding per show. |
+| `episode_drift` | `{season, episode, differs, resolution?, season_resolution?, range?, season_range?}` — a file unlike its own season (a season of at least 4 files, 75% of them alike). Codec mixes inside a season are not findings. |
+| `copies` | a film: `{files: [File], resolutions}`; a show: `{episodes, examples: [{season, episode, files: [File]}]}` (at most 20) — the same thing twice in one resolution class. `wasted_bytes` is everything but the largest copy. |
+| `versions` | a film: `{files: [File], resolutions: ["4K", "1080p"]}`; a show: `{episodes, resolutions}` — copies in different classes, often deliberate; never counted as waste. |
+| `thin` | a film: `{resolution, codec, bitrate_bps, threshold_bps}`; a season: `{season, files, of, lowest_bps, highest_bps, episodes: [{id, episode, resolution, codec, bitrate_bps, threshold_bps}]}`. Only the first version of an item is stored, so an item with several is judged by its first. |
+| `dub` | `{language, full: [1, 2], none: [3], partial: [{season, episodes, of}]}` — an audio language that covers some seasons fully and others not at all. |
+| `unidentified` | `{type, year, path}` — a film or show with no provider id at all. |
+
+`File` = `{id, library_id, resolution, codec, size_bytes, path, season, episode}`. Resolution classes are `4K`, `1080p`,
+`720p` and `SD`, by width (a cropped 1920×800 is 1080p) or height (a pillarboxed 1440×1080 is too). Copies follow the
+rule the watchlist and Pipeline use: films or shows of one type that share a TMDB, TVDB or IMDb id, unless the ids
+among them lead to different titles; a show's episodes are copies through it, by season and episode number.
+
+`POST /api/library/health/dismiss` with `{"key", "note"}` → `{"ok": true}`; `404` when there is no such finding, `400`
+for a note over 500 characters. `POST /api/library/health/undismiss` with `{"key"}` → `{"ok": true}`; `404` when it was
+not dismissed. Both need *manage finstats* **and** *see server details*. A dismissal holds while the values behind the
+finding do: a replaced file or a re-encoded season brings it back if it is still true. Recorded in the audit log as
+`finding_dismissed` and `finding_undismissed`. Dismissals travel with a backup and a restore keeps one this database
+already has; the findings themselves are worked out again and are not in a backup.
