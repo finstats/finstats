@@ -6,6 +6,17 @@ use serde_json::Value;
 use crate::db::rusqlite::{Connection, named_params, params};
 use crate::media::Streams;
 
+/// Where play `p` stopped, in seconds, the one rule every page uses: where it was when it ended, for a play that
+/// knows — finstats' own, and a Streamystats play that kept its runtime — and otherwise how long it ran, the play
+/// taken to have started at 0:00 (Jellystat keeps a length, not a place).
+pub const STOP_S: &str = "COALESCE(p.position_s, p.duration_s)";
+
+/// Whether that stop was measured rather than worked out from the length.
+pub const STOP_MEASURED: &str = "(p.position_s IS NOT NULL)";
+
+/// How far play `p` got through its title `i`, from 0 to 1, by `STOP_S` and the runtime the play or the title has.
+pub const PLAY_FRAC: &str = "MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0))";
+
 #[derive(Debug, Clone, Default)]
 pub struct PlayRecord {
     pub source: &'static str,

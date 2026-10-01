@@ -13,16 +13,13 @@ use serde_json::{Value, json};
 use crate::auth::AuthUser;
 use crate::db::rusqlite::{Connection, params};
 use crate::db::{self};
+use crate::playback::PLAY_FRAC;
 use crate::recap::longest_run;
 use crate::state::{ApiError, ApiResult, App};
 
 /// Watched this much of an episode and it counts as seen. Lenient on purpose: skipped credits
 /// and imported plays (which only know time watched) should not leave holes in a season.
 const SEEN_AT: f64 = 0.8;
-
-/// How far one play `p` got through its title `i`, from 0 to 1: where it stopped, or — for an imported play, which keeps
-/// a length and not a place — how long it ran, against the runtime.
-const PLAY_FRAC: &str = "MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0))";
 
 /// The one reading of "seen", for an episode and a film alike: a play that went far enough, then Jellyfin's played
 /// flag, then a mark by hand; otherwise begun if it was ever played. (state, which source said seen).

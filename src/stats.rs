@@ -13,6 +13,7 @@ use crate::db::rusqlite::types::ValueRef;
 use crate::db::rusqlite::{Connection, OptionalExtension, Row, params_from_iter};
 use crate::db::{self, SqlValue};
 use crate::media;
+use crate::playback::{PLAY_FRAC, STOP_MEASURED, STOP_S};
 use crate::state::{ApiError, ApiResult, App};
 
 const BOOL_COLS: [&str; 11] = ["active", "is_admin", "is_disabled", "removed", "has_image", "item_exists", "has_backdrop", "is_local", "is_favorite", "is_actor", "is_director"];
@@ -496,7 +497,7 @@ fn decorate_play(mut m: Map<String, Value>, see_network: bool, detail: bool) -> 
     let audio = media::audio_label(text(&m, "audio_codec").as_deref(), num(&m, "audio_channels"), text(&m, "audio_language").as_deref());
     let subtitle = media::subtitle_label(if detail { text(&m, "subtitle_codec") } else { None }.as_deref(), text(&m, "subtitle_language").as_deref());
 
-    // Live rows know where playback stopped. Imported rows only know how long it ran.
+    // `playback::STOP_S`, in Rust: where it stopped for a play that knows, otherwise how long it ran.
     let completion = match (num(&m, "runtime_s").filter(|r| *r > 0), num(&m, "position_s"), num(&m, "duration_s")) {
         (Some(rt), Some(pos), _) => Some((pos as f64 / rt as f64).clamp(0.0, 1.0)),
         (Some(rt), None, Some(d)) => Some((d as f64 / rt as f64).clamp(0.0, 1.0)),
@@ -637,8 +638,8 @@ const ACTIVITY_SORTS: [(&str, &str); 8] = [
     ("user", "COALESCE(u.name, p.user_name) COLLATE NOCASE"),
     ("title", "COALESCE(p.series_name, p.item_name) COLLATE NOCASE"),
     ("watched", "p.duration_s"),
-    // The same rule as the `completion` field: where it stopped, or for imported plays how long it ran.
-    ("progress", "MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0))"),
+    // The same rule as the `completion` field (`playback::PLAY_FRAC`).
+    ("progress", PLAY_FRAC),
     ("client", "p.client COLLATE NOCASE"),
     ("method", "p.play_method"),
     ("ip", "p.remote_ip"),
@@ -1243,8 +1244,7 @@ fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<
         return Ok(Value::Null);
     }
     let mut stmt = c.prepare(&format!(
-        "SELECT MAX(0, MIN(?, CASE WHEN p.source = 'live' AND p.position_s IS NOT NULL THEN p.position_s ELSE COALESCE(p.duration_s, 0) END)) AS stop_s,
-                (p.source = 'live' AND p.position_s IS NOT NULL) AS measured
+        "SELECT MAX(0, MIN(?, COALESCE({STOP_S}, 0))) AS stop_s, {STOP_MEASURED} AS measured
          FROM playbacks p {}",
         ended.sql()
     ))?;
@@ -1299,7 +1299,7 @@ fn series_seasons(c: &Connection, cond: &Cond, series_id: &str, series_removed: 
              FROM items e
              LEFT JOIN items sn ON sn.id = e.season_id
              LEFT JOIN (SELECT p.item_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, COUNT(DISTINCT p.user_id) AS users,
-                               SUM(COALESCE(p.runtime_s, 0) > 0 AND CASE WHEN p.source = 'live' AND p.position_s IS NOT NULL THEN p.position_s ELSE p.duration_s END >= 0.9 * p.runtime_s) AS finished
+                               SUM(COALESCE(p.runtime_s, 0) > 0 AND {STOP_S} >= 0.9 * p.runtime_s) AS finished
                         FROM playbacks p {} GROUP BY p.item_id) s ON s.item_id = e.id
              WHERE e.series_id = ? AND e.type = 'Episode' AND (e.removed = 0 OR {series_removed})
              ORDER BY COALESCE(e.parent_index_number, 9999), COALESCE(e.index_number, 9999), e.name",
@@ -1822,7 +1822,7 @@ fn insight_completion(c: &Connection, scope: &Scope) -> Result<Vec<Value>> {
     let comp = one_json(
         c,
         &format!(
-            "WITH r AS (SELECT MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / p.runtime_s) AS f FROM playbacks p {})
+            "WITH r AS (SELECT MIN(1.0, {STOP_S} * 1.0 / p.runtime_s) AS f FROM playbacks p {})
              SELECT COALESCE(SUM(f < 0.1), 0) AS a, COALESCE(SUM(f >= 0.1 AND f < 0.5), 0) AS b,
                     COALESCE(SUM(f >= 0.5 AND f < 0.9), 0) AS c, COALESCE(SUM(f >= 0.9), 0) AS d FROM r",
             video.sql()
@@ -2265,6 +2265,28 @@ mod tests {
         assert_eq!(curve[25], 0.75, "at fifty minutes the imported one is still counted");
         assert_eq!(curve[26], 0.5);
         assert_eq!(curve[50], 0.5, "two reached the end");
+    }
+
+    /// A Streamystats play keeps where it stopped when the row also has its runtime, and the activity list, the
+    /// profile and the completion chart all stop it there; the curve and an episode's "finished" stopped it at its
+    /// length instead, so one play was two different plays depending on the page.
+    #[test]
+    fn a_play_that_kept_where_it_stopped_stops_there_on_every_page() {
+        let c = conn();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, series_id, parent_index_number, index_number, runtime_s, updated_at) VALUES
+               ('s1', 'Series', 'Sintel: the show', NULL, NULL, NULL, NULL, 1), ('e1', 'Episode', 'One', 's1', 1, 1, 6000, 1);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, started_at, ended_at, duration_s, position_s, runtime_s) VALUES
+               ('streamystats', 'u1', 'alice', 'e1', 'One', 'Episode', 's1', 1000, 7000, 6000, 1200, 6000),
+               ('live',         'u2', 'bob',   'e1', 'One', 'Episode', 's1', 1000, 7000, 6000, 6000, 6000),
+               ('jellystat',    'u3', 'cat',   'e1', 'One', 'Episode', 's1', 1000, 7000, 6000, NULL, 6000);",
+        )
+        .unwrap();
+        let ins = item_insights(&c, &everyone().cond().with("p.item_id = ?", "e1".to_string()), Some(6000)).unwrap();
+        assert_eq!((ins["measured"].as_i64(), ins["estimated"].as_i64()), (Some(2), Some(1)), "a kept position is a measured stop");
+        assert_eq!(ins["curve"][11], json!(0.667), "and the curve loses alice at twenty minutes");
+        let seasons = series_seasons(&c, &everyone().cond().with("p.series_id = ?", "s1".to_string()), "s1", false).unwrap();
+        assert_eq!(seasons[0]["episodes"][0]["finished"], 2, "bob, and cat's imported length; not alice, who stopped at twenty minutes");
     }
 
     #[test]

@@ -13,6 +13,7 @@ use serde_json::{Map, Value, json};
 use crate::auth::AuthUser;
 use crate::db::rusqlite::{Connection, params_from_iter};
 use crate::db::{self, SqlValue};
+use crate::playback::PLAY_FRAC;
 use crate::state::{ApiError, ApiResult, App};
 use crate::stats::{one_json, rows_json};
 
@@ -741,7 +742,7 @@ fn discovery(c: &Connection, w: &Window) -> Result<Value> {
         c,
         &format!(
             "SELECT COALESCE(SUM(f AND t = 'Movie'), 0) AS finished_movies, COALESCE(SUM(f AND t = 'Episode'), 0) AS finished_episodes FROM (
-                SELECT p.item_type AS t, MAX(COALESCE(p.position_s, p.duration_s) * 1.0 / COALESCE(p.runtime_s, i.runtime_s)) >= 0.9 AS f
+                SELECT p.item_type AS t, MAX({PLAY_FRAC}) >= 0.9 AS f
                 FROM playbacks p LEFT JOIN items i ON i.id = p.item_id {} GROUP BY p.item_id, p.user_id)",
             w.with("p.item_type IN ('Movie', 'Episode') AND COALESCE(p.runtime_s, i.runtime_s, 0) > 0")
         ),
