@@ -1024,6 +1024,29 @@ pub async fn library_detail(State(app): State<App>, user: AuthUser, Path(id): Pa
     out.map(Json).ok_or_else(|| ApiError::not_found("Library"))
 }
 
+/// How many of a show's or a season's episodes can be played in each language: what tells a complete dub from one
+/// that stops after season one. A show or a season has no tracks of its own; anything else answers `None`, as does
+/// one without a file.
+fn language_coverage(c: &Connection, item_type: &str, id: &str) -> Result<Option<Value>> {
+    let parent = match item_type {
+        "Series" => "e.series_id",
+        "Season" => "e.season_id",
+        _ => return Ok(None),
+    };
+    let sql = format!("SELECT e.audio_languages, e.subtitle_languages FROM items e WHERE {parent} = ?1 AND e.type = 'Episode' AND e.removed = 0 AND e.size_bytes IS NOT NULL");
+    let languages = |raw: Option<String>| -> Vec<String> { raw.and_then(|r| serde_json::from_str(&r).ok()).unwrap_or_default() };
+    let files: Vec<(Vec<String>, Vec<String>)> =
+        c.prepare_cached(&sql)?.query_map([id], |r| Ok((languages(r.get(0)?), languages(r.get(1)?))))?.collect::<Result<_, _>>()?;
+    if files.is_empty() {
+        return Ok(None);
+    }
+    let total = files.len();
+    let per = |counts: Vec<(String, i64)>| -> Vec<Value> { counts.into_iter().map(|(code, episodes)| json!({ "code": code, "episodes": episodes })).collect() };
+    let audio = per(media::language_counts(files.iter().map(|f| f.0.as_slice())));
+    let subtitles = per(media::language_counts(files.iter().map(|f| f.1.as_slice())));
+    Ok(Some(json!({ "episodes": total, "audio": audio, "subtitles": subtitles })))
+}
+
 pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<String>, Query(q): Query<FilterQuery>) -> ApiResult {
     let id = db::norm_id(&id);
     let (caller, min_play) = (user.id.clone(), app.settings().min_play_s.max(120));
@@ -1115,17 +1138,8 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
         // which is what tells a complete dub from one that stops after season one.
         let item_type = item.get("type").and_then(Value::as_str).unwrap_or("").to_string();
         let item_type = item_type.as_str();
-        if matches!(item_type, "Series" | "Season") {
-            let parent = if item_type == "Series" { "e.series_id" } else { "e.season_id" };
-            let files = format!("FROM items e WHERE {parent} = ?1 AND e.type = 'Episode' AND e.removed = 0 AND e.size_bytes IS NOT NULL");
-            let total: i64 = c.query_row(&format!("SELECT COUNT(*) {files}"), [&id], |r| r.get(0))?;
-            if total > 0 {
-                let per = |col: &str| -> Result<Vec<Value>> {
-                    let sql = format!("SELECT j.value AS code, COUNT(*) AS episodes FROM items e, json_each(e.{col}) j WHERE {parent} = ?1 AND e.type = 'Episode' AND e.removed = 0 AND e.size_bytes IS NOT NULL GROUP BY 1 ORDER BY 2 DESC, MIN(j.key), 1");
-                    Ok(rows_json(c, &sql, &[id.clone().into()])?.into_iter().map(Value::Object).collect())
-                };
-                item.insert("language_coverage".into(), json!({ "episodes": total, "audio": per("audio_languages")?, "subtitles": per("subtitle_languages")? }));
-            }
+        if let Some(coverage) = language_coverage(c, item_type, &id)? {
+            item.insert("language_coverage".into(), coverage);
         }
         // Who asked for it, when it arrived: only for the caller's own request, or for someone who may see everyone.
         if matches!(item_type, "Series" | "Movie")
@@ -2054,6 +2068,40 @@ mod tests {
         )
         .unwrap();
         c
+    }
+
+    /// The Languages card of a show and of a season, as it read before the rule became one function: files only (a size),
+    /// removed episodes left out, season 0 counted, and languages by episodes, then by how early in the track list, then
+    /// by code.
+    #[test]
+    fn the_languages_card_counts_episodes_per_language() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            r#"INSERT INTO items(id, type, name, series_id, season_id, parent_index_number, size_bytes, removed, audio_languages, subtitle_languages, updated_at) VALUES
+                 ('e1', 'Episode', 'One',   's', 's1', 1, 10, 0, '["jpn","eng","fre"]', '["eng"]', 0),
+                 ('e2', 'Episode', 'Two',   's', 's1', 1, 10, 0, '["jpn","eng"]', NULL, 0),
+                 ('e3', 'Episode', 'Three', 's', 's2', 2, 10, 0, '["ger","jpn"]', '["eng","ger"]', 0),
+                 ('e4', 'Episode', 'Four',  's', 's2', 2, NULL, 0, '["spa"]', NULL, 0),
+                 ('e5', 'Episode', 'Five',  's', 's2', 2, 10, 1, '["ita"]', NULL, 0),
+                 ('e6', 'Episode', 'Six',   's', 's0', 0, 10, 0, '["dan"]', NULL, 0),
+                 ('e7', 'Episode', 'Seven', 's', 's2', 2, 10, 0, NULL, NULL, 0);"#,
+        )
+        .unwrap();
+        assert_eq!(
+            language_coverage(&c, "Series", "s").unwrap(),
+            Some(json!({ "episodes": 5,
+                "audio": [{ "code": "jpn", "episodes": 3 }, { "code": "eng", "episodes": 2 }, { "code": "dan", "episodes": 1 }, { "code": "ger", "episodes": 1 }, { "code": "fre", "episodes": 1 }],
+                "subtitles": [{ "code": "eng", "episodes": 2 }, { "code": "ger", "episodes": 1 }] }))
+        );
+        assert_eq!(
+            language_coverage(&c, "Season", "s2").unwrap(),
+            Some(json!({ "episodes": 2, "audio": [{ "code": "ger", "episodes": 1 }, { "code": "jpn", "episodes": 1 }], "subtitles": [{ "code": "eng", "episodes": 1 }, { "code": "ger", "episodes": 1 }] }))
+        );
+        assert_eq!(language_coverage(&c, "Season", "nothing").unwrap(), None, "no file, no card");
+        assert_eq!(language_coverage(&c, "Movie", "e1").unwrap(), None, "a film has tracks of its own");
     }
 
     fn caller(id: &str, see_everyone: bool) -> AuthUser {

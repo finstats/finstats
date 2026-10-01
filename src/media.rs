@@ -90,6 +90,23 @@ pub fn track_languages(media_streams: &Value, kind: &str) -> Option<String> {
     (!out.is_empty()).then(|| serde_json::json!(out).to_string())
 }
 
+/// How many episodes can be played in each language, from each episode's `track_languages`: most episodes first,
+/// then the language that comes earliest in any track list, then by code. One rule for the Languages card and for
+/// Library health's dub check, so the two never disagree about a show.
+pub fn language_counts<'a>(episodes: impl IntoIterator<Item = &'a [String]>) -> Vec<(String, i64)> {
+    let mut seen: std::collections::HashMap<&'a str, (i64, usize)> = std::collections::HashMap::new();
+    for languages in episodes {
+        for (at, code) in languages.iter().enumerate() {
+            let e = seen.entry(code.as_str()).or_insert((0, at));
+            e.0 += 1;
+            e.1 = e.1.min(at);
+        }
+    }
+    let mut out: Vec<(&str, i64, usize)> = seen.into_iter().map(|(code, (n, at))| (code, n, at)).collect();
+    out.sort_by(|a, b| b.1.cmp(&a.1).then(a.2.cmp(&b.2)).then(a.0.cmp(b.0)));
+    out.into_iter().map(|(code, n, _)| (code.to_string(), n)).collect()
+}
+
 /// Keep only the useful parts of Jellyfin's `TranscodingInfo`.
 pub fn compact_transcode(t: &Value) -> Option<Value> {
     if !t.is_object() {
@@ -206,6 +223,19 @@ pub fn subtitle_label(codec: Option<&str>, language: Option<&str>) -> Option<Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Languages by how many episodes have them, then by how early in the track list they come anywhere, then by code.
+    #[test]
+    fn language_counts_are_episodes_per_language() {
+        let eps: Vec<Vec<String>> = [vec!["jpn", "eng", "fre"], vec!["jpn", "eng"], vec!["ger", "jpn"], vec!["dan"], vec![]]
+            .into_iter()
+            .map(|e| e.into_iter().map(String::from).collect())
+            .collect();
+        let got = language_counts(eps.iter().map(Vec::as_slice));
+        let want: Vec<(String, i64)> = [("jpn", 3), ("eng", 2), ("dan", 1), ("ger", 1), ("fre", 1)].into_iter().map(|(c, n)| (c.into(), n)).collect();
+        assert_eq!(got, want);
+        assert!(language_counts(std::iter::empty()).is_empty());
+    }
 
     #[test]
     fn picks_selected_tracks() {
