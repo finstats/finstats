@@ -28,6 +28,8 @@ pub struct Missing {
     pub episode: Option<i64>,
     pub plays: i64,
     pub last_at: i64,
+    /// Where its plays came from, in the order the Activity filter lists trackers: "tautulli", "jellystat"…
+    pub sources: Vec<String>,
 }
 
 /// A title in the library it might be.
@@ -60,14 +62,17 @@ pub fn missing(conn: &Connection) -> Result<Vec<Missing>> {
     }
     let rows = conn
         .prepare(
-            "SELECT p.item_id, MAX(p.item_type), MAX(p.item_name), MAX(p.series_name), MAX(p.season_number), MAX(p.episode_number), COUNT(*), MAX(p.ended_at)
+            "SELECT p.item_id, MAX(p.item_type), MAX(p.item_name), MAX(p.series_name), MAX(p.season_number), MAX(p.episode_number), COUNT(*), MAX(p.ended_at),
+                    group_concat(DISTINCT p.source)
              FROM playbacks p WHERE p.item_id IN (SELECT value FROM json_each(?1)) AND p.item_type IN ('Movie', 'Video', 'Episode')
              GROUP BY p.item_id
              ORDER BY MAX(p.item_type) = 'Episode', COALESCE(MAX(p.series_name), MAX(p.item_name)) COLLATE NOCASE,
                       MAX(p.season_number), MAX(p.episode_number), p.item_id",
         )?
         .query_map([serde_json::to_string(&orphans)?], |r| {
-            Ok(Missing { id: r.get(0)?, item_type: r.get(1)?, name: r.get(2)?, series_name: r.get(3)?, season: r.get(4)?, episode: r.get(5)?, plays: r.get(6)?, last_at: r.get(7)? })
+            let mut sources: Vec<String> = r.get::<_, Option<String>>(8)?.unwrap_or_default().split(',').filter(|s| !s.is_empty()).map(str::to_string).collect();
+            sources.sort_by_key(|s| crate::stats::SOURCES.iter().position(|k| k == s).unwrap_or(usize::MAX));
+            Ok(Missing { id: r.get(0)?, item_type: r.get(1)?, name: r.get(2)?, series_name: r.get(3)?, season: r.get(4)?, episode: r.get(5)?, plays: r.get(6)?, last_at: r.get(7)?, sources })
         })?
         .collect::<Result<_, _>>()?;
     Ok(rows)
@@ -285,6 +290,16 @@ mod tests {
             ("plex:5".into(), "Movie".into(), 2),
             ("plex:9".into(), "Episode".into(), 1),
         ], "films by name, then shows; never a title the library has, nor a channel");
+    }
+
+    /// Each missing title says where its plays came from — Tautulli, Jellystat, finstats itself — in the filter's order.
+    #[test]
+    fn a_missing_title_says_which_trackers_its_plays_came_from() {
+        let c = conn();
+        history(&c);
+        c.execute("INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES ('jellystat', 'u', 'alice', 'plex:5', 'The Empire Strikes Back', 'Movie', 7000, 8000, 1000)", []).unwrap();
+        let empire = missing(&c).unwrap().into_iter().find(|m| m.id == "plex:5").unwrap();
+        assert_eq!(empire.sources, ["jellystat", "tautulli"]);
     }
 
     fn first(c: &Connection, id: &str, typed: Option<&str>) -> Option<String> {
