@@ -116,12 +116,31 @@ so a query that silently hides items is a data-loss bug, not a cosmetic one.
 
 **Track languages.** `items.audio_languages` / `subtitle_languages` are JSON arrays from `media::track_languages` (every track, each code once,
 `und` for an untagged one), written by both item producers (`sync::upsert_item`, the import's `jf_item_info`). A series or season has none of its
-own: `item_detail` answers `language_coverage` (episodes per language, files only), which is what shows a dub that stops half way. finstats never
+own: `item_detail` answers `language_coverage` (episodes per language, files only; the count is `media::language_counts`, shared with Library health), which is what shows a dub that stops half way. finstats never
 claims "dubbed": it does not know a title's original language, so it lists the languages and lets the reader decide. Names come from the browser
 (`languageName` in `dom.js`: `Intl.DisplayNames` plus the bibliographic codes it lacks), so no language table is shipped.
 On the title page the hero names at most four languages per kind, one line each that never wraps, and the Languages card
 (`#languages`, only when the hero could not say it all) lists every one with its episodes: a long show carries two dozen
 subtitle languages, and listing them in the hero pushed the artwork down a screen.
+
+**Library health (`health.rs`, Server → Library health, `/server/health`, 2.2.0).** A linter for the library: every rule
+(gaps, season and episode drift, copies and versions, thin files, dubs that stop, never identified) is a pure function over
+`Item` rows, and every threshold is a named constant with its reason. Resolution classes are coarse on purpose (4K, 1080p,
+720p, SD) and go by width *or* height, so a scope 1920×800 and a pillarboxed 1440×1080 are both 1080p. Findings are worked
+out **after a library read and after a look for metadata changes, beside `backfill_playbacks` and never inside it** —
+imports and restores run that too and change no item — and a page only reads what was stored (`health_findings`,
+`health_libraries`, migration 35). The look for changes waits until a library read has computed once
+(`health_computed_at`). **A gap needs `index_number_end`** (migration 34): "S01E01-E02" is numbered 1, and without where it
+ends every such file reads as a hole. Migration 34 forced one library read to bring it: **since 2.0.4 that means deleting
+the `task_runs` row of `sync_libraries` as well as `library_synced_at`** — the setting alone no longer makes a read due.
+Copies use the rule the watchlist and Pipeline use (items of one type sharing a provider id, unless the ids among them lead
+to different titles), read from `items.provider_ids` with `rebuild_external`'s own filter, and a test holds them to
+`watchlist::find_title`; a show's episodes are copies through it, by season and episode number. The same thing twice in one
+class counts as waste, two classes are versions and never do. The dub rule is the Languages card's (`media::language_counts`,
+lifted out of `item_detail` under a test that pinned the card's answer). Every finding has a stable key (kind and subject
+ids) and a fingerprint of what it read; a dismissal (`health_dismissed`, in `backup::TABLES`, a restore keeps one already
+here) holds while the fingerprint does, so a replaced file is looked at again. Reading needs `see_server`; dismissing needs
+`manage` **and** `see_server` (`may_dismiss`), and is audited. Nothing in an answer is about plays or people.
 
 **Jellyfin client (`jellyfin.rs`).** Every request asks for `Accept: application/json; profile="PascalCase"` because
 10.x servers answer PascalCase and newer ones camelCase by default. All JSON access in the codebase assumes

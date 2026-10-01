@@ -66,6 +66,14 @@ directly or transcodes, and why. A status bar keeps the essentials in sight on e
 - **What is my library made of?** Resolutions, codecs, HDR, size per decade, what was added when —
   and the big one: **titles nobody has ever watched**, sorted by how much space they take.
 
+### Is the library in order?
+**Server → Library health** compares every file with its neighbours and lists what stands out, each with the numbers
+that say so: episodes missing in the middle of a season, a season in another resolution than the rest of the show, one
+720p episode in a 1080p season, the same film twice (and the space it takes), a file far too thin for the resolution it
+claims, a dub that covers two seasons and not the third, and titles Jellyfin never matched with a catalogue. Set aside
+what is fine on purpose, with a note; it comes back by itself if the files change. finstats only reports: it never
+deletes, rescans or fixes anything.
+
 ### Is that really them?
 
 <img src="docs/screenshots/security.png" alt="Security page: a world map with a dot for every place people watch from, home in green, a live stream pulsing, a dashed line for an impossible trip from London to New York, and the alerts underneath" width="100%">
