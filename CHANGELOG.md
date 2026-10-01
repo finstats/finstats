@@ -10,7 +10,7 @@ Stability something that can no longer crash, halt, leak or lose data, Fixed som
 wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
 
-## [2.1.0] - 2026-09-29 to 2026-09-30
+## [2.1.0] - 2026-09-29 to 2026-10-01
 
 Watchlist
 
@@ -24,6 +24,16 @@ Watchlist
 
 ### Changed
 - `/api/upcoming` entries carry the TVDB and TMDB ids of their title, and `/api/auth/me` says whether the server keeps watchlists.
+
+### Stability
+- Saving a Sonarr, Radarr or Seerr connection while somebody had **Settings → Outbound** open could leave both waiting on each other for good.
+- **Settings that cannot be read stop finstats at start-up**, naming the setting at fault, instead of quietly resetting every setting to its default.
+- **Two changes to the settings at once** — the settings page and a task's schedule, say — no longer undo each other.
+- A pause, seek or track change seen while the database was busy is written on the next pass instead of lost.
+
+### Fixed
+- One failed read of Jellyfin's plugins, scheduled tasks or storage no longer empties that list on the Server page until the next read.
+- **A Streamystats play stops where it stopped on every page**: a title's drop-off curve and an episode's "finished" went by its length instead, and counted it as estimated.
 
 ## [2.0.4] - 2026-09-29
 
