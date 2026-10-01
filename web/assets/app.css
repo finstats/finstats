@@ -1168,7 +1168,9 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .rc-hero-title { margin-top: 16px; max-width: 14ch; font-size: clamp(44px, 8.4vw, 112px); line-height: .96; font-weight: 800; letter-spacing: -.05em; color: var(--text-hero); overflow-wrap: anywhere; text-wrap: balance; }
 .rc-hero-line { margin-top: clamp(18px, 2.6vw, 30px); max-width: 48ch; color: var(--text-muted); font-size: clamp(16px, 1.8vw, 21px); line-height: 1.5; }
 .rc-hero-line strong { color: var(--text-hero); font-weight: 650; }
-.rc-hero-rank { display: inline-block; margin-top: 16px; padding: 4px 12px; border: 1px solid color-mix(in srgb, var(--accent-hi) 35%, transparent); border-radius: 99px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--text-hero); font-size: 12.5px; }
+.rc-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-top: 16px; }
+.rc-hero-actions:empty { display: none; }
+.rc-hero-rank { display: inline-block; margin: 0; padding: 4px 12px; border: 1px solid color-mix(in srgb, var(--accent-hi) 35%, transparent); border-radius: 99px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--text-hero); font-size: 12.5px; }
 .rc-hero.rc-sk .sk { display: block; margin-top: 14px; max-width: 100%; }
 
 /* the posters, held like a hand of cards */
@@ -1906,7 +1908,7 @@ body.public { min-height: 100vh; }
 .pub-story img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: var(--radius-sm); border: 1px solid var(--border-soft); background: var(--bg-sunken); }
 .pub-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 /* Recap → the year as cards (2.0) */
-.rc-share { margin-top: 14px; align-self: flex-start; }
+.rc-share { align-self: flex-start; }
 .rc-scope { display: inline-flex; }
 .rc-person { display: inline-flex; align-items: center; gap: 7px; }
 .story-grid { list-style: none; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); margin: 12px 0; }

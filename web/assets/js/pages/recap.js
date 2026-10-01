@@ -267,8 +267,9 @@ function heroChapter(d, v, periodLabel, picker, share) {
         h('p', { class: 'rc-hero-line' },
           b(countUp(hrs, (x) => (hrs >= 10 ? num(x) : (Math.round(x * 10) / 10).toLocaleString())), hrs === 1 ? ' hour' : ' hours'),
           ' across ', b(plural(t.plays, 'play', 'plays')), ' and ', b(plural(t.distinct_items, 'title', 'titles')), '.'),
-        share,
-        r && r.position && r.of > 1 ? h('p', { class: 'rc-hero-rank mono' }, `#${num(r.position)} of ${plural(r.of, 'viewer', 'viewers')}${r.share != null ? ` · ${pct(r.share)} of all watching` : ''}`) : null),
+        // The share button and the rank sit in one row with room between them, and wrap on a narrow screen.
+        h('div', { class: 'rc-hero-actions' }, share,
+          r && r.position && r.of > 1 ? h('p', { class: 'rc-hero-rank mono' }, `#${num(r.position)} of ${plural(r.of, 'viewer', 'viewers')}${r.share != null ? ` · ${pct(r.share)} of all watching` : ''}`) : null)),
       fan.length >= 3 ? h('div', { class: 'rc-fan', 'aria-hidden': 'true' }, fan.map((x) => h('img', { src: imgItem(x.image_item_id, 300), alt: '', decoding: 'async', onError: (e) => e.target.remove() }))) : null),
     waveform(d));
 }
