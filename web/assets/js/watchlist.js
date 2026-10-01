@@ -35,12 +35,14 @@ async function repaintAll() {
 /**
  * The toggle for one film or show. `t`: `{item_id}` for a title in the library, else `{kind, tmdb_id, tvdb_id, title, year}`.
  * `compact`: an icon alone, for a row, a card or a search result, named for screen readers by `name`. `keepFocus`: a
- * click leaves the focus where it was (the search field). Hidden until the list is known; nothing at all on a server
- * without watchlists, or for a title that cannot be named.
+ * click leaves the focus where it was (the search field). `ofShow`: offered on an episode or a season, so it says it is
+ * the show that goes on the list. Hidden until the list is known; nothing at all on a server without watchlists, or for
+ * a title that cannot be named.
  */
-export function watchToggle(t, { compact = false, name = '', keepFocus = false } = {}) {
+export function watchToggle(t, { compact = false, name = '', keepFocus = false, ofShow = false } = {}) {
   if (!hasWatchlist() || !(t.item_id || ((t.tmdb_id != null || t.tvdb_id != null) && watchable(t.kind)))) return null;
-  const label = compact ? null : h('span', null, 'Add to watchlist');
+  const [addWords, onWords] = ofShow ? ['Add show to watchlist', 'Show is on your watchlist'] : ['Add to watchlist', 'On your watchlist'];
+  const label = compact ? null : h('span', null, addWords);
   const note = h('span', { class: 'wl-error', role: 'status' });
   const btn = h('button', { type: 'button', class: ['wl-toggle', compact ? 'icon-btn wl-compact' : 'btn btn-sm'], hidden: true, 'aria-pressed': 'false',
     onMousedown: keepFocus ? (e) => e.preventDefault() : null }, icon('bookmark', compact ? 16 : 14), label);
@@ -48,11 +50,11 @@ export function watchToggle(t, { compact = false, name = '', keepFocus = false }
   btn._wl = {
     paint(list) {
       entry = entryFor(list, t);
-      const words = entry ? 'On your watchlist' : 'Add to watchlist';
+      const words = entry ? onWords : addWords;
       btn.setAttribute('aria-pressed', String(!!entry));
       btn.classList.toggle('is-on', !!entry);
       if (label) label.textContent = words;
-      else { btn.setAttribute('aria-label', name ? `${words}: ${name}` : words); btn.title = entry ? 'On your watchlist. Click to take it off.' : 'Add to watchlist'; }
+      else { btn.setAttribute('aria-label', name ? `${words}: ${name}` : words); btn.title = entry ? `${onWords}. Click to take it off.` : addWords; }
       btn.hidden = false;
     },
   };

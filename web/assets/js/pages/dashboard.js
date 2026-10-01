@@ -6,7 +6,7 @@ import { pageHeader, card, filterBar, dataView, sk, topList, playsTable, emptySt
 import { activityCard, heatmapCard, overviewTiles, nowPlayingView, insightTiles, genresCard, failedLoginsCard, shelfRow } from '../widgets.js';
 import { openPlayModal } from '../playmodal.js';
 import { recapBanner } from './recap.js';
-import { loadUpcoming, entryCard } from '../upcoming.js';
+import { loadUpcoming, entryCard, entryTitle, entryName } from '../upcoming.js';
 import { loadDownloads, downloadsList, nothingDownloading } from '../downloads.js';
 import { groupsCard } from '../widgets.js';
 import { watchToggle, watchable } from '../watchlist.js';
@@ -115,7 +115,8 @@ export default function dashboard(ctx) {
       render: (d) => {
         const list = ((d && d.entries) || []).slice(0, 30);
         comingCard.hidden = !list.length;
-        return list.length ? shelfRow(list.map(entryCard), comingArrows, 'Coming up, soonest first') : null;
+        // The toggle beside each card's link, as on Recently added and Pipeline's Upcoming.
+        return list.length ? shelfRow(list.map((e) => [entryCard(e), watchToggle(entryTitle(e), { compact: true, name: entryName(e) })]), comingArrows, 'Coming up, soonest first') : null;
       },
     }).load();
   }
