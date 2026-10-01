@@ -128,11 +128,24 @@ impl Default for Settings {
 }
 
 impl Settings {
+    /// The settings as stored. Ones that cannot be read are an error and never "all defaults": that reset every
+    /// switch, grant and schedule without a word, and the next save wrote the defaults over what was there.
     pub fn load(conn: &db::rusqlite::Connection) -> Result<Self> {
-        Ok(match db::get_setting(conn, "settings")? {
-            Some(raw) => serde_json::from_str(&raw).unwrap_or_default(),
-            None => Self::default(),
+        let Some(raw) = db::get_setting(conn, "settings")? else { return Ok(Self::default()) };
+        serde_json::from_str(&raw).map_err(|e| {
+            anyhow::anyhow!(
+                "the settings stored in finstats' database cannot be read ({e}{}); nothing was changed",
+                Self::unreadable(&raw).map(|keys| format!("; the setting{} at fault: {}", if keys.len() == 1 { "" } else { "s" }, keys.join(", "))).unwrap_or_default()
+            )
         })
+    }
+
+    /// Which keys of a stored blob this version cannot read, each tried on its own; `None` when that cannot be told.
+    fn unreadable(raw: &str) -> Option<Vec<String>> {
+        let serde_json::Value::Object(all) = serde_json::from_str(raw).ok()? else { return None };
+        let bad: Vec<String> =
+            all.into_iter().filter(|(k, v)| serde_json::from_value::<Self>(serde_json::json!({ k.as_str(): v })).is_err()).map(|(k, _)| k).collect();
+        (!bad.is_empty()).then_some(bad)
     }
 
     pub fn validate(&self) -> Result<(), String> {
@@ -440,6 +453,19 @@ pub type ApiResult<T = Json<Value>> = Result<T, ApiError>;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Settings that cannot be read are an error, never "all defaults": read as defaults, every switch, grant and
+    /// schedule went back to its default without a word, and the next save wrote the defaults over what was there.
+    #[test]
+    fn settings_that_cannot_be_read_are_refused_not_reset() {
+        let db = db::Db::open_in_memory().unwrap();
+        let c = db.conn().unwrap();
+        db::set_setting(&c, "settings", r#"{"min_play_s": 42, "active_interval_s": "fast"}"#).unwrap();
+        let err = Settings::load(&c).expect_err("unreadable settings must not load as defaults");
+        assert!(format!("{err:#}").contains("active_interval_s"), "says which setting: {err:#}");
+        db::set_setting(&c, "settings", r#"{"min_play_s": 42}"#).unwrap();
+        assert_eq!(Settings::load(&c).unwrap().min_play_s, 42, "a key that is missing is still its default");
+    }
 
     /// `PUT /api/settings` takes any key of the blob, `schedules` included, so the rule for a schedule holds there too.
     #[test]
