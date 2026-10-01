@@ -38,7 +38,7 @@ const SUFFIX: &str = ".jsonl.gz";
 
 /// In the order they are written, which is also the order they must be read in: a timeline row
 /// needs its play to exist.
-const TABLES: [&str; 11] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit", "watchlist", "located"];
+const TABLES: [&str; 12] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit", "watchlist", "located", "health_dismissed"];
 
 pub fn dir(data_dir: &Path) -> PathBuf {
     data_dir.join("backups")
@@ -311,8 +311,9 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     res.other_rows += 1;
                 }
             }
-            // `located`: where the owner said a title is. A choice this database already has for the same id stands.
-            "manual_seen" | "home_addresses" | "server_events" | "devices" | "located" => {
+            // `located`: where the owner said a title is; `health_dismissed`: a finding set aside. A choice this database
+            // already has for the same id or finding stands.
+            "manual_seen" | "home_addresses" | "server_events" | "devices" | "located" | "health_dismissed" => {
                 let t = TABLES.iter().find(|t| **t == table).copied().unwrap_or("devices");
                 if insert_row(&tx, t, &known[t], row, &[], "INSERT OR IGNORE")? {
                     res.other_rows += 1;
@@ -534,6 +535,31 @@ mod tests {
         let to: String = c.query_row("SELECT to_id FROM located WHERE from_id = 'plex:5'", [], |r| r.get(0)).unwrap();
         let at: String = c.query_row("SELECT item_id FROM playbacks WHERE source_id = 'tautulli:1'", [], |r| r.get(0)).unwrap();
         assert_eq!((to.as_str(), at.as_str()), ("empire", "empire"));
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// A finding set aside in Library health is the owner's decision and travels; the findings themselves are worked out
+    /// again from the library and do not. A dismissal this database already has for the same finding stands.
+    #[test]
+    fn a_dismissed_finding_travels_and_the_findings_do_not() {
+        let tmp = std::env::temp_dir().join(format!("finstats-health-backup-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let source = Db::open(&tmp.join("source.db")).unwrap();
+        source.conn().unwrap().execute_batch(
+            "INSERT INTO health_dismissed(key, fingerprint, note, at, by) VALUES ('copies:bbb', 'f1', 'the 4K one stays', 100, 'alice'), ('gap:lo:1', 'f2', NULL, 100, 'alice');
+             INSERT INTO health_findings(key, kind, item_id, title, evidence, fingerprint, found_at) VALUES ('copies:bbb', 'copies', 'bbb', 'Big Buck Bunny', '{}', 'f1', 100);",
+        ).unwrap();
+        let made = export(&source, &dir(&tmp), None).unwrap();
+        let target = Db::open(&tmp.join("target.db")).unwrap();
+        target.conn().unwrap().execute_batch("INSERT INTO health_dismissed(key, fingerprint, note, at, by) VALUES ('gap:lo:1', 'f9', 'mine', 200, 'bob')").unwrap();
+        restore(&target, &dir(&tmp).join(&made.name), false, None).unwrap();
+        let c = target.conn().unwrap();
+        let rows: Vec<(String, String, Option<String>)> =
+            c.prepare("SELECT key, fingerprint, note FROM health_dismissed ORDER BY key").unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(rows, [("copies:bbb".into(), "f1".into(), Some("the 4K one stays".into())), ("gap:lo:1".into(), "f9".into(), Some("mine".into()))]);
+        let findings: i64 = c.query_row("SELECT COUNT(*) FROM health_findings", [], |r| r.get(0)).unwrap();
+        assert_eq!(findings, 0, "findings come from the library, not from a file");
         let _ = std::fs::remove_dir_all(&tmp);
     }
 

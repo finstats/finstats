@@ -5,7 +5,10 @@
 
 use std::collections::BTreeMap;
 
+use anyhow::Result;
 use serde_json::{Value, json};
+
+use crate::db::rusqlite::{Connection, OptionalExtension, params};
 use sha2::{Digest, Sha256};
 
 /// One live item, as much of it as the rules read.
@@ -140,6 +143,88 @@ fn fingerprint(kind: &str, subjects: &[&Item]) -> String {
         h.update(b"\n");
     }
     hex::encode(h.finalize())
+}
+
+// ---------------------------------------------------------------- stored
+
+/// Every live film, show and episode, as the rules read them.
+pub fn load(conn: &Connection) -> Result<Vec<Item>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, type, name, library_id, series_id, parent_index_number, index_number, index_number_end, production_year, path, size_bytes,
+                runtime_s, bitrate, width, height, video_codec, video_range, audio_languages, provider_ids
+         FROM items WHERE removed = 0 AND type IN ('Movie', 'Series', 'Episode')",
+    )?;
+    let rows = stmt.query_map([], |r| {
+        let languages: Option<String> = r.get(17)?;
+        let ids: Option<String> = r.get(18)?;
+        Ok(Item {
+            id: r.get(0)?, kind: r.get(1)?, name: r.get(2)?, library_id: r.get(3)?, series_id: r.get(4)?, season: r.get(5)?, number: r.get(6)?,
+            number_end: r.get(7)?, year: r.get(8)?, path: r.get(9)?, size_bytes: r.get(10)?, runtime_s: r.get(11)?, bitrate: r.get(12)?,
+            width: r.get(13)?, height: r.get(14)?, video_codec: r.get(15)?, video_range: r.get(16)?,
+            audio_languages: languages.and_then(|l| serde_json::from_str(&l).ok()).unwrap_or_default(),
+            provider_ids: provider_ids(ids.as_deref()),
+        })
+    })?;
+    Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// The ids a title was matched with: text and not empty, as `pipeline::rebuild_external` reads them.
+fn provider_ids(raw: Option<&str>) -> BTreeMap<String, String> {
+    let Some(Value::Object(map)) = raw.and_then(|r| serde_json::from_str(r).ok()) else { return BTreeMap::new() };
+    map.into_iter().filter_map(|(k, v)| Some((k, v.as_str().filter(|s| !s.is_empty())?.to_string()))).collect()
+}
+
+/// Works the findings out again and replaces the stored ones, keeping when each was first found. Answers how many there
+/// are. Read first, written in one transaction: a page never waits on the rules, and never sees half a list.
+pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
+    let found = findings(&load(conn)?);
+    let tx = conn.transaction()?;
+    let first: std::collections::HashMap<String, i64> =
+        tx.prepare("SELECT key, found_at FROM health_findings")?.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<_, _>>()?;
+    tx.execute_batch("DELETE FROM health_findings; DELETE FROM health_libraries;")?;
+    {
+        let mut row = tx.prepare("INSERT INTO health_findings(key, kind, item_id, title, evidence, fingerprint, wasted_bytes, found_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)")?;
+        let mut lib = tx.prepare("INSERT OR IGNORE INTO health_libraries(library_id, key) VALUES (?1, ?2)")?;
+        for f in &found {
+            let at = first.get(&f.key).copied().unwrap_or(now);
+            row.execute(params![f.key, f.kind, f.item_id, f.title, f.evidence.to_string(), f.fingerprint, f.wasted_bytes, at])?;
+            for l in &f.libraries {
+                lib.execute(params![l, f.key])?;
+            }
+        }
+    }
+    crate::db::set_setting(&tx, "health_computed_at", &now.to_string())?;
+    tx.commit()?;
+    Ok(found.len())
+}
+
+/// After a look for metadata changes: the same recompute, once a library read has made the first. Until then the items
+/// lack where a multi-episode file ends, and every such file would read as a hole.
+pub fn after_changes(conn: &mut Connection, now: i64) -> Result<Option<usize>> {
+    if crate::db::get_setting(conn, "health_computed_at")?.is_none() {
+        return Ok(None);
+    }
+    recompute(conn, now).map(Some)
+}
+
+/// A finding `f` that is dismissed: the owner set it aside as it is now.
+pub const DISMISSED_SQL: &str = "EXISTS (SELECT 1 FROM health_dismissed d WHERE d.key = f.key AND d.fingerprint = f.fingerprint)";
+
+/// Sets a finding aside as it stands. `false` when there is no such finding.
+pub fn dismiss(conn: &Connection, key: &str, note: Option<&str>, by: &str, now: i64) -> Result<bool> {
+    let Some(fingerprint) = conn.query_row("SELECT fingerprint FROM health_findings WHERE key = ?1", [key], |r| r.get::<_, String>(0)).optional()? else { return Ok(false) };
+    let note = note.map(str::trim).filter(|n| !n.is_empty());
+    conn.execute(
+        "INSERT INTO health_dismissed(key, fingerprint, note, at, by) VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT(key) DO UPDATE SET fingerprint = excluded.fingerprint, note = excluded.note, at = excluded.at, by = excluded.by",
+        params![key, fingerprint, note, now, by],
+    )?;
+    Ok(true)
+}
+
+/// Brings a dismissed finding back. `false` when it was not dismissed.
+pub fn undismiss(conn: &Connection, key: &str) -> Result<bool> {
+    Ok(conn.execute("DELETE FROM health_dismissed WHERE key = ?1", [key])? > 0)
 }
 
 // ---------------------------------------------------------------- gaps
@@ -992,6 +1077,156 @@ mod tests {
         let again = findings(&replaced);
         assert_ne!(kept(&again, "thin:bbb").unwrap().fingerprint, kept(&first, "thin:bbb").unwrap().fingerprint, "a new file is a new look");
         assert_eq!(kept(&again, "gap:lo:1"), kept(&first, "gap:lo:1"));
+    }
+
+    // ------------------------------------------------------------ stored
+
+    fn migrated() -> crate::db::rusqlite::Connection {
+        let c = crate::db::rusqlite::Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c
+    }
+
+    /// Two copies of Big Buck Bunny in two libraries, and a season of Low Orbit with episode 2 missing.
+    fn stocked() -> crate::db::rusqlite::Connection {
+        let c = migrated();
+        c.execute_batch(
+            r#"INSERT INTO items(id, library_id, type, name, production_year, provider_ids, path, size_bytes, runtime_s, width, height, video_codec, removed, updated_at) VALUES
+                 ('bbb-a', 'films',   'Movie', 'Big Buck Bunny', 2008, '{"Tmdb":"10378"}', '/films/a.mkv', 4000000000, 5400, 1920, 1080, 'h264', 0, 0),
+                 ('bbb-b', 'films-2', 'Movie', 'Big Buck Bunny', 2008, '{"Tmdb":"10378","Tvdb":""}', '/films2/b.mkv', 3000000000, 5400, 1920, 1080, 'h264', 0, 0),
+                 ('gone',  'films',   'Movie', 'Sintel', 2010, NULL, '/films/s.mkv', 1, 60, 1920, 1080, 'h264', 1, 0),
+                 ('lo',    'shows',   'Series', 'Low Orbit', 2020, '{"Tvdb":"70001"}', NULL, NULL, NULL, NULL, NULL, NULL, 0, 0);
+               INSERT INTO items(id, library_id, type, name, series_id, parent_index_number, index_number, path, size_bytes, runtime_s, width, height, video_codec, removed, updated_at) VALUES
+                 ('lo1', 'shows', 'Episode', 'One',   'lo', 1, 1, '/shows/1.mkv', 500000000, 1500, 1920, 1080, 'hevc', 0, 0),
+                 ('lo3', 'shows', 'Episode', 'Three', 'lo', 1, 3, '/shows/3.mkv', 500000000, 1500, 1920, 1080, 'hevc', 0, 0);"#,
+        )
+        .unwrap();
+        c
+    }
+
+    fn stored(c: &crate::db::rusqlite::Connection) -> Vec<(String, i64)> {
+        c.prepare("SELECT key, found_at FROM health_findings ORDER BY key").unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect()
+    }
+
+    #[test]
+    fn a_recompute_stores_what_it_finds_keeps_when_each_was_first_found_and_forgets_what_is_gone() {
+        let mut c = stocked();
+        assert_eq!(recompute(&mut c, 100).unwrap(), 2);
+        assert_eq!(stored(&c), [("copies:bbb-a".to_string(), 100), ("gap:lo:1".to_string(), 100)], "a removed title is no finding");
+        let libs: Vec<String> = c.prepare("SELECT library_id FROM health_libraries WHERE key = 'copies:bbb-a' ORDER BY 1").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(libs, ["films", "films-2"]);
+        let wasted: Option<i64> = c.query_row("SELECT wasted_bytes FROM health_findings WHERE key = 'copies:bbb-a'", [], |r| r.get(0)).unwrap();
+        assert_eq!(wasted, Some(3_000_000_000));
+
+        c.execute("INSERT INTO items(id, library_id, type, name, series_id, parent_index_number, index_number, path, size_bytes, updated_at) VALUES ('lo2', 'shows', 'Episode', 'Two', 'lo', 1, 2, '/shows/2.mkv', 1, 0)", []).unwrap();
+        recompute(&mut c, 200).unwrap();
+        assert_eq!(stored(&c), [("copies:bbb-a".to_string(), 100)], "the hole is filled; the copies were found at the first look");
+        let left: i64 = c.query_row("SELECT COUNT(*) FROM health_libraries WHERE key = 'gap:lo:1'", [], |r| r.get(0)).unwrap();
+        assert_eq!(left, 0);
+    }
+
+    /// `item_external` is rebuilt when the library is read, but health does not lean on it: on a server with no Sonarr,
+    /// Radarr or Seerr, and nothing in that table at all, copies are still copies.
+    #[test]
+    fn copies_are_found_on_a_server_with_nothing_connected() {
+        let mut c = stocked();
+        c.execute("DELETE FROM item_external", []).unwrap();
+        let services: i64 = c.query_row("SELECT COUNT(*) FROM services", [], |r| r.get(0)).unwrap();
+        assert_eq!(services, 0);
+        recompute(&mut c, 100).unwrap();
+        assert!(stored(&c).iter().any(|(k, _)| k == "copies:bbb-a"));
+    }
+
+    fn dismissed(c: &crate::db::rusqlite::Connection) -> Vec<String> {
+        c.prepare(&format!("SELECT f.key FROM health_findings f WHERE {DISMISSED_SQL} ORDER BY 1")).unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect()
+    }
+
+    #[test]
+    fn a_dismissal_outlives_a_rescan_and_lifts_when_the_file_changes() {
+        let mut c = stocked();
+        recompute(&mut c, 100).unwrap();
+        assert!(dismiss(&c, "copies:bbb-a", Some("the 4K one is coming"), "alice", 110).unwrap());
+        assert!(!dismiss(&c, "copies:nothing", None, "alice", 110).unwrap(), "only a finding there is can be dismissed");
+        assert_eq!(dismissed(&c), ["copies:bbb-a"]);
+        recompute(&mut c, 200).unwrap();
+        assert_eq!(dismissed(&c), ["copies:bbb-a"], "the same copies, still dismissed");
+        let note: Option<String> = c.query_row("SELECT note FROM health_dismissed WHERE key = 'copies:bbb-a'", [], |r| r.get(0)).unwrap();
+        assert_eq!(note.as_deref(), Some("the 4K one is coming"));
+
+        c.execute("UPDATE items SET size_bytes = 3100000000 WHERE id = 'bbb-b'", []).unwrap();
+        recompute(&mut c, 300).unwrap();
+        assert!(dismissed(&c).is_empty(), "a replaced file is looked at again");
+        assert!(stored(&c).iter().any(|(k, _)| k == "copies:bbb-a"), "…because it is still a copy");
+
+        assert!(dismiss(&c, "copies:bbb-a", None, "alice", 310).unwrap());
+        assert!(undismiss(&c, "copies:bbb-a").unwrap());
+        assert!(!undismiss(&c, "copies:bbb-a").unwrap());
+        assert!(dismissed(&c).is_empty());
+    }
+
+    #[test]
+    fn a_look_for_metadata_changes_waits_for_the_first_library_read() {
+        let mut c = stocked();
+        assert_eq!(after_changes(&mut c, 100).unwrap(), None, "until a library read has brought where multi-episode files end");
+        assert!(stored(&c).is_empty());
+        recompute(&mut c, 200).unwrap();
+        assert_eq!(after_changes(&mut c, 300).unwrap(), Some(2));
+    }
+
+    /// A library of 500 shows of 50 episodes and 5,000 films, a few of everything wrong in it.
+    pub(super) fn generated() -> crate::db::rusqlite::Connection {
+        let mut c = migrated();
+        let tx = c.transaction().unwrap();
+        {
+            let mut ins = tx
+                .prepare(
+                    "INSERT INTO items(id, library_id, type, name, series_id, parent_index_number, index_number, production_year, path, size_bytes, runtime_s,
+                                       bitrate, width, height, video_codec, video_range, audio_languages, provider_ids, removed, updated_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 2020, ?8, ?9, ?10, ?11, ?12, ?13, ?14, 'SDR', ?15, ?16, 0, 0)",
+                )
+                .unwrap();
+            for f in 0..5000i64 {
+                let tmdb = if f % 97 == 0 { f + 1 } else { f }; // every 97th film is a copy of the next
+                let ids = if f % 211 == 0 { "{}".to_string() } else { format!(r#"{{"Tmdb":"{tmdb}"}}"#) };
+                let (w, h, br) = if f % 50 == 0 { (3840, 2160, 2_000_000) } else { (1920, 1080, 6_000_000) };
+                ins.execute(params![format!("film{f:05}"), "films", "Movie", format!("Film {f}"), None::<String>, None::<i64>, None::<i64>, format!("/films/{f}.mkv"),
+                    4_000_000_000i64, 6000, br, w, h, "hevc", r#"["eng"]"#, ids]).unwrap();
+            }
+            for s in 0..500i64 {
+                let series = format!("show{s:04}");
+                ins.execute(params![series, "shows", "Series", format!("Show {s}"), None::<String>, None::<i64>, None::<i64>, None::<String>, None::<i64>, None::<i64>,
+                    None::<i64>, None::<i64>, None::<i64>, None::<String>, None::<String>, format!(r#"{{"Tvdb":"{s}"}}"#)]).unwrap();
+                for season in 1..=5i64 {
+                    for n in 1..=10i64 {
+                        if s % 13 == 0 && season == 2 && n == 4 {
+                            continue; // a hole
+                        }
+                        let (w, h) = if s % 17 == 0 && season == 1 { (1280, 720) } else { (1920, 1080) };
+                        let langs = if s % 19 == 0 && season == 5 { r#"["jpn"]"# } else { r#"["jpn","eng"]"# };
+                        ins.execute(params![format!("{series}-{season}-{n}"), "shows", "Episode", format!("Episode {n}"), series, season, n, format!("/shows/{s}/{season}/{n}.mkv"),
+                            600_000_000i64, 1500, 3_000_000, w, h, "hevc", langs, None::<String>]).unwrap();
+                    }
+                }
+            }
+        }
+        tx.commit().unwrap();
+        c
+    }
+
+    /// `cargo test --release health::tests::at_scale -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn at_scale() {
+        let mut c = generated();
+        let started = std::time::Instant::now();
+        let n = recompute(&mut c, 100).unwrap();
+        let first = started.elapsed();
+        let started = std::time::Instant::now();
+        recompute(&mut c, 200).unwrap();
+        println!("recompute over 25,000 episodes and 5,000 films: {n} findings, {first:?} first, {:?} again", started.elapsed());
+        assert!(first < std::time::Duration::from_secs(2));
     }
 
     #[test]

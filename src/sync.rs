@@ -711,6 +711,10 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             for title in backfill_playbacks(c)? {
                 crate::groups::detect(c, window, Some(&title))?;
             }
+            // Library health is worked out here, never on a request; what it finds never fails the read.
+            if let Err(e) = crate::health::recompute(c, db::now()) {
+                tracing::warn!("working out library health failed: {e:#}");
+            }
             db::set_setting(c, "library_synced_at", &started.to_string())
         })
         .await?;
@@ -838,6 +842,10 @@ async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
             // A title that arrived since the library read may be one a renamed file became: the same tail as a read.
             for title in backfill_playbacks(c)? {
                 crate::groups::detect(c, window, Some(&title))?;
+            }
+            // An edited title can end a finding or start one, as a library read can.
+            if let Err(e) = crate::health::after_changes(c, db::now()) {
+                tracing::warn!("working out library health failed: {e:#}");
             }
             if !known {
                 db::set_setting(c, "portraits_read", &started.to_string())?;

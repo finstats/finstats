@@ -653,6 +653,35 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     DELETE FROM settings WHERE key = 'library_synced_at';
     DELETE FROM task_runs WHERE task = 'sync_libraries';
     "#,
+    // user_version 35 — Library health (2.2.0): what is wrong with a file beside its neighbours. The findings are worked
+    //      out again after every library read and are not part of a backup; a dismissal is the owner's and is. One finding
+    //      may span libraries (a film in an HD and a 4K one), hence a table of its own for the library filter.
+    r#"
+    CREATE TABLE health_findings (
+        key          TEXT PRIMARY KEY,      -- kind:subject ids, the same at every recompute
+        kind         TEXT NOT NULL,
+        item_id      TEXT NOT NULL,         -- where a click leads
+        title        TEXT NOT NULL,
+        evidence     TEXT NOT NULL,         -- JSON: the numbers, and nothing about plays or people
+        fingerprint  TEXT NOT NULL,         -- what the rule read, hashed
+        wasted_bytes INTEGER,
+        found_at     INTEGER NOT NULL
+    ) WITHOUT ROWID;
+    CREATE INDEX idx_health_kind ON health_findings(kind, title);
+    CREATE TABLE health_libraries (
+        key        TEXT NOT NULL,
+        library_id TEXT NOT NULL,
+        PRIMARY KEY (key, library_id)
+    ) WITHOUT ROWID;
+    CREATE INDEX idx_health_libraries_library ON health_libraries(library_id, key);
+    CREATE TABLE health_dismissed (
+        key         TEXT PRIMARY KEY,
+        fingerprint TEXT NOT NULL,          -- the finding as it was dismissed; a changed file is looked at again
+        note        TEXT,
+        at          INTEGER NOT NULL,
+        by          TEXT
+    );
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole
