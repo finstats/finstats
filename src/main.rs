@@ -13,6 +13,7 @@ mod downloads;
 mod fuzzy;
 mod geo;
 mod groups;
+mod health;
 mod ical;
 mod import;
 mod jellyfin;
