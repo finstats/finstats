@@ -699,9 +699,18 @@ but also every corner (`--radius*`, a test refuses a literal radius), `--density
 `--on-accent`. **FinUI is also a repository of its own, `github.com/finstats/finui`** (checked out beside finstats as
 `../finui`): the components are developed here, where they are used, and copied there as they change; its gallery,
 **FinUI create** (`create/`: presets, `preset.js`, the page) and the installer (`curl -fsSL https://finstats.github.io/finui/install.sh | sh -s --
-<code>`, built with the site by its pages workflow) live there only — finstats serves no gallery and no presets, and Settings → System links to the site. The QA
+<code>`, built with the site by its pages workflow) live there only — finstats serves no gallery, and Settings → System
+links to the site. **Each person's finstats wears the preset they chose** (Settings → Appearance, `appearance.rs`, table
+`appearance`, `/api/me/appearance`, in `backup::TABLES`): finstats keeps FinUI's `create/presets.json` and the per-option
+token files FinUI's site build generates (`finui/p/<axis>/<option>.css`), and `/assets/finui.css` answers in the look of
+the session cookie that asks (`appearance::of_request`; `private`, `Vary: Cookie`): the stylesheet followed by the files
+the code names in axis order — exactly what FinUI's `install.sh` does, so finstats has no copy of how a choice becomes
+tokens. `finui::preset::overlay` only decodes the code against the files; an unknown code is refused at save. There is no
+look for everyone: one person's choice never reaches another (the owner's decision). To bring new
+options over: build FinUI's site (`node ../finui/tools/build-site.mjs <dir>`) and copy its `p/` and `create/presets.json`. The QA
 stage `finui` runs that repository's checks and tests, serves its site and walks the gallery and create, and fails when
-a file of `web/assets/finui` differs from the repository's: copy a change across in the same sitting.
+a file of `web/assets/finui` differs from the repository's (`p/` from its built site): copy a change across in the same
+sitting.
 
 "Now playing" (`nowPlayingView` in `widgets.js`) is polled every 5 s, but **only the 1 s ticker moves a clock** (+1 whole
 second per beat). A poll never repaints it; it only corrects the position when that means something (pause, server > 3 s

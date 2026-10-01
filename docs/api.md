@@ -1665,3 +1665,19 @@ not dismissed. Both need *manage finstats* **and** *see server details*. A dismi
 finding do: a replaced file or a re-encoded season brings it back if it is still true. Recorded in the audit log as
 `finding_dismissed` and `finding_undismissed`. Dismissals travel with a backup and a restore keeps one this database
 already has; the findings themselves are worked out again and are not in a backup.
+
+# v2.2 — Appearance
+
+How finstats looks is each person's own: a FinUI preset's code as FinUI create makes it
+(`https://finstats.github.io/finui/create/`) — one letter or digit per choice, such as `0101`.
+
+`GET /api/me/appearance` → `{"finui_preset": "0101"}` (`""`: FinUI as it ships). `PUT /api/me/appearance` with
+`{"finui_preset"}` sets the caller's and nobody else's, and answers the same shape; `""` takes it back; `400` for a code that
+names no option. Anyone signed in; recorded in the audit log as `appearance_changed`. It travels in a backup, and a restore
+keeps a choice this install already has for the same person.
+
+`GET /assets/finui.css` (no sign-in needed, as before) answers in the look of whoever's session cookie asks: FinUI's
+stylesheet, then the preset's tokens — FinUI's own generated file of each chosen option
+(`/assets/finui/p/{axis}/{option}.css`), in axis order, after a comment naming the code — with an ETag of its own and
+`Cache-Control: private, no-cache`, `Vary: Cookie`. Signed out, or nothing chosen: FinUI as it ships. The choices and their
+names are `/assets/finui/create/presets.json`, FinUI's file.
