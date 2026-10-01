@@ -395,3 +395,124 @@ pub(crate) fn finalize(conn: &Connection) -> Result<()> {
     crate::network::reclassify(conn)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    /// A backup in a folder of its own, and a fresh database beside it.
+    fn backup(name: &str, text: &str) -> (Db, PathBuf, PathBuf) {
+        let dir = std::env::temp_dir().join(format!("finstats-import-test-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("backup.jsonl");
+        std::fs::write(&file, text).unwrap();
+        (Db::open(&dir.join("finstats.db")).unwrap(), file, dir)
+    }
+
+    fn at(ts: &str) -> i64 {
+        parse_ts(ts).unwrap()
+    }
+
+    /// A film, a show with one episode, alice, and one play of each — in the line-per-record format.
+    const JSONL: &str = r#"{"type":"table","table":"jf_users"}
+{"type":"row","table":"jf_users","data":{"Id":"AAAA-1111","Name":"alice","IsAdministrator":false}}
+{"type":"table","table":"jf_libraries"}
+{"type":"row","data":{"Id":"LIB-1","Name":"Films","CollectionType":"movies"}}
+{"type":"table","table":"jf_library_items"}
+{"type":"row","data":{"Id":"FILM-1","ParentId":"LIB-1","Type":"Movie","Name":"Big Buck Bunny","RunTimeTicks":"6000000000","ProductionYear":2008}}
+{"type":"row","data":{"Id":"SHOW-1","ParentId":"LIB-1","Type":"Series","Name":"Low Orbit"}}
+{"type":"table","table":"jf_library_episodes"}
+{"type":"row","data":{"Id":"jellystat-own-key","EpisodeId":"EP-1","Name":"Pilot","SeriesId":"SHOW-1","SeasonId":"SEASON-1","SeriesName":"Low Orbit","IndexNumber":1,"ParentIndexNumber":1,"RunTimeTicks":"18000000000"}}
+{"type":"table","table":"jf_playback_activity"}
+{"type":"row","data":{"Id":"p1","UserId":"AAAA-1111","UserName":"alice","NowPlayingItemId":"FILM-1","NowPlayingItemName":"Big Buck Bunny","ActivityDateInserted":"2026-03-01T21:00:00.000Z","PlaybackDuration":"5400","Client":"Jellyfin Web","PlayMethod":"DirectPlay","PlayState":{"PositionTicks":12345678}}}
+{"type":"row","data":{"Id":"p2","UserId":"AAAA-1111","UserName":"alice","NowPlayingItemId":"SHOW-1","EpisodeId":"EP-1","NowPlayingItemName":"Pilot","SeriesName":"Low Orbit","ActivityDateInserted":"2026-03-02T20:30:00.000Z","PlaybackDuration":1500}}
+{"type":"table","table":"jf_playback_reporting_plugin_data"}
+{"type":"row","data":{"rowid":1,"ItemId":"FILM-1"}}
+{"type":"table","table":"jf_something_new"}
+{"type":"row","data":{"anything":true}}
+"#;
+
+    #[test]
+    fn a_backup_imports_its_people_titles_and_plays_and_twice_is_once() {
+        let (db, file, dir) = backup("whole", JSONL);
+        let res = run(&db, &file, None).unwrap();
+        assert_eq!((res.users, res.libraries, res.items, res.episodes), (1, 1, 2, 1));
+        assert_eq!((res.plays_imported, res.plays_skipped), (2, 0));
+        assert_eq!(res.unknown_rows, 1, "a table it does not know is counted; the plugin's own rows are already in the activity");
+
+        type Row = (String, String, Option<String>, String, i64, i64, Option<i64>, Option<i64>, Option<String>, Option<i64>, Option<i64>);
+        let rows: Vec<Row> = db
+            .conn()
+            .unwrap()
+            .prepare("SELECT user_id, item_id, series_id, item_type, started_at, ended_at, position_s, runtime_s, library_id, season_number, episode_number FROM playbacks ORDER BY started_at")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?, r.get(9)?, r.get(10)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        let (film, episode) = (&rows[0], &rows[1]);
+        assert_eq!((film.0.as_str(), film.1.as_str(), film.3.as_str()), ("aaaa1111", "film1", "Movie"), "ids as Jellyfin's, without dashes");
+        assert_eq!((film.4, film.5), (at("2026-03-01T21:00:00Z") - 5400, at("2026-03-01T21:00:00Z")), "the date is the end; the start is worked back");
+        assert_eq!(film.6, None, "Jellystat's position is where it first noticed the play, not where it stopped");
+        assert_eq!((film.7, film.8.as_deref()), (Some(600), Some("lib1")), "the library says how long it runs and where it lives");
+        assert_eq!((episode.1.as_str(), episode.2.as_deref(), episode.3.as_str()), ("ep1", Some("show1"), "Episode"), "for an episode the item is the series");
+        assert_eq!((episode.4, episode.9, episode.10), (at("2026-03-02T20:30:00Z") - 1500, Some(1), Some(1)));
+        assert_eq!(episode.8.as_deref(), Some("lib1"), "an episode lives where its show does");
+
+        let again = run(&db, &file, None).unwrap();
+        assert_eq!((again.plays_imported, again.plays_skipped), (0, 2), "the same backup twice is once");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn the_older_single_document_format_imports_the_same() {
+        let legacy = r#"[{"jf_users":[{"Id":"AAAA-1111","Name":"alice"}]},
+            {"jf_playback_activity":[{"Id":"p1","UserId":"AAAA-1111","UserName":"alice","NowPlayingItemId":"FILM-1","NowPlayingItemName":"Big Buck Bunny","ActivityDateInserted":"2026-03-01T21:00:00.000Z","PlaybackDuration":"5400"}]}]"#;
+        let (db, file, dir) = backup("legacy", &format!("\n  {legacy}"));
+        let res = run(&db, &file, None).unwrap();
+        assert_eq!((res.users, res.plays_imported), (1, 1));
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_file_that_is_not_a_backup_or_is_damaged_changes_nothing() {
+        let (db, file, dir) = backup("empty", "  \n ");
+        assert!(format!("{:#}", run(&db, &file, None).unwrap_err()).contains("empty"));
+        let _ = std::fs::remove_dir_all(dir);
+
+        let (db, file, dir) = backup("foreign", "name,watched\nalice,Big Buck Bunny\n");
+        assert!(format!("{:#}", run(&db, &file, None).unwrap_err()).contains("does not look like a Jellystat backup"));
+        let _ = std::fs::remove_dir_all(dir);
+
+        // Good records first, then a broken line: one transaction, so not even the good ones stay.
+        let damaged = format!("{}{{\"type\":\"row\",\"data\":", &JSONL[..JSONL.find("{\"type\":\"table\",\"table\":\"jf_playback_reporting").unwrap()]);
+        let (db, file, dir) = backup("damaged", &damaged);
+        let err = format!("{:#}", run(&db, &file, None).unwrap_err());
+        assert!(err.contains("damaged at line 13"), "{err}");
+        let c = db.conn().unwrap();
+        let counts: (i64, i64, i64) = c.query_row("SELECT (SELECT COUNT(*) FROM playbacks), (SELECT COUNT(*) FROM users), (SELECT COUNT(*) FROM items)", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap();
+        assert_eq!(counts, (0, 0, 0), "nothing of a failed import is kept");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn what_a_backup_knows_about_a_file_only_fills_gaps() {
+        let info = r#"{"type":"table","table":"jf_item_info"}
+{"type":"row","data":{"Id":"FILM-1","Path":"/media/films/Big Buck Bunny (2008).MKV","Size":"1048576","MediaStreams":[{"Type":"Video","Codec":"h264","Width":1920,"Height":1080},{"Type":"Audio","Codec":"aac","Language":"eng"}]}}
+{"type":"row","data":{"Id":"SHOW-1","Path":"/media/shows/Low Orbit","Size":"1"}}
+"#;
+        let (db, file, dir) = backup("info", &format!("{JSONL}{info}"));
+        db.conn().unwrap().execute_batch("INSERT INTO items(id, type, name, size_bytes, updated_at) VALUES ('show1', 'Series', 'Low Orbit', 999, 1)").unwrap();
+        let res = run(&db, &file, None).unwrap();
+        assert_eq!(res.item_info, 1, "only the film had a gap to fill");
+        let c = db.conn().unwrap();
+        let film: (Option<String>, i64, Option<String>, Option<String>) =
+            c.query_row("SELECT container, size_bytes, video_codec, audio_languages FROM items WHERE id = 'film1'", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).unwrap();
+        assert_eq!(film, (Some("mkv".into()), 1_048_576, Some("h264".into()), Some(r#"["eng"]"#.into())));
+        let kept: i64 = c.query_row("SELECT size_bytes FROM items WHERE id = 'show1'", [], |r| r.get(0)).unwrap();
+        assert_eq!(kept, 999, "what finstats read from Jellyfin itself is fresher than an old backup");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+}
