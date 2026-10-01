@@ -55,7 +55,7 @@ export function watchlistPage(ctx) {
 
   const dv = dataView({
     container: view, signal: ctx.signal,
-    skeleton: () => h('div', { class: 'wl-grid' }, [0, 1, 2, 3, 4, 5].map(() => h('span', { class: 'sk wl-sk' }))),
+    skeleton: () => h('div', { class: 'wl-grid' }, [0, 1, 2, 3, 4, 5].map(() => h('span', { class: 'fui-skeleton wl-sk' }))),
     fetch: () => loadWatchlist(ctx.signal),
     render: (d) => {
       paintHeader(d.user);
@@ -97,7 +97,7 @@ export function watchlistPage(ctx) {
 
   function mountError(err) { view.prepend(errorState(err, () => dv.load())); }
 
-  headerSlot.append(h('header', { class: 'page-header entity-header' }, h('span', { class: 'sk wl-sk-avatar' }), h('div', null, sk.line('180px', 26))));
+  headerSlot.append(h('header', { class: 'page-header entity-header' }, h('span', { class: 'fui-skeleton wl-sk-avatar' }), h('div', null, sk.line('180px', 26))));
   ctx.root.append(headerSlot, userTabs(me, 'watchlist'), view);
   dv.load();
 }

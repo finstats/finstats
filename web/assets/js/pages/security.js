@@ -113,7 +113,7 @@ export default function securityPage(ctx) {
     const body = alerts.rows.length
       ? [h('ul', { class: 'alert-list' }, alerts.rows.map((a) => alertRow(a, manage))),
         alerts.total > PER_PAGE ? pagination({ page: alerts.page, perPage: alerts.per_page, total: alerts.total, onPage: (p) => { f.page = p; reload(); } }) : null]
-      : h('div', { class: 'chart-empty chart-empty-sm' }, f.status === 'open' ? 'Nothing needs a look. Impossible travel and first visits to a new country show up here.' : 'No alerts here.');
+      : h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, f.status === 'open' ? 'Nothing needs a look. Impossible travel and first visits to a new country show up here.' : 'No alerts here.');
     return card({ title: 'Alerts', sub: 'A reason to look, never proof: places are city centres at best, and a VPN looks like a trip', actions: [resolveAll, tabs], body });
   }
 
@@ -184,7 +184,7 @@ export default function securityPage(ctx) {
     const note = h('p', { class: 'help', 'aria-live': 'polite' });
     return emptyState('No geolocation database yet',
       'Places come from a city database that finstats reads locally; no address is ever sent anywhere. Download DB-IP’s free one here, or put any MaxMind-format city file (.mmdb) into the geoip folder of the data directory. Settings → Security keeps it up to date.',
-      h('div', { class: 'empty-action' }, btn, note));
+      h('div', { class: 'fui-empty__action' }, btn, note));
   }
 
   const dv = dataView({
@@ -206,10 +206,10 @@ export default function securityPage(ctx) {
           statTile({ label: 'Places away from home', value: num(away.length), hint: rangeLong(f.days) }),
           can('see_server') && !f.userId ? statTile({ label: 'Failed sign-ins from outside', value: num(failedTotal), hint: rangeLong(f.days) }) : null),
         card({ title: 'Where people watch from', sub: o.home_known ? 'Plays, sign-ins and live streams by place; the home network is one dot' : 'Plays, sign-ins and live streams by place. Home is not on the map yet: finstats has not learned this network’s public address',
-          body: points.length ? [map.el, picked] : h('div', { class: 'chart-empty' }, 'Nobody has watched from a public address in this range.') }),
+          body: points.length ? [map.el, picked] : h('div', { class: 'fui-empty--chart' }, 'Nobody has watched from a public address in this range.') }),
         alertsCard(alerts, o.can_manage),
         h('div', { class: 'grid-heat' },
-          card({ title: 'Places', cls: 'fui-card--flush', body: o.places.length ? placesTable(o.places) : h('div', { class: 'chart-empty chart-empty-sm' }, 'Nothing in this range.') }),
+          card({ title: 'Places', cls: 'fui-card--flush', body: o.places.length ? placesTable(o.places) : h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, 'Nothing in this range.') }),
           card({ title: 'Countries', sub: 'By plays', body: bucketList(o.countries.map((c) => ({ name: c.name, plays: c.plays, watch_s: 0 })), { watch: false, empty: 'Nothing in this range.' }) })),
         h('p', { class: 'attribution' },
           o.database.dbip ? [h('a', { href: 'https://db-ip.com', target: '_blank', rel: 'noopener noreferrer' }, 'IP Geolocation by DB-IP'), ' · '] : null,

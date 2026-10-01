@@ -143,7 +143,7 @@ export function userPage(ctx) {
   // Streaks and show progress cover all time and load on their own. The streaks sit under the header;
   // the shows card is slotted into the page further down (the same node on every re-render).
   ctx.root.append(headerSlot, userTabs(id, 'overview'), allTime.tiles, filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view);
-  headerSlot.append(h('header', { class: 'page-header entity-header' }, h('span', { class: 'sk', style: { width: '56px', height: '56px', borderRadius: '50%' } }), h('div', null, sk.line('180px', 26))));
+  headerSlot.append(h('header', { class: 'page-header entity-header' }, h('span', { class: 'fui-skeleton', style: { width: '56px', height: '56px', borderRadius: '50%' } }), h('div', null, sk.line('180px', 26))));
   dv.load();
 }
 

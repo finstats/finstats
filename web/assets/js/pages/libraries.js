@@ -127,7 +127,7 @@ function healthSlot(ctx, libraryId) {
 }
 
 export function itemGrid(items) {
-  if (!items || !items.length) return h('div', { class: 'chart-empty chart-empty-sm' }, 'Nothing added yet.');
+  if (!items || !items.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, 'Nothing added yet.');
   return h('ul', { class: 'item-grid' }, items.map((it) => h('li', null, h('a', { class: 'item-card', href: `/items/${it.id}` },
     poster(it.image_item_id || it.id, it.name, { w: 300, cls: 'poster-grid' }),
     h('span', { class: 'item-card-name' }, it.name),

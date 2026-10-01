@@ -37,7 +37,7 @@ export function timelinePage(ctx) {
 
   const dv = dataView({
     container: view, signal: ctx.signal,
-    skeleton: () => h('div', { class: 'trail-sk' }, [0, 1, 2, 3, 4, 5].map(() => h('span', { class: 'sk trail-sk-stop' }))),
+    skeleton: () => h('div', { class: 'trail-sk' }, [0, 1, 2, 3, 4, 5].map(() => h('span', { class: 'fui-skeleton trail-sk-stop' }))),
     fetch: () => loadTimeline(id, picked, ctx.signal),
     render: (d) => {
       paintHeader(d.user);
@@ -113,7 +113,7 @@ export function timelinePage(ctx) {
     return box;
   }
 
-  headerSlot.append(h('header', { class: 'page-header entity-header' }, h('span', { class: 'sk', style: { width: '56px', height: '56px', borderRadius: '50%' } }), h('div', null, sk.line('180px', 26))));
+  headerSlot.append(h('header', { class: 'page-header entity-header' }, h('span', { class: 'fui-skeleton', style: { width: '56px', height: '56px', borderRadius: '50%' } }), h('div', null, sk.line('180px', 26))));
   ctx.root.append(headerSlot, userTabs(id, 'timeline'), filterSlot, view);
   dv.load();
 }

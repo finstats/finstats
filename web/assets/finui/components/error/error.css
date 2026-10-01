@@ -1,0 +1,7 @@
+/* finui: error. Moved from app.css; the same rules under finui's names. */
+.fui-card--flush .fui-error { margin: 8px 16px 12px; }
+.fui-error { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--critical) 40%, transparent); border-radius: var(--radius); background: color-mix(in srgb, var(--critical) 6%, transparent); }
+.fui-error > .icon { color: var(--critical-text); }
+.fui-error > div { flex: 1; min-width: 200px; }
+.fui-error__title { font-weight: 600; }
+.fui-error__text { color: var(--text-muted); font-size: 13px; }

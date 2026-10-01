@@ -32,7 +32,7 @@ export default function itemPage(ctx) {
 
   const dv = dataView({
     container: view, signal: ctx.signal,
-    skeleton: () => [h('div', { class: 'item-hero' }, h('span', { class: 'sk sk-poster-lg' }), h('div', { class: 'sk-row-lines' }, sk.line('40%', 28), sk.line('60%'), sk.line('30%'))), sk.tiles(3), sk.cardBlock(240)],
+    skeleton: () => [h('div', { class: 'item-hero' }, h('span', { class: 'fui-skeleton fui-skeleton--poster-lg' }), h('div', { class: 'fui-skeleton__lines' }, sk.line('40%', 28), sk.line('60%'), sk.line('30%'))), sk.tiles(3), sk.cardBlock(240)],
     fetch: () => loadItem(id, days, ctx.signal),
     render: ({ d, recent, key }) => {
       const it = d.item, t = d.totals || {}, langs = languages(it);

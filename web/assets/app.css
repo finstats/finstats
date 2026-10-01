@@ -10,7 +10,7 @@
 .sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .noscript { padding: 2rem; color: var(--text); }
 .boot { min-height: 100vh; display: grid; place-items: center; }
-.boot .spinner { width: 18px; height: 18px; }
+.boot .fui-spinner { width: 18px; height: 18px; }
 
 /* ------------------------------------------------------------ app frame */
 .app { min-height: 100vh; padding-left: var(--sidebar-w); padding-bottom: var(--statusbar-h); }
@@ -144,7 +144,7 @@ kbd {
 
 .result-count { color: var(--text-faint); font-size: 12.5px; font-family: var(--mono); }
 
-.fui-card--flush .empty, .fui-card--flush .sk-rows, .fui-card--flush .error-state { margin: 8px 16px 12px; }
+ 
 
 .grid-2, .grid-3 { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
 .grid-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
@@ -180,12 +180,6 @@ kbd {
 .form-actions { display: flex; align-items: center; gap: 12px; }
 .saved-note { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 12.5px; min-height: 18px; }
 .saved-note .icon { color: var(--good); }
-
-.spinner {
-  display: inline-block; width: 14px; height: 14px; flex: none; border-radius: 50%;
-  border: 2px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; animation: spin .7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---- dashboard shelf: recently added, scrolling sideways inside itself */
 .shelf-section[hidden] { display: none; }
@@ -422,8 +416,7 @@ kbd {
 /* ------------------------------------------------------------ charts */
 .chart { position: relative; min-width: 0; border-radius: var(--radius-sm); }
 .chart-plot svg { display: block; overflow: visible; }
-.chart-empty { display: grid; place-items: center; min-height: 200px; color: var(--text-faint); font-size: 13px; text-align: center; }
-.chart-empty-sm { min-height: 96px; }
+
 .tick { fill: var(--text-faint); font: 450 10.5px var(--mono); font-variant-numeric: tabular-nums; }
 .grid-line { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
 .axis-line { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
@@ -562,30 +555,7 @@ th[aria-sort="descending"] .th-sort-icon { transform: rotate(180deg); }
 .palette-foot { display: flex; gap: 16px; padding: 8px 16px; border-top: 1px solid var(--border-soft); color: var(--text-faint); font-size: 11.5px; }
 .palette-foot kbd { margin-right: 3px; }
 
-/* ------------------------------------------------------------ states */
-.empty { padding: 36px 20px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.fui-card .empty { border: 0; padding: 28px 20px; }
-.empty-title { font-weight: 600; color: var(--text); }
-.empty-text { color: var(--text-muted); max-width: 52ch; }
-/* Two ways in, side by side, and stacked when there is no room for two. */
-.empty-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.error-state { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--critical) 40%, transparent); border-radius: var(--radius); background: color-mix(in srgb, var(--critical) 6%, transparent); }
-.error-state > .icon { color: var(--critical-text); }
-.error-state > div { flex: 1; min-width: 200px; }
-.error-title { font-weight: 600; }
-.error-text { color: var(--text-muted); font-size: 13px; }
-
-.sk { display: inline-block; border-radius: var(--radius-sm); background: var(--skeleton); animation: sk 1.6s ease-in-out infinite; }
-.sk-block { display: block; width: 100%; border-radius: 6px; }
-.sk-rows { display: flex; flex-direction: column; gap: 14px; }
-.sk-row { display: flex; align-items: center; gap: 12px; }
-.sk-row-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.sk-thumb { width: 36px; height: 36px; border-radius: 6px; flex: none; }
-.sk-poster { width: 76px; aspect-ratio: 2 / 3; border-radius: 6px; flex: none; }
-.sk-poster-lg { width: 168px; aspect-ratio: 2 / 3; border-radius: var(--radius); flex: none; }
-.sk-np { max-width: 440px; }
-.tile .sk { margin: 3px 0; }
-@keyframes sk { 50% { opacity: .45; } }
+.tile .fui-skeleton { margin: 3px 0; }
 
 /* ------------------------------------------------------------ libraries & items */
 .lib-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
@@ -896,7 +866,6 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .storage-meter.is-critical .meter-fill { background: var(--critical); }
 .search-field-sm { min-width: 160px; flex: 0 1 240px; }
 .wrap-cell { overflow-wrap: anywhere; min-width: 120px; }
-.empty-action { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
 /* long unbroken strings never push a card wider than its column */
 .path, .mono.path { overflow-wrap: anywhere; word-break: break-word; }
@@ -948,7 +917,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
-  .spinner { animation: spin 1.2s linear infinite !important; animation-iteration-count: infinite !important; }
+  
 }
 
 /* ============================================================ recap (the year in review)
@@ -958,7 +927,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .rc-controls { min-width: 0; }
 .rc-story { min-width: 0; }
 .rc-story > * + * { margin-top: clamp(72px, 11vw, 148px); }
-.rc-story > .empty { margin-top: 32px; }
+.rc-story > .fui-empty { margin-top: 32px; }
 
 .rc-chapter { position: relative; isolation: isolate; scroll-margin-top: 72px; overflow-x: clip; } /* clip: the watermark word may not widen the page */
 .rc-mark { position: absolute; z-index: -1; right: 0; top: -.2em; max-width: 100%; overflow: hidden; white-space: nowrap; direction: rtl;
@@ -1000,7 +969,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .rc-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-top: 16px; }
 .rc-hero-actions:empty { display: none; }
 .rc-hero-rank { display: inline-block; margin: 0; padding: 4px 12px; border: 1px solid color-mix(in srgb, var(--accent-hi) 35%, transparent); border-radius: 99px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--text-hero); font-size: 12.5px; }
-.rc-hero.rc-sk .sk { display: block; margin-top: 14px; max-width: 100%; }
+.rc-hero.rc-sk .fui-skeleton { display: block; margin-top: 14px; max-width: 100%; }
 
 /* the posters, held like a hand of cards */
 .rc-fan { position: relative; flex: none; width: clamp(280px, 30vw, 430px); aspect-ratio: 1.22; margin-right: clamp(0px, 2vw, 28px); }

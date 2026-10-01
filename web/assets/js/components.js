@@ -6,6 +6,14 @@ import { RANGES, userList, can } from './state.js';
 import { dataTable } from './tables.js';
 import { button } from '../finui/components/button/button.js';
 
+export { emptyState } from '../finui/components/empty/empty.js';
+export { errorState } from '../finui/components/error/error.js';
+export { spinner } from '../finui/components/spinner/spinner.js';
+export { sk } from '../finui/components/skeleton/skeleton.js';
+import { spinner } from '../finui/components/spinner/spinner.js';
+import { emptyState } from '../finui/components/empty/empty.js';
+import { errorState } from '../finui/components/error/error.js';
+
 // ---------------------------------------------------------------- layout bits
 export function pageHeader(title, sub, right) {
   return h('header', { class: 'page-header' },
@@ -14,16 +22,6 @@ export function pageHeader(title, sub, right) {
 }
 
 export { card, chartCard } from '../finui/components/card/card.js';
-
-export function emptyState(title, text, action) {
-  return h('div', { class: 'empty' }, h('p', { class: 'empty-title' }, title), text ? h('p', { class: 'empty-text' }, text) : null, action || null);
-}
-
-export function errorState(err, retry) {
-  return h('div', { class: 'error-state', role: 'alert' }, icon('alert', 18),
-    h('div', null, h('p', { class: 'error-title' }, 'Couldn’t load this'), h('p', { class: 'error-text' }, err.message || String(err))),
-    retry ? button({ size: 'sm', type: 'button', onClick: retry }, icon('refresh', 14), 'Try again') : null);
-}
 
 export function inlineError(id, text) {
   return h('p', { class: 'field-error', id, role: 'alert' }, icon('alert', 14), h('span', null, text));
@@ -45,7 +43,6 @@ export function formField({ id, label, type = 'text', autocomplete, placeholder,
   };
 }
 
-export function spinner(size = 14) { return h('span', { class: 'spinner', style: { width: size + 'px', height: size + 'px' }, 'aria-hidden': 'true' }); }
 
 /** Put a button into / out of its busy state (disabled only while the request runs). */
 export function setBusy(btn, busy, busyLabel) {
@@ -63,18 +60,6 @@ export function setBusy(btn, busy, busyLabel) {
 }
 
 // ---------------------------------------------------------------- skeletons
-export const sk = {
-  line: (w = '60%', hgt = 12) => h('span', { class: 'sk', style: { width: w, height: hgt + 'px' } }),
-  block: (hgt = 120) => h('div', { class: 'sk sk-block', style: { height: hgt + 'px' } }),
-  tiles: (n = 4) => h('div', { class: 'tiles' }, Array.from({ length: n }, () =>
-    h('div', { class: 'tile' }, sk.line('45%', 11), sk.line('60%', 26), sk.line('35%', 10)))),
-  rows: (n = 5) => h('div', { class: 'sk-rows' }, Array.from({ length: Math.min(n, 5) }, () =>
-    h('div', { class: 'sk-row' }, h('span', { class: 'sk sk-thumb' }), h('div', { class: 'sk-row-lines' }, sk.line('55%'), sk.line('30%', 10))))),
-  tableRows: (n = 5) => h('div', { class: 'sk-rows' }, Array.from({ length: Math.min(n, 5) }, () =>
-    h('div', { class: 'sk-row' }, sk.line('18%'), sk.line('34%'), sk.line('12%'), sk.line('14%')))),
-  cardBlock: (hgt = 240, title = true) => h('section', { class: 'fui-card' }, title ? h('div', { class: 'fui-card__head' }, sk.line('28%', 14)) : null, h('div', { class: 'fui-card__body' }, sk.block(hgt))),
-  cardRows: (n = 5) => h('section', { class: 'fui-card' }, h('div', { class: 'fui-card__head' }, sk.line('28%', 14)), h('div', { class: 'fui-card__body' }, sk.rows(n))),
-};
 
 /**
  * First load → skeleton (kept ≥300ms so it never flashes).
@@ -395,7 +380,7 @@ export function statTile({ label, value, title, current, previous, vsLabel, spar
 
 /** Ranked poster rows for movies/series/music, avatar rows for users. */
 export function topList(rows, { kind = 'items', empty = 'No plays in this range.' } = {}) {
-  if (!rows || !rows.length) return h('div', { class: 'chart-empty chart-empty-sm' }, empty);
+  if (!rows || !rows.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
   return h('ol', { class: 'toplist' }, rows.map((r, i) => {
     const href = !r.id ? null : kind === 'users' ? `/users/${r.id}` : kind === 'libraries' ? `/libraries/${r.id}` : kind === 'items' ? `/items/${r.id}` : null;
     const thumb = kind === 'users' ? avatar(r.id, r.name, { size: 36 }) : kind === 'items' ? poster(r.image_item_id, r.name, { w: 120, cls: 'poster-sm' }) : null;

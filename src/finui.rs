@@ -210,9 +210,11 @@ mod tests {
         let mut owner: BTreeMap<String, String> = BTreeMap::new();
         for c in &r.components {
             for f in c.files.iter().filter(|f| f.ends_with(".css")) {
+                // Its own classes, and those of the components it says it is built with, as context (a flush card's
+                // empty state, an empty state's button).
                 for class in fui_classes(&uncommented(&read(&finui().join(f)))) {
-                    let base = class.split("--").next().unwrap().split("__").next().unwrap().to_string();
-                    assert_eq!(base, format!("fui-{}", c.name), "{f} styles .{class}, which is not {}'s", c.name);
+                    let base = class.split("--").next().unwrap().split("__").next().unwrap().trim_start_matches("fui-").to_string();
+                    assert!(base == c.name || c.requires.contains(&base), "{f} styles .{class}, which is neither {}'s nor of a component it requires", c.name);
                     owner.insert(class, c.name.clone());
                 }
             }

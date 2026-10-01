@@ -127,7 +127,7 @@ export default function serverPage(ctx) {
       timer = setTimeout(poll, 2000);
     });
     return emptyState('No server details yet', 'finstats fetches version, storage, plugins, scheduled tasks and devices from Jellyfin on its regular sync. You can also fetch them now.',
-      h('div', { class: 'empty-action' }, btn, err));
+      h('div', { class: 'fui-empty__action' }, btn, err));
   }
   let timer = null;
   ctx.onCleanup(() => clearTimeout(timer));

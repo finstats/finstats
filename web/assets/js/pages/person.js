@@ -21,7 +21,7 @@ export default function personPage(ctx) {
 
   const dv = dataView({
     container: view, signal: ctx.signal,
-    skeleton: () => [h('div', { class: 'item-hero' }, h('span', { class: 'sk sk-poster-lg' }), h('div', { class: 'sk-row-lines' }, sk.line('40%', 28), sk.line('30%'))), sk.tiles(3), sk.cardBlock(320)],
+    skeleton: () => [h('div', { class: 'item-hero' }, h('span', { class: 'fui-skeleton fui-skeleton--poster-lg' }), h('div', { class: 'fui-skeleton__lines' }, sk.line('40%', 28), sk.line('30%'))), sk.tiles(3), sk.cardBlock(320)],
     fetch: () => loadPerson(id, days, ctx.signal),
     render: (d) => {
       const p = d.person, t = d.totals || {};

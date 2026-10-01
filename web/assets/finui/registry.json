@@ -96,6 +96,76 @@
       "requires": [
         "core"
       ]
+    },
+    {
+      "name": "empty",
+      "category": "primitive",
+      "files": [
+        "components/empty/empty.js",
+        "components/empty/empty.css"
+      ],
+      "tokens": [
+        "--border",
+        "--radius",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "button",
+        "card"
+      ]
+    },
+    {
+      "name": "error",
+      "category": "primitive",
+      "files": [
+        "components/error/error.js",
+        "components/error/error.css"
+      ],
+      "tokens": [
+        "--critical",
+        "--critical-text",
+        "--radius",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "button",
+        "card"
+      ]
+    },
+    {
+      "name": "spinner",
+      "category": "primitive",
+      "files": [
+        "components/spinner/spinner.js",
+        "components/spinner/spinner.css"
+      ],
+      "tokens": [
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "skeleton",
+      "category": "primitive",
+      "files": [
+        "components/skeleton/skeleton.js",
+        "components/skeleton/skeleton.css"
+      ],
+      "tokens": [
+        "--radius",
+        "--radius-sm",
+        "--skeleton"
+      ],
+      "requires": [
+        "core",
+        "card"
+      ]
     }
   ]
 }

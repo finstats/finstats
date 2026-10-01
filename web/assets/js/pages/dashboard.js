@@ -46,8 +46,8 @@ export default function dashboard(ctx) {
 
   // ---- now playing (live; not scoped by the filters below)
   const npCount = h('span', { class: 'fui-badge--count mono', hidden: true });
-  const npBody = h('div', { class: 'np-wrap' }, h('div', { class: 'np-grid' }, h('div', { class: 'np sk-np' }, h('span', { class: 'sk sk-poster' }),
-    h('div', { class: 'sk-row-lines' }, sk.line('50%', 14), sk.line('35%'), sk.line('80%', 8)))));
+  const npBody = h('div', { class: 'np-wrap' }, h('div', { class: 'np-grid' }, h('div', { class: 'np fui-skeleton--wide' }, h('span', { class: 'fui-skeleton fui-skeleton--poster' }),
+    h('div', { class: 'fui-skeleton__lines' }, sk.line('50%', 14), sk.line('35%'), sk.line('80%', 8)))));
   let npFirst = true;
   const npLive = nowPlayingView(); // ticks every second between the polls
   ctx.onCleanup(() => npLive.destroy());
@@ -134,7 +134,7 @@ export default function dashboard(ctx) {
         return [emptyState('No plays recorded yet',
           can('manage') ? 'finstats is now watching your Jellyfin server — new plays show up here as they happen. You can also bring in the history you already have, from Jellystat or Streamystats.'
                 : 'Your plays show up here as they happen.',
-          can('manage') ? h('div', { class: 'empty-buttons' },
+          can('manage') ? h('div', { class: 'fui-empty__buttons' },
             button({ variant: 'primary', href: '/settings/import#import-jellystat' }, icon('upload', 14), 'Import from Jellystat'),
             button({ href: '/settings/import#import-streamystats' }, icon('upload', 14), 'Import from Streamystats')) : null), dlCard, shelfCard, comingCard];
       }

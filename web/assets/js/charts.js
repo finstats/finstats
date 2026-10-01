@@ -107,7 +107,7 @@ export function columnsChart({ daily, bucket = 'day', metric = 'watch_s', series
   const wrap = h('div', { class: 'chart', tabindex: rows.length && max > 0 ? 0 : null, role: 'group',
     'aria-label': `${metric === 'plays' ? 'Plays' : 'Watch time'} per ${bucket}. Use left and right arrow keys to read values.` });
   if (!rows.length || max <= 0) {
-    wrap.append(h('div', { class: 'chart-empty' }, 'No plays in this range.'));
+    wrap.append(h('div', { class: 'fui-empty--chart' }, 'No plays in this range.'));
     return wrap;
   }
 
@@ -237,7 +237,7 @@ export function heatmap({ data, metric = 'plays' }) {
   const max = Math.max(0, ...grid.flat());
   const wrap = h('div', { class: 'chart heat', tabindex: max > 0 ? 0 : null, role: 'group',
     'aria-label': 'Plays by weekday and hour. Use arrow keys to read values.' });
-  if (max <= 0) { wrap.append(h('div', { class: 'chart-empty' }, 'No plays in this range.')); return wrap; }
+  if (max <= 0) { wrap.append(h('div', { class: 'fui-empty--chart' }, 'No plays in this range.')); return wrap; }
 
   const plot = h('div', { class: 'chart-plot' });
   wrap.append(plot, h('div', { class: 'heat-scale' }, h('span', null, 'Less'),
@@ -314,7 +314,7 @@ export function heatmapTable({ data }) {
 /** items: [{label, value, color, display}] */
 export function stackedBar(items, { ariaLabel = '' } = {}) {
   const total = items.reduce((a, b) => a + (b.value || 0), 0);
-  if (total <= 0) return h('div', { class: 'chart-empty' }, 'No plays in this range.');
+  if (total <= 0) return h('div', { class: 'fui-empty--chart' }, 'No plays in this range.');
   const bar = h('div', { class: 'sbar', role: 'group', 'aria-label': ariaLabel },
     items.filter((it) => it.value > 0).map((it) => {
       const seg = h('div', { class: 'sbar-seg', tabindex: 0, style: { flexGrow: String(it.value), background: it.color },
@@ -350,7 +350,7 @@ export function methodsBar(methods, metric = 'plays') {
 /** buckets: [{name, plays, watch_s}] — one color for every bar: the categories are nominal. */
 export function bucketList(buckets, { labelFn = (x) => x, empty = 'Nothing recorded in this range.', watch = true } = {}) {
   const rows = buckets || [];
-  if (!rows.length || !rows.some((b) => (b.plays || 0) > 0 || (b.watch_s || 0) > 0)) return h('div', { class: 'chart-empty chart-empty-sm' }, empty);
+  if (!rows.length || !rows.some((b) => (b.plays || 0) > 0 || (b.watch_s || 0) > 0)) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
   const max = Math.max(1, ...rows.map((b) => b.plays || 0));
   return sortable(h('table', { class: 'buckets' },
     h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Share')), h('th', { class: 'r' }, 'Plays'), watch ? h('th', { class: 'r' }, 'Watch time') : null)),
@@ -365,7 +365,7 @@ export function bucketList(buckets, { labelFn = (x) => x, empty = 'Nothing recor
 /** Library make-up: [{name, count, size_bytes}] — bar by count, value = count, faint = size on disk. */
 export function libBucketList(buckets, { labelFn = (x) => x, empty = 'Nothing to show yet.', unit = 'Files' } = {}) {
   const rows = (buckets || []).filter((b) => b && b.name != null);
-  if (!rows.length) return h('div', { class: 'chart-empty chart-empty-sm' }, empty);
+  if (!rows.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
   const max = Math.max(1, ...rows.map((b) => b.count || 0));
   const anySize = rows.some((b) => (b.size_bytes || 0) > 0);
   return sortable(h('table', { class: 'buckets' },
@@ -387,7 +387,7 @@ export function simpleColumns({ rows, unit = ['item', 'items'], ariaLabel = 'Col
   const data = rows || [];
   const max = Math.max(0, ...data.map((d) => Number(d.value) || 0));
   const wrap = h('div', { class: 'chart', tabindex: data.length && max > 0 ? 0 : null, role: 'group', 'aria-label': `${ariaLabel}. Use left and right arrow keys to read values.` });
-  if (!data.length || max <= 0) { wrap.append(h('div', { class: 'chart-empty' }, empty)); return wrap; }
+  if (!data.length || max <= 0) { wrap.append(h('div', { class: 'fui-empty--chart' }, empty)); return wrap; }
   const plot = h('div', { class: 'chart-plot' });
   wrap.append(plot);
 
@@ -471,7 +471,7 @@ export function retentionChart({ runtime_s, bucket_s, curve, rewinds = [], subti
   const pts = curve || [];
   const n = Math.max(0, pts.length - 1);
   const wrap = h('div', { class: 'chart chart-retention', tabindex: n ? 0 : null, role: 'group', 'aria-label': `${ariaLabel}. Use left and right arrow keys to read values.` });
-  if (!n || !(runtime_s > 0) || !(bucket_s > 0)) { wrap.append(h('div', { class: 'chart-empty' }, empty)); return wrap; }
+  if (!n || !(runtime_s > 0) || !(bucket_s > 0)) { wrap.append(h('div', { class: 'fui-empty--chart' }, empty)); return wrap; }
   const plot = h('div', { class: 'chart-plot' });
   wrap.append(plot);
   const sum = (a) => (a || []).reduce((x, y) => x + (Number(y) || 0), 0);
@@ -568,7 +568,7 @@ export function retentionTable({ runtime_s, bucket_s, curve, rewinds = [], subti
 /** rows: [{client, direct_play, direct_stream, transcode, watch_s}] — a small three-part bar per client. */
 export function clientMethods(rows) {
   const data = (rows || []).filter((r) => r && ((r.direct_play || 0) + (r.direct_stream || 0) + (r.transcode || 0)) > 0);
-  if (!data.length) return h('div', { class: 'chart-empty chart-empty-sm' }, 'No plays in this range.');
+  if (!data.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, 'No plays in this range.');
   const keys = ['direct_play', 'direct_stream', 'transcode'];
   return plainTable(h('table', { class: 'table table-dense cm-table' },
     h('thead', null, h('tr', null, h('th', null, 'Client'), h('th', { class: 'cm-barcol', 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Split')),
@@ -606,7 +606,7 @@ export function sparkline(values, { w = 104, hgt = 30 } = {}) {
  */
 export function radarChart(buckets, { metric = 'watch_s', ariaLabel = 'Radar chart', empty = 'Nothing recorded in this range.' } = {}) {
   const data = (buckets || []).filter((b) => b && b.name !== 'Other' && Number(b[metric]) > 0).slice(0, 12);
-  if (data.length < 3) return h('div', { class: 'chart-empty chart-empty-sm' }, data.length ? 'A radar needs at least three genres. The list shows what there is.' : empty);
+  if (data.length < 3) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, data.length ? 'A radar needs at least three genres. The list shows what there is.' : empty);
   const n = data.length;
   const W = 520, H = 360, cx = W / 2, cy = H / 2 + 4, R = 118;
   const max = Math.max(...data.map((d) => Number(d[metric])));

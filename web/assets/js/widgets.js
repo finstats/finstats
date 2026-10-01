@@ -263,7 +263,7 @@ const monthLong = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'num
 function monthDate(str) { const [y, m] = String(str).split('-').map(Number); return new Date(y || 1970, (m || 1) - 1, 1); }
 
 function libItemRows(items, { empty, showAdded = false }) {
-  if (!items || !items.length) return h('div', { class: 'chart-empty chart-empty-sm' }, empty);
+  if (!items || !items.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
   return h('ol', { class: 'toplist' }, items.map((it, i) => h('li', { class: 'toplist-row' },
     h('span', { class: 'toplist-rank mono' }, String(i + 1)),
     poster(it.image_item_id || it.id, it.name, { w: 120, cls: 'poster-sm' }),

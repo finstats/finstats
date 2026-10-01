@@ -28,8 +28,6 @@
 .fui-button--icon:hover { background: var(--hover); color: var(--text); }
 .fui-button--icon[aria-disabled="true"] { opacity: .35; cursor: default; }
 
-/* An empty state's way out sits a little below its text. Until the empty state is finui's, button says so. */
-.empty .fui-button { margin-top: 8px; }
 
 /* The gallery's row of examples. */
 .fui-button__demo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
