@@ -1,4 +1,4 @@
-// finui: avatar. A person's picture in a circle, or their initials. Given an address, not an id.
+// FinUI: avatar. A person's picture in a circle, or their initials. Given an address, not an id.
 
 import { h, mount } from '../../core.js';
 import { initials } from '../../format.js';

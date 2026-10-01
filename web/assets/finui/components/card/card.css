@@ -1,4 +1,4 @@
-/* finui: card. Moved from app.css; the same rules under finui's names. */
+/* FinUI: card. Moved from app.css; the same rules under FinUI's names. */
 .fui-card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); box-shadow: var(--card-shadow); min-width: 0; }
 .fui-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: calc(var(--density) * 14px) calc(var(--density) * 16px) 0; }
 .fui-card__title { font-size: 14px; font-weight: 600; color: var(--text-strong); }

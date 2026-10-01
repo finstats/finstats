@@ -1,4 +1,4 @@
-// finui: combobox. One choice (or several) out of a list too long to show: a button that names the choice, and a list
+// FinUI: combobox. One choice (or several) out of a list too long to show: a button that names the choice, and a list
 // that opens under it, filtered as you type. multiSelect is the short kind, ticked rather than searched.
 
 import { h, icon, mount } from '../../core.js';

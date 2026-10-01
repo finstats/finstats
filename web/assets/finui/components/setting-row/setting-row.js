@@ -1,4 +1,4 @@
-// finui: setting-row. One setting on one line: what it is on the left (a label and at most a line of help), the
+// FinUI: setting-row. One setting on one line: what it is on the left (a label and at most a line of help), the
 // control on the right. On a phone the two stack.
 
 import { h } from '../../core.js';

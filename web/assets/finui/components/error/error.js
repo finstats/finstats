@@ -1,4 +1,4 @@
-// finui: error. What a view says when it could not load: that it failed, the reason in the server's words, and a way to
+// FinUI: error. What a view says when it could not load: that it failed, the reason in the server's words, and a way to
 // try again. It is an alert, so a screen reader says it as it appears.
 
 import { h, icon } from '../../core.js';

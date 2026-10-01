@@ -28,7 +28,7 @@ import { avatar as avatarOf } from '../finui/components/avatar/avatar.js';
 import { statTile } from '../finui/components/stat-tile/stat-tile.js';
 import { facts } from '../finui/components/facts/facts.js';
 
-/** A title's poster, by its id: finui's poster, given the address finstats serves it at. */
+/** A title's poster, by its id: FinUI's poster, given the address finstats serves it at. */
 export function poster(id, name, { w = 120, cls = '', kind = 'primary' } = {}) {
   return posterOf(id ? imgItem(id, w, kind) : null, name, { cls });
 }

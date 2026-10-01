@@ -31,7 +31,7 @@ const TIME_STEPS = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 4320
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAYS_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-// ---------------------------------------------------------------- tooltip (finui's; re-exported for the map)
+// ---------------------------------------------------------------- tooltip (FinUI's; re-exported for the map)
 import { showTip, hideTip, tipShown, tipRows } from '../finui/components/tooltip/tooltip.js';
 export { showTip, hideTip, tipShown };
 

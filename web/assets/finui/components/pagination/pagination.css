@@ -1,3 +1,3 @@
-/* finui: pagination. Moved from app.css; the same rules under finui's names. */
+/* FinUI: pagination. Moved from app.css; the same rules under FinUI's names. */
 .fui-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px 8px; border-top: 1px solid var(--border-soft); color: var(--text-muted); font-size: 12.5px; }
 .fui-pagination__buttons { display: flex; align-items: center; gap: 6px; }

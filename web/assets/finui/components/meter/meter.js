@@ -1,4 +1,4 @@
-// finui: meter. How far along something is, as a thin bar: a play, a job, a disk. Indeterminate when nobody knows yet.
+// FinUI: meter. How far along something is, as a thin bar: a play, a job, a disk. Indeterminate when nobody knows yet.
 
 import { h } from '../../core.js';
 

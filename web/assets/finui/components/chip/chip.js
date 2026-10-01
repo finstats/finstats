@@ -1,4 +1,4 @@
-// finui: chip. A small rounded thing that stands for one value: a genre, a filter in force, a choice that is on or off.
+// FinUI: chip. A small rounded thing that stands for one value: a genre, a filter in force, a choice that is on or off.
 // Unlike a badge it can be pressed — to filter by it, to switch it, or to take it away.
 
 import { h, icon } from '../../core.js';

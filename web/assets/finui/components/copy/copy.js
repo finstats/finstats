@@ -1,4 +1,4 @@
-// finui: copy. A small button beside a value that puts it on the clipboard and says, for two seconds, that it did.
+// FinUI: copy. A small button beside a value that puts it on the clipboard and says, for two seconds, that it did.
 
 import { h, icon, mount } from '../../core.js';
 

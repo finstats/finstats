@@ -1,4 +1,4 @@
-// finui: badge. A small label beside something: a pill (with a dot for what is live or paused), a count, or a status
+// FinUI: badge. A small label beside something: a pill (with a dot for what is live or paused), a count, or a status
 // line — an icon and a few words in one of four tones. It says; it is never pressed.
 
 import { h, icon } from '../../core.js';

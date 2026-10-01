@@ -1,4 +1,4 @@
-// finui: poster. A title's picture at one of a few sizes, standing in with its initials when there is none or it fails
+// FinUI: poster. A title's picture at one of a few sizes, standing in with its initials when there is none or it fails
 // to load. It is given an address, not an id: where pictures come from is the app's business.
 
 import { h, mount } from '../../core.js';

@@ -1,4 +1,4 @@
-/* finui: chip. Moved from app.css; the same rules under finui's names. */
+/* FinUI: chip. Moved from app.css; the same rules under FinUI's names. */
 .fui-chip--toggle { cursor: pointer; font: inherit; font-size: 12px; }
 .fui-chip--toggle[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: var(--accent-wash); color: var(--text); }
 .fui-chip--toggle[aria-pressed="false"] { color: var(--text-faint); }

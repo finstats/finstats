@@ -1,4 +1,4 @@
-/* finui: modal. Moved from app.css; the same rules under finui's names. */
+/* FinUI: modal. Moved from app.css; the same rules under FinUI's names. */
 /* ------------------------------------------------------------ modal, palette */
 .fui-modal__overlay { position: fixed; inset: 0; z-index: 60; display: grid; place-items: start center; padding: 9vh 16px 40px; overflow-y: auto; background: var(--backdrop); animation: fui-modal-fade var(--ease); }
 /* Fading out, it is already gone for the pointer: a click in those 140 ms belongs to the page under it. */

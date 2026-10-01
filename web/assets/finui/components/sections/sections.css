@@ -1,4 +1,4 @@
-/* finui: sections. Moved from app.css; the same rules under finui's names. */
+/* FinUI: sections. Moved from app.css; the same rules under FinUI's names. */
 /* ---- Sections (Settings, Server): one section on screen, a list to move between them. */
 .fui-sections { display: grid; grid-template-columns: 196px minmax(0, 1fr); gap: 20px 28px; align-items: start; }
 .fui-sections__nav { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }

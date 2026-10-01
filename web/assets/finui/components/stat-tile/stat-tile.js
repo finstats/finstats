@@ -1,4 +1,4 @@
-// finui: stat-tile. One number that matters, with its label and, beside it, how it moved since the period before.
+// FinUI: stat-tile. One number that matters, with its label and, beside it, how it moved since the period before.
 
 import { h, icon } from '../../core.js';
 

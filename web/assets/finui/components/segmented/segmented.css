@@ -1,4 +1,4 @@
-/* finui: segmented. Moved from app.css; the same rules under finui's names. */
+/* FinUI: segmented. Moved from app.css; the same rules under FinUI's names. */
 /* segmented control */
 .fui-segmented { display: inline-flex; padding: 2px; gap: 2px; background: var(--bg-sunken); border: 1px solid var(--border-soft); border-radius: calc(var(--radius-control) + 1px); max-width: 100%; overflow-x: auto; }
 .fui-segmented__option {

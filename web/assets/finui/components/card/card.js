@@ -1,4 +1,4 @@
-// finui: card. A surface that holds one thing — a chart, a list, a form — with a heading, a line under it and actions
+// FinUI: card. A surface that holds one thing — a chart, a list, a form — with a heading, a line under it and actions
 // on the right. Flush, it gives its body's edges to a table or a list that draws its own.
 
 import { h, icon, mount } from '../../core.js';

@@ -1,4 +1,4 @@
-// finui: rank-list. The most of something, in order: a number, a picture, a name and a line under it, and on the right
+// FinUI: rank-list. The most of something, in order: a number, a picture, a name and a line under it, and on the right
 // the figure it was ranked by with a smaller one under it.
 
 import { h } from '../../core.js';

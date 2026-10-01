@@ -1,4 +1,4 @@
-// finui: facts. A few things about one thing, label over value, in a grid: what a file is, where it lives, how big.
+// FinUI: facts. A few things about one thing, label over value, in a grid: what a file is, where it lives, how big.
 
 import { h } from '../../core.js';
 

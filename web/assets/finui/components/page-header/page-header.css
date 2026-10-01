@@ -1,4 +1,4 @@
-/* finui: page-header. Moved from app.css; the same rules under finui's names. */
+/* FinUI: page-header. Moved from app.css; the same rules under FinUI's names. */
 /* ------------------------------------------------------------ page chrome */
 .fui-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .fui-page-header__title { font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -.022em; color: var(--text-strong); overflow-wrap: anywhere; }

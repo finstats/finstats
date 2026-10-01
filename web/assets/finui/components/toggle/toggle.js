@@ -1,4 +1,4 @@
-// finui: toggle. A switch for a setting that takes effect at once: no Save button follows it.
+// FinUI: toggle. A switch for a setting that takes effect at once: no Save button follows it.
 
 import { h } from '../../core.js';
 

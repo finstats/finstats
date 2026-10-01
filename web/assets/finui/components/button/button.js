@@ -1,4 +1,4 @@
-// finui: button. One control in five looks — the default, primary for the one thing a view is for, ghost for the quiet
+// FinUI: button. One control in five looks — the default, primary for the one thing a view is for, ghost for the quiet
 // ones, danger for what cannot be undone, and an icon alone — at two sizes. A link that looks like a button is still a
 // link (`href`), and a file picker's label can look like one (`tag: 'label'`).
 
@@ -6,7 +6,7 @@ import { h, icon } from '../../core.js';
 
 /**
  * button({ variant, size, tone, block, disabled, href, tag, ...props }, ...children)
- * Everything else in props is h()'s: type, onClick, aria-*, title, class (added to finui's own).
+ * Everything else in props is h()'s: type, onClick, aria-*, title, class (added to FinUI's own).
  */
 export function button({ variant = 'default', size = 'md', tone = null, block = false, disabled = false, href = null, tag = null, class: extra = null, ...props } = {}, ...children) {
   const cls = ['fui-button', variant !== 'default' && `fui-button--${variant}`, size === 'sm' && 'fui-button--sm', tone === 'danger' && 'fui-button--danger-text',

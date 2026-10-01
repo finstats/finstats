@@ -1,4 +1,4 @@
-/* finui: stat-tile. Moved from app.css; the same rules under finui's names. */
+/* FinUI: stat-tile. Moved from app.css; the same rules under FinUI's names. */
 /* ------------------------------------------------------------ tiles */
 .fui-stat-tile__grid { --tile: 210px; --gap: 12px; display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--tile)), 1fr)); }
 /* Rows that come out even: three or six tiles go three, two or one across; four or eight go four, two or one — never three

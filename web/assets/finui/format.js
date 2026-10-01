@@ -1,4 +1,4 @@
-// finui format: the two ways a component writes a value itself. Numbers are printed as en-US, the way tables read them
+// FinUI format: the two ways a component writes a value itself. Numbers are printed as en-US, the way tables read them
 // back when they sort; a name with no picture becomes its initials.
 
 const nf = new Intl.NumberFormat('en-US');

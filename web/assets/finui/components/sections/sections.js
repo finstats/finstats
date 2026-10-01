@@ -1,4 +1,4 @@
-// finui: sections. A page that shows one of its sections at a time: a sticky list of them on the left — a row of chips
+// FinUI: sections. A page that shows one of its sections at a time: a sticky list of them on the left — a row of chips
 // on a phone — and the open one beside it. Which section is open is the app's to decide (it knows the address).
 
 import { h, icon } from '../../core.js';

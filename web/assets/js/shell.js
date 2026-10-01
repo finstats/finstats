@@ -15,7 +15,7 @@ let shell = null; // {el, content, navLinks, destroy, userId}
 let bare = null;
 
 
-/** The theme switch in the sidebar: finui's, given the choice this browser keeps. */
+/** The theme switch in the sidebar: FinUI's, given the choice this browser keeps. */
 const themeSwitch = () => themeSwitchOf({ value: themeChoice(), onChange: setTheme });
 
 function navItems() {

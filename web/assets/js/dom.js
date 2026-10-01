@@ -1,4 +1,4 @@
-// Formatting helpers, the logo, and finui's builder re-exported. Everything that comes from the API goes
+// Formatting helpers, the logo, and FinUI's builder re-exported. Everything that comes from the API goes
 // through text nodes — never innerHTML.
 
 import { h, s, clear, mount, icon } from '../finui/core.js';
@@ -6,7 +6,7 @@ import { num, initials } from '../finui/format.js';
 
 const nf = new Intl.NumberFormat('en-US');   // the other formatters' numbers, the way num() prints them
 
-// finui's builder and icons, for the modules that still import them from here.
+// FinUI's builder and icons, for the modules that still import them from here.
 export { h, s, clear, mount, icon, num, initials };
 
 /** The finstats logo. One source for favicon, sidebar and sign-in: /assets/logo.svg. */

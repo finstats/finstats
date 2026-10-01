@@ -1,4 +1,4 @@
-/* finui: media-card. Moved from app.css; the same rules under finui's names. */
+/* FinUI: media-card. Moved from app.css; the same rules under FinUI's names. */
 .fui-media-card__grid { display: grid; gap: 16px 14px; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
 .fui-media-card { display: flex; flex-direction: column; gap: 3px; color: var(--text); }
 .fui-media-card:hover { text-decoration: none; }

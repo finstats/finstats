@@ -1,4 +1,4 @@
-/* finui: copy. Moved from app.css; the same rules under finui's names. */
+/* FinUI: copy. Moved from app.css; the same rules under FinUI's names. */
 /* copy */
 .fui-copy { display: inline-flex; align-items: center; gap: 6px; }
 .fui-copy__row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }

@@ -1,4 +1,4 @@
-/* finui: skeleton. Moved from app.css; the same rules under finui's names. */
+/* FinUI: skeleton. Moved from app.css; the same rules under FinUI's names. */
 .fui-card--flush .fui-skeleton__rows { margin: 8px 16px 12px; }
 .fui-skeleton { display: inline-block; border-radius: var(--radius-sm); background: var(--skeleton); animation: fui-skeleton-pulse 1.6s ease-in-out infinite; }
 .fui-skeleton--block { display: block; width: 100%; border-radius: var(--radius-control); }

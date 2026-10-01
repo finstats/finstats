@@ -1,4 +1,4 @@
-// finui: tooltip. One floating box for the whole page, beside whatever the pointer or the keyboard is on: a chart's
+// FinUI: tooltip. One floating box for the whole page, beside whatever the pointer or the keyboard is on: a chart's
 // column, a dot on a map. It moves to stay on screen, and a scroll hides it.
 
 import { h } from '../../core.js';

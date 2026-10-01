@@ -1,11 +1,11 @@
-// finui: segmented. A few mutually exclusive choices side by side — a measure, a range, a sort — of which exactly one
+// FinUI: segmented. A few mutually exclusive choices side by side — a measure, a range, a sort — of which exactly one
 // is on. The arrow keys move between them, as in a radio group.
 
 import { h } from '../../core.js';
 
 export function segmented({ options, value, onChange, label, size = '' }) {
   let currentValue = value;
-  const small = size === 'sm' || size === 'seg-sm';   // 'seg-sm' is how callers said it before finui
+  const small = size === 'sm' || size === 'seg-sm';   // 'seg-sm' is how callers said it before FinUI
   const group = h('div', { class: ['fui-segmented', small && 'fui-segmented--sm'], role: 'radiogroup', 'aria-label': label });
   const btns = options.map((o) => h('button', { type: 'button', class: 'fui-segmented__option', role: 'radio', title: o.title || null,
     onClick: () => select(o.value, true) }, o.label));

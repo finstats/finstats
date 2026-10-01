@@ -1,4 +1,4 @@
-// finui: theme-switch. Light · Device · Dark as one switch with three stops: a click on a third of it, a drag of the knob
+// FinUI: theme-switch. Light · Device · Dark as one switch with three stops: a click on a third of it, a drag of the knob
 // or the arrow keys pick one, and the knob carries the icon of what is chosen. Which theme is kept, and where, is the
 // app's: it gives the value and is told the choice.
 

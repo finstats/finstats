@@ -1,4 +1,4 @@
-/* finui: setting-row. Moved from app.css; the same rules under finui's names. */
+/* FinUI: setting-row. Moved from app.css; the same rules under FinUI's names. */
 .fui-setting-row__label { font-size: 13px; font-weight: 550; color: var(--text); }
 /* The control sits on the middle of the name and help: aligned to the top, a switch hung there while a field, about as
    tall as the text, looked centred by chance. */

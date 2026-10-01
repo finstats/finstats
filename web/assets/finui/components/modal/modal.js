@@ -1,4 +1,4 @@
-// finui: modal. A dialog over the page for one task — confirm, edit, look closer — closed by its ×, by Esc or by a
+// FinUI: modal. A dialog over the page for one task — confirm, edit, look closer — closed by its ×, by Esc or by a
 // click outside, with the focus held inside it and given back to what opened it. Dialogs stack: only the one on top
 // answers a key, and its Esc goes no further, so a page behind never steps back.
 

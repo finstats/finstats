@@ -1,4 +1,4 @@
-// finui: field. A labelled input with its help and its error, the input itself, a search box with its icon, and a
+// FinUI: field. A labelled input with its help and its error, the input itself, a search box with its icon, and a
 // checkbox with its words. The label is always there; the help says what to type; the error says what was wrong.
 
 import { h, icon, mount } from '../../core.js';

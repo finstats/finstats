@@ -1,4 +1,4 @@
-/* finui: data-table. Moved from app.css; the same rules under finui's names. */
+/* FinUI: data-table. Moved from app.css; the same rules under FinUI's names. */
 /* ------------------------------------------------------------ tables */
 .fui-data-table__scroll { position: relative; overflow-x: auto; }
 /* relative: a visually hidden label inside must scroll with the table, not widen the page */

@@ -1,4 +1,4 @@
-// finui: spinner. A small turning ring for something that will take a moment: a button that is busy, a page that boots.
+// FinUI: spinner. A small turning ring for something that will take a moment: a button that is busy, a page that boots.
 
 import { h } from '../../core.js';
 

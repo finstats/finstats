@@ -1,4 +1,4 @@
-/* finui: rank-list. Moved from app.css; the same rules under finui's names. */
+/* FinUI: rank-list. Moved from app.css; the same rules under FinUI's names. */
 /* top lists */
 .fui-rank-list__row { display: flex; align-items: center; gap: 11px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); }
 .fui-rank-list__row:last-child { border-bottom: 0; padding-bottom: 0; }

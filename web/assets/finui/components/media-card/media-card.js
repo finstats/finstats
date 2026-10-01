@@ -1,9 +1,9 @@
-// finui: media-card. A title as a poster with its name and a line under it, the whole card a link; in a grid that fits as
+// FinUI: media-card. A title as a poster with its name and a line under it, the whole card a link; in a grid that fits as
 // many as the width allows.
 
 import { h } from '../../core.js';
 
-/** mediaCard({ href, poster, name, sub }): poster is a node (finui's poster, size --grid). */
+/** mediaCard({ href, poster, name, sub }): poster is a node (FinUI's poster, size --grid). */
 export function mediaCard({ href, poster, name, sub }) {
   return h('a', { class: 'fui-media-card', href }, poster, h('span', { class: 'fui-media-card__name' }, name), h('span', { class: 'fui-media-card__sub' }, sub));
 }

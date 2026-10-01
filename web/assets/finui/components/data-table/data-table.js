@@ -1,4 +1,4 @@
-// finui: data-table. Sorting and filtering for every table in the app.
+// FinUI: data-table. Sorting and filtering for every table in the app.
 //
 // sortable(table) turns the column headers into sort buttons. It reads what a cell *means*, not what
 // it says: "3d 2h", "1.4 GB", "42%", "2 hours ago" and "1,204" all sort by their value. A cell can
@@ -11,7 +11,7 @@
 
 import { h, icon } from '../../core.js';
 
-// The separators the app itself prints with (`num()` in finui's format.js is en-US), not the browser's: read with a
+// The separators the app itself prints with (`num()` in FinUI's format.js is en-US), not the browser's: read with a
 // German or Norwegian locale's, "1,204" was 1.204 and "12,345,678" was not a number at all.
 const GROUP_RE = /[,\s\u00a0\u202f]/g;
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });

@@ -1,4 +1,4 @@
-/* finui: field. Moved from app.css; the same rules under finui's names. */
+/* FinUI: field. Moved from app.css; the same rules under FinUI's names. */
 .fui-field__input {
   width: 100%; padding: calc(var(--density) * 8px) calc(var(--density) * 10px); min-height: calc(var(--density) * 36px); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text);
   transition: border-color var(--ease), box-shadow var(--ease);

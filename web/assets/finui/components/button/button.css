@@ -1,4 +1,4 @@
-/* finui: button. The rules app.css had for .btn and .icon-btn, under finui's names. */
+/* FinUI: button. The rules app.css had for .btn and .icon-btn, under FinUI's names. */
 .fui-button {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: calc(var(--density) * 7px) calc(var(--density) * 13px); min-height: calc(var(--density) * 34px);
   background: var(--hover); border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text); font-size: 13px; font-weight: 500; white-space: nowrap;

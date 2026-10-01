@@ -1,4 +1,4 @@
-// finui core: the element builder and the icons. Everything a finui component draws is made here; data reaches the
+// FinUI core: the element builder and the icons. Everything a FinUI component draws is made here; data reaches the
 // DOM as text nodes, never as markup. The only markup strings are the static icon paths below.
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -135,7 +135,7 @@ export const iconNames = () => Object.keys(ICONS);
 export const meta = {
   name: 'core',
   purpose: 'Builds elements (h for HTML, s for SVG), replaces an element’s children (mount, clear), and draws an icon.',
-  use: 'Everything in finui is built with h(). Data goes in as children, which become text nodes; never as markup.',
+  use: 'Everything in FinUI is built with h(). Data goes in as children, which become text nodes; never as markup.',
   avoid: 'innerHTML with anything but the static icon paths. el.append(null) prints "null": pass children through h() or mount(), which skip null, false and true.',
   props: {
     'h(tag, props, ...children)': 'props: class (a string, or an array whose falsy entries are dropped), style (an object), dataset, on<Event> handlers, attributes. Children nest in arrays.',

@@ -1,4 +1,4 @@
-// finui: skeleton. The shape of what is coming, in grey, while it comes: a line, a block, rows, tiles, a card. It shows
+// FinUI: skeleton. The shape of what is coming, in grey, while it comes: a line, a block, rows, tiles, a card. It shows
 // only when loading is slow (dataView waits 150 ms) and then stays long enough to read as deliberate.
 
 import { h } from '../../core.js';

@@ -26,7 +26,7 @@ pub struct Component {
     pub files: Vec<String>,
     /// Every token its CSS reads.
     pub tokens: Vec<String>,
-    /// Other finui components (or "core") it is built from.
+    /// Other FinUI components (or "core") it is built from.
     pub requires: Vec<String>,
 }
 
@@ -43,7 +43,7 @@ pub fn registry() -> anyhow::Result<Registry> {
 /// Every CSS file the registry lists, foundation first, each once, in order.
 pub fn stylesheet() -> anyhow::Result<String> {
     let r = registry()?;
-    let mut out = String::from("/* finui — finstats' components: web/assets/finui, in registry.json's order. */\n");
+    let mut out = String::from("/* FinUI — finstats' components: web/assets/finui, in registry.json's order. */\n");
     for path in r.foundation.iter().chain(r.components.iter().flat_map(|c| c.files.iter())).filter(|p| p.ends_with(".css")) {
         out.push('\n');
         out.push_str(file(path)?.trim());
@@ -158,7 +158,7 @@ mod tests {
             at += found + body.trim().len();
             assert_eq!(css.matches(body.trim()).count(), 1, "{f} is in finui.css twice");
         }
-        assert!(css.starts_with("/* finui"), "finui.css says what it is");
+        assert!(css.starts_with("/* FinUI"), "finui.css says what it is, by its name");
     }
 
     #[test]
@@ -174,7 +174,7 @@ mod tests {
                 }
                 let target = if spec.starts_with('/') { web().join(spec.trim_start_matches('/')) } else { path.parent().unwrap().join(spec) };
                 let target = target.canonicalize().unwrap_or_else(|_| panic!("{f} imports {spec}, which is not there"));
-                assert!(target.starts_with(&root), "{f} imports {spec}: finui imports nothing from outside finui");
+                assert!(target.starts_with(&root), "{f} imports {spec}: FinUI imports nothing from outside finui");
             }
         }
     }
@@ -221,14 +221,14 @@ mod tests {
             }
         }
         // A page may place or adjust a component inside its own layout (`.health-tiles .fui-stat-tile__foot`), but a
-        // selector made of finui's classes alone is a component's definition, and that lives in the component.
+        // selector made of FinUI's classes alone is a component's definition, and that lives in the component.
         for f in files_under(&web().join("assets")).iter().filter(|f| f.ends_with(".css") && !f.starts_with("finui/components/")) {
             let css = uncommented(&read(&web().join("assets").join(f)));
             for selector in css.split('}').filter_map(|rule| rule.rsplit_once('{').map(|(sel, _)| sel.rsplit('{').next().unwrap_or(sel))) {
                 for part in selector.split(',') {
                     let found = fui_classes(part);
                     let classes = part.matches('.').count();
-                    assert!(found.is_empty() || classes > found.len(), "{f} defines {}: a finui class alone belongs in its component", part.trim());
+                    assert!(found.is_empty() || classes > found.len(), "{f} defines {}: a FinUI class alone belongs in its component", part.trim());
                 }
             }
         }

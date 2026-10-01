@@ -1,4 +1,4 @@
-/* finui: avatar. Moved from app.css; the same rules under finui's names. */
+/* FinUI: avatar. Moved from app.css; the same rules under FinUI's names. */
 /* avatars & posters */
 .fui-avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; overflow: hidden; background: var(--wash-2); color: var(--wash-2-text); font-weight: 600; letter-spacing: .02em; }
 .fui-avatar img { width: 100%; height: 100%; object-fit: cover; }

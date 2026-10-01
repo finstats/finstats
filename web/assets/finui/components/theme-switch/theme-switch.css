@@ -1,4 +1,4 @@
-/* finui: theme-switch. Moved from app.css; the same rules under finui's names. */
+/* FinUI: theme-switch. Moved from app.css; the same rules under FinUI's names. */
 /* The theme: a switch with three stops (Light · Device · Dark), the family of .fui-toggle. --at is the stop, 0 to 2. */
 .fui-theme-switch { --at: 1; --w: 64px; --k: 22px; position: relative; flex: none; width: var(--w); height: 26px; border: 1px solid var(--border); border-radius: var(--radius-pill);
   background: var(--track); cursor: pointer; touch-action: none; user-select: none; transition: background 260ms ease, border-color var(--ease); }

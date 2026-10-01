@@ -1,5 +1,5 @@
 /* finstats — Obsidian's look, dark and light. */
-/* The tokens, the fonts, the reset and the small utilities (.mono, .muted…) are finui's: /assets/finui.css, linked before
+/* The tokens, the fonts, the reset and the small utilities (.mono, .muted…) are FinUI's: /assets/finui.css, linked before
    this file. */
 
 .noscript { padding: 2rem; color: var(--text); }
@@ -113,7 +113,7 @@ kbd {
 .fade-in { animation: fade var(--ease); }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
-/* ------------------------------------------------------------ inputs (buttons are finui's) */
+/* ------------------------------------------------------------ inputs (buttons are FinUI's) */
 
  
 

@@ -1,4 +1,4 @@
-/* finui: poster. Moved from app.css; the same rules under finui's names. */
+/* FinUI: poster. Moved from app.css; the same rules under FinUI's names. */
 .fui-poster { display: block; flex: none; aspect-ratio: 2 / 3; border-radius: var(--radius-sm); overflow: hidden; background: var(--placeholder); }
 .fui-poster img { width: 100%; height: 100%; object-fit: cover; }
 .fui-poster__fallback { display: grid; place-items: center; width: 100%; height: 100%; color: var(--text-faint); font-weight: 600; font-size: 11px; letter-spacing: .04em; }

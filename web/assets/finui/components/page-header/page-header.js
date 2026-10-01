@@ -1,4 +1,4 @@
-// finui: page-header. A page's name, a line under it, and whatever belongs on its right: chips, a picture.
+// FinUI: page-header. A page's name, a line under it, and whatever belongs on its right: chips, a picture.
 
 import { h } from '../../core.js';
 

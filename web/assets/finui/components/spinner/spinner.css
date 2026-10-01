@@ -1,4 +1,4 @@
-/* finui: spinner. Moved from app.css; the same rules under finui's names. */
+/* FinUI: spinner. Moved from app.css; the same rules under FinUI's names. */
 .fui-spinner {
   display: inline-block; width: 14px; height: 14px; flex: none; border-radius: 50%;
   border: 2px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; animation: fui-spinner-spin .7s linear infinite;
