@@ -412,6 +412,23 @@ The collector now keeps a timeline per live play and counts interruptions.
 // LibItem   = {"id","name","type","year","size_bytes","date_created","image_item_id"}
 ```
 
+## `GET /api/libraries/{id}/titles?type=&q=&sort=&dir=&page=` — everything in a library
+
+Every film, show, album, music video, video, book or audiobook in one library, sixty a page — not only what arrived
+lately. Episodes, seasons and tracks belong to one of these and are not titles of their own here. The library is the
+same for everyone, so this is open to anyone signed in and says nothing about plays.
+
+```jsonc
+{ "total": 1246, "page": 1, "page_size": 60,
+  "types": [ {"type": "Movie", "count": 1240}, {"type": "Video", "count": 6} ],   // what the library holds, whatever the filter
+  "items": [ {"id", "name", "type", "year", "date_created", "has_image", "image_item_id", "runtime_s", "album_artist",
+              "size_bytes",          // a show's is its episodes' files
+              "episodes"} ] }        // a show's episodes that are files, specials left out; null for anything else
+```
+
+`type` narrows to one kind, `q` keeps the titles whose name has every word typed. `sort` is `name` (default, case
+ignored), `year`, `added` or `size`; anything else is by name.
+
 ## `GET /api/server` 🔒 — the Jellyfin server itself
 
 ```jsonc

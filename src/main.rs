@@ -4,6 +4,7 @@ mod arr;
 mod audit;
 mod auth;
 mod backup;
+mod browse;
 mod card;
 mod changelog;
 mod channels;

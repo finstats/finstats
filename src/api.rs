@@ -69,6 +69,7 @@ pub fn router(app: App) -> Router {
         .route("/me/watchlist/{id}", delete(crate::watchlist::remove_mine))
         .route("/libraries", get(stats::libraries))
         .route("/libraries/{id}", get(stats::library_detail))
+        .route("/libraries/{id}/titles", get(crate::browse::get_titles))
         .route("/items/{id}", get(stats::item_detail))
         .route("/people/{id}", get(stats::person_detail))
         .route("/search", get(stats::search))
