@@ -31,39 +31,9 @@ const TIME_STEPS = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 4320
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAYS_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-// ---------------------------------------------------------------- tooltip
-let tipEl = null;
-function tipNode() {
-  if (!tipEl) {
-    tipEl = h('div', { class: 'tooltip', role: 'tooltip', hidden: true });
-    document.body.append(tipEl);
-    window.addEventListener('scroll', hideTip, { passive: true });
-  }
-  return tipEl;
-}
-export function showTip(rect, content) {
-  const el = tipNode();
-  el.replaceChildren(content);
-  el.hidden = false;
-  const tw = el.offsetWidth, th = el.offsetHeight;
-  let x = rect.left + rect.width / 2 - tw / 2;
-  let y = rect.top - th - 8;
-  if (y < 8) y = rect.bottom + 8;
-  x = Math.max(8, Math.min(x, window.innerWidth - tw - 8));
-  el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
-}
-export function hideTip() { if (tipEl) tipEl.hidden = true; }
-/** Is a tooltip on screen? Anything may have hidden it since it was shown: a scroll hides every one. */
-export const tipShown = () => !!tipEl && !tipEl.hidden;
-
-function tipRows(title, rows, total) {
-  return h('div', null,
-    h('div', { class: 'tooltip-title' }, title),
-    total ? h('div', { class: 'tooltip-row' }, h('span', { class: 'tooltip-key' }), h('strong', null, total.value), h('span', null, total.label)) : null,
-    rows.map((r) => h('div', { class: 'tooltip-row' },
-      h('span', { class: 'tooltip-key', style: { background: r.color } }),
-      h('strong', null, r.value), h('span', null, r.label))));
-}
+// ---------------------------------------------------------------- tooltip (finui's; re-exported for the map)
+import { showTip, hideTip, tipShown, tipRows } from '../finui/components/tooltip/tooltip.js';
+export { showTip, hideTip, tipShown };
 
 // ---------------------------------------------------------------- helpers
 function responsive(wrap, draw) {
@@ -281,9 +251,9 @@ export function heatmap({ data, metric = 'plays' }) {
     const v = (grid[d] && grid[d][hr]) || 0, o = (other[d] && other[d][hr]) || 0;
     const plays = metric === 'plays' ? v : o, watch = metric === 'plays' ? o : v;
     showTip(rect.getBoundingClientRect(), h('div', null,
-      h('div', { class: 'tooltip-title' }, `${DAYS_LONG[d]} ${hour(hr)}–${hour((hr + 1) % 24)}`),
-      h('div', { class: 'tooltip-row' }, h('strong', null, num(plays)), h('span', null, plays === 1 ? 'play' : 'plays')),
-      h('div', { class: 'tooltip-row' }, h('strong', null, duration(watch)), h('span', null, 'watched'))));
+      h('div', { class: 'fui-tooltip__title' }, `${DAYS_LONG[d]} ${hour(hr)}–${hour((hr + 1) % 24)}`),
+      h('div', { class: 'fui-tooltip__row' }, h('strong', null, num(plays)), h('span', null, plays === 1 ? 'play' : 'plays')),
+      h('div', { class: 'fui-tooltip__row' }, h('strong', null, duration(watch)), h('span', null, 'watched'))));
   }
 
   wrap.addEventListener('keydown', (e) => {

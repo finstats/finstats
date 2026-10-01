@@ -244,10 +244,14 @@ mod tests {
         let defined: BTreeSet<String> = tokens.match_indices("--").filter(|(i, _)| tokens[i + 2..].split(':').next().is_some_and(|n| !n.contains([' ', ')', ',', ';']))).map(|(i, _)| tokens[i..].split(':').next().unwrap().to_string()).collect();
         for c in &r.components {
             let mut read_here = BTreeSet::new();
+            let mut own = BTreeSet::new();
             for f in c.files.iter().filter(|f| f.ends_with(".css")) {
                 let css = uncommented(&read(&finui().join(f)));
                 read_here.extend(css.match_indices("var(--").map(|(i, _)| css[i + 4..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '-').collect::<String>()));
+                // A component's own variables (the theme switch's --at, its stop): declared in its CSS, not tokens.
+                own.extend(css.match_indices("--").filter(|(i, _)| *i == 0 || !css[..*i].ends_with('(')).map(|(i, _)| css[i..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '-').collect::<String>()).filter(|n| css.contains(&format!("{n}:"))));
             }
+            let read_here: BTreeSet<String> = read_here.difference(&own).cloned().collect();
             let listed: BTreeSet<String> = c.tokens.iter().cloned().collect();
             assert_eq!(read_here, listed, "{}: the tokens its CSS reads and the tokens registry.json lists", c.name);
             for t in &listed {

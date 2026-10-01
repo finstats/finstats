@@ -6,6 +6,7 @@ import { pageHeader, card, filterBar, dataView, sk, emptyState, topList, poster,
 import { activityCard, libraryInsights } from '../widgets.js';
 import { KINDS as HEALTH_KINDS } from './health.js';
 import { button } from '../../finui/components/button/button.js';
+import { mediaCard, mediaGrid } from '../../finui/components/media-card/media-card.js';
 
 const KIND = { movies: 'Movies', tvshows: 'Shows', music: 'Music', musicvideos: 'Music videos', homevideos: 'Home videos', books: 'Books', boxsets: 'Collections', mixed: 'Mixed' };
 const KIND_ICON = { movies: 'film', tvshows: 'play', music: 'activity' };
@@ -128,10 +129,8 @@ function healthSlot(ctx, libraryId) {
 
 export function itemGrid(items) {
   if (!items || !items.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, 'Nothing added yet.');
-  return h('ul', { class: 'item-grid' }, items.map((it) => h('li', null, h('a', { class: 'item-card', href: `/items/${it.id}` },
-    poster(it.image_item_id || it.id, it.name, { w: 300, cls: 'fui-poster--grid' }),
-    h('span', { class: 'item-card-name' }, it.name),
-    h('span', { class: 'item-card-sub' }, [it.sub || it.year, it.date_created ? 'added ' + relTime(it.date_created) : null].filter(Boolean).join(' · '))))));
+  return mediaGrid(items.map((it) => mediaCard({ href: `/items/${it.id}`, poster: poster(it.image_item_id || it.id, it.name, { w: 300, cls: 'fui-poster--grid' }),
+    name: it.name, sub: [it.sub || it.year, it.date_created ? 'added ' + relTime(it.date_created) : null].filter(Boolean).join(' · ') })));
 }
 
 // ---------------------------------------------------------------- /libraries/:id/titles
@@ -153,10 +152,7 @@ function titleSub(t) {
   if (t.type === 'MusicAlbum') return [t.album_artist, t.year].filter(Boolean).join(' · ');
   return [t.year, t.runtime_s ? duration(t.runtime_s) : null].filter(Boolean).join(' · ');
 }
-const titleCard = (t) => h('li', null, h('a', { class: 'item-card', href: `/items/${t.id}` },
-  poster(t.has_image ? t.image_item_id : null, t.name, { w: 300, cls: 'fui-poster--grid' }),
-  h('span', { class: 'item-card-name' }, t.name),
-  h('span', { class: 'item-card-sub' }, titleSub(t))));
+const titleCard = (t) => h('li', null, mediaCard({ href: `/items/${t.id}`, poster: poster(t.has_image ? t.image_item_id : null, t.name, { w: 300, cls: 'fui-poster--grid' }), name: t.name, sub: titleSub(t) }));
 
 export function libraryTitlesPage(ctx) {
   const id = ctx.params.id;
@@ -190,7 +186,7 @@ export function libraryTitlesPage(ctx) {
 
   const dv = dataView({
     container: view, signal: ctx.signal,
-    skeleton: () => h('ul', { class: 'item-grid titles-grid' }, Array.from({ length: 12 }, () => h('li', null, sk.block(180)))),
+    skeleton: () => h('ul', { class: 'fui-media-card__grid titles-grid' }, Array.from({ length: 12 }, () => h('li', null, sk.block(180)))),
     fetch: () => loadTitles(id, f, 1, ctx.signal),
     render: (d) => {
       if (observer) observer.disconnect();
@@ -199,7 +195,7 @@ export function libraryTitlesPage(ctx) {
         options: [{ value: '', label: 'All' }, ...d.types.map((t) => ({ value: t.type, label: `${TITLE_KIND[t.type] || t.type} (${num(t.count)})` }))],
         onChange: (v) => { f.type = v; apply(); } }) : null);
       if (!d.items.length) return emptyState(f.q || f.type ? 'Nothing matches' : 'Nothing here yet', f.q || f.type ? 'No title in this library has every word you typed.' : 'Titles appear here after finstats reads the library.');
-      const grid = h('ul', { class: 'item-grid titles-grid' }, d.items.map(titleCard));
+      const grid = h('ul', { class: 'fui-media-card__grid titles-grid' }, d.items.map(titleCard));
       let page = 1, shown = d.items.length, busy = false;
       const more = button({ variant: 'ghost', class: 'titles-more', onClick: () => next() }, 'Show more');
       const err = h('div');

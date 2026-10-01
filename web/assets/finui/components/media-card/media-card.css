@@ -1,0 +1,10 @@
+/* finui: media-card. Moved from app.css; the same rules under finui's names. */
+.fui-media-card__grid { display: grid; gap: 16px 14px; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.fui-media-card { display: flex; flex-direction: column; gap: 3px; color: var(--text); }
+.fui-media-card:hover { text-decoration: none; }
+.fui-media-card:hover .fui-poster { outline: 2px solid var(--accent); outline-offset: 1px; }
+.fui-media-card__name { margin-top: 5px; font-size: 13px; font-weight: 500; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fui-media-card__sub { font-size: 11.5px; color: var(--text-faint); }
+
+/* The gallery's stand-in for a poster. */
+.fui-media-card__demo-poster { display: block; aspect-ratio: 2 / 3; border-radius: 6px; background: var(--placeholder); }

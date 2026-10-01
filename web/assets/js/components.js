@@ -19,6 +19,7 @@ export { inlineError, formField } from '../finui/components/field/field.js';
 export { pagination } from '../finui/components/pagination/pagination.js';
 export { pageHeader } from '../finui/components/page-header/page-header.js';
 export { openModal } from '../finui/components/modal/modal.js';
+import { rankList } from '../finui/components/rank-list/rank-list.js';
 export { statTile } from '../finui/components/stat-tile/stat-tile.js';
 export { facts } from '../finui/components/facts/facts.js';
 export { meter } from '../finui/components/meter/meter.js';
@@ -175,17 +176,14 @@ export { chip } from '../finui/components/chip/chip.js';
 /** Ranked poster rows for movies/series/music, avatar rows for users. */
 export function topList(rows, { kind = 'items', empty = 'No plays in this range.' } = {}) {
   if (!rows || !rows.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
-  return h('ol', { class: 'toplist' }, rows.map((r, i) => {
-    const href = !r.id ? null : kind === 'users' ? `/users/${r.id}` : kind === 'libraries' ? `/libraries/${r.id}` : kind === 'items' ? `/items/${r.id}` : null;
-    const thumb = kind === 'users' ? avatar(r.id, r.name, { size: 36 }) : kind === 'items' ? poster(r.image_item_id, r.name, { w: 120, cls: 'fui-poster--sm' }) : null;
-    const name = href ? h('a', { href, class: 'toplist-name' }, r.name) : h('span', { class: 'toplist-name' }, r.name);
-    return h('li', { class: 'toplist-row' },
-      h('span', { class: 'toplist-rank mono' }, String(i + 1)),
-      thumb,
-      h('div', { class: 'toplist-main' }, name,
-        h('div', { class: 'toplist-sub' }, [r.sub, r.users != null ? `${num(r.users)} ${r.users === 1 ? 'user' : 'users'}` : null].filter(Boolean).join(' · ') || ' ')),
-      h('div', { class: 'toplist-nums' }, durEl(r.watch_s, 'mono toplist-watch'), h('span', { class: 'mono toplist-plays' }, `${num(r.plays)} ${r.plays === 1 ? 'play' : 'plays'}`)));
-  }));
+  return rankList(rows.map((r) => ({
+    href: !r.id ? null : kind === 'users' ? `/users/${r.id}` : kind === 'libraries' ? `/libraries/${r.id}` : kind === 'items' ? `/items/${r.id}` : null,
+    thumb: kind === 'users' ? avatar(r.id, r.name, { size: 36 }) : kind === 'items' ? poster(r.image_item_id, r.name, { w: 120, cls: 'fui-poster--sm' }) : null,
+    name: r.name,
+    sub: [r.sub, r.users != null ? `${num(r.users)} ${r.users === 1 ? 'user' : 'users'}` : null].filter(Boolean).join(' · ') || null,
+    value: durEl(r.watch_s, 'mono fui-rank-list__watch'),
+    note: `${num(r.plays)} ${r.plays === 1 ? 'play' : 'plays'}`,
+  })));
 }
 
 // ---------------------------------------------------------------- plays table

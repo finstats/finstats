@@ -215,10 +215,10 @@ export function genresCard(genres, { sub = 'By watch time' } = {}) {
 
 /** The titles watched together most, as a ranked list with posters. */
 export function titlesList(titles, n = 5) {
-  return h('ol', { class: 'toplist' }, (titles || []).slice(0, n).map((x, i) => h('li', { class: 'toplist-row' },
-    h('span', { class: 'toplist-rank mono' }, String(i + 1)), poster(x.image_item_id, x.name, { w: 120, cls: 'fui-poster--sm' }),
-    h('div', { class: 'toplist-main' }, h('a', { class: 'toplist-name', href: `/items/${x.id}` }, x.name), h('div', { class: 'toplist-sub' }, `${num(x.sessions)} ${x.sessions === 1 ? 'evening' : 'evenings'}`)),
-    h('div', { class: 'toplist-nums' }, h('span', { class: 'mono toplist-watch', title: durationExact(x.together_s) }, duration(x.together_s))))));
+  return h('ol', { class: 'fui-rank-list' }, (titles || []).slice(0, n).map((x, i) => h('li', { class: 'fui-rank-list__row' },
+    h('span', { class: 'fui-rank-list__rank mono' }, String(i + 1)), poster(x.image_item_id, x.name, { w: 120, cls: 'fui-poster--sm' }),
+    h('div', { class: 'fui-rank-list__main' }, h('a', { class: 'fui-rank-list__name', href: `/items/${x.id}` }, x.name), h('div', { class: 'fui-rank-list__sub' }, `${num(x.sessions)} ${x.sessions === 1 ? 'evening' : 'evenings'}`)),
+    h('div', { class: 'fui-rank-list__nums' }, h('span', { class: 'mono fui-rank-list__watch', title: durationExact(x.together_s) }, duration(x.together_s))))));
 }
 
 /** Who watches together. `g` is /api/stats/groups; hidden entirely when nobody has. */
@@ -239,10 +239,10 @@ export function groupsCard(g, { title = 'Watched together', forUser = null } = {
         me && me.share != null ? h('div', null, h('span', { class: 'group-num' }, Math.round(me.share * 100) + '%'), h('span', { class: 'group-label' }, 'of their watch time in company')) : null),
       h('div', { class: 'grid-2 group-lists' },
         h('div', null, h('h3', { class: 'group-head' }, forUser ? 'Most often with' : 'Groups'),
-          h('ol', { class: 'toplist' }, (g.companions || []).slice(0, 5).map((c, i) => h('li', { class: 'toplist-row' },
-            h('span', { class: 'toplist-rank mono' }, String(i + 1)), faces(c.members),
-            h('div', { class: 'toplist-main' }, h('span', { class: 'toplist-name' }, names(c.members)), h('div', { class: 'toplist-sub' }, `${num(c.sessions)} ${c.sessions === 1 ? 'session' : 'sessions'}`)),
-            h('div', { class: 'toplist-nums' }, h('span', { class: 'mono toplist-watch', title: durationExact(c.together_s) }, duration(c.together_s))))))),
+          h('ol', { class: 'fui-rank-list' }, (g.companions || []).slice(0, 5).map((c, i) => h('li', { class: 'fui-rank-list__row' },
+            h('span', { class: 'fui-rank-list__rank mono' }, String(i + 1)), faces(c.members),
+            h('div', { class: 'fui-rank-list__main' }, h('span', { class: 'fui-rank-list__name' }, names(c.members)), h('div', { class: 'fui-rank-list__sub' }, `${num(c.sessions)} ${c.sessions === 1 ? 'session' : 'sessions'}`)),
+            h('div', { class: 'fui-rank-list__nums' }, h('span', { class: 'mono fui-rank-list__watch', title: durationExact(c.together_s) }, duration(c.together_s))))))),
         h('div', null, h('h3', { class: 'group-head' }, 'Watched together most'), titlesList(g.titles)))] });
 }
 
@@ -264,12 +264,12 @@ function monthDate(str) { const [y, m] = String(str).split('-').map(Number); ret
 
 function libItemRows(items, { empty, showAdded = false }) {
   if (!items || !items.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
-  return h('ol', { class: 'toplist' }, items.map((it, i) => h('li', { class: 'toplist-row' },
-    h('span', { class: 'toplist-rank mono' }, String(i + 1)),
+  return h('ol', { class: 'fui-rank-list' }, items.map((it, i) => h('li', { class: 'fui-rank-list__row' },
+    h('span', { class: 'fui-rank-list__rank mono' }, String(i + 1)),
     poster(it.image_item_id || it.id, it.name, { w: 120, cls: 'fui-poster--sm' }),
-    h('div', { class: 'toplist-main' }, it.id ? h('a', { href: `/items/${it.id}`, class: 'toplist-name' }, it.name) : h('span', { class: 'toplist-name' }, it.name),
-      h('div', { class: 'toplist-sub' }, [it.year, it.type === 'Series' ? 'Series' : null, showAdded && it.date_created ? 'added ' + relTime(it.date_created) : null].filter(Boolean).join(' · ') || ' ')),
-    h('div', { class: 'toplist-nums' }, h('span', { class: 'mono toplist-watch' }, it.size_bytes ? bytes(it.size_bytes) : '–')))));
+    h('div', { class: 'fui-rank-list__main' }, it.id ? h('a', { href: `/items/${it.id}`, class: 'fui-rank-list__name' }, it.name) : h('span', { class: 'fui-rank-list__name' }, it.name),
+      h('div', { class: 'fui-rank-list__sub' }, [it.year, it.type === 'Series' ? 'Series' : null, showAdded && it.date_created ? 'added ' + relTime(it.date_created) : null].filter(Boolean).join(' · ') || ' ')),
+    h('div', { class: 'fui-rank-list__nums' }, h('span', { class: 'mono fui-rank-list__watch' }, it.size_bytes ? bytes(it.size_bytes) : '–')))));
 }
 
 /**

@@ -176,8 +176,8 @@ function barStrip({ rows, format, ariaLabel, head, cls = '', labelEvery = 1 }) {
     cols[i].classList.add('is-active');
     const r = rows[i];
     showTip(cols[i].querySelector('.rc-col-track').getBoundingClientRect(), h('div', null,
-      h('div', { class: 'tooltip-title' }, r.title || r.label),
-      h('div', { class: 'tooltip-row' }, h('span', { class: 'tooltip-key', style: { background: BAR } }), h('strong', null, format(Number(r.value) || 0)), r.note ? h('span', null, r.note) : null)));
+      h('div', { class: 'fui-tooltip__title' }, r.title || r.label),
+      h('div', { class: 'fui-tooltip__row' }, h('span', { class: 'fui-tooltip__key', style: { background: BAR } }), h('strong', null, format(Number(r.value) || 0)), r.note ? h('span', null, r.note) : null)));
   }
   wrap.addEventListener('pointerleave', () => { if (document.activeElement !== wrap) setActive(-1); });
   wrap.addEventListener('keydown', (e) => {
@@ -239,8 +239,8 @@ function waveform(d) {
     const bar = h('span', { class: 'rc-wave-bar' + (i === peak ? ' is-peak' : '') + (w.sec > 0 ? '' : ' is-silent'), style: { height: (w.sec > 0 ? Math.max(4, (w.sec / max) * 100) : 0) + '%' } });
     bar.style.setProperty('--i', String(i));
     const slot = h('span', { class: 'rc-wave-slot', onPointerenter: () => showTip(slot.getBoundingClientRect(), h('div', null,
-      h('div', { class: 'tooltip-title' }, range(w)),
-      h('div', { class: 'tooltip-row' }, h('span', { class: 'tooltip-key', style: { background: i === peak ? BAR_PEAK : BAR } }), w.sec > 0 ? h('strong', null, duration(w.sec)) : h('span', null, 'Nothing played')))) }, bar);
+      h('div', { class: 'fui-tooltip__title' }, range(w)),
+      h('div', { class: 'fui-tooltip__row' }, h('span', { class: 'fui-tooltip__key', style: { background: i === peak ? BAR_PEAK : BAR } }), w.sec > 0 ? h('strong', null, duration(w.sec)) : h('span', null, 'Nothing played')))) }, bar);
     return slot;
   });
   const cols = { gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` };
@@ -470,8 +470,8 @@ function heatmap(d) {
     active.classList.add('is-active');
     const x = active._d;
     showTip(active.getBoundingClientRect(), h('div', null,
-      h('div', { class: 'tooltip-title' }, longDay(x.key)),
-      h('div', { class: 'tooltip-row' }, h('span', { class: 'tooltip-key', style: { background: HEAT[Math.max(1, level(x.sec))] } }),
+      h('div', { class: 'fui-tooltip__title' }, longDay(x.key)),
+      h('div', { class: 'fui-tooltip__row' }, h('span', { class: 'fui-tooltip__key', style: { background: HEAT[Math.max(1, level(x.sec))] } }),
         x.sec > 0 ? [h('strong', null, duration(x.sec)), h('span', null, plural(x.plays, 'play', 'plays'))] : h('span', null, 'Nothing played'))));
   }
   const grid = h('div', { class: 'rc-heat-grid', style: { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }, 'aria-hidden': 'true' }, cells);

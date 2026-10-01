@@ -1,4 +1,4 @@
-/* finui: base. The fonts and what every element starts from: the reset, the type, the focus ring. */
+/* finui: base. The fonts and what every element starts from: the reset, the type, the focus ring, the utilities. */
 
 @font-face {
   font-family: "Inter Variable"; font-style: normal; font-weight: 100 900; font-display: swap;
@@ -35,3 +35,13 @@ table { border-collapse: collapse; width: 100%; }
 [hidden] { display: none !important; }
 :focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; border-radius: var(--radius-sm); }
 ::selection { background: var(--selection); }
+
+/* The small utilities every component and page uses. They come before every component, as they always came first:
+   a component's own size or colour wins over them, never the other way round. */
+.mono { font-family: var(--mono); font-size: .92em; font-variant-ligatures: none; }
+.muted { color: var(--text-faint); }
+.r { text-align: right; }
+.nowrap { white-space: nowrap; }
+.trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.icon { flex: none; vertical-align: -0.15em; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

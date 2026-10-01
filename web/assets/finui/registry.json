@@ -489,6 +489,86 @@
         "card",
         "field"
       ]
+    },
+    {
+      "name": "rank-list",
+      "category": "pattern",
+      "files": [
+        "components/rank-list/rank-list.js",
+        "components/rank-list/rank-list.css"
+      ],
+      "tokens": [
+        "--border-soft",
+        "--text",
+        "--text-faint"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "media-card",
+      "category": "pattern",
+      "files": [
+        "components/media-card/media-card.js",
+        "components/media-card/media-card.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--placeholder",
+        "--text",
+        "--text-faint"
+      ],
+      "requires": [
+        "core",
+        "poster"
+      ]
+    },
+    {
+      "name": "tooltip",
+      "category": "pattern",
+      "files": [
+        "components/tooltip/tooltip.js",
+        "components/tooltip/tooltip.css"
+      ],
+      "tokens": [
+        "--border",
+        "--mono",
+        "--radius-sm",
+        "--shadow",
+        "--text-muted",
+        "--text-strong",
+        "--tooltip-bg"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "theme-switch",
+      "category": "pattern",
+      "files": [
+        "components/theme-switch/theme-switch.js",
+        "components/theme-switch/theme-switch.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--border",
+        "--border-strong",
+        "--ease",
+        "--knob",
+        "--series-1",
+        "--shadow",
+        "--text-faint",
+        "--theme-device",
+        "--theme-moon",
+        "--theme-sun",
+        "--track",
+        "--warning"
+      ],
+      "requires": [
+        "core"
+      ]
     }
   ]
 }

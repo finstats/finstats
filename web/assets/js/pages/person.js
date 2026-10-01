@@ -51,16 +51,16 @@ export default function personPage(ctx) {
 }
 
 function titleGrid(rows, withTime) {
-  return h('ul', { class: 'item-grid' }, rows.map((x) => {
+  return h('ul', { class: 'fui-media-card__grid' }, rows.map((x) => {
     const credit = String(x.kinds || '').includes('Director') ? (String(x.kinds).includes('Actor') ? (x.role ? `Director · as ${x.role}` : 'Director · Actor') : 'Director') : x.role ? `as ${x.role}` : null;
     const inner = [
       poster(x.id, x.name, { w: 300, cls: 'fui-poster--grid' }),
-      h('span', { class: 'item-card-name' }, x.name),
-      h('span', { class: 'item-card-sub' }, [TYPE_LABEL[x.type] || x.type, x.year, x.removed ? 'no longer in library' : null].filter(Boolean).join(' · ')),
-      credit ? h('span', { class: 'item-card-sub' }, credit) : null,
-      withTime ? h('span', { class: 'item-card-sub mono', title: durationExact(x.watch_s) }, `${duration(x.watch_s)} · ${num(x.plays)} ${x.plays === 1 ? 'play' : 'plays'}`) : null,
+      h('span', { class: 'fui-media-card__name' }, x.name),
+      h('span', { class: 'fui-media-card__sub' }, [TYPE_LABEL[x.type] || x.type, x.year, x.removed ? 'no longer in library' : null].filter(Boolean).join(' · ')),
+      credit ? h('span', { class: 'fui-media-card__sub' }, credit) : null,
+      withTime ? h('span', { class: 'fui-media-card__sub mono', title: durationExact(x.watch_s) }, `${duration(x.watch_s)} · ${num(x.plays)} ${x.plays === 1 ? 'play' : 'plays'}`) : null,
     ];
-    return h('li', null, h('a', { class: 'item-card', href: `/items/${x.id}` }, inner));
+    return h('li', null, h('a', { class: 'fui-media-card', href: `/items/${x.id}` }, inner));
   }));
 }
 

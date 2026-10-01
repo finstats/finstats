@@ -161,8 +161,8 @@ export function worldMap({ points, countries = [], onPick, signal }) {
       const node = s('g', { class: 'wm-dot ' + KINDS[g.kind].cls, tabindex: '0', role: 'button', 'aria-label': `${KINDS[g.kind].label}: ${label}` },
         s('circle', { class: 'wm-mark', cx: g.xy[0], cy: g.xy[1], r }),
         one ? null : s('text', { class: 'wm-count', x: g.xy[0], y: g.xy[1], 'font-size': 10.5 * k, dy: '0.35em' }, String(g.members.length)));
-      const tip = () => (one ? one.tip() : h('div', null, h('div', { class: 'tooltip-title' }, `${g.members.length} places`),
-        g.members.slice(0, 6).map((m) => h('div', { class: 'tooltip-row' }, h('span', null, m.label))), h('div', { class: 'tooltip-title' }, 'Click to zoom in')));
+      const tip = () => (one ? one.tip() : h('div', null, h('div', { class: 'fui-tooltip__title' }, `${g.members.length} places`),
+        g.members.slice(0, 6).map((m) => h('div', { class: 'fui-tooltip__row' }, h('span', null, m.label))), h('div', { class: 'fui-tooltip__title' }, 'Click to zoom in')));
       const pick = () => { if (one) { if (onPick) onPick(one); } else fit(g.members, { pad: 1.8, minW: MIN_W }); };
       // Anchored on the circle itself: the group's box is the circle and whatever else a group ever holds.
       const mark = node.querySelector('.wm-mark');
@@ -270,5 +270,5 @@ export function worldMap({ points, countries = [], onPick, signal }) {
   };
 }
 
-export const placeTip = (title, rows) => h('div', null, h('div', { class: 'tooltip-title' }, title),
-  rows.filter(Boolean).map(([value, label]) => h('div', { class: 'tooltip-row' }, h('strong', null, typeof value === 'number' ? num(value) : value), h('span', null, label))));
+export const placeTip = (title, rows) => h('div', null, h('div', { class: 'fui-tooltip__title' }, title),
+  rows.filter(Boolean).map(([value, label]) => h('div', { class: 'fui-tooltip__row' }, h('strong', null, typeof value === 'number' ? num(value) : value), h('span', null, label))));
