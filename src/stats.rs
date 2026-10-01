@@ -568,9 +568,10 @@ pub(crate) fn order_by(columns: &[(&str, &str)], sort: Option<&str>, dir: Option
     format!("({expr}) IS NULL, {expr} {dir}, {default}")
 }
 
-/// The trackers a play can have come from: the live collector, or an import from one of the two
-/// other trackers. In the order the Activity filter offers them.
-pub(crate) const SOURCES: [&str; 3] = ["live", "jellystat", "streamystats"];
+/// The trackers a play can have come from: the live collector, or an import from one of the other
+/// trackers — each named by its own producer, so a new importer cannot be left out of the filter.
+/// In the order the Activity filter offers them.
+pub(crate) const SOURCES: [&str; 4] = [crate::collector::SOURCE, crate::import::SOURCE, crate::streamystats::SOURCE, crate::tautulli::SOURCE];
 
 /// The `source` filter, chosen from [`SOURCES`] rather than passed through — the value reaches SQL.
 /// Anything else, an empty value included, means all of them, which is what the filter shows when
@@ -2557,6 +2558,16 @@ mod tests {
         for all in [None, Some(""), Some("all"), Some("LIVE"), Some("' OR 1=1 --"), Some("jellystat' --")] {
             assert_eq!(source_filter(all), None, "{all:?}");
         }
+    }
+
+    /// Every tracker a play can come from is one the Activity filter offers: Tautulli's plays came in with 2.1.2 and
+    /// could not be filtered on, because the list was written down beside the importers rather than from them.
+    #[test]
+    fn every_tracker_a_play_comes_from_can_be_filtered_on() {
+        for source in [crate::collector::SOURCE, crate::import::SOURCE, crate::streamystats::SOURCE, crate::tautulli::SOURCE] {
+            assert_eq!(source_filter(Some(source)), Some(source), "{source}");
+        }
+        assert_eq!(SOURCES.len(), 4, "a new producer joins the list above as well");
     }
 
     #[test]

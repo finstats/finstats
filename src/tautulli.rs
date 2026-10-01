@@ -36,6 +36,9 @@ use crate::state::Tasks;
 
 pub const TASK: &str = "import_tautulli";
 
+/// What a play from Tautulli says it came from.
+pub const SOURCE: &str = "tautulli";
+
 /// Where an uploaded backup waits for its wires, in the data folder.
 pub const UPLOAD: &str = "tautulli-upload.db";
 
@@ -443,7 +446,7 @@ fn record(rows: &[Session], user: (&str, &str)) -> PlayRecord {
     };
     let (play_method, transcode) = served(head);
     PlayRecord {
-        source: "tautulli",
+        source: SOURCE,
         // The viewing's first row, which is its reference for every chain but one Plex began with a theme song.
         source_id: Some(format!("tautulli:{}", head.id)),
         active: false,

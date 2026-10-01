@@ -31,6 +31,9 @@ use crate::media::{self, Streams, ticks_to_s};
 use crate::playback::{PlayEvent, PlayRecord, insert_events};
 use crate::state::App;
 
+/// What a play finstats recorded itself says it came from.
+pub const SOURCE: &str = "live";
+
 const PERSIST_EVERY: Duration = Duration::from_secs(30);
 /// How often to check the socket's word against `/Sessions`, while there is something to check.
 /// While the socket carries and nothing is playing there is nothing to do and nothing to ask for, so
@@ -288,7 +291,7 @@ fn record_from_session(s: &Value, now: i64) -> Option<PlayRecord> {
     let is_episode = item_type == "Episode";
 
     Some(PlayRecord {
-        source: "live",
+        source: SOURCE,
         source_id: None,
         active: true,
         user_id,

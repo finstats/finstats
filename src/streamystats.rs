@@ -39,6 +39,9 @@ use crate::state::Tasks;
 
 const TASK: &str = "import_streamystats";
 
+/// What a play from Streamystats says it came from.
+pub const SOURCE: &str = "streamystats";
+
 #[derive(Debug, Default, Serialize, Clone)]
 pub struct ImportResult {
     pub sessions_read: u64,
@@ -200,7 +203,7 @@ fn record(conn: &Connection, d: &Value) -> Result<Option<PlayRecord>> {
     let transcode = transcode_of(d);
 
     Ok(Some(PlayRecord {
-        source: "streamystats",
+        source: SOURCE,
         source_id: opt_str(&d["id"]).map(|id| format!("streamystats:{id}")),
         // Nothing in a backup is playing now, whatever `isActive` says.
         active: false,

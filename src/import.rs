@@ -23,6 +23,9 @@ use crate::sync::backfill_playbacks;
 
 const TASK: &str = "import";
 
+/// What a play from Jellystat says it came from.
+pub const SOURCE: &str = "jellystat";
+
 #[derive(Debug, Default, Serialize, Clone)]
 pub struct ImportResult {
     pub plays_imported: u64,
@@ -357,7 +360,7 @@ fn record(conn: &Connection, d: &Value) -> Result<Option<PlayRecord>> {
     };
 
     Ok(Some(PlayRecord {
-        source: "jellystat",
+        source: SOURCE,
         source_id: Some(format!("jellystat:{source_id}")),
         active: false,
         user_id: norm_id(user_id),
