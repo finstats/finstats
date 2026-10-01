@@ -172,7 +172,7 @@ fn hash_token(token: &str) -> String {
     hex::encode(Sha256::digest(token.as_bytes()))
 }
 
-fn cookie_token(headers: &HeaderMap) -> Option<String> {
+pub(crate) fn cookie_token(headers: &HeaderMap) -> Option<String> {
     headers.get_all(COOKIE).iter().filter_map(|v| v.to_str().ok()).flat_map(|v| v.split(';')).find_map(|kv| {
         let (k, v) = kv.trim().split_once('=')?;
         (k == COOKIE_NAME && !v.is_empty()).then(|| v.to_string())

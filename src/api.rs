@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime};
 use axum::body::Body;
 use axum::extract::{DefaultBodyLimit, Path, Query, Request, State};
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE, HOST, ORIGIN};
-use axum::http::{HeaderValue, Method, StatusCode, Uri};
+use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post};
@@ -76,6 +76,7 @@ pub fn router(app: App) -> Router {
         .route("/events", get(stats::events))
         .route("/audit", get(crate::audit::audit))
         .route("/me/public-profile", get(crate::public::get_mine).put(crate::public::put_mine))
+        .route("/me/appearance", get(crate::appearance::get_mine).put(crate::appearance::put_mine))
         .route("/me/public-profile/reset", post(crate::public::reset_mine))
         .route("/public-profiles", get(crate::public::list))
         .route("/public-profiles/{id}", delete(crate::public::take_down))
@@ -208,14 +209,16 @@ async fn security_headers(req: Request, next: Next) -> Response {
 
 // ---------------------------------------------------------------- web UI
 
-async fn static_handler(uri: Uri) -> Response {
+async fn static_handler(State(app): State<App>, headers: HeaderMap, uri: Uri) -> Response {
     let path = uri.path().trim_start_matches('/');
-    // finui's styles, every component's file in one answer: one request on the critical path, no build step.
+    // FinUI's styles, every component's file in one answer: one request on the critical path, no build step — in the
+    // look the asker chose in Settings → Appearance. Theirs alone, so private: no cache between may hand it to another.
     if path == "assets/finui.css" {
-        return match crate::finui::served() {
+        return match crate::finui::served_with(&crate::appearance::of_request(&app, &headers).await) {
             Ok((css, etag)) => Response::builder()
                 .header(CONTENT_TYPE, "text/css; charset=utf-8")
-                .header(CACHE_CONTROL, "no-cache")
+                .header(CACHE_CONTROL, "private, no-cache")
+                .header("vary", "Cookie")
                 .header("etag", etag)
                 .body(Body::from(css.as_str().to_owned()))
                 .unwrap(),

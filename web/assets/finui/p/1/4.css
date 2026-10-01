@@ -1,0 +1,9 @@
+/* Accent: Green */
+:root {
+  --accent: light-dark(#15803d, #22c55e);
+  --accent-hi: light-dark(color-mix(in srgb, #15803d 85%, #000000), color-mix(in srgb, #22c55e 70%, #ffffff));
+  --accent-hover: light-dark(color-mix(in srgb, #15803d 85%, #000000), color-mix(in srgb, #22c55e 85%, #000000));
+  --accent-wash: light-dark(color-mix(in srgb, #15803d 10%, transparent), color-mix(in srgb, #22c55e 14%, transparent));
+  --selection: light-dark(color-mix(in srgb, #15803d 22%, transparent), color-mix(in srgb, #22c55e 40%, transparent));
+  --on-accent: light-dark(#ffffff, #0a0a0a);
+}

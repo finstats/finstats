@@ -1,0 +1,111 @@
+{
+  "about": "FinUI presets: every choice FinUI create offers (create/index.html, and bin/finui.mjs init --preset), in the order a preset code spells them (one base-36 digit per axis). The first option of an axis is tokens.css as it stands and sets nothing. Options are only ever appended, never reordered, so a code once handed out keeps its meaning. Colours are #rrggbb or var(--token); the ramps are Tailwind CSS's (MIT). Every chart palette but Dyes (finstats' own) is an ordering of the dataviz reference hues that passes its validator by day and by night, on paper, white, Obsidian and slate: neighbouring series at least ΔE 15 apart (OKLab).",
+  "axes": [
+    {
+      "key": "base", "label": "Base colour", "group": "Colour", "kind": "base",
+      "options": [
+        { "key": "washi", "label": "Washi & Obsidian", "swatch": ["#efe9dc", "#1e1e1e"] },
+        { "key": "neutral", "label": "Neutral", "ramp": ["#fafafa", "#f5f5f5", "#e5e5e5", "#d4d4d4", "#a3a3a3", "#737373", "#525252", "#404040", "#262626", "#171717", "#0a0a0a"] },
+        { "key": "stone", "label": "Stone", "ramp": ["#fafaf9", "#f5f5f4", "#e7e5e4", "#d6d3d1", "#a8a29e", "#78716c", "#57534e", "#44403c", "#292524", "#1c1917", "#0c0a09"] },
+        { "key": "zinc", "label": "Zinc", "ramp": ["#fafafa", "#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#52525b", "#3f3f46", "#27272a", "#18181b", "#09090b"] },
+        { "key": "slate", "label": "Slate", "ramp": ["#f8fafc", "#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8", "#64748b", "#475569", "#334155", "#1e293b", "#0f172a", "#020617"] },
+        { "key": "gray", "label": "Gray", "ramp": ["#f9fafb", "#f3f4f6", "#e5e7eb", "#d1d5db", "#9ca3af", "#6b7280", "#4b5563", "#374151", "#1f2937", "#111827", "#030712"] }
+      ]
+    },
+    {
+      "key": "accent", "label": "Accent", "group": "Colour", "kind": "accent",
+      "options": [
+        { "key": "seal", "label": "Seal & violet", "swatch": ["#b23a26", "#8a5cf5"] },
+        { "key": "violet", "label": "Violet", "light": "#6d28d9", "dark": "#8b5cf6" },
+        { "key": "blue", "label": "Blue", "light": "#1d4ed8", "dark": "#3b82f6" },
+        { "key": "teal", "label": "Teal", "light": "#0f766e", "dark": "#14b8a6" },
+        { "key": "green", "label": "Green", "light": "#15803d", "dark": "#22c55e" },
+        { "key": "amber", "label": "Amber", "light": "#b45309", "dark": "#f59e0b" },
+        { "key": "orange", "label": "Orange", "light": "#c2410c", "dark": "#f97316" },
+        { "key": "rose", "label": "Rose", "light": "#be123c", "dark": "#f43f5e" },
+        { "key": "pink", "label": "Pink", "light": "#be185d", "dark": "#ec4899" },
+        { "key": "ink", "label": "Ink", "light": "#262626", "dark": "#e5e5e5" }
+      ]
+    },
+    {
+      "key": "charts", "label": "Chart colours", "group": "Colour", "kind": "charts",
+      "options": [
+        { "key": "dyes", "label": "Dyes", "swatch": ["#5c3d7a", "#236e70", "#b23a26", "#2b4570"] },
+        { "key": "signal", "label": "Signal",
+          "series": [["#2a78d6", "#3987e5"], ["#eb6834", "#d95926"], ["#4a3aa7", "#9085e9"], ["#e34948", "#e66767"]],
+          "single": ["#2a78d6", "#3987e5"], "peak": ["#1d5496", "#88b7ef"] },
+        { "key": "ember", "label": "Ember",
+          "series": [["#eb6834", "#d95926"], ["#4a3aa7", "#9085e9"], ["#008300", "#008300"], ["#2a78d6", "#3987e5"]],
+          "single": ["#eb6834", "#d95926"], "peak": ["#a44924", "#e89b7d"] },
+        { "key": "lagoon", "label": "Lagoon",
+          "series": [["#1baf7a", "#199e70"], ["#2a78d6", "#3987e5"], ["#eb6834", "#d95926"], ["#4a3aa7", "#9085e9"]],
+          "single": ["#1baf7a", "#199e70"], "peak": ["#137a55", "#75c5a9"] },
+        { "key": "meadow", "label": "Meadow",
+          "series": [["#008300", "#008300"], ["#2a78d6", "#3987e5"], ["#eb6834", "#d95926"], ["#4a3aa7", "#9085e9"]],
+          "single": ["#008300", "#008300"], "peak": ["#005c00", "#66b566"] },
+        { "key": "dusk", "label": "Dusk",
+          "series": [["#4a3aa7", "#9085e9"], ["#eb6834", "#d95926"], ["#2a78d6", "#3987e5"], ["#e34948", "#e66767"]],
+          "single": ["#4a3aa7", "#9085e9"], "peak": ["#342975", "#bcb6f2"] }
+      ]
+    },
+    {
+      "key": "radius", "label": "Radius", "group": "Shape", "kind": "tokens",
+      "options": [
+        { "key": "default", "label": "Default" },
+        { "key": "none", "label": "None", "tokens": { "--radius": "0px", "--radius-sm": "0px", "--radius-control": "0px", "--radius-lg": "0px", "--radius-pill": "0px" } },
+        { "key": "small", "label": "Small", "tokens": { "--radius": "5px", "--radius-sm": "3px", "--radius-control": "4px", "--radius-lg": "7px" } },
+        { "key": "large", "label": "Large", "tokens": { "--radius": "12px", "--radius-sm": "6px", "--radius-control": "9px", "--radius-lg": "16px" } },
+        { "key": "round", "label": "Round", "tokens": { "--radius": "18px", "--radius-sm": "9px", "--radius-control": "18px", "--radius-lg": "24px" } }
+      ]
+    },
+    {
+      "key": "density", "label": "Density", "group": "Shape", "kind": "tokens",
+      "options": [
+        { "key": "default", "label": "Default" },
+        { "key": "compact", "label": "Compact", "tokens": { "--density": ".85" } },
+        { "key": "comfortable", "label": "Comfortable", "tokens": { "--density": "1.15" } },
+        { "key": "spacious", "label": "Spacious", "tokens": { "--density": "1.3" } }
+      ]
+    },
+    {
+      "key": "borders", "label": "Borders", "group": "Shape", "kind": "tokens",
+      "options": [
+        { "key": "hairline", "label": "Hairline" },
+        { "key": "none", "label": "None", "tokens": { "--border-soft": "transparent" } },
+        { "key": "strong", "label": "Strong", "tokens": { "--border": "var(--border-strong)", "--border-soft": "var(--border-strong)" } }
+      ]
+    },
+    {
+      "key": "cards", "label": "Cards", "group": "Shape", "kind": "tokens",
+      "options": [
+        { "key": "flat", "label": "Flat" },
+        { "key": "raised", "label": "Raised", "tokens": { "--card-shadow": "0 1px 2px color-mix(in srgb, var(--shadow) 16%, transparent), 0 4px 14px color-mix(in srgb, var(--shadow) 12%, transparent)" } },
+        { "key": "floating", "label": "Floating", "tokens": { "--card-shadow": "0 2px 4px color-mix(in srgb, var(--shadow) 14%, transparent), 0 14px 36px color-mix(in srgb, var(--shadow) 24%, transparent)" } }
+      ]
+    },
+    {
+      "key": "highlight", "label": "Highlight", "group": "Feel", "kind": "tokens",
+      "options": [
+        { "key": "subtle", "label": "Subtle" },
+        { "key": "bold", "label": "Bold", "tokens": { "--accent-wash": "color-mix(in srgb, var(--accent) 24%, transparent)" } }
+      ]
+    },
+    {
+      "key": "motion", "label": "Motion", "group": "Feel", "kind": "tokens",
+      "options": [
+        { "key": "default", "label": "Default" },
+        { "key": "quick", "label": "Quick", "tokens": { "--ease": "80ms ease" } },
+        { "key": "slow", "label": "Slow", "tokens": { "--ease": "260ms ease" } },
+        { "key": "off", "label": "Off", "tokens": { "--ease": "0s" } }
+      ]
+    },
+    {
+      "key": "icons", "label": "Icon stroke", "group": "Feel", "kind": "tokens",
+      "options": [
+        { "key": "regular", "label": "Regular" },
+        { "key": "light", "label": "Light", "tokens": { "--icon-stroke": "1.25" } },
+        { "key": "bold", "label": "Bold", "tokens": { "--icon-stroke": "2.25" } }
+      ]
+    }
+  ]
+}

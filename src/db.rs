@@ -682,6 +682,15 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         by          TEXT
     );
     "#,
+    // user_version 36 — Appearance (2.2.0): the FinUI preset one person chose, how finstats looks to them and nobody
+    //      else. No row: FinUI as it ships. Theirs to keep, so it travels in a backup.
+    r#"
+    CREATE TABLE appearance (
+        user_id      TEXT PRIMARY KEY,
+        finui_preset TEXT NOT NULL,
+        updated_at   INTEGER NOT NULL
+    ) WITHOUT ROWID;
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole

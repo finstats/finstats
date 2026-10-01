@@ -6,6 +6,8 @@
 
 use serde::Deserialize;
 
+pub mod preset;
+
 /// What `registry.json` says.
 #[derive(Deserialize)]
 #[allow(dead_code)]
@@ -69,6 +71,17 @@ pub fn served() -> anyhow::Result<(std::sync::Arc<String>, String)> {
         return Ok(v.clone());
     }
     Ok(ONCE.get_or_init(|| tagged(stylesheet().unwrap_or_default())).clone())
+}
+
+/// `/assets/finui.css` wearing the preset set in Settings → Appearance: the stylesheet as it ships, then the preset's
+/// tokens, with an ETag of its own. A code that names nothing (one stored before an option was removed) is ignored
+/// rather than breaking every page.
+pub fn served_with(preset: &str) -> anyhow::Result<(std::sync::Arc<String>, String)> {
+    let (css, etag) = served()?;
+    match preset::overlay(preset).filter(|o| !o.is_empty()) {
+        Some(overlay) => Ok((std::sync::Arc::new(format!("{css}{overlay}")), format!("{}-{preset}\"", etag.trim_end_matches('"')))),
+        None => Ok((css, etag)),
+    }
 }
 
 #[cfg(test)]
@@ -140,7 +153,9 @@ mod tests {
     fn every_listed_file_exists_and_every_file_is_listed() {
         let r = registry().unwrap();
         let listed: BTreeSet<String> = listed(&r).into_iter().collect();
-        let on_disk: BTreeSet<String> = files_under(&finui()).into_iter().filter(|f| f != "registry.json").collect();
+        // FinUI's site files a preset is made of (create/presets.json, p/<axis>/<option>.css) are not components: the
+        // QA stage `finui` holds them to FinUI's own.
+        let on_disk: BTreeSet<String> = files_under(&finui()).into_iter().filter(|f| f != "registry.json" && !f.starts_with("p/") && !f.starts_with("create/")).collect();
         let missing: Vec<_> = listed.difference(&on_disk).collect();
         let unlisted: Vec<_> = on_disk.difference(&listed).collect();
         assert!(missing.is_empty(), "listed in registry.json but not there: {missing:?}");
@@ -179,13 +194,13 @@ mod tests {
         }
     }
 
-    /// A colour is a token, and every token is `light-dark(light, dark)`, in `tokens.css` alone: a literal anywhere else
-    /// is right in one theme and wrong in the other.
+    /// A colour is a token, and every token is `light-dark(light, dark)`, in `tokens.css` alone (and in a preset's tokens,
+    /// `finui/p/`, which are tokens too): a literal anywhere else is right in one theme and wrong in the other.
     #[test]
     fn no_colour_literal_outside_the_tokens() {
         let assets = web().join("assets");
         let mut found = vec![];
-        for f in files_under(&assets).iter().filter(|f| (f.ends_with(".css") || f.ends_with(".js")) && f.as_str() != "finui/tokens.css") {
+        for f in files_under(&assets).iter().filter(|f| (f.ends_with(".css") || f.ends_with(".js")) && f.as_str() != "finui/tokens.css" && !f.starts_with("finui/p/")) {
             let text = read(&assets.join(f));
             let code = if f.ends_with(".css") { uncommented(&text) } else { js_code(&text) };
             for (n, line) in code.lines().enumerate() {

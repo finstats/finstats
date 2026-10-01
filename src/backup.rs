@@ -38,7 +38,7 @@ const SUFFIX: &str = ".jsonl.gz";
 
 /// In the order they are written, which is also the order they must be read in: a timeline row
 /// needs its play to exist.
-const TABLES: [&str; 12] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit", "watchlist", "located", "health_dismissed"];
+const TABLES: [&str; 13] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit", "watchlist", "located", "health_dismissed", "appearance"];
 
 pub fn dir(data_dir: &Path) -> PathBuf {
     data_dir.join("backups")
@@ -311,9 +311,9 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     res.other_rows += 1;
                 }
             }
-            // `located`: where the owner said a title is; `health_dismissed`: a finding set aside. A choice this database
-            // already has for the same id or finding stands.
-            "manual_seen" | "home_addresses" | "server_events" | "devices" | "located" | "health_dismissed" => {
+            // `located`: where the owner said a title is; `health_dismissed`: a finding set aside; `appearance`: how finstats
+            // looks to a person. A choice this database already has for the same id, finding or person stands.
+            "manual_seen" | "home_addresses" | "server_events" | "devices" | "located" | "health_dismissed" | "appearance" => {
                 let t = TABLES.iter().find(|t| **t == table).copied().unwrap_or("devices");
                 if insert_row(&tx, t, &known[t], row, &[], "INSERT OR IGNORE")? {
                     res.other_rows += 1;
@@ -560,6 +560,25 @@ mod tests {
         assert_eq!(rows, [("copies:bbb".into(), "f1".into(), Some("the 4K one stays".into())), ("gap:lo:1".into(), "f9".into(), Some("mine".into()))]);
         let findings: i64 = c.query_row("SELECT COUNT(*) FROM health_findings", [], |r| r.get(0)).unwrap();
         assert_eq!(findings, 0, "findings come from the library, not from a file");
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// How finstats looks to a person is theirs, and Jellyfin cannot give it back: it travels. A look this database already
+    /// has for the same person stands.
+    #[test]
+    fn a_person_s_look_travels_and_one_already_here_stands() {
+        let tmp = std::env::temp_dir().join(format!("finstats-appearance-backup-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let source = Db::open(&tmp.join("source.db")).unwrap();
+        source.conn().unwrap().execute_batch("INSERT INTO appearance(user_id, finui_preset, updated_at) VALUES ('alice', '0101', 100), ('bob', '02', 100);").unwrap();
+        let made = export(&source, &dir(&tmp), None).unwrap();
+        let target = Db::open(&tmp.join("target.db")).unwrap();
+        target.conn().unwrap().execute_batch("INSERT INTO appearance(user_id, finui_preset, updated_at) VALUES ('bob', '0001', 200)").unwrap();
+        restore(&target, &dir(&tmp).join(&made.name), false, None).unwrap();
+        let c = target.conn().unwrap();
+        let rows: Vec<(String, String)> = c.prepare("SELECT user_id, finui_preset FROM appearance ORDER BY user_id").unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(rows, [("alice".into(), "0101".into()), ("bob".into(), "0001".into())]);
         let _ = std::fs::remove_dir_all(&tmp);
     }
 

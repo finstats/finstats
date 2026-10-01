@@ -1,4 +1,5 @@
 mod api;
+mod appearance;
 mod artwork;
 mod arr;
 mod audit;
