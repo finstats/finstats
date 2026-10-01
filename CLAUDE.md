@@ -690,6 +690,19 @@ aborted and timers cleared on route change; every new card must hide itself when
 non-admins, imported plays). Native `el.append(null)` prints the text "null" — pass possibly-absent nodes through
 `h()` or filter them first.
 
+**FinUI (`web/assets/finui/`, `finui.rs`) is finstats' own component library**, written "FinUI" wherever a person reads
+it (lowercase only in paths, the registry's name and the `fui-` prefix). Each component is a module with its `meta` and
+its CSS, listed in `registry.json` with the tokens its CSS reads (a test holds the list); a `fui-x` class is styled by
+component x alone, and its modules import nothing from outside `finui/`. `/assets/finui.css` is every CSS file in
+registry order, built by the server — one request, no build step. **Every value a theme may change is a token**: colours,
+but also every corner (`--radius*`, a test refuses a literal radius), `--density`, `--card-shadow`, `--icon-stroke`,
+`--on-accent`. **FinUI is also a repository of its own, `github.com/finstats/finui`** (checked out beside finstats as
+`../finui`): the components are developed here, where they are used, and copied there as they change; its gallery,
+**FinUI create** (`create/`: presets, `preset.js`, the page) and the installer (`curl -fsSL https://finstats.github.io/finui/install.sh | sh -s --
+<code>`, built with the site by its pages workflow) live there only — finstats serves no gallery and no presets, and Settings → System links to the site. The QA
+stage `finui` runs that repository's checks and tests, serves its site and walks the gallery and create, and fails when
+a file of `web/assets/finui` differs from the repository's: copy a change across in the same sitting.
+
 "Now playing" (`nowPlayingView` in `widgets.js`) is polled every 5 s, but **only the 1 s ticker moves a clock** (+1 whole
 second per beat). A poll never repaints it; it only corrects the position when that means something (pause, server > 3 s
 ahead or > 15 s behind — clients report to Jellyfin roughly every 10 s), and even then by setting it one short so the
