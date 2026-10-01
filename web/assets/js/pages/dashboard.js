@@ -155,7 +155,7 @@ export default function dashboard(ctx) {
         groupsCard(groups, { forUser: userId || (admin ? null : state.user.id) }),
         insights ? failedLoginsCard(insights.failed_logins) : null,
         card({ title: 'Recent activity', actions: button({ variant: 'ghost', size: 'sm', href: '/activity' }, 'View all', icon('chevronRight', 14)),
-          cls: 'card-flush', body: playsTable(recent.rows, { showUser: admin, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }), empty: 'No plays in this range.' }) }),
+          cls: 'fui-card--flush', body: playsTable(recent.rows, { showUser: admin, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }), empty: 'No plays in this range.' }) }),
       ];
     },
   });

@@ -33,6 +33,25 @@
       "requires": [
         "core"
       ]
+    },
+    {
+      "name": "card",
+      "category": "primitive",
+      "files": [
+        "components/card/card.js",
+        "components/card/card.css"
+      ],
+      "tokens": [
+        "--bg-2",
+        "--border-soft",
+        "--radius",
+        "--text-faint",
+        "--text-strong"
+      ],
+      "requires": [
+        "core",
+        "button"
+      ]
     }
   ]
 }

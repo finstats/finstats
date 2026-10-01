@@ -23,9 +23,9 @@ function poster(t, w = 160) {
 const hours = (sec) => num((Number(sec) || 0) / 3600);
 
 function section(title, cls, ...body) {
-  return h('section', { class: `card pub-section ${cls}` },
-    h('div', { class: 'card-head' }, h('h2', { class: 'card-title' }, title)),
-    h('div', { class: 'card-body' }, ...body));
+  return h('section', { class: `fui-card pub-section ${cls}` },
+    h('div', { class: 'fui-card__head' }, h('h2', { class: 'fui-card__title' }, title)),
+    h('div', { class: 'fui-card__body' }, ...body));
 }
 
 function shelf(title, list) {

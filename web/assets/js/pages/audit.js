@@ -106,5 +106,5 @@ export function auditView(ctx) {
   paintKind();
   dv.load();
   return [h('div', { class: 'filters' }, h('div', { class: 'search-field' }, icon('search', 14), search), kindSlot),
-    summary, card({ cls: 'card-flush', id: 'audit', body: view })];
+    summary, card({ cls: 'fui-card--flush', id: 'audit', body: view })];
 }

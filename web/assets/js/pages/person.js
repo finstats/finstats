@@ -41,7 +41,7 @@ export default function personPage(ctx) {
           statTile({ label: 'Titles watched', value: `${num(t.titles_watched)} of ${num(p.titles)}`, hint: ' ' })),
         card({ title: 'Watched', sub: 'In this range, most watched first', body: watched.length ? titleGrid(watched, true) : emptyState('Nothing with them was played in the selected range.') }),
         unwatched.length ? card({ title: 'Also in the library', sub: 'Not played in this range', body: titleGrid(unwatched, false) }) : null,
-        can('see_everyone') && d.watchers && d.watchers.length ? card({ title: 'Watched by', cls: 'card-flush', body: watchers(d.watchers) }) : null,
+        can('see_everyone') && d.watchers && d.watchers.length ? card({ title: 'Watched by', cls: 'fui-card--flush', body: watchers(d.watchers) }) : null,
       ];
     },
   });

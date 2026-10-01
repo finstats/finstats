@@ -72,5 +72,5 @@ export function logView(ctx) {
   paintType();
   dv.load();
   return [h('div', { class: 'filters' }, h('div', { class: 'search-field' }, icon('search', 14), search), typeSlot),
-    summary, card({ cls: 'card-flush', id: 'log', body: view })];
+    summary, card({ cls: 'fui-card--flush', id: 'log', body: view })];
 }

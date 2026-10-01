@@ -13,31 +13,7 @@ export function pageHeader(title, sub, right) {
     right ? h('div', { class: 'page-header-right' }, right) : null);
 }
 
-export function card({ title, sub, actions, body, cls = '', id } = {}) {
-  return h('section', { class: 'card ' + cls, id },
-    title || actions ? h('div', { class: 'card-head' },
-      h('div', null, title ? h('h2', { class: 'card-title' }, title) : null, sub ? h('p', { class: 'card-sub' }, sub) : null),
-      actions ? h('div', { class: 'card-actions' }, actions) : null) : null,
-    h('div', { class: 'card-body' }, body));
-}
-
-/** Card whose body can flip between the chart and a table of the same data. */
-export function chartCard({ title, sub, controls, chart, table, cls = '' }) {
-  let showTable = false;
-  const body = h('div');
-  const label = h('span', null, 'Table');
-  const toggle = button({ variant: 'ghost', size: 'sm', type: 'button', 'aria-pressed': 'false',
-    onClick: () => { showTable = !showTable; render(); } }, icon('table', 14), label);
-  function render() {
-    toggle.setAttribute('aria-pressed', String(showTable));
-    toggle.replaceChildren(icon(showTable ? 'chart' : 'table', 14), h('span', null, showTable ? 'Chart' : 'Table'));
-    mount(body, showTable ? table() : chart());
-  }
-  render();
-  const el = card({ title, sub, actions: [controls, table ? toggle : null], body, cls: 'chart-card ' + cls });
-  el.rerender = render;
-  return el;
-}
+export { card, chartCard } from '../finui/components/card/card.js';
 
 export function emptyState(title, text, action) {
   return h('div', { class: 'empty' }, h('p', { class: 'empty-title' }, title), text ? h('p', { class: 'empty-text' }, text) : null, action || null);
@@ -96,8 +72,8 @@ export const sk = {
     h('div', { class: 'sk-row' }, h('span', { class: 'sk sk-thumb' }), h('div', { class: 'sk-row-lines' }, sk.line('55%'), sk.line('30%', 10))))),
   tableRows: (n = 5) => h('div', { class: 'sk-rows' }, Array.from({ length: Math.min(n, 5) }, () =>
     h('div', { class: 'sk-row' }, sk.line('18%'), sk.line('34%'), sk.line('12%'), sk.line('14%')))),
-  cardBlock: (hgt = 240, title = true) => h('section', { class: 'card' }, title ? h('div', { class: 'card-head' }, sk.line('28%', 14)) : null, h('div', { class: 'card-body' }, sk.block(hgt))),
-  cardRows: (n = 5) => h('section', { class: 'card' }, h('div', { class: 'card-head' }, sk.line('28%', 14)), h('div', { class: 'card-body' }, sk.rows(n))),
+  cardBlock: (hgt = 240, title = true) => h('section', { class: 'fui-card' }, title ? h('div', { class: 'fui-card__head' }, sk.line('28%', 14)) : null, h('div', { class: 'fui-card__body' }, sk.block(hgt))),
+  cardRows: (n = 5) => h('section', { class: 'fui-card' }, h('div', { class: 'fui-card__head' }, sk.line('28%', 14)), h('div', { class: 'fui-card__body' }, sk.rows(n))),
 };
 
 /**

@@ -321,7 +321,7 @@ export function libraryInsights(d, { scoped = false } = {}) {
       card({ title: 'Never watched',
         sub: un && un.count > 0 ? `${num(un.count)} ${un.count === 1 ? 'title' : 'titles'} · ${bytes(un.size_bytes)} nobody has played` : 'Everything has been played at least once',
         body: [libItemRows(un && un.items, { empty: 'Nothing unwatched — or no file sizes known yet.', showAdded: true }),
-          h('p', { class: 'help card-note' }, 'Combines plays recorded by finstats with Jellyfin’s own played flags, so history from before finstats counts too.')] })));
+          h('p', { class: 'help fui-card__note' }, 'Combines plays recorded by finstats with Jellyfin’s own played flags, so history from before finstats counts too.')] })));
 }
 
 // ---------------------------------------------------------------- a shelf: posters in a row

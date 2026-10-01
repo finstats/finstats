@@ -182,12 +182,12 @@ export default function serverPage(ctx) {
       onInput: (e) => onInput(e.target.value) });
     paint();
     return card({ title: ['Devices ', count], id: 'devices', sub: 'Every device that has signed in to Jellyfin',
-      actions: all.length > 5 ? h('div', { class: 'search-field search-field-sm' }, icon('search', 14), input) : null, cls: 'card-flush', body });
+      actions: all.length > 5 ? h('div', { class: 'search-field search-field-sm' }, icon('search', 14), input) : null, cls: 'fui-card--flush', body });
   }
 
   function pluginsCard(plugins) {
     const rows = Array.isArray(plugins) ? plugins : [];
-    return card({ title: 'Plugins', id: 'plugins', cls: 'card-flush', body: !rows.length ? emptyState('No plugins reported.') :
+    return card({ title: 'Plugins', id: 'plugins', cls: 'fui-card--flush', body: !rows.length ? emptyState('No plugins reported.') :
       plainTable(h('table', { class: 'table' },
         h('thead', null, h('tr', null, h('th', null, 'Plugin'), h('th', null, 'Version'), h('th', null, 'Status'))),
         h('tbody', null, rows.map((p) => {

@@ -89,7 +89,6 @@ kbd {
 .account-who { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .account-name { font-size: 14px; font-weight: 600; color: var(--text); }
 
-
 .topbar { display: none; }
 .scrim { position: fixed; inset: 0; z-index: 25; background: var(--backdrop); }
 
@@ -145,15 +144,7 @@ kbd {
 .count-pill { background: var(--accent-wash); color: var(--accent-hi); border-radius: 99px; padding: 1px 7px; font-size: 11px; }
 .result-count { color: var(--text-faint); font-size: 12.5px; font-family: var(--mono); }
 
-.card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); min-width: 0; }
-.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 16px 0; }
-.card-title { font-size: 14px; font-weight: 600; color: var(--text-strong); }
-.card-sub { font-size: 12.5px; color: var(--text-faint); margin-top: 1px; }
-.card-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.card-body { padding: 14px 16px 16px; }
-.card-flush > .card-body { padding: 8px 0 4px; }
-.card-flush > .card-head + .card-body { padding-top: 10px; }
-.card-flush .empty, .card-flush .sk-rows, .card-flush .error-state { margin: 8px 16px 12px; }
+.fui-card--flush .empty, .fui-card--flush .sk-rows, .fui-card--flush .error-state { margin: 8px 16px 12px; }
 
 .grid-2, .grid-3 { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
 .grid-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
@@ -505,7 +496,7 @@ th.is-sorted .th-sort-icon { opacity: 1; color: var(--accent-hi); }
 th[aria-sort="descending"] .th-sort-icon { transform: rotate(180deg); }
 .dt { min-width: 0; }
 .dt-tools { display: flex; justify-content: flex-end; padding: 0 0 10px; }
-.card-flush .dt-tools { padding: 10px 12px; border-bottom: 1px solid var(--border-soft); }
+.fui-card--flush .dt-tools { padding: 10px 12px; border-bottom: 1px solid var(--border-soft); }
 .dt-tools .search-field { width: min(100%, 240px); }
 .dt-none { margin: 0; padding: 18px 16px; color: var(--text-faint); font-size: 13px; text-align: center; }
 
@@ -602,7 +593,7 @@ th[aria-sort="descending"] .th-sort-icon { transform: rotate(180deg); }
 
 /* ------------------------------------------------------------ states */
 .empty { padding: 36px 20px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.card .empty { border: 0; padding: 28px 20px; }
+.fui-card .empty { border: 0; padding: 28px 20px; }
 .empty-title { font-weight: 600; color: var(--text); }
 .empty-text { color: var(--text-muted); max-width: 52ch; }
 /* Two ways in, side by side, and stacked when there is no room for two. */
@@ -688,7 +679,7 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .events td { vertical-align: top; }
 
 /* ------------------------------------------------------------ settings */
-.settings .card-body { max-width: 100%; }
+.settings .fui-card__body { max-width: 100%; }
 .setting-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .setting-row .help { max-width: 62ch; margin-top: 2px; }
 .setting-control { display: flex; align-items: center; gap: 10px; flex: none; }
@@ -865,7 +856,6 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .subsection-title { font-size: 18px; font-weight: 650; letter-spacing: -.012em; color: var(--text-strong); }
 .subsection-sub { margin-top: 3px; color: var(--text-faint); font-size: 12.5px; }
 .makeup:empty { display: none; }
-.card-note { margin-top: 12px; }
 
 .mini-list { display: flex; flex-direction: column; }
 .mini-row { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
@@ -941,8 +931,8 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 
 /* long unbroken strings never push a card wider than its column */
 .path, .mono.path { overflow-wrap: anywhere; word-break: break-word; }
-.lib-head > div, .page-header > div, .entity-header > div, .setting-row > div:first-child, .card-head > div:first-child { min-width: 0; }
-.lib-name, .card-title, .page-sub, .task-name, .task-msg, .import-msg, .play-head-title, .play-head-sub { overflow-wrap: anywhere; }
+.lib-head > div, .page-header > div, .entity-header > div, .setting-row > div:first-child { min-width: 0; }
+.lib-name, .page-sub, .task-name, .task-msg, .import-msg, .play-head-title, .play-head-sub { overflow-wrap: anywhere; }
 .np-badges .chip, .chips .chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; border-radius: 11px; }
 /* a full-width meter next to a sibling must flex, not claim 100% (see .np-progress) */
 .task-progress > .meter, .import-stage > .meter { flex: none; }
@@ -1174,7 +1164,6 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .rc-chip { display: inline-flex; align-items: baseline; gap: 10px; max-width: 100%; padding: 8px 16px; border: 1px solid var(--border); border-radius: 99px; }
 .rc-chip-name { font-size: 15px; font-weight: 600; color: var(--text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rc-chip-val { flex: none; color: var(--text-faint); font-size: 12px; }
-
 
 /* ---- the end: credits */
 .rc-credits { display: flex; flex-direction: column; align-items: center; text-align: center; padding-block: clamp(36px, 6vw, 80px) clamp(24px, 4vw, 48px); border-top: 1px solid var(--border-soft); }
@@ -1655,7 +1644,7 @@ span.shelf-card { cursor: default; }
 .lic-jump:hover { background: var(--hover); }
 .lic-jump .icon { flex: none; color: var(--text-faint); }
 .lic-view { display: flex; flex-direction: column; min-width: 0; scroll-margin-top: 14px; }
-.lic-view .card-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.lic-view .fui-card__body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
 .lic-view-name { font-weight: 650; }
 .lic-view-ver { margin-left: 6px; color: var(--text-faint); font-size: 12px; font-weight: 400; }
 .lic-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -1685,7 +1674,7 @@ span.shelf-card { cursor: default; }
 .section-link.is-active { background: var(--accent-wash); color: var(--text); }
 .section-link.is-active .icon { color: var(--accent-hi); }
 .section-body { min-width: 0; }
-.section-body .card-body { max-width: 100%; }
+.section-body .fui-card__body { max-width: 100%; }
 /* A setting is one row: what it is on the left, the control on the right, one line of help under the label. */
 .setting-rows { display: flex; flex-direction: column; }
 .section-body .setting-row { padding: 12px 0; border-top: 1px solid var(--border-soft); scroll-margin-top: 20px; }
@@ -1707,10 +1696,10 @@ span.shelf-card { cursor: default; }
 .key-form { display: grid; gap: 14px; }
 .key-form-row { display: grid; gap: 14px 20px; grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr); }
 @media (max-width: 560px) { .key-form-row { grid-template-columns: minmax(0, 1fr); } }
-.setting-row.is-hit, .card.is-hit { animation: hit 2.4s ease-out both; }
+.setting-row.is-hit, .fui-card.is-hit { animation: hit 2.4s ease-out both; }
 .setting-row.is-hit { border-radius: 6px; }
 @keyframes hit { 0%, 60% { box-shadow: inset 3px 0 0 var(--accent-hi); background: color-mix(in srgb, var(--accent) 10%, transparent); } 100% { box-shadow: none; background: transparent; } }
-.card.is-hit { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent); }
+.fui-card.is-hit { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent); }
 /* The finder. */
 .settings-finder { min-width: 220px; flex: 0 1 300px; }
 .settings-find-key { position: absolute; right: 9px; padding: 0 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-sunken); color: var(--text-faint); font: 500 11px/18px var(--mono); pointer-events: none; }
@@ -1739,7 +1728,7 @@ body.public { min-height: 100vh; }
 .pub-hero { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .pub-hero-text { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .pub-avatar { width: 64px; height: 64px; font-size: 24px; }
-.pub-section .card-body { display: flex; flex-direction: column; gap: 18px; }
+.pub-section .fui-card__body { display: flex; flex-direction: column; gap: 18px; }
 .pub-sub { font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
 .pub-shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 16px; list-style: none; }
 .pub-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -1849,7 +1838,7 @@ a.wl-poster:hover .poster, a.wl-poster:focus-visible .poster { outline: 2px soli
 .health-aside { margin: 6px 0 0; display: flex; gap: 5px; align-items: baseline; font-size: 12.5px; color: var(--text-muted); }
 .health-actions { white-space: nowrap; text-align: right; }
 .health-actions > * + * { margin-left: 4px; }
-.health-card .card-body p { margin: 0; }
+.health-card .fui-card__body p { margin: 0; }
 
 /* ---------------------------------------------------------------- everything in a library (/libraries/:id/titles) */
 .titles-grid { margin-top: 4px; }

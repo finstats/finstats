@@ -233,7 +233,7 @@ export function healthView(ctx) {
           : emptyState(filtered ? 'Nothing here' : 'Nothing to look at', filtered ? 'Nothing of this kind was found in this part of the library.' : 'No holes, no copies, nothing too thin, and every season alike.');
       const thinNote = (!f.kind || f.kind === 'thin') && list.items.some((it) => it.kind === 'thin')
         ? h('p', { class: 'help' }, 'Jellyfin keeps the first version of an item for finstats to read, so an item with several versions is judged by its first.') : null;
-      return [tiles(s), controls(s), count, card({ cls: 'card-flush', id: 'health', body }), thinNote];
+      return [tiles(s), controls(s), count, card({ cls: 'fui-card--flush', id: 'health', body }), thinNote];
     },
   });
   dv.load();

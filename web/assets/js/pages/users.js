@@ -58,7 +58,7 @@ export function usersPage(ctx) {
   });
   ctx.root.append(pageHeader('Users', 'Everyone with an account on your Jellyfin server'),
     filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }),
-    card({ cls: 'card-flush', body: view }));
+    card({ cls: 'fui-card--flush', body: view }));
   dv.load();
 }
 
@@ -131,9 +131,9 @@ export function userPage(ctx) {
         comingCard,
         Array.isArray(d.genres) ? genresCard(d.genres) : null,
         groupsCard(groups, { forUser: id }),
-        card({ title: 'Devices', cls: 'card-flush', body: devicesTable(d.devices) }),
-        can('see_network') ? card({ title: 'IP addresses', sub: 'Where this user has played from', cls: 'card-flush', body: ipsTable(d.ips) }) : null,
-        card({ title: 'Recent plays', cls: 'card-flush',
+        card({ title: 'Devices', cls: 'fui-card--flush', body: devicesTable(d.devices) }),
+        can('see_network') ? card({ title: 'IP addresses', sub: 'Where this user has played from', cls: 'fui-card--flush', body: ipsTable(d.ips) }) : null,
+        card({ title: 'Recent plays', cls: 'fui-card--flush',
           actions: button({ variant: 'ghost', size: 'sm', href: `/activity?user_id=${encodeURIComponent(id)}&days=${days}` }, 'View all'),
           body: playsTable(recent.rows, { showUser: false, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }), empty: 'No plays in this range.' }) }),
       ];

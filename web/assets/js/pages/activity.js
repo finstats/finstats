@@ -105,6 +105,6 @@ export default function activity(ctx) {
     ] });
 
   ctx.root.append(pageHeader('Activity', 'Every play finstats knows about. Newest first, or click a column to sort by it'), filters, summary,
-    card({ cls: 'card-flush', body: view }));
+    card({ cls: 'fui-card--flush', body: view }));
   dv.load();
 }

@@ -209,7 +209,7 @@ export default function securityPage(ctx) {
           body: points.length ? [map.el, picked] : h('div', { class: 'chart-empty' }, 'Nobody has watched from a public address in this range.') }),
         alertsCard(alerts, o.can_manage),
         h('div', { class: 'grid-heat' },
-          card({ title: 'Places', cls: 'card-flush', body: o.places.length ? placesTable(o.places) : h('div', { class: 'chart-empty chart-empty-sm' }, 'Nothing in this range.') }),
+          card({ title: 'Places', cls: 'fui-card--flush', body: o.places.length ? placesTable(o.places) : h('div', { class: 'chart-empty chart-empty-sm' }, 'Nothing in this range.') }),
           card({ title: 'Countries', sub: 'By plays', body: bucketList(o.countries.map((c) => ({ name: c.name, plays: c.plays, watch_s: 0 })), { watch: false, empty: 'Nothing in this range.' }) })),
         h('p', { class: 'attribution' },
           o.database.dbip ? [h('a', { href: 'https://db-ip.com', target: '_blank', rel: 'noopener noreferrer' }, 'IP Geolocation by DB-IP'), ' · '] : null,

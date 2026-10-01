@@ -89,9 +89,9 @@ export default function itemPage(ctx) {
         comingCard(it),
         languagesCard(langs),
         d.seasons && d.seasons.length ? card({ title: 'Seasons', sub: 'Plays per episode in this range', body: seasons(d.seasons) }) : null,
-        card({ title: 'Watched by', cls: 'card-flush', body: watchers(d.watchers) }),
+        card({ title: 'Watched by', cls: 'fui-card--flush', body: watchers(d.watchers) }),
         playedBy(d.played_by),
-        card({ title: 'Recent plays', cls: 'card-flush',
+        card({ title: 'Recent plays', cls: 'fui-card--flush',
           actions: button({ variant: 'ghost', size: 'sm', href: `/activity?${key}=${encodeURIComponent(id)}&days=${days}` }, 'View all'),
           body: playsTable(recent.rows, { showUser: can('see_everyone'), onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }), empty: 'No plays in this range.' }) }),
         file.children.length ? card({ title: 'File', body: file }) : null,
@@ -226,7 +226,7 @@ function externalLinks(list) {
 /** Jellyfin's played flags: covers people who watched before finstats existed. */
 function playedBy(rows) {
   if (!Array.isArray(rows) || !rows.length) return null;
-  return card({ title: 'Marked played in Jellyfin', sub: 'Jellyfin’s own flags, including history from before finstats', cls: 'card-flush',
+  return card({ title: 'Marked played in Jellyfin', sub: 'Jellyfin’s own flags, including history from before finstats', cls: 'fui-card--flush',
     body: plainTable(h('table', { class: 'table' },
       h('thead', null, h('tr', null, h('th', null, 'User'), h('th', null, 'Last played'), h('th', null, h('span', { class: 'sr-only' }, 'Favourite')))),
       h('tbody', null, rows.map((r) => h('tr', null,

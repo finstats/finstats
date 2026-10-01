@@ -217,9 +217,17 @@ mod tests {
                 }
             }
         }
+        // A page may place or adjust a component inside its own layout (`.health-tiles .fui-stat-tile__foot`), but a
+        // selector made of finui's classes alone is a component's definition, and that lives in the component.
         for f in files_under(&web().join("assets")).iter().filter(|f| f.ends_with(".css") && !f.starts_with("finui/components/")) {
-            let found = fui_classes(&uncommented(&read(&web().join("assets").join(f))));
-            assert!(found.is_empty(), "{f} styles finui's classes: {found:?}");
+            let css = uncommented(&read(&web().join("assets").join(f)));
+            for selector in css.split('}').filter_map(|rule| rule.rsplit_once('{').map(|(sel, _)| sel.rsplit('{').next().unwrap_or(sel))) {
+                for part in selector.split(',') {
+                    let found = fui_classes(part);
+                    let classes = part.matches('.').count();
+                    assert!(found.is_empty() || classes > found.len(), "{f} defines {}: a finui class alone belongs in its component", part.trim());
+                }
+            }
         }
     }
 

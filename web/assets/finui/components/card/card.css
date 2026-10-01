@@ -1,0 +1,15 @@
+/* finui: card. Moved from app.css; the same rules under finui's names. */
+.fui-card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); min-width: 0; }
+.fui-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 16px 0; }
+.fui-card__title { font-size: 14px; font-weight: 600; color: var(--text-strong); }
+.fui-card__sub { font-size: 12.5px; color: var(--text-faint); margin-top: 1px; }
+.fui-card__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fui-card__body { padding: 14px 16px 16px; }
+.fui-card--flush > .fui-card__body { padding: 8px 0 4px; }
+.fui-card--flush > .fui-card__head + .fui-card__body { padding-top: 10px; }
+.fui-card__note { margin-top: 12px; }
+.fui-card__head > div:first-child { min-width: 0; }
+.fui-card__title { overflow-wrap: anywhere; }
+
+/* The gallery's list in a flush card. */
+.fui-card__demo-list { margin: 0; padding: 0 16px 8px; list-style: none; display: grid; gap: 6px; }

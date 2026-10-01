@@ -151,15 +151,15 @@ function requestsTab(ctx, root) {
         trend.length > 1 ? chartCard({ title: 'How long a request takes', sub: 'Median hours from asking to available, by the month it was asked in',
           chart: () => simpleColumns({ rows: trend, unit: ['hour', 'hours'], ariaLabel: 'Median hours to arrive per month' }),
           table: () => simpleColumnsTable({ rows: trend, head: ['Month', 'Hours to arrive'] }) }) : null,
-        card({ cls: 'card-flush', body: [table, list.total > PER_PAGE ? pagination({ page: list.page, perPage: list.per_page, total: list.total, onPage: (p) => { f.page = p; apply(false); window.scrollTo({ top: 0 }); } }) : null] }),
-        never.length ? card({ title: 'Arrived, never played', sub: 'Here for more than two weeks and nobody has watched it', cls: 'card-flush',
+        card({ cls: 'fui-card--flush', body: [table, list.total > PER_PAGE ? pagination({ page: list.page, perPage: list.per_page, total: list.total, onPage: (p) => { f.page = p; apply(false); window.scrollTo({ top: 0 }); } }) : null] }),
+        never.length ? card({ title: 'Arrived, never played', sub: 'Here for more than two weeks and nobody has watched it', cls: 'fui-card--flush',
           body: dataTable(h('table', { class: 'table' },
             h('thead', null, h('tr', null, h('th', null, 'Title'), everyone ? h('th', null, 'Asked by') : null, h('th', { 'data-first': 'asc' }, 'Here since'))),
             h('tbody', null, never.map((r) => h('tr', null,
               h('td', null, titleCell(r)),
               everyone ? h('td', null, r.user_name || 'Unknown') : null,
               h('td', { class: 'mono nowrap', 'data-sort': r.available_at, title: dateTime(r.available_at) }, relTime(r.available_at))))))) }) : null,
-        summary.people && summary.people.length > 1 ? card({ title: 'Who asks for what', sub: 'Titles requested, and how many were watched afterwards', cls: 'card-flush',
+        summary.people && summary.people.length > 1 ? card({ title: 'Who asks for what', sub: 'Titles requested, and how many were watched afterwards', cls: 'fui-card--flush',
           body: dataTable(h('table', { class: 'table' },
             h('thead', null, h('tr', null, h('th', null, 'Person'), h('th', { class: 'r', 'data-first': 'desc' }, 'Asked for'), h('th', { class: 'r' }, 'Arrived'), h('th', { class: 'r' }, 'Watched'))),
             h('tbody', null, summary.people.map((p) => h('tr', null,
@@ -242,7 +242,7 @@ function historySection(ctx) {
           bucket('Indexers', 'Where it came from', d.indexers, 'Files'),
           bucket('Quality', 'As Sonarr and Radarr sorted it', d.quality, 'Files'),
           bucket('Clients', 'What fetched it', d.clients, 'Files')),
-        (d.failures || []).length ? card({ title: 'Failed downloads', sub: 'Grabbed and then given up on', cls: 'card-flush',
+        (d.failures || []).length ? card({ title: 'Failed downloads', sub: 'Grabbed and then given up on', cls: 'fui-card--flush',
           body: dataTable(h('table', { class: 'table' },
             h('thead', null, h('tr', null, h('th', { 'data-first': 'desc' }, 'When'), h('th', null, 'Title'), h('th', null, 'Indexer'))),
             h('tbody', null, d.failures.map((f) => h('tr', null,
@@ -272,7 +272,7 @@ function downloadsTab(ctx, root) {
       if (nothingDownloading(d) && !(d.problems || []).length) {
         return emptyState('Nothing is downloading', d.sources ? 'Sonarr, Radarr and your torrent client have nothing on the go.' : 'Connect a torrent client, or Sonarr and Radarr, to see what is arriving.');
       }
-      return card({ cls: 'card-flush dl-card', body: h('div', { class: 'dl-wrap' }, downloadsList(d)) });
+      return card({ cls: 'fui-card--flush dl-card', body: h('div', { class: 'dl-wrap' }, downloadsList(d)) });
     },
   });
   root.append(view, historySection(ctx));

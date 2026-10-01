@@ -50,7 +50,7 @@ export default function togetherPage(ctx) {
         chart: () => columnsChart({ daily: series, bucket: g.bucket, metric: 'watch_s', series: TOGETHER }),
         table: () => columnsTable({ daily: series, bucket: g.bucket, series: TOGETHER }) });
 
-      const pairs = (g.pairs || []).length ? card({ title: 'Who watches with whom', sub: 'Every pair, by time together; an evening of three counts for each of its pairs', cls: 'card-flush',
+      const pairs = (g.pairs || []).length ? card({ title: 'Who watches with whom', sub: 'Every pair, by time together; an evening of three counts for each of its pairs', cls: 'fui-card--flush',
         body: plainTable(h('table', { class: 'table pairs' },
           h('thead', null, h('tr', null, h('th', null, 'Pair'), h('th', { class: 'r' }, 'Evenings'), h('th', { class: 'r' }, 'Time together'), h('th', null, 'Last'), h('th', null, 'Watches most'))),
           h('tbody', null, g.pairs.map((x) => h('tr', null,
@@ -62,7 +62,7 @@ export default function togetherPage(ctx) {
 
       const titles = (g.titles || []).length ? card({ title: 'Watched together most', body: titlesList(g.titles, 8) }) : null;
 
-      const recent = (g.recent || []).length ? card({ title: 'Recent evenings', cls: 'card-flush',
+      const recent = (g.recent || []).length ? card({ title: 'Recent evenings', cls: 'fui-card--flush',
         body: plainTable(h('table', { class: 'table evenings' },
           h('thead', null, h('tr', null, h('th', null, 'Title'), h('th', null, 'People'), h('th', null, 'When'), h('th', { class: 'r' }, 'Time together'))),
           h('tbody', null, g.recent.map((r) => {
@@ -75,7 +75,7 @@ export default function togetherPage(ctx) {
               h('td', { class: 'mono r', 'data-sort': r.together_s }, duration(r.together_s)));
           })))) }) : null;
 
-      const people = everyone && (g.people || []).length > 1 ? card({ title: 'Alone or in company', sub: 'Each person’s watch time in this range, and how much of it was with someone', cls: 'card-flush',
+      const people = everyone && (g.people || []).length > 1 ? card({ title: 'Alone or in company', sub: 'Each person’s watch time in this range, and how much of it was with someone', cls: 'fui-card--flush',
         body: plainTable(h('table', { class: 'table shares' },
           h('thead', null, h('tr', null, h('th', null, 'Person'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Share')), h('th', { class: 'r' }, 'Together'), h('th', { class: 'r' }, 'Alone'), h('th', { class: 'r' }, 'Share'))),
           h('tbody', null, g.people.map((x) => h('tr', null,
