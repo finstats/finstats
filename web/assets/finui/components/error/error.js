@@ -19,8 +19,8 @@ export const meta = {
   states: [],
   a11y: 'role="alert": announced when it appears. The icon is hidden; the title says it.',
   props: { 'errorState(err, retry)': 'err: an Error (its message is shown); retry: a function, which adds Try again' },
-  examples: [
-    { name: 'With a way to try again', render: () => errorState(new Error('Jellyfin did not answer within 30 seconds.'), () => {}) },
-    { name: 'Without', render: () => errorState(new Error('The backup is damaged at line 1,204.')) },
-  ],
+  playground: {
+    controls: [{ key: 'retry', label: 'A way to try again', on: true }],
+    render: (o) => errorState(new Error(o.retry ? 'Jellyfin did not answer within 30 seconds.' : 'The backup is damaged at line 1,204.'), o.retry ? () => {} : null),
+  },
 };

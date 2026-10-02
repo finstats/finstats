@@ -17,8 +17,11 @@ export const meta = {
   states: [],
   a11y: 'The page’s one <h1>.',
   props: { 'pageHeader(title, sub, right)': 'title and sub are text or nodes; right is a node' },
-  examples: [
-    { name: 'A title and a line', render: () => pageHeader('Libraries', 'What’s on the server and how much of it gets watched') },
-    { name: 'With chips on the right', render: () => pageHeader('Jellyfin', 'Jellyfin 10.11.0', h('span', { class: 'fui-page-header__demo-chip' }, 'Update available')) },
-  ],
+  playground: {
+    controls: [
+      { key: 'sub', label: 'A line under it', on: true },
+      { key: 'right', label: 'Something on the right' },
+    ],
+    render: (o) => pageHeader('Libraries', o.sub ? 'What’s on the server and how much of it gets watched' : null, o.right ? h('span', { class: 'fui-page-header__demo-chip' }, 'Update available') : null),
+  },
 };

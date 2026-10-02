@@ -28,8 +28,18 @@ export const meta = {
   states: ['an edge button is aria-disabled: shown, not pressable'],
   a11y: 'A <nav aria-label="Pagination">; the buttons are named Previous page and Next page.',
   props: { 'pagination({ page, perPage, total, onPage })': 'onPage(n) is asked for a page that exists' },
-  examples: [
-    { name: 'The first page', render: () => pagination({ page: 1, perPage: 50, total: 3300, onPage: () => {} }) },
-    { name: 'Somewhere in the middle', render: () => pagination({ page: 2, perPage: 50, total: 3300, onPage: () => {} }) },
-  ],
+  playground: {
+    controls: [
+      { key: 'page', label: 'Page', choices: [[2, 'In the middle'], [1, 'The first'], [66, 'The last']] },
+      { key: 'few', label: 'Only a few' },
+    ],
+    render: (o) => {
+      const total = o.few ? 120 : 3300, last = Math.ceil(total / 50);
+      let page = Math.min(o.page, last);
+      const el = h('div');
+      const draw = () => el.replaceChildren(pagination({ page, perPage: 50, total, onPage: (n) => { page = n; draw(); } }));
+      draw();
+      return el;
+    },
+  },
 };

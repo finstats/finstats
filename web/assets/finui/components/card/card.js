@@ -43,9 +43,17 @@ export const meta = {
     'card({ title, sub, actions, body, cls, id })': 'title and sub are text; actions and body are nodes; cls adds classes (fui-card--flush); id makes it a place a link can land.',
     'chartCard({ title, sub, controls, chart, table, cls })': 'chart and table are functions that draw; the card calls one of them. el.rerender() draws again.',
   },
-  examples: [
-    { name: 'A heading, a line under it and an action', render: () => card({ title: 'Recently added', sub: 'What arrived this month', actions: button({ size: 'sm', variant: 'ghost' }, 'Everything in it', icon('chevronRight', 13)), body: h('p', null, 'Big Buck Bunny, Sintel and Tears of Steel.') }) },
-    { name: 'Flush, for a list with its own edges', render: () => card({ title: 'Devices', cls: 'fui-card--flush', body: h('ul', { class: 'fui-card__demo-list' }, ['Living room TV', 'Phone', 'Laptop'].map((d) => h('li', null, d))) }) },
-    { name: 'A chart that is also a table', render: () => chartCard({ title: 'Plays', sub: 'This week', chart: () => said(42), table: () => h('table', null, h('tbody', null, h('tr', null, h('th', null, 'Plays'), h('td', null, '42')))) }) },
-  ],
+  playground: {
+    controls: [
+      { key: 'sub', label: 'A line under the title', on: true },
+      { key: 'action', label: 'An action', on: true },
+      { key: 'flush', label: 'Flush, for a list' },
+      { key: 'chart', label: 'A chart that is also a table' },
+    ],
+    render: (o) => o.chart
+      ? chartCard({ title: 'Plays', sub: o.sub ? 'This week' : null, chart: () => said(42), table: () => h('table', null, h('tbody', null, h('tr', null, h('th', null, 'Plays'), h('td', null, '42')))) })
+      : card({ title: o.flush ? 'Devices' : 'Recently added', sub: o.sub ? 'What arrived this month' : null, cls: o.flush ? 'fui-card--flush' : '',
+        actions: o.action ? button({ size: 'sm', variant: 'ghost' }, 'Everything in it', icon('chevronRight', 13)) : null,
+        body: o.flush ? h('ul', { class: 'fui-card__demo-list' }, ['Living room TV', 'Phone', 'Laptop'].map((d) => h('li', null, d))) : h('p', null, 'Big Buck Bunny, Sintel and Tears of Steel.') }),
+  },
 };

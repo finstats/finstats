@@ -11,3 +11,6 @@
 
 /* The gallery's stand-in for a chart's column. */
 .fui-tooltip__demo { padding: 10px 14px; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); }
+/* Held in place, in the gallery: the same box, standing in the page instead of floating over it. */
+.fui-tooltip--held { position: static; pointer-events: auto; }
+.fui-tooltip__demo-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }

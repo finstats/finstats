@@ -12,3 +12,7 @@
   .fui-modal__overlay { padding-top: 5vh; }
 }
 @keyframes fui-modal-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* The gallery's dialog, drawn in place beside the button that opens it. */
+.fui-modal__demo { display: grid; gap: 12px; justify-items: start; }
+.fui-modal__demo .fui-modal { max-width: 100%; }

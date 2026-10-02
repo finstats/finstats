@@ -19,9 +19,15 @@ export const meta = {
   states: ['indeterminate holds still with reduced motion'],
   a11y: 'role="progressbar" with aria-valuenow when it is given a label; without one it is decoration beside a number.',
   props: { 'meter({ value, wide, block, indeterminate, label })': 'value 0–1; label names it for screen readers' },
-  examples: [
-    { name: 'Inline beside a number', render: () => h('span', { class: 'fui-meter__demo' }, meter({ value: 0.62 }), '62%') },
-    { name: 'Wide, and not known yet', render: () => h('div', { class: 'fui-meter__demo-stack' }, meter({ value: 0.35, wide: true, label: 'Library scan' }), meter({ wide: true, indeterminate: true, label: 'Reading the library' })) },
-    { name: 'Block', render: () => meter({ value: 0.81, block: true, label: 'Disk used' }) },
-  ],
+  playground: {
+    controls: [
+      { key: 'shape', label: 'Shape', choices: [['inline', 'Inline'], ['wide', 'Wide'], ['block', 'Block']] },
+      { key: 'value', label: 'How far', choices: [[0.62, '62%'], [0.15, '15%'], [1, 'All']] },
+      { key: 'unknown', label: 'Not known yet' },
+    ],
+    render: (o) => {
+      const m = meter({ value: o.value, wide: o.shape === 'wide', block: o.shape === 'block', indeterminate: o.unknown, label: 'Library scan' });
+      return o.shape === 'inline' ? h('span', { class: 'fui-meter__demo' }, m, o.unknown ? '…' : `${Math.round(o.value * 100)}%`) : m;
+    },
+  },
 };

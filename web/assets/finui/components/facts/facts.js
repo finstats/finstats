@@ -18,7 +18,13 @@ export const meta = {
   states: [],
   a11y: 'A <dl> of <dt> and <dd>, read as term and description.',
   props: { 'facts(pairs)': 'pairs: [label, value, { wide, mono }]; a falsy pair is left out; an empty value prints –' },
-  examples: [
-    { name: 'A file', render: () => facts([['Resolution', '1080p HEVC'], ['Size', '4.1 GB', { mono: true }], ['Library', 'Films'], ['Added', null], ['Path', h('span', { class: 'mono' }, '/media/films/Big Buck Bunny (2008)/Big Buck Bunny.mkv'), { wide: true }]]) },
-  ],
+  playground: {
+    controls: [
+      { key: 'wide', label: 'A long value, the whole row', on: true },
+      { key: 'mono', label: 'Numbers in mono', on: true },
+      { key: 'missing', label: 'A value not known' },
+    ],
+    render: (o) => facts([['Resolution', '1080p HEVC'], ['Size', '4.1 GB', { mono: o.mono }], ['Library', 'Films'], ['Added', o.missing ? null : '3 days ago'],
+      o.wide ? ['Path', h('span', { class: 'mono' }, '/media/films/Big Buck Bunny (2008)/Big Buck Bunny.mkv'), { wide: true }] : null]),
+  },
 };

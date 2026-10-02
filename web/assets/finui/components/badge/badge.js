@@ -23,9 +23,15 @@ export const meta = {
   states: ['live respects prefers-reduced-motion'],
   a11y: 'Plain text with an icon hidden from screen readers; the words carry the meaning in every tone.',
   props: { 'badge({ dot, live, paused, count })': 'a pill; children are its words', 'status({ tone, icon, line, outlined })': "tone: 'good' | 'warning' | 'critical' | 'info'; icon overrides the tone's own" },
-  examples: [
-    { name: 'Pills', render: () => h('div', { class: 'fui-badge__demo' }, badge({ dot: true }, 'Direct play'), badge({ live: true }, 'Live'), badge({ paused: true }, 'Paused'), badge({ count: true }, '12')) },
-    { name: 'Statuses', render: () => h('div', { class: 'fui-badge__demo' }, status({ tone: 'good' }, 'Connected'), status({ tone: 'warning' }, 'Slow to answer'), status({ tone: 'critical' }, 'Failed'), status({ tone: 'info', outlined: true }, 'Update available')) },
-    { name: 'A status that is a sentence wraps', render: () => status({ tone: 'good', line: true }, 'Restored 1,204 plays from the backup of 3 March, and 18 that were already here were left alone.') },
-  ],
+  playground: {
+    controls: [
+      { key: 'pill', label: 'Pill', choices: [['plain', 'Plain'], ['dot', 'Dot'], ['live', 'Live'], ['paused', 'Paused'], ['count', 'Count']] },
+      { key: 'tone', label: 'Status', choices: [['good', 'Good'], ['warning', 'Warning'], ['critical', 'Critical'], ['info', 'Info']] },
+      { key: 'outlined', label: 'Outlined status' },
+      { key: 'line', label: 'A status that is a sentence' },
+    ],
+    render: (o) => h('div', { class: 'fui-badge__demo' },
+      badge({ [o.pill]: o.pill !== 'plain' }, o.pill === 'count' ? '12' : o.pill === 'live' ? 'Live' : o.pill === 'paused' ? 'Paused' : 'Direct play'),
+      status({ tone: o.tone, outlined: o.outlined, line: o.line }, o.line ? 'Restored 1,204 plays from the backup of 3 March, and 18 that were already here were left alone.' : { good: 'Connected', warning: 'Slow to answer', critical: 'Failed', info: 'Update available' }[o.tone])),
+  },
 };

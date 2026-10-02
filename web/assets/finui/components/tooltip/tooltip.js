@@ -45,7 +45,16 @@ export const meta = {
   states: ['shown', 'hidden (a scroll hides it)'],
   a11y: 'role="tooltip"; the same numbers are in the chart’s table for screen readers and keyboards.',
   props: { 'showTip(rect, content)': 'rect: the mark’s DOMRect', 'hideTip()': '', 'tipShown()': 'is one on screen', 'tipRows(title, rows, total)': 'rows: [{ color, value, label }]' },
-  examples: [
-    { name: 'Point at the button', render: () => { const b = h('button', { type: 'button', class: 'fui-tooltip__demo', onPointerenter: (e) => showTip(e.currentTarget.getBoundingClientRect(), tipRows('Tue 14 Oct', [{ color: 'var(--series-1)', value: '2h 10m', label: 'Movies' }, { color: 'var(--series-2)', value: '48m', label: 'Episodes' }], { value: '2h 58m', label: 'in all' })), onPointerleave: hideTip, onFocus: (e) => showTip(e.currentTarget.getBoundingClientRect(), tipRows('Tue 14 Oct', [{ color: 'var(--series-1)', value: '2h 10m', label: 'Movies' }])), onBlur: hideTip }, 'A column of a chart'); return b; } },
-  ],
+  playground: {
+    controls: [
+      { key: 'total', label: 'A total' },
+      { key: 'two', label: 'Two rows', on: true },
+    ],
+    render: (o) => {
+      const tip = () => tipRows('Tue 14 Oct', [{ color: 'var(--series-1)', value: '2h 10m', label: 'Movies' }, o.two ? { color: 'var(--series-2)', value: '48m', label: 'Episodes' } : null].filter(Boolean), o.total ? { value: '2h 58m', label: 'in all' } : null);
+      const b = h('button', { type: 'button', class: 'fui-tooltip__demo', onPointerenter: (e) => showTip(e.currentTarget.getBoundingClientRect(), tip()), onPointerleave: hideTip, onFocus: (e) => showTip(e.currentTarget.getBoundingClientRect(), tip()), onBlur: hideTip }, 'Point at me');
+      // Held in place to look at, and the real one on the button.
+      return h('div', { class: 'fui-tooltip__demo-row' }, h('div', { class: 'fui-tooltip fui-tooltip--held', role: 'group', 'aria-label': 'A tooltip, held in place' }, tip()), b);
+    },
+  },
 };

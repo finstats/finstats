@@ -45,8 +45,12 @@ export const meta = {
   states: ['checked', 'hover', 'focus-visible'],
   a11y: 'role="radiogroup" with role="radio" buttons and aria-checked; only the checked one is in the tab order; arrow keys move and choose.',
   props: { 'segmented({ options, value, onChange, label, size })': "options: [{ value, label, title }]; label names the group; size: 'sm'. el.setValue(v) changes it quietly." },
-  examples: [
-    { name: 'A measure', render: () => segmented({ label: 'Measure', value: 'watch', options: [{ value: 'watch', label: 'Watch time' }, { value: 'plays', label: 'Plays' }], onChange: () => {} }) },
-    { name: 'Small, a sort', render: () => segmented({ label: 'Sort by', size: 'sm', value: 'name', options: [{ value: 'name', label: 'Name' }, { value: 'year', label: 'Year' }, { value: 'added', label: 'Added' }, { value: 'size', label: 'Size' }], onChange: () => {} }) },
-  ],
+  playground: {
+    controls: [
+      { key: 'choices', label: 'Choices', choices: [[2, 'Two'], [4, 'Four']] },
+      { key: 'small', label: 'Small' },
+    ],
+    render: (o) => segmented({ label: 'Sort by', size: o.small ? 'sm' : '', value: 'name',
+      options: [{ value: 'name', label: 'Name' }, { value: 'year', label: 'Year' }, { value: 'added', label: 'Added' }, { value: 'size', label: 'Size' }].slice(0, o.choices), onChange: () => {} }),
+  },
 };

@@ -35,10 +35,18 @@ export const meta = {
   states: ['hover (button)', 'aria-pressed (toggle)', 'focus-visible'],
   a11y: 'Pressable chips are <button>s; a toggle says aria-pressed; the × of a removable chip has its own aria-label.',
   props: { 'chip(text, title)': 'a value', 'chipButton({ onClick, mono, title })': 'a value that acts', 'chipToggle({ pressed, onChange })': 'on or off', 'removableChip({ label, onRemove, removeLabel })': 'a filter in force', 'chipSet(...chips)': 'a wrapping row' },
-  examples: [
-    { name: 'Values in a set', render: () => chipSet(chip('Drama'), chip('Science Fiction'), chip('Documentary'), h('span', { class: 'fui-chip mono' }, 'HEVC')) },
-    { name: 'A filter in force, and one to press', render: () => chipSet(removableChip({ label: 'Kind: Movies', onRemove: () => {}, removeLabel: 'Remove kind filter' }), chipButton({ title: 'Show only this kind', onClick: () => {} }, 'AuthenticationFailed')) },
-    { name: 'Toggles', render: () => chipSet(chipToggle({ pressed: true }, 'Films'), chipToggle({ pressed: false }, 'Shows'), chipToggle({ pressed: true }, 'Music')) },
-    { name: 'A group', render: () => h('span', { class: 'fui-chip fui-chip--group' }, icon('users', 13), 'Watched together') },
-  ],
+  playground: {
+    controls: [
+      { key: 'kind', label: 'Kind', choices: [['value', 'Values'], ['button', 'One to press'], ['toggle', 'Toggles'], ['removable', 'A filter in force'], ['group', 'A group']] },
+      { key: 'mono', label: 'Mono' },
+    ],
+    render: (o) => {
+      const m = o.mono ? 'mono' : null;
+      if (o.kind === 'button') return chipSet(chipButton({ title: 'Show only this kind', mono: o.mono, onClick: () => {} }, 'AuthenticationFailed'));
+      if (o.kind === 'toggle') return chipSet(chipToggle({ pressed: true, class: m }, 'Films'), chipToggle({ pressed: false, class: m }, 'Shows'), chipToggle({ pressed: true, class: m }, 'Music'));
+      if (o.kind === 'removable') return chipSet(removableChip({ label: o.mono ? 'Codec: HEVC' : 'Kind: Movies', onRemove: () => {}, removeLabel: 'Remove the filter' }));
+      if (o.kind === 'group') return h('span', { class: ['fui-chip fui-chip--group', m] }, icon('users', 13), 'Watched together');
+      return chipSet(...['Drama', 'Science Fiction', 'HEVC'].map((t) => h('span', { class: ['fui-chip', m] }, t)));
+    },
+  },
 };

@@ -22,7 +22,18 @@ export const meta = {
   states: ['is-hit (a link landed on it)'],
   a11y: 'The label names the control (label for, or aria-labelledby on a switch); the help describes it (aria-describedby).',
   props: { 'settingRow({ id, label, help, control, labelFor, error })': '→ [row, error]' },
-  examples: [
-    { name: 'A number, waiting for Save', render: () => h('div', { class: 'fui-setting-row__rows' }, settingRow({ id: 'demo-min', label: 'Shortest play counted', help: 'Plays shorter than this are left out of every statistic.', labelFor: 'demo-min-in', control: h('input', { class: 'fui-field__input fui-field__input--num', id: 'demo-min-in', type: 'number', value: 120 }) })) },
-  ],
+  playground: {
+    controls: [
+      { key: 'control', label: 'Control', choices: [['number', 'A number'], ['switch', 'A switch'], ['text', 'Words']] },
+      { key: 'help', label: 'Help', on: true },
+      { key: 'error', label: 'An error' },
+    ],
+    render: (o) => {
+      const control = o.control === 'switch' ? h('button', { type: 'button', class: 'fui-toggle', role: 'switch', 'aria-checked': 'true', 'aria-labelledby': 'demo-min-label' }, h('span', { class: 'fui-toggle__knob' }))
+        : h('input', { class: ['fui-field__input', o.control === 'number' && 'fui-field__input--num'], id: 'demo-min-in', type: o.control === 'number' ? 'number' : 'text', value: o.control === 'number' ? 120 : 'Living room' });
+      return h('div', { class: 'fui-setting-row__rows' }, settingRow({ id: 'demo-min', label: o.control === 'text' ? 'Server name' : 'Shortest play counted',
+        help: o.help ? (o.control === 'text' ? 'What this server is called here.' : 'Plays shorter than this are left out of every statistic.') : null,
+        labelFor: o.control === 'switch' ? null : 'demo-min-in', control, error: o.error ? h('p', { class: 'fui-field__error', role: 'alert' }, 'That cannot be saved: it is longer than ten minutes.') : null }));
+    },
+  },
 };

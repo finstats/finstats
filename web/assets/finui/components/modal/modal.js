@@ -55,7 +55,18 @@ export const meta = {
   states: ['open', 'closing (fades, already gone for the pointer)', 'stacked'],
   a11y: 'role="dialog" aria-modal="true", named by its title; Tab stays inside; Esc closes only the top one and stops there; focus returns to what opened it.',
   props: { 'openModal({ title, body, wide, onClose, initialFocus, labelId, bare, cls })': '→ { close, body, dialog }' },
-  examples: [
-    { name: 'A button that opens one', render: () => button({ onClick: () => openModal({ title: 'Dismiss finding', body: h('p', null, 'Low Orbit: episodes 4 and 5 are missing between 3 and 6.') }) }, 'Open a dialog') },
-  ],
+  playground: {
+    controls: [
+      { key: 'wide', label: 'Wide' },
+      { key: 'long', label: 'A long body' },
+    ],
+    render: (o) => {
+      const body = () => h('div', null, h('p', null, 'Low Orbit: episodes 4 and 5 are missing between 3 and 6.'),
+        o.long ? h('p', null, 'Dismissing it hides it until the files change. The audit log keeps who did it and when, and it travels in a backup.') : null);
+      // Drawn in place to look at, and a button that opens it for real.
+      return h('div', { class: 'fui-modal__demo' },
+        h('div', { class: ['fui-modal', o.wide && 'fui-modal--wide'], role: 'group', 'aria-label': 'Dismiss finding' }, h('div', { class: 'fui-modal__head' }, h('h2', { class: 'fui-modal__title' }, 'Dismiss finding')), h('div', { class: 'fui-modal__body' }, body())),
+        button({ onClick: () => openModal({ title: 'Dismiss finding', wide: o.wide, body: body() }) }, 'Open it'));
+    },
+  },
 };

@@ -227,7 +227,8 @@
         "--knob",
         "--on-accent",
         "--radius-pill",
-        "--shadow"
+        "--shadow",
+        "--text-faint"
       ],
       "requires": [
         "core"
@@ -250,6 +251,37 @@
         "--radius-control",
         "--text",
         "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "calendar",
+      "category": "pattern",
+      "files": [
+        "components/calendar/dates.js",
+        "components/calendar/calendar.js",
+        "components/calendar/calendar.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-wash",
+        "--border-strong",
+        "--density",
+        "--ease",
+        "--font-heading",
+        "--heading-weight",
+        "--hover",
+        "--primary-bg",
+        "--primary-text",
+        "--radius-control",
+        "--radius-pill",
+        "--radius-sm",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--text-strong"
       ],
       "requires": [
         "core"
@@ -322,7 +354,9 @@
         "--hover",
         "--mono",
         "--radius",
+        "--radius-sm",
         "--serious",
+        "--spark",
         "--text",
         "--text-faint",
         "--text-muted",
@@ -548,7 +582,8 @@
         "--text-faint"
       ],
       "requires": [
-        "core"
+        "core",
+        "avatar"
       ]
     },
     {

@@ -32,12 +32,21 @@ export const meta = {
   states: ['hover', 'focus (an accent ring)', 'aria-invalid'],
   a11y: 'The label is a <label for>; help and error are tied to the input with aria-describedby; the error is role="alert".',
   props: { 'formField({ id, label, type, autocomplete, placeholder, inputMode, help })': '→ { el, input, setError(msg) }', 'inlineError(id, text)': 'an error line, announced' },
-  examples: [
-    { name: 'A labelled input with help', render: () => formField({ id: 'demo-name', label: 'Name', placeholder: 'Living room laptop', help: 'So you can tell your keys apart.' }).el },
-    { name: 'With an error', render: () => { const f = formField({ id: 'demo-url', label: 'Address', help: 'Where Jellyfin answers.' }); f.input.value = 'jellyfin.local'; f.setError('That is not an address: it needs http:// or https://'); return f.el; } },
-    { name: 'Search, a number and a checkbox', render: () => h('div', { class: 'fui-field' },
-      h('div', { class: 'fui-field__search' }, icon('search', 14), h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: 'Find a title…', 'aria-label': 'Find a title' })),
-      h('input', { class: 'fui-field__input fui-field__input--num', type: 'number', value: 30, 'aria-label': 'Minutes' }),
-      h('label', { class: 'fui-field__check' }, h('input', { type: 'checkbox', checked: true }), 'Keep my settings')) },
-  ],
+  playground: {
+    controls: [
+      { key: 'kind', label: 'Kind', choices: [['text', 'Text'], ['search', 'Search'], ['number', 'A number'], ['check', 'A checkbox']] },
+      { key: 'help', label: 'Help', on: true },
+      { key: 'error', label: 'An error' },
+    ],
+    render: (o) => {
+      if (o.kind === 'search') return h('div', { class: 'fui-field__search' }, icon('search', 14), h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: o.help ? 'Find a title, a person…' : 'Find…', 'aria-label': 'Find a title', 'aria-invalid': o.error ? 'true' : null }));
+      if (o.kind === 'number') return h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', htmlFor: 'demo-min' }, 'Minutes'), h('input', { class: 'fui-field__input fui-field__input--num', id: 'demo-min', type: 'number', value: 30, 'aria-invalid': o.error ? 'true' : null }),
+        o.help ? h('p', { class: 'fui-field__help' }, 'Shorter plays are left out.') : null, o.error ? inlineError('demo-min-err', 'At most 600.') : null);
+      if (o.kind === 'check') return h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__check' }, h('input', { type: 'checkbox', checked: true }), 'Keep my settings'),
+        o.help ? h('p', { class: 'fui-field__help' }, 'They stay in this browser.') : null, o.error ? inlineError('demo-check-err', 'This browser keeps nothing.') : null);
+      const f = formField({ id: 'demo-url', label: 'Address', placeholder: 'http://192.168.1.10:8096', help: o.help ? 'Where Jellyfin answers.' : null });
+      if (o.error) { f.input.value = 'jellyfin.local'; f.setError('That is not an address: it needs http:// or https://'); }
+      return f.el;
+    },
+  },
 };

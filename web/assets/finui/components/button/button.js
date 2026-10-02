@@ -34,21 +34,19 @@ export const meta = {
     tag: "'label': a file picker's label (with disabled, it looks and acts disabled)",
     '...children': 'what it says: icon() and text, as h() takes them',
   },
-  examples: [
-    { name: 'Variants', render: () => h('div', { class: 'fui-button__demo' },
-      button({ variant: 'primary', onClick: say }, icon('plus', 14), 'Make a key'),
-      button({ onClick: say }, icon('refresh', 14), 'Read again'),
-      button({ variant: 'ghost', onClick: say }, 'Cancel'),
-      button({ variant: 'danger', onClick: say }, icon('trash', 14), 'Delete the backup'),
-      button({ variant: 'icon', 'aria-label': 'Search', onClick: say }, icon('search', 18))) },
-    { name: 'Small, and quiet in a row', render: () => h('div', { class: 'fui-button__demo' },
-      button({ size: 'sm', onClick: say }, icon('check', 13), 'Resolve…'),
-      button({ size: 'sm', variant: 'ghost', onClick: say }, icon('refresh', 13), 'Reopen'),
-      button({ size: 'sm', variant: 'ghost', tone: 'danger', onClick: say }, 'Revoke'),
-      button({ size: 'sm', variant: 'ghost', 'aria-disabled': 'true', 'aria-label': 'Previous page' }, icon('chevronLeft', 14))) },
-    { name: 'A link that looks like a button', render: () => h('div', { class: 'fui-button__demo' },
-      button({ href: '/finui/core' }, icon('layers', 14), 'Core', icon('chevronRight', 14)),
-      button({ variant: 'primary', size: 'md', disabled: true }, 'Saving…')) },
-    { name: 'The whole width', render: () => button({ variant: 'primary', block: true, onClick: say }, 'Sign in') },
-  ],
+  playground: {
+    controls: [
+      { key: 'variant', label: 'Variant', choices: [['default', 'Default'], ['primary', 'Primary'], ['ghost', 'Ghost'], ['danger', 'Danger'], ['icon', 'Icon']] },
+      { key: 'size', label: 'Size', choices: [['md', 'Regular'], ['sm', 'Small']] },
+      { key: 'withIcon', label: 'With an icon' },
+      { key: 'block', label: 'The whole width' },
+      { key: 'link', label: 'A link' },
+      { key: 'disabled', label: 'Busy' },
+    ],
+    render: (o) => o.variant === 'icon'
+      ? button({ variant: 'icon', size: o.size, 'aria-label': 'Search', onClick: say, disabled: o.disabled, block: o.block, href: o.link ? '#/button' : null }, icon('search', o.size === 'sm' ? 15 : 18))
+      : button({ variant: o.variant, size: o.size, block: o.block, href: o.link ? '#/button' : null, disabled: o.disabled, onClick: say },
+        o.withIcon ? icon(o.variant === 'danger' ? 'trash' : 'plus', o.size === 'sm' ? 13 : 14) : null,
+        o.disabled ? 'Saving…' : { default: 'Read again', primary: 'Make a key', ghost: 'Cancel', danger: 'Delete the backup' }[o.variant]),
+  },
 };

@@ -169,10 +169,19 @@ export const meta = {
   states: ['sorted up, sorted down, unsorted (a third click)', 'nothing matches the filter'],
   a11y: 'Headers are buttons with aria-sort on the th; values sort by meaning (3d 2h, 1.4 GB, 42%, dates), and numbers are read as num() prints them, whatever the browser’s language.',
   props: { 'dataTable(table, { server, filter, cls, label })': 'table: a built <table class="fui-data-table">', 'plainTable(table)': 'no filter', 'chartTable(table)': 'a chart’s table', 'sortable(table, { server })': 'headers only' },
-  examples: [
-    { name: 'Sorted by meaning, filtered as you type', render: () => dataTable(h('table', { class: 'fui-data-table' },
-      h('thead', null, h('tr', null, h('th', null, 'Title'), h('th', { class: 'r' }, 'Watch time'), h('th', { class: 'r' }, 'Size'), h('th', { class: 'r' }, 'Plays'))),
-      h('tbody', null, [['Big Buck Bunny', '3h 12m', '4.1 GB', '1,204'], ['Sintel', '52m', '850 MB', '96'], ['Tears of Steel', '1d 2h', '12 GB', '15']].map((r) =>
-        h('tr', null, h('td', null, r[0]), h('td', { class: 'mono r' }, r[1]), h('td', { class: 'mono r' }, r[2]), h('td', { class: 'mono r' }, r[3]))))), { filter: true }) },
-  ],
+  playground: {
+    controls: [
+      { key: 'filter', label: 'Filter as you type', on: true },
+      { key: 'dense', label: 'Dense' },
+      { key: 'hover', label: 'Rows light up' },
+      { key: 'more', label: 'More rows' },
+    ],
+    render: (o) => {
+      const rows = [['Big Buck Bunny', '3h 12m', '4.1 GB', '1,204'], ['Sintel', '52m', '850 MB', '96'], ['Tears of Steel', '1d 2h', '12 GB', '15']];
+      const all = o.more ? [...rows, ['Cosmos Laundromat', '12m', '310 MB', '4'], ['Elephants Dream', '2h 1m', '2.2 GB', '41'], ['Spring', '8m', '160 MB', '7']] : rows;
+      return dataTable(h('table', { class: ['fui-data-table', o.dense && 'fui-data-table--dense', o.hover && 'fui-data-table--hover'] },
+        h('thead', null, h('tr', null, h('th', null, 'Title'), h('th', { class: 'r' }, 'Watch time'), h('th', { class: 'r' }, 'Size'), h('th', { class: 'r' }, 'Plays'))),
+        h('tbody', null, all.map((r) => h('tr', null, h('td', null, r[0]), h('td', { class: 'mono r' }, r[1]), h('td', { class: 'mono r' }, r[2]), h('td', { class: 'mono r' }, r[3]))))), { filter: o.filter });
+    },
+  },
 };

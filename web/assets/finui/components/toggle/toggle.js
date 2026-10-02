@@ -23,7 +23,12 @@ export const meta = {
   states: ['on', 'off', 'disabled', 'focus-visible'],
   a11y: 'A <button role="switch" aria-checked>, named by aria-labelledby and described by aria-describedby. Space and Enter switch it.',
   props: { 'toggle({ checked, onChange, labelledby, describedby })': 'onChange(next, revert): call revert(previous) if saving failed' },
-  examples: [
-    { name: 'Off and on', render: () => h('div', { class: 'fui-toggle__demo' }, h('span', { id: 'demo-t1' }, 'Public profiles'), toggle({ checked: false, onChange: () => {}, labelledby: 'demo-t1' }), h('span', { id: 'demo-t2' }, 'Look up the public address'), toggle({ checked: true, onChange: () => {}, labelledby: 'demo-t2' })) },
-  ],
+  playground: {
+    controls: [
+      { key: 'on', label: 'On' },
+      { key: 'help', label: 'With a line of help' },
+    ],
+    render: (o) => h('div', { class: 'fui-toggle__demo' }, h('div', null, h('span', { id: 'demo-t1' }, 'Public profiles'), o.help ? h('p', { class: 'fui-toggle__demo-help', id: 'demo-t1-help' }, 'Anyone with the link sees your totals.') : null),
+      toggle({ checked: o.on, onChange: () => {}, labelledby: 'demo-t1', describedby: o.help ? 'demo-t1-help' : null })),
+  },
 };

@@ -20,7 +20,12 @@ export const meta = {
   states: ['hover and focus outline the poster'],
   a11y: 'One link per card, named by the title; the poster is decoration.',
   props: { 'mediaCard({ href, poster, name, sub })': 'one card', 'mediaGrid(cards, { class })': 'a grid of them' },
-  examples: [
-    { name: 'A grid', render: () => mediaGrid(['Big Buck Bunny', 'Sintel', 'Tears of Steel', 'Cosmos Laundromat'].map((n, i) => mediaCard({ href: '#', poster: h('span', { class: 'fui-media-card__demo-poster', 'aria-hidden': 'true' }), name: n, sub: String(2008 + i * 2) }))) },
-  ],
+  playground: {
+    controls: [
+      { key: 'count', label: 'Cards', choices: [[4, 'Four'], [8, 'Eight']] },
+      { key: 'sub', label: 'A line under the name', on: true },
+    ],
+    render: (o) => mediaGrid(['Big Buck Bunny', 'Sintel', 'Tears of Steel', 'Cosmos Laundromat', 'Elephants Dream', 'Spring', 'Caminandes', 'Agent 327'].slice(0, o.count)
+      .map((n, i) => mediaCard({ href: '#', poster: h('span', { class: 'fui-media-card__demo-poster', 'aria-hidden': 'true' }), name: n, sub: o.sub ? String(2008 + i * 2) : null }))),
+  },
 };

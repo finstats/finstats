@@ -21,7 +21,11 @@ export const meta = {
   states: ['failed → initials'],
   a11y: 'aria-hidden: decoration beside the name.',
   props: { 'avatar(src, name, { size })': 'src: an address or null' },
-  examples: [
-    { name: 'Initials at three sizes', render: () => h('div', { class: 'fui-avatar__demo' }, avatar(null, 'alice', { size: 20 }), avatar(null, 'bob builder', { size: 28 }), avatar(null, 'carol', { size: 44 })) },
-  ],
+  playground: {
+    controls: [
+      { key: 'size', label: 'Size', choices: [[28, 'Medium'], [20, 'Small'], [44, 'Large']] },
+      { key: 'two', label: 'Two names' },
+    ],
+    render: (o) => h('div', { class: 'fui-avatar__demo' }, avatar(null, o.two ? 'bob builder' : 'alice', { size: o.size })),
+  },
 };

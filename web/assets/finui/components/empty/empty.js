@@ -17,9 +17,14 @@ export const meta = {
   states: [],
   a11y: 'Plain text. An action is a real button or link.',
   props: { 'emptyState(title, text, action)': 'title and text are words; action is a node (a button, or several in fui-empty__buttons)' },
-  examples: [
-    { name: 'Nothing yet, and why', render: () => emptyState('No libraries yet', 'Libraries appear after the first sync with Jellyfin.') },
-    { name: 'With a way out', render: () => emptyState('No backups yet', 'A backup holds your history and settings, never your Jellyfin key.', button({ variant: 'primary' }, icon('plus', 14), 'Make a backup now')) },
-    { name: 'A chart with nothing in it', render: () => h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, 'No plays in this range.') },
-  ],
+  playground: {
+    controls: [
+      { key: 'where', label: 'Where', choices: [['page', 'A page'], ['chart', 'A chart']] },
+      { key: 'action', label: 'A way out' },
+    ],
+    render: (o) => o.where === 'chart'
+      ? h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, o.action ? 'No plays in this range. Try all time.' : 'No plays in this range.')
+      : emptyState(o.action ? 'No backups yet' : 'No libraries yet', o.action ? 'A backup holds your history and settings, never your Jellyfin key.' : 'Libraries appear after the first sync with Jellyfin.',
+        o.action ? button({ variant: 'primary' }, icon('plus', 14), 'Make a backup now') : null),
+  },
 };

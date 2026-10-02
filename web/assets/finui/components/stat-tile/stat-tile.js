@@ -29,8 +29,17 @@ export const meta = {
   states: ['up, down, no change, new', 'pressed'],
   a11y: 'Text throughout; the change is said in words and a sign (+12%), not only by its colour and arrow.',
   props: { 'statTile({ label, value, title, current, previous, vsLabel, spark, hint })': 'current and previous make the change; spark is a small chart beside the value' },
-  examples: [
-    { name: 'A row of tiles', render: () => h('div', { class: 'fui-stat-tile__grid' }, statTile({ label: 'Watch time', value: '42h', current: 42, previous: 36, vsLabel: 'vs last week' }), statTile({ label: 'Plays', value: '128', current: 128, previous: 140, vsLabel: 'vs last week' }), statTile({ label: 'People', value: '5', current: 5, previous: 5, vsLabel: 'vs last week' }), statTile({ label: 'Last played', value: 'just now', hint: 'Big Buck Bunny' })) },
-    { name: 'Pressable, one pressed', render: () => h('div', { class: 'fui-stat-tile__grid' }, ['Gaps', 'Copies', 'Thin files'].map((l, i) => h('button', { type: 'button', class: ['fui-stat-tile fui-stat-tile--pressable', i === 2 && 'is-quiet'], 'aria-pressed': String(i === 0) }, h('span', { class: 'fui-stat-tile__label' }, l), h('span', { class: 'fui-stat-tile__value' }, String([3, 1, 0][i]))))) },
-  ],
+  playground: {
+    controls: [
+      { key: 'change', label: 'How it moved', on: true },
+      { key: 'spark', label: 'A sparkline' },
+      { key: 'pressable', label: 'Pressable' },
+    ],
+    render: (o) => {
+      const spark = o.spark ? h('span', { class: 'fui-stat-tile__demo-spark', 'aria-hidden': 'true' }) : null;
+      const tile = (label, value, cur, prev) => statTile({ label, value, current: o.change ? cur : undefined, previous: o.change ? prev : undefined, vsLabel: 'vs last week', hint: o.change ? null : 'This week', spark });
+      if (o.pressable) return h('div', { class: 'fui-stat-tile__grid' }, ['Gaps', 'Copies', 'Thin files'].map((l, i) => h('button', { type: 'button', class: ['fui-stat-tile fui-stat-tile--pressable', i === 2 && 'is-quiet'], 'aria-pressed': String(i === 0) }, h('span', { class: 'fui-stat-tile__label' }, l), h('span', { class: 'fui-stat-tile__value' }, String([3, 1, 0][i])))));
+      return h('div', { class: 'fui-stat-tile__grid' }, tile('Watch time', '42h', 42, 36), tile('Plays', '128', 128, 140), tile('People', '5', 5, 5));
+    },
+  },
 };

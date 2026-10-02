@@ -22,7 +22,11 @@ export const meta = {
   states: ['loading (lazily)', 'failed → initials'],
   a11y: 'aria-hidden with an empty alt: decoration beside the name.',
   props: { 'poster(src, name, { cls })': 'src: an address or null; name gives the initials' },
-  examples: [
-    { name: 'Sizes, with initials for want of a picture', render: () => h('div', { class: 'fui-poster__demo' }, poster(null, 'Big Buck Bunny', { cls: 'fui-poster--sm' }), poster(null, 'Sintel', { cls: 'fui-poster--md' }), poster(null, 'Tears of Steel', { cls: 'fui-poster--lg' })) },
-  ],
+  playground: {
+    controls: [
+      { key: 'size', label: 'Size', choices: [['fui-poster--md', 'Medium'], ['fui-poster--sm', 'Small'], ['fui-poster--lg', 'Large'], ['fui-poster--still', 'A still']] },
+      { key: 'long', label: 'A long name' },
+    ],
+    render: (o) => h('div', { class: 'fui-poster__demo' }, poster(null, o.long ? 'The Adventures of Big Buck Bunny' : 'Sintel', { cls: o.size })),
+  },
 };

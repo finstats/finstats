@@ -25,9 +25,18 @@ export const meta = {
   states: ['breathes; holds still with reduced motion'],
   a11y: 'Decorative: the view around it says it is loading where that matters.',
   props: { 'sk.line(width, height)': 'a line of text', 'sk.block(height)': 'a chart or a picture', 'sk.rows(n)': 'a list', 'sk.tableRows(n)': 'a table', 'sk.tiles(n)': 'a row of tiles', 'sk.cardBlock(height, title)': 'a card', 'sk.cardRows(n)': 'a card with a list' },
-  examples: [
-    { name: 'Lines and a block', render: () => h('div', null, sk.line('40%', 14), h('br'), sk.line('70%'), sk.block(90)) },
-    { name: 'A list', render: () => sk.rows(3) },
-    { name: 'A card', render: () => sk.cardRows(2) },
-  ],
+  playground: {
+    controls: [
+      { key: 'shape', label: 'Shape', choices: [['lines', 'Lines'], ['rows', 'A list'], ['table', 'A table'], ['tiles', 'Tiles'], ['card', 'A card']] },
+      { key: 'more', label: 'More of it' },
+    ],
+    render: (o) => {
+      const n = o.more ? 5 : 2;
+      if (o.shape === 'rows') return sk.rows(n);
+      if (o.shape === 'table') return sk.tableRows(n);
+      if (o.shape === 'tiles') return sk.tiles(o.more ? 4 : 2);
+      if (o.shape === 'card') return sk.cardRows(n);
+      return h('div', null, Array.from({ length: n }, (_, i) => [sk.line(i ? '70%' : '40%', i ? 12 : 14), h('br')]), sk.block(o.more ? 140 : 90));
+    },
+  },
 };

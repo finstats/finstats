@@ -9,3 +9,4 @@
 
 /* The gallery's example. */
 .fui-toggle__demo { display: grid; grid-template-columns: max-content max-content; align-items: center; gap: 10px 14px; }
+.fui-toggle__demo-help { font-size: 12.5px; color: var(--text-faint); margin-top: 2px; }

@@ -109,8 +109,13 @@ export const meta = {
   states: ['closed', 'open', 'has a value', 'nothing found'],
   a11y: 'The button says aria-haspopup="listbox" and aria-expanded; the search is role="combobox" with aria-activedescendant; options are role="option" with aria-selected. Arrows, Enter, and Esc to close (which stops there and goes no further back).',
   props: { 'combobox({ value, onChange, placeholder, allLabel, load, label, multiple, searchable, iconName })': 'load() gives [{ value, label }], or a promise of them; the value is a comma-separated string', 'multiSelect({ options, value, onChange, label, allLabel, iconName })': 'a handful, ticked' },
-  examples: [
-    { name: 'Someone', render: () => combobox({ label: 'User', load: () => PEOPLE, onChange: () => {} }) },
-    { name: 'Several, ticked', render: () => multiSelect({ label: 'Type', allLabel: 'All types', iconName: 'film', options: [{ value: 'Movie', label: 'Movies' }, { value: 'Episode', label: 'Episodes' }, { value: 'Audio', label: 'Music' }], value: 'Movie', onChange: () => {} }) },
-  ],
+  playground: {
+    controls: [
+      { key: 'kind', label: 'Picks', choices: [['one', 'Someone'], ['several', 'Several, ticked']] },
+      { key: 'icon', label: 'With an icon' },
+    ],
+    render: (o) => o.kind === 'several'
+      ? multiSelect({ label: 'Type', allLabel: 'All types', iconName: o.icon ? 'film' : null, options: [{ value: 'Movie', label: 'Movies' }, { value: 'Episode', label: 'Episodes' }, { value: 'Audio', label: 'Music' }], value: 'Movie', onChange: () => {} })
+      : combobox({ label: 'User', load: () => PEOPLE, onChange: () => {}, iconName: o.icon ? 'user' : null }),
+  },
 };

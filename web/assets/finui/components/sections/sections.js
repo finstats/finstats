@@ -46,7 +46,12 @@ export const meta = {
   states: ['the open section (aria-current="page")', 'is-hit: a row a link pointed at, marked for a moment (reveal)'],
   a11y: 'A <nav> of links; the open one says aria-current="page". reveal() can move the focus to the row it marks.',
   props: { 'sectionNav(base, visible, current, label)': 'visible: [{ key, label, icon, group }]', 'sectionLayout(nav, slot)': 'the two columns', 'reveal(id, focus)': 'scroll to and mark an element' },
-  examples: [
-    { name: 'A list and the open section', render: () => sectionLayout(sectionNav('/finui', DEMO, 'jobs', 'Example sections'), h('div', { class: 'fui-sections__body' }, h('p', null, 'What Jellyfin is doing, live.'))) },
-  ],
+  playground: {
+    controls: [
+      { key: 'open', label: 'Open', choices: [['jobs', 'Jobs'], ['overview', 'Overview'], ['log', 'Log']] },
+      { key: 'groups', label: 'In groups', on: true },
+    ],
+    render: (o) => sectionLayout(sectionNav('#', DEMO.map((d) => ({ ...d, group: o.groups ? d.group : null })), o.open, 'Example sections'),
+      h('div', { class: 'fui-sections__body' }, h('p', null, { overview: 'How the server is doing.', jobs: 'What Jellyfin is doing, live.', log: 'What happened, newest first.' }[o.open]))),
+  },
 };

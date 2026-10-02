@@ -13,8 +13,11 @@ export const meta = {
   states: ['turns slower with reduced motion'],
   a11y: 'aria-hidden: what is busy says so in words beside it ("Saving…").',
   props: { 'spinner(size = 14)': 'its width and height in pixels' },
-  examples: [
-    { name: 'Sizes', render: () => h('div', { class: 'fui-spinner__demo' }, spinner(), spinner(18), spinner(28)) },
-    { name: 'Beside words', render: () => h('span', { class: 'fui-spinner__demo' }, spinner(), 'Saving…') },
-  ],
+  playground: {
+    controls: [
+      { key: 'size', label: 'Size', choices: [[14, 'Small'], [18, 'Medium'], [28, 'Large']] },
+      { key: 'words', label: 'With words' },
+    ],
+    render: (o) => h('span', { class: 'fui-spinner__demo' }, spinner(o.size), o.words ? 'Saving…' : null),
+  },
 };

@@ -28,7 +28,10 @@ export const meta = {
   states: ['copied (a tick, "Copied")', 'failed ("select the text instead")'],
   a11y: 'The button has an aria-label; what happened is said in an aria-live note.',
   props: { 'copyButton(text, label)': 'text is what is copied; label names the button' },
-  examples: [
-    { name: 'Beside a value', render: () => h('span', { class: 'fui-copy__row' }, h('code', { class: 'mono' }, 'http://192.168.1.10:8096'), copyButton('http://192.168.1.10:8096', 'Copy address')) },
-  ],
+  playground: {
+    controls: [{ key: 'value', label: 'Beside its value', on: true }],
+    render: (o) => o.value
+      ? h('span', { class: 'fui-copy__row' }, h('code', { class: 'mono' }, 'http://192.168.1.10:8096'), copyButton('http://192.168.1.10:8096', 'Copy address'))
+      : copyButton('http://192.168.1.10:8096', 'Copy address'),
+  },
 };

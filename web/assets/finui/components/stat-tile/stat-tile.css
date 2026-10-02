@@ -32,3 +32,6 @@
 .fui-stat-tile__grid--quiet .fui-stat-tile__value { font-size: 20px; color: var(--text); }
 .fui-stat-tile__grid--quiet { --tile: 200px; }
 .fui-stat-tile__grid--three { --tile: 220px; }
+
+/* The gallery's sparkline stand-in. */
+.fui-stat-tile__demo-spark { display: block; width: 64px; height: 18px; border-bottom: 2px solid var(--spark); border-radius: var(--radius-sm); }

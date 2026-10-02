@@ -2,6 +2,7 @@
 // the figure it was ranked by with a smaller one under it.
 
 import { h } from '../../core.js';
+import { avatar } from '../avatar/avatar.js';
 
 /** rankList(rows): rows are { href, thumb, name, sub, value, note }; value is a node or text, note text. A row without a
  *  sub has no second line, so its name sits in the middle of the row beside its picture. */
@@ -25,12 +26,13 @@ export const meta = {
   states: [],
   a11y: 'An ordered list: the order is the ranking. The name is the link.',
   props: { 'rankList(rows)': '[{ href, thumb, name, sub, value, note }]' },
-  examples: [
-    { name: 'The most watched', render: () => rankList([
-      { href: '#', name: 'Big Buck Bunny', sub: '2008 · 4 users', value: '12h 4m', note: '31 plays' },
-      { href: '#', name: 'Sintel', sub: '2010 · 3 users', value: '6h 50m', note: '18 plays' },
-      { href: '#', name: 'Tears of Steel', sub: '2012 · 1 user', value: '1h 2m', note: '1 play' }]) },
-    { name: 'People, with nothing under the name', render: () => rankList([
-      { href: '#', name: 'alice', value: '20h', note: '40 plays' }, { href: '#', name: 'bob', value: '14h', note: '29 plays' }]) },
-  ],
+  playground: {
+    controls: [
+      { key: 'thumb', label: 'Pictures', on: true },
+      { key: 'sub', label: 'A line under the name', on: true },
+      { key: 'note', label: 'A note under the value', on: true },
+    ],
+    render: (o) => rankList([['Big Buck Bunny', '2008 · 4 users', '12h 4m', '31 plays'], ['Sintel', '2010 · 3 users', '6h 50m', '18 plays'], ['Tears of Steel', '2012 · 1 user', '1h 2m', '1 play']]
+      .map(([name, sub, value, note]) => ({ href: '#', name, sub: o.sub ? sub : null, value, note: o.note ? note : null, thumb: o.thumb ? avatar(null, name, { size: 36 }) : null }))),
+  },
 };

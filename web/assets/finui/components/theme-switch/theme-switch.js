@@ -88,7 +88,8 @@ export const meta = {
   states: ['dragging', 'a new icon moves in (not with reduced motion)'],
   a11y: 'role="slider" with aria-valuetext ("Dark"); arrows, Home and End move it; it is in the tab order.',
   props: { 'themeSwitch({ value, onChange })': "value: 'light' | 'device' | 'dark'" },
-  examples: [
-    { name: 'The three stops', render: () => h('div', { class: 'fui-theme-switch__demo' }, themeSwitch({ value: 'light' }), themeSwitch({ value: 'device' }), themeSwitch({ value: 'dark' })) },
-  ],
+  playground: {
+    controls: [{ key: 'value', label: 'Set to', choices: [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']] }],
+    render: (o) => h('div', { class: 'fui-theme-switch__demo' }, themeSwitch({ value: o.value })),
+  },
 };
