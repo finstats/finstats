@@ -5,6 +5,7 @@ import { api, imgItem, imgUser, isAbort, recordRequests, viewCacheGet, viewCache
 import { RANGES, userList, can } from './state.js';
 import { dataTable } from './tables.js';
 import { button } from '../finui/components/button/button.js';
+import { animate, setBusy as setTurning } from '../finui/components/animated-icon/animated-icon.js';
 
 export { emptyState } from '../finui/components/empty/empty.js';
 export { errorState } from '../finui/components/error/error.js';
@@ -47,16 +48,20 @@ export { card, chartCard } from '../finui/components/card/card.js';
 
 /** Put a button into / out of its busy state (disabled only while the request runs). */
 export function setBusy(btn, busy, busyLabel) {
+  // A refresh is its own spinner: it keeps turning, and finishes its turn once it is done, rather than giving way to one.
+  const turn = btn.querySelector('svg.icon[data-icon="refresh"]');
   if (busy) {
     btn._label = btn._label || Array.from(btn.childNodes);
     btn.disabled = true;
     btn.setAttribute('aria-busy', 'true');
-    btn.replaceChildren(spinner(), h('span', null, busyLabel || 'Working…'));
+    if (turn) setTurning(animate(turn, { play: 'hover' }), true);
+    btn.replaceChildren(turn || spinner(), h('span', null, busyLabel || 'Working…'));
   } else if (btn._label) {
     btn.disabled = false;
     btn.removeAttribute('aria-busy');
     btn.replaceChildren(...btn._label);
     btn._label = null;
+    if (turn) setTurning(turn, false);
   }
 }
 

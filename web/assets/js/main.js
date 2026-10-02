@@ -6,7 +6,7 @@ import { state, resetCaches, applyTheme } from './state.js';
 import { route, setLayout, start, navigate } from './router.js';
 import { layout } from './shell.js';
 import { startPrefetching } from './prefetch.js';
-import { pageHeader, emptyState } from './components.js';
+import { pageHeader, emptyState, setBusy } from './components.js';
 
 import dashboard, { prefetchDashboard } from './pages/dashboard.js';
 import activity, { prefetchActivity } from './pages/activity.js';
@@ -28,6 +28,7 @@ import changelogPage, { prefetchChangelog } from './pages/changelog.js';
 import licensesPage, { prefetchLicenses } from './pages/licenses.js';
 import { setupPage, loginPage } from './pages/auth.js';
 import { button } from '../finui/components/button/button.js';
+import { animateWithin } from '../finui/components/animated-icon/animated-icon.js';
 
 route('/setup', setupPage, { bare: true });
 route('/login', loginPage, { bare: true });
@@ -75,6 +76,8 @@ setUnauthorizedHandler(() => {
 });
 
 applyTheme();   // theme.js already set the page's colours; this points the browser's own bar at the same choice
+// Every icon in something pressable — a link, a button, a tab — does its act once when pointed at or focused, wherever it is drawn.
+animateWithin(document.body);
 
 async function boot() {
   const app = document.getElementById('app');
@@ -87,7 +90,7 @@ async function boot() {
     app.replaceChildren(h('main', { class: 'bare' }, h('div', { class: 'auth-card' },
       h('h1', { class: 'auth-title' }, 'finstats isn’t responding'),
       h('p', { class: 'auth-sub' }, e.message),
-      button({ variant: 'primary', type: 'button', onClick: () => location.reload() }, icon('refresh', 14), 'Try again'))));
+      button({ variant: 'primary', type: 'button', onClick: (e) => { setBusy(e.currentTarget, true, 'Trying again…'); location.reload(); } }, icon('refresh', 14), 'Try again'))));
     return;
   }
   startPrefetching();
