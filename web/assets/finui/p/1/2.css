@@ -1,7 +1,7 @@
 /* Accent: Blue */
 :root {
   --accent: light-dark(#1d4ed8, #3b82f6);
-  --accent-hi: light-dark(color-mix(in srgb, #1d4ed8 85%, #000000), color-mix(in srgb, #3b82f6 70%, #ffffff));
+  --accent-hi: light-dark(color-mix(in srgb, #1d4ed8 78%, #000000), color-mix(in srgb, #3b82f6 60%, #ffffff));
   --accent-hover: light-dark(color-mix(in srgb, #1d4ed8 85%, #000000), color-mix(in srgb, #3b82f6 85%, #000000));
   --accent-wash: light-dark(color-mix(in srgb, #1d4ed8 10%, transparent), color-mix(in srgb, #3b82f6 14%, transparent));
   --selection: light-dark(color-mix(in srgb, #1d4ed8 22%, transparent), color-mix(in srgb, #3b82f6 40%, transparent));

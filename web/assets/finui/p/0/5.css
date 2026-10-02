@@ -1,10 +1,10 @@
 /* Base colour: Gray */
 :root {
-  --bg: light-dark(#f3f4f6, color-mix(in srgb, #111827 75%, #1f2937));
-  --page-glow: light-dark(#f9fafb, transparent);
-  --bg-2: light-dark(#ffffff, #1f2937);
+  --bg: light-dark(#d0d8da, color-mix(in srgb, #111827 75%, #1f2937));
+  --page-glow: light-dark(#f9fbfb, transparent);
+  --bg-2: light-dark(#f9fbfb, #1f2937);
   --bg-lift: light-dark(#ffffff, #030712);
-  --bg-sunken: light-dark(#e5e7eb, #111827);
+  --bg-sunken: light-dark(#c4cdcf, #111827);
   --hover: light-dark(color-mix(in srgb, #030712 7%, transparent), color-mix(in srgb, #1f2937 60%, #374151));
   --btn-hover: light-dark(color-mix(in srgb, #030712 11%, transparent), color-mix(in srgb, #1f2937 35%, #374151));
   --border: light-dark(#d1d5db, color-mix(in srgb, #1f2937 40%, #374151));

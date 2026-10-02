@@ -1,18 +1,18 @@
 /* Base colour: Zinc */
 :root {
-  --bg: light-dark(#f4f4f5, color-mix(in srgb, #18181b 75%, #27272a));
-  --page-glow: light-dark(#fafafa, transparent);
-  --bg-2: light-dark(#ffffff, #27272a);
+  --bg: light-dark(#d9ccdb, color-mix(in srgb, #18181b 75%, #27272a));
+  --page-glow: light-dark(#fafafc, transparent);
+  --bg-2: light-dark(#fafafc, #27272a);
   --bg-lift: light-dark(#ffffff, #09090b);
-  --bg-sunken: light-dark(#e4e4e7, #18181b);
+  --bg-sunken: light-dark(#cec0d1, #18181b);
   --hover: light-dark(color-mix(in srgb, #09090b 7%, transparent), color-mix(in srgb, #27272a 60%, #3f3f46));
   --btn-hover: light-dark(color-mix(in srgb, #09090b 11%, transparent), color-mix(in srgb, #27272a 35%, #3f3f46));
   --border: light-dark(#d4d4d8, color-mix(in srgb, #27272a 40%, #3f3f46));
   --border-soft: light-dark(#e4e4e7, color-mix(in srgb, #27272a 80%, #3f3f46));
   --border-strong: light-dark(#a1a1aa, color-mix(in srgb, #3f3f46 60%, #52525b));
   --text: light-dark(#18181b, color-mix(in srgb, #e4e4e7 50%, #d4d4d8));
-  --text-muted: light-dark(#52525b, #a1a1aa);
-  --text-faint: light-dark(color-mix(in srgb, #71717a 60%, #52525b), color-mix(in srgb, #71717a 50%, #a1a1aa));
+  --text-muted: light-dark(#45454c, #a1a1aa);
+  --text-faint: light-dark(#55555d, color-mix(in srgb, #71717a 50%, #a1a1aa));
   --text-strong: light-dark(#18181b, #f4f4f5);
   --text-hero: light-dark(#09090b, #fafafa);
   --grid: light-dark(#e4e4e7, color-mix(in srgb, #27272a 60%, #3f3f46));

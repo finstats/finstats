@@ -1,10 +1,10 @@
 /* Base colour: Neutral */
 :root {
-  --bg: light-dark(#f5f5f5, color-mix(in srgb, #171717 75%, #262626));
+  --bg: light-dark(#e1e1e1, color-mix(in srgb, #171717 75%, #262626));
   --page-glow: light-dark(#fafafa, transparent);
-  --bg-2: light-dark(#ffffff, #262626);
+  --bg-2: light-dark(#fafafa, #262626);
   --bg-lift: light-dark(#ffffff, #0a0a0a);
-  --bg-sunken: light-dark(#e5e5e5, #171717);
+  --bg-sunken: light-dark(#d5d5d5, #171717);
   --hover: light-dark(color-mix(in srgb, #0a0a0a 7%, transparent), color-mix(in srgb, #262626 60%, #404040));
   --btn-hover: light-dark(color-mix(in srgb, #0a0a0a 11%, transparent), color-mix(in srgb, #262626 35%, #404040));
   --border: light-dark(#d4d4d4, color-mix(in srgb, #262626 40%, #404040));

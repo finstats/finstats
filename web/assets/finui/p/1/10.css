@@ -1,0 +1,9 @@
+/* Accent: Indigo */
+:root {
+  --accent: light-dark(#4338ca, #818cf8);
+  --accent-hi: light-dark(color-mix(in srgb, #4338ca 78%, #000000), color-mix(in srgb, #818cf8 60%, #ffffff));
+  --accent-hover: light-dark(color-mix(in srgb, #4338ca 85%, #000000), color-mix(in srgb, #818cf8 85%, #000000));
+  --accent-wash: light-dark(color-mix(in srgb, #4338ca 10%, transparent), color-mix(in srgb, #818cf8 14%, transparent));
+  --selection: light-dark(color-mix(in srgb, #4338ca 22%, transparent), color-mix(in srgb, #818cf8 40%, transparent));
+  --on-accent: light-dark(#ffffff, #0a0a0a);
+}

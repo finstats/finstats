@@ -12,7 +12,7 @@ use crate::auth::AuthUser;
 const SOURCE: &str = include_str!("../THIRD-PARTY.json");
 
 /// What is inside the binary but is not a crate, so nothing generated can know about it:
-/// finstats itself, the two fonts, the map — and the city database, which is not shipped at
+/// finstats itself, the fonts, the map — and the city database, which is not shipped at
 /// all but is read by whoever switches it on, and asks to be credited.
 /// Each licence file that really exists on disk is compiled in; nothing here is retyped.
 const BUNDLED: &[(&str, &str, &str, &str, Option<&str>)] = &[
@@ -20,6 +20,32 @@ const BUNDLED: &[(&str, &str, &str, &str, Option<&str>)] = &[
     ("Inter", "", "OFL-1.1", "https://github.com/rsms/inter", Some(include_str!("../web/assets/fonts/LICENSE-Inter.txt"))),
     ("Inter (cards)", "4.1", "OFL-1.1", "https://github.com/rsms/inter", Some(include_str!("../fonts/card/LICENSE-Inter.txt"))),
     ("JetBrains Mono", "", "OFL-1.1", "https://github.com/JetBrains/JetBrainsMono", Some(include_str!("../web/assets/fonts/LICENSE-JetBrainsMono.txt"))),
+    // The fonts a FinUI preset may choose (Settings → Appearance), Fontsource's variable builds.
+    ("Geist", "", "OFL-1.1", "https://fontsource.org/fonts/geist", Some(include_str!("../web/assets/fonts/LICENSE-Geist.txt"))),
+    ("Roboto", "", "OFL-1.1", "https://fontsource.org/fonts/roboto", Some(include_str!("../web/assets/fonts/LICENSE-Roboto.txt"))),
+    ("Open Sans", "", "OFL-1.1", "https://fontsource.org/fonts/open-sans", Some(include_str!("../web/assets/fonts/LICENSE-OpenSans.txt"))),
+    ("Source Sans 3", "", "OFL-1.1", "https://fontsource.org/fonts/source-sans-3", Some(include_str!("../web/assets/fonts/LICENSE-SourceSans3.txt"))),
+    ("IBM Plex Sans", "", "OFL-1.1", "https://fontsource.org/fonts/ibm-plex-sans", Some(include_str!("../web/assets/fonts/LICENSE-IBMPlexSans.txt"))),
+    ("Nunito", "", "OFL-1.1", "https://fontsource.org/fonts/nunito", Some(include_str!("../web/assets/fonts/LICENSE-Nunito.txt"))),
+    ("Manrope", "", "OFL-1.1", "https://fontsource.org/fonts/manrope", Some(include_str!("../web/assets/fonts/LICENSE-Manrope.txt"))),
+    ("DM Sans", "", "OFL-1.1", "https://fontsource.org/fonts/dm-sans", Some(include_str!("../web/assets/fonts/LICENSE-DMSans.txt"))),
+    ("Plus Jakarta Sans", "", "OFL-1.1", "https://fontsource.org/fonts/plus-jakarta-sans", Some(include_str!("../web/assets/fonts/LICENSE-PlusJakartaSans.txt"))),
+    ("Figtree", "", "OFL-1.1", "https://fontsource.org/fonts/figtree", Some(include_str!("../web/assets/fonts/LICENSE-Figtree.txt"))),
+    ("Outfit", "", "OFL-1.1", "https://fontsource.org/fonts/outfit", Some(include_str!("../web/assets/fonts/LICENSE-Outfit.txt"))),
+    ("Lexend", "", "OFL-1.1", "https://fontsource.org/fonts/lexend", Some(include_str!("../web/assets/fonts/LICENSE-Lexend.txt"))),
+    ("Space Grotesk", "", "OFL-1.1", "https://fontsource.org/fonts/space-grotesk", Some(include_str!("../web/assets/fonts/LICENSE-SpaceGrotesk.txt"))),
+    ("Work Sans", "", "OFL-1.1", "https://fontsource.org/fonts/work-sans", Some(include_str!("../web/assets/fonts/LICENSE-WorkSans.txt"))),
+    ("Public Sans", "", "OFL-1.1", "https://fontsource.org/fonts/public-sans", Some(include_str!("../web/assets/fonts/LICENSE-PublicSans.txt"))),
+    ("Lora", "", "OFL-1.1", "https://fontsource.org/fonts/lora", Some(include_str!("../web/assets/fonts/LICENSE-Lora.txt"))),
+    ("Merriweather", "", "OFL-1.1", "https://fontsource.org/fonts/merriweather", Some(include_str!("../web/assets/fonts/LICENSE-Merriweather.txt"))),
+    ("Source Serif 4", "", "OFL-1.1", "https://fontsource.org/fonts/source-serif-4", Some(include_str!("../web/assets/fonts/LICENSE-SourceSerif4.txt"))),
+    ("Playfair Display", "", "OFL-1.1", "https://fontsource.org/fonts/playfair-display", Some(include_str!("../web/assets/fonts/LICENSE-PlayfairDisplay.txt"))),
+    ("Fraunces", "", "OFL-1.1", "https://fontsource.org/fonts/fraunces", Some(include_str!("../web/assets/fonts/LICENSE-Fraunces.txt"))),
+    ("EB Garamond", "", "OFL-1.1", "https://fontsource.org/fonts/eb-garamond", Some(include_str!("../web/assets/fonts/LICENSE-EBGaramond.txt"))),
+    ("Fira Code", "", "OFL-1.1", "https://fontsource.org/fonts/fira-code", Some(include_str!("../web/assets/fonts/LICENSE-FiraCode.txt"))),
+    ("Source Code Pro", "", "OFL-1.1", "https://fontsource.org/fonts/source-code-pro", Some(include_str!("../web/assets/fonts/LICENSE-SourceCodePro.txt"))),
+    ("Roboto Mono", "", "OFL-1.1", "https://fontsource.org/fonts/roboto-mono", Some(include_str!("../web/assets/fonts/LICENSE-RobotoMono.txt"))),
+    ("Geist Mono", "", "OFL-1.1", "https://fontsource.org/fonts/geist-mono", Some(include_str!("../web/assets/fonts/LICENSE-GeistMono.txt"))),
     ("Natural Earth", "1:50m", "Public domain", "https://www.naturalearthdata.com", None),
     ("DB-IP IP to City Lite", "", "CC-BY-4.0", "https://db-ip.com/db/lite.php", None),
 ];
@@ -119,6 +145,21 @@ mod tests {
             assert!(body.contains("SIL OPEN FONT LICENSE"), "{font} must carry the licence file that sits beside it");
         }
         assert_eq!(text("Natural Earth").0, "Public domain");
+    }
+
+    /// A font a FinUI preset may choose is shipped inside the binary like Inter: every licence that sits in
+    /// web/assets/fonts is in the notice, as the font's own text.
+    #[test]
+    fn every_font_finstats_bundles_is_in_the_notice_with_its_licence() {
+        let n = notice();
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("web/assets/fonts");
+        for e in std::fs::read_dir(&dir).unwrap().flatten() {
+            let file = e.file_name().to_string_lossy().to_string();
+            let Some(_) = file.strip_prefix("LICENSE-").and_then(|f| f.strip_suffix(".txt")) else { continue };
+            let text = std::fs::read_to_string(e.path()).unwrap();
+            let found = n.components.iter().any(|c| c.license == "OFL-1.1" && c.notices.iter().any(|&i| n.notices[i].text == text.trim()));
+            assert!(found, "{file} sits beside a bundled font and is not in the notice");
+        }
     }
 
     /// The whole notice is the same for everybody and never changes while the process runs,

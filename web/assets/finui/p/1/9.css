@@ -1,7 +1,7 @@
 /* Accent: Ink */
 :root {
   --accent: light-dark(#262626, #e5e5e5);
-  --accent-hi: light-dark(color-mix(in srgb, #262626 85%, #000000), color-mix(in srgb, #e5e5e5 70%, #ffffff));
+  --accent-hi: light-dark(color-mix(in srgb, #262626 78%, #000000), color-mix(in srgb, #e5e5e5 60%, #ffffff));
   --accent-hover: light-dark(color-mix(in srgb, #262626 85%, #000000), color-mix(in srgb, #e5e5e5 85%, #000000));
   --accent-wash: light-dark(color-mix(in srgb, #262626 10%, transparent), color-mix(in srgb, #e5e5e5 14%, transparent));
   --selection: light-dark(color-mix(in srgb, #262626 22%, transparent), color-mix(in srgb, #e5e5e5 40%, transparent));
