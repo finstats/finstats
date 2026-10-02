@@ -706,7 +706,12 @@ token files FinUI's site build generates (`finui/p/<axis>/<option>.css`), and `/
 the session cookie that asks (`appearance::of_request`; `private`, `Vary: Cookie`): the stylesheet followed by the files
 the code names in axis order — exactly what FinUI's `install.sh` does, so finstats has no copy of how a choice becomes
 tokens. `finui::preset::overlay` only decodes the code against the files; an unknown code is refused at save. There is no
-look for everyone: one person's choice never reaches another (the owner's decision). **Presets choose fonts too**
+look for everyone: one person's choice never reaches another (the owner's decision). **A style is a whole look in one
+choice** (`presets.json` `styles`: a key, a label, a line and its picks by option key; FinUI create's first picker — finstats'
+Appearance offers none, the owner's decision: finstats ships one look, and a style reaches it only as the code FinUI
+create makes), and it is nothing but a code — Washi, every default, is saved as no preset at all. finstats' own
+chrome reads FinUI's tokens where a choice should reach it: the sidebar's open row is `--selected-*` (the Menu axis), as
+FinUI's section list is. **Presets choose fonts too**
 (axes Font, Heading — the token `--font-heading`, the text's own by default — and Mono): every family a preset may name
 is bundled in `web/assets/fonts` beside its OFL licence, which `licenses.rs` lists (a test holds every licence there to
 the notice), and a font option's file carries its `@font-face` rules, so a page fetches only the fonts it was told to.
