@@ -715,7 +715,10 @@ FinUI's section list is. **Presets choose fonts too**
 (axes Font, Heading — the token `--font-heading`, the text's own by default — and Mono): every family a preset may name
 is bundled in `web/assets/fonts` beside its OFL licence, which `licenses.rs` lists (a test holds every licence there to
 the notice), and a font option's file carries its `@font-face` rules, so a page fetches only the fonts it was told to.
-To bring new options over: build FinUI's site (`node ../finui/tools/build-site.mjs <dir>`) and copy its `p/`,
+**Icons move once on hover** (FinUI's `animated-icon`): `main.js` calls `animateWithin(document.body)`, which animates
+every `icon()` inside something pressable as it is drawn (an icon among words stays still), so no page asks for it; a
+busy button (`setBusy` in `components.js`) whose icon is `refresh` keeps that icon turning instead of showing a spinner,
+and lets it finish its turn when done — the only icon that moves for longer than one hover. To bring new options over: build FinUI's site (`node ../finui/tools/build-site.mjs <dir>`) and copy its `p/`,
 `create/presets.json` and FinUI's `fonts/`. The QA
 stage `finui` runs that repository's checks and tests, serves its site and walks the gallery and create, and fails when
 a file of `web/assets/finui` differs from the repository's (`p/` from its built site): copy a change across in the same
