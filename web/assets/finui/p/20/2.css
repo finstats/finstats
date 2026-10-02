@@ -1,0 +1,5 @@
+/* Focus ring: Bold */
+:root {
+  --focus-width: 3px;
+  --focus-color: var(--text-strong);
+}

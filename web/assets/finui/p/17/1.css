@@ -1,0 +1,6 @@
+/* Menu: Solid */
+:root {
+  --selected-bg: var(--accent);
+  --selected-text: var(--on-accent);
+  --selected-icon: var(--on-accent);
+}

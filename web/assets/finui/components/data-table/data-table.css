@@ -2,7 +2,8 @@
 /* ------------------------------------------------------------ tables */
 .fui-data-table__scroll { position: relative; overflow-x: auto; }
 /* relative: a visually hidden label inside must scroll with the table, not widen the page */
-.fui-data-table th, .fui-data-table td { padding: calc(var(--density) * 9px) 12px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--border-soft); }
+.fui-data-table th, .fui-data-table td { padding: calc(var(--density) * 9px) 12px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--row-line); }
+.fui-data-table tbody tr:nth-child(even) { background: var(--row-stripe); }
 .fui-data-table th.r, .fui-data-table td.r { text-align: right; }
 .fui-data-table thead th { font-size: 11.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; padding-top: 6px; padding-bottom: 8px; }
 .fui-data-table tbody tr:last-child td, .fui-data-table tbody tr:last-child th { border-bottom: 0; }

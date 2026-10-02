@@ -98,6 +98,29 @@
   --density: 1;                                           /* the size of controls and the room in cards, as a factor */
   --card-shadow: none;                                    /* what lifts a card off the page: nothing, by default */
   --icon-stroke: 1.75;                                    /* the width an icon is drawn with */
+  --title-weight: 700;                                    /* a page's title */
+  --heading-weight: 600;                                  /* a card's, a dialog's, an empty state's title */
+  --heading-case: none;                                   /* uppercase: headings in capitals */
+  --heading-tracking: 0em;                                /* added to a heading's letter-spacing */
+  --primary-bg: var(--accent);                            /* the primary button: its fill, edge, words and hover */
+  --primary-border: var(--accent);
+  --primary-text: var(--on-accent);
+  --primary-hover: var(--accent-hover);
+  --field-bg: var(--bg);                                  /* an input: its ground, edge, which edges and corners */
+  --field-border: var(--border);
+  --field-edges: 1px;
+  --radius-field: var(--radius-control);
+  --row-line: var(--border-soft);                         /* the line under a table row, and the wash of every other */
+  --row-stripe: transparent;
+  --selected-bg: var(--accent-wash);                      /* the open item of a list to move between: ground, words, icon, edge */
+  --selected-text: var(--text);
+  --selected-icon: var(--accent-hi);
+  --selected-edge: none;
+  --icon-cap: round;                                      /* an icon's line ends and corners */
+  --icon-join: round;
+  --focus-width: 2px;                                     /* the ring a focused control wears */
+  --focus-color: var(--accent-hi);
+  --focus-offset: 2px;
   --sidebar-w: 220px;
   --statusbar-h: 26px;
   --ease: 150ms ease;

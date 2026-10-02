@@ -1,0 +1,7 @@
+/* Fields: Underlined */
+:root {
+  --field-bg: transparent;
+  --field-edges: 0 0 1px;
+  --radius-field: 0px;
+  --field-border: var(--border-strong);
+}

@@ -1,0 +1,5 @@
+/* Menu: Outline */
+:root {
+  --selected-bg: transparent;
+  --selected-edge: inset 0 0 0 1px var(--accent);
+}

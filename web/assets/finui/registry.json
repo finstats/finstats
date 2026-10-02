@@ -17,8 +17,6 @@
         "components/button/button.css"
       ],
       "tokens": [
-        "--accent",
-        "--accent-hover",
         "--border",
         "--btn-hover",
         "--critical",
@@ -27,8 +25,11 @@
         "--density",
         "--ease",
         "--hover",
-        "--on-accent",
         "--on-fill",
+        "--primary-bg",
+        "--primary-border",
+        "--primary-hover",
+        "--primary-text",
         "--radius-control",
         "--radius-sm",
         "--text",
@@ -50,6 +51,10 @@
         "--border-soft",
         "--card-shadow",
         "--density",
+        "--font-heading",
+        "--heading-case",
+        "--heading-tracking",
+        "--heading-weight",
         "--radius",
         "--text-faint",
         "--text-strong"
@@ -114,6 +119,10 @@
       ],
       "tokens": [
         "--border",
+        "--font-heading",
+        "--heading-case",
+        "--heading-tracking",
+        "--heading-weight",
         "--radius",
         "--text",
         "--text-faint",
@@ -186,14 +195,15 @@
       "tokens": [
         "--accent",
         "--accent-wash",
-        "--bg",
-        "--border",
         "--border-strong",
         "--critical",
         "--critical-text",
         "--density",
         "--ease",
-        "--radius-control",
+        "--field-bg",
+        "--field-border",
+        "--field-edges",
+        "--radius-field",
         "--text",
         "--text-faint",
         "--text-muted"
@@ -416,13 +426,15 @@
       ],
       "tokens": [
         "--accent",
-        "--accent-hi",
-        "--accent-wash",
         "--border",
         "--border-soft",
         "--hover",
         "--radius-control",
         "--radius-pill",
+        "--selected-bg",
+        "--selected-edge",
+        "--selected-icon",
+        "--selected-text",
         "--text",
         "--text-faint",
         "--text-muted"
@@ -441,8 +453,11 @@
         "components/page-header/page-header.css"
       ],
       "tokens": [
+        "--heading-case",
+        "--heading-tracking",
         "--text-muted",
-        "--text-strong"
+        "--text-strong",
+        "--title-weight"
       ],
       "requires": [
         "core"
@@ -481,6 +496,10 @@
         "--border",
         "--border-soft",
         "--ease",
+        "--font-heading",
+        "--heading-case",
+        "--heading-tracking",
+        "--heading-weight",
         "--radius-lg",
         "--shadow"
       ],
@@ -503,6 +522,8 @@
         "--ease",
         "--hover",
         "--radius-sm",
+        "--row-line",
+        "--row-stripe",
         "--text",
         "--text-faint",
         "--text-muted",

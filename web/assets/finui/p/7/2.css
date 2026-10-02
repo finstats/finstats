@@ -1,0 +1,4 @@
+/* Highlight: Strong */
+:root {
+  --accent-wash: color-mix(in srgb, var(--accent) 36%, transparent);
+}

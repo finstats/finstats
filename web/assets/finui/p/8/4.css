@@ -1,0 +1,4 @@
+/* Motion: Springy */
+:root {
+  --ease: 240ms cubic-bezier(.34, 1.56, .64, 1);
+}

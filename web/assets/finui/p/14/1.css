@@ -1,0 +1,7 @@
+/* Buttons: Soft */
+:root {
+  --primary-bg: color-mix(in srgb, var(--accent) 12%, transparent);
+  --primary-border: transparent;
+  --primary-text: color-mix(in srgb, var(--accent-hi) 72%, var(--text-strong));
+  --primary-hover: color-mix(in srgb, var(--accent) 20%, transparent);
+}

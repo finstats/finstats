@@ -1,0 +1,4 @@
+/* Page: Grid */
+:root {
+  --page-bg: linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 28px 28px, linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 28px 28px, var(--bg);
+}

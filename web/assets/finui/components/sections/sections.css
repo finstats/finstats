@@ -7,8 +7,8 @@
 .fui-sections__link { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: var(--radius-control); color: var(--text-muted); font-size: 13.5px; text-decoration: none; }
 .fui-sections__link .icon { color: var(--text-faint); flex: none; }
 .fui-sections__link:hover { background: var(--hover); color: var(--text); text-decoration: none; }
-.fui-sections__link.is-active { background: var(--accent-wash); color: var(--text); }
-.fui-sections__link.is-active .icon { color: var(--accent-hi); }
+.fui-sections__link.is-active { background: var(--selected-bg); color: var(--selected-text); box-shadow: var(--selected-edge); }
+.fui-sections__link.is-active .icon { color: var(--selected-icon); }
 .fui-sections__body { min-width: 0; }
 .fui-sections__body .fui-card__body { max-width: 100%; }
 .fui-sections__body .fui-setting-row { scroll-margin-top: 20px; }

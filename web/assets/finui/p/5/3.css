@@ -1,0 +1,5 @@
+/* Borders: Faint */
+:root {
+  --border: color-mix(in srgb, var(--border-strong) 45%, transparent);
+  --border-soft: color-mix(in srgb, var(--border-strong) 32%, transparent);
+}

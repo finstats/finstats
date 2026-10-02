@@ -36,7 +36,7 @@ img { max-width: 100%; display: block; }
 strong { font-weight: 600; color: var(--text); }
 table { border-collapse: collapse; width: 100%; }
 [hidden] { display: none !important; }
-:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; border-radius: var(--radius-sm); }
+:focus-visible { outline: var(--focus-width) solid var(--focus-color); outline-offset: var(--focus-offset); border-radius: var(--radius-sm); }
 ::selection { background: var(--selection); }
 
 /* The small utilities every component and page uses. They come before every component, as they always came first:
@@ -46,5 +46,5 @@ table { border-collapse: collapse; width: 100%; }
 .r { text-align: right; }
 .nowrap { white-space: nowrap; }
 .trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.icon { flex: none; vertical-align: -0.15em; stroke-width: var(--icon-stroke); }
+.icon { flex: none; vertical-align: -0.15em; stroke-width: var(--icon-stroke); stroke-linecap: var(--icon-cap); stroke-linejoin: var(--icon-join); }
 .sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

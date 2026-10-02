@@ -1,7 +1,7 @@
 /* FinUI: page-header. Moved from app.css; the same rules under FinUI's names. */
 /* ------------------------------------------------------------ page chrome */
 .fui-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.fui-page-header__title { font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -.022em; color: var(--text-strong); overflow-wrap: anywhere; }
+.fui-page-header__title { font-size: 28px; line-height: 1.15; font-weight: var(--title-weight); letter-spacing: calc(var(--heading-tracking) - .022em); text-transform: var(--heading-case); color: var(--text-strong); overflow-wrap: anywhere; }
 .fui-page-header__sub { margin-top: 5px; color: var(--text-muted); font-size: 13.5px; }
 .fui-page-header > div { min-width: 0; }
 .fui-page-header__sub { overflow-wrap: anywhere; }

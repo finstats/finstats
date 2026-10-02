@@ -1,0 +1,4 @@
+/* Cards: Glow */
+:root {
+  --card-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent), 0 10px 30px color-mix(in srgb, var(--accent) 16%, transparent);
+}

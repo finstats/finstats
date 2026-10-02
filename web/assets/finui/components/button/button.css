@@ -6,8 +6,8 @@
 }
 .fui-button:hover { background: var(--btn-hover); text-decoration: none; }
 .fui-button:disabled { opacity: .65; cursor: progress; }
-.fui-button--primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.fui-button--primary:hover { background: var(--accent-hover); }
+.fui-button--primary { background: var(--primary-bg); border-color: var(--primary-border); color: var(--primary-text); }
+.fui-button--primary:hover { background: var(--primary-hover); }
 .fui-button--ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
 .fui-button--ghost:hover { background: var(--hover); color: var(--text); }
 .fui-button--ghost[aria-disabled="true"] { opacity: .35; cursor: default; }

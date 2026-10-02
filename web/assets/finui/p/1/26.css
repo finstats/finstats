@@ -1,0 +1,9 @@
+/* Accent: Lime */
+:root {
+  --accent: light-dark(#4d7c0f, #a3e635);
+  --accent-hi: light-dark(color-mix(in srgb, #4d7c0f 78%, #000000), color-mix(in srgb, #a3e635 60%, #ffffff));
+  --accent-hover: light-dark(color-mix(in srgb, #4d7c0f 85%, #000000), color-mix(in srgb, #a3e635 85%, #000000));
+  --accent-wash: light-dark(color-mix(in srgb, #4d7c0f 10%, transparent), color-mix(in srgb, #a3e635 14%, transparent));
+  --selection: light-dark(color-mix(in srgb, #4d7c0f 22%, transparent), color-mix(in srgb, #a3e635 40%, transparent));
+  --on-accent: light-dark(#ffffff, #0a0a0a);
+}

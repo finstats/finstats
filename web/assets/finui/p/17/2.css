@@ -1,0 +1,5 @@
+/* Menu: Bar */
+:root {
+  --selected-bg: var(--hover);
+  --selected-edge: inset 3px 0 0 var(--accent);
+}
