@@ -1,6 +1,6 @@
 /* FinUI: animated icon. One cycle of --icon-cycle: drawn (0–6%), the icon's own act (6–50%), drawn out stroke by stroke
    (54–70%), nothing for a moment, drawn in again (76–96%). It starts and ends drawn, so the icon at rest is the static
-   one: on hover it moves from there, and a cycle of 0s (Motion: Off) or reduced motion leaves it still. Each shape draws
+   one: on hover it does its act from there, and a cycle of 0s (Motion: Off) or reduced motion leaves it still. Each shape draws
    on pathLength 1 with a dash of 1 and a gap of 2, so an offset of ±1.5 hides it with its round caps. */
 .fui-animated-icon { overflow: visible; --start: 0s; --times: infinite; }
 .fui-animated-icon > * {
@@ -39,8 +39,15 @@
 
 /* Once: in from nothing, the act, and it stays drawn. */
 .fui-animated-icon--once { --start: calc(var(--icon-cycle) * -0.72); --times: 1.5; }
-/* On hover: the static icon until it, or what holds it, is pointed at or focused. */
-.fui-animated-icon--hover:not(:hover, :hover > *, :focus-visible > *) > * { animation-name: none; }
+/* On hover: the static icon until it, or something pressable that holds it, is pointed at or focused; then its act, once
+   (half a cycle: it stops drawn, before the drawing out), and again the next time. */
+.fui-animated-icon--hover { --times: .5; }
+.fui-animated-icon--hover:not(:hover):not(:where(a[href], button, summary, label, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="option"], [role="switch"], [role="checkbox"], [role="radio"]):is(:hover, :focus-visible) *) > * { animation-name: none; }
+/* Busy (setBusy): what turns keeps turning, a whole turn at a time, pointed at or not; the rest stands still. */
+.fui-animated-icon.is-busy > * { animation-name: none; }
+.fui-animated-icon.is-busy > [data-act="spin"] { animation: fui-animated-icon-busy calc(var(--icon-cycle) / 3) linear infinite; }
+/* Done while still pointed at: it stands still until the pointer or the focus leaves, rather than playing again. */
+.fui-animated-icon--rested:not(.is-busy) > * { animation-name: none; }
 
 .fui-animated-icon__demo { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; color: var(--text); }
 
@@ -179,6 +186,10 @@
   20%, 32% { transform: scaleX(var(--sx)); animation-timing-function: ease-in-out; }
 }
 
+@keyframes fui-animated-icon-busy { from { transform: rotate(0deg); } to { transform: rotate(calc(360deg * var(--dir))); } }
+
+/* Still, with reduced motion; a busy icon turns on, slower, as the spinner does, so it still says something is under way. */
 @media (prefers-reduced-motion: reduce) {
   .fui-animated-icon > *, .fui-animated-icon > [data-act] { animation: none; }
+  .fui-animated-icon.is-busy > [data-act="spin"] { animation: fui-animated-icon-busy var(--icon-cycle) linear infinite; }
 }

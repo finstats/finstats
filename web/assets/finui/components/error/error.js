@@ -3,11 +3,14 @@
 
 import { h, icon } from '../../core.js';
 import { button } from '../button/button.js';
+import { animatedIcon, setBusy } from '../animated-icon/animated-icon.js';
 
 export function errorState(err, retry) {
+  // Pressed, its refresh turns until the view is replaced by what it tried again for (or by this again, if it failed again).
+  const turn = retry ? animatedIcon('refresh', { size: 14, play: 'hover' }) : null;
   return h('div', { class: 'fui-error', role: 'alert' }, icon('alert', 18),
     h('div', null, h('p', { class: 'fui-error__title' }, 'Couldn’t load this'), h('p', { class: 'fui-error__text' }, err.message || String(err))),
-    retry ? button({ size: 'sm', type: 'button', onClick: retry }, icon('refresh', 14), 'Try again') : null);
+    retry ? button({ size: 'sm', type: 'button', onClick: (e) => { setBusy(turn, true); return retry(e); } }, turn, 'Try again') : null);
 }
 
 export const meta = {
@@ -17,7 +20,7 @@ export const meta = {
   avoid: 'An error for a field (fieldError in a form). An error for an empty result (empty). Hiding the reason: the words the server gave are shown.',
   variants: ['with Try again', 'without'],
   states: [],
-  a11y: 'role="alert": announced when it appears. The icon is hidden; the title says it.',
+  a11y: 'role="alert": announced when it appears. The icon is hidden; the title says it. Pressed, Try again\'s icon turns until the view is replaced.',
   props: { 'errorState(err, retry)': 'err: an Error (its message is shown); retry: a function, which adds Try again' },
   playground: {
     controls: [{ key: 'retry', label: 'A way to try again', on: true }],

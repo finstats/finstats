@@ -120,10 +120,12 @@ const ICONS = {
 
 const iconTpl = document.createElement('template');
 export function icon(name, size = 16, cls = '') {
+  // It says which icon it is (data-icon), so an animated icon can be made of it where it stands.
+  const known = Object.hasOwn(ICONS, name);
   iconTpl.innerHTML =
     `<svg xmlns="${SVG_NS}" viewBox="0 0 24 24" width="${Number(size)}" height="${Number(size)}" fill="none" ` +
     `stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ` +
-    `class="icon">${ICONS[name] || ''}</svg>`;
+    `class="icon"${known ? ` data-icon="${name}"` : ''}>${known ? ICONS[name] : ''}</svg>`;
   const el = iconTpl.content.firstChild;
   if (cls) el.classList.add(...cls.split(' '));
   return el;

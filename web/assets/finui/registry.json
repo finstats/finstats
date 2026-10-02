@@ -150,7 +150,8 @@
       "requires": [
         "core",
         "button",
-        "card"
+        "card",
+        "animated-icon"
       ]
     },
     {
