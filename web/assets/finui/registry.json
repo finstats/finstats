@@ -168,6 +168,23 @@
       ]
     },
     {
+      "name": "animated-icon",
+      "category": "primitive",
+      "files": [
+        "components/animated-icon/animated-icon.js",
+        "components/animated-icon/motions.js",
+        "components/animated-icon/animated-icon.css"
+      ],
+      "tokens": [
+        "--icon-cycle",
+        "--text"
+      ],
+      "requires": [
+        "core",
+        "button"
+      ]
+    },
+    {
       "name": "skeleton",
       "category": "primitive",
       "files": [

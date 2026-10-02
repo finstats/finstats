@@ -124,6 +124,7 @@
   --sidebar-w: 220px;
   --statusbar-h: 26px;
   --ease: 150ms ease;
+  --icon-cycle: 3s;            /* one cycle of an animated icon: drawn, its act, drawn out, drawn in */
   /* Colours that were literals in app.css, as tokens with the values they had. */
   --on-fill: light-dark(#fff, #fff);                     /* text and knobs on a coloured fill or a picture */
   --on-accent: light-dark(#fff, #fff);                   /* text and knobs on the accent: a light accent takes ink */

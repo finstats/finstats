@@ -1181,28 +1181,32 @@
           "key": "quick",
           "label": "Quick",
           "tokens": {
-            "--ease": "80ms ease"
+            "--ease": "80ms ease",
+            "--icon-cycle": "2.2s"
           }
         },
         {
           "key": "slow",
           "label": "Slow",
           "tokens": {
-            "--ease": "260ms ease"
+            "--ease": "260ms ease",
+            "--icon-cycle": "4.2s"
           }
         },
         {
           "key": "off",
           "label": "Off",
           "tokens": {
-            "--ease": "0s"
+            "--ease": "0s",
+            "--icon-cycle": "0s"
           }
         },
         {
           "key": "springy",
           "label": "Springy",
           "tokens": {
-            "--ease": "240ms cubic-bezier(.34, 1.56, .64, 1)"
+            "--ease": "240ms cubic-bezier(.34, 1.56, .64, 1)",
+            "--icon-cycle": "3.4s"
           }
         }
       ]

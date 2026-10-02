@@ -1,0 +1,184 @@
+/* FinUI: animated icon. One cycle of --icon-cycle: drawn (0–6%), the icon's own act (6–50%), drawn out stroke by stroke
+   (54–70%), nothing for a moment, drawn in again (76–96%). It starts and ends drawn, so the icon at rest is the static
+   one: on hover it moves from there, and a cycle of 0s (Motion: Off) or reduced motion leaves it still. Each shape draws
+   on pathLength 1 with a dash of 1 and a gap of 2, so an offset of ±1.5 hides it with its round caps. */
+.fui-animated-icon { overflow: visible; --start: 0s; --times: infinite; }
+.fui-animated-icon > * {
+  --i: 0; --k: 0; --dx: 0; --dy: 0; --dir: 1; --sx: 1;
+  stroke-dasharray: 1 2;
+  animation: fui-animated-icon-draw var(--icon-cycle) linear var(--times) both;
+  animation-delay: calc(var(--start) + var(--i) * 60ms);
+}
+.fui-animated-icon > [data-act] {
+  transform-box: fill-box; transform-origin: center;
+  animation-name: fui-animated-icon-draw, var(--act);
+  animation-delay: calc(var(--start) + var(--i) * 60ms), calc(var(--start) + var(--k) * 110ms);
+}
+.fui-animated-icon > [data-act="spin"] { --act: fui-animated-icon-spin; }
+.fui-animated-icon > [data-act="exit"] { --act: fui-animated-icon-exit; }
+.fui-animated-icon > [data-act="nudge"] { --act: fui-animated-icon-nudge; }
+.fui-animated-icon > [data-act="beat"] { --act: fui-animated-icon-beat; }
+.fui-animated-icon > [data-act="flicker"] { --act: fui-animated-icon-flicker; transform-origin: center bottom; }
+.fui-animated-icon > [data-act="twinkle"] { --act: fui-animated-icon-twinkle; }
+.fui-animated-icon > [data-act="swing"] { --act: fui-animated-icon-swing; }
+.fui-animated-icon > [data-act="shake"] { --act: fui-animated-icon-shake; }
+.fui-animated-icon > [data-act="bob"] { --act: fui-animated-icon-bob; }
+.fui-animated-icon > [data-act="pop"] { --act: fui-animated-icon-pop; }
+.fui-animated-icon > [data-act="grow"] { --act: fui-animated-icon-grow; transform-origin: center bottom; }
+.fui-animated-icon > [data-act="blink"] { --act: fui-animated-icon-blink; }
+.fui-animated-icon > [data-act="slide"] { --act: fui-animated-icon-slide; }
+.fui-animated-icon > [data-act="squeeze"] { --act: fui-animated-icon-squeeze; transform-origin: left center; }
+.fui-animated-icon > [data-act="turn"] { --act: fui-animated-icon-turn; }
+.fui-animated-icon > [data-act="flip"] { --act: fui-animated-icon-flip; }
+.fui-animated-icon > [data-act="orbit"] { --act: fui-animated-icon-orbit; }
+.fui-animated-icon > [data-act="sweep"] { --act: fui-animated-icon-sweep; }
+.fui-animated-icon > [data-act="lift"] { --act: fui-animated-icon-lift; }
+.fui-animated-icon > [data-act="stretch"] { --act: fui-animated-icon-stretch; }
+/* Redrawing is a way of drawing: it takes the drawing's place rather than going beside it. */
+.fui-animated-icon > [data-act="redraw"] { animation-name: fui-animated-icon-redraw; animation-delay: calc(var(--start) + var(--i) * 60ms + var(--k) * 110ms); }
+
+/* Once: in from nothing, the act, and it stays drawn. */
+.fui-animated-icon--once { --start: calc(var(--icon-cycle) * -0.72); --times: 1.5; }
+/* On hover: the static icon until it, or what holds it, is pointed at or focused. */
+.fui-animated-icon--hover:not(:hover, :hover > *, :focus-visible > *) > * { animation-name: none; }
+
+.fui-animated-icon__demo { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; color: var(--text); }
+
+@keyframes fui-animated-icon-draw {
+  0%, 54% { stroke-dashoffset: 0; animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  70%, 76% { stroke-dashoffset: -1.5; }
+  76.01% { stroke-dashoffset: 1.5; animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  96%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes fui-animated-icon-redraw {
+  0%, 6% { stroke-dashoffset: 0; animation-timing-function: ease-in; }
+  17% { stroke-dashoffset: -1.5; }
+  17.01% { stroke-dashoffset: 1.5; animation-timing-function: ease-out; }
+  28% { stroke-dashoffset: 0; animation-timing-function: ease-in; }
+  39% { stroke-dashoffset: -1.5; }
+  39.01% { stroke-dashoffset: 1.5; animation-timing-function: ease-out; }
+  50%, 54% { stroke-dashoffset: 0; animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  70%, 76% { stroke-dashoffset: -1.5; }
+  76.01% { stroke-dashoffset: 1.5; animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  96%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes fui-animated-icon-spin {
+  0%, 6% { transform: rotate(0deg); animation-timing-function: cubic-bezier(.6, 0, .25, 1); }
+  50%, 100% { transform: rotate(calc(720deg * var(--dir))); }
+}
+@keyframes fui-animated-icon-exit {
+  0%, 6% { transform: translate(0, 0); opacity: 1; animation-timing-function: ease-in; }
+  17% { transform: translate(calc(var(--dx) * 6px), calc(var(--dy) * 6px)); opacity: 0; }
+  17.01% { transform: translate(calc(var(--dx) * -6px), calc(var(--dy) * -6px)); opacity: 0; animation-timing-function: ease-out; }
+  28% { transform: translate(0, 0); opacity: 1; animation-timing-function: ease-in; }
+  39% { transform: translate(calc(var(--dx) * 6px), calc(var(--dy) * 6px)); opacity: 0; }
+  39.01% { transform: translate(calc(var(--dx) * -6px), calc(var(--dy) * -6px)); opacity: 0; animation-timing-function: ease-out; }
+  50%, 100% { transform: translate(0, 0); opacity: 1; }
+}
+@keyframes fui-animated-icon-nudge {
+  0%, 6%, 22%, 38%, 50%, 100% { transform: translate(0, 0); animation-timing-function: ease-in-out; }
+  14%, 30% { transform: translate(calc(var(--dx) * 3px), calc(var(--dy) * 3px)); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-beat {
+  0%, 6%, 18%, 30%, 38%, 50%, 100% { transform: scale(1); animation-timing-function: ease-out; }
+  12%, 32% { transform: scale(1.2); animation-timing-function: ease-in; }
+  24%, 44% { transform: scale(1.12); animation-timing-function: ease-in; }
+}
+@keyframes fui-animated-icon-flicker {
+  0%, 6%, 50%, 100% { transform: scale(1, 1) skewX(0deg); }
+  12% { transform: scale(.94, 1.08) skewX(-3deg); }
+  18% { transform: scale(1.04, .95) skewX(2deg); }
+  24% { transform: scale(.96, 1.06) skewX(-2deg); }
+  31% { transform: scale(1.02, .98) skewX(1deg); }
+  37% { transform: scale(.95, 1.07) skewX(3deg); }
+  44% { transform: scale(1.03, .97) skewX(-1deg); }
+}
+/* A quarter turn leaves a four-pointed star as it was, so it turns back at the very end, where nobody sees it — and a cycle
+   of 0s, which shows that end, shows the static icon. */
+@keyframes fui-animated-icon-twinkle {
+  0%, 6% { transform: rotate(0deg) scale(1); animation-timing-function: ease-in; }
+  20% { transform: rotate(45deg) scale(.55); animation-timing-function: ease-out; }
+  34% { transform: rotate(90deg) scale(1.15); }
+  42%, 99.99% { transform: rotate(90deg) scale(1); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+@keyframes fui-animated-icon-swing {
+  0%, 6%, 50%, 100% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  14% { transform: rotate(calc(16deg * var(--dir))); animation-timing-function: ease-in-out; }
+  22% { transform: rotate(calc(-12deg * var(--dir))); animation-timing-function: ease-in-out; }
+  30% { transform: rotate(calc(8deg * var(--dir))); animation-timing-function: ease-in-out; }
+  38% { transform: rotate(calc(-5deg * var(--dir))); animation-timing-function: ease-in-out; }
+  45% { transform: rotate(calc(2deg * var(--dir))); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-shake {
+  0%, 6%, 27%, 30%, 51%, 100% { transform: translateX(0); }
+  9%, 15%, 33%, 39% { transform: translateX(-1.5px); }
+  12%, 18%, 36%, 42% { transform: translateX(1.5px); }
+  21%, 45% { transform: translateX(-.75px); }
+  24%, 48% { transform: translateX(.75px); }
+}
+@keyframes fui-animated-icon-bob {
+  0%, 6%, 24%, 42%, 100% { transform: translate(0, 0); animation-timing-function: ease-in-out; }
+  15%, 33% { transform: translate(calc(var(--dx) * 2.5px), calc(var(--dy) * 2.5px)); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-pop {
+  0%, 6% { transform: scale(1); animation-timing-function: ease-in; }
+  14% { transform: scale(.35); animation-timing-function: ease-out; }
+  24% { transform: scale(1.22); animation-timing-function: ease-in-out; }
+  32%, 100% { transform: scale(1); }
+}
+@keyframes fui-animated-icon-grow {
+  0%, 6% { transform: scaleY(1); animation-timing-function: ease-in; }
+  16% { transform: scaleY(.15); animation-timing-function: cubic-bezier(.3, 1.4, .6, 1); }
+  32%, 100% { transform: scaleY(1); }
+}
+@keyframes fui-animated-icon-blink {
+  0%, 6%, 18%, 30%, 42%, 100% { opacity: 1; }
+  12%, 24%, 36% { opacity: .15; }
+}
+@keyframes fui-animated-icon-slide {
+  0%, 6%, 46%, 100% { transform: translateX(0); animation-timing-function: ease-in-out; }
+  20%, 32% { transform: translateX(calc(var(--dx) * 3px)); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-squeeze {
+  0%, 6%, 26%, 46%, 100% { transform: scaleX(1); animation-timing-function: ease-in-out; }
+  16% { transform: scaleX(.45); animation-timing-function: ease-in-out; }
+  36% { transform: scaleX(.7); animation-timing-function: ease-in-out; }
+}
+/* A plus and a cross look the same a quarter turn on: they turn back unseen at the very end, as the star does. */
+@keyframes fui-animated-icon-turn {
+  0%, 6% { transform: rotate(0deg); animation-timing-function: cubic-bezier(.5, 0, .2, 1.3); }
+  40%, 99.99% { transform: rotate(calc(90deg * var(--dir))); }
+  100% { transform: rotate(0deg); }
+}
+/* A meridian flipped is its twin: a globe turning. */
+@keyframes fui-animated-icon-flip {
+  0%, 6% { transform: scaleX(1); animation-timing-function: ease-in-out; }
+  28% { transform: scaleX(-1); animation-timing-function: ease-in-out; }
+  50%, 100% { transform: scaleX(1); }
+}
+@keyframes fui-animated-icon-orbit {
+  0%, 6% { transform: rotate(0deg) translateX(0) rotate(0deg); }
+  11% { transform: rotate(0deg) translateX(1.5px) rotate(0deg); }
+  45% { transform: rotate(720deg) translateX(1.5px) rotate(-720deg); }
+  50%, 100% { transform: rotate(720deg) translateX(0) rotate(-720deg); }
+}
+@keyframes fui-animated-icon-sweep {
+  0%, 6%, 50%, 100% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  20% { transform: rotate(-80deg); animation-timing-function: ease-in-out; }
+  34% { transform: rotate(35deg); animation-timing-function: ease-in-out; }
+  43% { transform: rotate(-12deg); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-lift {
+  0%, 6%, 24%, 42%, 100% { transform: translateY(0) rotate(0deg); animation-timing-function: ease-in-out; }
+  15%, 33% { transform: translateY(-2px) rotate(-14deg); animation-timing-function: ease-in-out; }
+}
+/* A line that keeps up with a sliding knob: the same timing as slide. */
+@keyframes fui-animated-icon-stretch {
+  0%, 6%, 46%, 100% { transform: scaleX(1); animation-timing-function: ease-in-out; }
+  20%, 32% { transform: scaleX(var(--sx)); animation-timing-function: ease-in-out; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-animated-icon > *, .fui-animated-icon > [data-act] { animation: none; }
+}
