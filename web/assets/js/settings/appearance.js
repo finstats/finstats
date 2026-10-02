@@ -24,7 +24,7 @@ function restyle() {
 export default {
   key: 'appearance', label: 'Appearance', sub: 'How finstats looks to you', group: 'Account', icon: 'sliders',
   visible: () => true,
-  entries: [{ id: 'finui_preset', label: 'FinUI preset', hint: 'appearance look theme colours accent radius density borders cards motion icons finui preset code customize create' }],
+  entries: [{ id: 'finui_preset', label: 'FinUI preset', hint: 'appearance look theme colours accent radius density borders cards buttons fields tables menu motion icons contrast finui preset code customize create' }],
   async render(slot, store) {
     const body = h('div');
     mount(slot, card({ title: 'Appearance', sub: 'How finstats looks to you: your choice, nobody else’s', body, id: 'appearance' }));

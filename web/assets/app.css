@@ -38,8 +38,8 @@ kbd {
   color: var(--text-muted); font-size: 13px; line-height: 1.5; transition: background var(--ease), color var(--ease);
 }
 .nav-row:hover { background: var(--hover); color: var(--text); text-decoration: none; }
-.nav-row.is-active { background: var(--accent-wash); color: var(--text); }
-.nav-row.is-active .icon { color: var(--accent-hi); }
+.nav-row.is-active { background: var(--selected-bg); color: var(--selected-text); box-shadow: var(--selected-edge); }
+.nav-row.is-active .icon { color: var(--selected-icon); }
 
 .sidebar-foot { margin-top: auto; display: flex; align-items: center; gap: 4px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
 .me { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 4px 6px; border-radius: var(--radius-sm); color: var(--text); }
