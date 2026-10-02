@@ -425,7 +425,8 @@ finstats is free software under the [GNU General Public License v3.0](LICENSE). 
 study, share and change it; if you distribute a modified version, it has to stay under the same
 license with its source available. It comes with no warranty.
 
-The bundled fonts, Inter and JetBrains Mono, are under the SIL Open Font License 1.1
-([Inter](web/assets/fonts/LICENSE-Inter.txt), [JetBrains Mono](web/assets/fonts/LICENSE-JetBrainsMono.txt)).
+The bundled fonts — Inter and JetBrains Mono, and those a FinUI preset may choose in Settings → Appearance — are under
+the SIL Open Font License 1.1; each one's licence sits beside it in [`web/assets/fonts`](web/assets/fonts) and is listed on
+the in-app Licences page.
 
 <sub>Screenshots show generated demo data: invented users, titles and artwork.</sub>

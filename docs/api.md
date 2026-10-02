@@ -1267,7 +1267,7 @@ unchanged after that; it runs to about half a megabyte of licence text (≈ 55 K
 appears once in `notices` and every component points at the ones it carries. Nothing is retyped from memory: each text
 is a licence file as its own project wrote it, read out of the crate sources by `tools/make-third-party.py` and
 compiled in as `THIRD-PARTY.json`. `kind` separates the three halves: `app` is finstats itself under the GPL, `bundled`
-is what is shipped or read but is not a crate (the two fonts, the map outlines, the city database), and `crate` is the
+is what is shipped or read but is not a crate (the fonts, the map outlines, the city database), and `crate` is the
 generated dependency list. A component with an empty `notices` has no licence file to show — its SPDX `license` is then
 all there is to say.
 

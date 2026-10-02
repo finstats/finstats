@@ -706,8 +706,12 @@ token files FinUI's site build generates (`finui/p/<axis>/<option>.css`), and `/
 the session cookie that asks (`appearance::of_request`; `private`, `Vary: Cookie`): the stylesheet followed by the files
 the code names in axis order — exactly what FinUI's `install.sh` does, so finstats has no copy of how a choice becomes
 tokens. `finui::preset::overlay` only decodes the code against the files; an unknown code is refused at save. There is no
-look for everyone: one person's choice never reaches another (the owner's decision). To bring new
-options over: build FinUI's site (`node ../finui/tools/build-site.mjs <dir>`) and copy its `p/` and `create/presets.json`. The QA
+look for everyone: one person's choice never reaches another (the owner's decision). **Presets choose fonts too**
+(axes Font, Heading — the token `--font-heading`, the text's own by default — and Mono): every family a preset may name
+is bundled in `web/assets/fonts` beside its OFL licence, which `licenses.rs` lists (a test holds every licence there to
+the notice), and a font option's file carries its `@font-face` rules, so a page fetches only the fonts it was told to.
+To bring new options over: build FinUI's site (`node ../finui/tools/build-site.mjs <dir>`) and copy its `p/`,
+`create/presets.json` and FinUI's `fonts/`. The QA
 stage `finui` runs that repository's checks and tests, serves its site and walks the gallery and create, and fails when
 a file of `web/assets/finui` differs from the repository's (`p/` from its built site): copy a change across in the same
 sitting.
@@ -810,7 +814,7 @@ OFL-1.1 and their license texts live next to them in `web/assets/fonts/` — kee
 generated it would be wrong on the others) and reads each crate's own `LICENSE` files out of the sources cargo has
 unpacked. Identical texts are stored once — hundreds of crates ship the same MIT wording — and every crate points at
 the ones it carries. **Nothing in here is retyped**: each text is a licence file as its project wrote it, and the
-bundled half (`BUNDLED` in `licenses.rs`: finstats' own GPL, the two fonts, the map, DB-IP's database) is
+bundled half (`BUNDLED` in `licenses.rs`: finstats' own GPL, every font in `web/assets/fonts` — a test holds each licence there to the notice — the map, DB-IP's database) is
 `include_str!` of the file that really sits on disk. Re-run the generator whenever a dependency is added, removed or
 bumped: a test holds the file against every package in `Cargo.lock`, so a dependency whose licence was never recorded
 fails `cargo test`. The answer is rendered once into a `OnceLock` — half a megabyte, the same for everyone, unchanging
