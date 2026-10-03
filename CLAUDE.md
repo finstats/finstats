@@ -427,8 +427,8 @@ progress it saves and the devices it saw are likewise one transaction each (`sta
 
 **Search (`fuzzy.rs`).** `/api/search` scores every library title in Rust instead of using `LIKE`: normalised (case,
 accents, punctuation, leading article), every typed word must match some word of the title (exact > prefix > substring
-> typo; typos only for words of 4+ letters, with swapped letters as one slip). ~70 ms over 5.5k titles; the palette
-debounces. The same query also scores the ~10k names in `item_people` (`people` in the answer): bare names first, details only for the best
+> typo; typos only for words of 4+ letters, with swapped letters as one slip). ~70 ms over 5.5k titles; the search
+(`search.js`) debounces. The same query also scores the ~10k names in `item_people` (`people` in the answer): bare names first, details only for the best
 60, because grouping and counting every person's titles up front took 350 ms. The Activity and Server-log `q` filters stay in SQL but are word-by-word too.
 
 **Profiles (`profile.rs`).** Show progress counts only episodes that exist as files (`path`/`size_bytes` set; the sync
@@ -710,7 +710,7 @@ look for everyone: one person's choice never reaches another (the owner's decisi
 choice** (`presets.json` `styles`: a key, a label, a line and its picks by option key; FinUI create's first picker — finstats'
 Appearance offers none, the owner's decision: finstats ships one look, and a style reaches it only as the code FinUI
 create makes), and it is nothing but a code — Washi, every default, is saved as no preset at all. finstats' own
-chrome reads FinUI's tokens where a choice should reach it: the sidebar's open row is `--selected-*` (the Menu axis), as
+chrome reads FinUI's tokens where a choice should reach it: the menu's open page is `--selected-*` (the Menu axis), as
 FinUI's section list is. **Presets choose fonts too**
 (axes Font, Heading — the token `--font-heading`, the text's own by default — and Mono): every family a preset may name
 is bundled in `web/assets/fonts` beside its OFL licence, which `licenses.rs` lists (a test holds every licence there to
@@ -768,6 +768,32 @@ Esc is handled globally in `shell.js` (steps back out of `/libraries/:id`, `/use
 `history.state.depth`, and a tab opened on a title has none behind it. Overlays must keep calling `stopPropagation()` on
 their own Esc, and `openModal` keeps a stack: only the dialog on top answers keys. Tables read numbers as `num()` prints
 them (en-US), never with the browser's separators.
+**The menus are FinUI's `desktop-nav` and `mobile-nav`, each in the style its browser chose** (Settings → Appearance; the
+owner's decision: kept by the browser, `state.js`, never the account). Above 820 px one of eight — Sidebar (today's, the
+default), Grouped, Rail that opens (icons until the pointer or the focus comes, then the whole sidebar *over* the page,
+`STYLES[].opens`), Search first, Dock, Command bar, Pinned, Coloured tiles — and the six that are a side may sit on
+the right (*Menu on the right*; `sideOf` answers none for the dock and the command bar). Each style says which edge of the
+window it keeps (`STYLES[].edge` and `size`); `shell.js` lays the page beside it (`.app.nav-left|right|dock|command`,
+`--desktop-nav-size`), and the dock sends the status bar to the top, so the version and the repository link stay on
+screen; the dock tucks itself away while the page scrolls down and comes back scrolling up, at the top, with the pointer
+near the bottom edge or the focus in it (`dockShown`). Pinned's pins are the browser's too (`finstats.desktopNavPins`; nothing stored is the primary pages). Below 820 px
+one of five (Tab bar, the default, Peek, Full screen, Thumb arc, Address bar), offered only at that width; the three that
+keep the bottom of the screen take the status bar's place (`.app.has-mobile-dock`, `--mobile-nav-space`). Pages carry
+`group` and `primary` in `navItems`, which both menus read. The rules that are not drawing — styles, sides, groups, pins,
+the arc's rings, the dock's hiding, the search's flight — are each component's `plan.js`, tested in FinUI's repository. A
+menu takes Esc in the capture phase, before `shell.js`' own Esc steps back a page. The hand-built sidebar and the phone's
+slide-in drawer are gone.
+
+**Search is never a dialog (FinUI `search`, `search.js`, `shell.js`).** It lives in the menu or in the page, as this browser
+chose (Settings → Appearance → *Search opens*; `finstats.searchMode`, nothing stored is the menu). In the menu, each style
+holds it in its own place (`openSearch(panel)` on `desktop-nav` and `mobile-nav`: a sidebar widens over the page, the rail
+opens all the way, the dock rises into a card with the field where the dock was, the command bar's name turns into the
+field, a phone's sheet, screen or arc card holds it and the address bar keeps the field under the thumb); in the page, it
+takes `.content`'s place in `.page-search` while the menu stays. Either way `grow()` plays it out of the control that
+opened it — the menu's search, the command bar, the top bar's search on a phone, or for Ctrl+Space the menu's own — and
+`shrink()` back into it, a place that was not there opening out of the control (`cut`) rather than sliding in. `search.js`
+answers the words (pages at once, `/api/search` when it comes); a press anywhere else, Esc or a page chosen puts it away.
+The modal palette it replaced is gone.
 Signing out lives in Settings → Account (`settings/account.js`), not in the sidebar. In the status bar every item is one small box
 (18 px, `--radius-sm`) and every link hovers as that box; the `·` between two items is an element of its own (`.sb-sep`),
 laid out between them so flexbox centres it, never an item's `::before`: inside a link its hover lit the dot up, and placed
