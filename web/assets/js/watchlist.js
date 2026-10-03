@@ -77,9 +77,3 @@ export function watchToggle(t, { compact = false, name = '', keepFocus = false, 
   return h('span', { class: ['wl', compact && 'wl-is-compact'] }, btn, note);
 }
 
-/** The toggle's click, for a keyboard shortcut elsewhere (the search palette's Ctrl+Enter). */
-export function pressToggleIn(el) {
-  const btn = el && el.querySelector('.wl-toggle:not([hidden])');
-  if (btn) btn.click();
-  return !!btn;
-}

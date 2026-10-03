@@ -48,7 +48,7 @@ function score(q, e) {
 function finder(visible, current, ctx) {
   const index = visible.flatMap((s) => [
     { section: s, id: null, label: s.label, where: s.sub, labelWords: words(s.label), hintWords: words(s.sub) },
-    ...(s.entries || []).map((e) => ({ section: s, id: e.id, label: e.label, where: s.label, labelWords: words(e.label), hintWords: words(`${e.hint || ''} ${s.label}`) })),
+    ...(s.entries || []).filter((e) => !e.visible || e.visible()).map((e) => ({ section: s, id: e.id, label: e.label, where: s.label, labelWords: words(e.label), hintWords: words(`${e.hint || ''} ${s.label}`) })),
   ]);
   const input = h('input', { class: 'fui-field__input fui-field__input--search settings-find', type: 'search', placeholder: 'Find a setting…', 'aria-label': 'Find a setting', autocomplete: 'off',
     role: 'combobox', 'aria-expanded': 'false', 'aria-controls': 'settings-hits', 'aria-autocomplete': 'list', 'aria-keyshortcuts': '/' });

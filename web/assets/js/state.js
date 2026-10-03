@@ -65,6 +65,41 @@ export function noteRunningVersion(v) {
 }
 export function onVersionSeen(fn) { versionSubs.add(fn); return () => versionSubs.delete(fn); }
 
+// ---- the mobile menu: one of FinUI mobile-nav's styles, this browser's choice (a phone picks its own menu). Nothing stored
+// is the tab bar; a stored key FinUI does not know reads as the tab bar too.
+const MOBILE_NAV_KEY = 'finstats.mobileNav';
+const mobileNavSubs = new Set();
+export const mobileNavChoice = () => store.get(MOBILE_NAV_KEY) || '';
+export function setMobileNav(key) {
+  store.set(MOBILE_NAV_KEY, key);
+  mobileNavSubs.forEach((fn) => fn(key));
+}
+export function onMobileNavChange(fn) { mobileNavSubs.add(fn); return () => mobileNavSubs.delete(fn); }
+
+// ---- the desktop menu: one of FinUI desktop-nav's styles, the side a sidebar sits on and what Pinned holds, all this
+// browser's (like the phone's menu). Nothing stored is today's sidebar on the left, with the primary pages pinned.
+const DESKTOP_NAV_KEY = 'finstats.desktopNav', DESKTOP_SIDE_KEY = 'finstats.desktopNavSide', PINS_KEY = 'finstats.desktopNavPins';
+const desktopNavSubs = new Set();
+export const desktopNavChoice = () => ({
+  style: store.get(DESKTOP_NAV_KEY) || '',
+  side: store.get(DESKTOP_SIDE_KEY) || 'left',
+  pins: (() => { try { return JSON.parse(store.get(PINS_KEY) || 'null'); } catch { return null; } })(),
+});
+/** Change any of style, side and pins; the menu is drawn again for a style or a side, never for a pin (it redraws itself). */
+export function setDesktopNav({ style, side, pins }) {
+  if (style !== undefined) store.set(DESKTOP_NAV_KEY, style);
+  if (side !== undefined) store.set(DESKTOP_SIDE_KEY, side);
+  if (pins !== undefined) store.set(PINS_KEY, JSON.stringify(pins));
+  if (style !== undefined || side !== undefined) desktopNavSubs.forEach((fn) => fn());
+}
+export function onDesktopNavChange(fn) { desktopNavSubs.add(fn); return () => desktopNavSubs.delete(fn); }
+
+// ---- where search opens: in the menu (it grows out of the menu's own search into the menu) or in the page (in the page's
+// place), this browser's choice like the menus. Nothing stored is the menu.
+const SEARCH_MODE_KEY = 'finstats.searchMode';
+export const searchMode = () => (store.get(SEARCH_MODE_KEY) === 'page' ? 'page' : 'menu');
+export const setSearchMode = (mode) => store.set(SEARCH_MODE_KEY, mode === 'page' ? 'page' : 'menu');
+
 // ---- theme: 'device' (nothing stored, app.css follows the device), 'light' or 'dark' — this browser's
 // choice. theme.js applies the stored one before the first paint; this changes it afterwards.
 const THEME_KEY = 'finstats.theme';
