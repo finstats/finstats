@@ -670,6 +670,39 @@
       "requires": [
         "core"
       ]
+    },
+    {
+      "name": "search",
+      "category": "pattern",
+      "files": [
+        "components/search/plan.js",
+        "components/search/search.js",
+        "components/search/search.css"
+      ],
+      "tokens": [
+        "--accent-hi",
+        "--accent-wash",
+        "--bg-2",
+        "--border",
+        "--border-soft",
+        "--field-bg",
+        "--field-border",
+        "--field-edges",
+        "--focus-color",
+        "--hover",
+        "--mono",
+        "--radius-control",
+        "--radius-field",
+        "--radius-lg",
+        "--radius-sm",
+        "--sans",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
     }
   ]
 }
