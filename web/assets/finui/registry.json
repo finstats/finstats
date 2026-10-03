@@ -703,6 +703,54 @@
       "requires": [
         "core"
       ]
+    },
+    {
+      "name": "mobile-nav",
+      "category": "pattern",
+      "files": [
+        "components/mobile-nav/plan.js",
+        "components/mobile-nav/mobile-nav.js",
+        "components/mobile-nav/mobile-nav.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-hi",
+        "--accent-hover",
+        "--backdrop",
+        "--bg",
+        "--bg-2",
+        "--bg-sunken",
+        "--border",
+        "--border-soft",
+        "--border-strong",
+        "--ease",
+        "--field-bg",
+        "--field-border",
+        "--field-edges",
+        "--font-heading",
+        "--heading-weight",
+        "--hover",
+        "--on-accent",
+        "--radius",
+        "--radius-control",
+        "--radius-field",
+        "--radius-lg",
+        "--radius-pill",
+        "--sans",
+        "--selected-bg",
+        "--selected-edge",
+        "--selected-icon",
+        "--selected-text",
+        "--shadow",
+        "--text",
+        "--text-faint",
+        "--text-hero",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "search"
+      ]
     }
   ]
 }
