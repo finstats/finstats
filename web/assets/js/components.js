@@ -28,6 +28,7 @@ import { poster as posterOf } from '../finui/components/poster/poster.js';
 import { avatar as avatarOf } from '../finui/components/avatar/avatar.js';
 import { statTile } from '../finui/components/stat-tile/stat-tile.js';
 import { facts } from '../finui/components/facts/facts.js';
+import { typed } from './menus.js';
 
 /** A title's poster, by its id: FinUI's poster, given the address finstats serves it at. */
 export function poster(id, name, { w = 120, cls = '', kind = 'primary' } = {}) {
@@ -195,9 +196,9 @@ export function topList(rows, { kind = 'items', empty = 'No plays in this range.
 export function playTitle(p, { link = true } = {}) {
   const code = episodeCode(p.season_number, p.episode_number);
   const canLink = link && p.item_exists !== false;
-  const main = canLink && p.item_id ? h('a', { href: `/items/${p.item_id}`, onClick: (e) => e.stopPropagation() }, p.item_name || 'Unknown item') : h('span', null, p.item_name || 'Unknown item');
+  const main = canLink && p.item_id ? h('a', { href: `/items/${p.item_id}`, dataset: typed(p.item_type), onClick: (e) => e.stopPropagation() }, p.item_name || 'Unknown item') : h('span', null, p.item_name || 'Unknown item');
   if (!p.series_name) return h('div', { class: 'play-title' }, h('div', { class: 'play-title-main' }, main));
-  const series = canLink && p.series_id ? h('a', { href: `/items/${p.series_id}`, onClick: (e) => e.stopPropagation() }, p.series_name) : h('span', null, p.series_name);
+  const series = canLink && p.series_id ? h('a', { href: `/items/${p.series_id}`, dataset: typed('Series'), onClick: (e) => e.stopPropagation() }, p.series_name) : h('span', null, p.series_name);
   return h('div', { class: 'play-title' }, h('div', { class: 'play-title-main' }, series),
     h('div', { class: 'play-title-sub' }, code ? h('span', { class: 'mono' }, code) : null, code ? ' · ' : null, main));
 }

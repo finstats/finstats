@@ -5,6 +5,7 @@ import { columnsChart, columnsTable, heatmap, heatmapTable, sparkline, bucketLis
 import { card, chartCard, segmented, statTile, poster, avatar, methodBadge, facts } from './components.js';
 import { rangeLong, can } from './state.js';
 import { button } from '../finui/components/button/button.js';
+import { typed } from './menus.js';
 
 const METRICS = [{ value: 'watch_s', label: 'Watch time' }, { value: 'plays', label: 'Plays' }];
 
@@ -72,7 +73,7 @@ export function nowPlayingCard(sn) {
   return h('article', { class: ['np', sn.is_paused && 'is-paused'], 'data-np-key': sn.key },
     poster(sn.image_item_id, title, { w: 300, cls: 'fui-poster--np' }),
     h('div', { class: 'np-main' },
-      h('div', { class: 'np-title' }, h('a', { href: `/items/${sn.series_id || sn.item_id}` }, title)),
+      h('div', { class: 'np-title' }, h('a', { href: `/items/${sn.series_id || sn.item_id}`, dataset: typed(sn.series_id ? 'Series' : sn.item_type) }, title)),
       sn.series_name ? h('div', { class: 'np-sub' }, code ? h('span', { class: 'mono' }, code) : null, code ? ' · ' : null, sn.item_name) : null,
       h('div', { class: 'np-user' }, avatar(sn.user_id, sn.user_name, { size: 20 }), h('a', { href: `/users/${sn.user_id}` }, sn.user_name),
         h('span', { class: 'muted' }, ' · ', [sn.client, sn.device_name].filter(Boolean).join(' on '))),
@@ -267,7 +268,7 @@ function libItemRows(items, { empty, showAdded = false }) {
   return h('ol', { class: 'fui-rank-list' }, items.map((it, i) => h('li', { class: 'fui-rank-list__row' },
     h('span', { class: 'fui-rank-list__rank mono' }, String(i + 1)),
     poster(it.image_item_id || it.id, it.name, { w: 120, cls: 'fui-poster--sm' }),
-    h('div', { class: 'fui-rank-list__main' }, it.id ? h('a', { href: `/items/${it.id}`, class: 'fui-rank-list__name' }, it.name) : h('span', { class: 'fui-rank-list__name' }, it.name),
+    h('div', { class: 'fui-rank-list__main' }, it.id ? h('a', { href: `/items/${it.id}`, class: 'fui-rank-list__name', dataset: typed(it.type) }, it.name) : h('span', { class: 'fui-rank-list__name' }, it.name),
       h('div', { class: 'fui-rank-list__sub' }, [it.year, it.type === 'Series' ? 'Series' : null, showAdded && it.date_created ? 'added ' + relTime(it.date_created) : null].filter(Boolean).join(' · ') || ' ')),
     h('div', { class: 'fui-rank-list__nums' }, h('span', { class: 'mono fui-rank-list__watch' }, it.size_bytes ? bytes(it.size_bytes) : '–')))));
 }

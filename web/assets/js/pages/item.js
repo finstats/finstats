@@ -10,6 +10,7 @@ import { plainTable } from '../tables.js';
 import { agenda } from '../upcoming.js';
 import { watchToggle, watchable } from '../watchlist.js';
 import { button } from '../../finui/components/button/button.js';
+import { typed } from '../menus.js';
 
 const TYPE_LABEL = { Movie: 'Movie', Series: 'Series', Episode: 'Episode', Season: 'Season', Audio: 'Track', MusicAlbum: 'Album' };
 
@@ -55,7 +56,7 @@ export default function itemPage(ctx) {
         still ? poster(it.id, it.name, { w: 480, cls: 'fui-poster--lg fui-poster--still' })
           : poster(it.type === 'Episode' && it.series_id ? it.series_id : it.id, it.name, { w: 300, cls: 'fui-poster--lg' }),
         h('div', { class: 'item-hero-text' },
-          it.series_name && it.series_id ? h('a', { class: 'item-series', href: `/items/${it.series_id}` }, it.series_name, code ? h('span', { class: 'mono' }, ' · ' + code) : null) : null,
+          it.series_name && it.series_id ? h('a', { class: 'item-series', href: `/items/${it.series_id}`, dataset: typed('Series') }, it.series_name, code ? h('span', { class: 'mono' }, ' · ' + code) : null) : null,
           h('h1', { class: 'fui-page-header__title' }, it.name),
           h('div', { class: 'fui-chip__set' }, meta),
           it.genres && it.genres.length ? h('p', { class: 'item-genres' }, it.genres.join(' · ')) : null,

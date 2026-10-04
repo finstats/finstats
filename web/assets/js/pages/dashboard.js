@@ -11,6 +11,7 @@ import { loadDownloads, downloadsList, nothingDownloading } from '../downloads.j
 import { groupsCard } from '../widgets.js';
 import { watchToggle, watchable } from '../watchlist.js';
 import { button } from '../../finui/components/button/button.js';
+import { typed } from '../menus.js';
 
 // Coming up: the same loader for the card and the prefetcher. Nothing is asked when no Sonarr or Radarr is connected.
 const hasComing = () => !!(state.user && state.user.features && state.user.features.upcoming);
@@ -179,7 +180,7 @@ export default function dashboard(ctx) {
 
 /** Recently added: one card per arrival. */
 function shelf(items, arrows) {
-  return shelfRow(items.map((it) => [h('a', { class: 'shelf-card', href: `/items/${it.id}` },
+  return shelfRow(items.map((it) => [h('a', { class: 'shelf-card', href: `/items/${it.id}`, dataset: typed(it.kind === 'episodes' ? 'Series' : it.type) },
     poster(it.image_item_id || it.id, it.name, { w: 300, cls: 'fui-poster--grid' }),
     h('span', { class: 'shelf-when' }, relEl(it.added_at, '')),
     h('span', { class: 'shelf-name' }, it.name),

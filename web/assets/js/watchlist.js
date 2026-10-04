@@ -33,6 +33,25 @@ async function repaintAll() {
   for (const btn of document.querySelectorAll('.wl-toggle')) if (btn._wl) btn._wl.paint(list);
 }
 
+/** Put a title on the list, or take its entry off, and repaint every toggle on screen. */
+async function flip(t, entry) {
+  if (entry) await api.del(`/me/watchlist/${entry.id}`);
+  else await api.post('/me/watchlist', t.item_id ? { item_id: t.item_id } : t);
+  asked = null;
+  await repaintAll();
+}
+
+/** The watchlist as a context menu's item, for a film or a show — `t` as the toggle takes it, the library's item or the
+ *  title's ids: it says which way it goes once the list is known (at once, when a toggle on the page has asked already),
+ *  and goes. Null on a server without watchlists, or for a title that cannot be named. */
+export function watchMenuItem(t) {
+  if (!hasWatchlist() || !(t.item_id || ((t.tmdb_id != null || t.tvdb_id != null) && watchable(t.kind)))) return null;
+  return { label: 'Watchlist', icon: 'bookmark', later: entries().then((list) => {
+    const entry = entryFor(list, t);
+    return { label: entry ? 'Remove from watchlist' : 'Add to watchlist', icon: 'bookmark', onSelect: () => flip(t, entry).catch(() => {}) };
+  }) };
+}
+
 /**
  * The toggle for one film or show. `t`: `{item_id}` for a title in the library, else `{kind, tmdb_id, tvdb_id, title, year}`.
  * `compact`: an icon alone, for a row, a card or a search result, named for screen readers by `name`. `keepFocus`: a
@@ -65,10 +84,7 @@ export function watchToggle(t, { compact = false, name = '', keepFocus = false, 
     if (btn.disabled) return;
     btn.disabled = true; note.textContent = '';
     try {
-      if (entry) await api.del(`/me/watchlist/${entry.id}`);
-      else await api.post('/me/watchlist', t.item_id ? { item_id: t.item_id } : t);
-      asked = null;
-      await repaintAll();
+      await flip(t, entry);
     } catch (err) {
       if (!isAbort(err)) note.textContent = err.message;
     } finally { btn.disabled = false; }

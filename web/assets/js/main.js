@@ -29,6 +29,7 @@ import licensesPage, { prefetchLicenses } from './pages/licenses.js';
 import { setupPage, loginPage } from './pages/auth.js';
 import { button } from '../finui/components/button/button.js';
 import { animateWithin } from '../finui/components/animated-icon/animated-icon.js';
+import { installMenus } from './menus.js';
 
 route('/setup', setupPage, { bare: true });
 route('/login', loginPage, { bare: true });
@@ -78,6 +79,7 @@ setUnauthorizedHandler(() => {
 applyTheme();   // theme.js already set the page's colours; this points the browser's own bar at the same choice
 // Every icon in something pressable — a link, a button, a tab — does its act once when pointed at or focused, wherever it is drawn.
 animateWithin(document.body);
+installMenus();
 
 async function boot() {
   const app = document.getElementById('app');

@@ -1513,3 +1513,7 @@ a.wl-poster:hover .fui-poster, a.wl-poster:focus-visible .fui-poster { outline: 
 .titles-grid { margin-top: 4px; }
 .titles-tail { display: grid; justify-items: center; gap: 8px; padding: 8px 0 16px; }
 
+
+/* A long-press on a title, a person or a library opens finstats' menu (menus.js); Safari's own link preview would
+   open over it. */
+a[href^="/items/"], a[href^="/users/"], a[href^="/people/"], a[href^="/libraries/"] { -webkit-touch-callout: none; }

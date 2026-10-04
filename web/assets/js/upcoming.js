@@ -3,6 +3,7 @@
 import { h, icon, mount, initials, episodeCode, parseDay } from './dom.js';
 import { api, imgItem } from './api.js';
 import { watchToggle } from './watchlist.js';
+import { typed, notHere } from './menus.js';
 
 export const RELEASE_LABEL = { air: 'Airs', cinema: 'In cinemas', digital: 'Digital release', physical: 'Disc release' };
 const FINALE_LABEL = { season: 'Season finale', series: 'Series finale', midseason: 'Mid-season finale' };
@@ -57,7 +58,7 @@ export function entryTitle(e) {
  *  watchlist toggle. */
 export function entryRow(e, { people = false, watch = false } = {}) {
   const href = entryHref(e);
-  const title = href ? h('a', { class: 'up-title', href }, entryName(e)) : h('span', { class: 'up-title' }, entryName(e));
+  const title = href ? h('a', { class: 'up-title', href, dataset: typed(e.kind === 'episode' ? 'Series' : 'Movie') }, entryName(e)) : h('span', { class: 'up-title', tabindex: '0', dataset: notHere(entryTitle(e)) }, entryName(e));
   const names = people && e.follower_names && e.follower_names.length ? e.follower_names : null;
   return h('li', { class: 'up-row' },
     upcomingPoster(e, { w: 96, cls: 'fui-poster--sm' }),
@@ -94,5 +95,6 @@ export function entryCard(e) {
     h('span', { class: 'shelf-sub' }, entryWhat(e)),
     e.has_file ? h('span', { class: 'shelf-sub' }, 'Already here') : null];
   const href = entryHref(e);
-  return href ? h('a', { class: 'shelf-card', href }, inner) : h('span', { class: 'shelf-card' }, inner);
+  return href ? h('a', { class: 'shelf-card', href, dataset: typed(e.kind === 'episode' ? 'Series' : 'Movie') }, inner)
+    : h('span', { class: 'shelf-card', tabindex: '0', dataset: notHere(entryTitle(e)) }, inner);
 }
