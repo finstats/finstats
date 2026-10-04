@@ -794,6 +794,16 @@ opened it — the menu's search, the command bar, the top bar's search on a phon
 `shrink()` back into it, a place that was not there opening out of the control (`cut`) rather than sliding in. `search.js`
 answers the words (pages at once, `/api/search` when it comes); a press anywhere else, Esc or a page chosen puts it away.
 The modal palette it replaced is gone.
+**Context menus (FinUI `context-menu`, `menus.js`, 2.2.0) come from the link, not the page.** One resolver for the whole app
+(`installMenus`, `attachContextMenu(document, …)`): any `<a>` to `/items/:id`, `/users/:id`, `/people/:id` or `/libraries/:id` has a
+menu — right-click, a long-press on a touch screen (`plan.js` `held`: 500 ms, 10 px), the menu key or Shift+F10 — and Shift with a
+right-click, a field and anything else are left to the browser. What a title is comes from the link's `data-type` (`typed()`, a
+Jellyfin type), set where the answer that drew it knows: only a film or a show is offered the watchlist (`watchMenuItem`, the
+toggle's own add and remove), and a link without a type is offered everything else. A card with no link — a film in Coming up the library does not have yet — names its title in `data-` attributes instead (`notHere`, the watchlist's own `{kind, tmdb_id, tvdb_id, title, year}`) and is offered the watchlist by its ids, its page on TMDB or TVDB (the forms `stats.rs` links) and Pipeline. "Open in Jellyfin" is `user.jellyfin_details`
+plus the id (`/auth/me`; `jellyfin::web_link`'s rule). The menu grows out of the pressed point (`place` answers its corner and
+`transform-origin`), the first item takes the focus, Esc and Tab hand it back, and Esc never reaches `shell.js`. **A scroll carries
+the menu with its element and only its leaving the screen closes it**: closing at any scroll shut a menu opened from the keyboard in
+the frame it opened, as focusing a poster far along a shelf scrolled it into view.
 Signing out lives in Settings → Account (`settings/account.js`), not in the sidebar. In the status bar every item is one small box
 (18 px, `--radius-sm`) and every link hovers as that box; the `·` between two items is an element of its own (`.sb-sep`),
 laid out between them so flexbox centres it, never an item's `::before`: inside a link its hover lit the dot up, and placed

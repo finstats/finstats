@@ -1681,3 +1681,10 @@ stylesheet, then the preset's tokens — FinUI's own generated file of each chos
 (`/assets/finui/p/{axis}/{option}.css`), in axis order, after a comment naming the code — with an ETag of its own and
 `Cache-Control: private, no-cache`, `Vary: Cookie`. Signed out, or nothing chosen: FinUI as it ships. The choices and their
 names are `/assets/finui/create/presets.json`, FinUI's file.
+
+## A title's page in Jellyfin, from anywhere
+
+`/api/auth/me` gains `user.jellyfin_details`: a title's page in Jellyfin is this followed by its id —
+`"https://jellyfin.example.com/web/#/details?id="` — from the address an administrator set for "Open in Jellyfin", else the one
+finstats connects to; `null` before Jellyfin is set up. The context menu offers "Open in Jellyfin" on any link to a title
+with it, where the answer that drew the link had no `jellyfin_link` to give.
