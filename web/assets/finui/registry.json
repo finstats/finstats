@@ -645,6 +645,34 @@
       ]
     },
     {
+      "name": "context-menu",
+      "category": "pattern",
+      "files": [
+        "components/context-menu/plan.js",
+        "components/context-menu/context-menu.js",
+        "components/context-menu/context-menu.css"
+      ],
+      "tokens": [
+        "--bg-2",
+        "--border",
+        "--border-soft",
+        "--critical-text",
+        "--focus-color",
+        "--hover",
+        "--mono",
+        "--radius",
+        "--radius-sm",
+        "--sans",
+        "--shadow",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
       "name": "theme-switch",
       "category": "pattern",
       "files": [
