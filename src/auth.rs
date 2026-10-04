@@ -438,8 +438,10 @@ async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms
         })
         .await
         .unwrap_or(false);
-    // `features`: which optional pages have something behind them (a connected Sonarr, a Seerr, …).
-    json!({ "id": id, "name": name, "is_admin": is_admin, "has_image": has_image, "permissions": perms, "features": crate::services::features(app) })
+    // `features`: which optional pages have something behind them (a connected Sonarr, a Seerr, …). `jellyfin_details`:
+    // a title's page in Jellyfin is this followed by its id, for a link offered where the answer had none to give (a menu).
+    let jellyfin_details = crate::stats::jellyfin_base(app).map(|b| crate::jellyfin::web_link(&b, ""));
+    json!({ "id": id, "name": name, "is_admin": is_admin, "has_image": has_image, "permissions": perms, "features": crate::services::features(app), "jellyfin_details": jellyfin_details })
 }
 
 /// What Jellyfin has just said about somebody it let in, written to their users row: a session reads that
@@ -979,5 +981,26 @@ mod key_tests {
         assert!(bearer_token(&h("Bearer")).unwrap().is_err());
         assert!(bearer_token(&h("Bearer   ")).unwrap().is_err());
         assert!(bearer_token(&HeaderMap::new()).is_none(), "no header at all is not an error: the cookie may be there");
+    }
+}
+
+#[cfg(test)]
+mod me_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn me_says_where_a_title_opens_in_jellyfin() {
+        let app = crate::state::test_app();
+        let me = || user_json(&app, "u1", "alice", false, Perms::default());
+        assert_eq!(me().await["jellyfin_details"], Value::Null, "no Jellyfin yet, no link");
+        app.update_settings(|s| {
+            s.jellyfin_public_url = "https://jellyfin.example.com/".into();
+            Ok(())
+        })
+        .await
+        .unwrap();
+        // The page of a title is this followed by its id: one rule for the link, `jellyfin::web_link`'s.
+        assert_eq!(me().await["jellyfin_details"], json!(crate::jellyfin::web_link("https://jellyfin.example.com/", "")));
+        assert_eq!(me().await["jellyfin_details"], json!("https://jellyfin.example.com/web/#/details?id="));
     }
 }
