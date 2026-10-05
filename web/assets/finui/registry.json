@@ -1446,6 +1446,130 @@
       "requires": [
         "core"
       ]
+    },
+    {
+      "name": "chart",
+      "category": "chart",
+      "files": [
+        "components/chart/plan.js",
+        "components/chart/chart.js",
+        "components/chart/chart.css"
+      ],
+      "tokens": [
+        "--axis",
+        "--bg-2",
+        "--focus-color",
+        "--focus-width",
+        "--grid",
+        "--mono",
+        "--radius-sm",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--text-strong"
+      ],
+      "requires": [
+        "core",
+        "tooltip"
+      ]
+    },
+    {
+      "name": "bar-chart",
+      "category": "chart",
+      "files": [
+        "components/bar-chart/bar-chart.js",
+        "components/bar-chart/bar-chart.css"
+      ],
+      "tokens": [],
+      "requires": [
+        "core",
+        "chart"
+      ]
+    },
+    {
+      "name": "line-chart",
+      "category": "chart",
+      "files": [
+        "components/line-chart/line-chart.js",
+        "components/line-chart/line-chart.css"
+      ],
+      "tokens": [],
+      "requires": [
+        "core",
+        "chart"
+      ]
+    },
+    {
+      "name": "donut-chart",
+      "category": "chart",
+      "files": [
+        "components/donut-chart/donut-chart.js",
+        "components/donut-chart/donut-chart.css"
+      ],
+      "tokens": [
+        "--text-faint",
+        "--text-strong"
+      ],
+      "requires": [
+        "core",
+        "chart"
+      ]
+    },
+    {
+      "name": "heatmap",
+      "category": "chart",
+      "files": [
+        "components/heatmap/heatmap.js",
+        "components/heatmap/heatmap.css"
+      ],
+      "tokens": [
+        "--text",
+        "--text-faint"
+      ],
+      "requires": [
+        "core",
+        "chart"
+      ]
+    },
+    {
+      "name": "sparkline",
+      "category": "chart",
+      "files": [
+        "components/sparkline/sparkline.js",
+        "components/sparkline/sparkline.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--bg-2",
+        "--spark",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "chart"
+      ]
+    },
+    {
+      "name": "bar-list",
+      "category": "chart",
+      "files": [
+        "components/bar-list/bar-list.js",
+        "components/bar-list/bar-list.css"
+      ],
+      "tokens": [
+        "--mono",
+        "--radius-pill",
+        "--single",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--text-strong",
+        "--track"
+      ],
+      "requires": [
+        "core",
+        "chart"
+      ]
     }
   ]
 }

@@ -1,0 +1,13 @@
+/* FinUI: bar-list. Name and value on one line, a thin bar under them in the single-series colour; the summed rest quieter. */
+.fui-bar-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.fui-bar-list__row { display: grid; gap: 4px; }
+.fui-bar-list__line { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.fui-bar-list__name { min-width: 0; overflow: hidden; color: var(--text); text-overflow: ellipsis; white-space: nowrap; }
+a.fui-bar-list__name:hover { color: var(--text-strong); }
+.fui-bar-list__note { font-size: 12px; color: var(--text-faint); white-space: nowrap; }
+.fui-bar-list__value { margin-left: auto; padding-left: 8px; font: 12.5px var(--mono); color: var(--text-muted); white-space: nowrap; }
+.fui-bar-list__track { display: block; height: 6px; overflow: hidden; border-radius: var(--radius-pill); background: var(--track); }
+.fui-bar-list__fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--single); }
+.fui-bar-list__row.is-other .fui-bar-list__fill { background: var(--text-faint); }
+.fui-bar-list__row.is-other .fui-bar-list__name { color: var(--text-muted); }
+.fui-bar-list__demo { width: min(100%, 420px); }
