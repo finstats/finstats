@@ -184,6 +184,18 @@ kbd {
 .trail.is-line .stop-month { top: 12px; left: 0; transform: translateY(-50%); }
 
 .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* A page's range and people stay on screen while it scrolls, so changing 7d to All from the bottom of a long page needs no
+   trip back to the top. It wears the page's own ground (fixed, as the body's is, so a dotted or ruled preset lines up) and
+   draws its edge only once something scrolls under it. Below the phone's top bar, the dock's status bar, the command bar. */
+.filters-bar { position: sticky; top: var(--filters-top, 0px); z-index: 10; margin-bottom: -8px; padding-block: 8px;
+  background: var(--page-bg); background-attachment: fixed; border-bottom: 1px solid transparent; transition: border-color var(--ease); }
+.content > * + .filters-bar { margin-top: 12px; }
+.filters-bar.is-stuck { border-bottom-color: var(--border-soft); }
+@media (min-width: 821px) {
+  .app.nav-command { --filters-top: var(--desktop-nav-size); }
+  .app.nav-dock { --filters-top: var(--statusbar-h); }
+}
+@media (max-width: 820px) { .app { --filters-top: 48px; } }
 /* A filter the server decides the existence of (which tracker a play came from) sits in a slot that
    is filled once the answer arrives. Empty, it must not take a gap of its own. */
 .seg-slot:empty { display: none; }

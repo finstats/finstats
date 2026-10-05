@@ -29,7 +29,6 @@ export default function itemPage(ctx) {
   ctx.title('Title');
   let days = readDays(ctx.query);
   const view = h('div', { class: 'stack' });
-  const filtersSlot = h('div');
 
   const dv = dataView({
     container: view, signal: ctx.signal,
@@ -100,8 +99,7 @@ export default function itemPage(ctx) {
     },
   });
 
-  filtersSlot.append(filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }));
-  ctx.root.append(filtersSlot, view);
+  ctx.root.append(filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view);
   dv.load();
 }
 

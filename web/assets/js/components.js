@@ -156,12 +156,24 @@ export function userCombobox({ value, onChange, signal, multiple = false }) {
   return combobox({ value, onChange, multiple, load: () => userList(signal).then((us) => us.map((u) => ({ value: u.id, label: u.name }))) });
 }
 
-/** One row of filters above everything they scope. */
+/** One row of filters above everything they scope. It stays on screen while the page scrolls (`.filters-bar`), and
+ *  says when something has scrolled under it (`is-stuck`). Its parent must be the page, not a wrapper of its own height. */
 export function filterBar({ days, onDays, userId, onUser, signal, extra = [] }) {
-  return h('div', { class: 'filters', role: 'group', 'aria-label': 'Filters' },
+  const bar = h('div', { class: 'filters filters-bar', role: 'group', 'aria-label': 'Filters' },
     rangeControl(days, onDays),
     onUser && can('see_everyone') ? userCombobox({ value: userId || '', onChange: onUser, signal, multiple: true }) : null,
     extra);
+  // One look per frame while scrolling; the listener goes with the page (or, for a caller without a signal, with the bar).
+  let queued = false, seen = false;
+  const look = () => {
+    queued = false;
+    if (!bar.isConnected) { if (seen) removeEventListener('scroll', onScroll); return; }
+    seen = true;
+    bar.classList.toggle('is-stuck', bar.getBoundingClientRect().top <= parseFloat(getComputedStyle(bar).top) + 0.5 && scrollY > 0);
+  };
+  const onScroll = () => { if (!queued) { queued = true; requestAnimationFrame(look); } };
+  addEventListener('scroll', onScroll, { passive: true, signal });
+  return bar;
 }
 
 /** "Open in Jellyfin": the title's own page there, in a new tab. Null without a link (a title Jellyfin no longer has).
