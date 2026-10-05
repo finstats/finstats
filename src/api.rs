@@ -1299,6 +1299,19 @@ async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> Api
 mod tests {
     use super::*;
 
+    /// finstats draws both themes itself, so a browser extension that repaints pages dark (Dark Reader) is told to
+    /// leave every page as it is: it inverted the light theme's paper into a muddy grey and fought the dark one.
+    #[test]
+    fn every_page_tells_dark_reader_to_leave_it_alone() {
+        let pages: Vec<String> = WebAssets::iter().filter(|f| f.ends_with(".html")).map(|f| f.to_string()).collect();
+        assert!(pages.len() >= 2, "{pages:?}");
+        for page in pages {
+            let html = String::from_utf8(WebAssets::get(&page).unwrap().data.into_owned()).unwrap();
+            assert!(html.contains(r#"<meta name="darkreader-lock">"#), "{page} has no darkreader-lock");
+            assert!(html.contains(r#"<meta name="color-scheme" content="light dark">"#), "{page} does not say it has both themes");
+        }
+    }
+
     #[test]
     fn only_a_jellyfin_administrator_lets_profiles_be_public() {
         assert!(ACCESS_KEYS.contains(&"public_profiles"));
