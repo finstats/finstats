@@ -18,7 +18,7 @@
 .fui-animated-icon > [data-act="exit"] { --act: fui-animated-icon-exit; }
 .fui-animated-icon > [data-act="nudge"] { --act: fui-animated-icon-nudge; }
 .fui-animated-icon > [data-act="beat"] { --act: fui-animated-icon-beat; }
-.fui-animated-icon > [data-act="flicker"] { --act: fui-animated-icon-flicker; transform-origin: center bottom; }
+.fui-animated-icon > [data-act="blaze"] { --act: fui-animated-icon-blaze; }
 .fui-animated-icon > [data-act="twinkle"] { --act: fui-animated-icon-twinkle; }
 .fui-animated-icon > [data-act="swing"] { --act: fui-animated-icon-swing; }
 .fui-animated-icon > [data-act="shake"] { --act: fui-animated-icon-shake; }
@@ -34,6 +34,9 @@
 .fui-animated-icon > [data-act="sweep"] { --act: fui-animated-icon-sweep; }
 .fui-animated-icon > [data-act="lift"] { --act: fui-animated-icon-lift; }
 .fui-animated-icon > [data-act="stretch"] { --act: fui-animated-icon-stretch; }
+.fui-animated-icon > [data-act="door"] { --act: fui-animated-icon-door; }
+.fui-animated-icon > [data-act="unroll"] { --act: fui-animated-icon-unroll; }
+.fui-animated-icon > [data-act="join"] { --act: fui-animated-icon-join; }
 /* Redrawing is a way of drawing: it takes the drawing's place rather than going beside it. */
 .fui-animated-icon > [data-act="redraw"] { animation-name: fui-animated-icon-redraw; animation-delay: calc(var(--start) + var(--i) * 60ms + var(--k) * 110ms); }
 
@@ -91,14 +94,19 @@
   12%, 32% { transform: scale(1.2); animation-timing-function: ease-in; }
   24%, 44% { transform: scale(1.12); animation-timing-function: ease-in; }
 }
-@keyframes fui-animated-icon-flicker {
-  0%, 6%, 50%, 100% { transform: scale(1, 1) skewX(0deg); }
-  12% { transform: scale(.94, 1.08) skewX(-3deg); }
-  18% { transform: scale(1.04, .95) skewX(2deg); }
-  24% { transform: scale(.96, 1.06) skewX(-2deg); }
-  31% { transform: scale(1.02, .98) skewX(1deg); }
-  37% { transform: scale(.95, 1.07) skewX(3deg); }
-  44% { transform: scale(1.03, .97) skewX(-1deg); }
+/* A flame burning: the path itself is reshaped (d), so its tongue bends and licks one way and the other, the lick at
+   its side jumps, and its base stays where it is — turned or squashed whole, a flame reads as jelly. The rest frame is the
+   icon as core.js draws it, command for command; the breathing transform is what a browser that cannot morph a path sees. */
+@keyframes fui-animated-icon-blaze {
+  0%, 6%, 50%, 100% { d: path("M12 3 C12.6 6.2 17 8.4 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.5 9.4 15.8 C9 12 9.8 6.5 12 3Z"); transform: scale(1, 1); animation-timing-function: ease-in; }
+  11% { d: path("M12 5.6 C12.5 8.2 17 9.6 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.6 9.4 16 C9.2 12.8 10 8.4 12 5.6Z"); transform: scale(1.07, .87); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  17% { d: path("M9.2 .8 C10.4 4.6 17 7.8 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.4 8.3 15.2 9.3 15.4 C8 11 7.4 5.2 9.2 .8Z"); transform: scale(.95, 1.1); animation-timing-function: ease-in-out; }
+  23% { d: path("M15.6 1.8 C15.4 5.4 17.6 8.6 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.8 8.5 15.8 9.8 16 C10 12 12.4 6 15.6 1.8Z"); transform: scale(1.03, 1); animation-timing-function: ease-in-out; }
+  28% { d: path("M12 .8 C12.8 4.6 17 8 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.1 13.8 7.6 14 8.4 13.8 C8.4 10.6 9.4 5 12 .8Z"); transform: scale(.97, 1.08); animation-timing-function: ease-in-out; }
+  33% { d: path("M9 2.2 C10.4 5.6 16.8 8.8 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.4 9.3 15.6 C8.4 11.6 7.6 6 9 2.2Z"); transform: scale(1.03, .95); animation-timing-function: ease-in-out; }
+  38% { d: path("M15 2.4 C15 5.8 17.4 8.6 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.7 8.4 15.6 9.6 15.9 C9.8 12 11.8 6.4 15 2.4Z"); transform: scale(.99, 1.05); animation-timing-function: ease-in-out; }
+  43% { d: path("M10.6 1.8 C11.4 5.4 17 8.2 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.3 14.3 8 14.8 8.8 14.6 C8.6 11.2 8.6 5.8 10.6 1.8Z"); transform: scale(1.02, .98); animation-timing-function: ease-in-out; }
+  47% { d: path("M13 3.2 C13.4 6.4 17 8.5 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.5 9.4 15.8 C9.2 12 10.6 6.8 13 3.2Z"); transform: scale(1, 1); animation-timing-function: ease-in-out; }
 }
 /* A quarter turn leaves a four-pointed star as it was, so it turns back at the very end, where nobody sees it — and a cycle
    of 0s, which shows that end, shows the static icon. */
@@ -123,6 +131,30 @@
   12%, 18%, 36%, 42% { transform: translateX(1.5px); }
   21%, 45% { transform: translateX(-.75px); }
   24%, 48% { transform: translateX(.75px); }
+}
+/* A door on its hinge: it swings open (seen edge-on, narrow), stays a moment, and shuts with a small knock. */
+@keyframes fui-animated-icon-door {
+  0%, 6% { transform: scaleX(1); animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  18%, 30% { transform: scaleX(.18); animation-timing-function: cubic-bezier(.6, 0, .4, 1); }
+  41% { transform: scaleX(1.08); animation-timing-function: ease-out; }
+  46%, 50%, 100% { transform: scaleX(1); }
+}
+/* A ribbon on its pin: drawn up short, it drops down the page past its length and sways back to it. */
+@keyframes fui-animated-icon-unroll {
+  0%, 6% { transform: scaleY(1); animation-timing-function: ease-in; }
+  15% { transform: scaleY(.42); animation-timing-function: cubic-bezier(.2, .9, .3, 1.2); }
+  27% { transform: scaleY(1.12); animation-timing-function: ease-in-out; }
+  35% { transform: scaleY(.95); animation-timing-function: ease-in-out; }
+  42% { transform: scaleY(1.03); animation-timing-function: ease-in-out; }
+  48%, 50%, 100% { transform: scaleY(1); }
+}
+/* Two halves of a chain: apart along the diagonal, a little twisted, then snapped back past each other and settled. */
+@keyframes fui-animated-icon-join {
+  0%, 6% { transform: translate(0, 0) rotate(0deg); animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  20% { transform: translate(calc(var(--dx) * 3px), calc(var(--dy) * 3px)) rotate(calc(-14deg * var(--dir))); animation-timing-function: cubic-bezier(.7, 0, .9, .4); }
+  30% { transform: translate(calc(var(--dx) * -.8px), calc(var(--dy) * -.8px)) rotate(calc(4deg * var(--dir))); animation-timing-function: ease-out; }
+  38% { transform: translate(0, 0) rotate(0deg) scale(1.06); animation-timing-function: ease-in-out; }
+  45%, 50%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
 }
 @keyframes fui-animated-icon-bob {
   0%, 6%, 24%, 42%, 100% { transform: translate(0, 0); animation-timing-function: ease-in-out; }

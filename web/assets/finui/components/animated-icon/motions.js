@@ -6,11 +6,12 @@
 // bar after a bar. Pure, so a test reads it without a page.
 
 /** Every act there is; animated-icon.css has the keyframes of each. */
-export const ACTS = ['spin', 'exit', 'nudge', 'beat', 'flicker', 'twinkle', 'swing', 'shake', 'bob', 'pop', 'redraw', 'grow', 'blink', 'slide', 'squeeze', 'turn', 'flip', 'orbit', 'sweep', 'lift', 'stretch'];
+export const ACTS = ['spin', 'exit', 'nudge', 'beat', 'blaze', 'twinkle', 'swing', 'shake', 'bob', 'pop', 'redraw', 'grow', 'blink', 'slide', 'squeeze', 'turn', 'flip', 'orbit', 'sweep', 'lift', 'stretch', 'door', 'unroll', 'join'];
 
 const C = [12, 12];
 export const MOTIONS = {
-  home: [{ act: 'bob', parts: [0], dy: -1 }],
+  // The door swings open on its hinge (its left edge) and closes again; the house stands.
+  home: [{ act: 'door', parts: [2], origin: [10, 21] }],
   activity: [{ act: 'redraw' }],
   users: [{ act: 'bob', parts: [0, 2], dy: -1, stagger: true }],
   user: [{ act: 'bob', parts: [0], dy: -1 }],
@@ -53,10 +54,12 @@ export const MOTIONS = {
   refresh: [{ act: 'spin', origin: C }],
   film: [{ act: 'blink', parts: [3, 5, 4, 6], stagger: true }],
   database: [{ act: 'bob', dy: -1, stagger: true }],
-  link: [{ act: 'nudge', parts: [0], dx: 1, dy: -1 }, { act: 'nudge', parts: [1], dx: -1, dy: 1 }],
+  // The two halves part, twisting a little, and click back into each other.
+  link: [{ act: 'join', parts: [0], dx: 1, dy: -1, dir: 1 }, { act: 'join', parts: [1], dx: -1, dy: 1, dir: -1 }],
   shield: [{ act: 'beat' }],
   server: [{ act: 'blink', parts: [2, 3], stagger: true }],
-  bookmark: [{ act: 'nudge', dy: 1 }],
+  // The ribbon is drawn up to where it hangs and unrolls down the page again, settling with a sway of its length.
+  bookmark: [{ act: 'unroll', origin: [12, 3.5] }],
   heart: [{ act: 'beat' }],
   globe: [{ act: 'flip', parts: [2, 3], origin: C }],
   lan: [{ act: 'redraw', parts: [3, 4], stagger: true }],
@@ -72,7 +75,8 @@ export const MOTIONS = {
   clock: [{ act: 'spin', parts: [1], origin: C }],
   github: [{ act: 'swing', parts: [1], origin: [9, 18] }],
   calendar: [{ act: 'bob', parts: [2, 3], dy: -1, stagger: true }],
-  flame: [{ act: 'flicker' }],
+  // It burns: its tongue bends and licks either way, the lick at its side jumps, and its base stays put.
+  flame: [{ act: 'blaze', origin: [12, 21] }],
   repeat: [{ act: 'nudge', parts: [0], dx: 1 }, { act: 'nudge', parts: [2], dx: -1 }],
   sparkle: [{ act: 'twinkle' }],
   trophy: [{ act: 'swing', origin: [12, 21] }],
