@@ -38,9 +38,9 @@ function row(it, i) {
  * Open a menu. `items`: [{ label, icon, onSelect(), href, newTab, disabled, danger, hint }, { separator: true }, …]; an
  * item may instead be `{ label, later: Promise<item|null> }`, drawn waiting until it knows what it is (null takes it
  * away). `at`: the point it opens at, in the window's coordinates. `from`: the element it was opened from, which gets
- * the focus back. `label`: what a screen reader calls the menu.
+ * the focus back. `label`: what a screen reader calls the menu. `onClose()`: it has gone, however it went.
  */
-export function openMenu({ items, at, from = null, label = 'Actions' }) {
+export function openMenu({ items, at, from = null, label = 'Actions', onClose = null }) {
   closeMenu({ instant: true });
   // An item a caller left out can leave two separators together, or one at an end: a line divides two things or none.
   const list = items.filter(Boolean).filter((it, i, all) => !(it.separator && (i === 0 || i === all.length - 1 || all[i - 1].separator)));
@@ -87,6 +87,7 @@ export function openMenu({ items, at, from = null, label = 'Actions' }) {
   const close = ({ restore = false, instant = false } = {}) => {
     if (closed) return;
     closed = true;
+    if (onClose) onClose();
     if (current && current.el === el) current = null;
     document.removeEventListener('pointerdown', outside, true);
     window.removeEventListener('blur', gone);
@@ -229,7 +230,7 @@ export const meta = {
   a11y: 'role="menu" with role="menuitem" rows; the first takes the focus; arrows, Home, End and type-ahead move; Enter or Space chooses; Esc and Tab close and hand the focus back. The keyboard’s menu key and Shift+F10 open it on the focused element.',
   props: {
     'attachContextMenu(root, resolve)': 'resolve(target) → { items, from, label } or null; answers a function that detaches it',
-    'openMenu({ items, at, from, label })': 'items: [{ label, icon, onSelect, href, newTab, disabled, danger, hint, later }, { separator: true }]; at: { x, y }',
+    'openMenu({ items, at, from, label, onClose })': 'items: [{ label, icon, onSelect, href, newTab, disabled, danger, hint, later }, { separator: true }]; at: { x, y }',
     'closeMenu({ restore })': '', 'menuOpen()': 'is one on screen',
   },
   playground: {

@@ -1145,6 +1145,166 @@
         "calendar",
         "field"
       ]
+    },
+    {
+      "name": "popover",
+      "category": "pattern",
+      "files": [
+        "components/popover/plan.js",
+        "components/popover/popover.js",
+        "components/popover/popover.css"
+      ],
+      "tokens": [
+        "--bg-2",
+        "--border",
+        "--radius",
+        "--shadow",
+        "--text",
+        "--text-strong"
+      ],
+      "requires": [
+        "core",
+        "button"
+      ]
+    },
+    {
+      "name": "dropdown-menu",
+      "category": "pattern",
+      "files": [
+        "components/dropdown-menu/dropdown-menu.js",
+        "components/dropdown-menu/dropdown-menu.css"
+      ],
+      "tokens": [
+        "--ease",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "button",
+        "context-menu"
+      ]
+    },
+    {
+      "name": "drawer",
+      "category": "pattern",
+      "files": [
+        "components/drawer/drawer.js",
+        "components/drawer/drawer.css"
+      ],
+      "tokens": [
+        "--bg-2",
+        "--bg-sunken",
+        "--border",
+        "--border-soft",
+        "--card-shadow",
+        "--font-heading",
+        "--heading-weight",
+        "--radius",
+        "--radius-lg",
+        "--text-strong"
+      ],
+      "requires": [
+        "core",
+        "button",
+        "modal"
+      ]
+    },
+    {
+      "name": "toast",
+      "category": "pattern",
+      "files": [
+        "components/toast/plan.js",
+        "components/toast/toast.js",
+        "components/toast/toast.css"
+      ],
+      "tokens": [
+        "--bg-2",
+        "--border",
+        "--critical",
+        "--critical-text",
+        "--good",
+        "--radius",
+        "--shadow",
+        "--text",
+        "--text-muted",
+        "--warning"
+      ],
+      "requires": [
+        "core",
+        "button"
+      ]
+    },
+    {
+      "name": "callout",
+      "category": "pattern",
+      "files": [
+        "components/callout/callout.js",
+        "components/callout/callout.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-hi",
+        "--accent-wash",
+        "--bg-2",
+        "--border",
+        "--crit-wash",
+        "--critical",
+        "--critical-text",
+        "--good",
+        "--radius",
+        "--text",
+        "--text-muted",
+        "--text-strong",
+        "--warn-wash",
+        "--warning"
+      ],
+      "requires": [
+        "core",
+        "button"
+      ]
+    },
+    {
+      "name": "progress",
+      "category": "primitive",
+      "files": [
+        "components/progress/plan.js",
+        "components/progress/progress.js",
+        "components/progress/progress.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--critical",
+        "--good",
+        "--mono",
+        "--radius-pill",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--track"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "kbd",
+      "category": "primitive",
+      "files": [
+        "components/kbd/kbd.js",
+        "components/kbd/kbd.css"
+      ],
+      "tokens": [
+        "--bg-sunken",
+        "--border",
+        "--mono",
+        "--radius-sm",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
     }
   ]
 }

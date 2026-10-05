@@ -1,0 +1,19 @@
+/* FinUI: popover. The raised ground and its edge, a shadow under it; an arrow on the side it points from. */
+.fui-popover {
+  position: fixed; z-index: 70; max-width: min(320px, calc(100vw - 16px)); padding: 12px 14px; background: var(--bg-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 14px 36px color-mix(in srgb, var(--shadow) 42%, transparent); font-size: 13px;
+}
+.fui-popover:focus { outline: none; }
+.fui-popover__title { margin-bottom: 6px; font-weight: 600; color: var(--text-strong); }
+.fui-popover--held { position: relative; z-index: auto; }
+.fui-popover--arrow::before {
+  content: ''; position: absolute; width: 10px; height: 10px; background: var(--bg-2); border: 1px solid var(--border);
+  border-right: 0; border-bottom: 0; transform: rotate(45deg);
+}
+.fui-popover--arrow[data-side="bottom"]::before { top: -6px; left: 18px; }
+.fui-popover--arrow[data-side="top"]::before { bottom: -6px; left: 18px; transform: rotate(225deg); }
+.fui-popover--arrow[data-side="right"]::before { left: -6px; top: 14px; transform: rotate(-45deg); }
+/* The gallery's popover: its button, and the box held open where it would be. */
+.fui-popover__demo { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.fui-popover__demo.is-top { flex-direction: column-reverse; }
+.fui-popover__demo.is-right { flex-direction: row; align-items: flex-start; }

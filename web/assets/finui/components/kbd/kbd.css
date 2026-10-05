@@ -1,0 +1,6 @@
+/* FinUI: kbd. Each key a small cap on the sunken ground, in the mono face, with a deeper edge at its foot. */
+.fui-kbd { display: inline-flex; align-items: center; gap: 3px; vertical-align: middle; }
+.fui-kbd__key { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--radius-sm); background: var(--bg-sunken); color: var(--text); font: 500 11px var(--mono); }
+.fui-kbd__plus { font-size: 11px; color: var(--text-faint); }
+/* The gallery's shortcut, beside what it does. */
+.fui-kbd__demo { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); }

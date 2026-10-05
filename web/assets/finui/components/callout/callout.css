@@ -1,0 +1,16 @@
+/* FinUI: callout. A wash of its tone with an edge of it, the icon in the tone, the words in the text's own colours. */
+.fui-callout { display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-2); color: var(--text); font-size: 13px; }
+.fui-callout__icon { margin-top: 2px; color: var(--text-muted); }
+.fui-callout__words { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.fui-callout__title { font-weight: 600; color: var(--text-strong); }
+.fui-callout__body { color: var(--text-muted); }
+.fui-callout__action { flex: none; align-self: center; }
+.fui-callout--info { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); background: color-mix(in srgb, var(--accent-wash) 60%, var(--bg-2)); }
+.fui-callout--info .fui-callout__icon { color: var(--accent-hi); }
+.fui-callout--good { border-color: color-mix(in srgb, var(--good) 40%, var(--border)); }
+.fui-callout--good .fui-callout__icon { color: var(--good); }
+.fui-callout--warning { border-color: color-mix(in srgb, var(--warning) 45%, var(--border)); background: var(--warn-wash); }
+.fui-callout--warning .fui-callout__icon { color: var(--warning); }
+.fui-callout--critical { border-color: color-mix(in srgb, var(--critical) 45%, var(--border)); background: var(--crit-wash); }
+.fui-callout--critical .fui-callout__icon { color: var(--critical-text); }
+@media (max-width: 520px) { .fui-callout { flex-wrap: wrap; } .fui-callout__action { flex-basis: 100%; padding-left: 26px; } }
