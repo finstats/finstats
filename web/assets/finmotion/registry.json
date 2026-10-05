@@ -6,9 +6,44 @@
   "foundation": [
     "core/springs.js",
     "core/motion.js",
+    "core/dom.js",
     "core/finmotion.js",
     "core/springs.css",
     "parts/index.js"
   ],
-  "parts": []
+  "parts": [
+    {
+      "name": "toggle",
+      "finui": "toggle",
+      "files": [
+        "parts/toggle/toggle.js",
+        "parts/toggle/plan.js"
+      ]
+    },
+    {
+      "name": "tabs",
+      "finui": "tabs",
+      "files": [
+        "parts/tabs/tabs.js",
+        "parts/tabs/plan.js",
+        "parts/tabs/tabs.css"
+      ]
+    },
+    {
+      "name": "field",
+      "finui": "field",
+      "files": [
+        "parts/field/field.js",
+        "parts/field/plan.js"
+      ]
+    },
+    {
+      "name": "copy",
+      "finui": "copy",
+      "files": [
+        "parts/copy/copy.js",
+        "parts/copy/copy.css"
+      ]
+    }
+  ]
 }
