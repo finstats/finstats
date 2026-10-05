@@ -7,12 +7,12 @@
   --i: 0; --k: 0; --dx: 0; --dy: 0; --dir: 1; --sx: 1;
   stroke-dasharray: 1 2;
   animation: fui-animated-icon-draw var(--icon-cycle) linear var(--times) both;
-  animation-delay: calc(var(--start) + var(--i) * 60ms);
+  animation-delay: calc(var(--start) + var(--i) * var(--icon-cycle) / 50);
 }
 .fui-animated-icon > [data-act] {
   transform-box: fill-box; transform-origin: center;
   animation-name: fui-animated-icon-draw, var(--act);
-  animation-delay: calc(var(--start) + var(--i) * 60ms), calc(var(--start) + var(--k) * 110ms);
+  animation-delay: calc(var(--start) + var(--i) * var(--icon-cycle) / 50), calc(var(--start) + var(--k) * var(--icon-cycle) * 11 / 300);
 }
 .fui-animated-icon > [data-act="spin"] { --act: fui-animated-icon-spin; }
 .fui-animated-icon > [data-act="exit"] { --act: fui-animated-icon-exit; }
@@ -38,7 +38,7 @@
 .fui-animated-icon > [data-act="unroll"] { --act: fui-animated-icon-unroll; }
 .fui-animated-icon > [data-act="join"] { --act: fui-animated-icon-join; }
 /* Redrawing is a way of drawing: it takes the drawing's place rather than going beside it. */
-.fui-animated-icon > [data-act="redraw"] { animation-name: fui-animated-icon-redraw; animation-delay: calc(var(--start) + var(--i) * 60ms + var(--k) * 110ms); }
+.fui-animated-icon > [data-act="redraw"] { animation-name: fui-animated-icon-redraw; animation-delay: calc(var(--start) + var(--i) * var(--icon-cycle) / 50 + var(--k) * var(--icon-cycle) * 11 / 300); }
 
 /* Once: in from nothing, the act, and it stays drawn. */
 .fui-animated-icon--once { --start: calc(var(--icon-cycle) * -0.72); --times: 1.5; }
