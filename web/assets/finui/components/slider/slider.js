@@ -4,9 +4,10 @@
 import { h, mount } from '../../core.js';
 import { snap, fraction, fromPointer, keyed, nearest } from './plan.js';
 
-/** slider({ label, min, max, step, value, onChange, format, marks, disabled }): `value` a number, or [from, to] for two
- *  thumbs. `format(v)` says a value ("30 min"); `marks`: values to name under the track. */
-export function slider({ label, min = 0, max = 100, step = 1, value = min, onChange = () => {}, format = (v) => String(v), marks = [], disabled = false }) {
+/** slider({ label, min, max, step, value, onChange, format, marks, disabled, hideLabel }): `value` a number, or [from, to]
+ *  for two thumbs. `format(v)` says a value ("30 min"); `marks`: values to name under the track; `hideLabel` shows only
+ *  the value, for a row that names the slider already. */
+export function slider({ label, min = 0, max = 100, step = 1, value = min, onChange = () => {}, format = (v) => String(v), marks = [], disabled = false, hideLabel = false }) {
   const o = { min, max, step };
   const two = Array.isArray(value);
   let values = (two ? value : [value]).map((v) => snap(v, o));
@@ -16,7 +17,8 @@ export function slider({ label, min = 0, max = 100, step = 1, value = min, onCha
     'aria-valuemin': String(min), 'aria-valuemax': String(max), 'aria-disabled': disabled ? 'true' : null }));
   const track = h('div', { class: 'fui-slider__track' }, fill, thumbs);
   const el = h('div', { class: ['fui-slider', disabled && 'is-disabled'] },
-    h('div', { class: 'fui-slider__head' }, h('span', { class: 'fui-slider__label' }, label), out), track,
+    // In a row that names it already (a setting row), only its value shows; its thumbs keep the name for screen readers.
+    h('div', { class: 'fui-slider__head' }, hideLabel ? null : h('span', { class: 'fui-slider__label' }, label), out), track,
     marks.length ? h('div', { class: 'fui-slider__marks', 'aria-hidden': 'true' }, marks.map((m) => { const s = h('span', null, format(m)); s.style.left = `${fraction(m, o) * 100}%`; return s; })) : null);
 
   function paint() {
@@ -60,7 +62,7 @@ export const meta = {
   variants: ['one thumb', 'two thumbs (a range)', 'with marks', 'disabled'],
   states: ['dragging', 'focus-visible', 'disabled'],
   a11y: 'Each thumb is role="slider" with aria-valuemin, -max, -now and aria-valuetext from format; arrows move a step, Page Up and Down a tenth, Home and End the ends.',
-  props: { 'slider({ label, min, max, step, value, onChange, format, marks, disabled })': 'value: a number, or [from, to]' },
+  props: { 'slider({ label, min, max, step, value, onChange, format, marks, disabled, hideLabel })': 'value: a number, or [from, to]; hideLabel in a row that names it' },
   playground: {
     controls: [
       { key: 'range', label: 'Two thumbs' },
