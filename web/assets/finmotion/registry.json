@@ -1,0 +1,14 @@
+{
+  "name": "finmotion",
+  "license": "GPL-3.0-only",
+  "prefix": "fm-",
+  "on": "finui",
+  "foundation": [
+    "core/springs.js",
+    "core/motion.js",
+    "core/finmotion.js",
+    "core/springs.css",
+    "parts/index.js"
+  ],
+  "parts": []
+}

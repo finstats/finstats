@@ -228,6 +228,21 @@ async fn static_handler(State(app): State<App>, headers: HeaderMap, uri: Uri) ->
             }
         };
     }
+    // FinMotion's styles, the same way: its springs and every part's file in one answer. The same for everybody.
+    if path == "assets/finmotion.css" {
+        return match crate::finmotion::served() {
+            Ok((css, etag)) => Response::builder()
+                .header(CONTENT_TYPE, "text/css; charset=utf-8")
+                .header(CACHE_CONTROL, "no-cache")
+                .header("etag", etag)
+                .body(Body::from(css.as_str().to_owned()))
+                .unwrap(),
+            Err(e) => {
+                tracing::error!("finmotion.css: {e:#}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        };
+    }
     // The public page is a template with holes in it; it is only ever served filled, from `/u/{token}`.
     if let Some(file) = WebAssets::get(path).filter(|_| !path.is_empty() && path != "public.html") {
         let mime = mime_guess::from_path(path).first_or_octet_stream();

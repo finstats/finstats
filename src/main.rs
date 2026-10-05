@@ -15,6 +15,7 @@ mod downloads;
 mod fuzzy;
 mod geo;
 mod finui;
+mod finmotion;
 mod groups;
 mod health;
 mod ical;
