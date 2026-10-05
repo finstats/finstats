@@ -1,0 +1,4 @@
+/* FinMotion: donut-chart. The ring is seen through a conic mask from the top, as far round as --fm-poured says — registered,
+   so it can be animated, and whole at rest. Only the mask's alpha counts, so any of FinUI's opaque tokens will do. */
+@property --fm-poured { syntax: '<number>'; inherits: false; initial-value: 1; }
+.fui-donut-chart__svg { mask-image: conic-gradient(var(--text) calc(var(--fm-poured) * 1turn), transparent 0); }

@@ -1,0 +1,2 @@
+/* FinMotion: bar-chart. A column rises from its own foot. */
+.fui-chart__bar-group { transform-box: fill-box; transform-origin: 50% 100%; }

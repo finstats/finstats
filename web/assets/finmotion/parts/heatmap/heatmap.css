@@ -1,0 +1,2 @@
+/* FinMotion: heatmap. A cell swells from its own middle. */
+.fui-heatmap__cell { transform-box: fill-box; transform-origin: center; }

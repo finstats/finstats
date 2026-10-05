@@ -17,6 +17,9 @@ pub struct Registry {
     /// Paths under `finmotion/`: the springs, moving from script, motion(), the list of parts.
     pub foundation: Vec<String>,
     pub parts: Vec<Part>,
+    /// What it adds that FinUI has not (an odometer): its own components, after the parts.
+    #[serde(default)]
+    pub components: Vec<Part>,
 }
 
 #[derive(Deserialize)]
@@ -36,11 +39,11 @@ pub fn registry() -> anyhow::Result<Registry> {
     Ok(serde_json::from_str(&file("registry.json")?)?)
 }
 
-/// Every CSS file the registry lists, foundation first, each once, in order.
+/// Every CSS file the registry lists — foundation, parts, components — each once, in order.
 pub fn stylesheet() -> anyhow::Result<String> {
     let r = registry()?;
     let mut out = String::from("/* FinMotion — how FinUI moves: web/assets/finmotion, in registry.json's order. */\n");
-    for path in r.foundation.iter().chain(r.parts.iter().flat_map(|p| p.files.iter())).filter(|p| p.ends_with(".css")) {
+    for path in r.foundation.iter().chain(r.parts.iter().chain(r.components.iter()).flat_map(|p| p.files.iter())).filter(|p| p.ends_with(".css")) {
         out.push('\n');
         out.push_str(file(path)?.trim());
         out.push('\n');
@@ -73,7 +76,7 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("web/assets/finmotion")
     }
     fn listed(r: &Registry) -> Vec<String> {
-        r.foundation.iter().chain(r.parts.iter().flat_map(|p| p.files.iter())).cloned().collect()
+        r.foundation.iter().chain(r.parts.iter().chain(r.components.iter()).flat_map(|p| p.files.iter())).cloned().collect()
     }
 
     #[test]

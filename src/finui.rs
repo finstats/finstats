@@ -237,7 +237,9 @@ mod tests {
         }
         // A page may place or adjust a component inside its own layout (`.health-tiles .fui-stat-tile__foot`), but a
         // selector made of FinUI's classes alone is a component's definition, and that lives in the component.
-        for f in files_under(&web().join("assets")).iter().filter(|f| f.ends_with(".css") && !f.starts_with("finui/components/")) {
+        // FinMotion is how FinUI moves, put on top of it: its parts style FinUI's classes on purpose (a column's foot to rise
+        // from), and its own checker, in its QA, holds it to FinUI's classes and its own.
+        for f in files_under(&web().join("assets")).iter().filter(|f| f.ends_with(".css") && !f.starts_with("finui/components/") && !f.starts_with("finmotion/")) {
             let css = uncommented(&read(&web().join("assets").join(f)));
             for selector in css.split('}').filter_map(|rule| rule.rsplit_once('{').map(|(sel, _)| sel.rsplit('{').next().unwrap_or(sel))) {
                 for part in selector.split(',') {

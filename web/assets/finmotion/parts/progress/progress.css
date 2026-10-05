@@ -1,0 +1,11 @@
+/* FinMotion: progress on film. A taller track drawn as a strip — sprocket holes along both edges, frames between — that
+   slides along as the share grows; the share itself is a wash over it, ending in the accent's edge. */
+.fui-progress.fm-film { --fm-progress-at: 0; }
+.fm-film .fui-progress__track { height: 30px; border-radius: var(--radius-control); background: var(--bg-sunken); border: 1px solid var(--border); }
+.fm-progress__frames { position: absolute; inset: 0; opacity: .55;
+  background: repeating-linear-gradient(90deg, var(--text-faint) 0 6px, transparent 6px 16px) top / 100% 5px repeat-x,
+    repeating-linear-gradient(90deg, var(--text-faint) 0 6px, transparent 6px 16px) bottom / 100% 5px repeat-x,
+    repeating-linear-gradient(90deg, var(--track) 0 46px, var(--bg-sunken) 46px 48px);
+  background-position: calc(var(--fm-progress-at) * -480px) 0, calc(var(--fm-progress-at) * -480px) 100%, calc(var(--fm-progress-at) * -480px) 0;
+  transition: background-position var(--spring-settle); }
+.fm-film .fui-progress__fill { border-radius: 0; background: color-mix(in srgb, var(--accent) 30%, transparent); border-right: 2px solid var(--accent-hi); }

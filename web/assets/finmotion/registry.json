@@ -44,6 +44,73 @@
         "parts/copy/copy.js",
         "parts/copy/copy.css"
       ]
+    },
+    {
+      "name": "stat-tile",
+      "finui": "stat-tile",
+      "files": [
+        "parts/stat-tile/stat-tile.js"
+      ]
+    },
+    {
+      "name": "bar-chart",
+      "finui": "bar-chart",
+      "files": [
+        "parts/bar-chart/bar-chart.js",
+        "parts/bar-chart/bar-chart.css"
+      ]
+    },
+    {
+      "name": "line-chart",
+      "finui": "line-chart",
+      "files": [
+        "parts/line-chart/line-chart.js",
+        "parts/line-chart/line-chart.css"
+      ]
+    },
+    {
+      "name": "sparkline",
+      "finui": "sparkline",
+      "files": [
+        "parts/sparkline/sparkline.js",
+        "parts/sparkline/sparkline.css"
+      ]
+    },
+    {
+      "name": "donut-chart",
+      "finui": "donut-chart",
+      "files": [
+        "parts/donut-chart/donut-chart.js",
+        "parts/donut-chart/plan.js",
+        "parts/donut-chart/donut-chart.css"
+      ]
+    },
+    {
+      "name": "heatmap",
+      "finui": "heatmap",
+      "files": [
+        "parts/heatmap/heatmap.js",
+        "parts/heatmap/plan.js",
+        "parts/heatmap/heatmap.css"
+      ]
+    },
+    {
+      "name": "progress",
+      "finui": "progress",
+      "files": [
+        "parts/progress/progress.js",
+        "parts/progress/progress.css"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "odometer",
+      "files": [
+        "components/odometer/odometer.js",
+        "components/odometer/plan.js",
+        "components/odometer/odometer.css"
+      ]
     }
   ]
 }
