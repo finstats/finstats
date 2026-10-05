@@ -28,3 +28,7 @@
 .fui-field__check input { width: 15px; height: 15px; accent-color: var(--accent); }
 select.fui-field__input { appearance: none; padding-right: 30px; background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
 select.fui-field__input:disabled { opacity: .6; }
+/* Several lines: as tall as its rows, taller by hand; its help and its count on one line under it. */
+.fui-field__input--area { min-height: 84px; resize: vertical; line-height: 1.5; }
+.fui-field__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fui-field__count { font: 11.5px var(--mono); color: var(--text-faint); white-space: nowrap; }

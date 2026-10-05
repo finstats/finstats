@@ -228,6 +228,7 @@
         "--field-bg",
         "--field-border",
         "--field-edges",
+        "--mono",
         "--radius-field",
         "--text",
         "--text-faint",
@@ -965,6 +966,184 @@
       "requires": [
         "core",
         "button"
+      ]
+    },
+    {
+      "name": "choice",
+      "category": "primitive",
+      "files": [
+        "components/choice/choice.js",
+        "components/choice/choice.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--border",
+        "--border-strong",
+        "--ease",
+        "--field-bg",
+        "--focus-color",
+        "--focus-offset",
+        "--focus-width",
+        "--on-accent",
+        "--radius-sm",
+        "--text",
+        "--text-faint"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "slider",
+      "category": "primitive",
+      "files": [
+        "components/slider/plan.js",
+        "components/slider/slider.js",
+        "components/slider/slider.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--knob",
+        "--mono",
+        "--radius-pill",
+        "--shadow",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--track"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "number-stepper",
+      "category": "primitive",
+      "files": [
+        "components/number-stepper/plan.js",
+        "components/number-stepper/number-stepper.js",
+        "components/number-stepper/number-stepper.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--field-bg",
+        "--field-border",
+        "--hover",
+        "--mono",
+        "--radius-field",
+        "--radius-sm",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "otp",
+      "category": "primitive",
+      "files": [
+        "components/otp/plan.js",
+        "components/otp/otp.js",
+        "components/otp/otp.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-wash",
+        "--field-bg",
+        "--field-border",
+        "--mono",
+        "--radius-field",
+        "--text-faint",
+        "--text-strong"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "tag-input",
+      "category": "pattern",
+      "files": [
+        "components/tag-input/plan.js",
+        "components/tag-input/tag-input.js",
+        "components/tag-input/tag-input.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--field-bg",
+        "--field-border",
+        "--mono",
+        "--placeholder",
+        "--radius-field",
+        "--text",
+        "--text-faint"
+      ],
+      "requires": [
+        "core",
+        "chip"
+      ]
+    },
+    {
+      "name": "file-drop",
+      "category": "pattern",
+      "files": [
+        "components/file-drop/plan.js",
+        "components/file-drop/file-drop.js",
+        "components/file-drop/file-drop.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-wash",
+        "--bg-2",
+        "--bg-sunken",
+        "--border-soft",
+        "--border-strong",
+        "--critical-text",
+        "--ease",
+        "--focus-color",
+        "--focus-offset",
+        "--focus-width",
+        "--hover",
+        "--mono",
+        "--radius",
+        "--radius-control",
+        "--radius-pill",
+        "--radius-sm",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--track"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "date-picker",
+      "category": "pattern",
+      "files": [
+        "components/date-picker/plan.js",
+        "components/date-picker/date-picker.js",
+        "components/date-picker/date-picker.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--bg-2",
+        "--border",
+        "--field-bg",
+        "--field-border",
+        "--radius",
+        "--radius-field",
+        "--shadow",
+        "--text",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "calendar",
+        "field"
       ]
     }
   ]
