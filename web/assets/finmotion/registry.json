@@ -101,6 +101,56 @@
         "parts/progress/progress.js",
         "parts/progress/progress.css"
       ]
+    },
+    {
+      "name": "toast",
+      "finui": "toast",
+      "files": [
+        "parts/toast/toast.js",
+        "parts/toast/plan.js",
+        "parts/toast/toast.css"
+      ]
+    },
+    {
+      "name": "drawer",
+      "finui": "drawer",
+      "files": [
+        "parts/drawer/drawer.js",
+        "parts/drawer/plan.js",
+        "parts/drawer/drawer.css"
+      ]
+    },
+    {
+      "name": "modal",
+      "finui": "modal",
+      "files": [
+        "parts/modal/modal.css"
+      ]
+    },
+    {
+      "name": "data-table",
+      "finui": "data-table",
+      "files": [
+        "parts/data-table/data-table.js"
+      ]
+    },
+    {
+      "name": "poster",
+      "finui": "poster",
+      "files": [
+        "parts/poster/poster.js",
+        "parts/poster/plan.js",
+        "parts/poster/poster.css"
+      ]
+    },
+    {
+      "name": "page-header",
+      "finui": "page-header",
+      "files": [
+        "parts/page-header/page-header.js",
+        "parts/page-header/plan.js",
+        "parts/page-header/page-header.css"
+      ]
     }
   ],
   "components": [

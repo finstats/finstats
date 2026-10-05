@@ -13,5 +13,11 @@ import { part as sparkline } from './sparkline/sparkline.js';
 import { part as donutChart } from './donut-chart/donut-chart.js';
 import { part as heatmap } from './heatmap/heatmap.js';
 import { part as progress } from './progress/progress.js';
+import { part as toast } from './toast/toast.js';
+import { part as drawer } from './drawer/drawer.js';
+import { part as dataTable } from './data-table/data-table.js';
+import { part as poster } from './poster/poster.js';
+import { part as pageHeader } from './page-header/page-header.js';
 
-export const PARTS = [toggle, tabs, field, copy, statTile, barChart, lineChart, sparkline, donutChart, heatmap, progress];
+// The modal is styles only (its arrival): it has no module.
+export const PARTS = [toggle, tabs, field, copy, statTile, barChart, lineChart, sparkline, donutChart, heatmap, progress, toast, drawer, dataTable, poster, pageHeader];

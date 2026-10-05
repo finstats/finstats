@@ -1,0 +1,5 @@
+/* FinMotion: poster. Catching the light: the poster turns towards the pointer (poster.js), and a sheen sits where the light
+   would fall. */
+.fui-poster.fm-light { position: relative; }
+.fm-poster__sheen { position: absolute; inset: 0; pointer-events: none; --fm-poster-x: 50%; --fm-poster-y: 50%;
+  background: radial-gradient(circle at var(--fm-poster-x) var(--fm-poster-y), color-mix(in srgb, var(--on-fill) 38%, transparent), transparent 55%); }

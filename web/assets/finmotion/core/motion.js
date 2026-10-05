@@ -86,18 +86,27 @@ export function follower(start, apply, name = 'settle') {
   };
 }
 
+/** The first half of a FLIP: notes where `els` stand now, and answers a function that, called once they have moved (a
+ *  sort FinUI did, a row taken out), plays each from where it was to where it is, on `name`. */
+export function noted(els, name = 'settle') {
+  const before = new Map([...els].map((el) => [el, el.getBoundingClientRect()]));
+  return () => {
+    const out = [];
+    for (const [el, a] of before) {
+      if (!el.isConnected) continue;
+      const b = el.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
+      if (dx || dy) out.push(play(el, [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], name, { fill: 'none' }));
+    }
+    return out;
+  };
+}
+
 /** Moves `els` from where they are to where `change()` puts them (First, Last, Invert, Play): a list re-sorted, a row
  *  making room. Elements `change()` adds are left to appear; elements it removes are not followed. */
 export function flip(els, change, name = 'settle') {
-  const before = new Map([...els].map((el) => [el, el.getBoundingClientRect()]));
+  const go = noted(els, name);
   change();
-  const out = [];
-  for (const [el, a] of before) {
-    if (!el.isConnected) continue;
-    const b = el.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
-    if (dx || dy) out.push(play(el, [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], name, { fill: 'none' }));
-  }
-  return out;
+  return go();
 }
 
 /** Deals `els` in one after another, like cards onto a table: each rises a little and arrives on `name`, `every` ms apart

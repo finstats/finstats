@@ -1,0 +1,4 @@
+/* FinMotion: modal. A dialog arrives: it rises a little and comes up to size as the page behind it dims. (A drawer slides in
+   its own way.) */
+.fui-modal:not(.fui-drawer) { animation: fm-modal-arrive var(--spring-settle) both; }
+@keyframes fm-modal-arrive { from { opacity: 0; transform: translateY(10px) scale(.97); } }
