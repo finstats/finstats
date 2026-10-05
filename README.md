@@ -279,6 +279,8 @@ download the newest backup — the `.db` file, or the `.zip` holding it.
 
 In finstats, open **Settings → Import**, find the card for the one you used, and drop the file in.
 
+<img src="docs/screenshots/tautulli.png" alt="Tautulli import: a wiring board with Plex users on the left and Jellyfin users on the right, coloured wires from five Plex users to four people — two Plex accounts into one — and three Plex users left unwired, so their history stays behind" width="100%">
+
 **From Tautulli you say who is who.** Plex names rarely match Jellyfin's, so the upload becomes a
 wiring board: Plex users on one side, Jellyfin users on the other. Drag a wire from each Plex user to
 who they are now — or click one, then the other. Anybody you leave unwired is not imported, and two
