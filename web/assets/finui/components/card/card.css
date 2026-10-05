@@ -9,6 +9,9 @@
 .fui-card--flush > .fui-card__head + .fui-card__body { padding-top: 10px; }
 .fui-card__note { margin-top: 12px; }
 .fui-card__head > div:first-child { min-width: 0; }
+/* A card that is a link: the whole surface answers the pointer, its words keep their own colours. */
+.fui-card--link { display: block; color: var(--text); text-decoration: none; transition: border-color var(--ease), background var(--ease); }
+.fui-card--link:hover { border-color: var(--border); background: var(--hover); color: var(--text); text-decoration: none; }
 .fui-card__title { overflow-wrap: anywhere; }
 
 /* The gallery's list in a flush card. */

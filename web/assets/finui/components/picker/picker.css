@@ -1,0 +1,37 @@
+/* FinUI: picker. A quiet button with its label over its value, and a list that floats over the page. */
+.fui-picker { position: relative; }
+.fui-picker__button {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 10px; text-align: left;
+  background: transparent; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); transition: background var(--ease), border-color var(--ease);
+}
+.fui-picker__button:hover, .fui-picker.is-open .fui-picker__button { background: var(--hover); border-color: var(--border); }
+.fui-picker__text { display: grid; min-width: 0; }
+.fui-picker__label { font-size: 11.5px; color: var(--text-faint); }
+.fui-picker__value { font-size: 13px; font-weight: 550; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-picker__mark { display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; color: var(--text-muted); }
+/* The lock sits left of the swatch: hidden until the picker is pointed at or focused, and always once it is on. */
+.fui-picker__lock {
+  position: absolute; top: 50%; right: 36px; transform: translateY(-50%); display: grid; place-items: center; width: 24px; height: 24px; padding: 0;
+  background: transparent; border: 0; border-radius: var(--radius-sm); color: var(--text-faint); opacity: 0; transition: opacity var(--ease), background var(--ease);
+}
+.fui-picker__lock:hover { background: var(--btn-hover); color: var(--text); }
+.fui-picker:hover .fui-picker__lock, .fui-picker:focus-within .fui-picker__lock, .fui-picker.is-locked .fui-picker__lock { opacity: 1; }
+.fui-picker.is-locked .fui-picker__lock { color: var(--accent-hi); }
+@media (hover: none) and (pointer: coarse) { .fui-picker__lock { opacity: 1; } }
+.fui-picker__list {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30; max-height: 300px; overflow-y: auto; margin: 0; padding: 4px;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow) 50%, transparent);
+}
+.fui-picker__list:focus { outline: none; }
+.fui-picker.is-up .fui-picker__list { top: auto; bottom: calc(100% + 4px); }
+.fui-picker__option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; }
+.fui-picker__option.is-active { background: var(--hover); }
+.fui-picker__option[aria-selected="true"] { color: var(--accent-hi); }
+.fui-picker__check { margin-left: auto; }
+.fui-picker__about { display: grid; gap: 1px; min-width: 0; }
+.fui-picker__name { font-weight: 550; }
+.fui-picker__blurb { font-size: 12px; line-height: 1.35; color: var(--text-faint); }
+.fui-picker__option[aria-selected="true"] .fui-picker__blurb { color: var(--text-muted); }
+.fui-picker__list:has(.fui-picker__blurb) { max-height: 380px; }
+/* The gallery's picker, at the width of a panel. */
+.fui-picker__demo { width: min(100%, 260px); }

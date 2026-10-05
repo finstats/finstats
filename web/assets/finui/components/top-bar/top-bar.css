@@ -1,0 +1,17 @@
+/* FinUI: top-bar. A translucent bar on the page's ground, a hairline under it, the open section underlined in the accent. */
+.fui-top-bar {
+  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 28px; height: 56px; padding: 0 24px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent); border-bottom: 1px solid var(--border-soft);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.fui-top-bar__brand { flex: none; font: 750 19px/1 var(--font-heading); letter-spacing: -.03em; color: var(--text-strong); text-decoration: none; }
+.fui-top-bar__brand:hover { color: var(--text-strong); text-decoration: none; }
+.fui-top-bar__nav { display: flex; align-items: stretch; gap: 4px; flex: 1; min-width: 0; height: 100%; overflow-x: auto; scrollbar-width: none; }
+.fui-top-bar__link { display: flex; align-items: center; padding: 0 10px; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 14px; white-space: nowrap; text-decoration: none; }
+.fui-top-bar__link:hover { color: var(--text); text-decoration: none; }
+.fui-top-bar__link.is-active { color: var(--text-strong); border-bottom-color: var(--accent); }
+.fui-top-bar__actions { display: flex; align-items: center; gap: 10px; flex: none; }
+@media (max-width: 560px) { .fui-top-bar { gap: 14px; padding: 0 14px; } }
+/* The gallery's bar, in a frame rather than at the top of the window. */
+.fui-top-bar__demo { width: 100%; }
+.fui-top-bar__demo > .fui-top-bar { position: static; }

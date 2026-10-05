@@ -48,14 +48,18 @@
       ],
       "tokens": [
         "--bg-2",
+        "--border",
         "--border-soft",
         "--card-shadow",
         "--density",
+        "--ease",
         "--font-heading",
         "--heading-case",
         "--heading-tracking",
         "--heading-weight",
+        "--hover",
         "--radius",
+        "--text",
         "--text-faint",
         "--text-strong"
       ],
@@ -75,12 +79,15 @@
         "--accent",
         "--accent-hi",
         "--accent-wash",
+        "--bg-2",
         "--border",
+        "--border-soft",
         "--hover",
         "--radius-pill",
         "--text",
         "--text-faint",
-        "--text-muted"
+        "--text-muted",
+        "--text-strong"
       ],
       "requires": [
         "core"
@@ -507,6 +514,7 @@
       "tokens": [
         "--heading-case",
         "--heading-tracking",
+        "--heading-weight",
         "--text-muted",
         "--text-strong",
         "--title-weight"
@@ -828,6 +836,135 @@
       "requires": [
         "core",
         "search"
+      ]
+    },
+    {
+      "name": "swatch",
+      "category": "primitive",
+      "files": [
+        "components/swatch/swatch.js",
+        "components/swatch/swatch.css"
+      ],
+      "tokens": [
+        "--bg-2",
+        "--border",
+        "--radius-pill",
+        "--text",
+        "--text-muted"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "theme-frame",
+      "category": "pattern",
+      "files": [
+        "components/theme-frame/theme-frame.js",
+        "components/theme-frame/theme-frame.css"
+      ],
+      "tokens": [
+        "--bg",
+        "--border-soft",
+        "--radius",
+        "--text"
+      ],
+      "requires": [
+        "core",
+        "button"
+      ]
+    },
+    {
+      "name": "code-block",
+      "category": "pattern",
+      "files": [
+        "components/code-block/code-block.js",
+        "components/code-block/code-block.css"
+      ],
+      "tokens": [
+        "--bg-2",
+        "--bg-sunken",
+        "--border-soft",
+        "--mono",
+        "--radius",
+        "--radius-control",
+        "--radius-sm",
+        "--text",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "copy",
+        "segmented"
+      ]
+    },
+    {
+      "name": "picker",
+      "category": "pattern",
+      "files": [
+        "components/picker/picker.js",
+        "components/picker/picker.css"
+      ],
+      "tokens": [
+        "--accent-hi",
+        "--bg-2",
+        "--border",
+        "--border-soft",
+        "--btn-hover",
+        "--ease",
+        "--hover",
+        "--radius",
+        "--radius-sm",
+        "--shadow",
+        "--text",
+        "--text-faint",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "swatch"
+      ]
+    },
+    {
+      "name": "hero",
+      "category": "pattern",
+      "files": [
+        "components/hero/hero.js",
+        "components/hero/hero.css"
+      ],
+      "tokens": [
+        "--font-heading",
+        "--heading-case",
+        "--heading-tracking",
+        "--text-hero",
+        "--text-muted",
+        "--title-weight"
+      ],
+      "requires": [
+        "core",
+        "button",
+        "card"
+      ]
+    },
+    {
+      "name": "top-bar",
+      "category": "pattern",
+      "files": [
+        "components/top-bar/top-bar.js",
+        "components/top-bar/top-bar.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--bg",
+        "--border-soft",
+        "--font-heading",
+        "--text",
+        "--text-muted",
+        "--text-strong"
+      ],
+      "requires": [
+        "core",
+        "button"
       ]
     }
   ]

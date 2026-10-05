@@ -1,0 +1,5 @@
+/* FinUI: theme-frame. A surface in one theme: its scheme decides every light-dark() under it. */
+.fui-theme-frame { display: grid; gap: 12px; justify-items: start; min-width: 0; padding: 22px; border: 1px solid var(--border-soft); border-radius: var(--radius); background: var(--bg); color: var(--text); }
+.fui-theme-frame--light { color-scheme: light; }
+.fui-theme-frame--dark { color-scheme: dark; }
+.fui-theme-frame--phone { width: 360px; max-width: 100%; padding: 16px; }

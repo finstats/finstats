@@ -1,0 +1,14 @@
+/* FinUI: code-block. Code on the sunken ground, in the mono face; a pane on the raised one inside it. */
+.fui-code-block--line { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px 4px 4px 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-control); background: var(--bg-sunken); }
+.fui-code-block__text { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 12.5px/1.6 var(--mono); color: var(--text); scrollbar-width: thin; }
+.fui-code-block__copy { display: inline-flex; flex: none; }
+.fui-code-block { display: grid; gap: 10px; min-width: 0; padding: 12px; background: var(--bg-sunken); border: 1px solid var(--border-soft); border-radius: var(--radius); }
+.fui-code-block__bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fui-code-block__name { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.fui-code-block__note { font-size: 12.5px; color: var(--text-muted); }
+.fui-code-block__pane { margin: 0; max-height: 460px; overflow: auto; padding: 12px; font: 12px/1.55 var(--mono); white-space: pre; background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); color: var(--text); }
+.fui-code-block__pane--wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+.fui-code-block--fill { display: flex; flex-direction: column; height: 100%; }
+.fui-code-block--fill > .fui-code-block__pane { flex: 1; min-height: 0; max-height: none; }
+/* The gallery's line, with the words that go before it. */
+.fui-code-block__demo { display: grid; gap: 8px; width: min(100%, 520px); }
