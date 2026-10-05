@@ -1,0 +1,7 @@
+/* FinUI: avatar-group. Faces overlap, each ringed in the ground so the next one cuts a clean edge. */
+.fui-avatar-group { display: inline-flex; align-items: center; }
+.fui-avatar-group > .fui-avatar, .fui-avatar-group__more { box-shadow: 0 0 0 2px var(--bg-2); }
+.fui-avatar-group > * + * { margin-left: -8px; }
+.fui-avatar-group__more { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--hover); color: var(--text-muted); font-family: var(--mono); font-weight: 600; }
+/* The gallery's group, beside what it says. */
+.fui-avatar-group__demo { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); }

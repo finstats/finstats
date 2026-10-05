@@ -1305,6 +1305,147 @@
       "requires": [
         "core"
       ]
+    },
+    {
+      "name": "tabs",
+      "category": "pattern",
+      "files": [
+        "components/tabs/plan.js",
+        "components/tabs/tabs.js",
+        "components/tabs/tabs.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-wash",
+        "--border-soft",
+        "--hover",
+        "--mono",
+        "--radius-pill",
+        "--radius-sm",
+        "--sans",
+        "--text",
+        "--text-muted",
+        "--text-strong"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "breadcrumb",
+      "category": "pattern",
+      "files": [
+        "components/breadcrumb/plan.js",
+        "components/breadcrumb/breadcrumb.js",
+        "components/breadcrumb/breadcrumb.css"
+      ],
+      "tokens": [
+        "--hover",
+        "--radius-sm",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--text-strong"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "steps",
+      "category": "pattern",
+      "files": [
+        "components/steps/plan.js",
+        "components/steps/steps.js",
+        "components/steps/steps.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--accent-wash",
+        "--bg-2",
+        "--border",
+        "--mono",
+        "--on-accent",
+        "--radius-pill",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--text-strong"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "timeline",
+      "category": "pattern",
+      "files": [
+        "components/timeline/plan.js",
+        "components/timeline/timeline.js",
+        "components/timeline/timeline.css"
+      ],
+      "tokens": [
+        "--bg-2",
+        "--border",
+        "--border-soft",
+        "--critical",
+        "--critical-text",
+        "--good",
+        "--mono",
+        "--radius-pill",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--warning"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "avatar-group",
+      "category": "primitive",
+      "files": [
+        "components/avatar-group/plan.js",
+        "components/avatar-group/avatar-group.js",
+        "components/avatar-group/avatar-group.css"
+      ],
+      "tokens": [
+        "--bg-2",
+        "--hover",
+        "--mono",
+        "--text-muted"
+      ],
+      "requires": [
+        "core",
+        "avatar"
+      ]
+    },
+    {
+      "name": "shelf",
+      "category": "pattern",
+      "files": [
+        "components/shelf/plan.js",
+        "components/shelf/shelf.js",
+        "components/shelf/shelf.css"
+      ],
+      "tokens": [
+        "--bg-2",
+        "--border",
+        "--border-soft",
+        "--font-heading",
+        "--heading-weight",
+        "--hover",
+        "--mono",
+        "--radius-control",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--text-strong"
+      ],
+      "requires": [
+        "core"
+      ]
     }
   ]
 }
