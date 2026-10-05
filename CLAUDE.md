@@ -720,9 +720,21 @@ every `icon()` inside something pressable as it is drawn (an icon among words st
 busy button (`setBusy` in `components.js`) whose icon is `refresh` keeps that icon turning instead of showing a spinner,
 and lets it finish its turn when done — the only icon that moves for longer than one hover. To bring new options over: build FinUI's site (`node ../finui/tools/build-site.mjs <dir>`) and copy its `p/`,
 `create/presets.json` and FinUI's `fonts/`. The QA
-stage `finui` runs that repository's checks and tests, serves its site and walks the gallery and create, and fails when
-a file of `web/assets/finui` differs from the repository's (`p/` from its built site): copy a change across in the same
-sitting.
+stage `finui` runs that repository's QA (its checks and tests live in `../finui/qa`, never in FinUI), serves its site and
+walks the gallery and create, and fails when a file of `web/assets/finui` differs from the repository's (`p/` from its
+built site): copy a change across in the same sitting.
+
+**FinMotion (`web/assets/finmotion/`, `finmotion.rs`) is how FinUI moves — and FinUI is not an animation library** (the
+owner's words): FinUI's components are still and complete on their own, and nothing of motion goes back into FinUI but
+its animated icons. FinMotion is a repository of its own (`github.com/finstats/finmotion`, checked out beside finstats as
+`../finmotion`, its own CLAUDE.md) put on top of FinUI, and **finstats always wears it**: `/assets/finmotion.css` is its
+stylesheets in its registry's order, served as one like `finui.css` and linked after it, and `main.js` calls `motion()`
+once. Everything moves on four springs (`--spring-settle | -snap | -drift | -glide`) paced by the person's Motion choice
+(FinUI's `--ease` read as `--fm-pace`) and stilled by reduced motion. Each of its parts finds a FinUI component by FinUI's
+own classes and moves what FinUI draws — FinUI needs no change for it; what a person does moves at once, while an
+entrance or a flourish waits for an `fm-` class a page adds (`fm-roll`, `fm-arrive`, `fm-develop`, `fm-light`,
+`fm-gathers`, `fm-film`), because finstats redraws its pages. FinMotion is developed in its own repository and copied
+here; the QA stage `finmotion` runs its QA (`../finmotion/qa`) and fails while `web/assets/finmotion` differs from it.
 
 "Now playing" (`nowPlayingView` in `widgets.js`) is polled every 5 s, but **only the 1 s ticker moves a clock** (+1 whole
 second per beat). A poll never repaints it; it only corrects the position when that means something (pause, server > 3 s
