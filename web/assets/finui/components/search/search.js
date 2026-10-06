@@ -168,7 +168,7 @@ export const meta = {
   avoid: 'A dialog with a backdrop for it. Running the search in the component: it is given what it shows. Fetching per keystroke without the app’s own debounce.',
   variants: ['in a menu (desktop-nav, mobile-nav)', 'in the page'],
   states: ['is-active: the row Enter opens (aria-activedescendant)', 'nothing found, or a note while searching', 'a row that keeps a control: Ctrl+Enter presses it'],
-  a11y: 'A combobox over a listbox: the arrows move aria-activedescendant through the rows, Enter opens, Esc gives up and the app returns the focus to the control that opened it. Rows say aria-selected. Still with reduced motion.',
+  a11y: 'A combobox over a listbox: the arrows move aria-activedescendant through the rows, Enter opens, Esc gives up and the app returns the focus to what had it when search opened: the control pressed, or the place a shortcut was pressed in. Rows say aria-selected. Still with reduced motion.',
   props: {
     'searchPanel({ run, onPick, onEscape, placeholder, label, keys })': 'run(words, paint): paint(groups, note) as often as there is something',
     'grow({ from, host, bar, list, show })': 'lay it out and play it out of `from`',

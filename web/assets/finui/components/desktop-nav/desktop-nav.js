@@ -150,7 +150,7 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
   const found = h('div', { class: 'fui-desktop-nav__found' });
   const host = kind === 'command' ? frame.querySelector('.fui-desktop-nav__bar') : frame;
   host.append(found);
-  let hosted = null;
+  let hosted = null, opener = null;
   const searchControl = () => controls.find((c) => c.isConnected) || null;
   /** The menu as it stands, laid over itself for the length of a morph: the root's own frame and classes, nothing live. */
   function ghost() {
@@ -159,6 +159,8 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
     wrap.setAttribute('aria-hidden', 'true');
     wrap.inert = true;
     const copy = frame.cloneNode(true);
+    // A rail held open by the pointer or the focus is drawn open: the copy has neither, and would show the closed one.
+    copy.classList.toggle('is-open', frame.matches(':hover, :focus-within'));
     copy.querySelector('.fui-desktop-nav__found')?.remove();
     for (const n of copy.querySelectorAll('[id]')) n.removeAttribute('id');
     wrap.append(copy);
@@ -170,6 +172,9 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
   function openSearch(panel) {
     if (hosted) return;
     hosted = panel;
+    // What had the keyboard's focus — the menu's search, or a place in the page Ctrl+Space was pressed in — is where Esc
+    // gives it back. A click's focus is let go instead: handed back after a key, it is the keyboard's, and opens a rail.
+    opener = document.activeElement !== document.body && document.activeElement.matches(':focus-visible') ? document.activeElement : null;
     closeAll();
     // The dock rises into the card at its own width, so the shape only grows upwards out of it.
     const dockWidth = kind === 'dock' ? frame.getBoundingClientRect().width : 0;
@@ -181,29 +186,35 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
     } });
     panel.focus();
   }
-  /** Put the search back into what it grew out of, the menu fading back in over it as it arrives. `restore` gives
-   *  that control the focus (Esc) — quietly, so its tooltip does not pop up as the search goes. */
+  /** Put the search back into what it grew out of, the menu fading back in over it as it arrives. `restore` gives the
+   *  focus back to what had it when search opened (Esc) — quietly, so a tooltip does not pop up as the search goes. The
+   *  focus leaves the search before anything is measured: a rail holds itself open while the focus is in it, and the
+   *  shape closing into an open rail under a closed one faded in over it was both at once, then a rail left open. */
   function closeSearch(restore = false) {
     const p = hosted;
     if (!p) return Promise.resolve();
     hosted = null;
     const control = searchControl();
+    const back = opener && opener.isConnected && !p.el.contains(opener) ? opener : null;
+    opener = null;
+    // Once the menu is laid out again (each hide: the first, before shrink measures anything, and the last, because the
+    // search laid back over it for the animation hid the control and the browser let its focus go).
+    const giveBack = () => {
+      if (restore && back) {
+        if (document.activeElement === back) return;
+        back.dataset.quiet = '';
+        const loud = () => { delete back.dataset.quiet; back.removeEventListener('blur', loud); back.removeEventListener('pointerenter', loud); };
+        back.addEventListener('blur', loud);
+        back.addEventListener('pointerenter', loud);
+        back.focus({ preventScroll: true });
+      } else if (p.el.contains(document.activeElement)) document.activeElement.blur();
+    };
     const { host: shape, fresh } = shapeOf(p);
     const width = frame.style.width;
     return shrink({ to: control, host: shape, bar: p.bar, list: p.list, gone: fresh, ghost,
       show: () => { frame.style.width = width; el.classList.add('is-searching'); },
-      hide: () => { frame.style.width = ''; el.classList.remove('is-searching'); } })
-      .then(() => {
-        if (hosted) return;
-        found.replaceChildren();
-        if (restore && control && control.isConnected) {
-          control.dataset.quiet = '';
-          const loud = () => { delete control.dataset.quiet; control.removeEventListener('blur', loud); control.removeEventListener('pointerenter', loud); };
-          control.addEventListener('blur', loud);
-          control.addEventListener('pointerenter', loud);
-          control.focus({ preventScroll: true });
-        }
-      });
+      hide: () => { frame.style.width = ''; el.classList.remove('is-searching'); giveBack(); } })
+      .then(() => { if (!hosted) found.replaceChildren(); });
   }
 
   // The dock tucks itself away while the page scrolls down, like a dock that hides: back on scrolling up, at the top, with

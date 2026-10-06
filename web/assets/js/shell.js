@@ -114,14 +114,17 @@ function buildShell() {
 
   // ---- search: FinUI's, never a dialog. In the menu, the menu holds it (it grows out of the menu's own search into the
   // place the style has); in the page, it takes the page's place under the menu. The choice is this browser's (state.js).
-  let searching = null;   // { panel, where: 'desktop' | 'mobile' | 'page', from }
+  let searching = null;   // { panel, where: 'desktop' | 'mobile' | 'page', from, back }
   const wide = () => !matchMedia('(max-width: 820px)').matches;
   function openSearch(from) {
     if (searching) { searching.panel.focus(); return; }
+    // What had the keyboard's focus — a control pressed, or the place Ctrl+Space was pressed in — is where Esc gives it back;
+    // a click's focus is let go (desktop-nav's rule: handed back after a key, it is the keyboard's).
+    const back = document.activeElement !== document.body && document.activeElement.matches(':focus-visible') ? document.activeElement : null;
     const panel = finstatsSearch({ onPick: (row) => { endSearch(false); navigate(row.href); }, onEscape: () => endSearch(true) });
     if (searchMode() === 'menu' && wide()) { searching = { panel, where: 'desktop', from }; desktop.openSearch(panel); return; }
     if (searchMode() === 'menu') { searching = { panel, where: 'mobile', from }; mobile.openSearch(panel, from); return; }
-    searching = { panel, where: 'page', from };
+    searching = { panel, where: 'page', from, back };
     grow({ from, host: pageSearch, bar: panel.bar, list: panel.list, fresh: true, show: () => { pageSearch.replaceChildren(panel.el); el.classList.add('is-page-searching'); } });
     window.scrollTo(0, 0);
     panel.focus();
@@ -136,8 +139,9 @@ function buildShell() {
         show: () => el.classList.add('is-page-searching'), hide: () => el.classList.remove('is-page-searching') }).then(() => pageSearch.replaceChildren());
     done.then(() => {
       s.panel.destroy();
-      // Back on what opened it, quietly: a tooltip popping up as the search goes reads as a glitch (desktop-nav's own rule).
-      const to = s.from;
+      // Back on what had the focus, quietly: a tooltip popping up as the search goes reads as a glitch (desktop-nav's own
+      // rule). Not the menu's search for Ctrl+Space: a rail holds itself open while the focus is in it.
+      const to = s.back;
       if (restore && s.where === 'page' && to && to.isConnected) {
         to.dataset.quiet = '';
         const loud = () => { delete to.dataset.quiet; to.removeEventListener('blur', loud); to.removeEventListener('pointerenter', loud); };
