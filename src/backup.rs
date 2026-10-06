@@ -603,6 +603,70 @@ mod tests {
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
+    /// A database of its own and a backup file of the given lines beside it.
+    fn restoring(name: &str, lines: &[Value]) -> (std::path::PathBuf, Db, std::path::PathBuf) {
+        let tmp = std::env::temp_dir().join(format!("finstats-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let target = Db::open(&tmp.join("target.db")).unwrap();
+        db::set_setting(&target.conn().unwrap(), "settings", &serde_json::to_string(&Settings { min_play_s: 42, ..Settings::default() }).unwrap()).unwrap();
+        let file = tmp.join("backup.jsonl");
+        std::fs::write(&file, lines.iter().map(|l| l.to_string() + "\n").collect::<String>()).unwrap();
+        (tmp, target, file)
+    }
+    fn a_play() -> Value {
+        json!({ "t": "playbacks", "r": { "id": 1, "source": "live", "user_id": "u1", "user_name": "alice", "item_id": "i1", "item_name": "Big Buck Bunny",
+            "item_type": "Movie", "started_at": 1000, "ended_at": 1600, "duration_s": 600, "active": 0 } })
+    }
+    fn plays(db: &Db) -> i64 {
+        db.conn().unwrap().query_row("SELECT COUNT(*) FROM playbacks", [], |r| r.get(0)).unwrap()
+    }
+
+    #[test]
+    fn a_backup_from_a_newer_finstats_is_refused_and_nothing_is_restored() {
+        let (tmp, target, file) = restoring("backup-newer", &[json!({ "finstats_backup": FORMAT + 1, "app_version": "99.0.0" }), a_play()]);
+        let err = format!("{:#}", restore(&target, &file, true, None).expect_err("restored a format it does not know"));
+        assert!(err.contains("newer finstats") && err.contains("Update finstats"), "{err}");
+        assert_eq!(plays(&target), 0, "a refused backup wrote a play");
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn an_empty_file_is_refused_as_empty_and_a_header_alone_restores_nothing() {
+        for (what, lines) in [("nothing at all", vec![]), ("blank lines", vec![json!(null)])] {
+            let (tmp, target, file) = restoring("backup-empty", &lines);
+            if what == "blank lines" {
+                std::fs::write(&file, "\n   \n\n").unwrap();
+            }
+            let err = format!("{:#}", restore(&target, &file, true, None).expect_err(what));
+            assert!(err.contains("The file is empty"), "{what}: {err}");
+            let _ = std::fs::remove_dir_all(&tmp);
+        }
+        let (tmp, target, file) = restoring("backup-header", &[json!({ "finstats_backup": FORMAT, "app_version": "2.2.0" })]);
+        let r = restore(&target, &file, true, None).unwrap();
+        assert_eq!((r.plays_imported, r.events, r.other_rows, r.settings_restored), (0, 0, 0, false));
+        assert_eq!(r.from_version.as_deref(), Some("2.2.0"));
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// Settings this version can read but would refuse to save are not restored either: a backup must not
+    /// plant a value the settings page could never have stored.
+    #[test]
+    fn settings_this_version_refuses_are_not_restored() {
+        let refused = serde_json::to_string(&Settings { min_play_s: 7, home_addresses: vec!["not an address".into()], ..Settings::default() }).unwrap();
+        let (tmp, target, file) = restoring("backup-refused-settings", &[
+            json!({ "finstats_backup": FORMAT, "app_version": "2.2.0" }),
+            json!({ "t": "settings", "r": { "key": "settings", "value": refused } }),
+            a_play(),
+        ]);
+        let r = restore(&target, &file, true, None).unwrap();
+        assert!(!r.settings_restored);
+        assert_eq!(r.plays_imported, 1, "the history did not come back with the settings refused");
+        let now = Settings::load(&target.conn().unwrap()).unwrap();
+        assert_eq!((now.min_play_s, now.home_addresses.len()), (42, 0), "the install's own settings were changed");
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
     #[test]
     fn a_backup_from_before_seek_origins_were_kept_gets_them_back_on_restore() {
         // A file written by a version before migration 21 carries a seek's origin only in its label.
