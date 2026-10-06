@@ -494,6 +494,35 @@ mod tests {
         payload(channel, base, topic, "s3cret-token", m).expect("an HTTP channel has a payload")
     }
 
+    /// Every refusal is said in the words that fit the channel, and never with the body the service answered.
+    #[test]
+    fn a_refusal_says_what_it_usually_means_for_that_channel() {
+        let t = |channel: Channel, url: &str| crate::notify::test_target(channel, url);
+        let said = |status: u16, channel: Channel, url: &str| refuse(StatusCode::from_u16(status).unwrap(), &t(channel, url));
+        assert!(said(307, Channel::Webhook, "https://hooks.example/x").contains("follows none"), "a redirect is never followed, and says so");
+        assert!(said(400, Channel::Telegram, "https://api.telegram.org").contains("does not know that chat"));
+        assert!(said(400, Channel::Pushover, "https://api.pushover.net").contains("user key or the application token"));
+        assert!(said(400, Channel::Webhook, "https://hooks.example/x").ends_with("did not understand the message"));
+        assert!(said(401, Channel::Discord, "https://discord.com/api/webhooks/1/t").contains("Has it been deleted?"));
+        assert!(said(403, Channel::Telegram, "https://api.telegram.org").ends_with("refused the bot token"));
+        assert!(said(401, Channel::Pushbullet, "https://api.pushbullet.com").ends_with("refused the access token"));
+        assert!(said(401, Channel::Gotify, "https://gotify.example").ends_with("refused the token"));
+        assert!(said(404, Channel::Slack, "https://hooks.slack.com/services/x").contains("no longer knows that webhook"));
+        let missing = said(404, Channel::Ntfy, "https://ntfy.example/topic");
+        assert!(missing.starts_with("ntfy.example answered 404") && missing.contains("topic and base path"), "{missing}");
+        assert!(said(413, Channel::Webhook, "https://hooks.example/x").ends_with("found the message too large"));
+        assert!(said(429, Channel::Webhook, "https://hooks.example/x").ends_with("is rate-limiting finstats"));
+        assert!(said(500, Channel::Webhook, "https://hooks.example/x").ends_with("answered 500 Internal Server Error"));
+    }
+
+    #[test]
+    fn a_severity_is_carried_in_each_service_s_own_scale() {
+        assert_eq!([priority(ALERT), priority(WARN), priority(INFO)], [5, 4, 3]);
+        assert_eq!([tags(ALERT), tags(WARN), tags(INFO)], [vec!["rotating_light"], vec!["warning"], vec!["information_source"]]);
+        // Pushover's 2 needs acknowledging and is never sent; its quietest everyday level is -1.
+        assert_eq!([pushover_priority(ALERT), pushover_priority(WARN), pushover_priority(INFO)], [1, 0, -1]);
+    }
+
     #[test]
     fn every_channel_is_posted_the_way_it_expects() {
         let m = msg();

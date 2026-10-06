@@ -412,6 +412,15 @@ pub struct Target {
     pub created_at: i64,
 }
 
+/// A destination of the given kind at `url`, for the tests of the channels that talk to one.
+#[cfg(test)]
+pub(crate) fn test_target(channel: Channel, url: &str) -> Target {
+    Target {
+        id: 1, channel, name: "QA".into(), url: url.into(), secret: "s3cret-token".into(), topic: None, options: BTreeMap::new(), owner_id: None,
+        events: vec![], with_addresses: false, min_severity: INFO.into(), accept_invalid_certs: false, enabled: true, created_at: 0,
+    }
+}
+
 impl Target {
     pub fn url(&self) -> &str {
         &self.url
