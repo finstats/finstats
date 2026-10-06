@@ -197,6 +197,14 @@ mod tests {
                 arr_media_id: 7, has_file: false, item_id: None, external_id: 77 }
     }
 
+    /// Anime and some daily shows are numbered without seasons: the code is the episode's alone, and with neither, none.
+    #[test]
+    fn an_episode_without_a_season_is_named_by_its_number_alone() {
+        assert!(summary(&Entry { season: None, ..episode() }).starts_with("Low Orbit E10 · "), "{}", summary(&Entry { season: None, ..episode() }));
+        let bare = summary(&Entry { season: None, episode: None, ..episode() });
+        assert!(bare.starts_with("Low Orbit · ") && !bare.contains(" E"), "{bare}");
+    }
+
     #[test]
     fn text_is_escaped_the_way_rfc_5545_says() {
         assert_eq!(escape("a, b; c\nd\\e\r\n"), "a\\, b\\; c\\nd\\\\e\\n");

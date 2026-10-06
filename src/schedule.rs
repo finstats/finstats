@@ -274,6 +274,13 @@ pub fn load_runs(c: &Connection) -> Result<Vec<LastRun>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_time_limit_is_said_as_the_owner_set_it() {
+        for (s, said) in [(60, "1 minute"), (90 * 60, "90 minutes"), (3600, "1 hour"), (7200, "2 hours"), (5400, "90 minutes")] {
+            assert_eq!(human(s), said, "{s} s");
+        }
+    }
     use chrono::FixedOffset;
 
     fn snapshot_with(done: &[(&'static str, i64, i64)], running: &[&'static str]) -> Vec<crate::state::TaskState> {
