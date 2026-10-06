@@ -1307,6 +1307,71 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// A database an older finstats last opened, in a folder of its own, so the next open is an update.
+    fn opened_by_an_older_finstats(name: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+        let dir = std::env::temp_dir().join(format!("finstats-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("finstats.db");
+        let db = Db::open(&path).unwrap();
+        let c = db.conn().unwrap();
+        set_setting(&c, "marker", "keep-me").unwrap();
+        set_setting(&c, VERSION_KEY, "0.1.0").unwrap();
+        (dir, path)
+    }
+
+    #[test]
+    fn only_the_newest_three_snapshots_are_kept_and_nothing_else_in_the_folder_is_touched() {
+        let (dir, path) = opened_by_an_older_finstats("snapkeep");
+        let snaps = dir.join(PRE_UPDATE_DIR);
+        std::fs::create_dir_all(&snaps).unwrap();
+        // Three from earlier upgrades, a day apart, and a note of the owner's beside them.
+        let day = std::time::Duration::from_secs(86_400);
+        let now = std::time::SystemTime::now();
+        for (i, name) in ["finstats-0.0.1-a.db", "finstats-0.0.2-b.db", "finstats-0.0.3-c.db"].iter().enumerate() {
+            let f = std::fs::File::create(snaps.join(name)).unwrap();
+            f.set_modified(now - day * (4 - i as u32)).unwrap();
+        }
+        std::fs::write(snaps.join("README.txt"), b"mine").unwrap();
+        drop(Db::open(&path).unwrap());
+        let mut names: Vec<String> = std::fs::read_dir(&snaps).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
+        names.sort();
+        // The oldest went; the two after it and the one this upgrade made stayed.
+        assert_eq!(names.len(), 4, "{names:?}");
+        assert!(!names.contains(&"finstats-0.0.1-a.db".to_string()), "the oldest snapshot was kept: {names:?}");
+        assert!(names.contains(&"finstats-0.0.2-b.db".to_string()) && names.contains(&"finstats-0.0.3-c.db".to_string()), "{names:?}");
+        assert!(names.iter().any(|n| n.starts_with("finstats-0.1.0-")), "this upgrade's snapshot is missing: {names:?}");
+        assert!(names.contains(&"README.txt".to_string()), "a file that is not a snapshot was removed: {names:?}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn without_a_safety_copy_no_migration_runs_and_nothing_is_changed() {
+        let (dir, path) = opened_by_an_older_finstats("snapfail");
+        // One migration still to run, and nowhere to put the copy: the snapshot folder's name is taken by a file.
+        let pending = MIGRATIONS.len() as i64 - 1;
+        Connection::open(&path).unwrap().execute_batch(&format!("PRAGMA user_version = {pending}")).unwrap();
+        std::fs::write(dir.join(PRE_UPDATE_DIR), b"not a folder").unwrap();
+        let err = format!("{:#}", Db::open(&path).err().expect("migrated without a safety copy"));
+        assert!(err.contains("will not run migrations without a safety copy") && err.contains("nothing was changed"), "{err}");
+        assert!(err.contains("FINSTATS_SKIP_PREUPDATE_BACKUP"), "the way out is not named: {err}");
+        let c = Connection::open(&path).unwrap();
+        let schema: i64 = c.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap();
+        assert_eq!(schema, pending, "a migration ran anyway");
+        assert_eq!(get_setting(&c, VERSION_KEY).unwrap().as_deref(), Some("0.1.0"), "the version was recorded anyway");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_failed_copy_only_warns_when_nothing_but_the_version_changes() {
+        let (dir, path) = opened_by_an_older_finstats("snapwarn");
+        std::fs::write(dir.join(PRE_UPDATE_DIR), b"not a folder").unwrap();
+        let db = Db::open(&path).expect("a plain version bump refused to start for want of a copy");
+        assert_eq!(get_setting(&db.conn().unwrap(), VERSION_KEY).unwrap().as_deref(), Some(env!("CARGO_PKG_VERSION")));
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn a_snapshot_cut_short_is_never_kept_under_a_snapshots_name() {
         // VACUUM INTO writes straight into the file it is given, so a start killed while copying left an empty
