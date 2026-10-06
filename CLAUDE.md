@@ -664,6 +664,24 @@ or user+item+start), remaps timeline rows to the new play ids, and re-derives gr
 task's triggers write one (skipped while there is no play); endpoints are `JellyfinAdmin`-only and names go through `valid_name`.
 A file is written as `<name>.part` and renamed when complete; a `.part` found when the next one starts was a killed backup and is removed.
 
+**The trash (`trash.rs`, migration 37, 2.2.0): nothing a person deletes goes at once.** A play is deleted by
+`PUT /api/activity/{id}` `{"deleted": true}` (`manage`), which sets `playbacks.deleted_at`, clears its `group_id` and regroups the
+title (`groups::detect`, again on the way back); a backup by `PUT /api/backups/{name}`, which moves the file to
+`<data>/backups/deleted/<name>.<unix>` — out of `list`, `newest`, `prune`'s count, the download and the restore — and back only
+when nothing has taken its name (`409`). `DELETE` is gone from both. After `trash::KEEP_S` (30 days) `trash::purge` removes them for
+good on the 15-minute housekeeping beat, one look at the partial index `idx_playbacks_trash` (a test pins the plan), and touches
+only file names `backup::in_trash` recognises; `trash_purged` is audited by counts alone. `prune` stays a hard delete: what
+`backup_keep` lets go was never chosen by anyone. **Every reading of history reads the view `visible_playbacks`** (`SELECT * …
+WHERE deleted_at IS NULL`, flattened by the planner onto the table's indexes), the trash listing `trashed_playbacks`, and **the
+table itself only for identity** — `already_recorded`, `source_id`, relink and locate, the collector's deletes, the address
+reads: a play in the trash is still that play, so an import or a restore does not bring it back as a new one, and relinking moves
+it with its title. `db::tests::every_read_of_history_leaves_the_trash_out` scans every string literal in `src/` and fails on a read
+of `playbacks` that names neither `deleted_at` nor an entry of `IDENTITY_READS` (each with its reason; a stale entry fails too):
+a new query over the table is a decision, not a habit. The duplicate sweep never keeps a deleted row over a live one (the
+keeper fragment of `relinked_duplicates_sql!`'s second arm; the one-argument arm is migration 26's text, byte for byte), the
+collector never resumes a play in the trash, and a restore carries `deleted_at` but keeps the state of a row already here —
+it never undeletes.
+
 The response compression layer skips `application/gzip`: re-compressing a backup broke the download in browsers. Anything served
 pre-compressed needs the same exemption.
 
