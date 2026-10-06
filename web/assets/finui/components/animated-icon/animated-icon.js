@@ -98,6 +98,8 @@ export const meta = {
     'animate(svg, { play, label })': 'an icon() made animated where it stands',
     'animateWithin(root, { play })': "every icon in something pressable under root, now and later; play 'hover' unless told; returns a stop function",
     'setBusy(svg, on)': 'a turning icon turns on until told to stop, then ends its turn',
+    'animatedSvg(name, css, { size, cycle }) — svg.js': 'the icon, moving, as markup for a .svg of its own: css is the text of animated-icon.css, and only the rules it uses go in',
+    'node tools/build-icons.mjs <folder>': 'every icon as <name>.svg and animated/<name>.svg; the site serves them at icons/',
     '--icon-cycle': 'how long one cycle takes (the Motion choice of a preset sets it)',
   },
   playground: {

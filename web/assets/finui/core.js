@@ -289,14 +289,23 @@ const ICONS = {
   target: '<circle cx="11" cy="13" r="8.500"/><circle cx="11" cy="13" r="4.500"/><path d="M11 13 20.500 3.500"/><path d="M18 3.500V6h2.500"/>',
 };
 
-const iconTpl = document.createElement('template');
+/** The opening tag every icon shares, with what it says of itself after its paint. */
+const svgTag = (size, more) =>
+  `<svg xmlns="${SVG_NS}" viewBox="0 0 24 24" width="${Number(size)}" height="${Number(size)}" fill="none" ` +
+  `stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"${more}>`;
+
+/** iconSvg(name, size = 24): the icon as a file of its own, markup to save as name.svg; null for an icon there is not. It
+ *  draws in currentColor: black in an <img>, the text's colour inline. */
+export function iconSvg(name, size = 24) {
+  return Object.hasOwn(ICONS, name) ? `${svgTag(size, '')}${ICONS[name]}</svg>\n` : null;
+}
+
+let iconTpl;   // made at the first icon, so this module loads where there is no page (a build, a test)
 export function icon(name, size = 16, cls = '') {
   // It says which icon it is (data-icon), so an animated icon can be made of it where it stands.
   const known = Object.hasOwn(ICONS, name);
-  iconTpl.innerHTML =
-    `<svg xmlns="${SVG_NS}" viewBox="0 0 24 24" width="${Number(size)}" height="${Number(size)}" fill="none" ` +
-    `stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ` +
-    `class="icon"${known ? ` data-icon="${name}"` : ''}>${known ? ICONS[name] : ''}</svg>`;
+  iconTpl ||= document.createElement('template');
+  iconTpl.innerHTML = `${svgTag(size, ` aria-hidden="true" class="icon"${known ? ` data-icon="${name}"` : ''}`)}${known ? ICONS[name] : ''}</svg>`;
   const el = iconTpl.content.firstChild;
   if (cls) el.classList.add(...cls.split(' '));
   return el;
@@ -313,6 +322,7 @@ export const meta = {
   props: {
     'h(tag, props, ...children)': 'props: class (a string, or an array whose falsy entries are dropped), style (an object), dataset, on<Event> handlers, attributes. Children nest in arrays.',
     'icon(name, size = 16, cls)': 'An inline SVG with aria-hidden="true": an icon is never the only name a control has.',
+    'iconSvg(name, size = 24)': 'The icon as markup for a file of its own (name.svg), in currentColor; null for an unknown name.',
   },
   a11y: 'Icons are hidden from assistive technology; the control or text beside them carries the name.',
 };

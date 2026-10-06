@@ -181,6 +181,7 @@
       "files": [
         "components/animated-icon/animated-icon.js",
         "components/animated-icon/motions.js",
+        "components/animated-icon/svg.js",
         "components/animated-icon/animated-icon.css"
       ],
       "tokens": [
