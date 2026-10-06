@@ -156,13 +156,18 @@ export function userCombobox({ value, onChange, signal, multiple = false }) {
   return combobox({ value, onChange, multiple, load: () => userList(signal).then((us) => us.map((u) => ({ value: u.id, label: u.name }))) });
 }
 
-/** One row of filters above everything they scope. It stays on screen while the page scrolls (`.filters-bar`), and
- *  says when something has scrolled under it (`is-stuck`). Its parent must be the page, not a wrapper of its own height. */
+/** One row of filters above everything they scope: the page's range and people, and whatever else it narrows by. */
 export function filterBar({ days, onDays, userId, onUser, signal, extra = [] }) {
-  const bar = h('div', { class: 'filters filters-bar', role: 'group', 'aria-label': 'Filters' },
+  return stickyFilters([
     rangeControl(days, onDays),
     onUser && can('see_everyone') ? userCombobox({ value: userId || '', onChange: onUser, signal, multiple: true }) : null,
-    extra);
+    extra], signal);
+}
+
+/** A row of filters that stays on screen while the page scrolls (`.filters-bar`), and says when something has scrolled
+ *  under it (`is-stuck`). Its parent must be the page, not a wrapper of its own height. */
+export function stickyFilters(controls, signal) {
+  const bar = h('div', { class: 'filters filters-bar', role: 'group', 'aria-label': 'Filters' }, controls);
   // One look per frame while scrolling; the listener goes with the page (or, for a caller without a signal, with the bar).
   let queued = false, seen = false;
   const look = () => {

@@ -4,7 +4,7 @@
 import { h, icon, num, store, debounce, duration, relTime, dateTime, pct, bytes, dayLabel, dayLabelLong } from '../dom.js';
 import { state, can } from '../state.js';
 import { replaceQuery } from '../router.js';
-import { pageHeader, card, chartCard, dataView, sk, emptyState, segmented, userCombobox, statTile, pagination, avatar } from '../components.js';
+import { pageHeader, card, chartCard, dataView, sk, emptyState, segmented, userCombobox, stickyFilters, statTile, pagination, avatar } from '../components.js';
 import { dataTable } from '../tables.js';
 import { simpleColumns, simpleColumnsTable, libBucketList } from '../charts.js';
 import { loadUpcoming, agenda, upcomingPoster } from '../upcoming.js';
@@ -175,10 +175,10 @@ function requestsTab(ctx, root) {
   search.addEventListener('input', onSearch);
   ctx.onCleanup(() => onSearch.cancel());
   root.append(
-    h('div', { class: 'filters', role: 'group', 'aria-label': 'Filters' },
+    stickyFilters([
       segmented({ label: 'Which requests', value: f.status, options: STATUSES, onChange: (v) => { f.status = v; apply(); } }),
       can('see_everyone') ? userCombobox({ value: f.userId, signal: ctx.signal, onChange: (u) => { f.userId = u; apply(); } }) : null,
-      h('div', { class: 'fui-field__search' }, icon('search', 14), search)),
+      h('div', { class: 'fui-field__search' }, icon('search', 14), search)], ctx.signal),
     view);
   dv.load();
 }
@@ -207,10 +207,10 @@ function upcomingTab(ctx, root) {
     options: [{ value: 'all', label: 'Everything' }, { value: 'mine', label: f.userId ? 'Only what they watch' : 'Only what I watch' }],
     onChange: (v) => { f.mine = v === 'mine'; apply(); } });
   root.append(
-    h('div', { class: 'filters', role: 'group', 'aria-label': 'Filters' },
+    stickyFilters([
       segmented({ label: 'How far ahead', value: f.days, options: SPANS, onChange: (v) => { f.days = v; store.set('finstats.upcomingDays', String(v)); apply(); } }),
       can('see_everyone') ? userCombobox({ value: f.userId, signal: ctx.signal, onChange: (u) => { f.userId = u; apply(); } }) : null,
-      mineBtn),
+      mineBtn], ctx.signal),
     summary, view);
   dv.load();
 }
