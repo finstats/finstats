@@ -23,6 +23,14 @@ export function sideOf(style, wanted) {
   return STYLES.find((s) => s.key === styleOf(style)).edge !== 'side' ? null : wanted === 'right' ? 'right' : 'left';
 }
 
+/** How much of the window's bottom-right corner a style keeps, in px up from the bottom and in from the right, so what
+ *  rests in that corner (to-top) stays clear of it: a side on the right keeps its width; the dock floats in the middle of
+ *  the bottom and leaves the corner free, as every other style does. */
+export function cornerOf(style, side) {
+  const s = STYLES.find((x) => x.key === styleOf(style));
+  return { bottom: 0, right: sideOf(s.key, side) === 'right' ? s.size : 0 };
+}
+
 /** Pages in their groups, the groups in the order they first appear; pages without one are a group with no name. */
 export function groups(pages) {
   const out = [];

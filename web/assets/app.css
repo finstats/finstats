@@ -16,8 +16,6 @@
   .app.nav-command { padding-top: var(--desktop-nav-size); }
   .app.nav-dock { padding-top: var(--statusbar-h); padding-bottom: calc(var(--desktop-nav-size) + 8px); }
   .app.nav-dock .statusbar { inset: 0 0 auto 0; border-top: 0; border-bottom: 1px solid var(--border-soft); }
-  .app.nav-dock .to-top { bottom: calc(var(--desktop-nav-size) + 16px); }
-  .app.nav-right .to-top { right: calc(var(--desktop-nav-size) + 20px); }
 }
 .brand { display: flex; align-items: center; gap: 9px; padding: 2px 8px 6px; color: var(--text); }
 .brand:hover { text-decoration: none; }
@@ -75,15 +73,6 @@ kbd {
 .sb-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
 .sb-dot.ok { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 16%, transparent); }
 .sb-dot.bad { background: var(--critical); box-shadow: 0 0 0 3px color-mix(in srgb, var(--critical) 18%, transparent); }
-
-.to-top {
-  position: fixed; right: 20px; bottom: calc(var(--statusbar-h) + 16px); z-index: 35;
-  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
-  background: var(--bg-2); border: 1px solid var(--border); color: var(--text); box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 40%, transparent);
-  opacity: 0; transform: translateY(6px); transition: opacity var(--ease), transform var(--ease), background var(--ease);
-}
-.to-top.is-visible { opacity: 1; transform: none; }
-.to-top:hover { background: var(--hover); }
 
 .entity-header { justify-content: flex-start; align-items: center; gap: 16px; }
 .back-link { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 13px; }
@@ -657,7 +646,6 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
      place, and the page ends above it rather than under it. */
   .app.has-mobile-dock { padding-bottom: calc(var(--mobile-nav-space) + env(safe-area-inset-bottom, 0px)); }
   .app.has-mobile-dock .statusbar { display: none; }
-  .app.has-mobile-dock .to-top { bottom: calc(var(--mobile-nav-space) + env(safe-area-inset-bottom, 0px) + 16px); }
   .mobile-nav-foot { display: contents; }
   .content { padding: 20px 16px 48px; }
   

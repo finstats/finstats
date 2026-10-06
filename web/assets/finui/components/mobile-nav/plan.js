@@ -2,14 +2,19 @@
 // behind More, and where the thumb arc puts each page. Pure, so a test reads it without a page.
 
 /** The styles, the tab bar first: it is what a menu is before anybody chooses. `space` is how much of the bottom of the
- *  screen the style keeps for itself while closed, so the app can leave the end of its page clear of it. */
+ *  screen the style keeps for itself while closed, so the app can leave the end of its page clear of it; `corner` how far up
+ *  from the bottom it reaches in the right-hand corner (the safe area aside), so what rests there (to-top) stays clear:
+ *  the tab bar's top, the arc's button's, the address pill's. */
 export const STYLES = [
-  { key: 'tabs', label: 'Tab bar', line: 'Four pages always at the bottom; More raises the rest.', space: 64 },
-  { key: 'peek', label: 'Peek', line: 'A sheet that opens half way on the pages used most; drag it up for all of them.', space: 0 },
-  { key: 'full', label: 'Full screen', line: 'The whole screen becomes the menu, in large type.', space: 0 },
-  { key: 'arc', label: 'Thumb arc', line: 'A corner button fans every page out around the thumb.', space: 72 },
-  { key: 'address', label: 'Address bar', line: 'A pill at the bottom names the page you are on and grows into the menu.', space: 74 },
+  { key: 'tabs', label: 'Tab bar', line: 'Four pages always at the bottom; More raises the rest.', space: 64, corner: 64 },
+  { key: 'peek', label: 'Peek', line: 'A sheet that opens half way on the pages used most; drag it up for all of them.', space: 0, corner: 0 },
+  { key: 'full', label: 'Full screen', line: 'The whole screen becomes the menu, in large type.', space: 0, corner: 0 },
+  { key: 'arc', label: 'Thumb arc', line: 'A corner button fans every page out around the thumb.', space: 72, corner: 72 },
+  { key: 'address', label: 'Address bar', line: 'A pill at the bottom names the page you are on and grows into the menu.', space: 74, corner: 62 },
 ];
+
+/** How much of the screen's bottom-right corner a style keeps while closed, as desktop-nav's cornerOf says it. */
+export const cornerOf = (style) => ({ bottom: STYLES.find((s) => s.key === styleOf(style)).corner, right: 0 });
 
 /** A stored choice as a style: one nobody knows — from an older or newer version — is the tab bar. */
 export const styleOf = (value) => (STYLES.some((s) => s.key === value) ? value : STYLES[0].key);

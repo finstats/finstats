@@ -13,6 +13,9 @@ import { themeSwitch as themeSwitchOf } from '../finui/components/theme-switch/t
 import { button } from '../finui/components/button/button.js';
 import { mobileNav, STYLES, styleOf } from '../finui/components/mobile-nav/mobile-nav.js';
 import { desktopNav, STYLES as DESKTOP_STYLES, styleOf as desktopStyleOf, sideOf } from '../finui/components/desktop-nav/desktop-nav.js';
+import { cornerOf as desktopCornerOf } from '../finui/components/desktop-nav/plan.js';
+import { cornerOf as mobileCornerOf } from '../finui/components/mobile-nav/plan.js';
+import { toTop as toTopButton } from '../finui/components/to-top/to-top.js';
 
 let shell = null; // {el, content, setActive, destroy, userId}
 let bare = null;
@@ -56,6 +59,7 @@ function buildShell() {
   // wide screen). The app lays its page beside whatever edge the style keeps (STYLES: a side, the bottom or the top), and the
   // dock sends the status bar to the top.
   const desktopSlot = h('div', { class: 'desktop-nav' });
+  const corners = { desktop: null, mobile: null };   // what keeps the bottom-right corner, for to-top (below)
   let desktop = null, here = null;
   const pagesOf = () => items.map((n) => ({ key: n.href, href: n.href, label: n.label, icon: n.icon, group: n.group, primary: !!n.primary, dot: n.dot }));
   function buildDesktop() {
@@ -73,6 +77,9 @@ function buildShell() {
     for (const c of ['nav-left', 'nav-right', 'nav-dock', 'nav-command']) el.classList.remove(c);
     el.classList.add(side ? `nav-${side}` : edge === 'bottom' ? 'nav-dock' : 'nav-command');
     el.style.setProperty('--desktop-nav-size', `${size}px`);
+    // The corner beside the menu: the dock leaves it free (the status bar went to the top), a side on the right keeps it.
+    corners.desktop = [desktopCornerOf(style, side), edge === 'bottom' ? null : { bottom: bar }];
+    placeToTop();
   }
   const stopDesktop = onDesktopNavChange(buildDesktop);
 
@@ -93,6 +100,10 @@ function buildShell() {
     const space = STYLES.find((x) => x.key === style).space;
     el.classList.toggle('has-mobile-dock', space > 0);
     el.style.setProperty('--mobile-nav-space', `${space}px`);
+    // A menu that keeps the bottom takes the status bar's place; without one, the status bar is what is there.
+    const bar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--statusbar-h')) || 26;
+    corners.mobile = [mobileCornerOf(style), space > 0 ? null : { bottom: bar }];
+    placeToTop();
   }
   const stopMobile = onMobileNavChange(buildMobile);
   const stopDots = onVersionSeen(() => { if (mobile) mobile.repaint(); if (desktop) desktop.repaint(); });
@@ -185,27 +196,14 @@ function buildShell() {
   }
   pollSummary();
 
-  // ---- scroll to top (sits above the status bar)
-  const toTop = h('button', { type: 'button', class: 'to-top', 'aria-label': 'Scroll to top', hidden: true }, icon('arrowUp', 16));
-  toTop.addEventListener('click', () => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
-    main.focus({ preventScroll: true });
-  });
-  let ticking = false;
-  const onScroll = () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => {
-      ticking = false;
-      const show = window.scrollY > 400;
-      if (show) { toTop.hidden = false; requestAnimationFrame(() => toTop.classList.add('is-visible')); }
-      else { toTop.classList.remove('is-visible'); setTimeout(() => { if (window.scrollY <= 400) toTop.hidden = true; }, 160); }
-    });
-  };
-  window.addEventListener('scroll', onScroll, { passive: true });
+  // ---- scroll to top: FinUI's to-top, resting clear of whatever keeps the bottom-right corner in this layout (the menus'
+  // corners and the status bar, told by buildDesktop and buildMobile), the phone's or the desktop's by the width.
+  const toTop = toTopButton({ onTop: () => main.focus({ preventScroll: true }) });
+  const narrow = matchMedia('(max-width: 820px)');
+  const placeToTop = () => toTop.place((narrow.matches ? corners.mobile : corners.desktop) || []);
+  narrow.addEventListener('change', placeToTop);
 
-  const el = h('div', { class: 'app' }, topbar, desktopSlot, main, statusbar, toTop, mobileSlot);
+  const el = h('div', { class: 'app' }, topbar, desktopSlot, main, statusbar, toTop.el, mobileSlot);
   buildDesktop();
   buildMobile();
 
@@ -225,7 +223,8 @@ function buildShell() {
       dead = true;
       clearTimeout(sbTimer);
       if (sbAbort) sbAbort.abort();
-      window.removeEventListener('scroll', onScroll);
+      toTop.destroy();
+      narrow.removeEventListener('change', placeToTop);
       document.removeEventListener('pointerdown', onPress, true);
       if (searching) { searching.panel.destroy(); searching = null; }
       stopMobile();

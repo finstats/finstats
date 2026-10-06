@@ -1571,6 +1571,29 @@
         "core",
         "chart"
       ]
+    },
+    {
+      "name": "to-top",
+      "category": "pattern",
+      "files": [
+        "components/to-top/to-top.js",
+        "components/to-top/plan.js",
+        "components/to-top/to-top.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--bg-2",
+        "--border",
+        "--ease",
+        "--hover",
+        "--radius-lg",
+        "--radius-pill",
+        "--shadow",
+        "--text"
+      ],
+      "requires": [
+        "core"
+      ]
     }
   ]
 }
