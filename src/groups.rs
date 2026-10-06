@@ -116,7 +116,7 @@ pub fn detect(conn: &mut Connection, window_s: i64, only_item: Option<&str>) -> 
     {
         let filter = if only_item.is_some() { "AND item_id = ?1" } else { "" };
         let args: Vec<SqlValue> = only_item.map(|i| vec![i.to_string().into()]).unwrap_or_default();
-        let mut stmt = tx.prepare(&format!("SELECT item_id, id, user_id, started_at, ended_at, group_id FROM playbacks WHERE 1 = 1 {filter} ORDER BY item_id, started_at, id"))?;
+        let mut stmt = tx.prepare(&format!("SELECT item_id, id, user_id, started_at, ended_at, group_id FROM visible_playbacks WHERE 1 = 1 {filter} ORDER BY item_id, started_at, id"))?;
         let mut rows = stmt.query(params_from_iter(args.iter()))?;
         // Each title's plays with the group they have now; what the clustering says is compared with it, and only the
         // plays whose group actually changes are written. (Resetting every group to NULL and writing them all back
@@ -189,7 +189,7 @@ pub fn regroup_at_start(conn: &mut Connection, window_s: i64, now: i64) -> Resul
         }
         Some(since) => {
             let titles: Vec<String> = conn
-                .prepare("SELECT DISTINCT item_id FROM playbacks WHERE ended_at >= ?1 AND item_id IS NOT NULL")?
+                .prepare("SELECT DISTINCT item_id FROM visible_playbacks WHERE ended_at >= ?1 AND item_id IS NOT NULL")?
                 .query_map([since], |r| r.get(0))?
                 .collect::<Result<_, _>>()?;
             for title in &titles {
@@ -319,10 +319,10 @@ pub fn sessions_for(conn: &Connection, w: &Window, library_id: Option<&str>, use
             args.push(u.into());
         }
         if let Some(s) = w.since {
-            inner.push("NOT EXISTS (SELECT 1 FROM playbacks e WHERE e.group_id = g.group_id AND e.started_at < ?)");
+            inner.push("NOT EXISTS (SELECT 1 FROM visible_playbacks e WHERE e.group_id = g.group_id AND e.started_at < ?)");
             args.push(s.into());
         }
-        wh.push(format!("p.group_id IN (SELECT g.group_id FROM playbacks g WHERE {})", inner.join(" AND ")));
+        wh.push(format!("p.group_id IN (SELECT g.group_id FROM visible_playbacks g WHERE {})", inner.join(" AND ")));
     }
     if let Some(l) = library_id {
         wh.push("p.library_id = ?".into());
@@ -330,7 +330,7 @@ pub fn sessions_for(conn: &Connection, w: &Window, library_id: Option<&str>, use
     }
     if !user_ids.is_empty() {
         let holes = std::iter::repeat_n("?", user_ids.len()).collect::<Vec<_>>().join(", ");
-        wh.push(format!("p.group_id IN (SELECT group_id FROM playbacks WHERE user_id IN ({holes}) AND group_id IS NOT NULL)"));
+        wh.push(format!("p.group_id IN (SELECT group_id FROM visible_playbacks WHERE user_id IN ({holes}) AND group_id IS NOT NULL)"));
         for u in user_ids {
             args.push(u.clone().into());
         }
@@ -338,7 +338,7 @@ pub fn sessions_for(conn: &Connection, w: &Window, library_id: Option<&str>, use
     let sql = format!(
         "SELECT p.group_id, p.user_id, COALESCE(u.name, p.user_name), (u.image_tag IS NOT NULL), p.duration_s, p.started_at,
                 p.item_id, p.item_name, p.item_type, p.series_id, p.series_name, p.season_number, p.episode_number
-         FROM playbacks p LEFT JOIN users u ON u.id = p.user_id WHERE {} ORDER BY p.group_id, p.started_at",
+         FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id WHERE {} ORDER BY p.group_id, p.started_at",
         wh.join(" AND ")
     );
     let mut stmt = conn.prepare(&sql)?;
@@ -509,7 +509,7 @@ pub fn recent(sessions: &[Session]) -> Vec<Value> {
 fn watch_totals(c: &Connection, cond: &crate::stats::Cond) -> Result<BTreeMap<String, (String, bool, i64)>> {
     let mut stmt = c.prepare(&format!(
         "SELECT p.user_id, COALESCE(u.name, p.user_name), (u.image_tag IS NOT NULL), COALESCE(SUM(p.duration_s), 0)
-         FROM playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id",
+         FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id",
         cond.sql()
     ))?;
     let rows = stmt.query_map(params_from_iter(cond.args.iter()), |r| Ok((r.get::<_, String>(0)?, (r.get(1)?, r.get(2)?, r.get(3)?))))?;

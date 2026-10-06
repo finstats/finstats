@@ -64,7 +64,7 @@ pub fn missing(conn: &Connection) -> Result<Vec<Missing>> {
         .prepare(
             "SELECT p.item_id, MAX(p.item_type), MAX(p.item_name), MAX(p.series_name), MAX(p.season_number), MAX(p.episode_number), COUNT(*), MAX(p.ended_at),
                     group_concat(DISTINCT p.source)
-             FROM playbacks p WHERE p.item_id IN (SELECT value FROM json_each(?1)) AND p.item_type IN ('Movie', 'Video', 'Episode')
+             FROM visible_playbacks p WHERE p.item_id IN (SELECT value FROM json_each(?1)) AND p.item_type IN ('Movie', 'Video', 'Episode')
              GROUP BY p.item_id
              ORDER BY MAX(p.item_type) = 'Episode', COALESCE(MAX(p.series_name), MAX(p.item_name)) COLLATE NOCASE,
                       MAX(p.season_number), MAX(p.episode_number), p.item_id",

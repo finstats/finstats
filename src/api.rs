@@ -58,7 +58,7 @@ pub fn router(app: App) -> Router {
         .route("/licenses", get(crate::licenses::licenses))
         .route("/activity", get(stats::activity))
         .route("/activity/{id}", get(stats::activity_detail))
-        .route("/activity/{id}", delete(stats::activity_delete))
+        .route("/activity/{id}", axum::routing::put(stats::activity_set_deleted))
         .route("/users", get(stats::users))
         .route("/users/{id}", get(stats::user_detail))
         .route("/users/{id}/shows", get(profile::shows))
@@ -132,7 +132,7 @@ pub fn router(app: App) -> Router {
         .route("/library/health/undismiss", post(crate::health::post_undismiss))
         .route("/backups", get(list_backups).post(create_backup))
         .route("/backups/restore", post(restore_upload).layer(DefaultBodyLimit::disable()))
-        .route("/backups/{name}", get(download_backup).delete(delete_backup))
+        .route("/backups/{name}", get(download_backup).put(set_backup_deleted))
         .route("/backups/{name}/restore", post(restore_stored))
         .fallback(|| async { ApiError::not_found("Endpoint") })
         .layer(middleware::from_fn_with_state(app.clone(), same_origin));
@@ -707,7 +707,7 @@ async fn get_tasks(State(app): State<App>, Manager(_): Manager) -> ApiResult {
     let dbinfo = app
         .db
         .call(move |c| {
-            let (plays, oldest): (i64, Option<i64>) = c.query_row("SELECT COUNT(*), MIN(started_at) FROM playbacks", [], |r| Ok((r.get(0)?, r.get(1)?)))?;
+            let (plays, oldest): (i64, Option<i64>) = c.query_row("SELECT COUNT(*), MIN(started_at) FROM visible_playbacks", [], |r| Ok((r.get(0)?, r.get(1)?)))?;
             let items: i64 = c.query_row("SELECT COUNT(*) FROM items WHERE removed = 0", [], |r| r.get(0))?;
             let size: u64 = ["finstats.db", "finstats.db-wal"].iter().filter_map(|f| std::fs::metadata(data_dir.join(f)).ok()).map(|m| m.len()).sum();
             Ok(json!({ "size_bytes": size, "plays": plays, "items": items, "oldest_play_at": oldest }))
@@ -929,13 +929,13 @@ fn backup_path(app: &App, name: &str) -> ApiResult<PathBuf> {
 
 async fn list_backups(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -> ApiResult {
     let dir = crate::backup::dir(&app.data_dir);
-    let backups = tokio::task::spawn_blocking(move || crate::backup::list(&dir)).await.map_err(anyhow::Error::from)?;
+    let (backups, deleted) = tokio::task::spawn_blocking(move || (crate::backup::list(&dir), crate::backup::trashed(&dir))).await.map_err(anyhow::Error::from)?;
     let s = app.settings();
     // When the next one is written is the backup task's schedule (Settings → Tasks), measured from its last run.
     let triggers = crate::schedule::effective("backup", &s);
     let last = app.tasks.snapshot().into_iter().find(|t| t.id == "backup").and_then(|t| t.finished_at);
     let next_at = crate::schedule::next_at(&triggers, db::now(), last, &chrono::Local);
-    Ok(Json(json!({ "backups": backups, "scheduled": !triggers.is_empty(), "keep": s.backup_keep, "next_at": next_at })))
+    Ok(Json(json!({ "backups": backups, "deleted": deleted, "scheduled": !triggers.is_empty(), "keep": s.backup_keep, "next_at": next_at })))
 }
 
 async fn create_backup(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin) -> ApiResult<Response> {
@@ -969,11 +969,29 @@ async fn download_backup(State(app): State<App>, JellyfinAdmin(user): JellyfinAd
         .unwrap())
 }
 
-async fn delete_backup(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(name): Path<String>) -> ApiResult {
-    let path = backup_path(&app, &name)?;
-    tokio::fs::remove_file(&path).await.map_err(anyhow::Error::from)?;
-    audit::record(&app, audit::Entry::new("backup_deleted", Actor::from(&user)).target(name.clone()));
-    Ok(Json(json!({ "ok": true })))
+#[derive(Deserialize)]
+struct TrashBody {
+    deleted: bool,
+}
+
+/// `PUT /api/backups/{name}` `{"deleted": true|false}`: a backup into the trash, or back out of it. Audited when it moved.
+async fn set_backup_deleted(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(name): Path<String>, Json(body): Json<TrashBody>) -> ApiResult {
+    use crate::backup::TrashError;
+    let dir = crate::backup::dir(&app.data_dir);
+    let (n, deleted) = (name.clone(), body.deleted);
+    let moved = tokio::task::spawn_blocking(move || if deleted { crate::backup::move_to_trash(&dir, &n, db::now()) } else { crate::backup::take_out_of_trash(&dir, &n) })
+        .await
+        .map_err(anyhow::Error::from)?;
+    let at = match moved {
+        Ok(at) => at,
+        Err(TrashError::NotABackup | TrashError::NotFound) => return Err(ApiError::not_found("Backup")),
+        Err(TrashError::Taken) => return Err(ApiError::new(StatusCode::CONFLICT, "A backup of that name is there already: delete or rename it first")),
+        Err(TrashError::Io(e)) => return Err(anyhow::Error::from(e).into()),
+    };
+    let kind = if deleted { "backup_deleted" } else { "backup_undeleted" };
+    audit::record(&app, audit::Entry::new(kind, Actor::from(&user)).target(name.clone()));
+    let deleted_at = deleted.then_some(at);
+    Ok(Json(json!({ "ok": true, "name": name, "deleted": deleted, "deleted_at": deleted_at, "purge_at": deleted_at.map(|at| at + crate::trash::KEEP_S) })))
 }
 
 /// How an import ended, for the audit log; written from the worker thread.

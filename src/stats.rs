@@ -264,7 +264,7 @@ pub(crate) fn totals(conn: &Connection, cond: &Cond) -> Result<Value> {
     let sql = format!(
         "SELECT COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s,
                 COUNT(DISTINCT p.user_id) AS active_users, COUNT(DISTINCT p.item_id) AS distinct_items
-         FROM playbacks p {}",
+         FROM visible_playbacks p {}",
         cond.sql()
     );
     Ok(Value::Object(one_json(conn, &sql, &cond.args)?.unwrap_or_default()))
@@ -279,7 +279,7 @@ pub(crate) fn daily(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<(Ve
     let first: Option<String> = match scope.since {
         Some(s) => conn.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [s], |r| r.get(0))?,
         None => conn.query_row(
-            &format!("SELECT date(MIN(p.started_at), 'unixepoch', 'localtime') FROM playbacks p {}", cond.sql()),
+            &format!("SELECT date(MIN(p.started_at), 'unixepoch', 'localtime') FROM visible_playbacks p {}", cond.sql()),
             params_from_iter(cond.args.iter()),
             |r| r.get(0),
         )?,
@@ -297,7 +297,7 @@ pub(crate) fn daily(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<(Ve
         "SELECT {bucket_sql} AS d,
                 CASE p.item_type WHEN 'Movie' THEN 'Movie' WHEN 'Episode' THEN 'Episode' WHEN 'Audio' THEN 'Audio' ELSE 'Other' END AS g,
                 COUNT(*), COALESCE(SUM(p.duration_s), 0)
-         FROM playbacks p {} GROUP BY d, g",
+         FROM visible_playbacks p {} GROUP BY d, g",
         cond.sql()
     );
     let mut found: std::collections::HashMap<(String, String), (i64, i64)> = Default::default();
@@ -330,7 +330,7 @@ pub(crate) fn heatmap(conn: &Connection, cond: &Cond) -> Result<Value> {
         "SELECT CAST(strftime('%w', p.started_at, 'unixepoch', 'localtime') AS INTEGER),
                 CAST(strftime('%H', p.started_at, 'unixepoch', 'localtime') AS INTEGER),
                 COUNT(*), COALESCE(SUM(p.duration_s), 0)
-         FROM playbacks p {} GROUP BY 1, 2",
+         FROM visible_playbacks p {} GROUP BY 1, 2",
         cond.sql()
     );
     let mut plays = vec![vec![0i64; 24]; 7];
@@ -350,7 +350,7 @@ pub(crate) fn heatmap(conn: &Connection, cond: &Cond) -> Result<Value> {
 fn buckets(conn: &Connection, cond: &Cond, expr: &str, from_extra: &str, max: usize) -> Result<Vec<Value>> {
     let sql = format!(
         "SELECT {expr} AS name, COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s
-         FROM playbacks p {from_extra} {} GROUP BY 1 HAVING name IS NOT NULL ORDER BY plays DESC, watch_s DESC",
+         FROM visible_playbacks p {from_extra} {} GROUP BY 1 HAVING name IS NOT NULL ORDER BY plays DESC, watch_s DESC",
         cond.sql()
     );
     Ok(top_and_other(rows_json(conn, &sql, &cond.args)?, max))
@@ -398,7 +398,7 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, by_pla
             (
                 format!(
                     "SELECT p.item_id AS id, COALESCE(i.name, MAX(p.item_name)) AS name, {sub} AS sub, p.item_id AS image_item_id, {agg}
-                     FROM playbacks p LEFT JOIN items i ON i.id = p.item_id {} GROUP BY p.item_id ORDER BY {order} LIMIT {limit}",
+                     FROM visible_playbacks p LEFT JOIN items i ON i.id = p.item_id {} GROUP BY p.item_id ORDER BY {order} LIMIT {limit}",
                     c.sql()
                 ),
                 c,
@@ -410,7 +410,7 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, by_pla
                 format!(
                     "SELECT p.series_id AS id, COALESCE(i.name, MAX(p.series_name), 'Unknown series') AS name,
                             CAST(i.production_year AS TEXT) AS sub, p.series_id AS image_item_id, {agg}
-                     FROM playbacks p LEFT JOIN items i ON i.id = p.series_id {}
+                     FROM visible_playbacks p LEFT JOIN items i ON i.id = p.series_id {}
                      GROUP BY COALESCE(p.series_id, p.series_name) ORDER BY {order} LIMIT {limit}",
                     c.sql()
                 ),
@@ -421,7 +421,7 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, by_pla
             format!(
                 "SELECT p.user_id AS id, COALESCE(u.name, MAX(p.user_name)) AS name, NULL AS sub, NULL AS image_item_id,
                         COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s, MAX(p.ended_at) AS last_played
-                 FROM playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id ORDER BY {order} LIMIT {limit}",
+                 FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id ORDER BY {order} LIMIT {limit}",
                 cond.sql()
             ),
             cond.clone(),
@@ -432,7 +432,7 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, by_pla
             (
                 format!(
                     "SELECT NULL AS id, {col} AS name, NULL AS sub, NULL AS image_item_id, {agg}
-                     FROM playbacks p {} GROUP BY {col} ORDER BY {order} LIMIT {limit}",
+                     FROM visible_playbacks p {} GROUP BY {col} ORDER BY {order} LIMIT {limit}",
                     c.sql()
                 ),
                 c,
@@ -443,7 +443,7 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, by_pla
             (
                 format!(
                     "SELECT p.library_id AS id, COALESCE(l.name, 'Removed library') AS name, l.collection_type AS sub, p.library_id AS image_item_id, {agg}
-                     FROM playbacks p LEFT JOIN libraries l ON l.id = p.library_id {} GROUP BY p.library_id ORDER BY {order} LIMIT {limit}",
+                     FROM visible_playbacks p LEFT JOIN libraries l ON l.id = p.library_id {} GROUP BY p.library_id ORDER BY {order} LIMIT {limit}",
                     c.sql()
                 ),
                 c,
@@ -456,7 +456,7 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, by_pla
                         COALESCE(i.name, MAX(COALESCE(p.series_name, p.item_name))) AS name,
                         COALESCE(CAST(i.production_year AS TEXT), i.album_artist) AS sub,
                         COALESCE(p.series_id, p.item_id) AS image_item_id, {agg}
-                 FROM playbacks p LEFT JOIN items i ON i.id = COALESCE(p.series_id, p.item_id) {}
+                 FROM visible_playbacks p LEFT JOIN items i ON i.id = COALESCE(p.series_id, p.item_id) {}
                  GROUP BY COALESCE(p.series_id, p.item_id) ORDER BY {order} LIMIT {limit}",
                 cond.sql()
             ),
@@ -478,9 +478,9 @@ const PLAY_SELECT: &str = "SELECT p.id, p.source, p.active, p.user_id, COALESCE(
     p.client, p.device_name, p.device_id, p.app_version, p.remote_ip, p.play_method, p.container, p.bitrate,
     p.video_codec, p.width, p.height, p.video_range, p.bit_depth,
     p.audio_codec, p.audio_channels, p.audio_language, p.subtitle_codec, p.subtitle_language, p.transcode,
-    p.pause_count, p.seek_count, p.start_position_s, p.is_local, p.group_id,
-    CASE WHEN p.group_id IS NULL THEN NULL ELSE (SELECT COUNT(DISTINCT g.user_id) FROM playbacks g WHERE g.group_id = p.group_id) END AS group_size
-  FROM playbacks p
+    p.pause_count, p.seek_count, p.start_position_s, p.is_local, p.group_id, p.deleted_at,
+    CASE WHEN p.group_id IS NULL THEN NULL ELSE (SELECT COUNT(DISTINCT g.user_id) FROM visible_playbacks g WHERE g.group_id = p.group_id) END AS group_size
+  FROM visible_playbacks p
   LEFT JOIN items i ON i.id = p.item_id
   LEFT JOIN users u ON u.id = p.user_id";
 
@@ -540,6 +540,8 @@ pub struct ActivityQuery {
     source: Option<String>,
     sort: Option<String>,
     dir: Option<String>,
+    /// `1`: the plays in the trash instead of history, scoped the same way.
+    deleted: Option<i64>,
 }
 
 /// `ORDER BY` for a paginated list: a whitelisted column, empty values last whichever way it runs,
@@ -592,7 +594,7 @@ pub(crate) fn sources_present(conn: &Connection, whose: &Cond) -> Result<Vec<&'s
     let mut out = vec![];
     for source in SOURCES {
         let cond = whose.with("p.source = ?", source.to_string());
-        let sql = format!("SELECT EXISTS(SELECT 1 FROM playbacks p {})", cond.sql());
+        let sql = format!("SELECT EXISTS(SELECT 1 FROM visible_playbacks p {})", cond.sql());
         if conn.query_row(&sql, params_from_iter(cond.args.iter()), |r| r.get::<_, bool>(0))? {
             out.push(source);
         }
@@ -679,16 +681,34 @@ pub async fn activity(State(app): State<App>, user: AuthUser, Query(q): Query<Ac
                 cond.args.push(like.clone().into());
             }
         }
-        let total: i64 = c.query_row(&format!("SELECT COUNT(*) FROM playbacks p {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0))?;
+        // The trash is listed like history, from its own view, newest deletion first.
+        let trash = q.deleted == Some(1);
+        let from = if trash { "trashed_playbacks" } else { "visible_playbacks" };
+        let total: i64 = c.query_row(&format!("SELECT COUNT(*) FROM {from} p {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0))?;
         // Sorting by address is only for those who are shown addresses.
         let sort = q.sort.as_deref().filter(|k| *k != "ip" || scope.perms.see_network);
-        let order = order_by(&ACTIVITY_SORTS, sort, q.dir.as_deref(), "p.ended_at DESC, p.id DESC");
-        let sql = format!("{PLAY_SELECT} {} ORDER BY {order} LIMIT {per_page} OFFSET {}", cond.sql(), (page - 1) * per_page);
-        let rows: Vec<Value> = rows_json(c, &sql, &cond.args)?.into_iter().map(|m| decorate_play(m, scope.perms.see_network, false)).collect();
+        let order = order_by(&ACTIVITY_SORTS, sort, q.dir.as_deref(), if trash { "p.deleted_at DESC, p.id DESC" } else { "p.ended_at DESC, p.id DESC" });
+        let select = PLAY_SELECT.replacen("FROM visible_playbacks p\n", &format!("FROM {from} p\n"), 1);
+        let sql = format!("{select} {} ORDER BY {order} LIMIT {per_page} OFFSET {}", cond.sql(), (page - 1) * per_page);
+        let rows: Vec<Value> = rows_json(c, &sql, &cond.args)?
+            .into_iter()
+            .map(|mut m| {
+                let purge_at = m.get("deleted_at").and_then(Value::as_i64).map(|at| at + crate::trash::KEEP_S);
+                m.insert("purge_at".into(), json!(purge_at));
+                decorate_play(m, scope.perms.see_network, false)
+            })
+            .collect();
         // What this history is made of, so the page can offer a filter for it — and leave it out
         // when there is only one answer.
         let sources = sources_present(c, &scope.whose())?;
-        Ok(json!({ "total": total, "page": page, "per_page": per_page, "rows": rows, "sources": sources }))
+        // How many of these filters' plays wait in the trash, for whoever may bring them back: the page offers the trash
+        // only when it holds something.
+        let in_trash: Option<i64> = if scope.perms.manage && !trash {
+            Some(c.query_row(&format!("SELECT COUNT(*) FROM trashed_playbacks p {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0))?)
+        } else {
+            None
+        };
+        Ok(json!({ "total": total, "page": page, "per_page": per_page, "rows": rows, "sources": sources, "in_trash": in_trash }))
     })
     .await?;
     Ok(Json(out))
@@ -707,7 +727,7 @@ pub async fn activity_detail(State(app): State<App>, user: AuthUser, Path(id): P
         let with = match play["group_id"].as_i64() {
             Some(g) => rows_json(
                 c,
-                "SELECT DISTINCT p.user_id, COALESCE(u.name, p.user_name) AS user_name FROM playbacks p LEFT JOIN users u ON u.id = p.user_id
+                "SELECT DISTINCT p.user_id, COALESCE(u.name, p.user_name) AS user_name FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id
                  WHERE p.group_id = ?1 AND p.user_id <> ?2 ORDER BY 2",
                 &[g.into(), play["user_id"].as_str().unwrap_or_default().to_string().into()],
             )?,
@@ -720,35 +740,29 @@ pub async fn activity_detail(State(app): State<App>, user: AuthUser, Path(id): P
     found.map(Json).ok_or_else(|| ApiError::not_found("Play"))
 }
 
-/// Delete one finished play: (title, who, when) of what was deleted, `None` when there was no such play.
-/// Its title's groups are found again: whoever it was watched with may now have watched alone.
-fn delete_play(c: &mut Connection, id: i64, group_window_s: i64) -> Result<Option<(String, String, i64)>> {
-    let gone: Option<(String, String, String, i64)> = c
-        .query_row("SELECT item_id, item_name, user_name, started_at FROM playbacks WHERE id = ?1 AND active = 0", [id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
-        .optional()?;
-    let n = c.execute("DELETE FROM playbacks WHERE id = ?1 AND active = 0", [id])?;
-    let Some((item, title, who, started_at)) = gone.filter(|_| n > 0) else { return Ok(None) };
-    crate::groups::detect(c, group_window_s, Some(&item))?;
-    Ok(Some((title, who, started_at)))
+#[derive(Deserialize)]
+pub struct TrashBody {
+    deleted: bool,
 }
 
-pub async fn activity_delete(State(app): State<App>, Manager(user): Manager, Path(id): Path<i64>) -> ApiResult {
+/// `PUT /api/activity/{id}` `{"deleted": true|false}`: a finished play into the trash, or back out of it. Audited only
+/// when it moved; asking for the state a play is already in answers that state.
+pub async fn activity_set_deleted(State(app): State<App>, Manager(user): Manager, Path(id): Path<i64>, Json(body): Json<TrashBody>) -> ApiResult {
     let actor = crate::audit::Actor::from(&user);
     let window = app.settings().group_window_s;
-    let gone = app
+    let state = app
         .db
         .call(move |c| {
-            let gone = delete_play(c, id, window)?;
-            if let Some((title, who, started_at)) = &gone {
-                crate::audit::record_quietly(c, &crate::audit::Entry::new("play_deleted", actor).target(id.to_string()).detail(json!({ "title": title, "user": who, "started_at": started_at })));
+            let state = crate::trash::set_play_deleted(c, id, body.deleted, db::now(), window)?;
+            if let Some(s) = state.as_ref().filter(|s| s.changed) {
+                let kind = if body.deleted { "play_deleted" } else { "play_undeleted" };
+                crate::audit::record_quietly(c, &crate::audit::Entry::new(kind, actor).target(id.to_string()).detail(json!({ "title": s.title, "user": s.user, "started_at": s.started_at })));
             }
-            Ok(gone)
+            Ok(state)
         })
-        .await?;
-    if gone.is_none() {
-        return Err(ApiError::not_found("Play"));
-    }
-    Ok(Json(json!({ "ok": true })))
+        .await?
+        .ok_or_else(|| ApiError::not_found("Play"))?;
+    Ok(Json(json!({ "ok": true, "id": id, "deleted": state.deleted_at.is_some(), "deleted_at": state.deleted_at, "purge_at": state.purge_at() })))
 }
 
 // ---------------------------------------------------------------- stats endpoints
@@ -849,11 +863,11 @@ fn user_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<Vec
                 u.last_login_at, u.last_activity_at,
                 COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s, l.last_played_at,
                 (SELECT CASE WHEN x.series_name IS NOT NULL AND x.item_type = 'Episode' THEN x.series_name || ' — ' || x.item_name ELSE x.item_name END
-                   FROM playbacks x WHERE x.user_id = u.id ORDER BY x.ended_at DESC LIMIT 1) AS last_item_name,
-                (SELECT x.client FROM playbacks x WHERE x.user_id = u.id ORDER BY x.ended_at DESC LIMIT 1) AS last_client
+                   FROM visible_playbacks x WHERE x.user_id = u.id ORDER BY x.ended_at DESC LIMIT 1) AS last_item_name,
+                (SELECT x.client FROM visible_playbacks x WHERE x.user_id = u.id ORDER BY x.ended_at DESC LIMIT 1) AS last_client
          FROM users u
-         LEFT JOIN (SELECT p.user_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s FROM playbacks p {} GROUP BY p.user_id) s ON s.user_id = u.id
-         LEFT JOIN (SELECT user_id, MAX(ended_at) AS last_played_at FROM playbacks GROUP BY user_id) l ON l.user_id = u.id
+         LEFT JOIN (SELECT p.user_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s FROM visible_playbacks p {} GROUP BY p.user_id) s ON s.user_id = u.id
+         LEFT JOIN (SELECT user_id, MAX(ended_at) AS last_played_at FROM visible_playbacks GROUP BY user_id) l ON l.user_id = u.id
          {filter}
          ORDER BY watch_s DESC, u.name COLLATE NOCASE",
         cond.sql()
@@ -880,7 +894,7 @@ fn user_devices(c: &Connection, cond: &Cond, see_network: bool) -> Result<Vec<Ma
         &format!(
             "SELECT p.device_id, MAX(p.device_name) AS device_name, MAX(p.client) AS client, MAX(p.app_version) AS app_version,
                     COUNT(*) AS plays, MAX(p.ended_at) AS last_seen
-             FROM playbacks p {} GROUP BY COALESCE(p.device_id, p.device_name) ORDER BY last_seen DESC LIMIT 50",
+             FROM visible_playbacks p {} GROUP BY COALESCE(p.device_id, p.device_name) ORDER BY last_seen DESC LIMIT 50",
             cond.sql()
         ),
         &cond.args,
@@ -911,7 +925,7 @@ pub async fn user_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
             c,
             &format!(
                 "SELECT COALESCE(SUM(p.item_type = 'Movie'), 0) AS movies, COALESCE(SUM(p.item_type = 'Episode'), 0) AS episodes,
-                        COALESCE(SUM(p.item_type = 'Audio'), 0) AS tracks FROM playbacks p {}",
+                        COALESCE(SUM(p.item_type = 'Audio'), 0) AS tracks FROM visible_playbacks p {}",
                 cond.sql()
             ),
             &cond.args,
@@ -929,7 +943,7 @@ pub async fn user_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
                 c,
                 &format!(
                     "SELECT p.remote_ip AS ip, COUNT(*) AS plays, MIN(p.started_at) AS first_seen, MAX(p.ended_at) AS last_seen
-                     FROM playbacks p {} GROUP BY p.remote_ip ORDER BY last_seen DESC LIMIT 100",
+                     FROM visible_playbacks p {} GROUP BY p.remote_ip ORDER BY last_seen DESC LIMIT 100",
                     ipc.sql()
                 ),
                 &ipc.args,
@@ -969,7 +983,7 @@ fn library_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<
     let mut args = cond.args.clone();
     // A library that was deleted in Jellyfin and never had a single play is just noise in the list.
     // (It stays reachable by id, and one with history stays listed, marked as removed.)
-    let mut filter = "WHERE (l.removed = 0 OR EXISTS (SELECT 1 FROM playbacks x WHERE x.library_id = l.id))".to_string();
+    let mut filter = "WHERE (l.removed = 0 OR EXISTS (SELECT 1 FROM visible_playbacks x WHERE x.library_id = l.id))".to_string();
     if let Some(id) = only {
         filter = "WHERE l.id = ?".into();
         args.push(id.to_string().into());
@@ -985,7 +999,7 @@ fn library_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<
                            SUM(type = 'Series') AS series_count, SUM(type = 'Episode') AS episode_count, SUM(size_bytes) AS size_bytes
                     FROM items WHERE removed = 0 GROUP BY library_id) c ON c.library_id = l.id
          LEFT JOIN (SELECT p.library_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, MAX(p.ended_at) AS last_played_at
-                    FROM playbacks p {} GROUP BY p.library_id) s ON s.library_id = l.id
+                    FROM visible_playbacks p {} GROUP BY p.library_id) s ON s.library_id = l.id
          {filter}
          ORDER BY l.removed, watch_s DESC, l.name COLLATE NOCASE",
         cond.sql()
@@ -1078,9 +1092,9 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
             None => one_json(
                 c,
                 "SELECT ?1 AS id, name, type, 1 AS removed, 0 AS has_backdrop FROM (
-                    SELECT item_name AS name, item_type AS type, ended_at FROM playbacks WHERE item_id = ?1
+                    SELECT item_name AS name, item_type AS type, ended_at FROM visible_playbacks WHERE item_id = ?1
                     UNION ALL
-                    SELECT series_name, 'Series', ended_at FROM playbacks WHERE series_id = ?1
+                    SELECT series_name, 'Series', ended_at FROM visible_playbacks WHERE series_id = ?1
                  ) ORDER BY ended_at DESC LIMIT 1",
                 &[id.clone().into()],
             )?,
@@ -1114,7 +1128,7 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
             c,
             &format!(
                 "SELECT COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT p.user_id) AS users,
-                        MAX(p.ended_at) AS last_played_at FROM playbacks p {}",
+                        MAX(p.ended_at) AS last_played_at FROM visible_playbacks p {}",
                 cond.sql()
             ),
             &cond.args,
@@ -1124,7 +1138,7 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
             &format!(
                 "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) AS user_name, COUNT(*) AS plays,
                         COALESCE(SUM(p.duration_s), 0) AS watch_s, MAX(p.ended_at) AS last_played_at
-                 FROM playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id ORDER BY watch_s DESC LIMIT 50",
+                 FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id ORDER BY watch_s DESC LIMIT 50",
                 cond.sql()
             ),
             &cond.args,
@@ -1256,7 +1270,7 @@ fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<
     let runtime = match runtime_s.filter(|r| *r > 0) {
         Some(r) => r,
         None => c
-            .query_row(&format!("SELECT MAX(p.runtime_s) FROM playbacks p {}", ended.sql()), params_from_iter(ended.args.iter()), |r| r.get::<_, Option<i64>>(0))?
+            .query_row(&format!("SELECT MAX(p.runtime_s) FROM visible_playbacks p {}", ended.sql()), params_from_iter(ended.args.iter()), |r| r.get::<_, Option<i64>>(0))?
             .unwrap_or(0),
     };
     if runtime <= 0 {
@@ -1264,7 +1278,7 @@ fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<
     }
     let mut stmt = c.prepare(&format!(
         "SELECT MAX(0, MIN(?, COALESCE({STOP_S}, 0))) AS stop_s, {STOP_MEASURED} AS measured
-         FROM playbacks p {}",
+         FROM visible_playbacks p {}",
         ended.sql()
     ))?;
     let mut args: Vec<SqlValue> = vec![runtime.into()];
@@ -1281,7 +1295,7 @@ fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<
     // is a play's first subtitle change when it is to a track rather than to "Off" — the state before
     // the first change is never an event, so a later language change is not a second switch-on.
     let positions = |sql: &str| -> Result<Vec<i64>> {
-        let mut stmt = c.prepare(&format!("SELECT e.position_s FROM playbacks p JOIN playback_events e ON e.playback_id = p.id {} AND {sql}", ended.sql()))?;
+        let mut stmt = c.prepare(&format!("SELECT e.position_s FROM visible_playbacks p JOIN playback_events e ON e.playback_id = p.id {} AND {sql}", ended.sql()))?;
         let out = stmt.query_map(params_from_iter(ended.args.iter()), |r| r.get::<_, Option<i64>>(0))?.filter_map(Result::transpose).collect::<Result<_, _>>()?;
         Ok(out)
     };
@@ -1319,7 +1333,7 @@ fn series_seasons(c: &Connection, cond: &Cond, series_id: &str, series_removed: 
              LEFT JOIN items sn ON sn.id = e.season_id
              LEFT JOIN (SELECT p.item_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, COUNT(DISTINCT p.user_id) AS users,
                                SUM(COALESCE(p.runtime_s, 0) > 0 AND {STOP_S} >= 0.9 * p.runtime_s) AS finished
-                        FROM playbacks p {} GROUP BY p.item_id) s ON s.item_id = e.id
+                        FROM visible_playbacks p {} GROUP BY p.item_id) s ON s.item_id = e.id
              WHERE e.series_id = ? AND e.type = 'Episode' AND (e.removed = 0 OR {series_removed})
              ORDER BY COALESCE(e.parent_index_number, 9999), COALESCE(e.index_number, 9999), e.name",
             cond.sql(),
@@ -1359,7 +1373,7 @@ fn rewound_sql(where_sql: &str) -> String {
     format!(
         "WITH r AS (SELECT e.playback_id, e.position_s FROM playback_events e WHERE e.kind = 'seek' AND e.from_s > e.position_s),
               -- the plays the caller asked about: the counts and the hot spot both come from these
-              f AS MATERIALIZED (SELECT p.id, p.item_id, p.item_name, p.item_type, p.series_id, p.series_name FROM playbacks p {where_sql})
+              f AS MATERIALIZED (SELECT p.id, p.item_id, p.item_name, p.item_type, p.series_id, p.series_name FROM visible_playbacks p {where_sql})
          SELECT p.item_id AS id, COALESCE(i.name, MAX(p.item_name)) AS name, MAX(p.item_type) AS type, MAX(p.series_id) AS series_id, MAX(p.series_name) AS series_name,
                 COUNT(DISTINCT p.id) AS plays, COUNT(r.playback_id) AS rewinds, ROUND(COUNT(r.playback_id) * 1.0 / COUNT(DISTINCT p.id), 2) AS per_play,
                 (SELECT (r2.position_s / 60) * 60 FROM r r2 JOIN f p2 ON p2.id = r2.playback_id WHERE p2.item_id = p.item_id
@@ -1383,7 +1397,7 @@ fn file_signals_for(c: &Connection, scope: &Scope) -> Result<Value> {
             "SELECT p.item_id AS id, COALESCE(i.name, MAX(p.item_name)) AS name, MAX(p.item_type) AS type, MAX(p.series_id) AS series_id, MAX(p.series_name) AS series_name,
                     COUNT(*) AS plays, COUNT(DISTINCT p.user_id) AS users, MAX(p.duration_s) AS longest_s, MAX(p.started_at) AS last_tried_at,
                     json_group_array(DISTINCT p.client) FILTER (WHERE p.client IS NOT NULL) AS clients
-             FROM playbacks p LEFT JOIN items i ON i.id = p.item_id {}
+             FROM visible_playbacks p LEFT JOIN items i ON i.id = p.item_id {}
              GROUP BY p.item_id HAVING COUNT(*) >= 3 AND MAX(p.duration_s) < 30
              ORDER BY plays DESC, last_tried_at DESC LIMIT 25",
             any.sql()
@@ -1404,7 +1418,7 @@ fn file_signals_for(c: &Connection, scope: &Scope) -> Result<Value> {
              SELECT p.item_id AS id, COALESCE(i.name, MAX(p.item_name)) AS name, MAX(p.item_type) AS type, MAX(p.series_id) AS series_id, MAX(p.series_name) AS series_name,
                     COUNT(DISTINCT p.id) AS plays, COUNT(o.playback_id) AS switched_on,
                     ROUND(COUNT(o.playback_id) * 1.0 / COUNT(DISTINCT p.id), 2) AS share, CAST(AVG(o.position_s) AS INTEGER) AS typical_s
-             FROM playbacks p LEFT JOIN o ON o.playback_id = p.id LEFT JOIN items i ON i.id = p.item_id {}
+             FROM visible_playbacks p LEFT JOIN o ON o.playback_id = p.id LEFT JOIN items i ON i.id = p.item_id {}
              GROUP BY p.item_id HAVING COUNT(o.playback_id) >= 2 ORDER BY share DESC, switched_on DESC LIMIT 15",
             live.sql()
         ),
@@ -1433,7 +1447,7 @@ pub async fn person_detail(State(app): State<App>, user: AuthUser, Path(id): Pat
             c,
             &format!(
                 "SELECT COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT p.user_id) AS users,
-                        COUNT(DISTINCT {TITLE}) AS titles_watched, MAX(p.ended_at) AS last_played_at FROM playbacks p {}",
+                        COUNT(DISTINCT {TITLE}) AS titles_watched, MAX(p.ended_at) AS last_played_at FROM visible_playbacks p {}",
                 cond.sql()
             ),
             &cond.args,
@@ -1448,7 +1462,7 @@ pub async fn person_detail(State(app): State<App>, user: AuthUser, Path(id): Pat
                  FROM (SELECT item_id, GROUP_CONCAT(kind, ',') AS kinds, MAX(role) AS role FROM item_people WHERE person_id = ? GROUP BY item_id) ip
                  LEFT JOIN items i ON i.id = ip.item_id
                  LEFT JOIN (SELECT {TITLE} AS title_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, MAX(p.ended_at) AS last_played_at
-                            FROM playbacks p {} GROUP BY 1) s ON s.title_id = ip.item_id
+                            FROM visible_playbacks p {} GROUP BY 1) s ON s.title_id = ip.item_id
                  ORDER BY watch_s DESC, i.production_year DESC, name",
                 cond.sql(),
             ),
@@ -1459,7 +1473,7 @@ pub async fn person_detail(State(app): State<App>, user: AuthUser, Path(id): Pat
             &format!(
                 "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) AS user_name, COUNT(*) AS plays,
                         COALESCE(SUM(p.duration_s), 0) AS watch_s, MAX(p.ended_at) AS last_played_at
-                 FROM playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id ORDER BY watch_s DESC LIMIT 50",
+                 FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id ORDER BY watch_s DESC LIMIT 50",
                 cond.sql()
             ),
             &cond.args,
@@ -1581,8 +1595,8 @@ pub async fn summary(State(app): State<App>, user: AuthUser) -> ApiResult {
         .db
         .call(move |c| {
             let plays = match &scope_user {
-                Some(u) => c.query_row("SELECT COUNT(*) FROM playbacks WHERE user_id = ?1", [u], |r| r.get(0))?,
-                None => c.query_row("SELECT COUNT(*) FROM playbacks", [], |r| r.get(0))?,
+                Some(u) => c.query_row("SELECT COUNT(*) FROM visible_playbacks WHERE user_id = ?1", [u], |r| r.get(0))?,
+                None => c.query_row("SELECT COUNT(*) FROM visible_playbacks", [], |r| r.get(0))?,
             };
             let last = c.query_row("SELECT MAX(updated_at) FROM items", [], |r| r.get::<_, Option<i64>>(0))?.filter(|t| *t > 0);
             Ok((plays, last))
@@ -1680,7 +1694,7 @@ pub(crate) fn genre_buckets(conn: &Connection, cond: &Cond) -> Result<Vec<Value>
     let sql = format!(
         "SELECT g.value AS name, SUM(t.plays) AS plays, SUM(t.watch_s) AS watch_s
          FROM (SELECT COALESCE(p.series_id, p.item_id) AS title, COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s
-               FROM playbacks p {} GROUP BY 1) t
+               FROM visible_playbacks p {} GROUP BY 1) t
          JOIN items gi ON gi.id = t.title, json_each(gi.genres) g
          GROUP BY 1 HAVING name IS NOT NULL ORDER BY plays DESC, watch_s DESC",
         cond.sql()
@@ -1735,7 +1749,7 @@ fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
     // COALESCE, because `play_method` may be NULL — a row restored from a backup written before the
     // column existed has nothing to put there — and `NULL = 'Transcode'` is NULL, which is not a
     // boolean and made this whole page a 500 for everybody until that one row was found.
-    let sql = format!("SELECT p.started_at, p.ended_at, COALESCE(p.play_method = 'Transcode', 0) FROM playbacks p {} AND p.ended_at > p.started_at", cond.with_raw("1 = 1").sql());
+    let sql = format!("SELECT p.started_at, p.ended_at, COALESCE(p.play_method = 'Transcode', 0) FROM visible_playbacks p {} AND p.ended_at > p.started_at", cond.with_raw("1 = 1").sql());
     let mut points: Vec<(i64, i32, i32)> = vec![];
     let mut stmt = conn.prepare(&sql)?;
     let mut rows = stmt.query(params_from_iter(cond.args.iter()))?;
@@ -1814,7 +1828,7 @@ fn insight_data_bytes(c: &Connection, scope: &Scope) -> Result<i64> {
     Ok(c.query_row(
         &format!(
             "SELECT CAST(COALESCE(SUM(COALESCE(json_extract(p.transcode, '$.bitrate'), p.bitrate) / 8.0 * p.duration_s), 0) AS INTEGER)
-             FROM playbacks p {}",
+             FROM visible_playbacks p {}",
             cond.sql()
         ),
         params_from_iter(cond.args.iter()),
@@ -1829,7 +1843,7 @@ fn insight_client_methods(c: &Connection, scope: &Scope) -> Result<Vec<Map<Strin
         &format!(
             "SELECT p.client, COALESCE(SUM(p.play_method = 'DirectPlay'), 0) AS direct_play, COALESCE(SUM(p.play_method = 'DirectStream'), 0) AS direct_stream,
                     COALESCE(SUM(p.play_method = 'Transcode'), 0) AS transcode, COALESCE(SUM(p.duration_s), 0) AS watch_s
-             FROM playbacks p {} GROUP BY p.client ORDER BY COUNT(*) DESC LIMIT 12",
+             FROM visible_playbacks p {} GROUP BY p.client ORDER BY COUNT(*) DESC LIMIT 12",
             cm.sql()
         ),
         &cm.args,
@@ -1841,7 +1855,7 @@ fn insight_completion(c: &Connection, scope: &Scope) -> Result<Vec<Value>> {
     let comp = one_json(
         c,
         &format!(
-            "WITH r AS (SELECT MIN(1.0, {STOP_S} * 1.0 / p.runtime_s) AS f FROM playbacks p {})
+            "WITH r AS (SELECT MIN(1.0, {STOP_S} * 1.0 / p.runtime_s) AS f FROM visible_playbacks p {})
              SELECT COALESCE(SUM(f < 0.1), 0) AS a, COALESCE(SUM(f >= 0.1 AND f < 0.5), 0) AS b,
                     COALESCE(SUM(f >= 0.5 AND f < 0.9), 0) AS c, COALESCE(SUM(f >= 0.9), 0) AS d FROM r",
             video.sql()
@@ -1863,7 +1877,7 @@ fn insight_behaviour(c: &Connection, scope: &Scope) -> Result<Option<Map<String,
             "SELECT COUNT(*) AS plays_measured, ROUND(COALESCE(AVG(p.pause_count), 0), 2) AS avg_pauses,
                     ROUND(COALESCE(AVG(p.seek_count), 0), 2) AS avg_seeks,
                     ROUND(COALESCE(AVG(COALESCE(p.start_position_s, 0) > 30), 0), 3) AS resumed_share
-             FROM playbacks p {}",
+             FROM visible_playbacks p {}",
             live.sql()
         ),
         &live.args,
@@ -1998,7 +2012,7 @@ pub async fn library_insights(State(app): State<App>, _user: AuthUser, Query(q):
             );
             let largest = rows_json(c, &format!("{sized} ORDER BY size_bytes DESC LIMIT 15"), &args)?;
             // Nobody has played it here, and nobody has it marked as played in Jellyfin either.
-            let never = "NOT EXISTS (SELECT 1 FROM playbacks p WHERE p.item_id = t.id OR p.series_id = t.id)
+            let never = "NOT EXISTS (SELECT 1 FROM visible_playbacks p WHERE p.item_id = t.id OR p.series_id = t.id)
                  AND NOT EXISTS (SELECT 1 FROM user_items ui WHERE ui.played = 1 AND (ui.item_id = t.id OR ui.item_id IN (SELECT id FROM items WHERE series_id = t.id)))";
             let unwatched_items = rows_json(c, &format!("{sized} AND {never} ORDER BY size_bytes DESC LIMIT 25"), &args)?;
             let unwatched_totals =
@@ -2181,26 +2195,6 @@ mod tests {
         assert!(!without.is_empty() && without.iter().all(|d| d["device_id"].is_null() && d["device_name"] == "Living room TV"), "{without:?}");
         let with = user_devices(&c, &scope.cond(), true).unwrap();
         assert_eq!(with[0]["device_id"], "dev-1");
-    }
-
-    /// A play deleted out of a group takes the group with it when the one left is alone: nothing else
-    /// would ever look at that title again, and a "group" of one read as an evening with company.
-    #[test]
-    fn deleting_one_of_two_plays_watched_together_leaves_nobody_in_a_group() {
-        let mut c = conn();
-        c.execute_batch(
-            "DELETE FROM playbacks;
-             INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
-               (5, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 4600, 3600),
-               (7, 'live', 'u2', 'bob',   'i1', 'Big Buck Bunny', 'Movie', 1010, 4610, 3600);",
-        )
-        .unwrap();
-        crate::groups::detect(&mut c, 60, None).unwrap();
-        let group = |c: &Connection| c.query_row("SELECT group_id FROM playbacks WHERE id = 7", [], |r| r.get::<_, Option<i64>>(0)).unwrap();
-        assert_eq!(group(&c), Some(5));
-        assert!(delete_play(&mut c, 5, 60).unwrap().is_some());
-        assert_eq!(group(&c), None, "bob watched alone after all");
-        assert!(delete_play(&mut c, 5, 60).unwrap().is_none(), "gone is gone");
     }
 
     #[test]

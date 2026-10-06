@@ -246,23 +246,30 @@ pub fn drop_relinked_duplicates(conn: &Connection, window: i64, item_id: &str) -
 /// [`drop_relinked_duplicates`]' rule: the same as [`SAME_PLAY_SQL`]'s, as two index ranges (the same second is inside
 /// either). It runs at every start and after every library read, as one write: in the `ABS(…) <= ?1` form it held the
 /// write lock for 25 s on 150,000 plays, long enough for the collector's own writes to give up.
-const RELINKED_DUPLICATES_SQL: &str = crate::relinked_duplicates_sql!("?1");
+/// A row in the trash may be taken out as a duplicate of a visible one, but never stands for one: dropping a visible
+/// row for it would take the evening out of history with nothing in its place.
+const RELINKED_DUPLICATES_SQL: &str = crate::relinked_duplicates_sql!("?1", " AND (k.deleted_at IS NULL OR playbacks.deleted_at IS NOT NULL)");
 
 /// The statement behind [`RELINKED_DUPLICATES_SQL`], for a window given as SQL: a parameter here, and in the migration
 /// that swept every install once, the merge window read from the settings. One text, so the two cannot drift.
 #[macro_export]
 macro_rules! relinked_duplicates_sql {
+    // Migration 26's form, which must expand exactly as it did when it was released.
     ($window:literal) => {
+        $crate::relinked_duplicates_sql!($window, "")
+    };
+    // `$keeper` narrows which rows may stand for a duplicate, `k` being the one kept and `playbacks` the one dropped.
+    ($window:literal, $keeper:literal) => {
         concat!(
             "DELETE FROM playbacks WHERE source <> 'live' AND (
     EXISTS (SELECT 1 FROM playbacks k
              WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
                AND k.started_at BETWEEN playbacks.started_at - ", $window, " AND playbacks.started_at + ", $window, "
-               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id))
+               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id)", $keeper, ")
     OR EXISTS (SELECT 1 FROM playbacks k
              WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
                AND k.ended_at BETWEEN playbacks.ended_at - ", $window, " AND playbacks.ended_at + ", $window, "
-               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id)))"
+               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id)", $keeper, "))"
         )
     };
 }
@@ -409,6 +416,41 @@ mod tests {
         let plan: Vec<String> = c.prepare(&format!("EXPLAIN QUERY PLAN {RELINKED_DUPLICATES_SQL} AND item_id = ?2")).unwrap()
             .query_map(crate::db::rusqlite::params![600, "i2"], |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
         assert!(!plan.iter().any(|p| p.starts_with("SCAN playbacks")), "one title's plays, not every play: {plan:?}");
+    }
+
+    /// A row in the trash never displaces one in history: the evening would vanish with nothing in its place. The other
+    /// way round it may go, as any duplicate does — history still has the evening.
+    #[test]
+    fn the_sweep_never_keeps_a_deleted_row_and_drops_a_live_one() {
+        let c = conn();
+        c.execute_batch(
+            "DELETE FROM playbacks;
+             INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, deleted_at) VALUES
+               (1, 'live',      NULL,   'u1', 'alice', 'i1', 'A film', 'Movie', 1000, 4600, 3600, 5000),
+               (2, 'jellystat', 'js:2', 'u1', 'alice', 'i1', 'A film', 'Movie', 1010, 4600, 3590, NULL),
+               (3, 'live',      NULL,   'u1', 'alice', 'i2', 'A show', 'Episode', 1000, 4600, 3600, NULL),
+               (4, 'jellystat', 'js:4', 'u1', 'alice', 'i2', 'A show', 'Episode', 1010, 4600, 3590, 5000);",
+        )
+        .unwrap();
+        assert_eq!(drop_relinked_duplicates(&c, 600, "i1").unwrap(), 0, "a visible import was dropped for a play in the trash");
+        assert_eq!(drop_relinked_duplicates(&c, 600, "i2").unwrap(), 1, "a trashed duplicate of a visible play stays a duplicate");
+        let left: Vec<i64> = c.prepare("SELECT id FROM playbacks ORDER BY id").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(left, [1, 2, 3]);
+    }
+
+    /// Identity sees the trash: a play in it is still that play, so importing the same file again, or the same evening
+    /// from another tracker, does not bring it back as a visible duplicate.
+    #[test]
+    fn a_play_in_the_trash_is_still_recognised_when_it_arrives_again() {
+        let c = conn();
+        c.execute_batch(
+            "DELETE FROM playbacks;
+             INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, deleted_at) VALUES
+               (1, 'jellystat', 'jellystat:abc', 'u1', 'alice', 'i1', 'A film', 'Movie', 1000, 4600, 3600, 5000);",
+        )
+        .unwrap();
+        assert!(already_recorded(&c, Play { source: "jellystat", source_id: Some("jellystat:abc"), user_id: "u1", item_id: "i1", started_at: 1000, ended_at: 4600 }, 600).unwrap());
+        assert!(already_recorded(&c, Play { source: "streamystats", source_id: Some("streamystats:x"), user_id: "u1", item_id: "i1", started_at: 1200, ended_at: 4610 }, 600).unwrap());
     }
 
     #[test]

@@ -181,6 +181,10 @@ pub fn newest_at(dir: &Path) -> Option<i64> {
 }
 
 /// Keep the newest `keep` backups. Returns how many were removed.
+///
+/// A hard delete, and on purpose not the trash: the owner chose how many backups to keep, and every copy pruned going
+/// to the trash for a month would double the disk the backups take. Only a person's delete is undoable ([`move_to_trash`]),
+/// and the trash is out of what is counted here.
 pub fn prune(dir: &Path, keep: usize) -> usize {
     let mut removed = 0;
     for b in list(dir).into_iter().skip(keep.max(1)) {
@@ -188,6 +192,94 @@ pub fn prune(dir: &Path, keep: usize) -> usize {
             if std::fs::remove_file(dir.join(name)).is_ok() {
                 removed += 1;
             }
+        }
+    }
+    removed
+}
+
+// ---------------------------------------------------------------- the trash
+
+/// Where a deleted backup waits: `<backups>/deleted/<name>.<unix deleted_at>`. The moment it was deleted is in the
+/// name, so the disk alone says when it goes, and a rename keeps the file's own time, so it is still dated as made.
+pub fn trash_dir(dir: &Path) -> PathBuf {
+    dir.join("deleted")
+}
+
+/// A name in the trash, read back: the backup it was, and when it was deleted. Only names the trash itself writes.
+fn in_trash(file: &str) -> Option<(&str, i64)> {
+    let (name, at) = file.rsplit_once('.')?;
+    if !valid_name(name) || at.is_empty() || !at.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    Some((name, at.parse().ok()?))
+}
+
+#[derive(Debug)]
+pub enum TrashError {
+    /// Not one of finstats' own backup names: nothing outside them is ever moved.
+    NotABackup,
+    NotFound,
+    /// Coming back, a file of that name is there already.
+    Taken,
+    Io(std::io::Error),
+}
+
+/// Move a backup into the trash. When it was deleted.
+pub fn move_to_trash(dir: &Path, name: &str, now: i64) -> Result<i64, TrashError> {
+    if !valid_name(name) {
+        return Err(TrashError::NotABackup);
+    }
+    let from = dir.join(name);
+    if !from.is_file() {
+        return Err(TrashError::NotFound);
+    }
+    std::fs::create_dir_all(trash_dir(dir)).map_err(TrashError::Io)?;
+    std::fs::rename(&from, trash_dir(dir).join(format!("{name}.{now}"))).map_err(TrashError::Io)?;
+    Ok(now)
+}
+
+/// Take a backup out of the trash, back under its own name, unless a file has taken that name since. When it had been
+/// deleted. With the same backup in the trash more than once, the latest deletion comes back.
+pub fn take_out_of_trash(dir: &Path, name: &str) -> Result<i64, TrashError> {
+    if !valid_name(name) {
+        return Err(TrashError::NotABackup);
+    }
+    let latest = trashed(dir).into_iter().find(|t| t["name"].as_str() == Some(name)).and_then(|t| t["deleted_at"].as_i64());
+    let Some(at) = latest else { return Err(TrashError::NotFound) };
+    let to = dir.join(name);
+    if to.exists() {
+        return Err(TrashError::Taken);
+    }
+    std::fs::rename(trash_dir(dir).join(format!("{name}.{at}")), &to).map_err(TrashError::Io)?;
+    Ok(at)
+}
+
+/// The backups in the trash, the latest deleted first, each with when it was made, deleted and goes for good.
+pub fn trashed(dir: &Path) -> Vec<Value> {
+    let mut out: Vec<(i64, Value)> = std::fs::read_dir(trash_dir(dir))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|e| {
+            let file = e.file_name().to_string_lossy().to_string();
+            let (name, deleted_at) = in_trash(&file)?;
+            let meta = e.metadata().ok()?;
+            let made = meta.modified().ok()?.duration_since(std::time::UNIX_EPOCH).ok()?.as_secs() as i64;
+            Some((deleted_at, json!({ "name": name, "size_bytes": meta.len(), "created_at": made, "deleted_at": deleted_at, "purge_at": deleted_at + crate::trash::KEEP_S })))
+        })
+        .collect();
+    out.sort_by_key(|(at, _)| std::cmp::Reverse(*at));
+    out.into_iter().map(|(_, v)| v).collect()
+}
+
+/// Remove for good the backups that have been in the trash for [`crate::trash::KEEP_S`]. Only names the trash wrote
+/// are ever touched. How many went.
+pub fn purge_trashed(dir: &Path, now: i64) -> usize {
+    let mut removed = 0;
+    for e in std::fs::read_dir(trash_dir(dir)).into_iter().flatten().flatten() {
+        let file = e.file_name().to_string_lossy().to_string();
+        if in_trash(&file).is_some_and(|(_, at)| at <= now - crate::trash::KEEP_S) && std::fs::remove_file(e.path()).is_ok() {
+            removed += 1;
         }
     }
     removed
@@ -407,6 +499,75 @@ mod tests {
         }
     }
 
+    /// A folder of backups made a day apart, oldest first, named as finstats names them.
+    fn backups_on_disk(tag: &str, n: usize) -> (std::path::PathBuf, Vec<String>) {
+        let dir = std::env::temp_dir().join(format!("finstats-backup-trash-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let names: Vec<String> = (0..n).map(|i| format!("{PREFIX}2026010{}-120000{SUFFIX}", i + 1)).collect();
+        for (i, name) in names.iter().enumerate() {
+            let f = std::fs::File::create(dir.join(name)).unwrap();
+            f.set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_767_225_600 + i as u64 * 86_400)).unwrap();
+        }
+        (dir, names)
+    }
+    fn names_in(dir: &Path) -> Vec<String> {
+        list(dir).iter().map(|b| b["name"].as_str().unwrap().to_string()).collect()
+    }
+
+    #[test]
+    fn a_backup_in_the_trash_cannot_be_used_does_not_count_and_comes_back() {
+        let (dir, names) = backups_on_disk("use", 3);
+        let deleted = move_to_trash(&dir, &names[2], 2_000_000_000).unwrap();
+        assert_eq!(deleted, 2_000_000_000);
+        // Gone from the backups: not listed, not the newest, not one of those kept, and its name in the trash is not one
+        // anything that downloads or restores by name will take.
+        assert_eq!(names_in(&dir), [names[1].clone(), names[0].clone()]);
+        assert_eq!(newest_at(&dir), Some(1_767_225_600 + 86_400), "the backup in the trash still counts as the newest");
+        let in_trash = format!("{}.2000000000", names[2]);
+        assert!(trash_dir(&dir).join(&in_trash).exists());
+        assert!(!valid_name(&in_trash), "a name in the trash can be downloaded or restored from");
+        assert_eq!(prune(&dir, 1), 1, "the one past what is kept, and not the trash");
+        assert!(trash_dir(&dir).join(&in_trash).exists(), "pruning reached into the trash");
+        // Listed in the trash, made when it was made: a rename keeps the file's own time.
+        let t = trashed(&dir);
+        assert_eq!(t.len(), 1);
+        assert_eq!((t[0]["name"].as_str(), t[0]["created_at"].as_i64(), t[0]["deleted_at"].as_i64(), t[0]["purge_at"].as_i64()),
+            (Some(names[2].as_str()), Some(1_767_225_600 + 2 * 86_400), Some(2_000_000_000), Some(2_000_000_000 + crate::trash::KEEP_S)));
+        // Back.
+        assert_eq!(take_out_of_trash(&dir, &names[2]).unwrap(), 2_000_000_000);
+        assert_eq!(names_in(&dir), [names[2].clone(), names[1].clone()]);
+        assert!(trashed(&dir).is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_backup_comes_back_only_where_nothing_has_taken_its_name() {
+        let (dir, names) = backups_on_disk("refuse", 2);
+        assert!(matches!(move_to_trash(&dir, "../finstats.db", 1), Err(TrashError::NotABackup)));
+        assert!(matches!(move_to_trash(&dir, &format!("{PREFIX}20990101-000000{SUFFIX}"), 1), Err(TrashError::NotFound)));
+        assert!(matches!(take_out_of_trash(&dir, &names[0]), Err(TrashError::NotFound)), "a backup that is not in the trash");
+        move_to_trash(&dir, &names[0], 100).unwrap();
+        std::fs::write(dir.join(&names[0]), b"a newer file of that name").unwrap();
+        assert!(matches!(take_out_of_trash(&dir, &names[0]), Err(TrashError::Taken)), "the file that took the name was overwritten");
+        assert_eq!(std::fs::read(dir.join(&names[0])).unwrap(), b"a newer file of that name");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_backup_trash_is_emptied_after_thirty_days_and_touches_nothing_it_did_not_name() {
+        let (dir, names) = backups_on_disk("purge", 1);
+        move_to_trash(&dir, &names[0], 1_000_000).unwrap();
+        // Things in the trash folder finstats did not put there: never removed.
+        std::fs::write(trash_dir(&dir).join("notes.txt"), b"mine").unwrap();
+        std::fs::write(trash_dir(&dir).join("something.1"), b"mine too").unwrap();
+        assert_eq!(purge_trashed(&dir, 1_000_000 + crate::trash::KEEP_S - 86_400), 0, "a day before the thirty were up");
+        assert_eq!(purge_trashed(&dir, 1_000_000 + crate::trash::KEEP_S), 1);
+        assert!(trashed(&dir).is_empty());
+        assert!(trash_dir(&dir).join("notes.txt").exists() && trash_dir(&dir).join("something.1").exists(), "the purge removed a file it did not name");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn a_backup_killed_half_way_leaves_nothing_behind_once_the_next_one_is_written() {
         // Only one backup is ever written at a time, so a `.part` beside a new one is a backup that was killed:
@@ -423,6 +584,39 @@ mod tests {
         assert!(!stale.exists(), "the killed backup's partial file is still there");
         assert!(unrelated.exists(), "a file finstats did not name was removed");
         drop(db);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// The trash travels: a play in it comes back in it, and goes thirty days after its own deletion, not after the
+    /// restore. And a restore never takes a play out of the trash: the row already here keeps its own state.
+    #[test]
+    fn a_play_in_the_trash_is_restored_in_the_trash_and_a_restore_never_undeletes() {
+        let tmp = std::env::temp_dir().join(format!("finstats-backup-trash-rows-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let source = Db::open(&tmp.join("source.db")).unwrap();
+        source.conn().unwrap().execute_batch(
+            "INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, deleted_at) VALUES
+               (1, 'jellystat', 'jellystat:kept',    'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 1600, 600, NULL),
+               (2, 'jellystat', 'jellystat:trashed', 'u1', 'alice', 'i2', 'Sintel',         'Movie', 5000, 5600, 600, 7000);",
+        ).unwrap();
+        let file = dir(&tmp).join(export(&source, &dir(&tmp), None).unwrap().name);
+        // Here, the first play is in the trash already, and the backup has it in history.
+        let target = Db::open(&tmp.join("target.db")).unwrap();
+        target.conn().unwrap().execute_batch(
+            "INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, deleted_at) VALUES
+               (40, 'jellystat', 'jellystat:kept', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 1600, 600, 9000);",
+        ).unwrap();
+        let r = restore(&target, &file, false, None).unwrap();
+        assert_eq!((r.plays_imported, r.plays_skipped), (1, 1));
+        let c = target.conn().unwrap();
+        let state = |sid: &str| c.query_row("SELECT deleted_at FROM playbacks WHERE source_id = ?1", [sid], |r| r.get::<_, Option<i64>>(0)).unwrap();
+        assert_eq!(state("jellystat:kept"), Some(9000), "restoring a backup that had the play undeleted it");
+        assert_eq!(state("jellystat:trashed"), Some(7000), "a play in the trash came back out of it");
+        assert_eq!(crate::trash::purge_plays(&c, 7000 + crate::trash::KEEP_S - 1).unwrap(), 0);
+        assert_eq!(crate::trash::purge_plays(&c, 7000 + crate::trash::KEEP_S).unwrap(), 1, "thirty days after its own deletion, not after the restore");
+        assert_eq!(state("jellystat:kept"), Some(9000));
+        drop(c);
         let _ = std::fs::remove_dir_all(&tmp);
     }
 

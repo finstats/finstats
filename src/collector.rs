@@ -125,7 +125,7 @@ fn start_plays(c: &mut crate::db::rusqlite::Connection, plays: Vec<PlayRecord>, 
         // Same person, same item, same device, moments later: that's one viewing.
         let resumed = tx
             .prepare_cached(
-                "SELECT id, started_at, duration_s, paused_s, pause_count, seek_count, start_position_s FROM playbacks
+                "SELECT id, started_at, duration_s, paused_s, pause_count, seek_count, start_position_s FROM visible_playbacks
                  WHERE source = 'live' AND active = 0 AND user_id = ?1 AND item_id = ?2
                    AND device_id IS ?3 AND ended_at >= ?4
                  ORDER BY ended_at DESC LIMIT 1",
@@ -1546,6 +1546,21 @@ mod tests {
         let starts: Vec<(i64, Option<String>)> = c.prepare("SELECT playback_id, detail FROM playback_events WHERE kind = 'start' ORDER BY playback_id").unwrap()
             .query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
         assert_eq!(starts, vec![(old, Some("Continued after a short break".into())), (started[0].row_id, None)]);
+    }
+
+    /// A play resumed after its row went to the trash is a new play: continuing the deleted row would bring the evening
+    /// back into history without anybody asking, and leave a running play in the trash.
+    #[test]
+    fn a_restart_never_continues_a_play_in_the_trash() {
+        let mut c = migrated();
+        let mut earlier = playing("bob", "film", "tv");
+        (earlier.started_at, earlier.ended_at, earlier.active, earlier.duration_s) = (3000, 4950, false, 1900);
+        let old = earlier.insert(&c).unwrap().unwrap();
+        c.execute("UPDATE playbacks SET deleted_at = 4990 WHERE id = ?1", [old]).unwrap();
+        let started = start_plays(&mut c, vec![playing("bob", "film", "tv")], 5000, 600).unwrap();
+        assert!(started[0].row_id != old && started[0].started_at == 5000 && started[0].counters.is_none(), "the restart continued the deleted row");
+        let (active, deleted): (bool, Option<i64>) = c.query_row("SELECT active, deleted_at FROM playbacks WHERE id = ?1", [old], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        assert_eq!((active, deleted), (false, Some(4990)), "the play in the trash was touched");
     }
 
     #[test]

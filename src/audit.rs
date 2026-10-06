@@ -27,14 +27,14 @@ pub const KEEP_S: i64 = 365 * 86_400;
 
 /// Every kind an entry can be. A kind the list is asked for that is not one of these is an empty
 /// list, not an error.
-pub const KINDS: [&str; 35] = [
+pub const KINDS: [&str; 38] = [
     "sign_in", "sign_in_failed", "sign_in_refused", "sign_out", "setup_completed",
     "key_created", "key_revoked", "key_used",
     "setting_changed", "permissions_changed",
     "service_added", "service_changed", "service_removed",
     "target_added", "target_changed", "target_removed",
-    "backup_made", "backup_restored", "backup_deleted", "backup_downloaded",
-    "task_run", "task_schedule_changed", "import_started", "import_finished", "play_deleted", "title_located", "alert_resolved", "alert_reopened", "finding_dismissed", "finding_undismissed",
+    "backup_made", "backup_restored", "backup_deleted", "backup_undeleted", "backup_downloaded",
+    "task_run", "task_schedule_changed", "import_started", "import_finished", "play_deleted", "play_undeleted", "trash_purged", "title_located", "alert_resolved", "alert_reopened", "finding_dismissed", "finding_undismissed",
     "profile_published", "profile_changed", "profile_unpublished", "profile_link_reset",
     "appearance_changed",
 ];

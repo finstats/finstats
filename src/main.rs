@@ -49,6 +49,7 @@ mod streamystats;
 mod sync;
 mod tautulli;
 mod timeline;
+mod trash;
 mod watchlist;
 
 use std::net::SocketAddr;

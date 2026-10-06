@@ -117,7 +117,7 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
 
     let years: Vec<i64> = rows_json(
         c,
-        &format!("SELECT DISTINCT CAST(strftime('%Y', p.started_at, 'unixepoch', 'localtime') AS INTEGER) AS y FROM playbacks p {scope_wh} ORDER BY y DESC"),
+        &format!("SELECT DISTINCT CAST(strftime('%Y', p.started_at, 'unixepoch', 'localtime') AS INTEGER) AS y FROM visible_playbacks p {scope_wh} ORDER BY y DESC"),
         &scope_args,
     )?
     .iter()
@@ -144,7 +144,7 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
 
     let user_name: Option<String> = match &scope_user {
         Some(u) => c
-            .query_row("SELECT COALESCE((SELECT name FROM users WHERE id = ?1), (SELECT user_name FROM playbacks WHERE user_id = ?1 ORDER BY ended_at DESC LIMIT 1))", [u], |r| r.get(0))
+            .query_row("SELECT COALESCE((SELECT name FROM users WHERE id = ?1), (SELECT user_name FROM visible_playbacks WHERE user_id = ?1 ORDER BY ended_at DESC LIMIT 1))", [u], |r| r.get(0))
             .unwrap_or(None),
         None => None,
     };
@@ -174,7 +174,7 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
         c,
         &format!(
             "SELECT g.value AS name, COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s
-             FROM playbacks p JOIN items gi ON gi.id = {TITLE_ID}, json_each(gi.genres) g {} GROUP BY 1 ORDER BY watch_s DESC LIMIT 6",
+             FROM visible_playbacks p JOIN items gi ON gi.id = {TITLE_ID}, json_each(gi.genres) g {} GROUP BY 1 ORDER BY watch_s DESC LIMIT 6",
             w.wh
         ),
         &w.args,
@@ -182,9 +182,9 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
     out["genres"] = json!(one_json(
         c,
         &format!(
-            "SELECT (SELECT COUNT(DISTINCT g.value) FROM playbacks p JOIN items gi ON gi.id = {TITLE_ID}, json_each(gi.genres) g {wh}) AS count,
+            "SELECT (SELECT COUNT(DISTINCT g.value) FROM visible_playbacks p JOIN items gi ON gi.id = {TITLE_ID}, json_each(gi.genres) g {wh}) AS count,
                     COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s
-             FROM playbacks p JOIN items gi ON gi.id = {TITLE_ID} {wh} AND gi.genres IS NOT NULL",
+             FROM visible_playbacks p JOIN items gi ON gi.id = {TITLE_ID} {wh} AND gi.genres IS NOT NULL",
             wh = w.wh
         ),
         &[w.args.clone(), w.args.clone()].concat(),
@@ -195,7 +195,7 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
         c,
         &format!(
             "SELECT date(p.started_at, 'unixepoch', 'localtime') AS date, COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s
-             FROM playbacks p {} GROUP BY 1 ORDER BY 1",
+             FROM visible_playbacks p {} GROUP BY 1 ORDER BY 1",
             w.wh
         ),
         &w.args,
@@ -214,7 +214,7 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
     out["discovery"] = discovery(c, &w)?;
     out["clients"] = json!(rows_json(
         c,
-        &format!("SELECT p.client AS name, COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s FROM playbacks p {} GROUP BY 1 ORDER BY watch_s DESC LIMIT 3", w.with("p.client IS NOT NULL")),
+        &format!("SELECT p.client AS name, COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s FROM visible_playbacks p {} GROUP BY 1 ORDER BY watch_s DESC LIMIT 3", w.with("p.client IS NOT NULL")),
         &w.args,
     )?);
     let watch_s = out["totals"]["watch_s"].as_i64().unwrap_or(0);
@@ -310,7 +310,7 @@ fn requests(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>) 
         args.push(u.to_string().into());
     }
     let watched_sql = "r.available_at IS NOT NULL AND r.item_id IS NOT NULL AND EXISTS (
-        SELECT 1 FROM playbacks p WHERE p.user_id = r.user_id AND (p.item_id = r.item_id OR p.series_id = r.item_id) AND p.started_at >= r.available_at AND p.ended_at <= ?2)";
+        SELECT 1 FROM visible_playbacks p WHERE p.user_id = r.user_id AND (p.item_id = r.item_id OR p.series_id = r.item_id) AND p.started_at >= r.available_at AND p.ended_at <= ?2)";
     let (made, available, watched): (i64, i64, i64) = c.query_row(
         &format!("SELECT COUNT(*), COALESCE(SUM(r.available_at IS NOT NULL AND r.available_at < ?2), 0), COALESCE(SUM({watched_sql}), 0) FROM requests r WHERE {wh}"),
         params_from_iter(args.iter()),
@@ -340,7 +340,7 @@ pub fn announce_ready(c: &Connection, bus: &crate::notify::Fanout, today: NaiveD
     let to: i64 = c.query_row("SELECT CAST(strftime('%s', ?1, 'utc') AS INTEGER)", [format!("{:04}-01-01", year + 1)], |r| r.get(0))?;
     let people: Vec<(String, String)> = c
         .prepare(&format!(
-            "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) FROM playbacks p LEFT JOIN users u ON u.id = p.user_id
+            "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id
              WHERE p.started_at >= ?1 AND p.started_at < ?2 AND p.duration_s >= ?3 AND {NOT_LIVE_TV} GROUP BY p.user_id ORDER BY p.user_id"
         ))?
         // Plays the recap counts: somebody with only clicks under the minimum would be sent to an empty year.
@@ -453,7 +453,7 @@ fn totals_in(c: &Connection, wh: &str, args: &[SqlValue]) -> Result<Map<String, 
                     COUNT(DISTINCT CASE WHEN p.item_type = 'Episode' THEN COALESCE(p.series_id, p.series_name) END) AS series_count,
                     COUNT(DISTINCT date(p.started_at, 'unixepoch', 'localtime')) AS active_days,
                     COUNT(DISTINCT date(p.started_at, 'unixepoch', 'localtime') || p.user_id) AS user_days
-             FROM playbacks p {}",
+             FROM visible_playbacks p {}",
             wh
         ),
         args,
@@ -466,7 +466,7 @@ fn rank(c: &Connection, w: &Window, user: Option<&str>, min_play_s: i64) -> Resu
     let rows = rows_json(
         c,
         &format!(
-            "SELECT p.user_id, SUM(p.duration_s) AS watch_s FROM playbacks p
+            "SELECT p.user_id, SUM(p.duration_s) AS watch_s FROM visible_playbacks p
          WHERE p.started_at >= ?1 AND p.started_at < ?2 AND p.duration_s >= ?3 AND {NOT_LIVE_TV} GROUP BY p.user_id ORDER BY watch_s DESC"
         ),
         &[w.from.into(), w.to.into(), min_play_s.into()],
@@ -494,7 +494,7 @@ fn top_titles(c: &Connection, w: &Window, item_type: &str) -> Result<Vec<Map<Str
         &format!(
             "SELECT {id} AS id, {name} AS name, {sub} AS sub, {id} AS image_item_id, COUNT(*) AS plays,
                     COALESCE(SUM(p.duration_s), 0) AS watch_s, {episodes} AS episodes, (i.id IS NOT NULL AND i.removed = 0) AS item_exists
-             FROM playbacks p LEFT JOIN items i ON i.id = {id} {} AND p.item_type = ? GROUP BY {group} ORDER BY watch_s DESC LIMIT 5",
+             FROM visible_playbacks p LEFT JOIN items i ON i.id = {id} {} AND p.item_type = ? GROUP BY {group} ORDER BY watch_s DESC LIMIT 5",
             w.wh
         ),
         &args,
@@ -514,11 +514,11 @@ fn people(c: &Connection, w: &Window, kind: &str) -> Result<Vec<Map<String, Valu
         c,
         &format!(
             "WITH watched AS MATERIALIZED (
-                SELECT {TITLE_ID} AS item_id, SUM(p.duration_s) AS watch_s FROM playbacks p {wh} GROUP BY 1),
+                SELECT {TITLE_ID} AS item_id, SUM(p.duration_s) AS watch_s FROM visible_playbacks p {wh} GROUP BY 1),
              five AS (
                 SELECT ip.person_id AS id, MAX(ip.name) AS name, MAX(ip.has_image) AS has_image, COUNT(*) AS plays,
                        COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT ip.item_id) AS titles
-                FROM playbacks p JOIN item_people ip ON ip.item_id = {TITLE_ID} {wh} AND ip.kind = ?
+                FROM visible_playbacks p JOIN item_people ip ON ip.item_id = {TITLE_ID} {wh} AND ip.kind = ?
                 GROUP BY ip.person_id ORDER BY watch_s DESC LIMIT 5)
              SELECT five.*,
                     (SELECT COALESCE(i.name, 'Unknown title') FROM items i WHERE i.id = (
@@ -536,7 +536,7 @@ fn rewatch(c: &Connection, w: &Window) -> Result<Value> {
     let (sittings, items): (i64, i64) = c.query_row(
         &format!(
             "SELECT COUNT(*), COUNT(DISTINCT item_id) FROM (
-                SELECT p.item_id AS item_id FROM playbacks p {} GROUP BY p.item_id, date(p.started_at, 'unixepoch', 'localtime'))",
+                SELECT p.item_id AS item_id FROM visible_playbacks p {} GROUP BY p.item_id, date(p.started_at, 'unixepoch', 'localtime'))",
             w.with("p.item_type IN ('Movie', 'Episode') AND p.duration_s >= 300")
         ),
         params_from_iter(w.args.iter()),
@@ -554,7 +554,7 @@ fn months(c: &Connection, w: &Window) -> Result<Vec<Value>> {
         c,
         &format!(
             "SELECT strftime('%Y-%m', p.started_at, 'unixepoch', 'localtime') AS month, COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s
-             FROM playbacks p {} GROUP BY 1",
+             FROM visible_playbacks p {} GROUP BY 1",
             w.wh
         ),
         &w.args,
@@ -567,7 +567,7 @@ fn months(c: &Connection, w: &Window) -> Result<Vec<Value>> {
                 SELECT strftime('%Y-%m', p.started_at, 'unixepoch', 'localtime') AS month, {TITLE_ID} AS id,
                        COALESCE(MAX(p.series_name), MAX(p.item_name)) AS name, SUM(p.duration_s) AS watch_s,
                        ROW_NUMBER() OVER (PARTITION BY strftime('%Y-%m', p.started_at, 'unixepoch', 'localtime') ORDER BY SUM(p.duration_s) DESC) AS rn
-                FROM playbacks p {} GROUP BY 1, 2
+                FROM visible_playbacks p {} GROUP BY 1, 2
              ) WHERE rn = 1",
             w.with("p.item_type IN ('Movie', 'Episode')")
         ),
@@ -596,7 +596,7 @@ fn rhythm(c: &Connection, w: &Window) -> Result<(Vec<i64>, Vec<i64>)> {
     let (mut hours, mut weekdays) = (vec![0i64; 24], vec![0i64; 7]);
     let sql = format!(
         "SELECT CAST(strftime('%w', p.started_at, 'unixepoch', 'localtime') AS INTEGER), CAST(strftime('%H', p.started_at, 'unixepoch', 'localtime') AS INTEGER),
-                COALESCE(SUM(p.duration_s), 0) FROM playbacks p {} GROUP BY 1, 2",
+                COALESCE(SUM(p.duration_s), 0) FROM visible_playbacks p {} GROUP BY 1, 2",
         w.wh
     );
     let mut stmt = c.prepare(&sql)?;
@@ -649,7 +649,7 @@ fn records(c: &Connection, w: &Window) -> Result<Value> {
     let day = "date(p.started_at, 'unixepoch', 'localtime')";
     let biggest_day = one_json(
         c,
-        &format!("SELECT {day} AS date, COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(*) AS plays FROM playbacks p {} GROUP BY 1 ORDER BY watch_s DESC LIMIT 1", w.wh),
+        &format!("SELECT {day} AS date, COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(*) AS plays FROM visible_playbacks p {} GROUP BY 1 ORDER BY watch_s DESC LIMIT 1", w.wh),
         &w.args,
     )?;
     let biggest_binge = one_json(
@@ -657,7 +657,7 @@ fn records(c: &Connection, w: &Window) -> Result<Value> {
         &format!(
             "SELECT {day} AS date, p.series_id, MAX(p.series_name) AS series_name, p.series_id AS image_item_id,
                     COUNT(DISTINCT p.item_id) AS episodes, COALESCE(SUM(p.duration_s), 0) AS watch_s
-             FROM playbacks p {} GROUP BY 1, COALESCE(p.series_id, p.series_name) HAVING episodes >= 3 ORDER BY episodes DESC, watch_s DESC LIMIT 1",
+             FROM visible_playbacks p {} GROUP BY 1, COALESCE(p.series_id, p.series_name) HAVING episodes >= 3 ORDER BY episodes DESC, watch_s DESC LIMIT 1",
             w.with("p.item_type = 'Episode'")
         ),
         &w.args,
@@ -667,7 +667,7 @@ fn records(c: &Connection, w: &Window) -> Result<Value> {
         &format!(
             "SELECT p.item_id, CASE WHEN p.item_type = 'Episode' AND p.series_name IS NOT NULL THEN p.series_name || ' — ' || p.item_name ELSE p.item_name END AS name,
                     {TITLE_ID} AS image_item_id, p.duration_s, {day} AS date
-             FROM playbacks p LEFT JOIN items i ON i.id = p.item_id {} ORDER BY p.duration_s DESC LIMIT 1",
+             FROM visible_playbacks p LEFT JOIN items i ON i.id = p.item_id {} ORDER BY p.duration_s DESC LIMIT 1",
             // A session left open overnight is not a long play: the time must fit the runtime.
             w.with("p.duration_s <= COALESCE(p.runtime_s, i.runtime_s, p.duration_s) * 1.25")
         ),
@@ -678,7 +678,7 @@ fn records(c: &Connection, w: &Window) -> Result<Value> {
         &format!(
             "SELECT p.item_id AS id, CASE WHEN p.item_type = 'Episode' AND MAX(p.series_name) IS NOT NULL THEN MAX(p.series_name) || ' — ' || MAX(p.item_name) ELSE MAX(p.item_name) END AS name,
                     p.item_type AS type, {TITLE_ID} AS image_item_id, COUNT(DISTINCT {day}) AS plays
-             FROM playbacks p {} GROUP BY p.item_id HAVING plays >= 2 ORDER BY plays DESC, SUM(p.duration_s) DESC LIMIT 1",
+             FROM visible_playbacks p {} GROUP BY p.item_id HAVING plays >= 2 ORDER BY plays DESC, SUM(p.duration_s) DESC LIMIT 1",
             w.with("p.item_type IN ('Movie', 'Episode') AND p.duration_s >= 300")
         ),
         &w.args,
@@ -687,7 +687,7 @@ fn records(c: &Connection, w: &Window) -> Result<Value> {
         c,
         &format!(
             "SELECT p.item_id, CASE WHEN p.item_type = 'Episode' AND p.series_name IS NOT NULL THEN p.series_name || ' — ' || p.item_name ELSE p.item_name END AS name,
-                    {TITLE_ID} AS image_item_id, p.started_at AS at FROM playbacks p {} ORDER BY p.started_at LIMIT 1",
+                    {TITLE_ID} AS image_item_id, p.started_at AS at FROM visible_playbacks p {} ORDER BY p.started_at LIMIT 1",
             w.wh
         ),
         &w.args,
@@ -696,14 +696,14 @@ fn records(c: &Connection, w: &Window) -> Result<Value> {
         c,
         &format!(
             "SELECT i.id, i.name, i.production_year AS year, i.id AS image_item_id
-             FROM playbacks p JOIN items i ON i.id = {TITLE_ID} {} GROUP BY i.id ORDER BY i.production_year, SUM(p.duration_s) DESC LIMIT 1",
+             FROM visible_playbacks p JOIN items i ON i.id = {TITLE_ID} {} GROUP BY i.id ORDER BY i.production_year, SUM(p.duration_s) DESC LIMIT 1",
             w.with("i.production_year > 1800 AND p.duration_s >= 300")
         ),
         &w.args,
     )?;
 
     // Longest run of consecutive local days with at least one play.
-    let days: BTreeSet<NaiveDate> = rows_json(c, &format!("SELECT DISTINCT {day} AS d FROM playbacks p {}", w.wh), &w.args)?
+    let days: BTreeSet<NaiveDate> = rows_json(c, &format!("SELECT DISTINCT {day} AS d FROM visible_playbacks p {}", w.wh), &w.args)?
         .iter()
         .filter_map(|r| NaiveDate::parse_from_str(r["d"].as_str()?, "%Y-%m-%d").ok())
         .collect();
@@ -740,7 +740,7 @@ fn discovery(c: &Connection, w: &Window) -> Result<Value> {
     args.extend([w.from.into(), w.to.into()]);
     let firsts = format!(
         "SELECT p.series_id AS id, MAX(p.series_name) AS name, MIN(p.started_at) AS first_at, COUNT(DISTINCT p.item_id) AS episodes
-         FROM playbacks p {} AND p.item_type = 'Episode' AND p.series_id IS NOT NULL GROUP BY p.series_id",
+         FROM visible_playbacks p {} AND p.item_type = 'Episode' AND p.series_id IS NOT NULL GROUP BY p.series_id",
         w.scope_wh
     );
     let new_series: i64 = c.query_row(&format!("SELECT COUNT(*) FROM ({firsts}) WHERE first_at >= ? AND first_at < ?"), params_from_iter(args.iter()), |r| r.get(0))?;
@@ -754,7 +754,7 @@ fn discovery(c: &Connection, w: &Window) -> Result<Value> {
         &format!(
             "SELECT COALESCE(SUM(f AND t = 'Movie'), 0) AS finished_movies, COALESCE(SUM(f AND t = 'Episode'), 0) AS finished_episodes FROM (
                 SELECT p.item_type AS t, MAX({PLAY_FRAC}) >= 0.9 AS f
-                FROM playbacks p LEFT JOIN items i ON i.id = p.item_id {} GROUP BY p.item_id, p.user_id)",
+                FROM visible_playbacks p LEFT JOIN items i ON i.id = p.item_id {} GROUP BY p.item_id, p.user_id)",
             w.with("p.item_type IN ('Movie', 'Episode') AND COALESCE(p.runtime_s, i.runtime_s, 0) > 0")
         ),
         &w.args,

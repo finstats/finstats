@@ -141,7 +141,7 @@ fn entries(conn: &Connection, days: i64, only_item: Option<&str>) -> Result<Vec<
 
 /// TVDB id of a show → who played an episode of it lately (any of its items: the HD and the 4K copy are one show).
 pub const FOLLOWERS_SQL: &str = "SELECT x.value, p.user_id, COALESCE(u.name, MAX(p.user_name))
-     FROM item_external x JOIN playbacks p ON p.series_id = x.item_id LEFT JOIN users u ON u.id = p.user_id
+     FROM item_external x JOIN visible_playbacks p ON p.series_id = x.item_id LEFT JOIN users u ON u.id = p.user_id
      WHERE x.source = 'Tvdb' AND p.ended_at >= ?1 AND x.value IN (SELECT DISTINCT CAST(tvdb_id AS TEXT) FROM upcoming WHERE kind = 'episode' AND tvdb_id IS NOT NULL)
      GROUP BY x.value, p.user_id";
 
@@ -252,11 +252,11 @@ const WATCHED_CTE: &str = "WITH ri AS (
       UNION SELECT r.service_id, r.request_id, x.item_id FROM requests r JOIN item_external x ON x.source = 'Tmdb' AND x.value = CAST(r.tmdb_id AS TEXT) JOIN items i ON i.id = x.item_id AND i.type = 'Series' WHERE r.media_type = 'tv'
     ), plays AS (
       SELECT r.service_id, r.request_id, p.user_id = r.user_id AS mine, p.started_at
-      FROM requests r JOIN ri ON ri.service_id = r.service_id AND ri.request_id = r.request_id JOIN playbacks p ON p.item_id = ri.item_id
+      FROM requests r JOIN ri ON ri.service_id = r.service_id AND ri.request_id = r.request_id JOIN visible_playbacks p ON p.item_id = ri.item_id
       WHERE r.media_type = 'movie' AND p.started_at >= r.requested_at AND p.duration_s >= ?1
       UNION ALL
       SELECT r.service_id, r.request_id, p.user_id = r.user_id, p.started_at
-      FROM requests r JOIN ri ON ri.service_id = r.service_id AND ri.request_id = r.request_id JOIN playbacks p ON p.series_id = ri.item_id
+      FROM requests r JOIN ri ON ri.service_id = r.service_id AND ri.request_id = r.request_id JOIN visible_playbacks p ON p.series_id = ri.item_id
       WHERE r.media_type = 'tv' AND p.started_at >= r.requested_at AND p.duration_s >= ?1
         AND (r.seasons = '[]' OR p.season_number IN (SELECT value FROM json_each(r.seasons)))
     ), w AS (

@@ -392,6 +392,27 @@ mod tests {
 
     /// The same title written another way: other punctuation ("-" for "–"), other case, accents, or a year Jellyfin put
     /// into the name itself — "JoJo's Bizarre Adventure (2012)".
+    /// Plays in the trash move with their title, so an undo puts them back on the item that is really there: a title
+    /// whose only play is in the trash is orphaned all the same, and moved like any other.
+    #[test]
+    fn plays_in_the_trash_move_with_their_title() {
+        let conn = migrated();
+        conn.execute_batch(
+            "INSERT INTO items(id, type, name, production_year, provider_ids, library_id, updated_at) VALUES ('new1', 'Movie', 'Big Buck Bunny', 2008, '{\"Tmdb\":\"10378\"}', 'lib', 1);
+             INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, deleted_at) VALUES
+                (1, 'live', 'u', 'u', 'old1', 'Big Buck Bunny (2008) [tmdbid-10378]', 'Movie', 0, 10, 10, 50),
+                (2, 'live', 'u', 'u', 'old1', 'Big Buck Bunny (2008) [tmdbid-10378]', 'Movie', 100, 110, 10, NULL);",
+        )
+        .unwrap();
+        relink_orphans(&conn, 600).unwrap();
+        let moved: Vec<(String, Option<i64>)> = conn.prepare("SELECT item_id, deleted_at FROM playbacks ORDER BY id").unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(moved, [("new1".into(), Some(50)), ("new1".into(), None)], "the play in the trash stayed on the old id");
+        // And a title whose only play is in the trash.
+        conn.execute_batch("UPDATE playbacks SET item_id = 'old2' WHERE id = 1").unwrap();
+        relink_orphans(&conn, 600).unwrap();
+        assert_eq!(conn.query_row("SELECT item_id FROM playbacks WHERE id = 1", [], |r| r.get::<_, String>(0)).unwrap(), "new1");
+    }
+
     #[test]
     fn a_title_is_found_however_its_name_is_punctuated_or_dated() {
         let c = migrated();

@@ -106,7 +106,7 @@ Sorted by `watch_s` desc unless `&sort=plays`.
 
 ## Activity
 
-`GET /api/activity?page=1&per_page=50&q=&method=&type=&item_id=&series_id=&source=` (+ common filters)
+`GET /api/activity?page=1&per_page=50&q=&method=&type=&item_id=&series_id=&source=&deleted=` (+ common filters)
 
 `method`, `type` and `source` each take several comma-separated values: `type=Movie,Episode` is films
 and episodes and no music. `type` also takes `Other`, which is anything that is not `Movie`,
@@ -116,8 +116,14 @@ so an unknown tracker means all of them. `sources` in the answer lists which of 
 in that order — scoped to whose plays they may see, and deliberately *not* narrowed by the window or
 the other filters, so a filter built from it does not appear and disappear as the days change. The UI
 offers the filter only when there is more than one to choose between.
+
+`deleted=1` lists the trash instead (2.2.0): the plays a manager deleted in the last 30 days, scoped and filtered
+exactly like the list itself (without `see_everyone`, one's own), newest deletion first, each row with `deleted_at` and
+`purge_at` (when it goes for good). The normal answer carries `in_trash` — how many of the plays this list would show are
+in the trash — for `manage` only; a play in the trash is out of every other answer (totals, charts, titles, people,
+recap, public profiles) until it comes back.
 ```jsonc
-{"total": 2918, "page": 1, "per_page": 50, "sources": ["live", "jellystat"], "rows": [Play]}
+{"total": 2918, "page": 1, "per_page": 50, "sources": ["live", "jellystat"], "in_trash": 0, "rows": [Play]}
 
 Play = {
   "id": 123, "source": "live" | "jellystat" | "streamystats", "active": false,
@@ -136,7 +142,11 @@ Play = {
 `GET /api/activity/{id}` → `Play` plus
 `{"device_id", "bitrate", "video_codec", "width", "height", "video_range", "bit_depth", "audio_codec", "audio_channels", "audio_language", "subtitle_codec", "subtitle_language", "transcode": {…same as Session.transcode, plus "bitrate","width","height","audio_channels"} | null}`
 
-🔒 `DELETE /api/activity/{id}` → `{ok: true}`
+🔒 `PUT /api/activity/{id}` `{"deleted": true | false}` → `{"ok": true, "id": 123, "deleted": true, "deleted_at": 0|null, "purge_at": 0|null}`
+(`manage`). Moves a finished play into the trash, or back out of it; it is removed for good 30 days after it was
+deleted (`purge_at`), with its timeline. Asking for the state it is already in changes nothing and answers it (a second
+delete keeps the first `deleted_at`). `404` for no such play, a play still running, or — to restore — one that is not in
+the trash. Whoever watched with it is grouped again without it, and with it once it is back. `DELETE` answers `405`.
 
 ## Users
 
@@ -533,7 +543,7 @@ What each one gates, server-side:
 | `see_everyone` | `user_id` filters are honoured, `/api/users` and `/api/users/{id}` for anyone, all sessions in `/api/now-playing`, users in `/api/search`, everyone in `watchers` / `played_by`, the lists in `/api/stats/files`. |
 | `see_network` | `remote_ip`, `device_id`, `is_local` in plays and sessions; `ips` on user pages; `network` in insights; IP search in `/api/activity?q=`. Otherwise `null` / `[]`. |
 | `see_server` | `/api/server`, `/api/events`, `failed_logins` in insights, `item.path`. Otherwise `403` / `[]` / `null`. |
-| `manage` | `/api/settings`, `/api/tasks*`, `/api/import/*`, `DELETE /api/activity/{id}`. Otherwise `403`. |
+| `manage` | `/api/settings`, `/api/tasks*`, `/api/import/*`, `PUT /api/activity/{id}`, `in_trash` in `/api/activity`. Otherwise `403` / `null`. |
 | *Jellyfin administrator* | Not a permission but the account flag: `/api/audit`, everyone's keys in `/api/keys` (and revoking them), `/api/permissions*`, backups, connections. |
 
 `/api/recap` is never widened: it is always the caller's own. `PUT /api/settings` rejects `allow_user_login` and
@@ -729,10 +739,10 @@ can bring permissions back. `{name}` must look exactly like `finstats-backup-YYY
 
 | | |
 |---|---|
-| `GET /api/backups` | `{"backups": [{"name","size_bytes","created_at"}], "scheduled": true, "keep": 5, "next_at": 0\|null}` — newest first. `scheduled` and `next_at` come from the `backup` task's triggers (2.0.4; `every_d` is gone). |
+| `GET /api/backups` | `{"backups": [{"name","size_bytes","created_at"}], "deleted": [{"name","size_bytes","created_at","deleted_at","purge_at"}], "scheduled": true, "keep": 5, "next_at": 0\|null}` — newest first; `deleted` is the trash, newest deletion first, and never counts toward `keep`. `scheduled` and `next_at` come from the `backup` task's triggers (2.0.4; `every_d` is gone). |
 | `POST /api/backups` | Start writing one now. `202`; progress is task `backup` in `/api/tasks`. `409` while one is running. |
 | `GET /api/backups/{name}` | The file (`application/gzip`, `Content-Disposition: attachment`), streamed. |
-| `DELETE /api/backups/{name}` | Remove it. |
+| `PUT /api/backups/{name}` | `{"deleted": true\|false}` → `{"ok": true, "name", "deleted", "deleted_at": 0\|null, "purge_at": 0\|null}`. Moves the file into the trash (`<data>/backups/deleted/`) or back; it is removed for good at `purge_at`, 30 days on. A file in the trash cannot be downloaded or restored from (`404`). `404` when there is no such file where it is asked to move from, `409` when restoring it would replace a backup that has taken its name since. `DELETE` answers `405`. Backups older than `keep` are still removed for good, not moved to the trash. |
 | `POST /api/backups/{name}/restore?settings=true` | Restore a stored backup. `202`; task `restore`. |
 | `POST /api/backups/restore?settings=true` | The same from an uploaded file: raw request body, no size limit. |
 
@@ -1449,8 +1459,9 @@ right to sign in), `sign_out`, `setup_completed`, `key_created`, `key_revoked`, 
 `setting_changed` (only the keys that changed, with `from` and `to`; settings hold no secret), `permissions_changed`,
 `service_added|changed|removed` (kind and name, never the address or key), `target_added|changed|removed` (name,
 channel, whose), `backup_made` (no actor when the schedule wrote it) / `backup_restored` / `backup_deleted` /
-`backup_downloaded`, `task_run`, `import_started` / `import_finished` (plays imported and skipped, or the error),
-`play_deleted`, `alert_resolved` / `alert_reopened`. A row is kept a year, is written even when the action it records
+`backup_downloaded` / `backup_undeleted`, `task_run`, `import_started` / `import_finished` (plays imported and skipped, or the error),
+`play_deleted` / `play_undeleted` (title, person, start), `trash_purged` (no actor; how many plays and backups went,
+nothing else), `alert_resolved` / `alert_reopened`. A row is kept a year, is written even when the action it records
 failed (`outcome: "failed"`), and never fails the action for not being written. The `audit` table is part of
 backups; `api_keys` is not.
 

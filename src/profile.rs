@@ -36,7 +36,7 @@ fn verdict(frac: Option<f64>, jellyfin: bool, manual: bool) -> (&'static str, Op
 /// Longest and current run of consecutive local days with at least one play, over all time.
 pub fn streaks(conn: &Connection, user_id: &str, min_play_s: i64) -> Result<Value> {
     let mut stmt = conn.prepare(
-        "SELECT DISTINCT date(started_at, 'unixepoch', 'localtime') FROM playbacks WHERE user_id = ?1 AND duration_s >= ?2",
+        "SELECT DISTINCT date(started_at, 'unixepoch', 'localtime') FROM visible_playbacks WHERE user_id = ?1 AND duration_s >= ?2",
     )?;
     let days: BTreeSet<NaiveDate> = stmt
         .query_map(params![user_id, min_play_s], |r| r.get::<_, String>(0))?
@@ -94,10 +94,10 @@ pub(crate) fn episodes(conn: &Connection, user_id: &str, until: Option<i64>) -> 
             SELECT p.item_id, MAX(p.ended_at) AS last_at, MIN(p.started_at) AS first_at,
                    MAX({PLAY_FRAC}) AS frac,
                    MIN(CASE WHEN {PLAY_FRAC} >= ?2 THEN p.ended_at END) AS seen_at
-            FROM playbacks p LEFT JOIN items i ON i.id = p.item_id
+            FROM visible_playbacks p LEFT JOIN items i ON i.id = p.item_id
             WHERE p.user_id = ?1 AND p.item_type = 'Episode' AND (?3 IS NULL OR (p.active = 0 AND p.ended_at <= ?3)) GROUP BY p.item_id),
          touched AS (
-            SELECT series_id FROM playbacks p WHERE user_id = ?1 AND item_type = 'Episode' AND series_id IS NOT NULL AND (?3 IS NULL OR (p.active = 0 AND p.ended_at <= ?3))
+            SELECT series_id FROM visible_playbacks p WHERE user_id = ?1 AND item_type = 'Episode' AND series_id IS NOT NULL AND (?3 IS NULL OR (p.active = 0 AND p.ended_at <= ?3))
             UNION SELECT e.series_id FROM user_items ui JOIN items e ON e.id = ui.item_id WHERE ui.user_id = ?1 AND ui.played = 1 AND e.type = 'Episode'
               AND (?3 IS NULL OR ui.last_played_at IS NULL OR ui.last_played_at <= ?3)
             UNION SELECT e.series_id FROM manual_seen ms JOIN items e ON e.id = ms.item_id WHERE ms.user_id = ?1 AND (?3 IS NULL OR ms.created_at <= ?3))
@@ -145,7 +145,7 @@ pub(crate) fn films(conn: &Connection, user_id: &str, item_ids: &[String]) -> Re
         "WITH wanted(id) AS (SELECT value FROM json_each(?2)),
          mine AS (
             SELECT p.item_id, MAX({PLAY_FRAC}) AS frac
-            FROM playbacks p LEFT JOIN items i ON i.id = p.item_id
+            FROM visible_playbacks p LEFT JOIN items i ON i.id = p.item_id
             WHERE p.user_id = ?1 AND p.item_id IN (SELECT id FROM wanted) GROUP BY p.item_id)
          SELECT w.id, m.frac, COALESCE(ui.played, 0), ms.item_id IS NOT NULL
          FROM wanted w LEFT JOIN mine m ON m.item_id = w.id
@@ -251,7 +251,8 @@ mod tests {
             "CREATE TABLE items(id TEXT PRIMARY KEY, type TEXT, name TEXT, series_id TEXT, parent_index_number INTEGER, index_number INTEGER,
                                 production_year INTEGER, removed INTEGER DEFAULT 0, path TEXT, size_bytes INTEGER, runtime_s INTEGER);
              CREATE TABLE playbacks(id INTEGER PRIMARY KEY, user_id TEXT, item_id TEXT, item_type TEXT, series_id TEXT, started_at INTEGER, ended_at INTEGER,
-                                    duration_s INTEGER, position_s INTEGER, runtime_s INTEGER, active INTEGER NOT NULL DEFAULT 0);
+                                    duration_s INTEGER, position_s INTEGER, runtime_s INTEGER, active INTEGER NOT NULL DEFAULT 0, deleted_at INTEGER);
+             CREATE VIEW visible_playbacks AS SELECT * FROM playbacks WHERE deleted_at IS NULL;
              CREATE TABLE user_items(user_id TEXT, item_id TEXT, played INTEGER, last_played_at INTEGER, PRIMARY KEY(user_id, item_id));
              CREATE TABLE manual_seen(user_id TEXT, item_id TEXT, created_at INTEGER, PRIMARY KEY(user_id, item_id));
              INSERT INTO items(id, type, name) VALUES ('s', 'Series', 'Test Show');

@@ -435,7 +435,7 @@ fn sightings_of(conn: &Connection, user_id: &str, home: Option<&Spot>) -> Result
     let mut stmt = conn.prepare_cached(&format!(
         "SELECT 'play:' || p.id, p.started_at, p.ended_at, p.remote_ip, p.is_local,
                 COALESCE(p.series_name || ' · ', '') || p.item_name || COALESCE(' on ' || p.device_name, '')
-         FROM playbacks p WHERE p.user_id = ?1 AND p.remote_ip IS NOT NULL
+         FROM visible_playbacks p WHERE p.user_id = ?1 AND p.remote_ip IS NOT NULL
          UNION ALL
          SELECT 'event:' || e.id, e.date, e.date, e.remote_ip, NULL, e.name
          FROM server_events e WHERE e.user_id = ?1 AND e.remote_ip <> '' AND e.type IN ({SIGN_IN_TYPES})
@@ -473,7 +473,7 @@ fn file_alerts(conn: &Connection, rules: &Rules, only_user: Option<&str>, bus: O
     let home = home_place(conn)?.and_then(|p| spot_of(&p, true));
     let users: Vec<(String, String)> = conn
         .prepare(
-            "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) FROM playbacks p LEFT JOIN users u ON u.id = p.user_id
+            "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id
              WHERE p.remote_ip IS NOT NULL AND (?1 IS NULL OR p.user_id = ?1) GROUP BY p.user_id
              UNION
              SELECT e.user_id, u.name FROM server_events e JOIN users u ON u.id = e.user_id
@@ -620,7 +620,7 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
             // Plays away from home, by place and person.
             let mut stmt = c.prepare(&format!(
                 "SELECT {PLACE_COLS}, p.user_id, COALESCE(u.name, p.user_name), COUNT(*), COALESCE(SUM(p.duration_s), 0), MAX(p.started_at), COUNT(DISTINCT p.remote_ip)
-                 FROM playbacks p JOIN ip_locations l ON l.ip = p.remote_ip LEFT JOIN users u ON u.id = p.user_id
+                 FROM visible_playbacks p JOIN ip_locations l ON l.ip = p.remote_ip LEFT JOIN users u ON u.id = p.user_id
                  WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NOT NULL AND p.started_at >= ?1 AND {}
                  GROUP BY l.latitude, l.longitude, p.user_id", whose("p.user_id")
             ))?;
@@ -640,7 +640,7 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
             if let Some(h) = &home {
                 let mut stmt = c.prepare(&format!(
                     "SELECT p.user_id, COALESCE(u.name, p.user_name), COUNT(*), COALESCE(SUM(p.duration_s), 0), MAX(p.started_at)
-                     FROM playbacks p LEFT JOIN users u ON u.id = p.user_id
+                     FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id
                      WHERE p.is_local = 1 AND p.started_at >= ?1 AND {} GROUP BY p.user_id", whose("p.user_id")
                 ))?;
                 let rows = stmt.query_map(params_from_iter(with_who(since.into()).iter()), |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?, r.get::<_, i64>(3)?, r.get::<_, i64>(4)?)))?;
@@ -720,7 +720,7 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
             // A place the database knows only by its country cannot be drawn on the map, but it is a country all the same.
             let mut stmt = c.prepare(&format!(
                 "SELECT l.country_code, COALESCE(l.country, l.country_code), p.user_id, COUNT(*)
-                 FROM playbacks p JOIN ip_locations l ON l.ip = p.remote_ip
+                 FROM visible_playbacks p JOIN ip_locations l ON l.ip = p.remote_ip
                  WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NULL AND l.country_code IS NOT NULL AND p.started_at >= ?1 AND {}
                  GROUP BY l.country_code, p.user_id", whose("p.user_id")
             ))?;
@@ -758,7 +758,7 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
                 |r| r.get(0),
             )?;
             let unplaced: i64 = c.query_row(
-                "SELECT COUNT(DISTINCT p.remote_ip) FROM playbacks p JOIN ip_locations l ON l.ip = p.remote_ip WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NULL AND l.country_code IS NULL",
+                "SELECT COUNT(DISTINCT p.remote_ip) FROM visible_playbacks p JOIN ip_locations l ON l.ip = p.remote_ip WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NULL AND l.country_code IS NULL",
                 [],
                 |r| r.get(0),
             )?;

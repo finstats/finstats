@@ -215,7 +215,7 @@ fn totals(c: &Connection, cond: &Cond) -> Result<Totals> {
     let (movies, episodes, tracks) = c.query_row(
         &format!(
             "SELECT COALESCE(SUM(p.item_type = 'Movie'), 0), COALESCE(SUM(p.item_type = 'Episode'), 0), COALESCE(SUM(p.item_type = 'Audio'), 0)
-             FROM playbacks p {}",
+             FROM visible_playbacks p {}",
             cond.sql()
         ),
         params_from_iter(cond.args.iter()),
@@ -235,7 +235,7 @@ fn totals(c: &Connection, cond: &Cond) -> Result<Totals> {
 
 fn habits(c: &Connection, cond: &Cond) -> Result<Habits> {
     // The longest run and the days active; never the current streak, which is about today.
-    let mut stmt = c.prepare(&format!("SELECT DISTINCT date(p.started_at, 'unixepoch', 'localtime') FROM playbacks p {}", cond.sql()))?;
+    let mut stmt = c.prepare(&format!("SELECT DISTINCT date(p.started_at, 'unixepoch', 'localtime') FROM visible_playbacks p {}", cond.sql()))?;
     let days: std::collections::BTreeSet<chrono::NaiveDate> = stmt
         .query_map(params_from_iter(cond.args.iter()), |r| r.get::<_, String>(0))?
         .filter_map(|d| d.ok().and_then(|d| chrono::NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok()))
@@ -273,7 +273,7 @@ fn recent(c: &Connection, cond: &Cond) -> Result<Vec<RecentPlay>> {
                      ELSE CAST(i.production_year AS TEXT) END,
                 CASE WHEN p.item_type = 'Episode' THEN CASE WHEN s.removed = 0 THEN s.id END
                      ELSE CASE WHEN i.removed = 0 THEN i.id END END
-         FROM playbacks p LEFT JOIN items i ON i.id = p.item_id LEFT JOIN items s ON s.id = p.series_id
+         FROM visible_playbacks p LEFT JOIN items i ON i.id = p.item_id LEFT JOIN items s ON s.id = p.series_id
          {} ORDER BY p.ended_at DESC LIMIT 10",
         cond.sql()
     );

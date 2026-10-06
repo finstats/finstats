@@ -150,7 +150,7 @@ fn page(conn: &Connection, user_id: &str, min_play_s: i64, before: (i64, i64), l
                 p.series_id, COALESCE(s.name, p.series_name), COALESCE(p.season_number, i.parent_index_number),
                 COALESCE(p.episode_number, i.index_number), i.production_year, i.album, i.album_artist,
                 CASE WHEN sn.image_tag IS NOT NULL THEN sn.id END
-         FROM playbacks p
+         FROM visible_playbacks p
          LEFT JOIN items i ON i.id = p.item_id
          LEFT JOIN items s ON s.id = p.series_id
          LEFT JOIN items sn ON sn.id = p.season_id
@@ -177,7 +177,7 @@ fn page(conn: &Connection, user_id: &str, min_play_s: i64, before: (i64, i64), l
 fn libraries_of(conn: &Connection, user_id: &str, min_play_s: i64) -> Result<Vec<Value>> {
     let mut stmt = conn.prepare(
         "SELECT l.id, l.name, l.collection_type FROM libraries l
-         WHERE l.id IN (SELECT DISTINCT library_id FROM playbacks WHERE user_id = ?1 AND duration_s >= ?2) ORDER BY l.name COLLATE NOCASE",
+         WHERE l.id IN (SELECT DISTINCT library_id FROM visible_playbacks WHERE user_id = ?1 AND duration_s >= ?2) ORDER BY l.name COLLATE NOCASE",
     )?;
     let rows = stmt.query_map(params![user_id, min_play_s], |r| Ok(json!({ "id": r.get::<_, String>(0)?, "name": r.get::<_, String>(1)?, "collection_type": r.get::<_, Option<String>>(2)? })))?;
     Ok(rows.collect::<Result<_, _>>()?)

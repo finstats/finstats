@@ -691,6 +691,16 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         updated_at   INTEGER NOT NULL
     ) WITHOUT ROWID;
     "#,
+    // user_version 37 — The trash (2.2.0): a deleted play keeps its row for 30 days so it can come back, and is out of
+    //      every reading of history meanwhile. `visible_playbacks` is that history, and what every read of it goes
+    //      through; `trashed_playbacks` is the trash; the table itself is read only for identity (a test holds the
+    //      list). The index is the trash alone, so listing it and purging it cost nothing when it is empty.
+    r#"
+    ALTER TABLE playbacks ADD COLUMN deleted_at INTEGER;
+    CREATE INDEX idx_playbacks_trash ON playbacks(deleted_at) WHERE deleted_at IS NOT NULL;
+    CREATE VIEW visible_playbacks AS SELECT * FROM playbacks WHERE deleted_at IS NULL;
+    CREATE VIEW trashed_playbacks AS SELECT * FROM playbacks WHERE deleted_at IS NOT NULL;
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole
@@ -1027,6 +1037,105 @@ pub use rusqlite::types::Value as SqlValue;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A play in the trash is out of every reading of history (the view) and still there for identity (the table).
+    #[test]
+    fn a_play_in_the_trash_is_out_of_history_and_still_there_for_identity() {
+        let db = Db::open_in_memory().unwrap();
+        let c = db.conn().unwrap();
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES (1, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100, 700, 600), (2, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 900, 1500, 600);
+             UPDATE playbacks SET deleted_at = 2000 WHERE id = 2;",
+        )
+        .unwrap();
+        let count = |sql: &str| -> i64 { c.query_row(sql, [], |r| r.get(0)).unwrap() };
+        assert_eq!(count("SELECT COUNT(*) FROM visible_playbacks"), 1, "the trash is read as history");
+        assert_eq!(count("SELECT COUNT(*) FROM playbacks"), 2, "the trash is gone, not kept");
+        // A column the table gains later is the view's too: SQLite expands its * when the schema is read.
+        assert_eq!(count("SELECT COUNT(deleted_at) FROM playbacks WHERE deleted_at IS NOT NULL"), 1);
+    }
+
+    /// The reads of `playbacks` that are about identity, not history, and so see the trash. Each is the table on
+    /// purpose; everything else reads `visible_playbacks`, or says `deleted_at` itself. (file, a phrase of the SQL, why)
+    const IDENTITY_READS: [(&str, &str, &str); 13] = [
+        ("playback.rs", "SELECT 1 FROM playbacks WHERE source_id = ?1", "a file imported again is recognised by its id, trash included, or it comes back"),
+        ("playback.rs", "SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2 AND started_at = ?3", "the same play from another tracker is that play, trash included"),
+        ("relink.rs", "WITH RECURSIVE t(id)", "plays in the trash move with their title, so an undo lands on the right item"),
+        ("relink.rs", "SELECT p.item_id, p.item_type, COALESCE(MAX(old.name)", "the same: what an orphaned title is called, trash included"),
+        ("relink.rs", "SELECT p.item_id, MAX(p.series_id), COALESCE(MAX(olds.name)", "the same, for episodes"),
+        ("locate.rs", "SELECT MAX(item_type) FROM playbacks WHERE item_id = ?1", "the type of the plays that are moved, the trash among them"),
+        ("collector.rs", "DELETE FROM playbacks WHERE id = ?1", "an accidental click is dropped by its id"),
+        ("collector.rs", "DELETE FROM playbacks WHERE active = 1 AND duration_s < ?1", "a play still running cannot be in the trash"),
+        ("network.rs", "SELECT DISTINCT remote_ip FROM playbacks WHERE remote_ip IS NOT NULL", "every row is classified, so an undo comes back local or not"),
+        ("security.rs", "SELECT remote_ip AS ip FROM playbacks WHERE remote_ip IS NOT NULL", "every address is placed, so an undo comes back with its place"),
+        ("sync.rs", "SELECT EXISTS(SELECT 1 FROM playbacks)", "a backup holds the trash too, so the trash alone is something to back up"),
+        ("playback.rs", "DELETE FROM playbacks WHERE source <> 'live' AND ( EXISTS (SELECT 1 FROM playbacks k", "duplicates are found across the trash; the caller says which rows may stand for one"),
+        ("playback.rs", ") OR EXISTS (SELECT 1 FROM playbacks k WHERE k.user_id = playbacks.user_id", "the same rule's other end"),
+    ];
+
+    /// Every SQL string in `src/` (tests left out) that reads the `playbacks` table.
+    fn reads_of_playbacks() -> Vec<(String, String)> {
+        let mut out = vec![];
+        for entry in std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/src")).unwrap().flatten().filter(|e| e.path().extension().is_some_and(|x| x == "rs")) {
+            let file = entry.file_name().to_string_lossy().into_owned();
+            let text = std::fs::read_to_string(entry.path()).unwrap();
+            let text = text.split("\n#[cfg(test)]\nmod tests").next().unwrap().to_string();
+            let b: Vec<char> = text.chars().collect();
+            let mut i = 0;
+            while i < b.len() {
+                match b[i] {
+                    '/' if b.get(i + 1) == Some(&'/') => while i < b.len() && b[i] != '\n' { i += 1 },
+                    '\'' if b.get(i + 2) == Some(&'\'') || (b.get(i + 1) == Some(&'\\') && b.get(i + 3) == Some(&'\'')) => i += if b[i + 1] == '\\' { 4 } else { 3 },
+                    'r' if matches!(b.get(i + 1), Some('"') | Some('#')) && (i == 0 || !b[i - 1].is_alphanumeric() && b[i - 1] != '_') => {
+                        let hashes = b[i + 1..].iter().take_while(|c| **c == '#').count();
+                        if b.get(i + 1 + hashes) != Some(&'"') { i += 1; continue; }
+                        let start = i + 2 + hashes;
+                        let close: String = std::iter::once('"').chain(std::iter::repeat_n('#', hashes)).collect();
+                        let rest: String = b[start..].iter().collect();
+                        let end = rest.find(&close).unwrap();
+                        out.push((file.clone(), rest[..end].to_string()));
+                        i = start + rest[..end].chars().count() + close.len();
+                    }
+                    '"' => {
+                        let mut s = String::new();
+                        i += 1;
+                        while i < b.len() && b[i] != '"' {
+                            if b[i] == '\\' { i += 1; }
+                            s.push(b[i]);
+                            i += 1;
+                        }
+                        out.push((file.clone(), s));
+                        i += 1;
+                    }
+                    _ => i += 1,
+                }
+            }
+        }
+        out.retain(|(_, sql)| {
+            let flat = sql.split_whitespace().collect::<Vec<_>>().join(" ").to_ascii_lowercase();
+            ["from playbacks", "join playbacks"].iter().any(|w| flat.match_indices(w).any(|(at, _)| !flat[at + w.len()..].starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')))
+        });
+        out
+    }
+
+    /// A query added later must not count the trash by accident: it reads `visible_playbacks`, says what it does with
+    /// `deleted_at`, or is an identity read named above with its reason.
+    #[test]
+    fn every_read_of_history_leaves_the_trash_out() {
+        let flat = |s: &str| s.split_whitespace().collect::<Vec<_>>().join(" ");
+        let reads = reads_of_playbacks();
+        assert!(reads.len() > 5, "the scan found no reads at all: {}", reads.len());
+        let unexplained: Vec<String> = reads
+            .iter()
+            .filter(|(file, sql)| !sql.contains("deleted_at") && !IDENTITY_READS.iter().any(|(f, phrase, _)| f == file && flat(sql).contains(phrase)))
+            .map(|(file, sql)| format!("{file}: {}", flat(sql).chars().take(140).collect::<String>()))
+            .collect();
+        assert!(unexplained.is_empty(), "{} reads of playbacks count the trash; read visible_playbacks, or name one in IDENTITY_READS:\n{}", unexplained.len(), unexplained.join("\n"));
+        for (file, phrase, _) in IDENTITY_READS {
+            assert!(reads.iter().any(|(f, sql)| *f == file && flat(sql).contains(phrase)), "IDENTITY_READS names a read that is no longer there: {file}: {phrase}");
+        }
+    }
 
     fn db_at(schema: usize, version: Option<&str>) -> Connection {
         let c = Connection::open_in_memory().unwrap();
