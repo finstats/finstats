@@ -34,7 +34,15 @@ export default {
       try { backupsData = await api.get('/backups', null, { signal: store.signal }); sig = ''; paint(); }
       catch (e) { if (isAbort(e) || e.status === 401) return; mount(body, errorState(e, loadBackups)); }
     }
-    const act = async (fn) => { err = null; try { await fn(); } catch (e) { err = e.message; } pending = null; await store.poke(1000); await loadBackups(); };
+    // Clears only the question it answered: a question asked meanwhile (Delete pressed while "Back up now" was still
+    // finishing) used to vanish under the pointer when the earlier action ended.
+    const act = async (fn) => {
+      const answering = pending;
+      err = null;
+      try { await fn(); } catch (e) { err = e.message; }
+      if (pending === answering) pending = null;
+      await store.poke(1000); await loadBackups();
+    };
 
     function scheduleForm() {
       const s = store.settings;
