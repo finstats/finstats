@@ -801,8 +801,8 @@ their own Esc, and `openModal` keeps a stack: only the dialog on top answers key
 them (en-US), never with the browser's separators.
 **The menus are FinUI's `desktop-nav` and `mobile-nav`, each in the style its browser chose** (Settings → Appearance; the
 owner's decision: kept by the browser, `state.js`, never the account). Above 820 px one of eight — Sidebar (today's, the
-default), Grouped, Rail that opens (icons until the pointer or the focus comes, then the whole sidebar *over* the page,
-`STYLES[].opens`), Search first, Dock, Command bar, Pinned, Coloured tiles — and the six that are a side may sit on
+default), Grouped, Rail that opens (icons until the pointer or the keyboard's focus comes — `:focus-visible`, never a link a click left
+focused — then the whole sidebar *over* the page, `STYLES[].opens`; closed, its list scrolls without drawing a bar), Search first, Dock, Command bar, Pinned, Coloured tiles — and the six that are a side may sit on
 the right (*Menu on the right*; `sideOf` answers none for the dock and the command bar). Each style says which edge of the
 window it keeps (`STYLES[].edge` and `size`); `shell.js` lays the page beside it (`.app.nav-left|right|dock|command`,
 `--desktop-nav-size`), and the dock sends the status bar to the top, so the version and the repository link stay on
