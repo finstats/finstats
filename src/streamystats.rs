@@ -670,6 +670,27 @@ mod tests {
         assert_eq!(record(&c, &watched_live()).unwrap().unwrap().item_type, "Unknown");
     }
 
+    /// A play from Jellystat of something the library no longer has and no series names is typed from the
+    /// session it kept, the way the Jellystat import types the same row: so one evening reads the same
+    /// whichever tracker it arrived from.
+    #[test]
+    fn a_play_from_jellystat_outside_the_library_is_typed_as_the_jellystat_import_types_it() {
+        let c = conn();
+        let typed = |edit: &dyn Fn(&mut Value)| {
+            let mut row = came_from_jellystat();
+            for k in ["seriesId", "seriesName", "seasonId"] {
+                row.as_object_mut().unwrap().remove(k);
+            }
+            edit(&mut row);
+            record(&c, &row).unwrap().unwrap().item_type
+        };
+        assert_eq!(typed(&|_| {}), "Movie", "a picture with a file behind it");
+        assert_eq!(typed(&|r| r["rawData"].as_object_mut().unwrap().remove("OriginalContainer").map(drop).unwrap_or(())), "TvChannel", "a picture with no file behind it");
+        let sound_only = json!([{ "Type": "Audio", "Codec": "flac", "Index": 0, "Channels": 2 }]);
+        assert_eq!(typed(&|r| r["rawData"]["MediaStreams"] = sound_only.clone()), "Audio", "sound and no picture");
+        assert_eq!(typed(&|r| r["rawData"]["MediaStreams"] = json!([{ "Type": "Subtitle", "Codec": "srt", "Index": 0 }])), "Unknown", "neither");
+    }
+
     #[test]
     fn a_row_without_a_person_or_an_item_or_a_time_is_no_use() {
         let c = conn();
