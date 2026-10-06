@@ -99,7 +99,7 @@ export default function itemPage(ctx) {
     },
   });
 
-  ctx.root.append(filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view);
+  ctx.root.append(filterBar({ days, signal: ctx.signal, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view);
   dv.load();
 }
 

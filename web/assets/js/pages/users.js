@@ -57,7 +57,7 @@ export function usersPage(ctx) {
     },
   });
   ctx.root.append(pageHeader('Users', 'Everyone with an account on your Jellyfin server'),
-    filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }),
+    filterBar({ days, signal: ctx.signal, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }),
     card({ cls: 'fui-card--flush', body: view }));
   dv.load();
 }
@@ -142,7 +142,7 @@ export function userPage(ctx) {
 
   // Streaks and show progress cover all time and load on their own. The streaks sit under the header;
   // the shows card is slotted into the page further down (the same node on every re-render).
-  ctx.root.append(headerSlot, userTabs(id, 'overview'), allTime.tiles, filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view);
+  ctx.root.append(headerSlot, userTabs(id, 'overview'), allTime.tiles, filterBar({ days, signal: ctx.signal, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view);
   headerSlot.append(h('header', { class: 'fui-page-header entity-header' }, h('span', { class: 'fui-skeleton', style: { width: '56px', height: '56px', borderRadius: '50%' } }), h('div', null, sk.line('180px', 26))));
   dv.load();
 }

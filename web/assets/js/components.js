@@ -165,15 +165,17 @@ export function filterBar({ days, onDays, userId, onUser, signal, extra = [] }) 
 }
 
 /** A row of filters that stays on screen while the page scrolls (`.filters-bar`), and says when something has scrolled
- *  under it (`is-stuck`). Its parent must be the page, not a wrapper of its own height. */
+ *  under it (`is-stuck`). Its parent must be the page, not a wrapper of its own height. `signal` is the page's: the
+ *  window's scroll listener goes with it, and without one it held the bar, and the whole page around it, for as long
+ *  as the tab was open. */
 export function stickyFilters(controls, signal) {
+  if (!signal) throw new Error('stickyFilters needs the page\'s signal');
   const bar = h('div', { class: 'filters filters-bar', role: 'group', 'aria-label': 'Filters' }, controls);
-  // One look per frame while scrolling; the listener goes with the page (or, for a caller without a signal, with the bar).
-  let queued = false, seen = false;
+  // One look per frame while scrolling.
+  let queued = false;
   const look = () => {
     queued = false;
-    if (!bar.isConnected) { if (seen) removeEventListener('scroll', onScroll); return; }
-    seen = true;
+    if (!bar.isConnected) return;
     bar.classList.toggle('is-stuck', bar.getBoundingClientRect().top <= parseFloat(getComputedStyle(bar).top) + 0.5 && scrollY > 0);
   };
   const onScroll = () => { if (!queued) { queued = true; requestAnimationFrame(look); } };

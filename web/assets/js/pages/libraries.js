@@ -60,7 +60,7 @@ export function librariesPage(ctx) {
     },
   });
   ctx.root.append(pageHeader('Libraries', 'What’s on the server and how much of it gets watched'),
-    filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view, makeupSlot(ctx));
+    filterBar({ days, signal: ctx.signal, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view, makeupSlot(ctx));
   dv.load();
 }
 
@@ -104,7 +104,7 @@ export function libraryPage(ctx) {
     },
   });
   ctx.root.append(h('a', { class: 'back-link', href: '/libraries' }, icon('chevronLeft', 14), 'Libraries'), headerSlot,
-    filterBar({ days, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view, healthSlot(ctx, id), makeupSlot(ctx, id));
+    filterBar({ days, signal: ctx.signal, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view, healthSlot(ctx, id), makeupSlot(ctx, id));
   dv.load();
 }
 
