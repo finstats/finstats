@@ -224,6 +224,24 @@ pub fn subtitle_label(codec: Option<&str>, language: Option<&str>) -> Option<Str
 mod tests {
     use super::*;
 
+    #[test]
+    fn a_resolution_is_named_by_its_width_or_its_height() {
+        for ((w, h), said) in [((3840, 1600), Some("4K")), ((0, 2160), Some("4K")), ((2560, 1440), Some("1440p")), ((1920, 800), Some("1080p")),
+            ((1440, 1080), Some("1080p")), ((1280, 534), Some("720p")), ((1024, 576), Some("576p")), ((720, 576), Some("576p")), ((720, 480), Some("480p")),
+            ((640, 360), Some("SD")), ((0, 0), None)] {
+            assert_eq!(resolution_label(Some(w), Some(h)), said, "{w}x{h}");
+        }
+        assert_eq!(resolution_label(None, None), None);
+        assert_eq!(resolution_label(Some(1920), None), Some("1080p"));
+    }
+
+    #[test]
+    fn channels_are_named_as_a_layout() {
+        for (ch, said) in [(1, "1.0"), (2, "2.0"), (6, "5.1"), (8, "7.1"), (3, "3ch"), (12, "12ch")] {
+            assert_eq!(channels_label(ch), said);
+        }
+    }
+
     /// Languages by how many episodes have them, then by how early in the track list they come anywhere, then by code.
     #[test]
     fn language_counts_are_episodes_per_language() {
