@@ -704,7 +704,8 @@ No build step, no dependencies, no CDN: vanilla ES modules served from the binar
 element builder, icon map, formatters), `api.js`, `router.js` (History API; the server returns `index.html` for any
 non-`/api`, non-`/assets` path), `components.js`, `charts.js` (hand-rolled SVG), `pages/*.js`. Rules that hold
 everywhere: API/user strings reach the DOM only via `h()`/`textContent` (never `innerHTML` with data); fetches are
-aborted and timers cleared on route change; every new card must hide itself when its data is missing (older servers,
+aborted, timers cleared and listeners on `window` or `document` removed on route change (`ctx.signal`: a listener left behind holds
+its whole page, and `stickyFilters` refuses to be drawn without one); every new card must hide itself when its data is missing (older servers,
 non-admins, imported plays). Native `el.append(null)` prints the text "null" — pass possibly-absent nodes through
 `h()` or filter them first.
 
