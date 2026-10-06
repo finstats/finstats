@@ -824,6 +824,10 @@ takes `.content`'s place in `.page-search` while the menu stays. Either way `gro
 opened it — the menu's search, the command bar, the top bar's search on a phone, or for Ctrl+Space the menu's own — and
 `shrink()` back into it, a place that was not there opening out of the control (`cut`) rather than sliding in. `search.js`
 answers the words (pages at once, `/api/search` when it comes); a press anywhere else, Esc or a page chosen puts it away.
+**Esc gives the keyboard's focus back to what had it when search opened** — the control pressed, or the place Ctrl+Space was
+pressed in, never the menu's search for a shortcut — and lets a click's focus go (handed back after a key it would be the
+keyboard's, and a link a click left focused in the rail would open it): a rail holds itself open while the focus is in it, and `desktop-nav` moves the focus
+before `shrink` measures where it closes to (and again once it has, the search laid back over the menu having hidden it).
 The modal palette it replaced is gone.
 **Context menus (FinUI `context-menu`, `menus.js`, 2.2.0) come from the link, not the page.** One resolver for the whole app
 (`installMenus`, `attachContextMenu(document, …)`): any `<a>` to `/items/:id`, `/users/:id`, `/people/:id` or `/libraries/:id` has a
