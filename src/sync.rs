@@ -1002,7 +1002,8 @@ async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
     let previous: Option<Value> = app.db.call(|c| Ok(db::get_setting(c, "server_info")?.and_then(|raw| serde_json::from_str(&raw).ok()))).await?;
     let plugin_count = plugins.as_ref().map(Vec::len);
     let snapshot = server_snapshot(&info, storage, plugins.as_deref(), tasks.as_deref(), previous.as_ref(), db::now());
-    let device_count = devices.len();
+    // What was kept, not what was listed: a device nobody signed in on has no one to belong to and is not stored.
+    let device_count = devices.iter().filter(|d| d["Id"].is_string() && d["LastUserId"].is_string()).count();
     app.db
         .call(move |c| {
             let now = db::now();
