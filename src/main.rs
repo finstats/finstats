@@ -77,6 +77,9 @@ ENVIRONMENT:
     FINSTATS_BIND          Address to listen on                  (default: 0.0.0.0:8080)
     FINSTATS_TRUST_PROXY   Set to 1 behind a reverse proxy to read X-Forwarded-For
     FINSTATS_GEOIP_DB      A city database (.mmdb) to place addresses with (default: newest in <data dir>/geoip)
+    FINSTATS_PUBLIC_IP_URL Where to look up this network's public address (a service answering it as plain text)
+    FINSTATS_ALLOW_LIBRARY_SHRINK  Set to 1 to accept a library read that empties or nearly empties a library
+    FINSTATS_SKIP_PREUPDATE_BACKUP Set to 1 to upgrade without copying the database first
     JELLYFIN_URL           Optional: skip the setup wizard…
     JELLYFIN_API_KEY       …together with an API key
     TZ                     Timezone used for \"per day\" and \"hour of day\" statistics
@@ -373,6 +376,19 @@ mod tests {
         for cmd in ["import-jellystat", "import-streamystats", "restore"] {
             let err = parse(&[cmd]).err().unwrap_or_else(|| panic!("{cmd} without a file was accepted")).to_string();
             assert_eq!(err, format!("usage: finstats {cmd} <file>"));
+        }
+    }
+
+    #[test]
+    fn the_usage_names_every_variable_finstats_reads() {
+        for entry in std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/src")).unwrap().flatten().filter(|e| e.path().extension().is_some_and(|x| x == "rs")) {
+            let (file, text) = (entry.file_name().to_string_lossy().into_owned(), std::fs::read_to_string(entry.path()).unwrap());
+            for (i, _) in text.match_indices("env::var(\"") {
+                let name: String = text[i + 10..].chars().take_while(|c| *c != '"').collect();
+                if name.starts_with("FINSTATS_") || name.starts_with("JELLYFIN_") {
+                    assert!(USAGE.contains(&name), "{file} reads {name}, which the usage never mentions");
+                }
+            }
         }
     }
 }
