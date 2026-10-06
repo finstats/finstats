@@ -364,9 +364,9 @@ mod tests {
         assert!(matches!(parse(&["serve"]).unwrap(), Command::Serve));
         assert!(matches!(parse(&["backup"]).unwrap(), Command::Backup));
         assert!(matches!(parse(&["relink"]).unwrap(), Command::Relink));
-        assert!(matches!(parse(&["import-jellystat", "a.jsonl"]).unwrap(), Command::ImportJellystat(p) if p == PathBuf::from("a.jsonl")));
-        assert!(matches!(parse(&["import-streamystats", "b.json"]).unwrap(), Command::ImportStreamystats(p) if p == PathBuf::from("b.json")));
-        assert!(matches!(parse(&["restore", "c.jsonl.gz"]).unwrap(), Command::Restore(p) if p == PathBuf::from("c.jsonl.gz")));
+        assert!(matches!(parse(&["import-jellystat", "a.jsonl"]).unwrap(), Command::ImportJellystat(p) if p == std::path::Path::new("a.jsonl")));
+        assert!(matches!(parse(&["import-streamystats", "b.json"]).unwrap(), Command::ImportStreamystats(p) if p == std::path::Path::new("b.json")));
+        assert!(matches!(parse(&["restore", "c.jsonl.gz"]).unwrap(), Command::Restore(p) if p == std::path::Path::new("c.jsonl.gz")));
     }
 
     #[test]
