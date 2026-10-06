@@ -19,7 +19,9 @@ export function motion(root = document.body, { parts = PARTS } = {}) {
   // A preset may arrive as a stylesheet after this: every stylesheet that loads may change FinUI's --ease.
   const repace = (e) => { if (e.target instanceof HTMLLinkElement) pace(); };
   document.addEventListener('load', repace, true);
-  const done = new WeakMap(), stops = [];
+  // What each moved element answers to stop it, kept only while the element is in the page: a stop holds its element,
+  // and a list that only grew held every page that was ever left, with the listeners a part put outside it.
+  const done = new WeakMap(), stops = new Map();
   const sweep = (node) => {
     if (node.nodeType !== 1) return;
     for (const part of parts) {
@@ -29,12 +31,28 @@ export function motion(root = document.body, { parts = PARTS } = {}) {
         if (had.has(part.name)) continue;
         had.add(part.name); done.set(el, had);
         const stop = part.enhance(el);
-        if (typeof stop === 'function') stops.push(stop);
+        if (typeof stop === 'function') stops.set(el, [...(stops.get(el) || []), stop]);
       }
     }
   };
+  // An element that left is stopped and forgotten once the changes are done — one that only moved is still here — and
+  // moved again should it come back.
+  const letGo = () => {
+    for (const [el, fns] of stops) {
+      if (root.contains(el)) continue;
+      stops.delete(el); done.delete(el);
+      fns.forEach((s) => s());
+    }
+  };
   sweep(root);
-  const watch = new MutationObserver((records) => { for (const r of records) for (const n of r.addedNodes) sweep(n); });
+  const watch = new MutationObserver((records) => {
+    let left = false;
+    for (const r of records) {
+      for (const n of r.addedNodes) sweep(n);
+      if (!left) for (const n of r.removedNodes) if (n.nodeType === 1) { left = true; break; }
+    }
+    if (left) letGo();
+  });
   watch.observe(root, { childList: true, subtree: true });
-  return () => { watch.disconnect(); document.removeEventListener('load', repace, true); stops.forEach((s) => s()); };
+  return () => { watch.disconnect(); document.removeEventListener('load', repace, true); for (const fns of stops.values()) fns.forEach((s) => s()); stops.clear(); };
 }
