@@ -209,19 +209,26 @@ async fn security_headers(req: Request, next: Next) -> Response {
 
 // ---------------------------------------------------------------- web UI
 
+/// An asset and its ETag. Every one but a font is sent `no-cache`, so a browser asks again at each load: one that already
+/// holds this version is answered 304 and nothing else, or every stylesheet and module came down in full each time.
+fn asset(headers: &HeaderMap, etag: &str, mime: &str, cache: &str, vary: Option<&str>, body: impl FnOnce() -> Body) -> Response {
+    let mut r = Response::builder().header(CACHE_CONTROL, cache).header("etag", etag);
+    if let Some(v) = vary {
+        r = r.header("vary", v);
+    }
+    if artwork::not_modified(headers.get(axum::http::header::IF_NONE_MATCH).and_then(|v| v.to_str().ok()), etag) {
+        return r.status(StatusCode::NOT_MODIFIED).body(Body::empty()).unwrap();
+    }
+    r.header(CONTENT_TYPE, mime).body(body()).unwrap()
+}
+
 async fn static_handler(State(app): State<App>, headers: HeaderMap, uri: Uri) -> Response {
     let path = uri.path().trim_start_matches('/');
     // FinUI's styles, every component's file in one answer: one request on the critical path, no build step — in the
     // look the asker chose in Settings → Appearance. Theirs alone, so private: no cache between may hand it to another.
     if path == "assets/finui.css" {
         return match crate::finui::served_with(&crate::appearance::of_request(&app, &headers).await) {
-            Ok((css, etag)) => Response::builder()
-                .header(CONTENT_TYPE, "text/css; charset=utf-8")
-                .header(CACHE_CONTROL, "private, no-cache")
-                .header("vary", "Cookie")
-                .header("etag", etag)
-                .body(Body::from(css.as_str().to_owned()))
-                .unwrap(),
+            Ok((css, etag)) => asset(&headers, &etag, "text/css; charset=utf-8", "private, no-cache", Some("Cookie"), || Body::from(css.as_str().to_owned())),
             Err(e) => {
                 tracing::error!("finui.css: {e:#}");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -231,12 +238,7 @@ async fn static_handler(State(app): State<App>, headers: HeaderMap, uri: Uri) ->
     // FinMotion's styles, the same way: its springs and every part's file in one answer. The same for everybody.
     if path == "assets/finmotion.css" {
         return match crate::finmotion::served() {
-            Ok((css, etag)) => Response::builder()
-                .header(CONTENT_TYPE, "text/css; charset=utf-8")
-                .header(CACHE_CONTROL, "no-cache")
-                .header("etag", etag)
-                .body(Body::from(css.as_str().to_owned()))
-                .unwrap(),
+            Ok((css, etag)) => asset(&headers, &etag, "text/css; charset=utf-8", "no-cache", None, || Body::from(css.as_str().to_owned())),
             Err(e) => {
                 tracing::error!("finmotion.css: {e:#}");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -249,12 +251,7 @@ async fn static_handler(State(app): State<App>, headers: HeaderMap, uri: Uri) ->
         // Fonts never change; everything else revalidates so upgrades show up immediately.
         let cache = if path.starts_with("assets/fonts/") { "public, max-age=31536000, immutable" } else { "no-cache" };
         let etag = format!("\"{}\"", hex::encode(&file.metadata.sha256_hash()[..8]));
-        return Response::builder()
-            .header(CONTENT_TYPE, mime.as_ref())
-            .header(CACHE_CONTROL, cache)
-            .header("etag", etag)
-            .body(Body::from(file.data.into_owned()))
-            .unwrap();
+        return asset(&headers, &etag, mime.as_ref(), cache, None, || Body::from(file.data.into_owned()));
     }
     if path.starts_with("assets/") {
         return StatusCode::NOT_FOUND.into_response();
