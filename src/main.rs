@@ -102,6 +102,29 @@ fn ensure_writable(data_dir: &std::path::Path) -> Result<()> {
     }
 }
 
+/// What finstats was asked to do; everything but `--version` and `--help`, which need nothing at all.
+enum Command {
+    Serve,
+    ImportJellystat(PathBuf),
+    ImportStreamystats(PathBuf),
+    Backup,
+    Restore(PathBuf),
+    Relink,
+}
+
+fn command(args: &[String]) -> Result<Command> {
+    let file = |cmd: &str| args.get(1).map(PathBuf::from).with_context(|| format!("usage: finstats {cmd} <file>"));
+    Ok(match args.first().map(String::as_str) {
+        None | Some("serve") => Command::Serve,
+        Some(cmd @ "import-jellystat") => Command::ImportJellystat(file(cmd)?),
+        Some(cmd @ "import-streamystats") => Command::ImportStreamystats(file(cmd)?),
+        Some("backup") => Command::Backup,
+        Some(cmd @ "restore") => Command::Restore(file(cmd)?),
+        Some("relink") => Command::Relink,
+        Some(other) => bail!("unknown command `{other}`\n\n{USAGE}"),
+    })
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
@@ -121,17 +144,19 @@ fn main() -> Result<()> {
         .with_target(false)
         .init();
 
+    // What was asked is settled before anything is opened: a mistyped command, or one missing its file, used to
+    // create the data folder and open (and so migrate) the database before saying it did not know what to do.
+    let command = command(&args)?;
     let data_dir = PathBuf::from(std::env::var("FINSTATS_DATA_DIR").unwrap_or_else(|_| "data".into()));
     std::fs::create_dir_all(&data_dir).with_context(|| format!("creating data directory {}", data_dir.display()))?;
     ensure_writable(&data_dir)?;
     let db = db::Db::open(&data_dir.join("finstats.db"))?;
 
-    match args.first().map(String::as_str) {
-        None | Some("serve") => {}
-        Some("import-jellystat") => {
-            let Some(file) = args.get(1) else { bail!("usage: finstats import-jellystat <file>") };
+    match command {
+        Command::Serve => {}
+        Command::ImportJellystat(file) => {
             let started = std::time::Instant::now();
-            let res = import::run(&db, std::path::Path::new(file), None)?;
+            let res = import::run(&db, &file, None)?;
             println!(
                 "Imported {} plays ({} skipped as duplicates), {} users, {} libraries, {} items, {} seasons, {} episodes in {:.1}s",
                 res.plays_imported, res.plays_skipped, res.users, res.libraries, res.items, res.seasons, res.episodes,
@@ -139,28 +164,26 @@ fn main() -> Result<()> {
             );
             return Ok(());
         }
-        Some("import-streamystats") => {
-            let Some(file) = args.get(1) else { bail!("usage: finstats import-streamystats <file>") };
+        Command::ImportStreamystats(file) => {
             let started = std::time::Instant::now();
-            let res = streamystats::run(&db, std::path::Path::new(file), None)?;
+            let res = streamystats::run(&db, &file, None)?;
             println!(
                 "Imported {} plays ({} already present, {} marked watched but never played) and {} users from {} sessions in {:.1}s",
                 res.plays_imported, res.plays_skipped, res.marked_watched, res.users, res.sessions_read, started.elapsed().as_secs_f64()
             );
             return Ok(());
         }
-        Some("backup") => {
+        Command::Backup => {
             let made = backup::export(&db, &backup::dir(&data_dir), None)?;
             println!("Wrote {} ({} plays, {} rows, {:.1} MB)", backup::dir(&data_dir).join(&made.name).display(), made.plays, made.rows, made.size_bytes as f64 / 1e6);
             return Ok(());
         }
-        Some("restore") => {
-            let Some(file) = args.get(1) else { bail!("usage: finstats restore <file>") };
-            let r = backup::restore(&db, std::path::Path::new(file), true, None)?;
+        Command::Restore(file) => {
+            let r = backup::restore(&db, &file, true, None)?;
             println!("Restored {} plays ({} already present), {} timeline events, {} other rows; settings restored: {}", r.plays_imported, r.plays_skipped, r.events, r.other_rows, r.settings_restored);
             return Ok(());
         }
-        Some("relink") => {
+        Command::Relink => {
             let r = relink::relink_orphans(&*db.conn()?, Settings::load(&*db.conn()?)?.merge_window_s)?;
             println!(
                 "Re-linked {} title plays and {} episode plays; cleaned {} names; removed {} plays that had become duplicates",
@@ -168,7 +191,6 @@ fn main() -> Result<()> {
             );
             return Ok(());
         }
-        Some(other) => bail!("unknown command `{other}`\n\n{USAGE}"),
     }
 
     tokio::runtime::Builder::new_multi_thread()
@@ -323,4 +345,34 @@ set FINSTATS_ALLOW_LIBRARY_SHRINK=1.
         std::process::exit(70);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(args: &[&str]) -> Result<Command> {
+        command(&args.iter().map(|a| a.to_string()).collect::<Vec<_>>())
+    }
+
+    #[test]
+    fn what_was_asked_is_known_before_anything_is_opened() {
+        assert!(matches!(parse(&[]).unwrap(), Command::Serve));
+        assert!(matches!(parse(&["serve"]).unwrap(), Command::Serve));
+        assert!(matches!(parse(&["backup"]).unwrap(), Command::Backup));
+        assert!(matches!(parse(&["relink"]).unwrap(), Command::Relink));
+        assert!(matches!(parse(&["import-jellystat", "a.jsonl"]).unwrap(), Command::ImportJellystat(p) if p == PathBuf::from("a.jsonl")));
+        assert!(matches!(parse(&["import-streamystats", "b.json"]).unwrap(), Command::ImportStreamystats(p) if p == PathBuf::from("b.json")));
+        assert!(matches!(parse(&["restore", "c.jsonl.gz"]).unwrap(), Command::Restore(p) if p == PathBuf::from("c.jsonl.gz")));
+    }
+
+    #[test]
+    fn a_command_it_cannot_carry_out_is_refused_with_the_usage() {
+        let err = parse(&["bakcup"]).err().expect("an unknown command was accepted").to_string();
+        assert!(err.contains("unknown command `bakcup`") && err.contains("USAGE:"), "{err}");
+        for cmd in ["import-jellystat", "import-streamystats", "restore"] {
+            let err = parse(&[cmd]).err().unwrap_or_else(|| panic!("{cmd} without a file was accepted")).to_string();
+            assert_eq!(err, format!("usage: finstats {cmd} <file>"));
+        }
+    }
 }
