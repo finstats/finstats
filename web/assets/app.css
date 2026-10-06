@@ -929,24 +929,44 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .recap-banner .icon { flex: none; color: var(--accent-hi); }
 .recap-banner span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ------------------------------------------------------------ patch notes */
-.cl-list { display: flex; flex-direction: column; gap: 14px; max-width: 860px; }
-.cl-release { padding: 18px 20px 16px; background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); min-width: 0; }
-.cl-release.is-current { border-color: color-mix(in srgb, var(--accent) 55%, var(--border-soft)); }
-.cl-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
-.cl-version { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; color: var(--text-strong); }
-.cl-running { align-self: center; color: var(--text); background: var(--accent-wash); border-color: transparent; }
+/* ------------------------------------------------------------ patch notes
+   One sheet, the way Zen's release notes are set: no cards, whitespace between releases, and every note a
+   row of its own with its kind named in a column before it. A kind's hue is mixed towards the ink, so the
+   name reads in both themes whatever the hue. */
+.cl-list { display: flex; flex-direction: column; max-width: 920px; min-width: 0; }
+.cl-release { min-width: 0; }
+.cl-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.cl-version { margin: 0; font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em; color: var(--text-strong); }
+.cl-running { color: var(--text); background: var(--accent-wash); border-color: transparent; }
 .cl-date { margin-left: auto; color: var(--text-faint); font-size: 12.5px; }
-/* An x.y.0 release opens with a short title, not a paragraph, so it is set as one. */
-.cl-summary { margin: 6px 0 0; color: var(--text); font-size: 14.5px; font-weight: 600; max-width: 70ch; }
-.cl-group { margin-top: 14px; }
-.cl-kind { display: inline-flex; align-items: center; gap: 5px; margin: 0 0 6px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
-.cl-kind .icon { color: var(--accent-hi); }
-.cl-items { margin: 0; padding-left: 18px; list-style: disc; display: flex; flex-direction: column; gap: 6px; color: var(--text); font-size: 13.5px; line-height: 1.55; max-width: 78ch; overflow-wrap: anywhere; }
-.cl-items li::marker { color: var(--text-faint); }
-.cl-items strong { color: var(--text-strong); font-weight: 600; }
+/* A summary under a release that is not its series' x.y.0: a sentence or two, set apart from the notes. */
+.cl-summary { margin: 10px 0 0; color: var(--text-strong); font-size: 15px; font-weight: 600; max-width: 72ch; }
+.cl-group { margin-top: 16px; }
+.cl-group + .cl-group { margin-top: 22px; }
+.cl-added { --cl-hue: var(--good); }
+.cl-changed { --cl-hue: var(--series-4); }
+.cl-performance { --cl-hue: var(--series-1); }
+.cl-stability { --cl-hue: var(--series-2); }
+.cl-fixed { --cl-hue: var(--warning); }
+.cl-removed { --cl-hue: var(--critical-text); }
+.cl-kind, .cl-tag { color: color-mix(in srgb, var(--cl-hue, var(--text-muted)) 82%, var(--text)); }
+/* The group's heading is for a screen reader beside the column of names; on a phone it is the name. */
+.cl-kind { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: 12px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.cl-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.cl-items li { display: grid; grid-template-columns: 7rem minmax(0, 1fr); column-gap: 14px; align-items: start; font-size: 14px; line-height: 1.6; }
+/* As tall as one line of the note, so the name sits level with the note's first line however long it runs. */
+.cl-tag { display: inline-flex; align-items: center; gap: 6px; min-height: 1.6em; font-weight: 600; white-space: nowrap; }
+.cl-text { color: var(--text); max-width: 80ch; overflow-wrap: anywhere; }
+.cl-text strong { color: var(--text-strong); font-weight: 600; }
 .cl-code { padding: 1px 5px; border-radius: 4px; background: var(--bg-sunken); border: 1px solid var(--border-soft); font-size: 12px; }
-@media (max-width: 560px) { .cl-date { margin-left: 0; flex-basis: 100%; } }
+@media (min-width: 561px) {
+  .cl-kind { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+}
+@media (max-width: 560px) {
+  .cl-date { margin-left: 0; flex-basis: 100%; }
+  .cl-items li { grid-template-columns: 14px minmax(0, 1fr); column-gap: 10px; }
+  .cl-tag-word { display: none; }
+}
 
 /* ------------------------------------------------------------ settings: backups */
 .backup-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 20px; }
@@ -1047,24 +1067,20 @@ button.ep[aria-disabled="true"]:hover { filter: none; outline: 0; }
 .faces { display: inline-flex; flex: none; }
 .faces > * + * { margin-left: -7px; box-shadow: 0 0 0 2px var(--bg-2); border-radius: 50%; }
 
-/* ------------------------------------------------------------ patch notes: one fold per minor series */
-.cl-series { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); min-width: 0; }
-.cl-series.is-current { border-color: color-mix(in srgb, var(--accent) 55%, var(--border-soft)); }
+/* ------------------------------------------------------------ patch notes: one group per minor series */
+.cl-series { min-width: 0; }
+.cl-series + .cl-series { margin-top: 56px; padding-top: 40px; border-top: 1px solid var(--border-soft); }
 /* Nothing folds here, so the head is a heading and not a button: every series stands open and
    the list of versions beside the notes is what gets you about. */
-.cl-series-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 13px 18px;
-  border-bottom: 1px solid var(--border-soft); border-radius: var(--radius) var(--radius) 0 0; }
-.cl-series-name { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; color: var(--text-strong); }
+.cl-series-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.cl-series-name { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-strong); }
+.cl-series.is-current .cl-series-name { color: var(--accent-hi); }
 .cl-series-range { color: var(--text-faint); font-size: 12px; }
-.cl-series-about { flex: 1 1 260px; min-width: 0; color: var(--text-muted); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-series-about { flex: 1 1 260px; min-width: 0; color: var(--text-strong); font-family: var(--font-heading); font-size: 16.5px; font-weight: 600; }
 .cl-series-meta { margin-left: auto; color: var(--text-faint); font-size: 12.5px; white-space: nowrap; }
-.cl-series-body { padding: 4px 18px 8px; }
+.cl-series-body { display: flex; flex-direction: column; gap: 44px; margin-top: 24px; }
 .cl-series, .cl-release { scroll-margin-top: 14px; }
-/* inside a fold the releases are sections, not cards of their own */
-.cl-series-body .cl-release { padding: 14px 0 12px; background: none; border: 0; border-radius: 0; }
-.cl-series-body .cl-release + .cl-release { border-top: 1px solid var(--border-soft); }
-.cl-series-body .cl-version { font-size: 14.5px; }
-@media (max-width: 560px) { .cl-series-meta { margin-left: 0; flex-basis: 100%; } .cl-series-about { flex-basis: 100%; white-space: normal; } }
+@media (max-width: 560px) { .cl-series-meta { margin-left: 0; flex-basis: 100%; } .cl-series-about { flex-basis: 100%; } }
 
 /* ---- patch notes: the list of versions beside the notes
    Wide enough for two columns and it sits alongside, stuck to the top and scrolling on its own;

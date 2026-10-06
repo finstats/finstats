@@ -52,20 +52,30 @@ function days(first, last) {
   return typeof f.formatRange === 'function' ? f.formatRange(a, b) : `${f.format(a)} – ${f.format(b)}`;
 }
 
-function release(r, current) {
+// Every note is a row of its own with its kind named before it, as Zen's release notes do it: no bullets,
+// one column of kinds down the left, so a reader looking for what was fixed reads straight down it.
+// The heading names the group for a screen reader (each row's own name is hidden from it, or every line
+// would say "Added" again), and on a phone, where the column is only the icon, it is what is read.
+function notes(g) {
+  const k = KINDS[g.kind] || KINDS.Changed;
+  return h('section', { class: 'cl-group' },
+    h('h3', { class: ['cl-kind', k.cls] }, icon(k.icon, 14), g.kind),
+    h('ul', { class: 'cl-items' }, g.items.map((it) => h('li', null,
+      h('span', { class: ['cl-tag', k.cls], 'aria-hidden': 'true' }, icon(k.icon, 14), h('span', { class: 'cl-tag-word' }, g.kind)),
+      h('span', { class: 'cl-text' }, inline(it))))));
+}
+
+function release(r, current, about) {
   const running = r.version === current;
+  // The series' heading already says what its x.y.0 is called; said twice it reads as a stutter.
+  const summary = r.summary && r.summary.trim() !== about ? r.summary : null;
   return h('article', { class: ['cl-release', running && 'is-current'], 'aria-labelledby': `cl-${r.version}`, dataset: { version: r.version } },
     h('header', { class: 'cl-head' },
       h('h2', { class: 'cl-version mono', id: `cl-${r.version}` }, 'v' + r.version),
       running ? h('span', { class: 'fui-chip cl-running' }, icon('check', 12), 'Running now') : null,
       r.date ? h('time', { class: 'cl-date', dateTime: r.date }, days(r.started || r.date, r.date)) : null),
-    r.summary ? h('p', { class: 'cl-summary' }, inline(r.summary)) : null,
-    (r.groups || []).filter((g) => g.items && g.items.length).map((g) => {
-      const k = KINDS[g.kind] || KINDS.Changed;
-      return h('section', { class: 'cl-group' },
-        h('h3', { class: ['cl-kind', k.cls] }, icon(k.icon, 12), g.kind),
-        h('ul', { class: 'cl-items' }, g.items.map((it) => h('li', null, inline(it)))));
-    }));
+    summary ? h('p', { class: 'cl-summary' }, inline(summary)) : null,
+    (r.groups || []).filter((g) => g.items && g.items.length).map(notes));
 }
 
 /** Releases of one minor series (0.7.0 … 0.7.3) fold into one group, newest series first. */
@@ -90,7 +100,7 @@ function group(g, current, anchors) {
   // gives only its first, so a headline is never an introduction cut off by an ellipsis.
   const about = (oldest.summary || newest.summary || '').trim();
   const headline = (about.match(/^.+?[.!?](?=\s|$)/) || [about])[0];
-  const articles = g.releases.map((r) => release(r, current));
+  const articles = g.releases.map((r) => release(r, current, about));
   // Nothing folds: every series stands open and the list of versions is how you get about.
   // A page that hides most of itself behind a click is worse than a long one you can jump around.
   const section = h('section', { class: ['cl-series', running && 'is-current'], dataset: { key: g.key } },
