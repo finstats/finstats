@@ -717,6 +717,20 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
                     e.2.extend(a.users.keys().cloned());
                 }
             }
+            // A place the database knows only by its country cannot be drawn on the map, but it is a country all the same.
+            let mut stmt = c.prepare(&format!(
+                "SELECT l.country_code, COALESCE(l.country, l.country_code), p.user_id, COUNT(*)
+                 FROM playbacks p JOIN ip_locations l ON l.ip = p.remote_ip
+                 WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NULL AND l.country_code IS NOT NULL AND p.started_at >= ?1 AND {}
+                 GROUP BY l.country_code, p.user_id", whose("p.user_id")
+            ))?;
+            let rows = stmt.query_map(params_from_iter(with_who(since.into()).iter()), |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?)))?;
+            for row in rows {
+                let (cc, name, uid, plays) = row?;
+                let e = countries.entry(cc).or_insert_with(|| (name, 0, HashSet::new()));
+                e.1 += plays;
+                e.2.insert(uid);
+            }
             let mut countries: Vec<Value> = countries.into_iter().map(|(cc, (name, plays, users))| json!({ "code": cc, "name": name, "plays": plays, "users": users.len() })).collect();
             countries.sort_by_key(|v| std::cmp::Reverse(v["plays"].as_i64().unwrap_or(0)));
 
@@ -744,7 +758,7 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
                 |r| r.get(0),
             )?;
             let unplaced: i64 = c.query_row(
-                "SELECT COUNT(DISTINCT p.remote_ip) FROM playbacks p JOIN ip_locations l ON l.ip = p.remote_ip WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NULL",
+                "SELECT COUNT(DISTINCT p.remote_ip) FROM playbacks p JOIN ip_locations l ON l.ip = p.remote_ip WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NULL AND l.country_code IS NULL",
                 [],
                 |r| r.get(0),
             )?;
