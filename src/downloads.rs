@@ -624,6 +624,15 @@ mod tests {
         assert_eq!(rows.len(), 2);
     }
 
+    /// A pack of more than one season says how many, and one whose records name no season says only its episodes.
+    #[test]
+    fn a_pack_across_seasons_says_how_many_seasons_and_one_without_any_only_its_episodes() {
+        let (rows, _) = fold([1, 1, 2, 2].iter().map(|s| queued(1, "Low Orbit", Some("cc"), Some(*s), "downloading", 900, 300)).collect());
+        assert_eq!(rows[0].sub.as_deref(), Some("2 seasons · 4 episodes"));
+        let (rows, _) = fold((0..3).map(|_| queued(1, "Low Orbit", Some("dd"), None, "downloading", 900, 300)).collect());
+        assert_eq!(rows[0].sub.as_deref(), Some("3 episodes"));
+    }
+
     #[test]
     fn a_record_without_a_download_id_still_stands_for_itself() {
         let (rows, totals) = fold(vec![queued(2, "Northern Static", None, None, "downloading", 1000, 250), queued(3, "Tiny Giants", None, Some(1), "queued", 100, 100)]);
