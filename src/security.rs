@@ -192,19 +192,24 @@ fn human_gap(seconds: i64) -> String {
     let s = seconds.max(0);
     match s {
         0 => "at the same time".into(),
-        1..=90 => format!("{s} seconds apart"),
-        91..=5_400 => format!("{} minutes apart", (s as f64 / 60.0).round() as i64),
-        5_401..=172_800 => format!("{} hours apart", (s as f64 / 3600.0).round() as i64),
-        _ => format!("{} days apart", (s as f64 / 86_400.0).round() as i64),
+        1..=90 => format!("{} apart", count(s, "second")),
+        91..=5_400 => format!("{} apart", count((s as f64 / 60.0).round() as i64, "minute")),
+        5_401..=172_800 => format!("{} apart", count((s as f64 / 3600.0).round() as i64, "hour")),
+        _ => format!("{} apart", count((s as f64 / 86_400.0).round() as i64, "day")),
     }
+}
+
+/// "1 minute", "2 minutes".
+fn count(n: i64, one: &str) -> String {
+    format!("{n} {one}{}", if n == 1 { "" } else { "s" })
 }
 
 /// How long a run of things took: "under a minute", "12 minutes".
 fn human_span(seconds: i64) -> String {
     match seconds.max(0) {
         0..=60 => "under a minute".into(),
-        s @ 61..=5_400 => format!("{} minutes", (s as f64 / 60.0).round() as i64),
-        s => format!("{} hours", (s as f64 / 3600.0).round() as i64),
+        s @ 61..=5_400 => count((s as f64 / 60.0).round() as i64, "minute"),
+        s => count((s as f64 / 3600.0).round() as i64, "hour"),
     }
 }
 
@@ -894,6 +899,28 @@ pub async fn download_database(State(app): State<App>, Manager(user): Manager) -
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn how_far_apart_and_how_long_are_said_in_words_with_the_right_number() {
+        for (s, said) in [(0, "at the same time"), (-5, "at the same time"), (1, "1 second apart"), (45, "45 seconds apart"), (90, "90 seconds apart"),
+            (91, "2 minutes apart"), (5_400, "90 minutes apart"), (5_401, "2 hours apart"), (172_800, "48 hours apart"), (259_201, "3 days apart")] {
+            assert_eq!(human_gap(s), said, "{s} s apart");
+        }
+        for (s, said) in [(0, "under a minute"), (60, "under a minute"), (61, "1 minute"), (89, "1 minute"), (90, "2 minutes"), (5_400, "90 minutes"),
+            (5_401, "2 hours"), (7_200, "2 hours")] {
+            assert_eq!(human_span(s), said, "{s} s long");
+        }
+    }
+
+    #[test]
+    fn a_place_is_named_by_as_much_of_it_as_is_known() {
+        let p = |city: Option<&str>, country: Option<&str>, code: Option<&str>| Place { city: city.map(Into::into), country: country.map(Into::into), country_code: code.map(Into::into), ..Place::default() };
+        assert_eq!(place_label(&p(Some("London"), Some("United Kingdom"), Some("GB"))), "London, United Kingdom");
+        assert_eq!(place_label(&p(None, Some("Norway"), Some("NO"))), "Norway");
+        assert_eq!(place_label(&p(Some("Reykjavík"), None, None)), "Reykjavík");
+        assert_eq!(place_label(&p(None, None, Some("IS"))), "IS");
+        assert_eq!(place_label(&p(None, None, None)), "Unknown place");
+    }
 
     #[test]
     fn several_failed_sign_ins_in_a_row_are_one_burst_and_the_next_five_are_the_next() {
