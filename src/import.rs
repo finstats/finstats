@@ -478,6 +478,37 @@ mod tests {
         let _ = std::fs::remove_dir_all(dir);
     }
 
+    /// Jellystat's seasons table: each season becomes one, under its show by Jellyfin's id, and one Jellystat archived
+    /// (gone from the server) is kept as removed rather than as a season to show.
+    #[test]
+    fn seasons_are_read_under_their_show_and_an_archived_one_is_removed() {
+        let db = Db::open_in_memory().unwrap();
+        let c = db.conn().unwrap();
+        let mut res = ImportResult::default();
+        for row in [
+            json!({ "Id": "SEASON-1", "Name": "Season 1", "SeriesId": "SHOW-1", "SeriesName": "Low Orbit", "IndexNumber": 1 }),
+            json!({ "Id": "SEASON-0", "Name": "Specials", "SeriesId": "SHOW-1", "SeriesName": "Low Orbit", "IndexNumber": 0, "archived": true }),
+            json!({ "Name": "A season with no id" }),
+        ] {
+            import_row(&c, "jf_library_seasons", &row, &mut res, 300).unwrap();
+        }
+        assert_eq!(res.seasons, 2, "a row without an id is not a season");
+        let seasons: Vec<(String, String, String, Option<String>, Option<i64>, bool)> = c
+            .prepare("SELECT id, type, name, series_id, index_number, removed FROM items WHERE type = 'Season' ORDER BY index_number")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        assert_eq!(seasons, vec![
+            ("season0".into(), "Season".into(), "Specials".into(), Some("show1".into()), Some(0), true),
+            ("season1".into(), "Season".into(), "Season 1".into(), Some("show1".into()), Some(1), false),
+        ]);
+        // Twice is once.
+        import_row(&c, "jf_library_seasons", &json!({ "Id": "SEASON-1", "Name": "Season 1", "SeriesId": "SHOW-1", "IndexNumber": 1 }), &mut res, 300).unwrap();
+        assert_eq!(res.seasons, 2);
+    }
+
     /// An export that kept where a two-episode file ends brings it, so the file reads as no gap before the library is read.
     #[test]
     fn an_imported_episode_keeps_where_its_file_ends() {
