@@ -56,7 +56,7 @@ function cellValue(cell) {
   return [textValue(text), text === '–' ? '' : text];
 }
 
-const arrow = () => icon('arrowUp', 11, 'th-sort-icon');
+const arrow = () => icon('arrowUp', 11, 'fui-data-table__sort-icon');
 
 export function sortable(table, { server = null } = {}) {
   const head = table.tHead && table.tHead.rows[0];
