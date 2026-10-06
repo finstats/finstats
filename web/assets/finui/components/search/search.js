@@ -108,7 +108,20 @@ const whole = (r) => `inset(${-OUT}px round ${r + OUT}px)`;
 const ended = (a, ms) => Promise.race([a.finished.catch(() => {}), new Promise((r) => setTimeout(r, ms + 80))]);
 /** Everything of the search but its bar: the results and the keys under them. */
 const rest = (bar) => [...bar.parentElement.children].filter((n) => n !== bar);
-const hold = (host) => { const was = host.style.transition; host.style.transition = 'none'; return () => { host.style.transition = was; }; };
+/** Holds nest: a close begun while the open still runs must not keep the open's "none" as the value to put back, or the
+ *  host loses its own transitions for good (a rail that opens shut without moving). The last to let go puts it back. */
+const holds = new WeakMap();
+const hold = (host) => {
+  const h = holds.get(host) || { n: 0, was: host.style.transition };
+  if (!h.n) { h.was = host.style.transition; host.style.transition = 'none'; }
+  h.n++; holds.set(host, h);
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    if (--h.n === 0) { host.style.transition = h.was; holds.delete(host); }
+  };
+};
 
 /**
  * Lay the search out (`show`) and grow it into place: out of the host as it was, or — `fresh`, a place that was not there
