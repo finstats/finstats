@@ -1141,4 +1141,38 @@ mod tests {
         assert_eq!(persona(&totals, &hours, &weekdays)["key"], "weekend_warrior");
         assert!(persona(&totals, &vec![0; 24], &weekdays).is_null());
     }
+
+    /// Every persona there is, each from a year that has its habit and none of the ones before it in the order.
+    #[test]
+    fn every_persona_is_reached_and_says_its_number() {
+        let at = |pairs: &[(usize, i64)]| {
+            let mut h = vec![0i64; 24];
+            for (hour, s) in pairs {
+                h[*hour] = *s;
+            }
+            h
+        };
+        let even = vec![10i64; 7];
+        let evening = at(&[(20, 100)]);
+        let year = |plays: i64, episodes: i64, movies: i64, tracks: i64, days: i64| json!({ "plays": plays, "episodes": episodes, "movies": movies, "tracks": tracks, "active_days": days, "user_days": days });
+        let said = |totals: &Value, hours: &[i64], weekdays: &[i64]| {
+            let p = persona(totals, hours, weekdays);
+            (p["key"].as_str().unwrap().to_string(), p["line"].as_str().unwrap().to_string())
+        };
+        let (key, line) = said(&year(100, 10, 10, 0, 60), &at(&[(7, 40), (20, 60)]), &even);
+        assert_eq!((key.as_str(), line.as_str()), ("early_bird", "40% of the watching happened before 10 in the morning"));
+        let (key, line) = said(&year(100, 0, 0, 60, 60), &evening, &even);
+        assert_eq!((key.as_str(), line.as_str()), ("music_lover", "60% of everything played was music"));
+        // Four episodes a day each, not between them: twenty people watching one episode each is no binge.
+        let (key, line) = said(&year(500, 450, 50, 0, 100), &evening, &even);
+        assert_eq!((key.as_str(), line.as_str()), ("binge_watcher", "4.5 episodes on an average day of watching"));
+        assert_ne!(said(&json!({ "plays": 500, "episodes": 450, "movies": 50, "tracks": 0, "active_days": 100, "user_days": 2000 }), &evening, &even).0, "binge_watcher");
+        let (key, line) = said(&year(100, 20, 60, 0, 60), &evening, &even);
+        assert_eq!((key.as_str(), line.as_str()), ("movie_buff", "60% of plays were films"));
+        let (key, line) = said(&year(100, 20, 20, 0, 60), &at(&[(19, 30), (21, 70)]), &even);
+        assert_eq!((key.as_str(), line.as_str()), ("creature_of_habit", "Most of the watching started around 21:00, week in, week out"));
+        // The edges of the night are what the line says: 22:00 counts, 04:00 does not.
+        assert_eq!(said(&year(100, 10, 10, 0, 60), &at(&[(22, 35), (12, 65)]), &even).0, "night_owl");
+        assert_ne!(said(&year(100, 10, 10, 0, 60), &at(&[(4, 35), (12, 65)]), &even).0, "night_owl");
+    }
 }
