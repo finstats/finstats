@@ -270,7 +270,9 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
         }
         let (Some(table), Some(row)) = (v["t"].as_str(), v["r"].as_object()) else { continue };
         match table {
-            "settings" => settings_raw = row.get("value").and_then(Value::as_str).map(str::to_string),
+            // Only the settings themselves: a newer finstats may keep other rows in that table, and none of them is these.
+            "settings" if row.get("key").and_then(Value::as_str) == Some("settings") => settings_raw = row.get("value").and_then(Value::as_str).map(str::to_string),
+            "settings" => {}
             "playbacks" => {
                 let exists = crate::playback::already_recorded(
                     &tx,
@@ -664,6 +666,21 @@ mod tests {
         assert_eq!(r.plays_imported, 1, "the history did not come back with the settings refused");
         let now = Settings::load(&target.conn().unwrap()).unwrap();
         assert_eq!((now.min_play_s, now.home_addresses.len()), (42, 0), "the install's own settings were changed");
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// Files move between versions. One from a finstats that keeps another settings row beside the settings must
+    /// still bring the settings back, rather than reading whichever row came last as if it were them.
+    #[test]
+    fn only_the_settings_row_is_read_as_the_settings() {
+        let (tmp, target, file) = restoring("backup-settings-key", &[
+            json!({ "finstats_backup": FORMAT, "app_version": "2.9.0" }),
+            json!({ "t": "settings", "r": { "key": "settings", "value": serde_json::to_string(&Settings { min_play_s: 7, ..Settings::default() }).unwrap() } }),
+            json!({ "t": "settings", "r": { "key": "something_newer", "value": "{\"min_play_s\": 99}" } }),
+        ]);
+        let r = restore(&target, &file, true, None).unwrap();
+        assert!(r.settings_restored, "the settings were not restored");
+        assert_eq!(Settings::load(&target.conn().unwrap()).unwrap().min_play_s, 7, "another row was read as the settings");
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
