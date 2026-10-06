@@ -37,6 +37,12 @@
 .fui-animated-icon > [data-act="door"] { --act: fui-animated-icon-door; }
 .fui-animated-icon > [data-act="unroll"] { --act: fui-animated-icon-unroll; }
 .fui-animated-icon > [data-act="join"] { --act: fui-animated-icon-join; }
+.fui-animated-icon > [data-act="scribble"] { --act: fui-animated-icon-scribble; }
+.fui-animated-icon > [data-act="fold"] { --act: fui-animated-icon-fold; }
+.fui-animated-icon > [data-act="wink"] { --act: fui-animated-icon-wink; }
+.fui-animated-icon > [data-act="ring"] { --act: fui-animated-icon-ring; }
+.fui-animated-icon > [data-act="flick"] { --act: fui-animated-icon-flick; }
+.fui-animated-icon > [data-act="upend"] { --act: fui-animated-icon-upend; }
 /* Redrawing is a way of drawing: it takes the drawing's place rather than going beside it. */
 .fui-animated-icon > [data-act="redraw"] { animation-name: fui-animated-icon-redraw; animation-delay: calc(var(--start) + var(--i) * var(--icon-cycle) / 50 + var(--k) * var(--icon-cycle) * 11 / 300); }
 
@@ -216,6 +222,53 @@
 @keyframes fui-animated-icon-stretch {
   0%, 6%, 46%, 100% { transform: scaleX(1); animation-timing-function: ease-in-out; }
   20%, 32% { transform: scaleX(var(--sx)); animation-timing-function: ease-in-out; }
+}
+
+/* A pen writing: it runs along its tip in a quick zigzag, a word's worth (--dir: which way), and lifts back to where it began. */
+@keyframes fui-animated-icon-scribble {
+  0%, 6% { transform: translate(0, 0) rotate(0deg); animation-timing-function: ease-in-out; }
+  11% { transform: translate(calc(var(--dir) * .8px), -1.2px) rotate(calc(var(--dir) * -3deg)); animation-timing-function: ease-in-out; }
+  16% { transform: translate(calc(var(--dir) * 1.6px), .6px) rotate(calc(var(--dir) * 2deg)); animation-timing-function: ease-in-out; }
+  21% { transform: translate(calc(var(--dir) * 2.4px), -1.2px) rotate(calc(var(--dir) * -3deg)); animation-timing-function: ease-in-out; }
+  26% { transform: translate(calc(var(--dir) * 3.2px), .6px) rotate(calc(var(--dir) * 2deg)); animation-timing-function: ease-in-out; }
+  31% { transform: translate(calc(var(--dir) * 4px), -1.2px) rotate(calc(var(--dir) * -3deg)); animation-timing-function: ease-in-out; }
+  36% { transform: translate(calc(var(--dir) * 4.4px), 0) rotate(0deg); animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  46%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+}
+/* A flap on its fold: it turns over its edge, open, stays a moment, and folds shut. */
+@keyframes fui-animated-icon-fold {
+  0%, 6% { transform: scaleY(1); animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  20%, 32% { transform: scaleY(-1); animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  46%, 50%, 100% { transform: scaleY(1); }
+}
+/* An eye blinking: it shuts toward its middle and opens, twice, quickly. */
+@keyframes fui-animated-icon-wink {
+  0%, 6% { transform: scaleY(1); animation-timing-function: ease-in; }
+  11% { transform: scaleY(.08); animation-timing-function: ease-out; }
+  17%, 26% { transform: scaleY(1); animation-timing-function: ease-in; }
+  31% { transform: scaleY(.08); animation-timing-function: ease-out; }
+  37%, 50%, 100% { transform: scaleY(1); }
+}
+/* A phone ringing: it rattles about its middle in two bursts, as a ring does. */
+@keyframes fui-animated-icon-ring {
+  0%, 6%, 26%, 28%, 48%, 50%, 100% { transform: rotate(0deg); }
+  8.5%, 13.5%, 30.5%, 35.5% { transform: rotate(calc(-9deg * var(--dir))); }
+  11%, 16%, 33%, 38% { transform: rotate(calc(9deg * var(--dir))); }
+  18.5%, 40.5% { transform: rotate(calc(-5deg * var(--dir))); }
+  21%, 43% { transform: rotate(calc(5deg * var(--dir))); }
+  23.5%, 45.5% { transform: rotate(calc(-2deg * var(--dir))); }
+}
+/* A switch thrown: its knob runs the length of its track, stays a moment, and runs back, settling with a small overshoot. */
+@keyframes fui-animated-icon-flick {
+  0%, 6% { transform: translateX(0); animation-timing-function: cubic-bezier(.5, 0, .2, 1.25); }
+  18%, 30% { transform: translateX(calc(var(--dx) * 10px)); animation-timing-function: cubic-bezier(.5, 0, .2, 1.25); }
+  42%, 50%, 100% { transform: translateX(0); }
+}
+/* Turned over, end for end: a half turn leaves an hourglass as it was, so it turns back at the very end, where nobody sees it, as a plus does. */
+@keyframes fui-animated-icon-upend {
+  0%, 6% { transform: rotate(0deg); animation-timing-function: cubic-bezier(.5, 0, .2, 1.2); }
+  32%, 99.99% { transform: rotate(calc(180deg * var(--dir))); }
+  100% { transform: rotate(0deg); }
 }
 
 @keyframes fui-animated-icon-busy { from { transform: rotate(0deg); } to { transform: rotate(calc(360deg * var(--dir))); } }
