@@ -129,6 +129,17 @@ impl Query {
 mod tests {
     use super::*;
 
+    #[test]
+    fn every_accent_folds_to_its_letter() {
+        assert_eq!(normalize("Àéîõü ÇćČ Ññ ÝŸ ŠŚ ŽŹŻ Ł Ø"), "aeiou ccc nn yy ss zzz l o");
+        assert_eq!(normalize("Æon Flux"), "aeon flux");
+        assert_eq!(normalize("Straße"), "strasse");
+        assert_eq!(normalize("Cœur"), "coeur");
+        assert!(hit("lodz", "Łódź"));
+        assert!(hit("smorgasbord", "Smörgåsbord"));
+        assert!(hit("amelie", "Amélie"));
+    }
+
     fn hit(q: &str, title: &str) -> bool {
         Query::new(q).unwrap().score(title).is_some()
     }
