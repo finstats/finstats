@@ -149,7 +149,9 @@ fn every(seconds: i64) -> String {
         3_600 => "every hour".into(),
         s if s % 86_400 == 0 && s >= 86_400 => format!("every {} days", s / 86_400),
         s if s % 3_600 == 0 && s >= 3_600 => format!("every {} hours", s / 3600),
+        60 => "every minute".into(),
         s if s >= 60 => format!("every {} minutes", (s as f64 / 60.0).round() as i64),
+        1 => "every second".into(),
         s => format!("every {s} seconds"),
     }
 }
@@ -423,6 +425,28 @@ pub async fn run(app: App) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_schedule_is_said_the_way_jellyfin_s_own_page_says_it() {
+        let ticks = |s: i64| s * TICKS_PER_S;
+        let t = |v: Value| schedule(&[v], None).0;
+        assert_eq!(t(json!({"Type": "DailyTrigger", "TimeOfDayTicks": ticks(3 * 3600 + 30 * 60)})), ["every day at 03:30"]);
+        // Jellyfin writes the day as a name; an older server wrote its number, Sunday first.
+        assert_eq!(t(json!({"Type": "WeeklyTrigger", "DayOfWeek": "Tuesday", "TimeOfDayTicks": ticks(22 * 3600)})), ["every Tuesday at 22:00"]);
+        assert_eq!(t(json!({"Type": "WeeklyTrigger", "DayOfWeek": 0, "TimeOfDayTicks": 0})), ["every Sunday at 00:00"]);
+        assert_eq!(t(json!({"Type": "WeeklyTrigger", "DayOfWeek": 9})), ["every week at 00:00"]);
+        assert_eq!(t(json!({"Type": "StartupTrigger"})), ["when Jellyfin starts"]);
+        assert_eq!(t(json!({"Type": "SomethingNewTrigger"})), ["somethingnew"]);
+        assert!(t(json!({"Type": ""})).is_empty() && t(json!({"Type": "IntervalTrigger", "IntervalTicks": 0})).is_empty());
+        for (s, said) in [(86_400, "every day"), (3 * 86_400, "every 3 days"), (3_600, "every hour"), (6 * 3_600, "every 6 hours"), (900, "every 15 minutes"),
+            (60, "every minute"), (90, "every 2 minutes"), (30, "every 30 seconds"), (1, "every second")] {
+            assert_eq!(t(json!({"Type": "IntervalTrigger", "IntervalTicks": ticks(s)})), [said], "{s} s");
+        }
+        // An interval is a real countdown, from the last run; with two, the sooner one.
+        let (_, next) = schedule(&[json!({"Type": "IntervalTrigger", "IntervalTicks": ticks(3_600)}), json!({"Type": "IntervalTrigger", "IntervalTicks": ticks(900)})], Some(1_000));
+        assert_eq!(next, Some(1_900));
+        assert_eq!(schedule(&[json!({"Type": "IntervalTrigger", "IntervalTicks": ticks(900)})], None).1, None, "a countdown without a last run");
+    }
 
     #[test]
     fn the_jobs_people_ask_about_are_explained_in_words_that_are_not_their_name() {
