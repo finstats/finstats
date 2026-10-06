@@ -1,8 +1,11 @@
-import { h, icon, debounce, num, mount, TRACKERS } from '../dom.js';
+import { h, icon, debounce, num, mount, dateTime, TRACKERS } from '../dom.js';
 import { api } from '../api.js';
 import { readDays, saveDays, rangeLong, can } from '../state.js';
 import { replaceQuery } from '../router.js';
-import { pageHeader, card, filterBar, dataView, sk, playsTable, pagination, multiSelect } from '../components.js';
+import { pageHeader, card, filterBar, dataView, sk, playsTable, pagination, multiSelect, emptyState, setBusy } from '../components.js';
+import { plainTable } from '../tables.js';
+import { button } from '../../finui/components/button/button.js';
+import { toast } from '../../finui/components/toast/toast.js';
 import { openPlayModal } from '../playmodal.js';
 
 // Ticked, not chosen: films *and* episodes without music is a question worth being able to ask.
@@ -34,7 +37,28 @@ function filtersOf(q0) {
     sort: q0.get('sort') || '',
     dir: q0.get('dir') || '',
     page: Math.max(1, Number(q0.get('page')) || 1),
+    // The trash instead of history (Recently deleted): only for those who may bring a play back.
+    deleted: q0.get('deleted') === '1' && can('manage') ? 1 : '',
   };
+}
+
+/** Recently deleted: each play with when it goes for good, and the button that brings it back. Not sorted here:
+ *  the list is paged, and newest deletion first is the order that matters. */
+function trashTable(rows, { showUser, onRestored }) {
+  if (!rows.length) return emptyState('Nothing in the trash.', 'A deleted play waits here for 30 days before it is removed for good.');
+  const restore = (p) => button({ size: 'sm', type: 'button', onClick: async (e) => {
+    setBusy(e.currentTarget, true, 'Restoring…');
+    try { await api.put(`/activity/${p.id}`, { deleted: false }); toast({ text: `Restored ${p.item_name}.`, tone: 'good' }); onRestored(); }
+    catch (err) { setBusy(e.currentTarget, false); toast({ text: `Couldn’t restore: ${err.message}`, tone: 'critical' }); }
+  } }, icon('refresh', 13), 'Restore');
+  const th = (label, cls) => h('th', { class: cls || null, 'data-nosort': '' }, label);
+  return plainTable(h('table', { class: 'fui-data-table trash' },
+    h('thead', null, h('tr', null, th('Title'), showUser ? th('Person') : null, th('Played'), th('Deleted'), th('Removed for good'), th('', 'r'))),
+    h('tbody', null, rows.map((p) => h('tr', { dataset: { id: p.id } },
+      h('td', null, p.series_name ? `${p.series_name} · ${p.item_name}` : p.item_name),
+      showUser ? h('td', null, p.user_name) : null,
+      h('td', null, dateTime(p.started_at)), h('td', null, dateTime(p.deleted_at)), h('td', null, dateTime(p.purge_at)),
+      h('td', { class: 'r' }, restore(p)))))));
 }
 
 export default function activity(ctx) {
@@ -48,7 +72,16 @@ export default function activity(ctx) {
     skeleton: () => sk.tableRows(5),
     fetch: () => loadActivity(f, ctx.signal),
     render: (data) => {
-      summary.textContent = `${num(data.total)} ${data.total === 1 ? 'play' : 'plays'} · ${rangeLong(f.days).toLowerCase()}`;
+      if (f.deleted) {
+        mount(summary, [`${num(data.total)} ${data.total === 1 ? 'play' : 'plays'} in the trash, each removed for good 30 days after it was deleted · `,
+          h('a', { href: '#', onClick: (e) => { e.preventDefault(); f.deleted = ''; apply(); } }, 'Back to every play')]);
+        return [trashTable(data.rows, { showUser: can('see_everyone'), onRestored: () => dv.load() }),
+          data.total > PER_PAGE ? pagination({ page: data.page || f.page, perPage: data.per_page || PER_PAGE, total: data.total,
+            onPage: (p) => { f.page = p; apply(false); window.scrollTo({ top: 0 }); } }) : null];
+      }
+      mount(summary, [`${num(data.total)} ${data.total === 1 ? 'play' : 'plays'} · ${rangeLong(f.days).toLowerCase()}`,
+        data.in_trash ? [' · ', h('a', { href: '#', class: 'trash-link', onClick: (e) => { e.preventDefault(); f.deleted = 1; apply(); } },
+          icon('trash', 12), ` Recently deleted (${num(data.in_trash)})`)] : null]);
       renderSources(data.sources);
       return [
         playsTable(data.rows, { showUser: can('see_everyone'), sort: { key: f.sort, dir: f.dir, onSort: (key, dir) => { f.sort = key; f.dir = dir; apply(); } }, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }),

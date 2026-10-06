@@ -7,6 +7,7 @@ import { card, sk, setBusy, inlineError, errorState } from '../components.js';
 import { plainTable } from '../tables.js';
 import { progressOf, settingRow } from './common.js';
 import { button } from '../../finui/components/button/button.js';
+import { toast } from '../../finui/components/toast/toast.js';
 
 export default {
   key: 'backups', label: 'Backups', sub: 'Keep your history safe, or move it', group: 'Data', icon: 'database',
@@ -16,6 +17,7 @@ export default {
     { id: 'restore', label: 'Restore from a file', hint: 'restore upload move new install merge' },
     { id: 'backup-schedule', label: 'When backups are written', hint: 'schedule automatic every days weekly daily task' },
     { id: 'backup_keep', label: 'Keep the newest', hint: 'schedule keep count prune' },
+    { id: 'backups-deleted', label: 'Recently deleted', hint: 'trash undo undelete restore deleted backup' },
   ],
   async render(slot, store) {
     const body = h('div', { class: 'net-stack' }, sk.rows(2));
@@ -43,6 +45,13 @@ export default {
       if (pending === answering) pending = null;
       await store.poke(1000); await loadBackups();
     };
+    // Into the trash, and the toast that takes it back out; and back out from the Recently deleted list.
+    const trash = (name, deleted) => api.put(`/backups/${name}`, { deleted });
+    const moveToTrash = (b) => act(async () => {
+      await trash(b.name, true);
+      toast({ text: `Deleted the backup from ${dateTime(b.created_at)}. It can be undone for 30 days.`, action: 'Undo',
+        onAction: () => act(() => trash(b.name, false)) });
+    });
 
     function scheduleForm() {
       const s = store.settings;
@@ -84,7 +93,7 @@ export default {
           const ask = (action) => () => { pending = { name: b.name, action }; sig = ''; paint(); };
           const cancel = button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => { pending = null; sig = ''; paint(); } }, 'Cancel');
           const actions = mine === 'delete'
-            ? [h('span', { class: 'muted' }, 'Delete this backup?'), button({ size: 'sm', variant: 'danger', type: 'button', onClick: () => act(() => api.del(`/backups/${b.name}`)) }, 'Delete'), cancel]
+            ? [h('span', { class: 'muted' }, 'Delete this backup? It can be undone for 30 days.'), button({ size: 'sm', variant: 'danger', type: 'button', onClick: () => moveToTrash(b) }, 'Delete'), cancel]
             : mine === 'restore'
               ? [h('span', { class: 'muted' }, restoreSettings ? 'Merge its history in and replace settings and permissions?' : 'Merge its history in?'),
                 button({ size: 'sm', variant: 'primary', type: 'button', onClick: () => act(() => api.post(`/backups/${b.name}/restore?settings=${restoreSettings}`)) }, 'Restore'), cancel]
@@ -97,6 +106,19 @@ export default {
             h('td', null, h('div', { class: 'backup-actions' }, actions)));
         }))))
         : h('p', { class: 'fui-field__help' }, backupsData.scheduled ? 'No backups yet. The first one is written by itself once there is something to back up, or make one now.' : 'No backups yet, and none are scheduled.');
+
+      // Recently deleted: shown only while it holds something.
+      const gone = backupsData.deleted || [];
+      const deletedList = gone.length ? h('div', { class: 'fui-field', id: 'backups-deleted' },
+        h('div', { class: 'fui-setting-row__label' }, 'Recently deleted'),
+        h('p', { class: 'fui-field__help' }, 'A deleted backup waits here for 30 days, then it is removed for good. It can’t be downloaded or restored from until it is back.'),
+        plainTable(h('table', { class: 'fui-data-table backups backups-deleted' },
+          h('thead', null, h('tr', null, h('th', null, 'Made'), h('th', null, 'Removed for good'), h('th', { class: 'r' }, 'Size'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Actions')))),
+          h('tbody', null, gone.map((b) => h('tr', null,
+            h('td', null, h('time', { dateTime: new Date(b.created_at * 1000).toISOString(), title: b.name }, dateTime(b.created_at))),
+            h('td', null, h('time', { dateTime: new Date(b.purge_at * 1000).toISOString() }, dateTime(b.purge_at))),
+            h('td', { class: 'mono r' }, bytes(b.size_bytes)),
+            h('td', null, h('div', { class: 'backup-actions' }, button({ size: 'sm', type: 'button', disabled: busy, onClick: () => act(() => trash(b.name, false)) }, icon('refresh', 13), 'Restore'))))))))) : null;
 
       const restored = rs && rs.state === 'ok' && rs.result ? h('p', { class: 'fui-badge--status fui-badge--good fui-badge--line' }, icon('check', 13),
         `Restored ${num(rs.result.plays_imported)} plays, ${num(rs.result.plays_skipped)} were already here${rs.result.settings_restored ? '; settings and permissions restored' : ''}.`) : null;
@@ -125,6 +147,7 @@ export default {
         progressOf(bk, 'Backup progress'), bk && bk.state === 'error' && bk.error ? inlineError('backup-err', `Backup failed: ${bk.error}`) : null,
         table,
         err ? inlineError('backups-err', err) : null,
+        deletedList,
         h('div', { class: 'fui-field', id: 'restore' },
           h('div', { class: 'fui-setting-row__label' }, 'Restore from a file'),
           h('p', { class: 'fui-field__help' }, 'Restoring merges: plays already here are skipped, so it is safe to do twice. A backup holds everyone’s history and addresses, never your Jellyfin API key.'),

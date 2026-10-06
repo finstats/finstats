@@ -5,6 +5,7 @@ import { api, isAbort } from './api.js';
 import { can } from './state.js';
 import { openModal, copyButton, methodBadge, facts, errorState, sk, poster, setBusy, inlineError } from './components.js';
 import { button } from '../finui/components/button/button.js';
+import { toast } from '../finui/components/toast/toast.js';
 
 const res = (w, hgt) => (w && hgt ? `${w}×${hgt}` : null);
 const EVENT = {
@@ -46,7 +47,7 @@ function timeline(p) {
 
 const channels = (n) => (n == null ? null : { 1: 'Mono', 2: 'Stereo', 6: '5.1', 8: '7.1' }[n] || `${n} ch`);
 
-export function openPlayModal(play, { onDeleted } = {}) {
+export function openPlayModal(play, { onDeleted, onRestored } = {}) {
   const abort = new AbortController();
   const body = h('div', { class: 'play-modal' }, sk.rows(3));
   const modal = openModal({ title: 'Play details', body, wide: true, onClose: () => abort.abort() });
@@ -135,16 +136,17 @@ export function openPlayModal(play, { onDeleted } = {}) {
       del.addEventListener('click', async () => {
         setBusy(del, true, 'Deleting…'); cancel.disabled = true;
         try {
-          await api.del(`/activity/${p.id}`);
+          await api.put(`/activity/${p.id}`, { deleted: true });
           modal.close();
           if (onDeleted) onDeleted(p);
+          undoToast(p, onRestored || onDeleted);
         } catch (e) {
           setBusy(del, false); cancel.disabled = false;
           mount(err, inlineError('del-err', e.message));
         }
       });
       mount(row, h('div', { class: 'confirm', role: 'group', 'aria-label': 'Confirm delete' },
-        h('p', null, 'Delete this play from your stats? This can’t be undone.'), h('div', { class: 'confirm-btns' }, cancel, del)), err);
+        h('p', null, 'Delete this play from your stats? It can be undone for 30 days.'), h('div', { class: 'confirm-btns' }, cancel, del)), err);
       del.focus();
     }
     idle();
@@ -153,4 +155,13 @@ export function openPlayModal(play, { onDeleted } = {}) {
 
   load();
   return modal;
+}
+
+/** Said the moment a play goes to the trash, with the one button that takes it back out. */
+export function undoToast(p, onRestored) {
+  toast({ text: `Deleted ${p.item_name || 'the play'}. It can be undone for 30 days.`, tone: 'info', action: 'Undo',
+    onAction: async () => {
+      try { await api.put(`/activity/${p.id}`, { deleted: false }); if (onRestored) onRestored(p); }
+      catch (e) { toast({ text: `Couldn’t undo: ${e.message}`, tone: 'critical' }); }
+    } });
 }
