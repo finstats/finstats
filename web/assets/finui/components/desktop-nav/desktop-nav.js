@@ -159,8 +159,8 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
     wrap.setAttribute('aria-hidden', 'true');
     wrap.inert = true;
     const copy = frame.cloneNode(true);
-    // A rail held open by the pointer or the focus is drawn open: the copy has neither, and would show the closed one.
-    copy.classList.toggle('is-open', frame.matches(':hover, :focus-within'));
+    // A rail held open by the pointer or the keyboard's focus is drawn open: the copy has neither, and would show it closed.
+    copy.classList.toggle('is-open', frame.matches(':hover, :has(:focus-visible)'));
     copy.querySelector('.fui-desktop-nav__found')?.remove();
     for (const n of copy.querySelectorAll('[id]')) n.removeAttribute('id');
     wrap.append(copy);

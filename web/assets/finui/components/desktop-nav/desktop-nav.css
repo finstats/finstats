@@ -29,7 +29,7 @@
 .fui-desktop-nav__search-btn .fui-desktop-nav__label { flex: 1; }
 .fui-desktop-nav__keys { font: 500 10.5px/1 var(--mono); color: var(--text-faint); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px 5px; }
 
-.fui-desktop-nav__nav { min-height: 0; display: flex; flex-direction: column; gap: 1px; margin-top: 4px; overflow-y: auto; scrollbar-width: thin; }
+.fui-desktop-nav__nav { min-height: 0; display: flex; flex-direction: column; gap: 1px; margin-top: 4px; overflow: hidden auto; scrollbar-width: thin; }
 .fui-desktop-nav__link {
   position: relative; display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: var(--radius-sm);
   color: var(--text-muted); font-size: 13px; line-height: 1.5; text-decoration: none; transition: background var(--ease), color var(--ease), transform 160ms ease;
@@ -72,17 +72,21 @@
 .fui-desktop-nav__pop--me { width: 240px; bottom: 0; left: calc(100% + 10px); }
 .fui-desktop-nav__pop--me .fui-desktop-nav__foot { margin: 0; padding: 0; border: 0; }
 
-/* ---- Rail that opens: the grouped sidebar, its icons alone until the pointer or the focus comes, then all of it, over the page */
+/* ---- Rail that opens: the grouped sidebar, its icons alone until the pointer or the keyboard's focus comes, then all of it, over
+   the page. The keyboard's alone (:focus-visible): a link pressed keeps the focus, and held the rail open until a click elsewhere. */
 .fui-desktop-nav--rail .fui-desktop-nav__frame {
   overflow: hidden; z-index: 1; transition: width 200ms cubic-bezier(.2, .8, .2, 1), box-shadow 200ms ease;
 }
-.fui-desktop-nav--rail .fui-desktop-nav__frame:is(:hover, :focus-within, .is-open) { width: var(--fui-desktop-nav-open); box-shadow: 0 0 40px color-mix(in srgb, var(--shadow) 40%, transparent); }
+.fui-desktop-nav--rail .fui-desktop-nav__frame:is(:hover, :has(:focus-visible), .is-open) { width: var(--fui-desktop-nav-open); box-shadow: 0 0 40px color-mix(in srgb, var(--shadow) 40%, transparent); }
 .fui-desktop-nav--rail :is(.fui-desktop-nav__name, .fui-desktop-nav__label, .fui-desktop-nav__group-name, .fui-desktop-nav__who, .fui-desktop-nav__keys, .fui-desktop-nav__dot, .fui-desktop-nav__theme) {
   opacity: 0; white-space: nowrap; transition: opacity 120ms ease;
 }
-.fui-desktop-nav--rail .fui-desktop-nav__frame:is(:hover, :focus-within, .is-open) :is(.fui-desktop-nav__name, .fui-desktop-nav__label, .fui-desktop-nav__group-name, .fui-desktop-nav__who, .fui-desktop-nav__keys, .fui-desktop-nav__dot, .fui-desktop-nav__theme) {
+.fui-desktop-nav--rail .fui-desktop-nav__frame:is(:hover, :has(:focus-visible), .is-open) :is(.fui-desktop-nav__name, .fui-desktop-nav__label, .fui-desktop-nav__group-name, .fui-desktop-nav__who, .fui-desktop-nav__keys, .fui-desktop-nav__dot, .fui-desktop-nav__theme) {
   opacity: 1; transition-delay: 80ms;
 }
+/* Closed, the rail's list scrolls (a short window, 150 % zoom) but draws no bar: 60 px has no room for one. */
+.fui-desktop-nav--rail .fui-desktop-nav__frame:not(:hover, :has(:focus-visible), .is-open) .fui-desktop-nav__nav { scrollbar-width: none; }
+.fui-desktop-nav--rail .fui-desktop-nav__frame:not(:hover, :has(:focus-visible), .is-open) .fui-desktop-nav__nav::-webkit-scrollbar { display: none; }
 .fui-desktop-nav--rail .fui-desktop-nav__link { padding: 5px 11px; }
 .fui-desktop-nav--rail .fui-desktop-nav__search-btn { padding: 6px 11px; }
 .fui-desktop-nav--rail .fui-desktop-nav__brand { padding: 2px 8px 6px 7px; }
