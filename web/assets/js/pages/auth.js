@@ -16,7 +16,8 @@ function normalizeUrl(raw) {
   let u = raw.trim();
   if (!u) return { error: 'Enter the address of your Jellyfin server, like http://jellyfin:8096.' };
   if (!/^https?:\/\//i.test(u)) u = 'http://' + u;
-  try { const parsed = new URL(u); if (!parsed.hostname) throw new Error(); } catch { return { error: 'That doesn’t look like a web address. Try something like http://192.168.1.10:8096.' }; }
+  // Chrome escapes a space in a host rather than refusing it, so a host it had to escape is not one.
+  try { const parsed = new URL(u); if (!parsed.hostname || /[\s%]/.test(parsed.hostname)) throw new Error(); } catch { return { error: 'That doesn’t look like a web address. Try something like http://192.168.1.10:8096.' }; }
   return { url: u.replace(/\/+$/, '') };
 }
 
@@ -64,7 +65,9 @@ export function setupPage(ctx) {
     } catch (err) {
       tested = null;
       if (err.status === 409) { state.status = await api.get('/status'); navigate('/login', { replace: true }); return; }
-      url.setError(`Couldn’t connect: ${err.message} Check the address and that Jellyfin is running.`);
+      // A refusal of the address itself is not a failed connection; and the server's own words are one sentence, finished.
+      const said = /[.!?]$/.test(err.message) ? err.message : `${err.message}.`;
+      url.setError(err.status === 400 ? said : `Couldn’t connect: ${said} Check the address and that Jellyfin is running.`);
       url.input.focus();
     } finally { setBusy(testBtn, false); }
   });
