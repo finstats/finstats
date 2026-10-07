@@ -284,6 +284,12 @@ fn request_ip(parts: &Parts, app: &App) -> Option<IpAddr> {
     parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|ConnectInfo(peer)| client_ip(app, &parts.headers, *peer))
 }
 
+/// The same resolution for a connection that outlives its request (the live channel), which keeps what it presented
+/// and asks again: a session signed out or a key revoked must close it as it would refuse a request.
+pub(crate) async fn resolve_presented(presented: Presented, ip: Option<IpAddr>, app: &App) -> Result<AuthUser, ApiError> {
+    resolve(presented, ip, app).await
+}
+
 /// A presented credential to its user: the one place a request proves who it is.
 async fn resolve(presented: Presented, ip: Option<IpAddr>, app: &App) -> Result<AuthUser, ApiError> {
     let unauthorized = || ApiError::new(StatusCode::UNAUTHORIZED, "Sign in to continue");
@@ -599,6 +605,8 @@ pub async fn logout(State(app): State<App>, ConnectInfo(peer): ConnectInfo<Socke
                 Ok(())
             })
             .await?;
+        // The tab signing out is not the only one this session opened: every live connection of it closes now.
+        app.live_feed.recheck();
     }
     let mut resp = Json(json!({ "ok": true })).into_response();
     resp.headers_mut().insert(SET_COOKIE, session_cookie("", 0, is_https(&headers)));

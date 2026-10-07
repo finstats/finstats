@@ -40,6 +40,7 @@ pub fn router(app: App) -> Router {
         .route("/auth/me", get(auth::me))
         .route("/summary", get(stats::summary))
         .route("/now-playing", get(stats::now_playing))
+        .route("/live", get(crate::live::connect))
         .route("/stats/overview", get(stats::overview))
         .route("/stats/top", get(stats::top_handler))
         .route("/stats/heatmap", get(stats::heatmap_handler))
@@ -182,7 +183,7 @@ async fn same_origin(State(app): State<App>, req: Request, next: Next) -> Respon
 /// browser attaches to a cross-site navigation only and never to a cross-site `fetch`, or a `Bearer` key,
 /// which no browser adds on its own: a cross-site page cannot set `Authorization` without a CORS
 /// preflight, and FinStats answers none.
-fn cross_site(origin: Option<&str>, host: Option<&str>, forwarded: Option<&str>, trust_proxy: bool) -> bool {
+pub(crate) fn cross_site(origin: Option<&str>, host: Option<&str>, forwarded: Option<&str>, trust_proxy: bool) -> bool {
     let (Some(origin), Some(host)) = (origin, host) else { return false };
     let origin_host = origin.split_once("://").map(|(_, h)| h).unwrap_or(origin);
     // A client can set X-Forwarded-Host itself; only a trusted proxy's copy may vouch for the origin,
@@ -903,6 +904,7 @@ async fn put_user_permissions(State(app): State<App>, JellyfinAdmin(user): Jelly
         Some(false) => Err(ApiError::bad_request("Jellyfin administrators already have every permission")),
         Some(true) => {
             audit::record(&app, audit::Entry::new("permissions_changed", actor).target(target).detail(json!({ "permissions": granted })));
+            app.live_feed.recheck();
             Ok(Json(json!({ "permissions": keys })))
         }
     }

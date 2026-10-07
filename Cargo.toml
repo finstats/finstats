@@ -10,7 +10,7 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1"
-axum = { version = "0.8", default-features = false, features = ["http1", "json", "query", "tokio"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "query", "tokio", "ws"] }
 flate2 = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 futures-util = { version = "0.3", default-features = false }

@@ -24,6 +24,7 @@ mod jellyfin;
 mod jobs;
 mod keys;
 mod licenses;
+mod live;
 mod locate;
 mod mail;
 mod media;
@@ -281,6 +282,7 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
         wishes: Default::default(),
         downloads_watched: Mutex::new(0),
         downloads_wake: Notify::new(),
+        live_feed: Default::default(),
         public_cards: Default::default(),
         card_permits: tokio::sync::Semaphore::new(2),
         jf_jobs: Mutex::new(Default::default()),
@@ -308,6 +310,7 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
 
     tokio::spawn(collector::run(app.clone()));
     tokio::spawn(downloads::run(app.clone()));
+    tokio::spawn(live::run(app.clone()));
     tokio::spawn(notify::run(app.clone()));
     tokio::spawn(sync::scheduler(app.clone()));
     tokio::spawn(jobs::run(app.clone()));

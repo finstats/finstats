@@ -388,6 +388,8 @@ async fn sync_users(app: &App, jf: &Jellyfin) -> Result<String> {
         app.request_halt(msg.clone());
         return Err(anyhow!(msg));
     }
+    // Who is an administrator, disabled or gone is what Jellyfin just said: open live connections re-read who they speak for.
+    app.live_feed.recheck();
     Ok(format!("{count} users"))
 }
 

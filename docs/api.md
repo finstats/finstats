@@ -1699,3 +1699,56 @@ names are `/assets/finui/create/presets.json`, FinUI's file.
 It reads like `"https://jellyfin.example.com/web/#/details?id="` and comes from the address an administrator set for "Open in Jellyfin", else the one
 FinStats connects to; `null` before Jellyfin is set up. The context menu offers "Open in Jellyfin" on any link to a title
 with it, where the answer that drew the link had no `jellyfin_link` to give.
+
+# v2.3: The live channel
+
+One WebSocket per tab, from finstats to its own pages, carrying what changes on its own: what is playing, what is
+downloading, and the status bar's numbers. Pages still load over HTTP; the socket only says that something a page
+already shows has changed. Every endpoint it stands in for (`/api/now-playing`, `/api/downloads`, `/api/summary`) stays
+as it is, for scripts and as the fallback.
+
+`GET /api/live` with `Upgrade: websocket`. Credentials are the session cookie, or `Authorization: Bearer fs_…` for a
+client that is not a browser; **never a key in the address** (the calendar feed's `?key=` is that feed's alone) and never
+a calendar key (`403`). An `Origin` that is not finstats' own is refused (`403`), exactly as for a write, so a page on
+another site cannot open it with the cookie its browser would attach; behind a reverse proxy `X-Forwarded-Host` counts
+only with `FINSTATS_TRUST_PROXY`. No credential `401`, a request that is not an upgrade `426`, and more than 20 open
+connections for one person `429` (a tab each; close one and its seat is free again).
+
+Every message is a JSON text frame. The page sends:
+
+```jsonc
+{"type": "subscribe", "topics": ["now_playing", "summary"]}   // the whole state of each comes at once
+{"type": "unsubscribe", "topics": ["downloads"]}
+{"type": "visible", "visible": true}                            // the tab is on screen (or not)
+```
+
+finstats sends:
+
+```jsonc
+{"type": "hello", "v": 1, "topics": ["now_playing", "downloads", "summary"]}   // on opening: the topics this person may have
+{"type": "now_playing", "v": 1, "data": {"sessions": [Session]}}               // data: exactly what GET /api/now-playing answers them
+{"type": "downloads", "v": 1, "data": {…}}                                       // GET /api/downloads (needs see what is downloading)
+{"type": "summary", "v": 1, "data": {…}}                                         // GET /api/summary
+{"type": "denied", "v": 1, "topic": "downloads"}                                // not permitted, or no longer
+```
+
+`v` is the version of that topic's frame. Each `data` is built by the same function as the endpoint, for the person the
+connection speaks for: their own streams only without *see everyone*, no addresses without *see the network*. A frame is
+sent when the answer changes and never twice the same:
+
+- `now_playing` when a stream begins, ends, pauses, resumes, changes item, play method, audio or subtitle track or group,
+  or seeks. A position only moving on is not pushed: positions travel with each frame, and the page counts the clock.
+- `downloads` when the queue was read again (every 5 s while somebody looks, as before).
+- `summary` when somebody begins or ends a play, when the collector's state changes, and otherwise every 30 s.
+
+A tab subscribed to `downloads` that says it is visible keeps the queue on its 5-s cadence, like `?live=1` does; a hidden
+one does not.
+
+Who the connection speaks for is read again at least every 30 s, and at once when a permission, a default permission or
+sign-in is changed, a key revoked, a session signed out, or Jellyfin's users read: what it may see narrows on the next
+frame, and a credential that no longer opens finstats closes it with code `4401`. finstats pings every 25 s (a proxy
+closes a socket that says nothing) and drops a connection that has answered nothing for 80 s.
+
+**Fallback.** A page that cannot open the socket, or loses it, polls the endpoints above at the same intervals as before
+(now playing and downloads every 5 s, the summary every 10 s, paused while the tab is hidden), and goes back to the socket
+when it can. Behind a reverse proxy that does not pass WebSocket upgrades on, finstats works as it did, polling.

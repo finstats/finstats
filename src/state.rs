@@ -51,6 +51,8 @@ pub struct AppState {
     /// When a page last said it was showing the downloads, and how to wake their loop.
     pub downloads_watched: Mutex<i64>,
     pub downloads_wake: Notify,
+    /// The live channel: what changed, by topic, and who is listening.
+    pub live_feed: crate::live::Feed,
     /// Published profiles drawn as pictures (2.0), and the two drawing at most at once: a card is the one
     /// thing a reader without an account can make FinStats work for.
     pub public_cards: crate::card::Cache,
@@ -254,6 +256,8 @@ impl AppState {
         let raw = serde_json::to_string(&next).map_err(anyhow::Error::from)?;
         self.db.call(move |c| db::set_setting(c, "settings", &raw)).await?;
         *self.settings.write().unwrap() = next.clone();
+        // Default permissions and who may sign in live here: an open live connection re-reads what it may see.
+        self.live_feed.recheck();
         Ok((before, next))
     }
 
@@ -413,6 +417,7 @@ pub fn test_app() -> App {
         wishes: Default::default(),
         downloads_watched: Mutex::new(0),
         downloads_wake: Notify::new(),
+        live_feed: Default::default(),
         public_cards: Default::default(),
         card_permits: tokio::sync::Semaphore::new(2),
         jf_jobs: Mutex::new(Default::default()),
