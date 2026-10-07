@@ -828,6 +828,8 @@ answers the words (pages at once, `/api/search` when it comes); a press anywhere
 pressed in, never the menu's search for a shortcut — and lets a click's focus go (handed back after a key it would be the
 keyboard's, and a link a click left focused in the rail would open it): a rail holds itself open while the focus is in it, and `desktop-nav` moves the focus
 before `shrink` measures where it closes to (and again once it has, the search laid back over the menu having hidden it).
+`grow` and `shrink` both hold the host's own transition (nested `hold`) *before* they measure: a rail measured mid-transition
+is still as wide as the search, and the close shrank the shape into itself, an empty panel until it vanished.
 The modal palette it replaced is gone.
 **Context menus (FinUI `context-menu`, `menus.js`, 2.2.0) come from the link, not the page.** One resolver for the whole app
 (`installMenus`, `attachContextMenu(document, …)`): any `<a>` to `/items/:id`, `/users/:id`, `/people/:id` or `/libraries/:id` has a
