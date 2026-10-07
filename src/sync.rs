@@ -960,10 +960,15 @@ fn server_snapshot(info: &Value, storage: Option<Vec<Value>>, plugins: Option<&[
             .map(|t| {
                 let last = &t["LastExecutionResult"];
                 let (start, end) = (last["StartTimeUtc"].as_str().and_then(parse_ts), last["EndTimeUtc"].as_str().and_then(parse_ts));
+                // The shortest interval it runs at: what Capacity weighs a scan's length against.
+                let interval_s = t["Triggers"].as_array().map(Vec::as_slice).unwrap_or_default().iter()
+                    .filter(|tr| tr["Type"].as_str() == Some("IntervalTrigger"))
+                    .filter_map(|tr| tr["IntervalTicks"].as_i64().map(|ticks| ticks / 10_000_000).filter(|s| *s > 0))
+                    .min();
                 json!({
-                    "name": t["Name"], "category": t["Category"], "state": t["State"],
+                    "name": t["Name"], "key": t["Key"], "category": t["Category"], "state": t["State"],
                     "last_result": last["Status"], "last_run_at": end.or(start),
-                    "last_duration_s": start.zip(end).map(|(s, e)| (e - s).max(0)),
+                    "last_duration_s": start.zip(end).map(|(s, e)| (e - s).max(0)), "interval_s": interval_s,
                 })
             })
             .collect::<Vec<_>>()
@@ -1133,6 +1138,23 @@ mod tests {
         let fresh = server_snapshot(&info, Some(vec![]), Some(&[]), Some(&[]), Some(&before), 300);
         assert_eq!((fresh["storage"].clone(), fresh["plugins"].clone()), (json!([]), json!([])), "a read that answered empty is empty");
         assert_eq!(server_snapshot(&info, None, None, None, None, 1)["plugins"], json!([]), "nothing to keep: empty");
+    }
+
+    /// Capacity asks how often Jellyfin scans its library: the task's key (a name is in the server's language) and the
+    /// shortest interval it runs at are kept with the rest; a time of day or a start-up is no interval.
+    #[test]
+    fn a_scheduled_task_keeps_its_key_and_its_shortest_interval() {
+        let hour = 3_600 * 10_000_000i64;
+        let task = |key: &str, triggers: Value| json!({ "Name": "Medienbibliothek scannen", "Key": key, "State": "Idle", "Triggers": triggers });
+        let snap = server_snapshot(&json!({}), None, None, Some(&[
+            task("RefreshLibrary", json!([{ "Type": "IntervalTrigger", "IntervalTicks": 12 * hour }, { "Type": "IntervalTrigger", "IntervalTicks": hour }, { "Type": "StartupTrigger" }])),
+            task("CleanTranscode", json!([{ "Type": "DailyTrigger", "TimeOfDayTicks": hour }])),
+            json!({ "Name": "Old server", "State": "Idle" }),
+        ]), None, 1);
+        let t = &snap["scheduled_tasks"];
+        assert_eq!((t[0]["key"].as_str(), t[0]["interval_s"].as_i64()), (Some("RefreshLibrary"), Some(3_600)));
+        assert_eq!((t[1]["key"].as_str(), t[1]["interval_s"].as_i64()), (Some("CleanTranscode"), None), "a time of day is no interval");
+        assert_eq!((t[2]["key"].clone(), t[2]["interval_s"].clone()), (Value::Null, Value::Null), "a server that names no key");
     }
 
     #[test]
