@@ -1574,22 +1574,35 @@ pub async fn search(State(app): State<App>, user: AuthUser, Query(q): Query<Sear
 
 // ---------------------------------------------------------------- live & light status
 
-pub async fn now_playing(State(app): State<App>, user: AuthUser) -> ApiResult {
+/// Everybody's streams as the collector last saw them, with who watches with whom marked. Marked before anything is
+/// filtered out: you may see who you are watching with, even if you can't see their streams.
+pub fn marked_live(app: &App) -> Vec<Value> {
     let mut sessions = app.live.read().unwrap().clone();
-    // Before anything is filtered out: you may see who you are watching with, even if you can't see their streams.
     crate::groups::mark_live(&mut sessions, app.settings().group_window_s);
-    if !user.perms.see_everyone {
-        sessions.retain(|s| s["user_id"].as_str() == Some(user.id.as_str()));
-    }
+    sessions
+}
+
+/// `/now-playing` as one person is answered it, by HTTP or by the live channel: the one place its narrowing is written.
+pub fn now_playing_for(marked: &[Value], user: &AuthUser) -> Value {
+    let mut sessions: Vec<Value> = marked.iter().filter(|s| user.perms.see_everyone || s["user_id"].as_str() == Some(user.id.as_str())).cloned().collect();
     if !user.perms.see_network {
         for s in &mut sessions {
             s["remote_ip"] = Value::Null;
         }
     }
-    Ok(Json(json!({ "sessions": sessions })))
+    json!({ "sessions": sessions })
+}
+
+pub async fn now_playing(State(app): State<App>, user: AuthUser) -> ApiResult {
+    Ok(Json(now_playing_for(&marked_live(&app), &user)))
 }
 
 pub async fn summary(State(app): State<App>, user: AuthUser) -> ApiResult {
+    Ok(Json(summary_for(&app, &user).await?))
+}
+
+/// `/summary` as one person is answered it, by HTTP or by the live channel.
+pub async fn summary_for(app: &App, user: &AuthUser) -> Result<Value> {
     let scope_user = (!user.perms.see_everyone).then(|| user.id.clone());
     let (plays, last_sync): (i64, Option<i64>) = app
         .db
@@ -1608,10 +1621,10 @@ pub async fn summary(State(app): State<App>, user: AuthUser) -> ApiResult {
     } else {
         app.live.read().unwrap().iter().filter(|s| s["user_id"].as_str() == Some(user.id.as_str())).count()
     };
-    Ok(Json(json!({
+    Ok(json!({
         "active_sessions": active, "plays_total": plays, "last_sync_at": last_sync,
         "collector_ok": collector.connected, "collector_live": collector.socket_live, "version": env!("CARGO_PKG_VERSION"),
-    })))
+    }))
 }
 
 // ---------------------------------------------------------------- server log
@@ -2125,6 +2138,55 @@ mod tests {
     fn caller(id: &str, see_everyone: bool) -> AuthUser {
         let perms = crate::auth::Perms { see_everyone, ..Default::default() };
         AuthUser { id: id.to_string(), name: "x".into(), is_admin: false, perms, credential: Default::default(), ip: None }
+    }
+
+    /// `/now-playing` as one person is answered it, whichever transport asks: groups are marked over everybody's
+    /// streams first, so a companion shows on a card whose owner may not see the companion's own stream.
+    #[test]
+    fn now_playing_marks_companions_before_it_narrows_to_the_caller() {
+        let stream = |user: &str, name: &str| {
+            json!({ "key": format!("k-{user}"), "user_id": user, "user_name": name, "item_id": "i1", "position_s": 100, "started_at": 1000, "remote_ip": "192.168.1.10" })
+        };
+        let mut sessions = vec![stream("u1", "alice"), stream("u2", "bob")];
+        crate::groups::mark_live(&mut sessions, 60);
+
+        let bob = now_playing_for(&sessions, &caller("u2", false));
+        let list = bob["sessions"].as_array().unwrap();
+        assert_eq!(list.len(), 1, "without see_everyone only one's own streams");
+        assert_eq!((list[0]["user_id"].as_str(), list[0]["group"]["size"].as_i64()), (Some("u2"), Some(2)), "but who one watches with");
+        assert_eq!(list[0]["remote_ip"], Value::Null, "an address needs see_network");
+
+        let mut all = caller("u3", true);
+        all.perms.see_network = true;
+        let everyone = now_playing_for(&sessions, &all);
+        assert_eq!(everyone["sessions"].as_array().unwrap().len(), 2);
+        assert_eq!(everyone["sessions"][0]["remote_ip"], "192.168.1.10");
+    }
+
+    /// The status bar's numbers, scoped as `/summary` scopes them: one's own plays and streams without see_everyone.
+    #[tokio::test]
+    async fn the_summary_counts_only_the_callers_own_without_see_everyone() {
+        let app = crate::state::test_app();
+        app.db
+            .call(|c| {
+                c.execute_batch(
+                    "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+                       ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100, 700, 600),
+                       ('live', 'u2', 'bob',   'i1', 'Big Buck Bunny', 'Movie', 900, 1500, 600),
+                       ('live', 'u2', 'bob',   'i1', 'Big Buck Bunny', 'Movie', 2000, 2600, 600);",
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        *app.live.write().unwrap() = vec![json!({ "user_id": "u1" }), json!({ "user_id": "u2" })];
+        app.collector.write().unwrap().active_sessions = 2;
+
+        let alice = summary_for(&app, &caller("u1", false)).await.unwrap();
+        assert_eq!((alice["plays_total"].as_i64(), alice["active_sessions"].as_i64()), (Some(1), Some(1)));
+        let everyone = summary_for(&app, &caller("u3", true)).await.unwrap();
+        assert_eq!((everyone["plays_total"].as_i64(), everyone["active_sessions"].as_i64()), (Some(3), Some(2)));
+        assert_eq!(everyone["version"], env!("CARGO_PKG_VERSION"));
     }
 
     #[test]
