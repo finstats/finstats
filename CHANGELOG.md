@@ -10,6 +10,72 @@ Stability something that can no longer crash, halt, leak or lose data, Fixed som
 wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
 
+## [2.2.0] - 2026-10-01 to 2026-10-07
+
+Library health and FinUI
+
+### Added
+- **A menu of your own on a computer**: Settings → Appearance offers eight: the sidebar as it was, grouped by what the pages are for, a rail of icons that opens into the sidebar under the pointer, a sidebar that leads with search, a dock, a command bar, pages you pin on top, and coloured tiles. The sidebars can sit on the right. The dock slides away while you scroll down and comes back when you scroll up or point at the bottom of the window; with it the status bar moves to the top.
+- **A menu of your own on a phone**: a tab bar with More (the new default), a sheet that opens half way, the whole screen, the pages fanned around the thumb, or an address bar that grows into the menu. Each searches its pages and hands any other words to search.
+- Both are kept by the browser they were chosen in, so a phone and a computer each keep their own; both are FinUI components, `desktop-nav` and `mobile-nav`.
+- **A context menu**: right-click a title, a person or a library anywhere in finstats (a poster on the dashboard, a row of a list, a name in a table, a film in Coming up that is not in the library yet), or hold a finger on it, or press the menu key, and a menu grows out of the point you pressed: open it, open it in a new tab, put a film or a show on your watchlist, open it in Jellyfin or on TMDB and TVDB, copy its link. Shift with a right-click is still the browser's own. FinUI's `context-menu`.
+- **Search without a dialog**: search grows out of your menu (a sidebar widens into it, the dock rises into it, the command bar's name turns into it, a phone's menu holds it) or, chosen in Settings → Appearance, takes the page's place while the menu stays. Ctrl+Space opens it as before; the window over everything is gone. FinUI's `search`.
+- **Everything in a library**: a library's Recently added card offers *Everything in it*, every film, show or album it holds as posters, by name, year, date added or size, narrowed as you type. More arrive as you scroll.
+- **Server → Library health**: finstats compares every file with its neighbours and lists what stands out, each with the numbers behind it. It only reports; nothing is changed, deleted or rescanned in Jellyfin.
+- **Gaps**: episodes missing between two files of a season ("Season 2: episodes 4 and 5 are missing between 3 and 6"). A file that holds two episodes counts as both; specials and the end of a season are left alone.
+- **Seasons that differ** in resolution, HDR or codec from the rest of their show, and **odd episodes**: one file unlike its season, such as an SD episode in a 1080p season. Resolution goes by width or height, so a cropped 1920×800 film is 1080p.
+- **Copies and versions**: the same film or episode twice, by the provider ids the watchlist and Pipeline already go by. Two copies in one resolution show the space kept twice; a 4K copy beside a 1080p one is listed as two versions and never counted as waste.
+- **Thin files**: a bitrate far below what its resolution and codec usually take ("4K HEVC at 1.1 Mbps"); a season's thin episodes are one finding.
+- **Dubs that stop**: an audio language some seasons have on every episode and others on none.
+- **Never identified**: films and shows Jellyfin matched with no TMDB, TVDB or IMDb id.
+- **Dismiss** a finding that is fine on purpose, with a note. It comes back by itself when its files change. Those who may manage finstats and see the server can dismiss; dismissals are in the audit log and part of a backup.
+- A library's page says how many things there are to look at there, and leads to them.
+- **FinUI**, the components finstats is built from, is a project of its own (`github.com/finstats/finui`): every button, card and control in every state and both themes at `finstats.github.io/finui`, and **FinUI create** to change its colours, radius, density and more as you watch and take it home with one command. **Settings → System** leads there.
+- **Settings → Appearance**: everyone chooses how finstats looks to them, by the code of a FinUI preset: base colour, accent, chart colours, contrast, radius, density, borders, cards, buttons, fields, tables, highlight, motion, icons, the menu, the page behind it all, the focus ring, how headings are set, and the fonts for text, headings and numbers. Your choice is yours alone; it shows what the code means and leads to FinUI create to change it.
+- **Styles**: eleven whole looks to start from in one choice in FinUI create, whose code Settings → Appearance takes. They are Washi (finstats as it ships), Studio, Noir, Matinee, Console, Pastille, Ledger, Gazette, Arcade, Canopy and Harbour. finstats itself ships one look and offers no list of styles.
+- **Icons that move**: every icon in a link, a button or a tab does its own move once when pointed at (refresh turns, download's arrow drops into its tray, the trash lifts its lid), and a refresh that was pressed keeps turning until its answer is in. Still with reduced motion, and with Motion: Off.
+- **Motion, with FinMotion**: FinUI's components now move: a switch's knob is thrown across, a tab's underline inches to the next tab, a refused field shakes its head, a copy is ticked in one stroke, notices pile like a hand of cards and fan open when pointed at, a phone's sheet gives like a band when pulled, a sorted table's rows move to their places, a figure that changes rolls like an odometer and charts draw themselves the first time they are seen. All of it follows Settings → Appearance's Motion choice and stays still with reduced motion. FinMotion is its own project (`github.com/finstats/finmotion`), put on top of FinUI.
+- **More icons in FinUI**: 239 now, up from 71, each with a move of its own (volume up and down, a headset and a deafened one, a pencil that writes, a bell that rings, a phone that buzzes), and every one can be downloaded from FinUI's gallery as an SVG, still or animated.
+- **Fonts**: thirty-four open-licensed families to choose from (Geist, Roboto, Manrope, IBM Plex Sans, Montserrat, Lora, Playfair Display, Fira Code and more), bundled like Inter, never fetched from elsewhere, and loaded only when chosen.
+- **More bases and accents**: Nord, Solarized, Gruvbox, Catppuccin, Rosé Pine, Tokyo Night, Dracula, Everforest and Ocean; sixteen more accents, ten of them one colour by day and another by night. Every base now has a paper of its own by day: the greys looked alike in the light theme.
+- **Deleting can be undone for 30 days**: a deleted play or backup waits in the trash, and **Undo** on the notice that follows brings it back. Activity and Settings → Backups each list what was recently deleted, with when it goes for good, whenever there is any. A play in the trash is out of every total, chart, recap and profile, and an import or a restore does not bring it back as new; whoever watched it with somebody is counted as alone until it returns.
+
+### Changed
+- Dark Reader and extensions like it leave finstats' pages alone (`darkreader-lock`): finstats draws both themes itself, and a repainted page fought them.
+- On a phone the menu no longer slides in from the left: the tab bar sits at the bottom unless another is chosen.
+- finstats reads your library once after this update, to learn where files that hold several episodes end.
+- On a title's page, **Add to watchlist** is as tall as **Open in Jellyfin** beside it; it was a size smaller.
+- The range and people filters stay at the top of the screen while a page scrolls, so 7d becomes All from the bottom of a long page; so do Pipeline's request and upcoming filters.
+- The scroll-to-top button keeps clear of whichever menu holds the bottom of the window: low in the corner beside the dock, just above a phone's tab bar, thumb button or address bar, and above the status bar otherwise. It is FinUI's `to-top`.
+- Deleting a play or a backup moves it to the trash instead of removing it at once (`PUT` with `{"deleted": true}`; `DELETE` is gone from the API). Backups past the number kept are still removed for good.
+- **Patch notes** are one sheet instead of a stack of cards: every note is a line of its own with its kind (Added, Changed, Fixed and the rest) and that kind's icon in a column before it, under a heading for each series. The list of versions stays on the right.
+
+### Performance
+- Opening finstats downloads only what changed: a stylesheet, script or font the browser already holds is confirmed in a few bytes instead of sent again. Every visit used to fetch all of finstats' stylesheets and modules in full, though each carried a tag to tell them apart.
+
+### Stability
+- Restoring a backup reads the settings from the settings row alone: a file from a newer finstats that keeps more there had its settings dropped without a word.
+- An open tab no longer grows with every page visited: every page that was left stayed in memory behind the one on screen (about 2,600 elements a visit), held by FinMotion's list of what it moves and by the filters bar's scroll listener, until the tab was closed.
+- A mistyped command (`finstats bakcup`), or `restore` without its file, no longer creates or upgrades a database before saying it does not know what to do.
+
+### Fixed
+- A tile's small chart no longer runs past the tile when the number beside it is wide ("56d 23h"), or when four tiles share a narrower row: the chart gives way and the number keeps its width.
+- In the light theme a primary button turned violet under the pointer; it keeps the seal's colour now.
+- In Settings a switch sits level with its setting's name and help; it hung at the top of the row.
+- In a ranked list with nothing under a name, such as the dashboard's Top users, the name sat at the top of its row beside a centred picture; it is centred now.
+- A row of stat tiles at a width between phone and desktop (four tiles three across) left the last one alone on a row of its own; four tiles now go four, two or one across, and three go three or one.
+- The server read counted a device nobody signed in on, which it does not keep: the task said three devices where the Server page listed two.
+- One second, one minute, one hour: alerts said "1 seconds apart" and "in 1 minutes", and a Jellyfin task on a one-minute interval ran "every 1 minutes".
+- `finstats --help` names every variable finstats reads; `FINSTATS_PUBLIC_IP_URL`, `FINSTATS_ALLOW_LIBRARY_SHRINK` and `FINSTATS_SKIP_PREUPDATE_BACKUP` were missing.
+- The setup wizard said an address that was not one "couldn’t connect", in a sentence that ran into the next; it now says the address is not one.
+- In Settings → Backups, a question asked while a backup was being written vanished when the backup finished.
+- With the menu as a rail that opens, closing search showed the open search and the closed rail at once and then left the rail open until the pointer came and went. Esc now gives the keyboard's focus back to where it was when search opened, and lets a click's go.
+- On a phone, closing search kept the page dimmed until the search had gone and then cut to bright in one frame; the dimming fades with it.
+- The Tautulli import's steps said the backup downloads after **Backup Database**. Tautulli saves it on its own machine: the steps now say where (its `backups` folder, `/config` with Docker), which file to take, and to copy it over.
+- Search closed before it had finished opening left the rail that opens without its animation: from then on it opened and shut at once.
+- The rail that opens stayed open after a page was chosen from it until a click somewhere else, and on some browsers, or zoomed in, drew a scrollbar under its icons. It now opens for the pointer and the keyboard only, and draws no scrollbar while closed.
+- On the Security page, an address the database places in a country but not on the map counts toward that country, rather than among the addresses with no known place.
+
 ## [2.1.2] - 2026-10-01
 
 ### Added
