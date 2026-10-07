@@ -3,6 +3,7 @@
 
 import { h, icon, num, relTime, dateTime, mount, logo } from './dom.js';
 import { api, isAbort } from './api.js';
+import { follow } from './live.js';
 import { state, hasUnseenVersion, onVersionSeen, noteRunningVersion, can, themeChoice, setTheme, mobileNavChoice, onMobileNavChange, desktopNavChoice, setDesktopNav, onDesktopNavChange, searchMode } from './state.js';
 import { hasPipeline } from './pages/pipeline.js';
 import { navigate, onRouteChange, canGoBack } from './router.js';
@@ -172,33 +173,38 @@ function buildShell() {
   const sep = () => h('span', { class: 'sb-sep', 'aria-hidden': 'true' }, '·');
   const statusbar = h('footer', { class: 'statusbar', role: 'status', 'aria-label': 'Collector status' }, sbStream, sep(), sbPlays, sep(), sbSync, sbRepo, sep(), sbVer);
 
-  let sbTimer = null, sbAbort = null, dead = false;
-  async function pollSummary() {
-    if (dead) return;
-    if (!document.hidden) {
-      sbAbort = new AbortController();
-      try {
-        const sum = await api.get('/summary', null, { signal: sbAbort.signal });
-        const ok = !!sum.collector_ok;
-        sbDot.className = 'sb-dot ' + (ok ? 'ok' : 'bad');
-        const n = sum.active_sessions || 0;
-        sbStream.lastChild.textContent = ok ? `${num(n)} streaming` : 'collector offline';
-        sbStream.title = !ok ? 'FinStats can’t reach Jellyfin right now. Plays are not being recorded.'
-          : sum.collector_live ? 'Jellyfin is pushing what is playing · go to now playing' : 'Go to now playing';
-        sbPlays.textContent = `${num(sum.plays_total)} plays`;
-        sbSync.textContent = sum.last_sync_at ? `synced ${relTime(sum.last_sync_at)}` : 'not synced yet';
-        sbSync.title = sum.last_sync_at ? 'Last library sync: ' + dateTime(sum.last_sync_at) : '';
-        if (sum.version) { sbVerText.textContent = 'v' + sum.version; sbVer.hidden = false; noteRunningVersion(sum.version); }
-      } catch (e) {
-        if (!isAbort(e) && e.status !== 401) {
-          sbDot.className = 'sb-dot bad';
-          sbStream.lastChild.textContent = 'FinStats unreachable';
-        }
+  let sbAbort = null, sbShown = null;
+  const sbStop = new AbortController();
+  function paintSummary(sum) {
+    sbShown = sum;
+    const ok = !!sum.collector_ok;
+    sbDot.className = 'sb-dot ' + (ok ? 'ok' : 'bad');
+    const n = sum.active_sessions || 0;
+    sbStream.lastChild.textContent = ok ? `${num(n)} streaming` : 'collector offline';
+    sbStream.title = !ok ? 'FinStats can’t reach Jellyfin right now. Plays are not being recorded.'
+      : sum.collector_live ? 'Jellyfin is pushing what is playing · go to now playing' : 'Go to now playing';
+    sbPlays.textContent = `${num(sum.plays_total)} plays`;
+    sbSync.textContent = sum.last_sync_at ? `synced ${relTime(sum.last_sync_at)}` : 'not synced yet';
+    sbSync.title = sum.last_sync_at ? 'Last library sync: ' + dateTime(sum.last_sync_at) : '';
+    if (sum.version) { sbVerText.textContent = 'v' + sum.version; sbVer.hidden = false; noteRunningVersion(sum.version); }
+  }
+  async function loadSummary() {
+    if (sbStop.signal.aborted) return;
+    sbAbort = new AbortController();
+    try {
+      paintSummary(await api.get('/summary', null, { signal: sbAbort.signal }));
+    } catch (e) {
+      if (!isAbort(e) && e.status !== 401) {
+        sbDot.className = 'sb-dot bad';
+        sbStream.lastChild.textContent = 'FinStats unreachable';
       }
     }
-    if (!dead) sbTimer = setTimeout(pollSummary, 10000);
   }
-  pollSummary();
+  loadSummary();
+  // Pushed when it changes; asked for every 10 s (while the tab is on screen) only while the live channel is not there.
+  follow('summary', { poll: loadSummary, every: 10000, onData: paintSummary, signal: sbStop.signal });
+  // "synced 3 min ago" ages by itself: said again from what is already here, without asking.
+  const sbAge = setInterval(() => { if (sbShown && !document.hidden) paintSummary(sbShown); }, 30000);
 
   // ---- scroll to top: FinUI's to-top, resting clear of whatever keeps the bottom-right corner in this layout (the menus'
   // corners and the status bar, told by buildDesktop and buildMobile), the phone's or the desktop's by the width.
@@ -224,8 +230,8 @@ function buildShell() {
       mobile.setCurrent(here);
     },
     destroy() {
-      dead = true;
-      clearTimeout(sbTimer);
+      sbStop.abort();
+      clearInterval(sbAge);
       if (sbAbort) sbAbort.abort();
       toTop.destroy();
       narrow.removeEventListener('change', placeToTop);

@@ -8,6 +8,7 @@ import { openPlayModal } from '../playmodal.js';
 import { recapBanner } from './recap.js';
 import { loadUpcoming, entryCard, entryTitle, entryName } from '../upcoming.js';
 import { loadDownloads, downloadsList, nothingDownloading } from '../downloads.js';
+import { follow } from '../live.js';
 import { groupsCard } from '../widgets.js';
 import { watchToggle, watchable } from '../watchlist.js';
 import { button } from '../../finui/components/button/button.js';
@@ -52,15 +53,17 @@ export default function dashboard(ctx) {
   let npFirst = true;
   const npLive = nowPlayingView(); // ticks every second between the polls
   ctx.onCleanup(() => npLive.destroy());
+  function paintNow(data) {
+    const sessions = data.sessions || [];
+    npCount.hidden = !sessions.length;
+    npCount.textContent = String(sessions.length);
+    if (npFirst) mount(npBody, npLive.el);
+    npLive.update(sessions);
+    npFirst = false;
+  }
   async function loadNow() {
     try {
-      const data = await api.get('/now-playing', null, { signal: ctx.signal });
-      const sessions = data.sessions || [];
-      npCount.hidden = !sessions.length;
-      npCount.textContent = String(sessions.length);
-      if (npFirst) mount(npBody, npLive.el);
-      npLive.update(sessions);
-      npFirst = false;
+      paintNow(await api.get('/now-playing', null, { signal: ctx.signal }));
     } catch (e) {
       if (isAbort(e) || e.status === 401) return;
       if (npFirst) mount(npBody, h('p', { class: 'np-empty' }, icon('alert', 14), ' Live sessions are unavailable: ' + e.message));
@@ -99,7 +102,7 @@ export default function dashboard(ctx) {
       },
     });
     dlView.load();
-    ctx.every(() => dlView.load(), 5000, { visibleOnly: true });
+    follow('downloads', { poll: () => dlView.load(), every: 5000, onData: (d) => dlView.show(d), signal: ctx.signal });
   }
 
   // ---- coming up: what Sonarr and Radarr expect this week. About the calendar, not about plays: no filter applies. Hides
@@ -174,7 +177,8 @@ export default function dashboard(ctx) {
     filters, view].filter(Boolean));
 
   loadNow();
-  ctx.every(loadNow, 5000, { visibleOnly: true });
+  // Pushed when it changes; asked for every 5 s only while the live channel is not there.
+  follow('now_playing', { poll: loadNow, every: 5000, onData: paintNow, signal: ctx.signal });
   dv.load();
 }
 

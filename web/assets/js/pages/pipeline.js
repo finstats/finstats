@@ -9,6 +9,7 @@ import { dataTable } from '../tables.js';
 import { simpleColumns, simpleColumnsTable, libBucketList } from '../charts.js';
 import { loadUpcoming, agenda, upcomingPoster } from '../upcoming.js';
 import { loadDownloads, downloadsList, nothingDownloading } from '../downloads.js';
+import { follow } from '../live.js';
 import { api } from '../api.js';
 import { button } from '../../finui/components/button/button.js';
 
@@ -277,10 +278,12 @@ function downloadsTab(ctx, root) {
   });
   root.append(view, historySection(ctx));
   dv.load();
-  // A live list: it is polled while this page is open, and only then.
-  ctx.every(async () => {
-    try { await dv.load(); failed = null; } catch (e) { if (!failed) failed = e; }
-  }, 5000, { visibleOnly: true });
+  // A live list while this page is open, and only then: pushed when the queue is read again, or asked for every 5 s
+  // while the live channel is not there.
+  follow('downloads', {
+    poll: async () => { try { await dv.load(); failed = null; } catch (e) { if (!failed) failed = e; } },
+    every: 5000, onData: (d) => { dv.show(d); failed = null; }, signal: ctx.signal,
+  });
 }
 
 export default function pipelinePage(ctx) {

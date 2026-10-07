@@ -76,10 +76,12 @@ export function dataView({ container, skeleton, fetch, render, signal }) {
   let loaded = false;
   let seq = 0;
   let shownJson = null; // what is on screen, to skip re-rendering identical data
+  let lastKey = null;   // the GETs that last filled it, under which a pushed answer is remembered too
   async function load() {
     const my = ++seq;
     // Calling fetch() fires the page's GET requests synchronously; their URLs identify this view.
     const { result, key } = recordRequests(fetch);
+    lastKey = key;
     let skeletonAt = 0;
     let skeletonTimer = null;
     if (!loaded) {
@@ -134,7 +136,19 @@ export function dataView({ container, skeleton, fetch, render, signal }) {
       if (my === seq) container.removeAttribute('aria-busy');
     }
   }
-  return { load, get loaded() { return loaded; } };
+  /** The same answer as `fetch` gives, pushed rather than asked for (the live channel): drawn as a load would draw it. */
+  function show(data) {
+    if (signal && signal.aborted) return;
+    ++seq; // whatever load is on its way is older than this
+    if (lastKey) viewCacheSet(lastKey, data);
+    const json = JSON.stringify(data);
+    container.classList.remove('is-stale');
+    if (loaded && json === shownJson) return;
+    loaded = true;
+    shownJson = json;
+    mount(container, render(data));
+  }
+  return { load, show, get loaded() { return loaded; } };
 }
 
 // ---------------------------------------------------------------- controls
