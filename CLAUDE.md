@@ -38,6 +38,19 @@ its failing check in the local `qa/` suite first (see the QA section). A bug fix
 gets a test reproducing it (Red), then the fix (Green). Do not add production behaviour that no test
 named, and do not delete a test to make the bar green.
 
+## Documentation lives in its own repository
+
+**Every page of documentation is written in `github.com/finstats/docs`** (checked out beside FinStats as `../docs`; MkDocs
+with Material, published by its Pages workflow at <https://docs.finstats.no/>), never in this repository (the
+owner's decision, 2026-10-07). There is no `docs/` folder here any more. What stays here is only what GitHub or the build
+needs: `README.md` (a short landing page: the pitch, the hero shot, the build blockquote, one `docker run`, links to the
+docs), `CONTRIBUTING.md` and `SECURITY.md` (pointers), `CODE_OF_CONDUCT.md`, `.github/`, and `CHANGELOG.md`, which is
+`include_str!`'d as the Patch notes. A change that a page describes (an endpoint, a setting, an environment variable, an
+import rule, a privacy promise) comes with a commit in `../docs` in the same sitting; read `../docs/CLAUDE.md` before
+writing there. Pages for a version not yet released wait on a branch of the docs named like FinStats' own (`dev-2.3.0`) and
+reach `main`, which publishes, with the release. The README's pictures are the docs' (`assets/screenshots/`, linked by
+their published address), and `qa/run.sh screenshots` writes them there.
+
 ## Commands
 
 ```sh
@@ -242,13 +255,13 @@ says what the client settled back to, and each one is a change: FinStats wrote o
 rest of the play, reading `DirectPlay: <reasons>`, a line that contradicts itself (migration 17 clears them). Anything
 sticky that the diff also reads belongs above the diff.
 
-**Jellystat import semantics** (learned from real exports; documented at the top of `import.rs` and in `docs/jellystat-import.md`):
+**Jellystat import semantics** (learned from real exports; documented at the top of `import.rs` and in the docs repository's `finstats/imports/jellystat.md`):
 `ActivityDateInserted` is the *end* of a play; for episodes `NowPlayingItemId` is the series and `EpisodeId` the
 episode; `PositionTicks` is unreliable and not imported (completion = watched ÷ runtime for imported rows);
 there is no item type, so Live TV is inferred (video, not in library, no container → `TvChannel`). The import is a
 single transaction and streams a multi-hundred-MB file line by line.
 
-**Streamystats import semantics (`streamystats.rs`, `docs/streamystats-import.md`).** Its backup is **sessions only**
+**Streamystats import semantics (`streamystats.rs`, the docs' `finstats/imports/streamystats.md`).** Its backup is **sessions only**
 (no items, users or libraries) and holds three kinds of row that must be read differently, none of them flagged as such.
 **A row carries one moment or two, and which it is decides what the moment means**: two (`startTime` < `endTime`) is a
 play Streamystats watched, and the first is the real start; one (`startTime` == `endTime`) is a play it imported from
@@ -267,7 +280,7 @@ counts only where the row also keeps the `runtimeTicks` it is a position in. `is
 backup and means nothing. **Nothing is invented to fill a gap**: an item neither the row nor the library can type is left
 `Unknown`, not guessed. The file is walked with a `DeserializeSeed` rather than loaded, one transaction.
 
-**Tautulli import (`tautulli.rs`, `docs/tautulli-import.md`, 2.1.2) is Plex's history, so nothing in it shares an id with
+**Tautulli import (`tautulli.rs`, the docs' `finstats/imports/tautulli.md`, 2.1.2) is Plex's history, so nothing in it shares an id with
 Jellyfin, and nothing is guessed.** It runs in two steps: `POST /api/import/tautulli` only stores the backup (`.db`, or the
 zip Tautulli's download gives; `unpack` reads the one `.db` out of the central directory, stored or deflated) as
 `tautulli-upload.db` and answers the **wiring board** (`settings/wiring.js`: Plex users left, Jellyfin users right, the owner
@@ -599,8 +612,8 @@ itself has listed. None of these tables are in `backup::TABLES`: they are re-rea
 (Jellyfin, the public-IP services, DB-IP, each `services` row, each `notify_targets` row), with whether it is on and when it
 last answered. Built entirely from what is already kept (collector status, `home_addresses`, the `.mmdb` on disk,
 `service_health`, a destination's `last_ok_at`): nothing is recorded for it, and hosts are shown without paths or keys. A new
-outbound destination must appear here, and in the promise sentences in `README.md` and `docs/security.md`, in the same change
-that adds it.
+outbound destination must appear here, and in the promise sentences in `README.md` and the docs' `finstats/privacy.md` and
+`finstats/security.md`, in the same change that adds it.
 
 **Jellyfin's own jobs (`jobs.rs`, `GET /api/jellyfin/jobs`, the Server page).** Jellyfin's scheduled tasks say what the
 code is called ("Detect and Analyze Media Segments"); `explain` says what it does to the server, matching Jellyfin's
@@ -692,18 +705,22 @@ it never undeletes.
 The response compression layer skips `application/gzip`: re-compressing a backup broke the download in browsers. Anything served
 pre-compressed needs the same exemption.
 
-**HTTP contract.** `docs/api.md` is the contract the UI is written against; change it together with the endpoint.
+**HTTP contract.** The docs' `finstats/api.md` (`../docs/docs/finstats/api.md`) is the contract the UI is written against;
+change it together with the endpoint. The QA `routes` check reads it from there.
 
 **The README says how FinStats is built**: a blockquote under the hero shot disclosing that most of the code was
 written by Claude Code from the maintainer's decisions, and what that does and does not mean: test-first, reviewed
 before it lands, `cargo test` in CI on every push to `main` and every release tag, each release run against a real
 server. Those are promises, like the privacy sentences: if any of them stops being true, the blockquote changes in
-the same commit. It names no model version on purpose, so it does not go stale.
+the same commit, and so does its copy at the top of the docs' `finstats/index.md`. It names no model version on purpose,
+so it does not go stale.
 
-For people: `CONTRIBUTING.md` is the one guide (what fits the project, running from source, the local Docker setup with a throwaway
-Jellyfin, rules for a change, pull requests); `SECURITY.md` covers private reporting, `CODE_OF_CONDUCT.md` behaviour (it forbids posting other people's viewing data), and
-`.github/` holds the issue forms, the discussion forms (file name = category slug: `q-a`, `ideas`, `show-and-tell`) and the PR template. Keep their rules in step with this file, and do
-not add a second developer guide next to them.
+For people: the contributing guide is the docs' `finstats/contributing.md`, the one guide (what fits the project, running from
+source, the local Docker setup with a throwaway Jellyfin, rules for a change, pull requests); `CONTRIBUTING.md` here is a short
+pointer to it, as `SECURITY.md` is to the docs' `finstats/reporting-security.md` (both stay because GitHub reads them from the
+repository). `CODE_OF_CONDUCT.md` covers behaviour (it forbids posting other people's viewing data), and `.github/` holds the
+issue forms, the discussion forms (file name = category slug: `q-a`, `ideas`, `show-and-tell`) and the PR template. Keep their
+rules in step with this file, and do not add a second developer guide next to them.
 
 ## Frontend (`web/`)
 
