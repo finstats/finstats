@@ -10,6 +10,7 @@ import { reveal, pickSection, sectionNav, sectionLayout } from '../sections.js';
 import { logView, prefetchEvents } from './events.js';
 import { auditView, prefetchAudit } from './audit.js';
 import { healthView, prefetchHealth } from './health.js';
+import { capacityView, prefetchCapacity } from './capacity.js';
 import { isAdmin } from '../state.js';
 import { button } from '../../finui/components/button/button.js';
 
@@ -27,6 +28,7 @@ export const prefetchServer = (c) => {
   if (section === 'log') return prefetchEvents(c);
   if (section === 'audit') return prefetchAudit(c);
   if (section === 'health') return prefetchHealth(c);
+  if (section === 'capacity') return prefetchCapacity(c);
   return [() => loadServer(c.signal)];
 };
 
@@ -36,6 +38,8 @@ const SECTIONS = [
   { key: 'devices', label: 'Devices', sub: 'Every device that has signed in', icon: 'monitor' },
   { key: 'plugins', label: 'Plugins', sub: 'What is installed on Jellyfin', icon: 'layers' },
   // Not the image's HEALTHCHECK: what is wrong with the files, found by comparing them with their neighbours.
+  // Will it cope: the busiest moments on record, how fast the disks fill, and what that says about the server's settings.
+  { key: 'capacity', label: 'Capacity', sub: 'The busiest moments on record, how fast each disk fills, and what that says about the server’s settings', icon: 'hardDrive' },
   { key: 'health', label: 'Library health', sub: 'Holes in seasons, copies, thin files and seasons that differ, found by comparing each file with its neighbours', icon: 'gauge' },
   { key: 'log', label: 'Log', sub: 'Jellyfin’s own activity log: sign-ins, failed logins, playback, tasks', icon: 'log' },
   // FinStats' own doings, for administrators: it names who changed what.
@@ -308,9 +312,10 @@ export default function serverPage(ctx) {
   }
 
   ctx.root.append(headerSlot, sectionLayout(sectionNav('/server', visible, section.key, 'Server sections'), view));
-  if (section.key === 'log' || section.key === 'audit' || section.key === 'health') {
-    // The logs and Library health are their own requests with their own filters; the server details only name the page.
-    view.append(...(section.key === 'log' ? logView(ctx) : section.key === 'audit' ? auditView(ctx) : healthView(ctx)));
+  const own = { log: logView, audit: auditView, health: healthView, capacity: capacityView }[section.key];
+  if (own) {
+    // The logs, Library health and Capacity are their own requests; the server details only name the page.
+    view.append(...own(ctx));
     loadServer(ctx.signal).then((d) => { if (!ctx.signal.aborted) paintHeader(d); }).catch(() => {});
   } else dv.load();
   if (section.key === 'jobs') {

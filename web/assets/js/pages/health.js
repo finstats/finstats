@@ -117,6 +117,35 @@ function details(f, libraryName) {
 // ---------------------------------------------------------------- the section
 
 /** The section: tiles, filters, and the list of the kind picked. Mounted by the Server page. */
+/** Set a finding aside, with a note, after asking: Library health's and Capacity's alike (one dismissal for both).
+ *  `line` says what the finding is; `onDone` redraws the page once it is set aside. */
+export function askDismiss(item, line, onDone) {
+  const note = h('input', { class: 'fui-field__input', type: 'text', maxLength: 500, id: 'health-note', autocomplete: 'off', placeholder: 'Why it is fine, for whoever looks next' });
+  const error = inlineError('health-error', '');
+  error.hidden = true;
+  const save = button({ variant: 'primary', type: 'submit' }, icon('check', 14), 'Dismiss');
+  const form = h('form', { class: 'stack-sm' },
+    h('p', { class: 'fui-field__help' }, `${item.title}: ${line}.`),
+    h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', for: 'health-note' }, 'Note (optional)'), note),
+    h('p', { class: 'fui-field__help' }, item.key.startsWith('capacity:') ? 'It comes back by itself if what it rests on changes.' : 'It comes back by itself if the files behind it change.'),
+    error,
+    h('div', { class: 'form-actions' }, save, button({ variant: 'ghost', type: 'button', onClick: () => modal.close() }, 'Cancel')));
+  const modal = openModal({ title: 'Dismiss finding', body: form, initialFocus: note });
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    setBusy(save, true, 'Dismissing…');
+    try {
+      await api.post('/library/health/dismiss', { key: item.key, note: note.value });
+      modal.close();
+      onDone();
+    } catch (err) {
+      setBusy(save, false);
+      error.hidden = false;
+      error.lastChild.textContent = err.message;
+    }
+  });
+}
+
 export function healthView(ctx) {
   const f = filtersOf(ctx.query);
   const manage = can('manage') && can('see_server');
@@ -128,32 +157,7 @@ export function healthView(ctx) {
     dv.load();
   }
 
-  function dismissDialog(item) {
-    const note = h('input', { class: 'fui-field__input', type: 'text', maxLength: 500, id: 'health-note', autocomplete: 'off', placeholder: 'Why it is fine, for whoever looks next' });
-    const error = inlineError('health-error', '');
-    error.hidden = true;
-    const save = button({ variant: 'primary', type: 'submit' }, icon('check', 14), 'Dismiss');
-    const form = h('form', { class: 'stack-sm' },
-      h('p', { class: 'fui-field__help' }, `${item.title}: ${describe(item)}.`),
-      h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', for: 'health-note' }, 'Note (optional)'), note),
-      h('p', { class: 'fui-field__help' }, 'It comes back by itself if the files behind it change.'),
-      error,
-      h('div', { class: 'form-actions' }, save, button({ variant: 'ghost', type: 'button', onClick: () => modal.close() }, 'Cancel')));
-    const modal = openModal({ title: 'Dismiss finding', body: form, initialFocus: note });
-    form.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      setBusy(save, true, 'Dismissing…');
-      try {
-        await api.post('/library/health/dismiss', { key: item.key, note: note.value });
-        modal.close();
-        dv.load();
-      } catch (err) {
-        setBusy(save, false);
-        error.hidden = false;
-        error.lastChild.textContent = err.message;
-      }
-    });
-  }
+  const dismissDialog = (item) => askDismiss(item, describe(item), () => dv.load());
 
   async function bringBack(btn, item) {
     setBusy(btn, true, 'Bringing back…');

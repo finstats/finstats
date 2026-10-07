@@ -1525,6 +1525,18 @@ a.wl-poster:hover .fui-poster, a.wl-poster:focus-visible .fui-poster { outline: 
 .health-actions > * + * { margin-left: 4px; }
 .health-card .fui-card__body p { margin: 0; }
 
+/* Capacity (Server → Capacity) */
+.capacity-findings { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.capacity-finding { display: grid; gap: 4px; }
+.capacity-finding + .capacity-finding { padding-top: 14px; border-top: 1px solid var(--border); }
+.capacity-finding > p { margin: 0; }
+.capacity-finding__title { font-weight: 600; }
+.capacity-finding__found { font-size: 12.5px; }
+.capacity-finding.is-aside .capacity-finding__title { color: var(--text-muted); }
+.capacity-finding .health-actions { text-align: left; }
+.capacity-disk > p { margin: 0 0 6px; }
+.capacity-disk + .capacity-disk { padding-top: 12px; border-top: 1px solid var(--border); }
+
 /* ---------------------------------------------------------------- everything in a library (/libraries/:id/titles) */
 .titles-grid { margin-top: 4px; }
 .titles-tail { display: grid; justify-items: center; gap: 8px; padding: 8px 0 16px; }
