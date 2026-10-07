@@ -10,7 +10,7 @@ import { simpleColumns, simpleColumnsTable, libBucketList } from '../charts.js';
 import { loadUpcoming, agenda, upcomingPoster } from '../upcoming.js';
 import { loadDownloads, downloadsList, nothingDownloading } from '../downloads.js';
 import { follow } from '../live.js';
-import { api } from '../api.js';
+import { api, qs } from '../api.js';
 import { button } from '../../finui/components/button/button.js';
 
 const TABS = [
@@ -188,7 +188,13 @@ function upcomingTab(ctx, root) {
   const f = upcomingScope(ctx.query);
   const view = h('div', { class: 'stack' });
   const summary = h('p', { class: 'result-count', 'aria-live': 'polite' });
-  const apply = () => { replaceQuery({ tab: 'upcoming', days: f.days, user_id: f.userId, mine: f.mine ? '1' : '' }); dv.load(); };
+  // What this list is, as a file to import once: the page's own filters, read by its own route (behind the session).
+  const exportHref = () => '/api/upcoming.ics' + qs({ days: f.days, user_id: f.userId, mine: f.mine ? 'true' : '' });
+  const exportLink = button({ variant: 'ghost', size: 'sm', href: exportHref(), download: 'finstats-upcoming.ics' }, icon('download', 14), 'Export .ics');
+  const exportHelp = h('p', { class: 'fui-field__help upcoming-export-help' },
+    'Export .ics saves this list as a snapshot to import into a calendar app; it will not update itself. For a calendar that stays current, subscribe with a calendar key from ',
+    h('a', { href: '/settings/keys' }, 'Settings → API keys'), '.');
+  const apply = () => { replaceQuery({ tab: 'upcoming', days: f.days, user_id: f.userId, mine: f.mine ? '1' : '' }); exportLink.setAttribute('href', exportHref()); dv.load(); };
   const dv = dataView({
     container: view, signal: ctx.signal,
     skeleton: () => [sk.cardRows(4), sk.cardRows(3)],
@@ -211,8 +217,8 @@ function upcomingTab(ctx, root) {
     stickyFilters([
       segmented({ label: 'How far ahead', value: f.days, options: SPANS, onChange: (v) => { f.days = v; store.set('finstats.upcomingDays', String(v)); apply(); } }),
       can('see_everyone') ? userCombobox({ value: f.userId, signal: ctx.signal, onChange: (u) => { f.userId = u; apply(); } }) : null,
-      mineBtn], ctx.signal),
-    summary, view);
+      mineBtn, exportLink], ctx.signal),
+    exportHelp, summary, view);
   dv.load();
 }
 
