@@ -825,6 +825,10 @@ pub async fn heatmap_handler(State(app): State<App>, user: AuthUser, Query(q): Q
     Ok(Json(scoped(&app, &user, &q, |c, scope| heatmap(c, &scope.cond())).await?))
 }
 
+/// The hardware a transcode used, as the Playback page names it: Jellyfin's "none" (it said software) and nothing (an older
+/// server that did not say) are both Software there.
+const HW_ACCEL_SQL: &str = "CASE WHEN COALESCE(json_extract(p.transcode, '$.hw_accel'), 'none') = 'none' THEN 'Software' ELSE json_extract(p.transcode, '$.hw_accel') END";
+
 pub async fn playback(State(app): State<App>, user: AuthUser, Query(q): Query<FilterQuery>) -> ApiResult {
     let out = scoped(&app, &user, &q, |c, scope| {
         let cond = scope.cond();
@@ -833,7 +837,7 @@ pub async fn playback(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
         Ok(json!({
             "methods": buckets(c, &cond, "p.play_method", "", 12)?,
             "transcode_reasons": buckets(c, &cond.with_raw("p.transcode IS NOT NULL"), "j.value", ", json_each(p.transcode, '$.reasons') j", 12)?,
-            "hw_accel": buckets(c, &video_transcode, "COALESCE(json_extract(p.transcode, '$.hw_accel'), 'Software')", "", 12)?,
+            "hw_accel": buckets(c, &video_transcode, HW_ACCEL_SQL, "", 12)?,
             "video_codecs": buckets(c, &cond, "UPPER(p.video_codec)", "", 12)?,
             "audio_codecs": buckets(c, &cond, "UPPER(p.audio_codec)", "", 12)?,
             "resolutions": buckets(c, &cond, RESOLUTION_SQL, "", 12)?,
@@ -2187,6 +2191,18 @@ mod tests {
         let everyone = summary_for(&app, &caller("u3", true)).await.unwrap();
         assert_eq!((everyone["plays_total"].as_i64(), everyone["active_sessions"].as_i64()), (Some(3), Some(2)));
         assert_eq!(everyone["version"], env!("CARGO_PKG_VERSION"));
+    }
+
+    /// What the Playback page calls the hardware a transcode used: Jellyfin's "none" and a server that said nothing are both
+    /// Software there, as they always were.
+    #[test]
+    fn the_hardware_chart_reads_none_and_nothing_alike_as_software() {
+        let c = Connection::open_in_memory().unwrap();
+        let named = |t: &str| -> String { c.query_row(&format!("SELECT {HW_ACCEL_SQL} FROM (SELECT ?1 AS transcode) p"), [t], |r| r.get(0)).unwrap() };
+        assert_eq!(named(r#"{"hw_accel":"none"}"#), "Software");
+        assert_eq!(named(r#"{"hw_accel":null}"#), "Software");
+        assert_eq!(named("{}"), "Software");
+        assert_eq!(named(r#"{"hw_accel":"vaapi"}"#), "vaapi");
     }
 
     #[test]

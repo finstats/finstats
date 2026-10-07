@@ -118,7 +118,8 @@ pub fn compact_transcode(t: &Value) -> Option<Value> {
         "container": t["Container"],
         "is_video_direct": t["IsVideoDirect"].as_bool().unwrap_or(false),
         "is_audio_direct": t["IsAudioDirect"].as_bool().unwrap_or(false),
-        "hw_accel": s(&t["HardwareAccelerationType"]).filter(|h| !h.eq_ignore_ascii_case("none")),
+        // "none" is Jellyfin saying it used no hardware, which is not the same as saying nothing (an older server).
+        "hw_accel": s(&t["HardwareAccelerationType"]).map(|h| if h.eq_ignore_ascii_case("none") { "none".to_string() } else { h }),
         "reasons": normalize_reasons(&t["TranscodeReasons"]),
         "bitrate": t["Bitrate"],
         "width": t["Width"],
@@ -302,5 +303,17 @@ mod tests {
         assert_eq!(track_languages(&streams, "Subtitle").as_deref(), Some(r#"["eng","und"]"#));
         assert_eq!(track_languages(&serde_json::json!([{"Type": "Video"}]), "Audio"), None);
         assert_eq!(track_languages(&Value::Null, "Audio"), None);
+    }
+
+    /// Software is an answer Jellyfin gives ("none"); a server that says nothing has not said software. Capacity counts
+    /// only the transcodes Jellyfin said either way about.
+    #[test]
+    fn a_transcode_keeps_whether_jellyfin_said_it_used_no_hardware() {
+        let hw = |t: Value| compact_transcode(&t).unwrap()["hw_accel"].clone();
+        assert_eq!(hw(json!({ "HardwareAccelerationType": "none" })), json!("none"));
+        assert_eq!(hw(json!({ "HardwareAccelerationType": "None" })), json!("none"), "one spelling");
+        assert_eq!(hw(json!({ "HardwareAccelerationType": "vaapi" })), json!("vaapi"));
+        assert_eq!(hw(json!({ "VideoCodec": "h264" })), Value::Null, "not said");
+        assert_eq!(hw(json!({ "HardwareAccelerationType": "" })), Value::Null);
     }
 }

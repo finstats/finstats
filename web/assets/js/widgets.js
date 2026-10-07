@@ -62,7 +62,7 @@ export function nowPlayingCard(sn) {
         ['Video', t.is_video_direct ? 'Copied (direct)' : (t.video_codec || '–').toUpperCase(), { mono: true }],
         ['Audio', t.is_audio_direct ? 'Copied (direct)' : (t.audio_codec || '–').toUpperCase(), { mono: true }],
         ['Container', t.container, { mono: true }],
-        ['Hardware', t.hw_accel ? t.hw_accel.toUpperCase() : 'Software', { mono: true }],
+        ['Hardware', t.hw_accel && t.hw_accel !== 'none' ? t.hw_accel.toUpperCase() : 'Software', { mono: true }],
         t.progress != null ? ['Transcoded', Math.round(Math.min(1, t.progress) * 100) + '%', { mono: true }] : null,
         ['Reasons', t.reasons && t.reasons.length ? t.reasons.map(humanize).join(', ') : '–'],
       ]));

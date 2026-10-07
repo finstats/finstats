@@ -112,7 +112,7 @@ export function openPlayModal(play, { onDeleted, onRestored } = {}) {
       ['Audio', t.is_audio_direct ? 'Copied (direct)' : [t.audio_codec && t.audio_codec.toUpperCase(), channels(t.audio_channels)].filter(Boolean).join(' · '), { mono: true }],
       ['Container', t.container, { mono: true }],
       ['Bitrate', bitrate(t.bitrate), { mono: true }],
-      ['Hardware', t.hw_accel ? t.hw_accel.toUpperCase() : 'Software', { mono: true }],
+      ['Hardware', t.hw_accel && t.hw_accel !== 'none' ? t.hw_accel.toUpperCase() : 'Software', { mono: true }],
       ['Reasons', t.reasons && t.reasons.length ? h('span', { class: 'fui-chip__set' }, t.reasons.map((r) => h('span', { class: 'fui-chip' }, humanize(r)))) : '–'],
     ])] : null;
 
