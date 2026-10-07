@@ -108,38 +108,54 @@ pub fn stamps(subscribed: bool, visible: bool) -> bool {
     subscribed && visible
 }
 
-/// How many live connections one person may hold at once: a tab each, and a person rarely has more than a few.
+/// How many live connections one person may hold at once: a tab each, and a person rarely has more than a few. Beyond it
+/// the oldest gives way, as the oldest session does: a page frozen in a browser's back/forward cache, or a connection
+/// that died somewhere on the way without a word, would otherwise hold a seat that nobody is using.
 pub const PER_PERSON: usize = 20;
 
-/// Who holds how many connections.
-#[derive(Debug, Default)]
-pub struct Seats(std::sync::Mutex<HashMap<String, usize>>);
+/// One connection's seat: its number, and how it is told that a newer connection of the same person took its place.
+pub struct Ticket {
+    pub id: u64,
+    pub gone: Arc<tokio::sync::Notify>,
+}
+
+/// Who holds which connections, oldest first.
+#[derive(Default)]
+pub struct Seats {
+    held: Mutex<HashMap<String, std::collections::VecDeque<(u64, Arc<tokio::sync::Notify>)>>>,
+    next: std::sync::atomic::AtomicU64,
+}
 
 impl Seats {
-    /// A seat for this person, or `None` when they already hold [`PER_PERSON`]. Give it back with [`Seats::leave`].
-    pub fn take(&self, user_id: &str) -> bool {
-        let mut held = self.0.lock().unwrap();
-        let n = held.entry(user_id.to_string()).or_default();
-        if *n >= PER_PERSON {
-            return false;
+    /// A seat for this person. One who already holds [`PER_PERSON`] has their oldest told to go.
+    pub fn take(&self, user_id: &str) -> Ticket {
+        let id = self.next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let gone = Arc::new(tokio::sync::Notify::new());
+        let mut held = self.held.lock().unwrap();
+        let mine = held.entry(user_id.to_string()).or_default();
+        if mine.len() >= PER_PERSON
+            && let Some((_, oldest)) = mine.pop_front()
+        {
+            oldest.notify_one(); // kept as a permit if that connection is not listening at this instant
         }
-        *n += 1;
-        true
+        mine.push_back((id, gone.clone()));
+        Ticket { id, gone }
     }
 
-    pub fn leave(&self, user_id: &str) {
-        let mut held = self.0.lock().unwrap();
-        if let Some(n) = held.get_mut(user_id) {
-            *n = n.saturating_sub(1);
-            if *n == 0 {
+    /// The connection has ended. A seat already given up to a newer one changes nothing.
+    pub fn leave(&self, user_id: &str, id: u64) {
+        let mut held = self.held.lock().unwrap();
+        if let Some(mine) = held.get_mut(user_id) {
+            mine.retain(|(n, _)| *n != id);
+            if mine.is_empty() {
                 held.remove(user_id);
             }
         }
     }
 
-    /// Connections open now, for the log.
+    /// Connections open now.
     pub fn open(&self) -> usize {
-        self.0.lock().unwrap().values().sum()
+        self.held.lock().unwrap().values().map(|m| m.len()).sum()
     }
 }
 
@@ -164,6 +180,8 @@ const LOOK_EVERY: Duration = Duration::from_secs(1);
 const MESSAGE_MAX: usize = 4096;
 /// Close codes: the credential no longer opens FinStats.
 const CLOSE_SIGNED_OUT: u16 = 4401;
+/// …and: this person opened more than [`PER_PERSON`], and this was the oldest. The page polls rather than coming back.
+const CLOSE_REPLACED: u16 = 4429;
 
 /// What changed, by topic: a latest value, never a queue, so a slow page only ever gets the newest state.
 pub struct Feed {
@@ -176,6 +194,8 @@ pub struct Feed {
     pub seats: Seats,
     /// When a refusal was last logged, so a reconnecting script cannot flood the log.
     refused_logged: Mutex<Option<Instant>>,
+    /// When a connection last gave way to a newer one, likewise.
+    replaced_logged: Mutex<Option<Instant>>,
 }
 
 impl Default for Feed {
@@ -187,6 +207,7 @@ impl Default for Feed {
             auth: watch::Sender::new(0),
             seats: Seats::default(),
             refused_logged: Mutex::new(None),
+            replaced_logged: Mutex::new(None),
         }
     }
 }
@@ -202,11 +223,24 @@ impl Feed {
     }
 
     fn refused(&self, why: &str) {
-        let mut last = self.refused_logged.lock().unwrap();
-        if last.is_none_or(|t| t.elapsed() >= Duration::from_secs(60)) {
-            *last = Some(Instant::now());
+        if Self::once_a_minute(&self.refused_logged) {
             tracing::warn!("live channel: refused a connection ({why}); further refusals this minute are not logged");
         }
+    }
+
+    fn noted(&self, what: &str) {
+        if Self::once_a_minute(&self.replaced_logged) {
+            tracing::info!("live channel: {what} (at most once a minute in this log)");
+        }
+    }
+
+    fn once_a_minute(last: &Mutex<Option<Instant>>) -> bool {
+        let mut last = last.lock().unwrap();
+        let due = last.is_none_or(|t| t.elapsed() >= Duration::from_secs(60));
+        if due {
+            *last = Some(Instant::now());
+        }
+        due
     }
 }
 
@@ -260,11 +294,12 @@ pub async fn run(app: App) {
 struct Seat {
     app: App,
     user_id: String,
+    id: u64,
 }
 
 impl Drop for Seat {
     fn drop(&mut self) {
-        self.app.live_feed.seats.leave(&self.user_id);
+        self.app.live_feed.seats.leave(&self.user_id, self.id);
     }
 }
 
@@ -300,12 +335,10 @@ pub async fn connect(
         Ok(ws) => ws,
         Err(_) => return ApiError::new(StatusCode::UPGRADE_REQUIRED, "This address is a WebSocket").into_response(),
     };
-    if !app.live_feed.seats.take(&user.id) {
-        app.live_feed.refused("one person's connections are at the limit");
-        return ApiError::new(StatusCode::TOO_MANY_REQUESTS, "Too many live connections: close a tab or two").into_response();
-    }
-    let seat = Seat { app: app.clone(), user_id: user.id.clone() };
-    ws.max_message_size(MESSAGE_MAX).on_upgrade(move |socket| serve(app, socket, user, presented, seat))
+    let ticket = app.live_feed.seats.take(&user.id);
+    let seat = Seat { app: app.clone(), user_id: user.id.clone(), id: ticket.id };
+    let gone = ticket.gone;
+    ws.max_message_size(MESSAGE_MAX).on_upgrade(move |socket| serve(app, socket, user, presented, seat, gone))
 }
 
 /// What one connection has asked for, and what it was last sent, so nothing is sent twice.
@@ -340,7 +373,7 @@ impl Tab {
     }
 }
 
-async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Presented, _seat: Seat) {
+async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Presented, _seat: Seat, gone: Arc<tokio::sync::Notify>) {
     let feed = &app.live_feed;
     let (mut np, mut dl, mut sum, mut auth) = (feed.now_playing.subscribe(), feed.downloads.subscribe(), feed.summary.subscribe(), feed.auth.subscribe());
     let mut tab = Tab { topics: HashSet::new(), visible: false, sent: HashMap::new(), user };
@@ -407,6 +440,12 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                 if stamps(tab.topics.contains("downloads"), tab.visible) {
                     crate::downloads::watched(&app, crate::db::now());
                 }
+            }
+            _ = gone.notified() => {
+                app.live_feed.noted("one person's oldest connection gave way to a newer one");
+                let bye = CloseFrame { code: CLOSE_REPLACED, reason: "a newer tab took this seat".into() };
+                let _ = socket.send(Message::Close(Some(bye))).await;
+                break;
             }
             _ = ping.tick() => {
                 if heard.elapsed() > SILENT_FOR || socket.send(Message::Ping(Default::default())).await.is_err() {
@@ -528,20 +567,27 @@ mod tests {
         assert_eq!(f, json!({ "type": "summary", "v": 1, "data": { "plays_total": 3 } }));
     }
 
-    #[test]
-    fn one_person_holds_at_most_twenty_connections_and_a_closed_one_frees_its_seat() {
+    #[tokio::test]
+    async fn the_oldest_connection_gives_way_to_the_twenty_first_and_a_closed_one_frees_its_seat() {
         let seats = Seats::default();
-        for _ in 0..PER_PERSON {
-            assert!(seats.take("u1"));
+        let gone = |t: &Ticket| {
+            let t = t.gone.clone();
+            async move { tokio::time::timeout(std::time::Duration::from_millis(20), t.notified()).await.is_ok() }
+        };
+        let tickets: Vec<Ticket> = (0..PER_PERSON).map(|_| seats.take("u1")).collect();
+        assert_eq!(seats.open(), PER_PERSON);
+        let newest = seats.take("u1");
+        assert!(gone(&tickets[0]).await, "the oldest is told to go");
+        assert!(!gone(&tickets[1]).await && !gone(&newest).await, "and nobody else");
+        assert_eq!(seats.open(), PER_PERSON, "still twenty");
+        let other = seats.take("u2");
+        assert!(!gone(&tickets[1]).await, "somebody else's connection costs alice nothing");
+        seats.leave("u1", tickets[0].id); // the one told to go, closing: already given up, nothing changes
+        assert_eq!(seats.open(), PER_PERSON + 1);
+        for t in tickets.iter().skip(1).chain([&newest]) {
+            seats.leave("u1", t.id);
         }
-        assert!(!seats.take("u1"), "the twenty-first tab is refused");
-        assert!(seats.take("u2"), "somebody else is not");
-        seats.leave("u1");
-        assert!(seats.take("u1"), "a closed tab gives its seat back");
-        for _ in 0..PER_PERSON {
-            seats.leave("u1");
-        }
-        seats.leave("u2");
+        seats.leave("u2", other.id);
         assert_eq!(seats.open(), 0, "every seat given back: nothing left behind");
     }
 }
