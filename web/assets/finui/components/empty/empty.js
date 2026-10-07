@@ -1,4 +1,4 @@
-// FinUI: empty. What a view says when it has nothing to show — why, and the way out when there is one — instead of a
+// FinUI: empty. What a view says when it has nothing to show (why, and the way out when there is one) instead of a
 // blank space somebody has to interpret.
 
 import { h, icon } from '../../core.js';

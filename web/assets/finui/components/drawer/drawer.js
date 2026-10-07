@@ -1,4 +1,4 @@
-// FinUI: drawer. A panel that slides in from an edge over the page — the modal's dialog, held to a side: details of a
+// FinUI: drawer. A panel that slides in from an edge over the page (the modal's dialog, held to a side): details of a
 // row, a filter with many parts, a phone's menu. Esc, its ×, or a press on the page behind closes it.
 
 import { h, icon } from '../../core.js';

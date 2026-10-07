@@ -1,4 +1,4 @@
-// FinUI: theme-frame. What it holds, drawn in one theme whatever the page around it is in — light or dark — or at a
+// FinUI: theme-frame. What it holds, drawn in one theme whatever the page around it is in (light or dark), or at a
 // phone's width: a gallery's example, a look being tried. light-dark() follows the colour scheme of the element that
 // uses it, so a frame's scheme is all it takes.
 

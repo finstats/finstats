@@ -72,7 +72,7 @@ fn list_in(c: &Connection, user: &AuthUser) -> Result<Vec<Value>> {
     Ok(rows.into_iter().map(Value::Object).collect())
 }
 
-/// `GET /api/keys` — one's own keys; every key, with its owner, for a Jellyfin administrator. Never the token.
+/// `GET /api/keys`: one's own keys; every key, with its owner, for a Jellyfin administrator. Never the token.
 pub async fn list(State(app): State<App>, user: AuthUser) -> ApiResult {
     let keys = app.db.call(move |c| list_in(c, &user)).await?;
     Ok(Json(json!({ "keys": keys })))
@@ -85,7 +85,7 @@ pub struct CreateBody {
     expires_in_d: Option<i64>,
 }
 
-/// `POST /api/keys` — a new key for the caller, shown this once.
+/// `POST /api/keys`: a new key for the caller, shown this once.
 pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<CreateBody>) -> ApiResult<axum::response::Response> {
     only_a_session(&user)?;
     let (name, expires_in_d) = check_request(&body.name, body.expires_in_d)?;
@@ -109,7 +109,7 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Cre
     Ok((StatusCode::CREATED, Json(made)).into_response())
 }
 
-/// `DELETE /api/keys/{id}` — revoke one's own key, or anyone's as an administrator. A key that is not
+/// `DELETE /api/keys/{id}`: revoke one's own key, or anyone's as an administrator. A key that is not
 /// the caller's to see is not there.
 pub async fn revoke(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -> ApiResult {
     only_a_session(&user)?;

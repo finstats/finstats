@@ -10,7 +10,7 @@ export const part = {
   name: 'page-header',
   selector: '.fui-page-header.fm-gathers',
   enhance(head) {
-    // Whatever scrolls it — the page or a box it sits in — is heard in the capture phase.
+    // Whatever scrolls it (the page or a box it sits in) is heard in the capture phase.
     const scrolled = (e) => {
       const by = e.target === document ? document.scrollingElement : e.target;
       if (by !== document.scrollingElement && !by.contains(head)) return;

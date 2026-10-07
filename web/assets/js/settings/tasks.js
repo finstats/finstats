@@ -1,4 +1,4 @@
-// Settings → Tasks: every job finstats does by itself, when it last ran, and — a click on a row — when it runs,
+// Settings → Tasks: every job finstats does by itself, when it last ran, and (a click on a row) when it runs,
 // laid out the way Jellyfin lays out its scheduled tasks: a list, then a job's own page with its triggers and an
 // "Add trigger" dialog. `/settings/tasks` is the list, `/settings/tasks/:task` one job. The server holds every
 // rule (`schedule.rs`); this page only says it in words and sends the whole list back when it changes.

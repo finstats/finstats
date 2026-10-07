@@ -30,7 +30,7 @@ function bar(episodes, { seasonNo, editable, onToggle, dense }) {
     'aria-label': `${episodes.filter((e) => e.state === 'seen').length} of ${episodes.length} episodes seen` },
     episodes.map((e) => {
       const what = e.state === 'seen' ? `seen (${SOURCE[e.source] || 'seen'})` : e.state === 'started' ? 'started, not finished' : 'not seen';
-      const title = `${epLabel(e.season ?? seasonNo, e)} — ${what}`;
+      const title = `${epLabel(e.season ?? seasonNo, e)} · ${what}`;
       if (!editable) return h('span', { class: `ep ep-${e.state}`, title });
       const locked = e.state === 'seen' && e.source !== 'manual'; // a real play can't be un-watched here
       return h('button', { type: 'button', class: `ep ep-${e.state}`, title: locked ? title : `${title}. Click to ${e.state === 'seen' ? 'unmark' : 'mark as seen'}.`,

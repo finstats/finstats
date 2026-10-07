@@ -80,7 +80,7 @@ pub struct Versus {
 pub struct StoryYear {
     /// "2025", or "The last 12 months".
     pub label: String,
-    /// Whose year it is, as the card says it: set by the caller — a published profile's chosen name,
+    /// Whose year it is, as the card says it: set by the caller: a published profile's chosen name,
     /// the server's name for the server's year, empty in the app (a login name never goes on a card).
     pub whose: String,
     pub totals: Totals,
@@ -173,7 +173,7 @@ fn titles(v: &Value) -> Vec<Title> {
 
 impl StoryYear {
     /// The year as `recap::build` answers it, copied field by field into what may leave finstats.
-    /// Anything the recap has that is not a field here — companions, the rank, the apps — stays behind.
+    /// Anything the recap has that is not a field here (companions, the rank, the apps) stays behind.
     pub fn from_recap(r: &Value, whose: &str) -> Option<StoryYear> {
         if r["empty"] == true || int(&r["totals"]["plays"]) == 0 {
             return None;

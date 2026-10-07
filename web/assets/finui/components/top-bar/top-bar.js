@@ -1,5 +1,5 @@
 // FinUI: top-bar. A site's bar across the top of every page: its name, its sections as links (the one you are in
-// marked), and on the right what belongs to every page — a theme switch, an account. It stays as the page scrolls.
+// marked), and on the right what belongs to every page: a theme switch, an account. It stays as the page scrolls.
 
 import { h } from '../../core.js';
 import { button } from '../button/button.js';

@@ -2,17 +2,17 @@
 //!
 //! What the export means, learned from a real file rather than from documentation:
 //! - It is **sessions only**. There are no items, users or libraries in it, so an import brings no
-//!   library data with it — only history, and the people it names.
+//!   library data with it: only history, and the people it names.
 //! - A row carries **one moment or two**, and which it is decides what the moment means. Two
 //!   (`startTime` < `endTime`) is a play Streamystats watched itself: the first is the real start,
 //!   and whatever the pair leaves over `playDuration` is time the play was not running. One
 //!   (`startTime` == `endTime`) is a play it imported from Jellystat, and that moment is the
-//!   **end** — Jellystat's `ActivityDateInserted`, copied into both fields. Reading it as a start
+//!   **end**: Jellystat's `ActivityDateInserted`, copied into both fields. Reading it as a start
 //!   would move every one of those evenings forward by the length of the film, which is the kind
 //!   of mistake that is invisible until every chart is quietly wrong.
 //! - `isInferred`, or an id beginning `inferred:`, is **not a play**: Jellyfin reported the item
 //!   watched, so Streamystats wrote a row as long as the whole runtime for a viewing nobody saw.
-//! - `itemId` is the item in both kinds — Streamystats re-links renamed items. `mediaSourceId` is
+//! - `itemId` is the item in both kinds, because Streamystats re-links renamed items. `mediaSourceId` is
 //!   *not* an item id.
 //! - A play Streamystats watched itself says **nothing about the file**: `videoCodec`,
 //!   `resolution*`, `audioCodec` and `videoRangeType` are empty in every row a real export holds.
@@ -64,7 +64,7 @@ fn lower(v: &Value) -> Option<String> {
 /// What a row in the export is.
 #[derive(Debug, PartialEq, Eq)]
 enum Kind {
-    /// A play — either one Streamystats watched or one it imported. Which of the two shows in its
+    /// A play: either one Streamystats watched or one it imported. Which of the two shows in its
     /// timestamps rather than in any flag; see [`timing`].
     Play,
     /// Not a play: a row as long as the whole runtime, for a viewing nobody saw.
@@ -97,7 +97,7 @@ fn timing(d: &Value) -> Option<Timing> {
     if end > start {
         // Two moments: the play began at the first, and nothing can have run for longer than the
         // time between them. What the pair leaves over is time it was paused or simply sitting
-        // there — Streamystats does not say which, so finstats does not either.
+        // there. Streamystats does not say which, so finstats does not either.
         Some(Timing { started_at: start, ended_at: end, duration_s: played.min(end - start) })
     } else {
         // One moment, and it is the end.
@@ -324,7 +324,7 @@ fn session(conn: &Connection, d: &Value, res: &mut ImportResult, merge_window_s:
         return Ok(());
     };
     // The export names no users of its own, so the people in the history are all it can give back.
-    // Anything else about them — whether they administer the server, their picture — is Jellyfin's
+    // Anything else about them (whether they administer the server, their picture) is Jellyfin's
     // to say, and the next sync says it.
     res.users += conn
         .prepare_cached("INSERT OR IGNORE INTO users(id, name, updated_at) VALUES (?1, ?2, 0)")?
@@ -448,7 +448,7 @@ mod tests {
     }
 
     /// A session Streamystats watched itself: it knows when the play began, and nothing at all
-    /// about the file — the source columns are empty in every row a real export contains.
+    /// about the file: the source columns are empty in every row a real export contains.
     fn watched_live() -> Value {
         let session = json!({
             "id": "11111111-1111-1111-1111-111111111111",

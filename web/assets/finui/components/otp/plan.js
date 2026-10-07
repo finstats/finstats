@@ -1,4 +1,4 @@
-// FinUI: otp, the rules that are not drawing — a code typed or pasted into a row of boxes: one character a box, from the
+// FinUI: otp, the rules that are not drawing: a code typed or pasted into a row of boxes: one character a box, from the
 // box it went into, keeping only what a box takes (digits, unless told otherwise). Pure; tested in FinUI's repository.
 
 /** The boxes after `text` arrives at box `at`. What does not fit is dropped. */

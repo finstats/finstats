@@ -118,7 +118,7 @@ function buildShell() {
   const wide = () => !matchMedia('(max-width: 820px)').matches;
   function openSearch(from) {
     if (searching) { searching.panel.focus(); return; }
-    // What had the keyboard's focus — a control pressed, or the place Ctrl+Space was pressed in — is where Esc gives it back;
+    // What had the keyboard's focus (a control pressed, or the place Ctrl+Space was pressed in) is where Esc gives it back;
     // a click's focus is let go (desktop-nav's rule: handed back after a key, it is the keyboard's).
     const back = document.activeElement !== document.body && document.activeElement.matches(':focus-visible') ? document.activeElement : null;
     const panel = finstatsSearch({ onPick: (row) => { endSearch(false); navigate(row.href); }, onEscape: () => endSearch(true) });
@@ -153,7 +153,7 @@ function buildShell() {
   }
   /** The mobile menu let its search go by itself (its scrim, a handle). */
   function dropSearch() { if (searching) { searching.panel.destroy(); searching = null; } }
-  // A press anywhere else gives up, as Esc does — the search is part of the page, not a dialog that holds it.
+  // A press anywhere else gives up, as Esc does: the search is part of the page, not a dialog that holds it.
   const onPress = (e) => {
     if (!searching || searching.panel.el.contains(e.target) || e.target.closest('.fui-mobile-nav, .topbar-search, .fui-desktop-nav__search-btn, .fui-desktop-nav__trigger')) return;
     endSearch(false);

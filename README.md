@@ -3,7 +3,7 @@
 
 <p align="center">
   <b>See what your Jellyfin server is really doing.</b><br>
-  Who is watching, what they watch, how it streams — and your year in review.<br>
+  Who is watching, what they watch, how it streams, and your year in review.<br>
   One tiny container. No database server. Set up in two minutes.
 </p>
 
@@ -20,7 +20,7 @@
 
 > **How finstats is built: with AI assistance.** Most of the code here was written by Claude Code,
 > working from the maintainer's design decisions and reviewed before it landed. Nothing is generated
-> and forgotten — every change is written test-first, `cargo test` runs in CI on every push to `main`
+> and forgotten: every change is written test-first, `cargo test` runs in CI on every push to `main`
 > and on every release tag, and each release is run against a real Jellyfin server before it ships.
 > Said plainly because you should know what you are running; the responsibility for this code is the
 > maintainer's, not a model's.
@@ -36,7 +36,7 @@ lightweight alternative to Jellystat and Streamystats: a single small program wi
 built-in database, using **under 100 MB of memory**, where each of those needs around half a gigabyte.
 Nothing else to install, nothing to maintain.
 
-Already using Jellystat or Streamystats, or coming from Plex with Tautulli? [Bring your history with you](#moving-from-jellystat-streamystats-or-tautulli) — it takes seconds.
+Already using Jellystat or Streamystats, or coming from Plex with Tautulli? [Bring your history with you](#moving-from-jellystat-streamystats-or-tautulli). It takes seconds.
 
 ## What you get
 
@@ -63,7 +63,7 @@ directly or transcodes, and why. A status bar keeps the essentials in sight on e
 - **Want it in a different order?** Every table sorts by any column with a click, and long ones can be filtered as you type.
 - **Is it dubbed?** Every title shows the languages of its audio and subtitle tracks. A show says how far a dub goes
   ("English: 13 of 26 episodes"), and each episode lists its own, so you know before you start.
-- **What is my library made of?** Resolutions, codecs, HDR, size per decade, what was added when —
+- **What is my library made of?** Resolutions, codecs, HDR, size per decade, what was added when,
   and the big one: **titles nobody has ever watched**, sorted by how much space they take.
 
 ### Is the library in order?
@@ -91,10 +91,10 @@ machine and the map is drawn by finstats itself, so no address or coordinate is 
 <img src="docs/screenshots/pipeline.png" alt="Pipeline page: requests from Seerr with how long each took and whether it was watched, the upcoming calendar, and the live download list" width="100%">
 
 finstats can also watch the rest of your setup, read-only: **Sonarr**, **Radarr** and **Seerr**, several of a kind if you
-have them. Your download client needs no setup of its own — Sonarr and Radarr already talk to it, and finstats reads what
+have them. Your download client needs no setup of its own: Sonarr and Radarr already talk to it, and finstats reads what
 they know. The **Pipeline** page then answers the questions statistics alone cannot:
 
-- **Was it worth getting?** Every request with who asked, how long it took to arrive, and whether they ever watched it —
+- **Was it worth getting?** Every request with who asked, how long it took to arrive, and whether they ever watched it,
   plus the list nobody likes to see: what arrived weeks ago and has never been played.
 - **What is coming?** A calendar of new episodes and film releases, marked with who is actually watching that show, so a
   Friday episode of something three people follow stands out from one nobody has touched in a year.
@@ -112,7 +112,7 @@ Other tools store one line per play. finstats records what happened *during* it:
 resume, every skip, audio and subtitle switches, the moment a direct play turned into a transcode,
 where playback picked up and where it stopped.
 
-Alongside the usual details — device, app version, IP address and whether it was on your network,
+Alongside the usual details: device, app version, IP address and whether it was on your network,
 video and audio format, bitrate, time watched versus time paused.
 
 Every film and show lists its cast and crew, and every actor and director has a page of their own:
@@ -126,7 +126,7 @@ When two or more people press play on the same thing at the same time, finstats 
 groups watch together, what they watch, and how many hours they have spent doing it. It shows on
 the dashboard, on each profile ("most often with"), and as a small mark on every shared play. The
 **Together** page has the whole of it: who watches with whom, hours in company against hours alone
-over time, each person's share, and the recent evenings — an evening of three counts for each of its pairs.
+over time, each person's share, and the recent evenings. An evening of three counts for each of its pairs.
 
 ### Use it from outside
 Everything the pages know, a script can ask. Make a key under **Settings → API keys** and send it as a header:
@@ -136,9 +136,9 @@ curl -H "Authorization: Bearer fs_…" https://finstats.example/api/stats/overvi
 ```
 
 A key is you: it sees what you may see and no more, dies when your access does, and is shown once. Make one
-with the *calendar* scope and your phone can subscribe to **what is coming** — every episode and film Sonarr
+with the *calendar* scope and your phone can subscribe to **what is coming**: every episode and film Sonarr
 and Radarr expect, as a calendar you carry with you, without that key opening anything else. And every change
-made in finstats — a sign-in, a setting, a key, a backup, an import — is on record under **Server → Audit**,
+made in finstats (a sign-in, a setting, a key, a backup, an import) is on record under **Server → Audit**,
 with who did it and from where.
 
 ### Where you are in every show
@@ -151,7 +151,7 @@ and current day streak.
 <br clear="right">
 
 ### A watchlist of your own
-Put a film or a show on your watchlist from its page (an episode's page offers its show), from Upcoming, from Recently added or from search —
+Put a film or a show on your watchlist from its page (an episode's page offers its show), from Upcoming, from Recently added or from search,
 even one that is not on your server yet, straight from what Sonarr or Radarr is waiting for. Every entry
 says where it stands now: on the server, 5 of 26 episodes, requested, coming up Friday, or watched. When
 something you were waiting for arrives, finstats can tell you. Nobody else sees your list, an administrator
@@ -159,28 +159,28 @@ included, and nothing is written to Jellyfin, Seerr, Sonarr or Radarr.
 
 ### Your year in review
 
-<img src="docs/screenshots/recap.png" alt="Recap: Your 2025, replayed — the top posters fanned out beside the headline, above a waveform of the year with one bar per week" width="100%">
+<img src="docs/screenshots/recap.png" alt="Recap: Your 2025, replayed. The top posters fanned out beside the headline, above a waveform of the year with one bar per week" width="100%">
 
 A personal recap for every user, in the spirit of Spotify Wrapped: hours watched, top shows, movies,
 music and genres, the actors and directors you spent the most time with, and a viewing
-personality — night owl, weekend warrior, binge watcher and more. See the whole year as a calendar
+personality: night owl, weekend warrior, binge watcher and more. See the whole year as a calendar
 of days, find out which weekday took the crown, and collect the records worth bragging about:
 biggest binge, longest daily streak, most rewatched title, the oldest film you watched. Since 2.0 it
 also tells you who you watched with, which shows you finished (and which you left for later), what you
 asked for through Seerr and what came of it, and how the year compares with the one before.
 
 **Share it as a story.** Every chapter is also a 1080×1920 card, the shape phone stories use: save one,
-or all of them as a ZIP. A card never names anybody else — the people you watched with are named in
+or all of them as a ZIP. A card never names anybody else: the people you watched with are named in
 the app and nowhere that leaves it. Publish your year on your public profile and anyone with the link
 sees the same cards. In December, when the year is ready, finstats can tell you so.
 
 Each person sees only their own. Administrators can open another person's recap, and the whole server's
-year — titles and totals, nobody ranked or named; nobody else can, whatever permissions they hold.
+year (titles and totals, nobody ranked or named); nobody else can, whatever permissions they hold.
 
 ### Share it, if you want to
 
-A person can publish part of their profile at a link that opens without an account — totals and top
-titles, streaks and when they watch, the year, the last few plays — and every link comes with a card
+A person can publish part of their profile at a link that opens without an account (totals and top
+titles, streaks and when they watch, the year, the last few plays), and every link comes with a card
 that chat apps show when it is pasted. It is off until an administrator allows it, each part is off
 until its owner turns it on, and nothing on it is newer than a day, so a published page never says
 who is watching right now. Devices, addresses, apps and file paths are never published, whatever is
@@ -189,23 +189,23 @@ switched on. The link is random, and resetting it is how you take back one alrea
 ### Private by design
 - **Sign in with your Jellyfin account.** No new passwords, and finstats never stores yours.
 - **Nothing is readable without an account** unless an administrator allows public profiles and a person
-  publishes one — and then only what that person switched on, a day late, never a device, address or path.
+  publishes one, and then only what that person switched on, a day late, never a device, address or path.
 - **You decide who sees what.** Let family and friends sign in if you like. By default they get
   their own statistics and recap and nothing else. From there you grant more, per person or for
   everyone: other people's activity, network details like IP addresses, the server pages, or
   managing finstats itself. No permission opens other people's recaps or watchlists.
 - **Nothing about you leaves your network.** No telemetry, no accounts, no fonts or scripts loaded
   from the internet. Posters are fetched from your own Jellyfin. The one outside request finstats
-  makes by default is a plain "what is my IP" lookup — asked **once**, so that people watching at home
+  makes by default is a plain "what is my IP" lookup, asked **once**, so that people watching at home
   through your public address are not counted as remote, and after that never again unless you press the
   button. It carries no information about you or your server, and one switch in Settings turns it off.
   **Settings → System → Outbound connections** lists every destination finstats can reach and whether it is
   switched on, so the promise is one you can check rather than one you have to take. The Security map needs a geolocation database; downloading it is
   off until you ask for it, and addresses are always looked up on your own machine. Sonarr, Radarr, Seerr and torrent
   are reached at the addresses you enter, on your own network.
-- **Notifications go where you send them, and nowhere else.** finstats can tell you when something happens —
-  a Discord or Slack channel, a Telegram chat, an e-mail, Pushover, Pushbullet, ntfy, Gotify, or a webhook of
-  your own — and until you add a destination it sends nothing at all. Each destination is told only the kinds of event you tick for it, and IP addresses and coordinates stay
+- **Notifications go where you send them, and nowhere else.** finstats can tell you when something happens
+  (in a Discord or Slack channel, a Telegram chat, an e-mail, Pushover, Pushbullet, ntfy, Gotify, or a webhook of
+  your own), and until you add a destination it sends nothing at all. Each destination is told only the kinds of event you tick for it, and IP addresses and coordinates stay
   out of the messages unless you switch them in for that one destination. Every destination is listed under
   **Outbound connections** with the rest.
 - **Read-only.** finstats never changes anything on your Jellyfin server and never starts a library scan. The same goes for
@@ -287,19 +287,19 @@ click **Download Backup**.
 
 In finstats, open **Settings → Import**, find the card for the one you used, and drop the file in.
 
-<img src="docs/screenshots/tautulli.png" alt="Tautulli import: a wiring board with Plex users on the left and Jellyfin users on the right, coloured wires from five Plex users to four people — two Plex accounts into one — and three Plex users left unwired, so their history stays behind" width="100%">
+<img src="docs/screenshots/tautulli.png" alt="Tautulli import: a wiring board with Plex users on the left and Jellyfin users on the right, coloured wires from five Plex users to four people (two Plex accounts into one), and three Plex users left unwired, so their history stays behind" width="100%">
 
 **From Tautulli you say who is who.** Plex names rarely match Jellyfin's, so the upload becomes a
 wiring board: Plex users on one side, Jellyfin users on the other. Drag a wire from each Plex user to
-who they are now — or click one, then the other. Anybody you leave unwired is not imported, and two
+who they are now, or click one, then the other. Anybody you leave unwired is not imported, and two
 Plex accounts can go into one person. Films and episodes are matched to your library by name; music
-is left out. Anything it cannot place — a film Plex called something else — waits under **Settings → Unlinked media**
+is left out. Anything it cannot place (a film Plex called something else) waits under **Settings → Unlinked media**
 with its likeliest match already found, one **Locate** away.
 
-**Ran both?** Import both files. Nothing is counted twice — finstats recognises a play it already
+**Ran both?** Import both files. Nothing is counted twice: finstats recognises a play it already
 has, whichever tracker brought it in and whether or not it watched that evening itself.
 
-Large backups are no problem — a 350 MB file imports in a few seconds — and importing the same file
+Large backups are no problem (a 350 MB file imports in a few seconds), and importing the same file
 twice is safe. One thing to know: neither tracker recorded what happens *during* a play, so imported
 history has no pause-and-skip timelines. Everything finstats records from now on does.
 [How Jellystat data is interpreted →](docs/jellystat-import.md) ·
@@ -313,10 +313,10 @@ Everything works out of the box. If you want to tune it, **Settings** in the app
 | | |
 |---|---|
 | **Access** | Who may sign in and what they may see, for everyone or per person: *sign in*, *see everyone's activity*, *see network details*, *see the server*, *manage finstats*. Jellyfin administrators always have everything, and only they can change this. |
-| **Jellyfin's address for people** | Where every title's *Open in Jellyfin* button points — your Jellyfin's address from outside, when that is not the one finstats connects to (a container name, a LAN address). Empty: the address finstats connects to. Jellyfin administrators only. |
+| **Jellyfin's address for people** | Where every title's *Open in Jellyfin* button points: your Jellyfin's address from outside, when that is not the one finstats connects to (a container name, a LAN address). Empty: the address finstats connects to. Jellyfin administrators only. |
 | **API keys** | Your own keys for scripts and calendars, with a scope and an expiry; shown once, revoked with a click. Every signed-in user has this section; administrators see everyone's keys. |
-| **Tasks** | Every job finstats does by itself, when it last ran and how long it took, and — one click — its schedule, the way Jellyfin schedules its own: daily, weekly, on an interval, at start-up, or after Jellyfin's library scan (the default for the library read), each with an optional time limit. |
-| **Check every…** | How often finstats asks what is playing: every second while someone is watching, and — only while the live connection is not carrying — every 5 seconds while nobody is. Jellyfin pushes a new play within about a second, so the second one is a fallback and nothing more. |
+| **Tasks** | Every job finstats does by itself, when it last ran and how long it took, and (one click away) its schedule, the way Jellyfin schedules its own: daily, weekly, on an interval, at start-up, or after Jellyfin's library scan (the default for the library read), each with an optional time limit. |
+| **Check every…** | How often finstats asks what is playing: every second while someone is watching, and, only while the live connection is not carrying, every 5 seconds while nobody is. Jellyfin pushes a new play within about a second, so the second one is a fallback and nothing more. |
 | **Treat a restart as the same play** | A stream that stops and resumes within 10 minutes counts as one viewing. |
 | **Home network** | Which plays count as local. Private addresses always do; with *Recognise my own public address* on (the default), so does your household's public IP, looked up **once** and remembered. *Look up now* asks again on the day it changes; you can also add addresses by hand. |
 | **Connections** | Sonarr, Radarr and Seerr, several of a kind if you have them. Each is tested before it is saved; API keys are never shown again and never part of a backup. Jellyfin administrators only. |
@@ -392,8 +392,8 @@ Stop the container, delete the `data` folder, start it again. To clean up fully,
 `finstats` API key in Jellyfin (Dashboard → API Keys).
 
 **Is it safe to expose to the internet?**
-It is built for it — Jellyfin-backed sign-in, rate limiting, hashed sessions, a strict content
-security policy — but like anything self-hosted, a reverse proxy with HTTPS is strongly
+It is built for it (Jellyfin-backed sign-in, rate limiting, hashed sessions, a strict content
+security policy), but like anything self-hosted, a reverse proxy with HTTPS is strongly
 recommended. [Security details →](docs/security.md)
 
 ## For developers
@@ -415,8 +415,8 @@ problem? [Report it privately](SECURITY.md). Questions go to
 [Discussions](https://github.com/finstats/finstats/discussions). Everyone taking part follows the
 [code of conduct](CODE_OF_CONDUCT.md).
 
-- [Contributing](CONTRIBUTING.md) — reporting bugs, what fits the project, running it from source or in a local Docker setup, the rules for a change, pull requests
-- [HTTP API](docs/api.md) — the contract the web UI is built on
+- [Contributing](CONTRIBUTING.md): reporting bugs, what fits the project, running it from source or in a local Docker setup, the rules for a change, pull requests
+- [HTTP API](docs/api.md): the contract the web UI is built on
 - How [Jellystat](docs/jellystat-import.md), [Streamystats](docs/streamystats-import.md) and [Tautulli](docs/tautulli-import.md) data is interpreted
 - [Security model](docs/security.md)
 - [Patch notes](CHANGELOG.md)
@@ -435,7 +435,7 @@ finstats is free software under the [GNU General Public License v3.0](LICENSE). 
 study, share and change it; if you distribute a modified version, it has to stay under the same
 license with its source available. It comes with no warranty.
 
-The bundled fonts — Inter and JetBrains Mono, and those a FinUI preset may choose in Settings → Appearance — are under
+The bundled fonts (Inter and JetBrains Mono, and those a FinUI preset may choose in Settings → Appearance) are under
 the SIL Open Font License 1.1; each one's licence sits beside it in [`web/assets/fonts`](web/assets/fonts) and is listed on
 the in-app Licences page.
 

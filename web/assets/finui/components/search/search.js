@@ -1,4 +1,4 @@
-// FinUI: search. A bar and its results that live in whatever opened them — a menu, or the page — never in a dialog over
+// FinUI: search. A bar and its results that live in whatever opened them (a menu, or the page), never in a dialog over
 // everything. The words go to the app (`run`), which paints groups of rows as they come; the arrows move through them,
 // Enter opens one, Ctrl+Enter presses the control a row keeps beside it, Esc gives up. grow() and shrink() play it out
 // of, and back into, the control that opened it.
@@ -13,7 +13,7 @@ const mac = () => /Mac|iPhone|iPad/.test(navigator.platform || '');
 
 /**
  * The search. `run(words, paint)` is called with the words as they change (and with '' at once); it calls
- * `paint(groups, note)` as often as it has something — groups: [{ title, rows: [{ label, sub, thumb, href, keep }] }], `note`
+ * `paint(groups, note)` as often as it has something. groups: [{ title, rows: [{ label, sub, thumb, href, keep }] }], `note`
  * what to say while there is nothing (searching, nothing found). `onPick(row, event)` opens a row; `onEscape()` gives up.
  * Answers { el, bar, input, list, set(words), focus(), destroy() }.
  */
@@ -88,7 +88,7 @@ export function searchPanel({ run, onPick, onEscape = () => {}, placeholder = 'S
 }
 
 // ---------------------------------------------------------------- the motion
-// One shape, never a reflow: the search is laid out at its end size from the first frame, and only its outline moves — a
+// One shape, never a reflow: the search is laid out at its end size from the first frame, and only its outline moves: a
 // clip from exactly the shape it grows out of (the menu as it was, or the control that opened it, with its corners) to its
 // own. What it grew out of is a snapshot laid over it (`ghost`), fading as it opens and back as it closes, so the menu and
 // the search trade places without a cut. The curve is a sheet's: quick off the mark, long and soft into place.
@@ -104,7 +104,7 @@ const round = (n, b) => Math.min(parseFloat(getComputedStyle(n).borderTopLeftRad
 const OUT = typeof CSS !== 'undefined' && CSS.supports('clip-path', 'inset(-1px)') ? 64 : 0;
 const whole = (r) => `inset(${-OUT}px round ${r + OUT}px)`;
 /** An animation's end, or its length and a little more: a browser that stops drawing (a hidden tab) holds animations still,
- *  and what waits on them — a snapshot to remove, a search to take away — must not wait for ever. */
+ *  and what waits on them (a snapshot to remove, a search to take away) must not wait for ever. */
 const ended = (a, ms) => Promise.race([a.finished.catch(() => {}), new Promise((r) => setTimeout(r, ms + 80))]);
 /** Everything of the search but its bar: the results and the keys under them. */
 const rest = (bar) => [...bar.parentElement.children].filter((n) => n !== bar);
@@ -124,8 +124,8 @@ const hold = (host) => {
 };
 
 /**
- * Lay the search out (`show`) and grow it into place: out of the host as it was, or — `fresh`, a place that was not there
- * — out of the control `from`. `ghost()` lays a snapshot of what it grows out of over it (a menu's own, before `show`).
+ * Lay the search out (`show`) and grow it into place: out of the host as it was, or (`fresh`, a place that was not there)
+ * out of the control `from`. `ghost()` lays a snapshot of what it grows out of over it (a menu's own, before `show`).
  */
 export function grow({ from, host, bar, list, show, fresh = false, ghost = null }) {
   if (still()) { show(); return; }
@@ -144,14 +144,14 @@ export function grow({ from, host, bar, list, show, fresh = false, ghost = null 
 }
 
 /**
- * Close it back into what it grew out of — the menu (`hide` brings it back; `ghost()` is its snapshot, laid over and faded
- * in as the shape arrives) or, `gone`, the control `to` — and take it away.
+ * Close it back into what it grew out of: the menu (`hide` brings it back; `ghost()` is its snapshot, laid over and faded
+ * in as the shape arrives) or, `gone`, the control `to`. Then take it away.
  */
 export function shrink({ to, host, bar, list, show, hide, gone = false, ghost = null }) {
   if (still() || !shown(host)) { hide(); return Promise.resolve(); }
   const now = box(host), r1 = round(host, now);
   // Held before it is measured, as grow() holds it: a host with a transition of its own (a rail's width) would otherwise be
-  // measured at the start of that transition — as wide as the search — and the shape would shrink into itself, staying
+  // measured at the start of that transition (as wide as the search), and the shape would shrink into itself, staying
   // whole until it vanished.
   const free = hold(host);
   hide();
@@ -179,7 +179,7 @@ const DEMO = [
 ];
 export const meta = {
   name: 'search',
-  purpose: 'Search that lives where it was opened — in a menu or in the page — never as a dialog over everything.',
+  purpose: 'Search that lives where it was opened (in a menu or in the page), never as a dialog over everything.',
   use: 'One at a time. The app runs the words (pages at once, the rest when its answer comes) and decides where it lives; grow() plays it out of the control that opened it and shrink() back into it.',
   avoid: 'A dialog with a backdrop for it. Running the search in the component: it is given what it shows. Fetching per keystroke without the app’s own debounce.',
   variants: ['in a menu (desktop-nav, mobile-nav)', 'in the page'],

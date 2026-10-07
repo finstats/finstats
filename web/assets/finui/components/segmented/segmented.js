@@ -1,4 +1,4 @@
-// FinUI: segmented. A few mutually exclusive choices side by side — a measure, a range, a sort — of which exactly one
+// FinUI: segmented. A few mutually exclusive choices side by side (a measure, a range, a sort) of which exactly one
 // is on. The arrow keys move between them, as in a radio group.
 
 import { h } from '../../core.js';

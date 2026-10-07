@@ -2,7 +2,7 @@
 // may sit on the right, how pages fall into groups, what is pinned, and a group's colour. Pure, so a test reads it.
 
 /** The styles, today's sidebar first: it is what a menu is before anybody chooses. `edge` and `size` say what each keeps
- *  of the window — a side (px wide), the bottom or the top (px tall) — so the app can lay its page beside it. A rail
+ *  of the window: a side (px wide), the bottom or the top (px tall), so the app can lay its page beside it. A rail
  *  `opens` that wide under the pointer, over the page rather than pushing it. */
 export const STYLES = [
   { key: 'sidebar', label: 'Sidebar', line: 'Every page in one quiet list down the side.', edge: 'side', size: 220 },
@@ -59,7 +59,7 @@ export const tone = (i) => 1 + (i % 4);
 /** How far the page must move before the dock answers it, so a trackpad's tremor does not flicker it. */
 const SCROLL_PX = 4;
 /** Whether the dock is out: tucked away while the page scrolls down, back on scrolling up, at the top of the page, with the
- *  pointer near the bottom edge (`near`) or the focus in it — like a dock that hides itself. */
+ *  pointer near the bottom edge (`near`) or the focus in it, like a dock that hides itself. */
 export function dockShown({ was, scrollY, dy, near, focused }) {
   if (near || focused || scrollY <= 40) return true;
   if (dy > SCROLL_PX) return false;

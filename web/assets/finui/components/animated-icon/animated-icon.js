@@ -87,7 +87,7 @@ export function setBusy(svg, on) {
 
 export const meta = {
   name: 'animated-icon',
-  purpose: 'An icon that moves: drawn in, doing what it is about — refresh turns, download drops into its tray, a heart beats — and drawn out again.',
+  purpose: 'An icon that moves: drawn in, doing what it is about (refresh turns, download drops into its tray, a heart beats) and drawn out again.',
   use: 'On hover, once, to say a control is alive (animateWithin does it for every icon in anything pressable); busy, a refresh turning until its answer is in; looped, where something is happening and the icon says what. Every icon has one.',
   avoid: 'Beside text people read for long: something moving for ever pulls the eye. Several on one screen at once. Anything a spinner says better.',
   variants: ['loop', 'once on hover', 'once', 'busy (setBusy)', 'any size'],
@@ -98,7 +98,7 @@ export const meta = {
     'animate(svg, { play, label })': 'an icon() made animated where it stands',
     'animateWithin(root, { play })': "every icon in something pressable under root, now and later; play 'hover' unless told; returns a stop function",
     'setBusy(svg, on)': 'a turning icon turns on until told to stop, then ends its turn',
-    'animatedSvg(name, css, { size, cycle }) — svg.js': 'the icon, moving, as markup for a .svg of its own: css is the text of animated-icon.css, and only the rules it uses go in',
+    'animatedSvg(name, css, { size, cycle }) in svg.js': 'the icon, moving, as markup for a .svg of its own: css is the text of animated-icon.css, and only the rules it uses go in',
     'node tools/build-icons.mjs <folder>': 'every icon as <name>.svg and animated/<name>.svg; the site serves them at icons/',
     '--icon-cycle': 'how long one cycle takes (the Motion choice of a preset sets it)',
   },

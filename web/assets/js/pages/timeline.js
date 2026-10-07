@@ -1,4 +1,4 @@
-// /users/:id/timeline — one person's watching as a trail, newest first. Wide screens lay it out as a
+// /users/:id/timeline: one person's watching as a trail, newest first. Wide screens lay it out as a
 // snake (left to right, then back), a phone gets one straight line.
 import { h, icon, duration, durationExact, dateTime } from '../dom.js';
 import { api } from '../api.js';

@@ -1,6 +1,6 @@
 //! When finstats' own jobs run. Every job that can run by itself carries a list of triggers, the way Jellyfin's
-//! scheduled tasks do: daily at a time, weekly on a day at a time, on an interval, at start-up — and one Jellyfin has
-//! no need for, after Jellyfin's own library scan, because a library read in the middle of one is half old and half
+//! scheduled tasks do: daily at a time, weekly on a day at a time, on an interval, at start-up. There is also one Jellyfin has
+//! no need for: after Jellyfin's own library scan, because a library read in the middle of one is half old and half
 //! new. A trigger may carry a time limit; a run that outlasts it is stopped and reported as failed.
 //!
 //! The owner's triggers live in `Settings::schedules`, one list per job. A job with no list there runs on its

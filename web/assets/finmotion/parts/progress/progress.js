@@ -1,5 +1,5 @@
 // FinMotion: progress. A progress bar marked fm-film runs on film: its track becomes a strip whose frames slide under the
-// gate as the share grows — for something played, not something copied.
+// gate as the share grows. It is for something played, not something copied.
 
 import { h } from '../../core/dom.js';
 

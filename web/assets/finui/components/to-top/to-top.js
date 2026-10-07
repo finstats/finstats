@@ -9,7 +9,7 @@ import { shown, rest } from './plan.js';
  * toTop({ label, after, kept, onTop }): the button; answers { el, place(kept), destroy() }. after: how far down (px) the
  * page must be before it shows. kept: what keeps a part of the corner, [{ bottom, right }] in px (desktop-nav's and
  * mobile-nav's cornerOf, a status bar's height); place() says it again when the layout changes. onTop: called once the
- * page is sent up — where the focus should go, say.
+ * page is sent up (where the focus should go, say).
  */
 /** Nothing should move: reduced motion, or a preset's Motion: Off (an --ease of 0s). */
 const still = (el) => matchMedia('(prefers-reduced-motion: reduce)').matches || parseFloat(getComputedStyle(el).getPropertyValue('--ease')) === 0;
@@ -45,7 +45,7 @@ export const meta = {
   props: {
     'toTop({ label, after, kept, onTop })': "label: 'Scroll to top'; after: 400 (px); kept: [{ bottom, right }]; onTop: after the page is sent up",
     'place(kept)': 'where it rests, again: the layout changed',
-    'rest(kept, gap) — plan.js': 'that place in px from the bottom and the right, gap (16) beyond the most anything keeps',
+    'rest(kept, gap) in plan.js': 'that place in px from the bottom and the right, gap (16) beyond the most anything keeps',
   },
   playground: {
     controls: [

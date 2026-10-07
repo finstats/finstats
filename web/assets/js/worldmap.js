@@ -197,7 +197,7 @@ export function worldMap({ points, countries = [], onPick, signal }) {
     const m = toMap(e), slack = 2 * unitsPerPx();
     const under = shown.filter((d) => Math.hypot(d.xy[0] - m[0], d.xy[1] - m[1]) <= d.r + slack).reverse();
     const key = under.map((d) => shown.indexOf(d)).join(',');
-    // Nothing new under the pointer — unless something else (a scroll hides every tooltip) took ours away meanwhile.
+    // Nothing new under the pointer, unless something else (a scroll hides every tooltip) took ours away meanwhile.
     if (key === hovering && (!under.length || tipShown())) return;
     hovering = key;
     if (!under.length) return hideTip();

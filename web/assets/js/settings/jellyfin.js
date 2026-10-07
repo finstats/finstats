@@ -23,7 +23,7 @@ export default {
       const s = store.settings, c = store.tasks && store.tasks.collector;
       const status = !c ? h('span', { class: 'muted' }, 'Checking…')
         : c.connected ? h('span', { class: 'fui-badge--status fui-badge--good' }, icon('check', 13), `Connected · ${num(c.active_sessions)} active ${c.active_sessions === 1 ? 'session' : 'sessions'}`)
-        : h('span', { class: 'fui-badge--status fui-badge--critical' }, icon('alert', 13), 'Not connected' + (c.error ? ` — ${c.error}` : ''));
+        : h('span', { class: 'fui-badge--status fui-badge--critical' }, icon('alert', 13), 'Not connected' + (c.error ? `: ${c.error}` : ''));
       // With the live connection carrying, each transport does the half it is good at: Jellyfin
       // says when something starts, and finstats asks for the detail while it plays.
       const live = c && c.socket_live;
@@ -37,7 +37,7 @@ export default {
         ['Collector', status],
         how ? ['How', how] : null,
         c && c.last_poll_at ? ['Last checked', h('span', { title: dateTime(c.last_poll_at) }, relTime(c.last_poll_at)), { mono: true }] : null,
-        live ? ['Asking right now', c.transport === 'poll' ? 'Yes — something is playing' : 'No — nothing is playing, or everything is paused'] : null,
+        live ? ['Asking right now', c.transport === 'poll' ? 'Yes, something is playing' : 'No, nothing is playing or everything is paused'] : null,
       ]),
       h('div', { class: 'fui-setting-row__notes' },
       live ? h('p', { class: 'fui-field__help' }, `Nothing is asked for while nothing plays or everything is paused; while something runs finstats asks every ${num(s.active_interval_s)} s, which is what keeps pauses and skips exact.`)

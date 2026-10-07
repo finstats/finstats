@@ -1,5 +1,5 @@
 // Formatting helpers, the logo, and FinUI's builder re-exported. Everything that comes from the API goes
-// through text nodes — never innerHTML.
+// through text nodes, never innerHTML.
 
 import { h, s, clear, mount, icon } from '../finui/core.js';
 import { num, initials } from '../finui/format.js';
@@ -91,7 +91,7 @@ export function relTime(ts) {
   return Math.round(d / (86400 * 365)) + 'y ago';
 }
 
-/** "in 6 days" — `relTime` only looks backwards. */
+/** "in 6 days": `relTime` only looks backwards. */
 export function untilText(ts) {
   if (!ts) return '';
   const s = ts - Date.now() / 1000;

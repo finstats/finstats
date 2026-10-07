@@ -1,11 +1,11 @@
-// FinUI: code-block. Code to read and take: one line of it — a command — or panes of it (JavaScript, CSS, HTML), with
+// FinUI: code-block. Code to read and take: one line of it (a command) or panes of it (JavaScript, CSS, HTML), with
 // a way to copy what is shown. Code reaches the page as text, never as markup.
 
 import { h, mount } from '../../core.js';
 import { copyButton } from '../copy/copy.js';
 import { segmented } from '../segmented/segmented.js';
 
-/** One line — a command to paste — and its copy button. `.set(text)` puts another line in its place. */
+/** One line (a command to paste) and its copy button. `.set(text)` puts another line in its place. */
 export function codeLine(text, { label = 'Copy the command', class: extra = null } = {}) {
   const code = h('code', { class: 'fui-code-block__text' });
   const copySlot = h('span', { class: 'fui-code-block__copy' });

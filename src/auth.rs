@@ -138,7 +138,7 @@ pub enum Presented {
 }
 
 /// The feed's own extractor: a key in the query string or the header, of any scope, and never the
-/// cookie — a subscribed calendar cannot send one, and a browser must not open a feed by accident.
+/// cookie: a subscribed calendar cannot send one, and a browser must not open a feed by accident.
 pub struct CalendarKey(pub AuthUser);
 
 /// May change settings, run tasks, import and delete plays.
@@ -180,7 +180,7 @@ pub(crate) fn cookie_token(headers: &HeaderMap) -> Option<String> {
 }
 
 /// `Authorization: Bearer <key>`: `None` when there is no such header at all (the cookie may be there),
-/// `Some(Err)` when there is one that is not a bearer token — which is never quietly ignored.
+/// `Some(Err)` when there is one that is not a bearer token, which is never quietly ignored.
 pub fn bearer_token(headers: &HeaderMap) -> Option<Result<String, ApiError>> {
     let raw = headers.get(AUTHORIZATION)?.to_str().ok().map(str::trim).unwrap_or_default();
     let bad = || ApiError::new(StatusCode::UNAUTHORIZED, "Use `Authorization: Bearer <key>`");
@@ -343,7 +343,7 @@ impl FromRequestParts<App> for AuthUser {
     type Rejection = ApiError;
 
     /// Every route but the calendar feed: the cookie or a full key. Grants are read on every
-    /// request, so a change by an administrator applies at once — to a key as much as to a session.
+    /// request, so a change by an administrator applies at once, to a key as much as to a session.
     async fn from_request_parts(parts: &mut Parts, app: &App) -> Result<Self, Self::Rejection> {
         let user = resolve(pick_credential(&parts.headers)?, request_ip(parts, app), app).await?;
         refuse_calendar_key(&user)?;
@@ -446,7 +446,7 @@ async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms
 
 /// What Jellyfin has just said about somebody it let in, written to their users row: a session reads that
 /// row live, so it must never be older than the sign-in it serves. Without this, a row the users read has
-/// not reached yet — written by a Jellystat import from the file's own word for who administers Jellyfin —
+/// not reached yet (written by a Jellystat import from the file's own word for who administers Jellyfin)
 /// would make a session an administrator's that Jellyfin never did.
 pub(crate) fn remember_sign_in(c: &Connection, user_id: &str, user_name: &str, is_admin: bool, now: i64) -> anyhow::Result<()> {
     c.execute(
@@ -461,7 +461,7 @@ pub(crate) fn remember_sign_in(c: &Connection, user_id: &str, user_name: &str, i
 /// for thirty days, and somebody with a password could otherwise sign in in a loop and fill the table and the disk.
 pub(crate) const SESSIONS_PER_USER: usize = 30;
 
-/// A new session, written, and that person's oldest beyond [`SESSIONS_PER_USER`] let go — never the new one.
+/// A new session, written, and that person's oldest beyond [`SESSIONS_PER_USER`] let go, never the new one.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn store_session(c: &Connection, hash: &str, user_id: &str, user_name: &str, is_admin: bool, now: i64, ip: Option<&str>, ua: Option<&str>) -> anyhow::Result<()> {
     c.execute(
@@ -615,7 +615,7 @@ pub async fn status(State(app): State<App>) -> Json<Value> {
     let cfg = app.config.read().unwrap().clone();
     // How the collector is listening, so it can be checked from outside without reading a log. Shape
     // only: which of the four things it is doing, what is true on the wire, and how often it is
-    // asking. Never who, never what — no names, no titles, not even how many sessions there are.
+    // asking. Never who, never what: no names, no titles, not even how many sessions there are.
     // One read of memory: no request to Jellyfin, no query, nothing that could make this slow.
     let c = app.collector.read().unwrap().clone();
     Json(json!({

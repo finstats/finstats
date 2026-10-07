@@ -1,5 +1,5 @@
-// Settings → Appearance: how finstats looks to you, and to nobody else. A FinUI preset — the code FinUI create makes
-// (finstats.github.io/finui/create) — whose tokens the server serves after FinUI's own in /assets/finui.css, to you
+// Settings → Appearance: how finstats looks to you, and to nobody else. A FinUI preset (the code FinUI create makes,
+// finstats.github.io/finui/create), whose tokens the server serves after FinUI's own in /assets/finui.css, to you
 // alone. Saving swaps that stylesheet on this page at once; your other pages get it on their next load.
 // Which menu this browser has: on a phone one of FinUI mobile-nav's styles, on a wider screen one of desktop-nav's and the side
 // it sits on. Kept by this browser (state.js) and nowhere else; each is offered only at the width where it is in use.

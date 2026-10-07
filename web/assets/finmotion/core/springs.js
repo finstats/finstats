@@ -1,4 +1,4 @@
-// FinMotion: the springs. Pure: no page, no style. Each spring is physics — a stiffness and a damping — simulated once and
+// FinMotion: the springs. Pure: no page, no style. Each spring is physics (a stiffness and a damping) simulated once and
 // compiled to what CSS understands, a linear() curve and how long it takes to rest. core/springs.css carries the result (a
 // test holds the two together), so a transition, a keyframe and a script all move on the same four feelings.
 

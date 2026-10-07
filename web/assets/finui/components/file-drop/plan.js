@@ -1,4 +1,4 @@
-// FinUI: file-drop, the rules that are not drawing — which files a drop takes (an `accept` as <input type=file> reads
+// FinUI: file-drop, the rules that are not drawing: which files a drop takes (an `accept` as <input type=file> reads
 // one: extensions, types, families of types) and a size said as people read it. Pure; tested in FinUI's repository.
 
 /** Does `file` ({ name, type }) match `accept` (".mkv,.mp4", "image/*", "" for anything)? */

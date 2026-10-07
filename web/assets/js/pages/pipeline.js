@@ -19,7 +19,7 @@ const TABS = [
 ];
 const features = () => (state.user && state.user.features) || {};
 export const pipelineTabs = () => TABS.filter((t) => features()[t.feature] && (!t.perm || can(t.perm)));
-// In the menu as soon as a service can answer something — and always for an administrator, who is the only
+// In the menu as soon as a service can answer something, and always for an administrator, who is the only
 // person who can connect one. A page that can only be reached by typing its address is a page nobody finds.
 export const hasPipeline = () => pipelineTabs().length > 0 || !!(state.user && state.user.is_admin);
 

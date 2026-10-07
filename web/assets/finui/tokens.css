@@ -1,6 +1,6 @@
 /* FinUI: tokens. Every colour finstats uses, and nothing else may name one (a cargo test holds it). */
 
-/* Every colour is one token, light and dark side by side: light-dark(light, dark). Light is washi paper by day —
+/* Every colour is one token, light and dark side by side: light-dark(light, dark). Light is washi paper by day:
    cream ground, ink text, a vermilion seal for the accent, and dyes for the rest: nando for quantities, matcha for
    success, brass for a warning, murasaki/nando/shu/ai for the four kinds of media. Its accents are darker than a
    dark theme's on purpose: the same hues at glowing-on-black lightness fail contrast on cream. Dark is Obsidian's.

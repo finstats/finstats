@@ -1,4 +1,4 @@
-//! Library health: what is wrong with a file only shows beside its neighbours — a season in another resolution, a hole
+//! Library health: what is wrong with a file only shows beside its neighbours: a season in another resolution, a hole
 //! in a season, the same film twice, a file far too thin for what it claims, a dub that stops, a title Jellyfin never
 //! identified. Every rule here is a pure function over item rows; nothing reads the database, so each can be tried on
 //! invented data. finstats only reports: nothing here changes anything in Jellyfin.
@@ -366,7 +366,7 @@ pub struct SummaryQuery {
     library_id: Option<String>,
 }
 
-/// `GET /api/library/health?library_id=` — how many findings of each kind, and the space copies spend twice.
+/// `GET /api/library/health?library_id=`: how many findings of each kind, and the space copies spend twice.
 pub async fn get_summary(State(app): State<App>, ServerViewer(_): ServerViewer, Query(q): Query<SummaryQuery>) -> ApiResult {
     let library = q.library_id.filter(|l| !l.is_empty());
     Ok(Json(app.db.call(move |c| summary(c, library.as_deref())).await?))
@@ -382,7 +382,7 @@ pub struct FindingsQuery {
     page: Option<i64>,
 }
 
-/// `GET /api/library/health/findings?kind=&library_id=&dismissed=&sort=&dir=&page=` — one page of findings.
+/// `GET /api/library/health/findings?kind=&library_id=&dismissed=&sort=&dir=&page=`: one page of findings.
 pub async fn get_findings(State(app): State<App>, ServerViewer(_): ServerViewer, Query(q): Query<FindingsQuery>) -> ApiResult {
     let l = Listing {
         kind: q.kind,
@@ -402,7 +402,7 @@ pub struct DismissBody {
     note: Option<String>,
 }
 
-/// `POST /api/library/health/dismiss` with `{"key", "note"}` — set a finding aside as it stands.
+/// `POST /api/library/health/dismiss` with `{"key", "note"}`: set a finding aside as it stands.
 pub async fn post_dismiss(State(app): State<App>, Manager(user): Manager, Json(body): Json<DismissBody>) -> ApiResult {
     if !may_dismiss(&user.perms) {
         return Err(ApiError::not_permitted("see the server"));
@@ -425,7 +425,7 @@ pub struct UndismissBody {
     key: String,
 }
 
-/// `POST /api/library/health/undismiss` with `{"key"}` — bring a dismissed finding back.
+/// `POST /api/library/health/undismiss` with `{"key"}`: bring a dismissed finding back.
 pub async fn post_undismiss(State(app): State<App>, Manager(user): Manager, Json(body): Json<UndismissBody>) -> ApiResult {
     if !may_dismiss(&user.perms) {
         return Err(ApiError::not_permitted("see the server"));
@@ -583,7 +583,7 @@ fn too_thin(e: &Item) -> Option<Thin> {
     (bps < floor).then_some(Thin { class, codec, bps, floor })
 }
 
-/// A film far too thin for what it claims, and the thin episodes of a season as one finding — a season encoded the
+/// A film far too thin for what it claims, and the thin episodes of a season as one finding: a season encoded the
 /// same way is one thing to look at, not a dozen.
 fn thin(items: &[Item], lib: &Library) -> Vec<Finding> {
     let mut out = vec![];
@@ -825,7 +825,7 @@ pub enum Class {
 //
 // Every number a finding rests on is here, with why it is that number.
 
-/// Resolution bands by width — a cropped film keeps its width (1920×800 is 1080p) — or by height, for 4:3 and
+/// Resolution bands by width (a cropped film keeps its width: 1920×800 is 1080p) or by height, for 4:3 and
 /// pillarboxed pictures that keep theirs (1440×1080 is 1080p). Low enough to forgive a crop of a few pixels.
 const UHD_WIDTH: i64 = 3200;
 const UHD_HEIGHT: i64 = 2000;
@@ -1065,7 +1065,7 @@ mod tests {
         ];
         let found = findings(&items);
         let thin: Vec<&str> = of(&found, "thin").iter().map(|f| f.item_id.as_str()).collect();
-        assert_eq!(thin, ["bbb", "cos", "sin"], "4K HEVC at 1.1, AV1 1080p at 0.7, H.264 1080p at 1.4 — not SD, not a codec without a rule");
+        assert_eq!(thin, ["bbb", "cos", "sin"], "4K HEVC at 1.1, AV1 1080p at 0.7, H.264 1080p at 1.4; not SD, not a codec without a rule");
         let bbb = of(&found, "thin")[0];
         assert_eq!(bbb.key, "thin:bbb");
         assert_eq!((bbb.evidence["resolution"].as_str(), bbb.evidence["codec"].as_str()), (Some("4K"), Some("HEVC")));

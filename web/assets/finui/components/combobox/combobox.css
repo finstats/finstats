@@ -22,6 +22,6 @@
 .fui-combobox__option[aria-selected="true"] { color: var(--accent-hi); }
 .fui-combobox__empty { padding: 14px 10px; color: var(--text-faint); font-size: 13px; text-align: center; }
 /* A list you tick: it takes the focus itself, having no search box to hold it, and the active row is
-   what shows where you are — so no focus ring on the list as well. */
+   what shows where you are, so no focus ring on the list as well. */
 .fui-combobox__list:focus { outline: none; }
 .fui-combobox.is-multi .fui-combobox__option[aria-selected="true"] { background: var(--accent-wash); }

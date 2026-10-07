@@ -101,7 +101,7 @@
   24%, 44% { transform: scale(1.12); animation-timing-function: ease-in; }
 }
 /* A flame burning: the path itself is reshaped (d), so its tongue bends and licks one way and the other, the lick at
-   its side jumps, and its base stays where it is — turned or squashed whole, a flame reads as jelly. The rest frame is the
+   its side jumps, and its base stays where it is; turned or squashed whole, a flame reads as jelly. The rest frame is the
    icon as core.js draws it, command for command; the breathing transform is what a browser that cannot morph a path sees. */
 @keyframes fui-animated-icon-blaze {
   0%, 6%, 50%, 100% { d: path("M12 3 C12.6 6.2 17 8.4 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.5 9.4 15.8 C9 12 9.8 6.5 12 3Z"); transform: scale(1, 1); animation-timing-function: ease-in; }
@@ -114,7 +114,7 @@
   43% { d: path("M10.6 1.8 C11.4 5.4 17 8.2 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.3 14.3 8 14.8 8.8 14.6 C8.6 11.2 8.6 5.8 10.6 1.8Z"); transform: scale(1.02, .98); animation-timing-function: ease-in-out; }
   47% { d: path("M13 3.2 C13.4 6.4 17 8.5 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.5 9.4 15.8 C9.2 12 10.6 6.8 13 3.2Z"); transform: scale(1, 1); animation-timing-function: ease-in-out; }
 }
-/* A quarter turn leaves a four-pointed star as it was, so it turns back at the very end, where nobody sees it — and a cycle
+/* A quarter turn leaves a four-pointed star as it was, so it turns back at the very end, where nobody sees it, and a cycle
    of 0s, which shows that end, shows the static icon. */
 @keyframes fui-animated-icon-twinkle {
   0%, 6% { transform: rotate(0deg) scale(1); animation-timing-function: ease-in; }

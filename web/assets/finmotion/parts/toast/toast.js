@@ -12,8 +12,8 @@ export const part = {
     let open = false, shutting = 0;
     const known = new WeakSet();
     const cards = () => [...region.children].filter((c) => c.matches('.fui-toast') && !c.classList.contains('fm-toast--leaving'));
-    // Each card moves from wherever it stands now — FinUI re-adds its cards on every paint, which a CSS transition does
-    // not survive — to where the hand puts it.
+    // Each card moves from wherever it stands now (FinUI re-adds its cards on every paint, which a CSS transition does
+    // not survive) to where the hand puts it.
     const lay = () => {
       const list = cards();
       pose(list.map((c) => c.offsetHeight), open).forEach((p, i) => {

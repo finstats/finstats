@@ -58,8 +58,8 @@ pub struct AppState {
     /// Wakes background loops when configuration or settings change.
     pub wake: Notify,
     /// A controlled, fail-closed shutdown: when finstats reads something from Jellyfin it refuses to
-    /// act on — a library that came back empty where the database holds thousands of items, the shape
-    /// of a Jellyfin that has changed under an upgrade — it declines the destructive change (the data
+    /// act on (a library that came back empty where the database holds thousands of items, the shape
+    /// of a Jellyfin that has changed under an upgrade), it declines the destructive change (the data
     /// is kept intact) and asks the process to stop, with a reason, so the operator sees it and can
     /// pin a version or push a fix rather than discovering a wiped install later. `halt` wakes the
     /// serve loop; `halt_reason` is what to print, set once.
@@ -115,7 +115,7 @@ pub struct Settings {
     pub public_url: String,
     /// People may publish a profile readable without an account (2.0). Off until an administrator allows it.
     pub public_profiles: bool,
-    /// Where people open Jellyfin — its address from outside, which is often not the one finstats connects
+    /// Where people open Jellyfin: its address from outside, which is often not the one finstats connects
     /// to (a container name, a LAN address). Every "Open in Jellyfin" button points here; empty means the
     /// address finstats connects to.
     pub jellyfin_public_url: String,
@@ -209,8 +209,8 @@ pub struct CollectorStatus {
     /// The socket is open and carrying, whichever transport brought the last list. While something
     /// plays that list comes from a poll, and the socket is still the thing that will say it stopped.
     pub socket_live: bool,
-    /// What the collector is doing in one word — `idle_socket`, `playing_poll`, `paused_socket` or
-    /// `fallback` — and whether Jellyfin is currently subscribed to for session pushes.
+    /// What the collector is doing in one word (`idle_socket`, `playing_poll`, `paused_socket` or
+    /// `fallback`) and whether Jellyfin is currently subscribed to for session pushes.
     pub session_mode: &'static str,
     /// What is true on the wire: a connection that is open, and a subscription actually sent on it.
     pub socket_connected: bool,
@@ -243,7 +243,7 @@ impl AppState {
     }
 
     /// The one way to change the settings: read what is current, change it, check it, store it and let everyone see it,
-    /// one change at a time. Each writes the whole blob, so two at once — the settings page and a task's schedule, say —
+    /// one change at a time. Each writes the whole blob, so two at once (the settings page and a task's schedule, say)
     /// lost whichever was stored first. (before, after); a change that is refused or fails changes nothing.
     pub async fn update_settings(&self, change: impl FnOnce(&mut Settings) -> Result<(), ApiError>) -> Result<(Settings, Settings), ApiError> {
         let _one_at_a_time = self.settings_write.lock().await;
@@ -258,7 +258,7 @@ impl AppState {
     }
 
     /// Refuse to go on: keep whatever is already stored, record why, and ask the serve loop to shut
-    /// down cleanly. Only the first reason is kept — the first thing to notice a broken read is the
+    /// down cleanly. Only the first reason is kept: the first thing to notice a broken read is the
     /// one that matters, and a flood of follow-on errors must not bury it. Safe to call from anywhere,
     /// including inside a `db.call` closure.
     pub fn request_halt(&self, reason: impl Into<String>) {
@@ -485,7 +485,7 @@ mod tests {
         assert_eq!(Settings::load(&c).unwrap().min_play_s, 42, "a key that is missing is still its default");
     }
 
-    /// Two changes to the settings at once — the settings page and a task's schedule, say — each wrote the whole
+    /// Two changes to the settings at once (the settings page and a task's schedule, say) each wrote the whole
     /// blob as it had read it, and whichever wrote last took the other's change with it.
     #[tokio::test]
     async fn changes_to_the_settings_made_at_once_all_land() {

@@ -1,5 +1,5 @@
 // A published profile, for a reader without an account (2.0). Deliberately outside the app: no
-// state, no api.js, no router, no prefetch — nothing here knows about signing in, so nothing here can
+// state, no api.js, no router, no prefetch. Nothing here knows about signing in, so nothing here can
 // send a stranger to /login or ask for more than the one answer. The server has already filled in the
 // link preview; this draws the sections the owner published, with the same charts the app uses.
 

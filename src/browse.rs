@@ -97,7 +97,7 @@ pub struct TitlesQuery {
     page: Option<i64>,
 }
 
-/// `GET /api/libraries/{id}/titles?type=&q=&sort=&dir=&page=` — every title in a library, a page at a time.
+/// `GET /api/libraries/{id}/titles?type=&q=&sort=&dir=&page=`: every title in a library, a page at a time.
 pub async fn get_titles(State(app): State<App>, _user: AuthUser, Path(id): Path<String>, Query(q): Query<TitlesQuery>) -> ApiResult {
     let b = Browse { library_id: id, kind: q.kind, q: q.q, sort: q.sort, dir: q.dir, page: q.page.unwrap_or(1) };
     Ok(Json(app.db.call(move |c| titles(c, &b)).await?))

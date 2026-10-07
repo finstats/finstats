@@ -10,7 +10,7 @@
 //! - **Nothing leaves unless it was asked for.** A destination is a row somebody entered, with the kinds
 //!   of event it wants ticked. No destination, no request; an unticked kind, no request.
 //! - **Addresses and places stay behind a switch.** An event carries two bags: `data`, which any
-//!   destination may be told, and `private` — IP addresses, coordinates — which is only rendered for a
+//!   destination may be told, and `private` (IP addresses, coordinates), which is only rendered for a
 //!   destination whose owner switched "include addresses" on. `message()` is the only thing that can
 //!   reach either, so the rule holds by construction.
 //! - **An event is written once.** `raise` is `INSERT OR IGNORE` on `dedupe`, exactly like
@@ -100,7 +100,7 @@ pub enum Need {
     SignIns,
     /// About the server itself: `see_server`.
     Server,
-    /// Somebody's own and nobody else's — their watchlist (2.1): their own destinations only, whatever anybody else
+    /// Somebody's own and nobody else's, such as their watchlist (2.1): their own destinations only, whatever anybody else
     /// may see, and never a destination of the server's.
     Owner,
 }
@@ -400,7 +400,7 @@ pub struct Target {
     secret: String,
     pub topic: Option<String>,
     /// What this kind of destination needs beyond the three above: only mail has any (`from`, `username`).
-    /// Not a secret — the password is `secret` — but not something a page needs either.
+    /// Not a secret (the password is `secret`), but not something a page needs either.
     pub options: BTreeMap<String, String>,
     /// `None` = the server's own destination; otherwise the person it belongs to.
     pub owner_id: Option<String>,
@@ -439,7 +439,7 @@ impl Target {
         self.events.iter().any(|e| e == kind.key())
     }
 
-    /// Host and port only, and the last thing that could be read as a name — never the token. Which
+    /// Host and port only, and the last thing that could be read as a name, never the token. Which
     /// topic, which chat and which mailbox are shown because otherwise two destinations of a kind read
     /// the same; a Pushover user key is not, because it is half of what it takes to send.
     pub fn shown(&self) -> String {
@@ -563,7 +563,7 @@ pub fn wanted_by(t: &Target, kind: Kind, severity: &str, at: i64, about: Option<
     }
 }
 
-/// At send time: `None` = no longer to be sent (switched off, or its owner may no longer see it — a
+/// At send time: `None` = no longer to be sent (switched off, or its owner may no longer see it, since a
 /// delivery can wait an hour between tries), else whether the addresses go with it. "Include addresses"
 /// is the owner's wish; on a personal destination it also takes `see_network`, as it does in finstats.
 pub fn deliverable(t: &Target, e: &Stored, owner: Option<Perms>) -> Option<bool> {
@@ -576,7 +576,7 @@ pub fn deliverable(t: &Target, e: &Stored, owner: Option<Perms>) -> Option<bool>
 // ---------------------------------------------------------------- raising one
 
 /// Write an event down and queue it for every destination that wants it. `false` when it was already
-/// known — which is the normal answer, because most sources re-derive the same events every pass.
+/// known, which is the normal answer, because most sources re-derive the same events every pass.
 pub fn raise_in(conn: &Connection, f: &Fanout, e: &Event) -> Result<bool> {
     if !f.anyone_wants(e.kind) {
         return Ok(false); // nobody is listening: nothing to write down
@@ -953,7 +953,7 @@ pub async fn must_be_public(url: &str) -> Result<()> {
         bail!("{host} could not be looked up");
     }
     if addresses.iter().any(|a| db::is_local_ip(&a.to_string()).unwrap_or(true)) {
-        bail!("{host} is an address on this network. Your own destinations must point at a public service — ask an administrator to add it for the server instead");
+        bail!("{host} is an address on this network. Your own destinations must point at a public service. Ask an administrator to add it for the server instead");
     }
     Ok(())
 }
@@ -1005,7 +1005,7 @@ pub fn clean_url(input: &str, channel: Channel) -> Result<String> {
             bail!("That is not a Discord webhook address. In Discord: Channel settings → Integrations → Webhooks → Copy Webhook URL");
         }
         if parsed.path().trim_end_matches('/').split('/').count() < 5 {
-            bail!("That Discord webhook address is missing its token — copy the whole URL");
+            bail!("That Discord webhook address is missing its token. Copy the whole URL");
         }
     }
     if channel == Channel::Slack {
@@ -1013,7 +1013,7 @@ pub fn clean_url(input: &str, channel: Channel) -> Result<String> {
             bail!("That is not a Slack webhook address. In Slack: your app → Incoming Webhooks → Add New Webhook to Workspace, then copy the URL");
         }
         if parsed.path().trim_end_matches('/').split('/').count() < 5 {
-            bail!("That Slack webhook address is missing its token — copy the whole URL");
+            bail!("That Slack webhook address is missing its token. Copy the whole URL");
         }
     }
     let trimmed = parsed.as_str().trim_end_matches('/').to_string();
@@ -1031,7 +1031,7 @@ fn clean_mail_url(typed: &str) -> Result<String> {
     let with_scheme = if lower.contains("://") { typed.to_string() } else { format!("smtps://{typed}") };
     let parsed = reqwest::Url::parse(&with_scheme).map_err(|_| anyhow!("That doesn't look like a mail server address"))?;
     if !parsed.username().is_empty() || parsed.password().is_some() {
-        bail!("Leave the user name and password out of the address — there is a field for each of them");
+        bail!("Leave the user name and password out of the address; there is a field for each of them");
     }
     if !parsed.path().trim_matches('/').is_empty() || parsed.query().is_some() || parsed.fragment().is_some() {
         bail!("A mail server address is a host and a port, with nothing after it");
@@ -1345,7 +1345,7 @@ pub async fn update(State(app): State<App>, user: AuthUser, Path(id): Path<i64>,
     one(&app, &user, id).await
 }
 
-/// Name, channel and whose it is — never the address, which is the credential.
+/// Name, channel and whose it is, never the address, which is the credential.
 fn target_detail(name: &str, channel: Channel, own: bool) -> Value {
     json!({ "name": name, "channel": channel.key(), "owner": if own { "own" } else { "server" } })
 }
@@ -1527,7 +1527,7 @@ pub(crate) mod tests {
             title: "Impossible travel: alice".into(),
             body: "Oslo, Norway and London, United Kingdom, 1160 km apart, 40 minutes apart.".into(),
             link: Some("/security".into()),
-            data: vec![("Person".into(), "alice".into()), ("From".into(), "Oslo, Norway — signed in".into())],
+            data: vec![("Person".into(), "alice".into()), ("From".into(), "Oslo, Norway, signed in".into())],
             private: vec![("From address".into(), "203.0.113.9".into()), ("To address".into(), "198.51.100.4".into())],
         }
     }
@@ -1544,7 +1544,7 @@ pub(crate) mod tests {
             let e = stored(kind);
             let m = message(&e, false, Some("https://finstats.example"));
             let all = format!("{} {} {}", m.title, m.text(), m.fields.iter().map(|(a, b)| format!("{a} {b}")).collect::<Vec<_>>().join(" "));
-            assert!(!names_an_address(&all), "{}: an address reached a destination that did not ask for one — {all}", kind.key());
+            assert!(!names_an_address(&all), "{}: an address reached a destination that did not ask for one: {all}", kind.key());
             assert_eq!(m.fields.len(), 2, "{}: only the public fields", kind.key());
         }
         let m = message(&stored(Kind::Travel), true, Some("https://finstats.example"));

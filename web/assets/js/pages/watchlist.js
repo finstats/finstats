@@ -1,4 +1,4 @@
-// /users/:id/watchlist — the films and shows somebody means to watch, grouped by where each one stands now. Only ever
+// /users/:id/watchlist: the films and shows somebody means to watch, grouped by where each one stands now. Only ever
 // one's own: the server answers the caller's list whatever the address says, so somebody else's address opens yours.
 import { h, icon } from '../dom.js';
 import { api } from '../api.js';

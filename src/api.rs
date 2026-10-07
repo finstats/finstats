@@ -159,7 +159,7 @@ pub fn router(app: App) -> Router {
 ///
 /// Behind a reverse proxy the browser's `Origin` is the public name while `Host` has been rewritten to
 /// the internal one, so a proxy's `X-Forwarded-Host` is what the origin should match. But that header
-/// is trusted **only** when `FINSTATS_TRUST_PROXY` is set — the same gate `client_ip` uses. Without a
+/// is trusted **only** when `FINSTATS_TRUST_PROXY` is set, the same gate `client_ip` uses. Without a
 /// trusted proxy a client sets `X-Forwarded-Host` itself, and honouring it would let any client vouch
 /// for its own foreign `Origin` (`Origin: https://evil` + `X-Forwarded-Host: evil` sailed straight
 /// through), which is the whole lock undone by one header.
@@ -177,10 +177,10 @@ async fn same_origin(State(app): State<App>, req: Request, next: Next) -> Respon
 
 /// The same-origin decision, pulled out so it can be tested without a live request. A write is
 /// cross-site when it carries both an `Origin` and a `Host` and the origin's host matches neither the
-/// real `Host` nor — **only behind a trusted proxy** — the `X-Forwarded-Host`. A request with no
+/// real `Host` nor (**only behind a trusted proxy**) the `X-Forwarded-Host`. A request with no
 /// `Origin` (a native client, curl) is not judged here: it carries either the SameSite=Lax cookie, which a
 /// browser attaches to a cross-site navigation only and never to a cross-site `fetch`, or a `Bearer` key,
-/// which no browser adds on its own — a cross-site page cannot set `Authorization` without a CORS
+/// which no browser adds on its own: a cross-site page cannot set `Authorization` without a CORS
 /// preflight, and finstats answers none.
 fn cross_site(origin: Option<&str>, host: Option<&str>, forwarded: Option<&str>, trust_proxy: bool) -> bool {
     let (Some(origin), Some(host)) = (origin, host) else { return false };
@@ -224,7 +224,7 @@ fn asset(headers: &HeaderMap, etag: &str, mime: &str, cache: &str, vary: Option<
 
 async fn static_handler(State(app): State<App>, headers: HeaderMap, uri: Uri) -> Response {
     let path = uri.path().trim_start_matches('/');
-    // FinUI's styles, every component's file in one answer: one request on the critical path, no build step — in the
+    // FinUI's styles, every component's file in one answer: one request on the critical path, no build step, in the
     // look the asker chose in Settings → Appearance. Theirs alone, so private: no cache between may hand it to another.
     if path == "assets/finui.css" {
         return match crate::finui::served_with(&crate::appearance::of_request(&app, &headers).await) {
@@ -369,7 +369,7 @@ async fn user_image(State(app): State<App>, _user: AuthUser, Path(id): Path<Stri
 
 /// A picture through the cache, under the tag finstats last read for it (`artwork`): a poster replaced in
 /// Jellyfin has a new tag and so a new file. With a tag the browser is handed it as the ETag and asks again
-/// every time — a 304, before anything is read, when nothing changed — instead of keeping whatever it had for a week.
+/// every time (a 304, before anything is read, when nothing changed) instead of keeping whatever it had for a week.
 async fn current_picture(app: &App, pic: Picture, id: String, width: u32, headers: &axum::http::HeaderMap) -> ApiResult<Response> {
     let tag = tag_of(app, pic, &id).await?;
     let Some(etag) = tag.as_deref().map(artwork::etag) else { return fetch_picture(app, pic, &id, width, None).await };
@@ -465,8 +465,8 @@ async fn public_card(State(app): State<App>, Path(token): Path<String>, Query(q)
 }
 
 /// A card from the memory cache, or drawn: at most two at once (`card_permits`), its posters fetched
-/// through the image cache, rasterised off the async threads. Every card goes through here — the
-/// published ones and the recap's story — so none of them can skip the limit.
+/// through the image cache, rasterised off the async threads. Every card goes through here (the
+/// published ones and the recap's story), so none of them can skip the limit.
 pub(crate) async fn draw<F>(app: &App, key: String, poster_ids: Vec<String>, svg: F) -> ApiResult<std::sync::Arc<Vec<u8>>>
 where
     F: FnOnce(&crate::card::Posters) -> String,
@@ -489,7 +489,7 @@ where
     Ok(app.public_cards.put(key, png))
 }
 
-/// The published year, one chapter at a time, to anyone holding the link — only when the year is published.
+/// The published year, one chapter at a time, to anyone holding the link, only when the year is published.
 async fn public_story_card(State(app): State<App>, Path((token, chapter)): Path<(String, String)>) -> ApiResult<Response> {
     let ch = crate::story::Chapter::parse(&chapter).ok_or_else(crate::public::not_found)?;
     let (_, a) = crate::public::resolve(&app, token).await?;
@@ -1120,7 +1120,7 @@ async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
-/// `GET /api/library/missing` — every film, video and episode plays point at that the library does not have, each with
+/// `GET /api/library/missing`: every film, video and episode plays point at that the library does not have, each with
 /// the three titles it most likely is.
 async fn library_missing(State(app): State<App>, Manager(_): Manager) -> ApiResult {
     let missing = app
@@ -1146,7 +1146,7 @@ struct CandidatesQuery {
     q: Option<String>,
 }
 
-/// `GET /api/library/missing/{id}/candidates?q=` — up to eight titles a missing one might be: by its names, or by `q`.
+/// `GET /api/library/missing/{id}/candidates?q=`: up to eight titles a missing one might be: by its names, or by `q`.
 async fn missing_candidates(State(app): State<App>, Manager(_): Manager, Path(id): Path<String>, Query(q): Query<CandidatesQuery>) -> ApiResult {
     let found = app
         .db
@@ -1165,7 +1165,7 @@ struct LocateBody {
     to: String,
 }
 
-/// `POST /api/library/locate` with `{"from", "to"}` — the plays of a missing title are of `to`. They move, the choice
+/// `POST /api/library/locate` with `{"from", "to"}`: the plays of a missing title are of `to`. They move, the choice
 /// is kept for a re-import, and the title's groups are worked out again.
 async fn locate_title(State(app): State<App>, Manager(user): Manager, Json(body): Json<LocateBody>) -> ApiResult {
     let (window, group_window) = { let s = app.settings(); (s.merge_window_s, s.group_window_s) };
@@ -1196,7 +1196,7 @@ fn history_being_written(app: &App) -> bool {
     app.tasks.snapshot().iter().any(|t| HISTORY_WRITERS.contains(&t.id) && t.state == "running")
 }
 
-/// `GET /api/import/tautulli` — the wiring board of a Tautulli backup waiting for its wires, or `null`.
+/// `GET /api/import/tautulli`: the wiring board of a Tautulli backup waiting for its wires, or `null`.
 async fn tautulli_board(State(app): State<App>, Manager(_): Manager) -> ApiResult {
     let path = app.data_dir.join(crate::tautulli::UPLOAD);
     if !path.exists() {
@@ -1207,7 +1207,7 @@ async fn tautulli_board(State(app): State<App>, Manager(_): Manager) -> ApiResul
     Ok(Json(json!({ "board": board.ok() })))
 }
 
-/// `POST /api/import/tautulli` — the backup (`.db`, or the zip Tautulli's download gives) as the raw body. Nothing is
+/// `POST /api/import/tautulli`: the backup (`.db`, or the zip Tautulli's download gives) as the raw body. Nothing is
 /// imported yet: the backup waits for its wires, and the answer is the board to draw them on.
 async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult {
     if history_being_written(&app) {
@@ -1240,7 +1240,7 @@ async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Reque
     }
 }
 
-/// `DELETE /api/import/tautulli` — put a waiting board away without importing anything.
+/// `DELETE /api/import/tautulli`: put a waiting board away without importing anything.
 async fn tautulli_cancel(State(app): State<App>, Manager(_): Manager) -> ApiResult {
     if history_being_written(&app) {
         return Err(ApiError::new(StatusCode::CONFLICT, "An import or a restore is already running"));
@@ -1254,7 +1254,7 @@ struct TautulliWires {
     wires: Vec<crate::tautulli::Wire>,
 }
 
-/// `POST /api/import/tautulli/run` with `{"wires": [{"plex_user_id", "jellyfin_user_id"}]}` — import the wired Plex
+/// `POST /api/import/tautulli/run` with `{"wires": [{"plex_user_id", "jellyfin_user_id"}]}`: import the wired Plex
 /// users' history. The backup is removed afterwards, whatever the outcome: it holds every Plex user's tokens.
 async fn tautulli_run(State(app): State<App>, Manager(user): Manager, Json(body): Json<TautulliWires>) -> ApiResult<Response> {
     let path = app.data_dir.join(crate::tautulli::UPLOAD);
@@ -1388,7 +1388,7 @@ mod tests {
         // Same origin: allowed. (`Host` carries no scheme; `Origin` does.)
         assert!(!cross_site(Some("https://finstats.example"), Some(us), None, false));
         assert!(!cross_site(Some("http://finstats.example"), Some(us), None, false));
-        // No Origin at all (a native client): not judged here — a cookie a browser only attaches to a
+        // No Origin at all (a native client): not judged here: a cookie a browser only attaches to a
         // navigation, or a Bearer key no browser adds on its own.
         assert!(!cross_site(None, Some(us), None, false));
         // A foreign origin is refused.
@@ -1399,7 +1399,7 @@ mod tests {
     fn a_client_supplied_forwarded_host_cannot_vouch_for_a_foreign_origin() {
         let us = "finstats.example";
         // The bug: without a trusted proxy, `Origin: evil` + `X-Forwarded-Host: evil` must still be
-        // refused — a client sets that header itself, so honouring it lets any origin vouch for itself.
+        // refused, because a client sets that header itself, so honouring it lets any origin vouch for itself.
         assert!(cross_site(Some("https://evil.example"), Some(us), Some("evil.example"), false));
         // Behind a trusted proxy the browser's Origin is the public name and Host is the internal one,
         // so the proxy's X-Forwarded-Host is exactly what the origin should match: allowed.

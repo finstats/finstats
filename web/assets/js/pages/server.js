@@ -1,4 +1,4 @@
-// /server — what the Jellyfin server itself looks like (GET /api/server, see_server). One section on
+// /server: what the Jellyfin server itself looks like (GET /api/server, see_server). One section on
 // screen at a time, like Settings: Overview (system and storage), Jobs (live), Devices, Plugins.
 
 import { h, icon, num, bytes, duration, relEl, dateTime, debounce, mount, untilText } from '../dom.js';
@@ -228,7 +228,7 @@ export default function serverPage(ctx) {
     });
   }
 
-  /** "about 4 minutes left" when finstats has watched the percentage move — and, when it has not, the same
+  /** "about 4 minutes left" when finstats has watched the percentage move and, when it has not, the same
       sentence with three cycling dots where the time will go: "about . left", "about .. left", "about ... left".
       The words around them are what make the dots mean something: on their own they read as a page still
       loading. A guess put where an estimate goes would read exactly like an estimate, so there is no number. */
@@ -251,7 +251,7 @@ export default function serverPage(ctx) {
     return h('span', { class: 'muted' }, `· ${Math.round(job.progress || 0)}% for ${duration(job.unchanged_for_s)}`);
   }
 
-  /** How long finstats has been watching — which is how young the estimate is. Left out when the job has
+  /** How long finstats has been watching, which is how young the estimate is. Left out when the job has
       stood still for that whole time, because then the line above has already said it. */
   function watchedText(job) {
     if (!job.watching_since) return null;

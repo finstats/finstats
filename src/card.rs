@@ -3,7 +3,7 @@
 //!
 //! The card is SVG built here as text and rasterised with resvg, with Inter bundled (`fonts/card/`) so
 //! it looks the same on every machine and never reads a system font. The browser's charts cannot run
-//! here — `charts.js` builds DOM with tooltips and observers — so the one shape the card shares with
+//! here (`charts.js` builds DOM with tooltips and observers), so the one shape the card shares with
 //! the page, the weekday × hour grid, is drawn from the same colours (`HEAT_EMPTY`, `HEAT_RAMP` in
 //! `charts.js`; change them together). Only a `PublicProfile` goes in, so a card can say nothing the
 //! published page does not.
@@ -240,7 +240,7 @@ fn shown_name(a: &PublicProfile) -> &str {
     if a.name.is_empty() { "A finstats profile" } else { &a.name }
 }
 
-/// Series and films taken in turn, then music: the posters row, as many as there is room for — six on
+/// Series and films taken in turn, then music: the posters row, as many as there is room for: six on
 /// a card of its own, four beside the weekday grid.
 fn shelf(a: &PublicProfile) -> Vec<&Title> {
     let Some(t) = &a.totals else { return vec![] };

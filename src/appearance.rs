@@ -53,13 +53,13 @@ pub struct Look {
     finui_preset: String,
 }
 
-/// `GET /api/me/appearance` — the caller's own look.
+/// `GET /api/me/appearance`: the caller's own look.
 pub async fn get_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
     let preset = app.db.call(move |c| of(c, &user.id)).await?;
     Ok(Json(json!({ "finui_preset": preset })))
 }
 
-/// `PUT /api/me/appearance` with `{"finui_preset"}` — the caller's own look, and nobody else's; "" for none.
+/// `PUT /api/me/appearance` with `{"finui_preset"}`: the caller's own look, and nobody else's; "" for none.
 pub async fn put_mine(State(app): State<App>, user: AuthUser, Json(look): Json<Look>) -> ApiResult {
     let actor = Actor::from(&user);
     let preset = look.finui_preset.trim().to_string();

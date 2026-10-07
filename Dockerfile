@@ -7,7 +7,7 @@ WORKDIR /src
 # Dependencies first, so editing finstats itself doesn't rebuild the world. The two cache mounts make
 # even that incremental between builds on one machine: the crate registry and the target directory
 # survive, so a changed source file recompiles finstats and relinks instead of building everything
-# again — minutes off every local rebuild and every run of the QA image check. They are BuildKit
+# again, which takes minutes off every local rebuild and every run of the QA image check. They are BuildKit
 # caches and change nothing about the image: the binary is copied out of the cache onto a real layer,
 # and a builder without them (a cold CI runner) simply builds as before.
 COPY Cargo.toml Cargo.lock ./
@@ -21,7 +21,7 @@ COPY src ./src
 COPY web ./web
 # The typeface the shareable cards are drawn in (the web UI's own is woff2, which the renderer cannot read).
 COPY fonts ./fonts
-# Compiled into the binary: the in-app patch notes, and the licences — finstats' own and
+# Compiled into the binary: the in-app patch notes, and the licences: finstats' own and
 # the notice generated for every crate it is built on.
 COPY CHANGELOG.md LICENSE THIRD-PARTY.json ./
 RUN --mount=type=cache,target=/usr/local/cargo/registry,id=finstats-registry \

@@ -6,13 +6,13 @@
 //! ones. Unknown tasks (a plugin's own) fall back to Jellyfin's description, and say where they came from.
 //!
 //! **A run is timed by watching it, because Jellyfin does not say when it started.** A task carries a
-//! percentage and nothing else — no start time for the run in progress — so `Watch` remembers the
+//! percentage and nothing else (no start time for the run in progress), so `Watch` remembers the
 //! percentages this finstats has seen and `eta_s` works the rest out from the rate they moved at. When
 //! nothing has been seen to move there is no number, and the page says so rather than guessing.
 //!
 //! **The watching does not wait for somebody to look.** `observe` feeds the same `Watch` from task lists
-//! finstats has already read for other reasons — the scan check every 5 minutes, the server details every
-//! 15 — so a run that has been going for an hour is an estimate the moment the page opens, instead of an
+//! finstats has already read for other reasons (the scan check every 5 minutes, the server details every
+//! 15), so a run that has been going for an hour is an estimate the moment the page opens, instead of an
 //! ellipsis until it has been watched. Those reads happen either way; this only stops throwing the
 //! percentages in them away.
 //!
@@ -49,7 +49,7 @@ pub fn explain(key: &str, name: &str) -> Option<&'static str> {
         return Some("Looks through your media folders for files that are new, changed or gone and updates Jellyfin's database. This is the job that makes a new film appear. finstats reads your library right after it finishes, so anything it finds is on your statistics within a minute or two.");
     }
     if is(&["mediasegment", "media segments", "intro skip", "introskipper"]) {
-        return Some("Goes through your episodes looking for the parts a player can offer to skip — the intro, a recap, the closing credits — and writes down where they are. It reads the audio and video of each file to do it, so it is one of the heaviest things Jellyfin ever runs, and it only looks at what it has not analysed before. Leaving it to run overnight is normal; nothing about it touches your library files.");
+        return Some("Goes through your episodes looking for the parts a player can offer to skip (the intro, a recap, the closing credits) and writes down where they are. It reads the audio and video of each file to do it, so it is one of the heaviest things Jellyfin ever runs, and it only looks at what it has not analysed before. Leaving it to run overnight is normal; nothing about it touches your library files.");
     }
     if is(&["refreshtrickplay", "trickplay"]) {
         return Some("Builds the strip of little pictures you see when you drag the progress bar. It decodes every video once and stores the thumbnails next to them, so the first run on a large library takes hours and costs disk space. Later runs only handle what is new.");
@@ -73,7 +73,7 @@ pub fn explain(key: &str, name: &str) -> Option<&'static str> {
         return Some("Tidies Jellyfin's own database file: reclaims the space deleted rows left behind and rebuilds the indexes. Jellyfin is briefly slower while it runs and quicker afterwards. It has nothing to do with your media.");
     }
     if is(&["cleanactivitylog", "activity log"]) {
-        return Some("Deletes old entries from Jellyfin's activity log — the sign-ins and errors you see under Dashboard → Activity. finstats has already copied those into its own history, so nothing on the finstats Server page disappears with them.");
+        return Some("Deletes old entries from Jellyfin's activity log: the sign-ins and errors you see under Dashboard → Activity. finstats has already copied those into its own history, so nothing on the finstats Server page disappears with them.");
     }
     if is(&["cleanlogs", "log file", "log files"]) {
         return Some("Deletes Jellyfin's own log files once they are older than the number of days set in its settings. Housekeeping; it never touches media.");
@@ -82,7 +82,7 @@ pub fn explain(key: &str, name: &str) -> Option<&'static str> {
         return Some("Empties the parts of Jellyfin's cache folder nothing needs any more. Safe, quick, and it only frees disk space.");
     }
     if is(&["cleantranscode", "deletetranscodefiles", "transcode director", "transcoding temp"]) {
-        return Some("Deletes the temporary files left behind when Jellyfin transcodes something — the pieces of video it made for a player that could not handle the original. They can be many gigabytes on a busy server.");
+        return Some("Deletes the temporary files left behind when Jellyfin transcodes something: the pieces of video it made for a player that could not handle the original. They can be many gigabytes on a busy server.");
     }
     if is(&["pluginupdate", "plugin update", "check for plugin"]) {
         return Some("Asks the plugin repositories whether any of your plugins has a newer version, and installs the updates if you asked it to. This one talks to the internet on your server's behalf.");
@@ -112,13 +112,13 @@ fn fallback(description: Option<&str>) -> String {
 
 // ---------------------------------------------------------------- how long is left
 
-/// What is left of a run, in seconds — **only when it has been measured**. The rate is taken against the
+/// What is left of a run, in seconds, **only when it has been measured**. The rate is taken against the
 /// most recent reading far enough back to say anything (at least `MIN_GAIN` over `MIN_WINDOW_S`, within
 /// `WINDOW_S`), so a job that speeds up or slows down is described by the pace it has now rather than the
 /// one it averaged, and a job creeping a percent every few minutes is still measurable.
 ///
 /// `None` means finstats has not seen the percentage move and has nothing to work from. There is a
-/// tempting number to put there — how long the last run took, applied to the fraction that is left — and
+/// tempting number to put there (how long the last run took, applied to the fraction that is left), and
 /// it is a guess: it stands still while the job does, it knows nothing about how much of this run has
 /// already happened, and on the screen it is indistinguishable from an estimate that was earned. So it is
 /// not offered. The page says it does not know, and `last_duration_s` is shown beside it for anyone who
@@ -196,7 +196,7 @@ pub fn schedule(triggers: &[Value], last_run_at: Option<i64>) -> (Vec<String>, O
 /// What finstats has seen of one run. Jellyfin reports a percentage and never says when the run began,
 /// so this is the only clock there is: the recent percentages, and when the last one actually changed.
 pub struct Run {
-    /// When finstats first saw this run — which may be long after Jellyfin started it.
+    /// When finstats first saw this run, which may be long after Jellyfin started it.
     pub first_at: i64,
     /// When the percentage last moved. Equal to `first_at` until it does.
     pub changed_at: i64,
@@ -271,7 +271,7 @@ impl Watch {
     }
 
     /// How soon the backend should read Jellyfin's jobs again by itself: while it knows of a run in progress, often
-    /// enough to time it; otherwise not at all — the scheduler's five-minute read notices the next run.
+    /// enough to time it; otherwise not at all, since the scheduler's five-minute read notices the next run.
     pub fn next_look(&self) -> Option<std::time::Duration> {
         (!self.runs.is_empty()).then_some(std::time::Duration::from_secs(BUSY_EVERY_S))
     }
@@ -353,7 +353,7 @@ fn job_json(t: &Value, watch: &mut Watch, now: i64) -> Value {
     })
 }
 
-/// `GET /api/jellyfin/jobs` — what Jellyfin is doing right now, and what it will do later. Read-only, and
+/// `GET /api/jellyfin/jobs`: what Jellyfin is doing right now, and what it will do later. Read-only, and
 /// asked of Jellyfin at most every few seconds however many people are watching the page.
 pub async fn jobs(axum::extract::State(app): axum::extract::State<App>, _viewer: ServerViewer) -> ApiResult {
     let now = db::now();
@@ -475,8 +475,8 @@ mod tests {
     #[test]
     fn a_number_is_only_ever_shown_when_it_was_measured() {
         // The fault this was written for: a percentage that does not move left "about 2 minutes left" on
-        // the screen for a quarter of an hour. There was a number to show — the last run's duration for
-        // the fraction that is left — and it was a guess that stood still while the job did. Nothing that
+        // the screen for a quarter of an hour. There was a number to show (the last run's duration for
+        // the fraction that is left), and it was a guess that stood still while the job did. Nothing that
         // was not measured is offered now, however tempting it looks.
         assert_eq!(eta_s(90.0, 0.0, 600), None, "ten minutes of watching a percentage that did not move");
         assert_eq!(eta_s(25.0, 0.0, 2), None, "nothing seen yet is nothing to say");

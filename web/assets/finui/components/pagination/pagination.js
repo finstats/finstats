@@ -1,4 +1,4 @@
-// FinUI: pagination. Where a long list stands — "51–100 of 3,300", page 2 of 66 — and the way to the page before and after.
+// FinUI: pagination. Where a long list stands ("51–100 of 3,300", page 2 of 66) and the way to the page before and after.
 
 import { h, icon } from '../../core.js';
 import { num } from '../../format.js';

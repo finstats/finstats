@@ -1,4 +1,4 @@
-/* FinMotion: progress on film. A taller track drawn as a strip — sprocket holes along both edges, frames between — that
+/* FinMotion: progress on film. A taller track drawn as a strip (sprocket holes along both edges, frames between) that
    slides along as the share grows; the share itself is a wash over it, ending in the accent's edge. */
 .fui-progress.fm-film { --fm-progress-at: 0; }
 .fm-film .fui-progress__track { height: 30px; border-radius: var(--radius-control); background: var(--bg-sunken); border: 1px solid var(--border); }

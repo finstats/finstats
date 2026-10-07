@@ -5,7 +5,7 @@
 // state its own value with data-sort; a header opts out with data-nosort. Empty cells go last in
 // either direction, and a third click gives the original order back.
 //
-// Paginated tables cannot be sorted in the browser — that would only shuffle the page on screen — so
+// Paginated tables cannot be sorted in the browser (that would only shuffle the page on screen), so
 // they pass `server: {key, dir, onSort}` and mark their headers with data-key; the click is handed
 // to the page, which asks the server.
 
@@ -27,7 +27,7 @@ function plainNumber(text) {
 /** What a piece of cell text is worth: a number when it is one of the app's formats, else null. */
 export function textValue(raw) {
   const text = String(raw == null ? '' : raw).trim();
-  if (!text || text === '–' || text === '—' || text === '-') return null;
+  if (!text || text === '–' || text === '-') return null;
   let m;
   if ((m = /^(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?$/.exec(text)) && m[0]) return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0);
   if ((m = /^([\d.,\s]+?)\s*%/.exec(text))) return plainNumber(m[1]);

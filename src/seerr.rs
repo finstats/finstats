@@ -5,12 +5,12 @@
 //! Sonarr or Radarr when they have it, and only then from Seerr's `/movie/{id}` or `/tv/{id}`, once.
 //!
 //! **Reading.** A pass begins by asking for a single row, newest-modified first: if that one `updatedAt` is no
-//! newer than the cursor, nothing has been created or changed and the pass is over — about a kilobyte, rather
+//! newer than the cursor, nothing has been created or changed and the pass is over: about a kilobyte, rather
 //! than the page of fifty a listing costs. When something has changed, the listing is read newest-modified first
 //! and stops a little past the newest change already known (`OVERLAP_S`, measured on Seerr's clock, so ours does
 //! not matter). That alone would miss a request whose *media* became available, because that does not always touch
-//! the request. So every request finstats believes to be open is looked at again — the ones a fresh
-//! "pending/processing" listing returns anyway, the rest one by one — but only while something *is* open, and at
+//! the request. So every request finstats believes to be open is looked at again (the ones a fresh
+//! "pending/processing" listing returns anyway, the rest one by one), but only while something *is* open, and at
 //! most every `OPEN_EVERY_S`: a title that has arrived is news within the quarter hour, not within the minute.
 //! Once a day everything is listed, and only if that listing was complete does a request that is no longer there
 //! get its `removed_at`.
@@ -45,7 +45,7 @@ const RECHECK_MAX: usize = 60;
 ///
 /// A request that is still moving is worth another look soon: Seerr creates it before Sonarr or Radarr have
 /// been told about it, so the first look often finds nothing through no fault of anyone's. One that is
-/// settled — declined, failed, or here — is not going to turn up in an Arr app now.
+/// settled (declined, failed, or here) is not going to turn up in an Arr app now.
 const LOOKUPS_PER_PASS: usize = 30;
 const LOOKUP_REST_S: i64 = 30 * 60;
 const LOOKUP_REST_SETTLED_S: i64 = 24 * 3600;
@@ -261,7 +261,7 @@ pub fn link(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-/// What is still on its way, newest change first — and how many there are, which is what decides whether this
+/// What is still on its way, newest change first, and how many there are, which is what decides whether this
 /// pass asks Seerr about open requests at all.
 fn open_requests(conn: &Connection, sid: i64) -> Result<Vec<i64>> {
     Ok(conn
@@ -432,7 +432,7 @@ pub async fn sync_requests(app: &App) -> Result<String> {
     Ok(format!("{total} requests read{}", if gone > 0 { format!(", {gone} no longer in Seerr") } else { String::new() }))
 }
 
-/// "The thing you asked for is watchable now" — the one notification 1.3 was missing somewhere to say.
+/// "The thing you asked for is watchable now": the one notification 1.3 was missing somewhere to say.
 /// Only what arrived in the last few hours: anything older is history, and a first read of Seerr on an
 /// install with years of requests must not become years of messages.
 pub fn announce_available(conn: &Connection, bus: &crate::notify::Fanout) -> Result<usize> {

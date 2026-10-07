@@ -1,5 +1,5 @@
 // FinUI: number-stepper. An exact number with a step down and a step up beside it: typed, arrowed or pressed, and
-// always kept inside its ends — a button at an end says so by being unavailable.
+// always kept inside its ends; a button at an end says so by being unavailable.
 
 import { h, icon } from '../../core.js';
 import { clamp, parseNumber, stepBy } from './plan.js';

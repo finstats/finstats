@@ -1,4 +1,4 @@
-// FinUI: chart, the arithmetic every chart shares — round steps on an axis, a value's place along it, stacks, the path
+// FinUI: chart, the arithmetic every chart shares: round steps on an axis, a value's place along it, stacks, the path
 // of a line and of a ring's slice, how busy a heat cell is, and numbers said compactly. Pure; tested in FinUI's repository.
 
 const dust = (n) => Number(n.toPrecision(12));

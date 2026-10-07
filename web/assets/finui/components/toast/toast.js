@@ -1,5 +1,5 @@
-// FinUI: toast. A short message that comes and goes at the edge of the window — something was saved, something
-// happened — with at most one thing to do (Undo). It stays as long as it takes to read, waits while pointed at or
+// FinUI: toast. A short message that comes and goes at the edge of the window (something was saved, something
+// happened) with at most one thing to do (Undo). It stays as long as it takes to read, waits while pointed at or
 // focused, and a few are shown at once, newest first.
 
 import { h, icon } from '../../core.js';

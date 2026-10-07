@@ -6,7 +6,7 @@
 //!
 //! Two transports, one producer, each doing the half it is good at. The session list arrives either
 //! by asking (`GET /Sessions`, on a timer) or by being told (`socket.rs`, pushed); `tick()` cannot
-//! tell the difference and does not care — it is handed a list and works out what changed.
+//! tell the difference and does not care: it is handed a list and works out what changed.
 //!
 //! **Nothing playing: listen.** An idle server has nothing to report, and asking it every few seconds
 //! to be told so was almost all the traffic finstats ever caused. Not one request goes out.
@@ -15,7 +15,7 @@
 //! its business, not ours; asking is also what ends a play whose client vanished without saying so,
 //! since the push carries no `ActiveWithinSeconds`. Reads are compressed, so the busy half is cheap.
 //!
-//! The moment the socket stops carrying, polling resumes on the very next pass — never a gap, because
+//! The moment the socket stops carrying, polling resumes on the very next pass. There is never a gap, because
 //! a play that is never seen is lost for good.
 
 use std::collections::HashMap;
@@ -39,12 +39,12 @@ const PERSIST_EVERY: Duration = Duration::from_secs(30);
 /// While the socket carries and nothing is playing there is nothing to do and nothing to ask for, so
 /// the loop only comes round this often to re-read its settings. It costs no request.
 const SOCKET_IDLE_WAKE: Duration = Duration::from_secs(60);
-/// While the socket carries paused sessions, one read after this much *silence* — no push and no
-/// read — in case a push went missing. Silence is what is measured, and a read is as good as a push
+/// While the socket carries paused sessions, one read after this much *silence* (no push and no
+/// read) in case a push went missing. Silence is what is measured, and a read is as good as a push
 /// at ending it: an early attempt restarted the wait on every push alone, so a client that kept reporting its
 /// progress while paused reset it for ever and the net never once fell; the next measured it from
-/// the last *push* and nothing else, so the first pause after a minute of playing — when the
-/// subscription had been off the whole time and no push could have arrived — was already "silent",
+/// the last *push* and nothing else, so the first pause after a minute of playing (when the
+/// subscription had been off the whole time and no push could have arrived) was already "silent",
 /// and since the read it called for reset nothing either, the reads went out as fast as they could be
 /// made. 2,625 of them in eight seconds, until a push happened along. Hence `Net` below: every one of
 /// the three things that ends silence re-arms the clock, the attempt itself included.
@@ -63,7 +63,7 @@ const PAUSED_POLL_S: i64 = 15;
 /// speed anything up.
 const FALLBACK_IDLE_S: i64 = 30;
 /// How many readings in a row must say "every active session is paused" before the socket takes over.
-/// At the active interval that is about three seconds — long enough that pausing to fetch a drink and
+/// At the active interval that is about three seconds, long enough that pausing to fetch a drink and
 /// starting again does not change transport twice.
 const PAUSE_DEBOUNCE: u32 = 3;
 const DEVICE_REFRESH: Duration = Duration::from_secs(300);
@@ -74,8 +74,8 @@ fn ended_keys<'a>(tracked: impl Iterator<Item = &'a String>, seen: &std::collect
     tracked.filter(|k| !seen.contains(*k)).cloned().collect()
 }
 
-/// Every play that ended in one pass, closed in one transaction — a play too short to keep deleted, the rest given their
-/// final numbers and a stop event — and then each title's groups worked out once, not once per play. One call and one
+/// Every play that ended in one pass, closed in one transaction (a play too short to keep deleted, the rest given their
+/// final numbers and a stop event), and then each title's groups worked out once, not once per play. One call and one
 /// detection per play closed 245 plays a second, so a crowd ending together held up the collector for minutes.
 fn close_ended(c: &mut crate::db::rusqlite::Connection, finished: &[(i64, PlayRecord, Vec<PlayEvent>)], group_window_s: i64) -> Result<()> {
     let mut titles = std::collections::BTreeSet::new();
@@ -155,7 +155,7 @@ fn start_plays(c: &mut crate::db::rusqlite::Connection, plays: Vec<PlayRecord>, 
     Ok(out)
 }
 
-/// Every play whose progress is due in one pass — its numbers so far and what happened since — in one transaction,
+/// Every play whose progress is due in one pass (its numbers so far and what happened since) in one transaction,
 /// for the same reason as [`start_plays`].
 fn save_progress(c: &mut crate::db::rusqlite::Connection, due: &[(i64, PlayRecord, Vec<PlayEvent>)]) -> Result<()> {
     let tx = c.transaction()?;
@@ -191,7 +191,7 @@ fn remember_devices(c: &mut crate::db::rusqlite::Connection, rows: Vec<DeviceRow
 }
 
 /// When each device's row was last written, forgetting any not written for longer than [`DEVICE_REFRESH`]: past that
-/// an entry decides nothing, and a device id is the app's own word — one that invented a new id every time would
+/// an entry decides nothing, and a device id is the app's own word, and one that invented a new id every time would
 /// otherwise grow the map for as long as finstats runs.
 fn forget_stale_devices(seen: &mut HashMap<(String, String), Instant>, now: Instant) {
     seen.retain(|_, written| now.saturating_duration_since(*written) <= DEVICE_REFRESH);
@@ -208,7 +208,7 @@ fn carry_over(prev: &PlayRecord, rec: &mut PlayRecord) {
         rec.transcode = prev.transcode.clone();
         rec.play_method = crate::media::effective_play_method(Some(&rec.play_method), rec.transcode.as_ref());
     }
-    // Once a play has needed transcoding it stays a transcode in the statistics — and this
+    // Once a play has needed transcoding it stays a transcode in the statistics, and this
     // has to happen *before* the comparison, not after it. Applied after, the kept
     // record said "Transcode" while every reading that followed said what the client had
     // settled back to, so each one looked like a change: one `transcode` event per second
@@ -226,7 +226,7 @@ const MIN_KEEP_S: i64 = 2;
 const JELLYFIN_DOWN_AFTER: u32 = 10;
 
 /// Whether Jellyfin answers: reads failed in a row, and whether somebody was told it is down. Any list
-/// that arrives — polled, pushed or a safety read — is an answer.
+/// that arrives (polled, pushed or a safety read) is an answer.
 #[derive(Default)]
 struct Reachable {
     failures: u32,
@@ -338,7 +338,7 @@ fn play_event(rec: &crate::playback::PlayRecord, starting: bool, row_id: i64) ->
         true => (crate::notify::Kind::PlayStarted, format!("{} started watching", rec.user_name), format!("{what} on {device}.")),
         false => {
             let minutes = (rec.duration_s as f64 / 60.0).round() as i64;
-            (crate::notify::Kind::PlayStopped, format!("{} stopped watching", rec.user_name), format!("{what} — {minutes} minute{} on {device}.", if minutes == 1 { "" } else { "s" }))
+            (crate::notify::Kind::PlayStopped, format!("{} stopped watching", rec.user_name), format!("{what}: {minutes} minute{} on {device}.", if minutes == 1 { "" } else { "s" }))
         }
     };
     let mut event = crate::notify::Event::new(kind, format!("notify:play:{}:{row_id}", if starting { "start" } else { "stop" }), title, body)
@@ -512,8 +512,8 @@ const SUPPRESSED_EVERY: Duration = Duration::from_secs(60);
 /// and the net, and nothing else. More than this is the machine disagreeing with itself.
 const READS_WHILE_LISTENING: u32 = 2;
 
-/// Every `/Sessions` read finstats makes, from every caller — the beat while something plays, the
-/// one-shot net, the catch-up after trusting a subscription, the socket's own consistency check —
+/// Every `/Sessions` read finstats makes, from every caller (the beat while something plays, the
+/// one-shot net, the catch-up after trusting a subscription, the socket's own consistency check)
 /// passes through this one gate. Not because any of them is expected to misbehave, but because
 /// a clock that stopped being reset once turned one of them into thousands, and a limiter
 /// is the only part of this that is true whatever the state machine believes. It is the floor, not
@@ -562,7 +562,7 @@ impl Reads {
         Ok(())
     }
 
-    /// How many reads went out in the last minute — what a packet capture would count.
+    /// How many reads went out in the last minute: what a packet capture would count.
     fn last_min(&mut self, now: Instant) -> usize {
         self.prune(now);
         self.at.len()
@@ -592,7 +592,7 @@ fn listening_mode(mode: &str) -> bool {
 }
 
 /// Take a slot for one `/Sessions` read, or be told how long until there is one. Every caller goes
-/// through here; a refusal is a bug somewhere above, so it is counted and said out loud — once a
+/// through here; a refusal is a bug somewhere above, so it is counted and said out loud, once a
 /// minute, because the one thing a limiter must not do is make its own noise.
 pub fn sessions_slot(now: Instant, caller: &'static str, mode: &'static str) -> Result<(), Duration> {
     let mut reads = READS.lock().unwrap();
@@ -622,7 +622,7 @@ pub fn sessions_reads_last_min() -> usize {
     READS.lock().unwrap().last_min(Instant::now())
 }
 
-/// How many went out while listening since `since` — for the state machine marking its own work.
+/// How many went out while listening since `since`, for the state machine marking its own work.
 fn reads_in_mode(since: Instant) -> u32 {
     let now = Instant::now();
     // `checked_sub` because a monotonic clock is allowed to be younger than a minute.
@@ -635,13 +635,13 @@ fn reads_in_mode(since: Instant) -> u32 {
 /// The clocks behind the one-shot read, and the whole of the fix that ended that storm. Two of
 /// them, because silence and the five-minute net are different questions:
 ///
-///   * `activity` — when something last happened on this subscription: a push, or a read of our own.
+///   * `activity`: when something last happened on this subscription: a push, or a read of our own.
 ///     A *fresh subscription* is also activity, and that is the part the first version of this
 ///     lacked. While a play is polled the subscription is off and no push can arrive, so the moment
 ///     it goes back on, a clock measured from the last push is already a minute stale and asks for
-///     a read at once — and then for another, because nothing the read did touched the clock that
+///     a read at once, and then for another, because nothing the read did touched the clock that
 ///     called for it.
-///   * `read` — when finstats last read `/Sessions`, by any route at all, the beat during a play
+///   * `read`: when finstats last read `/Sessions`, by any route at all, the beat during a play
 ///     included. A poll a second ago is better evidence than any net could fetch, so the net is not
 ///     due; three minutes of playing therefore end in a pause that asks for nothing.
 ///
@@ -676,7 +676,7 @@ impl Net {
     }
 
     /// **One `/Sessions` read: the gate, and the clocks it must re-arm, in a single call.** These two
-    /// drifting apart is exactly what 1.4.11 was — the net asked for a read, and nothing the read did
+    /// drifting apart is exactly what 1.4.11 was: the net asked for a read, and nothing the read did
     /// touched the clock that had called for it, so it asked again, and again, 2,625 times in eight
     /// seconds. Fusing them makes that unrepresentable rather than merely tested: there is no way to
     /// read without re-arming. The *attempt* re-arms, not its answer, so even a refusal waits its turn
@@ -711,7 +711,7 @@ pub fn safety_due(active: usize, since_activity: Duration, since_read: Duration)
 
 /// The collector's timing, with no I/O in it: everything one pass decides, from what it has seen
 /// and what the clock says. `run()` owns one and every read, push and subscription goes through it,
-/// so the same object can be driven through three minutes of playing in a microsecond — which is
+/// so the same object can be driven through three minutes of playing in a microsecond, which is
 /// what the storm needed, and what no test of the arithmetic on its own could have caught.
 pub struct Pass {
     decide: Decide,
@@ -798,7 +798,7 @@ fn publish(app: &App, mut now: Published, mode_since: &mut i64, mode_at: &mut In
 }
 
 /// Everything the state machine has decided, as one picture. Written in a single lock so that no
-/// request can catch it half-applied — a mode of "listening" with a poll timer still running would
+/// request can catch it half-applied: a mode of "listening" with a poll timer still running would
 /// be a lie for however many microseconds it lasted.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Published {
@@ -806,7 +806,7 @@ pub struct Published {
     pub socket_connected: bool,
     pub socket_subscribed: bool,
     /// The beat actually running, in seconds; `None` while nothing is being asked for. A safety read
-    /// is not a beat — it is one read in case a push went missing — so it does not appear here.
+    /// is not a beat (it is one read in case a push went missing), so it does not appear here.
     pub poll_interval_s: Option<i64>,
     /// `/Sessions` reads made while listening since this mode began, or in the last minute, whichever
     /// is the shorter time. Counted from the gate every read goes through, so it is what went out on
@@ -842,7 +842,7 @@ pub enum Mode {
     /// between two sightings.
     Poll,
     /// Let Jellyfin push it. Either nothing is loaded anywhere, or everything that is has been paused
-    /// long enough to believe — and a paused session is exactly what a server has nothing to say about.
+    /// long enough to believe, and a paused session is exactly what a server has nothing to say about.
     Listen,
 }
 
@@ -898,7 +898,7 @@ enum Source {
     /// A single read while listening: the net under a push that never came, or the catch-up that
     /// follows trusting a subscription. Not a beat, and never the transport.
     Safety,
-    /// Asked for — because something is playing, or because there is no socket to be told by.
+    /// Asked for, because something is playing, or because there is no socket to be told by.
     Poll,
 }
 
@@ -969,7 +969,7 @@ pub async fn run(app: App) {
         // Subscribed unless something is actually running. **Not** "unless the collector is in
         // listening mode": that was the bug this rule exists for. Listening needs the socket to
         // have proved itself, proof is the list Jellyfin sends when subscribed to, and unsubscribing
-        // before it arrives meant it never did — the fallback latched for good, on exactly the idle
+        // before it arrives meant it never did: the fallback latched for good, on exactly the idle
         // server the socket is for. While something plays the pushes are a second copy of what is
         // already being asked for, uncompressed, so those are the only moments worth silence.
         if let Some(handle) = sock.as_ref() {
@@ -979,14 +979,14 @@ pub async fn run(app: App) {
         // A subscription that has just gone back on starts its silence window here. Watched on the
         // wire rather than on what was asked for, so a reconnection that re-sends `SessionsStart` of
         // its own counts too. Without this the first pause after a minute of playing looks like a
-        // minute of silence the instant it begins — the socket was unsubscribed for all of it — and
+        // minute of silence the instant it begins (the socket was unsubscribed for all of it), and
         // the net falls at once and then again and again, which is the storm this is the guard against.
         pass.subscription(Instant::now(), sock.as_ref().is_some_and(|h| h.subscribed()));
 
         // Each transport where it is the better one. **Nothing playing**: listen. An idle server has
         // nothing to report, and asking it every few seconds to be told so was most of the traffic
         // finstats ever caused. **Something playing**: ask, at `active_interval_s`. That is where the
-        // detail lives — a pause, a seek or a track change is only as sharp as the gap between two
+        // detail lives: a pause, a seek or a track change is only as sharp as the gap between two
         // sightings, and no push cadence is ours to promise. Every read is compressed, so the
         // busy half is also the cheap half. It also means the poll that ends a play whose client
         // vanished is simply the next poll: the push carries no `ActiveWithinSeconds`, but nothing
@@ -1032,7 +1032,7 @@ pub async fn run(app: App) {
                 let handle = sock.as_mut().expect("a live socket means there is a socket");
                 // When the next one-shot read falls due: after a spell of complete silence with
                 // something paused, or on the plain five-minute net, whichever comes first. Neither
-                // is a beat — `poll_interval_s` stays null — they are single reads.
+                // is a beat (`poll_interval_s` stays null); they are single reads.
                 let due = pass.due(Instant::now(), active);
                 let wait = due.min(SOCKET_IDLE_WAKE);
                 tokio::select! {
@@ -1049,7 +1049,7 @@ pub async fn run(app: App) {
                             None
                         }
                         Some(crate::socket::Event::Down(why)) => {
-                            // Say it once per spell, at the level of a thing that fixed itself — and
+                            // Say it once per spell, at the level of a thing that fixed itself, and
                             // only about a socket that *was* carrying. One that has not proved itself
                             // yet has already said so in its own words.
                             if socket_error.as_deref() != Some(why.as_str()) && socket_live {
@@ -1126,7 +1126,7 @@ pub async fn run(app: App) {
                 if trusted_unproven && source == Source::Push {
                     trusted_unproven = false;
                     if was != now_mode {
-                        tracing::info!("the first pushed list says {now_mode}, where the catch-up read said {was} — following the push");
+                        tracing::info!("the first pushed list says {now_mode}, where the catch-up read said {was}; following the push");
                     }
                 }
                 if source == Source::Safety && was != now_mode {
@@ -1185,7 +1185,7 @@ pub async fn run(app: App) {
         // (up to a minute).
         if !on_socket {
             // Something running is watched closely. Otherwise this is the fallback: the socket ought to
-            // be carrying and is not, so the beat is slower than a second — a paused play changes when
+            // be carrying and is not, so the beat is slower than a second: a paused play changes when
             // a person does something, and an idle server is why the socket exists. It is never
             // hurried past the owner's own intervals, only slowed.
             let base = poll_interval_s(settings.active_interval_s, settings.idle_interval_s, playing, active, !socket_live) as u64;
@@ -1209,7 +1209,7 @@ pub async fn run(app: App) {
                             // not be another for hours, so dropping this one could mean missing the
                             // play it announces until something else happens.
                             // Subscribed, the server answering, nothing to push: believed, and the
-                            // next pass — a poll, since the mode has not moved — is the catch-up read
+                            // next pass (a poll, since the mode has not moved) is the catch-up read
                             // that says what to do. That is how an idle server reaches idle_socket
                             // without ever being sent a list.
                             Some(crate::socket::Event::Trusted) => {
@@ -1389,7 +1389,7 @@ async fn tick(
 mod tests {
     use super::*;
 
-    /// A play whose end could not be written — the database busy with an import for longer than it waits —
+    /// A play whose end could not be written (the database busy with an import for longer than it waits)
     /// is still tracked and closed on a later pass. Dropped before the write, it stayed `active` until the
     /// next restart, with no stop and no group, and a restart of it could not continue its row.
     #[tokio::test]
@@ -1826,7 +1826,7 @@ mod tests {
     }
 
     /// **The storm, on a fake clock, through the objects the loop itself uses.** Three minutes of a
-    /// play polled every second with the subscription off — so not one push can arrive — then a
+    /// play polled every second with the subscription off (so not one push can arrive), then a
     /// pause, the debounce, and three minutes of a quiet paused client. 1.4.10 made 2,625 reads in
     /// the eight seconds after that pause. This counts every read the collector would make, the gate
     /// included, and it takes microseconds: the minute-scale proof lives here rather than in a test
@@ -1876,8 +1876,8 @@ mod tests {
 
     #[test]
     fn a_pause_after_a_long_play_asks_for_nothing_at_all() {
-        // The read storm, on the clock. Three minutes of playing — polled every second, the socket
-        // unsubscribed throughout, so not one push — and then a pause, and a quiet client.
+        // The read storm, on the clock. Three minutes of playing (polled every second, the socket
+        // unsubscribed throughout, so not one push), and then a pause, and a quiet client.
         let mut net = Net::new(Instant::now());
         let t0 = Instant::now();
         for s in 0..180 {
@@ -1900,7 +1900,7 @@ mod tests {
         let quiet = net_over(300, 1, |_| (false, false));
         assert_eq!(quiet, [60, 120, 180, 240], "one a minute, and the minute starts again at each read");
         // A client that keeps reporting its progress while paused: silence never falls, so only the
-        // plain five-minute net does — once in six minutes, not once every five seconds.
+        // plain five-minute net does: once in six minutes, not once every five seconds.
         let chatty = net_over(360, 1, |s| (s % 5 == 0, false));
         assert_eq!(chatty, [300], "exactly one, and it is the five-minute one");
     }
@@ -2043,7 +2043,7 @@ mod tests {
     fn a_play_that_settles_back_to_direct_is_not_a_transcode_every_second() {
         // The bug as it was recorded: the kept record was forced to "Transcode" after the
         // comparison, so it disagreed with every reading that followed and each one wrote another
-        // event — 144 of them on one play, all saying "DirectPlay: ContainerBitrateExceedsLimit".
+        // event: 144 of them on one play, all saying "DirectPlay: ContainerBitrateExceedsLimit".
         let reasons = json!({ "reasons": ["ContainerBitrateExceedsLimit"] });
         let transcoding = PlayRecord { play_method: "Transcode".into(), transcode: Some(reasons.clone()), position_s: Some(100), ..Default::default() };
         // What the session says once the client has settled: direct play, the reasons still attached.
@@ -2077,7 +2077,7 @@ mod tests {
     }
 
     /// A remux (both streams direct) is a direct stream. A reading that says "Transcode" but has lost its
-    /// transcoding details for a moment — a seek restarting the job — borrows the last ones, and must then
+    /// transcoding details for a moment (a seek restarting the job) borrows the last ones, and must then
     /// be judged by them too, or the play turns into a transcode for good at the next reading.
     #[test]
     fn a_remux_that_loses_its_transcoding_details_for_a_moment_stays_a_direct_stream() {

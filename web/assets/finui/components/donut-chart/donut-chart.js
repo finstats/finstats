@@ -1,5 +1,5 @@
 // FinUI: donut-chart. Parts of one whole as slices of a ring, a gap of the ground between each, the whole said in the
-// middle and every part named in the legend with its value and its share — four parts at most, the rest as Other.
+// middle and every part named in the legend with its value and its share: four parts at most, the rest as Other.
 
 import { h, s } from '../../core.js';
 import { slice, compact } from '../chart/plan.js';

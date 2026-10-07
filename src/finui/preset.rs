@@ -2,7 +2,7 @@
 //! (finstats.github.io/finui/create) and is a code: one base-36 digit per axis of `finui/create/presets.json`. finstats
 //! keeps FinUI's own generated files of each option's tokens (`finui/p/<axis>/<option>.css`, built by FinUI's
 //! tools/build-site.mjs and copied here; the QA stage `finui` holds them to FinUI's) and does with them what FinUI's
-//! install.sh does: the files the code names, in axis order, after the stylesheet — a later choice sets a token last.
+//! install.sh does: the files the code names, in axis order, after the stylesheet, so a later choice sets a token last.
 //! So there is no second copy of how a choice becomes tokens.
 
 /// Every option file there is for an axis: `p/<axis>/<option>.css` for options 1…, none for the default.

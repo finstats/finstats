@@ -1,5 +1,5 @@
 // FinUI: callout. A note on the page that stays until it is dealt with: something to know, something that went well,
-// something to watch, something wrong — in words, with what to do about it.
+// something to watch, something wrong; in words, with what to do about it.
 
 import { h, icon } from '../../core.js';
 import { button } from '../button/button.js';

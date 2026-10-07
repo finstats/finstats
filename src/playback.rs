@@ -7,7 +7,7 @@ use crate::db::rusqlite::{Connection, named_params, params};
 use crate::media::Streams;
 
 /// Where play `p` stopped, in seconds, the one rule every page uses: where it was when it ended, for a play that
-/// knows — finstats' own, and a Streamystats play that kept its runtime — and otherwise how long it ran, the play
+/// knows (finstats' own, and a Streamystats play that kept its runtime), and otherwise how long it ran, the play
 /// taken to have started at 0:00 (Jellystat keeps a length, not a place).
 pub const STOP_S: &str = "COALESCE(p.position_s, p.duration_s)";
 
@@ -124,8 +124,8 @@ impl PlayRecord {
     }
 
     /// Insert an imported row, unless the history already holds this play. `None` means it did
-    /// already: either this very row has been imported before, or another tracker — or the
-    /// collector — got there first. See [`already_recorded`].
+    /// already: either this very row has been imported before, or another tracker (or the
+    /// collector) got there first. See [`already_recorded`].
     pub fn insert_imported(&self, conn: &Connection, merge_window_s: i64) -> Result<Option<i64>> {
         let this = Play {
             source: self.source,
@@ -191,15 +191,15 @@ pub struct Play<'a> {
 /// the same evening cannot be counted twice however it arrives.
 ///
 /// Its own id settles it when there is one. Otherwise it is the same person, the same item, and one
-/// of the play's two ends close enough to be the same viewing — where "close enough" depends on who
+/// of the play's two ends close enough to be the same viewing, where "close enough" depends on who
 /// recorded the other row.
 ///
 /// **Between** sources it is `window` seconds at *either* end, because the trackers disagree about
 /// what they record. Jellystat keeps only the moment a play *ended*, so finstats works the start
 /// back from the seconds played, and every minute the viewer spent paused moves that start later;
 /// Streamystats and the collector keep the real start. The ends, on the other hand, are the same
-/// moment for all three, give or take how quickly each noticed. Measured against real history —
-/// 3,162 plays a Streamystats export and a Jellystat import held in common — matching either end
+/// moment for all three, give or take how quickly each noticed. Measured against real history
+/// (3,162 plays a Streamystats export and a Jellystat import held in common), matching either end
 /// recognised 2,750 of them, the start alone 2,527, and the offsets of the ones the start missed
 /// ran in an unbroken smear out past ten minutes, while the ends fall off a cliff inside one.
 ///
@@ -215,7 +215,7 @@ pub fn already_recorded(conn: &Connection, p: Play<'_>, window: i64) -> Result<b
     Ok(conn.prepare_cached(SAME_PLAY_SQL)?.exists(params![p.user_id, p.item_id, p.started_at, p.ended_at, p.source, window.max(0)])?)
 }
 
-/// The same person, the same item, and the same second — or, from another tracker, either end within the window.
+/// The same person, the same item, and the same second, or, from another tracker, either end within the window.
 /// Written as three index ranges rather than `ABS(started_at - ?3) <= ?6`, which the index cannot narrow: that form
 /// read every play this person ever made of the title, for every row of an import.
 const SAME_PLAY_SQL: &str = "
@@ -229,16 +229,16 @@ const SAME_PLAY_SQL: &str = "
 /// become a duplicate since. Answers how many rows went.
 ///
 /// Needed because [`crate::relink`] rewrites `item_id`: a row whose item had been renamed in
-/// Jellyfin matches nothing when it is imported — no other row carries that old id — and is then
+/// Jellyfin matches nothing when it is imported (no other row carries that old id) and is then
 /// pointed at the item that is really there, which is the one an older row from another tracker
 /// already points at. So the duplicate appears *after* the rule ran, and the rule has to run again
-/// wherever ids are rewritten rather than only where rows are written — for the titles plays were
+/// wherever ids are rewritten rather than only where rows are written: for the titles plays were
 /// moved onto, the only place one can have appeared.
 ///
 /// Only a row somebody imported is ever removed, and never one finstats recorded itself: its own
 /// row carries a timeline and the counts that go with it, which no import can have. Between two
 /// imported rows the one that arrived first stays. Rows of one tracker are never compared with each
-/// other — a second row of the same item is a restart the viewer really made.
+/// other: a second row of the same item is a restart the viewer really made.
 pub fn drop_relinked_duplicates(conn: &Connection, window: i64, item_id: &str) -> Result<usize> {
     Ok(conn.execute(&format!("{RELINKED_DUPLICATES_SQL} AND item_id = ?2"), crate::db::rusqlite::params![window.max(0), item_id])?)
 }
@@ -285,7 +285,7 @@ pub struct PlayEvent {
     pub detail: Option<String>,
 }
 
-/// Give a seek kept without its origin one from its label — what migration 21 did once for every
+/// Give a seek kept without its origin one from its label, which is what migration 21 did once for every
 /// seek already in the database, repeated here for rows that arrive later without the column: a
 /// backup written by a version from before it. The two statements must say the same thing.
 pub fn backfill_seek_origins(conn: &Connection) -> Result<usize> {
@@ -319,7 +319,7 @@ mod tests {
     fn the_same_play_is_looked_for_in_a_window_of_one_persons_plays_of_one_title() {
         // Searched by title, then by person and title with the time tested row by row, every play read every other
         // play of its title: 150,000 plays took five minutes to import, and the sweep after every library read held
-        // the write lock for 25 s — past the collector's 15-second wait, so live plays went unrecorded meanwhile.
+        // the write lock for 25 s, past the collector's 15-second wait, so live plays went unrecorded meanwhile.
         let c = conn();
         for (what, sql, n) in [("an import", SAME_PLAY_SQL, 6), ("the sweep after re-linking", RELINKED_DUPLICATES_SQL, 1)] {
             let args: Vec<Box<dyn crate::db::rusqlite::ToSql>> = (0..n).map(|i| Box::new(i as i64) as Box<dyn crate::db::rusqlite::ToSql>).collect();
@@ -362,7 +362,7 @@ mod tests {
     fn a_duplicate_that_relinking_creates_afterwards_is_taken_back_out() {
         let c = conn();
         // The rule runs before a row is written, against the item id the tracker gave. When that
-        // item has since been renamed in Jellyfin, nothing matches it — and then `relink_orphans`
+        // item has since been renamed in Jellyfin, nothing matches it, and then `relink_orphans`
         // points the row at the item that is really there, which is the one an older row from
         // another tracker already points at. That is the duplicate the rule exists to stop,
         // made after it ran, so the rule has to be applied again wherever item ids are rewritten.
@@ -398,7 +398,7 @@ mod tests {
     #[test]
     fn the_sweep_for_one_title_leaves_every_other_title_alone() {
         // Re-linking moves plays onto a handful of titles; only there can a duplicate have appeared. Swept over the
-        // whole history instead, it read every imported play at every start and after every library read — 2 s on a
+        // whole history instead, it read every imported play at every start and after every library read: 2 s on a
         // million plays, all of it under the write lock, to find nothing.
         let c = conn();
         c.execute_batch(
@@ -419,7 +419,7 @@ mod tests {
     }
 
     /// A row in the trash never displaces one in history: the evening would vanish with nothing in its place. The other
-    /// way round it may go, as any duplicate does — history still has the evening.
+    /// way round it may go, as any duplicate does, since history still has the evening.
     #[test]
     fn the_sweep_never_keeps_a_deleted_row_and_drops_a_live_one() {
         let c = conn();
@@ -481,7 +481,7 @@ mod tests {
         // The trackers agree about when a play ended far better than about when it began: Jellystat
         // keeps only the end, so finstats works its start back from the seconds played, and every
         // minute the viewer spent paused moves that start later. Half an hour of pause puts it well
-        // outside any sane window — while both still say the play ended at the same moment.
+        // outside any sane window, while both still say the play ended at the same moment.
         assert!(already_recorded(&c, Play { source: "jellystat", source_id: Some("jellystat:x"), user_id: "u1", item_id: "i1", started_at: 11_800, ended_at: 15_400 }, 600).unwrap());
         // Measured on real history: matching either end catches 2,750 of 3,162 plays the two
         // trackers held in common, against 2,527 for the start alone.
@@ -495,7 +495,7 @@ mod tests {
         let c = conn();
         // One tracker never exports the same play twice, so a second row of the same item minutes
         // later is a restart the viewer really made. Widening the window inside a source would
-        // silently drop it — on an import and, worse, on a restore of finstats' own backup.
+        // silently drop it, on an import and, worse, on a restore of finstats' own backup.
         assert!(!already_recorded(&c, Play { source: "live", source_id: None, user_id: "u1", item_id: "i1", started_at: 10180, ended_at: 99999 }, 600).unwrap());
         assert!(already_recorded(&c, Play { source: "live", source_id: None, user_id: "u1", item_id: "i1", started_at: 10000, ended_at: 99999 }, 600).unwrap());
     }

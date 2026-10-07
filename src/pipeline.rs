@@ -109,8 +109,8 @@ pub fn fold(rows: Vec<Entry>) -> Vec<Entry> {
 }
 
 /// A disc date for a film that is already on disk is no news: Radarr keeps reporting the physical release of a copy
-/// that arrived weeks ago. Every other date still says something — a cinema or digital day is when it can be seen
-/// elsewhere — and a film that is *not* here yet keeps its disc date, because that is when it will be.
+/// that arrived weeks ago. Every other date still says something (a cinema or digital day is when it can be seen
+/// elsewhere), and a film that is *not* here yet keeps its disc date, because that is when it will be.
 fn still_to_come(e: &Entry) -> bool {
     !(e.kind == "movie" && e.release == "physical" && e.has_file)
 }
@@ -197,7 +197,7 @@ pub fn upcoming_json(conn: &Connection, days: i64, subject: &str, everyone: bool
 }
 
 /// The agenda for a calendar feed: each entry and whether `subject` follows its show, and nothing about
-/// anybody else by construction — a subscribed calendar syncs through somebody's cloud, exactly the
+/// anybody else by construction, because a subscribed calendar syncs through somebody's cloud, exactly the
 /// place a household's names are kept out of.
 pub fn entries_for(conn: &Connection, days: i64, subject: &str, mine: bool) -> Result<Vec<(Entry, bool)>> {
     let follows = followers(conn)?;

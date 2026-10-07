@@ -1,4 +1,4 @@
-// FinUI: slider. A number picked along a track — or a stretch of it, between two thumbs — by dragging, pressing the
+// FinUI: slider. A number picked along a track (or a stretch of it, between two thumbs) by dragging, pressing the
 // track, or the keys. Its value is said beside its name and to screen readers in words (format).
 
 import { h, mount } from '../../core.js';

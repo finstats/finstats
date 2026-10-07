@@ -1,4 +1,4 @@
-// FinUI: avatar-group. Several people as a row of overlapping faces — as many as fit, and how many more — named in
+// FinUI: avatar-group. Several people as a row of overlapping faces (as many as fit, and how many more) named in
 // words for those who cannot see them.
 
 import { h } from '../../core.js';

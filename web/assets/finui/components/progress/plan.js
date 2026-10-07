@@ -1,4 +1,4 @@
-// FinUI: progress, the rules that are not drawing — the time left worked out from the rate so far (never guessed before
+// FinUI: progress, the rules that are not drawing: the time left worked out from the rate so far (never guessed before
 // anything has moved), and said in the words a person uses. Pure; tested in FinUI's repository.
 
 /** Seconds left at `fraction` done after `elapsed` seconds; null with nothing done yet. */

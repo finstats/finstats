@@ -7,7 +7,7 @@
 //! - **It is encrypted, always.** `smtps://` is TLS from the first byte (465); `smtp://` starts plain and
 //!   must upgrade with STARTTLS (587) or the letter does not go. A relay with a certificate of its own
 //!   making is covered by the same administrator-only "accept invalid certificates" switch every other
-//!   connection has — a switch, not the default.
+//!   connection has: a switch, not the default.
 //! - **The address is the destination's, not finstats'.** The mailbox to send to is stored like an ntfy
 //!   topic; the sender is asked for because most servers refuse a `From` they do not know.
 //! - **Nothing that comes back is repeated.** Errors say a host and a kind of failure, exactly like
@@ -69,7 +69,7 @@ fn one_line(text: &str) -> String {
 }
 
 /// What finstats accepts as a mailbox: something lettre will send to, whose domain could be looked up.
-/// Nothing here is a guess about whether it exists — only that it is an address at all.
+/// Nothing here is a guess about whether it exists, only that it is an address at all.
 pub fn address(input: &str) -> Result<String> {
     let text = input.trim();
     let parsed: Address = text.parse().map_err(|_| anyhow!("{text} is not an e-mail address"))?;

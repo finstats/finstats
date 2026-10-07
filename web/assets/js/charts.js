@@ -1,5 +1,5 @@
-// Hand-rolled SVG charts. Colors follow the entity (Movie is always series 1), come from app.css' tokens —
-// Obsidian's hues in the dark, washi dyes in the light, each held at 3:1 against its theme's card — and
+// Hand-rolled SVG charts. Colors follow the entity (Movie is always series 1), come from app.css' tokens
+// (Obsidian's hues in the dark, washi dyes in the light, each held at 3:1 against its theme's card), and
 // text never wears a series color. A token is a string 'var(--x)', so it goes on through style, never an
 // SVG presentation attribute.
 
@@ -317,7 +317,7 @@ export function methodsBar(methods, metric = 'plays') {
 }
 
 // ---------------------------------------------------------------- ranked bucket list (it is its own table)
-/** buckets: [{name, plays, watch_s}] — one color for every bar: the categories are nominal. */
+/** buckets: [{name, plays, watch_s}]: one color for every bar, as the categories are nominal. */
 export function bucketList(buckets, { labelFn = (x) => x, empty = 'Nothing recorded in this range.', watch = true } = {}) {
   const rows = buckets || [];
   if (!rows.length || !rows.some((b) => (b.plays || 0) > 0 || (b.watch_s || 0) > 0)) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
@@ -332,7 +332,7 @@ export function bucketList(buckets, { labelFn = (x) => x, empty = 'Nothing recor
       watch ? h('td', { class: 'mono r bucket-watch', title: durationExact(b.watch_s) }, duration(b.watch_s)) : null)))));
 }
 
-/** Library make-up: [{name, count, size_bytes}] — bar by count, value = count, faint = size on disk. */
+/** Library make-up: [{name, count, size_bytes}]: bar by count, value = count, faint = size on disk. */
 export function libBucketList(buckets, { labelFn = (x) => x, empty = 'Nothing to show yet.', unit = 'Files' } = {}) {
   const rows = (buckets || []).filter((b) => b && b.name != null);
   if (!rows.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
@@ -535,7 +535,7 @@ export function retentionTable({ runtime_s, bucket_s, curve, rewinds = [], subti
 }
 
 // ---------------------------------------------------------------- client × play method
-/** rows: [{client, direct_play, direct_stream, transcode, watch_s}] — a small three-part bar per client. */
+/** rows: [{client, direct_play, direct_stream, transcode, watch_s}]: a small three-part bar per client. */
 export function clientMethods(rows) {
   const data = (rows || []).filter((r) => r && ((r.direct_play || 0) + (r.direct_stream || 0) + (r.transcode || 0)) > 0);
   if (!data.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, 'No plays in this range.');

@@ -16,7 +16,7 @@ export const STYLES = [
 /** How much of the screen's bottom-right corner a style keeps while closed, as desktop-nav's cornerOf says it. */
 export const cornerOf = (style) => ({ bottom: STYLES.find((s) => s.key === styleOf(style)).corner, right: 0 });
 
-/** A stored choice as a style: one nobody knows — from an older or newer version — is the tab bar. */
+/** A stored choice as a style: one nobody knows (from an older or newer version) is the tab bar. */
 export const styleOf = (value) => (STYLES.some((s) => s.key === value) ? value : STYLES[0].key);
 
 /** The pages a bar shows (`n` at most: the ones marked `primary`, then the first of the others) and the rest, both in page order. */

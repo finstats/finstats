@@ -41,8 +41,8 @@ async function flip(t, entry) {
   await repaintAll();
 }
 
-/** The watchlist as a context menu's item, for a film or a show — `t` as the toggle takes it, the library's item or the
- *  title's ids: it says which way it goes once the list is known (at once, when a toggle on the page has asked already),
+/** The watchlist as a context menu's item, for a film or a show, given `t` as the toggle takes it (the library's item or the
+ *  title's ids). It says which way it goes once the list is known (at once, when a toggle on the page has asked already),
  *  and goes. Null on a server without watchlists, or for a title that cannot be named. */
 export function watchMenuItem(t) {
   if (!hasWatchlist() || !(t.item_id || ((t.tmdb_id != null || t.tvdb_id != null) && watchable(t.kind)))) return null;

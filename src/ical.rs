@@ -4,7 +4,7 @@
 //! `pipeline::entries_for`, whose answer holds no names by construction.
 //!
 //! RFC 5545, by hand: text escaped, lines folded at 75 octets, CRLF throughout. An episode is a
-//! timed event of a flat hour — its runtime is an average at best and an "airs" block is a reminder,
+//! timed event of a flat hour, because its runtime is an average at best and an "airs" block is a reminder,
 //! not a schedule; a film is an all-day event on its day.
 
 use axum::body::Body;
@@ -155,7 +155,7 @@ pub struct FeedQuery {
     #[allow(dead_code)]
     key: Option<String>,
     days: Option<i64>,
-    /// `1`, `true`, `yes`, `on` — an address typed by hand, not a form finstats wrote.
+    /// `1`, `true`, `yes`, `on`: an address typed by hand, not a form finstats wrote.
     mine: Option<String>,
 }
 
@@ -164,7 +164,7 @@ fn truthy(v: Option<&str>) -> bool {
     matches!(v.map(|s| s.trim().to_ascii_lowercase()).as_deref(), Some("1" | "true" | "yes" | "on"))
 }
 
-/// `GET /api/calendar.ics?key=&days=&mine=` — the key's owner's agenda, as a calendar.
+/// `GET /api/calendar.ics?key=&days=&mine=`: the key's owner's agenda, as a calendar.
 pub async fn feed(State(app): State<App>, CalendarKey(user): CalendarKey, Query(q): Query<FeedQuery>) -> ApiResult<Response> {
     let days = q.days.unwrap_or(90).clamp(1, 90);
     let mine = truthy(q.mine.as_deref());

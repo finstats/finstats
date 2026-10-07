@@ -1,9 +1,9 @@
 # How Tautulli data is imported
 
-Tautulli keeps what Plex played. finstats reads its database backup directly — the `.db` file, or
-the `.zip` holding one, that **Backup Database** (Settings → Import & Backups) saves in the `backups`
-folder of Tautulli's data folder (`/config/backups` in Docker) — and brings that history over to
-Jellyfin. The file is saved where Tautulli runs, not downloaded, so copy it to the computer you
+Tautulli keeps what Plex played. finstats reads its database backup directly and brings that history
+over to Jellyfin. The backup is the `.db` file, or the `.zip` holding one, that **Backup Database**
+(Settings → Import & Backups) saves in the `backups` folder of Tautulli's data folder
+(`/config/backups` in Docker). The file is saved where Tautulli runs, not downloaded, so copy it to the computer you
 upload from.
 The whole import is one transaction: it either fully succeeds or changes nothing.
 
@@ -34,23 +34,23 @@ Learned from a real backup rather than from documentation:
 | `paused_counter` | Seconds paused. Not counted as watched. |
 | `view_offset` | Where playback was when the row ended (milliseconds). Taken as where the play stopped, beside the runtime (`duration`). |
 | `transcode_decision` | `direct play`, `copy` (a direct stream) or `transcode`. A transcode that copied both picture and sound is a direct stream, the same rule as for a play finstats watches itself. |
-| `guid` | `plex://…` or `local://…` — Plex's own ids, with no TMDB, TVDB or IMDb id beside them. |
+| `guid` | `plex://…` or `local://…`: Plex's own ids, with no TMDB, TVDB or IMDb id beside them. |
 | An empty string where a number goes | Tautulli writes one where it has no number (a film's episode number, a missing width), and writes some numbers as text. Both are read for what they say. |
 
 ## How titles are found
 
 With no provider ids to go by, a film is matched to your library by its **title and year**, and an
-episode by its **show and its season and episode number** — the same rule finstats uses to follow a
+episode by its **show and its season and episode number**, by the same rule finstats uses to follow a
 title that was renamed. A match must be unambiguous, and it is forgiving where catalogues differ:
 
 - A name matches Jellyfin's title **or its original-language title**, so a show Plex knew as
   오징어 게임 is found as Squid Game, and a film Plex knew as *Im Westen nichts Neues* as *All Quiet on
   the Western Front*.
-- Case, accents, punctuation (a hyphen for a dash), a year written into the name — "JoJo's Bizarre
-  Adventure (2012)" — and a leading "The" do not matter.
+- Case, accents, punctuation (a hyphen for a dash), a year written into the name, as in "JoJo's Bizarre
+  Adventure (2012)", and a leading "The" do not matter.
 - The year may be one off, as catalogues often disagree by a year about when a film came out.
 
-A title known by another name altogether — *Fast & Furious 7* where Jellyfin has *Furious 7* — is
+A title known by another name altogether (*Fast & Furious 7* where Jellyfin has *Furious 7*) is
 not guessed at. Those are listed under **Settings → Unlinked media**, each with where it most
 likely is: press **Locate**, pick the title, and its plays attach. finstats remembers the choice, so importing
 the same backup again attaches it by itself. A play of something not on your server is kept

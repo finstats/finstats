@@ -1,5 +1,5 @@
-// FinUI: heatmap. How busy each moment was, as a grid of cells from quiet to busy in steps of one colour — the hours of
-// each day of the week, the days of a year — with its rows and columns named and a key from less to more.
+// FinUI: heatmap. How busy each moment was, as a grid of cells from quiet to busy in steps of one colour (the hours of
+// each day of the week, the days of a year), with its rows and columns named and a key from less to more.
 
 import { h, s } from '../../core.js';
 import { level, compact } from '../chart/plan.js';

@@ -2,7 +2,7 @@
 //!
 //! Every other read resolves through `AuthUser` and a `Scope` that *subtracts* what the caller may
 //! not see. This one runs the other way: a `Published` names one person and the sections they chose,
-//! and `answer` builds each of those sections and nothing else — no `Perms`, no `Scope`, no `AuthUser`.
+//! and `answer` builds each of those sections and nothing else: no `Perms`, no `Scope`, no `AuthUser`.
 //! The answer is typed, never `row_json`, so a column later added to a shared SELECT cannot reach a
 //! stranger. Devices, clients, play methods, addresses, places, file paths, other people and the
 //! Jellyfin login name are never produced, whatever the flags say.
@@ -125,7 +125,7 @@ pub struct RecentPlay {
     pub image: Option<String>,
 }
 
-/// A token to the profile it opens, or `None` for every reason there is none — the server switch is
+/// A token to the profile it opens, or `None` for every reason there is none: the server switch is
 /// off, the token is unknown, the profile is not published, its owner was removed or disabled or may no
 /// longer sign in. The caller answers all of them with the same 404.
 pub fn lookup(c: &Connection, settings: &Settings, token: &str) -> Result<Option<Published>> {
@@ -382,7 +382,7 @@ pub async fn get_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
     Ok(Json(app.db.call(move |c| mine(c, &settings, &user.id)).await?))
 }
 
-/// `PUT /api/me/public-profile` — what to publish, and whether to. The first save mints the link.
+/// `PUT /api/me/public-profile`: what to publish, and whether to. The first save mints the link.
 pub async fn put_mine(State(app): State<App>, user: AuthUser, Json(e): Json<Edit>) -> ApiResult {
     only_a_session(&user)?;
     let settings = app.settings();
@@ -402,7 +402,7 @@ pub async fn put_mine(State(app): State<App>, user: AuthUser, Json(e): Json<Edit
     Ok(Json(out))
 }
 
-/// `POST /api/me/public-profile/reset` — a new link; the old one is gone for good.
+/// `POST /api/me/public-profile/reset`: a new link; the old one is gone for good.
 pub async fn reset_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
     only_a_session(&user)?;
     let settings = app.settings();
@@ -421,7 +421,7 @@ pub async fn reset_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
     Ok(Json(out))
 }
 
-/// `GET /api/public-profiles` — who publishes what, for the administrators who answer for the server.
+/// `GET /api/public-profiles`: who publishes what, for the administrators who answer for the server.
 pub async fn list(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -> ApiResult {
     let rows = app
         .db
@@ -443,7 +443,7 @@ pub async fn list(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -> Ap
     Ok(Json(json!({ "enabled": app.settings().public_profiles, "profiles": rows })))
 }
 
-/// `DELETE /api/public-profiles/{user_id}` — an administrator takes a profile down. The owner's choices
+/// `DELETE /api/public-profiles/{user_id}`: an administrator takes a profile down. The owner's choices
 /// are kept; publishing again is theirs to do.
 pub async fn take_down(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(id): Path<String>) -> ApiResult {
     let id = db::norm_id(&id);
@@ -486,7 +486,7 @@ pub async fn resolve(app: &App, token: String) -> Result<(Published, PublicProfi
         .ok_or_else(not_found)
 }
 
-/// `GET /api/public/{token}` — no session, no key: the link is the only thing asked for.
+/// `GET /api/public/{token}`, with no session and no key: the link is the only thing asked for.
 pub async fn read(State(app): State<App>, Path(token): Path<String>) -> ApiResult<Response> {
     let (_, a) = resolve(&app, token).await?;
     Ok(noindex(Json(a).into_response()))

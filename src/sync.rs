@@ -17,12 +17,12 @@ const SKIPPED_COLLECTIONS: [&str; 2] = ["boxsets", "playlists"];
 /// Whether a read is a trustworthy basis for removing what it did not return. `items_page` turns
 /// anything it cannot parse into an empty list, so a Jellyfin upgrade that changed the response shape,
 /// or an error dressed as `200 {"Items":[]}`, would otherwise silently wipe a library. But this guard
-/// exists for that "Jellyfin broke my program" case, **not** for ordinary churn — a small library
+/// exists for that "Jellyfin broke my program" case, **not** for ordinary churn: a small library
 /// genuinely losing most of its items (a handful of clips whose files went) must not be mistaken for a
 /// fault, or the guard turns a normal day into an outage. So only a *clearly* broken read is refused:
 /// a library big enough to matter read back completely empty, or a big one gutted to almost nothing.
 /// Everything else applies as before. `FINSTATS_ALLOW_LIBRARY_SHRINK=1` waves even a refused one
-/// through — after genuinely emptying a large library, say.
+/// through, after genuinely emptying a large library, say.
 const EMPTY_FLOOR: i64 = 200; // a fully-empty read is only alarming once a library is at least this big
 const WIPE_FLOOR: i64 = 1000; // ...and a partial gutting only when it would remove at least this many
 pub(crate) fn trustworthy_removal(seen: usize, current: i64) -> bool {
@@ -41,8 +41,8 @@ pub(crate) fn trustworthy_removal(seen: usize, current: i64) -> bool {
     !(would_remove >= WIPE_FLOOR && seen.saturating_mul(20) < current)
 }
 
-/// A whole set gone at once — Jellyfin listing zero libraries, or zero users, where finstats holds
-/// some — is a broken read (an auth failure, an API change), never a normal day: you do not lose every
+/// A whole set gone at once (Jellyfin listing zero libraries, or zero users, where finstats holds
+/// some) is a broken read (an auth failure, an API change), never a normal day: you do not lose every
 /// library at once. Unlike the item guard there is no "big enough to matter" floor, because a set going
 /// entirely empty is the catastrophe whatever its size. Losing *some* (one library of five) is normal.
 fn whole_set_vanished(seen: usize, current: i64) -> bool {
@@ -186,7 +186,7 @@ pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
 }
 
 /// Runs every job on its triggers (`schedule`), looking once a minute or when woken. finstats only ever *reads*
-/// from Jellyfin; it never starts a scan there — "after Jellyfin's library scan" waits for Jellyfin's own.
+/// from Jellyfin; it never starts a scan there, and "after Jellyfin's library scan" waits for Jellyfin's own.
 pub async fn scheduler(app: App) {
     let mut last_housekeeping = 0i64;
     let mut last_scan_check = 0i64;
@@ -251,7 +251,7 @@ pub async fn scheduler(app: App) {
             deferred_library = false;
             tracing::info!("Jellyfin's library scan is over; reading the library");
         }
-        // What each job last did, kept for the next start — written only when something finished since.
+        // What each job last did, kept for the next start, written only when something finished since.
         let snapshot = app.tasks.snapshot();
         let finished = serde_json::to_string(&snapshot.iter().map(|t| (t.id, t.finished_at)).collect::<Vec<_>>()).unwrap_or_default();
         if finished != saved {
@@ -358,7 +358,7 @@ pub(crate) fn store_users(c: &mut Connection, users: &[Value], shrink_ok: bool, 
         }
     }
     // The same guard as libraries and items: an empty /Users where finstats knows people is a
-    // broken read, not everyone deleted — do not mark them all removed.
+    // broken read, not everyone deleted, so do not mark them all removed.
     // Counted by the ids it could read, not by entries: a reshaped answer is everybody in keys finstats
     // does not know, and that is a broken read too.
     let seen: Vec<String> = users.iter().filter_map(|u| u["Id"].as_str()).map(norm_id).collect();
@@ -383,7 +383,7 @@ async fn sync_users(app: &App, jf: &Jellyfin) -> Result<String> {
     let refused = app.db.call(move |c| store_users(c, &users, shrink_ok, db::now())).await?;
     if let Some(current) = refused {
         let msg = format!(
-            "Jellyfin returned {count} user(s) where finstats knows {current}. Refusing to mark the missing ones removed — this looks like a Jellyfin change or a bad read. Nothing was changed."
+            "Jellyfin returned {count} user(s) where finstats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read. Nothing was changed."
         );
         app.request_halt(msg.clone());
         return Err(anyhow!(msg));
@@ -593,7 +593,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
     if let Some(current) = refused {
         let plural = if seen_libs == 1 { "y" } else { "ies" };
         let msg = format!(
-            "Jellyfin listed {seen_libs} librar{plural} where finstats knows {current}. Refusing to mark the missing ones removed — this looks like a Jellyfin change or a bad read, not an emptied server. Nothing was changed."
+            "Jellyfin listed {seen_libs} librar{plural} where finstats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read, not an emptied server. Nothing was changed."
         );
         app.request_halt(msg.clone());
         return Err(anyhow!(msg));
@@ -605,7 +605,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
         // How many of this library's items the read actually saw. The guard below rests on it, so it
         // is named for what it means and never reused: a second cursor called `start` for the
         // cast-and-crew pass used to shadow it, and the guard then compared a library's *shows*
-        // against its *items* — on a television library, a handful against thousands, so every read
+        // against its *items*: on a television library, a handful against thousands, so every read
         // looked like a gutted library and halted the install.
         let mut seen = 0usize;
         // What of it could be stored: the guard's count. `seen` is the page cursor, and an answer whose
@@ -678,7 +678,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             }
         }
 
-        // Only after a library was read completely is "not seen" proof of removal — and only if the
+        // Only after a library was read completely is "not seen" proof of removal, and only if the
         // read is trustworthy. `seen` is how many of this library's items the read above actually
         // saw; if that is a fraction of what finstats holds, the read is broken, not the library
         // empty. Refuse, keep the data, and halt so the operator can look (`trustworthy_removal`).
@@ -697,7 +697,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             .await?;
         if let Some(current) = refused {
             let msg = format!(
-                "Jellyfin returned {stored} readable item(s) for library “{lib_name}” but finstats holds {current}. Refusing to mark {} items removed — this looks like a Jellyfin change or a bad read, not a deletion. The library was left exactly as it was.",
+                "Jellyfin returned {stored} readable item(s) for library “{lib_name}” but finstats holds {current}. Refusing to mark {} items removed: this looks like a Jellyfin change or a bad read, not a deletion. The library was left exactly as it was.",
                 current - stored as i64
             );
             app.request_halt(msg.clone());
@@ -730,14 +730,14 @@ const CHANGES_OVERLAP_S: i64 = 600;
 const PEOPLE_PAGE: usize = 1000;
 
 /// Where the next look for changes starts: from the last look, else from the last library read (which read
-/// everything), with the overlap. `None` before the library was ever read — that read will bring everything.
+/// everything), with the overlap. `None` before the library was ever read, because that read will bring everything.
 fn changes_from(last_look: Option<i64>, library_read: Option<i64>) -> Option<i64> {
     let from = last_look.max(library_read)?;
     Some(from - CHANGES_OVERLAP_S)
 }
 
-/// One page of what Jellyfin saved in a library since the last look, stored as the library read stores an item —
-/// names, overviews, genres, ratings, file details, pictures — and cast and crew for films and shows. Returns how
+/// One page of what Jellyfin saved in a library since the last look, stored as the library read stores an item
+/// (names, overviews, genres, ratings, file details, pictures), and cast and crew for films and shows. Returns how
 /// many titles were stored. Nothing is ever marked removed here: that takes a whole library read.
 pub fn store_changes(c: &Connection, library_id: &str, items: &[Value], now: i64) -> Result<usize> {
     let mut stored = 0;
@@ -755,7 +755,7 @@ pub fn store_changes(c: &Connection, library_id: &str, items: &[Value], now: i64
 }
 
 /// Where the look at people starts: where the look at titles does, once every person has been read (`portraits_read`).
-/// Until then — the first look after 2.0.4 added portrait tags — every person is read once, since a portrait replaced
+/// Until then (the first look after 2.0.4 added portrait tags) every person is read once, since a portrait replaced
 /// before the last look would otherwise wait for the next library read. It is a mark of a *finished* read, not "some
 /// tag is known": a look that read a few people must not stand in for one that read them all.
 fn people_from(from: i64, portraits_known: bool) -> i64 {
@@ -778,7 +778,7 @@ pub fn store_portraits(c: &Connection, people: &[Value]) -> Result<usize> {
     Ok(changed)
 }
 
-/// Everything Jellyfin changed since the last look — an edited title, a new poster, the cast refreshed — library by
+/// Everything Jellyfin changed since the last look (an edited title, a new poster, the cast refreshed), library by
 /// library, without waiting for a library scan: editing metadata in Jellyfin starts none.
 async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
     const ID: &str = "sync_changes";
@@ -1401,8 +1401,8 @@ mod tests {
 
     #[test]
     fn only_a_clearly_broken_read_is_refused_ordinary_shrink_is_normal() {
-        // The guard is for the "Jellyfin broke my program" case — a stocked library that reads back
-        // empty, or a big one gutted to almost nothing — not for ordinary churn. A real install losing
+        // The guard is for the "Jellyfin broke my program" case (a stocked library that reads back
+        // empty, or a big one gutted to almost nothing), not for ordinary churn. A real install losing
         // most of a small library (37 clips down to 3 as their files go) must NOT be mistaken for a
         // fault, or the guard turns a normal day into an outage.
         assert!(trustworthy_removal(3, 37), "a 37-item library down to 3 is ordinary churn, not a fault");

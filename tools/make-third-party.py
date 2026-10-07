@@ -3,7 +3,7 @@
 
 Input:  `cargo metadata` for the dependency graph, and the crate sources cargo has already
         unpacked (~/.cargo/registry/src/...), where every crate keeps its own LICENSE files.
-Output: one entry per crate — name, version, SPDX expression, repository — and the licence
+Output: one entry per crate (name, version, SPDX expression, repository) and the licence
         texts themselves, deduplicated: hundreds of crates ship the same MIT wording, so the
         texts are listed once each and every crate points at the ones it carries.
 
@@ -25,7 +25,7 @@ OUT = os.path.join(ROOT, "THIRD-PARTY.json")
 # Files a crate keeps its licence in. NOTICE is Apache-2.0's own attribution file.
 LICENCE_FILES = ("LICENSE", "LICENCE", "COPYING", "COPYRIGHT", "NOTICE", "UNLICENSE")
 SKIP = (".toml", ".orig", ".md~")
-# Some crates ship a LICENSE file holding only "MIT OR Apache-2.0" — a pointer to the two real
+# Some crates ship a LICENSE file holding only "MIT OR Apache-2.0": a pointer to the two real
 # files beside it, not a licence. No licence text is anywhere near this short.
 MIN_TEXT = 40
 

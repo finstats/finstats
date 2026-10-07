@@ -1,15 +1,15 @@
 //! Everywhere finstats can reach, in one list.
 //!
 //! The README and `docs/security.md` promise that nothing about you leaves your network and that
-//! finstats talks to your Jellyfin and — unless you say otherwise — to nothing else. A promise the
+//! finstats talks to your Jellyfin and, unless you say otherwise, to nothing else. A promise the
 //! owner cannot check is only a sentence, so this is the same claim assembled from what the running
 //! program actually knows: the collector's own connection, the two switches that can reach outside,
-//! each connection the owner entered under Settings, and every notification destination — the only
+//! each connection the owner entered under Settings, and every notification destination, the only
 //! rows here finstats *sends* to rather than reads from.
 //!
-//! Nothing new is recorded for it. Every row is read from something that was already being kept —
+//! Nothing new is recorded for it. Every row is read from something that was already being kept:
 //! the collector status, the addresses a lookup has produced, the geolocation file on disk, each
-//! service's last good read and each destination's last accepted message — so this page cannot itself
+//! service's last good read and each destination's last accepted message. So this page cannot itself
 //! be the reason finstats knows something. Hosts only, never a key: neither `Service` nor
 //! `notify::Target` even implements `Serialize`, and a destination's address is a credential of its own.
 
@@ -151,7 +151,7 @@ pub fn destinations(
     out
 }
 
-/// `GET /api/outbound` — Jellyfin administrators only, like the connections it lists.
+/// `GET /api/outbound`: Jellyfin administrators only, like the connections it lists.
 pub async fn outbound(
     axum::extract::State(app): axum::extract::State<App>,
     _admin: crate::auth::JellyfinAdmin,

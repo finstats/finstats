@@ -177,7 +177,7 @@
 .fui-desktop-nav:is(.fui-desktop-nav--left, .fui-desktop-nav--right, .fui-desktop-nav--dock).is-searching .fui-desktop-nav__frame > :not(.fui-desktop-nav__brand, .fui-desktop-nav__found) { display: none; }
 
 /* The command bar and the dock hold the search the same way: one card, a surface like any FinUI floats, its results and keys, with
-   the field where the menu was — at the top of the card under the command bar's name, at the bottom where the dock was. */
+   the field where the menu was: at the top of the card under the command bar's name, at the bottom where the dock was. */
 .fui-desktop-nav--command .fui-desktop-nav__found .fui-search, .fui-desktop-nav--dock.is-searching .fui-desktop-nav__frame {
   background: var(--bg-2); border: 1px solid var(--border); border-radius: calc(var(--radius-lg) * 1.4); box-shadow: 0 22px 60px color-mix(in srgb, var(--shadow) 50%, transparent);
 }

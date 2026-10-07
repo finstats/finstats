@@ -5,7 +5,7 @@ The backup is streamed to disk and parsed line by line, so its size barely matte
 import is one transaction: it either fully succeeds or changes nothing. Plays are de-duplicated by
 their Jellystat id, which makes importing the same backup twice safe.
 
-Backups that also contain libraries, items and users are welcome — finstats uses those tables to
+Backups that also contain libraries, items and users are welcome: finstats uses those tables to
 fill in anything it has not yet read from Jellyfin itself, and never overwrites fresher data.
 
 ## What the fields mean
@@ -19,7 +19,7 @@ Learned from real exports rather than documentation:
 | `PlayState.PositionTicks` | Not imported. Jellystat usually captures it when a session is first seen, not where playback stopped. Completion for imported plays is *time watched ÷ runtime* instead. |
 | `PlayMethod: Transcode` with video *and* audio copied | Stored as a direct stream (a remux), the same as for live plays. |
 | *(no item type exists)* | Episodes are recognised by `EpisodeId`; other items by the library. Something with video that is not in the library and has no file container is a **Live TV** channel. |
-| `jf_playback_reporting_plugin_data` | Skipped — Jellystat has already folded these rows into its activity table. |
+| `jf_playback_reporting_plugin_data` | Skipped: Jellystat has already folded these rows into its activity table. |
 
 ## Importing alongside Streamystats
 

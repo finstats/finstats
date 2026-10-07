@@ -35,7 +35,7 @@ export function motion(root = document.body, { parts = PARTS } = {}) {
       }
     }
   };
-  // An element that left is stopped and forgotten once the changes are done — one that only moved is still here — and
+  // An element that left is stopped and forgotten once the changes are done (one that only moved is still here), and
   // moved again should it come back.
   const letGo = () => {
     for (const [el, fns] of stops) {

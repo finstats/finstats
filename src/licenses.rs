@@ -12,7 +12,7 @@ use crate::auth::AuthUser;
 const SOURCE: &str = include_str!("../THIRD-PARTY.json");
 
 /// What is inside the binary but is not a crate, so nothing generated can know about it:
-/// finstats itself, the fonts, the map — and the city database, which is not shipped at
+/// finstats itself, the fonts, the map, and the city database, which is not shipped at
 /// all but is read by whoever switches it on, and asks to be credited.
 /// Each licence file that really exists on disk is compiled in; nothing here is retyped.
 const BUNDLED: &[(&str, &str, &str, &str, Option<&str>)] = &[
@@ -72,7 +72,7 @@ pub struct Component {
     pub repository: String,
     /// Which of `Notices::notices` this component ships, by index.
     pub notices: Vec<usize>,
-    /// "app", "bundled" or "crate" — the generated file names none, so a crate it is.
+    /// "app", "bundled" or "crate". The generated file names none, so a crate it is.
     #[serde(default = "crate_kind")]
     pub kind: String,
 }
@@ -119,7 +119,7 @@ fn body() -> &'static str {
     })
 }
 
-/// `GET /api/licenses` — finstats' own licence and every third-party one it is built on.
+/// `GET /api/licenses`: finstats' own licence and every third-party one it is built on.
 pub async fn licenses(_user: AuthUser) -> impl IntoResponse {
     ([(CONTENT_TYPE, HeaderValue::from_static("application/json"))], body())
 }
@@ -192,7 +192,7 @@ mod tests {
             if name == env!("CARGO_PKG_NAME") {
                 continue;
             }
-            assert!(have.contains(&(name, version)), "{name} {version} is a dependency with no licence recorded — run tools/make-third-party.py");
+            assert!(have.contains(&(name, version)), "{name} {version} is a dependency with no licence recorded: run tools/make-third-party.py");
         }
         for c in &n.components {
             assert!(!c.license.is_empty() || !c.notices.is_empty(), "{} is listed with no licence at all", c.name);

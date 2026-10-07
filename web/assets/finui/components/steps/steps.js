@@ -1,5 +1,5 @@
 // FinUI: steps. The way through a wizard: each step numbered, the ones done ticked, the one now marked, the rest to
-// come; a step that can be gone to is a button — back to any done, forward only to the next once this one is done.
+// come; a step that can be gone to is a button: back to any done, forward only to the next once this one is done.
 
 import { h, icon } from '../../core.js';
 import { reachable, stateOf } from './plan.js';

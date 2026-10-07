@@ -427,7 +427,7 @@ mod tests {
         parse_ts(ts).unwrap()
     }
 
-    /// A film, a show with one episode, alice, and one play of each — in the line-per-record format.
+    /// A film, a show with one episode, alice, and one play of each, in the line-per-record format.
     const JSONL: &str = r#"{"type":"table","table":"jf_users"}
 {"type":"row","table":"jf_users","data":{"Id":"AAAA-1111","Name":"alice","IsAdministrator":false}}
 {"type":"table","table":"jf_libraries"}

@@ -19,7 +19,7 @@ export const IMPORTERS = [
     steps: [
       ['Open your Jellystat instance.'],
       ['Go to ', 'Settings', ' and select the ', 'Backup', ' tab.'],
-      ['Select only ', 'Activity', ' — it turns purple when selected.'],
+      ['Select only ', 'Activity', '. It turns purple when selected.'],
       ['Under settings, click ', 'Settings', '.'],
       ['Scroll all the way to the end and start a backup.'],
       ['Go back to ', 'Backups', '.'],
@@ -28,7 +28,7 @@ export const IMPORTERS = [
     ],
     rows: [['plays_imported', 'Plays imported'], ['plays_skipped', 'Already here'], ['users', 'Users'], ['libraries', 'Libraries'],
       ['items', 'Movies, series and tracks'], ['seasons', 'Seasons'], ['episodes', 'Episodes'], ['item_info', 'File details']],
-    note: 'Importing the same backup again is safe — plays that are already here are skipped. Backups that also contain libraries and users work too.',
+    note: 'Importing the same backup again is safe: plays that are already here are skipped. Backups that also contain libraries and users work too.',
   },
   {
     key: 'streamystats', task: 'import_streamystats', name: 'Streamystats', endpoint: '/import/streamystats', file: 'the .json file', accept: '.json,application/json', pattern: /\.json$/i,
@@ -42,7 +42,7 @@ export const IMPORTERS = [
     ],
     rows: [['plays_imported', 'Plays imported'], ['plays_skipped', 'Already here'], ['marked_watched', 'Marked watched, never played'],
       ['users', 'Users'], ['sessions_read', 'Sessions read']],
-    note: 'Ran both trackers? Import both files — an evening either one already brought in is not counted twice. Streamystats keeps no library data, so titles come from your own Jellyfin.',
+    note: 'Ran both trackers? Import both files; an evening either one already brought in is not counted twice. Streamystats keeps no library data, so titles come from your own Jellyfin.',
   },
   {
     key: 'tautulli', task: 'import_tautulli', name: 'Tautulli', endpoint: '/import/tautulli', file: 'the .db or .zip file', accept: '.db,.zip,application/zip', pattern: /\.(db|zip)$/i,
@@ -52,9 +52,9 @@ export const IMPORTERS = [
       ['Open your Tautulli instance.'],
       ['Go to ', 'Settings', ' and select ', 'Import & Backups', '.'],
       ['Under the database backups, click ', 'Backup Database', '. Tautulli saves it on its own machine, so nothing downloads.'],
-      ['Find it in Tautulli’s ', 'backups', ' folder, inside its data folder — with Docker, inside the folder you mounted as ', '/config', '.'],
-      ['Take the newest ', 'tautulli.backup-…', ' file, ending in .db or .db.zip — not a ', 'config.backup-…', ' one, which holds settings.'],
-      ['Copy it to this computer — scp, a shared folder or your NAS’s file manager all work.'],
+      ['Find it in Tautulli’s ', 'backups', ' folder, inside its data folder (with Docker, inside the folder you mounted as ', '/config', ').'],
+      ['Take the newest ', 'tautulli.backup-…', ' file, ending in .db or .db.zip, not a ', 'config.backup-…', ' one, which holds settings.'],
+      ['Copy it to this computer: scp, a shared folder or your NAS’s file manager all work.'],
       ['Upload it here, then connect each Plex user to who they are on Jellyfin.'],
     ],
     rows: [['plays_imported', 'Plays imported'], ['plays_skipped', 'Already here'], ['users_wired', 'Plex users connected'],
@@ -108,7 +108,7 @@ export default {
       let n = 0;
       try { n = ((await api.get('/library/missing')).missing || []).length; } catch { /* nothing to point at */ }
       pointerBox.hidden = !n;
-      mount(pointer, n ? h('p', { class: 'fui-field__help' }, `${num(n)} title${n === 1 ? '' : 's'} in your history ${n === 1 ? 'doesn’t' : 'don’t'} match anything in your library — usually a name the other server used. `,
+      mount(pointer, n ? h('p', { class: 'fui-field__help' }, `${num(n)} title${n === 1 ? '' : 's'} in your history ${n === 1 ? 'doesn’t' : 'don’t'} match anything in your library, usually because of a name the other server used. `,
         h('a', { href: '/settings/unlinked' }, 'Link them under Unlinked media'), '.') : null);
     }
     unlinked();
@@ -137,7 +137,7 @@ export default {
       store.poke(1000);
     }
 
-    // The board is kept across repaints — a poll must not throw away the wires being drawn — and torn down when it goes.
+    // The board is kept across repaints (a poll must not throw away the wires being drawn) and torn down when it goes.
     const views = {};
     function boardView(imp) {
       const v = views[imp.key];
@@ -195,7 +195,7 @@ export default {
         const input = fileInputs[imp.key];
         const drop = h('label', { class: ['dropzone', elsewhere && 'is-disabled'], htmlFor: elsewhere ? null : input.id, tabindex: elsewhere ? -1 : 0, role: 'button', 'aria-disabled': elsewhere ? 'true' : null, 'aria-label': `Choose a ${imp.name} backup file` },
           icon('upload', 20), h('span', { class: 'dropzone-title' }, elsewhere ? 'Another import is running' : `Drop your ${imp.name} backup here`),
-          h('span', { class: 'dropzone-sub' }, elsewhere ? 'One at a time — this one can start when that one finishes' : `or click to choose ${imp.file} — large backups are fine`));
+          h('span', { class: 'dropzone-sub' }, elsewhere ? 'One at a time: this one can start when that one finishes' : `or click to choose ${imp.file}. Large backups are fine`));
         if (!elsewhere) {
           drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
           drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('is-over'); });
@@ -239,7 +239,7 @@ export default {
     store.onTasks(paintAll);
     paintAll();
     store.loadTasks().catch(() => {});
-    // A board left waiting — the page closed half-way through the wiring — is picked up where it was.
+    // A board left waiting (the page closed half-way through the wiring) is picked up where it was.
     for (const imp of IMPORTERS.filter((i) => i.board)) {
       api.get(imp.endpoint).then((d) => { boards[imp.key] = d.board || null; paintAll(); }, () => {});
     }

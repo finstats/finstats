@@ -149,7 +149,7 @@ pub fn announce(conn: &Connection, bus: &crate::notify::Fanout) -> Result<usize>
             crate::notify::Kind::NewItems,
             key,
             format!("New in the library: {name}"),
-            if what.is_empty() { name.to_string() } else { format!("{name} — {what}") },
+            if what.is_empty() { name.to_string() } else { format!("{name} · {what}") },
         )
         .at(at)
         .field("Title", name.to_string())
@@ -199,7 +199,7 @@ mod tests {
         assert_eq!((out[3]["episode_number"].as_i64(), out[3]["episode_name"].as_str()), (Some(1), Some("Episode 1")), "a single episode says which one");
     }
 
-    /// One show, one *local* day, one notification — the same day the shelf folds by. Keyed by the UTC
+    /// One show, one *local* day, one notification: the same day the shelf folds by. Keyed by the UTC
     /// day instead, an evening's episodes on either side of UTC midnight were announced twice, and two
     /// local days inside one UTC day only once.
     #[test]

@@ -1,5 +1,5 @@
 // FinMotion: the parts. Each moves one FinUI component and lives in a folder of its own (parts/<name>/): its module exports
-// `part` — { name, selector, enhance(el) → stop? } — and enhance() is called once for every element matching selector, the
+// `part` ({ name, selector, enhance(el) → stop? }), and enhance() is called once for every element matching selector, the
 // ones on the page when motion() starts and the ones drawn later.
 
 import { part as toggle } from './toggle/toggle.js';

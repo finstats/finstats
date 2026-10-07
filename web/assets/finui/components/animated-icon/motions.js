@@ -1,5 +1,5 @@
-// FinUI: what each icon does when it moves. An icon is drawn in stroke by stroke, does what it is about — refresh turns,
-// download drops into its tray, a heart beats — and is drawn out again; the drawing is the same for all, the act is the
+// FinUI: what each icon does when it moves. An icon is drawn in stroke by stroke, does what it is about (refresh turns,
+// download drops into its tray, a heart beats) and is drawn out again; the drawing is the same for all, the act is the
 // icon's own. A motion names the act, the shapes that do it (by their place in the icon, all of them when left out), the
 // way they go (dx, dy: -1, 0 or 1; dir: 1 or -1 for a turn; sx: how far a stretch goes) and the point they turn about (in the icon's 24×24 box;
 // left out, each shape turns about its own centre). The shapes of a motion move as one; `stagger` has them take turns, a
@@ -347,7 +347,7 @@ export const MOTIONS = {
   target: [{ act: 'exit', parts: [2, 3], dx: -1, dy: 1 }],
 };
 
-/** Each of the `count` shapes of icon `name`, in order: { act, k, dx, dy, dir, sx, origin } — act null for a shape that is
+/** Each of the `count` shapes of icon `name`, in order: { act, k, dx, dy, dir, sx, origin }, act null for a shape that is
  *  only drawn; k is its place among the shapes of its act, for a group that takes turns; origin a CSS transform-origin,
  *  or null for the shape's own centre. */
 export function plan(name, count) {

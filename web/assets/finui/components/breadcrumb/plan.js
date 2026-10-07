@@ -1,4 +1,4 @@
-// FinUI: breadcrumb, the rules that are not drawing — a long trail keeps its first place and its last ones, and the rest
+// FinUI: breadcrumb, the rules that are not drawing: a long trail keeps its first place and its last ones, and the rest
 // wait behind one ellipsis (null). Pure; tested in FinUI's repository.
 
 /** `items` kept to `max` places: the first, null for the ones left out, the last max − 2. */

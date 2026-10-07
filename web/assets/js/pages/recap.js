@@ -1,7 +1,7 @@
-// Recap — the year in review. The one loud page in an otherwise quiet app. It opens on the year
+// Recap: the year in review. The one loud page in an otherwise quiet app. It opens on the year
 // "replayed" as a waveform, a bar per week, beside the posters that filled it; then one idea per
-// chapter — a headline with a single accented word, a sentence that carries the figures, the
-// chapter's word standing faint behind it — and it ends the way films do: with the credits.
+// chapter (a headline with a single accented word, a sentence that carries the figures, the
+// chapter's word standing faint behind it), and it ends the way films do: with the credits.
 
 import { h, icon, mount, num, duration, durationExact, pct, parseDay } from '../dom.js';
 import { api, imgItem } from '../api.js';
@@ -296,15 +296,15 @@ function numbersChapter(d, v, periodLabel) {
     id: 'numbers', icon: 'chart', eyebrow: 'By the numbers', mark: /^\d{4}$/.test(periodLabel) ? periodLabel : '365',
     title: [`${v.your} year by the `, em('numbers')],
     lead: [`${v.who} pressed play `, b(plural(t.plays, 'time', 'times')), ' on ', b(plural(t.distinct_items, 'different title', 'different titles')),
-      hrs >= 24 ? tail(` — that’s ${daysText} ${daysText === '1' ? 'day' : 'days'} without a break.`) : '.'],
+      hrs >= 24 ? tail(`. That’s ${daysText} ${daysText === '1' ? 'day' : 'days'} without a break.`) : '.'],
     body: [
       h('div', { class: 'rc-tiles' },
         tile('play', countUp(t.plays), 'Plays'),
         tile('clock', countUp(hrs, (x) => `${hrs >= 10 ? num(x) : (Math.round(x * 10) / 10).toLocaleString()}h`), 'Watch time', durationExact(t.watch_s)),
         tile('layers', countUp(t.distinct_items), 'Different titles'),
         tile('calendar', countUp(t.active_days), 'Days watched'),
-        tile('flame', streak && streak.days > 1 ? countUp(streak.days) : '—', 'Longest streak, days', streak && streak.days > 1 ? dayRange(streak.from, streak.to) : null),
-        tile('repeat', rw ? countUp((rw.share || 0) * 100, (x) => `${Math.round(x)}%`) : '—', 'Rewatches', rw ? `${plural(rw.rewatches, 'sitting', 'sittings')} with something ${v.you ? 'you had' : 'they had'} already seen` : null)),
+        tile('flame', streak && streak.days > 1 ? countUp(streak.days) : 'None', 'Longest streak, days', streak && streak.days > 1 ? dayRange(streak.from, streak.to) : null),
+        tile('repeat', rw ? countUp((rw.share || 0) * 100, (x) => `${Math.round(x)}%`) : 'None', 'Rewatches', rw ? `${plural(rw.rewatches, 'sitting', 'sittings')} with something ${v.you ? 'you had' : 'they had'} already seen` : null)),
       split.length > 1 ? h('div', { class: 'rc-split' },
         h('h3', { class: 'rc-subhead' }, 'What it was made of'),
         rankBars(split, (x) => x.watch_s, (x) => `${duration(x.watch_s)} · ${plural(x.plays, 'play', 'plays')}`)) : null,
@@ -328,7 +328,7 @@ function genresChapter(d, v) {
     id: 'genres', icon: 'tag', eyebrow: 'Genres', mark: top.name,
     title: v.you ? [`You’re ${an} `, em(top.name), ' fan'] : [`${v.who} is ${an} `, em(top.name), ' fan'],
     lead: [b(top.name), ' led with ', b(duration(top.watch_s)), ' across ', b(plural(top.plays, 'play', 'plays')),
-      rows[1] ? tail(` — with ${rows[1].name} close behind.`) : '.'],
+      rows[1] ? tail(`, with ${rows[1].name} close behind.`) : '.'],
     stats: [
       g.count ? { value: countUp(g.count), label: g.count === 1 ? 'Genre' : 'Genres' } : null,
       share != null ? { value: countUp(share * 100, (x) => `${Math.round(x)}%`), label: `Was ${top.name}` } : null,
@@ -349,7 +349,7 @@ function peopleChapter(d, v) {
     const rows = sets.find((x) => x[0] === tab)[2], top = rows[0];
     mount(title, tab === 'actors' ? [em(top.name), ' was everywhere'] : [em(top.name), ' called the shots']);
     mount(lead, [b(duration(top.watch_s)), tab === 'actors' ? ' on screen across ' : ' directed across ', b(plural(top.titles, 'title', 'titles')),
-      top.top_title ? tail(` — most of it in ${top.top_title}.`) : '.']);
+      top.top_title ? tail(`, most of it in ${top.top_title}.`) : '.']);
     mount(grid, rows.map((x, i) => h('li', null, h('a', { class: 'rc-person', href: `/people/${x.id}` },
       h('span', { class: 'rc-person-n mono', 'aria-hidden': 'true' }, '.' + String(i + 1).padStart(2, '0')),
       poster(x.has_image ? x.id : null, x.name, { w: 300, cls: 'rc-person-photo' }),
@@ -396,13 +396,13 @@ function rhythmChapter(d, v) {
     if (tab === 'hours') {
       const i = peakOf(hours);
       mount(title, [em(hour2(i)), v.you ? ' is your prime time' : ` is ${v.your} prime time`]);
-      mount(lead, [b(duration(hours[i])), ` started between ${hour2(i)} and ${hour2((i + 1) % 24)}`, total ? tail(` — ${pct(hours[i] / total)} of everything, in one hour of the day.`) : '.']);
+      mount(lead, [b(duration(hours[i])), ` started between ${hour2(i)} and ${hour2((i + 1) % 24)}`, total ? tail(`. That’s ${pct(hours[i] / total)} of everything, in one hour of the day.`) : '.']);
       mount(plot, barStrip({ rows: hours.map((x, k) => ({ label: String(k).padStart(2, '0'), title: `${hour2(k)} – ${hour2((k + 1) % 24)}`, value: x })), format: duration, ariaLabel: 'Watch time by hour of day', head: ['Hour', 'Watch time'], labelEvery: 3, cls: 'rc-bars-24' }));
     } else if (tab === 'days') {
       const i = peakOf(weekdays), avg = weekdays.reduce((a, x) => a + x, 0) / 7;
       const over = avg > 0 ? weekdays[i] / avg - 1 : 0;
       mount(title, [em(WEEKDAYS[i]), ' took the crown']);
-      mount(lead, [b(duration(weekdays[i])), ` of watching landed on ${WEEKDAYS[i]}s`, over >= 0.05 ? tail(` — ${pct(over)} more than an average day.`) : '.']);
+      mount(lead, [b(duration(weekdays[i])), ` of watching landed on ${WEEKDAYS[i]}s`, over >= 0.05 ? tail(`, ${pct(over)} more than an average day.`) : '.']);
       mount(plot, barStrip({ rows: weekdays.map((x, k) => ({ label: WEEKDAYS[k].slice(0, 3), title: WEEKDAYS[k], value: x })), format: duration, ariaLabel: 'Watch time by weekday', head: ['Weekday', 'Watch time'], cls: 'rc-bars-7' }));
     } else {
       const spansYears = new Set(months.map((m) => String(m.month).slice(0, 4))).size > 1;
@@ -413,7 +413,7 @@ function rhythmChapter(d, v) {
           foot: h('span', { class: 'rc-col-foot', title: name || null }, m.top ? [poster(m.top.image_item_id, name, { w: 120, cls: 'fui-poster--xs' }), h('span', { class: 'rc-col-foot-name' }, name)] : null) };
       });
       mount(title, [em(mF.format(monthDate(best.month))), ' was the big one']);
-      mount(lead, [b(duration(best.watch_s)), ' in a single month', best.top && best.top.name ? tail(` — most of it with ${best.top.name}.`) : '.']);
+      mount(lead, [b(duration(best.watch_s)), ' in a single month', best.top && best.top.name ? tail(`, most of it with ${best.top.name}.`) : '.']);
       mount(plot, [barStrip({ rows, format: duration, ariaLabel: 'Watch time per month', head: ['Month', 'Watch time'], cls: 'rc-bars-months' }),
         h('table', { class: 'sr-only' }, h('caption', null, 'Most watched title per month'),
           h('tbody', null, rows.map((r, k) => h('tr', null, h('td', null, r.title), h('td', null, (months[k].top && months[k].top.name) || 'Nothing')))))]);
@@ -517,8 +517,8 @@ function daysChapter(d, v) {
     title: [em(num(t.active_days)), ` ${t.active_days === 1 ? 'day' : 'days'} with something on`],
     lead: streak
       ? [`${v.your} longest streak ran `, b(`${num(streak.days)} days`), `, ${dayRange(streak.from, streak.to)}`,
-        r.biggest_day ? tail(` — and the biggest day of all was ${longDay(r.biggest_day.date)}, with ${duration(r.biggest_day.watch_s)}.`) : '.']
-      : r.biggest_day ? ['The biggest day was ', b(longDay(r.biggest_day.date)), tail(` — ${duration(r.biggest_day.watch_s)} in one go.`)] : null,
+        r.biggest_day ? tail(`. The biggest day of all was ${longDay(r.biggest_day.date)}, with ${duration(r.biggest_day.watch_s)}.`) : '.']
+      : r.biggest_day ? ['The biggest day was ', b(longDay(r.biggest_day.date)), tail(`, with ${duration(r.biggest_day.watch_s)} in one go.`)] : null,
     body: map,
   });
 }
@@ -575,7 +575,7 @@ function togetherChapter(d, v) {
   return chapter({
     id: 'together', icon: 'together', eyebrow: 'Together', mark: 'Company',
     title: [em(plural(g.evenings, 'evening', 'evenings')), ' in company'],
-    lead: [b(`${hoursText(g.together_s)} hours`), ' watched with somebody else', g.share ? tail(` — ${pct(g.share)} of ${v.yourLow} watching.`) : '.'],
+    lead: [b(`${hoursText(g.together_s)} hours`), ' watched with somebody else', g.share ? tail(`, ${pct(g.share)} of ${v.yourLow} watching.`) : '.'],
     body: [
       people.length ? h('div', null, h('h3', { class: 'rc-subhead' }, v.you ? 'Who you watched with' : `Who ${v.who} watched with`),
         h('ul', { class: 'rc-chips' }, people.map((p) => h('li', { class: 'rc-chip' },
@@ -590,7 +590,7 @@ function togetherChapter(d, v) {
 }
 const people_in = (g) => (g.people_in_company ? h('p', { class: 'rc-note' }, `${plural(g.people_in_company, 'person', 'people')} watched in company this year.`) : null);
 
-/** Seen to the end, and left for later — by the same "seen" as the profile's progress bars. */
+/** Seen to the end, and left for later, by the same "seen" as the profile's progress bars. */
 function finishedChapter(d, v) {
   const f = d.finished;
   if (!f || (!f.count && !f.dropped_count)) return null;
@@ -712,14 +712,14 @@ function buildStory(d, me, periodLabel, picker, share) {
     topChapter('shows', d.top_series, {
       icon: 'tv', eyebrow: 'Top shows', mark: 'Shows',
       title: (t) => [em(t.name), v.you ? ' owned your year' : ` owned ${v.your} year`],
-      lead: (t) => [b(`${hoursText(t.watch_s)} hours`), ' together', t.episodes ? [', over ', b(plural(t.episodes, 'episode', 'episodes'))] : null, tail(' — more than any other show.')],
+      lead: (t) => [b(`${hoursText(t.watch_s)} hours`), ' together', t.episodes ? [', over ', b(plural(t.episodes, 'episode', 'episodes'))] : null, tail(', more than any other show.')],
       facts: (t) => [['Watch time', duration(t.watch_s)], t.episodes ? ['Episodes', num(t.episodes)] : null, ['Plays', num(t.plays)]],
       extra: (t) => (t.episodes ? plural(t.episodes, 'episode', 'episodes') : null),
     }),
     topChapter('movies', d.top_movies, {
       icon: 'film', eyebrow: 'Top movies', mark: 'Movies',
       title: (t) => [`${v.your} movie of the year: `, em(t.name)],
-      lead: (t) => [b(duration(t.watch_s)), ' in total', t.plays > 1 ? tail(` — ${v.whoLow} came back to it ${num(t.plays)} times.`) : '.'],
+      lead: (t) => [b(duration(t.watch_s)), ' in total', t.plays > 1 ? tail(`. ${v.who} came back to it ${num(t.plays)} times.`) : '.'],
       facts: (t) => [['Watch time', duration(t.watch_s)], ['Plays', num(t.plays)]],
       extra: (t) => plural(t.plays, 'play', 'plays'),
     }),

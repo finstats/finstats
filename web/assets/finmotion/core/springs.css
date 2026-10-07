@@ -1,5 +1,5 @@
 /* FinMotion: the springs. The first of FinMotion's stylesheets, which a page loads after FinUI's own.
-   Four springs, each a feeling (springs.js computes them; a test holds them to it). A movement reads one whole —
+   Four springs, each a feeling (springs.js computes them; a test holds them to it). A movement reads one whole:
    var(--spring-snap) is a duration and a curve. --fm-pace is FinUI's Motion choice (motion() reads it from --ease):
    Quick is quicker, Slow slower, Off still. */
 /* Registered, so the browser works the times out: a script reading --spring-snap-dur is told 0.433s, not calc() text. */

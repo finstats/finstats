@@ -32,7 +32,7 @@ export const meta = {
     ],
     render: (o) => hero({
       title: 'Every evening on your server, counted.',
-      lede: 'Who watched what, for how long and on what — read from Jellyfin, kept on your own machine.',
+      lede: 'Who watched what, for how long and on what: read from Jellyfin, kept on your own machine.',
       actions: o.actions ? [button({ variant: 'primary' }, 'Get started'), button({}, 'Read the docs')] : null,
       aside: o.aside ? card({ title: 'Last night', body: h('p', null, '3 people, 4 films, 6h 12m.') }) : null,
     }),

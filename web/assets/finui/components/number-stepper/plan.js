@@ -1,4 +1,4 @@
-// FinUI: number-stepper, the rules that are not drawing — a value kept inside its ends, a step up or down, and what was
+// FinUI: number-stepper, the rules that are not drawing: a value kept inside its ends, a step up or down, and what was
 // typed read as a number (a comma as a point, as half the world writes one). Pure; tested in FinUI's repository.
 
 const tidy = (n, step) => { const d = (String(step).split('.')[1] || '').length; return Number(n.toFixed(Math.min(10, d))); };

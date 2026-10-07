@@ -148,7 +148,7 @@ export function rangeControl(days, onChange) {
 /// A dropdown of options, one of them or several.
 ///
 /// `multiple` makes it a list you tick: `value` and what `onChange` is handed are then a
-/// comma-separated string rather than one value, which is what a URL carries either way — so a
+/// comma-separated string rather than one value, which is what a URL carries either way, so a
 /// caller that already passes its filter straight into the query string needs no change at all.
 /// `searchable` is worth having for a list of people and only noise for a list of four, and a list
 /// you tick stays open while you tick it.

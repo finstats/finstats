@@ -1,5 +1,5 @@
-// Settings → Unlinked media (and a pointer to it from Import): titles plays point at that the library does not have under that name — a Plex
-// history calls a film what Plex called it, a guide moves an episode into the specials — each with where it most likely
+// Settings → Unlinked media (and a pointer to it from Import): titles plays point at that the library does not have under that name (a Plex
+// history calls a film what Plex called it, a guide moves an episode into the specials), each with where it most likely
 // is, and Locate to say where it is. The choice moves the plays (`POST /library/locate`) and is kept, so the same history
 // imported again attaches by itself. The card is there only while something is missing.
 import { h, icon, num, mount, debounce, episodeCode, TRACKERS } from '../dom.js';
@@ -18,7 +18,7 @@ const fromWhere = (m) => {
   return names.length ? ` · from ${names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]}` : '';
 };
 
-/** Fill `slot` with the missing titles. With nothing missing, `card` hides — or, given `empty`, says that instead.
+/** Fill `slot` with the missing titles. With nothing missing, `card` hides or, given `empty`, says that instead.
  *  Answers `{ refresh }`. */
 export function missingCard(slot, card, { empty = null } = {}) {
   async function refresh() {
@@ -42,7 +42,7 @@ export function missingCard(slot, card, { empty = null } = {}) {
         button({ size: 'sm', class: 'locate-btn', type: 'button', onClick: () => pick(m, refresh) }, icon('search', 13), 'Locate'));
     };
     mount(slot,
-      h('p', { class: 'fui-field__help' }, `${num(list.length)} title${list.length === 1 ? '' : 's'} in your history ${list.length === 1 ? 'isn’t' : 'aren’t'} in your library under that name — usually because the server it was imported from called ${list.length === 1 ? 'it' : 'them'} something else. Locate one to attach its plays; anything you leave stays in your history as it is.`),
+      h('p', { class: 'fui-field__help' }, `${num(list.length)} title${list.length === 1 ? '' : 's'} in your history ${list.length === 1 ? 'isn’t' : 'aren’t'} in your library under that name, usually because the server it was imported from called ${list.length === 1 ? 'it' : 'them'} something else. Locate one to attach its plays; anything you leave stays in your history as it is.`),
       films.length ? h('ul', { class: 'locate-list' }, films.map((m) => row(m, m.name))) : null,
       [...shows].map(([show, eps]) => h('div', { class: 'locate-show' }, h('h3', { class: 'section-label' }, show),
         h('ul', { class: 'locate-list' }, eps.map((m) => row(m, [episodeCode(m.season, m.episode), m.name].filter(Boolean).join(' · ')))))));

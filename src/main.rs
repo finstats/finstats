@@ -62,7 +62,7 @@ use tokio::sync::Notify;
 
 use state::{AppState, CollectorStatus, JfConfig, Settings, Tasks};
 
-const USAGE: &str = "finstats — playback statistics for Jellyfin
+const USAGE: &str = "finstats: playback statistics for Jellyfin
 
 USAGE:
     finstats                            Run the server
@@ -316,8 +316,8 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
     let bind = env("FINSTATS_BIND").unwrap_or_else(|| "0.0.0.0:8080".into());
     let listener = tokio::net::TcpListener::bind(&bind).await.with_context(|| format!("listening on {bind}"))?;
     match app.config.read().unwrap().as_ref() {
-        Some(c) => tracing::info!("finstats {} on http://{bind} — connected to {}", env!("CARGO_PKG_VERSION"), c.url),
-        None => tracing::info!("finstats {} on http://{bind} — open it in a browser to finish setup", env!("CARGO_PKG_VERSION")),
+        Some(c) => tracing::info!("finstats {} on http://{bind}, connected to {}", env!("CARGO_PKG_VERSION"), c.url),
+        None => tracing::info!("finstats {} on http://{bind}; open it in a browser to finish setup", env!("CARGO_PKG_VERSION")),
     }
 
     let serve_app = app.clone();
@@ -336,7 +336,7 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
         .await?;
     // A clean stop returns 0; a fail-closed halt returns non-zero and says why, so a process manager
     // surfaces it (a restart loop stops as soon as the operator sets FINSTATS_ALLOW_LIBRARY_SHRINK=1 or
-    // fixes Jellyfin). The refused change was never applied — the database is exactly as it was.
+    // fixes Jellyfin). The refused change was never applied: the database is exactly as it was.
     if let Some(reason) = app.halt_reason() {
         tracing::error!("finstats stopped without applying a change it did not trust: {reason}");
         eprintln!("

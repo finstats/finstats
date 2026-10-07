@@ -1,4 +1,4 @@
-// FinUI: date-picker, the rules that are not drawing — a day typed into its field, read in the ways people write one:
+// FinUI: date-picker, the rules that are not drawing: a day typed into its field, read in the ways people write one:
 // 2026-10-05, 5.10.2026, 05/10/2026 (day first, as most of the world writes it), 5 October 2026, Oct 5, 2026. Pure;
 // tested in FinUI's repository.
 

@@ -1,4 +1,4 @@
-//! The trash: what a person deletes — a play, a backup file — is kept for [`KEEP_S`] so it can come back, and is then
+//! The trash: what a person deletes (a play, a backup file) is kept for [`KEEP_S`] so it can come back, and is then
 //! removed for good by [`purge`], on the housekeeping beat. A play in the trash is out of every reading of history
 //! (`visible_playbacks`) and still there for identity (the table), so an import or a restore does not bring it back
 //! as a duplicate while it waits.
@@ -31,7 +31,7 @@ impl PlayState {
 }
 
 /// Move a finished play into the trash, or out of it. `None` when there is nothing to move: no such play, one still
-/// running, or — to come back — one that is not in the trash (or has been purged). Its title is grouped again either
+/// running, or, to come back, one that is not in the trash (or has been purged). Its title is grouped again either
 /// way: whoever it was watched with watched alone without it, and in company again with it.
 pub fn set_play_deleted(c: &mut Connection, id: i64, deleted: bool, now: i64, group_window_s: i64) -> Result<Option<PlayState>> {
     let row: Option<(String, String, String, i64, Option<i64>)> = c

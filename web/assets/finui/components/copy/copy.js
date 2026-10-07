@@ -12,7 +12,7 @@ export function copyButton(text, label = 'Copy') {
     try { await navigator.clipboard.writeText(text); } catch { ok = false; }
     btn.replaceChildren(icon(ok ? 'check' : 'x', 13));
     btn.classList.toggle('is-ok', ok);
-    note.textContent = ok ? 'Copied' : 'Copy failed — select the text instead';
+    note.textContent = ok ? 'Copied' : 'Copy failed. Select the text instead';
     clearTimeout(timer);
     timer = setTimeout(() => { btn.replaceChildren(icon('copy', 13)); btn.classList.remove('is-ok'); note.textContent = ''; }, 2000);
   });
@@ -21,7 +21,7 @@ export function copyButton(text, label = 'Copy') {
 
 export const meta = {
   name: 'copy',
-  purpose: 'Copies a value — an address, a key, a path — and says that it did.',
+  purpose: 'Copies a value (an address, a key, a path) and says that it did.',
   use: 'Beside a value somebody will paste elsewhere. fui-copy__row keeps the value and the button on one line where they fit.',
   avoid: 'Copying something the reader cannot see. A copy button as the only way to the value: it is also selectable text.',
   variants: ['button', 'in a row with its value'],

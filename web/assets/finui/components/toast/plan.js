@@ -1,4 +1,4 @@
-// FinUI: toast, the rules that are not drawing — how long a message stays (long enough to read; longer when it offers
+// FinUI: toast, the rules that are not drawing: how long a message stays (long enough to read; longer when it offers
 // something to do; until closed when asked) and which are shown when several arrive. Pure; tested in FinUI's repository.
 
 /** How many milliseconds `toast` ({ text, action, sticky }) stays. */

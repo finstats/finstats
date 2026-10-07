@@ -2,7 +2,7 @@
 //!
 //! They already talk to the download client, whichever it is, and report the same things for a torrent as for
 //! a usenet download: what it is, how far along, and what went wrong on import. That is what finstats reads,
-//! rather than each client's own API — three services to keep up with instead of six, and nothing to set up
+//! rather than each client's own API: three services to keep up with instead of six, and nothing to set up
 //! twice. What is lost is what only a client knows (ratio, peers), and the speed, which is worked out here
 //! instead: bytes that moved between two readings, divided by the time between them.
 //!
@@ -71,7 +71,7 @@ const SECRET_PARAMS: [&str; 14] = ["apikey", "api_key", "api-key", "key", "passk
 /// A service's own words with the credentials in them blanked: the login in an address (`http://user:pass@host`)
 /// and the value of any query parameter named like a key or a password. Sonarr and Radarr quote the download
 /// client and the indexer they could not reach, addresses and all, and those words are shown to everybody who
-/// may see the queue — who may see what is downloading, not the keys it is downloading with.
+/// may see the queue. That is who may see what is downloading, not the keys it is downloading with.
 pub fn redact(s: &str) -> String {
     // Not '/': a password printed as it was typed may hold one, and the login ends at the last '@' before
     // the query. Where a path has an '@' of its own, more is blanked than needed, never less.
@@ -430,7 +430,7 @@ fn download_json(d: &Download, wishes: &Wishes) -> Value {
 }
 
 /// Is this title in the queue right now? The queue is a listing finstats itself makes, so its posters are
-/// ones it may show — to the people who are allowed to see the queue in the first place.
+/// ones it may show to the people who are allowed to see the queue in the first place.
 pub fn in_queue(app: &App, service_id: i64, media_id: i64) -> bool {
     app.downloads.read().unwrap().rows.iter().any(|d| d.arr == Some((service_id, media_id)))
 }
@@ -492,8 +492,8 @@ async fn tick(app: &App, before: &HashMap<String, (i64, i64)>) -> HashMap<String
 }
 
 /// How long before the queues are read again. Fast while a page is showing them; otherwise as slow as what is in
-/// them allows. Something in the queue is still worth a minute — a request page tells the person who asked how far
-/// along it is — but an empty queue has nothing to go out of date: reading it again in five minutes is soon enough,
+/// them allows. Something in the queue is still worth a minute (a request page tells the person who asked how far
+/// along it is), but an empty queue has nothing to go out of date: reading it again in five minutes is soon enough,
 /// and opening the page, connecting a service or a read of Seerr all wake the loop anyway.
 pub fn wait_s(watching: bool, connected: bool, queued: bool) -> u64 {
     match (connected, watching, queued) {

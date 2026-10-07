@@ -1,6 +1,6 @@
 // FinUI: desktop-nav. The menu of a wide screen, in eight styles the person chooses between: a sidebar (grouped or not),
-// a rail of icons that opens into the sidebar under the pointer, a sidebar that leads with search, one with the pages you pinned on top, one of coloured tiles — any of
-// those on the left or the right — a dock at the bottom that tucks itself away while the page scrolls down, and a command
+// a rail of icons that opens into the sidebar under the pointer, a sidebar that leads with search, one with the pages you pinned on top, one of coloured tiles (any of
+// those on the left or the right), a dock at the bottom that tucks itself away while the page scrolls down, and a command
 // bar at the top. Which style, which side, which page is open and what is pinned are the app's; the menu says what it
 // needs of the window (`STYLES[].edge` and `size`). Search lives in it: the app hands it a FinUI search (openSearch), and
 // it grows out of the menu's own search control into the place the style has for it.
@@ -15,7 +15,7 @@ const dotOn = (p) => (typeof p.dot === 'function' ? !!p.dot() : !!p.dot);
 
 /**
  * The menu. `pages`: [{ key, href, label, icon, group, primary, dot }]. `brand`: { href, mark, name } (mark a node).
- * `me`: { href, avatar, name, role } (avatar a node), `theme`: the app's theme control, both drawn at the foot — or behind
+ * `me`: { href, avatar, name, role } (avatar a node), `theme`: the app's theme control, both drawn at the foot, or behind
  * the avatar, where a style has no room. `onSearch()`: the menu's search control was pressed (the app opens its search,
  * here with openSearch or wherever it keeps it). `keys`: the shortcut to say
  * beside the search. `pins`/`onPins(keys)`: what is pinned (Pinned keeps them; the app stores them). `insets`: { top,
@@ -145,7 +145,7 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
   }
   el.append(frame);
 
-  // Where search lives in this style: the frame itself — a sidebar widens, the dock rises into a card — or, in the command
+  // Where search lives in this style: the frame itself (a sidebar widens, the dock rises into a card) or, in the command
   // bar, the bar it stands in.
   const found = h('div', { class: 'fui-desktop-nav__found' });
   const host = kind === 'command' ? frame.querySelector('.fui-desktop-nav__bar') : frame;
@@ -172,7 +172,7 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
   function openSearch(panel) {
     if (hosted) return;
     hosted = panel;
-    // What had the keyboard's focus — the menu's search, or a place in the page Ctrl+Space was pressed in — is where Esc
+    // What had the keyboard's focus (the menu's search, or a place in the page Ctrl+Space was pressed in) is where Esc
     // gives it back. A click's focus is let go instead: handed back after a key, it is the keyboard's, and opens a rail.
     opener = document.activeElement !== document.body && document.activeElement.matches(':focus-visible') ? document.activeElement : null;
     closeAll();
@@ -187,7 +187,7 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
     panel.focus();
   }
   /** Put the search back into what it grew out of, the menu fading back in over it as it arrives. `restore` gives the
-   *  focus back to what had it when search opened (Esc) — quietly, so a tooltip does not pop up as the search goes. The
+   *  focus back to what had it when search opened (Esc), quietly, so a tooltip does not pop up as the search goes. The
    *  focus leaves the search before anything is measured: a rail holds itself open while the focus is in it, and the
    *  shape closing into an open rail under a closed one faded in over it was both at once, then a rail left open. */
   function closeSearch(restore = false) {

@@ -71,14 +71,14 @@ pub fn parse_name(raw: &str) -> ParsedName {
 }
 
 /// A name as two catalogues are compared: without provider tags or a year written into it, folded like search folds
-/// it (case, accents, punctuation — a hyphen and a dash are one), and without a leading article.
+/// it (case, accents, punctuation: a hyphen and a dash are one), and without a leading article.
 pub fn title_key(name: &str) -> String {
     let folded = crate::fuzzy::normalize(&parse_name(name).title);
     ["the ", "a ", "an "].iter().find_map(|a| folded.strip_prefix(a)).map(str::to_string).unwrap_or(folded)
 }
 
-/// Of the titles a name can mean, the one: the only one within a year of `year` — catalogues disagree by a year about
-/// when a film came out — or, of several, the only one of that very year. Without a year, the only one there is.
+/// Of the titles a name can mean, the one: the only one within a year of `year` (catalogues disagree by a year about
+/// when a film came out) or, of several, the only one of that very year. Without a year, the only one there is.
 fn pick(mut hits: Vec<(String, Option<i64>)>, year: Option<i64>) -> Option<String> {
     hits.sort();
     hits.dedup();
@@ -123,7 +123,7 @@ impl Keys {
 }
 
 /// The one live item of `item_type` this name can only mean, if there is exactly one: by provider id when the name
-/// carries one, then by the name as written — Jellyfin's or the original-language one it keeps beside it — and last by
+/// carries one, then by the name as written (Jellyfin's or the original-language one it keeps beside it), and last by
 /// the name cleaned of what two catalogues write differently.
 fn find_current(conn: &Connection, keys: &mut Keys, item_type: &str, raw_name: &str, known_year: Option<i64>) -> Result<Option<String>> {
     let parsed = parse_name(raw_name);
@@ -170,7 +170,7 @@ pub struct Relinked {
 }
 
 /// Every title plays point at that the library no longer has, stepping from one title to the next through the title
-/// index (`idx_pb_item`) — one lookup per title rather than a read of every play, because this runs at every start and
+/// index (`idx_pb_item`): one lookup per title rather than a read of every play, because this runs at every start and
 /// after every library read and nearly always finds nothing.
 pub(crate) const ORPHANS_SQL: &str = "WITH RECURSIVE t(id) AS (
         SELECT (SELECT MIN(item_id) FROM playbacks)
@@ -298,7 +298,7 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
 /// Point one title's orphaned plays at `to`, and re-apply the rule for a play already here to `to`'s plays: the
 /// check that would have caught a duplicate ran before the id moved, and only where plays landed can one have
 /// appeared. One write, so a start killed between the two cannot leave a duplicate behind that no later pass would
-/// look for — once moved, nothing is orphaned any more. A savepoint, because an import or a restore calls this inside
+/// look for, since once moved, nothing is orphaned any more. A savepoint, because an import or a restore calls this inside
 /// its own transaction. Answers (plays moved, duplicates removed).
 pub(crate) fn move_plays(conn: &Connection, merge_window_s: i64, to: &str, update: impl FnOnce() -> Result<usize>) -> Result<(usize, usize)> {
     conn.execute_batch("SAVEPOINT relink")?;
@@ -356,7 +356,7 @@ mod tests {
         )
         .unwrap();
         // Every row here is one finstats recorded itself, so none of them can be a duplicate of
-        // another tracker's — re-linking them takes nothing away.
+        // another tracker's, so re-linking them takes nothing away.
         let r = relink_orphans(&conn, 600).unwrap();
         assert_eq!((r.titles, r.episodes, r.names_cleaned, r.duplicates_removed), (1, 1, 1, 0));
         let get = |old: &str| -> (String, String) { conn.query_row("SELECT item_id, item_name FROM playbacks WHERE id = ?1", [old], |r| Ok((r.get(0)?, r.get(1)?))).unwrap() };
@@ -391,7 +391,7 @@ mod tests {
     }
 
     /// The same title written another way: other punctuation ("-" for "–"), other case, accents, or a year Jellyfin put
-    /// into the name itself — "JoJo's Bizarre Adventure (2012)".
+    /// into the name itself, as in "JoJo's Bizarre Adventure (2012)".
     /// Plays in the trash move with their title, so an undo puts them back on the item that is really there: a title
     /// whose only play is in the trash is orphaned all the same, and moved like any other.
     #[test]
@@ -431,7 +431,7 @@ mod tests {
         assert_eq!(now_at(&c, "JoJo's Bizarre Adventure (2012)"), "jojo11", "a year in the library's name");
     }
 
-    /// Plex, Tautulli or an old library may know a title by its original-language name — 오징어 게임 for Squid Game — which
+    /// Plex, Tautulli or an old library may know a title by its original-language name (오징어 게임 for Squid Game), which
     /// Jellyfin keeps beside its own.
     #[test]
     fn a_title_is_found_by_its_original_name() {

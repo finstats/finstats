@@ -1,5 +1,5 @@
-//! finui: finstats' own component registry, in `web/assets/finui`. Components are source in this repository — a
-//! module and its CSS each, described by the module's own `meta` and listed in `registry.json` — and finstats serves
+//! finui: finstats' own component registry, in `web/assets/finui`. Components are source in this repository (a
+//! module and its CSS each, described by the module's own `meta` and listed in `registry.json`), and finstats serves
 //! their styles as one stylesheet, `/assets/finui.css`: the foundation (tokens, base) and every component's CSS in the
 //! registry's order, read through the same embed as every other file. One request on the critical path and no build
 //! step; the files stay one per component. The tests below hold the registry to what is on disk.
@@ -45,7 +45,7 @@ pub fn registry() -> anyhow::Result<Registry> {
 /// Every CSS file the registry lists, foundation first, each once, in order.
 pub fn stylesheet() -> anyhow::Result<String> {
     let r = registry()?;
-    let mut out = String::from("/* FinUI — finstats' components: web/assets/finui, in registry.json's order. */\n");
+    let mut out = String::from("/* FinUI: finstats' components from web/assets/finui, in registry.json's order. */\n");
     for path in r.foundation.iter().chain(r.components.iter().flat_map(|c| c.files.iter())).filter(|p| p.ends_with(".css")) {
         out.push('\n');
         out.push_str(file(path)?.trim());

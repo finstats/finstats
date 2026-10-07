@@ -140,7 +140,7 @@ impl Http {
         self.client(svc.accept_invalid_certs)
     }
 
-    /// The same two clients, for anything else that must not follow a redirect while holding a token —
+    /// The same two clients, for anything else that must not follow a redirect while holding a token:
     /// a notification destination, say.
     pub fn client(&self, accept_invalid_certs: bool) -> &reqwest::Client {
         if accept_invalid_certs { &self.lax } else { &self.strict }

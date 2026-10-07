@@ -94,7 +94,7 @@ export function combobox({ value = '', onChange, placeholder = 'All users', allL
 }
 
 /// A dropdown of a known handful of options, ticked rather than chosen: media types, play methods,
-/// which tracker recorded a play. No search — for four options it is only noise.
+/// which tracker recorded a play. No search: for four options it is only noise.
 export function multiSelect({ options, value, onChange, label, allLabel, iconName = null }) {
   return combobox({ value, onChange, label, allLabel, placeholder: allLabel, iconName, multiple: true, searchable: false, load: () => options });
 }

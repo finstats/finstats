@@ -4,7 +4,7 @@
 //!
 //! An entry is written where the thing happens, by the handler that did it, and **never fails the
 //! caller**: a setting that was changed is changed whether or not the note about it could be
-//! written. Nothing secret is ever in `detail` — a service is named by kind and name, never its
+//! written. Nothing secret is ever in `detail`: a service is named by kind and name, never its
 //! address or key; the settings entry is the diff of the settings blob, which holds no secret.
 //! Reading it is a Jellyfin administrator's business. A year is kept.
 
@@ -111,7 +111,7 @@ pub fn record(app: &App, e: Entry) {
     });
 }
 
-/// The same, awaited: for a row that must be on record before what it announces begins — an import
+/// The same, awaited: for a row that must be on record before what it announces begins. An import
 /// takes one long transaction, and a write landing in the middle of its first reads would make its
 /// own upgrade to writing fail (`SQLITE_BUSY_SNAPSHOT`). Still never the caller's error.
 pub async fn record_now(app: &App, e: Entry) {
@@ -192,7 +192,7 @@ pub fn list(conn: &Connection, q: &AuditQuery) -> Result<Value> {
     Ok(json!({ "total": total, "page": page, "per_page": per_page, "rows": rows, "kinds": kinds }))
 }
 
-/// `GET /api/audit` — Jellyfin administrators only: it names who changed what.
+/// `GET /api/audit`, for Jellyfin administrators only: it names who changed what.
 pub async fn audit(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Query(q): Query<AuditQuery>) -> ApiResult {
     let out = app.db.call(move |c| list(c, &q)).await?;
     Ok(Json(out))

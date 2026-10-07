@@ -1,7 +1,7 @@
 // FinMotion: donut-chart, the rules that are not drawing. Pure; tested in its QA.
 
 /** A donut poured: each share's start and length as parts of one unit of time, one after another, the next starting
- *  before the last has quite settled (at 72% of it), the larger the longer — so a spring's duration stretches the whole. */
+ *  before the last has quite settled (at 72% of it), the larger the longer, so a spring's duration stretches the whole. */
 export function pour(values) {
   const sum = values.reduce((s, v) => s + v, 0) || 1;
   const lengths = values.map((v) => 0.35 + (v / sum) * 1.5);

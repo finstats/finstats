@@ -46,8 +46,8 @@ export function sized(box, draw, fallback = 560) {
   if (typeof ResizeObserver === 'function') new ResizeObserver((es) => run(es[0].contentRect.width)).observe(box);
 }
 
-/** Points along a plot that a pointer and the keys move between. `target` is the plot's HTML box — one tab stop, named
- *  by `label` — and `spec()` answers the drawing as it stands: { count, at(i) → { rect, title, rows, total }, mark(i)
+/** Points along a plot that a pointer and the keys move between. `target` is the plot's HTML box (one tab stop, named
+ *  by `label`), and `spec()` answers the drawing as it stands: { count, at(i) → { rect, title, rows, total }, mark(i)
  *  (−1: none), indexAt(event) }. Wired once, so a redraw at another width only answers a new spec. */
 export function hoverable(target, spec, label) {
   let i = -1;

@@ -1,7 +1,7 @@
 /* FinUI: stat-tile. Moved from app.css; the same rules under FinUI's names. */
 /* ------------------------------------------------------------ tiles */
 .fui-stat-tile__grid { --tile: 210px; --gap: 12px; display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--tile)), 1fr)); }
-/* Rows that come out even: three or six tiles go three, two or one across; four or eight go four, two or one — never three
+/* Rows that come out even: three or six tiles go three, two or one across; four or eight go four, two or one, never three
    and one left alone under them. Each width is a floor that the next breakpoint lifts: (breakpoint - 100%) * 999 is huge
    below it and negative above it. */
 .fui-stat-tile__grid:has(> :nth-child(3):last-child) { grid-template-columns: repeat(auto-fit, minmax(max(calc((100% - 2 * var(--gap)) / 3 - .1px), min(100%, calc((3 * var(--tile) + 2 * var(--gap) - 100%) * 999))), 1fr)); }
@@ -12,7 +12,7 @@
 .fui-stat-tile__row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
 .fui-stat-tile__value { font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -.02em; color: var(--text-strong); white-space: nowrap; flex: none; }
 /* The value is what the tile is for and keeps its width; a small chart beside it takes what is left and scales down
-   whole — a wide value ("56d 23h") once pushed it out of the tile, its last point cut off. */
+   whole: a wide value ("56d 23h") once pushed it out of the tile, its last point cut off. */
 .fui-stat-tile__spark { flex: 0 1 auto; min-width: 0; display: flex; }
 .fui-stat-tile__spark > svg { max-width: 100%; height: auto; }
 .fui-stat-tile__foot { display: flex; align-items: center; gap: 7px; font-size: 12px; min-height: 18px; flex-wrap: wrap; }

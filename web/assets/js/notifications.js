@@ -1,6 +1,6 @@
 // Settings → Notifications: where what finstats finds is sent. A destination belongs either to the
 // server (Jellyfin administrators) or to one person, and a person's own destination is only ever sent
-// what they may already see in the app — the server decides that, this only draws it.
+// what they may already see in the app. The server decides that; this only draws it.
 //
 // The address is write-only, like a key: a Discord webhook URL carries its own token, so the API
 // answers the host and never the URL. Editing without re-typing it keeps the stored one.
@@ -37,7 +37,7 @@ export function notificationsPanel(ctx) {
   let history = null;      // { events }
   let editing = null;      // null | 'new' | id
   let removing = null;     // id awaiting the second click
-  let rowMsg = null;       // { id, ok, text } — the result of a test or a failed removal
+  let rowMsg = null;       // { id, ok, text }: the result of a test or a failed removal
   let lastSig = '';
 
   async function load({ quiet = false } = {}) {
@@ -249,8 +249,8 @@ export function notificationsPanel(ctx) {
         name.el, url.el, topic.el, ...[...extras.values()].map((f) => f.el), secret.el,
         !existing && data.can_add_server
           ? h('div', { class: 'fui-field' }, h('span', { class: 'fui-field__label' }, 'Who it is for'),
-            h('label', { class: 'fui-field__check' }, scopeServer, 'The server — everything you ticked, about anybody'),
-            h('label', { class: 'fui-field__check' }, scopeMine, 'Just me — only what I may already see'))
+            h('label', { class: 'fui-field__check' }, scopeServer, 'The server: everything you ticked, about anybody'),
+            h('label', { class: 'fui-field__check' }, scopeMine, 'Just me: only what I may already see'))
           : null,
         h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', htmlFor: 'notify-sev' }, 'How much'), severity)),
       h('div', { class: 'fui-field' },
@@ -259,7 +259,7 @@ export function notificationsPanel(ctx) {
       h('div', { class: 'fui-field' },
         // Addresses reach a personal destination only with see_network, as they do on every page.
         can('see_network') ? h('label', { class: 'fui-field__check' }, addresses, 'Include IP addresses and places') : null,
-        can('see_network') ? h('p', { class: 'fui-field__help', id: 'notify-addresses-help' }, 'Off: a message says the place is “Oslo, Norway” but never the address it came from. On: the addresses go out too — worth thinking about for a destination somebody else runs, like Discord.') : null,
+        can('see_network') ? h('p', { class: 'fui-field__help', id: 'notify-addresses-help' }, 'Off: a message says the place is “Oslo, Norway” but never the address it came from. On: the addresses go out too, which is worth thinking about for a destination somebody else runs, like Discord.') : null,
         isAdmin() ? h('label', { class: 'fui-field__check' }, certs, 'Accept a self-signed certificate') : null,
         isAdmin() ? h('p', { class: 'fui-field__help', id: 'notify-certs-help' }, 'Only for an address whose certificate is your own: a service on your own network, or a mail server of your own.') : null,
         existing ? h('label', { class: 'fui-field__check' }, enabled, 'Switched on') : null),

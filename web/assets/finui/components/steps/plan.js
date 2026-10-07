@@ -1,4 +1,4 @@
-// FinUI: steps, the rules that are not drawing — which steps of a wizard can be gone to (back to any done, forward only
+// FinUI: steps, the rules that are not drawing: which steps of a wizard can be gone to (back to any done, forward only
 // to the next once this one is done) and what each step is now. Pure; tested in FinUI's repository.
 
 /** Can step `i` be gone to from `current`, with `done` the steps finished? */

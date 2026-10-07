@@ -13,7 +13,7 @@ pub struct Db {
 }
 
 pub(crate) const MIGRATIONS: &[&str] = &[
-    // 1 — initial schema
+    // 1: initial schema
     r#"
     CREATE TABLE settings (
         key   TEXT PRIMARY KEY,
@@ -164,7 +164,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     );
     CREATE INDEX idx_events_date ON server_events(date);
     "#,
-    // 2 — what happens *during* a play, Jellyfin's own played flags, richer item details
+    // 2: what happens *during* a play, Jellyfin's own played flags, richer item details
     r#"
     ALTER TABLE playbacks ADD COLUMN pause_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE playbacks ADD COLUMN seek_count INTEGER NOT NULL DEFAULT 0;
@@ -199,19 +199,19 @@ pub(crate) const MIGRATIONS: &[&str] = &[
 
     ALTER TABLE devices ADD COLUMN last_user_name TEXT;
     "#,
-    // 3 — Jellystat has no item type, so imported Live TV channels were guessed to be films.
+    // 3: Jellystat has no item type, so imported Live TV channels were guessed to be films.
     //     A channel is not in the library and has neither a container nor a runtime.
     r#"
     UPDATE playbacks SET item_type = 'TvChannel'
     WHERE source = 'jellystat' AND item_type = 'Movie' AND container IS NULL AND runtime_s IS NULL
       AND NOT EXISTS (SELECT 1 FROM items i WHERE i.id = playbacks.item_id);
     "#,
-    // 4 — re-linking renamed items looks titles up by name, once per orphaned item.
+    // 4: re-linking renamed items looks titles up by name, once per orphaned item.
     r#"
     CREATE INDEX idx_items_type_name ON items(type, name COLLATE NOCASE);
     CREATE INDEX idx_items_series_episode ON items(series_id, parent_index_number, index_number);
     "#,
-    // 5 — what each non-admin user has been granted, on top of the defaults in settings
+    // 5: what each non-admin user has been granted, on top of the defaults in settings
     r#"
     CREATE TABLE user_permissions (
         user_id     TEXT PRIMARY KEY,
@@ -219,7 +219,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         updated_at  INTEGER NOT NULL
     ) WITHOUT ROWID;
     "#,
-    // 6 — episodes a user marked as seen by hand, for what was watched while nothing was recording
+    // 6: episodes a user marked as seen by hand, for what was watched while nothing was recording
     r#"
     CREATE TABLE manual_seen (
         user_id    TEXT NOT NULL,
@@ -228,13 +228,13 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         PRIMARY KEY (user_id, item_id)
     ) WITHOUT ROWID;
     "#,
-    // 7 — group watching: plays that were watched together share a group_id (the lowest play id in it)
+    // 7: group watching: plays that were watched together share a group_id (the lowest play id in it)
     r#"
     ALTER TABLE playbacks ADD COLUMN group_id INTEGER;
     CREATE INDEX idx_pb_group ON playbacks(group_id) WHERE group_id IS NOT NULL;
     CREATE INDEX idx_pb_item_start ON playbacks(item_id, started_at);
     "#,
-    // 8 — cast and crew of films and shows, for "most watched people" in the recap. Forgetting when
+    // 8: cast and crew of films and shows, for "most watched people" in the recap. Forgetting when
     //     the library was last read makes the next start read it once more, so people arrive without
     //     waiting for Jellyfin's next scan.
     r#"
@@ -251,7 +251,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE INDEX idx_item_people_person ON item_people(person_id, kind);
     DELETE FROM settings WHERE key = 'library_synced_at';
     "#,
-    // 9 — addresses that count as "at home" although they are public: this network's own public
+    // 9: addresses that count as "at home" although they are public: this network's own public
     //     address (looked up, every one ever seen) and any the owner adds by hand
     r#"
     CREATE TABLE home_addresses (
@@ -261,11 +261,11 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         last_seen  INTEGER NOT NULL
     ) WITHOUT ROWID;
     "#,
-    // 10 — "recently added" walks the library newest first and stops after a few dozen rows
+    // 10: "recently added" walks the library newest first and stops after a few dozen rows
     r#"
     CREATE INDEX idx_items_added ON items(date_created DESC) WHERE removed = 0 AND date_created IS NOT NULL;
     "#,
-    // 11 — where people watch from: the address of a sign-in (NULL = not looked at yet, '' = none in the
+    // 11: where people watch from: the address of a sign-in (NULL = not looked at yet, '' = none in the
     //      text), a place per address from the local geolocation database, and what looked wrong
     r#"
     ALTER TABLE server_events ADD COLUMN remote_ip TEXT;
@@ -302,7 +302,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE INDEX idx_alerts_open ON security_alerts(resolved_at, at);
     CREATE INDEX idx_alerts_user ON security_alerts(user_id, at);
     "#,
-    // 12 — which languages a file can be played in: every audio and subtitle track, not just the first.
+    // 12: which languages a file can be played in: every audio and subtitle track, not just the first.
     //      JSON arrays of the codes Jellyfin reports (ISO 639-2, "und" for a track without one), in track
     //      order. Filled by the library read, so forget when it last ran and it runs again now.
     r#"
@@ -310,7 +310,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     ALTER TABLE items ADD COLUMN subtitle_languages TEXT;
     DELETE FROM settings WHERE key = 'library_synced_at';
     "#,
-    // 13 — connections to the services around Jellyfin (Sonarr, Radarr, Seerr, torrent clients). Their keys
+    // 13: connections to the services around Jellyfin (Sonarr, Radarr, Seerr, torrent clients). Their keys
     //      and passwords live here and nowhere else: never in the settings blob, never in a backup.
     //      AUTOINCREMENT: an id is never handed out twice, so rows of a deleted service cannot be adopted.
     //      `item_external` is the library's provider ids turned sideways (one id can belong to several
@@ -339,7 +339,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     ) WITHOUT ROWID;
     CREATE INDEX idx_item_external ON item_external(source, value);
     "#,
-    // 14 — what Sonarr and Radarr expect: episodes about to air, films about to be released. One row per
+    // 14: what Sonarr and Radarr expect: episodes about to air, films about to be released. One row per
     //      instance, title and kind of release; the same episode in two Sonarrs is folded when it is read.
     //      An episode has a moment (`at`, UTC). A film has a *day*: Radarr gives midnight UTC, which as a
     //      moment would be the evening before in every zone west of Greenwich.
@@ -368,7 +368,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE INDEX idx_upcoming_at ON upcoming(at);
     CREATE INDEX idx_upcoming_day ON upcoming(day);
     "#,
-    // 15 — what people asked for in Seerr. Seerr purges a request when its media is removed, so a request that
+    // 15: what people asked for in Seerr. Seerr purges a request when its media is removed, so a request that
     //      disappears is kept and marked (`removed_at`): "asked for 14, watched 9" should not shrink.
     //      `status` and `media_status` are Seerr's own numbers; `available_at` is worked out by finstats.
     //      `user_id` is the Jellyfin user behind Seerr's, when Seerr says who that is; `item_id` and
@@ -409,7 +409,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE INDEX idx_requests_when ON requests(requested_at);
     CREATE INDEX idx_requests_item ON requests(item_id);
     "#,
-    // 16 — what actually came in: Sonarr's and Radarr's history, the grabbed / imported / failed events.
+    // 16: what actually came in: Sonarr's and Radarr's history, the grabbed / imported / failed events.
     //      One row per event, kept by the id the instance gave it, so reading twice changes nothing.
     r#"
     CREATE TABLE grabs (
@@ -433,7 +433,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     ) WITHOUT ROWID;
     CREATE INDEX idx_grabs_at ON grabs(at);
     "#,
-    // 17 — clear out the `transcode` events 1.5.0 and earlier wrote every second. A play whose
+    // 17: clear out the `transcode` events 1.5.0 and earlier wrote every second. A play whose
     //      client settled back to direct play after transcoding had its kept record forced to
     //      "Transcode" *after* each comparison, so every reading that followed looked like a
     //      change: one event per poll, all identical, filling the Activity page. The collector no
@@ -447,7 +447,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         ) WHERE IFNULL(detail, '') = IFNULL(before, '')
     );
     "#,
-    // 18 — notifications: where finstats may send what it finds, what it found, and how each sending went.
+    // 18: notifications: where finstats may send what it finds, what it found, and how each sending went.
     //      `notify_targets` holds the address *and* the secret of a destination (a Discord webhook URL is
     //      itself the credential), so like `services` it never leaves this table and is never backed up.
     //      An event is written once and deduped by `dedupe`, exactly like `security_alerts`, so deriving
@@ -501,18 +501,18 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     ) WITHOUT ROWID;
     CREATE INDEX idx_notify_due ON notify_deliveries(state, next_at);
     "#,
-    // 19 — what a destination needs beyond an address, a token and the one field beside them. Only mail
+    // 19: what a destination needs beyond an address, a token and the one field beside them. Only mail
     // has any (the sender, and a user name that is often not the sender), and it is not a secret: the
     // password stays in `secret`.
     r#"
     ALTER TABLE notify_targets ADD COLUMN options TEXT NOT NULL DEFAULT '{}';
     "#,
-    // 20 — which tracker a play came from is a filter on the Activity page, and the page asks on
+    // 20: which tracker a play came from is a filter on the Activity page, and the page asks on
     //      every load which trackers the history holds at all. Three seeks rather than three scans.
     r#"
     CREATE INDEX idx_pb_source ON playbacks(source);
     "#,
-    // 21 — a seek's origin as a number. The label ("27:12 → 33:10") stays for the timeline; the number
+    // 21: a seek's origin as a number. The label ("27:12 → 33:10") stays for the timeline; the number
     //      is what says whether a seek went backwards, which the rewind heatmap asks of every seek. The
     //      left side of the label is the position playback was expected at, in m:ss or h:mm:ss.
     //      `backup::restore` runs the same backfill for a file from before the column existed.
@@ -528,7 +528,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     WHERE kind = 'seek' AND detail LIKE '%:__ → %';
     CREATE INDEX idx_pbe_kind ON playback_events(kind, playback_id, position_s);
     "#,
-    // 22 — API keys, and finstats' own audit log, in one migration: a long-lived credential without a
+    // 22: API keys, and finstats' own audit log, in one migration: a long-lived credential without a
     //      record of what it did would be a step backwards. A key is stored as the hash of its token,
     //      like a session, and is never part of a backup; the audit log is, being finstats' own data.
     //      Ids are never reused (AUTOINCREMENT) so an audit row keeps pointing at the right key.
@@ -561,7 +561,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE INDEX idx_audit_at ON audit(at);
     CREATE INDEX idx_audit_user ON audit(user_id, at);
     "#,
-    // 24 — Public profiles (2.0): what a person chose to publish, and the link that reaches it. The token
+    // 24: Public profiles (2.0): what a person chose to publish, and the link that reaches it. The token
     //      is stored as it is, not hashed: it is a link its owner is shown again, and it opens nothing but
     //      what the owner published. Not part of a backup, so a restore never brings an old link back.
     r#"
@@ -576,19 +576,19 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         updated_at   INTEGER NOT NULL
     ) WITHOUT ROWID;
     "#,
-    // 25 — An import asks, for every row, whether this person already has this play of this title. The
-    //      title index alone made that read every play of the title by anybody — quadratic in a big import.
+    // 25: An import asks, for every row, whether this person already has this play of this title. The
+    //      title index alone made that read every play of the title by anybody, which is quadratic in a big import.
     "CREATE INDEX idx_pb_user_item ON playbacks(user_id, item_id, started_at);",
-    // 26 — …and the same by where a play ended, for the other half of the rule: two trackers agree about the end.
+    // 26: …and the same by where a play ended, for the other half of the rule: two trackers agree about the end.
     "CREATE INDEX idx_pb_user_item_end ON playbacks(user_id, item_id, ended_at);",
-    // 27 — Re-linking sweeps only the titles it moved plays onto. Before, it swept the whole history at every
+    // 27: Re-linking sweeps only the titles it moved plays onto. Before, it swept the whole history at every
     //      start and library read; an install coming from before that sweep existed (2.0.0) is swept once, here.
     crate::relinked_duplicates_sql!("COALESCE((SELECT json_extract(value, '$.merge_window_s') FROM settings WHERE key = 'settings'), 600)"),
-    // user_version 27 (the labels above run one ahead of it) — The order one person's sessions were made in.
+    // user_version 27 (the labels above run one ahead of it): The order one person's sessions were made in.
     //      `created_at` is whole seconds and the table has no rowid, so among sign-ins of one second the one
     //      that gave way to the limit was picked by its token's hash, not its age.
     "ALTER TABLE sessions ADD COLUMN seq INTEGER NOT NULL DEFAULT 0;",
-    // user_version 28 — How each of finstats' own jobs last ended (2.0.4). An interval trigger counts from the
+    // user_version 28: How each of finstats' own jobs last ended (2.0.4). An interval trigger counts from the
     //      last run, and a start must not forget it: every job used to run again at every start. Re-readable,
     //      so not part of a backup.
     r#"
@@ -601,10 +601,10 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         error       TEXT
     ) WITHOUT ROWID;
     "#,
-    // user_version 29 — A person's portrait has an image tag of its own (2.0.4): the cache names a picture after it, and
+    // user_version 29: A person's portrait has an image tag of its own (2.0.4): the cache names a picture after it, and
     //      a portrait replaced in Jellyfin re-saves the person, not the titles they are in.
     "ALTER TABLE item_people ADD COLUMN image_tag TEXT;",
-    // user_version 30 — Watchlists (2.1.0): the films and shows somebody means to watch. An entry names its title by
+    // user_version 30: Watchlists (2.1.0): the films and shows somebody means to watch. An entry names its title by
     //      the item in the library or, when it is not there yet, by its provider ids, and keeps enough of it (kind,
     //      title, year, ids) to be read without the library. Somebody's own and not Jellyfin's to give back, so it is
     //      part of a backup. AUTOINCREMENT: an id a page still holds never comes to mean another entry.
@@ -624,7 +624,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE INDEX idx_watchlist_user ON watchlist(user_id, added_at);
     CREATE UNIQUE INDEX idx_watchlist_item ON watchlist(user_id, item_id) WHERE item_id IS NOT NULL;
     "#,
-    // user_version 31 — Whether an entry's title was missing from the library at the last look, and when it came (2.1.1).
+    // user_version 31: Whether an entry's title was missing from the library at the last look, and when it came (2.1.1).
     //      An arrival is a title that was not here and now is: a new item alone also means a replaced file (a new path
     //      is a new id), which announced "now on the server" for titles that never left.
     r#"
@@ -632,11 +632,11 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     ALTER TABLE watchlist ADD COLUMN arrived_at INTEGER;
     UPDATE watchlist SET missing = NOT EXISTS (SELECT 1 FROM items i WHERE i.id = watchlist.item_id AND i.removed = 0);
     "#,
-    // user_version 32 — A title's original-language name, beside the one Jellyfin shows (2.1.2): Plex, Tautulli or an old
+    // user_version 32: A title's original-language name, beside the one Jellyfin shows (2.1.2): Plex, Tautulli or an old
     //      library may know Squid Game only as 오징어 게임, and a title is found by either. Filled by the next library read.
     "ALTER TABLE items ADD COLUMN original_title TEXT;",
-    // user_version 33 — Where the owner located a title the library did not have under its name (2.1.2): plays move
-    //      to it, and anything that comes under the same id again — a re-import — is attached by the choice.
+    // user_version 33: Where the owner located a title the library did not have under its name (2.1.2): plays move
+    //      to it, and anything that comes under the same id again (a re-import) is attached by the choice.
     r#"
     CREATE TABLE located (
         from_id TEXT PRIMARY KEY,           -- the id plays pointed at that the library does not have
@@ -645,15 +645,15 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         by      TEXT                        -- who said so
     );
     "#,
-    // user_version 34 — Where a file that holds several episodes ends (2.2.0): "S01E01-E02" is numbered 1 and ends at 2,
+    // user_version 34: Where a file that holds several episodes ends (2.2.0): "S01E01-E02" is numbered 1 and ends at 2,
     //      and without the end every such file reads as a missing episode beside it. Only a library read brings it, so
-    //      the last one is forgotten — the setting and the kept run both, since 2.0.4 the scheduler goes by the run.
+    //      the last one is forgotten: the setting and the kept run both, since 2.0.4 the scheduler goes by the run.
     r#"
     ALTER TABLE items ADD COLUMN index_number_end INTEGER;
     DELETE FROM settings WHERE key = 'library_synced_at';
     DELETE FROM task_runs WHERE task = 'sync_libraries';
     "#,
-    // user_version 35 — Library health (2.2.0): what is wrong with a file beside its neighbours. The findings are worked
+    // user_version 35: Library health (2.2.0): what is wrong with a file beside its neighbours. The findings are worked
     //      out again after every library read and are not part of a backup; a dismissal is the owner's and is. One finding
     //      may span libraries (a film in an HD and a 4K one), hence a table of its own for the library filter.
     r#"
@@ -682,7 +682,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         by          TEXT
     );
     "#,
-    // user_version 36 — Appearance (2.2.0): the FinUI preset one person chose, how finstats looks to them and nobody
+    // user_version 36: Appearance (2.2.0): the FinUI preset one person chose, how finstats looks to them and nobody
     //      else. No row: FinUI as it ships. Theirs to keep, so it travels in a backup.
     r#"
     CREATE TABLE appearance (
@@ -691,7 +691,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         updated_at   INTEGER NOT NULL
     ) WITHOUT ROWID;
     "#,
-    // user_version 37 — The trash (2.2.0): a deleted play keeps its row for 30 days so it can come back, and is out of
+    // user_version 37: The trash (2.2.0): a deleted play keeps its row for 30 days so it can come back, and is out of
     //      every reading of history meanwhile. `visible_playbacks` is that history, and what every read of it goes
     //      through; `trashed_playbacks` is the trash; the table itself is read only for identity (a test holds the
     //      list). The index is the trash alone, so listing it and purging it cost nothing when it is empty.
@@ -705,7 +705,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole
 /// 30-second timeout and then says only "timed out waiting for connection", and its first connection switches the
-/// file to WAL — a write — before any check could run. So a file that is damaged, is not a database, or is another
+/// file to WAL (a write) before any check could run. So a file that is damaged, is not a database, or is another
 /// program's database is refused here, at once, by name, having only been read.
 fn preflight(path: &Path) -> Result<()> {
     let shown = path.display();
@@ -755,7 +755,7 @@ impl Db {
             ))?;
             // Every transaction takes the write lock as it begins, waiting its turn under busy_timeout, so one that reads
             // before it writes can never be refused its write by a commit in between (SQLITE_BUSY_SNAPSHOT). The one
-            // transaction that only reads — a backup's consistent snapshot — asks for a deferred one by name.
+            // transaction that only reads (a backup's consistent snapshot) asks for a deferred one by name.
             c.set_transaction_behavior(rusqlite::TransactionBehavior::Immediate);
             Ok(())
         });
@@ -872,7 +872,7 @@ fn is_update(schema: i64, stored: Option<&str>, running: &str, migrations_len: u
 }
 
 /// Kept apart from the exportable JSON backups in `backups/`: these are byte-for-byte copies of the
-/// whole database — the library and the secrets included — for going back locally if an upgrade breaks
+/// whole database, the library and the secrets included, for going back locally if an upgrade breaks
 /// something, so they are never served over the API.
 const PRE_UPDATE_DIR: &str = "pre-update-backups";
 const PRE_UPDATE_KEEP: usize = 3;
@@ -881,7 +881,7 @@ const PRE_UPDATE_KEEP: usize = 3;
 const JOURNAL_LIMIT: i64 = 64 * 1024 * 1024;
 
 /// Before a newer finstats touches an older database, copy the whole thing, so that nothing an upgrade
-/// might break — a migration, or the new binary writing rows the old one cannot — can lose the user's
+/// might break (a migration, or the new binary writing rows the old one cannot) can lose the user's
 /// data beyond recovery. They can go back to the copy and report the bug without having lost anything.
 /// The copy is a consistent full snapshot (`VACUUM INTO`), taken before any migration runs. Missing the
 /// copy is only fatal when migrations are pending (the risky case); a plain version bump warns and goes on.
@@ -906,7 +906,7 @@ fn back_up_before_update(conn: &Connection, path: &Path, running: &str) -> Resul
     match snapshot_into(conn, &dir, &dst) {
         Ok(()) => {
             tracing::info!(
-                "update detected ({from} -> {running}); backed up the database to {} before upgrading. If anything looks wrong after this update, stop finstats, replace {} with that file, and start the previous version — then report the bug.",
+                "update detected ({from} -> {running}); backed up the database to {} before upgrading. If anything looks wrong after this update, stop finstats, replace {} with that file, and start the previous version, then report the bug.",
                 dst.display(),
                 path.display()
             );
@@ -994,7 +994,7 @@ pub fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<()> {
 ///
 /// The unspecified addresses (`0.0.0.0`, `::`) and the rest of `0.0.0.0/8` count too, and not as a
 /// nicety: `connect()` to `0.0.0.0` reaches this machine, so a "public" destination spelled that way
-/// is loopback under another name — which is exactly what `notify::must_be_public` is holding shut.
+/// is loopback under another name, which is exactly what `notify::must_be_public` is holding shut.
 pub fn is_local_ip(ip: &str) -> Option<bool> {
     use std::net::IpAddr;
     let v4_local = |v4: std::net::Ipv4Addr| {
@@ -1175,7 +1175,7 @@ mod tests {
     fn an_install_that_never_swept_for_relinked_duplicates_is_swept_once() {
         // Re-linking now sweeps only the titles it moved plays onto. An install coming from before the sweep existed
         // (2.0.0) may hold duplicates it never looked for, so the whole history is swept once, here, with the install's
-        // own merge window — and with the default one when the settings never named it.
+        // own merge window, and with the default one when the settings never named it.
         let last = 25; // the sweep (user_version 26), whatever comes after it
         for (window, kept) in [(Some(30), vec![1, 2, 3]), (None, vec![1, 3])] {
             let c = Connection::open_in_memory().unwrap();
@@ -1288,7 +1288,7 @@ mod tests {
     #[test]
     fn a_version_nobody_can_read_is_named_as_unreadable_not_as_newer() {
         // Written by hand with JSON quotes, the install refused to start saying it had been "last used by
-        // finstats "2.0.1", and this is the older finstats 2.0.1" — true of neither.
+        // finstats "2.0.1", and this is the older finstats 2.0.1", which is true of neither.
         let n = MIGRATIONS.len();
         for stored in ["\"2.0.1\"", "next", ""] {
             let err = refuse_downgrade(&db_at(n, Some(stored)), "2.0.1").expect_err(stored).to_string();
@@ -1320,7 +1320,7 @@ mod tests {
             .filter(|p| p.extension().is_some_and(|x| x == "db"))
             .collect();
         assert_eq!(snaps.len(), 1, "exactly one pre-update snapshot");
-        // The snapshot is a real database that still holds the data, and it captured the OLD version —
+        // The snapshot is a real database that still holds the data, and it captured the OLD version,
         // i.e. it was taken before the upgrade rewrote anything.
         let snap = Connection::open(&snaps[0]).unwrap();
         assert_eq!(get_setting(&snap, "marker").unwrap().as_deref(), Some("keep-me"));
@@ -1336,7 +1336,7 @@ mod tests {
     #[test]
     fn a_transaction_holds_the_write_lock_from_its_first_statement() {
         // A deferred transaction that reads before it writes cannot write at all once anybody else has committed in
-        // between — SQLITE_BUSY_SNAPSHOT, which no busy timeout waits out. Under the collector's steady writes that
+        // between: SQLITE_BUSY_SNAPSHOT, which no busy timeout waits out. Under the collector's steady writes that
         // failed the group detection after an import (so the import said it failed) and could fail any read-then-write.
         let dir = std::env::temp_dir().join(format!("finstats-txlock-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -1379,13 +1379,13 @@ mod tests {
             let before = std::fs::read(path).ok();
             let started = std::time::Instant::now();
             let err = format!("{:#}", Db::open(path).err().unwrap_or_else(|| panic!("{why}: opened")));
-            assert!(started.elapsed() < std::time::Duration::from_secs(5), "{why}: took {:?} to refuse — a supervisor sees a hang", started.elapsed());
+            assert!(started.elapsed() < std::time::Duration::from_secs(5), "{why}: took {:?} to refuse, and a supervisor sees a hang", started.elapsed());
             assert!(err.contains(&path.display().to_string()) && err.contains("Nothing was changed"), "{why}: the message names neither the file nor what happened to it: {err}");
             assert_eq!(std::fs::read(path).ok(), before, "{why}: the file was changed");
             let wal = path.with_extension("db-wal");
             assert!(!wal.exists() || std::fs::metadata(&wal).unwrap().len() == 0, "{why}: a journal was left beside it");
         };
-        // Random bytes, and a finstats database cut in half — what a failed copy or a full disk leaves.
+        // Random bytes, and a finstats database cut in half: what a failed copy or a full disk leaves.
         let garbage = dir.join("garbage.db");
         std::fs::write(&garbage, (0..300_000u32).map(|i| (i.wrapping_mul(2_654_435_761) >> 13) as u8).collect::<Vec<_>>()).unwrap();
         refused(&garbage, "random bytes");
@@ -1484,7 +1484,7 @@ mod tests {
     #[test]
     fn a_snapshot_cut_short_is_never_kept_under_a_snapshots_name() {
         // VACUUM INTO writes straight into the file it is given, so a start killed while copying left an empty
-        // `finstats-<version>-<stamp>.db` (and its journal) — which SQLite calls a valid empty database, and which
+        // `finstats-<version>-<stamp>.db` (and its journal), which SQLite calls a valid empty database, and which
         // counted toward the three kept, pushing a real one out.
         let dir = std::env::temp_dir().join(format!("finstats-snapcut-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);

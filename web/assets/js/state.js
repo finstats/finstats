@@ -100,7 +100,7 @@ const SEARCH_MODE_KEY = 'finstats.searchMode';
 export const searchMode = () => (store.get(SEARCH_MODE_KEY) === 'page' ? 'page' : 'menu');
 export const setSearchMode = (mode) => store.set(SEARCH_MODE_KEY, mode === 'page' ? 'page' : 'menu');
 
-// ---- theme: 'device' (nothing stored, app.css follows the device), 'light' or 'dark' — this browser's
+// ---- theme: 'device' (nothing stored, app.css follows the device), 'light' or 'dark', this browser's
 // choice. theme.js applies the stored one before the first paint; this changes it afterwards.
 const THEME_KEY = 'finstats.theme';
 export const THEMES = ['device', 'light', 'dark'];

@@ -3,7 +3,7 @@
 // (Shift+F10) opens it; Shift with a right-click is left to the browser, whose own menu is still a click away. One menu
 // at a time, on the page's top layer of its own (appended to <body>, position: fixed).
 //
-// The rules that are not drawing — where it opens, the keys, type-ahead, what a long-press is — are plan.js.
+// The rules that are not drawing (where it opens, the keys, type-ahead, what a long-press is) are plan.js.
 
 import { h, icon } from '../../core.js';
 import { place, step, edge, typeahead, held } from './plan.js';
@@ -67,8 +67,8 @@ export function openMenu({ items, at, from = null, label = 'Actions', onClose = 
 
   const outside = (e) => { if (!el.contains(e.target)) close({ restore: false }); };
   const gone = () => close({ restore: false, instant: true });
-  // A scroll carries the menu with the thing it belongs to — a smooth scroll still under way when it opened, a row
-  // scrolled by its arrows, the page by a wheel — and only once that thing has left the screen does the menu go.
+  // A scroll carries the menu with the thing it belongs to (a smooth scroll still under way when it opened, a row
+  // scrolled by its arrows, the page by a wheel), and only once that thing has left the screen does the menu go.
   // Closing at any scroll shut a menu opened from the keyboard in the same frame, as the focus scrolled it into view.
   const anchor = from && from.isConnected ? from.getBoundingClientRect() : null;
   let follow = 0;
@@ -160,8 +160,8 @@ export function openMenu({ items, at, from = null, label = 'Actions', onClose = 
 }
 
 /**
- * Give everything under `root` a context menu. `resolve(target)` answers what the element pressed offers —
- * `{ items, from, label }` — or null for the browser's own menu (text in a field, a picture to save). Answers a function
+ * Give everything under `root` a context menu. `resolve(target)` answers what the element pressed offers
+ * (`{ items, from, label }`), or null for the browser's own menu (text in a field, a picture to save). Answers a function
  * that takes it all away again.
  */
 export function attachContextMenu(root, resolve) {

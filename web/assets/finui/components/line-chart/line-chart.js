@@ -1,4 +1,4 @@
-// FinUI: line-chart. A measure over time as a 2 px line — a wash of its colour under it when there is one series — with
+// FinUI: line-chart. A measure over time as a 2 px line (a wash of its colour under it when there is one series) with
 // round steps up the side, a dot ringed in the ground at the end, and a crosshair that a pointer and the arrow keys move
 // along, the tooltip saying every series at that moment.
 

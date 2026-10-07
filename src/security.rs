@@ -245,8 +245,8 @@ fn as_event(f: &Finding, user_id: &str, user_name: &str) -> notify::Event {
                 format!("{} and {}, {km:.0} km apart, {when}.", place_of(from), place_of(to)),
             )
             .field("Person", user_name)
-            .field("From", format!("{} — {}", place_of(from), from["what"].as_str().unwrap_or("seen")))
-            .field("To", format!("{} — {}", place_of(to), to["what"].as_str().unwrap_or("seen")))
+            .field("From", format!("{}, {}", place_of(from), from["what"].as_str().unwrap_or("seen")))
+            .field("To", format!("{}, {}", place_of(to), to["what"].as_str().unwrap_or("seen")))
             .field("Apart", format!("{km:.0} km, {when}"))
         }
     };

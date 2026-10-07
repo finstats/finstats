@@ -78,7 +78,7 @@ setUnauthorizedHandler(() => {
 });
 
 applyTheme();   // theme.js already set the page's colours; this points the browser's own bar at the same choice
-// Every icon in something pressable — a link, a button, a tab — does its act once when pointed at or focused, wherever it is drawn.
+// Every icon in something pressable (a link, a button, a tab) does its act once when pointed at or focused, wherever it is drawn.
 animateWithin(document.body);
 // FinMotion: every FinUI component moves, at the pace of the person's Motion choice and not at all with reduced motion.
 motion(document.body);

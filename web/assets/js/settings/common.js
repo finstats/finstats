@@ -1,5 +1,5 @@
 // What every settings section shares: one store for the two answers most of them read (`/settings`,
-// `/tasks`), and the two shapes a setting takes on the page — a switch that saves itself, and a row
+// `/tasks`), and the two shapes a setting takes on the page: a switch that saves itself, and a row
 // of numbers saved together. A section is a module: `{ key, label, sub, group, icon, visible,
 // entries, render }`. `entries` is what the finder in the page header offers; `render(slot, store)`
 // paints into the slot and may keep painting while the page is open (`store.onTasks`).

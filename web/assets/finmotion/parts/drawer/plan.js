@@ -7,7 +7,7 @@ export const band = (d, limit) => Math.sign(d) * (1 - 1 / ((Math.abs(d) * 0.55) 
 export const unband = (b, limit) => Math.sign(b) * (1 / (1 - Math.min(Math.abs(b), limit * 0.999) / limit) - 1) * limit / 0.55;
 
 /** A bottom sheet let go `dy` px below where it rests (moving at `v` px/ms, down positive): 'close' when it was pulled a
- *  third of its `height` down or flicked down, 'stay' otherwise — up is never away. */
+ *  third of its `height` down or flicked down, 'stay' otherwise. Up is never away. */
 export function letGo(dy, height, v) {
   if (v < -0.3) return 'stay';
   return dy > height / 3 || (dy > 0 && v > 0.6) ? 'close' : 'stay';

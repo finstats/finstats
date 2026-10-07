@@ -192,7 +192,7 @@ pub struct Found {
 /// Does a connected Sonarr (by TVDB id) or Radarr (by TMDB id) have this title? It then also has its poster.
 ///
 /// `Ok(None)` means they answered and do not have it; an error means nobody could be asked, which is a
-/// different thing entirely — the caller must not write that down as "looked for it and it is not there".
+/// different thing entirely, and the caller must not write that down as "looked for it and it is not there".
 pub async fn find(app: &App, media_type: &str, tmdb: Option<i64>, tvdb: Option<i64>) -> Result<Option<Found>> {
     let (kind, path, key, id) = match (media_type, tmdb, tvdb) {
         ("movie", Some(id), _) => (Kind::Radarr, "/api/v3/movie", "tmdbId", id),

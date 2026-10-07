@@ -8,7 +8,7 @@ export function pageHeader(title, sub, right) {
     right ? h('div', { class: 'fui-page-header__right' }, right) : null);
 }
 
-/** sectionHeader(title, sub, right): the same, one level down — a part of the page, under its <h1>. */
+/** sectionHeader(title, sub, right): the same, one level down: a part of the page, under its <h1>. */
 export function sectionHeader(title, sub, right) {
   return h('header', { class: 'fui-page-header fui-page-header--section' },
     h('div', null, h('h2', { class: 'fui-page-header__title' }, title), sub ? h('p', { class: 'fui-page-header__sub' }, sub) : null),

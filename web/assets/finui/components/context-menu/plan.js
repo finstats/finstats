@@ -1,5 +1,5 @@
-// FinUI: context-menu, the rules that are not drawing. Where the menu opens beside the point that was pressed — and so
-// the point it grows out of — moving through it with the keys, finding an item by typing, and when a touch is a
+// FinUI: context-menu, the rules that are not drawing. Where the menu opens beside the point that was pressed (and so
+// the point it grows out of), moving through it with the keys, finding an item by typing, and when a touch is a
 // long-press. Pure; tested in FinUI's repository.
 
 /** How long a touch must be held still to ask for the menu, and how far a finger may drift and still be still. */
@@ -8,7 +8,7 @@ export const SLOP_PX = 10;
 
 /** Where a menu of `size` opens for a press at `at` in a window of `view`: below and to the right of the point, else
  *  on the side that has room, else held `gap` inside the window. `origin` is the point within the menu that it grows
- *  out of — the pressed point, or the nearest place to it the menu covers. */
+ *  out of: the pressed point, or the nearest place to it the menu covers. */
 export function place(at, size, view, gap = 8) {
   const axis = (p, len, room) => {
     if (p + len <= room - gap) return p;

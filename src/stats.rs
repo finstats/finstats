@@ -43,7 +43,7 @@ pub fn row_json(row: &Row) -> Map<String, Value> {
 }
 
 /// A list's page number from the address: 1 when absent, and never so large that `(page - 1) * per_page`
-/// overflows — past the end is an empty page, never the first one again.
+/// overflows: past the end is an empty page, never the first one again.
 pub(crate) fn page_number(page: Option<i64>) -> i64 {
     page.unwrap_or(1).clamp(1, 100_000)
 }
@@ -78,7 +78,7 @@ impl Cond {
         self.args.push(v.into());
         self
     }
-    /// `col IN (?, ?, …)`, or nothing at all when no value was named — which is how "all of them"
+    /// `col IN (?, ?, …)`, or nothing at all when no value was named, which is how "all of them"
     /// is spelt throughout: a filter naming nothing is not a filter.
     pub fn add_in(&mut self, col: &str, vals: &[String]) -> &mut Self {
         if vals.is_empty() {
@@ -141,7 +141,7 @@ pub(crate) fn many(v: Option<&str>) -> Vec<String> {
     out
 }
 
-/// Whose rows a request may be about — the one place this rule is written down. Empty means
+/// Whose rows a request may be about: the one place this rule is written down. Empty means
 /// everybody. With "see everyone", the people the URL names; without it, always exactly the caller,
 /// whoever the URL names and however many: the filter can narrow what somebody sees and never widen it.
 pub fn pinned_users(user: &AuthUser, asked: &[String]) -> Vec<String> {
@@ -158,7 +158,7 @@ pub fn pinned_users(user: &AuthUser, asked: &[String]) -> Vec<String> {
 }
 
 /// The same rule where exactly one person is the subject (their requests, their places). `None`
-/// means everybody. Several named, and the first is taken — those endpoints are about one person.
+/// means everybody. Several named, and the first is taken, since those endpoints are about one person.
 pub fn pinned_user(user: &AuthUser, asked: Option<&str>) -> Option<String> {
     pinned_users(user, &many(asked)).into_iter().next()
 }
@@ -220,7 +220,7 @@ impl Scope {
     }
 
     /// The same window and pin, but plays of any length: for the one question where the minimum play
-    /// length would hide the answer — a file nobody ever gets thirty seconds into.
+    /// length would hide the answer: a file nobody ever gets thirty seconds into.
     pub fn cond_any_length(&self) -> Cond {
         let mut c = Cond::default();
         c.add_in("p.user_id", &self.user_ids);
@@ -548,7 +548,7 @@ pub struct ActivityQuery {
 /// and a fixed tiebreaker so pages never shuffle. Unknown keys fall back to the default order.
 /// The words of a `q` filter, each one ready for LIKE: cut to a length a word can plausibly be, then
 /// escaped. The cut is part of building the pattern rather than a check somewhere above it, because
-/// SQLite refuses a LIKE pattern longer than `SQLITE_MAX_LIKE_PATTERN_LENGTH` (50 000) with an error —
+/// SQLite refuses a LIKE pattern longer than `SQLITE_MAX_LIKE_PATTERN_LENGTH` (50 000) with an error,
 /// so `?q=<50 000 letters>` was a 500 and a line in the log, from any signed-in caller. Escaping comes
 /// after the cut: the other way round, a trim could leave half of an escape pair behind.
 pub(crate) fn like_words(q: Option<&str>) -> Vec<String> {
@@ -571,11 +571,11 @@ pub(crate) fn order_by(columns: &[(&str, &str)], sort: Option<&str>, dir: Option
 }
 
 /// The trackers a play can have come from: the live collector, or an import from one of the other
-/// trackers — each named by its own producer, so a new importer cannot be left out of the filter.
+/// trackers, each named by its own producer, so a new importer cannot be left out of the filter.
 /// In the order the Activity filter offers them.
 pub(crate) const SOURCES: [&str; 4] = [crate::collector::SOURCE, crate::import::SOURCE, crate::streamystats::SOURCE, crate::tautulli::SOURCE];
 
-/// The `source` filter, chosen from [`SOURCES`] rather than passed through — the value reaches SQL.
+/// The `source` filter, chosen from [`SOURCES`] rather than passed through, because the value reaches SQL.
 /// Anything else, an empty value included, means all of them, which is what the filter shows when
 /// nobody has picked one.
 pub(crate) fn source_filter(asked: Option<&str>) -> Option<&'static str> {
@@ -585,7 +585,7 @@ pub(crate) fn source_filter(asked: Option<&str>) -> Option<&'static str> {
 
 /// Which trackers this history came from, in [`SOURCES`] order so the filter never reshuffles.
 ///
-/// `whose` is the caller's permission scope and nothing else — no window, no library, no search. It
+/// `whose` is the caller's permission scope and nothing else: no window, no library, no search. It
 /// answers what somebody's history is *made of* rather than what the view in front of them happens
 /// to contain, so the filter does not appear and disappear as they change the days. The scope still
 /// applies: a person who may only see their own plays must not learn that somebody else's history
@@ -606,7 +606,7 @@ pub(crate) fn sources_present(conn: &Connection, whose: &Cond) -> Result<Vec<&'s
 const CHARTED_TYPES: [&str; 3] = ["Movie", "Episode", "Audio"];
 
 /// The media-type filter as a clause and the values to bind, or `None` when it asks for everything
-/// — nothing named, or all four, both of which are "no filter".
+/// (nothing named, or all four), both of which are "no filter".
 ///
 /// "Other" is not a type but the absence of the three named ones, so it cannot join them in an `IN`
 /// list: asking for films *and* other has to mean either.
@@ -698,7 +698,7 @@ pub async fn activity(State(app): State<App>, user: AuthUser, Query(q): Query<Ac
                 decorate_play(m, scope.perms.see_network, false)
             })
             .collect();
-        // What this history is made of, so the page can offer a filter for it — and leave it out
+        // What this history is made of, so the page can offer a filter for it, and leave it out
         // when there is only one answer.
         let sources = sources_present(c, &scope.whose())?;
         // How many of these filters' plays wait in the trash, for whoever may bring them back: the page offers the trash
@@ -862,7 +862,7 @@ fn user_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<Vec
         "SELECT u.id, u.name, u.is_admin, u.is_disabled, u.removed, (u.image_tag IS NOT NULL) AS has_image,
                 u.last_login_at, u.last_activity_at,
                 COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s, l.last_played_at,
-                (SELECT CASE WHEN x.series_name IS NOT NULL AND x.item_type = 'Episode' THEN x.series_name || ' — ' || x.item_name ELSE x.item_name END
+                (SELECT CASE WHEN x.series_name IS NOT NULL AND x.item_type = 'Episode' THEN x.series_name || ' · ' || x.item_name ELSE x.item_name END
                    FROM visible_playbacks x WHERE x.user_id = u.id ORDER BY x.ended_at DESC LIMIT 1) AS last_item_name,
                 (SELECT x.client FROM visible_playbacks x WHERE x.user_id = u.id ORDER BY x.ended_at DESC LIMIT 1) AS last_client
          FROM users u
@@ -1292,7 +1292,7 @@ fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<
     let bucket_s = bucket_width(runtime);
     // Events exist only for plays finstats recorded itself, so these two are counted over those. A
     // rewind is a seek that landed before where it left from, counted where it landed; a switch-on
-    // is a play's first subtitle change when it is to a track rather than to "Off" — the state before
+    // is a play's first subtitle change when it is to a track rather than to "Off"; the state before
     // the first change is never an event, so a later language change is not a second switch-on.
     let positions = |sql: &str| -> Result<Vec<i64>> {
         let mut stmt = c.prepare(&format!("SELECT e.position_s FROM visible_playbacks p JOIN playback_events e ON e.playback_id = p.id {} AND {sql}", ended.sql()))?;
@@ -1746,8 +1746,8 @@ impl<F: FnMut(i64) -> Result<String>> LocalDays<F> {
 
 /// Sweep over play intervals: the most streams (and transcodes) that ever overlapped, and the peak per bucket.
 fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
-    // COALESCE, because `play_method` may be NULL — a row restored from a backup written before the
-    // column existed has nothing to put there — and `NULL = 'Transcode'` is NULL, which is not a
+    // COALESCE, because `play_method` may be NULL (a row restored from a backup written before the
+    // column existed has nothing to put there), and `NULL = 'Transcode'` is NULL, which is not a
     // boolean and made this whole page a 500 for everybody until that one row was found.
     let sql = format!("SELECT p.started_at, p.ended_at, COALESCE(p.play_method = 'Transcode', 0) FROM visible_playbacks p {} AND p.ended_at > p.started_at", cond.with_raw("1 = 1").sql());
     let mut points: Vec<(i64, i32, i32)> = vec![];
@@ -2579,7 +2579,7 @@ mod tests {
     #[test]
     fn the_media_type_filter_can_ask_for_several_kinds_and_for_the_rest() {
         // "Other" is not a type but the absence of the three finstats names by themselves, so it
-        // cannot go in the same IN list — and asking for Movies *and* Other has to mean either.
+        // cannot go in the same IN list, and asking for Movies *and* Other has to mean either.
         assert_eq!(type_clause(&[]), None);
         let (sql, vals) = type_clause(&["Movie".into(), "Episode".into()]).unwrap();
         assert_eq!(sql, "(p.item_type IN (?, ?))");

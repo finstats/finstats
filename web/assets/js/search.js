@@ -1,4 +1,4 @@
-// Search (Ctrl+Space, or the menu's own): FinUI's search run against finstats — a page, a user, anything in the library, or
+// Search (Ctrl+Space, or the menu's own): FinUI's search run against finstats: a page, a user, anything in the library, or
 // someone who is in it. Where it lives (the menu, or the page) is shell.js' business; this only answers the words.
 
 import { h, icon, debounce } from './dom.js';

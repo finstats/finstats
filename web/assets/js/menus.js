@@ -1,5 +1,5 @@
-// finstats' context menus (FinUI's context-menu): wherever a title, a person or a library is a link — a poster on the
-// dashboard, a row of a list, a name in a table — a right-click, a long-press or the menu key offers what can be done
+// finstats' context menus (FinUI's context-menu): wherever a title, a person or a library is a link (a poster on the
+// dashboard, a row of a list, a name in a table), a right-click, a long-press or the menu key offers what can be done
 // to it. One resolver for the whole app, reading the link itself: a page draws nothing for it, and a new page's links
 // have a menu the day they are written. The link's `data-type` (a Jellyfin type) is what says a title is a film or a
 // show, the two things a watchlist holds; a link without one is offered everything else.
@@ -12,7 +12,7 @@ import { attachContextMenu, closeMenu } from '../finui/components/context-menu/c
 export const typed = (type) => (type ? { type } : null);
 
 /** The `dataset` of a card for a title the library does not have yet (Coming up): no link to read, so it names the title
- *  itself — `t` is what a watchlist knows it by, `{kind, tmdb_id, tvdb_id, title, year}`. */
+ *  itself: `t` is what a watchlist knows it by, `{kind, tmdb_id, tvdb_id, title, year}`. */
 export function notHere(t) {
   const d = { notHere: '1', kind: t.kind, name: t.title, tmdb: t.tmdb_id, tvdb: t.tvdb_id, year: t.year };
   return Object.fromEntries(Object.entries(d).filter(([, v]) => v != null && v !== '').map(([k, v]) => [k, String(v)]));

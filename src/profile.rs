@@ -86,7 +86,7 @@ pub(crate) struct Episode {
     pub first_at: Option<i64>,
 }
 
-/// `until`: only what had happened by then — plays ended, flags and marks set — for a published recap,
+/// `until`: only what had happened by then (plays ended, flags and marks set), for a published recap,
 /// which must not move while somebody is watching. `None` is everything, as the profile shows it.
 pub(crate) fn episodes(conn: &Connection, user_id: &str, until: Option<i64>) -> Result<Vec<Episode>> {
     let mut stmt = conn.prepare(&format!(

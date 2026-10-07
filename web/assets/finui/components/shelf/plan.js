@@ -1,4 +1,4 @@
-// FinUI: shelf, the rules that are not drawing — where one glide of a shelf goes (a page of whole cards on or back,
+// FinUI: shelf, the rules that are not drawing: where one glide of a shelf goes (a page of whole cards on or back,
 // never past its ends) and whether it is at an end. Pure; tested in FinUI's repository.
 
 /** Where a glide from `scrollLeft` goes `dir` (1 on, −1 back) in `box` { width, scrollWidth, card } (a card and its gap). */

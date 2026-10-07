@@ -1,5 +1,5 @@
 // The wiring board for a Tautulli import: Plex users on the left, Jellyfin users on the right, and a wire from each Plex
-// user to whoever they are now — Among Us's Fix Wiring, for deciding whose history is whose. Drag a plug onto a socket,
+// user to whoever they are now, like Among Us's Fix Wiring, for deciding whose history is whose. Drag a plug onto a socket,
 // or pick a plug (a click, Enter) and then a socket; the arrow keys walk the sockets. A wire pulled out into nothing
 // comes unplugged, and so does Delete on a plug. Several plugs may go into one socket, one plug into one socket only,
 // and a Plex user left without a wire is not imported.
@@ -74,7 +74,7 @@ export function wiringBoard(board, { onImport, onReset }) {
   const importBtn = button({ variant: 'primary', class: 'wire-import', type: 'button', onClick: start });
   const resetBtn = button({ class: 'wire-reset', type: 'button', onClick: () => onReset() }, 'Start over');
   const root = h('div', { class: 'wire-wrap' },
-    h('p', { class: 'fui-field__help' }, 'Drag a wire from each Plex user to who they are on Jellyfin — or click one, then the other. Several Plex users may go to one person. A Plex user without a wire is not imported.'),
+    h('p', { class: 'fui-field__help' }, 'Drag a wire from each Plex user to who they are on Jellyfin, or click one, then the other. Several Plex users may go to one person. A Plex user without a wire is not imported.'),
     el, said, summary, failed, h('div', { class: 'wire-actions' }, resetBtn, importBtn));
 
   // ---- wiring
@@ -114,7 +114,7 @@ export function wiringBoard(board, { onImport, onReset }) {
     sockets.get(ids[(ids.indexOf(from) + by + ids.length) % ids.length]).focus();
   }
 
-  // ---- dragging: the wire follows the pointer, and lands in the socket under it — or in nothing, and comes out
+  // ---- dragging: the wire follows the pointer, and lands in the socket under it, or in nothing, and comes out
   function grab(e, plex) {
     if (e.button !== 0) return;
     plugs.get(plex).setPointerCapture(e.pointerId);

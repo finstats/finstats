@@ -1,5 +1,5 @@
-// FinUI: dropdown-menu. A button that opens a menu of actions under it — the context menu's, with its keys, its
-// type-ahead and its way back — named by what it is for and marked open while it is.
+// FinUI: dropdown-menu. A button that opens a menu of actions under it (the context menu's, with its keys, its
+// type-ahead and its way back), named by what it is for and marked open while it is.
 
 import { h, icon } from '../../core.js';
 import { button } from '../button/button.js';

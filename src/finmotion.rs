@@ -1,6 +1,6 @@
 //! FinMotion: how FinUI moves, put on top of it (`github.com/finstats/finmotion`, a copy in `web/assets/finmotion`).
-//! finstats always wears it: `/assets/finmotion.css` is every stylesheet its registry lists, in order — the springs,
-//! then each part's — served as one, as `/assets/finui.css` is; `main.js` calls its `motion()`. The tests below hold the
+//! finstats always wears it: `/assets/finmotion.css` is every stylesheet its registry lists, in order (the springs,
+//! then each part's), served as one, as `/assets/finui.css` is; `main.js` calls its `motion()`. The tests below hold the
 //! registry to what is on disk.
 
 use serde::Deserialize;
@@ -39,10 +39,10 @@ pub fn registry() -> anyhow::Result<Registry> {
     Ok(serde_json::from_str(&file("registry.json")?)?)
 }
 
-/// Every CSS file the registry lists — foundation, parts, components — each once, in order.
+/// Every CSS file the registry lists (foundation, parts, components), each once, in order.
 pub fn stylesheet() -> anyhow::Result<String> {
     let r = registry()?;
-    let mut out = String::from("/* FinMotion — how FinUI moves: web/assets/finmotion, in registry.json's order. */\n");
+    let mut out = String::from("/* FinMotion: how FinUI moves, from web/assets/finmotion in registry.json's order. */\n");
     for path in r.foundation.iter().chain(r.parts.iter().chain(r.components.iter()).flat_map(|p| p.files.iter())).filter(|p| p.ends_with(".css")) {
         out.push('\n');
         out.push_str(file(path)?.trim());

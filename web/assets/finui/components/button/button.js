@@ -1,5 +1,5 @@
-// FinUI: button. One control in five looks — the default, primary for the one thing a view is for, ghost for the quiet
-// ones, danger for what cannot be undone, and an icon alone — at two sizes. A link that looks like a button is still a
+// FinUI: button. One control in five looks (the default, primary for the one thing a view is for, ghost for the quiet
+// ones, danger for what cannot be undone, and an icon alone) at two sizes. A link that looks like a button is still a
 // link (`href`), and a file picker's label can look like one (`tag: 'label'`).
 
 import { h, icon } from '../../core.js';

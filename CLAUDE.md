@@ -13,20 +13,20 @@ anything there except creating its own API key during setup.
 **From now on, every change in this repository is written test-first, following the Red–Green–Refactor
 cycle (Martin Fowler).** No production code is written before a failing test asks for it.
 
-1. **Red** — write one small test for the next slice of behaviour, and run it. It must *fail*, for the
+1. **Red**: write one small test for the next slice of behaviour, and run it. It must *fail*, for the
    right reason: the behaviour does not exist yet. A test that passes the moment it is written proves
-   nothing — go back and make it demand something real.
-2. **Green** — write the least code that makes that test pass. Do not reach for clean design yet; the
+   nothing; go back and make it demand something real.
+2. **Green**: write the least code that makes that test pass. Do not reach for clean design yet; the
    only goal is a green bar. Run the tests.
-3. **Refactor** — with the tests green, clean up what you just wrote (both the code and the test): remove
+3. **Refactor**: with the tests green, clean up what you just wrote (both the code and the test): remove
    duplication, improve names, simplify. Run the whole suite after each step; it must stay green.
 
-Then loop: the next test drives the next slice. Keep the steps small — minutes, not hours — so a red bar
+Then loop: the next test drives the next slice. Keep the steps small (minutes, not hours) so a red bar
 always points at the last thing you changed.
 
 Practically here: unit tests are `#[cfg(test)]` modules next to the code (`cargo test`, ~0.5 s); pure
 logic (a guard, a parser, a permission rule) is tested there first. Behaviour only observable from
-outside — an endpoint, an auth boundary, the collector on a real socket, wrong data from Jellyfin — gets
+outside (an endpoint, an auth boundary, the collector on a real socket, wrong data from Jellyfin) gets
 its failing check in the local `qa/` suite first (see the QA section). A bug fixed is a bug that first
 gets a test reproducing it (Red), then the fix (Green). Do not add production behaviour that no test
 named, and do not delete a test to make the bar green.
@@ -52,7 +52,7 @@ docker build -t finstats:latest .        # local image; the published one is ghc
 - **Do not run `cargo fmt`.** The code is deliberately not rustfmt-formatted (hundreds of long lines); formatting
   would rewrite every file. Match the surrounding style by hand.
 - Debug builds read `web/` from disk at runtime (rust-embed), so UI edits only need a browser refresh.
-  Release builds embed it — rebuild to see UI changes. `CHANGELOG.md` is `include_str!`'d, so it always needs a rebuild.
+  Release builds embed it, so rebuild to see UI changes. `CHANGELOG.md` is `include_str!`'d, so it always needs a rebuild.
 - Env: `FINSTATS_DATA_DIR`, `FINSTATS_BIND`, `FINSTATS_TRUST_PROXY`, `FINSTATS_PUBLIC_IP_URL`, `FINSTATS_GEOIP_DB`, `FINSTATS_ALLOW_LIBRARY_SHRINK`, `FINSTATS_SKIP_PREUPDATE_BACKUP`, `JELLYFIN_URL` + `JELLYFIN_API_KEY` (skip the wizard), `TZ`, `RUST_LOG`.
 
 ## Architecture
@@ -67,37 +67,37 @@ Sonarr/Radarr queues ───────────────────�
 ```
 
 **State & DB access.** `state.rs` holds `AppState` (shared via `Arc` as `App`): DB handle, Jellyfin config,
-`Settings` (one JSON blob in the `settings` table, `#[serde(default)]` so old installs load — and a blob that still cannot be
+`Settings` (one JSON blob in the `settings` table, `#[serde(default)]` so old installs load, and a blob that still cannot be
 read is an error naming the key at fault, never "all defaults", which reset every setting silently and the next save wrote the
 defaults back; **every change goes through `AppState::update_settings`**, which reads, changes, validates, stores and publishes
 under one lock, because each write is the whole blob and two at once lost one), the in-memory task
 registry, the live now-playing snapshot, and a `Notify` (`wake`) that background loops select on. All DB work goes
 through `db.call(|conn| …)` (r2d2 pool + `spawn_blocking`). A page whose queries over the history need nothing from each
 other runs them side by side (`stats::resolved` once, then `apart` per part under `tokio::try_join!`): each is one
-core's work in SQLite, and in sequence the page takes their sum — at most five at once, so the collector keeps a
-connection of the six; rusqlite is re-exported as `db::rusqlite` — import it from
+core's work in SQLite, and in sequence the page takes their sum (at most five at once, so the collector keeps a
+connection of the six); rusqlite is re-exported as `db::rusqlite`: import it from
 there, not from the crate, to stay on the version `r2d2_sqlite` uses. **Every `transaction()` on a pooled connection is
 IMMEDIATE** (set in the pool's init): a deferred one that reads before it writes is refused its write outright once anybody
 else commits in between (`SQLITE_BUSY_SNAPSHOT`, which `busy_timeout` does not wait out), and the collector commits all the
-time. A transaction that only reads — the backup's snapshot — asks for `Deferred` by name, or it would hold the write lock
+time. A transaction that only reads (the backup's snapshot) asks for `Deferred` by name, or it would hold the write lock
 for the whole export. `journal_size_limit` (64 MB) is set there too: SQLite never shrinks its WAL on its own. **Before the
 pool touches the file, `preflight` looks at it once**: the pool retries a bad file for its 30-second timeout and its first
 connection switches the file to WAL (a write), so a damaged file, another program's database (tables, `user_version` 0), a
 folder or a file finstats may not write is refused there, in milliseconds, naming it and saying nothing was changed.
 
 **Migrations** are the `MIGRATIONS` array in `db.rs`, applied by index against `PRAGMA user_version`. Released
-migrations are immutable — deployed databases have already run them. Add a new entry; never edit or reorder one.
+migrations are immutable: deployed databases have already run them. Add a new entry; never edit or reorder one.
 `Db::open` also refuses a database from the future (`refuse_downgrade`): the settings key `app_version` holds the newest
 version that has opened it, and a binary older than that, or one with fewer migrations than `user_version`, bails before
 writing anything. Releases up to 1.0.4 predate the check and cannot be stopped. The key is not part of backups on purpose.
 
 **A newer binary snapshots the database before it upgrades it (`back_up_before_update`).** On `Db::open`, between
 `refuse_downgrade` and the migrations, `is_update` asks whether a populated database is being opened by a *different*
-version, or still has migrations to run; if so a full `VACUUM INTO` copy — the library and the secrets included, unlike the
-exportable JSON backups — is written to `<data>/pre-update-backups/` **before** anything is changed, so a migration or a new
+version, or still has migrations to run; if so a full `VACUUM INTO` copy (the library and the secrets included, unlike the
+exportable JSON backups) is written to `<data>/pre-update-backups/` **before** anything is changed, so a migration or a new
 binary that corrupts data can always be rolled back to (stop finstats, put the copy in place of `finstats.db`, run the old
 version). A brand-new database and a same-version restart snapshot nothing. The newest `PRE_UPDATE_KEEP` (3) are kept; the
-copies are never served over the API. A failed copy is fatal only when migrations are pending (the risky case) — a plain
+copies are never served over the API. A failed copy is fatal only when migrations are pending (the risky case); a plain
 version bump warns and continues. `FINSTATS_SKIP_PREUPDATE_BACKUP=1` turns it off. The copy is written to `<name>.db.part`
 and renamed when complete, and what a killed start left is swept first: `VACUUM INTO` writes straight into its target, and an
 empty file under a snapshot's name is a valid empty database to SQLite that counted toward the three kept.
@@ -127,12 +127,12 @@ subtitle languages, and listing them in the hero pushed the artwork down a scree
 (gaps, season and episode drift, copies and versions, thin files, dubs that stop, never identified) is a pure function over
 `Item` rows, and every threshold is a named constant with its reason. Resolution classes are coarse on purpose (4K, 1080p,
 720p, SD) and go by width *or* height, so a scope 1920×800 and a pillarboxed 1440×1080 are both 1080p. Findings are worked
-out **after a library read and after a look for metadata changes, beside `backfill_playbacks` and never inside it** —
-imports and restores run that too and change no item — and a page only reads what was stored (`health_findings`,
+out **after a library read and after a look for metadata changes, beside `backfill_playbacks` and never inside it**
+(imports and restores run that too and change no item), and a page only reads what was stored (`health_findings`,
 `health_libraries`, migration 35). The look for changes waits until a library read has computed once
 (`health_computed_at`). **A gap needs `index_number_end`** (migration 34): "S01E01-E02" is numbered 1, and without where it
 ends every such file reads as a hole. Migration 34 forced one library read to bring it: **since 2.0.4 that means deleting
-the `task_runs` row of `sync_libraries` as well as `library_synced_at`** — the setting alone no longer makes a read due.
+the `task_runs` row of `sync_libraries` as well as `library_synced_at`**; the setting alone no longer makes a read due.
 Copies use the rule the watchlist and Pipeline use (items of one type sharing a provider id, unless the ids among them lead
 to different titles), read from `items.provider_ids` with `rebuild_external`'s own filter, and a test holds them to
 `watchlist::find_title`; a show's episodes are copies through it, by season and episode number. The same thing twice in one
@@ -147,74 +147,74 @@ here) holds while the fingerprint does, so a replaced file is looked at again. R
 PascalCase keys. Jellyfin ids are normalised with `db::norm_id` (no dashes, lowercase) everywhere.
 
 **Compression (reqwest's `gzip` + `brotli` features).** Every outbound read asks for `Accept-Encoding: gzip, br` and is
-decoded transparently — Jellyfin, Sonarr, Radarr and Seerr all compress JSON when asked, and JSON is nearly everything
+decoded transparently: Jellyfin, Sonarr, Radarr and Seerr all compress JSON when asked, and JSON is nearly everything
 finstats reads. The features are the whole mechanism: `default-features = false` without them means no header goes out
 and nothing would be decoded, so the QA mocks answer compressed and a check holds the header. Two deliberate exceptions:
 `geo.rs` pins `Accept-Encoding: identity` on the `.mmdb.gz` download (a gzip *body* it unpacks itself; the header also
-keeps `content_length` honest, and setting it at all turns reqwest's own decoding off), and the WebSocket carries none —
+keeps `content_length` honest, and setting it at all turns reqwest's own decoding off), and the WebSocket carries none:
 frame compression is `permessage-deflate`, which tungstenite does not implement.
 
 **Two transports, one collector (`collector.rs`, `socket.rs`).** The session list arrives either by asking
 (`GET /Sessions` on the `active_interval_s` / `idle_interval_s` timers) or by being told (Jellyfin's `/socket` with
 `SessionsStart`); `tick()` cannot tell which and must not learn. **There is no setting**: the socket is spawned for whatever
-Jellyfin is configured, always, and being told is how finstats collects — 1.4.0's `live_socket` switch was removed in 1.5.0, so
+Jellyfin is configured, always, and being told is how finstats collects; 1.4.0's `live_socket` switch was removed in 1.5.0, so
 `active_interval_s` / `idle_interval_s` are only what the asking half asks at, and the fallback for a socket that is not carrying.
-**Each does the half it is good at.** `collector::Decide::see` reads one session list — pushed or asked for, it
-decides the same — and answers `Mode::Poll` or `Mode::Listen`: **anything running** → poll at `active_interval_s`, because a pause or a
+**Each does the half it is good at.** `collector::Decide::see` reads one session list (pushed or asked for, it
+decides the same) and answers `Mode::Poll` or `Mode::Listen`: **anything running** → poll at `active_interval_s`, because a pause or a
 seek is only as sharp as the gap between two sightings and the push carries no `ActiveWithinSeconds`; **nothing loaded anywhere** →
 listen; **everything loaded is paused**, for `PAUSE_DEBOUNCE` readings in a row → listen, because a frozen position is exactly what a
 server has nothing to push about, and one 1 s poll per second of it asks the same question 3,600 times an hour. Any session running again
 (a resume, or somebody new) takes it straight back, within about a second. Three rules hold the transitions together, all measured on the wire: `session_mode` calls the pause debounce
 `playing_poll` and keeps `fallback` for a socket that is genuinely unusable (an early attempt reported every pause as a fault for three seconds);
 `should_subscribe(playing, settling)` keeps the subscription off for the whole debounce, and the transition itself sends the frame and
-waits for `Handle::settled` before publishing, so nothing is ever subscribed and polling at once; and the one-shot read is `Net`/`safety_due` —
+waits for `Handle::settled` before publishing, so nothing is ever subscribed and polling at once; and the one-shot read is `Net`/`safety_due`:
 after `PAUSED_SAFETY_SILENCE` of silence with something paused, or `SAFETY_EVERY` regardless (an early attempt restarted its wait on every push,
 so a client that kept reporting itself while paused meant the net never fell). **Silence is nothing heard *and* nothing asked, and the
-attempt re-arms the clock that called for it**: `Net` is reset by a push, by any `/Sessions` read of finstats' own — the beat
-during a play included — and by a fresh subscription, with `SAFETY_MIN_GAP` as a floor under all of it. Measured from the last
+attempt re-arms the clock that called for it**: `Net` is reset by a push, by any `/Sessions` read of finstats' own (the beat
+during a play included) and by a fresh subscription, with `SAFETY_MIN_GAP` as a floor under all of it. Measured from the last
 push alone, as an early attempt did, it breaks: since the subscription is off for the whole of a play, the first pause after a minute of one was already "silent", and the read
 that followed reset nothing, so 2,625 of them went out in eight seconds until a push happened along. Anything that makes a repeat depend on
 a clock the repeat does not touch is that bug again. The two are **one call**: `Net::take_read` takes the gate slot *and* re-arms both clocks, so a read that
-does not restart the wait it answers is not expressible (1.5.2); `Net::read` is private, and `Pass` — one object holding `Decide`, `Net` and
-the subscription as the wire has it — is what `run()` goes through, which is also what lets a test walk seven simulated minutes of this in
+does not restart the wait it answers is not expressible (1.5.2); `Net::read` is private, and `Pass` (one object holding `Decide`, `Net` and
+the subscription as the wire has it) is what `run()` goes through, which is also what lets a test walk seven simulated minutes of this in
 microseconds (`three_minutes_of_playing_then_a_pause_is_almost_no_reads_at_all`) instead of sitting through two real ones. Under it all,
-`sessions_slot` — **every** `/Sessions` read in the process, the socket's own consistency check included, takes a slot from one gate:
+`sessions_slot` makes **every** `/Sessions` read in the process, the socket's own consistency check included, take a slot from one gate:
 `READS_PER_S`, `READS_PER_MIN`, refusals counted and logged WARN at most once a minute. `/api/status` publishes what the gate counted (`sessions_requests_last_min`), and `disagrees` holds a listening mode to
 `READS_WHILE_LISTENING`, because every word of the status was true throughout that storm. With no socket at all, paused sessions are polled at
 `PAUSED_POLL_S` rather than every second.
 `attribute()` holds the invariant the whole thing rests on: the gap between two sightings belongs to the state the play was *already* in,
 so however rarely a paused play is looked at, none of it becomes watch time. **One at a time**: `SessionsStart`'s `"0,1500"` asks
-Jellyfin to look every 1.5 s and send what differs — which is silence on an idle server and a list every 1.5 s during a play, so while
+Jellyfin to look every 1.5 s and send what differs, which is silence on an idle server and a list every 1.5 s during a play, so while
 polling the pushes are the same list a second time, uncompressed. `Handle::listen(false)` sends `SessionsStop` for the duration (the
 connection stays open and answering `KeepAlive`); `listen(true)` on the pass where the last play ends. **The rule is
-`should_subscribe(playing) = playing == 0`, never the collector's own mode** — and that is the whole of it: listening needs the
+`should_subscribe(playing) = playing == 0`, never the collector's own mode**, and that is the whole of it: listening needs the
 socket to have proved itself, the proof is the list a subscription brings, and an early attempt unsubscribed before it could arrive,
 so the fallback latched on for good (connected, never subscribed, polling for ever on exactly the idle server the socket is
 for). Anything that gates the subscription on something the subscription itself produces is this bug again.
 A verdict is never kept either. **An absent list proves nothing**: a Jellyfin normally answers `SessionsStart` at once whether or
-not anything is loaded (measured: `0.0s after subscribing, 0 loaded`), but one was once seen not to, cause never established — most
+not anything is loaded (measured: `0.0s after subscribing, 0 loaded`), but one was once seen not to, cause never established; most
 likely a server still starting. So after `SUBSCRIBE_MAX` finstats says so once, the collector polls meanwhile, and the connection is
 kept, stays subscribed and re-sends `SessionsStart` every `PROBE_EVERY`; the first real push settles it. An earlier attempt concluded "cannot push"
 from that one silence and lost the socket altogether, which is why silence is never a verdict here. `End::Unsupported` is now only for a *shape* mismatch, which is real disproof; every
 other end uses the backoff. `looks_like_sessions` answers *what* differed for the
-log, and compares only sessions with a `NowPlayingItem` that both lists saw — an app open with nothing playing is in the
-push and not in `/Sessions?ActiveWithinSeconds=300`, which says nothing about the socket. **What it is doing is published, not inferred**. `publish()` writes the whole picture — `session_mode`
+log, and compares only sessions with a `NowPlayingItem` that both lists saw: an app open with nothing playing is in the
+push and not in `/Sessions?ActiveWithinSeconds=300`, which says nothing about the socket. **What it is doing is published, not inferred**. `publish()` writes the whole picture in one lock: `session_mode`
 (`idle_socket` | `playing_poll` | `paused_socket` | `fallback`), `socket_connected`, `socket_subscribed`, `poll_interval_s`,
-`mode_since` — in one lock, twice a pass, so nothing can be read half-applied while a pass blocks for a minute on a push. The two wire
+`mode_since`. It does so twice a pass, so nothing can be read half-applied while a pass blocks for a minute on a push. The two wire
 facts come from the socket task itself (`Handle::connected`/`subscribed`, atomics set where the frames are actually written), never from
 what the collector *asked* for. `disagrees()` is the machine marking its own work: every rule is something a packet capture would
 contradict, and a disagreement is logged WARN only once it outlives `SETTLE`, because asking the socket to stop and the stop reaching the
-wire are two moments. All of it is on `GET /api/status`, unauthenticated by the owner's decision — shape only, never a name, a title or
+wire are two moments. All of it is on `GET /api/status`, unauthenticated by the owner's decision: shape only, never a name, a title or
 even a count, and answered from memory with no request and no query. In the fallback the beat slows (`FALLBACK_IDLE_S`, `PAUSED_POLL_S`) but never below the owner's own
-interval — it only ever slows the beat, never hurries it. A reconnect mid-play subscribes
+interval; it only ever slows the beat, never hurries it. A reconnect mid-play subscribes
 once for the proof and goes quiet again, and the `SUBSCRIBE_MAX` deadline runs from `listening_since`, not the handshake, or a socket
 kept quiet on purpose would be mistaken for a server that does not speak this. That replaced the one-a-minute reconcile read; `Source` has
 no `Reconcile` any more, and `CollectorStatus` swapped `last_reconcile_at` for `socket_live` (the socket carries, whatever brought the
-last list — `transport` then says which half we are in, and `/api/summary`'s `collector_live` follows `socket_live`).
+last list; `transport` then says which half we are in, and `/api/summary`'s `collector_live` follows `socket_live`).
 **Silence is normal, not death**: Jellyfin answers `SessionsStart` with the list as it stands and then
 sends nothing until something changes, which on an evening when nobody is watching is never. So two clocks, never one:
 `subscribed` (no session list within `SUBSCRIBE_MAX` of being asked = this server does not speak it) and `heard` (nothing
-at all — list, `KeepAlive` answer, pong — within `lost_after(period)`, two unanswered keepalives, = gone). Judging the connection by how lately a *list* arrived is
+at all, whether a list, a `KeepAlive` answer or a pong, within `lost_after(period)`, two unanswered keepalives, = gone). Judging the connection by how lately a *list* arrived is
 what made 1.4.0 drop the socket every 15 s and poll right through, on exactly the idle server it was meant to spare.
 The collector's `on_socket` is likewise the socket saying it carries, not a recent snapshot, and a list that arrives
 while the poller sleeps is *kept* (`pending`), because with push-on-change there may not be another for hours.
@@ -231,7 +231,7 @@ it every 30 s, counts only un-paused time, merges a restart within `merge_window
 consecutive sightings into `playback_events` (pause/seek/track/transcode timeline). **An event is a change, so the two
 sides of `diff_events` must be the same kind of value.** "Once a transcode, always a transcode" is applied to the new
 reading *before* the diff, never after: applied after, the kept record says `Transcode` while every reading that follows
-says what the client settled back to, and each one is a change — finstats wrote one `transcode` event per second for the
+says what the client settled back to, and each one is a change: finstats wrote one `transcode` event per second for the
 rest of the play, reading `DirectPlay: <reasons>`, a line that contradicts itself (migration 17 clears them). Anything
 sticky that the diff also reads belongs above the diff.
 
@@ -241,38 +241,38 @@ episode; `PositionTicks` is unreliable and not imported (completion = watched ÷
 there is no item type, so Live TV is inferred (video, not in library, no container → `TvChannel`). The import is a
 single transaction and streams a multi-hundred-MB file line by line.
 
-**Streamystats import semantics (`streamystats.rs`, `docs/streamystats-import.md`).** Its backup is **sessions only** —
-no items, users or libraries — and holds three kinds of row that must be read differently, none of them flagged as such.
+**Streamystats import semantics (`streamystats.rs`, `docs/streamystats-import.md`).** Its backup is **sessions only**
+(no items, users or libraries) and holds three kinds of row that must be read differently, none of them flagged as such.
 **A row carries one moment or two, and which it is decides what the moment means**: two (`startTime` < `endTime`) is a
 play Streamystats watched, and the first is the real start; one (`startTime` == `endTime`) is a play it imported from
-Jellystat, and that moment is the **end** — `ActivityDateInserted` copied into both fields, 1,799 of 3,167 rows in the
+Jellystat, and that moment is the **end**: `ActivityDateInserted` copied into both fields, 1,799 of 3,167 rows in the
 file this was learned from. Reading those as starts moves every one of those evenings forward by the length of the film,
 which is invisible until every chart is quietly wrong. `isInferred` (or an `inferred:` id) is **not a play at all**:
-Jellyfin reported the item watched, so Streamystats wrote a row as long as the whole runtime for a viewing nobody saw —
-counted (`marked_watched`) and never imported. `itemId` is the item in both kinds (Streamystats re-links renamed items);
+Jellyfin reported the item watched, so Streamystats wrote a row as long as the whole runtime for a viewing nobody saw;
+it is counted (`marked_watched`) and never imported. `itemId` is the item in both kinds (Streamystats re-links renamed items);
 `mediaSourceId` is *not* an item id. **Where the two kinds carry data is opposite, and reading the wrong one is worse
 than reading nothing**: a play it watched has no source media at all (`videoCodec`, `resolution*`, `audioCodec`,
 `videoRangeType` empty in every row) but does carry its transcode target; a play from Jellystat carries the whole session
 in `rawData` (read with `Streams::extract`) while its own flat `transcoding*` columns are a copy of the *source* with
-`transcodeReasons: ["Unknown"]`, which stored as a transcode reads as a file transcoded into itself for reasons unknown —
+`transcodeReasons: ["Unknown"]`, which stored as a transcode reads as a file transcoded into itself for reasons unknown,
 so those are read only from `rawData.TranscodingInfo`, and a third of them have none and get no transcode. `positionTicks`
 counts only where the row also keeps the `runtimeTicks` it is a position in. `isActive` is `true` on nearly every row of a
 backup and means nothing. **Nothing is invented to fill a gap**: an item neither the row nor the library can type is left
 `Unknown`, not guessed. The file is walked with a `DeserializeSeed` rather than loaded, one transaction.
 
 **Tautulli import (`tautulli.rs`, `docs/tautulli-import.md`, 2.1.2) is Plex's history, so nothing in it shares an id with
-Jellyfin — and nothing is guessed.** It runs in two steps: `POST /api/import/tautulli` only stores the backup (`.db`, or the
+Jellyfin, and nothing is guessed.** It runs in two steps: `POST /api/import/tautulli` only stores the backup (`.db`, or the
 zip Tautulli's download gives; `unpack` reads the one `.db` out of the central directory, stored or deflated) as
 `tautulli-upload.db` and answers the **wiring board** (`settings/wiring.js`: Plex users left, Jellyfin users right, the owner
-drags a cable from each — or clicks, or Enter and the arrows); `POST …/run` with the wires imports. A Plex user **without a wire
+drags a cable from each, or clicks, or Enter and the arrows); `POST …/run` with the wires imports. A Plex user **without a wire
 is not imported** and several may go into one Jellyfin user (`check_wires`: one wire per Plex user; the owner's decisions,
-with every wire starting unplugged — no matching by name). The backup's `users` table holds every Plex user's tokens and e-mail:
+with every wire starting unplugged: no matching by name). The backup's `users` table holds every Plex user's tokens and e-mail:
 `PLEX_USERS_SQL` reads ids, names and counts only, and the file is removed after the import (whatever its outcome), on cancel,
 at start-up and after six hours (`sweep`). **Titles carry no provider id** (`plex://`, `local://`), so a play is written under
 a stand-in id (`plex:<rating key>`, its show `plex:<grandparent>`) with the names Jellyfin would give it, a film as
-`Title (2008)` so the year travels, and `relink` attaches it during the import's own `finalize` — or at any later library read
+`Title (2008)` so the year travels, and `relink` attaches it during the import's own `finalize`, or at any later library read
 when the title arrives: one matching rule, not two. **A viewing is one `reference_id` and one title**: a resumed play chains its
-rows by `reference_id`, but Plex plays a show's theme while the show is open and Tautulli chains the episode onto that track —
+rows by `reference_id`, but Plex plays a show's theme while the show is open and Tautulli chains the episode onto that track;
 grouping by reference alone counted those episodes as music. `source_id` is the viewing's first row (`tautulli:<id>`), which
 is its reference everywhere else. **Read every value leniently** (`num`, `text`): Tautulli writes `''` where it has no number
 and some numbers as text, and a strict read failed a whole real import on the first film without an episode number. Music,
@@ -283,23 +283,23 @@ viewings, 721 films and episodes, every one of them imported.
 restore.** `source_id` stops a file being imported twice and says nothing about the same evening arriving from another
 tracker under another id. So: its own id first, else the same person, the same item, and one of the play's **two ends**
 close enough. **Between** sources that is `merge_window_s` at *either* end, because the trackers disagree about the
-*start* — Jellystat keeps only the end, so the start is derived from the seconds played and every minute paused moves it
-later — while all three agree about the end. Measured on real history (3,162 plays a Streamystats export and a Jellystat
+*start* (Jellystat keeps only the end, so the start is derived from the seconds played and every minute paused moves it
+later) while all three agree about the end. Measured on real history (3,162 plays a Streamystats export and a Jellystat
 import held in common): either end recognised 2,750, the start alone 2,527, and the start's misses ran in an unbroken
 smear past ten minutes where the ends fall off a cliff inside one. **Within** one source it is the very same second and
 nothing wider: a tracker never exports the same play twice, so a second row of the same item minutes later is a restart
-the viewer really made, and a window there would silently drop it — on an import and, worse, on a restore of finstats'
+the viewer really made, and a window there would silently drop it, on an import and, worse, on a restore of finstats'
 own backup. A new importer goes through `PlayRecord::insert_imported`, never `insert`. **Both statements of the rule
 (`SAME_PLAY_SQL`, `RELINKED_DUPLICATES_SQL`) are index ranges** over `(user_id, item_id, started_at)` and `…ended_at`
 (migration 25), and a test holds their plans: written as `ABS(started_at - ?) <= window` no index could narrow them, a
 120,000-play import took five minutes, and the sweep held the write lock for 25 s at every start and library read.
 
 **Re-linking is the only thing that rewrites `item_id`, so it is the only thing that can turn an imported play into a
-duplicate of one already here** — the `already_recorded` check ran before the id moved. `relink::relink_orphans` therefore
+duplicate of one already here**: the `already_recorded` check ran before the id moved. `relink::relink_orphans` therefore
 re-applies the rule (`playback::drop_relinked_duplicates`) to each title it moved plays onto, in one savepoint with the
 move (`move_plays`), and takes `merge_window_s` as an argument so that none of its three callers can forget to. Only an
 imported row is ever removed, never one the collector recorded (its row carries a timeline no import can have), and rows
-of one source are never compared with each other. A real history had 363 such pairs, 189 rows, mostly music — music being
+of one source are never compared with each other. A real history had 363 such pairs, 189 rows, mostly music, music being
 what gets re-added and renamed. **Anything that rewrites which item a play points at re-applies the rule, or it re-creates
 that bug.** It runs at every start and after every library read and nearly always finds nothing, so it must stay cheap
 when there is nothing: `ORPHANS_SQL` steps from title to title through the title index and it returns at once when no
@@ -309,22 +309,22 @@ with its own merge window, for those coming from before the sweep existed; the r
 (`relinked_duplicates_sql!`) so the statement and the migration cannot drift.
 
 **Locating what a rule cannot find (`locate.rs`, Settings → Unlinked media, 2.1.2).** `relink` attaches
-only what a name rule finds without guessing; the rest — Plex's "Star Wars: Episode V - The Empire Strikes Back" is
-Jellyfin's "The Empire Strikes Back", TVDB moved an episode into another show's specials — is listed by `missing()` (orphans
+only what a name rule finds without guessing; the rest (Plex's "Star Wars: Episode V - The Empire Strikes Back" is
+Jellyfin's "The Empire Strikes Back", TVDB moved an episode into another show's specials) is listed by `missing()` (orphans
 through `relink::ORPHANS_SQL`, films and episodes only) with suggestions from `candidates()`: `fuzzy::Query` scored **both
 ways round** (search's own direction needs every typed word in the title, which a longer Plex name never is), the original
 title too, and an episode by its own name anywhere (`title_key`), so a moved special is found. The library is read once per
 request (`Library`). The owner picks; `locate()` moves the plays through `relink::move_plays` (the same savepoint and
-duplicate rule) by `move_onto`, which also gives them the target's type and place — a film may be located as an episode,
-since anime films are often a show's special, but never as a whole show — and keeps the choice in `located` (migration 33),
+duplicate rule) by `move_onto`, which also gives them the target's type and place (a film may be located as an episode,
+since anime films are often a show's special, but never as a whole show) and keeps the choice in `located` (migration 33),
 which `relink_orphans` consults **before any rule**, so a re-import attaches by itself. It is the owner's and not
 Jellyfin's to give back, so it is in `backup::TABLES`, restored before the restore's own re-link.
 
-**`sync_libraries` reads a library twice — every item, then the cast and crew of films and shows only — and only the
+**`sync_libraries` reads a library twice (every item, then the cast and crew of films and shows only) and only the
 first count may be shown to `trustworthy_removal`.** The two cursors were both called `start`, the second shadowing the
 first, so the guard compared a library's *shows* against its *items*: equal on a film library, 223 against 16,744 on a
 television one and 0 against 4,773 on music. Every read of such a library read as a gutted library, so the guard refused
-it and halted — correctly, on a reading that was never true — and the install restarted and did it again, every two and a
+it and halted (correctly, on a reading that was never true), and the install restarted and did it again, every two and a
 half minutes, with no library read ever completing. Nothing was wrongly removed (`updated_at` decides that, not this
 count, and too small a count only ever refuses) but nothing was read either. The cursors are now `seen` and `people_at`.
 **A QA mock must answer the query it is standing in for**: `mock-jellyfin-breakable.mjs` ignored `IncludeItemTypes`, so
@@ -332,14 +332,14 @@ both passes looked identical to it and a stage written for exactly this class of
 
 **What the library can tell a play lives in `sync::backfill_playbacks`**, not in an importer, because history is usually
 imported before finstats has ever read the library: it runs after every library read as well as after an import, and
-fills `library_id`, `runtime_s`, season/episode numbers and — for imported rows only — the item type neither tracker
+fills `library_id`, `runtime_s`, season/episode numbers and, for imported rows only, the item type neither tracker
 records. A live row keeps the type the session gave it.
 
 **Scheduling (`schedule.rs`, `sync::scheduler`, Settings → Tasks, 2.0.4).** Every job that runs by itself carries triggers the
-way Jellyfin's scheduled tasks do — daily, weekly, interval, start-up — plus one Jellyfin has no need for, **after Jellyfin's
+way Jellyfin's scheduled tasks do (daily, weekly, interval, start-up) plus one Jellyfin has no need for, **after Jellyfin's
 library scan** (`AFTER_SCAN` jobs only), each with an optional time limit (`within`; not for `backup`/`geoip`, which cannot be
 stopped half way). The owner's lists live in `Settings::schedules`; a job without one runs on `defaults`, which is exactly what
-the settings before 2.0.4 said (`follow_jellyfin_scan` + `sync_interval_h`, `backup_every_d`, `geoip_download`) — those are no
+the settings before 2.0.4 said (`follow_jellyfin_scan` + `sync_interval_h`, `backup_every_d`, `geoip_download`); those are no
 longer shown and decide nothing else, the owner's decision being **one place schedules a job**. The scheduler looks once a minute
 (or on `wake`); `schedule::due` is the whole decision and is pure: a time of day fires when it falls in the stretch since the last
 look (so a time missed while stopped is not caught up), an interval counts from the end of the last run. **When each job last
@@ -350,17 +350,17 @@ Housekeeping that is not a job (server name, a dropped-in GeoIP file, `services:
 and otherwise only when somebody asks (`POST /api/settings/public-ip`, or switching the setting on). Every scheduled job can also
 be run by hand (`api::RUNNABLE`, a test holds it). **Metadata changes (`sync_changes`)** reads, per library, what Jellyfin saved
 since the last look (`jellyfin::changed_query`: the library read's own question plus `People` and `MinDateLastSaved`, from
-`changes_from` with a ten-minute overlap) and stores it as the library read does (`store_changes`), cast included — editing
-metadata in Jellyfin starts no scan — but never marks anything removed. It then reads the **people** saved since
+`changes_from` with a ten-minute overlap) and stores it as the library read does (`store_changes`), cast included (editing
+metadata in Jellyfin starts no scan), but never marks anything removed. It then reads the **people** saved since
 (`people_changed_query`, 1,000 a page) and writes their portrait tags onto every title they are in (`store_portraits`,
 `item_people.image_tag`, migration 29): replacing a portrait re-saves the person and none of their titles, and `artwork::tag_of`
-falls back to that tag for a person's id — before that, a replaced portrait stayed a week on disk and a week in the browser. The `/ScheduledTasks` read (every 5 min) and `sync_server`'s both pass
+falls back to that tag for a person's id; before that, a replaced portrait stayed a week on disk and a week in the browser. The `/ScheduledTasks` read (every 5 min) and `sync_server`'s both pass
 their task list to `jobs::observe`, which is the only reason the Jellyfin jobs card can open on an ETA: the watch that
 `eta_s` needs is fed by lists finstats already has, never by a request made for it. **A read never wipes what it cannot see.** Marking rows `removed` is destructive (they vanish from every page and stat) and
 `items_page` turns anything it cannot parse into an empty list, so a Jellyfin that changes shape under an upgrade, or answers
 `200 {"Items":[]}`, must not be read as "the library was emptied". `sync::trustworthy_removal(seen, current)` gates every
 destructive removal (items, libraries, users): a read that comes back empty, or a catastrophic shrink of a sizeable set, is
-refused — the data is kept, the sync fails (task + notification), and `AppState::request_halt` asks the process to stop cleanly
+refused: the data is kept, the sync fails (task + notification), and `AppState::request_halt` asks the process to stop cleanly
 (exit 70, a reason on stderr; `notify_one`, because the scheduler can ask before the server is waiting) so the operator pins a
 version or pushes a fix rather than finding a wiped install. The count a guard is shown is what the read could *store*
 (entries with an `Id`), never the raw length of the answer: an answer in unknown keys is an empty read. A library that leaves
@@ -368,35 +368,35 @@ Jellyfin's list takes its titles with it (`store_libraries`), since it is never 
 still applies; `FINSTATS_ALLOW_LIBRARY_SHRINK=1` waves a genuine emptying through (and clears a halt loop). After a library read, `backfill_playbacks` links plays to libraries and
 `relink.rs` re-attaches orphaned plays to renamed items (Jellyfin ids derive from the path): provider-id match
 first, then the name as written against Jellyfin's name **or its original-language name** (`items.original_title`, migration
-32 — Plex and Tautulli often know a title only by that: 오징어 게임 for Squid Game), then the name cleaned as search cleans it
-(`title_key`: `fuzzy::normalize`, no year in the name, no leading article — "- " and "– " are one), episodes by series + S/E
-number — only when unambiguous. A year may be one off (catalogues disagree: Kingsman is 2014 to Plex and 2015 to Jellyfin)
+32; Plex and Tautulli often know a title only by that: 오징어 게임 for Squid Game), then the name cleaned as search cleans it
+(`title_key`: `fuzzy::normalize`, no year in the name, no leading article; "- " and "– " are one), episodes by series + S/E
+number, only when unambiguous. A year may be one off (catalogues disagree: Kingsman is 2014 to Plex and 2015 to Jellyfin)
 and of several within one the exact year wins (`pick`); two off is a remake. The cleaned index (`Keys`) is read once per
 re-link and only when a name as written found nothing, because re-linking runs at every start and after every library read.
 
 **Stats layer (`stats.rs`).** Every query goes through `Scope` → `Cond`: the time window ("last N days" = N full
 local days, so chart buckets and totals agree), user/library filters, `min_play_s`, and the rule that **non-admins
-without `see_everyone` are force-scoped to their own `user_id`, and IPs/device ids/file paths are only sent with `see_network`/`see_server` — enforced server-side**.
+without `see_everyone` are force-scoped to their own `user_id`, and IPs/device ids/file paths are only sent with `see_network`/`see_server`, enforced server-side**.
 `row_json` maps SQL rows to JSON by column name (`BOOL_COLS` / `JSON_COLS` decide bool and JSON columns), so adding a
 field is usually just adding a column to a SELECT. Local-time bucketing relies on SQLite's `'localtime'` and the
 process `TZ` (the Docker image ships tzdata for this); Rust that needs the local day of many moments asks through
-`LocalDays`, once per quarter hour (every offset and clock change falls on one), never once per play. Do not use `#[serde(flatten)]` in `Query` structs —
+`LocalDays`, once per quarter hour (every offset and clock change falls on one), never once per play. Do not use `#[serde(flatten)]` in `Query` structs:
 serde_urlencoded then hands numbers over as strings and every numeric filter 400s.
 
 **Playback insights (`stats.rs`, 2.0).** Where a title loses its viewers, drawn from where each play stopped. **A stop is
 `position_s` where the play has one and `duration_s` otherwise** (finstats' own plays and Streamystats rows that kept their runtime
 know where they stopped; Jellystat keeps a length, not a place, so the play is taken to have started at 0:00), and the two are
 never mixed silently: every curve carries `measured` and `estimated`. The rule is `playback::STOP_S` / `STOP_MEASURED` /
-`PLAY_FRAC`, and every page uses it — the curve once trusted only finstats' own positions while the activity list and the profile
+`PLAY_FRAC`, and every page uses it; the curve once trusted only finstats' own positions while the activity list and the profile
 trusted Streamystats' too, so one play finished on one page and stopped twenty minutes in on another. The grid
 (`bucket_width`) keeps any runtime to sixty points; under `MIN_CURVE_PLAYS` (3) or without a runtime there is no curve, not a thin
 one. Events exist only for live plays, so rewinds (a seek whose `from_s` is past its `position_s`) and subtitle switch-ons (a play's
-*first* subtitle change, to a track — the state before it is never an event, so a later language change is not a second switch-on)
+*first* subtitle change, to a track; the state before it is never an event, so a later language change is not a second switch-on)
 are counted over those. `from_s` came in migration 21, backfilled from the seek label in SQL; `playback::backfill_seek_origins` is
 the same statement for a restored backup from before it, and a test holds both to the same answer. A show's episodes carry `users`
 and `finished` because "everyone quits episode three" is a fact *between* episodes. `GET /api/stats/files` builds three lists from
-everyone's plays and answers empty lists without `see_everyone`; the broken-file list uses `Scope::cond_any_length()` — the minimum
-play length is precisely what a broken file never reaches — and reads nothing from `server_events`, because Jellyfin's activity
+everyone's plays and answers empty lists without `see_everyone`; the broken-file list uses `Scope::cond_any_length()` (the minimum
+play length is precisely what a broken file never reaches) and reads nothing from `server_events`, because Jellyfin's activity
 log carries no playback errors (every Error row on a real install was a failed sign-in). Server-wide event queries go through
 `idx_pbe_kind` and a test pins the plan. A seek under `SEEK_TOLERANCE_S` was never recorded, so a short rewind is invisible by design.
 
@@ -407,23 +407,23 @@ three counts for each of its three pairs; a session's own `together_s` describes
 the bucket it started in** (`alone_s` = scoped watch time in the bucket minus grouped time, never below zero). Without `see_everyone` the
 pairs must include the caller and `people` is the caller alone: a companion's name is theirs to see, a companion's time alone is not.
 Inferred, because `/Sessions` exposes no SyncPlay groups: plays of one item by ≥ 2
-different users starting within `group_window_s` (default 60 — real data shows a third of genuine groups start 6–60 s
+different users starting within `group_window_s` (default 60; real data shows a third of genuine groups start 6–60 s
 apart) and overlapping ≥ 2 min share `playbacks.group_id` (= lowest play id in the group). `detect()` re-runs per item
 when a play ends and for the titles re-linking moved plays onto, fully after an import or a restore and when the setting
 changes. **A start regroups only what the last run left behind** (`regroup_at_start`): plays it was still recording when it
 stopped were all saved after that run began, so the key `groups_detected` notes version, window and when, and the next
-start regroups titles with a play ended since — everything only for another version or window. Regrouping the whole
+start regroups titles with a play ended since, and everything only for another version or window. Regrouping the whole
 history at every start took 24 s on ten million plays. "Time together" is the
 second-longest stay in a session. Running streams are grouped separately by `mark_live` (same title,
 different users, starts within the window *or* positions within `max(window, 30)` s), before `/api/now-playing` narrows
 the list to the caller. **Everything here is measured at crowd scale** (the capacity stage in `qa/`): `mark_live` pairs
-streams of one title only, on plain values read once, and names at most `COMPANIONS_NAMED` companions (the size is exact) —
+streams of one title only, on plain values read once, and names at most `COMPANIONS_NAMED` companions (the size is exact);
 comparing every stream with every other and listing every companion took 40 s at 10,000 streams and 23.7 GB at 25,000.
 `detect` writes only the plays whose group changed; resetting every group to NULL and writing it back rewrote every grouped
 play of the history at each start, import and play end. The collector finds ended plays with a set (`ended_keys`) and closes
 a pass's ended plays in one transaction, detecting each title once (`close_ended`); the plays a pass sees begin, the
 progress it saves and the devices it saw are likewise one transaction each (`start_plays`, `save_progress`,
-`remember_devices`), never one awaited call per play — a crowd of 100,000 took 13 s to record that way, and one pass ten.
+`remember_devices`), never one awaited call per play: a crowd of 100,000 took 13 s to record that way, and one pass ten.
 
 **Search (`fuzzy.rs`).** `/api/search` scores every library title in Rust instead of using `LIKE`: normalised (case,
 accents, punctuation, leading article), every typed word must match some word of the title (exact > prefix > substring
@@ -434,14 +434,14 @@ accents, punctuation, leading article), every typed word must match some word of
 **Profiles (`profile.rs`).** Show progress counts only episodes that exist as files (`path`/`size_bytes` set; the sync
 asks Jellyfin to exclude virtual items, and season 0 is skipped). "Seen" merges three sources in order: a recorded
 play ≥ 80%, Jellyfin's played flag (`user_items`), a manual mark (`manual_seen`, written via `POST /api/me/seen` for
-the caller only — finstats never writes to Jellyfin). Streaks are all-time and share `recap::longest_run`.
+the caller only; finstats never writes to Jellyfin). Streaks are all-time and share `recap::longest_run`.
 
 **Watchlist (`watchlist.rs`, `/users/:id/watchlist`, 2.1).** One person's films and shows to watch, **their own and nobody
 else's**: every endpoint (`/api/me/watchlist*`) acts on the caller and takes no `user_id`, so no permission, not even a Jellyfin
 administrator's, opens another's list (a calendar key is refused by `AuthUser` like everywhere). An entry names its title by the
 item (`item_id`) or, not in the library yet, by provider ids, and keeps a snapshot (kind, title, year, ids) so it reads without the
 library. **Copies are one title**: items sharing an id and a type are the HD and 4K film, the lowest id stands for them (Pipeline's
-rule, not `relink.rs`'s — nothing here rewrites history), and ids that lead to *different* titles attach to nothing (`find_title`).
+rule, not `relink.rs`'s, since nothing here rewrites history), and ids that lead to *different* titles attach to nothing (`find_title`).
 `resolve` runs at the end of `backfill_playbacks`, so every library read, metadata look, import and restore attaches waiting
 entries, follows a renamed title, keeps attached snapshots current and merges every entry of one title into the oldest
 `added_at` (all of them, before the survivor moves: one may hold the item, and the unique `(user_id, item_id)` index refusing it
@@ -451,7 +451,7 @@ with `see_everyone`, Pipeline's rule), coming up (`pipeline::entries_for`), left
 `MAX_ENTRIES` (1,000) per person. In `backup::TABLES`, merged per person and title on restore. The page and every toggle
 (a film's or show's page, and an episode's or season's for its show; Pipeline's Upcoming rows; the dashboard's Coming up and
 Recently added cards; search with Ctrl+Enter) read `/api/me/watchlist/keys` once per visit (`watchlist.js`), never a request per
-poster. On a dashboard poster the toggle shows on hover or keyboard focus, and always where `(hover: none) and (pointer: coarse)` —
+poster. On a dashboard poster the toggle shows on hover or keyboard focus, and always where `(hover: none) and (pointer: coarse)`,
 not `(hover: hover)` for the opposite, which headless browsers do not report, so the QA journey could not see the rule work. None of it shows on a server whose `/auth/me` lacks `features.watchlist`. Its notification,
 `watchlist_available`, is `notify::Need::Owner`: the owner's own destinations only, never a server's, and left out of every
 other person's notification history, administrators' included. **An arrival is a title that was missing and is here now**
@@ -474,25 +474,25 @@ The shelf scrolls by hand (`shelf()` in `pages/dashboard.js`): one glide towards
 put CSS scroll-snap on a row like this: a wheel notch shorter than half a card springs back, so Firefox users could barely move it.
 
 **Recap (`recap.rs`)** is one person's year: the caller's own, or, for a Jellyfin administrator only (`is_admin`, not a
-permission), the user in `user_id`, or the whole server's (`scope=server`, 2.0) — which goes through `server_edition`, so it
+permission), the user in `user_id`, or the whole server's (`scope=server`, 2.0), which goes through `server_edition`, so it
 ranks nobody and names nobody (companions, rank and apps taken out). `whose_year` is the one place that rule lives; the page
 and the cards both go through it. It excludes Live TV item types and defaults to the year that is "ready": the current year in
 December, otherwise the previous one. 2.0 added `together` (the group fold for one person and one year; companions named, at
 most three), `finished` (by `profile::episodes`, the same "seen" as show progress; dropped = begun this year, under half seen,
 nothing for `DROPPED_QUIET_S`), `requests` (null when no request was ever recorded) and `versus`. **The year as a story
 (`story.rs`)**: every card is drawn from `StoryYear`, a typed copy with no field for a companion, a rank or an app, so a card
-cannot name anybody however the recap grows — never draw a card from the recap's JSON. `/api/recap` answers `story` (which
+cannot name anybody however the recap grows; never draw a card from the recap's JSON. `/api/recap` answers `story` (which
 chapters have cards) so the page never recomputes it. `recap::announce_ready` tells each person who watched in December, once
 (`notify:recap:{year}:{user}`).
 Its "most watched people" read `item_people`: actors (first 12 billed) and directors of films and shows only, filled by a
-second, small `/Items` pass per library in `sync_libraries` (`Fields=People`) — never add `People` to the main item read.
+second, small `/Items` pass per library in `sync_libraries` (`Fields=People`); never add `People` to the main item read.
 The same table feeds the Cast & crew row on `/items/:id` and the person pages (`/people/:id`, `stats::person_detail`), which are
 scoped like any other stats query.
 
 **Auth (`auth.rs`).** Login forwards credentials to Jellyfin's `AuthenticateByName`, immediately logs that Jellyfin
 session out, and mints an own opaque session token (stored hashed, HttpOnly SameSite=Lax cookie). **Two credentials, one
 resolution point**: `auth::resolve` reads `Authorization: Bearer fs_…` first (`looks_like_key` gates before any query; an
-invalid header never falls back to the cookie — header beats cookie), else the cookie, and both end in the same `AuthUser`,
+invalid header never falls back to the cookie: header beats cookie), else the cookie, and both end in the same `AuthUser`,
 which now carries `credential` (`Session` | `Key{id, scope}`) and `ip`. A key (`keys.rs`, `api_keys`, sha256 of `fs_`+64 hex,
 shown once) is resolved against the **live** user row and the live grants through `effective`, never a snapshot, so a lost
 `sign_in` or a demotion reaches every key at once. One person keeps at most `SESSIONS_PER_USER` (30) sessions, the oldest giving
@@ -501,12 +501,12 @@ way at the next sign-in (`store_session`), or a password in a loop fills the tab
 administrator demoted, disabled or deleted in Jellyfin used to keep full access for the session's 30 days. Because the
 session now trusts the row, every sign-in writes Jellyfin's fresh answer into it (`remember_sign_in`), or a row a Jellystat
 import wrote from the file's `IsAdministrator` could crown somebody Jellyfin did not. `sync::store_users` marks removed whoever
-the read did not return, by id — a whole-second `updated_at` comparison missed a deletion read in the same second; `touch_key` writes `last_used_*` at most once a minute. `KeyScope::Calendar`
+the read did not return, by id (a whole-second `updated_at` comparison missed a deletion read in the same second); `touch_key` writes `last_used_*` at most once a minute. `KeyScope::Calendar`
 opens only `/api/calendar.ics`: the `AuthUser` extractor refuses it with 403 everywhere, and the feed's own `CalendarKey`
 extractor takes `?key=` or the header and never the cookie (`ical.rs`; `pipeline::entries_for` carries no name by construction,
 since a subscribed calendar syncs through somebody's cloud). Minting or revoking through a key is refused (`keys::only_a_session`).
 `audit.rs` is the one record of finstats' own write paths (`KINDS`; `Actor::from(&AuthUser)`; `record` is fire-and-forget and
-never the caller's error, `record_now` for a row that must land before what it announces — an import's transaction); a new
+never the caller's error, `record_now` for a row that must land before what it announces, such as an import's transaction); a new
 write path gets a kind and one `record`, never a second log. `api_keys` is never in a backup; `audit` is.
 
 **Public profiles (`public.rs`, `card.rs`, `/u/:token`, 2.0) are the one read without an account, and they never go
@@ -526,16 +526,16 @@ state, api.js, router or prefetch, so nothing there can send a stranger to /logi
 **Permissions.** `AuthUser.perms` (`Perms`: `see_everyone`, `see_network`, `see_server`, `see_downloads`, `notify`, `manage`) is rebuilt on every
 request from `user_permissions` ∪ `Settings.default_permissions`; `sign_in` (or `allow_user_login`) gates access at
 all; Jellyfin admins always get `Perms::ALL`. Grants only add, there are no denies. Extractors: `AuthUser` (anyone
-signed in), `ServerViewer`, `Manager`, and `JellyfinAdmin` — the only one allowed to edit permissions, and
+signed in), `ServerViewer`, `Manager`, and `JellyfinAdmin`, the only one allowed to edit permissions, and
 `put_settings` refuses the access keys from anyone else, so a manager cannot self-promote. In `stats.rs` decide by
 the specific permission (`scope.perms.see_network` for IPs, `see_server` for paths, `see_everyone` for whose rows),
 never by `is_admin`. The recap ignores permissions: own for everyone, any one user for Jellyfin administrators. The UI mirrors this with
-`can('perm')` from `state.js`; it is cosmetic — every rule is enforced server-side. `api.rs` adds an Origin check on writes and a strict CSP
-(`style-src 'self'` — the UI must not use inline `<style>`/`style=""`; `el.style.x` via JS is fine).
+`can('perm')` from `state.js`; it is cosmetic; every rule is enforced server-side. `api.rs` adds an Origin check on writes and a strict CSP
+(`style-src 'self'`: the UI must not use inline `<style>`/`style=""`; `el.style.x` via JS is fine).
 
 **Local vs remote (`network.rs`).** `is_local` = private range (`db::is_local_ip`) or a row in `home_addresses`: this network's own
 public IP, looked up **once** from a plain-text service (the only non-Jellyfin request finstats makes by default; setting
-`public_ip_lookup`, override `FINSTATS_PUBLIC_IP_URL`) — at start-up when no `lookup` row exists, or when somebody presses the button —
+`public_ip_lookup`, override `FINSTATS_PUBLIC_IP_URL`), at start-up when no `lookup` row exists, or when somebody presses the button,
 plus the manual `home_addresses` setting. Always go through
 `network::classify(conn, ip)`; after the set changes call `network::reclassify`, which re-decides the whole history and
 notes what it decided against (`network_classified`: version and home addresses); a start re-decides only when that differs
@@ -543,7 +543,7 @@ notes what it decided against (`network_classified`: version and home addresses)
 must stay anonymous (no version, no ids in the request) and the docs' privacy claims must stay true to it.
 
 **Security (`geo.rs`, `security.rs`, `/security`).** `geo.rs` reads a MaxMind-format city database through a memory map (`Geo` in `AppState`,
-swapped whole when a newer file appears) — of a **private copy** (`private_copy`: copied into `<data>/geoip`, opened, its name removed),
+swapped whole when a newer file appears), of a **private copy** (`private_copy`: copied into `<data>/geoip`, opened, its name removed),
 never of the file itself, because an owner who copies a newer file over the old one truncates what is mapped and the next lookup is
 SIGBUS, which kills the process. The file used is `FINSTATS_GEOIP_DB`, else the newest `.mmdb` in `<data>/geoip/`. Lookups never leave the machine; the
 only network use is the opt-in download of DB-IP's monthly file (task `geoip`, no trigger by default; a trigger fires `download_if_stale`), which must stay as anonymous
@@ -559,37 +559,37 @@ resolved. `scan` runs when a play begins (that user), after the log sync, at sta
 match). No tiles, no map service. The plain wheel scrolls the page; Ctrl+wheel, the buttons and the keys zoom.
 **Drawing the coastline is what costs** (445 kB of path): a gesture only transforms the picture already drawn (`.wm-stage`,
 twice the frame each way so a drag uncovers land) and the viewBox is set once it settles (`draw`); nothing is ever animated
-inside the SVG — the playing-now pulse is HTML above it — because that re-records the whole world every frame. Hover is
+inside the SVG (the playing-now pulse is HTML above it), because that re-records the whole world every frame. Hover is
 worked out from the dots' positions (`hover`), one tooltip for everything under the pointer, anchored on the top circle.
 
 **Pipeline: the services around Jellyfin (`services.rs`, `arr.rs`, `seerr.rs`, `downloads.rs`, `pipeline.rs`, `/pipeline`).**
 Connections (Sonarr, Radarr, Seerr; several of a kind) live in `services`, secrets and all, and are `JellyfinAdmin`-only. **Download clients are
 deliberately not connected**: Sonarr and Radarr already talk to them and report a torrent and a usenet download the same way, so finstats reads
-their queues — three APIs to keep up with instead of six, and nothing for the owner to set up twice. What that gives up is ratio and peers; the
+their queues: three APIs to keep up with instead of six, and nothing for the owner to set up twice. What that gives up is ratio and peers; the
 speed is worked out from what moved between two readings (`downloads::speeds`). They get **their own HTTP clients that follow no redirect**: reqwest drops `Authorization`/`Cookie` across hosts but not
 `X-Api-Key`, and a 307 replays a POST body. `Service` is neither `Serialize` nor `Debug`; its JSON is hand-built with `has_secret`; errors name a
 status and a kind of failure, never an upstream body. Everything is `GET`, so nothing in the code could change anything there. An id is never reused and pointing a
 connection at another host/port/base path forgets its rows. Certificates are verified unless the owner switches that off per connection.
 Tasks: `sync_upcoming` + `sync_grabs` (15 min), `sync_requests` (5 min), all through `services::spawn`; `api::RUNNABLE` is the one way in and a
-test holds it against `TASK_IDS`. `item_external` turns `items.provider_ids` into indexed rows — **one id may belong to several items** (HD and 4K),
+test holds it against `TASK_IDS`. `item_external` turns `items.provider_ids` into indexed rows; **one id may belong to several items** (HD and 4K),
 so joins go id → every item → plays, unlike `relink.rs`, which refuses ambiguity because it rewrites history. Film releases are stored as a *day*
 (Radarr's midnight UTC is the evening before west of Greenwich); episodes keep their moment. Seerr is read newest-modified-first with an overlap
-on *its* clock, plus a re-read of everything still open (a media status change does not touch the request) — that one every 15 min and only while
-something *is* open — and only a whole listing may set `removed_at` (Seerr purges; the history must not shrink). Every pass starts with a `take=1`
+on *its* clock, plus a re-read of everything still open (a media status change does not touch the request); that one runs every 15 min and only while
+something *is* open. Only a whole listing may set `removed_at` (Seerr purges; the history must not shrink). Every pass starts with a `take=1`
 probe (`newest_change`): a newest `updatedAt` no newer than the cursor means nothing was created or changed, and the pass ends there, which is
-what keeps a five-minute cadence from being most of the traffic finstats makes. Users link by `jellyfinUserId`, then Jellyfin user name — never a display name or e-mail.
+what keeps a five-minute cadence from being most of the traffic finstats makes. Users link by `jellyfinUserId`, then Jellyfin user name, never a display name or e-mail.
 `downloads.rs` is the only live part: its own loop and `Notify`, 5 s while a page says `?live=1`, otherwise 60 s while anything is in the queue
-(a request page shows how far along it is) and 5 min while it is empty (`wait_s`) — an empty queue has nothing to go out of date, and opening the
+(a request page shows how far along it is) and 5 min while it is empty (`wait_s`); an empty queue has nothing to go out of date, and opening the
 page, connecting a service or a read of Seerr all wake the loop. No DB work per tick, the snapshot in memory only. `fold()` turns queue records into downloads by `downloadId` + service: a season pack is one row, the same id in two
 instances is two rows, a record without an id stands for itself. Scoping goes through `stats::pinned_user`: own requests for everyone, others'
-need `see_everyone` (and then no follower *counts* either — on a small server a number is a name), the queue needs `see_downloads`, while own-request
+need `see_everyone` (and then no follower *counts* either, since on a small server a number is a name), the queue needs `see_downloads`, while own-request
 progress (`state`, `progress`, `eta_s` and nothing else) is always allowed. A queue row's `error` is the service's own words
 passed through `downloads::redact`: Sonarr and Radarr quote the client or indexer they could not reach, `user:pass@` and
 `?apikey=` included. The poster proxy `/img/arr/{service}/{media}` serves only ids finstats
 itself has listed. None of these tables are in `backup::TABLES`: they are re-readable, and `services` holds secrets.
 
-**Outbound connections (`outbound.rs`, `GET /api/outbound`, Settings card).** One row per destination finstats can reach —
-Jellyfin, the public-IP services, DB-IP, each `services` row, each `notify_targets` row — with whether it is on and when it
+**Outbound connections (`outbound.rs`, `GET /api/outbound`, Settings card).** One row per destination finstats can reach
+(Jellyfin, the public-IP services, DB-IP, each `services` row, each `notify_targets` row), with whether it is on and when it
 last answered. Built entirely from what is already kept (collector status, `home_addresses`, the `.mmdb` on disk,
 `service_health`, a destination's `last_ok_at`): nothing is recorded for it, and hosts are shown without paths or keys. A new
 outbound destination must appear here, and in the promise sentences in `README.md` and `docs/security.md`, in the same change
@@ -598,26 +598,26 @@ that adds it.
 **Jellyfin's own jobs (`jobs.rs`, `GET /api/jellyfin/jobs`, the Server page).** Jellyfin's scheduled tasks say what the
 code is called ("Detect and Analyze Media Segments"); `explain` says what it does to the server, matching Jellyfin's
 **key first** (a name is in the server's language) and a keyword in the name second, and falling back to Jellyfin's own
-`Description` — a sentence finstats does not have is never invented. **A run is timed by watching it**: the API carries
+`Description`; a sentence finstats does not have is never invented. **A run is timed by watching it**: the API carries
 a percentage and never a start time for the run in progress, so `Run` keeps the recent readings and `eta_s` works out
-the rest from the rate they moved at — measured against the *most recent* reading that is far enough back to say
+the rest from the rate they moved at, measured against the *most recent* reading that is far enough back to say
 anything (0.5% and 5 s, within `WINDOW_S`), never the average of the whole run. **Nothing that was not measured is ever offered**: when there is no rate, `eta_s` is `None` and the page
-shows a cycling ellipsis rather than a number. The tempting fallback — the last run's duration for the fraction left —
+shows a cycling ellipsis rather than a number. The tempting fallback (the last run's duration for the fraction left)
 is what put "about 2 minutes left" on the screen for a quarter of an hour (1.6.1 made it age, 1.6.2 removed it): it
 knows nothing about how much of *this* run has happened and reads exactly like an earned estimate. `unchanged_for_s` is published so a slow job reads as slow
 rather than as a stuck page; a percentage that goes backwards is the next run, not this one going back. `schedule` prints a time of day as
-a time, never a countdown — a daily trigger is in the *server's* local zone, which finstats cannot know — and only an
+a time, never a countdown (a daily trigger is in the *server's* local zone, which finstats cannot know), and only an
 interval trigger, measured from the last run, produces `next_at`. The read is live but never more often than
 `MIN_GAP_S` (3 s) however many people watch, hidden tasks included, and read-only like everything else: nothing in the
 code can start or stop a task on Jellyfin. **The estimate is the backend's (2.0.4)**: `jobs::run` reads the list itself every
 `BUSY_EVERY_S` (10 s) while `Watch::next_look` knows of a run, so a page opened on a running job is served an `eta_s` it did not
-have to watch into being — before, only a page's own 3-s reads (and the five-minute scan check) timed a run. Idle it asks
+have to watch into being; before, only a page's own 3-s reads (and the five-minute scan check) timed a run. Idle it asks
 nothing; the scheduler's read notices the next run. A job Jellyfin reports at 0% throughout has no rate, and the page keeps
 its cycling "ETA…" until the percentage moves.
 
 **Notifications (`notify.rs`, `channels.rs`, `/api/notifications*`, Settings card).** The only thing finstats *sends*. An
-**event** is raised where the thing is noticed and written once — `raise_in` is `INSERT OR IGNORE` on `dedupe`, exactly like
-`security_alerts`, so re-deriving the same thing announces nothing twice — and **delivery is a separate row per destination**
+**event** is raised where the thing is noticed and written once (`raise_in` is `INSERT OR IGNORE` on `dedupe`, exactly like
+`security_alerts`, so re-deriving the same thing announces nothing twice), and **delivery is a separate row per destination**
 with its own attempts and clock (`backoff`: 30 s → 2 min → 10 min → 1 h, then given up on; `Retry-After` honoured;
 `PER_MINUTE` per destination), so a webhook that is down delays nothing else. `notify::run` is its own loop, woken by
 `notify_wake` and otherwise asleep until the next retry; an install with no destination never wakes. **Two guards make adding a
@@ -626,12 +626,12 @@ never queued, and `wanted_by` refuses anything that happened before that destina
 `KEEP_S` (30 days), which is safe only because every source either re-derives a short window (`recent::announce`,
 `seerr::announce_available`, `security::scan_sign_ins`) or raises once, when the thing itself is first written
 (`security::file_alerts`).
-**What may be said is one pure function**: `message(event, with_addresses, public_url)`. An event carries two bags — `data`,
+**What may be said is one pure function**: `message(event, with_addresses, public_url)`. An event carries two bags: `data`,
 which any destination may be told, and `private` (addresses, coordinates), which `message` reads *only* with the
-per-destination switch — so the rule holds by construction rather than by care, and a test asserts no address appears in any
+per-destination switch, so the rule holds by construction rather than by care, and a test asserts no address appears in any
 kind of message without it. The link is `public_url` + the event's path; empty setting, no link.
 **`wanted_by` is the whole permission rule in one pure place**: a server destination (`owner_id IS NULL`) is not filtered; a
-personal one is checked against its owner's `Perms` (`auth::effective`) — own rows always, somebody else's play or request
+personal one is checked against its owner's `Perms` (`auth::effective`): own rows always, somebody else's play or request
 needs `see_everyone`, somebody else's *places* need `see_network` too (`security::gate`'s rule), somebody else's failed
 sign-ins `see_server` as well (the Security page's), the server's own business needs `see_server`. The owner is read live
 (disabled or removed in Jellyfin = told nothing), and **asked again at send time** (`deliverable`): a delivery can wait an
@@ -643,19 +643,19 @@ administrator's may point anywhere.
 `Debug`, the API answers `shown` (host, plus the topic, chat or mailbox that says which one it is) and never the URL, editing without a `url` keeps the stored one,
 and `notify_targets` is not in `backup::TABLES`. `channels.rs` holds every payload shape and the POST; it reuses
 `services::Http` (no redirect followed while holding a token) and publishes to ntfy and Gotify in their JSON form, never
-through headers, because a title is a film title — the same reason Telegram is sent with no `parse_mode`.
+through headers, because a title is a film title, the same reason Telegram is sent with no `parse_mode`.
 **Nine kinds of destination, and one model under them**: an address, a token, one field beside them, and `options` for
 what is left (migration 19; only mail has any). A channel may fix its own address (`Channel::fixed_url`: Telegram,
 Pushover, Pushbullet are reached at their own service and nowhere else, so a token can never be posted to a look-alike
 host) and names that one field itself (`topic_label`: an ntfy topic, a chat id, a Pushover user key, a mailbox), each
 checked the way its own service writes it. **Email is the one that is not a POST of JSON**, so it is its own module
 (`mail.rs`, `lettre`): `smtps://` is encrypted from the first byte, `smtp://` must upgrade with STARTTLS, and there is no
-third option — no path by which a password is sent in the clear. `payload()` answering `None` is what says "not an HTTP
+third option: no path by which a password is sent in the clear. `payload()` answering `None` is what says "not an HTTP
 request at all"; `Channel::is_mail` is the same fact where it is easier to read. Anything new here is a `Channel` arm, a
 payload and where its token goes: `notify.rs` should not have to change for one. Producers live where the thing is noticed: `security.rs` (alerts, and
 `bursts` of failed sign-ins), `sync.rs` (a failed job, a failed backup, what arrived), `services.rs` and `collector.rs` (a
 connection that stopped answering, Jellyfin included, and plays beginning and ending), `seerr.rs` (a request that became
-watchable). Adding a kind of event means a `Kind` arm and one `raise` — never a second way out.
+watchable). Adding a kind of event means a `Kind` arm and one `raise`, never a second way out.
 
 **Backups (`backup.rs`).** gzip JSON Lines, one row per line tagged with its table, matched *by column name* both ways so files move
 between versions; a new table that holds something Jellyfin cannot give back must be added to `backup::TABLES`. Secrets (Jellyfin
@@ -667,19 +667,19 @@ A file is written as `<name>.part` and renamed when complete; a `.part` found wh
 **The trash (`trash.rs`, migration 37, 2.2.0): nothing a person deletes goes at once.** A play is deleted by
 `PUT /api/activity/{id}` `{"deleted": true}` (`manage`), which sets `playbacks.deleted_at`, clears its `group_id` and regroups the
 title (`groups::detect`, again on the way back); a backup by `PUT /api/backups/{name}`, which moves the file to
-`<data>/backups/deleted/<name>.<unix>` — out of `list`, `newest`, `prune`'s count, the download and the restore — and back only
+`<data>/backups/deleted/<name>.<unix>` (out of `list`, `newest`, `prune`'s count, the download and the restore) and back only
 when nothing has taken its name (`409`). `DELETE` is gone from both. After `trash::KEEP_S` (30 days) `trash::purge` removes them for
 good on the 15-minute housekeeping beat, one look at the partial index `idx_playbacks_trash` (a test pins the plan), and touches
 only file names `backup::in_trash` recognises; `trash_purged` is audited by counts alone. `prune` stays a hard delete: what
 `backup_keep` lets go was never chosen by anyone. **Every reading of history reads the view `visible_playbacks`** (`SELECT * …
 WHERE deleted_at IS NULL`, flattened by the planner onto the table's indexes), the trash listing `trashed_playbacks`, and **the
-table itself only for identity** — `already_recorded`, `source_id`, relink and locate, the collector's deletes, the address
-reads: a play in the trash is still that play, so an import or a restore does not bring it back as a new one, and relinking moves
+table itself only for identity** (`already_recorded`, `source_id`, relink and locate, the collector's deletes, the address
+reads): a play in the trash is still that play, so an import or a restore does not bring it back as a new one, and relinking moves
 it with its title. `db::tests::every_read_of_history_leaves_the_trash_out` scans every string literal in `src/` and fails on a read
 of `playbacks` that names neither `deleted_at` nor an entry of `IDENTITY_READS` (each with its reason; a stale entry fails too):
 a new query over the table is a decision, not a habit. The duplicate sweep never keeps a deleted row over a live one (the
 keeper fragment of `relinked_duplicates_sql!`'s second arm; the one-argument arm is migration 26's text, byte for byte), the
-collector never resumes a play in the trash, and a restore carries `deleted_at` but keeps the state of a row already here —
+collector never resumes a play in the trash, and a restore carries `deleted_at` but keeps the state of a row already here;
 it never undeletes.
 
 The response compression layer skips `application/gzip`: re-compressing a backup broke the download in browsers. Anything served
@@ -687,7 +687,7 @@ pre-compressed needs the same exemption.
 
 **HTTP contract.** `docs/api.md` is the contract the UI is written against; change it together with the endpoint.
 
-**The README says how finstats is built** — a blockquote under the hero shot disclosing that most of the code was
+**The README says how finstats is built**: a blockquote under the hero shot disclosing that most of the code was
 written by Claude Code from the maintainer's decisions, and what that does and does not mean: test-first, reviewed
 before it lands, `cargo test` in CI on every push to `main` and every release tag, each release run against a real
 server. Those are promises, like the privacy sentences: if any of them stops being true, the blockquote changes in
@@ -706,58 +706,58 @@ non-`/api`, non-`/assets` path), `components.js`, `charts.js` (hand-rolled SVG),
 everywhere: API/user strings reach the DOM only via `h()`/`textContent` (never `innerHTML` with data); fetches are
 aborted, timers cleared and listeners on `window` or `document` removed on route change (`ctx.signal`: a listener left behind holds
 its whole page, and `stickyFilters` refuses to be drawn without one); every new card must hide itself when its data is missing (older servers,
-non-admins, imported plays). Native `el.append(null)` prints the text "null" — pass possibly-absent nodes through
+non-admins, imported plays). Native `el.append(null)` prints the text "null", so pass possibly-absent nodes through
 `h()` or filter them first.
 
 **FinUI (`web/assets/finui/`, `finui.rs`) is finstats' own component library**, written "FinUI" wherever a person reads
 it (lowercase only in paths, the registry's name and the `fui-` prefix). Each component is a module with its `meta` and
 its CSS, listed in `registry.json` with the tokens its CSS reads (a test holds the list); a `fui-x` class is styled by
 component x alone, and its modules import nothing from outside `finui/`. `/assets/finui.css` is every CSS file in
-registry order, built by the server — one request, no build step. **Every value a theme may change is a token**: colours,
+registry order, built by the server: one request, no build step. **Every value a theme may change is a token**: colours,
 but also every corner (`--radius*`, a test refuses a literal radius), `--density`, `--card-shadow`, `--icon-stroke`,
 `--on-accent`. **FinUI is also a repository of its own, `github.com/finstats/finui`** (checked out beside finstats as
 `../finui`): the components are developed here, where they are used, and copied there as they change; its gallery,
 **FinUI create** (`create/`: presets, `preset.js`, the page) and the installer (`curl -fsSL https://finstats.github.io/finui/install.sh | sh -s --
-<code>`, built with the site by its pages workflow) live there only — finstats serves no gallery, and Settings → System
+<code>`, built with the site by its pages workflow) live there only; finstats serves no gallery, and Settings → System
 links to the site. **Each person's finstats wears the preset they chose** (Settings → Appearance, `appearance.rs`, table
 `appearance`, `/api/me/appearance`, in `backup::TABLES`): finstats keeps FinUI's `create/presets.json` and the per-option
 token files FinUI's site build generates (`finui/p/<axis>/<option>.css`), and `/assets/finui.css` answers in the look of
 the session cookie that asks (`appearance::of_request`; `private`, `Vary: Cookie`): the stylesheet followed by the files
-the code names in axis order — exactly what FinUI's `install.sh` does, so finstats has no copy of how a choice becomes
+the code names in axis order, exactly what FinUI's `install.sh` does, so finstats has no copy of how a choice becomes
 tokens. `finui::preset::overlay` only decodes the code against the files; an unknown code is refused at save. There is no
 look for everyone: one person's choice never reaches another (the owner's decision). **A style is a whole look in one
-choice** (`presets.json` `styles`: a key, a label, a line and its picks by option key; FinUI create's first picker — finstats'
+choice** (`presets.json` `styles`: a key, a label, a line and its picks by option key; FinUI create's first picker; finstats'
 Appearance offers none, the owner's decision: finstats ships one look, and a style reaches it only as the code FinUI
-create makes), and it is nothing but a code — Washi, every default, is saved as no preset at all. finstats' own
+create makes), and it is nothing but a code: Washi, every default, is saved as no preset at all. finstats' own
 chrome reads FinUI's tokens where a choice should reach it: the menu's open page is `--selected-*` (the Menu axis), as
 FinUI's section list is. **Presets choose fonts too**
-(axes Font, Heading — the token `--font-heading`, the text's own by default — and Mono): every family a preset may name
+(axes Font, Heading and Mono; Heading is the token `--font-heading`, the text's own by default): every family a preset may name
 is bundled in `web/assets/fonts` beside its OFL licence, which `licenses.rs` lists (a test holds every licence there to
 the notice), and a font option's file carries its `@font-face` rules, so a page fetches only the fonts it was told to.
 **Icons move once on hover** (FinUI's `animated-icon`): `main.js` calls `animateWithin(document.body)`, which animates
 every `icon()` inside something pressable as it is drawn (an icon among words stays still), so no page asks for it; a
 busy button (`setBusy` in `components.js`) whose icon is `refresh` keeps that icon turning instead of showing a spinner,
-and lets it finish its turn when done — the only icon that moves for longer than one hover. To bring new options over: build FinUI's site (`node ../finui/tools/build-site.mjs <dir>`) and copy its `p/`,
+and lets it finish its turn when done. It is the only icon that moves for longer than one hover. To bring new options over: build FinUI's site (`node ../finui/tools/build-site.mjs <dir>`) and copy its `p/`,
 `create/presets.json` and FinUI's `fonts/`. The QA
 stage `finui` runs that repository's QA (its checks and tests live in `../finui/qa`, never in FinUI), serves its site and
 walks the gallery and create, and fails when a file of `web/assets/finui` differs from the repository's (`p/` from its
 built site): copy a change across in the same sitting.
 
-**FinMotion (`web/assets/finmotion/`, `finmotion.rs`) is how FinUI moves — and FinUI is not an animation library** (the
+**FinMotion (`web/assets/finmotion/`, `finmotion.rs`) is how FinUI moves, and FinUI is not an animation library** (the
 owner's words): FinUI's components are still and complete on their own, and nothing of motion goes back into FinUI but
 its animated icons. FinMotion is a repository of its own (`github.com/finstats/finmotion`, checked out beside finstats as
 `../finmotion`, its own CLAUDE.md) put on top of FinUI, and **finstats always wears it**: `/assets/finmotion.css` is its
 stylesheets in its registry's order, served as one like `finui.css` and linked after it, and `main.js` calls `motion()`
 once. Everything moves on four springs (`--spring-settle | -snap | -drift | -glide`) paced by the person's Motion choice
 (FinUI's `--ease` read as `--fm-pace`) and stilled by reduced motion. Each of its parts finds a FinUI component by FinUI's
-own classes and moves what FinUI draws — FinUI needs no change for it; what a person does moves at once, while an
+own classes and moves what FinUI draws, so FinUI needs no change for it; what a person does moves at once, while an
 entrance or a flourish waits for an `fm-` class a page adds (`fm-roll`, `fm-arrive`, `fm-develop`, `fm-light`,
 `fm-gathers`, `fm-film`), because finstats redraws its pages. FinMotion is developed in its own repository and copied
 here; the QA stage `finmotion` runs its QA (`../finmotion/qa`) and fails while `web/assets/finmotion` differs from it.
 
 "Now playing" (`nowPlayingView` in `widgets.js`) is polled every 5 s, but **only the 1 s ticker moves a clock** (+1 whole
 second per beat). A poll never repaints it; it only corrects the position when that means something (pause, server > 3 s
-ahead or > 15 s behind — clients report to Jellyfin roughly every 10 s), and even then by setting it one short so the
+ahead or > 15 s behind; clients report to Jellyfin roughly every 10 s), and even then by setting it one short so the
 change lands on the next beat. Painting from the poll is what made the clock stutter.
 
 Tables go through `tables.js`: `dataTable()` / `plainTable()` / `chartTable()` wrap a built `<table>` in its scroll box and make every
@@ -784,8 +784,8 @@ already in flight (`shareRequestsOf`); only the prefetcher's requests can be joi
 (`/` focuses it) built from each section's `entries`. A section is a module
 exporting `{ key, label, sub, group, icon, visible, entries, render(slot, store) }`; `settings/common.js` holds the store (`/settings` and
 `/tasks`, fetched once per visit, tasks polled only if a section subscribes) and the two shapes a setting takes: `toggleRow` (saves itself) and
-`numberForm` (one `Save` per section, bottom right). A setting is one row — label, one line of help of at most ~150 characters, control on the
-right — and a QA check holds that budget, because the page it replaced was fourteen cards and six hundred words of help in one column. Bare
+`numberForm` (one `Save` per section, bottom right). A setting is one row (label, one line of help of at most ~150 characters, control on the
+right), and a QA check holds that budget, because the page it replaced was fourteen cards and six hundred words of help in one column. Bare
 `/settings` and the old anchors (`/settings#backups`) forward to the section that holds them (`LEGACY`); a new section's card id stays a valid
 anchor. Sections hide themselves (`visible`) rather than explaining why they are empty.
 **Tasks (`settings/tasks.js`) is the one section with pages below it**: `/settings/tasks` lists every job Jellyfin-style (a row
@@ -800,9 +800,9 @@ Esc is handled globally in `shell.js` (steps back out of `/libraries/:id`, `/use
 their own Esc, and `openModal` keeps a stack: only the dialog on top answers keys. Tables read numbers as `num()` prints
 them (en-US), never with the browser's separators.
 **The menus are FinUI's `desktop-nav` and `mobile-nav`, each in the style its browser chose** (Settings → Appearance; the
-owner's decision: kept by the browser, `state.js`, never the account). Above 820 px one of eight — Sidebar (today's, the
-default), Grouped, Rail that opens (icons until the pointer or the keyboard's focus comes — `:focus-visible`, never a link a click left
-focused — then the whole sidebar *over* the page, `STYLES[].opens`; closed, its list scrolls without drawing a bar), Search first, Dock, Command bar, Pinned, Coloured tiles — and the six that are a side may sit on
+owner's decision: kept by the browser, `state.js`, never the account). Above 820 px one of eight: Sidebar (today's, the
+default), Grouped, Rail that opens (icons until the pointer or the keyboard's focus comes (`:focus-visible`, never a link a click left
+focused), then the whole sidebar *over* the page, `STYLES[].opens`; closed, its list scrolls without drawing a bar), Search first, Dock, Command bar, Pinned, Coloured tiles. The six that are a side may sit on
 the right (*Menu on the right*; `sideOf` answers none for the dock and the command bar). Each style says which edge of the
 window it keeps (`STYLES[].edge` and `size`); `shell.js` lays the page beside it (`.app.nav-left|right|dock|command`,
 `--desktop-nav-size`), and the dock sends the status bar to the top, so the version and the repository link stay on
@@ -810,8 +810,8 @@ screen; the dock tucks itself away while the page scrolls down and comes back sc
 near the bottom edge or the focus in it (`dockShown`). Pinned's pins are the browser's too (`finstats.desktopNavPins`; nothing stored is the primary pages). Below 820 px
 one of five (Tab bar, the default, Peek, Full screen, Thumb arc, Address bar), offered only at that width; the three that
 keep the bottom of the screen take the status bar's place (`.app.has-mobile-dock`, `--mobile-nav-space`). Pages carry
-`group` and `primary` in `navItems`, which both menus read. The rules that are not drawing — styles, sides, groups, pins,
-the arc's rings, the dock's hiding, the search's flight — are each component's `plan.js`, tested in FinUI's repository. A
+`group` and `primary` in `navItems`, which both menus read. The rules that are not drawing (styles, sides, groups, pins,
+the arc's rings, the dock's hiding, the search's flight) are each component's `plan.js`, tested in FinUI's repository. A
 menu takes Esc in the capture phase, before `shell.js`' own Esc steps back a page. The hand-built sidebar and the phone's
 slide-in drawer are gone.
 
@@ -821,11 +821,11 @@ holds it in its own place (`openSearch(panel)` on `desktop-nav` and `mobile-nav`
 opens all the way, the dock rises into a card with the field where the dock was, the command bar's name turns into the
 field, a phone's sheet, screen or arc card holds it and the address bar keeps the field under the thumb); in the page, it
 takes `.content`'s place in `.page-search` while the menu stays. Either way `grow()` plays it out of the control that
-opened it — the menu's search, the command bar, the top bar's search on a phone, or for Ctrl+Space the menu's own — and
+opened it (the menu's search, the command bar, the top bar's search on a phone, or for Ctrl+Space the menu's own) and
 `shrink()` back into it, a place that was not there opening out of the control (`cut`) rather than sliding in. `search.js`
 answers the words (pages at once, `/api/search` when it comes); a press anywhere else, Esc or a page chosen puts it away.
-**Esc gives the keyboard's focus back to what had it when search opened** — the control pressed, or the place Ctrl+Space was
-pressed in, never the menu's search for a shortcut — and lets a click's focus go (handed back after a key it would be the
+**Esc gives the keyboard's focus back to what had it when search opened** (the control pressed, or the place Ctrl+Space was
+pressed in, never the menu's search for a shortcut) and lets a click's focus go (handed back after a key it would be the
 keyboard's, and a link a click left focused in the rail would open it): a rail holds itself open while the focus is in it, and `desktop-nav` moves the focus
 before `shrink` measures where it closes to (and again once it has, the search laid back over the menu having hidden it).
 `grow` and `shrink` both hold the host's own transition (nested `hold`) *before* they measure: a rail measured mid-transition
@@ -833,10 +833,10 @@ is still as wide as the search, and the close shrank the shape into itself, an e
 The modal palette it replaced is gone.
 **Context menus (FinUI `context-menu`, `menus.js`, 2.2.0) come from the link, not the page.** One resolver for the whole app
 (`installMenus`, `attachContextMenu(document, …)`): any `<a>` to `/items/:id`, `/users/:id`, `/people/:id` or `/libraries/:id` has a
-menu — right-click, a long-press on a touch screen (`plan.js` `held`: 500 ms, 10 px), the menu key or Shift+F10 — and Shift with a
+menu: right-click, a long-press on a touch screen (`plan.js` `held`: 500 ms, 10 px), the menu key or Shift+F10. Shift with a
 right-click, a field and anything else are left to the browser. What a title is comes from the link's `data-type` (`typed()`, a
 Jellyfin type), set where the answer that drew it knows: only a film or a show is offered the watchlist (`watchMenuItem`, the
-toggle's own add and remove), and a link without a type is offered everything else. A card with no link — a film in Coming up the library does not have yet — names its title in `data-` attributes instead (`notHere`, the watchlist's own `{kind, tmdb_id, tvdb_id, title, year}`) and is offered the watchlist by its ids, its page on TMDB or TVDB (the forms `stats.rs` links) and Pipeline. "Open in Jellyfin" is `user.jellyfin_details`
+toggle's own add and remove), and a link without a type is offered everything else. A card with no link (a film in Coming up the library does not have yet) names its title in `data-` attributes instead (`notHere`, the watchlist's own `{kind, tmdb_id, tvdb_id, title, year}`) and is offered the watchlist by its ids, its page on TMDB or TVDB (the forms `stats.rs` links) and Pipeline. "Open in Jellyfin" is `user.jellyfin_details`
 plus the id (`/auth/me`; `jellyfin::web_link`'s rule). The menu grows out of the pressed point (`place` answers its corner and
 `transform-origin`), the first item takes the focus, Esc and Tab hand it back, and Esc never reaches `shell.js`. **A scroll carries
 the menu with its element and only its leaving the screen closes it**: closing at any scroll shut a menu opened from the keyboard in
@@ -844,38 +844,38 @@ the frame it opened, as focusing a poster far along a shelf scrolled it into vie
 Signing out lives in Settings → Account (`settings/account.js`), not in the sidebar. In the status bar every item is one small box
 (18 px, `--radius-sm`) and every link hovers as that box; the `·` between two items is an element of its own (`.sb-sep`),
 laid out between them so flexbox centres it, never an item's `::before`: inside a link its hover lit the dot up, and placed
-by hand it was never quite centred. It hides with the item after it (`:has`). A long value in a `facts()` grid — a file
-path — takes `{ wide: true }` and the whole row, or it runs down a 190 px cell.
+by hand it was never quite centred. It hides with the item after it (`:has`). A long value in a `facts()` grid (a file
+path) takes `{ wide: true }` and the whole row, or it runs down a 190 px cell.
 Each screen is held to the UX patterns from <https://uxgoodpatterns.com>. A generated copy, `ux-rules.md`, may sit in the working
 tree for reference; it is someone else's work, is git-ignored and must never be committed. The look is Obsidian's in the dark and washi paper in the light (cream ground, ink text, a vermilion seal for
 the accent, nando for quantities), via the tokens at the top of `app.css`; categorical chart colours follow the entity (Movie/Episode/Audio/Other), never rank.
-**Every colour is a token, and every token is `light-dark(light, dark)`** — one declaration, two themes. A colour literal
+**Every colour is a token, and every token is `light-dark(light, dark)`**: one declaration, two themes. A colour literal
 anywhere else (a CSS rule, a chart's `fill`, a `style.background` in JS) is right in one theme and wrong in the other; the QA
 light sweep measures text contrast on every page and fails on it. JS reaches a token as the string `'var(--x)'` through `style`
 (never an SVG presentation attribute). With nothing chosen the device decides (`color-scheme: light dark`); the sidebar's
 theme switch (`themeSwitch` in `shell.js`: three stops Light · Device · Dark, a `role="slider"`; click, drag or keys; its knob's
 icon animates in, never with reduced motion) keeps the choice in `localStorage` (`finstats.theme`, absent = Device), which
-`theme.js` — a classic, blocking script in both pages' `<head>` — puts on `<html data-theme>` before the first paint. The
+`theme.js` (a classic, blocking script in both pages' `<head>`) puts on `<html data-theme>` before the first paint. The
 server-rendered profile cards (`card.rs`) stay dark.
 
 ## Local QA suite
 
 `qa/` (git-ignored, so it may not exist in a fresh clone) holds a local release gate: `qa/run.sh` runs static checks, an API suite
 and a real-browser suite against a throwaway instance built from generated data. Run it before every release and add a check for
-every bug fixed. The database torture and the soak are not in it — minutes each, one after the other — but `qa/run.sh endurance`:
+every bug fixed. The database torture and the soak are not in it (minutes each, one after the other) but in `qa/run.sh endurance`:
 run that too before a release, and after work on the database or on anything long-running. It is a local tool and must never be committed; the same goes for `ux-rules.md`.
 
 ## Releases and patch notes
 
 `CHANGELOG.md` is the single source for the in-app **Patch notes** tab (`changelog.rs` parses it). A test fails if
-the top entry's version differs from `Cargo.toml`, or an entry lacks a date/notes/known group — so a version bump
+the top entry's version differs from `Cargo.toml`, or an entry lacks a date/notes/known group, so a version bump
 and its changelog entry land together. Format: `## [x.y.z] - YYYY-MM-DD`, or `- YYYY-MM-DD to YYYY-MM-DD` for a release
 made over several days (`date` stays the release day, `started` the first; the page shows both), then
 `### Added | Changed | Performance | Stability | Fixed | Removed` with one-line bullets (`**bold**`, `*italic*` and
 `` `code` `` are rendered; a Markdown link is not, so name a doc as `code`). **Performance** is quicker or lighter, **Stability** is something that can no longer crash, halt, leak or lose
-data, **Fixed** is something that gave a wrong answer — a speed-up filed as a fix reads as a bug nobody had. The rules live
+data, **Fixed** is something that gave a wrong answer; a speed-up filed as a fix reads as a bug nobody had. The rules live
 in one test function (`changelog::tests::problems`). An `x.y.0` entry opens with a **short title line**
-and nothing else — "Notifications", "WebSocket session tracking" — which the app shows as that whole series' headline
+and nothing else ("Notifications", "WebSocket session tracking"), which the app shows as that whole series' headline
 (`changelog.js` takes the summary's first sentence, or all of it when there is no full stop, so a title stays whole);
 a test enforces that an `x.y.0` has one. Notes are terse and factual, in the shape of a GitHub changelog: what
 changed, and the fact that makes it make sense. Nothing a release did not do.
@@ -888,17 +888,17 @@ commit that touches Rust must build and pass `cargo test` on its own.
 
 finstats is `GPL-3.0-only` (`LICENSE`, `Cargo.toml`). A new dependency must carry a GPL-3.0-compatible license
 (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0 and similar are fine; check with `cargo metadata`). The bundled fonts are
-OFL-1.1 and their license texts live next to them in `web/assets/fonts/` — keep them together.
+OFL-1.1 and their license texts live next to them in `web/assets/fonts/`; keep them together.
 
 **The notice is shipped, not summarised (`licenses.rs`, `THIRD-PARTY.json`, `GET /api/licenses`, `/licenses`).**
 `tools/make-third-party.py` walks `cargo metadata` (non-dev, every platform: a notice true only on the machine that
 generated it would be wrong on the others) and reads each crate's own `LICENSE` files out of the sources cargo has
-unpacked. Identical texts are stored once — hundreds of crates ship the same MIT wording — and every crate points at
+unpacked. Identical texts are stored once (hundreds of crates ship the same MIT wording), and every crate points at
 the ones it carries. **Nothing in here is retyped**: each text is a licence file as its project wrote it, and the
-bundled half (`BUNDLED` in `licenses.rs`: finstats' own GPL, every font in `web/assets/fonts` — a test holds each licence there to the notice — the map, DB-IP's database) is
+bundled half (`BUNDLED` in `licenses.rs`: finstats' own GPL, every font in `web/assets/fonts` (a test holds each licence there to the notice), the map, DB-IP's database) is
 `include_str!` of the file that really sits on disk. Re-run the generator whenever a dependency is added, removed or
 bumped: a test holds the file against every package in `Cargo.lock`, so a dependency whose licence was never recorded
-fails `cargo test`. The answer is rendered once into a `OnceLock` — half a megabyte, the same for everyone, unchanging
+fails `cargo test`. The answer is rendered once into a `OnceLock`: half a megabyte, the same for everyone, unchanging
 while the process runs. The page reaches it from a button in Settings; the route itself is open to anyone signed in.
 
 ## Publishing
@@ -918,7 +918,7 @@ change is risky.
 
 The repository is `github.com/finstats/finstats`; images go to `ghcr.io/finstats/finstats`. Up to 1.6.5 both lived
 under the maintainer's personal account; 2.0.0 is the first release from the organisation. Nothing but
-the changelog may name the old home any more — a QA static check holds it — and the 25 GitHub releases up to 1.6.5
+the changelog may name the old home any more (a QA static check holds it), and the 25 GitHub releases up to 1.6.5
 were rewritten to match. `.github/workflows/docker.yml` runs the unit
 tests, builds amd64 and arm64 on native runners (no QEMU), and publishes `:edge` from `main` and `:X.Y.Z`, `:X.Y`, `:X`, `:latest` from a
 `vX.Y.Z` tag, then creates the GitHub release from that version's `CHANGELOG.md` section. It refuses a tag that does not match
@@ -936,9 +936,9 @@ image, never at a locally built tag.
 
 ## This repository is public
 
-`data/` (the SQLite database: users, IP addresses, the Jellyfin API key) and tracker exports — Jellystat's
-(`*.jsonl`, `backup_*`) and Streamystats' (`streamystats-backup-*.json`, which carries public IP addresses) —
+`data/` (the SQLite database: users, IP addresses, the Jellyfin API key) and tracker exports, Jellystat's
+(`*.jsonl`, `backup_*`) and Streamystats' (`streamystats-backup-*.json`, which carries public IP addresses),
 sit next to the source on development machines and must never be committed; `.gitignore`,
 `.dockerignore` and `.githooks/pre-commit` (enable with `git config core.hooksPath .githooks`) guard this. Stage
 explicit paths rather than `git add -A`. Tests, docs, examples and commit messages use invented data only
-(e.g. "alice", "Big Buck Bunny", `Europe/London`, `192.168.1.10`) — never values from a real server.
+(e.g. "alice", "Big Buck Bunny", `Europe/London`, `192.168.1.10`), never values from a real server.

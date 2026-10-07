@@ -163,7 +163,7 @@ impl Channel {
         match self {
             Channel::Ntfy => "The ntfy topic to publish to. Anybody who knows it can read your notifications, so make it hard to guess.",
             Channel::Telegram => "Message your bot once, then open https://api.telegram.org/bot<token>/getUpdates and use the chat id it reports. A channel may be given as @name.",
-            Channel::Pushover => "Your user key, on the front page of pushover.net — or a group key.",
+            Channel::Pushover => "Your user key, on the front page of pushover.net, or a group key.",
             Channel::Email => "The mailbox to send to.",
             _ => "",
         }
@@ -295,7 +295,7 @@ fn body_max(channel: Channel) -> usize {
 }
 
 /// What one destination is sent: where to, and the JSON body. Pure, so every shape has a test under it
-/// and none of them needs a server to check. `None` for email, which is not an HTTP request at all —
+/// and none of them needs a server to check. `None` for email, which is not an HTTP request at all:
 /// `mail.rs` has its own shape and its own transport.
 pub fn payload(channel: Channel, base_url: &str, topic: Option<&str>, secret: &str, m: &Message) -> Option<(String, Value)> {
     let title = cut(&m.title, TITLE_MAX);

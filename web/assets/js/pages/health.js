@@ -1,4 +1,4 @@
-// Server → Library health: what is wrong with a file only shows beside its neighbours — a hole in a season, a season in
+// Server → Library health: what is wrong with a file only shows beside its neighbours: a hole in a season, a season in
 // another resolution, the same film twice, a file far too thin for what it claims, a dub that stops, a title Jellyfin
 // never identified. The server works the findings out after a library read; this only draws them, and finstats changes
 // nothing in Jellyfin. A tile per kind picks the list below it; a finding can be set aside, and comes back by itself

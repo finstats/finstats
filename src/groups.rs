@@ -120,7 +120,7 @@ pub fn detect(conn: &mut Connection, window_s: i64, only_item: Option<&str>) -> 
         let mut rows = stmt.query(params_from_iter(args.iter()))?;
         // Each title's plays with the group they have now; what the clustering says is compared with it, and only the
         // plays whose group actually changes are written. (Resetting every group to NULL and writing them all back
-        // rewrote every grouped play of the history each time — at start-up, after every import, after every play.)
+        // rewrote every grouped play of the history each time: at start-up, after every import, after every play.)
         let mut changes: Vec<(i64, Option<i64>)> = vec![];
         let mut found: BTreeSet<i64> = BTreeSet::new();
         let mut current: Option<String> = None;
@@ -174,7 +174,7 @@ const REGROUPED_KEY: &str = "groups_detected";
 
 /// The start-up pass. A play that ends regroups its title at once, and an import, a restore or a new window regroup
 /// everything themselves, so a start has only to catch what the last run left behind: plays it was still recording
-/// when it stopped, and every one of those was saved after that run's start — `ended_at` at or past `now` as it was
+/// when it stopped, and every one of those was saved after that run's start, with `ended_at` at or past `now` as it was
 /// then. Regrouping the whole history at every start instead took 24 s on ten million plays. A different version of
 /// finstats, or a different window, still regroups everything: the rule itself may be what changed. `now` is when
 /// this pass begins.
@@ -205,7 +205,7 @@ pub fn regroup_at_start(conn: &mut Connection, window_s: i64, now: i64) -> Resul
 // ---------------------------------------------------------------- the fold (2.0)
 //
 // One grouped play as the SELECT hands it over; sessions are folded from these in Rust, and everything
-// the page and the recap ask — pairs, time per day, each person's share — is read off the sessions
+// the page and the recap ask (pairs, time per day, each person's share) is read off the sessions
 // by pure functions, so the recap can ask the same questions of one person and one year.
 
 /// One row of the grouped-plays SELECT.
@@ -274,7 +274,7 @@ impl Session {
     }
 }
 
-/// A span of time, unix seconds: `[since, until)`. `until` is what a window of the past needs — the
+/// A span of time, unix seconds: `[since, until)`. `until` is what a window of the past needs: the
 /// window before this one, or the recap's one year.
 pub struct Window {
     pub since: Option<i64>,
@@ -307,7 +307,7 @@ pub fn sessions_for(conn: &Connection, w: &Window, library_id: Option<&str>, use
     let mut wh = vec!["p.group_id IS NOT NULL".to_string()];
     let mut args: Vec<SqlValue> = vec![];
     // A session belongs whole to the window it started in: every member of a group whose first play started
-    // inside it, and none of one that started before it — however the members' own starts fall.
+    // inside it, and none of one that started before it, however the members' own starts fall.
     if w.since.is_some() || w.until.is_some() {
         let mut inner = vec!["g.group_id IS NOT NULL"];
         if let Some(s) = w.since {
@@ -419,7 +419,7 @@ pub fn pairs(sessions: &[Session], must_include: &[String]) -> Vec<Pair> {
 
 /// Per bucket of the caller's choosing (a day, a week): the time together of the sessions that
 /// started in it, and everything the scoped people (everyone, when `scoped` is empty) watched in
-/// them — what "alone" is taken from. A session belongs whole to the bucket it started in.
+/// them, which is what "alone" is taken from. A session belongs whole to the bucket it started in.
 pub fn per_bucket(sessions: &[Session], scoped: &[String], mut bucket_of: impl FnMut(i64) -> Result<String>) -> Result<BTreeMap<String, (i64, i64)>> {
     let mut out: BTreeMap<String, (i64, i64)> = BTreeMap::new();
     for s in sessions {
@@ -458,7 +458,7 @@ pub fn people_shares(sessions: &[Session], totals: &BTreeMap<String, (String, bo
     out
 }
 
-/// The groups as sets of members — what the dashboard card has always shown — most time together first, at most eight.
+/// The groups as sets of members (what the dashboard card has always shown), most time together first, at most eight.
 pub fn companions(sessions: &[Session]) -> Vec<Value> {
     let mut acc: HashMap<Vec<String>, (Vec<Value>, i64, i64, i64)> = HashMap::new();
     for s in sessions {
@@ -588,7 +588,7 @@ pub(crate) fn answer(c: &Connection, scope: &Scope) -> Result<Value> {
     }))
 }
 
-/// `GET /api/stats/groups` — who watches together, what, and for how long.
+/// `GET /api/stats/groups`: who watches together, what, and for how long.
 /// Without "see everyone" only groups the caller was part of are returned.
 pub async fn groups(State(app): State<App>, user: AuthUser, Query(q): Query<FilterQuery>) -> ApiResult {
     let scope = Scope::new(&app, &user, &q);
@@ -715,8 +715,8 @@ mod tests {
     }
 
     /// A session belongs whole to the window it started in: alice pressed play ten seconds before midnight
-    /// on New Year's Eve and bob ten seconds after, and the new year held a session of bob alone — one more
-    /// evening with nobody — while the old year held alice alone.
+    /// on New Year's Eve and bob ten seconds after, and the new year held a session of bob alone (one more
+    /// evening with nobody) while the old year held alice alone.
     #[test]
     fn a_session_across_the_edge_of_a_window_is_the_first_windows_and_whole() {
         let c = conn();
@@ -836,7 +836,7 @@ mod tests {
 
     #[test]
     fn a_start_regroups_only_the_titles_played_since_the_last_one() {
-        // Every start regrouped the whole history — 24 s on ten million plays — although a play ending groups its title
+        // Every start regrouped the whole history (24 s on ten million plays), although a play ending groups its title
         // at once. What a start has to catch is only what the last run left behind: plays it was still recording when it
         // stopped, whose last save came after that run began. A new version or a new window still regroups everything.
         let mut c = conn();
@@ -871,7 +871,7 @@ mod tests {
     #[test]
     fn detecting_groups_again_writes_nothing_when_nothing_changed() {
         // Every run set every grouped play's group to NULL and wrote it back: at start-up, after every import and each
-        // time a play ended, the same rows again — on a history of millions, millions of writes that changed nothing.
+        // time a play ended, the same rows again: on a history of millions, millions of writes that changed nothing.
         let mut c = conn();
         c.execute_batch(
             "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)

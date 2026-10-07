@@ -274,7 +274,7 @@ function libItemRows(items, { empty, showAdded = false }) {
 }
 
 /**
- * "What your library is made of". Not scoped by the time range — it describes the files,
+ * "What your library is made of". Not scoped by the time range: it describes the files,
  * so it renders under its own heading, away from the range-filtered cards.
  */
 export function libraryInsights(d, { scoped = false } = {}) {
@@ -291,7 +291,7 @@ export function libraryInsights(d, { scoped = false } = {}) {
   const counts = [['Movies', t.movies], ['Series', t.series], ['Episodes', t.episodes], ['Tracks', t.tracks]].filter(([, v]) => v > 0);
   return h('section', { class: 'subsection stack' },
     h('div', null, h('h2', { class: 'subsection-title' }, scoped ? 'What this library is made of' : 'What your library is made of'),
-      h('p', { class: 'subsection-sub' }, 'About the files themselves — the time range above doesn’t apply here.')),
+      h('p', { class: 'subsection-sub' }, 'About the files themselves. The time range above doesn’t apply here.')),
     h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--three' },
       h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, 'Files'), h('div', { class: 'fui-stat-tile__value' }, compact(t.files)),
         h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, counts.map(([k, v]) => `${num(v)} ${k.toLowerCase()}`).join(' · ') || ' '))),
@@ -321,7 +321,7 @@ export function libraryInsights(d, { scoped = false } = {}) {
       card({ title: 'Largest', sub: 'Series count all their episodes', body: libItemRows(d.largest, { empty: 'No file sizes known yet.' }) }),
       card({ title: 'Never watched',
         sub: un && un.count > 0 ? `${num(un.count)} ${un.count === 1 ? 'title' : 'titles'} · ${bytes(un.size_bytes)} nobody has played` : 'Everything has been played at least once',
-        body: [libItemRows(un && un.items, { empty: 'Nothing unwatched — or no file sizes known yet.', showAdded: true }),
+        body: [libItemRows(un && un.items, { empty: 'Nothing unwatched, or no file sizes known yet.', showAdded: true }),
           h('p', { class: 'fui-field__help fui-card__note' }, 'Combines plays recorded by finstats with Jellyfin’s own played flags, so history from before finstats counts too.')] })));
 }
 
@@ -369,7 +369,7 @@ export function shelfRow(cards, arrows, label) {
     glide(from() + Math.sign(raw) * (px >= 30 ? step() : px * step() / 50));
   }, { passive: false });
 
-  // Arrow keys move one poster, Page Up/Down a screenful, Home/End to the ends — on the row itself or on a card in it.
+  // Arrow keys move one poster, Page Up/Down a screenful, Home/End to the ends, on the row itself or on a card in it.
   list.addEventListener('keydown', (e) => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     const to = { ArrowRight: () => from() + step(), ArrowLeft: () => from() - step(), PageDown: () => from() + list.clientWidth - step(),

@@ -1,4 +1,4 @@
-// FinMotion: how things move, from script — on the same four springs CSS moves on (--spring-settle, -snap, -drift,
+// FinMotion: how things move, from script, on the same four springs CSS moves on (--spring-settle, -snap, -drift,
 // -glide in core/springs.css), read from the page, so FinUI's Motion choice and the device's reduced motion reach a script
 // exactly as they reach a transition. Nothing here moves by itself; a part asks.
 
@@ -25,8 +25,8 @@ export function pace(root = document.documentElement) {
 /** What leaves gets out of the way: a third of its spring's time, on a curve that starts slowly and ends fast. */
 const LEAVE = { part: 1 / 3, easing: 'cubic-bezier(.4, 0, 1, 1)' };
 
-/** A spring's timing as `style` (a computed style) gives it: `{ duration, easing }` in ms, for Element.animate. Still —
- *  duration 0 — when the preset's Motion is Off or the device asks for reduced motion. `leaving`: the same spring for
+/** A spring's timing as `style` (a computed style) gives it: `{ duration, easing }` in ms, for Element.animate. Still
+ *  (duration 0) when the preset's Motion is Off or the device asks for reduced motion. `leaving`: the same spring for
  *  something on its way out. */
 export function timing(style, name, { reduced = false, leaving = false } = {}) {
   if (!SPRINGS[name]) throw new Error(`FinUI has no spring called ${name}`);
@@ -36,7 +36,7 @@ export function timing(style, name, { reduced = false, leaving = false } = {}) {
 }
 
 /** The spring `name` as it stands for `el` (a preset may be scoped to part of a page). An element not yet in the page has
- *  no style to read — it would read as still — so the page's own springs stand in for it. */
+ *  no style to read (it would read as still), so the page's own springs stand in for it. */
 export const spring = (name = 'settle', el = document.documentElement, { leaving = false } = {}) =>
   timing(getComputedStyle(el && el.isConnected ? el : document.documentElement), name, { reduced: reducedHere(), leaving });
 
@@ -61,7 +61,7 @@ export const ended = (a, ms = a.effect ? a.effect.getComputedTiming().endTime : 
 export function settle(el) { for (const a of el.getAnimations({ subtree: true })) a.cancel(); }
 
 /** Values that chase a target on a spring, stepped every frame: a new target bends the movement in flight rather than
- *  waiting for an animation to end — what a pointer needs. `apply(values)` paints; it is called on every frame. */
+ *  waiting for an animation to end, which is what a pointer needs. `apply(values)` paints; it is called on every frame. */
 export function follower(start, apply, name = 'settle') {
   const x = { ...start }, v = Object.fromEntries(Object.keys(start).map((k) => [k, 0]));
   const goal = { ...start };
@@ -116,7 +116,7 @@ export function deal(els, { name = 'drift', every = null, rise = 10 } = {}) {
   return list.map((el, i) => play(el, [{ opacity: 0, transform: `translateY(${rise}px)` }, { opacity: 1, transform: 'none' }], name, { delay: i * step, fill: 'backwards' }));
 }
 
-/** Runs `enter()` once, the first time `el` comes into view — a chart drawing itself, a number rolling up — and never
+/** Runs `enter()` once, the first time `el` comes into view (a chart drawing itself, a number rolling up), and never
  *  when nothing should move. A page that draws something far below is not spent on an entrance nobody saw. */
 export function whenSeen(el, enter) {
   if (typeof IntersectionObserver !== 'function') return;

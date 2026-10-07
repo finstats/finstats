@@ -106,7 +106,7 @@ fn private_copy(src: &Path, scratch: &Path) -> Result<std::fs::File> {
 impl Database {
     /// `scratch` is a folder of finstats' own, for the private copy that is actually read.
     pub fn open(path: &Path, scratch: &Path) -> Result<Self> {
-        // Memory-mapped, because a city database is over 100 MB and only the pages a lookup touches get read — but
+        // Memory-mapped, because a city database is over 100 MB and only the pages a lookup touches get read, but
         // mapped from a private copy, never from `path` itself: the owner can overwrite that file in place (a `cp`
         // onto the same name truncates it first), and a lookup that then reads past its new end is SIGBUS, which
         // kills the process. Nothing but this process can reach the copy, so nothing can shorten it.
@@ -353,7 +353,7 @@ pub async fn pick_up(app: &App) {
 }
 
 /// When the `geoip` job's trigger fires: fetch a newer month once the downloaded one is old. The trigger is the
-/// owner's consent — a job without one never reaches DB-IP.
+/// owner's consent: a job without one never reaches DB-IP.
 pub fn download_if_stale(app: &App) -> bool {
     if std::env::var("FINSTATS_GEOIP_DB").is_ok_and(|p| !p.trim().is_empty()) {
         return false;

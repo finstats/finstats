@@ -6,14 +6,14 @@
 //!
 //!   * **Casing.** Every HTTP read asks for `profile="PascalCase"` (see `jellyfin.rs`), and a
 //!     WebSocket handshake cannot: it is one GET whose `Accept` the server ignores. A server that
-//!     answers camelCase would make `record_from_session` return `None` for every session — no plays
+//!     answers camelCase would make `record_from_session` return `None` for every session: no plays
 //!     at all, silently. So keys are put back into PascalCase here, and the first snapshot is held
 //!     against one real `/Sessions` read before a single row is written from it.
 //!   * **No `ActiveWithinSeconds`.** The push is the server's whole session list, so a client that
 //!     vanished without saying stop lingers with something "playing". Nothing that is playing is ever
 //!     judged by the push alone: the collector asks for the list itself for as long as anything is,
 //!     and that is what ends such a play.
-//!   * **Silence.** A socket can stop delivering without closing, which a poll cannot — but silence is
+//!   * **Silence.** A socket can stop delivering without closing, which a poll cannot, but silence is
 //!     also the *normal* state here: Jellyfin pushes a session list when something changes and sends
 //!     nothing at all while nobody is watching, for hours. So what is watched is the server answering,
 //!     not sessions arriving: finstats sends `KeepAlive` and Jellyfin answers, and nothing heard for
@@ -38,11 +38,11 @@ use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 use crate::jellyfin::Jellyfin;
 
 /// Subscribe: send the list now, and look again every 1.5 s. Jellyfin only sends when that look finds
-/// something different, which is why a server with nobody watching anything says nothing for hours —
+/// something different, which is why a server with nobody watching anything says nothing for hours,
 /// and why one with something playing says something every 1.5 s, since a position never stops moving.
 const SESSIONS_START: &str = r#"{"MessageType":"SessionsStart","Data":"0,1500"}"#;
 /// Unsubscribe, and the reason this exists: the moment a play is being polled for, those pushes are a
-/// second copy of what finstats is already asking for — the same list twice, and the pushed one is not
+/// second copy of what finstats is already asking for: the same list twice, and the pushed one is not
 /// even compressed. The connection stays open and keeps answering `KeepAlive`, so it costs nothing and
 /// is one message away from carrying again the moment the last play ends.
 const SESSIONS_STOP: &str = r#"{"MessageType":"SessionsStop","Data":""}"#;
@@ -50,14 +50,14 @@ const KEEP_ALIVE: &str = r#"{"MessageType":"KeepAlive"}"#;
 /// How long to wait for the list that proves the socket carries before saying so and letting the
 /// collector poll meanwhile. **Not a verdict.** A Jellyfin normally answers `SessionsStart` at once
 /// whether or not anything is loaded (measured: "0.0s after subscribing, 0 loaded"), but one was once
-/// seen not to, and the cause was never established — a server still starting up, most likely. Nothing
+/// seen not to, and the cause was never established (a server still starting up, most likely). Nothing
 /// is concluded from that silence: the connection is kept, stays subscribed, and the first real push
 /// settles it. Assuming otherwise cost an earlier attempt the socket entirely.
 const SUBSCRIBE_MAX: Duration = Duration::from_secs(5);
 /// While still unproven, ask again this often, in case the subscription itself went missing.
 const PROBE_EVERY: Duration = Duration::from_secs(300);
-/// A connection that has not said one word in this long — no `ForceKeepAlive`, no answer to a
-/// `KeepAlive` of ours, nothing — is not healthy, whatever it may be subscribed to.
+/// A connection that has not said one word in this long (no `ForceKeepAlive`, no answer to a
+/// `KeepAlive` of ours, nothing) is not healthy, whatever it may be subscribed to.
 const NOT_ANSWERING: Duration = Duration::from_secs(10);
 const HANDSHAKE_MAX: Duration = Duration::from_secs(10);
 /// A snapshot is a whole picture, so an old one is worthless; a few in hand is plenty.
@@ -75,7 +75,7 @@ pub enum Event {
     /// for something that may never come: the connection is healthy, so the subscription is believed,
     /// and the collector reads the current state for itself once instead.
     Trusted,
-    /// Jellyfin answered a `KeepAlive`. No news — that is the point: it says the picture the collector
+    /// Jellyfin answered a `KeepAlive`. No news, and that is the point: it says the picture the collector
     /// already has is still the current one, which is what "last checked" means on this transport.
     Alive,
     Down(String),
@@ -83,13 +83,13 @@ pub enum Event {
 
 /// How one connection ended. The difference matters only in how soon to try again: a server that does
 /// not answer a subscription is asked again in `PROBE_EVERY` rather than in a second or two, and a
-/// verdict is never kept — "does not speak this" and "was restarting when we asked" look the same.
+/// verdict is never kept: "does not speak this" and "was restarting when we asked" look the same.
 enum End {
     Unsupported(String),
     Broken(String),
 }
 
-/// A running socket task. Dropping it stops the task — one assignment, for a Jellyfin that changed.
+/// A running socket task. Dropping it stops the task: one assignment, for a Jellyfin that changed.
 pub struct Handle {
     rx: mpsc::Receiver<Event>,
     /// Whether session pushes are wanted right now. Survives a reconnection, so a socket that comes
@@ -131,7 +131,7 @@ impl Handle {
     }
 
     /// Wait for the wire to match what was last asked for, so a change of transport is never published
-    /// before it has happened. Milliseconds in practice — the task is awake and a frame is one write.
+    /// before it has happened. Milliseconds in practice: the task is awake and a frame is one write.
     /// `false` if it did not land in time, which the caller treats as the socket being unusable.
     pub async fn settled(&self, on: bool, within: Duration) -> bool {
         let deadline = Instant::now() + within;
@@ -277,7 +277,7 @@ pub fn keepalive_period(force: u64) -> Duration {
 }
 
 /// Nothing at all from the server for this long is death: two keepalives of ours unanswered, plus a
-/// little room for a slow one. A session list is *not* what is being waited for — a paused play, or
+/// little room for a slow one. A session list is *not* what is being waited for: a paused play, or
 /// an evening when nobody is watching, has none to send and is perfectly well.
 pub fn lost_after(period: Duration) -> Duration {
     period * 2 + Duration::from_secs(10)
@@ -368,7 +368,7 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
     let mut watchdog = tokio::time::interval(Duration::from_secs(1));
     // Two different questions, and 1.4.0 answered both with one clock, which is the bug this fixes.
     //   `subscribed`: did `SessionsStart` take? Jellyfin answers it with the session list as it is
-    //     right now — empty when nobody is watching anything — so the first list is the proof, and
+    //     right now (empty when nobody is watching anything), so the first list is the proof, and
     //     no first list means this server does not speak it.
     //   `heard`: is the server still there? Anything at all counts, because after that first list a
     //     healthy Jellyfin sends nothing until something changes, which can be hours.
@@ -449,11 +449,11 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
             }
             _ = watchdog.tick() => {
                 // Nothing has been pushed yet. Say so once, so the collector asks for the list itself
-                // meanwhile — and then keep waiting, subscribed, for as long as the connection lives:
+                // meanwhile, and then keep waiting, subscribed, for as long as the connection lives:
                 // an idle Jellyfin sends nothing because it has nothing to send, not because it cannot.
                 if listening && subscribed.is_none() && !unproven && listening_since.elapsed() > SUBSCRIBE_MAX {
                     match heard {
-                        // The server is answering — it simply has nothing to report. Believe the
+                        // The server is answering; it simply has nothing to report. Believe the
                         // subscription; the collector reads the current state for itself once.
                         Some(_) => {
                             unproven = true;

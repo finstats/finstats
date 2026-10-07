@@ -1,4 +1,4 @@
-// FinUI: popover, the rules that are not drawing — where a box opens beside what it belongs to: on the side asked for,
+// FinUI: popover, the rules that are not drawing: where a box opens beside what it belongs to: on the side asked for,
 // lined up with its start, its end or its middle, on the other side when there is no room, and held inside the window.
 // Pure; tested in FinUI's repository.
 

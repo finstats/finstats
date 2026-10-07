@@ -1,4 +1,4 @@
-// /together — who watches with whom, how much, and how that has changed. Everything on the page is
+// /together: who watches with whom, how much, and how that has changed. Everything on the page is
 // read from one call, /api/stats/groups, which the dashboard and profile cards read too: the server
 // scopes it (a viewer who may only see themselves is answered their own pairs and nobody else's
 // time alone), the page only draws it.

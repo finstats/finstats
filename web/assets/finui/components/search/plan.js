@@ -1,9 +1,9 @@
-// FinUI: the search's rules, apart from any page: the shape it grows out of — the control or the menu that opened it —
+// FinUI: the search's rules, apart from any page: the shape it grows out of (the control or the menu that opened it)
 // and moving through the results. Pure, so a test reads it.
 
 const px = (n) => `${+n.toFixed(2)}px`;
 
-/** The place `h` clipped down to `t` — the control or the menu it grows out of — as far as `t` lies inside it, with the
+/** The place `h` clipped down to `t` (the control or the menu it grows out of) as far as `t` lies inside it, with the
  *  corners `r` that shape has: the first frame of a search opening, the last of one closing. */
 export function cut(t, h, r = 24) {
   const c = (v, max) => Math.max(0, Math.min(max, v));

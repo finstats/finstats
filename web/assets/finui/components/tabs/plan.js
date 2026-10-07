@@ -1,4 +1,4 @@
-// FinUI: tabs, the rules that are not drawing — where the keys move between tabs: the arrows to the next or the one
+// FinUI: tabs, the rules that are not drawing: where the keys move between tabs: the arrows to the next or the one
 // before (round at the ends), Home and End to the ends, a tab that is off stepped over. Pure; tested in FinUI's repository.
 
 /** The tab the key moves to from `at`, among tabs whose `off` says which are unavailable; null for a key that does not move. */

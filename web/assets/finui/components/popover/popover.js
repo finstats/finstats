@@ -1,4 +1,4 @@
-// FinUI: popover. A small box beside what opened it — more about a thing, a short form, a few choices — that opens on
+// FinUI: popover. A small box beside what opened it (more about a thing, a short form, a few choices) that opens on
 // the side with room, lines itself up with its button, and closes on Esc, a press elsewhere or its button again.
 
 import { h, icon } from '../../core.js';

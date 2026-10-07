@@ -1,4 +1,4 @@
-// FinMotion: the little it draws itself — a line under a row of tabs, a ring — is built here, since FinMotion imports
+// FinMotion: the little it draws itself (a line under a row of tabs, a ring) is built here, since FinMotion imports
 // nothing from FinUI. Text and attributes only: nothing reaches the page as markup.
 
 /** h(tag, attrs, ...children): an element with its attributes set (a class as a string) and its children appended. */

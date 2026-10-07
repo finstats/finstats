@@ -1,6 +1,6 @@
 // FinMotion: poster. A FinUI poster marked fm-develop develops like a photograph as its picture arrives, from soft and
 // colourless (not one already in the cache: it was there before anybody could watch). One marked fm-light tips towards the
-// pointer, and a sheen crosses it where the light would fall — for one large poster, not a grid of them.
+// pointer, and a sheen crosses it where the light would fall. It is for one large poster, not a grid of them.
 
 import { h } from '../../core/dom.js';
 import { play, follower } from '../../core/motion.js';

@@ -147,7 +147,7 @@ export function userPage(ctx) {
   dv.load();
 }
 
-/** Jellyfin's own flags — they cover history from before finstats was installed. */
+/** Jellyfin's own flags: they cover history from before finstats was installed. */
 function jellyfinStrip(j) {
   if (!j) return null;
   const cell = (k, v) => h('div', null, h('dt', null, k), h('dd', { class: 'mono' }, num(v)));

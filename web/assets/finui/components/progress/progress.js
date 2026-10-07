@@ -1,4 +1,4 @@
-// FinUI: progress. How far along something is that is happening now — a download, an import, a scan: a bar or a ring,
+// FinUI: progress. How far along something is that is happening now (a download, an import, a scan): a bar or a ring,
 // the share in words, and the time left once there is a rate to work it out from. With no share known, it says it is
 // working rather than inventing one.
 

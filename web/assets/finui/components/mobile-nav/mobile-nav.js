@@ -14,7 +14,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input, [tabindex]:not([tabin
 const dotOn = (p) => (typeof p.dot === 'function' ? !!p.dot() : !!p.dot);
 
 /**
- * The menu. `pages`: [{ key, href, label, icon, primary, dot }] — `primary` asks for a place in a bar, `dot` (a boolean or
+ * The menu. `pages`: [{ key, href, label, icon, primary, dot }]. `primary` asks for a place in a bar, `dot` (a boolean or
  * a function read on repaint) marks something new. `foot` is the app's own node (who is signed in, a theme switch).
  * `onSearch(from)`: the menu's search was pressed (from that button); without it there is none. `onSearchEnd()`: the menu
  * let its search go by itself (the scrim, a handle). `contained` keeps it inside its positioned parent (a gallery's frame).
@@ -37,7 +37,7 @@ export function mobileNav({ style, pages, current = null, foot = null, onSearch 
     links.push({ a, p, dot });
     return a;
   }
-  /** The menu's search: drawn as a field, and a button — the search itself is the app's, and opens where this was. */
+  /** The menu's search: drawn as a field, and a button; the search itself is the app's, and opens where this was. */
   function search({ placeholder = 'Search' } = {}) {
     if (!onSearch) return null;
     const b = h('button', { type: 'button', class: 'fui-mobile-nav__search' }, icon('search', 18), h('span', null, placeholder));
@@ -126,7 +126,7 @@ export function mobileNav({ style, pages, current = null, foot = null, onSearch 
     panel.append(grab(panel), footer('fui-mobile-nav__foot--top'), list(pages, 'fui-mobile-nav__list--pairs', { size: 16 }), search({ placeholder: 'Search or go to…' }));
   }
 
-  // Where search lives: the style's own place — its sheet, its screen, the arc's card.
+  // Where search lives: the style's own place: its sheet, its screen, the arc's card.
   const found = h('div', { class: 'fui-mobile-nav__found' });
   const host = kind === 'arc' ? panel.querySelector('.fui-mobile-nav__card') : panel;
   host.append(found);
@@ -147,7 +147,7 @@ export function mobileNav({ style, pages, current = null, foot = null, onSearch 
     el.after(wrap);
     return wrap;
   }
-  /** Hold the app's search, growing out of `from` (the menu's search, or the app's own button) — opening the menu if needed. */
+  /** Hold the app's search, growing out of `from` (the menu's search, or the app's own button), opening the menu if needed. */
   function openSearch(searchPanel, from) {
     if (hosted) return;
     hosted = searchPanel; searchFrom = from;

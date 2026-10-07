@@ -104,7 +104,7 @@ export default function activity(ctx) {
   ctx.onCleanup(() => onSearch.cancel());
 
   // Built from the answer rather than up front, because only the server knows what this history is
-  // made of — and rebuilt only when that changes, so tabbing to the control does not lose the focus.
+  // made of, and rebuilt only when that changes, so tabbing to the control does not lose the focus.
   const sourceSlot = h('div', { class: 'seg-slot' });
   let sourceSig = null;
   function renderSources(present) {

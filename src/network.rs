@@ -251,7 +251,7 @@ mod tests {
     #[test]
     fn a_start_re_decides_the_history_only_when_the_home_addresses_changed() {
         // Every start re-decided every play's network (5.5 s on ten million plays), although what a play is only
-        // changes with the set of home addresses — or with the rules, which is another version of finstats.
+        // changes with the set of home addresses (or with the rules, which is another version of finstats).
         let c = conn();
         let flag = |c: &Connection| -> Option<bool> { c.query_row("SELECT is_local FROM playbacks WHERE remote_ip = '198.51.100.9'", [], |r| r.get(0)).unwrap() };
         set_manual(&c, &["198.51.100.9".into()]).unwrap();

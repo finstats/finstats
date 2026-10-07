@@ -1,10 +1,10 @@
-//! Plays whose title the library does not have — imported from a server that called it something else, or kept after
-//! the title left — and the owner saying where each one is now.
+//! Plays whose title the library does not have (imported from a server that called it something else, or kept after
+//! the title left), and the owner saying where each one is now.
 //!
 //! `relink` attaches what a name rule can find without guessing. What it cannot is listed here with suggestions worked
 //! out the forgiving way (`fuzzy`, in both directions, and by the episode's own name for one a guide moved into another
-//! season or show), and the owner picks. A choice moves the plays exactly as `relink` would — the same savepoint, the same
-//! rule for a play the history already has — and is remembered (`located`), so a re-import of the same history attaches
+//! season or show), and the owner picks. A choice moves the plays exactly as `relink` would (the same savepoint, the same
+//! rule for a play the history already has) and is remembered (`located`), so a re-import of the same history attaches
 //! by itself.
 
 use anyhow::Result;
@@ -14,7 +14,7 @@ use crate::db::rusqlite::{Connection, OptionalExtension, params};
 use crate::fuzzy::Query;
 use crate::relink::{parse_name, title_key};
 
-/// What a missing title can be, and be located as: something a play is of — never a whole show or season.
+/// What a missing title can be, and be located as: something a play is of, never a whole show or season.
 const PLAYABLE: [&str; 3] = ["Movie", "Video", "Episode"];
 
 /// A title plays point at that the library does not have.
@@ -208,8 +208,8 @@ pub fn locate(conn: &Connection, from: &str, to: &str, by: &str, merge_window_s:
     Ok(Ok(moved))
 }
 
-/// Point the plays of `from` at the title `to`, named, typed and placed as the library has it — an episode with its show,
-/// season and number, a film with none — through `relink`'s move, which re-applies the rule for a play the history already has.
+/// Point the plays of `from` at the title `to`, named, typed and placed as the library has it (an episode with its show,
+/// season and number, a film with none), through `relink`'s move, which re-applies the rule for a play the history already has.
 /// (plays moved, duplicates removed).
 pub(crate) fn move_onto(conn: &Connection, merge_window_s: i64, from: &str, to: &str) -> Result<(usize, usize)> {
     crate::relink::move_plays(conn, merge_window_s, to, || {
@@ -292,7 +292,7 @@ mod tests {
         ], "films by name, then shows; never a title the library has, nor a channel");
     }
 
-    /// Each missing title says where its plays came from — Tautulli, Jellystat, finstats itself — in the filter's order.
+    /// Each missing title says where its plays came from (Tautulli, Jellystat, finstats itself), in the filter's order.
     #[test]
     fn a_missing_title_says_which_trackers_its_plays_came_from() {
         let c = conn();
@@ -339,7 +339,7 @@ mod tests {
         assert_eq!(again, "tour005");
     }
 
-    /// A film one server keeps as a film can be a special of a show on another — anime films often are — so a film may be
+    /// A film one server keeps as a film can be a special of a show on another (anime films often are), so a film may be
     /// located as an episode and an episode as a film, the play becoming what it now is. A whole show is never a play.
     #[test]
     fn a_film_may_be_located_as_an_episode_but_nothing_as_a_whole_show() {

@@ -1,5 +1,5 @@
 // FinMotion: donut-chart. The first time a donut is seen it is poured round from the top, one share after another, the
-// largest first and longest — through a conic mask (donut-chart.css), whole at rest. The shares are read from how FinUI
+// largest first and longest, through a conic mask (donut-chart.css), whole at rest. The shares are read from how FinUI
 // drew the slices.
 
 import { play, spring, whenSeen } from '../../core/motion.js';

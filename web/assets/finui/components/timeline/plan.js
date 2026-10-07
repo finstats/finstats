@@ -1,4 +1,4 @@
-// FinUI: timeline, the rules that are not drawing — events fall into the local days they happened on, newest day first,
+// FinUI: timeline, the rules that are not drawing: events fall into the local days they happened on, newest day first,
 // each day's events newest first. Pure; tested in FinUI's repository.
 
 const dayKey = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };

@@ -15,15 +15,15 @@ permissions; a request carrying both is judged on the header alone.
   calendar-scoped key anywhere but the feed), `409` = wrong state (e.g. already configured).
 - **Common filters** (query string) on every `/api/stats/*`, `/api/activity`, `/api/users*`,
   `/api/libraries*`, `/api/items/*` endpoint:
-  - `days` — integer window ending now. `0` or absent = all time.
-  - `user_id` — restrict to these users: one id, or several separated by commas
+  - `days`: integer window ending now. `0` or absent = all time.
+  - `user_id`: restrict to these users: one id, or several separated by commas
     (`user_id=a1b2,c3d4`). Absent or empty = everybody.
-  - `library_id` — restrict to one library.
-- **A filter that names several values** uses commas, and naming nothing means all of them —
+  - `library_id`: restrict to one library.
+- **A filter that names several values** uses commas, and naming nothing means all of them,
   so `?type=` and no `type` at all are the same request. Values are de-duplicated and at most 50
   are read, so no caller can grow the SQL by repeating or padding them.
 - **Non-admin users** are always scoped to their own `user_id` server-side, whichever and however
-  many the URL names — a user filter can narrow what somebody sees and never widen it. They also
+  many the URL names: a user filter can narrow what somebody sees and never widen it. They also
   never see IP addresses, and get `403` on admin endpoints (marked 🔒).
 
 ## Bootstrap & auth
@@ -32,7 +32,7 @@ permissions; a request carrying both is judged on the header alone.
 |---|---|---|---|
 | GET | `/api/status` | – | `{configured, version, server_name?}` plus how the collector is listening (public) |
 | POST | `/api/setup/test` | `{url}` | `{server_name, version, id}` (public, only while unconfigured) |
-| POST | `/api/setup` | `{url, username, password}` | `{user}` — must be a Jellyfin admin. Creates a Jellyfin API key named `finstats`, stores config, logs in, kicks off first sync. Only while unconfigured. |
+| POST | `/api/setup` | `{url, username, password}` | `{user}`; must be a Jellyfin admin. Creates a Jellyfin API key named `finstats`, stores config, logs in, kicks off first sync. Only while unconfigured. |
 | POST | `/api/auth/login` | `{username, password}` | `{user}`; `401` bad credentials, `403` user login disabled, `429` too many attempts |
 | POST | `/api/auth/logout` | – | `{ok: true}` |
 | GET | `/api/auth/me` | – | `{user}` or `401` |
@@ -82,7 +82,7 @@ Session = {
 When the window is longer than 120 days `daily` is bucketed per ISO week; each entry then
 carries the Monday date and `"bucket": "week"` is set at top level (otherwise `"day"`).
 
-`GET /api/stats/top?kind=<kind>&limit=10` — `kind` ∈ `movies | series | music | users | clients | devices | libraries`
+`GET /api/stats/top?kind=<kind>&limit=10`: `kind` ∈ `movies | series | music | users | clients | devices | libraries`
 ```jsonc
 {"rows": [ {"id": "…"|null, "name": "…", "sub": "2019"|null, "plays": 12, "watch_s": 3600,
             "users": 3,               // distinct users (absent for kind=users)
@@ -90,7 +90,7 @@ carries the Monday date and `"bucket": "week"` is set at top level (otherwise `"
 ```
 Sorted by `watch_s` desc unless `&sort=plays`.
 
-`GET /api/stats/heatmap` → `{"plays": [[24 ints] × 7], "watch_s": [[24 ints] × 7]}` — outer index 0 = Monday, inner = hour of day (server TZ).
+`GET /api/stats/heatmap` → `{"plays": [[24 ints] × 7], "watch_s": [[24 ints] × 7]}`: outer index 0 = Monday, inner = hour of day (server TZ).
 
 `GET /api/stats/playback`
 ```jsonc
@@ -110,17 +110,17 @@ Sorted by `watch_s` desc unless `&sort=plays`.
 
 `method`, `type` and `source` each take several comma-separated values: `type=Movie,Episode` is films
 and episodes and no music. `type` also takes `Other`, which is anything that is not `Movie`,
-`Episode` or `Audio` — so `type=Movie,Other` means either, and naming all four is no filter at all.
+`Episode` or `Audio`, so `type=Movie,Other` means either, and naming all four is no filter at all.
 `source` is `live`, `jellystat` or `streamystats`; anything else, an empty value included, is ignored,
 so an unknown tracker means all of them. `sources` in the answer lists which of the three this caller's history actually came from,
-in that order — scoped to whose plays they may see, and deliberately *not* narrowed by the window or
+in that order. They are scoped to whose plays they may see, and deliberately *not* narrowed by the window or
 the other filters, so a filter built from it does not appear and disappear as the days change. The UI
 offers the filter only when there is more than one to choose between.
 
 `deleted=1` lists the trash instead (2.2.0): the plays a manager deleted in the last 30 days, scoped and filtered
 exactly like the list itself (without `see_everyone`, one's own), newest deletion first, each row with `deleted_at` and
-`purge_at` (when it goes for good). The normal answer carries `in_trash` — how many of the plays this list would show are
-in the trash — for `manage` only; a play in the trash is out of every other answer (totals, charts, titles, people,
+`purge_at` (when it goes for good). The normal answer carries `in_trash` (how many of the plays this list would show are
+in the trash) for `manage` only; a play in the trash is out of every other answer (totals, charts, titles, people,
 recap, public profiles) until it comes back.
 ```jsonc
 {"total": 2918, "page": 1, "per_page": 50, "sources": ["live", "jellystat"], "in_trash": 0, "rows": [Play]}
@@ -145,7 +145,7 @@ Play = {
 🔒 `PUT /api/activity/{id}` `{"deleted": true | false}` → `{"ok": true, "id": 123, "deleted": true, "deleted_at": 0|null, "purge_at": 0|null}`
 (`manage`). Moves a finished play into the trash, or back out of it; it is removed for good 30 days after it was
 deleted (`purge_at`), with its timeline. Asking for the state it is already in changes nothing and answers it (a second
-delete keeps the first `deleted_at`). `404` for no such play, a play still running, or — to restore — one that is not in
+delete keeps the first `deleted_at`). `404` for no such play, a play still running, or (to restore) one that is not in
 the trash. Whoever watched with it is grouped again without it, and with it once it is back. `DELETE` answers `405`.
 
 ## Users
@@ -199,13 +199,13 @@ the trash. Whoever watched with it is grouped again without it, and with it once
 ```
 Recent plays for an item come from `/api/activity?item_id=` (episode/movie) or `?series_id=`.
 
-`GET /api/search?q=att&limit=12` → `{"items": [ItemCard], "users": [{"id","name"}], "people": [Person]}` — items limited to Movie/Series/MusicAlbum/Audio top-level hits.
+`GET /api/search?q=att&limit=12` → `{"items": [ItemCard], "users": [{"id","name"}], "people": [Person]}`: items limited to Movie/Series/MusicAlbum/Audio top-level hits.
 `Person = {"id","name","has_image","is_actor","is_director","titles"}`: cast and crew of titles that are still in the library (at most 8; `titles` counts those
 titles, and breaks ties: more first). Matched like titles, by name only. Open to everyone signed in; `users` needs `see_everyone`.
 
 ## Images
 
-- `GET /api/img/item/{id}?kind=primary|backdrop&w=300` — proxied + cached from Jellyfin. `404` when Jellyfin has none.
+- `GET /api/img/item/{id}?kind=primary|backdrop&w=300`: proxied + cached from Jellyfin. `404` when Jellyfin has none.
 - `GET /api/img/user/{id}?w=96`
 
 A picture finstats knows the Jellyfin image tag of is cached under that tag and answered with `ETag` and
@@ -230,7 +230,7 @@ Both send long-lived `Cache-Control`. Use as `<img loading="lazy">` with an `one
  "min_play_s": 0,                  // stats ignore plays shorter than this
  "public_url": ""}                 // where finstats answers from outside; only used to put a link in notifications (administrators only, like the access keys)
 ```
-`PUT /api/settings` — partial object of the mutable keys above (not `jellyfin_url`/`server_*`) → full settings.
+`PUT /api/settings`: partial object of the mutable keys above (not `jellyfin_url`/`server_*`) → full settings.
 
 `GET /api/tasks`
 ```jsonc
@@ -261,7 +261,7 @@ A trigger is one of `{"type": "daily", "at_min": 180}` (minute of the day, 0..14
 (day 0 = Sunday .. 6), `{"type": "interval", "every_s": 3600}` (300 .. 30 days, counted from the end of the last run),
 `{"type": "startup"}` and `{"type": "after_scan"}` (when Jellyfin's *Scan Media Library* has finished since the job last started;
 only `sync_libraries`, `sync_userdata`, `sync_changes`). Any of them may carry `"limit_s"` (60 .. 7 days): a run that takes longer is
-stopped and fails with that reason — not for `backup` or `geoip`, which cannot be stopped half way. At most 16 per job, no duplicates.
+stopped and fails with that reason (not for `backup` or `geoip`, which cannot be stopped half way). At most 16 per job, no duplicates.
 
 | | |
 |---|---|
@@ -270,7 +270,7 @@ stopped and fails with that reason — not for `backup` or `geoip`, which cannot
 
 The triggers live in the settings as `"schedules": {"backup": [...]}` and `PUT /api/settings` checks them by the same rules.
 A job without an entry runs on its defaults, which is what `follow_jellyfin_scan`, `sync_interval_h`, `backup_every_d` and
-`geoip_download` say — those settings are no longer shown, and decide nothing else. Defaults: users, server log, server
+`geoip_download` say; those settings are no longer shown, and decide nothing else. Defaults: users, server log, server
 details, Sonarr/Radarr calendars and history every 15 minutes, Seerr requests every 5, metadata changes every hour, the library
 read and watched flags after Jellyfin's scan plus every 7 days (or every `sync_interval_h` hours when not following it), backups
 every `backup_every_d` days, the GeoIP download daily (it fetches only when a newer month is out) when `geoip_download` was on.
@@ -279,32 +279,32 @@ start does not run everything again.
 
 **Metadata changes** (`sync_changes`, 2.0.4): per library,
 `GET /Items?ParentId=…&MinDateLastSaved=…` with the library read's own fields plus `People`, from the last look (else the last
-library read) minus ten minutes. Each title is stored as the library read stores it — names, overviews, genres, ratings, file
-details, image tags — and the cast and crew of films and shows are replaced. It never marks anything removed: only a whole
+library read) minus ten minutes. Each title is stored as the library read stores it (names, overviews, genres, ratings, file
+details, image tags), and the cast and crew of films and shows are replaced. It never marks anything removed: only a whole
 library read may. Then the people: `GET /Items?IncludeItemTypes=Person&Recursive=true&MinDateLastSaved=…` (ids and portrait tags,
-1,000 a page — after a scan Jellyfin has re-saved thousands), because replacing a portrait re-saves the person and none of the
+1,000 a page, since after a scan Jellyfin has re-saved thousands), because replacing a portrait re-saves the person and none of the
 titles they are in; the first look after upgrading reads every person once (settings key `portraits_read` marks it done).
 A portrait's tag is kept on every `item_people` row of that person (migration 29), so `/api/img/item/{person id}`
 is cached under it like a poster. The UI asks for pictures with `v=3` (`v=2`, an earlier step of 2.0.4, still let a portrait be kept for a week).
 
-`POST /api/import/jellystat` — **raw request body** is the `.jsonl` (or legacy `.json`) backup
-(`Content-Type: application/octet-stream`; can be hundreds of MB — use XHR for upload progress).
+`POST /api/import/jellystat`: the **raw request body** is the `.jsonl` (or legacy `.json`) backup
+(`Content-Type: application/octet-stream`; can be hundreds of MB, so use XHR for upload progress).
 Returns `202 {ok:true}` once the upload is stored; parsing continues as task `import`
 (poll `/api/tasks`). On finish the task `message` summarises, and `result` holds
 `{"plays_imported","plays_skipped","users","libraries","items","seasons","episodes","item_info"}`.
 
-`POST /api/import/streamystats` — the same, for a Streamystats backup (its **Settings → Backup &
+`POST /api/import/streamystats`: the same, for a Streamystats backup (its **Settings → Backup &
 Import → Download Backup**, one `.json` document). Task `import_streamystats`; `result` holds
 `{"sessions_read","plays_imported","plays_skipped","marked_watched","users","unreadable_rows"}`,
-where `marked_watched` counts rows that were never a play — Jellyfin reported the item watched and
+where `marked_watched` counts rows that were never a play: Jellyfin reported the item watched and
 Streamystats wrote a row as long as the whole runtime for a viewing nobody saw. Those are never
 imported. A Streamystats export carries no libraries, items or users of its own.
 
 **Tautulli** (Plex's history) imports in two steps, because its people are not Jellyfin's: nobody is
 guessed, the owner wires each Plex user to a Jellyfin user. All four need `manage`.
 
-`POST /api/import/tautulli` — **raw request body** is the backup: Tautulli's `.db`, or the `.zip`
-holding it. Nothing is imported: the file waits for its wires (one at a time; a new upload replaces
+`POST /api/import/tautulli`: the **raw request body** is the backup (Tautulli's `.db`, or the `.zip`
+holding it). Nothing is imported: the file waits for its wires (one at a time; a new upload replaces
 it) and the answer is the board:
 
 ```jsonc
@@ -315,7 +315,7 @@ it) and the answer is the board:
 }}
 ```
 
-Never a Plex token or e-mail address — the backup holds both, and they are never read. `400` for an
+Never a Plex token or e-mail address: the backup holds both, and they are never read. `400` for an
 empty file or one that is not a Tautulli database; `409` while an import or a restore runs.
 
 `GET /api/import/tautulli` → `{"board": … | null}`: the board of a backup still waiting for its wires.
@@ -323,7 +323,7 @@ empty file or one that is not a Tautulli database; `409` while an import or a re
 
 `POST /api/import/tautulli/run` with `{"wires": [{"plex_user_id": 101, "jellyfin_user_id": "…"}]}` →
 `202 {ok:true}`, then task `import_tautulli`, whose `result` holds
-`{"plays_imported","plays_skipped","not_wired","other_media","users_wired"}` — `not_wired`: viewings
+`{"plays_imported","plays_skipped","not_wired","other_media","users_wired"}`. `not_wired`: viewings
 of Plex users without a wire, which stay behind; `other_media`: music, clips, photos and Live TV,
 which are not imported. A Plex user may have one wire; several may go into one Jellyfin user. `400`
 for no wire, a Plex user wired twice, or either end naming somebody who is not there; `409` when no
@@ -332,8 +332,8 @@ start-up and after six hours of waiting.
 
 **Titles the library does not have under that name.** All three need `manage`.
 
-`GET /api/library/missing` → every film, video and episode plays point at that the library lacks — usually from an
-import, whose server named things differently — films by name first, then episodes by show, season and number:
+`GET /api/library/missing` → every film, video and episode plays point at that the library lacks (usually from an
+import, whose server named things differently): films by name first, then episodes by show, season and number:
 
 ```jsonc
 {"missing": [{"id": "plex:5", "item_type": "Movie" | "Video" | "Episode", "name": "Star Wars: Episode V - The Empire Strikes Back (1980)",
@@ -350,7 +350,7 @@ typed. `404` when nothing is missing under that id.
 `POST /api/library/locate` with `{"from": "plex:5", "to": "<item id>"}` → `{"moved": 2}`: the plays of `from` become plays
 of `to`, named, typed and placed as the library has it (a film may be located as a show's special, and the other way
 round), under the same rule for a play the history already has as re-linking. The choice is kept, so plays arriving under
-`from` again — a re-import — are attached by it. `404` when `from` is not missing or `to` is not in the library, `400`
+`from` again (a re-import) are attached by it. `404` when `from` is not missing or `to` is not in the library, `400`
 when `to` is a whole show or season. Recorded in the audit log as `title_located`.
 
 **One import runs at a time**, any kind: they write to the same tables, so whichever is not running
@@ -369,7 +369,7 @@ Streamystats export of the same evenings both be imported without counting anyth
 
 ## Light status (any signed-in user)
 
-`GET /api/summary` → `{"active_sessions": 1, "plays_total": 2918, "last_sync_at": 0, "collector_ok": true, "version": "0.1.0"}` — cheap; poll for the status bar.
+`GET /api/summary` → `{"active_sessions": 1, "plays_total": 2918, "last_sync_at": 0, "collector_ok": true, "version": "0.1.0"}`. Cheap; poll for the status bar.
 
 ---
 
@@ -379,7 +379,7 @@ Streamystats export of the same evenings both be imported without counting anyth
 
 The collector now keeps a timeline per live play and counts interruptions.
 
-- `Play` rows (list + detail) gain `"pause_count": 0`, `"seek_count": 0`, and — admins only, else `null` —
+- `Play` rows (list + detail) gain `"pause_count": 0`, `"seek_count": 0`, and (admins only, else `null`)
   `"is_local": true|false|null` (LAN / remote, derived from the IP).
 - `GET /api/activity/{id}` additionally returns `"start_position_s": 0|null` (where playback resumed from) and
   ```jsonc
@@ -405,7 +405,7 @@ The collector now keeps a timeline per live play and counts interruptions.
 }
 ```
 
-## `GET /api/library/insights?library_id=` — what the library is made of (no time window)
+## `GET /api/library/insights?library_id=`: what the library is made of (no time window)
 
 ```jsonc
 {
@@ -422,9 +422,9 @@ The collector now keeps a timeline per live play and counts interruptions.
 // LibItem   = {"id","name","type","year","size_bytes","date_created","image_item_id"}
 ```
 
-## `GET /api/libraries/{id}/titles?type=&q=&sort=&dir=&page=` — everything in a library
+## `GET /api/libraries/{id}/titles?type=&q=&sort=&dir=&page=`: everything in a library
 
-Every film, show, album, music video, video, book or audiobook in one library, sixty a page — not only what arrived
+Every film, show, album, music video, video, book or audiobook in one library, sixty a page, not only what arrived
 lately. Episodes, seasons and tracks belong to one of these and are not titles of their own here. The library is the
 same for everyone, so this is open to anyone signed in and says nothing about plays.
 
@@ -439,7 +439,7 @@ same for everyone, so this is open to anyone signed in and says nothing about pl
 `type` narrows to one kind, `q` keeps the titles whose name has every word typed. `sort` is `name` (default, case
 ignored), `year`, `added` or `size`; anything else is by name.
 
-## `GET /api/server` 🔒 — the Jellyfin server itself
+## `GET /api/server` 🔒: the Jellyfin server itself
 
 ```jsonc
 {
@@ -462,11 +462,11 @@ New task ids in `/api/tasks`: `sync_server` (server info, plugins, tasks, device
 
 ---
 
-# v0.3 — Recap (the year in review)
+# v0.3: Recap (the year in review)
 
-`GET /api/recap?year=2026` — a recap is personal: everyone, administrators included, only ever gets their **own**.
+`GET /api/recap?year=2026`: a recap is personal; everyone, administrators included, only ever gets their **own**.
 `year` is a calendar year (server TZ) or `last12` (the last 12 full months plus the current one).
-Default: the year whose recap is "ready" — the current year during December, otherwise the previous year
+Default: the year whose recap is "ready": the current year during December, otherwise the previous year
 (2026 becomes the default in December 2026 and stays it until December 2027). If that year has no plays
 (a new install), the newest year that has.
 
@@ -512,9 +512,9 @@ Default: the year whose recap is "ready" — the current year during December, o
 
 ---
 
-# v0.4 — Patch notes
+# v0.4: Patch notes
 
-`GET /api/changelog` (any signed-in user) — `CHANGELOG.md`, compiled into the binary and parsed.
+`GET /api/changelog` (any signed-in user): `CHANGELOG.md`, compiled into the binary and parsed.
 
 ```jsonc
 {
@@ -529,10 +529,10 @@ Default: the year whose recap is "ready" — the current year during December, o
 
 ---
 
-# v0.5 — Permissions
+# v0.5: Permissions
 
 `user` (from `/api/auth/login`, `/api/auth/me`, `/api/setup`) gains
-`"permissions": {"see_everyone": false, "see_network": false, "see_server": false, "manage": false}` — all `true` for
+`"permissions": {"see_everyone": false, "see_network": false, "see_server": false, "manage": false}`, all `true` for
 Jellyfin administrators. They are evaluated on every request, so a change applies at once.
 
 What each one gates, server-side:
@@ -549,7 +549,7 @@ What each one gates, server-side:
 `/api/recap` is never widened: it is always the caller's own. `PUT /api/settings` rejects `allow_user_login` and
 `default_permissions` with `403` unless the caller is a Jellyfin administrator.
 
-## Managing permissions — Jellyfin administrators only (🔒 `403` for everyone else, including `manage`)
+## Managing permissions: Jellyfin administrators only (🔒 `403` for everyone else, including `manage`)
 
 `GET /api/permissions`
 ```jsonc
@@ -563,9 +563,9 @@ administrator (they already have everything), `404` for an unknown user. Effecti
 
 ---
 
-# v0.6 — Profiles: show progress, manual marks, streaks
+# v0.6: Profiles, show progress, manual marks, streaks
 
-`GET /api/users/{id}/shows` — own id, or anyone's with `see_everyone` (`403` otherwise). All time; no filters.
+`GET /api/users/{id}/shows`: own id, or anyone's with `see_everyone` (`403` otherwise). All time; no filters.
 ```jsonc
 {
   "editable": true,                       // true only on your own profile
@@ -587,7 +587,7 @@ left the library its removed episodes are used instead. An episode is `seen` whe
 precedence; `started` = played, but not that far. Shows with nothing seen or started are omitted.
 The same `streaks` object is also part of `GET /api/users/{id}`.
 
-`POST /api/me/seen` `{"item_ids": ["…"], "seen": true|false}` → `{"changed": 12}` — marks episodes as seen for the
+`POST /api/me/seen` `{"item_ids": ["…"], "seen": true|false}` → `{"changed": 12}`: marks episodes as seen for the
 caller only (1–5000 ids; non-episodes are ignored). Marks live in finstats alone: nothing is written to Jellyfin,
 and `seen: false` only removes manual marks, never a recorded play.
 
@@ -595,15 +595,15 @@ and `seen: false` only removes manual marks, never a recorded play.
 
 ---
 
-# v0.6.1 — Recap for administrators
+# v0.6.1: Recap for administrators
 
-`GET /api/recap?year=&user_id=` — `user_id` is honoured for **Jellyfin administrators** only and selects one other
+`GET /api/recap?year=&user_id=`: `user_id` is honoured for **Jellyfin administrators** only and selects one other
 user's recap (`scope` then names them). Everyone else always gets their own, whatever permissions they hold
 (`see_everyone` included); the parameter is ignored rather than refused. The whole server's year came in 2.0 (`scope=server`, below).
 
 ---
 
-# v0.7 — Group watching
+# v0.7: Group watching
 
 Plays of one item by at least two different users that start within `group_window_s` (setting, default 60, 5–600) of
 each other and overlap for at least two minutes share a `group_id`. Jellyfin's sessions do not expose SyncPlay groups,
@@ -611,7 +611,7 @@ so this is inferred; it is recomputed for an item whenever one of its plays ends
 the whole history when the setting changes.
 
 - `Play` rows gain `"group_id": 123|null` and `"group_size": 3|null` (distinct people).
-- `GET /api/activity/{id}` gains `"watched_with": [{"user_id","user_name"}]` — the other people in the group.
+- `GET /api/activity/{id}` gains `"watched_with": [{"user_id","user_name"}]`: the other people in the group.
 
 `GET /api/stats/groups` (common filters; without `see_everyone` only groups the caller was part of; with a `user_id`
 filter only that person's groups)
@@ -637,7 +637,7 @@ costs a few names per stream instead of the whole crowd.
 
 ---
 
-# v0.7.5 — Forgiving search
+# v0.7.5: Forgiving search
 
 `GET /api/search?q=` matches word by word instead of by exact phrase: every word of `q` has to be found in the title
 (any order; case, accents, punctuation and a leading article ignored; one slip allowed in words of 4–7 letters, two in
@@ -646,7 +646,7 @@ longer ones; music also matches on its artist). Results are ranked, best first. 
 
 ---
 
-# v0.8 — Recap: days, people, rewatches
+# v0.8: Recap with days, people, rewatches
 
 `GET /api/recap` gains, all within the same period and scope as the rest of the response:
 
@@ -664,8 +664,8 @@ longer ones; music also matches on its artist). Results are ranked, best first. 
 }
 ```
 
-- **People** come from the films and shows themselves (an episode counts towards its show's cast). Only actors — the
-  first 12 billed per title — and directors are kept. A person's portrait is `GET /api/img/item/{person id}`.
+- **People** come from the films and shows themselves (an episode counts towards its show's cast). Only actors (the
+  first 12 billed per title) and directors are kept. A person's portrait is `GET /api/img/item/{person id}`.
   They are read with the library, in a second, smaller request per library (`IncludeItemTypes=Movie,Series`,
   `Fields=People`); until the first library read after upgrading, both lists are empty.
 - A **sitting** is one film or episode on one local day (plays of at least 5 minutes). A **rewatch** is a sitting with
@@ -674,13 +674,13 @@ longer ones; music also matches on its artist). Results are ranked, best first. 
 
 ---
 
-# v0.8.1 — People
+# v0.8.1: People
 
-`GET /api/items/{id}` gains `"people": [{"id","name","kind": "Actor"|"Director","role": "…"|null,"has_image": true}]` —
+`GET /api/items/{id}` gains `"people": [{"id","name","kind": "Actor"|"Director","role": "…"|null,"has_image": true}]`:
 directors first, then the cast in billing order. An episode or season answers with its show's. Empty until the
 library has been read by 0.8.0 or newer.
 
-`GET /api/people/{id}` (common filters) — one actor or director. `404` for an id nobody in the library carries.
+`GET /api/people/{id}` (common filters): one actor or director. `404` for an id nobody in the library carries.
 
 ```jsonc
 {
@@ -698,7 +698,7 @@ people; a play counts once even when the person both acts in and directs the tit
 
 ---
 
-# v0.9 — Sorting the paginated lists
+# v0.9: Sorting the paginated lists
 
 `GET /api/activity` and `GET /api/events` take `sort` and `dir` (`asc` | `desc`, default `desc`). Rows without a value
 for the sorted column come last in either direction, and the default order is always the tiebreaker, so pages stay stable.
@@ -713,7 +713,7 @@ Every other table is sorted in the browser (`web/assets/js/tables.js`); those en
 
 ---
 
-# v0.9.1 — Home network
+# v0.9.1: Home network
 
 `is_local` on plays and on a user's address list now means "a private address **or** a known home address". Home
 addresses are this network's public IP (looked up, every one ever seen) plus any added by hand; changing either
@@ -729,7 +729,7 @@ most 50; anything else is a `400`). The response also carries, read-only:
 
 ---
 
-# v0.10 — Backups, and the polling intervals
+# v0.10: Backups, and the polling intervals
 
 `poll_interval_s` is gone from the settings. In its place: `"active_interval_s": 1` (while something plays) and
 `"idle_interval_s": 5` (while nothing does), both 1..60. New: `"backup_every_d": 7` (0 = off, 0..365) and `"backup_keep": 5` (1..100).
@@ -739,7 +739,7 @@ can bring permissions back. `{name}` must look exactly like `finstats-backup-YYY
 
 | | |
 |---|---|
-| `GET /api/backups` | `{"backups": [{"name","size_bytes","created_at"}], "deleted": [{"name","size_bytes","created_at","deleted_at","purge_at"}], "scheduled": true, "keep": 5, "next_at": 0\|null}` — newest first; `deleted` is the trash, newest deletion first, and never counts toward `keep`. `scheduled` and `next_at` come from the `backup` task's triggers (2.0.4; `every_d` is gone). |
+| `GET /api/backups` | `{"backups": [{"name","size_bytes","created_at"}], "deleted": [{"name","size_bytes","created_at","deleted_at","purge_at"}], "scheduled": true, "keep": 5, "next_at": 0\|null}`, newest first; `deleted` is the trash, newest deletion first, and never counts toward `keep`. `scheduled` and `next_at` come from the `backup` task's triggers (2.0.4; `every_d` is gone). |
 | `POST /api/backups` | Start writing one now. `202`; progress is task `backup` in `/api/tasks`. `409` while one is running. |
 | `GET /api/backups/{name}` | The file (`application/gzip`, `Content-Disposition: attachment`), streamed. |
 | `PUT /api/backups/{name}` | `{"deleted": true\|false}` → `{"ok": true, "name", "deleted", "deleted_at": 0\|null, "purge_at": 0\|null}`. Moves the file into the trash (`<data>/backups/deleted/`) or back; it is removed for good at `purge_at`, 30 days on. A file in the trash cannot be downloaded or restored from (`404`). `404` when there is no such file where it is asked to move from, `409` when restoring it would replace a backup that has taken its name since. `DELETE` answers `405`. Backups older than `keep` are still removed for good, not moved to the trash. |
@@ -758,9 +758,9 @@ restored plays are never `active`, and groups, local/remote and library links ar
 entry is merged by its title per person (the same item, or the same kind and any one id), keeping the older `added_at`.
 CLI: `finstats backup`, `finstats restore <file>`.
 
-# v1.1 — Timeline
+# v1.1: Timeline
 
-`GET /api/users/{id}/timeline?before=&limit=24&libraries=` — own id, or anyone's with `see_everyone` (`403` otherwise; `404`
+`GET /api/users/{id}/timeline?before=&limit=24&libraries=`: own id, or anyone's with `see_everyone` (`403` otherwise; `404`
 for an unknown user). All time, newest first; `min_play_s` applies.
 ```jsonc
 {
@@ -779,9 +779,9 @@ or one title played again. Anything else in between starts a new stop, so a show
 the middle of a stop, and the stops are the same whatever `limit` (1..60) is. `libraries` is a comma-separated list of library
 ids (absent = all); ids that are not ids and cursors that are not cursors are a `400`.
 
-# v1.1.2 — Recently added
+# v1.1.2: Recently added
 
-`GET /api/library/recent?limit=30` (1..60) — for everyone signed in: the library is the same for all, nothing here is about plays.
+`GET /api/library/recent?limit=30` (1..60), for everyone signed in: the library is the same for all, nothing here is about plays.
 ```jsonc
 { "items": [
   {"kind": "episodes", "type": "Episode", "id": "<series id>", "name": "The Rookery", "sub": "Season 4" | "3 seasons" | "Specials" | null,
@@ -799,7 +799,7 @@ or a whole imported show takes one place. Series, seasons and single tracks are 
 
 ---
 
-# v1.2 — Security: places, impossible travel
+# v1.2: Security, places, impossible travel
 
 Addresses get a place (country, city, a city-centre coordinate) from a city database read locally (`<data dir>/geoip/*.mmdb` or
 `FINSTATS_GEOIP_DB`); nothing is asked of anyone per lookup. Everything here needs **both** `see_network` and `see_everyone`
@@ -853,12 +853,12 @@ the fact (an import, the first database) are filed as resolved by `finstats`. Al
 
 ---
 
-# v1.2.2 — Languages
+# v1.2.2: Languages
 
 Every audio and subtitle track of a file is kept, not only the first: ISO 639-2 codes as Jellyfin reports them, lower case, each once,
 in track order, `"und"` for a track without a language. Filled by the library read (and by a Jellystat import for files it describes; a Streamystats export describes none).
 
-- `GET /api/items/{id}` — a film, episode or other file: `item.audio_languages: ["jpn","eng"] | null` and `item.subtitle_languages`.
+- `GET /api/items/{id}`, for a film, episode or other file: `item.audio_languages: ["jpn","eng"] | null` and `item.subtitle_languages`.
   A series or a season has no tracks of its own and gets
   `item.language_coverage: {"episodes": 26, "audio": [{"code": "jpn", "episodes": 26}, {"code": "eng", "episodes": 13}], "subtitles": [...]}`
   over its episodes that exist as files (absent when there are none). Each row of `seasons[].episodes[]` gains `audio_languages`.
@@ -867,7 +867,7 @@ in track order, `"und"` for a track without a language. Filled by the library re
 
 ---
 
-# v1.3 — Connections (Sonarr, Radarr, Seerr)
+# v1.3: Connections (Sonarr, Radarr, Seerr)
 
 finstats reads from these services and never changes anything in them. **Jellyfin administrators only** (`403` for everyone else, including
 `manage`). A key or password is write-only: the API says `has_secret`, never the value, and none of this is part of a backup.
@@ -883,11 +883,11 @@ Every write answers with the same list.
 
 - `POST /api/services/test` `{kind, url, secret?, accept_invalid_certs?}` or `{id, …}` (whatever is left out is taken from the stored
   connection, so a key need not be retyped) → `{"ok": true, "app": "Sonarr", "version": "4.0.9"}`, or `502` with a sentence that says what is wrong.
-- `POST /api/services` — the same body plus `name?`. The connection is tested first and only saved when it answers (`502` otherwise). A missing
+- `POST /api/services`: the same body plus `name?`. The connection is tested first and only saved when it answers (`502` otherwise). A missing
   name becomes the kind's, then "Radarr 2". At most 20.
-- `PUT /api/services/{id}` — any of `name`, `url`, `secret`, `accept_invalid_certs`, `enabled`; the kind never changes. Changing what
+- `PUT /api/services/{id}`: any of `name`, `url`, `secret`, `accept_invalid_certs`, `enabled`; the kind never changes. Changing what
   is needed to connect tests again. Pointing a connection at another host, port or base path throws away everything read from the old one.
-- `DELETE /api/services/{id}` — also removes everything that was read from it.
+- `DELETE /api/services/{id}`: also removes everything that was read from it.
 
 Addresses: `http://` or `https://`, a base path is kept (`/sonarr`), no `user:password@`, `?` or `#` (`400`). finstats follows no redirect to a
 service: a redirect is reported as the error it is. `accept_invalid_certs` switches certificate verification off for that one connection.
@@ -899,7 +899,7 @@ service: a redirect is reported as the error it is. `accept_invalid_certs` switc
 Read every 15 minutes (task `sync_upcoming`, which `POST /api/tasks/sync_upcoming/run` starts by hand): monitored episodes and film releases from
 7 days back to 90 days ahead. For everyone signed in: a calendar is about the library, like Recently added.
 
-`GET /api/upcoming?days=14&user_id=&mine=` — `days` 1..90 from today (local days); `user_id` is whose shows "follow" refers to (the caller's own
+`GET /api/upcoming?days=14&user_id=&mine=`: `days` 1..90 from today (local days); `user_id` is whose shows "follow" refers to (the caller's own
 without `see_everyone`, whatever is asked); `mine=true` keeps only what that person follows.
 ```jsonc
 { "days": 14, "user_id": "<whose>", "entries": [
@@ -915,12 +915,12 @@ without `see_everyone`, whatever is asked); `mine=true` keeps only what that per
   } ] }
 ```
 The same episode in two Sonarrs, or the same film in an HD and a 4K Radarr, is one entry (on disk if it is anywhere). A `physical` release of a
-film that is already on disk is left out — a disc date for a copy that arrived weeks ago is no news; its other dates, and the disc date of a film
+film that is already on disk is left out, because a disc date for a copy that arrived weeks ago is no news; its other dates, and the disc date of a film
 that is not here yet, are listed as before. Switched-off connections say nothing. Without `see_everyone` there is no count either: on a small server a number is a name.
 
-- `GET /api/img/arr/{service_id}/{media_id}?w=` — the poster of a title that is not in the library yet, proxied from Sonarr or Radarr and cached on
-  disk. Both ids are numbers; only posters of titles finstats itself lists are served — what is on a calendar, what somebody asked for, and (for
-  people with `see_downloads`) what is downloading now — and the browser never talks to TMDB.
+- `GET /api/img/arr/{service_id}/{media_id}?w=`: the poster of a title that is not in the library yet, proxied from Sonarr or Radarr and cached on
+  disk. Both ids are numbers; only posters of titles finstats itself lists are served (what is on a calendar, what somebody asked for, and, for
+  people with `see_downloads`, what is downloading now), and the browser never talks to TMDB.
 - `GET /api/items/{id}` gains `item.upcoming` for a series or film with something due in the next 90 days: entries as above, without any of the
   keys about people.
 
@@ -933,7 +933,7 @@ a day. Everyone signed in sees **their own** requests; other people's need `see_
 without it no count, name or "somebody else watched it" is sent either. A request Seerr cannot tie to a Jellyfin user belongs to nobody and
 is only visible to those who may see everyone.
 
-`GET /api/requests?status=&user_id=&q=&sort=&dir=&page=&per_page=` — `status`: `open` | `arrived` | `declined` | all (default); `q` matches the
+`GET /api/requests?status=&user_id=&q=&sort=&dir=&page=&per_page=`: `status`: `open` | `arrived` | `declined` | all (default); `q` matches the
 title; `sort` is one of `when` (default), `title`, `user`, `state`, `arrived`, `watched`; at most 100 per page.
 ```jsonc
 { "rows": [ {"id": "3:41",                       // <connection>:<Seerr request>
@@ -963,7 +963,7 @@ for a series only in the seasons that were asked for.
 }
 ```
 
-`GET /api/items/{id}` gains `item.request` — the oldest request for that title, but only the caller's own unless they have `see_everyone`;
+`GET /api/items/{id}` gains `item.request`: the oldest request for that title, but only the caller's own unless they have `see_everyone`;
 otherwise the key is absent, "arrived after" included.
 
 ## Downloads (Sonarr and Radarr)
@@ -972,8 +972,8 @@ Live, from memory: the queues of every connected Sonarr and Radarr. They already
 torrent and a usenet download the same way, so finstats reads them rather than each client's own API. Nothing is stored. Needs the
 permission **`see_downloads`** (`403` without it; Jellyfin administrators always have it).
 
-`GET /api/downloads?live=1` — `live=1` means "a page is showing this": the snapshot is then refreshed every 5 seconds for the next 20.
-While nobody is looking it is read every 60 seconds if there is anything in the queue, and every 5 minutes if there is not — opening the page,
+`GET /api/downloads?live=1`: `live=1` means "a page is showing this": the snapshot is then refreshed every 5 seconds for the next 20.
+While nobody is looking it is read every 60 seconds if there is anything in the queue, and every 5 minutes if there is not. Opening the page,
 connecting a service or a read of Seerr all refresh it at once. The prefetcher never asks for it.
 ```jsonc
 { "rows": [ {"key": "<download id>:<service>" | "arr:<service>:<title>:<sub>",
@@ -997,11 +997,11 @@ because each is waiting for its own copy. Worst first: what needs attention is o
 
 **Without `see_downloads`** a person still learns how far their *own* request has got: rows of `GET /api/requests` and
 `item.request` of `GET /api/items/{id}` carry `"download": {"state": "downloading", "progress": 0.66, "eta_s": 1300}` when something in the
-queue is that title — and nothing else: no release name, no client, no speed, no other download.
+queue is that title, and nothing else: no release name, no client, no speed, no other download.
 
 `GET/PUT /api/permissions` gain `see_downloads`.
 
-`GET /api/downloads/history?days=30` (1..3650, `see_downloads`) — Sonarr's and Radarr's own history, read every 15 minutes (task
+`GET /api/downloads/history?days=30` (1..3650, `see_downloads`): Sonarr's and Radarr's own history, read every 15 minutes (task
 `sync_grabs`; the first read goes back a year, afterwards only what is new). Only `grabbed`, `imported` and `failed` events are kept;
 renames, deletions and ignores say nothing about what arrived.
 ```jsonc
@@ -1015,32 +1015,32 @@ renames, deletions and ignores say nothing about what arrived.
 
 ---
 
-# v1.5 — Live session tracking
+# v1.5: Live session tracking
 
 The collector is *told* when something starts instead of asking for it: finstats keeps one WebSocket open to Jellyfin's `/socket`. There
-is no setting — it is how the collector works, and `active_interval_s` / `idle_interval_s` are what it asks at, plus the fallback for a
-socket that is not carrying. Nothing else about the API changes — the same rows, the same `/api/now-playing`, only sooner.
+is no setting: it is how the collector works, and `active_interval_s` / `idle_interval_s` are what it asks at, plus the fallback for a
+socket that is not carrying. Nothing else about the API changes: the same rows, the same `/api/now-playing`, only sooner.
 
-Each transport does the half it is good at. **Nothing playing:** finstats listens and asks for nothing at all — Jellyfin sends a session
+Each transport does the half it is good at. **Nothing playing:** finstats listens and asks for nothing at all. Jellyfin sends a session
 list when something changes and nothing in between, so a quiet server is a quiet socket and not a broken one. **Something playing:**
 finstats reads `/Sessions` every `active_interval_s`, because a pause, a seek or a track change is only as sharp as the gap between two
-sightings, and because the push carries no `ActiveWithinSeconds` — asking is what ends a play whose client vanished. **Everything paused:**
-back to listening after three readings in a row of it, since a frozen position is nothing for a server to report; a single `/Sessions` read stands as a net —
-after a minute of silence, and in any case every five minutes — and anyone starting again is pushed and answered within about a
+sightings, and because the push carries no `ActiveWithinSeconds`; asking is what ends a play whose client vanished. **Everything paused:**
+back to listening after three readings in a row of it, since a frozen position is nothing for a server to report; a single `/Sessions` read stands as a net
+(after a minute of silence, and in any case every five minutes), and anyone starting again is pushed and answered within about a
 second. Silence means *nothing heard and nothing asked*: a push, a read of finstats' own and a fresh subscription all start the minute
 again, the read the net itself calls for included, and two reads are never closer together than five seconds. So a pause that follows
 three minutes of playing asks for nothing at all for the next minute, however long ago the last push was. Measured from the last push
-alone — as an earlier attempt did — the clock is already stale the moment the subscription comes back on, since it is off for the whole of a
+alone, as an earlier attempt did, the clock is already stale the moment the subscription comes back on, since it is off for the whole of a
 play: a pause after a minute of one asked at once, and again, and again, 2,625 times in eight seconds until a push happened along. A server that answers the subscription with
 nothing at all is believed as long as it answers keep-alives: one read says where things stand, and that is the mode. So `transport` reads `poll` while
 something is actually running and `socket` otherwise, with `socket_live` true throughout.
 
-Jellyfin is subscribed to whenever nothing is actually running — idle or all-paused alike — and never while something is, which is the one
+Jellyfin is subscribed to whenever nothing is actually running (idle or all-paused alike) and never while something is, which is the one
 moment its pushes would be a second copy of what is already being asked for. Jellyfin normally answers `SessionsStart` at once, whether or not anything is loaded. A server that does
 not is polled meanwhile, but not written off: the connection is kept and stays subscribed, `SessionsStart` is re-sent every five minutes,
 and the first real push settles it. Neither that silence nor an app left open with nothing playing is ever evidence against the socket. The two never
-run at once: finstats sends Jellyfin `SessionsStop` for as long as it is polling — otherwise the same list would arrive twice, and the
-pushed copy is not compressed — and subscribes again on the pass where the last play ends.
+run at once: finstats sends Jellyfin `SessionsStop` for as long as it is polling (otherwise the same list would arrive twice, and the
+pushed copy is not compressed) and subscribes again on the pass where the last play ends.
 
 A socket that closes, says nothing at all for 90 s (not even an answer to a keep-alive), or never answers `SessionsStart` with a first
 session list drops finstats back to polling at `active_interval_s` / `idle_interval_s` on the next pass, and it keeps trying to reconnect.
@@ -1068,19 +1068,19 @@ outside without reading a log:
 These always hold, and finstats logs a warning about itself if they ever stop: listening means connected, subscribed and
 `poll_interval_s: null`; `playing_poll` means *not* subscribed and a beat that is running; `fallback` always has a beat. A
 safety read is not a beat, so it does not appear. `sessions_requests_last_min` is about 60 while something plays and at most 2
-while listening — counted at the one gate every `/Sessions` read passes through, so it is what a packet capture counts and not
+while listening, counted at the one gate every `/Sessions` read passes through, so it is what a packet capture counts and not
 what the collector believes it asked for; that gate also refuses more than 2 reads in a second or 70 in a minute, whatever asks
-it, and says so in the log at most once a minute. Shape only — no names, no titles, not even how many sessions there are —
+it, and says so in the log at most once a minute. Shape only (no names, no titles, not even how many sessions there are),
 and answered from memory: no request to Jellyfin, no query.
 
 `GET /api/summary` gains `collector_live` (`socket_live`), for the status bar.
 
-`POST /api/settings/public-ip` 🔒 — look this network's public address up **now**, and answer like `GET /api/settings`. This is the only
+`POST /api/settings/public-ip` 🔒: look this network's public address up **now**, and answer like `GET /api/settings`. This is the only
 thing that asks after the first answer: the lookup no longer runs on the 15-minute timer, only once at start-up on an install that has
 never learned an address, when `public_ip_lookup` is switched on, and when this is called. `400` when the setting is off.
 
-`GET /api/outbound` 🔒 — every destination finstats can reach, for the **Outbound connections** card. Read from what is already kept;
-nothing is recorded for it. Hosts (with ports) only — never a path, never a key.
+`GET /api/outbound` 🔒: every destination finstats can reach, for the **Outbound connections** card. Read from what is already kept;
+nothing is recorded for it. Hosts (with ports) only: never a path, never a key.
 ```jsonc
 { "destinations": [
     {"id": "jellyfin",   "what": "Your Jellyfin server", "hosts": ["jellyfin.example:8096"], "why": "…",
@@ -1097,7 +1097,7 @@ nothing is recorded for it. Hosts (with ports) only — never a path, never a ke
 
 ---
 
-# v1.6 — Notifications
+# v1.6: Notifications
 
 Where what finstats finds is sent. A destination belongs either to the **server** (Jellyfin administrators) or to **one
 person** (anybody with `notify`), and finstats sends nothing at all until one exists: no destination, no request.
@@ -1117,7 +1117,7 @@ finstats fills in rather than asking for.
 { "targets": [
     {"id": 3, "kind": "webhook" | "discord" | "slack" | "telegram" | "email" | "ntfy" | "gotify" | "pushover" | "pushbullet",
      "label": "Discord", "name": "Household",
-     "shown": "discord.com/…",            // host, and the topic, chat or mailbox where there is one — never the URL
+     "shown": "discord.com/…",            // host, and the topic, chat or mailbox where there is one; never the URL
      "scope": "server" | "me", "owner_id": "…" | null, "owner_name": "bob" | null,   // "me": a personal destination, not necessarily the caller's
      "topic": "finstats-abc" | null,      // whatever that kind calls it: topic, chat id, user key, mailbox
      "options": {"from": "finstats@example.com"},   // what that kind needs beyond those; only email has any
@@ -1155,13 +1155,13 @@ finstats fills in rather than asking for.
  "events": ["travel", "new_country", "request_available"],
  "with_addresses": false, "min_severity": "info", "accept_invalid_certs": false, "enabled": true}
 ```
-`PUT /api/notifications/targets/{id}` — the same object, every key optional; what is left out keeps what is stored, and
+`PUT /api/notifications/targets/{id}`: the same object, every key optional; what is left out keeps what is stored, and
 `kind` and `scope` never change. `DELETE /api/notifications/targets/{id}` → `{"ok": true}`.
 
-`POST /api/notifications/targets/{id}/test` → `{"ok": true}` or `{"ok": false, "error": "Gotify refused the token"}` —
+`POST /api/notifications/targets/{id}/test` → `{"ok": true}` or `{"ok": false, "error": "Gotify refused the token"}`:
 one message down the same path as every other, so a test that arrives proves the real thing works.
 
-`GET /api/notifications/history?limit=50` (max 200) — what has been sent lately. A person sees only what went to their own
+`GET /api/notifications/history?limit=50` (max 200): what has been sent lately. A person sees only what went to their own
 destinations.
 ```jsonc
 { "events": [
@@ -1188,22 +1188,22 @@ title is not markup), Pushover and Pushbullet what they take; email is a plain-t
 - an event is written once (deduped like a security alert) and delivered per destination, retried on its own clock
   (30 s, 2 min, 10 min, 1 h, then given up on; a `Retry-After` is honoured), at most 20 messages a minute per destination;
 - nothing found more than six hours after it happened is ever sent, and no destination is sent anything that happened
-  before it existed — adding one cannot replay a year;
+  before it existed, so adding one cannot replay a year;
 - a personal destination carries exactly what its owner may see in the app: their own rows always, somebody else's play
   or request needs `see_everyone`, somebody else's places need `see_network` as well, and the server's own business needs
   `see_server`;
-- a personal destination's address must not resolve into a private or loopback range — checked when it is saved and again
+- a personal destination's address must not resolve into a private or loopback range, checked when it is saved and again
   before every send. An administrator's may point anywhere;
 - mail is encrypted or it does not go: `smtps://` from the first byte, `smtp://` must upgrade with STARTTLS. There is no
   third option, and no path by which the password is sent in the clear. A certificate of your own making is the same
   administrator-only switch (`accept_invalid_certs`) every other connection has.
 
 
-## `GET /api/jellyfin/jobs` 🔒 — what your Jellyfin is doing right now
+## `GET /api/jellyfin/jobs` 🔒: what your Jellyfin is doing right now
 
 Needs *see the server*. Jellyfin's own scheduled tasks, read live (at most one read of Jellyfin every 3 seconds however
 many people are watching), with the hidden ones included: "what is running" must not leave something out because
-Jellyfin's dashboard does not draw it. finstats only ever reads this — there is no way in the code to start, stop or
+Jellyfin's dashboard does not draw it. finstats only ever reads this; there is no way in the code to start, stop or
 change a task on Jellyfin.
 
 ```jsonc
@@ -1228,19 +1228,19 @@ change a task on Jellyfin.
 **`eta_s` is an estimate, and the shape of the answer says so.** Jellyfin reports a percentage and never when the
 current run started, so finstats times the run by watching it. The rate is measured against the most recent reading far
 enough back to say anything (at least 0.5% ago and at least 5 s ago, within a 15-minute memory), so a job that speeds up
-or slows down is described by the pace it has now rather than the one it averaged — and a job creeping a percent every
+or slows down is described by the pace it has now rather than the one it averaged, and a job creeping a percent every
 few minutes is still measurable at all.
 
-**The watching is the backend's, and starts before the first call.** The task lists finstats reads anyway — the
-library-scan check every 5 minutes, the server details every 15 — notice a run, and from then on finstats reads the whole
+**The watching is the backend's, and starts before the first call.** The task lists finstats reads anyway (the
+library-scan check every 5 minutes, the server details every 15) notice a run, and from then on finstats reads the whole
 list itself every 10 seconds for as long as anything runs (2.0.4), whether or not a page is open. So a page opened on a
 running job is answered with an `eta_s` measured over the last minutes, not one it has to watch into being. Idle, nothing
 extra is asked of Jellyfin. This endpoint's own read is still at most every 3 s, and a page reading it spares the
-backend's. A job Jellyfin reports at 0% the whole time — a library scan's first phase does — has no rate to measure,
+backend's. A job Jellyfin reports at 0% the whole time (a library scan's first phase does) has no rate to measure,
 and stays `null` until the percentage moves.
 
-**When nothing has been measured, `eta_s` is `null` and stays `null`.** There is a tempting number to put there — how
-long the last run took, applied to the fraction that is left — and it is a guess: it knows nothing about how much of
+**When nothing has been measured, `eta_s` is `null` and stays `null`.** There is a tempting number to put there (how
+long the last run took, applied to the fraction that is left), and it is a guess: it knows nothing about how much of
 *this* run has already happened, it does not move while the job does not, and on a page it is indistinguishable from an
 estimate that was earned. finstats does not offer it. The page shows a cycling ellipsis in place of the number, and
 `last_duration_s` sits beside it for anyone who wants to judge for themselves. The page writes "ETA" in front of the
@@ -1252,9 +1252,9 @@ Running jobs come first, then whatever ran most recently.
 
 ---
 
-# v1.6.4 — Licences
+# v1.6.4: Licences
 
-`GET /api/licenses` (any signed-in user) — what finstats is built on, and the licence each part is under. It is the
+`GET /api/licenses` (any signed-in user): what finstats is built on, and the licence each part is under. It is the
 same for every caller and cannot change while the process runs, so it is rendered once at the first call and handed out
 unchanged after that; it runs to about half a megabyte of licence text (≈ 55 KB over the wire, compressed).
 
@@ -1278,7 +1278,7 @@ appears once in `notices` and every component points at the ones it carries. Not
 is a licence file as its own project wrote it, read out of the crate sources by `tools/make-third-party.py` and
 compiled in as `THIRD-PARTY.json`. `kind` separates the three halves: `app` is finstats itself under the GPL, `bundled`
 is what is shipped or read but is not a crate (the fonts, the map outlines, the city database), and `crate` is the
-generated dependency list. A component with an empty `notices` has no licence file to show — its SPDX `license` is then
+generated dependency list. A component with an empty `notices` has no licence file to show; its SPDX `license` is then
 all there is to say.
 
 `cargo test` fails while `THIRD-PARTY.json` does not cover every package in `Cargo.lock`, so a dependency cannot be
@@ -1286,7 +1286,7 @@ added without its licence being recorded.
 
 ---
 
-# v1.8 — Playback insights
+# v1.8: Playback insights
 
 What the timeline of every play adds up to. Pure reads over `playbacks` and `playback_events`; nothing new is collected.
 
@@ -1309,7 +1309,7 @@ A film or episode answers where its plays stopped:
 
 `null` for anything but a film or an episode, under three plays in scope, or without a runtime to draw on. The stop rule
 is the one `completion` has always used, made explicit: `position_s` when finstats saw the play end, else `duration_s`.
-The two are never mixed silently — `measured` and `estimated` always travel with the curve. Rewinds and subtitle
+The two are never mixed silently: `measured` and `estimated` always travel with the curve. Rewinds and subtitle
 switch-ons exist only for plays finstats recorded itself. A seek shorter than 20 s was never recorded, so a short rewind
 is invisible by design.
 
@@ -1349,7 +1349,7 @@ up to 25 broken and 15 of each of the others.
 
 ---
 
-# v1.9 — Watched together
+# v1.9: Watched together
 
 `GET /api/stats/groups` (common filters) answers what the **Together** page draws, alongside the keys the dashboard and
 profile cards have always read. Nothing new is collected: the sessions are the groups `group_id` already marks.
@@ -1370,7 +1370,7 @@ profile cards have always read. Nothing new is collected: the sessions are the g
 }
 ```
 
-Two rules. **A pair's time together is the shorter of the two stays**, which is theirs alone — a session's own
+Two rules. **A pair's time together is the shorter of the two stays**, which is theirs alone. A session's own
 `together_s` (the second-longest stay) describes any two of its members, so an evening of three counts for each of its
 three pairs. **A session belongs whole to the bucket it started in**; `alone_s` is what the scoped people watched in that
 bucket minus their time inside sessions that started in it, never below zero.
@@ -1380,25 +1380,25 @@ alone (a companion's name is theirs to see; a companion's time alone is not), an
 pin. `min_play_s` applies to `watch_s` and the series' totals, not to the sessions themselves, which are at least two
 minutes long by construction.
 
-# v1.10 — API keys, calendar feed, audit
+# v1.10: API keys, calendar feed, audit
 
 ## API keys
 
 A key is a second credential for the same person: `fs_` + 64 hex characters (67 in all), shown **once** when it is
-made and stored only as a hash. It is sent as `Authorization: Bearer fs_…` — scheme case-insensitive, spacing
-tolerant — and resolves to exactly the `user` a session would: name, administrator flag and permissions are read live
+made and stored only as a hash. It is sent as `Authorization: Bearer fs_…` (scheme case-insensitive, spacing
+tolerant) and resolves to exactly the `user` a session would: name, administrator flag and permissions are read live
 on every request, so a demoted administrator's key demotes with them and a person who may no longer sign in has no
 working keys. A session cookie is read the same way, and one of somebody disabled or deleted in Jellyfin
 is `401`. **Header beats cookie**: a request carrying both is judged on the header, and an invalid header is `401`
 even with a valid cookie beside it. A key is refused (`401`) once revoked or past its expiry.
 
 Two scopes. `full` opens everything its holder may see. `calendar` opens `GET /api/calendar.ics` and nothing else
-(`403` everywhere else) — it exists so a phone's calendar can hold a credential that cannot read a single statistic.
+(`403` everywhere else); it exists so a phone's calendar can hold a credential that cannot read a single statistic.
 
 | Method | Path | Body | Response |
 |---|---|---|---|
-| GET | `/api/keys` | – | `{keys: [{id, name, scope, user_id, user_name, has_image, created_at, expires_at, last_used_at, last_used_ip, mine}]}` — the caller's live keys; a Jellyfin administrator's list holds everyone's. Never the key itself. |
-| POST | `/api/keys` | `{name (1–60), scope: "full"\|"calendar", expires_in_d?: 1..3650}` | `201 {id, key, name, scope, created_at, expires_at}` — the only time `key` is ever answered. At most 20 live keys per person (`409`). |
+| GET | `/api/keys` | – | `{keys: [{id, name, scope, user_id, user_name, has_image, created_at, expires_at, last_used_at, last_used_ip, mine}]}`: the caller's live keys; a Jellyfin administrator's list holds everyone's. Never the key itself. |
+| POST | `/api/keys` | `{name (1–60), scope: "full"\|"calendar", expires_in_d?: 1..3650}` | `201 {id, key, name, scope, created_at, expires_at}`, the only time `key` is ever answered. At most 20 live keys per person (`409`). |
 | DELETE | `/api/keys/{id}` | – | `{ok: true}`; a soft revoke that stops the key on its next request. Own keys, or anyone's for an administrator; `404` otherwise, and for a key already revoked. |
 
 Both writes need a **session**: a request authenticated by a key cannot mint or revoke keys (`403`), so a leaked key
@@ -1406,7 +1406,7 @@ has no successors. `last_used_at`/`last_used_ip` are written at most once a minu
 
 ## The calendar feed
 
-`GET /api/calendar.ics?key=fs_…&days=90&mine=1` — a subscribable iCalendar of what Sonarr and Radarr have coming, the
+`GET /api/calendar.ics?key=fs_…&days=90&mine=1`: a subscribable iCalendar of what Sonarr and Radarr have coming, the
 same rows as `/api/upcoming` for the same person, as far ahead as `days` (1–90, default 90). `mine=1` (or `true`)
 keeps it to the shows and films the caller follows.
 
@@ -1433,7 +1433,7 @@ END:VEVENT
 The feed **names nobody by construction**: the query behind it carries no user name or count, only whether the
 caller follows the title, because a subscribed calendar syncs through somebody's cloud.
 
-## The audit log — Jellyfin administrators only (🔒)
+## The audit log: Jellyfin administrators only (🔒)
 
 Every write path in finstats leaves a row: who did it, from where, through which key if any, to what, and how it
 went. Reads leave none. `GET /api/audit` pages through it.
@@ -1465,7 +1465,7 @@ nothing else), `alert_resolved` / `alert_reopened`. A row is kept a year, is wri
 failed (`outcome: "failed"`), and never fails the action for not being written. The `audit` table is part of
 backups; `api_keys` is not.
 
-# v1.11 — Public profiles and shareable cards
+# v1.11: Public profiles and shareable cards
 
 The first answers given without an account. They are built by `public.rs` from what one person published and nothing
 else, and each of them answers the same `404 {"error": "Profile not found"}` when the server switch (`public_profiles`,
@@ -1480,15 +1480,15 @@ least a day before** (`active = 0`, `ended_at <= now − 86400`), recent plays i
 |---|---|---|
 | GET | `/u/{token}` | The page, HTML, with its link preview (`og:title`, `og:description`, `og:image` = the profile card; absolute when `public_url` is set). |
 | GET | `/u/{token}/card.png?kind=profile\|recap` | A 1200×630 PNG. `profile` needs `totals` or `habits` published, `recap` needs `recap`. `Cache-Control: public, max-age=3600`. |
-| GET | `/api/public/{token}` | `{name, avatar, totals?, habits?, recap?, recent?}` — an unpublished section is absent, not empty. |
+| GET | `/api/public/{token}` | `{name, avatar, totals?, habits?, recap?, recent?}`; an unpublished section is absent, not empty. |
 | GET | `/api/public/{token}/img/{item_id}?w=` | A poster, only for an `image` the answer lists. |
 | GET | `/api/public/{token}/avatar` | The owner's picture, only when `avatar` is true. |
 
 `totals`: `{plays, watch_s, movies, episodes, tracks, top_series, top_movies, top_tracks}`, each list up to five
 `{name, sub, plays, watch_s, image}`. `habits`: `{longest_streak_days, active_days, heatmap: {plays, watch_s}, genres: [{name,
-watch_s}]}` — the grid is `[weekday, Monday = 0][hour]`, the shape `charts.js` draws; there is no current streak.
+watch_s}]}`. The grid is `[weekday, Monday = 0][hour]`, the shape `charts.js` draws; there is no current streak.
 `recap` (the ready year): `{year, plays, watch_s, active_days, persona: {title, line}|null, top_series, top_movie,
-top_genre, longest_streak_days}` — never the rank among other people, the apps or the records. `recent`: up to ten
+top_genre, longest_streak_days}`, never the rank among other people, the apps or the records. `recent`: up to ten
 `{day: "YYYY-MM-DD", name, sub, image}`. `name` is the name the owner typed, `""` for none; never the Jellyfin login name.
 
 ## The owner's side (a session; a key is refused `403`)
@@ -1504,7 +1504,7 @@ top_genre, longest_streak_days}` — never the rank among other people, the apps
 `/api/auth/me` gains `user.features.public_profiles`. Audit kinds: `profile_published`, `profile_changed`,
 `profile_unpublished`, `profile_link_reset`. `public_profiles` is not in backups: a restore never brings a link back.
 
-# v2.0 — Recap 2026
+# v2.0: Recap 2026
 
 ## `GET /api/recap` grows
 
@@ -1517,9 +1517,9 @@ New keys, each `null` when there is nothing to say:
 | Key | Shape |
 |---|---|
 | `together` | `{evenings, together_s, share, top_title: {id, name, image_item_id, evenings} \| null, companions: [{user_id, user_name, has_image, evenings, together_s}] /* ≤ 3, a person's year only */, people_in_company /* the server's year only */}` |
-| `finished` | `{series: [{id, name, image_item_id, episodes, finished_on}], count, dropped: [{id, name, image_item_id, seen, total}], dropped_count}` — a person's year only. Finished: every file episode seen, the last inside the year. Dropped: begun in the year, under half seen, nothing played for 60 days before the year closed (or before now). |
-| `requests` | `{made, available, watched, top: [{title, year, item_id, image_item_id}]}` — Seerr requests made in the year; `watched` counts those played by the requester after they arrived. `null` when no request was ever recorded. |
-| `versus` | `{year, plays, watch_s, active_days}` — the calendar year before; `null` for `last12` or when that year had no plays. |
+| `finished` | `{series: [{id, name, image_item_id, episodes, finished_on}], count, dropped: [{id, name, image_item_id, seen, total}], dropped_count}`, a person's year only. Finished: every file episode seen, the last inside the year. Dropped: begun in the year, under half seen, nothing played for 60 days before the year closed (or before now). |
+| `requests` | `{made, available, watched, top: [{title, year, item_id, image_item_id}]}`: Seerr requests made in the year; `watched` counts those played by the requester after they arrived. `null` when no request was ever recorded. |
+| `versus` | `{year, plays, watch_s, active_days}`: the calendar year before; `null` for `last12` or when that year had no plays. |
 | `story` | The chapters that have a card, in order: keys of `year, numbers, shows, films, music, genres, persona, rhythm, days, records, together, finished, asked, versus`. |
 
 ## The year as cards
@@ -1542,20 +1542,20 @@ beside it listing its cards.
 A new event kind, `recap_ready` (Library group, the person it is about): in December, once per person who watched that year,
 "Your 2025 in review is ready" with a link to `/recap?year=2025`.
 
-# v2.0.2 — Open in Jellyfin
+# v2.0.2: Open in Jellyfin
 
 `GET /api/items/{id}` gains `item.jellyfin_link`: Jellyfin's web app on that title's page
 (`{base}/web/#/details?id={id}`), or `null` for a title Jellyfin no longer has. `base` is the setting
-`jellyfin_public_url` — where people open Jellyfin, which is often not the address finstats connects to — or,
+`jellyfin_public_url` (where people open Jellyfin, which is often not the address finstats connects to) or,
 while it is empty, the address finstats connects to. `jellyfin_public_url` is an http(s) address naming a host
 (`400` otherwise) and, being a link everyone follows, only a Jellyfin administrator may set it (`403` for anyone else).
 
 
-# v2.1 — Watchlist
+# v2.1: Watchlist
 
 ## Your own list
 
-Every endpoint acts on the caller and takes no `user_id`: nobody — not `see_everyone`, not a Jellyfin administrator —
+Every endpoint acts on the caller and takes no `user_id`: nobody (not `see_everyone`, not a Jellyfin administrator)
 reads or changes somebody else's list. A session or a full key may use them; a calendar key is refused `403`. Nothing is
 written anywhere but finstats' own database, and nothing is audit-logged.
 
@@ -1569,19 +1569,19 @@ written anywhere but finstats' own database, and nothing is audit-logged.
 `/api/auth/me` gains `user.features.watchlist: true`; a page offers the list only where it is there.
 
 Only films and shows go on a list: `kind` is `Movie` or `Series`, and an `item_id` that is anything else, or that the
-library does not have, is `404`. A title outside the library needs at least one id — TMDB and TVDB ids are digits and may
-be sent as numbers, an IMDb id is `tt` and digits — and a name of at most 300 characters; `year`, when given, is
+library does not have, is `404`. A title outside the library needs at least one id (TMDB and TVDB ids are digits and may
+be sent as numbers, an IMDb id is `tt` and digits) and a name of at most 300 characters; `year`, when given, is
 1870–2200. Anything else is `400` with a sentence saying why. If the ids already name a title in the library, the entry
 is attached to it at once. A list holds at most 1,000 titles; one more is `400`.
 
-Adding what is already there — the same item, a copy of it in another library, or the same kind with any one of its ids —
+Adding what is already there (the same item, a copy of it in another library, or the same kind with any one of its ids)
 answers the entry that is there. `keys` is what a page needs to show the toggle without a request per poster: `item_ids`
 is every item in the library that shares one of the entry's ids (a film in an HD and a 4K library is one title), plus the
 item it was added from.
 
 `Entry`: `{id, kind, title, year, added_at, item_id, tmdb_id, tvdb_id, imdb_id, state, progress, request, next, poster}`.
 `title` and `year` are the snapshot kept with the entry; `item_id` is the title in the library now (the lowest id of its
-copies), `null` when it is not there. `state` is worked out when the list is read and never stored — the first that holds:
+copies), `null` when it is not there. `state` is worked out when the list is read and never stored; the first that holds:
 
 | `state` | When |
 |---|---|
@@ -1594,13 +1594,13 @@ copies), `null` when it is not there. `state` is worked out when the list is rea
 | `not_on_server` | None of these. |
 
 `progress` is `{seen, total}` for a show somebody has begun, else `null`; of several copies the one furthest along
-counts. `request` is `{by_you: true}` for the caller's own request, and `{by_you: false, user_name}` for somebody else's —
+counts. `request` is `{by_you: true}` for the caller's own request, and `{by_you: false, user_name}` for somebody else's,
 which is only ever sent to somebody with `see_everyone`: without it, another person's request is not mentioned at all,
 exactly as on the Pipeline page. `next` is `{day, at, release, season, episode}` from the calendar, `null` without one.
 `poster` is `{item_id}` for a title the library has or had, else `{service_id, media_id}` for one on the calendar or in a
 request the caller may see (served by `/api/img/arr/…`), else `null`.
 
-Watchlists are part of a backup — they are somebody's own and Jellyfin cannot give them back — and a restore merges them
+Watchlists are part of a backup (they are somebody's own and Jellyfin cannot give them back), and a restore merges them
 per person and title, keeping the older date, and attaches them to the library as it is.
 
 ## `GET /api/upcoming` entries carry their ids
@@ -1610,7 +1610,7 @@ has none), so a title that is not in the library yet can be put on a watchlist b
 
 ## Notifications: `watchlist_available`
 
-A new event kind (Library group): a film or show somebody put on their watchlist has arrived in the library — once per
+A new event kind (Library group): a film or show somebody put on their watchlist has arrived in the library, once per
 person and title, only for a title that came after it was put on the list, and nothing older than the last few hours.
 It is **only ever somebody's own**: it goes to that person's own destinations and to no other, a server destination
 and an administrator's included, and it is left out of `GET /api/notifications/history` for everyone but that person.
@@ -1656,14 +1656,14 @@ Nothing in an answer is about plays or people; the one name is who dismissed a f
 
 | `kind` | `evidence` |
 |---|---|
-| `gap` | `{season, from, to, files, missing: [[4, 5], [8, 8]]}` — episode numbers missing between a season's lowest and highest file. A file of several episodes counts whole; season 0 and episodes without a number are left out, and nothing is said about the end of a season. |
-| `season_drift` | `{differs: ["resolution", "range", "codec"], seasons: [{season, episodes, resolution, range, codec}]}` — each season's usual look; one finding per show. |
-| `episode_drift` | `{season, episode, differs, resolution?, season_resolution?, range?, season_range?}` — a file unlike its own season (a season of at least 4 files, 75% of them alike). Codec mixes inside a season are not findings. |
-| `copies` | a film: `{files: [File], resolutions}`; a show: `{episodes, examples: [{season, episode, files: [File]}]}` (at most 20) — the same thing twice in one resolution class. `wasted_bytes` is everything but the largest copy. |
-| `versions` | a film: `{files: [File], resolutions: ["4K", "1080p"]}`; a show: `{episodes, resolutions}` — copies in different classes, often deliberate; never counted as waste. |
+| `gap` | `{season, from, to, files, missing: [[4, 5], [8, 8]]}`: episode numbers missing between a season's lowest and highest file. A file of several episodes counts whole; season 0 and episodes without a number are left out, and nothing is said about the end of a season. |
+| `season_drift` | `{differs: ["resolution", "range", "codec"], seasons: [{season, episodes, resolution, range, codec}]}`: each season's usual look; one finding per show. |
+| `episode_drift` | `{season, episode, differs, resolution?, season_resolution?, range?, season_range?}`: a file unlike its own season (a season of at least 4 files, 75% of them alike). Codec mixes inside a season are not findings. |
+| `copies` | a film: `{files: [File], resolutions}`; a show: `{episodes, examples: [{season, episode, files: [File]}]}` (at most 20): the same thing twice in one resolution class. `wasted_bytes` is everything but the largest copy. |
+| `versions` | a film: `{files: [File], resolutions: ["4K", "1080p"]}`; a show: `{episodes, resolutions}`: copies in different classes, often deliberate; never counted as waste. |
 | `thin` | a film: `{resolution, codec, bitrate_bps, threshold_bps}`; a season: `{season, files, of, lowest_bps, highest_bps, episodes: [{id, episode, resolution, codec, bitrate_bps, threshold_bps}]}`. Only the first version of an item is stored, so an item with several is judged by its first. |
-| `dub` | `{language, full: [1, 2], none: [3], partial: [{season, episodes, of}]}` — an audio language that covers some seasons fully and others not at all. |
-| `unidentified` | `{type, year, path}` — a film or show with no provider id at all. |
+| `dub` | `{language, full: [1, 2], none: [3], partial: [{season, episodes, of}]}`: an audio language that covers some seasons fully and others not at all. |
+| `unidentified` | `{type, year, path}`: a film or show with no provider id at all. |
 
 `File` = `{id, library_id, resolution, codec, size_bytes, path, season, episode}`. Resolution classes are `4K`, `1080p`,
 `720p` and `SD`, by width (a cropped 1920×800 is 1080p) or height (a pillarboxed 1440×1080 is too). Copies follow the
@@ -1677,10 +1677,10 @@ finding do: a replaced file or a re-encoded season brings it back if it is still
 `finding_dismissed` and `finding_undismissed`. Dismissals travel with a backup and a restore keeps one this database
 already has; the findings themselves are worked out again and are not in a backup.
 
-# v2.2 — Appearance
+# v2.2: Appearance
 
 How finstats looks is each person's own: a FinUI preset's code as FinUI create makes it
-(`https://finstats.github.io/finui/create/`) — one letter or digit per choice, such as `0101`.
+(`https://finstats.github.io/finui/create/`), one letter or digit per choice, such as `0101`.
 
 `GET /api/me/appearance` → `{"finui_preset": "0101"}` (`""`: FinUI as it ships). `PUT /api/me/appearance` with
 `{"finui_preset"}` sets the caller's and nobody else's, and answers the same shape; `""` takes it back; `400` for a code that
@@ -1688,14 +1688,14 @@ names no option. Anyone signed in; recorded in the audit log as `appearance_chan
 keeps a choice this install already has for the same person.
 
 `GET /assets/finui.css` (no sign-in needed, as before) answers in the look of whoever's session cookie asks: FinUI's
-stylesheet, then the preset's tokens — FinUI's own generated file of each chosen option
-(`/assets/finui/p/{axis}/{option}.css`), in axis order, after a comment naming the code — with an ETag of its own and
+stylesheet, then the preset's tokens (FinUI's own generated file of each chosen option,
+`/assets/finui/p/{axis}/{option}.css`, in axis order, after a comment naming the code) with an ETag of its own and
 `Cache-Control: private, no-cache`, `Vary: Cookie`. Signed out, or nothing chosen: FinUI as it ships. The choices and their
 names are `/assets/finui/create/presets.json`, FinUI's file.
 
 ## A title's page in Jellyfin, from anywhere
 
-`/api/auth/me` gains `user.jellyfin_details`: a title's page in Jellyfin is this followed by its id —
-`"https://jellyfin.example.com/web/#/details?id="` — from the address an administrator set for "Open in Jellyfin", else the one
+`/api/auth/me` gains `user.jellyfin_details`: a title's page in Jellyfin is this followed by its id.
+It reads like `"https://jellyfin.example.com/web/#/details?id="` and comes from the address an administrator set for "Open in Jellyfin", else the one
 finstats connects to; `null` before Jellyfin is set up. The context menu offers "Open in Jellyfin" on any link to a title
 with it, where the answer that drew the link had no `jellyfin_link` to give.

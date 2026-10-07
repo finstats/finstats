@@ -1,11 +1,11 @@
 //! A person's list of films and shows they mean to watch. It belongs to its owner and nobody else: every
-//! endpoint acts on the caller and takes no `user_id`, and no permission — `see_everyone`, a Jellyfin
-//! administrator — opens somebody else's. Written to finstats' own database only; nothing here talks to
+//! endpoint acts on the caller and takes no `user_id`, and no permission (`see_everyone`, a Jellyfin
+//! administrator) opens somebody else's. Written to finstats' own database only; nothing here talks to
 //! Jellyfin, Seerr, Sonarr or Radarr.
 //!
 //! **An entry names a title in one of two ways**: by its Jellyfin item when it is in the library, or by a
-//! provider id (TMDB, TVDB, IMDb) when it is not yet. Either way it keeps a snapshot — kind, title, year and
-//! the provider ids — so it still reads as something after its title leaves the library, or before it comes.
+//! provider id (TMDB, TVDB, IMDb) when it is not yet. Either way it keeps a snapshot (kind, title, year and
+//! the provider ids) so it still reads as something after its title leaves the library, or before it comes.
 
 use anyhow::Result;
 
@@ -196,7 +196,7 @@ const FIND_SQL: &str = "SELECT x.item_id, x.source, x.value FROM item_external x
 
 /// The one live title of `kind` these provider ids can mean, if there is one. Several items that share the ids
 /// are copies of one title (a film in an HD and a 4K library) and the lowest id stands for them, as it does for
-/// Pipeline; ids that lead to *different* titles — two TMDB ids among the candidates, say — mean nothing is
+/// Pipeline; ids that lead to *different* titles (two TMDB ids among the candidates, say) mean nothing is
 /// sure, and nothing is chosen. Nothing here rewrites history, which is why copies are not refused the way
 /// `relink.rs` refuses them.
 pub fn find_title(conn: &Connection, t: &Title) -> Result<Option<String>> {
@@ -308,7 +308,7 @@ pub fn restore_row(conn: &Connection, row: &serde_json::Map<String, Value>) -> R
     Ok(true)
 }
 
-/// After a library read: tell each person whose watchlist was waiting for a title that it is here — a title that was
+/// After a library read: tell each person whose watchlist was waiting for a title that it is here: a title that was
 /// missing at a library read and came after they put it on the list, in the last few hours. A new item alone is not an
 /// arrival: a replaced file is a new path and so a new item, of a title that never left. Re-derived from that window every time, so saying it twice is
 /// impossible and a missed read loses nothing; anything older is history and says nothing. Only ever to the person's own
@@ -367,8 +367,8 @@ const WAITING_SQL: &str = "SELECT w.id, w.user_id, w.kind, w.item_id, w.tmdb_id,
      FROM watchlist w LEFT JOIN items i ON i.id = w.item_id
      WHERE w.item_id IS NULL OR i.id IS NULL OR i.removed <> 0";
 
-/// After a library read: attach every entry whose title is in the library now — one that was waiting for it, or one
-/// whose title was renamed into a new item — and merge two entries that turn out to be one title, keeping the older.
+/// After a library read: attach every entry whose title is in the library now (one that was waiting for it, or one
+/// whose title was renamed into a new item) and merge two entries that turn out to be one title, keeping the older.
 /// Answers how many entries were attached.
 pub fn resolve(conn: &Connection) -> Result<usize> {
     // What the library calls an attached title, first: an id it has learnt may be what makes a waiting entry the same title.
@@ -399,7 +399,7 @@ pub fn resolve(conn: &Connection) -> Result<usize> {
             continue; // folded into an older entry of the same title already
         }
         let Some(found) = find_title(conn, &t)? else { continue };
-        // Other entries of theirs may already stand for this title — on it, on a copy of it, or by one of its ids. All of
+        // Other entries of theirs may already stand for this title: on it, on a copy of it, or by one of its ids. All of
         // them are one entry now, the oldest, and the rest go before it moves: one of them may hold the item.
         let mut same = match snapshot(conn, &found)? {
             Some(title) => standing_for(conn, &user_id, Some(&found), &title, Some(id))?,
@@ -426,7 +426,7 @@ pub fn resolve(conn: &Connection) -> Result<usize> {
     Ok(attached)
 }
 
-/// Every entry on `user_id`'s list, newest first, each with what is true of its title now — never stored, so it
+/// Every entry on `user_id`'s list, newest first, each with what is true of its title now, never stored, so it
 /// cannot go stale. `everyone`: the caller may see everyone's activity, and so who asked for a title in Seerr.
 ///
 /// The state is the first of these that holds: `watched` (by the profile's reading of "seen"; a show when every
@@ -543,7 +543,7 @@ impl AddBody {
     }
 }
 
-/// `POST /api/me/watchlist` — `201` when it was added, `200` when it was there already.
+/// `POST /api/me/watchlist`: `201` when it was added, `200` when it was there already.
 pub async fn add_mine(State(app): State<App>, user: AuthUser, Json(body): Json<AddBody>) -> ApiResult<Response> {
     let wanted = body.wanted()?;
     let uid = user.id.clone();
@@ -559,7 +559,7 @@ pub async fn add_mine(State(app): State<App>, user: AuthUser, Json(body): Json<A
     Ok(((if created { StatusCode::CREATED } else { StatusCode::OK }), Json(json!({ "id": id, "created": created }))).into_response())
 }
 
-/// `DELETE /api/me/watchlist/{id}` — only ever the caller's own; anybody else's is not there.
+/// `DELETE /api/me/watchlist/{id}`: only ever the caller's own; anybody else's is not there.
 pub async fn remove_mine(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -> ApiResult {
     let uid = user.id.clone();
     if !app.db.call(move |c| remove(c, &uid, id)).await? {
@@ -568,7 +568,7 @@ pub async fn remove_mine(State(app): State<App>, user: AuthUser, Path(id): Path<
     Ok(Json(json!({ "ok": true })))
 }
 
-/// `GET /api/me/watchlist` — the caller's list, each entry with its state, and who the caller is for the page's header.
+/// `GET /api/me/watchlist`: the caller's list, each entry with its state, and who the caller is for the page's header.
 pub async fn list_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
     let (uid, everyone) = (user.id.clone(), user.perms.see_everyone);
     let (who, entries) = app
@@ -584,7 +584,7 @@ pub async fn list_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
     Ok(Json(json!({ "user": { "id": user.id, "name": name, "has_image": has_image }, "entries": entries })))
 }
 
-/// `GET /api/me/watchlist/keys` — what is on the caller's list, for the pages that offer the toggle.
+/// `GET /api/me/watchlist/keys`: what is on the caller's list, for the pages that offer the toggle.
 pub async fn keys_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
     let uid = user.id.clone();
     let entries = app.db.call(move |c| keys(c, &uid)).await?;
@@ -892,7 +892,7 @@ mod tests {
         crate::pipeline::rebuild_external(&c).unwrap();
         assert_eq!(resolve(&c).unwrap(), 1);
         assert_eq!(item_of(&c, id).as_deref(), Some("sintel2"));
-        // Deleted for good: nothing else has its ids, so it stays where it was — and reads as having left.
+        // Deleted for good: nothing else has its ids, so it stays where it was, and reads as having left.
         c.execute_batch("UPDATE items SET removed = 1 WHERE id = 'sintel2';").unwrap();
         crate::pipeline::rebuild_external(&c).unwrap();
         assert_eq!(resolve(&c).unwrap(), 0);
@@ -924,7 +924,7 @@ mod tests {
         assert!(!left.iter().any(|(id, _, _)| *id == newer));
     }
 
-    /// Three entries of one title — one on its item, two waiting by ids the others did not share — are one entry after a
+    /// Three entries of one title (one on its item, two waiting by ids the others did not share) are one entry after a
     /// library read. Merging only the oldest twin moved a waiting entry onto the item another entry still held, the
     /// unique index refused it, and with it every library read, import and restore that came after.
     #[test]
@@ -973,7 +973,7 @@ mod tests {
         assert!(p.contains("idx_item_external") && !p.contains("SCAN x") && !p.contains("SCAN item_external"), "{p}");
     }
     /// alice's on-the-server film, its file upgraded. A new file is a new path, and so a new item with a fresh DateCreated,
-    /// which once read as "Now on the server" for a title that never left — at every upgrade, watched or not.
+    /// which once read as "Now on the server" for a title that never left, at every upgrade, watched or not.
     #[test]
     fn a_title_that_never_left_is_not_an_arrival_when_its_file_is_replaced() {
         use crate::notify::{Kind, tests::{bus, target}};
@@ -993,7 +993,7 @@ mod tests {
         assert_eq!(announce(&c, &f).unwrap(), 0, "it never left");
     }
 
-    /// The other side of the rule: a title that really left — missing at a library read — and came back is an arrival.
+    /// The other side of the rule: a title that really left (missing at a library read) and came back is an arrival.
     #[test]
     fn a_title_that_left_and_came_back_is_an_arrival() {
         use crate::notify::{Kind, tests::{bus, target}};

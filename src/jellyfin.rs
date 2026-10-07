@@ -1,4 +1,4 @@
-//! Minimal Jellyfin API client — only the endpoints finstats needs.
+//! Minimal Jellyfin API client: only the endpoints finstats needs.
 
 use std::time::Duration;
 
@@ -177,7 +177,7 @@ impl Jellyfin {
                 }
             })?;
         if !resp.status().is_success() {
-            bail!("{} answered {} — is this a Jellyfin server?", self.base, resp.status());
+            bail!("{} answered {}. Is this a Jellyfin server?", self.base, resp.status());
         }
         let info: PublicInfo =
             resp.json().await.map_err(|_| anyhow!("{} did not answer like a Jellyfin server", self.base))?;
@@ -476,7 +476,7 @@ fn library_query(library_id: &str, start: usize, limit: usize) -> Vec<(&'static 
 }
 
 /// What Jellyfin saved in one library since a moment (unix seconds): the library read's question for only the
-/// items changed since, with their cast and crew as well — a few items, where the library read has thousands.
+/// items changed since, with their cast and crew as well: a few items, where the library read has thousands.
 pub fn changed_query(library_id: &str, since: i64, start: usize, limit: usize) -> Vec<(&'static str, String)> {
     let since = chrono::DateTime::from_timestamp(since, 0).unwrap_or_default().format("%Y-%m-%dT%H:%M:%SZ").to_string();
     let mut q = library_query(library_id, start, limit);

@@ -1,5 +1,5 @@
 // FinUI: chip. A small rounded thing that stands for one value: a genre, a filter in force, a choice that is on or off.
-// Unlike a badge it can be pressed — to filter by it, to switch it, or to take it away.
+// Unlike a badge it can be pressed: to filter by it, to switch it, or to take it away.
 
 import { h, icon } from '../../core.js';
 
@@ -18,7 +18,7 @@ export function chipToggle({ pressed = false, onChange, class: extra = null } = 
   return el;
 }
 
-/** chipChoice({ label, options: [{ value, label, lead }], value, onChange }): one of several, as a row of chips — a radio
+/** chipChoice({ label, options: [{ value, label, lead }], value, onChange }): one of several, as a row of chips, a radio
  *  group the arrows move along. `lead` goes before an option's words (a swatch). */
 export function chipChoice({ label, options, value, onChange = () => {} }) {
   let at = Math.max(0, options.findIndex((o) => o.value === value));

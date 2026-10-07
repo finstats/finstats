@@ -1,4 +1,4 @@
-// FinUI: shelf. A row of cards that goes on past the edge: it scrolls by hand — the wheel with Shift, a drag, a swipe —
+// FinUI: shelf. A row of cards that goes on past the edge: it scrolls by hand (the wheel with Shift, a drag, a swipe)
 // and its arrows and keys glide a page of whole cards at a time. No snapping: a short wheel notch moves it a little.
 
 import { h, icon } from '../../core.js';

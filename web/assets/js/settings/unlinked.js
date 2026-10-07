@@ -1,5 +1,5 @@
-// Settings → Unlinked media: plays whose title the library does not have under that name — almost always from an import
-// (Tautulli, Jellystat, Streamystats), whose server named things differently — each linked to the right title by hand,
+// Settings → Unlinked media: plays whose title the library does not have under that name, almost always from an import
+// (Tautulli, Jellystat, Streamystats) whose server named things differently. Each is linked to the right title by hand,
 // with the likeliest one already found. The list itself is `missing.js`; this is its page.
 import { h } from '../dom.js';
 import { can } from '../state.js';

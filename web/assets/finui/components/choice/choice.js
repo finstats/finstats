@@ -1,5 +1,5 @@
 // FinUI: choice. Checkboxes and radio buttons with their words: one thing on or off, several of a list, or one of a
-// list. The native inputs do the work — keys, forms, screen readers — and FinUI draws the box beside each.
+// list. The native inputs do the work (keys, forms, screen readers) and FinUI draws the box beside each.
 
 import { h, icon } from '../../core.js';
 

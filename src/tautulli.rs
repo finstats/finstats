@@ -1,4 +1,4 @@
-//! Import of Tautulli history — what Plex played, brought over to Jellyfin.
+//! Import of Tautulli history: what Plex played, brought over to Jellyfin.
 //!
 //! A Tautulli backup is its own SQLite database (often zipped by the download). What it means, learned from a real one:
 //! - **People are Plex's, not Jellyfin's.** Names do not line up, so nothing is guessed: the owner wires each Plex user
@@ -66,12 +66,12 @@ pub struct ImportResult {
     pub plays_skipped: u64,
     /// Viewings of Plex users who got no wire.
     pub not_wired: u64,
-    /// Viewings of anything but a film or an episode — music, clips, photos, Live TV — which are not imported.
+    /// Viewings of anything but a film or an episode (music, clips, photos, Live TV), which are not imported.
     pub other_media: u64,
     pub users_wired: u64,
 }
 
-/// If the upload is a zip — Tautulli's download is — put the one database inside in its place. A file that is not a
+/// If the upload is a zip (Tautulli's download is), put the one database inside in its place. A file that is not a
 /// zip is left as it is, for `open` to judge.
 pub fn unpack(path: &Path) -> Result<()> {
     let mut file = std::fs::File::open(path).context("opening the uploaded backup")?;
@@ -157,7 +157,7 @@ fn zip_entry(file: &mut std::fs::File) -> Result<ZipEntry> {
     }
 }
 
-/// Remove an uploaded backup — and what an interrupted upload or unpacking left — once it is older than `older_than`:
+/// Remove an uploaded backup (and what an interrupted upload or unpacking left) once it is older than `older_than`:
 /// it holds every Plex user's access tokens, so it is kept only while it waits for its wires. `true` when anything went.
 pub fn sweep(data_dir: &Path, older_than: std::time::Duration) -> bool {
     let stem = UPLOAD.trim_end_matches(".db");
@@ -239,7 +239,7 @@ pub fn board(db: &Db, path: &Path) -> Result<Value> {
 /// Plex user → Jellyfin user, and every Jellyfin user's name.
 type Wired = (HashMap<i64, String>, HashMap<String, String>);
 
-/// The wires checked against who is really there — the backup's Plex users and this server's Jellyfin users — with the
+/// The wires checked against who is really there (the backup's Plex users and this server's Jellyfin users), with the
 /// Jellyfin names the plays will carry; or, as the inner error, what is wrong with them.
 fn wired(conn: &Connection, t: &Connection, wires: &[Wire]) -> Result<Result<Wired, String>> {
     let plex: HashSet<i64> = plex_users(t)?.into_iter().map(|u| u.id).collect();
@@ -336,8 +336,8 @@ fn sessions_sql(t: &Connection) -> Result<String> {
     ))
 }
 
-/// A number as Tautulli keeps it: an integer, or text — an empty string where it has none, and some numbers written
-/// out — and nothing else. A strict read failed the whole import on the first film without a show number.
+/// A number as Tautulli keeps it: an integer, or text (an empty string where it has none, and some numbers written
+/// out), and nothing else. A strict read failed the whole import on the first film without a show number.
 fn num(r: &rusqlite::Row, i: usize) -> rusqlite::Result<Option<i64>> {
     use rusqlite::types::ValueRef;
     Ok(match r.get_ref(i)? {
@@ -413,7 +413,7 @@ fn session_of(r: &rusqlite::Row) -> rusqlite::Result<Session> {
     })
 }
 
-/// How Plex served it, as Jellyfin would have said it — and through the same remux rule as a live play.
+/// How Plex served it, as Jellyfin would have said it, and through the same remux rule as a live play.
 fn served(s: &Session) -> (String, Option<Value>) {
     let reported = match s.decision.as_deref() {
         Some("transcode") => "Transcode",
@@ -433,7 +433,7 @@ fn served(s: &Session) -> (String, Option<Value>) {
     (crate::media::effective_play_method(Some(reported), Some(&transcode)), Some(transcode))
 }
 
-/// One viewing — the rows of one `reference_id` and one title — as a play of `user` (Jellyfin id, Jellyfin name).
+/// One viewing (the rows of one `reference_id` and one title) as a play of `user` (Jellyfin id, Jellyfin name).
 fn record(rows: &[Session], user: (&str, &str)) -> PlayRecord {
     let (head, last) = (&rows[0], rows.iter().max_by_key(|s| s.stopped).expect("a viewing has a row"));
     let runtime_s = head.duration_ms.filter(|d| *d > 0).map(|d| d / 1000);

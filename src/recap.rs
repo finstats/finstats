@@ -96,7 +96,7 @@ pub(crate) async fn story_for(app: &App, user: &AuthUser, q: &RecapQuery) -> Res
     crate::story::StoryYear::from_recap(&out, if server { &server_name } else { "" }).ok_or_else(|| ApiError::not_found("Year"))
 }
 
-/// `until`: count only plays that had ended by then — for a published recap, which must not move while
+/// `until`: count only plays that had ended by then, for a published recap, which must not move while
 /// somebody is watching (`public::answer`).
 pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64, server_name: &str, requested: &str, until: Option<i64>) -> Result<Value> {
     // Live TV is left out of the recap altogether: a channel left on all evening says nothing about taste.
@@ -233,7 +233,7 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
 
 /// Who this person watched with, from the evenings the group fold found: how many, how long in
 /// company (for each evening the shorter of their stay and the longest other one), the title that
-/// brought people together most, and at most three companions — named here, in the app, and nowhere
+/// brought people together most, and at most three companions, named here, in the app, and nowhere
 /// that leaves it. The whole server's year counts evenings and people and names nobody.
 fn together(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>, watch_s: i64) -> Result<Value> {
     let end = until.map_or(w.to, |u| u.min(w.to));
@@ -294,7 +294,7 @@ fn together(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>, 
 }
 
 /// What this person asked for through Seerr in the window, how much of it arrived, and how much of what
-/// arrived they then watched (a play by them after it became available — watching it before does not count
+/// arrived they then watched (a play by them after it became available; watching it before does not count
 /// as the request's doing). Nothing at all when no request was ever recorded: Seerr is not connected, or
 /// nobody uses it. The whole server's year counts everybody's and names nobody.
 fn requests(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>) -> Result<Value> {
@@ -352,7 +352,7 @@ pub fn announce_ready(c: &Connection, bus: &crate::notify::Fanout, today: NaiveD
             crate::notify::Kind::RecapReady,
             format!("notify:recap:{year}:{user_id}"),
             format!("Your {year} in review is ready"),
-            format!("Hours, top titles, the shows finished and the rest of {name}'s {year}, ready to look back on — and to share."),
+            format!("Hours, top titles, the shows finished and the rest of {name}'s {year}, ready to look back on and to share."),
         )
         .field("Year", year.to_string())
         .link(format!("/recap?year={year}"))
@@ -382,8 +382,8 @@ pub(crate) fn server_edition(mut v: Value) -> Value {
 /// going): long enough that a show between seasons, or saved for the holidays, is not called dropped.
 const DROPPED_QUIET_S: i64 = 60 * 86_400;
 
-/// The shows this person finished in the window — every episode on the server seen, the last of them
-/// inside it — and the ones they began and left, by the same reading of "seen" as the profile's
+/// The shows this person finished in the window (every episode on the server seen, the last of them
+/// inside it) and the ones they began and left, by the same reading of "seen" as the profile's
 /// progress bars (`profile::episodes`).
 fn finished(c: &Connection, w: &Window, user: &str, until: Option<i64>) -> Result<Value> {
     let end = w.to.min(until.unwrap_or_else(db::now));
@@ -504,7 +504,7 @@ fn top_titles(c: &Connection, w: &Window, item_type: &str) -> Result<Vec<Map<Str
 /// The people seen (or, for directors, watched) the most: watch time across every title they are in.
 fn people(c: &Connection, w: &Window, kind: &str) -> Result<Vec<Map<String, Value>>> {
     // How long each title was watched, added up once; the five; and each one's title out of those sums. Asked the way it
-    // reads — "which of their titles was watched most", for everybody in the year — it walked every title of theirs in
+    // reads ("which of their titles was watched most", for everybody in the year), it walked every title of theirs in
     // the library against every play of the year: 132 ms of a real recap, and seconds in a big one.
     let mut args = w.args.clone();
     args.extend(w.args.iter().cloned());
@@ -665,7 +665,7 @@ fn records(c: &Connection, w: &Window) -> Result<Value> {
     let longest_play = one_json(
         c,
         &format!(
-            "SELECT p.item_id, CASE WHEN p.item_type = 'Episode' AND p.series_name IS NOT NULL THEN p.series_name || ' — ' || p.item_name ELSE p.item_name END AS name,
+            "SELECT p.item_id, CASE WHEN p.item_type = 'Episode' AND p.series_name IS NOT NULL THEN p.series_name || ' · ' || p.item_name ELSE p.item_name END AS name,
                     {TITLE_ID} AS image_item_id, p.duration_s, {day} AS date
              FROM visible_playbacks p LEFT JOIN items i ON i.id = p.item_id {} ORDER BY p.duration_s DESC LIMIT 1",
             // A session left open overnight is not a long play: the time must fit the runtime.
@@ -676,7 +676,7 @@ fn records(c: &Connection, w: &Window) -> Result<Value> {
     let most_rewatched = one_json(
         c,
         &format!(
-            "SELECT p.item_id AS id, CASE WHEN p.item_type = 'Episode' AND MAX(p.series_name) IS NOT NULL THEN MAX(p.series_name) || ' — ' || MAX(p.item_name) ELSE MAX(p.item_name) END AS name,
+            "SELECT p.item_id AS id, CASE WHEN p.item_type = 'Episode' AND MAX(p.series_name) IS NOT NULL THEN MAX(p.series_name) || ' · ' || MAX(p.item_name) ELSE MAX(p.item_name) END AS name,
                     p.item_type AS type, {TITLE_ID} AS image_item_id, COUNT(DISTINCT {day}) AS plays
              FROM visible_playbacks p {} GROUP BY p.item_id HAVING plays >= 2 ORDER BY plays DESC, SUM(p.duration_s) DESC LIMIT 1",
             w.with("p.item_type IN ('Movie', 'Episode') AND p.duration_s >= 300")
@@ -686,7 +686,7 @@ fn records(c: &Connection, w: &Window) -> Result<Value> {
     let first_play = one_json(
         c,
         &format!(
-            "SELECT p.item_id, CASE WHEN p.item_type = 'Episode' AND p.series_name IS NOT NULL THEN p.series_name || ' — ' || p.item_name ELSE p.item_name END AS name,
+            "SELECT p.item_id, CASE WHEN p.item_type = 'Episode' AND p.series_name IS NOT NULL THEN p.series_name || ' · ' || p.item_name ELSE p.item_name END AS name,
                     {TITLE_ID} AS image_item_id, p.started_at AS at FROM visible_playbacks p {} ORDER BY p.started_at LIMIT 1",
             w.wh
         ),
@@ -806,7 +806,7 @@ mod tests {
         build(c, user.map(str::to_string), 0, "", year, None).unwrap()
     }
 
-    /// The people of a year: who was watched longest, in how many titles, and in which most — counted per title, an
+    /// The people of a year: who was watched longest, in how many titles, and in which most, counted per title, an
     /// episode for its show.
     #[test]
     fn the_people_of_a_year_are_the_ones_watched_longest_each_with_their_title() {
@@ -839,7 +839,7 @@ mod tests {
     }
 
     /// A real year is shows: episodes counted for their show, which no index can find by, and hundreds of actors. The
-    /// top five are found without looking up the favourite title of every one of them — that was a scan of the year
+    /// top five are found without looking up the favourite title of every one of them; that was a scan of the year
     /// per actor, and most of what a recap cost (132 ms of a real one, 4 ms without).
     #[test]
     fn a_year_of_shows_and_three_thousand_actors_finds_its_five_at_once() {
@@ -931,7 +931,7 @@ mod tests {
     }
 
     /// A published year counts only what had ended a day before (`until`). Finished and dropped shows read
-    /// every play there is, so pressing play on a dropped show took it off the list within seconds — a
+    /// every play there is, so pressing play on a dropped show took it off the list within seconds, so a
     /// stranger holding the link could see that somebody was watching now.
     #[test]
     fn a_published_year_does_not_move_when_somebody_presses_play_today() {

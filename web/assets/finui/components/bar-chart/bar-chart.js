@@ -1,4 +1,4 @@
-// FinUI: bar-chart. Amounts per category as columns from one baseline — stacked when there are several series — with
+// FinUI: bar-chart. Amounts per category as columns from one baseline (stacked when there are several series) with
 // round steps up the side, thin columns with a rounded end at the top and a gap between stacked parts, a tooltip per
 // column and the same numbers as a table.
 

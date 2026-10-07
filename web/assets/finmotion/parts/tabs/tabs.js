@@ -1,5 +1,5 @@
 // FinMotion: tabs. FinUI marks the chosen tab with an edge of its own; FinMotion lays one line under the row instead and
-// moves it like an inchworm when another tab is chosen — the edge it goes towards leads, the other follows.
+// moves it like an inchworm when another tab is chosen: the edge it goes towards leads, the other follows.
 
 import { h } from '../../core/dom.js';
 import { play, gap } from '../../core/motion.js';

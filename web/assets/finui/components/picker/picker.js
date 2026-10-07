@@ -17,9 +17,9 @@ function room(el) {
 
 /**
  * picker({ label, options, value, onChange, onPreview, lock, custom, dataset }).
- * `options`: [{ key, label, blurb, mark }] — `mark()` draws its swatch. `value`: the index chosen, or −1 for none of
+ * `options`: [{ key, label, blurb, mark }]; `mark()` draws its swatch. `value`: the index chosen, or −1 for none of
  * them (it reads `custom`, "Custom"). `onPreview(i)`: an option is being looked at (−1 … back to what was there).
- * `lock`: { label, on, onToggle(on) } — a button beside it that holds the choice. Answers { el, update({ value, locked }) }.
+ * `lock`: { label, on, onToggle(on) }, a button beside it that holds the choice. Answers { el, update({ value, locked }) }.
  */
 export function picker({ label, options, value = 0, onChange = () => {}, onPreview = () => {}, lock = null, custom = 'Custom', dataset = {} }) {
   const id = `fui-picker-${++seq}`;
