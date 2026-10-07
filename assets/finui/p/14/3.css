@@ -1,0 +1,7 @@
+/* Buttons: Ink */
+:root {
+  --primary-bg: var(--text-strong);
+  --primary-border: var(--text-strong);
+  --primary-text: var(--bg-2);
+  --primary-hover: color-mix(in srgb, var(--text-strong) 86%, var(--bg-2));
+}

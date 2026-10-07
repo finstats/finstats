@@ -1,0 +1,34 @@
+/* Base colour: Neutral */
+:root {
+  --bg: light-dark(#e1e1e1, color-mix(in srgb, #171717 75%, #262626));
+  --page-glow: light-dark(#fafafa, transparent);
+  --bg-2: light-dark(#fafafa, #262626);
+  --bg-lift: light-dark(#ffffff, #0a0a0a);
+  --bg-sunken: light-dark(#d5d5d5, #171717);
+  --hover: light-dark(color-mix(in srgb, #0a0a0a 7%, transparent), color-mix(in srgb, #262626 60%, #404040));
+  --btn-hover: light-dark(color-mix(in srgb, #0a0a0a 11%, transparent), color-mix(in srgb, #262626 35%, #404040));
+  --border: light-dark(#d4d4d4, color-mix(in srgb, #262626 40%, #404040));
+  --border-soft: light-dark(#e5e5e5, color-mix(in srgb, #262626 80%, #404040));
+  --border-strong: light-dark(#a3a3a3, color-mix(in srgb, #404040 60%, #525252));
+  --text: light-dark(#171717, color-mix(in srgb, #e5e5e5 50%, #d4d4d4));
+  --text-muted: light-dark(#525252, #a3a3a3);
+  --text-faint: light-dark(color-mix(in srgb, #737373 60%, #525252), color-mix(in srgb, #737373 50%, #a3a3a3));
+  --text-strong: light-dark(#171717, #f5f5f5);
+  --text-hero: light-dark(#0a0a0a, #fafafa);
+  --grid: light-dark(#e5e5e5, color-mix(in srgb, #262626 60%, #404040));
+  --axis: light-dark(#d4d4d4, color-mix(in srgb, #404040 80%, #262626));
+  --scrollbar: light-dark(#a3a3a3, color-mix(in srgb, #404040 70%, #525252));
+  --separator: light-dark(#a3a3a3, #525252);
+  --knob: light-dark(#ffffff, #d4d4d4);
+  --placeholder: light-dark(#e5e5e5, color-mix(in srgb, #262626 60%, #404040));
+  --skeleton: light-dark(#e5e5e5, color-mix(in srgb, #262626 50%, #404040));
+  --track: light-dark(#e5e5e5, color-mix(in srgb, #262626 30%, #404040));
+  --land: light-dark(#e5e5e5, color-mix(in srgb, #262626 85%, #171717));
+  --land-edge: light-dark(#d4d4d4, color-mix(in srgb, #262626 30%, #404040));
+  --heat-0: light-dark(#e5e5e5, color-mix(in srgb, #262626 60%, #404040));
+  --rc-heat-0: light-dark(#e5e5e5, color-mix(in srgb, #ffffff 6%, transparent));
+  --wash-2: light-dark(#e5e5e5, color-mix(in srgb, #262626 50%, #404040));
+  --wash-2-text: light-dark(#262626, #e5e5e5);
+  --warn-wash: light-dark(color-mix(in srgb, var(--warning) 18%, var(--bg-2)), color-mix(in srgb, var(--warning) 25%, var(--bg-2)));
+  --crit-wash: light-dark(color-mix(in srgb, var(--critical) 16%, var(--bg-2)), color-mix(in srgb, var(--critical) 25%, var(--bg-2)));
+}

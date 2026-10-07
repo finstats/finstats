@@ -1,0 +1,26 @@
+/* FinUI: calendar. A month of day buttons: today ringed, what is picked filled, a range's days between washed, a dot on a
+   marked day, days of the months around it faint. */
+.fui-calendar { display: grid; gap: 8px; min-width: 0; max-width: 340px; }
+.fui-calendar__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fui-calendar__caption { font-family: var(--font-heading); font-weight: var(--heading-weight); color: var(--text-strong); }
+.fui-calendar__nav { display: grid; place-items: center; width: calc(var(--density) * 30px); height: calc(var(--density) * 30px); padding: 0;
+  background: transparent; border: 0; border-radius: var(--radius-sm); color: var(--text-muted); transition: background var(--ease), color var(--ease); }
+.fui-calendar__nav:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.fui-calendar__nav:disabled { opacity: .35; cursor: default; }
+.fui-calendar__grid { width: 100%; border-collapse: separate; border-spacing: 0 2px; table-layout: fixed; }
+.fui-calendar__grid th { padding: 4px 0; font-size: 11px; font-weight: 500; text-align: center; color: var(--text-faint); }
+.fui-calendar__grid td { padding: 0; text-align: center; }
+.fui-calendar__day { position: relative; display: grid; place-items: center; width: 100%; height: calc(var(--density) * 36px); padding: 0;
+  background: transparent; border: 0; border-radius: var(--radius-control); color: var(--text); font-size: 13px; font-variant-numeric: tabular-nums;
+  transition: background var(--ease); }
+.fui-calendar__day:hover:not(:disabled) { background: var(--hover); }
+.fui-calendar__day:disabled { color: var(--text-faint); opacity: .45; cursor: not-allowed; text-decoration: line-through; }
+.fui-calendar__day[aria-current="date"] { box-shadow: inset 0 0 0 1px var(--border-strong); font-weight: 600; }
+.is-outside .fui-calendar__day { color: var(--text-faint); }
+.is-in-range .fui-calendar__day { background: var(--accent-wash); border-radius: 0; }
+.is-range-start .fui-calendar__day { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.is-range-end .fui-calendar__day { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+/* Picked stays filled under the pointer: this outranks the hover above. */
+.fui-calendar td[aria-selected="true"] > .fui-calendar__day { background: var(--primary-bg); color: var(--primary-text); box-shadow: none; }
+.fui-calendar__mark { position: absolute; bottom: 12%; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: var(--radius-pill); background: var(--accent); }
+.fui-calendar td[aria-selected="true"] > .fui-calendar__day .fui-calendar__mark { background: var(--primary-text); }

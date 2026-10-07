@@ -1,0 +1,10 @@
+/* FinUI: number-stepper. One field-shaped row: the buttons inside its edges, the number in the mono face between them. */
+.fui-number-stepper { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--field-border); border-radius: var(--radius-field); background: var(--field-bg); }
+.fui-number-stepper:focus-within { border-color: var(--accent); }
+.fui-number-stepper__input { width: 6ch; min-width: 0; padding: 4px 2px; border: 0; background: transparent; color: var(--text); font: 13.5px var(--mono); text-align: center; outline: none; }
+.fui-number-stepper__unit { padding-right: 4px; font-size: 12.5px; color: var(--text-faint); }
+.fui-number-stepper__button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); }
+.fui-number-stepper__button:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.fui-number-stepper__button:disabled { opacity: .35; cursor: default; }
+/* The gallery's stepper, beside the words it is for. */
+.fui-number-stepper__demo { display: flex; align-items: center; gap: 12px; font-size: 13px; }

@@ -1,0 +1,33 @@
+/* FinUI: button. The rules app.css had for .btn and .icon-btn, under FinUI's names. */
+.fui-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: calc(var(--density) * 7px) calc(var(--density) * 13px); min-height: calc(var(--density) * 34px);
+  background: var(--hover); border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text); font-size: 13px; font-weight: 500; white-space: nowrap;
+  transition: background var(--ease), border-color var(--ease);
+}
+.fui-button:hover { background: var(--btn-hover); text-decoration: none; }
+.fui-button:disabled { opacity: .65; cursor: progress; }
+.fui-button--primary { background: var(--primary-bg); border-color: var(--primary-border); color: var(--primary-text); }
+.fui-button--primary:hover { background: var(--primary-hover); }
+.fui-button--ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
+.fui-button--ghost:hover { background: var(--hover); color: var(--text); }
+.fui-button--ghost[aria-disabled="true"] { opacity: .35; cursor: default; }
+.fui-button--ghost[aria-disabled="true"]:hover { background: transparent; }
+.fui-button--sm { padding: calc(var(--density) * 4px) calc(var(--density) * 9px); min-height: calc(var(--density) * 28px); font-size: 12.5px; }
+.fui-button--block { width: 100%; }
+.fui-button--danger { background: var(--critical); border-color: var(--critical); color: var(--on-fill); }
+.fui-button--danger:hover { background: var(--critical-hover); }
+.fui-button--danger-text { color: var(--critical-text); }
+/* A label standing for a button (a file picker) has no disabled state of its own. */
+.fui-button--disabled { opacity: .5; pointer-events: none; }
+
+/* An icon alone: a square, no frame until the pointer is on it. */
+.fui-button--icon {
+  display: inline-grid; place-items: center; width: calc(var(--density) * 30px); height: calc(var(--density) * 30px); min-height: 0; padding: 0; gap: 0; flex: none;
+  background: transparent; border: 0; border-radius: var(--radius-sm); color: var(--text-muted); transition: background var(--ease), color var(--ease);
+}
+.fui-button--icon:hover { background: var(--hover); color: var(--text); }
+.fui-button--icon[aria-disabled="true"] { opacity: .35; cursor: default; }
+
+
+/* The gallery's row of examples. */
+.fui-button__demo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

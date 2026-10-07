@@ -1,0 +1,9 @@
+/* Accent: Berry & aqua */
+:root {
+  --accent: light-dark(#9d174d, #67e8f9);
+  --accent-hi: light-dark(color-mix(in srgb, #9d174d 78%, #000000), color-mix(in srgb, #67e8f9 60%, #ffffff));
+  --accent-hover: light-dark(color-mix(in srgb, #9d174d 85%, #000000), color-mix(in srgb, #67e8f9 85%, #000000));
+  --accent-wash: light-dark(color-mix(in srgb, #9d174d 10%, transparent), color-mix(in srgb, #67e8f9 14%, transparent));
+  --selection: light-dark(color-mix(in srgb, #9d174d 22%, transparent), color-mix(in srgb, #67e8f9 40%, transparent));
+  --on-accent: light-dark(#ffffff, #0a0a0a);
+}

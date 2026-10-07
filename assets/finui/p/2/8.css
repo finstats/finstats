@@ -1,0 +1,20 @@
+/* Chart colours: Neon */
+:root {
+  --series-1: light-dark(#d6247f, #ff4fa3);
+  --series-2: light-dark(#5b9a00, #a3e635);
+  --series-3: light-dark(#0e8fb5, #22d3ee);
+  --series-4: light-dark(#c77800, #fbbf24);
+  --single: light-dark(#0e8fb5, #22d3ee);
+  --peak: light-dark(#0a6480, #a5f0fb);
+  --spark: light-dark(#0e8fb5, #22d3ee);
+  --heat-1: light-dark(color-mix(in srgb, #0e8fb5 14%, var(--bg-2)), color-mix(in srgb, #22d3ee 14%, var(--bg-2)));
+  --heat-2: light-dark(color-mix(in srgb, #0e8fb5 30%, var(--bg-2)), color-mix(in srgb, #22d3ee 30%, var(--bg-2)));
+  --heat-3: light-dark(color-mix(in srgb, #0e8fb5 48%, var(--bg-2)), color-mix(in srgb, #22d3ee 48%, var(--bg-2)));
+  --heat-4: light-dark(color-mix(in srgb, #0e8fb5 66%, var(--bg-2)), color-mix(in srgb, #22d3ee 66%, var(--bg-2)));
+  --heat-5: light-dark(color-mix(in srgb, #0e8fb5 84%, var(--bg-2)), color-mix(in srgb, #22d3ee 84%, var(--bg-2)));
+  --heat-6: light-dark(#0a6480, #a5f0fb);
+  --rc-heat-1: light-dark(color-mix(in srgb, #0e8fb5 22%, var(--bg-2)), color-mix(in srgb, #22d3ee 22%, var(--bg-2)));
+  --rc-heat-2: light-dark(color-mix(in srgb, #0e8fb5 50%, var(--bg-2)), color-mix(in srgb, #22d3ee 50%, var(--bg-2)));
+  --rc-heat-3: light-dark(#0e8fb5, #22d3ee);
+  --rc-heat-4: light-dark(#0a6480, #a5f0fb);
+}

@@ -1,0 +1,9 @@
+/* Accent: Forest & peach */
+:root {
+  --accent: light-dark(#166534, #fdba74);
+  --accent-hi: light-dark(color-mix(in srgb, #166534 78%, #000000), color-mix(in srgb, #fdba74 60%, #ffffff));
+  --accent-hover: light-dark(color-mix(in srgb, #166534 85%, #000000), color-mix(in srgb, #fdba74 85%, #000000));
+  --accent-wash: light-dark(color-mix(in srgb, #166534 10%, transparent), color-mix(in srgb, #fdba74 14%, transparent));
+  --selection: light-dark(color-mix(in srgb, #166534 22%, transparent), color-mix(in srgb, #fdba74 40%, transparent));
+  --on-accent: light-dark(#ffffff, #0a0a0a);
+}

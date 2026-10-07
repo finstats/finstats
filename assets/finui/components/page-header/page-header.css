@@ -1,0 +1,19 @@
+/* FinUI: page-header. Moved from app.css; the same rules under FinUI's names. */
+/* ------------------------------------------------------------ page chrome */
+.fui-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.fui-page-header__title { font-size: 28px; line-height: 1.15; font-weight: var(--title-weight); letter-spacing: calc(var(--heading-tracking) - .022em); text-transform: var(--heading-case); color: var(--text-strong); overflow-wrap: anywhere; }
+.fui-page-header__sub { margin-top: 5px; color: var(--text-muted); font-size: 13.5px; }
+.fui-page-header > div { min-width: 0; }
+.fui-page-header__sub { overflow-wrap: anywhere; }
+/* A part of the page: the same, smaller, its line beside it where there is room. */
+.fui-page-header--section { align-items: baseline; justify-content: flex-start; gap: 4px 16px; }
+.fui-page-header--section > div { display: flex; align-items: baseline; gap: 4px 16px; flex-wrap: wrap; }
+.fui-page-header--section .fui-page-header__title { font-size: 21px; font-weight: var(--heading-weight); letter-spacing: calc(var(--heading-tracking) - .015em); }
+.fui-page-header--section .fui-page-header__sub { margin-top: 0; font-size: 14px; }
+@media (max-width: 820px) {
+  .fui-page-header__title { font-size: 24px; }
+  .fui-page-header--section .fui-page-header__title { font-size: 19px; }
+}
+
+/* The gallery's chip. */
+.fui-page-header__demo-chip { font-size: 12px; color: var(--text-muted); }

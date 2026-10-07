@@ -1,0 +1,4 @@
+/* Cards: Floating */
+:root {
+  --card-shadow: 0 2px 4px color-mix(in srgb, var(--shadow) 14%, transparent), 0 14px 36px color-mix(in srgb, var(--shadow) 24%, transparent);
+}

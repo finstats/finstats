@@ -1,0 +1,25 @@
+/* FinUI: choice. The native input lies over the box it is drawn as, so a click on either is the input's. */
+.fui-choice { position: relative; display: inline-flex; align-items: flex-start; gap: 9px; font-size: 13.5px; color: var(--text); cursor: pointer; }
+.fui-choice__input { position: absolute; top: 1px; left: 0; width: 18px; height: 18px; margin: 0; opacity: 0; cursor: inherit; }
+.fui-choice__box {
+  display: grid; place-items: center; flex: none; width: 18px; height: 18px; margin-top: 1px;
+  border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--field-bg); color: var(--on-accent);
+  transition: background var(--ease), border-color var(--ease);
+}
+.fui-choice--radio .fui-choice__box { border-radius: 50%; }
+.fui-choice:hover .fui-choice__box { border-color: var(--accent); }
+.fui-choice__tick, .fui-choice__dash { display: none; }
+.fui-choice__input:checked + .fui-choice__box, .fui-choice__input:indeterminate + .fui-choice__box { border-color: var(--accent); background: var(--accent); }
+.fui-choice__input:checked:not(:indeterminate) + .fui-choice__box .fui-choice__tick { display: block; }
+.fui-choice__input:indeterminate + .fui-choice__box .fui-choice__dash { display: block; }
+.fui-choice--radio .fui-choice__input:checked + .fui-choice__box::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--on-accent); }
+.fui-choice__input:focus-visible + .fui-choice__box { outline: var(--focus-width) solid var(--focus-color); outline-offset: var(--focus-offset); }
+.fui-choice.is-disabled { cursor: default; opacity: .5; }
+.fui-choice.is-disabled .fui-choice__box { border-color: var(--border); }
+.fui-choice__text { display: grid; gap: 1px; min-width: 0; }
+.fui-choice__label { line-height: 20px; }
+.fui-choice__help { font-size: 12.5px; color: var(--text-faint); }
+.fui-choice__group { min-width: 0; margin: 0; padding: 0; border: 0; }
+.fui-choice__legend { margin-bottom: 10px; padding: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+.fui-choice__options { display: grid; gap: 10px; }
+.fui-choice__options--inline { display: flex; flex-wrap: wrap; gap: 10px 22px; }

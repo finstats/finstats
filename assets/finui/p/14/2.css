@@ -1,0 +1,7 @@
+/* Buttons: Outline */
+:root {
+  --primary-bg: transparent;
+  --primary-border: var(--accent-hi);
+  --primary-text: var(--accent-hi);
+  --primary-hover: var(--accent-wash);
+}

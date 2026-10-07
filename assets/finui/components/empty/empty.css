@@ -1,0 +1,13 @@
+/* FinUI: empty. Moved from app.css; the same rules under FinUI's names. */
+.fui-card--flush .fui-empty { margin: 8px 16px 12px; }
+.fui-empty--chart { display: grid; place-items: center; min-height: 200px; color: var(--text-faint); font-size: 13px; text-align: center; }
+.fui-empty--chart-sm { min-height: 96px; }
+.fui-empty { padding: 36px 20px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.fui-card .fui-empty { border: 0; padding: 28px 20px; }
+.fui-empty__title { font-family: var(--font-heading); font-weight: var(--heading-weight); text-transform: var(--heading-case); letter-spacing: var(--heading-tracking); color: var(--text); }
+.fui-empty__text { color: var(--text-muted); max-width: 52ch; }
+/* Two ways in, side by side, and stacked when there is no room for two. */
+.fui-empty__buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.fui-empty__action { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+/* An empty state's way out sits a little below its text. */
+.fui-empty .fui-button { margin-top: 8px; }

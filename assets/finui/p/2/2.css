@@ -1,0 +1,20 @@
+/* Chart colours: Ember */
+:root {
+  --series-1: light-dark(#eb6834, #d95926);
+  --series-2: light-dark(#4a3aa7, #9085e9);
+  --series-3: light-dark(#008300, #008300);
+  --series-4: light-dark(#2a78d6, #3987e5);
+  --single: light-dark(#eb6834, #d95926);
+  --peak: light-dark(#a44924, #e89b7d);
+  --spark: light-dark(#eb6834, #d95926);
+  --heat-1: light-dark(color-mix(in srgb, #eb6834 14%, var(--bg-2)), color-mix(in srgb, #d95926 14%, var(--bg-2)));
+  --heat-2: light-dark(color-mix(in srgb, #eb6834 30%, var(--bg-2)), color-mix(in srgb, #d95926 30%, var(--bg-2)));
+  --heat-3: light-dark(color-mix(in srgb, #eb6834 48%, var(--bg-2)), color-mix(in srgb, #d95926 48%, var(--bg-2)));
+  --heat-4: light-dark(color-mix(in srgb, #eb6834 66%, var(--bg-2)), color-mix(in srgb, #d95926 66%, var(--bg-2)));
+  --heat-5: light-dark(color-mix(in srgb, #eb6834 84%, var(--bg-2)), color-mix(in srgb, #d95926 84%, var(--bg-2)));
+  --heat-6: light-dark(#a44924, #e89b7d);
+  --rc-heat-1: light-dark(color-mix(in srgb, #eb6834 22%, var(--bg-2)), color-mix(in srgb, #d95926 22%, var(--bg-2)));
+  --rc-heat-2: light-dark(color-mix(in srgb, #eb6834 50%, var(--bg-2)), color-mix(in srgb, #d95926 50%, var(--bg-2)));
+  --rc-heat-3: light-dark(#eb6834, #d95926);
+  --rc-heat-4: light-dark(#a44924, #e89b7d);
+}

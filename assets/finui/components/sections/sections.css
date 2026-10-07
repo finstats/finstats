@@ -1,0 +1,24 @@
+/* FinUI: sections. Moved from app.css; the same rules under FinUI's names. */
+/* ---- Sections (Settings, Server): one section on screen, a list to move between them. */
+.fui-sections { display: grid; grid-template-columns: 196px minmax(0, 1fr); gap: 20px 28px; align-items: start; }
+.fui-sections__nav { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.fui-sections__group { display: flex; flex-direction: column; gap: 1px; }
+.fui-sections__group-title { margin: 0 0 4px; padding-left: 10px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-faint); }
+.fui-sections__link { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: var(--radius-control); color: var(--text-muted); font-size: 13.5px; text-decoration: none; }
+.fui-sections__link .icon { color: var(--text-faint); flex: none; }
+.fui-sections__link:hover { background: var(--hover); color: var(--text); text-decoration: none; }
+.fui-sections__link.is-active { background: var(--selected-bg); color: var(--selected-text); box-shadow: var(--selected-edge); }
+.fui-sections__link.is-active .icon { color: var(--selected-icon); }
+.fui-sections__body { min-width: 0; }
+.fui-sections__body .fui-card__body { max-width: 100%; }
+.fui-sections__body .fui-setting-row { scroll-margin-top: 20px; }
+/* A row on its own in a section (not in a list of rows) is still set off from what is above it. */
+.fui-sections__body :not(.fui-setting-row__rows) > .fui-setting-row { padding: 12px 0; border-top: 1px solid var(--border-soft); }
+@media (max-width: 820px) {
+  .fui-sections { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .fui-sections__nav { position: static; flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .fui-sections__group { display: contents; }
+  .fui-sections__group-title { display: none; }
+  .fui-sections__link { padding: 5px 11px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); font-size: 13px; white-space: nowrap; }
+  .fui-sections__link.is-active { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
+}

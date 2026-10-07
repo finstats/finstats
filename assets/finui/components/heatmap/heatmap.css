@@ -1,0 +1,11 @@
+/* FinUI: heatmap. Small rounded cells in the heat steps; a cell pointed at is ringed in the text's colour. */
+.fui-heatmap__wrap { display: grid; gap: 8px; min-width: 0; }
+.fui-heatmap__box { min-width: 0; overflow-x: auto; }
+.fui-heatmap__svg { width: auto; max-width: none; }
+.fui-heatmap__cell { stroke: transparent; stroke-width: 1.5; }
+.fui-heatmap__cell.is-on { stroke: var(--text); }
+.fui-heatmap__key { display: flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--text-faint); }
+.fui-heatmap__key > span:first-child { margin-right: 4px; }
+.fui-heatmap__key > span:last-child { margin-left: 4px; }
+.fui-heatmap__swatch { width: 11px; height: 11px; border-radius: 2px; }
+.fui-heatmap__demo { width: 100%; }

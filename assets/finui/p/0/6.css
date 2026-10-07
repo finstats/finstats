@@ -1,0 +1,34 @@
+/* Base colour: Nord */
+:root {
+  --bg: light-dark(#c2d3e8, #272c36);
+  --page-glow: light-dark(#eceff4, transparent);
+  --bg-2: light-dark(#eceff4, #2e3440);
+  --bg-lift: light-dark(#ffffff, #242933);
+  --bg-sunken: light-dark(#b5c7df, #22262f);
+  --hover: light-dark(color-mix(in srgb, #242933 7%, transparent), color-mix(in srgb, #3b4252 60%, #4c566a));
+  --btn-hover: light-dark(color-mix(in srgb, #242933 11%, transparent), color-mix(in srgb, #3b4252 35%, #4c566a));
+  --border: light-dark(#c2cad8, color-mix(in srgb, #3b4252 40%, #4c566a));
+  --border-soft: light-dark(#d8dee9, color-mix(in srgb, #3b4252 80%, #4c566a));
+  --border-strong: light-dark(#a5afc0, color-mix(in srgb, #4c566a 60%, #5b6579));
+  --text: light-dark(#2e3440, #eceff4);
+  --text-muted: light-dark(#3b4252, #d8dee9);
+  --text-faint: light-dark(#4c566a, #a5afc0);
+  --text-strong: light-dark(#2e3440, #eceff4);
+  --text-hero: light-dark(#242933, #eceff4);
+  --grid: light-dark(#d8dee9, color-mix(in srgb, #3b4252 60%, #4c566a));
+  --axis: light-dark(#c2cad8, color-mix(in srgb, #4c566a 80%, #3b4252));
+  --scrollbar: light-dark(#a5afc0, color-mix(in srgb, #4c566a 70%, #5b6579));
+  --separator: light-dark(#a5afc0, #5b6579);
+  --knob: light-dark(#ffffff, #c2cad8);
+  --placeholder: light-dark(#d8dee9, color-mix(in srgb, #3b4252 60%, #4c566a));
+  --skeleton: light-dark(#d8dee9, color-mix(in srgb, #3b4252 50%, #4c566a));
+  --track: light-dark(#d8dee9, color-mix(in srgb, #3b4252 30%, #4c566a));
+  --land: light-dark(#d8dee9, color-mix(in srgb, #3b4252 85%, #2e3440));
+  --land-edge: light-dark(#c2cad8, color-mix(in srgb, #3b4252 30%, #4c566a));
+  --heat-0: light-dark(#d8dee9, color-mix(in srgb, #3b4252 60%, #4c566a));
+  --rc-heat-0: light-dark(#d8dee9, color-mix(in srgb, #ffffff 6%, transparent));
+  --wash-2: light-dark(#d8dee9, color-mix(in srgb, #3b4252 50%, #4c566a));
+  --wash-2-text: light-dark(#3b4252, #d8dee9);
+  --warn-wash: light-dark(color-mix(in srgb, var(--warning) 18%, var(--bg-2)), color-mix(in srgb, var(--warning) 25%, var(--bg-2)));
+  --crit-wash: light-dark(color-mix(in srgb, var(--critical) 16%, var(--bg-2)), color-mix(in srgb, var(--critical) 25%, var(--bg-2)));
+}

@@ -1,0 +1,108 @@
+/* FinMotion: how FinUI moves, from web/assets/finmotion in registry.json's order. */
+
+/* FinMotion: the springs. The first of FinMotion's stylesheets, which a page loads after FinUI's own.
+   Four springs, each a feeling (springs.js computes them; a test holds them to it). A movement reads one whole:
+   var(--spring-snap) is a duration and a curve. --fm-pace is FinUI's Motion choice (motion() reads it from --ease):
+   Quick is quicker, Slow slower, Off still. */
+/* Registered, so the browser works the times out: a script reading --spring-snap-dur is told 0.433s, not calc() text. */
+@property --fm-pace { syntax: '<number>'; inherits: true; initial-value: 1; }
+@property --spring-settle-dur { syntax: '<time>'; inherits: true; initial-value: 0s; }
+@property --spring-snap-dur { syntax: '<time>'; inherits: true; initial-value: 0s; }
+@property --spring-drift-dur { syntax: '<time>'; inherits: true; initial-value: 0s; }
+@property --spring-glide-dur { syntax: '<time>'; inherits: true; initial-value: 0s; }
+:root {
+  --fm-pace: 1;
+  --spring-settle-dur: calc(708ms * var(--fm-pace));
+  --spring-settle-curve: linear(0, 0.0536, 0.1116, 0.1787, 0.2497, 0.3209, 0.3897, 0.4549, 0.5155, 0.5709, 0.6212, 0.6666, 0.7074, 0.7435, 0.7755, 0.8039, 0.829, 0.8509, 0.8701, 0.887, 0.9018, 0.9146, 0.9258, 0.9356, 0.9441, 0.9515, 0.9579, 0.9635, 0.9683, 0.9725, 0.9762, 0.9794, 0.9821, 0.9845, 0.9866, 0.9884, 0.9899, 0.9913, 0.9924, 0.9935, 0.9943, 0.9951, 0.9957, 0.9963, 0.9968, 0.9972, 0.9976, 0.9979, 1);
+  --spring-settle: var(--spring-settle-dur) var(--spring-settle-curve);
+  --spring-snap-dur: calc(433ms * var(--fm-pace));
+  --spring-snap-curve: linear(0, 0.0755, 0.1388, 0.2108, 0.2869, 0.364, 0.4396, 0.5118, 0.5793, 0.6416, 0.698, 0.7485, 0.7932, 0.8322, 0.866, 0.8948, 0.9192, 0.9394, 0.956, 0.9696, 0.9805, 0.9891, 0.9958, 1.0008, 1.0045, 1.0071, 1.0088, 1.0098, 1.0103, 1.0103, 1.01, 1.0095, 1.0088, 1.0081, 1.0073, 1.0065, 1.0057, 1.005, 1.0043, 1.0037, 1.0031, 1.0026, 1.0021, 1.0017, 1.0014, 1.0011, 1.0008, 1.0006, 1);
+  --spring-snap: var(--spring-snap-dur) var(--spring-snap-curve);
+  --spring-drift-dur: calc(958ms * var(--fm-pace));
+  --spring-drift-curve: linear(0, 0.0519, 0.1226, 0.2114, 0.3106, 0.4135, 0.5152, 0.6119, 0.7012, 0.7808, 0.8503, 0.9093, 0.9576, 0.9963, 1.0258, 1.0472, 1.0618, 1.0703, 1.074, 1.0739, 1.0709, 1.0658, 1.0592, 1.0519, 1.0443, 1.0367, 1.0295, 1.0228, 1.0168, 1.0115, 1.0071, 1.0034, 1.0005, 0.9982, 0.9966, 0.9955, 0.9948, 0.9945, 0.9945, 0.9947, 0.9951, 0.9956, 0.9961, 0.9967, 0.9972, 0.9978, 0.9983, 0.9987, 1);
+  --spring-drift: var(--spring-drift-dur) var(--spring-drift-curve);
+  --spring-glide-dur: calc(1250ms * var(--fm-pace));
+  --spring-glide-curve: linear(0, 0.0538, 0.1255, 0.2067, 0.289, 0.3678, 0.4409, 0.5074, 0.567, 0.6202, 0.6671, 0.7085, 0.7449, 0.7769, 0.8049, 0.8294, 0.8509, 0.8697, 0.8861, 0.9004, 0.913, 0.9239, 0.9335, 0.9419, 0.9492, 0.9556, 0.9612, 0.9661, 0.9704, 0.9741, 0.9774, 0.9802, 0.9827, 0.9849, 0.9868, 0.9885, 0.9899, 0.9912, 0.9923, 0.9933, 0.9941, 0.9949, 0.9955, 0.9961, 0.9966, 0.997, 0.9974, 0.9977, 1);
+  --spring-glide: var(--spring-glide-dur) var(--spring-glide-curve);
+}
+/* Reduced motion stills every spring, above the pace motion() writes on the page itself. */
+@media (prefers-reduced-motion: reduce) {
+  :root { --fm-pace: 0 !important; }
+}
+
+/* FinMotion: tabs. One line under the row (tabs.js places it and moves it); once it is laid, FinUI's own edge under the
+   chosen tab steps aside for it. */
+.fui-tabs__list:has(> .fm-tabs__line) { position: relative; }
+.fm-tabs--lined > .fui-tabs__tab[aria-selected="true"] { border-bottom-color: transparent; }
+.fm-tabs__line { position: absolute; bottom: 0; height: 2px; border-radius: var(--radius-pill); background: var(--accent); pointer-events: none; }
+.fui-tabs__list:not(.fm-tabs--lined) > .fm-tabs__line { display: none; }
+
+/* FinMotion: copy. The ring that spreads from where the button was pressed. */
+.fui-copy__button:has(> .fm-copy__ring) { position: relative; overflow: hidden; }
+.fm-copy__ring { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: currentColor; pointer-events: none; }
+
+/* FinMotion: bar-chart. A column rises from its own foot. */
+.fui-chart__bar-group { transform-box: fill-box; transform-origin: 50% 100%; }
+
+/* FinMotion: line-chart. A dot grows from its own middle. */
+.fui-chart__dot { transform-box: fill-box; transform-origin: center; }
+
+/* FinMotion: sparkline. The last value's dot grows from its own middle. */
+.fui-sparkline__now { transform-box: fill-box; transform-origin: center; }
+
+/* FinMotion: donut-chart. The ring is seen through a conic mask from the top, as far round as --fm-poured says; registered,
+   so it can be animated, and whole at rest. Only the mask's alpha counts, so any of FinUI's opaque tokens will do. */
+@property --fm-poured { syntax: '<number>'; inherits: false; initial-value: 1; }
+.fui-donut-chart__svg { mask-image: conic-gradient(var(--text) calc(var(--fm-poured) * 1turn), transparent 0); }
+
+/* FinMotion: heatmap. A cell swells from its own middle. */
+.fui-heatmap__cell { transform-box: fill-box; transform-origin: center; }
+
+/* FinMotion: progress on film. A taller track drawn as a strip (sprocket holes along both edges, frames between) that
+   slides along as the share grows; the share itself is a wash over it, ending in the accent's edge. */
+.fui-progress.fm-film { --fm-progress-at: 0; }
+.fm-film .fui-progress__track { height: 30px; border-radius: var(--radius-control); background: var(--bg-sunken); border: 1px solid var(--border); }
+.fm-progress__frames { position: absolute; inset: 0; opacity: .55;
+  background: repeating-linear-gradient(90deg, var(--text-faint) 0 6px, transparent 6px 16px) top / 100% 5px repeat-x,
+    repeating-linear-gradient(90deg, var(--text-faint) 0 6px, transparent 6px 16px) bottom / 100% 5px repeat-x,
+    repeating-linear-gradient(90deg, var(--track) 0 46px, var(--bg-sunken) 46px 48px);
+  background-position: calc(var(--fm-progress-at) * -480px) 0, calc(var(--fm-progress-at) * -480px) 100%, calc(var(--fm-progress-at) * -480px) 0;
+  transition: background-position var(--spring-settle); }
+.fm-film .fui-progress__fill { border-radius: 0; background: color-mix(in srgb, var(--accent) 30%, transparent); border-right: 2px solid var(--accent-hi); }
+
+/* FinMotion: toast. In the region every card stands on the same foot, placed by toast.js; it turns about a point far
+   below, so a fan is an arc. FinUI's own entrance gives way to FinMotion's. */
+.fui-toast__region > .fui-toast { position: absolute; right: 0; bottom: 0; width: 100%; transform-origin: 50% 600%; animation: none; }
+
+/* FinMotion: drawer. A drawer slides in on glide, and a bottom sheet is held by its head. */
+.fui-drawer:not(.fui-drawer--held) { animation-duration: var(--spring-glide-dur); animation-timing-function: var(--spring-glide-curve); }
+.fm-drawer__grip { touch-action: none; cursor: grab; }
+.fui-drawer--bottom.fui-modal:has(.fm-drawer__grip:active) { transition: none; }
+
+/* FinMotion: modal. A dialog arrives: it rises a little and comes up to size as the page behind it dims. (A drawer slides in
+   its own way.) */
+.fui-modal:not(.fui-drawer) { animation: fm-modal-arrive var(--spring-settle) both; }
+@keyframes fm-modal-arrive { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+
+/* FinMotion: poster. Catching the light: the poster turns towards the pointer (poster.js), and a sheen sits where the light
+   would fall. */
+.fui-poster.fm-light { position: relative; }
+.fm-poster__sheen { position: absolute; inset: 0; pointer-events: none; --fm-poster-x: 50%; --fm-poster-y: 50%;
+  background: radial-gradient(circle at var(--fm-poster-x) var(--fm-poster-y), color-mix(in srgb, var(--on-fill) 38%, transparent), transparent 55%); }
+
+/* FinMotion: page-header. Gathering: kept at the top of what scrolls, on the page's own ground; --fm-gathered (0 to 1)
+   follows the scroll, so the header moves as the page does and never on its own. */
+.fui-page-header.fm-gathers { --fm-gathered: 0; position: sticky; top: 0; z-index: 5; padding-block: calc(8px - 4px * var(--fm-gathered));
+  background: var(--page-bg); background-attachment: fixed; }
+.fm-gathers .fui-page-header__title { transform-origin: 0 50%; scale: calc(1 - .32 * var(--fm-gathered)); margin-bottom: calc(-6px * var(--fm-gathered)); }
+.fm-gathers .fui-page-header__sub { opacity: calc(1 - 1.6 * var(--fm-gathered)); max-height: calc(3em * (1 - var(--fm-gathered))); overflow: hidden; }
+
+/* FinMotion: odometer. Each digit a reel behind a window one line tall; the reel moves, the window stays. What it says is
+   text beside the reels, there for a screen reader and not for the eye. */
+.fm-odometer { --fm-odometer-line: 1.15em; display: inline-flex; font-variant-numeric: tabular-nums; }
+.fm-odometer__said { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.fm-odometer__reels { display: inline-flex; line-height: var(--fm-odometer-line); }
+.fm-odometer__col { display: inline-block; height: var(--fm-odometer-line); overflow: hidden; }
+.fm-odometer__reel { display: flex; flex-direction: column; }
+.fm-odometer__reel > span { height: var(--fm-odometer-line); text-align: center; }
+.fm-odometer__char { white-space: pre; }

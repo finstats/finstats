@@ -1,0 +1,9 @@
+/* Accent: Plum & gold */
+:root {
+  --accent: light-dark(#7e22ce, #fbbf24);
+  --accent-hi: light-dark(color-mix(in srgb, #7e22ce 78%, #000000), color-mix(in srgb, #fbbf24 60%, #ffffff));
+  --accent-hover: light-dark(color-mix(in srgb, #7e22ce 85%, #000000), color-mix(in srgb, #fbbf24 85%, #000000));
+  --accent-wash: light-dark(color-mix(in srgb, #7e22ce 10%, transparent), color-mix(in srgb, #fbbf24 14%, transparent));
+  --selection: light-dark(color-mix(in srgb, #7e22ce 22%, transparent), color-mix(in srgb, #fbbf24 40%, transparent));
+  --on-accent: light-dark(#ffffff, #0a0a0a);
+}

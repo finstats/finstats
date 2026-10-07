@@ -1,0 +1,38 @@
+/* FinUI: search. A bar and its results, laid out by whatever holds them; its bar flies from the top-left corner. */
+
+.fui-search { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; font-family: var(--sans); color: var(--text); }
+.fui-search__bar {
+  position: relative; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 6px; height: 40px; padding: 0 5px; transform-origin: 0 0;
+  background: var(--field-bg); border: var(--field-edges) solid var(--field-border); border-radius: var(--radius-field); color: var(--text-faint);
+}
+/* The field fills the whole bar, so the ring it wears when focused is the bar's; the icon, Esc and ✕ sit over its ends. */
+.fui-search__bar > .icon { position: absolute; left: 12px; top: 50%; translate: 0 -50%; z-index: 1; pointer-events: none; }
+.fui-search__bar:focus-within > .icon { color: var(--accent-hi); }
+/* 16 px or more: a phone zooms the page into a smaller field the moment it is touched. */
+.fui-search__input {
+  position: absolute; inset: calc(-1 * var(--field-edges)); width: auto; height: auto; padding: 0 76px 0 38px; margin: 0;
+  border: var(--field-edges) solid transparent; border-radius: var(--radius-field); outline: none; background: none; font: 16px var(--sans); color: var(--text);
+}
+.fui-search__input:focus-visible { border-color: var(--focus-color); box-shadow: 0 0 0 3px var(--accent-wash); }
+.fui-search__input::placeholder { color: var(--text-faint); }
+.fui-search__input::-webkit-search-cancel-button { display: none; }
+.fui-search__esc { position: relative; z-index: 1; font: 500 10px var(--mono); color: var(--text-faint); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px 4px; }
+.fui-search__close { position: relative; z-index: 1; display: grid; place-items: center; width: 28px; height: 28px; flex: none; padding: 0; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text-faint); cursor: pointer; }
+.fui-search__close:hover { background: var(--hover); color: var(--text); }
+
+.fui-search__list { flex: 1; min-height: 0; margin: 0; padding: 2px; list-style: none; overflow-y: auto; overscroll-behavior: contain; }
+.fui-search__group { padding: 8px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-faint); }
+.fui-search__group:first-child { padding-top: 2px; }
+.fui-search__row { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 5px 8px; border-radius: var(--radius-control); cursor: pointer; }
+.fui-search__row.is-active { background: var(--accent-wash); }
+.fui-search__text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.fui-search__label { font-size: 13.5px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-search__sub { font-size: 11.5px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-search__icon { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: var(--radius-control); background: var(--bg-2); border: 1px solid var(--border-soft); color: var(--text-muted); }
+.fui-search__none { padding: 18px 10px; text-align: center; color: var(--text-faint); font-size: 13px; }
+.fui-search__foot { flex: none; display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 8px 6px 0; border-top: 1px solid var(--border-soft); color: var(--text-faint); font-size: 11.5px; }
+.fui-search__foot kbd { margin-right: 3px; font: 500 10px var(--mono); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1px 4px; }
+@media (hover: none) and (pointer: coarse) { .fui-search__foot, .fui-search__esc { display: none; } }
+
+.fui-search__demo { display: flex; height: 440px; max-width: 480px; padding: 12px; background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); }
+.fui-search__demo .fui-search { flex: 1; }

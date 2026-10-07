@@ -1,0 +1,392 @@
+// Larger blocks shared by several pages.
+
+import { h, icon, num, compact, bytes, duration, durationExact, clock, bitrate, humanize, episodeCode, store, mount, relTime, dateTime, dayLabelLong, languageName } from './dom.js';
+import { columnsChart, columnsTable, heatmap, heatmapTable, sparkline, bucketList, libBucketList, simpleColumns, simpleColumnsTable, radarChart } from './charts.js';
+import { card, chartCard, segmented, statTile, poster, avatar, methodBadge, facts } from './components.js';
+import { rangeLong, can } from './state.js';
+import { button } from '../finui/components/button/button.js';
+import { typed } from './menus.js';
+
+const METRICS = [{ value: 'watch_s', label: 'Watch time' }, { value: 'plays', label: 'Plays' }];
+
+function metricPref() { const m = store.get('finstats.metric', 'watch_s'); return m === 'plays' ? 'plays' : 'watch_s'; }
+
+/** Stacked columns by media type, with a Watch time | Plays view switch. */
+export function activityCard({ daily, bucket, title = 'Activity' }) {
+  let metric = metricPref();
+  const el = chartCard({
+    title,
+    sub: bucket === 'week' ? 'Per week, by media type' : 'Per day, by media type',
+    controls: segmented({ label: 'Measure', size: 'sm', value: metric, options: METRICS,
+      onChange: (v) => { metric = v; store.set('finstats.metric', v); el.rerender(); } }),
+    chart: () => columnsChart({ daily, bucket, metric }),
+    table: () => columnsTable({ daily, bucket }),
+  });
+  return el;
+}
+
+export function heatmapCard({ data, title = 'When people watch' }) {
+  return chartCard({
+    title, sub: 'Plays by weekday and hour, server time',
+    chart: () => heatmap({ data, metric: 'plays' }),
+    table: () => heatmapTable({ data }),
+  });
+}
+
+export function overviewTiles({ totals, previous, daily, days, scoped }) {
+  const vs = previous ? `vs previous ${days === 365 ? 'year' : days + ' days'}` : null;
+  const t = totals || {}, p = previous || null;
+  return h('div', { class: 'fui-stat-tile__grid' },
+    statTile({ label: 'Watch time', value: duration(t.watch_s), title: durationExact(t.watch_s), current: t.watch_s, previous: p && p.watch_s, vsLabel: vs,
+      hint: rangeLong(days), spark: sparkline((daily || []).map((d) => d.watch_s)) }),
+    statTile({ label: 'Plays', value: compact(t.plays), title: num(t.plays), current: t.plays, previous: p && p.plays, vsLabel: vs,
+      hint: rangeLong(days), spark: sparkline((daily || []).map((d) => d.plays)) }),
+    scoped ? null : statTile({ label: 'Active users', value: compact(t.active_users), title: num(t.active_users), current: t.active_users, previous: p && p.active_users, vsLabel: vs, hint: rangeLong(days) }),
+    statTile({ label: 'Different titles played', value: compact(t.distinct_items), title: num(t.distinct_items), current: t.distinct_items, previous: p && p.distinct_items, vsLabel: vs, hint: rangeLong(days) }));
+}
+
+// ---------------------------------------------------------------- now playing
+const openTranscode = new Set(); // keeps <details> open across polls
+
+export function nowPlayingCard(sn) {
+  const code = episodeCode(sn.season_number, sn.episode_number);
+  const prog = sn.runtime_s ? Math.max(0, Math.min(1, (sn.position_s || 0) / sn.runtime_s)) : null;
+  const title = sn.series_name || sn.item_name;
+  const t = sn.transcode;
+
+  let details = null;
+  if (t) {
+    details = h('details', { class: 'np-details' },
+      h('summary', null, icon('chevronRight', 13), 'Transcode details'),
+      facts([
+        ['Video', t.is_video_direct ? 'Copied (direct)' : (t.video_codec || '–').toUpperCase(), { mono: true }],
+        ['Audio', t.is_audio_direct ? 'Copied (direct)' : (t.audio_codec || '–').toUpperCase(), { mono: true }],
+        ['Container', t.container, { mono: true }],
+        ['Hardware', t.hw_accel ? t.hw_accel.toUpperCase() : 'Software', { mono: true }],
+        t.progress != null ? ['Transcoded', Math.round(Math.min(1, t.progress) * 100) + '%', { mono: true }] : null,
+        ['Reasons', t.reasons && t.reasons.length ? t.reasons.map(humanize).join(', ') : '–'],
+      ]));
+    details.open = openTranscode.has(sn.key);
+    details.addEventListener('toggle', () => { if (details.open) openTranscode.add(sn.key); else openTranscode.delete(sn.key); });
+  }
+
+  return h('article', { class: ['np', sn.is_paused && 'is-paused'], 'data-np-key': sn.key },
+    poster(sn.image_item_id, title, { w: 300, cls: 'fui-poster--np' }),
+    h('div', { class: 'np-main' },
+      h('div', { class: 'np-title' }, h('a', { href: `/items/${sn.series_id || sn.item_id}`, dataset: typed(sn.series_id ? 'Series' : sn.item_type) }, title)),
+      sn.series_name ? h('div', { class: 'np-sub' }, code ? h('span', { class: 'mono' }, code) : null, code ? ' · ' : null, sn.item_name) : null,
+      h('div', { class: 'np-user' }, avatar(sn.user_id, sn.user_name, { size: 20 }), h('a', { href: `/users/${sn.user_id}` }, sn.user_name),
+        h('span', { class: 'muted' }, ' · ', [sn.client, sn.device_name].filter(Boolean).join(' on '))),
+      h('div', { class: 'np-badges' },
+        sn.is_paused ? h('span', { class: 'fui-badge fui-badge--paused' }, icon('pause', 11), 'Paused') : h('span', { class: 'fui-badge fui-badge--live' }, h('span', { class: 'fui-badge__dot' }), 'Playing'),
+        methodBadge(sn.play_method),
+        [sn.video, sn.audio].filter(Boolean).map((x) => h('span', { class: 'fui-chip mono' }, x)),
+        sn.bitrate ? h('span', { class: 'fui-chip mono' }, bitrate(sn.bitrate)) : null,
+        sn.group && sn.group.with && sn.group.with.length ? h('span', { class: 'fui-chip fui-chip--group', title: `Watching together · ${sn.group.size} people` }, icon('together', 12),
+          'With ', sn.group.with.map((w) => w.user_name).join(', '),
+          // The server names a few companions; the size says how many there are in all.
+          sn.group.size - 1 > sn.group.with.length ? ` and ${(sn.group.size - 1 - sn.group.with.length).toLocaleString()} ${sn.group.size - 1 - sn.group.with.length === 1 ? 'other' : 'others'}` : '') : null,
+        can('see_network') && sn.remote_ip ? h('span', { class: 'fui-chip mono', title: 'IP address' }, sn.remote_ip) : null),
+      h('div', { class: 'np-progress' },
+        h('div', { class: 'fui-meter fui-meter--wide', role: 'progressbar', 'aria-label': 'Playback position', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': prog == null ? null : Math.round(prog * 100) },
+          h('span', { class: 'fui-meter__fill', style: { width: (prog || 0) * 100 + '%' } })),
+        h('span', { class: 'mono np-time' }, sn.runtime_s ? `${clock(sn.position_s)} / ${clock(sn.runtime_s)}` : clock(sn.position_s))),
+      details));
+}
+
+/**
+ * The live "Now playing" block. The server is asked every few seconds; in between, the clock and
+ * the bar of every playing session advance locally once a second so they move like a player does.
+ *
+ * Clients report their position to Jellyfin only every ten seconds or so, which means a poll often
+ * returns a position that is a little *behind* what we are already showing. Snapping to it would
+ * make the clock stutter backwards, so the local clock is kept unless the server disagrees in a way
+ * that means something: it is ahead, the viewer paused, or the gap is too big to be reporting lag
+ * (a skip).
+ */
+const BEHIND_OK_S = 15; // the server may trail us by this much: that is just reporting lag
+const AHEAD_OK_S = 3;   // and lead us by this much: rounding and poll timing, not news
+export function nowPlayingView() {
+  const root = h('div', { class: 'np-live' });
+  let live = new Map(); // key -> { s, pos (whole seconds), shape, clockEl, fillEl, barEl }
+  // Everything about a session except the numbers that change every second: if this is the same,
+  // the card on screen is still right and only its clock needs attention.
+  const shapeOf = (s) => JSON.stringify({ ...s, position_s: 0, watched_s: 0, transcode: s.transcode ? { ...s.transcode, progress: 0 } : null });
+  function paint(l) {
+    const pos = l.s.runtime_s ? Math.min(l.pos, l.s.runtime_s) : l.pos;
+    if (l.clockEl) l.clockEl.textContent = l.s.runtime_s ? `${clock(pos)} / ${clock(l.s.runtime_s)}` : clock(pos);
+    if (l.fillEl && l.s.runtime_s) {
+      const pr = Math.max(0, Math.min(1, pos / l.s.runtime_s));
+      l.fillEl.style.width = pr * 100 + '%';
+      if (l.barEl) l.barEl.setAttribute('aria-valuenow', String(Math.round(pr * 100)));
+    }
+  }
+  // The ticker is the only thing that moves a clock: exactly one second per beat, so the display
+  // is a metronome. A poll landing between two beats must never nudge the number off the beat.
+  const timer = setInterval(() => { for (const l of live.values()) if (!l.s.is_paused) { l.pos += 1; paint(l); } }, 1000);
+
+  function update(sessions) {
+    const next = new Map();
+    // An empty view has drawn nothing yet, not even "nothing is playing": zero cards is not "the same cards".
+    let sameCards = sessions.length === live.size && root.hasChildNodes();
+    const corrected = [];
+    for (const s of sessions) {
+      const old = live.get(s.key);
+      const shape = shapeOf(s);
+      const server = Math.floor(s.position_s ?? 0);
+      let pos = server;
+      if (old && old.shape === shape && !s.is_paused) {
+        const drift = server - old.pos; // > 0: the server is ahead of what we show
+        if (drift <= AHEAD_OK_S && -drift <= BEHIND_OK_S) pos = old.pos; // close enough: keep counting, stay on the beat
+      }
+      if (!old || old.shape !== shape) sameCards = false;
+      const l = { s, pos, shape, clockEl: old && old.clockEl, fillEl: old && old.fillEl, barEl: old && old.barEl };
+      if (old && pos !== old.pos) corrected.push(l); // a skip, a pause, or real drift (a throttled background tab)
+      next.set(s.key, l);
+    }
+    live = next;
+    if (!sameCards) {
+      // Someone started, stopped, paused or changed quality: draw the cards again.
+      mount(root, nowPlayingList(sessions));
+      for (const l of live.values()) {
+        const card = root.querySelector(`[data-np-key="${CSS.escape(l.s.key)}"]`);
+        l.clockEl = card && card.querySelector('.np-time');
+        l.barEl = card && card.querySelector('.np-progress .fui-meter');
+        l.fillEl = card && card.querySelector('.np-progress .fui-meter__fill');
+        paint(l);
+      }
+    } else {
+      // Even a correction waits for the beat: set the clock one short and let the next tick land
+      // on the right second, so the number only ever changes in time with the others. A paused clock
+      // has no beat coming (the ticker skips it), so a paused viewer who scrubbed is shown at once.
+      for (const l of corrected) { if (l.s.is_paused) paint(l); else l.pos -= 1; }
+    }
+  }
+  return { el: root, update, destroy: () => clearInterval(timer) };
+}
+
+export function nowPlayingList(sessions) {
+  if (!sessions.length) return h('p', { class: 'np-empty' }, 'Nothing is playing right now.');
+  // forget <details> state for sessions that ended
+  const keys = new Set(sessions.map((x) => x.key));
+  for (const k of openTranscode) if (!keys.has(k)) openTranscode.delete(k);
+  return h('div', { class: 'np-grid' }, sessions.map(nowPlayingCard));
+}
+
+// ---------------------------------------------------------------- insights (GET /api/stats/insights)
+const upper = (x) => (x && String(x).length <= 6 ? String(x).toUpperCase() : x);
+
+/** The quieter second row of dashboard tiles. Returns null when there is nothing to say. */
+export function insightTiles(ins) {
+  if (!ins) return null;
+  const c = ins.concurrency || {};
+  const net = Array.isArray(ins.network) ? ins.network : [];
+  const netTotal = net.reduce((a, b) => a + (b.plays || 0), 0);
+  const remote = (net.find((b) => b.name === 'Remote') || {}).plays || 0;
+  const tiles = [
+    c.peak != null ? h('div', { class: 'fui-stat-tile tile-quiet' },
+      h('div', { class: 'fui-stat-tile__label' }, 'Peak concurrent streams'),
+      h('div', { class: 'fui-stat-tile__value' }, num(c.peak)),
+      h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' },
+        c.peak_transcodes > 0 ? `${num(c.peak_transcodes)} transcoding at once` : c.peak_at ? h('span', { title: dateTime(c.peak_at) }, relTime(c.peak_at)) : ' '))) : null,
+    ins.data_bytes != null ? h('div', { class: 'fui-stat-tile tile-quiet' },
+      h('div', { class: 'fui-stat-tile__label' }, 'Data streamed'),
+      h('div', { class: 'fui-stat-tile__value', title: num(ins.data_bytes) + ' bytes' }, bytes(ins.data_bytes)),
+      h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, 'estimated from stream bitrates'))) : null,
+    can('see_network') && netTotal > 0 ? h('div', { class: 'fui-stat-tile tile-quiet' },
+      h('div', { class: 'fui-stat-tile__label' }, 'Remote plays'),
+      h('div', { class: 'fui-stat-tile__value' }, Math.round((remote / netTotal) * 100) + '%'),
+      h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, `${num(remote)} of ${num(netTotal)} plays`))) : null,
+  ].filter(Boolean);
+  return tiles.length ? h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--quiet' }, tiles) : null;
+}
+
+/** Genres as the ranked list (the actual numbers, the default) or as a radar (the shape of someone's taste). The choice is remembered. */
+export function genresCard(genres, { sub = 'By watch time' } = {}) {
+  const body = h('div', { class: 'genres-body' });
+  let view = store.get('finstats.genresView', 'list') === 'radar' ? 'radar' : 'list';
+  const paint = () => mount(body, view === 'radar'
+    ? radarChart(genres, { ariaLabel: 'Genres by watch time', empty: 'No genre information for these plays yet.' })
+    : bucketList(genres, { empty: 'No genre information for these plays yet.' }));
+  paint();
+  return card({ title: 'Genres', sub, body,
+    actions: segmented({ label: 'Genres view', value: view, options: [{ value: 'list', label: 'List' }, { value: 'radar', label: 'Radar' }],
+      onChange: (v) => { view = v; store.set('finstats.genresView', v); paint(); } }) });
+}
+
+/** The titles watched together most, as a ranked list with posters. */
+export function titlesList(titles, n = 5) {
+  return h('ol', { class: 'fui-rank-list' }, (titles || []).slice(0, n).map((x, i) => h('li', { class: 'fui-rank-list__row' },
+    h('span', { class: 'fui-rank-list__rank mono' }, String(i + 1)), poster(x.image_item_id, x.name, { w: 120, cls: 'fui-poster--sm' }),
+    h('div', { class: 'fui-rank-list__main' }, h('a', { class: 'fui-rank-list__name', href: `/items/${x.id}` }, x.name), h('div', { class: 'fui-rank-list__sub' }, `${num(x.sessions)} ${x.sessions === 1 ? 'evening' : 'evenings'}`)),
+    h('div', { class: 'fui-rank-list__nums' }, h('span', { class: 'mono fui-rank-list__watch', title: durationExact(x.together_s) }, duration(x.together_s))))));
+}
+
+/** Who watches together. `g` is /api/stats/groups; hidden entirely when nobody has. */
+export function groupsCard(g, { title = 'Watched together', forUser = null } = {}) {
+  if (!g || !g.totals || !g.totals.sessions) return null;
+  const t = g.totals;
+  // The person's own share of watch time spent in company, when the answer carries them.
+  const me = forUser && Array.isArray(g.people) ? g.people.find((p) => p.user_id === forUser) : null;
+  const link = button({ variant: 'ghost', size: 'sm', href: forUser ? `/together?user_id=${encodeURIComponent(forUser)}` : '/together' }, 'Together', icon('chevronRight', 14));
+  const faces = (members) => h('span', { class: 'faces' }, members.filter((m) => m.user_id !== forUser).map((m) => avatar(m.user_id, m.user_name, { size: 22, hasImage: m.has_image })));
+  const names = (members) => members.filter((m) => m.user_id !== forUser).map((m) => m.user_name).join(forUser ? ', ' : ' + ');
+  return card({ title, sub: 'People who pressed play on the same thing at the same time', actions: link,
+    body: [
+      h('div', { class: 'group-facts' },
+        h('div', null, h('span', { class: 'group-num' }, duration(t.together_s)), h('span', { class: 'group-label' }, 'time together')),
+        h('div', null, h('span', { class: 'group-num' }, num(t.sessions)), h('span', { class: 'group-label' }, t.sessions === 1 ? 'evening' : 'evenings')),
+        forUser ? null : h('div', null, h('span', { class: 'group-num' }, num(t.people)), h('span', { class: 'group-label' }, 'people')),
+        me && me.share != null ? h('div', null, h('span', { class: 'group-num' }, Math.round(me.share * 100) + '%'), h('span', { class: 'group-label' }, 'of their watch time in company')) : null),
+      h('div', { class: 'grid-2 group-lists' },
+        h('div', null, h('h3', { class: 'group-head' }, forUser ? 'Most often with' : 'Groups'),
+          h('ol', { class: 'fui-rank-list' }, (g.companions || []).slice(0, 5).map((c, i) => h('li', { class: 'fui-rank-list__row' },
+            h('span', { class: 'fui-rank-list__rank mono' }, String(i + 1)), faces(c.members),
+            h('div', { class: 'fui-rank-list__main' }, h('span', { class: 'fui-rank-list__name' }, names(c.members)), h('div', { class: 'fui-rank-list__sub' }, `${num(c.sessions)} ${c.sessions === 1 ? 'session' : 'sessions'}`)),
+            h('div', { class: 'fui-rank-list__nums' }, h('span', { class: 'mono fui-rank-list__watch', title: durationExact(c.together_s) }, duration(c.together_s))))))),
+        h('div', null, h('h3', { class: 'group-head' }, 'Watched together most'), titlesList(g.titles)))] });
+}
+
+/** Admin-only; hidden entirely when there is nothing to show. */
+export function failedLoginsCard(rows) {
+  if (!can('see_server') || !Array.isArray(rows) || !rows.length) return null;
+  return card({ title: 'Failed sign-ins', sub: 'Most recent attempts on your Jellyfin server',
+    actions: button({ variant: 'ghost', size: 'sm', href: '/server/log' }, 'Server log', icon('chevronRight', 14)),
+    body: h('ul', { class: 'mini-list' }, rows.map((r) => h('li', { class: 'mini-row' },
+      h('span', { class: 'fui-badge--status fui-badge--warning' }, icon('alert', 13)),
+      h('span', { class: 'mini-main' }, r.overview || 'Failed sign-in', r.user_name ? h('span', { class: 'muted' }, ' · ' + r.user_name) : null),
+      h('time', { class: 'mono muted mini-when', title: dateTime(r.date) }, relTime(r.date))))) });
+}
+
+// ---------------------------------------------------------------- library make-up (GET /api/library/insights)
+const monthf = new Intl.DateTimeFormat(undefined, { month: 'short', year: '2-digit' });
+const monthLong = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
+function monthDate(str) { const [y, m] = String(str).split('-').map(Number); return new Date(y || 1970, (m || 1) - 1, 1); }
+
+function libItemRows(items, { empty, showAdded = false }) {
+  if (!items || !items.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
+  return h('ol', { class: 'fui-rank-list' }, items.map((it, i) => h('li', { class: 'fui-rank-list__row' },
+    h('span', { class: 'fui-rank-list__rank mono' }, String(i + 1)),
+    poster(it.image_item_id || it.id, it.name, { w: 120, cls: 'fui-poster--sm' }),
+    h('div', { class: 'fui-rank-list__main' }, it.id ? h('a', { href: `/items/${it.id}`, class: 'fui-rank-list__name', dataset: typed(it.type) }, it.name) : h('span', { class: 'fui-rank-list__name' }, it.name),
+      h('div', { class: 'fui-rank-list__sub' }, [it.year, it.type === 'Series' ? 'Series' : null, showAdded && it.date_created ? 'added ' + relTime(it.date_created) : null].filter(Boolean).join(' · ') || ' ')),
+    h('div', { class: 'fui-rank-list__nums' }, h('span', { class: 'mono fui-rank-list__watch' }, it.size_bytes ? bytes(it.size_bytes) : '–')))));
+}
+
+/**
+ * "What your library is made of". Not scoped by the time range: it describes the files,
+ * so it renders under its own heading, away from the range-filtered cards.
+ */
+export function libraryInsights(d, { scoped = false } = {}) {
+  if (!d) return null;
+  const t = d.totals || {};
+  if (!(t.files > 0) && !(d.resolutions || []).length && !(d.largest || []).length) {
+    return h('section', { class: 'subsection' }, h('h2', { class: 'subsection-title' }, scoped ? 'What this library is made of' : 'What your library is made of'),
+      h('p', { class: 'np-empty' }, 'File details appear after the next library sync.'));
+  }
+  const b = (title, sub, rows, labelFn, unit) => card({ title, sub, body: libBucketList(rows, { labelFn, unit }) });
+  const decades = (d.decades || []).map((x) => ({ label: x.name, title: x.name, value: x.count }));
+  const added = (d.added || []).map((x) => ({ label: monthf.format(monthDate(x.month)), title: monthLong.format(monthDate(x.month)), value: x.count }));
+  const un = d.unwatched || null;
+  const counts = [['Movies', t.movies], ['Series', t.series], ['Episodes', t.episodes], ['Tracks', t.tracks]].filter(([, v]) => v > 0);
+  return h('section', { class: 'subsection stack' },
+    h('div', null, h('h2', { class: 'subsection-title' }, scoped ? 'What this library is made of' : 'What your library is made of'),
+      h('p', { class: 'subsection-sub' }, 'About the files themselves. The time range above doesn’t apply here.')),
+    h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--three' },
+      h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, 'Files'), h('div', { class: 'fui-stat-tile__value' }, compact(t.files)),
+        h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, counts.map(([k, v]) => `${num(v)} ${k.toLowerCase()}`).join(' · ') || ' '))),
+      h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, 'Total size'), h('div', { class: 'fui-stat-tile__value' }, bytes(t.size_bytes)),
+        h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, t.files > 0 && t.size_bytes > 0 ? `${bytes(t.size_bytes / t.files)} per file on average` : ' '))),
+      h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, 'Total runtime'), h('div', { class: 'fui-stat-tile__value', title: durationExact(t.runtime_s) }, duration(t.runtime_s)),
+        h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, 'to play everything once')))),
+    h('div', { class: 'grid-3' },
+      b('Resolutions', 'Video files', d.resolutions),
+      b('Video codecs', 'Video files', d.video_codecs, upper),
+      b('Dynamic range', 'Video files', d.video_ranges)),
+    h('div', { class: 'grid-3' },
+      b('Containers', 'All files', d.containers, upper),
+      b('Audio codecs', 'First audio track', d.audio_codecs, upper),
+      b('Genres', 'Movies and series', d.genres, undefined, 'Titles')),
+    (d.audio_languages && d.audio_languages.length) || (d.subtitle_languages && d.subtitle_languages.length) ? h('div', { class: 'grid-2' },
+      b('Audio languages', 'Video files with a track in the language; a dubbed file counts once for each', d.audio_languages, languageName),
+      b('Subtitle languages', 'Video files with subtitles in the language', d.subtitle_languages, languageName)) : null,
+    h('div', { class: 'grid-2' },
+      chartCard({ title: 'By decade', sub: 'Titles by release year',
+        chart: () => simpleColumns({ rows: decades, unit: ['title', 'titles'], ariaLabel: 'Titles per decade' }),
+        table: () => simpleColumnsTable({ rows: decades, head: ['Decade', 'Titles'] }) }),
+      chartCard({ title: 'Added per month', sub: 'Last 24 months',
+        chart: () => simpleColumns({ rows: added, unit: ['title', 'titles'], ariaLabel: 'Titles added per month' }),
+        table: () => simpleColumnsTable({ rows: added, head: ['Month', 'Added'] }) })),
+    h('div', { class: 'grid-2' },
+      card({ title: 'Largest', sub: 'Series count all their episodes', body: libItemRows(d.largest, { empty: 'No file sizes known yet.' }) }),
+      card({ title: 'Never watched',
+        sub: un && un.count > 0 ? `${num(un.count)} ${un.count === 1 ? 'title' : 'titles'} · ${bytes(un.size_bytes)} nobody has played` : 'Everything has been played at least once',
+        body: [libItemRows(un && un.items, { empty: 'Nothing unwatched, or no file sizes known yet.', showAdded: true }),
+          h('p', { class: 'fui-field__help fui-card__note' }, 'Combines plays recorded by finstats with Jellyfin’s own played flags, so history from before finstats counts too.')] })));
+}
+
+// ---------------------------------------------------------------- a shelf: posters in a row
+/** A row of posters that scrolls sideways inside itself; the arrows (put into `arrows`) move it by most of a screen. */
+export function shelfRow(cards, arrows, label) {
+  const list = h('ul', { class: 'shelf', tabindex: 0, 'aria-label': label }, cards.map((c) => h('li', null, c)));
+  // Scrolling is done by hand. CSS scroll-snap swallowed a wheel notch that moved less than half a card (the row sprang back),
+  // native arrow keys moved 40 px at a time and Home/End not at all. Everything goes through one glide towards a target, so
+  // fast repeated input adds up instead of restarting an animation.
+  const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let target = 0, frame = 0;
+  const max = () => Math.max(0, list.scrollWidth - list.clientWidth);
+  const step = () => { const li = list.firstElementChild; return li ? li.getBoundingClientRect().width + (parseFloat(getComputedStyle(list).columnGap) || 0) : 148; };
+  function glide(to) {
+    target = Math.max(0, Math.min(max(), to));
+    if (calm) { list.scrollLeft = target; return; }
+    if (frame) return;
+    const tick = () => {
+      const d = target - list.scrollLeft, before = list.scrollLeft;
+      if (Math.abs(d) < 1.5) { list.scrollLeft = target; frame = 0; return; }
+      list.scrollLeft = before + Math.sign(d) * Math.max(1, Math.abs(d) * 0.24);
+      frame = list.scrollLeft === before ? 0 : requestAnimationFrame(tick); // an edge we cannot pass: stop
+    };
+    frame = requestAnimationFrame(tick);
+  }
+  const from = () => (frame ? target : list.scrollLeft); // mid-glide, the next input continues from where the glide is heading
+  const page = (dir) => glide(from() + dir * Math.max(step(), list.clientWidth - step()));
+
+  const prev = button({ variant: 'icon', type: 'button', 'aria-label': 'Scroll back', onClick: () => page(-1) }, icon('chevronLeft', 16));
+  const next = button({ variant: 'icon', type: 'button', 'aria-label': 'Scroll on', onClick: () => page(1) }, icon('chevronRight', 16));
+  arrows.replaceChildren(prev, next);
+
+  // Shift + wheel (a mouse has no sideways wheel). A trackpad's own sideways swipe and the
+  // plain wheel are left to the browser, so the page still scrolls normally with the pointer over the row.
+  list.addEventListener('wheel', (e) => {
+    if (!e.shiftKey || e.ctrlKey || e.metaKey) return;
+    const raw = e.deltaX || e.deltaY; // Chromium turns shift+wheel into deltaX, Firefox leaves it in deltaY
+    if (!raw || max() <= 0) return;
+    e.preventDefault();
+    const px = Math.abs(e.deltaMode === 1 ? raw * 16 : e.deltaMode === 2 ? raw * list.clientWidth : raw);
+    // One notch is one poster, like one press of an arrow key, however many pixels the browser calls a notch (48 to 100). People
+    // flick several notches at a time, so anything more per notch overshoots. The small deltas of a trackpad or a free-spinning
+    // wheel scale instead, a notch's worth of them adding up to the same poster.
+    glide(from() + Math.sign(raw) * (px >= 30 ? step() : px * step() / 50));
+  }, { passive: false });
+
+  // Arrow keys move one poster, Page Up/Down a screenful, Home/End to the ends, on the row itself or on a card in it.
+  list.addEventListener('keydown', (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const to = { ArrowRight: () => from() + step(), ArrowLeft: () => from() - step(), PageDown: () => from() + list.clientWidth - step(),
+      PageUp: () => from() - list.clientWidth + step(), Home: () => 0, End: () => max() }[e.key];
+    if (!to) return;
+    e.preventDefault();
+    glide(to());
+  });
+
+  // The arrows stay clickable at either end (aria-disabled says why nothing happens) and vanish when everything fits.
+  const paint = () => {
+    arrows.hidden = max() <= 4;
+    prev.setAttribute('aria-disabled', String(list.scrollLeft <= 2));
+    next.setAttribute('aria-disabled', String(list.scrollLeft >= max() - 2));
+  };
+  list.addEventListener('scroll', paint, { passive: true });
+  if ('ResizeObserver' in window) new ResizeObserver(paint).observe(list);
+  requestAnimationFrame(paint);
+  return list;
+}

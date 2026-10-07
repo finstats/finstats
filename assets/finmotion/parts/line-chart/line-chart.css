@@ -1,0 +1,2 @@
+/* FinMotion: line-chart. A dot grows from its own middle. */
+.fui-chart__dot { transform-box: fill-box; transform-origin: center; }

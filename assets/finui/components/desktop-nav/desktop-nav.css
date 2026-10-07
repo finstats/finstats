@@ -1,0 +1,209 @@
+/* FinUI: desktop-nav. Eight styles of one menu; the sidebars sit on either side, the dock at the bottom, the command bar
+   at the top, each keeping no more of the window than STYLES says. */
+
+.fui-desktop-nav {
+  --fui-desktop-nav-top: 0px; --fui-desktop-nav-bottom: 0px; --fui-desktop-nav-size: 220px; --fui-desktop-nav-open: 220px; --fui-desktop-nav-search: 420px;
+  position: fixed; inset: 0; z-index: 30; pointer-events: none; font-family: var(--sans); color: var(--text);
+}
+.fui-desktop-nav--contained { position: absolute; }
+.fui-desktop-nav__frame { position: absolute; pointer-events: auto; }
+
+/* ---- a side: the sidebar, grouped, the rail, search first, pinned, tiles */
+.fui-desktop-nav--left .fui-desktop-nav__frame, .fui-desktop-nav--right .fui-desktop-nav__frame {
+  top: var(--fui-desktop-nav-top); bottom: var(--fui-desktop-nav-bottom); width: var(--fui-desktop-nav-size);
+  display: flex; flex-direction: column; gap: 10px; padding: 14px 10px 10px; background: var(--bg-sunken);
+}
+.fui-desktop-nav--left .fui-desktop-nav__frame { left: 0; border-right: 1px solid var(--border-soft); }
+.fui-desktop-nav--right .fui-desktop-nav__frame { right: 0; border-left: 1px solid var(--border-soft); }
+
+.fui-desktop-nav__brand { display: flex; align-items: center; gap: 9px; padding: 2px 8px 6px; color: var(--text); text-decoration: none; }
+.fui-desktop-nav__brand:hover { text-decoration: none; }
+.fui-desktop-nav__name { font-weight: 650; font-size: 15px; letter-spacing: -.01em; }
+
+.fui-desktop-nav__search-btn {
+  position: relative; flex: none; display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px;
+  background: var(--bg); border: 1px solid var(--border-soft); border-radius: var(--radius-field); color: var(--text-faint); font: 13px var(--sans); text-align: left; cursor: pointer;
+  transition: border-color var(--ease), color var(--ease);
+}
+.fui-desktop-nav__search-btn:hover { border-color: var(--border); color: var(--text-muted); }
+.fui-desktop-nav__search-btn .fui-desktop-nav__label { flex: 1; }
+.fui-desktop-nav__keys { font: 500 10.5px/1 var(--mono); color: var(--text-faint); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px 5px; }
+
+.fui-desktop-nav__nav { min-height: 0; display: flex; flex-direction: column; gap: 1px; margin-top: 4px; overflow: hidden auto; scrollbar-width: thin; }
+.fui-desktop-nav__link {
+  position: relative; display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: var(--radius-sm);
+  color: var(--text-muted); font-size: 13px; line-height: 1.5; text-decoration: none; transition: background var(--ease), color var(--ease), transform 160ms ease;
+}
+.fui-desktop-nav__link:hover { background: var(--hover); color: var(--text); text-decoration: none; }
+.fui-desktop-nav__link.is-current { background: var(--selected-bg); color: var(--selected-text); box-shadow: var(--selected-edge); }
+.fui-desktop-nav__link.is-current .icon { color: var(--selected-icon); }
+.fui-desktop-nav__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-desktop-nav__dot { width: 7px; height: 7px; margin-left: auto; flex: none; border-radius: 50%; background: var(--accent-hi); }
+
+.fui-desktop-nav__group { display: flex; flex-direction: column; gap: 1px; }
+.fui-desktop-nav__group + .fui-desktop-nav__group { margin-top: 10px; }
+.fui-desktop-nav__group-name { padding: 0 8px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); }
+
+.fui-desktop-nav__foot { margin-top: auto; flex: none; display: flex; align-items: center; gap: 4px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
+.fui-desktop-nav__me { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 4px 6px; border-radius: var(--radius-sm); color: var(--text); text-decoration: none; }
+.fui-desktop-nav__me:hover { background: var(--hover); text-decoration: none; }
+.fui-desktop-nav__who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.fui-desktop-nav__me-name { font-size: 13px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-desktop-nav__me-role { font-size: 11px; color: var(--text-faint); }
+.fui-desktop-nav__theme { flex: none; display: flex; }
+
+/* A name shown above the pointer, for a page drawn as its icon alone (the dock). */
+.fui-desktop-nav__tip {
+  position: absolute; left: calc(100% + 10px); top: 50%; z-index: 6; padding: 4px 8px; border-radius: var(--radius-sm);
+  background: var(--tooltip-bg); border: 1px solid var(--border); box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 35%, transparent);
+  font: 500 12px var(--sans); color: var(--text); white-space: nowrap; pointer-events: none;
+  opacity: 0; translate: -4px -50%; transition: opacity 120ms ease, translate 120ms ease;
+}
+:is(.fui-desktop-nav__link, .fui-desktop-nav__search-btn):is(:hover, :focus-visible) > .fui-desktop-nav__tip { opacity: 1; translate: 0 -50%; }
+
+/* A popover: the command panel, and you and the theme behind an avatar where a style has no room for them. */
+.fui-desktop-nav__pop {
+  position: absolute; z-index: 5; padding: 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--shadow) 45%, transparent);
+}
+.fui-desktop-nav__foot-wrap { position: relative; margin-top: auto; flex: none; }
+.fui-desktop-nav__me-btn { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; transition: background var(--ease); }
+.fui-desktop-nav__me-btn:hover, .fui-desktop-nav__me-btn[aria-expanded="true"] { background: var(--hover); }
+.fui-desktop-nav__pop--me { width: 240px; bottom: 0; left: calc(100% + 10px); }
+.fui-desktop-nav__pop--me .fui-desktop-nav__foot { margin: 0; padding: 0; border: 0; }
+
+/* ---- Rail that opens: the grouped sidebar, its icons alone until the pointer or the keyboard's focus comes, then all of it, over
+   the page. The keyboard's alone (:focus-visible): a link pressed keeps the focus, and held the rail open until a click elsewhere. */
+.fui-desktop-nav--rail .fui-desktop-nav__frame {
+  overflow: hidden; z-index: 1; transition: width 200ms cubic-bezier(.2, .8, .2, 1), box-shadow 200ms ease;
+}
+.fui-desktop-nav--rail .fui-desktop-nav__frame:is(:hover, :has(:focus-visible), .is-open) { width: var(--fui-desktop-nav-open); box-shadow: 0 0 40px color-mix(in srgb, var(--shadow) 40%, transparent); }
+.fui-desktop-nav--rail :is(.fui-desktop-nav__name, .fui-desktop-nav__label, .fui-desktop-nav__group-name, .fui-desktop-nav__who, .fui-desktop-nav__keys, .fui-desktop-nav__dot, .fui-desktop-nav__theme) {
+  opacity: 0; white-space: nowrap; transition: opacity 120ms ease;
+}
+.fui-desktop-nav--rail .fui-desktop-nav__frame:is(:hover, :has(:focus-visible), .is-open) :is(.fui-desktop-nav__name, .fui-desktop-nav__label, .fui-desktop-nav__group-name, .fui-desktop-nav__who, .fui-desktop-nav__keys, .fui-desktop-nav__dot, .fui-desktop-nav__theme) {
+  opacity: 1; transition-delay: 80ms;
+}
+/* Closed, the rail's list scrolls (a short window, 150 % zoom) but draws no bar: 60 px has no room for one. */
+.fui-desktop-nav--rail .fui-desktop-nav__frame:not(:hover, :has(:focus-visible), .is-open) .fui-desktop-nav__nav { scrollbar-width: none; }
+.fui-desktop-nav--rail .fui-desktop-nav__frame:not(:hover, :has(:focus-visible), .is-open) .fui-desktop-nav__nav::-webkit-scrollbar { display: none; }
+.fui-desktop-nav--rail .fui-desktop-nav__link { padding: 5px 11px; }
+.fui-desktop-nav--rail .fui-desktop-nav__search-btn { padding: 6px 11px; }
+.fui-desktop-nav--rail .fui-desktop-nav__brand { padding: 2px 8px 6px 7px; }
+.fui-desktop-nav--rail .fui-desktop-nav__group-name { height: 18px; }
+.fui-desktop-nav--rail .fui-desktop-nav__me { flex: none; width: calc(var(--fui-desktop-nav-open) - 96px); padding-left: 5px; }
+.fui-desktop-nav--rail .fui-desktop-nav__foot { flex-wrap: nowrap; }
+/* Something new on a page drawn as its icon alone: a badge on the icon's corner. */
+.fui-desktop-nav--dock .fui-desktop-nav__dot { position: absolute; top: 7px; right: 8px; margin: 0; box-shadow: 0 0 0 2px var(--bg-2); }
+.fui-desktop-nav__sep { flex: none; width: 22px; height: 1px; margin: 4px 0; background: var(--border-soft); }
+
+/* ---- Search first */
+.fui-desktop-nav--search .fui-desktop-nav__frame { gap: 12px; }
+.fui-desktop-nav__search-btn--big { height: 44px; padding: 0 16px; font-size: 15px; }
+.fui-desktop-nav__nav--well { padding: 6px; gap: 2px; background: var(--bg); border: 1px solid var(--border-soft); border-radius: calc(var(--radius) * 1.5); }
+.fui-desktop-nav__link--big { min-height: 36px; gap: 11px; padding: 0 10px; border-radius: var(--radius-control); font-size: 14px; }
+
+/* ---- Pinned */
+.fui-desktop-nav__pins { display: flex; flex-direction: column; gap: 1px; padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--border-soft); }
+.fui-desktop-nav__hint { margin: 2px 8px 4px; font-size: 12px; line-height: 1.4; color: var(--text-faint); }
+.fui-desktop-nav__line { position: relative; }
+.fui-desktop-nav__line .fui-desktop-nav__link { padding-right: 30px; }
+.fui-desktop-nav__pin {
+  position: absolute; right: 4px; top: 50%; translate: 0 -50%; display: grid; place-items: center; width: 22px; height: 22px; padding: 0;
+  border: 0; border-radius: var(--radius-sm); background: none; color: var(--text-faint); cursor: pointer; opacity: 0; transition: opacity var(--ease), background var(--ease);
+}
+.fui-desktop-nav__line:hover .fui-desktop-nav__pin, .fui-desktop-nav__pin:focus-visible, .fui-desktop-nav__pin.is-on { opacity: 1; }
+.fui-desktop-nav__pin:hover { background: var(--btn-hover); color: var(--text); }
+.fui-desktop-nav__pin.is-on { color: var(--accent-hi); }
+
+/* ---- Coloured tiles: each group's icons in tiles of one of the four chart colours */
+.fui-desktop-nav--tiles .fui-desktop-nav__group { padding: 4px; background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); }
+.fui-desktop-nav--tiles .fui-desktop-nav__group + .fui-desktop-nav__group { margin-top: 8px; }
+.fui-desktop-nav__link--tile { min-height: 32px; gap: 10px; padding: 0 6px; }
+.fui-desktop-nav__tile { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: var(--radius-sm); }
+.fui-desktop-nav__tile .icon, .fui-desktop-nav__link.is-current .fui-desktop-nav__tile .icon { color: var(--on-fill); }
+.fui-desktop-nav__tile--1 { background: var(--series-1); }
+.fui-desktop-nav__tile--2 { background: var(--series-2); }
+.fui-desktop-nav__tile--3 { background: var(--series-4); }
+.fui-desktop-nav__tile--4 { background: var(--series-3); }
+
+/* ---- Dock: every page at the bottom, growing under the pointer */
+.fui-desktop-nav--dock .fui-desktop-nav__frame {
+  left: 50%; bottom: calc(14px + var(--fui-desktop-nav-bottom)); translate: -50% 0; transition: translate 260ms cubic-bezier(.2, .8, .2, 1); display: flex; align-items: center; gap: 4px; padding: 6px 8px;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: calc(var(--radius-lg) * 2); box-shadow: 0 16px 40px color-mix(in srgb, var(--shadow) 45%, transparent);
+}
+/* Tucked below the window while the page scrolls down; it slides back up when wanted. */
+.fui-desktop-nav--dock .fui-desktop-nav__frame.is-tucked { translate: -50% calc(100% + 24px); }
+.fui-desktop-nav--dock .fui-desktop-nav__nav { flex-direction: row; align-items: center; gap: 4px; margin: 0; overflow: visible; }
+.fui-desktop-nav--dock .fui-desktop-nav__link, .fui-desktop-nav--dock .fui-desktop-nav__search-btn { justify-content: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: var(--radius-control); background: none; transform-origin: bottom center; }
+.fui-desktop-nav--dock .fui-desktop-nav__link > .fui-desktop-nav__label, .fui-desktop-nav--dock .fui-desktop-nav__search-btn > .fui-desktop-nav__label { display: none; }
+.fui-desktop-nav--dock .fui-desktop-nav__link:hover { transform: scale(1.25) translateY(-3px); }
+.fui-desktop-nav--dock .fui-desktop-nav__link.is-current { background: none; box-shadow: none; }
+.fui-desktop-nav--dock .fui-desktop-nav__link.is-current::after { content: ''; position: absolute; bottom: -3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
+.fui-desktop-nav--dock .fui-desktop-nav__sep { width: 1px; height: 26px; margin: 0 4px; background: var(--border); }
+.fui-desktop-nav--dock .fui-desktop-nav__tip { left: 50%; top: auto; bottom: calc(100% + 10px); translate: -50% 4px; }
+.fui-desktop-nav--dock :is(.fui-desktop-nav__link, .fui-desktop-nav__search-btn):is(:hover, :focus-visible) > .fui-desktop-nav__tip { translate: -50% 0; }
+.fui-desktop-nav--dock .fui-desktop-nav__foot-wrap { margin: 0 0 0 2px; }
+.fui-desktop-nav--dock .fui-desktop-nav__pop--me { left: auto; right: 0; bottom: calc(100% + 14px); }
+
+/* ---- Command bar: the open page's name at the top, which turns into the search where it stands */
+.fui-desktop-nav--command .fui-desktop-nav__frame {
+  top: var(--fui-desktop-nav-top); left: 0; right: 0; height: var(--fui-desktop-nav-size); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 14px;
+  background: var(--bg-sunken); border-bottom: 1px solid var(--border-soft);
+}
+.fui-desktop-nav--command .fui-desktop-nav__brand { padding: 0; }
+.fui-desktop-nav__bar { position: relative; flex: 0 1 460px; }
+.fui-desktop-nav__trigger {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; padding: 0 10px 0 6px;
+  border: 1px solid var(--border); border-radius: var(--radius-field); background: var(--bg-2); color: var(--text-faint); font: 500 13.5px var(--sans); cursor: pointer;
+  transition: border-color var(--ease), box-shadow var(--ease);
+}
+.fui-desktop-nav__trigger:hover { border-color: var(--focus-color); box-shadow: 0 0 0 3px var(--accent-wash); }
+.fui-desktop-nav__trigger > .fui-desktop-nav__label { flex: 1; color: var(--text); text-align: left; }
+.fui-desktop-nav__where { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 50%; background: var(--selected-bg); color: var(--selected-icon); }
+.fui-desktop-nav__crumb { display: inline-flex; gap: 6px; }
+.fui-desktop-nav__crumb-sep { color: var(--separator); }
+.fui-desktop-nav--command .fui-desktop-nav__foot-wrap { margin: 0; }
+.fui-desktop-nav--command .fui-desktop-nav__pop--me { left: auto; right: 0; bottom: auto; top: calc(100% + 8px); }
+
+/* ---- search, in the place the style has for it */
+.fui-desktop-nav__found { display: none; }
+.fui-desktop-nav.is-searching .fui-desktop-nav__found { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+.fui-desktop-nav__found > .fui-search { flex: 1; }
+/* A sidebar widens over the page into the search; the rail opens all the way. Its pages and its foot give way to it. */
+.fui-desktop-nav:is(.fui-desktop-nav--left, .fui-desktop-nav--right).is-searching .fui-desktop-nav__frame {
+  width: max(var(--fui-desktop-nav-size), var(--fui-desktop-nav-search)); box-shadow: 0 0 50px color-mix(in srgb, var(--shadow) 40%, transparent);
+}
+.fui-desktop-nav:is(.fui-desktop-nav--left, .fui-desktop-nav--right, .fui-desktop-nav--dock).is-searching .fui-desktop-nav__frame > :not(.fui-desktop-nav__brand, .fui-desktop-nav__found) { display: none; }
+
+/* The command bar and the dock hold the search the same way: one card, a surface like any FinUI floats, its results and keys, with
+   the field where the menu was: at the top of the card under the command bar's name, at the bottom where the dock was. */
+.fui-desktop-nav--command .fui-desktop-nav__found .fui-search, .fui-desktop-nav--dock.is-searching .fui-desktop-nav__frame {
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: calc(var(--radius-lg) * 1.4); box-shadow: 0 22px 60px color-mix(in srgb, var(--shadow) 50%, transparent);
+}
+.fui-desktop-nav--command .fui-search__list, .fui-desktop-nav--command .fui-search__foot,
+.fui-desktop-nav--dock .fui-search__list, .fui-desktop-nav--dock .fui-search__foot { margin: 0 8px; }
+.fui-desktop-nav--command.is-searching .fui-desktop-nav__bar { flex-basis: 640px; min-height: 36px; }
+.fui-desktop-nav--command.is-searching .fui-desktop-nav__trigger { display: none; }
+.fui-desktop-nav--command .fui-desktop-nav__found .fui-search { position: absolute; top: 0; left: 0; right: 0; max-height: min(70vh, 560px); padding: 0 0 8px; }
+.fui-desktop-nav--command .fui-search__bar { height: 36px; }
+/* It keeps the dock's own width (set as it opens), so the dock rises into it. */
+.fui-desktop-nav--dock.is-searching .fui-desktop-nav__frame { flex-direction: column; align-items: stretch; padding: 8px 0 0; }
+.fui-desktop-nav--dock .fui-desktop-nav__found .fui-search { max-height: min(70vh, 560px); }
+/* Its results take the height they have (up to the card's), rather than a share of a height the card does not have. */
+.fui-desktop-nav--dock .fui-search__list { order: 1; flex: 0 1 auto; }
+.fui-desktop-nav--dock .fui-search__foot { order: 2; padding-bottom: 2px; }
+.fui-desktop-nav--dock .fui-search__bar { order: 3; height: 42px; }
+
+/* The control search went back into takes the focus quietly: no tooltip until it is pointed at or reached again. */
+.fui-desktop-nav [data-quiet] > .fui-desktop-nav__tip { opacity: 0; }
+
+/* ---- a frame to show it in (the gallery) */
+.fui-desktop-nav__demo { position: relative; height: 520px; overflow: hidden; isolation: isolate; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--bg); }
+.fui-desktop-nav__demo-page { display: flex; flex-direction: column; gap: 12px; padding: 70px 260px 90px; }
+.fui-desktop-nav__demo-page span { height: 80px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--border-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-desktop-nav__link, .fui-desktop-nav__tip, .fui-desktop-nav__pin, .fui-desktop-nav--rail .fui-desktop-nav__frame, .fui-desktop-nav--dock .fui-desktop-nav__frame { transition: none; }
+  .fui-desktop-nav--dock .fui-desktop-nav__link:hover { transform: none; }
+}

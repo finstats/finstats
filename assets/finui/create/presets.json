@@ -1,0 +1,2872 @@
+{
+  "about": "FinUI presets: every choice FinUI create offers (create/index.html, and bin/finui.mjs init --preset), in the order a preset code spells them (one base-36 digit per axis). The first option of an axis is tokens.css as it stands and sets nothing. Options are only ever appended, never reordered, so a code once handed out keeps its meaning. Colours are #rrggbb or var(--token); the ramps are Tailwind CSS's (MIT), but Sage's, Blush's and Mist's, which are worked out in OKLCH. Every chart palette keeps neighbouring series at least ΔE 15 apart (OKLab) by day and by night. Styles are whole looks: a name, a line and the options they pick by key, every other axis at its default. Fonts are Fontsource's variable builds (5.3.0) of families under the SIL Open Font License, Latin and Latin Extended, each with its licence in fonts/; Inter and JetBrains Mono are base.css' own.",
+  "axes": [
+    {
+      "key": "base",
+      "label": "Base colour",
+      "group": "Colour",
+      "kind": "base",
+      "options": [
+        {
+          "key": "washi",
+          "label": "Washi & Obsidian",
+          "swatch": [
+            "#efe9dc",
+            "#1e1e1e"
+          ]
+        },
+        {
+          "key": "neutral",
+          "label": "Neutral",
+          "ramp": [
+            "#fafafa",
+            "#f5f5f5",
+            "#e5e5e5",
+            "#d4d4d4",
+            "#a3a3a3",
+            "#737373",
+            "#525252",
+            "#404040",
+            "#262626",
+            "#171717",
+            "#0a0a0a"
+          ],
+          "day": {
+            "bg": "#e1e1e1",
+            "card": "#fafafa",
+            "sunken": "#d5d5d5"
+          }
+        },
+        {
+          "key": "stone",
+          "label": "Stone",
+          "ramp": [
+            "#fafaf9",
+            "#f5f5f4",
+            "#e7e5e4",
+            "#d6d3d1",
+            "#a8a29e",
+            "#78716c",
+            "#57534e",
+            "#44403c",
+            "#292524",
+            "#1c1917",
+            "#0c0a09"
+          ],
+          "day": {
+            "bg": "#e0d2c2",
+            "card": "#fbfaf8",
+            "sunken": "#d6c6b6",
+            "muted": "#4d4944",
+            "faint": "#5c5650"
+          }
+        },
+        {
+          "key": "zinc",
+          "label": "Zinc",
+          "ramp": [
+            "#fafafa",
+            "#f4f4f5",
+            "#e4e4e7",
+            "#d4d4d8",
+            "#a1a1aa",
+            "#71717a",
+            "#52525b",
+            "#3f3f46",
+            "#27272a",
+            "#18181b",
+            "#09090b"
+          ],
+          "day": {
+            "bg": "#d9ccdb",
+            "card": "#fafafc",
+            "sunken": "#cec0d1",
+            "muted": "#45454c",
+            "faint": "#55555d"
+          }
+        },
+        {
+          "key": "slate",
+          "label": "Slate",
+          "ramp": [
+            "#f8fafc",
+            "#f1f5f9",
+            "#e2e8f0",
+            "#cbd5e1",
+            "#94a3b8",
+            "#64748b",
+            "#475569",
+            "#334155",
+            "#1e293b",
+            "#0f172a",
+            "#020617"
+          ],
+          "day": {
+            "bg": "#cfe0f6",
+            "card": "#f8fafc",
+            "sunken": "#c2d5ec"
+          }
+        },
+        {
+          "key": "gray",
+          "label": "Gray",
+          "ramp": [
+            "#f9fafb",
+            "#f3f4f6",
+            "#e5e7eb",
+            "#d1d5db",
+            "#9ca3af",
+            "#6b7280",
+            "#4b5563",
+            "#374151",
+            "#1f2937",
+            "#111827",
+            "#030712"
+          ],
+          "day": {
+            "bg": "#d0d8da",
+            "card": "#f9fbfb",
+            "sunken": "#c4cdcf"
+          }
+        },
+        {
+          "key": "nord",
+          "label": "Nord",
+          "ramp": [
+            "#eceff4",
+            "#e5e9f0",
+            "#d8dee9",
+            "#c2cad8",
+            "#a5afc0",
+            "#7b879a",
+            "#5b6579",
+            "#4c566a",
+            "#3b4252",
+            "#2e3440",
+            "#242933"
+          ],
+          "day": {
+            "bg": "#c2d3e8",
+            "card": "#eceff4",
+            "sunken": "#b5c7df",
+            "text": "#2e3440",
+            "muted": "#3b4252",
+            "faint": "#4c566a"
+          },
+          "night": {
+            "bg": "#272c36",
+            "card": "#2e3440",
+            "sunken": "#22262f",
+            "text": "#eceff4",
+            "muted": "#d8dee9",
+            "faint": "#a5afc0"
+          }
+        },
+        {
+          "key": "solarized",
+          "label": "Solarized",
+          "ramp": [
+            "#fdf6e3",
+            "#eee8d5",
+            "#e2dcc8",
+            "#cfcab7",
+            "#93a1a1",
+            "#839496",
+            "#586e75",
+            "#44575e",
+            "#073642",
+            "#002b36",
+            "#00212b"
+          ],
+          "day": {
+            "bg": "#feefc0",
+            "card": "#fdf6e3",
+            "sunken": "#f4e4b0",
+            "text": "#073642",
+            "muted": "#44575e",
+            "faint": "#586e75"
+          },
+          "night": {
+            "bg": "#002b36",
+            "card": "#073642",
+            "sunken": "#00212b",
+            "text": "#eee8d5",
+            "muted": "#93a1a1",
+            "faint": "#839496"
+          }
+        },
+        {
+          "key": "gruvbox",
+          "label": "Gruvbox",
+          "ramp": [
+            "#fbf1c7",
+            "#f2e5bc",
+            "#ebdbb2",
+            "#d5c4a1",
+            "#bdae93",
+            "#928374",
+            "#665c54",
+            "#504945",
+            "#3c3836",
+            "#282828",
+            "#1d2021"
+          ],
+          "day": {
+            "bg": "#f9dfa3",
+            "card": "#fbf1c7",
+            "sunken": "#f0d391",
+            "text": "#282828",
+            "muted": "#504945",
+            "faint": "#665c54"
+          },
+          "night": {
+            "bg": "#282828",
+            "card": "#32302f",
+            "sunken": "#1d2021",
+            "text": "#ebdbb2",
+            "muted": "#bdae93",
+            "faint": "#a89984"
+          }
+        },
+        {
+          "key": "catppuccin",
+          "label": "Catppuccin",
+          "ramp": [
+            "#eff1f5",
+            "#e6e9ef",
+            "#dce0e8",
+            "#ccd0da",
+            "#9ca0b0",
+            "#8c8fa1",
+            "#6c6f85",
+            "#45475a",
+            "#313244",
+            "#1e1e2e",
+            "#11111b"
+          ],
+          "day": {
+            "bg": "#eef0f5",
+            "card": "#fafbfd",
+            "sunken": "#e2e5ea",
+            "text": "#383a52",
+            "muted": "#5c5f77",
+            "faint": "#6c6f85"
+          },
+          "night": {
+            "bg": "#1e1e2e",
+            "card": "#313244",
+            "sunken": "#181825",
+            "text": "#cdd6f4",
+            "muted": "#bac2de",
+            "faint": "#9399b2"
+          }
+        },
+        {
+          "key": "rose-pine",
+          "label": "Rosé Pine",
+          "ramp": [
+            "#fffaf3",
+            "#faf4ed",
+            "#f2e9e1",
+            "#dfdad9",
+            "#cecacd",
+            "#9893a5",
+            "#797593",
+            "#403d52",
+            "#26233a",
+            "#1f1d2e",
+            "#191724"
+          ],
+          "day": {
+            "bg": "#f8d8d7",
+            "card": "#fffaf3",
+            "sunken": "#eeccca",
+            "text": "#3f3b5c",
+            "muted": "#4f4a70",
+            "faint": "#5d5878"
+          },
+          "night": {
+            "bg": "#191724",
+            "card": "#1f1d2e",
+            "sunken": "#16141f",
+            "text": "#e0def4",
+            "muted": "#908caa",
+            "faint": "#817c9c"
+          }
+        },
+        {
+          "key": "tokyo-night",
+          "label": "Tokyo Night",
+          "ramp": [
+            "#e9e9ec",
+            "#e1e2e7",
+            "#d0d5e3",
+            "#b6bfd8",
+            "#8990b3",
+            "#6172b0",
+            "#4c505e",
+            "#3b4261",
+            "#24283b",
+            "#1a1b26",
+            "#16161e"
+          ],
+          "day": {
+            "bg": "#e6e6fe",
+            "card": "#e9e9ef",
+            "sunken": "#dadaf5",
+            "text": "#2a2f48",
+            "muted": "#3b4261",
+            "faint": "#4c505e"
+          },
+          "night": {
+            "bg": "#1a1b26",
+            "card": "#24283b",
+            "sunken": "#16161e",
+            "text": "#c0caf5",
+            "muted": "#a9b1d6",
+            "faint": "#8990b3"
+          }
+        },
+        {
+          "key": "dracula",
+          "label": "Dracula",
+          "ramp": [
+            "#fbf9ff",
+            "#f2eefa",
+            "#e6e0f2",
+            "#d2cbe3",
+            "#a9a3c2",
+            "#6272a4",
+            "#565870",
+            "#44475a",
+            "#343746",
+            "#282a36",
+            "#21222c"
+          ],
+          "day": {
+            "bg": "#e5d6f2",
+            "card": "#fbf9ff",
+            "sunken": "#dacae8",
+            "text": "#282a36",
+            "muted": "#44475a",
+            "faint": "#565870"
+          },
+          "night": {
+            "bg": "#282a36",
+            "card": "#2f3140",
+            "sunken": "#21222c",
+            "text": "#f8f8f2",
+            "muted": "#d6d6d0",
+            "faint": "#a3a7c0"
+          }
+        },
+        {
+          "key": "everforest",
+          "label": "Everforest",
+          "ramp": [
+            "#fdf6e3",
+            "#f4f0d9",
+            "#e6e2cc",
+            "#d3cfb8",
+            "#a6b0a0",
+            "#829181",
+            "#5c6a72",
+            "#475258",
+            "#343f44",
+            "#2d353b",
+            "#232a2e"
+          ],
+          "day": {
+            "bg": "#d8edcd",
+            "card": "#fdf6e3",
+            "sunken": "#cbe2c0",
+            "text": "#2f393e",
+            "muted": "#4a555b",
+            "faint": "#5c6a72"
+          },
+          "night": {
+            "bg": "#232a2e",
+            "card": "#2b3338",
+            "sunken": "#1e2427",
+            "text": "#e5dcc3",
+            "muted": "#a7b3aa",
+            "faint": "#929f96"
+          }
+        },
+        {
+          "key": "ocean",
+          "label": "Ocean",
+          "ramp": [
+            "#f4f9fb",
+            "#e9f2f6",
+            "#d8e7ee",
+            "#bdd3de",
+            "#94adbb",
+            "#68818f",
+            "#4f6672",
+            "#3c4d57",
+            "#28343b",
+            "#1a242a",
+            "#11181c"
+          ],
+          "day": {
+            "bg": "#cef0f6",
+            "card": "#f6fbfc",
+            "sunken": "#bfe5ec",
+            "muted": "#425a66",
+            "faint": "#526b78"
+          }
+        },
+        {
+          "key": "sage",
+          "label": "Sage",
+          "ramp": [
+            "#f4fcf8",
+            "#e8f9f1",
+            "#daeae2",
+            "#c9d9d1",
+            "#96a59e",
+            "#697770",
+            "#48564f",
+            "#36443d",
+            "#1d2924",
+            "#0e1a15",
+            "#070b09"
+          ],
+          "day": {
+            "bg": "#c7e4d6",
+            "card": "#dbede4",
+            "sunken": "#b7d6c7"
+          }
+        },
+        {
+          "key": "blush",
+          "label": "Blush",
+          "ramp": [
+            "#fff7fa",
+            "#ffeef5",
+            "#f2e0e6",
+            "#e1cfd5",
+            "#ad9ba1",
+            "#7e6e74",
+            "#5d4d53",
+            "#4a3b40",
+            "#2f2227",
+            "#1f1318",
+            "#0e080a"
+          ],
+          "day": {
+            "bg": "#ffe4ee",
+            "card": "#fff3f9",
+            "sunken": "#f2d5df"
+          }
+        },
+        {
+          "key": "mist",
+          "label": "Mist",
+          "ramp": [
+            "#f3fcfe",
+            "#e6f8fd",
+            "#d7e9ee",
+            "#c6d8dc",
+            "#94a4a9",
+            "#67777b",
+            "#465559",
+            "#344347",
+            "#1b292c",
+            "#0c1a1d",
+            "#060b0d"
+          ],
+          "day": {
+            "bg": "#b6e2ed",
+            "card": "#d0eaf1",
+            "sunken": "#a4d4e0"
+          }
+        }
+      ]
+    },
+    {
+      "key": "accent",
+      "label": "Accent",
+      "group": "Colour",
+      "kind": "accent",
+      "options": [
+        {
+          "key": "seal",
+          "label": "Seal & violet",
+          "swatch": [
+            "#b23a26",
+            "#8a5cf5"
+          ]
+        },
+        {
+          "key": "violet",
+          "label": "Violet",
+          "light": "#6d28d9",
+          "dark": "#8b5cf6"
+        },
+        {
+          "key": "blue",
+          "label": "Blue",
+          "light": "#1d4ed8",
+          "dark": "#3b82f6"
+        },
+        {
+          "key": "teal",
+          "label": "Teal",
+          "light": "#0f766e",
+          "dark": "#14b8a6"
+        },
+        {
+          "key": "green",
+          "label": "Green",
+          "light": "#15803d",
+          "dark": "#22c55e"
+        },
+        {
+          "key": "amber",
+          "label": "Amber",
+          "light": "#b45309",
+          "dark": "#f59e0b"
+        },
+        {
+          "key": "orange",
+          "label": "Orange",
+          "light": "#c2410c",
+          "dark": "#f97316"
+        },
+        {
+          "key": "rose",
+          "label": "Rose",
+          "light": "#be123c",
+          "dark": "#f43f5e"
+        },
+        {
+          "key": "pink",
+          "label": "Pink",
+          "light": "#be185d",
+          "dark": "#ec4899"
+        },
+        {
+          "key": "ink",
+          "label": "Ink",
+          "light": "#262626",
+          "dark": "#e5e5e5"
+        },
+        {
+          "key": "indigo",
+          "label": "Indigo",
+          "light": "#4338ca",
+          "dark": "#818cf8"
+        },
+        {
+          "key": "cyan",
+          "label": "Cyan",
+          "light": "#0e7490",
+          "dark": "#22d3ee"
+        },
+        {
+          "key": "emerald",
+          "label": "Emerald",
+          "light": "#047857",
+          "dark": "#34d399"
+        },
+        {
+          "key": "red",
+          "label": "Red",
+          "light": "#b91c1c",
+          "dark": "#f87171"
+        },
+        {
+          "key": "fuchsia",
+          "label": "Fuchsia",
+          "light": "#a21caf",
+          "dark": "#e879f9"
+        },
+        {
+          "key": "sky",
+          "label": "Sky",
+          "light": "#0369a1",
+          "dark": "#38bdf8"
+        },
+        {
+          "key": "indigo-cyan",
+          "label": "Indigo & cyan",
+          "light": "#4338ca",
+          "dark": "#22d3ee"
+        },
+        {
+          "key": "teal-coral",
+          "label": "Teal & coral",
+          "light": "#0f766e",
+          "dark": "#fb7185"
+        },
+        {
+          "key": "plum-gold",
+          "label": "Plum & gold",
+          "light": "#7e22ce",
+          "dark": "#fbbf24"
+        },
+        {
+          "key": "navy-amber",
+          "label": "Navy & amber",
+          "light": "#1e3a8a",
+          "dark": "#f59e0b"
+        },
+        {
+          "key": "crimson-sky",
+          "label": "Crimson & sky",
+          "light": "#b91c1c",
+          "dark": "#38bdf8"
+        },
+        {
+          "key": "moss-lilac",
+          "label": "Moss & lilac",
+          "light": "#4d7c0f",
+          "dark": "#c4b5fd"
+        },
+        {
+          "key": "brick-mint",
+          "label": "Brick & mint",
+          "light": "#9a3412",
+          "dark": "#5eead4"
+        },
+        {
+          "key": "ink-lime",
+          "label": "Ink & lime",
+          "light": "#1f2937",
+          "dark": "#a3e635"
+        },
+        {
+          "key": "forest-peach",
+          "label": "Forest & peach",
+          "light": "#166534",
+          "dark": "#fdba74"
+        },
+        {
+          "key": "berry-aqua",
+          "label": "Berry & aqua",
+          "light": "#9d174d",
+          "dark": "#67e8f9"
+        },
+        {
+          "key": "lime",
+          "label": "Lime",
+          "light": "#4d7c0f",
+          "dark": "#a3e635"
+        },
+        {
+          "key": "gold",
+          "label": "Gold",
+          "light": "#a16207",
+          "dark": "#facc15"
+        },
+        {
+          "key": "sunset-lavender",
+          "label": "Sunset & lavender",
+          "light": "#c2410c",
+          "dark": "#a78bfa"
+        },
+        {
+          "key": "lagoon-rose",
+          "label": "Lagoon & rose",
+          "light": "#0f766e",
+          "dark": "#fb7185"
+        }
+      ]
+    },
+    {
+      "key": "charts",
+      "label": "Chart colours",
+      "group": "Colour",
+      "kind": "charts",
+      "options": [
+        {
+          "key": "dyes",
+          "label": "Dyes",
+          "swatch": [
+            "#5c3d7a",
+            "#236e70",
+            "#b23a26",
+            "#2b4570"
+          ]
+        },
+        {
+          "key": "signal",
+          "label": "Signal",
+          "series": [
+            [
+              "#2a78d6",
+              "#3987e5"
+            ],
+            [
+              "#eb6834",
+              "#d95926"
+            ],
+            [
+              "#4a3aa7",
+              "#9085e9"
+            ],
+            [
+              "#e34948",
+              "#e66767"
+            ]
+          ],
+          "single": [
+            "#2a78d6",
+            "#3987e5"
+          ],
+          "peak": [
+            "#1d5496",
+            "#88b7ef"
+          ]
+        },
+        {
+          "key": "ember",
+          "label": "Ember",
+          "series": [
+            [
+              "#eb6834",
+              "#d95926"
+            ],
+            [
+              "#4a3aa7",
+              "#9085e9"
+            ],
+            [
+              "#008300",
+              "#008300"
+            ],
+            [
+              "#2a78d6",
+              "#3987e5"
+            ]
+          ],
+          "single": [
+            "#eb6834",
+            "#d95926"
+          ],
+          "peak": [
+            "#a44924",
+            "#e89b7d"
+          ]
+        },
+        {
+          "key": "lagoon",
+          "label": "Lagoon",
+          "series": [
+            [
+              "#1baf7a",
+              "#199e70"
+            ],
+            [
+              "#2a78d6",
+              "#3987e5"
+            ],
+            [
+              "#eb6834",
+              "#d95926"
+            ],
+            [
+              "#4a3aa7",
+              "#9085e9"
+            ]
+          ],
+          "single": [
+            "#1baf7a",
+            "#199e70"
+          ],
+          "peak": [
+            "#137a55",
+            "#75c5a9"
+          ]
+        },
+        {
+          "key": "meadow",
+          "label": "Meadow",
+          "series": [
+            [
+              "#008300",
+              "#008300"
+            ],
+            [
+              "#2a78d6",
+              "#3987e5"
+            ],
+            [
+              "#eb6834",
+              "#d95926"
+            ],
+            [
+              "#4a3aa7",
+              "#9085e9"
+            ]
+          ],
+          "single": [
+            "#008300",
+            "#008300"
+          ],
+          "peak": [
+            "#005c00",
+            "#66b566"
+          ]
+        },
+        {
+          "key": "dusk",
+          "label": "Dusk",
+          "series": [
+            [
+              "#4a3aa7",
+              "#9085e9"
+            ],
+            [
+              "#eb6834",
+              "#d95926"
+            ],
+            [
+              "#2a78d6",
+              "#3987e5"
+            ],
+            [
+              "#e34948",
+              "#e66767"
+            ]
+          ],
+          "single": [
+            "#4a3aa7",
+            "#9085e9"
+          ],
+          "peak": [
+            "#342975",
+            "#bcb6f2"
+          ]
+        },
+        {
+          "key": "okabe-ito",
+          "label": "Okabe–Ito",
+          "series": [
+            [
+              "#0072b2",
+              "#56b4e9"
+            ],
+            [
+              "#e69f00",
+              "#e69f00"
+            ],
+            [
+              "#009e73",
+              "#2fbf8f"
+            ],
+            [
+              "#cc79a7",
+              "#d98cc0"
+            ]
+          ],
+          "single": [
+            "#0072b2",
+            "#56b4e9"
+          ],
+          "peak": [
+            "#004f7c",
+            "#a6d6f4"
+          ]
+        },
+        {
+          "key": "pastel",
+          "label": "Pastel",
+          "series": [
+            [
+              "#7a9cc6",
+              "#8fb8f0"
+            ],
+            [
+              "#e3a07a",
+              "#f7a26a"
+            ],
+            [
+              "#5fa86e",
+              "#7fd18a"
+            ],
+            [
+              "#b88ac4",
+              "#d4a5ef"
+            ]
+          ],
+          "single": [
+            "#7a9cc6",
+            "#8fb8f0"
+          ],
+          "peak": [
+            "#4f74a3",
+            "#d3e3f8"
+          ]
+        },
+        {
+          "key": "neon",
+          "label": "Neon",
+          "series": [
+            [
+              "#d6247f",
+              "#ff4fa3"
+            ],
+            [
+              "#5b9a00",
+              "#a3e635"
+            ],
+            [
+              "#0e8fb5",
+              "#22d3ee"
+            ],
+            [
+              "#c77800",
+              "#fbbf24"
+            ]
+          ],
+          "single": [
+            "#0e8fb5",
+            "#22d3ee"
+          ],
+          "peak": [
+            "#0a6480",
+            "#a5f0fb"
+          ]
+        },
+        {
+          "key": "earth",
+          "label": "Earth",
+          "series": [
+            [
+              "#3f7a4a",
+              "#7fbf86"
+            ],
+            [
+              "#a4512f",
+              "#d9784f"
+            ],
+            [
+              "#4f6d7a",
+              "#7fa3b3"
+            ],
+            [
+              "#b8860b",
+              "#e0b043"
+            ]
+          ],
+          "single": [
+            "#3f7a4a",
+            "#7fbf86"
+          ],
+          "peak": [
+            "#2a5533",
+            "#c3e6c6"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "radius",
+      "label": "Radius",
+      "group": "Shape",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "default",
+          "label": "Default"
+        },
+        {
+          "key": "none",
+          "label": "None",
+          "tokens": {
+            "--radius": "0px",
+            "--radius-sm": "0px",
+            "--radius-control": "0px",
+            "--radius-lg": "0px",
+            "--radius-pill": "0px"
+          }
+        },
+        {
+          "key": "small",
+          "label": "Small",
+          "tokens": {
+            "--radius": "5px",
+            "--radius-sm": "3px",
+            "--radius-control": "4px",
+            "--radius-lg": "7px"
+          }
+        },
+        {
+          "key": "large",
+          "label": "Large",
+          "tokens": {
+            "--radius": "12px",
+            "--radius-sm": "6px",
+            "--radius-control": "9px",
+            "--radius-lg": "16px"
+          }
+        },
+        {
+          "key": "round",
+          "label": "Round",
+          "tokens": {
+            "--radius": "18px",
+            "--radius-sm": "9px",
+            "--radius-control": "18px",
+            "--radius-lg": "24px"
+          }
+        },
+        {
+          "key": "pill",
+          "label": "Pill",
+          "tokens": {
+            "--radius": "16px",
+            "--radius-sm": "8px",
+            "--radius-control": "99px",
+            "--radius-lg": "22px"
+          }
+        }
+      ]
+    },
+    {
+      "key": "density",
+      "label": "Density",
+      "group": "Shape",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "default",
+          "label": "Default"
+        },
+        {
+          "key": "compact",
+          "label": "Compact",
+          "tokens": {
+            "--density": ".85"
+          }
+        },
+        {
+          "key": "comfortable",
+          "label": "Comfortable",
+          "tokens": {
+            "--density": "1.15"
+          }
+        },
+        {
+          "key": "spacious",
+          "label": "Spacious",
+          "tokens": {
+            "--density": "1.3"
+          }
+        },
+        {
+          "key": "tight",
+          "label": "Tight",
+          "tokens": {
+            "--density": ".75"
+          }
+        }
+      ]
+    },
+    {
+      "key": "borders",
+      "label": "Borders",
+      "group": "Shape",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "hairline",
+          "label": "Hairline"
+        },
+        {
+          "key": "none",
+          "label": "None",
+          "tokens": {
+            "--border-soft": "transparent"
+          }
+        },
+        {
+          "key": "strong",
+          "label": "Strong",
+          "tokens": {
+            "--border": "var(--border-strong)",
+            "--border-soft": "var(--border-strong)"
+          }
+        },
+        {
+          "key": "faint",
+          "label": "Faint",
+          "tokens": {
+            "--border": "color-mix(in srgb, var(--border-strong) 45%, transparent)",
+            "--border-soft": "color-mix(in srgb, var(--border-strong) 32%, transparent)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "cards",
+      "label": "Cards",
+      "group": "Shape",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "flat",
+          "label": "Flat"
+        },
+        {
+          "key": "raised",
+          "label": "Raised",
+          "tokens": {
+            "--card-shadow": "0 1px 2px color-mix(in srgb, var(--shadow) 16%, transparent), 0 4px 14px color-mix(in srgb, var(--shadow) 12%, transparent)"
+          }
+        },
+        {
+          "key": "floating",
+          "label": "Floating",
+          "tokens": {
+            "--card-shadow": "0 2px 4px color-mix(in srgb, var(--shadow) 14%, transparent), 0 14px 36px color-mix(in srgb, var(--shadow) 24%, transparent)"
+          }
+        },
+        {
+          "key": "glow",
+          "label": "Glow",
+          "tokens": {
+            "--card-shadow": "0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent), 0 10px 30px color-mix(in srgb, var(--accent) 16%, transparent)"
+          }
+        },
+        {
+          "key": "block",
+          "label": "Block",
+          "tokens": {
+            "--card-shadow": "4px 4px 0 var(--border-strong)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "highlight",
+      "label": "Highlight",
+      "group": "Feel",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "subtle",
+          "label": "Subtle"
+        },
+        {
+          "key": "bold",
+          "label": "Bold",
+          "tokens": {
+            "--accent-wash": "color-mix(in srgb, var(--accent) 24%, transparent)"
+          }
+        },
+        {
+          "key": "strong",
+          "label": "Strong",
+          "tokens": {
+            "--accent-wash": "color-mix(in srgb, var(--accent) 36%, transparent)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "motion",
+      "label": "Motion",
+      "group": "Feel",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "default",
+          "label": "Default"
+        },
+        {
+          "key": "quick",
+          "label": "Quick",
+          "tokens": {
+            "--ease": "80ms ease",
+            "--icon-cycle": "2.2s"
+          }
+        },
+        {
+          "key": "slow",
+          "label": "Slow",
+          "tokens": {
+            "--ease": "260ms ease",
+            "--icon-cycle": "4.2s"
+          }
+        },
+        {
+          "key": "off",
+          "label": "Off",
+          "tokens": {
+            "--ease": "0s",
+            "--icon-cycle": "0s"
+          }
+        },
+        {
+          "key": "springy",
+          "label": "Springy",
+          "tokens": {
+            "--ease": "240ms cubic-bezier(.34, 1.56, .64, 1)",
+            "--icon-cycle": "3.4s"
+          }
+        }
+      ]
+    },
+    {
+      "key": "icons",
+      "label": "Icon stroke",
+      "group": "Feel",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "regular",
+          "label": "Regular"
+        },
+        {
+          "key": "light",
+          "label": "Light",
+          "tokens": {
+            "--icon-stroke": "1.25"
+          }
+        },
+        {
+          "key": "bold",
+          "label": "Bold",
+          "tokens": {
+            "--icon-stroke": "2.25"
+          }
+        },
+        {
+          "key": "thin",
+          "label": "Thin",
+          "tokens": {
+            "--icon-stroke": "1"
+          }
+        },
+        {
+          "key": "heavy",
+          "label": "Heavy",
+          "tokens": {
+            "--icon-stroke": "2.75"
+          }
+        }
+      ]
+    },
+    {
+      "key": "font",
+      "label": "Font",
+      "group": "Type",
+      "kind": "font",
+      "token": "--sans",
+      "options": [
+        {
+          "key": "inter",
+          "label": "Inter"
+        },
+        {
+          "key": "geist",
+          "label": "Geist",
+          "family": "Geist Variable",
+          "stack": "\"Geist Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "geist-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "geist-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Geist.txt"
+        },
+        {
+          "key": "roboto",
+          "label": "Roboto",
+          "family": "Roboto Variable",
+          "stack": "\"Roboto Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "roboto-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "roboto-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Roboto.txt"
+        },
+        {
+          "key": "open-sans",
+          "label": "Open Sans",
+          "family": "Open Sans Variable",
+          "stack": "\"Open Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "300 800",
+          "files": [
+            {
+              "file": "open-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "open-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-OpenSans.txt"
+        },
+        {
+          "key": "source-sans-3",
+          "label": "Source Sans 3",
+          "family": "Source Sans 3 Variable",
+          "stack": "\"Source Sans 3 Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "200 900",
+          "files": [
+            {
+              "file": "source-sans-3-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "source-sans-3-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-SourceSans3.txt"
+        },
+        {
+          "key": "ibm-plex-sans",
+          "label": "IBM Plex Sans",
+          "family": "IBM Plex Sans Variable",
+          "stack": "\"IBM Plex Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 700",
+          "files": [
+            {
+              "file": "ibm-plex-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "ibm-plex-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-IBMPlexSans.txt"
+        },
+        {
+          "key": "nunito",
+          "label": "Nunito",
+          "family": "Nunito Variable",
+          "stack": "\"Nunito Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "200 1000",
+          "files": [
+            {
+              "file": "nunito-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "nunito-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Nunito.txt"
+        },
+        {
+          "key": "manrope",
+          "label": "Manrope",
+          "family": "Manrope Variable",
+          "stack": "\"Manrope Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "200 800",
+          "files": [
+            {
+              "file": "manrope-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "manrope-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Manrope.txt"
+        },
+        {
+          "key": "dm-sans",
+          "label": "DM Sans",
+          "family": "DM Sans Variable",
+          "stack": "\"DM Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 1000",
+          "files": [
+            {
+              "file": "dm-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "dm-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-DMSans.txt"
+        },
+        {
+          "key": "plus-jakarta-sans",
+          "label": "Plus Jakarta Sans",
+          "family": "Plus Jakarta Sans Variable",
+          "stack": "\"Plus Jakarta Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "200 800",
+          "files": [
+            {
+              "file": "plus-jakarta-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "plus-jakarta-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-PlusJakartaSans.txt"
+        },
+        {
+          "key": "figtree",
+          "label": "Figtree",
+          "family": "Figtree Variable",
+          "stack": "\"Figtree Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "300 900",
+          "files": [
+            {
+              "file": "figtree-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "figtree-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Figtree.txt"
+        },
+        {
+          "key": "outfit",
+          "label": "Outfit",
+          "family": "Outfit Variable",
+          "stack": "\"Outfit Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "outfit-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "outfit-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Outfit.txt"
+        },
+        {
+          "key": "lexend",
+          "label": "Lexend",
+          "family": "Lexend Variable",
+          "stack": "\"Lexend Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "lexend-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "lexend-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Lexend.txt"
+        },
+        {
+          "key": "space-grotesk",
+          "label": "Space Grotesk",
+          "family": "Space Grotesk Variable",
+          "stack": "\"Space Grotesk Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "300 700",
+          "files": [
+            {
+              "file": "space-grotesk-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "space-grotesk-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-SpaceGrotesk.txt"
+        },
+        {
+          "key": "work-sans",
+          "label": "Work Sans",
+          "family": "Work Sans Variable",
+          "stack": "\"Work Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "work-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "work-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-WorkSans.txt"
+        },
+        {
+          "key": "public-sans",
+          "label": "Public Sans",
+          "family": "Public Sans Variable",
+          "stack": "\"Public Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "public-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "public-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-PublicSans.txt"
+        },
+        {
+          "key": "lora",
+          "label": "Lora",
+          "family": "Lora Variable",
+          "stack": "\"Lora Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "400 700",
+          "files": [
+            {
+              "file": "lora-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "lora-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Lora.txt"
+        },
+        {
+          "key": "merriweather",
+          "label": "Merriweather",
+          "family": "Merriweather Variable",
+          "stack": "\"Merriweather Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "300 900",
+          "files": [
+            {
+              "file": "merriweather-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "merriweather-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Merriweather.txt"
+        },
+        {
+          "key": "source-serif-4",
+          "label": "Source Serif 4",
+          "family": "Source Serif 4 Variable",
+          "stack": "\"Source Serif 4 Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "200 900",
+          "files": [
+            {
+              "file": "source-serif-4-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "source-serif-4-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-SourceSerif4.txt"
+        },
+        {
+          "key": "playfair-display",
+          "label": "Playfair Display",
+          "family": "Playfair Display Variable",
+          "stack": "\"Playfair Display Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "400 900",
+          "files": [
+            {
+              "file": "playfair-display-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "playfair-display-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-PlayfairDisplay.txt"
+        },
+        {
+          "key": "fraunces",
+          "label": "Fraunces",
+          "family": "Fraunces Variable",
+          "stack": "\"Fraunces Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "fraunces-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "fraunces-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Fraunces.txt"
+        },
+        {
+          "key": "eb-garamond",
+          "label": "EB Garamond",
+          "family": "EB Garamond Variable",
+          "stack": "\"EB Garamond Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "400 800",
+          "files": [
+            {
+              "file": "eb-garamond-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "eb-garamond-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-EBGaramond.txt"
+        },
+        {
+          "key": "montserrat",
+          "label": "Montserrat",
+          "family": "Montserrat Variable",
+          "stack": "\"Montserrat Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "montserrat-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "montserrat-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Montserrat.txt"
+        },
+        {
+          "key": "raleway",
+          "label": "Raleway",
+          "family": "Raleway Variable",
+          "stack": "\"Raleway Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "raleway-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "raleway-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Raleway.txt"
+        },
+        {
+          "key": "rubik",
+          "label": "Rubik",
+          "family": "Rubik Variable",
+          "stack": "\"Rubik Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "300 900",
+          "files": [
+            {
+              "file": "rubik-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "rubik-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Rubik.txt"
+        },
+        {
+          "key": "mulish",
+          "label": "Mulish",
+          "family": "Mulish Variable",
+          "stack": "\"Mulish Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "200 1000",
+          "files": [
+            {
+              "file": "mulish-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "mulish-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Mulish.txt"
+        },
+        {
+          "key": "noto-sans",
+          "label": "Noto Sans",
+          "family": "Noto Sans Variable",
+          "stack": "\"Noto Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "noto-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "noto-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-NotoSans.txt"
+        },
+        {
+          "key": "instrument-sans",
+          "label": "Instrument Sans",
+          "family": "Instrument Sans Variable",
+          "stack": "\"Instrument Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "400 700",
+          "files": [
+            {
+              "file": "instrument-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "instrument-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-InstrumentSans.txt"
+        }
+      ]
+    },
+    {
+      "key": "heading",
+      "label": "Heading",
+      "group": "Type",
+      "kind": "font",
+      "token": "--font-heading",
+      "options": [
+        {
+          "key": "text",
+          "label": "Same as text"
+        },
+        {
+          "key": "inter",
+          "label": "Inter",
+          "family": "Inter Variable",
+          "stack": "\"Inter Variable\", Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif"
+        },
+        {
+          "key": "geist",
+          "label": "Geist",
+          "family": "Geist Variable",
+          "stack": "\"Geist Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "geist-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "geist-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Geist.txt"
+        },
+        {
+          "key": "roboto",
+          "label": "Roboto",
+          "family": "Roboto Variable",
+          "stack": "\"Roboto Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "roboto-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "roboto-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Roboto.txt"
+        },
+        {
+          "key": "open-sans",
+          "label": "Open Sans",
+          "family": "Open Sans Variable",
+          "stack": "\"Open Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "300 800",
+          "files": [
+            {
+              "file": "open-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "open-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-OpenSans.txt"
+        },
+        {
+          "key": "source-sans-3",
+          "label": "Source Sans 3",
+          "family": "Source Sans 3 Variable",
+          "stack": "\"Source Sans 3 Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "200 900",
+          "files": [
+            {
+              "file": "source-sans-3-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "source-sans-3-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-SourceSans3.txt"
+        },
+        {
+          "key": "ibm-plex-sans",
+          "label": "IBM Plex Sans",
+          "family": "IBM Plex Sans Variable",
+          "stack": "\"IBM Plex Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 700",
+          "files": [
+            {
+              "file": "ibm-plex-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "ibm-plex-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-IBMPlexSans.txt"
+        },
+        {
+          "key": "nunito",
+          "label": "Nunito",
+          "family": "Nunito Variable",
+          "stack": "\"Nunito Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "200 1000",
+          "files": [
+            {
+              "file": "nunito-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "nunito-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Nunito.txt"
+        },
+        {
+          "key": "manrope",
+          "label": "Manrope",
+          "family": "Manrope Variable",
+          "stack": "\"Manrope Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "200 800",
+          "files": [
+            {
+              "file": "manrope-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "manrope-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Manrope.txt"
+        },
+        {
+          "key": "dm-sans",
+          "label": "DM Sans",
+          "family": "DM Sans Variable",
+          "stack": "\"DM Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 1000",
+          "files": [
+            {
+              "file": "dm-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "dm-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-DMSans.txt"
+        },
+        {
+          "key": "plus-jakarta-sans",
+          "label": "Plus Jakarta Sans",
+          "family": "Plus Jakarta Sans Variable",
+          "stack": "\"Plus Jakarta Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "200 800",
+          "files": [
+            {
+              "file": "plus-jakarta-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "plus-jakarta-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-PlusJakartaSans.txt"
+        },
+        {
+          "key": "figtree",
+          "label": "Figtree",
+          "family": "Figtree Variable",
+          "stack": "\"Figtree Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "300 900",
+          "files": [
+            {
+              "file": "figtree-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "figtree-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Figtree.txt"
+        },
+        {
+          "key": "outfit",
+          "label": "Outfit",
+          "family": "Outfit Variable",
+          "stack": "\"Outfit Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "outfit-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "outfit-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Outfit.txt"
+        },
+        {
+          "key": "lexend",
+          "label": "Lexend",
+          "family": "Lexend Variable",
+          "stack": "\"Lexend Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "lexend-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "lexend-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Lexend.txt"
+        },
+        {
+          "key": "space-grotesk",
+          "label": "Space Grotesk",
+          "family": "Space Grotesk Variable",
+          "stack": "\"Space Grotesk Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "300 700",
+          "files": [
+            {
+              "file": "space-grotesk-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "space-grotesk-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-SpaceGrotesk.txt"
+        },
+        {
+          "key": "work-sans",
+          "label": "Work Sans",
+          "family": "Work Sans Variable",
+          "stack": "\"Work Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "work-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "work-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-WorkSans.txt"
+        },
+        {
+          "key": "public-sans",
+          "label": "Public Sans",
+          "family": "Public Sans Variable",
+          "stack": "\"Public Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "public-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "public-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-PublicSans.txt"
+        },
+        {
+          "key": "lora",
+          "label": "Lora",
+          "family": "Lora Variable",
+          "stack": "\"Lora Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "400 700",
+          "files": [
+            {
+              "file": "lora-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "lora-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Lora.txt"
+        },
+        {
+          "key": "merriweather",
+          "label": "Merriweather",
+          "family": "Merriweather Variable",
+          "stack": "\"Merriweather Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "300 900",
+          "files": [
+            {
+              "file": "merriweather-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "merriweather-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Merriweather.txt"
+        },
+        {
+          "key": "source-serif-4",
+          "label": "Source Serif 4",
+          "family": "Source Serif 4 Variable",
+          "stack": "\"Source Serif 4 Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "200 900",
+          "files": [
+            {
+              "file": "source-serif-4-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "source-serif-4-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-SourceSerif4.txt"
+        },
+        {
+          "key": "playfair-display",
+          "label": "Playfair Display",
+          "family": "Playfair Display Variable",
+          "stack": "\"Playfair Display Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "400 900",
+          "files": [
+            {
+              "file": "playfair-display-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "playfair-display-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-PlayfairDisplay.txt"
+        },
+        {
+          "key": "fraunces",
+          "label": "Fraunces",
+          "family": "Fraunces Variable",
+          "stack": "\"Fraunces Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "fraunces-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "fraunces-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Fraunces.txt"
+        },
+        {
+          "key": "eb-garamond",
+          "label": "EB Garamond",
+          "family": "EB Garamond Variable",
+          "stack": "\"EB Garamond Variable\", ui-serif, Georgia, \"Times New Roman\", serif",
+          "weight": "400 800",
+          "files": [
+            {
+              "file": "eb-garamond-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "eb-garamond-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-EBGaramond.txt"
+        },
+        {
+          "key": "montserrat",
+          "label": "Montserrat",
+          "family": "Montserrat Variable",
+          "stack": "\"Montserrat Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "montserrat-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "montserrat-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Montserrat.txt"
+        },
+        {
+          "key": "raleway",
+          "label": "Raleway",
+          "family": "Raleway Variable",
+          "stack": "\"Raleway Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "raleway-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "raleway-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Raleway.txt"
+        },
+        {
+          "key": "rubik",
+          "label": "Rubik",
+          "family": "Rubik Variable",
+          "stack": "\"Rubik Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "300 900",
+          "files": [
+            {
+              "file": "rubik-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "rubik-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Rubik.txt"
+        },
+        {
+          "key": "mulish",
+          "label": "Mulish",
+          "family": "Mulish Variable",
+          "stack": "\"Mulish Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "200 1000",
+          "files": [
+            {
+              "file": "mulish-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "mulish-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Mulish.txt"
+        },
+        {
+          "key": "noto-sans",
+          "label": "Noto Sans",
+          "family": "Noto Sans Variable",
+          "stack": "\"Noto Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "noto-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "noto-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-NotoSans.txt"
+        },
+        {
+          "key": "instrument-sans",
+          "label": "Instrument Sans",
+          "family": "Instrument Sans Variable",
+          "stack": "\"Instrument Sans Variable\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+          "weight": "400 700",
+          "files": [
+            {
+              "file": "instrument-sans-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "instrument-sans-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-InstrumentSans.txt"
+        }
+      ]
+    },
+    {
+      "key": "mono",
+      "label": "Mono",
+      "group": "Type",
+      "kind": "font",
+      "token": "--mono",
+      "options": [
+        {
+          "key": "jetbrains-mono",
+          "label": "JetBrains Mono"
+        },
+        {
+          "key": "fira-code",
+          "label": "Fira Code",
+          "family": "Fira Code Variable",
+          "stack": "\"Fira Code Variable\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+          "weight": "300 700",
+          "files": [
+            {
+              "file": "fira-code-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "fira-code-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-FiraCode.txt"
+        },
+        {
+          "key": "source-code-pro",
+          "label": "Source Code Pro",
+          "family": "Source Code Pro Variable",
+          "stack": "\"Source Code Pro Variable\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+          "weight": "200 900",
+          "files": [
+            {
+              "file": "source-code-pro-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "source-code-pro-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-SourceCodePro.txt"
+        },
+        {
+          "key": "roboto-mono",
+          "label": "Roboto Mono",
+          "family": "Roboto Mono Variable",
+          "stack": "\"Roboto Mono Variable\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+          "weight": "100 700",
+          "files": [
+            {
+              "file": "roboto-mono-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "roboto-mono-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-RobotoMono.txt"
+        },
+        {
+          "key": "geist-mono",
+          "label": "Geist Mono",
+          "family": "Geist Mono Variable",
+          "stack": "\"Geist Mono Variable\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+          "weight": "100 900",
+          "files": [
+            {
+              "file": "geist-mono-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "geist-mono-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-GeistMono.txt"
+        },
+        {
+          "key": "red-hat-mono",
+          "label": "Red Hat Mono",
+          "family": "Red Hat Mono Variable",
+          "stack": "\"Red Hat Mono Variable\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+          "weight": "300 700",
+          "files": [
+            {
+              "file": "red-hat-mono-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "red-hat-mono-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-RedHatMono.txt"
+        },
+        {
+          "key": "inconsolata",
+          "label": "Inconsolata",
+          "family": "Inconsolata Variable",
+          "stack": "\"Inconsolata Variable\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+          "weight": "200 900",
+          "files": [
+            {
+              "file": "inconsolata-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "inconsolata-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-Inconsolata.txt"
+        },
+        {
+          "key": "victor-mono",
+          "label": "Victor Mono",
+          "family": "Victor Mono Variable",
+          "stack": "\"Victor Mono Variable\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+          "weight": "100 700",
+          "files": [
+            {
+              "file": "victor-mono-latin-ext-wght-normal.woff2",
+              "range": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+            },
+            {
+              "file": "victor-mono-latin-wght-normal.woff2",
+              "range": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+            }
+          ],
+          "licence": "LICENSE-VictorMono.txt"
+        }
+      ]
+    },
+    {
+      "key": "headings",
+      "label": "Headings",
+      "group": "Type",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "default",
+          "label": "Default"
+        },
+        {
+          "key": "heavy",
+          "label": "Heavy",
+          "tokens": {
+            "--title-weight": "800",
+            "--heading-weight": "700"
+          }
+        },
+        {
+          "key": "light",
+          "label": "Light",
+          "tokens": {
+            "--title-weight": "500",
+            "--heading-weight": "500"
+          }
+        },
+        {
+          "key": "caps",
+          "label": "Capitals",
+          "tokens": {
+            "--heading-case": "uppercase",
+            "--heading-tracking": ".07em"
+          }
+        },
+        {
+          "key": "tight",
+          "label": "Tight",
+          "tokens": {
+            "--title-weight": "750",
+            "--heading-weight": "650",
+            "--heading-tracking": "-.02em"
+          }
+        }
+      ]
+    },
+    {
+      "key": "buttons",
+      "label": "Buttons",
+      "group": "Shape",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "solid",
+          "label": "Solid"
+        },
+        {
+          "key": "soft",
+          "label": "Soft",
+          "tokens": {
+            "--primary-bg": "color-mix(in srgb, var(--accent) 12%, transparent)",
+            "--primary-border": "transparent",
+            "--primary-text": "color-mix(in srgb, var(--accent-hi) 72%, var(--text-strong))",
+            "--primary-hover": "color-mix(in srgb, var(--accent) 20%, transparent)"
+          }
+        },
+        {
+          "key": "outline",
+          "label": "Outline",
+          "tokens": {
+            "--primary-bg": "transparent",
+            "--primary-border": "var(--accent-hi)",
+            "--primary-text": "var(--accent-hi)",
+            "--primary-hover": "var(--accent-wash)"
+          }
+        },
+        {
+          "key": "ink",
+          "label": "Ink",
+          "tokens": {
+            "--primary-bg": "var(--text-strong)",
+            "--primary-border": "var(--text-strong)",
+            "--primary-text": "var(--bg-2)",
+            "--primary-hover": "color-mix(in srgb, var(--text-strong) 86%, var(--bg-2))"
+          }
+        }
+      ]
+    },
+    {
+      "key": "fields",
+      "label": "Fields",
+      "group": "Shape",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "outlined",
+          "label": "Outlined"
+        },
+        {
+          "key": "filled",
+          "label": "Filled",
+          "tokens": {
+            "--field-bg": "var(--bg-sunken)",
+            "--field-border": "transparent"
+          }
+        },
+        {
+          "key": "underlined",
+          "label": "Underlined",
+          "tokens": {
+            "--field-bg": "transparent",
+            "--field-edges": "0 0 1px",
+            "--radius-field": "0px",
+            "--field-border": "var(--border-strong)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "tables",
+      "label": "Tables",
+      "group": "Shape",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "lines",
+          "label": "Lines"
+        },
+        {
+          "key": "striped",
+          "label": "Striped",
+          "tokens": {
+            "--row-line": "transparent",
+            "--row-stripe": "color-mix(in srgb, var(--tint) 4%, transparent)"
+          }
+        },
+        {
+          "key": "open",
+          "label": "Open",
+          "tokens": {
+            "--row-line": "transparent"
+          }
+        }
+      ]
+    },
+    {
+      "key": "menu",
+      "label": "Menu",
+      "group": "Feel",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "wash",
+          "label": "Wash"
+        },
+        {
+          "key": "solid",
+          "label": "Solid",
+          "tokens": {
+            "--selected-bg": "var(--accent)",
+            "--selected-text": "var(--on-accent)",
+            "--selected-icon": "var(--on-accent)"
+          }
+        },
+        {
+          "key": "bar",
+          "label": "Bar",
+          "tokens": {
+            "--selected-bg": "var(--hover)",
+            "--selected-edge": "inset 3px 0 0 var(--accent)"
+          }
+        },
+        {
+          "key": "outline",
+          "label": "Outline",
+          "tokens": {
+            "--selected-bg": "transparent",
+            "--selected-edge": "inset 0 0 0 1px var(--accent)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "icon-ends",
+      "label": "Icon ends",
+      "group": "Feel",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "round",
+          "label": "Round"
+        },
+        {
+          "key": "square",
+          "label": "Square",
+          "tokens": {
+            "--icon-cap": "butt",
+            "--icon-join": "miter"
+          }
+        }
+      ]
+    },
+    {
+      "key": "page",
+      "label": "Page",
+      "group": "Feel",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "glow",
+          "label": "Glow"
+        },
+        {
+          "key": "plain",
+          "label": "Plain",
+          "tokens": {
+            "--page-bg": "var(--bg)"
+          }
+        },
+        {
+          "key": "dots",
+          "label": "Dots",
+          "tokens": {
+            "--page-bg": "radial-gradient(circle, var(--border) 1px, transparent 1.6px) 0 0 / 22px 22px, var(--bg)"
+          }
+        },
+        {
+          "key": "grid",
+          "label": "Grid",
+          "tokens": {
+            "--page-bg": "linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 28px 28px, linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 28px 28px, var(--bg)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "focus",
+      "label": "Focus ring",
+      "group": "Feel",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "default",
+          "label": "Default"
+        },
+        {
+          "key": "soft",
+          "label": "Soft",
+          "tokens": {
+            "--focus-width": "3px",
+            "--focus-color": "color-mix(in srgb, var(--accent) 50%, transparent)",
+            "--focus-offset": "1px"
+          }
+        },
+        {
+          "key": "bold",
+          "label": "Bold",
+          "tokens": {
+            "--focus-width": "3px",
+            "--focus-color": "var(--text-strong)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "contrast",
+      "label": "Contrast",
+      "group": "Colour",
+      "kind": "tokens",
+      "options": [
+        {
+          "key": "default",
+          "label": "Default"
+        },
+        {
+          "key": "high",
+          "label": "High",
+          "tokens": {
+            "--text-muted": "var(--text)",
+            "--text-faint": "color-mix(in srgb, var(--text) 88%, var(--bg-2))",
+            "--border": "var(--border-strong)"
+          }
+        }
+      ]
+    }
+  ],
+  "styles": [
+    {
+      "key": "washi",
+      "label": "Washi",
+      "blurb": "finstats as it ships: paper and a vermilion seal by day, Obsidian by night.",
+      "picks": {}
+    },
+    {
+      "key": "studio",
+      "label": "Studio",
+      "blurb": "Neutral and exact: ink buttons, Geist, small corners, nothing that shouts.",
+      "picks": {
+        "base": "gray",
+        "accent": "ink",
+        "charts": "signal",
+        "radius": "small",
+        "density": "compact",
+        "buttons": "ink",
+        "font": "geist",
+        "mono": "geist-mono",
+        "menu": "bar",
+        "page": "plain",
+        "tables": "striped"
+      }
+    },
+    {
+      "key": "noir",
+      "label": "Noir",
+      "blurb": "Black, white and square: capitals for headings, strong lines, no curves.",
+      "picks": {
+        "base": "neutral",
+        "accent": "ink",
+        "radius": "none",
+        "borders": "strong",
+        "headings": "caps",
+        "buttons": "outline",
+        "icon-ends": "square",
+        "menu": "outline",
+        "font": "space-grotesk",
+        "mono": "victor-mono",
+        "page": "plain",
+        "focus": "bold"
+      }
+    },
+    {
+      "key": "matinee",
+      "label": "Matinee",
+      "blurb": "Warm and generous: a serif for headings, soft buttons, cards that lift.",
+      "picks": {
+        "base": "stone",
+        "accent": "amber",
+        "charts": "ember",
+        "radius": "large",
+        "density": "comfortable",
+        "cards": "raised",
+        "heading": "fraunces",
+        "font": "dm-sans",
+        "buttons": "soft",
+        "fields": "filled",
+        "motion": "slow"
+      }
+    },
+    {
+      "key": "console",
+      "label": "Console",
+      "blurb": "A night shift at the terminal: tight rows, a grid, cyan on deep blue.",
+      "picks": {
+        "base": "tokyo-night",
+        "accent": "cyan",
+        "charts": "neon",
+        "radius": "small",
+        "density": "tight",
+        "borders": "strong",
+        "font": "ibm-plex-sans",
+        "mono": "fira-code",
+        "icons": "light",
+        "page": "grid",
+        "tables": "striped",
+        "motion": "quick",
+        "menu": "bar"
+      }
+    },
+    {
+      "key": "pastille",
+      "label": "Pastille",
+      "blurb": "Round and soft: pill corners, pastel charts, filled fields, a gentle spring.",
+      "picks": {
+        "base": "rose-pine",
+        "accent": "pink",
+        "charts": "pastel",
+        "radius": "pill",
+        "density": "comfortable",
+        "cards": "floating",
+        "font": "nunito",
+        "buttons": "soft",
+        "fields": "filled",
+        "motion": "springy",
+        "highlight": "bold",
+        "menu": "solid"
+      }
+    },
+    {
+      "key": "ledger",
+      "label": "Ledger",
+      "blurb": "Numbers first: high contrast, heavy headings, compact tables with lines.",
+      "picks": {
+        "base": "slate",
+        "accent": "emerald",
+        "charts": "okabe-ito",
+        "radius": "none",
+        "density": "compact",
+        "headings": "heavy",
+        "font": "ibm-plex-sans",
+        "mono": "red-hat-mono",
+        "contrast": "high",
+        "focus": "bold",
+        "page": "plain"
+      }
+    },
+    {
+      "key": "gazette",
+      "label": "Gazette",
+      "blurb": "Set like a newspaper: Playfair headings over Source Serif, ruled and plain.",
+      "picks": {
+        "base": "solarized",
+        "accent": "crimson-sky",
+        "charts": "earth",
+        "radius": "none",
+        "heading": "playfair-display",
+        "font": "source-serif-4",
+        "mono": "source-code-pro",
+        "fields": "underlined",
+        "tables": "open",
+        "borders": "strong",
+        "page": "plain"
+      }
+    },
+    {
+      "key": "arcade",
+      "label": "Arcade",
+      "blurb": "Loud on purpose: block shadows, heavy icons, dots behind, a bouncy step.",
+      "picks": {
+        "base": "dracula",
+        "accent": "fuchsia",
+        "charts": "neon",
+        "radius": "large",
+        "cards": "block",
+        "icons": "heavy",
+        "page": "dots",
+        "motion": "springy",
+        "font": "outfit",
+        "headings": "heavy",
+        "menu": "solid"
+      }
+    },
+    {
+      "key": "canopy",
+      "label": "Canopy",
+      "blurb": "Green and quiet: moss and lilac, Lexend, rounded cards that float.",
+      "picks": {
+        "base": "everforest",
+        "accent": "moss-lilac",
+        "charts": "meadow",
+        "radius": "round",
+        "cards": "floating",
+        "font": "lexend",
+        "density": "comfortable",
+        "icons": "light",
+        "fields": "filled",
+        "highlight": "bold"
+      }
+    },
+    {
+      "key": "harbour",
+      "label": "Harbour",
+      "blurb": "Cool and clear: mist paper, lagoon and rose, Manrope, a soft focus ring.",
+      "picks": {
+        "base": "mist",
+        "accent": "lagoon-rose",
+        "charts": "lagoon",
+        "radius": "large",
+        "font": "manrope",
+        "headings": "tight",
+        "buttons": "soft",
+        "focus": "soft",
+        "cards": "raised",
+        "tables": "striped"
+      }
+    }
+  ]
+}

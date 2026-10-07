@@ -1,0 +1,4 @@
+/* Page: Dots */
+:root {
+  --page-bg: radial-gradient(circle, var(--border) 1px, transparent 1.6px) 0 0 / 22px 22px, var(--bg);
+}

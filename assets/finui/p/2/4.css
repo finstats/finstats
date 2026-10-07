@@ -1,0 +1,20 @@
+/* Chart colours: Meadow */
+:root {
+  --series-1: light-dark(#008300, #008300);
+  --series-2: light-dark(#2a78d6, #3987e5);
+  --series-3: light-dark(#eb6834, #d95926);
+  --series-4: light-dark(#4a3aa7, #9085e9);
+  --single: light-dark(#008300, #008300);
+  --peak: light-dark(#005c00, #66b566);
+  --spark: light-dark(#008300, #008300);
+  --heat-1: light-dark(color-mix(in srgb, #008300 14%, var(--bg-2)), color-mix(in srgb, #008300 14%, var(--bg-2)));
+  --heat-2: light-dark(color-mix(in srgb, #008300 30%, var(--bg-2)), color-mix(in srgb, #008300 30%, var(--bg-2)));
+  --heat-3: light-dark(color-mix(in srgb, #008300 48%, var(--bg-2)), color-mix(in srgb, #008300 48%, var(--bg-2)));
+  --heat-4: light-dark(color-mix(in srgb, #008300 66%, var(--bg-2)), color-mix(in srgb, #008300 66%, var(--bg-2)));
+  --heat-5: light-dark(color-mix(in srgb, #008300 84%, var(--bg-2)), color-mix(in srgb, #008300 84%, var(--bg-2)));
+  --heat-6: light-dark(#005c00, #66b566);
+  --rc-heat-1: light-dark(color-mix(in srgb, #008300 22%, var(--bg-2)), color-mix(in srgb, #008300 22%, var(--bg-2)));
+  --rc-heat-2: light-dark(color-mix(in srgb, #008300 50%, var(--bg-2)), color-mix(in srgb, #008300 50%, var(--bg-2)));
+  --rc-heat-3: light-dark(#008300, #008300);
+  --rc-heat-4: light-dark(#005c00, #66b566);
+}

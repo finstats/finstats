@@ -1,0 +1,6 @@
+/* FinMotion: tabs. One line under the row (tabs.js places it and moves it); once it is laid, FinUI's own edge under the
+   chosen tab steps aside for it. */
+.fui-tabs__list:has(> .fm-tabs__line) { position: relative; }
+.fm-tabs--lined > .fui-tabs__tab[aria-selected="true"] { border-bottom-color: transparent; }
+.fm-tabs__line { position: absolute; bottom: 0; height: 2px; border-radius: var(--radius-pill); background: var(--accent); pointer-events: none; }
+.fui-tabs__list:not(.fm-tabs--lined) > .fm-tabs__line { display: none; }

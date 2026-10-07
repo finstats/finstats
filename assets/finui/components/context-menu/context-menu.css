@@ -1,0 +1,42 @@
+/* FinUI: context-menu. One of the surfaces that float over a page, so it stands on --bg-2 with its --border edge, like a
+   dialog or the dock. Its rows are the size of a menu's rows anywhere: a pointer finds them, a finger too. */
+.fui-context-menu {
+  position: fixed; z-index: 1000;
+  display: flex; flex-direction: column;
+  min-width: 200px; max-width: min(320px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow-y: auto;
+  padding: 4px;
+  background: var(--bg-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 14px 36px color-mix(in srgb, var(--shadow) 42%, transparent), 0 2px 6px color-mix(in srgb, var(--shadow) 22%, transparent);
+  font: 13.5px/1.3 var(--sans);
+  -webkit-user-select: none; user-select: none;
+}
+.fui-context-menu__item {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 32px; padding: 6px 10px;
+  border: 0; border-radius: var(--radius-sm);
+  background: none; color: var(--text); font: inherit; text-align: left; text-decoration: none;
+  cursor: pointer; outline: none;
+}
+.fui-context-menu__item .icon { flex: none; color: var(--text-muted); }
+.fui-context-menu__no-icon { flex: none; width: 15px; }
+.fui-context-menu__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-context-menu__hint { flex: none; padding-left: 12px; font: 11.5px var(--mono); color: var(--text-faint); }
+.fui-context-menu__item:hover, .fui-context-menu__item:focus-visible { background: var(--hover); }
+.fui-context-menu__item:focus-visible { box-shadow: inset 0 0 0 1px var(--focus-color); }
+.fui-context-menu__item:hover .icon, .fui-context-menu__item:focus-visible .icon { color: var(--text); }
+.fui-context-menu__item--danger, .fui-context-menu__item--danger .icon { color: var(--critical-text); }
+.fui-context-menu__item[aria-disabled="true"] { cursor: default; color: var(--text-faint); background: none; }
+.fui-context-menu__item[aria-disabled="true"] .icon { color: var(--text-faint); }
+.fui-context-menu__item.is-waiting .fui-context-menu__label { color: var(--text-faint); }
+.fui-context-menu__separator { height: 1px; margin: 4px 6px; background: var(--border-soft); }
+.fui-context-menu__separator[hidden] { display: none; }
+/* The gallery: one held open to look at, and an area to try the real one in. */
+.fui-context-menu--held { position: relative; z-index: auto; flex: none; }
+.fui-context-menu__demo-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+.fui-context-menu__demo {
+  flex: 1 1 220px;
+  display: grid; place-items: center; min-height: 140px; padding: 16px;
+  border: 1px dashed var(--border); border-radius: var(--radius);
+  color: var(--text-muted); text-align: center;
+}

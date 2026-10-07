@@ -1,0 +1,24 @@
+/* FinUI: badge. Moved from app.css; the same rules under FinUI's names. */
+.fui-badge--count { background: var(--accent-wash); color: var(--accent-hi); border-radius: var(--radius-pill); padding: 1px 7px; font-size: 11px; }
+.fui-badge { display: inline-flex; align-items: center; gap: 6px; padding: 1px 8px; min-height: 22px; border-radius: var(--radius-pill); background: var(--hover); color: var(--text); font-size: 12px; white-space: nowrap; }
+.fui-badge__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
+.fui-badge.fui-badge--live .fui-badge__dot { background: var(--good); animation: fui-badge-pulse 2s ease-in-out infinite; }
+.fui-badge.fui-badge--paused { color: var(--text-muted); }
+@keyframes fui-badge-pulse { 50% { opacity: .35; } }
+/* The live dot breathes; with reduced motion it holds still. */
+@media (prefers-reduced-motion: reduce) { .fui-badge--live .fui-badge__dot { animation: none; } }
+.fui-badge--status { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); white-space: nowrap; }
+.fui-badge--good .icon { color: var(--good); }
+.fui-badge--warning .icon { color: var(--warning); }
+.fui-badge--critical .icon { color: var(--critical-text); }
+.fui-badge--info .icon { color: var(--text-faint); }
+.fui-badge--info { color: var(--text-muted); }
+.fui-badge--critical { white-space: normal; }
+/* A status line that is a sentence rather than a label wraps. `nowrap` is right for "Connected" next
+   to its tick; on a phone it made the Backups card's "Restored N plays, …" push the whole page sideways. */
+.fui-badge--line { white-space: normal; max-width: 100%; align-items: flex-start; }
+.fui-badge--line .icon { margin-top: 2px; flex: none; }
+.fui-badge--outlined { padding: 2px 10px; min-height: 24px; border: 1px solid var(--border); border-radius: var(--radius-pill); }
+
+/* The gallery's row of examples. */
+.fui-badge__demo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

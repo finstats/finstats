@@ -1,0 +1,5 @@
+/* Tables: Striped */
+:root {
+  --row-line: transparent;
+  --row-stripe: color-mix(in srgb, var(--tint) 4%, transparent);
+}

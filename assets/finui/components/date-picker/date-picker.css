@@ -1,0 +1,11 @@
+/* FinUI: date-picker. The field and its calendar button as one row; the calendar floats under it on the raised ground. */
+.fui-date-picker__row { position: relative; display: flex; gap: 6px; }
+.fui-date-picker__input { flex: 1; min-width: 0; }
+.fui-date-picker__button { display: grid; place-items: center; flex: none; width: 38px; padding: 0; border: 1px solid var(--field-border); border-radius: var(--radius-field); background: var(--field-bg); color: var(--text-muted); }
+.fui-date-picker__button:hover, .fui-date-picker__button[aria-expanded="true"] { border-color: var(--accent); color: var(--text); }
+.fui-date-picker__pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; padding: 10px; background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: 0 14px 36px color-mix(in srgb, var(--shadow) 42%, transparent);
+}
+/* The gallery's picker: room under it for the calendar it opens. */
+.fui-date-picker__demo { width: min(100%, 320px); min-height: 380px; }

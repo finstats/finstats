@@ -1,0 +1,5 @@
+/* Headings: Capitals */
+:root {
+  --heading-case: uppercase;
+  --heading-tracking: .07em;
+}

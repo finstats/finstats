@@ -1,0 +1,166 @@
+{
+  "name": "finmotion",
+  "license": "GPL-3.0-only",
+  "prefix": "fm-",
+  "on": "finui",
+  "foundation": [
+    "core/springs.js",
+    "core/motion.js",
+    "core/dom.js",
+    "core/finmotion.js",
+    "core/springs.css",
+    "parts/index.js"
+  ],
+  "parts": [
+    {
+      "name": "toggle",
+      "finui": "toggle",
+      "files": [
+        "parts/toggle/toggle.js",
+        "parts/toggle/plan.js"
+      ]
+    },
+    {
+      "name": "tabs",
+      "finui": "tabs",
+      "files": [
+        "parts/tabs/tabs.js",
+        "parts/tabs/plan.js",
+        "parts/tabs/tabs.css"
+      ]
+    },
+    {
+      "name": "field",
+      "finui": "field",
+      "files": [
+        "parts/field/field.js",
+        "parts/field/plan.js"
+      ]
+    },
+    {
+      "name": "copy",
+      "finui": "copy",
+      "files": [
+        "parts/copy/copy.js",
+        "parts/copy/copy.css"
+      ]
+    },
+    {
+      "name": "stat-tile",
+      "finui": "stat-tile",
+      "files": [
+        "parts/stat-tile/stat-tile.js"
+      ]
+    },
+    {
+      "name": "bar-chart",
+      "finui": "bar-chart",
+      "files": [
+        "parts/bar-chart/bar-chart.js",
+        "parts/bar-chart/bar-chart.css"
+      ]
+    },
+    {
+      "name": "line-chart",
+      "finui": "line-chart",
+      "files": [
+        "parts/line-chart/line-chart.js",
+        "parts/line-chart/line-chart.css"
+      ]
+    },
+    {
+      "name": "sparkline",
+      "finui": "sparkline",
+      "files": [
+        "parts/sparkline/sparkline.js",
+        "parts/sparkline/sparkline.css"
+      ]
+    },
+    {
+      "name": "donut-chart",
+      "finui": "donut-chart",
+      "files": [
+        "parts/donut-chart/donut-chart.js",
+        "parts/donut-chart/plan.js",
+        "parts/donut-chart/donut-chart.css"
+      ]
+    },
+    {
+      "name": "heatmap",
+      "finui": "heatmap",
+      "files": [
+        "parts/heatmap/heatmap.js",
+        "parts/heatmap/plan.js",
+        "parts/heatmap/heatmap.css"
+      ]
+    },
+    {
+      "name": "progress",
+      "finui": "progress",
+      "files": [
+        "parts/progress/progress.js",
+        "parts/progress/progress.css"
+      ]
+    },
+    {
+      "name": "toast",
+      "finui": "toast",
+      "files": [
+        "parts/toast/toast.js",
+        "parts/toast/plan.js",
+        "parts/toast/toast.css"
+      ]
+    },
+    {
+      "name": "drawer",
+      "finui": "drawer",
+      "files": [
+        "parts/drawer/drawer.js",
+        "parts/drawer/plan.js",
+        "parts/drawer/drawer.css"
+      ]
+    },
+    {
+      "name": "modal",
+      "finui": "modal",
+      "files": [
+        "parts/modal/modal.css"
+      ]
+    },
+    {
+      "name": "data-table",
+      "finui": "data-table",
+      "files": [
+        "parts/data-table/data-table.js"
+      ]
+    },
+    {
+      "name": "poster",
+      "finui": "poster",
+      "files": [
+        "parts/poster/poster.js",
+        "parts/poster/plan.js",
+        "parts/poster/poster.css"
+      ]
+    },
+    {
+      "name": "page-header",
+      "finui": "page-header",
+      "files": [
+        "parts/page-header/page-header.js",
+        "parts/page-header/plan.js",
+        "parts/page-header/page-header.css"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "odometer",
+      "files": [
+        "components/odometer/odometer.js",
+        "components/odometer/plan.js",
+        "components/odometer/odometer.css"
+      ]
+    }
+  ]
+}

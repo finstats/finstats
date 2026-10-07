@@ -1,0 +1,9 @@
+/* Accent: Rose */
+:root {
+  --accent: light-dark(#be123c, #f43f5e);
+  --accent-hi: light-dark(color-mix(in srgb, #be123c 78%, #000000), color-mix(in srgb, #f43f5e 60%, #ffffff));
+  --accent-hover: light-dark(color-mix(in srgb, #be123c 85%, #000000), color-mix(in srgb, #f43f5e 85%, #000000));
+  --accent-wash: light-dark(color-mix(in srgb, #be123c 10%, transparent), color-mix(in srgb, #f43f5e 14%, transparent));
+  --selection: light-dark(color-mix(in srgb, #be123c 22%, transparent), color-mix(in srgb, #f43f5e 40%, transparent));
+  --on-accent: light-dark(#ffffff, #0a0a0a);
+}

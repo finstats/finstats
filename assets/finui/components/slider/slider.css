@@ -1,0 +1,19 @@
+/* FinUI: slider. A thin track, the chosen stretch in the accent, round thumbs on the knob's ground. */
+.fui-slider { display: grid; gap: 10px; min-width: 0; touch-action: none; }
+.fui-slider__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fui-slider__head > .fui-slider__value:only-child { margin-left: auto; }
+.fui-slider__label { font-size: 13px; font-weight: 550; color: var(--text); }
+.fui-slider__value { font: 12.5px var(--mono); color: var(--text-muted); }
+.fui-slider__track { position: relative; height: 6px; margin: 6px 9px; border-radius: var(--radius-pill); background: var(--track); cursor: pointer; }
+.fui-slider__fill { position: absolute; top: 0; bottom: 0; border-radius: var(--radius-pill); background: var(--accent); }
+.fui-slider__thumb {
+  position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid var(--accent); border-radius: 50%;
+  background: var(--knob); box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow) 40%, transparent); cursor: grab;
+}
+.fui-slider__thumb:active { cursor: grabbing; }
+.fui-slider__marks { position: relative; height: 16px; margin: 0 9px; font: 11px var(--mono); color: var(--text-faint); }
+.fui-slider__marks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.fui-slider.is-disabled { opacity: .5; }
+.fui-slider.is-disabled .fui-slider__track, .fui-slider.is-disabled .fui-slider__thumb { cursor: default; }
+/* The gallery's slider, at a form's width. */
+.fui-slider__demo { width: min(100%, 360px); }

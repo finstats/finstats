@@ -1,0 +1,15 @@
+/* FinUI: toast. The raised ground with its edge, its tone in the icon; the stack at the bottom right, newest at the foot. */
+.fui-toast__region { position: fixed; right: 16px; bottom: 16px; z-index: 80; display: flex; flex-direction: column-reverse; gap: 8px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+.fui-toast { display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 12px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 10px 28px color-mix(in srgb, var(--shadow) 40%, transparent); color: var(--text); font-size: 13px; pointer-events: auto; animation: fui-toast-in .22s cubic-bezier(.32, .72, 0, 1); }
+.fui-toast__text { flex: 1; min-width: 0; }
+.fui-toast__icon { color: var(--text-muted); }
+.fui-toast--good .fui-toast__icon { color: var(--good); }
+.fui-toast--warning .fui-toast__icon { color: var(--warning); }
+.fui-toast--critical { border-color: color-mix(in srgb, var(--critical) 45%, var(--border)); }
+.fui-toast--critical .fui-toast__icon { color: var(--critical-text); }
+.fui-toast__action { flex: none; }
+@keyframes fui-toast-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .fui-toast { animation: none; } }
+/* The gallery's toast, held where it can be seen, and a button to show one for real. */
+.fui-toast__demo { display: grid; gap: 12px; justify-items: start; width: min(100%, 380px); }
+.fui-toast__demo > .fui-toast { width: 100%; animation: none; }

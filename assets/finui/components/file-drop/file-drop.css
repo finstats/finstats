@@ -1,0 +1,23 @@
+/* FinUI: file-drop. A dashed well to drop into, its edge in the accent when something is over it; files listed under it. */
+.fui-file-drop { display: grid; gap: 10px; min-width: 0; }
+.fui-file-drop__zone {
+  position: relative; display: grid; justify-items: center; gap: 4px; padding: 22px 16px; border: 1.5px dashed var(--border-strong); border-radius: var(--radius);
+  background: var(--bg-sunken); color: var(--text-muted); text-align: center; cursor: pointer; transition: border-color var(--ease), background var(--ease);
+}
+.fui-file-drop__zone:hover, .fui-file-drop__zone.is-over { border-color: var(--accent); background: var(--accent-wash); color: var(--text); }
+.fui-file-drop__input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.fui-file-drop__zone:focus-within { outline: var(--focus-width) solid var(--focus-color); outline-offset: var(--focus-offset); }
+.fui-file-drop__label { font-weight: 600; color: var(--text); }
+.fui-file-drop__or, .fui-file-drop__help { font-size: 12.5px; color: var(--text-faint); }
+.fui-file-drop__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.fui-file-drop__list:empty { display: none; }
+.fui-file-drop__file { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 4px 10px; padding: 8px 10px; border: 1px solid var(--border-soft); border-radius: var(--radius-control); background: var(--bg-2); font-size: 13px; color: var(--text); }
+.fui-file-drop__file > .icon { color: var(--text-muted); }
+.fui-file-drop__file.is-error > .icon, .fui-file-drop__file.is-error .fui-file-drop__size { color: var(--critical-text); }
+.fui-file-drop__size { font: 12px var(--mono); color: var(--text-faint); white-space: nowrap; }
+.fui-file-drop__bar { grid-column: 2 / -1; height: 4px; overflow: hidden; border-radius: var(--radius-pill); background: var(--track); }
+.fui-file-drop__bar > span { display: block; height: 100%; background: var(--accent); }
+.fui-file-drop__remove { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-faint); }
+.fui-file-drop__remove:hover { background: var(--hover); color: var(--text); }
+/* The gallery's drop, at a form's width. */
+.fui-file-drop__demo { width: min(100%, 440px); }

@@ -1,0 +1,12 @@
+/* FinUI: hero. The title is the largest type FinUI sets; the line under it reads, the actions follow it. */
+.fui-hero { display: grid; gap: 28px; align-items: center; }
+.fui-hero--aside { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px; }
+.fui-hero__copy { display: grid; gap: 18px; align-content: center; min-width: 0; }
+.fui-hero__title { max-width: 15ch; font: var(--title-weight) clamp(32px, 3.6vw, 50px)/1.04 var(--font-heading); letter-spacing: calc(var(--heading-tracking) - .035em); text-transform: var(--heading-case); color: var(--text-hero); text-wrap: balance; }
+.fui-hero__lede { max-width: 46ch; font-size: 16px; line-height: 1.55; color: var(--text-muted); }
+.fui-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.fui-hero__aside { min-width: 0; }
+@media (max-width: 1080px) {
+  .fui-hero--aside { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .fui-hero__title { max-width: 20ch; }
+}

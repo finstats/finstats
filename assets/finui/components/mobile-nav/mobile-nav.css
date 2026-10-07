@@ -1,0 +1,199 @@
+/* FinUI: mobile-nav. One menu, five styles; the closed menu keeps no more of the screen than its style's `space`. */
+
+.fui-mobile-nav {
+  --fui-mobile-nav-safe: env(safe-area-inset-bottom, 0px);
+  --fui-mobile-nav-bar: calc(64px + var(--fui-mobile-nav-safe));
+  --fui-mobile-nav-move: 300ms cubic-bezier(.2, .8, .2, 1);
+  position: fixed; inset: 0; z-index: 50; pointer-events: none; font-family: var(--sans); color: var(--text);
+}
+.fui-mobile-nav--contained { position: absolute; --fui-mobile-nav-safe: 0px; }
+.fui-mobile-nav--locked { overflow: hidden; }
+
+.fui-mobile-nav__scrim { position: absolute; inset: 0; z-index: 0; background: var(--backdrop); opacity: 0; transition: opacity 220ms ease; }
+.fui-mobile-nav.is-open .fui-mobile-nav__scrim { opacity: 1; pointer-events: auto; }
+.fui-mobile-nav__panel { position: absolute; z-index: 1; visibility: hidden; outline: none; }
+.fui-mobile-nav.is-open .fui-mobile-nav__panel { visibility: visible; }
+/* Only while open: a panel on its way out is still drawn for a moment, and must not catch the press that reopens it. */
+.fui-mobile-nav.is-open .fui-mobile-nav__sheet, .fui-mobile-nav.is-open .fui-mobile-nav__screen { pointer-events: auto; }
+.fui-mobile-nav__dock { position: absolute; z-index: 2; pointer-events: auto; }
+
+/* ---- the pieces */
+.fui-mobile-nav__sheet {
+  inset: auto 0 0 0; max-height: 88%; display: flex; flex-direction: column; gap: 10px; padding: 0 12px calc(14px + var(--fui-mobile-nav-safe));
+  background: var(--bg-2); border-top: 1px solid var(--border); border-radius: calc(var(--radius-lg) * 2.4) calc(var(--radius-lg) * 2.4) 0 0;
+  box-shadow: 0 -18px 50px color-mix(in srgb, var(--shadow) 40%, transparent);
+  translate: 0 104%; transition: translate var(--fui-mobile-nav-move), visibility 0s linear 300ms, max-height var(--fui-mobile-nav-move);
+}
+.fui-mobile-nav.is-open .fui-mobile-nav__sheet { translate: 0 0; transition: translate var(--fui-mobile-nav-move), visibility 0s, max-height var(--fui-mobile-nav-move); }
+.fui-mobile-nav__sheet.is-dragging { transition: none; }
+
+.fui-mobile-nav__grab { flex: none; display: grid; place-items: center; width: 100%; height: 24px; margin-bottom: -4px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; }
+.fui-mobile-nav__grab-bar { width: 38px; height: 5px; border-radius: var(--radius-pill); background: var(--border-strong); transition: background var(--ease), width var(--ease); }
+.fui-mobile-nav__grab:hover .fui-mobile-nav__grab-bar { width: 46px; background: var(--text-faint); }
+
+
+.fui-mobile-nav__list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 2px; }
+.fui-mobile-nav__link {
+  position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; flex: none;
+  border-radius: var(--radius-control); font: 500 15px var(--sans); color: var(--text-muted); text-decoration: none;
+  transition: background var(--ease), color var(--ease);
+}
+.fui-mobile-nav__link:hover { background: var(--hover); color: var(--text); text-decoration: none; }
+.fui-mobile-nav__link.is-current { background: var(--selected-bg); color: var(--selected-text); box-shadow: var(--selected-edge); }
+.fui-mobile-nav__link.is-current .icon { color: var(--selected-icon); }
+.fui-mobile-nav__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-mobile-nav__dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--accent-hi); }
+.fui-mobile-nav__foot { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 6px 0; border-top: 1px solid var(--border-soft); }
+.fui-mobile-nav__foot--top { order: -1; padding: 2px 6px 10px; border-top: 0; border-bottom: 1px solid var(--border-soft); }
+.fui-mobile-nav__grab + .fui-mobile-nav__foot--top { order: 0; }
+
+/* ---- Tab bar: four pages and More, always there; More raises a sheet from behind the bar */
+.fui-mobile-nav--tabs .fui-mobile-nav__scrim { bottom: var(--fui-mobile-nav-bar); }
+.fui-mobile-nav--tabs .fui-mobile-nav__sheet { bottom: var(--fui-mobile-nav-bar); max-height: calc(88% - var(--fui-mobile-nav-bar)); padding-bottom: 14px; border-bottom: 1px solid var(--border-soft); }
+.fui-mobile-nav--tabs .fui-mobile-nav__dock {
+  inset: auto 0 0 0; height: var(--fui-mobile-nav-bar); display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  padding: 6px 6px calc(10px + var(--fui-mobile-nav-safe)); background: var(--bg-sunken); border-top: 1px solid var(--border-soft);
+}
+.fui-mobile-nav__tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 0; padding: 0;
+  border: 0; border-radius: 0; background: none; font: 500 11px var(--sans); color: var(--text-faint); cursor: pointer;
+}
+.fui-mobile-nav__tab .fui-mobile-nav__label { flex: none; max-width: 100%; }
+.fui-mobile-nav__tab .icon { box-sizing: content-box; padding: 3px 16px; border-radius: var(--radius-pill); transition: background var(--ease), color var(--ease); }
+.fui-mobile-nav__tab:hover { background: none; color: var(--text); }
+.fui-mobile-nav__tab.is-current, .fui-mobile-nav__more[aria-expanded="true"] { background: none; box-shadow: none; color: var(--text); }
+.fui-mobile-nav__tab.is-current .icon, .fui-mobile-nav__more[aria-expanded="true"] .icon { background: var(--selected-bg); color: var(--selected-icon); }
+.fui-mobile-nav__tab .fui-mobile-nav__dot { position: absolute; top: 6px; left: calc(50% + 10px); }
+
+/* ---- Peek: half way on the pages used most; drawn up, every page */
+.fui-mobile-nav--peek .fui-mobile-nav__sheet { max-height: calc(240px + var(--fui-mobile-nav-safe)); overflow: hidden; }
+.fui-mobile-nav--peek.is-full .fui-mobile-nav__sheet { max-height: 88%; }
+.fui-mobile-nav__quick { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.fui-mobile-nav__q { flex-direction: column; gap: 7px; min-height: 0; padding: 0; font-size: 12px; text-align: center; }
+.fui-mobile-nav__q:hover, .fui-mobile-nav__q.is-current { background: none; box-shadow: none; }
+.fui-mobile-nav__q .fui-mobile-nav__label { flex: none; max-width: 100%; }
+.fui-mobile-nav__q .icon { box-sizing: content-box; padding: 14px; border-radius: 50%; background: var(--bg-sunken); border: 1px solid var(--border-soft); transition: background var(--ease); }
+.fui-mobile-nav__q:hover .icon { background: var(--hover); }
+.fui-mobile-nav__q.is-current .icon { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.fui-mobile-nav__q .fui-mobile-nav__dot { position: absolute; top: 2px; right: calc(50% - 26px); }
+.fui-mobile-nav__all {
+  flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px;
+  border: 0; border-top: 1px solid var(--border-soft); background: none; font: 500 13px var(--sans); color: var(--text-muted); cursor: pointer;
+}
+.fui-mobile-nav__all:hover { color: var(--text); }
+.fui-mobile-nav__all .icon { transition: transform 300ms ease; }
+.fui-mobile-nav--peek.is-full .fui-mobile-nav__all .icon { transform: rotate(180deg); }
+/* Hidden, not only faded, while the sheet peeks: what cannot be seen cannot be tabbed to. */
+.fui-mobile-nav__rest { min-height: 0; display: flex; flex-direction: column; gap: 2px; opacity: 0; visibility: hidden; transition: opacity 200ms ease, visibility 0s linear 200ms; }
+.fui-mobile-nav--peek.is-full .fui-mobile-nav__rest { opacity: 1; visibility: visible; transition: opacity 200ms ease, visibility 0s; }
+.fui-mobile-nav__rest .fui-mobile-nav__list { flex: 1; }
+
+/* ---- Full screen: the whole screen, in large type */
+.fui-mobile-nav__screen {
+  inset: 0; display: flex; flex-direction: column; gap: 14px; padding: 4px 16px calc(16px + var(--fui-mobile-nav-safe)); background: var(--bg);
+  opacity: 0; scale: 1.03; transition: opacity 200ms ease, scale 260ms cubic-bezier(.2, .8, .2, 1), visibility 0s linear 260ms;
+}
+.fui-mobile-nav.is-open .fui-mobile-nav__screen { opacity: 1; scale: 1; transition: opacity 200ms ease, scale 260ms cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+.fui-mobile-nav__head { flex: none; display: flex; align-items: center; gap: 8px; height: 48px; margin: 0 -8px; }
+.fui-mobile-nav__close { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--radius-control); background: none; color: var(--text-muted); cursor: pointer; }
+.fui-mobile-nav__close:hover { background: var(--hover); color: var(--text); }
+.fui-mobile-nav__title { font: var(--heading-weight) 15px var(--font-heading); color: var(--text-muted); }
+.fui-mobile-nav__list--large .fui-mobile-nav__link { min-height: 46px; gap: 16px; padding: 0 8px; font: 600 21px var(--font-heading); letter-spacing: -.015em; }
+.fui-mobile-nav__list--large .fui-mobile-nav__link .icon { color: var(--text-faint); }
+.fui-mobile-nav__list--large .fui-mobile-nav__link.is-current { background: none; box-shadow: none; color: var(--text-hero); }
+.fui-mobile-nav__list--large .fui-mobile-nav__link.is-current .fui-mobile-nav__label::after { content: ''; display: inline-block; width: 6px; height: 6px; margin: 0 0 4px 8px; border-radius: 50%; background: var(--accent); }
+.fui-mobile-nav__screen .fui-mobile-nav__foot { margin-top: auto; }
+
+/* ---- Thumb arc: a corner button fans every page out around it */
+.fui-mobile-nav__fab {
+  right: 16px; bottom: calc(16px + var(--fui-mobile-nav-safe)); display: grid; place-items: center; width: 56px; height: 56px; padding: 0;
+  border: 0; border-radius: 50%; background: var(--accent); color: var(--on-accent); cursor: pointer;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--shadow) 45%, transparent); transition: background var(--ease);
+}
+.fui-mobile-nav__fab:hover { background: var(--accent-hover); }
+.fui-mobile-nav__fab > span { grid-area: 1 / 1; display: grid; transition: opacity 200ms ease, rotate 260ms ease; }
+.fui-mobile-nav__fab-close { opacity: 0; rotate: -90deg; }
+.fui-mobile-nav.is-open .fui-mobile-nav__fab-open { opacity: 0; rotate: 90deg; }
+.fui-mobile-nav.is-open .fui-mobile-nav__fab-close { opacity: 1; rotate: 0deg; }
+.fui-mobile-nav__fan { inset: 0; }
+.fui-mobile-nav__card {
+  position: absolute; top: 12px; left: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; padding: 10px;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: calc(var(--radius-lg) * 2.4);
+  opacity: 0; translate: 0 -12px; transition: opacity 200ms ease, translate 260ms ease;
+}
+.fui-mobile-nav.is-open .fui-mobile-nav__card { opacity: 1; translate: 0 0; pointer-events: auto; }
+.fui-mobile-nav__card .fui-mobile-nav__foot { padding-top: 8px; }
+.fui-mobile-nav__arc { position: absolute; inset: 0; }
+/* Where the arc puts a page (plan.js' arc(), set on each by the script) and its turn in the fan. */
+.fui-mobile-nav__spot {
+  --x: 0px; --y: 0px; --i: 0;
+  position: absolute; right: calc(44px + var(--x) - 32px); bottom: calc(44px + var(--fui-mobile-nav-safe) + var(--y) - 37px); width: 64px; min-height: 0;
+  flex-direction: column; gap: 3px; padding: 0; background: none;
+  opacity: 0; translate: var(--x) var(--y); scale: .3;
+  transition: opacity 200ms ease, translate 320ms cubic-bezier(.2, .9, .3, 1.2), scale 320ms cubic-bezier(.2, .9, .3, 1.2);
+  transition-delay: calc(var(--i) * 14ms);
+}
+.fui-mobile-nav.is-open .fui-mobile-nav__spot { opacity: 1; translate: 0 0; scale: 1; pointer-events: auto; }
+.fui-mobile-nav__spot:hover, .fui-mobile-nav__spot.is-current { background: none; box-shadow: none; }
+.fui-mobile-nav__spot .icon { box-sizing: content-box; padding: 12px; border-radius: 50%; background: var(--bg-2); border: 1px solid var(--border); transition: background var(--ease), color var(--ease); }
+.fui-mobile-nav__spot:hover .icon { background: var(--hover); color: var(--text); }
+.fui-mobile-nav__spot.is-current .icon { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.fui-mobile-nav__spot .fui-mobile-nav__label { flex: none; max-width: 78px; padding: 1px 6px; border-radius: var(--radius-pill); background: var(--bg-2); font: 600 10.5px var(--sans); color: var(--text); text-align: center; }
+.fui-mobile-nav__spot .fui-mobile-nav__dot { position: absolute; top: 2px; right: 12px; }
+
+/* ---- Address bar: a pill naming the page, which grows into the menu with the search where the pill was */
+.fui-mobile-nav__pill {
+  left: 12px; right: 12px; bottom: calc(12px + var(--fui-mobile-nav-safe)); display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 18px 0 8px;
+  border: 1px solid var(--border); border-radius: var(--radius-field); background: var(--bg-2); color: var(--text-faint); cursor: pointer;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow) 35%, transparent); font: 600 15px var(--sans); text-align: left;
+  transition: opacity 160ms ease, scale 200ms ease;
+}
+.fui-mobile-nav__pill .fui-mobile-nav__label { color: var(--text); }
+.fui-mobile-nav__where { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--selected-bg); color: var(--selected-icon); }
+.fui-mobile-nav--address.is-open .fui-mobile-nav__pill { opacity: 0; scale: .97; pointer-events: none; }
+.fui-mobile-nav--address .fui-mobile-nav__sheet { padding-bottom: calc(12px + var(--fui-mobile-nav-safe)); }
+.fui-mobile-nav__list--pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
+.fui-mobile-nav__list--pairs .fui-mobile-nav__link { gap: 9px; padding: 0 10px; min-height: 42px; font-size: 14px; }
+
+/* ---- the menu's search: a field to look at, a button to press; the search itself is the app's */
+.fui-mobile-nav__search {
+  flex: none; display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; padding: 0 18px;
+  background: var(--field-bg); border: var(--field-edges) solid var(--field-border); border-radius: var(--radius-field);
+  font: 400 16px var(--sans); color: var(--text-faint); text-align: left; cursor: text;
+}
+.fui-mobile-nav__search:hover { border-color: var(--border-strong); }
+.fui-mobile-nav--address .fui-mobile-nav__search { height: 50px; background: var(--bg-sunken); }
+
+/* ---- search, in the place the style has for it: the sheet, the screen, the arc's card */
+.fui-mobile-nav__found { display: none; }
+.fui-mobile-nav.is-searching .fui-mobile-nav__found { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.fui-mobile-nav__found > .fui-search { flex: 1; }
+.fui-mobile-nav.is-searching .fui-mobile-nav__panel > :not(.fui-mobile-nav__found, .fui-mobile-nav__grab, .fui-mobile-nav__head, .fui-mobile-nav__card, .fui-mobile-nav__arc) { display: none; }
+.fui-mobile-nav.is-searching .fui-mobile-nav__card > :not(.fui-mobile-nav__found) { display: none; }
+.fui-mobile-nav.is-searching .fui-mobile-nav__arc { display: none; }
+.fui-mobile-nav--tabs.is-searching .fui-mobile-nav__sheet { height: calc(88% - var(--fui-mobile-nav-bar)); }
+.fui-mobile-nav--peek.is-searching .fui-mobile-nav__sheet { height: 88%; max-height: 88%; }
+.fui-mobile-nav--arc.is-searching .fui-mobile-nav__card { max-height: 78%; height: 78%; }
+.fui-mobile-nav .fui-search__bar { height: 48px; }
+.fui-mobile-nav .fui-search__input { font-size: 17px; }
+/* The address bar keeps its field at the bottom, under the thumb, and the results rise above it. */
+.fui-mobile-nav--address .fui-search__list { order: 1; }
+.fui-mobile-nav--address .fui-search__foot { order: 2; }
+.fui-mobile-nav--address .fui-search__bar { order: 3; height: 50px; }
+/* Opened from outside the menu, the place appears where the search grows rather than sliding in, and goes the same way. */
+.fui-mobile-nav.is-instant .fui-mobile-nav__panel, .fui-mobile-nav.is-instant .fui-mobile-nav__scrim, .fui-mobile-nav.is-instant .fui-mobile-nav__card { transition: none; }
+.fui-mobile-nav.is-gone :is(.fui-mobile-nav__panel, .fui-mobile-nav__scrim) { visibility: hidden; opacity: 0; }
+
+/* ---- a frame to show it in (the gallery) */
+.fui-mobile-nav__demo { position: relative; width: min(100%, 340px); height: 620px; overflow: hidden; isolation: isolate; border: 1px solid var(--border-strong); border-radius: calc(var(--radius-lg) * 3); background: var(--bg); }
+.fui-mobile-nav__demo-bar { display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 8px; background: var(--bg-sunken); border-bottom: 1px solid var(--border-soft); }
+.fui-mobile-nav__menu { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--radius-control); background: none; color: var(--text-muted); cursor: pointer; }
+.fui-mobile-nav__menu:hover { background: var(--hover); color: var(--text); }
+.fui-mobile-nav__demo-name { font-weight: 650; font-size: 15px; }
+.fui-mobile-nav__demo-page { display: flex; flex-direction: column; gap: 12px; padding: 18px 16px; }
+.fui-mobile-nav__demo-page span { height: 70px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--border-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-mobile-nav__sheet, .fui-mobile-nav.is-open .fui-mobile-nav__sheet, .fui-mobile-nav__screen, .fui-mobile-nav.is-open .fui-mobile-nav__screen,
+  .fui-mobile-nav__spot, .fui-mobile-nav__card, .fui-mobile-nav__scrim, .fui-mobile-nav__pill, .fui-mobile-nav__fab > span { transition: none; }
+}

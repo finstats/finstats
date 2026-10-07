@@ -1,0 +1,23 @@
+/* FinUI: chart. A figure's title in the text's colours; the legend's keys carry the series' colours, never its words;
+   gridlines and axes recessive; marks thin. Every chart component's SVG classes are styled here. */
+.fui-chart { display: grid; gap: 10px; min-width: 0; margin: 0; }
+.fui-chart__head { display: grid; gap: 1px; }
+.fui-chart__title { font-size: 13.5px; font-weight: 600; color: var(--text-strong); }
+.fui-chart__sub { font-size: 12.5px; color: var(--text-faint); }
+.fui-chart__legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--text-muted); }
+.fui-chart__legend li { display: inline-flex; align-items: center; gap: 7px; }
+.fui-chart__key { width: 10px; height: 10px; flex: none; border-radius: 3px; }
+.fui-chart__legend-value { font-family: var(--mono); font-size: 12px; color: var(--text); }
+.fui-chart__plot { display: block; width: 100%; overflow: visible; border-radius: var(--radius-sm); }
+.fui-chart__target { border-radius: var(--radius-sm); }
+.fui-chart__target:focus-visible { outline: var(--focus-width) solid var(--focus-color); outline-offset: 4px; }
+.fui-chart__grid { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+.fui-chart__axis { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+.fui-chart__tick { fill: var(--text-faint); font: 10.5px var(--mono); }
+.fui-chart__cross { stroke: var(--axis); stroke-width: 1; }
+.fui-chart__line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fui-chart__area { fill-opacity: .1; stroke: none; }
+.fui-chart__dot { stroke: var(--bg-2); stroke-width: 2; }
+.fui-chart__hit { fill: transparent; }
+.fui-chart__bar { transition: opacity .12s ease; }
+.fui-chart__plot.is-pointing .fui-chart__bar:not(.is-on) { opacity: .45; }

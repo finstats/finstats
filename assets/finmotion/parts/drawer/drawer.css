@@ -1,0 +1,4 @@
+/* FinMotion: drawer. A drawer slides in on glide, and a bottom sheet is held by its head. */
+.fui-drawer:not(.fui-drawer--held) { animation-duration: var(--spring-glide-dur); animation-timing-function: var(--spring-glide-curve); }
+.fm-drawer__grip { touch-action: none; cursor: grab; }
+.fui-drawer--bottom.fui-modal:has(.fm-drawer__grip:active) { transition: none; }

@@ -1,0 +1,6 @@
+/* Contrast: High */
+:root {
+  --text-muted: var(--text);
+  --text-faint: color-mix(in srgb, var(--text) 88%, var(--bg-2));
+  --border: var(--border-strong);
+}

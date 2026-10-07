@@ -1,0 +1,15 @@
+/* FinUI: swatch. Colours sit on a hairline of the ground so a pale one still has an edge. */
+.fui-swatch { display: inline-flex; flex: none; vertical-align: middle; }
+.fui-swatch--stack > span { width: 14px; height: 14px; border-radius: var(--radius-pill); box-shadow: 0 0 0 1.5px var(--bg-2); }
+.fui-swatch--stack > span + span { margin-left: -5px; }
+.fui-swatch--halves { width: 16px; height: 16px; overflow: hidden; border-radius: 50%; box-shadow: 0 0 0 1px var(--border); }
+.fui-swatch--halves > span { flex: 1; }
+.fui-swatch--dots { display: inline-grid; grid-template-columns: repeat(2, 7px); gap: 2px; }
+.fui-swatch--dots > span { width: 7px; height: 7px; border-radius: 50%; }
+.fui-swatch--bars { gap: 2px; }
+.fui-swatch--bars > span { width: 6px; height: 14px; border-radius: 3px; box-shadow: 0 0 0 1px var(--border); }
+.fui-swatch--corner { width: 13px; height: 13px; margin: 3px 0 0 3px; border-top: 2px solid currentColor; border-left: 2px solid currentColor; color: var(--text-muted); }
+.fui-swatch--type { font-size: 15px; font-weight: 500; line-height: 1; color: var(--text); }
+.fui-swatch--stroke { color: var(--text-muted); }
+/* The gallery's swatch, beside the name it shows. */
+.fui-swatch__demo { display: inline-flex; align-items: center; gap: 8px; }

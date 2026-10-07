@@ -1,0 +1,3 @@
+/* FinUI: dropdown-menu. The button is FinUI's own; its caret turns while the menu is open. The menu is context-menu's. */
+.fui-dropdown-menu__caret { transition: transform var(--ease); color: var(--text-muted); }
+.fui-dropdown-menu[aria-expanded="true"] .fui-dropdown-menu__caret { transform: rotate(180deg); }

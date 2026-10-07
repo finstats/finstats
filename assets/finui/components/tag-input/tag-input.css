@@ -1,0 +1,9 @@
+/* FinUI: tag-input. A field's edge and ground round the tags and the place to type the next. */
+.fui-tag-input { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 38px; padding: 5px 8px; border: 1px solid var(--field-border); border-radius: var(--radius-field); background: var(--field-bg); cursor: text; }
+.fui-tag-input:focus-within { border-color: var(--accent); }
+.fui-tag-input__tags { display: contents; }
+.fui-tag-input__field { flex: 1 1 100px; min-width: 80px; padding: 3px 2px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 13.5px; outline: none; }
+.fui-tag-input__field::placeholder { color: var(--placeholder); }
+.fui-tag-input__count { margin-left: auto; font: 11.5px var(--mono); color: var(--text-faint); }
+/* The gallery's field, at a form's width. */
+.fui-tag-input__demo { width: min(100%, 380px); }

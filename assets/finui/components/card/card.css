@@ -1,0 +1,18 @@
+/* FinUI: card. Moved from app.css; the same rules under FinUI's names. */
+.fui-card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); box-shadow: var(--card-shadow); min-width: 0; }
+.fui-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: calc(var(--density) * 14px) calc(var(--density) * 16px) 0; }
+.fui-card__title { font-family: var(--font-heading); font-size: 14px; font-weight: var(--heading-weight); text-transform: var(--heading-case); letter-spacing: var(--heading-tracking); color: var(--text-strong); }
+.fui-card__sub { font-size: 12.5px; color: var(--text-faint); margin-top: 1px; }
+.fui-card__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fui-card__body { padding: calc(var(--density) * 14px) calc(var(--density) * 16px) calc(var(--density) * 16px); }
+.fui-card--flush > .fui-card__body { padding: 8px 0 4px; }
+.fui-card--flush > .fui-card__head + .fui-card__body { padding-top: 10px; }
+.fui-card__note { margin-top: 12px; }
+.fui-card__head > div:first-child { min-width: 0; }
+/* A card that is a link: the whole surface answers the pointer, its words keep their own colours. */
+.fui-card--link { display: block; color: var(--text); text-decoration: none; transition: border-color var(--ease), background var(--ease); }
+.fui-card--link:hover { border-color: var(--border); background: var(--hover); color: var(--text); text-decoration: none; }
+.fui-card__title { overflow-wrap: anywhere; }
+
+/* The gallery's list in a flush card. */
+.fui-card__demo-list { margin: 0; padding: 0 16px 8px; list-style: none; display: grid; gap: 6px; }

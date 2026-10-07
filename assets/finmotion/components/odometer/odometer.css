@@ -1,0 +1,9 @@
+/* FinMotion: odometer. Each digit a reel behind a window one line tall; the reel moves, the window stays. What it says is
+   text beside the reels, there for a screen reader and not for the eye. */
+.fm-odometer { --fm-odometer-line: 1.15em; display: inline-flex; font-variant-numeric: tabular-nums; }
+.fm-odometer__said { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.fm-odometer__reels { display: inline-flex; line-height: var(--fm-odometer-line); }
+.fm-odometer__col { display: inline-block; height: var(--fm-odometer-line); overflow: hidden; }
+.fm-odometer__reel { display: flex; flex-direction: column; }
+.fm-odometer__reel > span { height: var(--fm-odometer-line); text-align: center; }
+.fm-odometer__char { white-space: pre; }

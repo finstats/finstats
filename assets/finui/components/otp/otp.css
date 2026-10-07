@@ -1,0 +1,10 @@
+/* FinUI: otp. Square boxes in the field's look, the code in the mono face; a complete code is marked in the accent. */
+.fui-otp { display: inline-flex; align-items: center; gap: 8px; }
+.fui-otp__box {
+  width: 42px; height: 48px; padding: 0; border: 1px solid var(--field-border); border-radius: var(--radius-field); background: var(--field-bg);
+  color: var(--text-strong); font: 600 20px var(--mono); text-align: center; text-transform: uppercase; caret-color: var(--accent);
+}
+.fui-otp__box:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-wash); }
+.fui-otp.is-complete .fui-otp__box { border-color: color-mix(in srgb, var(--accent) 55%, var(--field-border)); }
+.fui-otp__gap { color: var(--text-faint); }
+@media (max-width: 420px) { .fui-otp { gap: 5px; } .fui-otp__box { width: 36px; height: 44px; font-size: 18px; } }

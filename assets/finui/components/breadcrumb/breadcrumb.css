@@ -1,0 +1,9 @@
+/* FinUI: breadcrumb. Small, quiet links with chevrons between; the page itself in the text's colour. */
+.fui-breadcrumb__list { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.fui-breadcrumb__item { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.fui-breadcrumb__link { color: var(--text-muted); }
+.fui-breadcrumb__link:hover { color: var(--text); }
+.fui-breadcrumb__here { color: var(--text-strong); font-weight: 550; }
+.fui-breadcrumb__sep { color: var(--text-faint); }
+.fui-breadcrumb__more { padding: 0 6px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); font: inherit; cursor: pointer; }
+.fui-breadcrumb__more:hover { background: var(--hover); color: var(--text); }

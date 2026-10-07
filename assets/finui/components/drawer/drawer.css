@@ -1,0 +1,27 @@
+/* FinUI: drawer. The modal's overlay holds it to an edge; the panel fills that edge's height (or width) and slides in. */
+.fui-modal__overlay:has(> .fui-drawer) { place-items: stretch; padding: 0; }
+.fui-modal__overlay:has(> .fui-drawer--right) { justify-items: end; }
+.fui-modal__overlay:has(> .fui-drawer--left) { justify-items: start; }
+.fui-modal__overlay:has(> .fui-drawer--bottom) { align-items: end; }
+.fui-drawer { display: flex; flex-direction: column; width: min(420px, 100%); height: 100%; max-height: 100vh; border-radius: 0; animation: fui-drawer-in .26s cubic-bezier(.32, .72, 0, 1); }
+.fui-drawer--bottom { width: 100%; height: auto; max-height: 85vh; border-radius: var(--radius-lg) var(--radius-lg) 0 0; animation-name: fui-drawer-up; }
+.fui-drawer--left { animation-name: fui-drawer-left; }
+.fui-drawer > .fui-modal__body { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 0; }
+.fui-drawer__body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px; }
+.fui-drawer__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border-soft); background: var(--bg-sunken); }
+@keyframes fui-drawer-in { from { transform: translateX(100%); } }
+@keyframes fui-drawer-left { from { transform: translateX(-100%); } }
+@keyframes fui-drawer-up { from { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) { .fui-drawer { animation: none; } }
+/* Held in a page: the same panel, drawn where it stands. */
+.fui-drawer--held { width: 300px; max-width: 100%; height: auto; animation: none; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--card-shadow); overflow: hidden; }
+.fui-drawer--held.fui-drawer--right { border-radius: var(--radius) 0 0 var(--radius); }
+.fui-drawer--held.fui-drawer--left { border-radius: 0 var(--radius) var(--radius) 0; }
+.fui-drawer--held.fui-drawer--bottom { width: 100%; border-radius: var(--radius) var(--radius) 0 0; }
+.fui-drawer__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 10px 10px 18px; border-bottom: 1px solid var(--border-soft); }
+.fui-drawer__title { font-family: var(--font-heading); font-size: 15px; font-weight: var(--heading-weight); color: var(--text-strong); }
+.fui-drawer--held .fui-drawer__body { display: grid; gap: 6px; }
+/* The gallery's drawer: its button, and the panel held at its edge. */
+.fui-drawer__demo { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; width: 100%; }
+.fui-drawer__demo.is-left { align-items: flex-start; }
+.fui-drawer__demo.is-bottom { align-items: stretch; }

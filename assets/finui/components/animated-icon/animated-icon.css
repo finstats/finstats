@@ -1,0 +1,280 @@
+/* FinUI: animated icon. One cycle of --icon-cycle: drawn (0–6%), the icon's own act (6–50%), drawn out stroke by stroke
+   (54–70%), nothing for a moment, drawn in again (76–96%). It starts and ends drawn, so the icon at rest is the static
+   one: on hover it does its act from there, and a cycle of 0s (Motion: Off) or reduced motion leaves it still. Each shape draws
+   on pathLength 1 with a dash of 1 and a gap of 2, so an offset of ±1.5 hides it with its round caps. */
+.fui-animated-icon { overflow: visible; --start: 0s; --times: infinite; }
+.fui-animated-icon > * {
+  --i: 0; --k: 0; --dx: 0; --dy: 0; --dir: 1; --sx: 1;
+  stroke-dasharray: 1 2;
+  animation: fui-animated-icon-draw var(--icon-cycle) linear var(--times) both;
+  animation-delay: calc(var(--start) + var(--i) * var(--icon-cycle) / 50);
+}
+.fui-animated-icon > [data-act] {
+  transform-box: fill-box; transform-origin: center;
+  animation-name: fui-animated-icon-draw, var(--act);
+  animation-delay: calc(var(--start) + var(--i) * var(--icon-cycle) / 50), calc(var(--start) + var(--k) * var(--icon-cycle) * 11 / 300);
+}
+.fui-animated-icon > [data-act="spin"] { --act: fui-animated-icon-spin; }
+.fui-animated-icon > [data-act="exit"] { --act: fui-animated-icon-exit; }
+.fui-animated-icon > [data-act="nudge"] { --act: fui-animated-icon-nudge; }
+.fui-animated-icon > [data-act="beat"] { --act: fui-animated-icon-beat; }
+.fui-animated-icon > [data-act="blaze"] { --act: fui-animated-icon-blaze; }
+.fui-animated-icon > [data-act="twinkle"] { --act: fui-animated-icon-twinkle; }
+.fui-animated-icon > [data-act="swing"] { --act: fui-animated-icon-swing; }
+.fui-animated-icon > [data-act="shake"] { --act: fui-animated-icon-shake; }
+.fui-animated-icon > [data-act="bob"] { --act: fui-animated-icon-bob; }
+.fui-animated-icon > [data-act="pop"] { --act: fui-animated-icon-pop; }
+.fui-animated-icon > [data-act="grow"] { --act: fui-animated-icon-grow; transform-origin: center bottom; }
+.fui-animated-icon > [data-act="blink"] { --act: fui-animated-icon-blink; }
+.fui-animated-icon > [data-act="slide"] { --act: fui-animated-icon-slide; }
+.fui-animated-icon > [data-act="squeeze"] { --act: fui-animated-icon-squeeze; transform-origin: left center; }
+.fui-animated-icon > [data-act="turn"] { --act: fui-animated-icon-turn; }
+.fui-animated-icon > [data-act="flip"] { --act: fui-animated-icon-flip; }
+.fui-animated-icon > [data-act="orbit"] { --act: fui-animated-icon-orbit; }
+.fui-animated-icon > [data-act="sweep"] { --act: fui-animated-icon-sweep; }
+.fui-animated-icon > [data-act="lift"] { --act: fui-animated-icon-lift; }
+.fui-animated-icon > [data-act="stretch"] { --act: fui-animated-icon-stretch; }
+.fui-animated-icon > [data-act="door"] { --act: fui-animated-icon-door; }
+.fui-animated-icon > [data-act="unroll"] { --act: fui-animated-icon-unroll; }
+.fui-animated-icon > [data-act="join"] { --act: fui-animated-icon-join; }
+.fui-animated-icon > [data-act="scribble"] { --act: fui-animated-icon-scribble; }
+.fui-animated-icon > [data-act="fold"] { --act: fui-animated-icon-fold; }
+.fui-animated-icon > [data-act="wink"] { --act: fui-animated-icon-wink; }
+.fui-animated-icon > [data-act="ring"] { --act: fui-animated-icon-ring; }
+.fui-animated-icon > [data-act="flick"] { --act: fui-animated-icon-flick; }
+.fui-animated-icon > [data-act="upend"] { --act: fui-animated-icon-upend; }
+/* Redrawing is a way of drawing: it takes the drawing's place rather than going beside it. */
+.fui-animated-icon > [data-act="redraw"] { animation-name: fui-animated-icon-redraw; animation-delay: calc(var(--start) + var(--i) * var(--icon-cycle) / 50 + var(--k) * var(--icon-cycle) * 11 / 300); }
+
+/* Once: in from nothing, the act, and it stays drawn. */
+.fui-animated-icon--once { --start: calc(var(--icon-cycle) * -0.72); --times: 1.5; }
+/* On hover: the static icon until it, or something pressable that holds it, is pointed at or focused; then its act, once
+   (half a cycle: it stops drawn, before the drawing out), and again the next time. */
+.fui-animated-icon--hover { --times: .5; }
+.fui-animated-icon--hover:not(:hover):not(:where(a[href], button, summary, label, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="option"], [role="switch"], [role="checkbox"], [role="radio"]):is(:hover, :focus-visible) *) > * { animation-name: none; }
+/* Busy (setBusy): what turns keeps turning, a whole turn at a time, pointed at or not; the rest stands still. */
+.fui-animated-icon.is-busy > * { animation-name: none; }
+.fui-animated-icon.is-busy > [data-act="spin"] { animation: fui-animated-icon-busy calc(var(--icon-cycle) / 3) linear infinite; }
+/* Done while still pointed at: it stands still until the pointer or the focus leaves, rather than playing again. */
+.fui-animated-icon--rested:not(.is-busy) > * { animation-name: none; }
+
+.fui-animated-icon__demo { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; color: var(--text); }
+
+@keyframes fui-animated-icon-draw {
+  0%, 54% { stroke-dashoffset: 0; animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  70%, 76% { stroke-dashoffset: -1.5; }
+  76.01% { stroke-dashoffset: 1.5; animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  96%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes fui-animated-icon-redraw {
+  0%, 6% { stroke-dashoffset: 0; animation-timing-function: ease-in; }
+  17% { stroke-dashoffset: -1.5; }
+  17.01% { stroke-dashoffset: 1.5; animation-timing-function: ease-out; }
+  28% { stroke-dashoffset: 0; animation-timing-function: ease-in; }
+  39% { stroke-dashoffset: -1.5; }
+  39.01% { stroke-dashoffset: 1.5; animation-timing-function: ease-out; }
+  50%, 54% { stroke-dashoffset: 0; animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  70%, 76% { stroke-dashoffset: -1.5; }
+  76.01% { stroke-dashoffset: 1.5; animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  96%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes fui-animated-icon-spin {
+  0%, 6% { transform: rotate(0deg); animation-timing-function: cubic-bezier(.6, 0, .25, 1); }
+  50%, 100% { transform: rotate(calc(720deg * var(--dir))); }
+}
+@keyframes fui-animated-icon-exit {
+  0%, 6% { transform: translate(0, 0); opacity: 1; animation-timing-function: ease-in; }
+  17% { transform: translate(calc(var(--dx) * 6px), calc(var(--dy) * 6px)); opacity: 0; }
+  17.01% { transform: translate(calc(var(--dx) * -6px), calc(var(--dy) * -6px)); opacity: 0; animation-timing-function: ease-out; }
+  28% { transform: translate(0, 0); opacity: 1; animation-timing-function: ease-in; }
+  39% { transform: translate(calc(var(--dx) * 6px), calc(var(--dy) * 6px)); opacity: 0; }
+  39.01% { transform: translate(calc(var(--dx) * -6px), calc(var(--dy) * -6px)); opacity: 0; animation-timing-function: ease-out; }
+  50%, 100% { transform: translate(0, 0); opacity: 1; }
+}
+@keyframes fui-animated-icon-nudge {
+  0%, 6%, 22%, 38%, 50%, 100% { transform: translate(0, 0); animation-timing-function: ease-in-out; }
+  14%, 30% { transform: translate(calc(var(--dx) * 3px), calc(var(--dy) * 3px)); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-beat {
+  0%, 6%, 18%, 30%, 38%, 50%, 100% { transform: scale(1); animation-timing-function: ease-out; }
+  12%, 32% { transform: scale(1.2); animation-timing-function: ease-in; }
+  24%, 44% { transform: scale(1.12); animation-timing-function: ease-in; }
+}
+/* A flame burning: the path itself is reshaped (d), so its tongue bends and licks one way and the other, the lick at
+   its side jumps, and its base stays where it is; turned or squashed whole, a flame reads as jelly. The rest frame is the
+   icon as core.js draws it, command for command; the breathing transform is what a browser that cannot morph a path sees. */
+@keyframes fui-animated-icon-blaze {
+  0%, 6%, 50%, 100% { d: path("M12 3 C12.6 6.2 17 8.4 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.5 9.4 15.8 C9 12 9.8 6.5 12 3Z"); transform: scale(1, 1); animation-timing-function: ease-in; }
+  11% { d: path("M12 5.6 C12.5 8.2 17 9.6 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.6 9.4 16 C9.2 12.8 10 8.4 12 5.6Z"); transform: scale(1.07, .87); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  17% { d: path("M9.2 .8 C10.4 4.6 17 7.8 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.4 8.3 15.2 9.3 15.4 C8 11 7.4 5.2 9.2 .8Z"); transform: scale(.95, 1.1); animation-timing-function: ease-in-out; }
+  23% { d: path("M15.6 1.8 C15.4 5.4 17.6 8.6 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.8 8.5 15.8 9.8 16 C10 12 12.4 6 15.6 1.8Z"); transform: scale(1.03, 1); animation-timing-function: ease-in-out; }
+  28% { d: path("M12 .8 C12.8 4.6 17 8 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.1 13.8 7.6 14 8.4 13.8 C8.4 10.6 9.4 5 12 .8Z"); transform: scale(.97, 1.08); animation-timing-function: ease-in-out; }
+  33% { d: path("M9 2.2 C10.4 5.6 16.8 8.8 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.4 9.3 15.6 C8.4 11.6 7.6 6 9 2.2Z"); transform: scale(1.03, .95); animation-timing-function: ease-in-out; }
+  38% { d: path("M15 2.4 C15 5.8 17.4 8.6 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.7 8.4 15.6 9.6 15.9 C9.8 12 11.8 6.4 15 2.4Z"); transform: scale(.99, 1.05); animation-timing-function: ease-in-out; }
+  43% { d: path("M10.6 1.8 C11.4 5.4 17 8.2 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.3 14.3 8 14.8 8.8 14.6 C8.6 11.2 8.6 5.8 10.6 1.8Z"); transform: scale(1.02, .98); animation-timing-function: ease-in-out; }
+  47% { d: path("M13 3.2 C13.4 6.4 17 8.5 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.5 9.4 15.8 C9.2 12 10.6 6.8 13 3.2Z"); transform: scale(1, 1); animation-timing-function: ease-in-out; }
+}
+/* A quarter turn leaves a four-pointed star as it was, so it turns back at the very end, where nobody sees it, and a cycle
+   of 0s, which shows that end, shows the static icon. */
+@keyframes fui-animated-icon-twinkle {
+  0%, 6% { transform: rotate(0deg) scale(1); animation-timing-function: ease-in; }
+  20% { transform: rotate(45deg) scale(.55); animation-timing-function: ease-out; }
+  34% { transform: rotate(90deg) scale(1.15); }
+  42%, 99.99% { transform: rotate(90deg) scale(1); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+@keyframes fui-animated-icon-swing {
+  0%, 6%, 50%, 100% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  14% { transform: rotate(calc(16deg * var(--dir))); animation-timing-function: ease-in-out; }
+  22% { transform: rotate(calc(-12deg * var(--dir))); animation-timing-function: ease-in-out; }
+  30% { transform: rotate(calc(8deg * var(--dir))); animation-timing-function: ease-in-out; }
+  38% { transform: rotate(calc(-5deg * var(--dir))); animation-timing-function: ease-in-out; }
+  45% { transform: rotate(calc(2deg * var(--dir))); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-shake {
+  0%, 6%, 27%, 30%, 51%, 100% { transform: translateX(0); }
+  9%, 15%, 33%, 39% { transform: translateX(-1.5px); }
+  12%, 18%, 36%, 42% { transform: translateX(1.5px); }
+  21%, 45% { transform: translateX(-.75px); }
+  24%, 48% { transform: translateX(.75px); }
+}
+/* A door on its hinge: it swings open (seen edge-on, narrow), stays a moment, and shuts with a small knock. */
+@keyframes fui-animated-icon-door {
+  0%, 6% { transform: scaleX(1); animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  18%, 30% { transform: scaleX(.18); animation-timing-function: cubic-bezier(.6, 0, .4, 1); }
+  41% { transform: scaleX(1.08); animation-timing-function: ease-out; }
+  46%, 50%, 100% { transform: scaleX(1); }
+}
+/* A ribbon on its pin: drawn up short, it drops down the page past its length and sways back to it. */
+@keyframes fui-animated-icon-unroll {
+  0%, 6% { transform: scaleY(1); animation-timing-function: ease-in; }
+  15% { transform: scaleY(.42); animation-timing-function: cubic-bezier(.2, .9, .3, 1.2); }
+  27% { transform: scaleY(1.12); animation-timing-function: ease-in-out; }
+  35% { transform: scaleY(.95); animation-timing-function: ease-in-out; }
+  42% { transform: scaleY(1.03); animation-timing-function: ease-in-out; }
+  48%, 50%, 100% { transform: scaleY(1); }
+}
+/* Two halves of a chain: apart along the diagonal, a little twisted, then snapped back past each other and settled. */
+@keyframes fui-animated-icon-join {
+  0%, 6% { transform: translate(0, 0) rotate(0deg); animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  20% { transform: translate(calc(var(--dx) * 3px), calc(var(--dy) * 3px)) rotate(calc(-14deg * var(--dir))); animation-timing-function: cubic-bezier(.7, 0, .9, .4); }
+  30% { transform: translate(calc(var(--dx) * -.8px), calc(var(--dy) * -.8px)) rotate(calc(4deg * var(--dir))); animation-timing-function: ease-out; }
+  38% { transform: translate(0, 0) rotate(0deg) scale(1.06); animation-timing-function: ease-in-out; }
+  45%, 50%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+}
+@keyframes fui-animated-icon-bob {
+  0%, 6%, 24%, 42%, 100% { transform: translate(0, 0); animation-timing-function: ease-in-out; }
+  15%, 33% { transform: translate(calc(var(--dx) * 2.5px), calc(var(--dy) * 2.5px)); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-pop {
+  0%, 6% { transform: scale(1); animation-timing-function: ease-in; }
+  14% { transform: scale(.35); animation-timing-function: ease-out; }
+  24% { transform: scale(1.22); animation-timing-function: ease-in-out; }
+  32%, 100% { transform: scale(1); }
+}
+@keyframes fui-animated-icon-grow {
+  0%, 6% { transform: scaleY(1); animation-timing-function: ease-in; }
+  16% { transform: scaleY(.15); animation-timing-function: cubic-bezier(.3, 1.4, .6, 1); }
+  32%, 100% { transform: scaleY(1); }
+}
+@keyframes fui-animated-icon-blink {
+  0%, 6%, 18%, 30%, 42%, 100% { opacity: 1; }
+  12%, 24%, 36% { opacity: .15; }
+}
+@keyframes fui-animated-icon-slide {
+  0%, 6%, 46%, 100% { transform: translateX(0); animation-timing-function: ease-in-out; }
+  20%, 32% { transform: translateX(calc(var(--dx) * 3px)); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-squeeze {
+  0%, 6%, 26%, 46%, 100% { transform: scaleX(1); animation-timing-function: ease-in-out; }
+  16% { transform: scaleX(.45); animation-timing-function: ease-in-out; }
+  36% { transform: scaleX(.7); animation-timing-function: ease-in-out; }
+}
+/* A plus and a cross look the same a quarter turn on: they turn back unseen at the very end, as the star does. */
+@keyframes fui-animated-icon-turn {
+  0%, 6% { transform: rotate(0deg); animation-timing-function: cubic-bezier(.5, 0, .2, 1.3); }
+  40%, 99.99% { transform: rotate(calc(90deg * var(--dir))); }
+  100% { transform: rotate(0deg); }
+}
+/* A meridian flipped is its twin: a globe turning. */
+@keyframes fui-animated-icon-flip {
+  0%, 6% { transform: scaleX(1); animation-timing-function: ease-in-out; }
+  28% { transform: scaleX(-1); animation-timing-function: ease-in-out; }
+  50%, 100% { transform: scaleX(1); }
+}
+@keyframes fui-animated-icon-orbit {
+  0%, 6% { transform: rotate(0deg) translateX(0) rotate(0deg); }
+  11% { transform: rotate(0deg) translateX(1.5px) rotate(0deg); }
+  45% { transform: rotate(720deg) translateX(1.5px) rotate(-720deg); }
+  50%, 100% { transform: rotate(720deg) translateX(0) rotate(-720deg); }
+}
+@keyframes fui-animated-icon-sweep {
+  0%, 6%, 50%, 100% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  20% { transform: rotate(-80deg); animation-timing-function: ease-in-out; }
+  34% { transform: rotate(35deg); animation-timing-function: ease-in-out; }
+  43% { transform: rotate(-12deg); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-lift {
+  0%, 6%, 24%, 42%, 100% { transform: translateY(0) rotate(0deg); animation-timing-function: ease-in-out; }
+  15%, 33% { transform: translateY(-2px) rotate(-14deg); animation-timing-function: ease-in-out; }
+}
+/* A line that keeps up with a sliding knob: the same timing as slide. */
+@keyframes fui-animated-icon-stretch {
+  0%, 6%, 46%, 100% { transform: scaleX(1); animation-timing-function: ease-in-out; }
+  20%, 32% { transform: scaleX(var(--sx)); animation-timing-function: ease-in-out; }
+}
+
+/* A pen writing: it runs along its tip in a quick zigzag, a word's worth (--dir: which way), and lifts back to where it began. */
+@keyframes fui-animated-icon-scribble {
+  0%, 6% { transform: translate(0, 0) rotate(0deg); animation-timing-function: ease-in-out; }
+  11% { transform: translate(calc(var(--dir) * .8px), -1.2px) rotate(calc(var(--dir) * -3deg)); animation-timing-function: ease-in-out; }
+  16% { transform: translate(calc(var(--dir) * 1.6px), .6px) rotate(calc(var(--dir) * 2deg)); animation-timing-function: ease-in-out; }
+  21% { transform: translate(calc(var(--dir) * 2.4px), -1.2px) rotate(calc(var(--dir) * -3deg)); animation-timing-function: ease-in-out; }
+  26% { transform: translate(calc(var(--dir) * 3.2px), .6px) rotate(calc(var(--dir) * 2deg)); animation-timing-function: ease-in-out; }
+  31% { transform: translate(calc(var(--dir) * 4px), -1.2px) rotate(calc(var(--dir) * -3deg)); animation-timing-function: ease-in-out; }
+  36% { transform: translate(calc(var(--dir) * 4.4px), 0) rotate(0deg); animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  46%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+}
+/* A flap on its fold: it turns over its edge, open, stays a moment, and folds shut. */
+@keyframes fui-animated-icon-fold {
+  0%, 6% { transform: scaleY(1); animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  20%, 32% { transform: scaleY(-1); animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  46%, 50%, 100% { transform: scaleY(1); }
+}
+/* An eye blinking: it shuts toward its middle and opens, twice, quickly. */
+@keyframes fui-animated-icon-wink {
+  0%, 6% { transform: scaleY(1); animation-timing-function: ease-in; }
+  11% { transform: scaleY(.08); animation-timing-function: ease-out; }
+  17%, 26% { transform: scaleY(1); animation-timing-function: ease-in; }
+  31% { transform: scaleY(.08); animation-timing-function: ease-out; }
+  37%, 50%, 100% { transform: scaleY(1); }
+}
+/* A phone ringing: it rattles about its middle in two bursts, as a ring does. */
+@keyframes fui-animated-icon-ring {
+  0%, 6%, 26%, 28%, 48%, 50%, 100% { transform: rotate(0deg); }
+  8.5%, 13.5%, 30.5%, 35.5% { transform: rotate(calc(-9deg * var(--dir))); }
+  11%, 16%, 33%, 38% { transform: rotate(calc(9deg * var(--dir))); }
+  18.5%, 40.5% { transform: rotate(calc(-5deg * var(--dir))); }
+  21%, 43% { transform: rotate(calc(5deg * var(--dir))); }
+  23.5%, 45.5% { transform: rotate(calc(-2deg * var(--dir))); }
+}
+/* A switch thrown: its knob runs the length of its track, stays a moment, and runs back, settling with a small overshoot. */
+@keyframes fui-animated-icon-flick {
+  0%, 6% { transform: translateX(0); animation-timing-function: cubic-bezier(.5, 0, .2, 1.25); }
+  18%, 30% { transform: translateX(calc(var(--dx) * 10px)); animation-timing-function: cubic-bezier(.5, 0, .2, 1.25); }
+  42%, 50%, 100% { transform: translateX(0); }
+}
+/* Turned over, end for end: a half turn leaves an hourglass as it was, so it turns back at the very end, where nobody sees it, as a plus does. */
+@keyframes fui-animated-icon-upend {
+  0%, 6% { transform: rotate(0deg); animation-timing-function: cubic-bezier(.5, 0, .2, 1.2); }
+  32%, 99.99% { transform: rotate(calc(180deg * var(--dir))); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes fui-animated-icon-busy { from { transform: rotate(0deg); } to { transform: rotate(calc(360deg * var(--dir))); } }
+
+/* Still, with reduced motion; a busy icon turns on, slower, as the spinner does, so it still says something is under way. */
+@media (prefers-reduced-motion: reduce) {
+  .fui-animated-icon > *, .fui-animated-icon > [data-act] { animation: none; }
+  .fui-animated-icon.is-busy > [data-act="spin"] { animation: fui-animated-icon-busy var(--icon-cycle) linear infinite; }
+}

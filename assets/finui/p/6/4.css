@@ -1,0 +1,4 @@
+/* Cards: Block */
+:root {
+  --card-shadow: 4px 4px 0 var(--border-strong);
+}

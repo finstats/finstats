@@ -1,0 +1,3 @@
+/* FinUI: bar-chart. Its marks are chart's; the box only holds the plot at its width. */
+.fui-bar-chart__box { min-width: 0; }
+.fui-bar-chart__demo { width: 100%; }

@@ -1,0 +1,5 @@
+/* Motion: Slow */
+:root {
+  --ease: 260ms ease;
+  --icon-cycle: 4.2s;
+}

@@ -1,0 +1,5 @@
+/* Fields: Filled */
+:root {
+  --field-bg: var(--bg-sunken);
+  --field-border: transparent;
+}

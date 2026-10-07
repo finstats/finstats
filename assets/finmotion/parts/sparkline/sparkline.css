@@ -1,0 +1,2 @@
+/* FinMotion: sparkline. The last value's dot grows from its own middle. */
+.fui-sparkline__now { transform-box: fill-box; transform-origin: center; }

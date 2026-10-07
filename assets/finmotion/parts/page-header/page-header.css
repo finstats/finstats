@@ -1,0 +1,6 @@
+/* FinMotion: page-header. Gathering: kept at the top of what scrolls, on the page's own ground; --fm-gathered (0 to 1)
+   follows the scroll, so the header moves as the page does and never on its own. */
+.fui-page-header.fm-gathers { --fm-gathered: 0; position: sticky; top: 0; z-index: 5; padding-block: calc(8px - 4px * var(--fm-gathered));
+  background: var(--page-bg); background-attachment: fixed; }
+.fm-gathers .fui-page-header__title { transform-origin: 0 50%; scale: calc(1 - .32 * var(--fm-gathered)); margin-bottom: calc(-6px * var(--fm-gathered)); }
+.fm-gathers .fui-page-header__sub { opacity: calc(1 - 1.6 * var(--fm-gathered)); max-height: calc(3em * (1 - var(--fm-gathered))); overflow: hidden; }

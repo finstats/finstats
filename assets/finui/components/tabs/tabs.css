@@ -1,0 +1,17 @@
+/* FinUI: tabs. A hairline under the row; the selected tab stands on it in the accent; counts are small pills. */
+.fui-tabs { display: grid; gap: 14px; min-width: 0; }
+.fui-tabs__list { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border-soft); scrollbar-width: none; }
+.fui-tabs__list--fill > .fui-tabs__tab { flex: 1; justify-content: center; }
+.fui-tabs__tab {
+  display: inline-flex; align-items: center; gap: 7px; margin-bottom: -1px; padding: 8px 12px; border: 0; border-bottom: 2px solid transparent;
+  background: transparent; color: var(--text-muted); font: 500 13.5px var(--sans); white-space: nowrap; cursor: pointer;
+}
+.fui-tabs__tab:hover:not(:disabled) { color: var(--text); }
+.fui-tabs__tab[aria-selected="true"] { border-bottom-color: var(--accent); color: var(--text-strong); }
+.fui-tabs__tab:disabled { opacity: .45; cursor: default; }
+.fui-tabs__count { padding: 0 6px; border-radius: var(--radius-pill); background: var(--hover); color: var(--text-muted); font: 11px/18px var(--mono); }
+.fui-tabs__tab[aria-selected="true"] .fui-tabs__count { background: var(--accent-wash); color: var(--text); }
+.fui-tabs__panel { min-width: 0; font-size: 13.5px; }
+.fui-tabs__panel:focus-visible { border-radius: var(--radius-sm); }
+/* The gallery's tabs, at a card's width. */
+.fui-tabs__demo { width: min(100%, 480px); }

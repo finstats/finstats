@@ -1,0 +1,8 @@
+/* The demo's own marks: the word "Demo" in the status bar, and beside the name in a phone's top bar. */
+.sb-demo { gap: 6px; color: var(--text-muted); }
+.sb-demo-mark {
+  padding: 2px 5px; border-radius: var(--radius-sm);
+  background: var(--accent-wash); color: var(--accent-hi);
+  font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 10px;
+}
+.topbar .sb-demo-mark { align-self: center; }

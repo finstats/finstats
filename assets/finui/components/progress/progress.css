@@ -1,0 +1,24 @@
+/* FinUI: progress. A thin track with the done share in the accent (or its tone); working, a short stretch travels along it. */
+.fui-progress { display: grid; gap: 6px; min-width: 0; }
+.fui-progress__head, .fui-progress__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fui-progress__label { font-size: 13px; font-weight: 550; color: var(--text); }
+.fui-progress__share { font: 12.5px var(--mono); color: var(--text-muted); }
+.fui-progress__foot { font-size: 12.5px; color: var(--text-faint); }
+.fui-progress__track { position: relative; height: 6px; overflow: hidden; border-radius: var(--radius-pill); background: var(--track); }
+.fui-progress__fill { position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-pill); background: var(--accent); transition: width .3s ease; }
+.fui-progress--good .fui-progress__fill { background: var(--good); }
+.fui-progress--critical .fui-progress__fill { background: var(--critical); }
+.fui-progress.is-working .fui-progress__fill { width: 30%; animation: fui-progress-work 1.4s ease-in-out infinite; }
+@keyframes fui-progress-work { from { left: -30%; } to { left: 100%; } }
+.fui-progress__ring { position: relative; display: inline-grid; place-items: center; flex: none; }
+.fui-progress__ring-svg { transform: rotate(-90deg); }
+.fui-progress__ring-track, .fui-progress__arc { fill: none; stroke-width: 4; }
+.fui-progress__ring-track { stroke: var(--track); }
+.fui-progress__arc { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .3s ease; }
+.fui-progress__ring.is-working .fui-progress__ring-svg { animation: fui-progress-turn 1s linear infinite; }
+@keyframes fui-progress-turn { to { transform: rotate(270deg); } }
+.fui-progress__ring-text { position: absolute; font: 600 10.5px var(--mono); color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .fui-progress.is-working .fui-progress__fill, .fui-progress__ring.is-working .fui-progress__ring-svg { animation: none; } }
+/* The gallery's bar and ring. */
+.fui-progress__demo { width: min(100%, 420px); }
+.fui-progress__demo-ring { display: flex; align-items: center; gap: 10px; font-size: 13px; }

@@ -1,0 +1,6 @@
+/* FinUI: sparkline. The line in the quiet spark colour, a faint wash of it, now in the accent ringed in the ground. */
+.fui-sparkline { display: inline-block; flex: none; overflow: visible; vertical-align: middle; }
+.fui-sparkline__line { fill: none; stroke: var(--spark); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fui-sparkline__area { fill: var(--spark); fill-opacity: .1; }
+.fui-sparkline__now { fill: var(--accent); stroke: var(--bg-2); stroke-width: 2; }
+.fui-sparkline__demo { display: inline-flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-muted); }

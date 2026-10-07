@@ -1,0 +1,18 @@
+/* FinUI: to-top. Round, raised a little off the page, in the bottom-right corner where place() puts it (above the safe
+   area); it rises into view once the page is far from its top and sinks out of it when back. Hidden,
+   it is not there to the keyboard or a screen reader either: visibility goes with it. */
+.fui-to-top {
+  --fui-to-top-bottom: 16px; --fui-to-top-right: 16px;
+  position: fixed; right: var(--fui-to-top-right); bottom: calc(var(--fui-to-top-bottom) + env(safe-area-inset-bottom, 0px)); z-index: 35;
+  display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border-radius: var(--radius-pill); cursor: pointer;
+  background: var(--bg-2); border: 1px solid var(--border); color: var(--text); box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 40%, transparent);
+  opacity: 0; translate: 0 6px; visibility: hidden;
+  transition: opacity var(--ease), translate var(--ease), visibility var(--ease), bottom var(--ease), right var(--ease), background var(--ease);
+}
+.fui-to-top.is-shown { opacity: 1; translate: 0 0; visibility: visible; }
+.fui-to-top:hover { background: var(--hover); }
+.fui-to-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The gallery's example: a window's corner, drawn small, with the button where it would rest in it. */
+.fui-to-top__stage { position: relative; width: 100%; height: 160px; border: 1px dashed var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.fui-to-top--demo { position: absolute; }

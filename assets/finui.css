@@ -1,0 +1,2065 @@
+/* FinUI: finstats' components from web/assets/finui, in registry.json's order. */
+
+/* FinUI: tokens. Every colour finstats uses, and nothing else may name one (a cargo test holds it). */
+
+/* Every colour is one token, light and dark side by side: light-dark(light, dark). Light is washi paper by day:
+   cream ground, ink text, a vermilion seal for the accent, and dyes for the rest: nando for quantities, matcha for
+   success, brass for a warning, murasaki/nando/shu/ai for the four kinds of media. Its accents are darker than a
+   dark theme's on purpose: the same hues at glowing-on-black lightness fail contrast on cream. Dark is Obsidian's.
+   With nothing chosen the device decides; data-theme on <html> is a choice made in this browser (theme.js applies
+   it before the first paint). --bg has a twin: the light theme-color meta tag in index.html and public.html. */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#efe9dc, #1e1e1e);                     /* the page ground (washi: paper) */
+  --page-glow: light-dark(#fbf7ec, transparent);          /* light falling on the top of the page */
+  --page-bg: radial-gradient(1100px 620px at 50% -12%, var(--page-glow) 0%, transparent 62%), var(--bg);
+  --bg-2: light-dark(#fbf8f1, #262626);                   /* a card or panel (paper-card) */
+  --bg-lift: light-dark(#fffdf7, #121212);                /* lifted further: tooltips (paper-lift) */
+  --bg-sunken: light-dark(#e7e0ce, #181818);              /* sidebar, status bar (paper-sunk) */
+  --hover: light-dark(rgba(0, 0, 0, .07), #2f2f2f);       /* the pressed/hover wash (press) */
+  --btn-hover: light-dark(rgba(0, 0, 0, .11), #383838);
+  --border: light-dark(#d8d0bc, #363636);                 /* hairline */
+  --border-soft: light-dark(#d8d0bc, #2c2c2c);
+  --border-strong: light-dark(#bfb59b, #4a4a4a);          /* hairline on hover */
+  --text: light-dark(#24211c, #dadada);                   /* ink */
+  --text-muted: light-dark(#5b564c, #a8a8a8);             /* ink-soft */
+  --text-faint: light-dark(#6f6859, #7d7d7d);             /* ink-mute */
+  --text-strong: light-dark(#24211c, #ececec);
+  --text-hero: light-dark(#24211c, #f4f2fc);
+  --tint: light-dark(#000000, #ffffff);                   /* a wash over a surface: color-mix(… var(--tint) n%, transparent) */
+  --shadow: light-dark(rgba(60, 50, 30, .42), #000000);   /* shadows mix this: warm and soft on paper */
+  --backdrop: light-dark(rgba(36, 33, 28, .42), rgba(0, 0, 0, .6));   /* behind a dialog: ink, thinned */
+  --accent: light-dark(#b23a26, #8a5cf5);                 /* shu, the seal */
+  --accent-hi: light-dark(#9a2f1d, #a68af9);              /* links, the page one is on (shu-2) */
+  --accent-wash: light-dark(color-mix(in srgb, #b23a26 10%, transparent), rgba(138, 92, 245, .14));
+  --selection: light-dark(color-mix(in srgb, #b23a26 22%, transparent), rgba(138, 92, 245, .4));
+  --good: light-dark(#4f6b22, #0ca30c);                   /* matcha */
+  --warning: light-dark(#8a6410, #fab219);                /* brass */
+  --serious: light-dark(#7a5230, #ec835a);                /* kuri */
+  --critical: light-dark(#9a2f1d, #d03b3b);               /* shu-2 */
+  --critical-text: light-dark(#7e2717, #f08a8a);          /* shu-3 */
+  --series-1: light-dark(#5c3d7a, #9085e9);               /* Movie: murasaki */
+  --series-2: light-dark(#236e70, #199e70);               /* Episode: nando */
+  --series-3: light-dark(#b23a26, #d95926);               /* Music: shu */
+  --series-4: light-dark(#2b4570, #3987e5);               /* Other: ai */
+  --single: light-dark(#236e70, #9085e9);                 /* one series, a quantity: nando */
+  --peak: light-dark(#185657, #b49dfb);                   /* the extreme of it (nando-2) */
+  --spark: light-dark(#236e70, #6a5fb0);
+  --alone: light-dark(#6f6859, #5a6275);
+  --grid: light-dark(#e3dcc9, #303030);
+  --axis: light-dark(#c8bfa6, #454545);                   /* guide */
+  --scrollbar: light-dark(#bfb59b, #444444);
+  --separator: light-dark(#bfb59b, #5a5a5a);
+  --knob: light-dark(#fffdf7, #cfcfcf);
+  --theme-sun: light-dark(#b8660a, #8a4b00);      /* the icons in the theme switch's knob, on --knob */
+  --theme-moon: light-dark(#4b3f9e, #3b2f86);
+  --theme-device: light-dark(#5f5a4e, #3a3a3a);
+  --wash-2: light-dark(#e7e0ce, #3a3552);                 /* avatars, meter tracks */
+  --wash-2-text: light-dark(#2b4570, #cfc6f7);            /* ai */
+  --warn-wash: light-dark(color-mix(in srgb, #8a6410 18%, #fbf8f1), #4a3d1a);
+  --crit-wash: light-dark(color-mix(in srgb, #9a2f1d 16%, #fbf8f1), #4a2222);
+  --placeholder: light-dark(#e3dcc9, #303030);            /* gap-empty: absence, not zero */
+  --skeleton: light-dark(#e7e0ce, #313131);
+  --tooltip-bg: var(--bg-lift);
+  --track: light-dark(#e3dcc9, #3a3a3a);
+  --land: light-dark(#e3dcc9, #2b2b2b);
+  --land-edge: light-dark(#d8d0bc, #3d3d3d);
+  /* The wiring board's cables (Tautulli import), Fix Wiring's colours first; deeper by day, so they hold on paper. */
+  --wire-0: light-dark(#c62828, #ff5a5a);
+  --wire-1: light-dark(#1f4fc4, #5b8cff);
+  --wire-2: light-dark(#a87b00, #ffd23f);
+  --wire-3: light-dark(#b3168d, #ff62d0);
+  --wire-4: light-dark(#1d7f45, #47d488);
+  --wire-5: light-dark(#0b7d88, #3fd2de);
+  --wire-6: light-dark(#c45a12, #ff9a3d);
+  --wire-7: light-dark(#6237c0, #a98bff);
+  --wire-edge: light-dark(rgb(40 30 10 / .28), rgb(0 0 0 / .6));
+  --wire-hole: light-dark(#3a342b, #0d0d0d);
+  --land-hot: light-dark(color-mix(in srgb, #5c3d7a 14%, #e3dcc9), #35304d);
+  --land-hot-edge: light-dark(color-mix(in srgb, #5c3d7a 40%, #d8d0bc), #51487a);
+  --heat-0: light-dark(#e3dcc9, #2f2f2f);                 /* charts.js' activity grid: empty, then quiet → busy */
+  --heat-1: light-dark(color-mix(in srgb, #236e70 14%, #fbf8f1), #3a3358);
+  --heat-2: light-dark(color-mix(in srgb, #236e70 30%, #fbf8f1), #4b3f80);
+  --heat-3: light-dark(color-mix(in srgb, #236e70 48%, #fbf8f1), #5e4ba8);
+  --heat-4: light-dark(color-mix(in srgb, #236e70 66%, #fbf8f1), #7459d0);
+  --heat-5: light-dark(color-mix(in srgb, #236e70 84%, #fbf8f1), #8f6ff0);
+  --heat-6: light-dark(#185657, #b49dfb);
+  --rc-heat-0: light-dark(#e3dcc9, rgba(255, 255, 255, .055));   /* the recap's year grid */
+  --rc-heat-1: light-dark(color-mix(in srgb, #236e70 22%, #fbf8f1), #3a2f6b);
+  --rc-heat-2: light-dark(color-mix(in srgb, #236e70 50%, #fbf8f1), #5b47ad);
+  --rc-heat-3: light-dark(#236e70, #8067e0);
+  --rc-heat-4: light-dark(#185657, #b9a5fc);
+  --sans: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-heading: var(--sans);                            /* headings: the text's own font unless a preset says otherwise */
+  --radius: 8px;                                          /* a card, a panel, a list that opens */
+  --radius-sm: 4px;                                       /* a small thing inside one: an option, an icon button */
+  --radius-control: 6px;                                  /* a button, a field, a poster */
+  --radius-lg: 10px;                                      /* a dialog */
+  --radius-pill: 99px;                                    /* chips, badges, toggles, meters: round ends */
+  --density: 1;                                           /* the size of controls and the room in cards, as a factor */
+  --card-shadow: none;                                    /* what lifts a card off the page: nothing, by default */
+  --icon-stroke: 1.75;                                    /* the width an icon is drawn with */
+  --title-weight: 700;                                    /* a page's title */
+  --heading-weight: 600;                                  /* a card's, a dialog's, an empty state's title */
+  --heading-case: none;                                   /* uppercase: headings in capitals */
+  --heading-tracking: 0em;                                /* added to a heading's letter-spacing */
+  --primary-bg: var(--accent);                            /* the primary button: its fill, edge, words and hover */
+  --primary-border: var(--accent);
+  --primary-text: var(--on-accent);
+  --primary-hover: var(--accent-hover);
+  --field-bg: var(--bg);                                  /* an input: its ground, edge, which edges and corners */
+  --field-border: var(--border);
+  --field-edges: 1px;
+  --radius-field: var(--radius-control);
+  --row-line: var(--border-soft);                         /* the line under a table row, and the wash of every other */
+  --row-stripe: transparent;
+  --selected-bg: var(--accent-wash);                      /* the open item of a list to move between: ground, words, icon, edge */
+  --selected-text: var(--text);
+  --selected-icon: var(--accent-hi);
+  --selected-edge: none;
+  --icon-cap: round;                                      /* an icon's line ends and corners */
+  --icon-join: round;
+  --focus-width: 2px;                                     /* the ring a focused control wears */
+  --focus-color: var(--accent-hi);
+  --focus-offset: 2px;
+  --sidebar-w: 220px;
+  --statusbar-h: 26px;
+  --ease: 150ms ease;
+  --icon-cycle: 3s;            /* one cycle of an animated icon: drawn, its act, drawn out, drawn in */
+  /* Colours that were literals in app.css, as tokens with the values they had. */
+  --on-fill: light-dark(#fff, #fff);                     /* text and knobs on a coloured fill or a picture */
+  --on-accent: light-dark(#fff, #fff);                   /* text and knobs on the accent: a light accent takes ink */
+  --picture-shade: light-dark(rgba(0, 0, 0, .7), rgba(0, 0, 0, .7));   /* a shadow that lifts --on-fill text off a picture */
+  --accent-hover: light-dark(#9a2f1d, #7a4ce6);          /* a primary button under the pointer: shu-2 by day */
+  --critical-hover: light-dark(#b93232, #b93232);        /* a danger button under the pointer */
+  --fav: light-dark(#d55181, #d55181);                   /* a favourite's heart */
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* FinUI: base. The fonts and what every element starts from: the reset, the type, the focus ring, the utilities. */
+
+/* Inter: SIL Open Font License 1.1, fonts/LICENSE-Inter.txt */
+@font-face {
+  font-family: "Inter Variable"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter Variable"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* JetBrains Mono: SIL Open Font License 1.1, fonts/LICENSE-JetBrainsMono.txt */
+@font-face {
+  font-family: "JetBrains Mono Variable"; font-style: normal; font-weight: 100 800; font-display: swap;
+  src: url("fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; scrollbar-color: var(--scrollbar) var(--bg); }
+html.no-scroll { overflow: hidden; }
+body {
+  margin: 0; background: var(--page-bg); background-attachment: fixed; color: var(--text);
+  font: 400 14px/1.5 var(--sans); font-feature-settings: "cv11", "ss03"; -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, p, ul, ol, dl, dd, figure { margin: 0; }
+h1, h2, h3, h4 { font-family: var(--font-heading); }
+ul, ol { padding: 0; list-style: none; }
+a { color: var(--accent-hi); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 2px; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+img { max-width: 100%; display: block; }
+strong { font-weight: 600; color: var(--text); }
+table { border-collapse: collapse; width: 100%; }
+[hidden] { display: none !important; }
+:focus-visible { outline: var(--focus-width) solid var(--focus-color); outline-offset: var(--focus-offset); border-radius: var(--radius-sm); }
+::selection { background: var(--selection); }
+
+/* The small utilities every component and page uses. They come before every component, as they always came first:
+   a component's own size or colour wins over them, never the other way round. */
+.mono { font-family: var(--mono); font-size: .92em; font-variant-ligatures: none; }
+.muted { color: var(--text-faint); }
+.r { text-align: right; }
+.nowrap { white-space: nowrap; }
+.trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.icon { flex: none; vertical-align: -0.15em; stroke-width: var(--icon-stroke); stroke-linecap: var(--icon-cap); stroke-linejoin: var(--icon-join); }
+.sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* FinUI: button. The rules app.css had for .btn and .icon-btn, under FinUI's names. */
+.fui-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: calc(var(--density) * 7px) calc(var(--density) * 13px); min-height: calc(var(--density) * 34px);
+  background: var(--hover); border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text); font-size: 13px; font-weight: 500; white-space: nowrap;
+  transition: background var(--ease), border-color var(--ease);
+}
+.fui-button:hover { background: var(--btn-hover); text-decoration: none; }
+.fui-button:disabled { opacity: .65; cursor: progress; }
+.fui-button--primary { background: var(--primary-bg); border-color: var(--primary-border); color: var(--primary-text); }
+.fui-button--primary:hover { background: var(--primary-hover); }
+.fui-button--ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
+.fui-button--ghost:hover { background: var(--hover); color: var(--text); }
+.fui-button--ghost[aria-disabled="true"] { opacity: .35; cursor: default; }
+.fui-button--ghost[aria-disabled="true"]:hover { background: transparent; }
+.fui-button--sm { padding: calc(var(--density) * 4px) calc(var(--density) * 9px); min-height: calc(var(--density) * 28px); font-size: 12.5px; }
+.fui-button--block { width: 100%; }
+.fui-button--danger { background: var(--critical); border-color: var(--critical); color: var(--on-fill); }
+.fui-button--danger:hover { background: var(--critical-hover); }
+.fui-button--danger-text { color: var(--critical-text); }
+/* A label standing for a button (a file picker) has no disabled state of its own. */
+.fui-button--disabled { opacity: .5; pointer-events: none; }
+
+/* An icon alone: a square, no frame until the pointer is on it. */
+.fui-button--icon {
+  display: inline-grid; place-items: center; width: calc(var(--density) * 30px); height: calc(var(--density) * 30px); min-height: 0; padding: 0; gap: 0; flex: none;
+  background: transparent; border: 0; border-radius: var(--radius-sm); color: var(--text-muted); transition: background var(--ease), color var(--ease);
+}
+.fui-button--icon:hover { background: var(--hover); color: var(--text); }
+.fui-button--icon[aria-disabled="true"] { opacity: .35; cursor: default; }
+
+
+/* The gallery's row of examples. */
+.fui-button__demo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* FinUI: card. Moved from app.css; the same rules under FinUI's names. */
+.fui-card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); box-shadow: var(--card-shadow); min-width: 0; }
+.fui-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: calc(var(--density) * 14px) calc(var(--density) * 16px) 0; }
+.fui-card__title { font-family: var(--font-heading); font-size: 14px; font-weight: var(--heading-weight); text-transform: var(--heading-case); letter-spacing: var(--heading-tracking); color: var(--text-strong); }
+.fui-card__sub { font-size: 12.5px; color: var(--text-faint); margin-top: 1px; }
+.fui-card__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fui-card__body { padding: calc(var(--density) * 14px) calc(var(--density) * 16px) calc(var(--density) * 16px); }
+.fui-card--flush > .fui-card__body { padding: 8px 0 4px; }
+.fui-card--flush > .fui-card__head + .fui-card__body { padding-top: 10px; }
+.fui-card__note { margin-top: 12px; }
+.fui-card__head > div:first-child { min-width: 0; }
+/* A card that is a link: the whole surface answers the pointer, its words keep their own colours. */
+.fui-card--link { display: block; color: var(--text); text-decoration: none; transition: border-color var(--ease), background var(--ease); }
+.fui-card--link:hover { border-color: var(--border); background: var(--hover); color: var(--text); text-decoration: none; }
+.fui-card__title { overflow-wrap: anywhere; }
+
+/* The gallery's list in a flush card. */
+.fui-card__demo-list { margin: 0; padding: 0 16px 8px; list-style: none; display: grid; gap: 6px; }
+
+/* FinUI: chip. Moved from app.css; the same rules under FinUI's names. */
+.fui-chip--toggle { cursor: pointer; font: inherit; font-size: 12px; }
+.fui-chip--toggle[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: var(--accent-wash); color: var(--text); }
+.fui-chip--toggle[aria-pressed="false"] { color: var(--text-faint); }
+/* One of several: the chosen one in the accent's wash, the rest quiet until pointed at. */
+.fui-chip--choice { cursor: pointer; font: inherit; font-size: 12.5px; gap: 7px; min-height: 28px; padding: 3px 11px; background: var(--bg-2); border-color: var(--border-soft); color: var(--text); }
+.fui-chip--choice:hover { border-color: var(--border); background: var(--hover); }
+.fui-chip--choice[aria-checked="true"] { border-color: var(--accent); background: var(--accent-wash); color: var(--text-strong); }
+/* chips & badges */
+.fui-chip__set { display: flex; flex-wrap: wrap; gap: 6px; }
+.fui-chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; min-height: 22px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+.fui-chip.mono { font-size: 11.5px; }
+.fui-chip--button:hover { border-color: var(--accent); color: var(--text); }
+.fui-chip--removable { padding-right: 3px; border-color: var(--accent); background: var(--accent-wash); color: var(--text); }
+.fui-chip__x { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); }
+.fui-chip__x:hover { background: var(--hover); color: var(--text); }
+.fui-chip__x .icon { pointer-events: none; }
+.fui-chip__set .fui-chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; border-radius: min(11px, var(--radius-pill)); }
+.fui-chip--group { display: inline-flex; align-items: center; gap: 5px; color: var(--text); background: var(--accent-wash); border-color: transparent; }
+.fui-chip--group .icon { color: var(--accent-hi); }
+
+/* FinUI: badge. Moved from app.css; the same rules under FinUI's names. */
+.fui-badge--count { background: var(--accent-wash); color: var(--accent-hi); border-radius: var(--radius-pill); padding: 1px 7px; font-size: 11px; }
+.fui-badge { display: inline-flex; align-items: center; gap: 6px; padding: 1px 8px; min-height: 22px; border-radius: var(--radius-pill); background: var(--hover); color: var(--text); font-size: 12px; white-space: nowrap; }
+.fui-badge__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
+.fui-badge.fui-badge--live .fui-badge__dot { background: var(--good); animation: fui-badge-pulse 2s ease-in-out infinite; }
+.fui-badge.fui-badge--paused { color: var(--text-muted); }
+@keyframes fui-badge-pulse { 50% { opacity: .35; } }
+/* The live dot breathes; with reduced motion it holds still. */
+@media (prefers-reduced-motion: reduce) { .fui-badge--live .fui-badge__dot { animation: none; } }
+.fui-badge--status { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); white-space: nowrap; }
+.fui-badge--good .icon { color: var(--good); }
+.fui-badge--warning .icon { color: var(--warning); }
+.fui-badge--critical .icon { color: var(--critical-text); }
+.fui-badge--info .icon { color: var(--text-faint); }
+.fui-badge--info { color: var(--text-muted); }
+.fui-badge--critical { white-space: normal; }
+/* A status line that is a sentence rather than a label wraps. `nowrap` is right for "Connected" next
+   to its tick; on a phone it made the Backups card's "Restored N plays, …" push the whole page sideways. */
+.fui-badge--line { white-space: normal; max-width: 100%; align-items: flex-start; }
+.fui-badge--line .icon { margin-top: 2px; flex: none; }
+.fui-badge--outlined { padding: 2px 10px; min-height: 24px; border: 1px solid var(--border); border-radius: var(--radius-pill); }
+
+/* The gallery's row of examples. */
+.fui-badge__demo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* FinUI: empty. Moved from app.css; the same rules under FinUI's names. */
+.fui-card--flush .fui-empty { margin: 8px 16px 12px; }
+.fui-empty--chart { display: grid; place-items: center; min-height: 200px; color: var(--text-faint); font-size: 13px; text-align: center; }
+.fui-empty--chart-sm { min-height: 96px; }
+.fui-empty { padding: 36px 20px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.fui-card .fui-empty { border: 0; padding: 28px 20px; }
+.fui-empty__title { font-family: var(--font-heading); font-weight: var(--heading-weight); text-transform: var(--heading-case); letter-spacing: var(--heading-tracking); color: var(--text); }
+.fui-empty__text { color: var(--text-muted); max-width: 52ch; }
+/* Two ways in, side by side, and stacked when there is no room for two. */
+.fui-empty__buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.fui-empty__action { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+/* An empty state's way out sits a little below its text. */
+.fui-empty .fui-button { margin-top: 8px; }
+
+/* FinUI: error. Moved from app.css; the same rules under FinUI's names. */
+.fui-card--flush .fui-error { margin: 8px 16px 12px; }
+.fui-error { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--critical) 40%, transparent); border-radius: var(--radius); background: color-mix(in srgb, var(--critical) 6%, transparent); }
+.fui-error > .icon { color: var(--critical-text); }
+.fui-error > div { flex: 1; min-width: 200px; }
+.fui-error__title { font-weight: 600; }
+.fui-error__text { color: var(--text-muted); font-size: 13px; }
+
+/* FinUI: spinner. Moved from app.css; the same rules under FinUI's names. */
+.fui-spinner {
+  display: inline-block; width: 14px; height: 14px; flex: none; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; animation: fui-spinner-spin .7s linear infinite;
+}
+@keyframes fui-spinner-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .fui-spinner { animation: fui-spinner-spin 1.2s linear infinite !important; animation-iteration-count: infinite !important; }
+}
+
+/* The gallery's examples. */
+.fui-spinner__demo { display: inline-flex; align-items: center; gap: 12px; color: var(--text-muted); }
+
+/* FinUI: animated icon. One cycle of --icon-cycle: drawn (0–6%), the icon's own act (6–50%), drawn out stroke by stroke
+   (54–70%), nothing for a moment, drawn in again (76–96%). It starts and ends drawn, so the icon at rest is the static
+   one: on hover it does its act from there, and a cycle of 0s (Motion: Off) or reduced motion leaves it still. Each shape draws
+   on pathLength 1 with a dash of 1 and a gap of 2, so an offset of ±1.5 hides it with its round caps. */
+.fui-animated-icon { overflow: visible; --start: 0s; --times: infinite; }
+.fui-animated-icon > * {
+  --i: 0; --k: 0; --dx: 0; --dy: 0; --dir: 1; --sx: 1;
+  stroke-dasharray: 1 2;
+  animation: fui-animated-icon-draw var(--icon-cycle) linear var(--times) both;
+  animation-delay: calc(var(--start) + var(--i) * var(--icon-cycle) / 50);
+}
+.fui-animated-icon > [data-act] {
+  transform-box: fill-box; transform-origin: center;
+  animation-name: fui-animated-icon-draw, var(--act);
+  animation-delay: calc(var(--start) + var(--i) * var(--icon-cycle) / 50), calc(var(--start) + var(--k) * var(--icon-cycle) * 11 / 300);
+}
+.fui-animated-icon > [data-act="spin"] { --act: fui-animated-icon-spin; }
+.fui-animated-icon > [data-act="exit"] { --act: fui-animated-icon-exit; }
+.fui-animated-icon > [data-act="nudge"] { --act: fui-animated-icon-nudge; }
+.fui-animated-icon > [data-act="beat"] { --act: fui-animated-icon-beat; }
+.fui-animated-icon > [data-act="blaze"] { --act: fui-animated-icon-blaze; }
+.fui-animated-icon > [data-act="twinkle"] { --act: fui-animated-icon-twinkle; }
+.fui-animated-icon > [data-act="swing"] { --act: fui-animated-icon-swing; }
+.fui-animated-icon > [data-act="shake"] { --act: fui-animated-icon-shake; }
+.fui-animated-icon > [data-act="bob"] { --act: fui-animated-icon-bob; }
+.fui-animated-icon > [data-act="pop"] { --act: fui-animated-icon-pop; }
+.fui-animated-icon > [data-act="grow"] { --act: fui-animated-icon-grow; transform-origin: center bottom; }
+.fui-animated-icon > [data-act="blink"] { --act: fui-animated-icon-blink; }
+.fui-animated-icon > [data-act="slide"] { --act: fui-animated-icon-slide; }
+.fui-animated-icon > [data-act="squeeze"] { --act: fui-animated-icon-squeeze; transform-origin: left center; }
+.fui-animated-icon > [data-act="turn"] { --act: fui-animated-icon-turn; }
+.fui-animated-icon > [data-act="flip"] { --act: fui-animated-icon-flip; }
+.fui-animated-icon > [data-act="orbit"] { --act: fui-animated-icon-orbit; }
+.fui-animated-icon > [data-act="sweep"] { --act: fui-animated-icon-sweep; }
+.fui-animated-icon > [data-act="lift"] { --act: fui-animated-icon-lift; }
+.fui-animated-icon > [data-act="stretch"] { --act: fui-animated-icon-stretch; }
+.fui-animated-icon > [data-act="door"] { --act: fui-animated-icon-door; }
+.fui-animated-icon > [data-act="unroll"] { --act: fui-animated-icon-unroll; }
+.fui-animated-icon > [data-act="join"] { --act: fui-animated-icon-join; }
+.fui-animated-icon > [data-act="scribble"] { --act: fui-animated-icon-scribble; }
+.fui-animated-icon > [data-act="fold"] { --act: fui-animated-icon-fold; }
+.fui-animated-icon > [data-act="wink"] { --act: fui-animated-icon-wink; }
+.fui-animated-icon > [data-act="ring"] { --act: fui-animated-icon-ring; }
+.fui-animated-icon > [data-act="flick"] { --act: fui-animated-icon-flick; }
+.fui-animated-icon > [data-act="upend"] { --act: fui-animated-icon-upend; }
+/* Redrawing is a way of drawing: it takes the drawing's place rather than going beside it. */
+.fui-animated-icon > [data-act="redraw"] { animation-name: fui-animated-icon-redraw; animation-delay: calc(var(--start) + var(--i) * var(--icon-cycle) / 50 + var(--k) * var(--icon-cycle) * 11 / 300); }
+
+/* Once: in from nothing, the act, and it stays drawn. */
+.fui-animated-icon--once { --start: calc(var(--icon-cycle) * -0.72); --times: 1.5; }
+/* On hover: the static icon until it, or something pressable that holds it, is pointed at or focused; then its act, once
+   (half a cycle: it stops drawn, before the drawing out), and again the next time. */
+.fui-animated-icon--hover { --times: .5; }
+.fui-animated-icon--hover:not(:hover):not(:where(a[href], button, summary, label, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="option"], [role="switch"], [role="checkbox"], [role="radio"]):is(:hover, :focus-visible) *) > * { animation-name: none; }
+/* Busy (setBusy): what turns keeps turning, a whole turn at a time, pointed at or not; the rest stands still. */
+.fui-animated-icon.is-busy > * { animation-name: none; }
+.fui-animated-icon.is-busy > [data-act="spin"] { animation: fui-animated-icon-busy calc(var(--icon-cycle) / 3) linear infinite; }
+/* Done while still pointed at: it stands still until the pointer or the focus leaves, rather than playing again. */
+.fui-animated-icon--rested:not(.is-busy) > * { animation-name: none; }
+
+.fui-animated-icon__demo { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; color: var(--text); }
+
+@keyframes fui-animated-icon-draw {
+  0%, 54% { stroke-dashoffset: 0; animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  70%, 76% { stroke-dashoffset: -1.5; }
+  76.01% { stroke-dashoffset: 1.5; animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  96%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes fui-animated-icon-redraw {
+  0%, 6% { stroke-dashoffset: 0; animation-timing-function: ease-in; }
+  17% { stroke-dashoffset: -1.5; }
+  17.01% { stroke-dashoffset: 1.5; animation-timing-function: ease-out; }
+  28% { stroke-dashoffset: 0; animation-timing-function: ease-in; }
+  39% { stroke-dashoffset: -1.5; }
+  39.01% { stroke-dashoffset: 1.5; animation-timing-function: ease-out; }
+  50%, 54% { stroke-dashoffset: 0; animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  70%, 76% { stroke-dashoffset: -1.5; }
+  76.01% { stroke-dashoffset: 1.5; animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  96%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes fui-animated-icon-spin {
+  0%, 6% { transform: rotate(0deg); animation-timing-function: cubic-bezier(.6, 0, .25, 1); }
+  50%, 100% { transform: rotate(calc(720deg * var(--dir))); }
+}
+@keyframes fui-animated-icon-exit {
+  0%, 6% { transform: translate(0, 0); opacity: 1; animation-timing-function: ease-in; }
+  17% { transform: translate(calc(var(--dx) * 6px), calc(var(--dy) * 6px)); opacity: 0; }
+  17.01% { transform: translate(calc(var(--dx) * -6px), calc(var(--dy) * -6px)); opacity: 0; animation-timing-function: ease-out; }
+  28% { transform: translate(0, 0); opacity: 1; animation-timing-function: ease-in; }
+  39% { transform: translate(calc(var(--dx) * 6px), calc(var(--dy) * 6px)); opacity: 0; }
+  39.01% { transform: translate(calc(var(--dx) * -6px), calc(var(--dy) * -6px)); opacity: 0; animation-timing-function: ease-out; }
+  50%, 100% { transform: translate(0, 0); opacity: 1; }
+}
+@keyframes fui-animated-icon-nudge {
+  0%, 6%, 22%, 38%, 50%, 100% { transform: translate(0, 0); animation-timing-function: ease-in-out; }
+  14%, 30% { transform: translate(calc(var(--dx) * 3px), calc(var(--dy) * 3px)); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-beat {
+  0%, 6%, 18%, 30%, 38%, 50%, 100% { transform: scale(1); animation-timing-function: ease-out; }
+  12%, 32% { transform: scale(1.2); animation-timing-function: ease-in; }
+  24%, 44% { transform: scale(1.12); animation-timing-function: ease-in; }
+}
+/* A flame burning: the path itself is reshaped (d), so its tongue bends and licks one way and the other, the lick at
+   its side jumps, and its base stays where it is; turned or squashed whole, a flame reads as jelly. The rest frame is the
+   icon as core.js draws it, command for command; the breathing transform is what a browser that cannot morph a path sees. */
+@keyframes fui-animated-icon-blaze {
+  0%, 6%, 50%, 100% { d: path("M12 3 C12.6 6.2 17 8.4 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.5 9.4 15.8 C9 12 9.8 6.5 12 3Z"); transform: scale(1, 1); animation-timing-function: ease-in; }
+  11% { d: path("M12 5.6 C12.5 8.2 17 9.6 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.6 9.4 16 C9.2 12.8 10 8.4 12 5.6Z"); transform: scale(1.07, .87); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  17% { d: path("M9.2 .8 C10.4 4.6 17 7.8 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.4 8.3 15.2 9.3 15.4 C8 11 7.4 5.2 9.2 .8Z"); transform: scale(.95, 1.1); animation-timing-function: ease-in-out; }
+  23% { d: path("M15.6 1.8 C15.4 5.4 17.6 8.6 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.8 8.5 15.8 9.8 16 C10 12 12.4 6 15.6 1.8Z"); transform: scale(1.03, 1); animation-timing-function: ease-in-out; }
+  28% { d: path("M12 .8 C12.8 4.6 17 8 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.1 13.8 7.6 14 8.4 13.8 C8.4 10.6 9.4 5 12 .8Z"); transform: scale(.97, 1.08); animation-timing-function: ease-in-out; }
+  33% { d: path("M9 2.2 C10.4 5.6 16.8 8.8 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.4 9.3 15.6 C8.4 11.6 7.6 6 9 2.2Z"); transform: scale(1.03, .95); animation-timing-function: ease-in-out; }
+  38% { d: path("M15 2.4 C15 5.8 17.4 8.6 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.7 8.4 15.6 9.6 15.9 C9.8 12 11.8 6.4 15 2.4Z"); transform: scale(.99, 1.05); animation-timing-function: ease-in-out; }
+  43% { d: path("M10.6 1.8 C11.4 5.4 17 8.2 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.3 14.3 8 14.8 8.8 14.6 C8.6 11.2 8.6 5.8 10.6 1.8Z"); transform: scale(1.02, .98); animation-timing-function: ease-in-out; }
+  47% { d: path("M13 3.2 C13.4 6.4 17 8.5 17 13.2A5 5 0 0 1 12 21A5 5 0 0 1 7 13.2 C7.4 14.6 8.3 15.5 9.4 15.8 C9.2 12 10.6 6.8 13 3.2Z"); transform: scale(1, 1); animation-timing-function: ease-in-out; }
+}
+/* A quarter turn leaves a four-pointed star as it was, so it turns back at the very end, where nobody sees it, and a cycle
+   of 0s, which shows that end, shows the static icon. */
+@keyframes fui-animated-icon-twinkle {
+  0%, 6% { transform: rotate(0deg) scale(1); animation-timing-function: ease-in; }
+  20% { transform: rotate(45deg) scale(.55); animation-timing-function: ease-out; }
+  34% { transform: rotate(90deg) scale(1.15); }
+  42%, 99.99% { transform: rotate(90deg) scale(1); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+@keyframes fui-animated-icon-swing {
+  0%, 6%, 50%, 100% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  14% { transform: rotate(calc(16deg * var(--dir))); animation-timing-function: ease-in-out; }
+  22% { transform: rotate(calc(-12deg * var(--dir))); animation-timing-function: ease-in-out; }
+  30% { transform: rotate(calc(8deg * var(--dir))); animation-timing-function: ease-in-out; }
+  38% { transform: rotate(calc(-5deg * var(--dir))); animation-timing-function: ease-in-out; }
+  45% { transform: rotate(calc(2deg * var(--dir))); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-shake {
+  0%, 6%, 27%, 30%, 51%, 100% { transform: translateX(0); }
+  9%, 15%, 33%, 39% { transform: translateX(-1.5px); }
+  12%, 18%, 36%, 42% { transform: translateX(1.5px); }
+  21%, 45% { transform: translateX(-.75px); }
+  24%, 48% { transform: translateX(.75px); }
+}
+/* A door on its hinge: it swings open (seen edge-on, narrow), stays a moment, and shuts with a small knock. */
+@keyframes fui-animated-icon-door {
+  0%, 6% { transform: scaleX(1); animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  18%, 30% { transform: scaleX(.18); animation-timing-function: cubic-bezier(.6, 0, .4, 1); }
+  41% { transform: scaleX(1.08); animation-timing-function: ease-out; }
+  46%, 50%, 100% { transform: scaleX(1); }
+}
+/* A ribbon on its pin: drawn up short, it drops down the page past its length and sways back to it. */
+@keyframes fui-animated-icon-unroll {
+  0%, 6% { transform: scaleY(1); animation-timing-function: ease-in; }
+  15% { transform: scaleY(.42); animation-timing-function: cubic-bezier(.2, .9, .3, 1.2); }
+  27% { transform: scaleY(1.12); animation-timing-function: ease-in-out; }
+  35% { transform: scaleY(.95); animation-timing-function: ease-in-out; }
+  42% { transform: scaleY(1.03); animation-timing-function: ease-in-out; }
+  48%, 50%, 100% { transform: scaleY(1); }
+}
+/* Two halves of a chain: apart along the diagonal, a little twisted, then snapped back past each other and settled. */
+@keyframes fui-animated-icon-join {
+  0%, 6% { transform: translate(0, 0) rotate(0deg); animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  20% { transform: translate(calc(var(--dx) * 3px), calc(var(--dy) * 3px)) rotate(calc(-14deg * var(--dir))); animation-timing-function: cubic-bezier(.7, 0, .9, .4); }
+  30% { transform: translate(calc(var(--dx) * -.8px), calc(var(--dy) * -.8px)) rotate(calc(4deg * var(--dir))); animation-timing-function: ease-out; }
+  38% { transform: translate(0, 0) rotate(0deg) scale(1.06); animation-timing-function: ease-in-out; }
+  45%, 50%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+}
+@keyframes fui-animated-icon-bob {
+  0%, 6%, 24%, 42%, 100% { transform: translate(0, 0); animation-timing-function: ease-in-out; }
+  15%, 33% { transform: translate(calc(var(--dx) * 2.5px), calc(var(--dy) * 2.5px)); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-pop {
+  0%, 6% { transform: scale(1); animation-timing-function: ease-in; }
+  14% { transform: scale(.35); animation-timing-function: ease-out; }
+  24% { transform: scale(1.22); animation-timing-function: ease-in-out; }
+  32%, 100% { transform: scale(1); }
+}
+@keyframes fui-animated-icon-grow {
+  0%, 6% { transform: scaleY(1); animation-timing-function: ease-in; }
+  16% { transform: scaleY(.15); animation-timing-function: cubic-bezier(.3, 1.4, .6, 1); }
+  32%, 100% { transform: scaleY(1); }
+}
+@keyframes fui-animated-icon-blink {
+  0%, 6%, 18%, 30%, 42%, 100% { opacity: 1; }
+  12%, 24%, 36% { opacity: .15; }
+}
+@keyframes fui-animated-icon-slide {
+  0%, 6%, 46%, 100% { transform: translateX(0); animation-timing-function: ease-in-out; }
+  20%, 32% { transform: translateX(calc(var(--dx) * 3px)); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-squeeze {
+  0%, 6%, 26%, 46%, 100% { transform: scaleX(1); animation-timing-function: ease-in-out; }
+  16% { transform: scaleX(.45); animation-timing-function: ease-in-out; }
+  36% { transform: scaleX(.7); animation-timing-function: ease-in-out; }
+}
+/* A plus and a cross look the same a quarter turn on: they turn back unseen at the very end, as the star does. */
+@keyframes fui-animated-icon-turn {
+  0%, 6% { transform: rotate(0deg); animation-timing-function: cubic-bezier(.5, 0, .2, 1.3); }
+  40%, 99.99% { transform: rotate(calc(90deg * var(--dir))); }
+  100% { transform: rotate(0deg); }
+}
+/* A meridian flipped is its twin: a globe turning. */
+@keyframes fui-animated-icon-flip {
+  0%, 6% { transform: scaleX(1); animation-timing-function: ease-in-out; }
+  28% { transform: scaleX(-1); animation-timing-function: ease-in-out; }
+  50%, 100% { transform: scaleX(1); }
+}
+@keyframes fui-animated-icon-orbit {
+  0%, 6% { transform: rotate(0deg) translateX(0) rotate(0deg); }
+  11% { transform: rotate(0deg) translateX(1.5px) rotate(0deg); }
+  45% { transform: rotate(720deg) translateX(1.5px) rotate(-720deg); }
+  50%, 100% { transform: rotate(720deg) translateX(0) rotate(-720deg); }
+}
+@keyframes fui-animated-icon-sweep {
+  0%, 6%, 50%, 100% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  20% { transform: rotate(-80deg); animation-timing-function: ease-in-out; }
+  34% { transform: rotate(35deg); animation-timing-function: ease-in-out; }
+  43% { transform: rotate(-12deg); animation-timing-function: ease-in-out; }
+}
+@keyframes fui-animated-icon-lift {
+  0%, 6%, 24%, 42%, 100% { transform: translateY(0) rotate(0deg); animation-timing-function: ease-in-out; }
+  15%, 33% { transform: translateY(-2px) rotate(-14deg); animation-timing-function: ease-in-out; }
+}
+/* A line that keeps up with a sliding knob: the same timing as slide. */
+@keyframes fui-animated-icon-stretch {
+  0%, 6%, 46%, 100% { transform: scaleX(1); animation-timing-function: ease-in-out; }
+  20%, 32% { transform: scaleX(var(--sx)); animation-timing-function: ease-in-out; }
+}
+
+/* A pen writing: it runs along its tip in a quick zigzag, a word's worth (--dir: which way), and lifts back to where it began. */
+@keyframes fui-animated-icon-scribble {
+  0%, 6% { transform: translate(0, 0) rotate(0deg); animation-timing-function: ease-in-out; }
+  11% { transform: translate(calc(var(--dir) * .8px), -1.2px) rotate(calc(var(--dir) * -3deg)); animation-timing-function: ease-in-out; }
+  16% { transform: translate(calc(var(--dir) * 1.6px), .6px) rotate(calc(var(--dir) * 2deg)); animation-timing-function: ease-in-out; }
+  21% { transform: translate(calc(var(--dir) * 2.4px), -1.2px) rotate(calc(var(--dir) * -3deg)); animation-timing-function: ease-in-out; }
+  26% { transform: translate(calc(var(--dir) * 3.2px), .6px) rotate(calc(var(--dir) * 2deg)); animation-timing-function: ease-in-out; }
+  31% { transform: translate(calc(var(--dir) * 4px), -1.2px) rotate(calc(var(--dir) * -3deg)); animation-timing-function: ease-in-out; }
+  36% { transform: translate(calc(var(--dir) * 4.4px), 0) rotate(0deg); animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  46%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+}
+/* A flap on its fold: it turns over its edge, open, stays a moment, and folds shut. */
+@keyframes fui-animated-icon-fold {
+  0%, 6% { transform: scaleY(1); animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  20%, 32% { transform: scaleY(-1); animation-timing-function: cubic-bezier(.5, 0, .3, 1); }
+  46%, 50%, 100% { transform: scaleY(1); }
+}
+/* An eye blinking: it shuts toward its middle and opens, twice, quickly. */
+@keyframes fui-animated-icon-wink {
+  0%, 6% { transform: scaleY(1); animation-timing-function: ease-in; }
+  11% { transform: scaleY(.08); animation-timing-function: ease-out; }
+  17%, 26% { transform: scaleY(1); animation-timing-function: ease-in; }
+  31% { transform: scaleY(.08); animation-timing-function: ease-out; }
+  37%, 50%, 100% { transform: scaleY(1); }
+}
+/* A phone ringing: it rattles about its middle in two bursts, as a ring does. */
+@keyframes fui-animated-icon-ring {
+  0%, 6%, 26%, 28%, 48%, 50%, 100% { transform: rotate(0deg); }
+  8.5%, 13.5%, 30.5%, 35.5% { transform: rotate(calc(-9deg * var(--dir))); }
+  11%, 16%, 33%, 38% { transform: rotate(calc(9deg * var(--dir))); }
+  18.5%, 40.5% { transform: rotate(calc(-5deg * var(--dir))); }
+  21%, 43% { transform: rotate(calc(5deg * var(--dir))); }
+  23.5%, 45.5% { transform: rotate(calc(-2deg * var(--dir))); }
+}
+/* A switch thrown: its knob runs the length of its track, stays a moment, and runs back, settling with a small overshoot. */
+@keyframes fui-animated-icon-flick {
+  0%, 6% { transform: translateX(0); animation-timing-function: cubic-bezier(.5, 0, .2, 1.25); }
+  18%, 30% { transform: translateX(calc(var(--dx) * 10px)); animation-timing-function: cubic-bezier(.5, 0, .2, 1.25); }
+  42%, 50%, 100% { transform: translateX(0); }
+}
+/* Turned over, end for end: a half turn leaves an hourglass as it was, so it turns back at the very end, where nobody sees it, as a plus does. */
+@keyframes fui-animated-icon-upend {
+  0%, 6% { transform: rotate(0deg); animation-timing-function: cubic-bezier(.5, 0, .2, 1.2); }
+  32%, 99.99% { transform: rotate(calc(180deg * var(--dir))); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes fui-animated-icon-busy { from { transform: rotate(0deg); } to { transform: rotate(calc(360deg * var(--dir))); } }
+
+/* Still, with reduced motion; a busy icon turns on, slower, as the spinner does, so it still says something is under way. */
+@media (prefers-reduced-motion: reduce) {
+  .fui-animated-icon > *, .fui-animated-icon > [data-act] { animation: none; }
+  .fui-animated-icon.is-busy > [data-act="spin"] { animation: fui-animated-icon-busy var(--icon-cycle) linear infinite; }
+}
+
+/* FinUI: skeleton. Moved from app.css; the same rules under FinUI's names. */
+.fui-card--flush .fui-skeleton__rows { margin: 8px 16px 12px; }
+.fui-skeleton { display: inline-block; border-radius: var(--radius-sm); background: var(--skeleton); animation: fui-skeleton-pulse 1.6s ease-in-out infinite; }
+.fui-skeleton--block { display: block; width: 100%; border-radius: var(--radius-control); }
+.fui-skeleton__rows { display: flex; flex-direction: column; gap: 14px; }
+.fui-skeleton__row { display: flex; align-items: center; gap: 12px; }
+.fui-skeleton__lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.fui-skeleton--thumb { width: 36px; height: 36px; border-radius: var(--radius-control); flex: none; }
+.fui-skeleton--poster { width: 76px; aspect-ratio: 2 / 3; border-radius: var(--radius-control); flex: none; }
+.fui-skeleton--poster-lg { width: 168px; aspect-ratio: 2 / 3; border-radius: var(--radius); flex: none; }
+.fui-skeleton--wide { max-width: 440px; }
+@keyframes fui-skeleton-pulse { 50% { opacity: .45; } }
+/* A placeholder breathes while it waits; with reduced motion it holds still. */
+@media (prefers-reduced-motion: reduce) { .fui-skeleton { animation: none; } }
+
+/* FinUI: field. Moved from app.css; the same rules under FinUI's names. */
+.fui-field__input {
+  width: 100%; padding: calc(var(--density) * 8px) calc(var(--density) * 10px); min-height: calc(var(--density) * 36px); background: var(--field-bg); border: solid var(--field-border); border-width: var(--field-edges); border-radius: var(--radius-field); color: var(--text);
+  transition: border-color var(--ease), box-shadow var(--ease);
+}
+.fui-field__input::placeholder { color: var(--text-faint); }
+.fui-field__input:hover { border-color: var(--border-strong); }
+.fui-field__input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+.fui-field__input[aria-invalid="true"] { border-color: var(--critical); }
+.fui-field__input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--critical) 18%, transparent); }
+.fui-field__input--num { width: 110px; text-align: right; }
+.fui-field__search { position: relative; display: flex; align-items: center; min-width: 200px; flex: 1 1 200px; max-width: 320px; }
+.fui-field__search > .icon { position: absolute; left: 10px; color: var(--text-faint); pointer-events: none; }
+.fui-field__input--search { padding-left: 30px; min-height: calc(var(--density) * 32px); padding-top: calc(var(--density) * 5px); padding-bottom: calc(var(--density) * 5px); font-size: 13px; }
+.fui-field__input--search::-webkit-search-cancel-button { filter: invert(.6); }
+.fui-field { display: flex; flex-direction: column; gap: 6px; }
+.fui-field__label { font-size: 13px; font-weight: 550; color: var(--text); }
+.fui-field__row { display: flex; align-items: center; gap: 8px; }
+.fui-field__help { color: var(--text-faint); font-size: 12.5px; line-height: 1.5; }
+.fui-field__error { display: flex; align-items: flex-start; gap: 6px; color: var(--critical-text); font-size: 12.5px; margin-top: 2px; }
+.fui-field__error .icon { margin-top: 2px; }
+.fui-field__error + .fui-field__error { margin-top: 10px; }
+.fui-field__search--sm { min-width: 160px; flex: 0 1 240px; }
+@media (max-width: 820px) {
+  .fui-field__search { max-width: none; }
+}
+.fui-field__check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
+.fui-field__check input { width: 15px; height: 15px; accent-color: var(--accent); }
+select.fui-field__input { appearance: none; padding-right: 30px; background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+select.fui-field__input:disabled { opacity: .6; }
+/* Several lines: as tall as its rows, taller by hand; its help and its count on one line under it. */
+.fui-field__input--area { min-height: 84px; resize: vertical; line-height: 1.5; }
+.fui-field__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fui-field__count { font: 11.5px var(--mono); color: var(--text-faint); white-space: nowrap; }
+
+/* FinUI: toggle. Moved from app.css; the same rules under FinUI's names. */
+/* toggle switch */
+.fui-toggle { position: relative; width: 38px; height: 22px; flex: none; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--hover); transition: background var(--ease), border-color var(--ease); }
+.fui-toggle__knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: min(50%, var(--radius-pill)); background: var(--knob); box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 30%, transparent); transition: transform var(--ease), background var(--ease); }
+.fui-toggle[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.fui-toggle[aria-checked="true"] .fui-toggle__knob { transform: translateX(16px); background: var(--on-accent); }
+.fui-toggle:disabled { cursor: not-allowed; }
+.fui-toggle.is-inherited { opacity: .45; }
+
+/* The gallery's example. */
+.fui-toggle__demo { display: grid; grid-template-columns: max-content max-content; align-items: center; gap: 10px 14px; }
+.fui-toggle__demo-help { font-size: 12.5px; color: var(--text-faint); margin-top: 2px; }
+
+/* FinUI: segmented. Moved from app.css; the same rules under FinUI's names. */
+/* segmented control */
+.fui-segmented { display: inline-flex; padding: 2px; gap: 2px; background: var(--bg-sunken); border: 1px solid var(--border-soft); border-radius: calc(var(--radius-control) + 1px); max-width: 100%; overflow-x: auto; }
+.fui-segmented__option {
+  padding: calc(var(--density) * 4px) calc(var(--density) * 11px); min-height: calc(var(--density) * 26px); background: transparent; border: 0; border-radius: max(0px, calc(var(--radius-control) - 1px)); color: var(--text-muted);
+  font-size: 12.5px; font-weight: 500; white-space: nowrap; transition: background var(--ease), color var(--ease);
+}
+.fui-segmented__option:hover { color: var(--text); }
+.fui-segmented__option[aria-checked="true"], .fui-segmented__option[aria-current="page"] { background: var(--hover); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+.fui-segmented--sm .fui-segmented__option { padding: 2px 9px; min-height: 22px; font-size: 12px; }
+
+/* FinUI: calendar. A month of day buttons: today ringed, what is picked filled, a range's days between washed, a dot on a
+   marked day, days of the months around it faint. */
+.fui-calendar { display: grid; gap: 8px; min-width: 0; max-width: 340px; }
+.fui-calendar__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fui-calendar__caption { font-family: var(--font-heading); font-weight: var(--heading-weight); color: var(--text-strong); }
+.fui-calendar__nav { display: grid; place-items: center; width: calc(var(--density) * 30px); height: calc(var(--density) * 30px); padding: 0;
+  background: transparent; border: 0; border-radius: var(--radius-sm); color: var(--text-muted); transition: background var(--ease), color var(--ease); }
+.fui-calendar__nav:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.fui-calendar__nav:disabled { opacity: .35; cursor: default; }
+.fui-calendar__grid { width: 100%; border-collapse: separate; border-spacing: 0 2px; table-layout: fixed; }
+.fui-calendar__grid th { padding: 4px 0; font-size: 11px; font-weight: 500; text-align: center; color: var(--text-faint); }
+.fui-calendar__grid td { padding: 0; text-align: center; }
+.fui-calendar__day { position: relative; display: grid; place-items: center; width: 100%; height: calc(var(--density) * 36px); padding: 0;
+  background: transparent; border: 0; border-radius: var(--radius-control); color: var(--text); font-size: 13px; font-variant-numeric: tabular-nums;
+  transition: background var(--ease); }
+.fui-calendar__day:hover:not(:disabled) { background: var(--hover); }
+.fui-calendar__day:disabled { color: var(--text-faint); opacity: .45; cursor: not-allowed; text-decoration: line-through; }
+.fui-calendar__day[aria-current="date"] { box-shadow: inset 0 0 0 1px var(--border-strong); font-weight: 600; }
+.is-outside .fui-calendar__day { color: var(--text-faint); }
+.is-in-range .fui-calendar__day { background: var(--accent-wash); border-radius: 0; }
+.is-range-start .fui-calendar__day { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.is-range-end .fui-calendar__day { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+/* Picked stays filled under the pointer: this outranks the hover above. */
+.fui-calendar td[aria-selected="true"] > .fui-calendar__day { background: var(--primary-bg); color: var(--primary-text); box-shadow: none; }
+.fui-calendar__mark { position: absolute; bottom: 12%; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: var(--radius-pill); background: var(--accent); }
+.fui-calendar td[aria-selected="true"] > .fui-calendar__day .fui-calendar__mark { background: var(--primary-text); }
+
+/* FinUI: combobox. Moved from app.css; the same rules under FinUI's names. */
+/* combobox */
+.fui-combobox { position: relative; }
+.fui-combobox__button {
+  display: inline-flex; align-items: center; gap: 7px; min-height: calc(var(--density) * 32px); padding: calc(var(--density) * 4px) calc(var(--density) * 9px); max-width: 240px;
+  background: var(--bg-sunken); border: 1px solid var(--border-soft); border-radius: calc(var(--radius-control) + 1px); color: var(--text-muted); font-size: 12.5px; font-weight: 500;
+}
+.fui-combobox__button:hover { border-color: var(--border); color: var(--text); }
+.fui-combobox.has-value .fui-combobox__button { color: var(--text); border-color: var(--accent); background: var(--accent-wash); }
+.fui-combobox__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-combobox__caret { color: var(--text-faint); }
+.fui-combobox__pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: 260px; max-width: calc(100vw - 32px);
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow) 50%, transparent); overflow: hidden;
+  animation: fade var(--ease);
+}
+.fui-combobox__search { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); color: var(--text-faint); }
+.fui-combobox__input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; font-size: 13px; }
+.fui-combobox__list { max-height: 260px; overflow-y: auto; padding: 4px; }
+.fui-combobox__option { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; }
+.fui-combobox__option.is-active { background: var(--hover); }
+.fui-combobox__option[aria-selected="true"] { color: var(--accent-hi); }
+.fui-combobox__empty { padding: 14px 10px; color: var(--text-faint); font-size: 13px; text-align: center; }
+/* A list you tick: it takes the focus itself, having no search box to hold it, and the active row is
+   what shows where you are, so no focus ring on the list as well. */
+.fui-combobox__list:focus { outline: none; }
+.fui-combobox.is-multi .fui-combobox__option[aria-selected="true"] { background: var(--accent-wash); }
+
+/* FinUI: copy. Moved from app.css; the same rules under FinUI's names. */
+/* copy */
+.fui-copy { display: inline-flex; align-items: center; gap: 6px; }
+.fui-copy__row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+/* An address is one word: never break it in the middle. What follows it wraps underneath instead. */
+.fui-copy__row > .mono:not(.trunc) { white-space: nowrap; overflow-wrap: normal; }
+/* A truncated value gives way instead: it shrinks to its ellipsis, so the copy button stays beside it and never wraps under it. */
+.fui-copy__row > .trunc { flex: 1 1 0; }
+.fui-copy__button { display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-faint); }
+.fui-copy__button:hover { background: var(--hover); color: var(--text); }
+.fui-copy__button.is-ok { color: var(--good); }
+.fui-copy__note { font-size: 12px; color: var(--text-muted); }
+
+/* FinUI: stat-tile. Moved from app.css; the same rules under FinUI's names. */
+/* ------------------------------------------------------------ tiles */
+.fui-stat-tile__grid { --tile: 210px; --gap: 12px; display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--tile)), 1fr)); }
+/* Rows that come out even: three or six tiles go three, two or one across; four or eight go four, two or one, never three
+   and one left alone under them. Each width is a floor that the next breakpoint lifts: (breakpoint - 100%) * 999 is huge
+   below it and negative above it. */
+.fui-stat-tile__grid:has(> :nth-child(3):last-child) { grid-template-columns: repeat(auto-fit, minmax(max(calc((100% - 2 * var(--gap)) / 3 - .1px), min(100%, calc((3 * var(--tile) + 2 * var(--gap) - 100%) * 999))), 1fr)); }
+.fui-stat-tile__grid:has(> :nth-child(6):last-child) { grid-template-columns: repeat(auto-fit, minmax(max(calc((100% - 2 * var(--gap)) / 3 - .1px), min(calc((100% - var(--gap)) / 2 - .1px), calc((3 * var(--tile) + 2 * var(--gap) - 100%) * 999)), min(100%, calc((2 * var(--tile) + var(--gap) - 100%) * 999))), 1fr)); }
+.fui-stat-tile__grid:is(:has(> :nth-child(4):last-child), :has(> :nth-child(8):last-child)) { grid-template-columns: repeat(auto-fit, minmax(max(calc((100% - 3 * var(--gap)) / 4 - .1px), min(calc((100% - var(--gap)) / 2 - .1px), calc((4 * var(--tile) + 3 * var(--gap) - 100%) * 999)), min(100%, calc((2 * var(--tile) + var(--gap) - 100%) * 999))), 1fr)); }
+.fui-stat-tile { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); box-shadow: var(--card-shadow); padding: calc(var(--density) * 14px) calc(var(--density) * 16px) calc(var(--density) * 12px); min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.fui-stat-tile__label { font-size: 12.5px; color: var(--text-muted); }
+.fui-stat-tile__row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.fui-stat-tile__value { font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -.02em; color: var(--text-strong); white-space: nowrap; flex: none; }
+/* The value is what the tile is for and keeps its width; a small chart beside it takes what is left and scales down
+   whole: a wide value ("56d 23h") once pushed it out of the tile, its last point cut off. */
+.fui-stat-tile__spark { flex: 0 1 auto; min-width: 0; display: flex; }
+.fui-stat-tile__spark > svg { max-width: 100%; height: auto; }
+.fui-stat-tile__foot { display: flex; align-items: center; gap: 7px; font-size: 12px; min-height: 18px; flex-wrap: wrap; }
+.fui-stat-tile__vs { color: var(--text-faint); }
+/* A tile that is also a choice (Library health's kinds): pressed is the list below it. */
+.fui-stat-tile--pressable { font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+.fui-stat-tile--pressable:hover { border-color: var(--border); background: var(--hover); }
+.fui-stat-tile--pressable[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.fui-stat-tile--pressable.is-quiet .fui-stat-tile__value { color: var(--text-faint); }
+.fui-stat-tile__delta { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 11.5px; color: var(--text); }
+.fui-stat-tile__delta.fui-stat-tile__delta--up .icon { color: var(--good); }
+.fui-stat-tile__delta.fui-stat-tile__delta--down .icon { color: var(--serious); }
+.fui-stat-tile__delta.fui-stat-tile__delta--flat .icon { color: var(--text-faint); }
+.fui-stat-tile .fui-skeleton { margin: 3px 0; }
+/* ------------------------------------------------------------ v0.2: insights, library make-up, server */
+.fui-stat-tile__grid--quiet .fui-stat-tile { background: transparent; padding: 10px 14px 9px; }
+.fui-stat-tile__grid--quiet .fui-stat-tile__value { font-size: 20px; color: var(--text); }
+.fui-stat-tile__grid--quiet { --tile: 200px; }
+.fui-stat-tile__grid--three { --tile: 220px; }
+
+/* The gallery's sparkline stand-in. */
+.fui-stat-tile__demo-spark { display: block; width: 64px; height: 18px; border-bottom: 2px solid var(--spark); border-radius: var(--radius-sm); }
+
+/* FinUI: facts. Moved from app.css; the same rules under FinUI's names. */
+/* ------------------------------------------------------------ facts */
+.fui-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 20px; }
+.fui-facts__item { min-width: 0; }
+.fui-facts__item--wide { grid-column: 1 / -1; }
+.fui-facts__item dt { font-size: 11.5px; color: var(--text-faint); margin-bottom: 1px; }
+.fui-facts__item dd { color: var(--text); overflow-wrap: anywhere; }
+/* Help under facts sits a little apart from them. */
+.fui-facts + .fui-field__help { margin-top: 14px; }
+
+/* FinUI: meter. Moved from app.css; the same rules under FinUI's names. */
+.fui-meter { display: inline-block; width: 56px; height: 4px; border-radius: var(--radius-pill); background: var(--wash-2); overflow: hidden; flex: none; }
+.fui-meter__fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--accent-hi); transition: width 400ms ease; }
+.fui-meter--wide { display: block; width: 100%; height: 5px; }
+.fui-meter.is-indeterminate .fui-meter__fill { animation: fui-meter-slide 1.4s ease-in-out infinite; }
+@keyframes fui-meter-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(340%); } }
+.fui-meter--block { display: block; width: 100%; height: 6px; }
+/* Indeterminate, the bar sweeps; with reduced motion it holds still. */
+@media (prefers-reduced-motion: reduce) { .fui-meter.is-indeterminate .fui-meter__fill { animation: none; } }
+
+/* The gallery's examples. */
+.fui-meter__demo { display: inline-flex; align-items: center; gap: 8px; }
+.fui-meter__demo-stack { display: grid; gap: 12px; }
+
+/* FinUI: poster. Moved from app.css; the same rules under FinUI's names. */
+.fui-poster { display: block; flex: none; aspect-ratio: 2 / 3; border-radius: var(--radius-sm); overflow: hidden; background: var(--placeholder); }
+.fui-poster img { width: 100%; height: 100%; object-fit: cover; }
+.fui-poster__fallback { display: grid; place-items: center; width: 100%; height: 100%; color: var(--text-faint); font-weight: 600; font-size: 11px; letter-spacing: .04em; }
+.fui-poster--xs { width: 28px; }
+.fui-poster--sm { width: 38px; }
+.fui-poster--md { width: 84px; border-radius: var(--radius-control); }
+.fui-poster--md .fui-poster__fallback, .fui-poster--np .fui-poster__fallback { font-size: 16px; }
+.fui-poster--np { width: 76px; border-radius: var(--radius-control); align-self: flex-start; }
+.fui-poster--lg { width: 168px; border-radius: var(--radius); box-shadow: 0 10px 30px color-mix(in srgb, var(--shadow) 45%, transparent); }
+.fui-poster--still { width: 300px; aspect-ratio: 16 / 9; }
+.fui-poster--lg .fui-poster__fallback, .fui-poster--grid .fui-poster__fallback { font-size: 26px; }
+.fui-poster--grid { width: 100%; border-radius: var(--radius-control); }
+@media (max-width: 820px) {
+  .fui-poster--lg { width: 120px; }
+  .fui-poster--still { width: min(100%, 320px); }
+}
+@media (max-width: 420px) {
+  .fui-poster--np { width: 56px; }
+}
+.fui-poster--placeholder { display: grid; place-items: center; background: var(--bg-sunken); color: var(--text-faint); border: 1px solid var(--border-soft); }
+
+/* The gallery's examples. */
+.fui-poster__demo { display: flex; align-items: flex-end; gap: 12px; }
+
+/* FinUI: avatar. Moved from app.css; the same rules under FinUI's names. */
+/* avatars & posters */
+.fui-avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; overflow: hidden; background: var(--wash-2); color: var(--wash-2-text); font-weight: 600; letter-spacing: .02em; }
+.fui-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* The gallery's examples. */
+.fui-avatar__demo { display: flex; align-items: center; gap: 10px; }
+
+/* FinUI: pagination. Moved from app.css; the same rules under FinUI's names. */
+.fui-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px 8px; border-top: 1px solid var(--border-soft); color: var(--text-muted); font-size: 12.5px; }
+.fui-pagination__buttons { display: flex; align-items: center; gap: 6px; }
+
+/* FinUI: sections. Moved from app.css; the same rules under FinUI's names. */
+/* ---- Sections (Settings, Server): one section on screen, a list to move between them. */
+.fui-sections { display: grid; grid-template-columns: 196px minmax(0, 1fr); gap: 20px 28px; align-items: start; }
+.fui-sections__nav { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.fui-sections__group { display: flex; flex-direction: column; gap: 1px; }
+.fui-sections__group-title { margin: 0 0 4px; padding-left: 10px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-faint); }
+.fui-sections__link { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: var(--radius-control); color: var(--text-muted); font-size: 13.5px; text-decoration: none; }
+.fui-sections__link .icon { color: var(--text-faint); flex: none; }
+.fui-sections__link:hover { background: var(--hover); color: var(--text); text-decoration: none; }
+.fui-sections__link.is-active { background: var(--selected-bg); color: var(--selected-text); box-shadow: var(--selected-edge); }
+.fui-sections__link.is-active .icon { color: var(--selected-icon); }
+.fui-sections__body { min-width: 0; }
+.fui-sections__body .fui-card__body { max-width: 100%; }
+.fui-sections__body .fui-setting-row { scroll-margin-top: 20px; }
+/* A row on its own in a section (not in a list of rows) is still set off from what is above it. */
+.fui-sections__body :not(.fui-setting-row__rows) > .fui-setting-row { padding: 12px 0; border-top: 1px solid var(--border-soft); }
+@media (max-width: 820px) {
+  .fui-sections { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .fui-sections__nav { position: static; flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .fui-sections__group { display: contents; }
+  .fui-sections__group-title { display: none; }
+  .fui-sections__link { padding: 5px 11px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); font-size: 13px; white-space: nowrap; }
+  .fui-sections__link.is-active { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
+}
+
+/* FinUI: page-header. Moved from app.css; the same rules under FinUI's names. */
+/* ------------------------------------------------------------ page chrome */
+.fui-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.fui-page-header__title { font-size: 28px; line-height: 1.15; font-weight: var(--title-weight); letter-spacing: calc(var(--heading-tracking) - .022em); text-transform: var(--heading-case); color: var(--text-strong); overflow-wrap: anywhere; }
+.fui-page-header__sub { margin-top: 5px; color: var(--text-muted); font-size: 13.5px; }
+.fui-page-header > div { min-width: 0; }
+.fui-page-header__sub { overflow-wrap: anywhere; }
+/* A part of the page: the same, smaller, its line beside it where there is room. */
+.fui-page-header--section { align-items: baseline; justify-content: flex-start; gap: 4px 16px; }
+.fui-page-header--section > div { display: flex; align-items: baseline; gap: 4px 16px; flex-wrap: wrap; }
+.fui-page-header--section .fui-page-header__title { font-size: 21px; font-weight: var(--heading-weight); letter-spacing: calc(var(--heading-tracking) - .015em); }
+.fui-page-header--section .fui-page-header__sub { margin-top: 0; font-size: 14px; }
+@media (max-width: 820px) {
+  .fui-page-header__title { font-size: 24px; }
+  .fui-page-header--section .fui-page-header__title { font-size: 19px; }
+}
+
+/* The gallery's chip. */
+.fui-page-header__demo-chip { font-size: 12px; color: var(--text-muted); }
+
+/* FinUI: setting-row. Moved from app.css; the same rules under FinUI's names. */
+.fui-setting-row__label { font-size: 13px; font-weight: 550; color: var(--text); }
+/* The control sits on the middle of the name and help: aligned to the top, a switch hung there while a field, about as
+   tall as the text, looked centred by chance. */
+.fui-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.fui-setting-row .fui-field__help { max-width: 62ch; margin-top: 2px; }
+.fui-setting-row__control { display: flex; align-items: center; gap: 10px; flex: none; }
+.fui-setting-row > div:first-child { min-width: 0; }
+@media (max-width: 820px) {
+  .fui-setting-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
+/* A setting is one row: what it is on the left, the control on the right, one line of help under the label. */
+.fui-setting-row__rows { display: flex; flex-direction: column; }
+/* Rows stand apart by themselves, a line between two, wherever they are: once only a Settings section spaced them, and
+   anywhere else two rows sat flush and a tall control touched the next. Room grows with the density. */
+.fui-setting-row__rows > .fui-setting-row { padding: calc(var(--density) * 12px) 0; border-top: 1px solid var(--border-soft); }
+.fui-setting-row__rows > .fui-setting-row:first-child { padding-top: 0; border-top: 0; }
+.fui-setting-row__rows > form.fui-setting-row__rows:not(:first-child) { border-top: 1px solid var(--border-soft); padding-top: calc(var(--density) * 12px); margin-top: 2px; }
+.fui-setting-row__rows > form.fui-setting-row__rows:not(:first-child) > .fui-setting-row:first-child { padding-top: 0; }
+.fui-setting-row__control { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex: none; min-width: 0; }
+.fui-setting-row__actions { justify-content: flex-end; padding-top: 12px; }
+.fui-setting-row__foot { margin-top: 14px; }
+.fui-setting-row__notes { display: grid; gap: 6px; margin-top: 14px; }
+.fui-setting-row.is-hit { animation: fui-setting-row-hit 2.4s ease-out both; }
+.fui-setting-row.is-hit { border-radius: var(--radius-control); }
+@media (max-width: 820px) {
+  .fui-setting-row__control { justify-content: flex-start; width: 100%; }
+}
+@keyframes fui-setting-row-hit { 0%, 60% { box-shadow: inset 3px 0 0 var(--accent-hi); background: color-mix(in srgb, var(--accent) 10%, transparent); } 100% { box-shadow: none; background: transparent; } }
+
+/* FinUI: modal. Moved from app.css; the same rules under FinUI's names. */
+/* ------------------------------------------------------------ modal, palette */
+.fui-modal__overlay { position: fixed; inset: 0; z-index: 60; display: grid; place-items: start center; padding: 9vh 16px 40px; overflow-y: auto; background: var(--backdrop); animation: fui-modal-fade var(--ease); }
+/* Fading out, it is already gone for the pointer: a click in those 140 ms belongs to the page under it. */
+.fui-modal__overlay.is-closing { opacity: 0; transition: opacity 140ms ease; pointer-events: none; }
+.fui-modal { width: min(520px, 100%); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: 0 24px 64px color-mix(in srgb, var(--shadow) 60%, transparent); outline: none; }
+.fui-modal--wide { width: min(720px, 100%); }
+.fui-modal__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 12px 12px 18px; border-bottom: 1px solid var(--border-soft); }
+.fui-modal__title { font-family: var(--font-heading); font-size: 15px; font-weight: var(--heading-weight); text-transform: var(--heading-case); letter-spacing: var(--heading-tracking); }
+.fui-modal__body { padding: 18px; }
+@media (max-width: 820px) {
+  .fui-modal__overlay { padding-top: 5vh; }
+}
+@keyframes fui-modal-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* The gallery's dialog, drawn in place beside the button that opens it. */
+.fui-modal__demo { display: grid; gap: 12px; justify-items: start; }
+.fui-modal__demo .fui-modal { max-width: 100%; }
+
+/* FinUI: data-table. Moved from app.css; the same rules under FinUI's names. */
+/* ------------------------------------------------------------ tables */
+.fui-data-table__scroll { position: relative; overflow-x: auto; }
+/* relative: a visually hidden label inside must scroll with the table, not widen the page */
+.fui-data-table th, .fui-data-table td { padding: calc(var(--density) * 9px) 12px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--row-line); }
+.fui-data-table tbody tr:nth-child(even) { background: var(--row-stripe); }
+.fui-data-table th.r, .fui-data-table td.r { text-align: right; }
+.fui-data-table thead th { font-size: 11.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; padding-top: 6px; padding-bottom: 8px; }
+.fui-data-table tbody tr:last-child td, .fui-data-table tbody tr:last-child th { border-bottom: 0; }
+.fui-data-table th:first-child, .fui-data-table td:first-child { padding-left: 16px; }
+.fui-data-table th:last-child, .fui-data-table td:last-child { padding-right: 16px; }
+.fui-data-table td.mono, .fui-data-table td .mono, .fui-data-table th.mono { font-variant-numeric: tabular-nums; }
+.fui-data-table tbody th { font-weight: 500; color: var(--text-muted); }
+.fui-data-table--hover tbody tr { transition: background var(--ease); }
+.fui-data-table--hover tbody tr:hover { background: color-mix(in srgb, var(--tint) 2.5%, transparent); }
+.fui-data-table--dense th, .fui-data-table--dense td { padding: 5px 8px; font-size: 12.5px; }
+/* ---- sortable headers + quick row filter (tables.js) */
+.fui-data-table__sort { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; margin: -3px -5px; padding: 3px 5px; border: 0; border-radius: var(--radius-sm); background: none;
+  color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; white-space: inherit; cursor: pointer; transition: color var(--ease), background var(--ease); }
+.fui-data-table__sort:hover { color: var(--text); background: var(--hover); }
+th.r .fui-data-table__sort { flex-direction: row-reverse; }
+.fui-data-table__sort-icon { flex: none; opacity: .28; transition: opacity var(--ease), transform var(--ease); }
+.fui-data-table__sort:hover .fui-data-table__sort-icon, .fui-data-table__sort:focus-visible .fui-data-table__sort-icon { opacity: .7; }
+th.is-sorted .fui-data-table__sort { color: var(--text); }
+th.is-sorted .fui-data-table__sort-icon { opacity: 1; color: var(--accent-hi); }
+th[aria-sort="descending"] .fui-data-table__sort-icon { transform: rotate(180deg); }
+.fui-data-table__tools { display: flex; justify-content: flex-end; padding: 0 0 10px; }
+.fui-data-table__tools .fui-field__search { width: min(100%, 240px); }
+.fui-data-table__none { margin: 0; padding: 18px 16px; color: var(--text-faint); font-size: 13px; text-align: center; }
+.fui-data-table__scroll { overflow-x: auto; }
+/* In a flush card the tools sit on a line of their own. */
+.fui-card--flush .fui-data-table__tools { padding: 10px 12px; border-bottom: 1px solid var(--border-soft); }
+
+/* FinUI: rank-list. Moved from app.css; the same rules under FinUI's names. */
+/* top lists */
+.fui-rank-list__row { display: flex; align-items: center; gap: 11px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); }
+.fui-rank-list__row:last-child { border-bottom: 0; padding-bottom: 0; }
+.fui-rank-list__row:first-child { padding-top: 0; }
+.fui-rank-list__rank { width: 16px; color: var(--text-faint); font-size: 12px; text-align: right; flex: none; }
+.fui-rank-list__main { flex: 1; min-width: 0; }
+.fui-rank-list__name { display: block; color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-rank-list__sub { font-size: 12px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-rank-list__nums { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.35; white-space: nowrap; }
+.fui-rank-list__watch { color: var(--text); }
+.fui-rank-list__plays { color: var(--text-faint); font-size: 11.5px; }
+
+/* FinUI: media-card. Moved from app.css; the same rules under FinUI's names. */
+.fui-media-card__grid { display: grid; gap: 16px 14px; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.fui-media-card { display: flex; flex-direction: column; gap: 3px; color: var(--text); }
+.fui-media-card:hover { text-decoration: none; }
+.fui-media-card:hover .fui-poster { outline: 2px solid var(--accent); outline-offset: 1px; }
+.fui-media-card__name { margin-top: 5px; font-size: 13px; font-weight: 500; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fui-media-card__sub { font-size: 11.5px; color: var(--text-faint); }
+
+/* The gallery's stand-in for a poster. */
+.fui-media-card__demo-poster { display: block; aspect-ratio: 2 / 3; border-radius: var(--radius-control); background: var(--placeholder); }
+
+/* FinUI: tooltip. Moved from app.css; the same rules under FinUI's names. */
+.fui-tooltip {
+  position: fixed; top: 0; left: 0; z-index: 100; pointer-events: none; max-width: 260px;
+  background: var(--tooltip-bg); border: 1px solid var(--border); border-radius: var(--radius-control); padding: 8px 10px; box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow) 50%, transparent);
+  font-size: 12.5px; color: var(--text-muted);
+}
+.fui-tooltip__title { color: var(--text-muted); font-size: 11.5px; margin-bottom: 4px; }
+.fui-tooltip__row { display: flex; align-items: center; gap: 7px; line-height: 1.6; }
+.fui-tooltip__row strong { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text-strong); }
+.fui-tooltip__key { width: 10px; height: 3px; border-radius: 2px; flex: none; }
+
+/* The gallery's stand-in for a chart's column. */
+.fui-tooltip__demo { padding: 10px 14px; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); }
+/* Held in place, in the gallery: the same box, standing in the page instead of floating over it. */
+.fui-tooltip--held { position: static; pointer-events: auto; }
+.fui-tooltip__demo-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+
+/* FinUI: context-menu. One of the surfaces that float over a page, so it stands on --bg-2 with its --border edge, like a
+   dialog or the dock. Its rows are the size of a menu's rows anywhere: a pointer finds them, a finger too. */
+.fui-context-menu {
+  position: fixed; z-index: 1000;
+  display: flex; flex-direction: column;
+  min-width: 200px; max-width: min(320px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow-y: auto;
+  padding: 4px;
+  background: var(--bg-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 14px 36px color-mix(in srgb, var(--shadow) 42%, transparent), 0 2px 6px color-mix(in srgb, var(--shadow) 22%, transparent);
+  font: 13.5px/1.3 var(--sans);
+  -webkit-user-select: none; user-select: none;
+}
+.fui-context-menu__item {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 32px; padding: 6px 10px;
+  border: 0; border-radius: var(--radius-sm);
+  background: none; color: var(--text); font: inherit; text-align: left; text-decoration: none;
+  cursor: pointer; outline: none;
+}
+.fui-context-menu__item .icon { flex: none; color: var(--text-muted); }
+.fui-context-menu__no-icon { flex: none; width: 15px; }
+.fui-context-menu__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-context-menu__hint { flex: none; padding-left: 12px; font: 11.5px var(--mono); color: var(--text-faint); }
+.fui-context-menu__item:hover, .fui-context-menu__item:focus-visible { background: var(--hover); }
+.fui-context-menu__item:focus-visible { box-shadow: inset 0 0 0 1px var(--focus-color); }
+.fui-context-menu__item:hover .icon, .fui-context-menu__item:focus-visible .icon { color: var(--text); }
+.fui-context-menu__item--danger, .fui-context-menu__item--danger .icon { color: var(--critical-text); }
+.fui-context-menu__item[aria-disabled="true"] { cursor: default; color: var(--text-faint); background: none; }
+.fui-context-menu__item[aria-disabled="true"] .icon { color: var(--text-faint); }
+.fui-context-menu__item.is-waiting .fui-context-menu__label { color: var(--text-faint); }
+.fui-context-menu__separator { height: 1px; margin: 4px 6px; background: var(--border-soft); }
+.fui-context-menu__separator[hidden] { display: none; }
+/* The gallery: one held open to look at, and an area to try the real one in. */
+.fui-context-menu--held { position: relative; z-index: auto; flex: none; }
+.fui-context-menu__demo-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+.fui-context-menu__demo {
+  flex: 1 1 220px;
+  display: grid; place-items: center; min-height: 140px; padding: 16px;
+  border: 1px dashed var(--border); border-radius: var(--radius);
+  color: var(--text-muted); text-align: center;
+}
+
+/* FinUI: theme-switch. Moved from app.css; the same rules under FinUI's names. */
+/* The theme: a switch with three stops (Light · Device · Dark), the family of .fui-toggle. --at is the stop, 0 to 2. */
+.fui-theme-switch { --at: 1; --w: 64px; --k: 22px; position: relative; flex: none; width: var(--w); height: 26px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  background: var(--track); cursor: pointer; touch-action: none; user-select: none; transition: background 260ms ease, border-color var(--ease); }
+.fui-theme-switch[data-at="0"] { background: color-mix(in srgb, var(--warning) 26%, var(--track)); }
+.fui-theme-switch[data-at="2"] { background: color-mix(in srgb, var(--series-1) 34%, var(--track)); }
+.fui-theme-switch:hover { border-color: var(--border-strong); }
+.fui-theme-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fui-theme-switch__marks { position: absolute; inset: 0; pointer-events: none; }
+/* Under the knob's three resting centres: its inset, half of it, and a third of the travel each. */
+.fui-theme-switch__mark { position: absolute; top: 50%; width: 3px; height: 3px; border-radius: 50%; background: var(--text-faint); opacity: .7;
+  translate: -50% -50%; left: calc(1px + var(--k) / 2 + var(--i) * (var(--w) - var(--k) - 4px) / 2); }
+.fui-theme-switch__mark:nth-child(1) { --i: 0; }
+.fui-theme-switch__mark:nth-child(2) { --i: 1; }
+.fui-theme-switch__mark:nth-child(3) { --i: 2; }
+.fui-theme-switch__knob { position: absolute; top: 1px; left: 1px; width: var(--k); height: var(--k); display: grid; place-items: center; border-radius: min(50%, var(--radius-pill));
+  background: var(--knob); box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow) 35%, transparent), 0 0 0 .5px color-mix(in srgb, var(--shadow) 20%, transparent);
+  translate: calc(var(--at) * (var(--w) - var(--k) - 4px) / 2) 0;
+  transition: translate 340ms cubic-bezier(.34, 1.4, .5, 1), transform 340ms cubic-bezier(.34, 1.4, .5, 1); }
+.fui-theme-switch.is-dragging .fui-theme-switch__knob { transition: none; }
+.fui-theme-switch:active:not(.is-dragging) .fui-theme-switch__knob { scale: 1.08; }
+.fui-theme-switch__knob[data-icon="sun"] { color: var(--theme-sun); }
+.fui-theme-switch__knob[data-icon="moon"] { color: var(--theme-moon); }
+.fui-theme-switch__knob[data-icon="monitor"] { color: var(--theme-device); }
+.fui-theme-switch__icon { display: block; stroke-width: 2.1; }
+.fui-theme-switch__knob[data-icon="sun"] .fui-theme-switch__icon.is-in { animation: fui-theme-sun 520ms cubic-bezier(.3, 1.3, .5, 1) both; }
+.fui-theme-switch__knob[data-icon="moon"] .fui-theme-switch__icon.is-in { animation: fui-theme-moon 560ms cubic-bezier(.3, 1.3, .5, 1) both; }
+.fui-theme-switch__knob[data-icon="monitor"] .fui-theme-switch__icon.is-in { animation: fui-theme-device 440ms cubic-bezier(.3, 1.3, .5, 1) both; }
+@keyframes fui-theme-sun { from { opacity: 0; transform: rotate(-120deg) scale(.3); } to { opacity: 1; transform: none; } }
+@keyframes fui-theme-moon { 0% { opacity: 0; transform: rotate(70deg) scale(.4); } 60% { opacity: 1; transform: rotate(-14deg) scale(1.05); } 100% { transform: none; } }
+@keyframes fui-theme-device { from { opacity: 0; transform: translateY(-7px) scale(.6); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fui-theme-switch, .fui-theme-switch__knob { transition: none; }
+  .fui-theme-switch__icon.is-in { animation: none !important; }
+}
+
+/* The gallery's three. */
+.fui-theme-switch__demo { display: flex; gap: 14px; }
+
+/* FinUI: search. A bar and its results, laid out by whatever holds them; its bar flies from the top-left corner. */
+
+.fui-search { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; font-family: var(--sans); color: var(--text); }
+.fui-search__bar {
+  position: relative; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 6px; height: 40px; padding: 0 5px; transform-origin: 0 0;
+  background: var(--field-bg); border: var(--field-edges) solid var(--field-border); border-radius: var(--radius-field); color: var(--text-faint);
+}
+/* The field fills the whole bar, so the ring it wears when focused is the bar's; the icon, Esc and ✕ sit over its ends. */
+.fui-search__bar > .icon { position: absolute; left: 12px; top: 50%; translate: 0 -50%; z-index: 1; pointer-events: none; }
+.fui-search__bar:focus-within > .icon { color: var(--accent-hi); }
+/* 16 px or more: a phone zooms the page into a smaller field the moment it is touched. */
+.fui-search__input {
+  position: absolute; inset: calc(-1 * var(--field-edges)); width: auto; height: auto; padding: 0 76px 0 38px; margin: 0;
+  border: var(--field-edges) solid transparent; border-radius: var(--radius-field); outline: none; background: none; font: 16px var(--sans); color: var(--text);
+}
+.fui-search__input:focus-visible { border-color: var(--focus-color); box-shadow: 0 0 0 3px var(--accent-wash); }
+.fui-search__input::placeholder { color: var(--text-faint); }
+.fui-search__input::-webkit-search-cancel-button { display: none; }
+.fui-search__esc { position: relative; z-index: 1; font: 500 10px var(--mono); color: var(--text-faint); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px 4px; }
+.fui-search__close { position: relative; z-index: 1; display: grid; place-items: center; width: 28px; height: 28px; flex: none; padding: 0; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text-faint); cursor: pointer; }
+.fui-search__close:hover { background: var(--hover); color: var(--text); }
+
+.fui-search__list { flex: 1; min-height: 0; margin: 0; padding: 2px; list-style: none; overflow-y: auto; overscroll-behavior: contain; }
+.fui-search__group { padding: 8px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-faint); }
+.fui-search__group:first-child { padding-top: 2px; }
+.fui-search__row { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 5px 8px; border-radius: var(--radius-control); cursor: pointer; }
+.fui-search__row.is-active { background: var(--accent-wash); }
+.fui-search__text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.fui-search__label { font-size: 13.5px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-search__sub { font-size: 11.5px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-search__icon { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: var(--radius-control); background: var(--bg-2); border: 1px solid var(--border-soft); color: var(--text-muted); }
+.fui-search__none { padding: 18px 10px; text-align: center; color: var(--text-faint); font-size: 13px; }
+.fui-search__foot { flex: none; display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 8px 6px 0; border-top: 1px solid var(--border-soft); color: var(--text-faint); font-size: 11.5px; }
+.fui-search__foot kbd { margin-right: 3px; font: 500 10px var(--mono); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1px 4px; }
+@media (hover: none) and (pointer: coarse) { .fui-search__foot, .fui-search__esc { display: none; } }
+
+.fui-search__demo { display: flex; height: 440px; max-width: 480px; padding: 12px; background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); }
+.fui-search__demo .fui-search { flex: 1; }
+
+/* FinUI: mobile-nav. One menu, five styles; the closed menu keeps no more of the screen than its style's `space`. */
+
+.fui-mobile-nav {
+  --fui-mobile-nav-safe: env(safe-area-inset-bottom, 0px);
+  --fui-mobile-nav-bar: calc(64px + var(--fui-mobile-nav-safe));
+  --fui-mobile-nav-move: 300ms cubic-bezier(.2, .8, .2, 1);
+  position: fixed; inset: 0; z-index: 50; pointer-events: none; font-family: var(--sans); color: var(--text);
+}
+.fui-mobile-nav--contained { position: absolute; --fui-mobile-nav-safe: 0px; }
+.fui-mobile-nav--locked { overflow: hidden; }
+
+.fui-mobile-nav__scrim { position: absolute; inset: 0; z-index: 0; background: var(--backdrop); opacity: 0; transition: opacity 220ms ease; }
+.fui-mobile-nav.is-open .fui-mobile-nav__scrim { opacity: 1; pointer-events: auto; }
+.fui-mobile-nav__panel { position: absolute; z-index: 1; visibility: hidden; outline: none; }
+.fui-mobile-nav.is-open .fui-mobile-nav__panel { visibility: visible; }
+/* Only while open: a panel on its way out is still drawn for a moment, and must not catch the press that reopens it. */
+.fui-mobile-nav.is-open .fui-mobile-nav__sheet, .fui-mobile-nav.is-open .fui-mobile-nav__screen { pointer-events: auto; }
+.fui-mobile-nav__dock { position: absolute; z-index: 2; pointer-events: auto; }
+
+/* ---- the pieces */
+.fui-mobile-nav__sheet {
+  inset: auto 0 0 0; max-height: 88%; display: flex; flex-direction: column; gap: 10px; padding: 0 12px calc(14px + var(--fui-mobile-nav-safe));
+  background: var(--bg-2); border-top: 1px solid var(--border); border-radius: calc(var(--radius-lg) * 2.4) calc(var(--radius-lg) * 2.4) 0 0;
+  box-shadow: 0 -18px 50px color-mix(in srgb, var(--shadow) 40%, transparent);
+  translate: 0 104%; transition: translate var(--fui-mobile-nav-move), visibility 0s linear 300ms, max-height var(--fui-mobile-nav-move);
+}
+.fui-mobile-nav.is-open .fui-mobile-nav__sheet { translate: 0 0; transition: translate var(--fui-mobile-nav-move), visibility 0s, max-height var(--fui-mobile-nav-move); }
+.fui-mobile-nav__sheet.is-dragging { transition: none; }
+
+.fui-mobile-nav__grab { flex: none; display: grid; place-items: center; width: 100%; height: 24px; margin-bottom: -4px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; }
+.fui-mobile-nav__grab-bar { width: 38px; height: 5px; border-radius: var(--radius-pill); background: var(--border-strong); transition: background var(--ease), width var(--ease); }
+.fui-mobile-nav__grab:hover .fui-mobile-nav__grab-bar { width: 46px; background: var(--text-faint); }
+
+
+.fui-mobile-nav__list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 2px; }
+.fui-mobile-nav__link {
+  position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; flex: none;
+  border-radius: var(--radius-control); font: 500 15px var(--sans); color: var(--text-muted); text-decoration: none;
+  transition: background var(--ease), color var(--ease);
+}
+.fui-mobile-nav__link:hover { background: var(--hover); color: var(--text); text-decoration: none; }
+.fui-mobile-nav__link.is-current { background: var(--selected-bg); color: var(--selected-text); box-shadow: var(--selected-edge); }
+.fui-mobile-nav__link.is-current .icon { color: var(--selected-icon); }
+.fui-mobile-nav__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-mobile-nav__dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--accent-hi); }
+.fui-mobile-nav__foot { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 6px 0; border-top: 1px solid var(--border-soft); }
+.fui-mobile-nav__foot--top { order: -1; padding: 2px 6px 10px; border-top: 0; border-bottom: 1px solid var(--border-soft); }
+.fui-mobile-nav__grab + .fui-mobile-nav__foot--top { order: 0; }
+
+/* ---- Tab bar: four pages and More, always there; More raises a sheet from behind the bar */
+.fui-mobile-nav--tabs .fui-mobile-nav__scrim { bottom: var(--fui-mobile-nav-bar); }
+.fui-mobile-nav--tabs .fui-mobile-nav__sheet { bottom: var(--fui-mobile-nav-bar); max-height: calc(88% - var(--fui-mobile-nav-bar)); padding-bottom: 14px; border-bottom: 1px solid var(--border-soft); }
+.fui-mobile-nav--tabs .fui-mobile-nav__dock {
+  inset: auto 0 0 0; height: var(--fui-mobile-nav-bar); display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  padding: 6px 6px calc(10px + var(--fui-mobile-nav-safe)); background: var(--bg-sunken); border-top: 1px solid var(--border-soft);
+}
+.fui-mobile-nav__tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 0; padding: 0;
+  border: 0; border-radius: 0; background: none; font: 500 11px var(--sans); color: var(--text-faint); cursor: pointer;
+}
+.fui-mobile-nav__tab .fui-mobile-nav__label { flex: none; max-width: 100%; }
+.fui-mobile-nav__tab .icon { box-sizing: content-box; padding: 3px 16px; border-radius: var(--radius-pill); transition: background var(--ease), color var(--ease); }
+.fui-mobile-nav__tab:hover { background: none; color: var(--text); }
+.fui-mobile-nav__tab.is-current, .fui-mobile-nav__more[aria-expanded="true"] { background: none; box-shadow: none; color: var(--text); }
+.fui-mobile-nav__tab.is-current .icon, .fui-mobile-nav__more[aria-expanded="true"] .icon { background: var(--selected-bg); color: var(--selected-icon); }
+.fui-mobile-nav__tab .fui-mobile-nav__dot { position: absolute; top: 6px; left: calc(50% + 10px); }
+
+/* ---- Peek: half way on the pages used most; drawn up, every page */
+.fui-mobile-nav--peek .fui-mobile-nav__sheet { max-height: calc(240px + var(--fui-mobile-nav-safe)); overflow: hidden; }
+.fui-mobile-nav--peek.is-full .fui-mobile-nav__sheet { max-height: 88%; }
+.fui-mobile-nav__quick { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.fui-mobile-nav__q { flex-direction: column; gap: 7px; min-height: 0; padding: 0; font-size: 12px; text-align: center; }
+.fui-mobile-nav__q:hover, .fui-mobile-nav__q.is-current { background: none; box-shadow: none; }
+.fui-mobile-nav__q .fui-mobile-nav__label { flex: none; max-width: 100%; }
+.fui-mobile-nav__q .icon { box-sizing: content-box; padding: 14px; border-radius: 50%; background: var(--bg-sunken); border: 1px solid var(--border-soft); transition: background var(--ease); }
+.fui-mobile-nav__q:hover .icon { background: var(--hover); }
+.fui-mobile-nav__q.is-current .icon { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.fui-mobile-nav__q .fui-mobile-nav__dot { position: absolute; top: 2px; right: calc(50% - 26px); }
+.fui-mobile-nav__all {
+  flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px;
+  border: 0; border-top: 1px solid var(--border-soft); background: none; font: 500 13px var(--sans); color: var(--text-muted); cursor: pointer;
+}
+.fui-mobile-nav__all:hover { color: var(--text); }
+.fui-mobile-nav__all .icon { transition: transform 300ms ease; }
+.fui-mobile-nav--peek.is-full .fui-mobile-nav__all .icon { transform: rotate(180deg); }
+/* Hidden, not only faded, while the sheet peeks: what cannot be seen cannot be tabbed to. */
+.fui-mobile-nav__rest { min-height: 0; display: flex; flex-direction: column; gap: 2px; opacity: 0; visibility: hidden; transition: opacity 200ms ease, visibility 0s linear 200ms; }
+.fui-mobile-nav--peek.is-full .fui-mobile-nav__rest { opacity: 1; visibility: visible; transition: opacity 200ms ease, visibility 0s; }
+.fui-mobile-nav__rest .fui-mobile-nav__list { flex: 1; }
+
+/* ---- Full screen: the whole screen, in large type */
+.fui-mobile-nav__screen {
+  inset: 0; display: flex; flex-direction: column; gap: 14px; padding: 4px 16px calc(16px + var(--fui-mobile-nav-safe)); background: var(--bg);
+  opacity: 0; scale: 1.03; transition: opacity 200ms ease, scale 260ms cubic-bezier(.2, .8, .2, 1), visibility 0s linear 260ms;
+}
+.fui-mobile-nav.is-open .fui-mobile-nav__screen { opacity: 1; scale: 1; transition: opacity 200ms ease, scale 260ms cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+.fui-mobile-nav__head { flex: none; display: flex; align-items: center; gap: 8px; height: 48px; margin: 0 -8px; }
+.fui-mobile-nav__close { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--radius-control); background: none; color: var(--text-muted); cursor: pointer; }
+.fui-mobile-nav__close:hover { background: var(--hover); color: var(--text); }
+.fui-mobile-nav__title { font: var(--heading-weight) 15px var(--font-heading); color: var(--text-muted); }
+.fui-mobile-nav__list--large .fui-mobile-nav__link { min-height: 46px; gap: 16px; padding: 0 8px; font: 600 21px var(--font-heading); letter-spacing: -.015em; }
+.fui-mobile-nav__list--large .fui-mobile-nav__link .icon { color: var(--text-faint); }
+.fui-mobile-nav__list--large .fui-mobile-nav__link.is-current { background: none; box-shadow: none; color: var(--text-hero); }
+.fui-mobile-nav__list--large .fui-mobile-nav__link.is-current .fui-mobile-nav__label::after { content: ''; display: inline-block; width: 6px; height: 6px; margin: 0 0 4px 8px; border-radius: 50%; background: var(--accent); }
+.fui-mobile-nav__screen .fui-mobile-nav__foot { margin-top: auto; }
+
+/* ---- Thumb arc: a corner button fans every page out around it */
+.fui-mobile-nav__fab {
+  right: 16px; bottom: calc(16px + var(--fui-mobile-nav-safe)); display: grid; place-items: center; width: 56px; height: 56px; padding: 0;
+  border: 0; border-radius: 50%; background: var(--accent); color: var(--on-accent); cursor: pointer;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--shadow) 45%, transparent); transition: background var(--ease);
+}
+.fui-mobile-nav__fab:hover { background: var(--accent-hover); }
+.fui-mobile-nav__fab > span { grid-area: 1 / 1; display: grid; transition: opacity 200ms ease, rotate 260ms ease; }
+.fui-mobile-nav__fab-close { opacity: 0; rotate: -90deg; }
+.fui-mobile-nav.is-open .fui-mobile-nav__fab-open { opacity: 0; rotate: 90deg; }
+.fui-mobile-nav.is-open .fui-mobile-nav__fab-close { opacity: 1; rotate: 0deg; }
+.fui-mobile-nav__fan { inset: 0; }
+.fui-mobile-nav__card {
+  position: absolute; top: 12px; left: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; padding: 10px;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: calc(var(--radius-lg) * 2.4);
+  opacity: 0; translate: 0 -12px; transition: opacity 200ms ease, translate 260ms ease;
+}
+.fui-mobile-nav.is-open .fui-mobile-nav__card { opacity: 1; translate: 0 0; pointer-events: auto; }
+.fui-mobile-nav__card .fui-mobile-nav__foot { padding-top: 8px; }
+.fui-mobile-nav__arc { position: absolute; inset: 0; }
+/* Where the arc puts a page (plan.js' arc(), set on each by the script) and its turn in the fan. */
+.fui-mobile-nav__spot {
+  --x: 0px; --y: 0px; --i: 0;
+  position: absolute; right: calc(44px + var(--x) - 32px); bottom: calc(44px + var(--fui-mobile-nav-safe) + var(--y) - 37px); width: 64px; min-height: 0;
+  flex-direction: column; gap: 3px; padding: 0; background: none;
+  opacity: 0; translate: var(--x) var(--y); scale: .3;
+  transition: opacity 200ms ease, translate 320ms cubic-bezier(.2, .9, .3, 1.2), scale 320ms cubic-bezier(.2, .9, .3, 1.2);
+  transition-delay: calc(var(--i) * 14ms);
+}
+.fui-mobile-nav.is-open .fui-mobile-nav__spot { opacity: 1; translate: 0 0; scale: 1; pointer-events: auto; }
+.fui-mobile-nav__spot:hover, .fui-mobile-nav__spot.is-current { background: none; box-shadow: none; }
+.fui-mobile-nav__spot .icon { box-sizing: content-box; padding: 12px; border-radius: 50%; background: var(--bg-2); border: 1px solid var(--border); transition: background var(--ease), color var(--ease); }
+.fui-mobile-nav__spot:hover .icon { background: var(--hover); color: var(--text); }
+.fui-mobile-nav__spot.is-current .icon { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.fui-mobile-nav__spot .fui-mobile-nav__label { flex: none; max-width: 78px; padding: 1px 6px; border-radius: var(--radius-pill); background: var(--bg-2); font: 600 10.5px var(--sans); color: var(--text); text-align: center; }
+.fui-mobile-nav__spot .fui-mobile-nav__dot { position: absolute; top: 2px; right: 12px; }
+
+/* ---- Address bar: a pill naming the page, which grows into the menu with the search where the pill was */
+.fui-mobile-nav__pill {
+  left: 12px; right: 12px; bottom: calc(12px + var(--fui-mobile-nav-safe)); display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 18px 0 8px;
+  border: 1px solid var(--border); border-radius: var(--radius-field); background: var(--bg-2); color: var(--text-faint); cursor: pointer;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow) 35%, transparent); font: 600 15px var(--sans); text-align: left;
+  transition: opacity 160ms ease, scale 200ms ease;
+}
+.fui-mobile-nav__pill .fui-mobile-nav__label { color: var(--text); }
+.fui-mobile-nav__where { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--selected-bg); color: var(--selected-icon); }
+.fui-mobile-nav--address.is-open .fui-mobile-nav__pill { opacity: 0; scale: .97; pointer-events: none; }
+.fui-mobile-nav--address .fui-mobile-nav__sheet { padding-bottom: calc(12px + var(--fui-mobile-nav-safe)); }
+.fui-mobile-nav__list--pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
+.fui-mobile-nav__list--pairs .fui-mobile-nav__link { gap: 9px; padding: 0 10px; min-height: 42px; font-size: 14px; }
+
+/* ---- the menu's search: a field to look at, a button to press; the search itself is the app's */
+.fui-mobile-nav__search {
+  flex: none; display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; padding: 0 18px;
+  background: var(--field-bg); border: var(--field-edges) solid var(--field-border); border-radius: var(--radius-field);
+  font: 400 16px var(--sans); color: var(--text-faint); text-align: left; cursor: text;
+}
+.fui-mobile-nav__search:hover { border-color: var(--border-strong); }
+.fui-mobile-nav--address .fui-mobile-nav__search { height: 50px; background: var(--bg-sunken); }
+
+/* ---- search, in the place the style has for it: the sheet, the screen, the arc's card */
+.fui-mobile-nav__found { display: none; }
+.fui-mobile-nav.is-searching .fui-mobile-nav__found { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.fui-mobile-nav__found > .fui-search { flex: 1; }
+.fui-mobile-nav.is-searching .fui-mobile-nav__panel > :not(.fui-mobile-nav__found, .fui-mobile-nav__grab, .fui-mobile-nav__head, .fui-mobile-nav__card, .fui-mobile-nav__arc) { display: none; }
+.fui-mobile-nav.is-searching .fui-mobile-nav__card > :not(.fui-mobile-nav__found) { display: none; }
+.fui-mobile-nav.is-searching .fui-mobile-nav__arc { display: none; }
+.fui-mobile-nav--tabs.is-searching .fui-mobile-nav__sheet { height: calc(88% - var(--fui-mobile-nav-bar)); }
+.fui-mobile-nav--peek.is-searching .fui-mobile-nav__sheet { height: 88%; max-height: 88%; }
+.fui-mobile-nav--arc.is-searching .fui-mobile-nav__card { max-height: 78%; height: 78%; }
+.fui-mobile-nav .fui-search__bar { height: 48px; }
+.fui-mobile-nav .fui-search__input { font-size: 17px; }
+/* The address bar keeps its field at the bottom, under the thumb, and the results rise above it. */
+.fui-mobile-nav--address .fui-search__list { order: 1; }
+.fui-mobile-nav--address .fui-search__foot { order: 2; }
+.fui-mobile-nav--address .fui-search__bar { order: 3; height: 50px; }
+/* Opened from outside the menu, the place appears where the search grows rather than sliding in, and goes the same way. */
+.fui-mobile-nav.is-instant .fui-mobile-nav__panel, .fui-mobile-nav.is-instant .fui-mobile-nav__scrim, .fui-mobile-nav.is-instant .fui-mobile-nav__card { transition: none; }
+.fui-mobile-nav.is-gone :is(.fui-mobile-nav__panel, .fui-mobile-nav__scrim) { visibility: hidden; opacity: 0; }
+
+/* ---- a frame to show it in (the gallery) */
+.fui-mobile-nav__demo { position: relative; width: min(100%, 340px); height: 620px; overflow: hidden; isolation: isolate; border: 1px solid var(--border-strong); border-radius: calc(var(--radius-lg) * 3); background: var(--bg); }
+.fui-mobile-nav__demo-bar { display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 8px; background: var(--bg-sunken); border-bottom: 1px solid var(--border-soft); }
+.fui-mobile-nav__menu { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--radius-control); background: none; color: var(--text-muted); cursor: pointer; }
+.fui-mobile-nav__menu:hover { background: var(--hover); color: var(--text); }
+.fui-mobile-nav__demo-name { font-weight: 650; font-size: 15px; }
+.fui-mobile-nav__demo-page { display: flex; flex-direction: column; gap: 12px; padding: 18px 16px; }
+.fui-mobile-nav__demo-page span { height: 70px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--border-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-mobile-nav__sheet, .fui-mobile-nav.is-open .fui-mobile-nav__sheet, .fui-mobile-nav__screen, .fui-mobile-nav.is-open .fui-mobile-nav__screen,
+  .fui-mobile-nav__spot, .fui-mobile-nav__card, .fui-mobile-nav__scrim, .fui-mobile-nav__pill, .fui-mobile-nav__fab > span { transition: none; }
+}
+
+/* FinUI: desktop-nav. Eight styles of one menu; the sidebars sit on either side, the dock at the bottom, the command bar
+   at the top, each keeping no more of the window than STYLES says. */
+
+.fui-desktop-nav {
+  --fui-desktop-nav-top: 0px; --fui-desktop-nav-bottom: 0px; --fui-desktop-nav-size: 220px; --fui-desktop-nav-open: 220px; --fui-desktop-nav-search: 420px;
+  position: fixed; inset: 0; z-index: 30; pointer-events: none; font-family: var(--sans); color: var(--text);
+}
+.fui-desktop-nav--contained { position: absolute; }
+.fui-desktop-nav__frame { position: absolute; pointer-events: auto; }
+
+/* ---- a side: the sidebar, grouped, the rail, search first, pinned, tiles */
+.fui-desktop-nav--left .fui-desktop-nav__frame, .fui-desktop-nav--right .fui-desktop-nav__frame {
+  top: var(--fui-desktop-nav-top); bottom: var(--fui-desktop-nav-bottom); width: var(--fui-desktop-nav-size);
+  display: flex; flex-direction: column; gap: 10px; padding: 14px 10px 10px; background: var(--bg-sunken);
+}
+.fui-desktop-nav--left .fui-desktop-nav__frame { left: 0; border-right: 1px solid var(--border-soft); }
+.fui-desktop-nav--right .fui-desktop-nav__frame { right: 0; border-left: 1px solid var(--border-soft); }
+
+.fui-desktop-nav__brand { display: flex; align-items: center; gap: 9px; padding: 2px 8px 6px; color: var(--text); text-decoration: none; }
+.fui-desktop-nav__brand:hover { text-decoration: none; }
+.fui-desktop-nav__name { font-weight: 650; font-size: 15px; letter-spacing: -.01em; }
+
+.fui-desktop-nav__search-btn {
+  position: relative; flex: none; display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px;
+  background: var(--bg); border: 1px solid var(--border-soft); border-radius: var(--radius-field); color: var(--text-faint); font: 13px var(--sans); text-align: left; cursor: pointer;
+  transition: border-color var(--ease), color var(--ease);
+}
+.fui-desktop-nav__search-btn:hover { border-color: var(--border); color: var(--text-muted); }
+.fui-desktop-nav__search-btn .fui-desktop-nav__label { flex: 1; }
+.fui-desktop-nav__keys { font: 500 10.5px/1 var(--mono); color: var(--text-faint); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px 5px; }
+
+.fui-desktop-nav__nav { min-height: 0; display: flex; flex-direction: column; gap: 1px; margin-top: 4px; overflow: hidden auto; scrollbar-width: thin; }
+.fui-desktop-nav__link {
+  position: relative; display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: var(--radius-sm);
+  color: var(--text-muted); font-size: 13px; line-height: 1.5; text-decoration: none; transition: background var(--ease), color var(--ease), transform 160ms ease;
+}
+.fui-desktop-nav__link:hover { background: var(--hover); color: var(--text); text-decoration: none; }
+.fui-desktop-nav__link.is-current { background: var(--selected-bg); color: var(--selected-text); box-shadow: var(--selected-edge); }
+.fui-desktop-nav__link.is-current .icon { color: var(--selected-icon); }
+.fui-desktop-nav__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-desktop-nav__dot { width: 7px; height: 7px; margin-left: auto; flex: none; border-radius: 50%; background: var(--accent-hi); }
+
+.fui-desktop-nav__group { display: flex; flex-direction: column; gap: 1px; }
+.fui-desktop-nav__group + .fui-desktop-nav__group { margin-top: 10px; }
+.fui-desktop-nav__group-name { padding: 0 8px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); }
+
+.fui-desktop-nav__foot { margin-top: auto; flex: none; display: flex; align-items: center; gap: 4px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
+.fui-desktop-nav__me { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 4px 6px; border-radius: var(--radius-sm); color: var(--text); text-decoration: none; }
+.fui-desktop-nav__me:hover { background: var(--hover); text-decoration: none; }
+.fui-desktop-nav__who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.fui-desktop-nav__me-name { font-size: 13px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-desktop-nav__me-role { font-size: 11px; color: var(--text-faint); }
+.fui-desktop-nav__theme { flex: none; display: flex; }
+
+/* A name shown above the pointer, for a page drawn as its icon alone (the dock). */
+.fui-desktop-nav__tip {
+  position: absolute; left: calc(100% + 10px); top: 50%; z-index: 6; padding: 4px 8px; border-radius: var(--radius-sm);
+  background: var(--tooltip-bg); border: 1px solid var(--border); box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 35%, transparent);
+  font: 500 12px var(--sans); color: var(--text); white-space: nowrap; pointer-events: none;
+  opacity: 0; translate: -4px -50%; transition: opacity 120ms ease, translate 120ms ease;
+}
+:is(.fui-desktop-nav__link, .fui-desktop-nav__search-btn):is(:hover, :focus-visible) > .fui-desktop-nav__tip { opacity: 1; translate: 0 -50%; }
+
+/* A popover: the command panel, and you and the theme behind an avatar where a style has no room for them. */
+.fui-desktop-nav__pop {
+  position: absolute; z-index: 5; padding: 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--shadow) 45%, transparent);
+}
+.fui-desktop-nav__foot-wrap { position: relative; margin-top: auto; flex: none; }
+.fui-desktop-nav__me-btn { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; transition: background var(--ease); }
+.fui-desktop-nav__me-btn:hover, .fui-desktop-nav__me-btn[aria-expanded="true"] { background: var(--hover); }
+.fui-desktop-nav__pop--me { width: 240px; bottom: 0; left: calc(100% + 10px); }
+.fui-desktop-nav__pop--me .fui-desktop-nav__foot { margin: 0; padding: 0; border: 0; }
+
+/* ---- Rail that opens: the grouped sidebar, its icons alone until the pointer or the keyboard's focus comes, then all of it, over
+   the page. The keyboard's alone (:focus-visible): a link pressed keeps the focus, and held the rail open until a click elsewhere. */
+.fui-desktop-nav--rail .fui-desktop-nav__frame {
+  overflow: hidden; z-index: 1; transition: width 200ms cubic-bezier(.2, .8, .2, 1), box-shadow 200ms ease;
+}
+.fui-desktop-nav--rail .fui-desktop-nav__frame:is(:hover, :has(:focus-visible), .is-open) { width: var(--fui-desktop-nav-open); box-shadow: 0 0 40px color-mix(in srgb, var(--shadow) 40%, transparent); }
+.fui-desktop-nav--rail :is(.fui-desktop-nav__name, .fui-desktop-nav__label, .fui-desktop-nav__group-name, .fui-desktop-nav__who, .fui-desktop-nav__keys, .fui-desktop-nav__dot, .fui-desktop-nav__theme) {
+  opacity: 0; white-space: nowrap; transition: opacity 120ms ease;
+}
+.fui-desktop-nav--rail .fui-desktop-nav__frame:is(:hover, :has(:focus-visible), .is-open) :is(.fui-desktop-nav__name, .fui-desktop-nav__label, .fui-desktop-nav__group-name, .fui-desktop-nav__who, .fui-desktop-nav__keys, .fui-desktop-nav__dot, .fui-desktop-nav__theme) {
+  opacity: 1; transition-delay: 80ms;
+}
+/* Closed, the rail's list scrolls (a short window, 150 % zoom) but draws no bar: 60 px has no room for one. */
+.fui-desktop-nav--rail .fui-desktop-nav__frame:not(:hover, :has(:focus-visible), .is-open) .fui-desktop-nav__nav { scrollbar-width: none; }
+.fui-desktop-nav--rail .fui-desktop-nav__frame:not(:hover, :has(:focus-visible), .is-open) .fui-desktop-nav__nav::-webkit-scrollbar { display: none; }
+.fui-desktop-nav--rail .fui-desktop-nav__link { padding: 5px 11px; }
+.fui-desktop-nav--rail .fui-desktop-nav__search-btn { padding: 6px 11px; }
+.fui-desktop-nav--rail .fui-desktop-nav__brand { padding: 2px 8px 6px 7px; }
+.fui-desktop-nav--rail .fui-desktop-nav__group-name { height: 18px; }
+.fui-desktop-nav--rail .fui-desktop-nav__me { flex: none; width: calc(var(--fui-desktop-nav-open) - 96px); padding-left: 5px; }
+.fui-desktop-nav--rail .fui-desktop-nav__foot { flex-wrap: nowrap; }
+/* Something new on a page drawn as its icon alone: a badge on the icon's corner. */
+.fui-desktop-nav--dock .fui-desktop-nav__dot { position: absolute; top: 7px; right: 8px; margin: 0; box-shadow: 0 0 0 2px var(--bg-2); }
+.fui-desktop-nav__sep { flex: none; width: 22px; height: 1px; margin: 4px 0; background: var(--border-soft); }
+
+/* ---- Search first */
+.fui-desktop-nav--search .fui-desktop-nav__frame { gap: 12px; }
+.fui-desktop-nav__search-btn--big { height: 44px; padding: 0 16px; font-size: 15px; }
+.fui-desktop-nav__nav--well { padding: 6px; gap: 2px; background: var(--bg); border: 1px solid var(--border-soft); border-radius: calc(var(--radius) * 1.5); }
+.fui-desktop-nav__link--big { min-height: 36px; gap: 11px; padding: 0 10px; border-radius: var(--radius-control); font-size: 14px; }
+
+/* ---- Pinned */
+.fui-desktop-nav__pins { display: flex; flex-direction: column; gap: 1px; padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--border-soft); }
+.fui-desktop-nav__hint { margin: 2px 8px 4px; font-size: 12px; line-height: 1.4; color: var(--text-faint); }
+.fui-desktop-nav__line { position: relative; }
+.fui-desktop-nav__line .fui-desktop-nav__link { padding-right: 30px; }
+.fui-desktop-nav__pin {
+  position: absolute; right: 4px; top: 50%; translate: 0 -50%; display: grid; place-items: center; width: 22px; height: 22px; padding: 0;
+  border: 0; border-radius: var(--radius-sm); background: none; color: var(--text-faint); cursor: pointer; opacity: 0; transition: opacity var(--ease), background var(--ease);
+}
+.fui-desktop-nav__line:hover .fui-desktop-nav__pin, .fui-desktop-nav__pin:focus-visible, .fui-desktop-nav__pin.is-on { opacity: 1; }
+.fui-desktop-nav__pin:hover { background: var(--btn-hover); color: var(--text); }
+.fui-desktop-nav__pin.is-on { color: var(--accent-hi); }
+
+/* ---- Coloured tiles: each group's icons in tiles of one of the four chart colours */
+.fui-desktop-nav--tiles .fui-desktop-nav__group { padding: 4px; background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius); }
+.fui-desktop-nav--tiles .fui-desktop-nav__group + .fui-desktop-nav__group { margin-top: 8px; }
+.fui-desktop-nav__link--tile { min-height: 32px; gap: 10px; padding: 0 6px; }
+.fui-desktop-nav__tile { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: var(--radius-sm); }
+.fui-desktop-nav__tile .icon, .fui-desktop-nav__link.is-current .fui-desktop-nav__tile .icon { color: var(--on-fill); }
+.fui-desktop-nav__tile--1 { background: var(--series-1); }
+.fui-desktop-nav__tile--2 { background: var(--series-2); }
+.fui-desktop-nav__tile--3 { background: var(--series-4); }
+.fui-desktop-nav__tile--4 { background: var(--series-3); }
+
+/* ---- Dock: every page at the bottom, growing under the pointer */
+.fui-desktop-nav--dock .fui-desktop-nav__frame {
+  left: 50%; bottom: calc(14px + var(--fui-desktop-nav-bottom)); translate: -50% 0; transition: translate 260ms cubic-bezier(.2, .8, .2, 1); display: flex; align-items: center; gap: 4px; padding: 6px 8px;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: calc(var(--radius-lg) * 2); box-shadow: 0 16px 40px color-mix(in srgb, var(--shadow) 45%, transparent);
+}
+/* Tucked below the window while the page scrolls down; it slides back up when wanted. */
+.fui-desktop-nav--dock .fui-desktop-nav__frame.is-tucked { translate: -50% calc(100% + 24px); }
+.fui-desktop-nav--dock .fui-desktop-nav__nav { flex-direction: row; align-items: center; gap: 4px; margin: 0; overflow: visible; }
+.fui-desktop-nav--dock .fui-desktop-nav__link, .fui-desktop-nav--dock .fui-desktop-nav__search-btn { justify-content: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: var(--radius-control); background: none; transform-origin: bottom center; }
+.fui-desktop-nav--dock .fui-desktop-nav__link > .fui-desktop-nav__label, .fui-desktop-nav--dock .fui-desktop-nav__search-btn > .fui-desktop-nav__label { display: none; }
+.fui-desktop-nav--dock .fui-desktop-nav__link:hover { transform: scale(1.25) translateY(-3px); }
+.fui-desktop-nav--dock .fui-desktop-nav__link.is-current { background: none; box-shadow: none; }
+.fui-desktop-nav--dock .fui-desktop-nav__link.is-current::after { content: ''; position: absolute; bottom: -3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
+.fui-desktop-nav--dock .fui-desktop-nav__sep { width: 1px; height: 26px; margin: 0 4px; background: var(--border); }
+.fui-desktop-nav--dock .fui-desktop-nav__tip { left: 50%; top: auto; bottom: calc(100% + 10px); translate: -50% 4px; }
+.fui-desktop-nav--dock :is(.fui-desktop-nav__link, .fui-desktop-nav__search-btn):is(:hover, :focus-visible) > .fui-desktop-nav__tip { translate: -50% 0; }
+.fui-desktop-nav--dock .fui-desktop-nav__foot-wrap { margin: 0 0 0 2px; }
+.fui-desktop-nav--dock .fui-desktop-nav__pop--me { left: auto; right: 0; bottom: calc(100% + 14px); }
+
+/* ---- Command bar: the open page's name at the top, which turns into the search where it stands */
+.fui-desktop-nav--command .fui-desktop-nav__frame {
+  top: var(--fui-desktop-nav-top); left: 0; right: 0; height: var(--fui-desktop-nav-size); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 14px;
+  background: var(--bg-sunken); border-bottom: 1px solid var(--border-soft);
+}
+.fui-desktop-nav--command .fui-desktop-nav__brand { padding: 0; }
+.fui-desktop-nav__bar { position: relative; flex: 0 1 460px; }
+.fui-desktop-nav__trigger {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; padding: 0 10px 0 6px;
+  border: 1px solid var(--border); border-radius: var(--radius-field); background: var(--bg-2); color: var(--text-faint); font: 500 13.5px var(--sans); cursor: pointer;
+  transition: border-color var(--ease), box-shadow var(--ease);
+}
+.fui-desktop-nav__trigger:hover { border-color: var(--focus-color); box-shadow: 0 0 0 3px var(--accent-wash); }
+.fui-desktop-nav__trigger > .fui-desktop-nav__label { flex: 1; color: var(--text); text-align: left; }
+.fui-desktop-nav__where { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 50%; background: var(--selected-bg); color: var(--selected-icon); }
+.fui-desktop-nav__crumb { display: inline-flex; gap: 6px; }
+.fui-desktop-nav__crumb-sep { color: var(--separator); }
+.fui-desktop-nav--command .fui-desktop-nav__foot-wrap { margin: 0; }
+.fui-desktop-nav--command .fui-desktop-nav__pop--me { left: auto; right: 0; bottom: auto; top: calc(100% + 8px); }
+
+/* ---- search, in the place the style has for it */
+.fui-desktop-nav__found { display: none; }
+.fui-desktop-nav.is-searching .fui-desktop-nav__found { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+.fui-desktop-nav__found > .fui-search { flex: 1; }
+/* A sidebar widens over the page into the search; the rail opens all the way. Its pages and its foot give way to it. */
+.fui-desktop-nav:is(.fui-desktop-nav--left, .fui-desktop-nav--right).is-searching .fui-desktop-nav__frame {
+  width: max(var(--fui-desktop-nav-size), var(--fui-desktop-nav-search)); box-shadow: 0 0 50px color-mix(in srgb, var(--shadow) 40%, transparent);
+}
+.fui-desktop-nav:is(.fui-desktop-nav--left, .fui-desktop-nav--right, .fui-desktop-nav--dock).is-searching .fui-desktop-nav__frame > :not(.fui-desktop-nav__brand, .fui-desktop-nav__found) { display: none; }
+
+/* The command bar and the dock hold the search the same way: one card, a surface like any FinUI floats, its results and keys, with
+   the field where the menu was: at the top of the card under the command bar's name, at the bottom where the dock was. */
+.fui-desktop-nav--command .fui-desktop-nav__found .fui-search, .fui-desktop-nav--dock.is-searching .fui-desktop-nav__frame {
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: calc(var(--radius-lg) * 1.4); box-shadow: 0 22px 60px color-mix(in srgb, var(--shadow) 50%, transparent);
+}
+.fui-desktop-nav--command .fui-search__list, .fui-desktop-nav--command .fui-search__foot,
+.fui-desktop-nav--dock .fui-search__list, .fui-desktop-nav--dock .fui-search__foot { margin: 0 8px; }
+.fui-desktop-nav--command.is-searching .fui-desktop-nav__bar { flex-basis: 640px; min-height: 36px; }
+.fui-desktop-nav--command.is-searching .fui-desktop-nav__trigger { display: none; }
+.fui-desktop-nav--command .fui-desktop-nav__found .fui-search { position: absolute; top: 0; left: 0; right: 0; max-height: min(70vh, 560px); padding: 0 0 8px; }
+.fui-desktop-nav--command .fui-search__bar { height: 36px; }
+/* It keeps the dock's own width (set as it opens), so the dock rises into it. */
+.fui-desktop-nav--dock.is-searching .fui-desktop-nav__frame { flex-direction: column; align-items: stretch; padding: 8px 0 0; }
+.fui-desktop-nav--dock .fui-desktop-nav__found .fui-search { max-height: min(70vh, 560px); }
+/* Its results take the height they have (up to the card's), rather than a share of a height the card does not have. */
+.fui-desktop-nav--dock .fui-search__list { order: 1; flex: 0 1 auto; }
+.fui-desktop-nav--dock .fui-search__foot { order: 2; padding-bottom: 2px; }
+.fui-desktop-nav--dock .fui-search__bar { order: 3; height: 42px; }
+
+/* The control search went back into takes the focus quietly: no tooltip until it is pointed at or reached again. */
+.fui-desktop-nav [data-quiet] > .fui-desktop-nav__tip { opacity: 0; }
+
+/* ---- a frame to show it in (the gallery) */
+.fui-desktop-nav__demo { position: relative; height: 520px; overflow: hidden; isolation: isolate; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--bg); }
+.fui-desktop-nav__demo-page { display: flex; flex-direction: column; gap: 12px; padding: 70px 260px 90px; }
+.fui-desktop-nav__demo-page span { height: 80px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--border-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-desktop-nav__link, .fui-desktop-nav__tip, .fui-desktop-nav__pin, .fui-desktop-nav--rail .fui-desktop-nav__frame, .fui-desktop-nav--dock .fui-desktop-nav__frame { transition: none; }
+  .fui-desktop-nav--dock .fui-desktop-nav__link:hover { transform: none; }
+}
+
+/* FinUI: swatch. Colours sit on a hairline of the ground so a pale one still has an edge. */
+.fui-swatch { display: inline-flex; flex: none; vertical-align: middle; }
+.fui-swatch--stack > span { width: 14px; height: 14px; border-radius: var(--radius-pill); box-shadow: 0 0 0 1.5px var(--bg-2); }
+.fui-swatch--stack > span + span { margin-left: -5px; }
+.fui-swatch--halves { width: 16px; height: 16px; overflow: hidden; border-radius: 50%; box-shadow: 0 0 0 1px var(--border); }
+.fui-swatch--halves > span { flex: 1; }
+.fui-swatch--dots { display: inline-grid; grid-template-columns: repeat(2, 7px); gap: 2px; }
+.fui-swatch--dots > span { width: 7px; height: 7px; border-radius: 50%; }
+.fui-swatch--bars { gap: 2px; }
+.fui-swatch--bars > span { width: 6px; height: 14px; border-radius: 3px; box-shadow: 0 0 0 1px var(--border); }
+.fui-swatch--corner { width: 13px; height: 13px; margin: 3px 0 0 3px; border-top: 2px solid currentColor; border-left: 2px solid currentColor; color: var(--text-muted); }
+.fui-swatch--type { font-size: 15px; font-weight: 500; line-height: 1; color: var(--text); }
+.fui-swatch--stroke { color: var(--text-muted); }
+/* The gallery's swatch, beside the name it shows. */
+.fui-swatch__demo { display: inline-flex; align-items: center; gap: 8px; }
+
+/* FinUI: theme-frame. A surface in one theme: its scheme decides every light-dark() under it. */
+.fui-theme-frame { display: grid; gap: 12px; justify-items: start; min-width: 0; padding: 22px; border: 1px solid var(--border-soft); border-radius: var(--radius); background: var(--bg); color: var(--text); }
+.fui-theme-frame--light { color-scheme: light; }
+.fui-theme-frame--dark { color-scheme: dark; }
+.fui-theme-frame--phone { width: 360px; max-width: 100%; padding: 16px; }
+
+/* FinUI: code-block. Code on the sunken ground, in the mono face; a pane on the raised one inside it. */
+.fui-code-block--line { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px 4px 4px 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-control); background: var(--bg-sunken); }
+.fui-code-block__text { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 12.5px/1.6 var(--mono); color: var(--text); scrollbar-width: thin; }
+.fui-code-block__copy { display: inline-flex; flex: none; }
+.fui-code-block { display: grid; gap: 10px; min-width: 0; padding: 12px; background: var(--bg-sunken); border: 1px solid var(--border-soft); border-radius: var(--radius); }
+.fui-code-block__bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fui-code-block__name { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.fui-code-block__note { font-size: 12.5px; color: var(--text-muted); }
+.fui-code-block__pane { margin: 0; max-height: 460px; overflow: auto; padding: 12px; font: 12px/1.55 var(--mono); white-space: pre; background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); color: var(--text); }
+.fui-code-block__pane--wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+.fui-code-block--fill { display: flex; flex-direction: column; height: 100%; }
+.fui-code-block--fill > .fui-code-block__pane { flex: 1; min-height: 0; max-height: none; }
+/* The gallery's line, with the words that go before it. */
+.fui-code-block__demo { display: grid; gap: 8px; width: min(100%, 520px); }
+
+/* FinUI: picker. A quiet button with its label over its value, and a list that floats over the page. */
+.fui-picker { position: relative; }
+.fui-picker__button {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 10px; text-align: left;
+  background: transparent; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); transition: background var(--ease), border-color var(--ease);
+}
+.fui-picker__button:hover, .fui-picker.is-open .fui-picker__button { background: var(--hover); border-color: var(--border); }
+.fui-picker__text { display: grid; min-width: 0; }
+.fui-picker__label { font-size: 11.5px; color: var(--text-faint); }
+.fui-picker__value { font-size: 13px; font-weight: 550; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-picker__mark { display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; color: var(--text-muted); }
+/* The lock sits left of the swatch: hidden until the picker is pointed at or focused, and always once it is on. */
+.fui-picker__lock {
+  position: absolute; top: 50%; right: 36px; transform: translateY(-50%); display: grid; place-items: center; width: 24px; height: 24px; padding: 0;
+  background: transparent; border: 0; border-radius: var(--radius-sm); color: var(--text-faint); opacity: 0; transition: opacity var(--ease), background var(--ease);
+}
+.fui-picker__lock:hover { background: var(--btn-hover); color: var(--text); }
+.fui-picker:hover .fui-picker__lock, .fui-picker:focus-within .fui-picker__lock, .fui-picker.is-locked .fui-picker__lock { opacity: 1; }
+.fui-picker.is-locked .fui-picker__lock { color: var(--accent-hi); }
+@media (hover: none) and (pointer: coarse) { .fui-picker__lock { opacity: 1; } }
+.fui-picker__list {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30; max-height: 300px; overflow-y: auto; margin: 0; padding: 4px;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow) 50%, transparent);
+}
+.fui-picker__list:focus { outline: none; }
+.fui-picker.is-up .fui-picker__list { top: auto; bottom: calc(100% + 4px); }
+.fui-picker__option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; }
+.fui-picker__option.is-active { background: var(--hover); }
+.fui-picker__option[aria-selected="true"] { color: var(--accent-hi); }
+.fui-picker__check { margin-left: auto; }
+.fui-picker__about { display: grid; gap: 1px; min-width: 0; }
+.fui-picker__name { font-weight: 550; }
+.fui-picker__blurb { font-size: 12px; line-height: 1.35; color: var(--text-faint); }
+.fui-picker__option[aria-selected="true"] .fui-picker__blurb { color: var(--text-muted); }
+.fui-picker__list:has(.fui-picker__blurb) { max-height: 380px; }
+/* The gallery's picker, at the width of a panel. */
+.fui-picker__demo { width: min(100%, 260px); }
+
+/* FinUI: hero. The title is the largest type FinUI sets; the line under it reads, the actions follow it. */
+.fui-hero { display: grid; gap: 28px; align-items: center; }
+.fui-hero--aside { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px; }
+.fui-hero__copy { display: grid; gap: 18px; align-content: center; min-width: 0; }
+.fui-hero__title { max-width: 15ch; font: var(--title-weight) clamp(32px, 3.6vw, 50px)/1.04 var(--font-heading); letter-spacing: calc(var(--heading-tracking) - .035em); text-transform: var(--heading-case); color: var(--text-hero); text-wrap: balance; }
+.fui-hero__lede { max-width: 46ch; font-size: 16px; line-height: 1.55; color: var(--text-muted); }
+.fui-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.fui-hero__aside { min-width: 0; }
+@media (max-width: 1080px) {
+  .fui-hero--aside { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .fui-hero__title { max-width: 20ch; }
+}
+
+/* FinUI: top-bar. A translucent bar on the page's ground, a hairline under it, the open section underlined in the accent. */
+.fui-top-bar {
+  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 28px; height: 56px; padding: 0 24px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent); border-bottom: 1px solid var(--border-soft);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.fui-top-bar__brand { flex: none; font: 750 19px/1 var(--font-heading); letter-spacing: -.03em; color: var(--text-strong); text-decoration: none; }
+.fui-top-bar__brand:hover { color: var(--text-strong); text-decoration: none; }
+.fui-top-bar__nav { display: flex; align-items: stretch; gap: 4px; flex: 1; min-width: 0; height: 100%; overflow-x: auto; scrollbar-width: none; }
+.fui-top-bar__link { display: flex; align-items: center; padding: 0 10px; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 14px; white-space: nowrap; text-decoration: none; }
+.fui-top-bar__link:hover { color: var(--text); text-decoration: none; }
+.fui-top-bar__link.is-active { color: var(--text-strong); border-bottom-color: var(--accent); }
+.fui-top-bar__actions { display: flex; align-items: center; gap: 10px; flex: none; }
+@media (max-width: 560px) { .fui-top-bar { gap: 14px; padding: 0 14px; } }
+/* The gallery's bar, in a frame rather than at the top of the window. */
+.fui-top-bar__demo { width: 100%; }
+.fui-top-bar__demo > .fui-top-bar { position: static; }
+
+/* FinUI: choice. The native input lies over the box it is drawn as, so a click on either is the input's. */
+.fui-choice { position: relative; display: inline-flex; align-items: flex-start; gap: 9px; font-size: 13.5px; color: var(--text); cursor: pointer; }
+.fui-choice__input { position: absolute; top: 1px; left: 0; width: 18px; height: 18px; margin: 0; opacity: 0; cursor: inherit; }
+.fui-choice__box {
+  display: grid; place-items: center; flex: none; width: 18px; height: 18px; margin-top: 1px;
+  border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--field-bg); color: var(--on-accent);
+  transition: background var(--ease), border-color var(--ease);
+}
+.fui-choice--radio .fui-choice__box { border-radius: 50%; }
+.fui-choice:hover .fui-choice__box { border-color: var(--accent); }
+.fui-choice__tick, .fui-choice__dash { display: none; }
+.fui-choice__input:checked + .fui-choice__box, .fui-choice__input:indeterminate + .fui-choice__box { border-color: var(--accent); background: var(--accent); }
+.fui-choice__input:checked:not(:indeterminate) + .fui-choice__box .fui-choice__tick { display: block; }
+.fui-choice__input:indeterminate + .fui-choice__box .fui-choice__dash { display: block; }
+.fui-choice--radio .fui-choice__input:checked + .fui-choice__box::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--on-accent); }
+.fui-choice__input:focus-visible + .fui-choice__box { outline: var(--focus-width) solid var(--focus-color); outline-offset: var(--focus-offset); }
+.fui-choice.is-disabled { cursor: default; opacity: .5; }
+.fui-choice.is-disabled .fui-choice__box { border-color: var(--border); }
+.fui-choice__text { display: grid; gap: 1px; min-width: 0; }
+.fui-choice__label { line-height: 20px; }
+.fui-choice__help { font-size: 12.5px; color: var(--text-faint); }
+.fui-choice__group { min-width: 0; margin: 0; padding: 0; border: 0; }
+.fui-choice__legend { margin-bottom: 10px; padding: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+.fui-choice__options { display: grid; gap: 10px; }
+.fui-choice__options--inline { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+
+/* FinUI: slider. A thin track, the chosen stretch in the accent, round thumbs on the knob's ground. */
+.fui-slider { display: grid; gap: 10px; min-width: 0; touch-action: none; }
+.fui-slider__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fui-slider__head > .fui-slider__value:only-child { margin-left: auto; }
+.fui-slider__label { font-size: 13px; font-weight: 550; color: var(--text); }
+.fui-slider__value { font: 12.5px var(--mono); color: var(--text-muted); }
+.fui-slider__track { position: relative; height: 6px; margin: 6px 9px; border-radius: var(--radius-pill); background: var(--track); cursor: pointer; }
+.fui-slider__fill { position: absolute; top: 0; bottom: 0; border-radius: var(--radius-pill); background: var(--accent); }
+.fui-slider__thumb {
+  position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid var(--accent); border-radius: 50%;
+  background: var(--knob); box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow) 40%, transparent); cursor: grab;
+}
+.fui-slider__thumb:active { cursor: grabbing; }
+.fui-slider__marks { position: relative; height: 16px; margin: 0 9px; font: 11px var(--mono); color: var(--text-faint); }
+.fui-slider__marks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.fui-slider.is-disabled { opacity: .5; }
+.fui-slider.is-disabled .fui-slider__track, .fui-slider.is-disabled .fui-slider__thumb { cursor: default; }
+/* The gallery's slider, at a form's width. */
+.fui-slider__demo { width: min(100%, 360px); }
+
+/* FinUI: number-stepper. One field-shaped row: the buttons inside its edges, the number in the mono face between them. */
+.fui-number-stepper { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--field-border); border-radius: var(--radius-field); background: var(--field-bg); }
+.fui-number-stepper:focus-within { border-color: var(--accent); }
+.fui-number-stepper__input { width: 6ch; min-width: 0; padding: 4px 2px; border: 0; background: transparent; color: var(--text); font: 13.5px var(--mono); text-align: center; outline: none; }
+.fui-number-stepper__unit { padding-right: 4px; font-size: 12.5px; color: var(--text-faint); }
+.fui-number-stepper__button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); }
+.fui-number-stepper__button:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.fui-number-stepper__button:disabled { opacity: .35; cursor: default; }
+/* The gallery's stepper, beside the words it is for. */
+.fui-number-stepper__demo { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+
+/* FinUI: otp. Square boxes in the field's look, the code in the mono face; a complete code is marked in the accent. */
+.fui-otp { display: inline-flex; align-items: center; gap: 8px; }
+.fui-otp__box {
+  width: 42px; height: 48px; padding: 0; border: 1px solid var(--field-border); border-radius: var(--radius-field); background: var(--field-bg);
+  color: var(--text-strong); font: 600 20px var(--mono); text-align: center; text-transform: uppercase; caret-color: var(--accent);
+}
+.fui-otp__box:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-wash); }
+.fui-otp.is-complete .fui-otp__box { border-color: color-mix(in srgb, var(--accent) 55%, var(--field-border)); }
+.fui-otp__gap { color: var(--text-faint); }
+@media (max-width: 420px) { .fui-otp { gap: 5px; } .fui-otp__box { width: 36px; height: 44px; font-size: 18px; } }
+
+/* FinUI: tag-input. A field's edge and ground round the tags and the place to type the next. */
+.fui-tag-input { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 38px; padding: 5px 8px; border: 1px solid var(--field-border); border-radius: var(--radius-field); background: var(--field-bg); cursor: text; }
+.fui-tag-input:focus-within { border-color: var(--accent); }
+.fui-tag-input__tags { display: contents; }
+.fui-tag-input__field { flex: 1 1 100px; min-width: 80px; padding: 3px 2px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 13.5px; outline: none; }
+.fui-tag-input__field::placeholder { color: var(--placeholder); }
+.fui-tag-input__count { margin-left: auto; font: 11.5px var(--mono); color: var(--text-faint); }
+/* The gallery's field, at a form's width. */
+.fui-tag-input__demo { width: min(100%, 380px); }
+
+/* FinUI: file-drop. A dashed well to drop into, its edge in the accent when something is over it; files listed under it. */
+.fui-file-drop { display: grid; gap: 10px; min-width: 0; }
+.fui-file-drop__zone {
+  position: relative; display: grid; justify-items: center; gap: 4px; padding: 22px 16px; border: 1.5px dashed var(--border-strong); border-radius: var(--radius);
+  background: var(--bg-sunken); color: var(--text-muted); text-align: center; cursor: pointer; transition: border-color var(--ease), background var(--ease);
+}
+.fui-file-drop__zone:hover, .fui-file-drop__zone.is-over { border-color: var(--accent); background: var(--accent-wash); color: var(--text); }
+.fui-file-drop__input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.fui-file-drop__zone:focus-within { outline: var(--focus-width) solid var(--focus-color); outline-offset: var(--focus-offset); }
+.fui-file-drop__label { font-weight: 600; color: var(--text); }
+.fui-file-drop__or, .fui-file-drop__help { font-size: 12.5px; color: var(--text-faint); }
+.fui-file-drop__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.fui-file-drop__list:empty { display: none; }
+.fui-file-drop__file { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 4px 10px; padding: 8px 10px; border: 1px solid var(--border-soft); border-radius: var(--radius-control); background: var(--bg-2); font-size: 13px; color: var(--text); }
+.fui-file-drop__file > .icon { color: var(--text-muted); }
+.fui-file-drop__file.is-error > .icon, .fui-file-drop__file.is-error .fui-file-drop__size { color: var(--critical-text); }
+.fui-file-drop__size { font: 12px var(--mono); color: var(--text-faint); white-space: nowrap; }
+.fui-file-drop__bar { grid-column: 2 / -1; height: 4px; overflow: hidden; border-radius: var(--radius-pill); background: var(--track); }
+.fui-file-drop__bar > span { display: block; height: 100%; background: var(--accent); }
+.fui-file-drop__remove { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-faint); }
+.fui-file-drop__remove:hover { background: var(--hover); color: var(--text); }
+/* The gallery's drop, at a form's width. */
+.fui-file-drop__demo { width: min(100%, 440px); }
+
+/* FinUI: date-picker. The field and its calendar button as one row; the calendar floats under it on the raised ground. */
+.fui-date-picker__row { position: relative; display: flex; gap: 6px; }
+.fui-date-picker__input { flex: 1; min-width: 0; }
+.fui-date-picker__button { display: grid; place-items: center; flex: none; width: 38px; padding: 0; border: 1px solid var(--field-border); border-radius: var(--radius-field); background: var(--field-bg); color: var(--text-muted); }
+.fui-date-picker__button:hover, .fui-date-picker__button[aria-expanded="true"] { border-color: var(--accent); color: var(--text); }
+.fui-date-picker__pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; padding: 10px; background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: 0 14px 36px color-mix(in srgb, var(--shadow) 42%, transparent);
+}
+/* The gallery's picker: room under it for the calendar it opens. */
+.fui-date-picker__demo { width: min(100%, 320px); min-height: 380px; }
+
+/* FinUI: popover. The raised ground and its edge, a shadow under it; an arrow on the side it points from. */
+.fui-popover {
+  position: fixed; z-index: 70; max-width: min(320px, calc(100vw - 16px)); padding: 12px 14px; background: var(--bg-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 14px 36px color-mix(in srgb, var(--shadow) 42%, transparent); font-size: 13px;
+}
+.fui-popover:focus { outline: none; }
+.fui-popover__title { margin-bottom: 6px; font-weight: 600; color: var(--text-strong); }
+.fui-popover--held { position: relative; z-index: auto; }
+.fui-popover--arrow::before {
+  content: ''; position: absolute; width: 10px; height: 10px; background: var(--bg-2); border: 1px solid var(--border);
+  border-right: 0; border-bottom: 0; transform: rotate(45deg);
+}
+.fui-popover--arrow[data-side="bottom"]::before { top: -6px; left: 18px; }
+.fui-popover--arrow[data-side="top"]::before { bottom: -6px; left: 18px; transform: rotate(225deg); }
+.fui-popover--arrow[data-side="right"]::before { left: -6px; top: 14px; transform: rotate(-45deg); }
+/* The gallery's popover: its button, and the box held open where it would be. */
+.fui-popover__demo { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.fui-popover__demo.is-top { flex-direction: column-reverse; }
+.fui-popover__demo.is-right { flex-direction: row; align-items: flex-start; }
+
+/* FinUI: dropdown-menu. The button is FinUI's own; its caret turns while the menu is open. The menu is context-menu's. */
+.fui-dropdown-menu__caret { transition: transform var(--ease); color: var(--text-muted); }
+.fui-dropdown-menu[aria-expanded="true"] .fui-dropdown-menu__caret { transform: rotate(180deg); }
+
+/* FinUI: drawer. The modal's overlay holds it to an edge; the panel fills that edge's height (or width) and slides in. */
+.fui-modal__overlay:has(> .fui-drawer) { place-items: stretch; padding: 0; }
+.fui-modal__overlay:has(> .fui-drawer--right) { justify-items: end; }
+.fui-modal__overlay:has(> .fui-drawer--left) { justify-items: start; }
+.fui-modal__overlay:has(> .fui-drawer--bottom) { align-items: end; }
+.fui-drawer { display: flex; flex-direction: column; width: min(420px, 100%); height: 100%; max-height: 100vh; border-radius: 0; animation: fui-drawer-in .26s cubic-bezier(.32, .72, 0, 1); }
+.fui-drawer--bottom { width: 100%; height: auto; max-height: 85vh; border-radius: var(--radius-lg) var(--radius-lg) 0 0; animation-name: fui-drawer-up; }
+.fui-drawer--left { animation-name: fui-drawer-left; }
+.fui-drawer > .fui-modal__body { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 0; }
+.fui-drawer__body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px; }
+.fui-drawer__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border-soft); background: var(--bg-sunken); }
+@keyframes fui-drawer-in { from { transform: translateX(100%); } }
+@keyframes fui-drawer-left { from { transform: translateX(-100%); } }
+@keyframes fui-drawer-up { from { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) { .fui-drawer { animation: none; } }
+/* Held in a page: the same panel, drawn where it stands. */
+.fui-drawer--held { width: 300px; max-width: 100%; height: auto; animation: none; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--card-shadow); overflow: hidden; }
+.fui-drawer--held.fui-drawer--right { border-radius: var(--radius) 0 0 var(--radius); }
+.fui-drawer--held.fui-drawer--left { border-radius: 0 var(--radius) var(--radius) 0; }
+.fui-drawer--held.fui-drawer--bottom { width: 100%; border-radius: var(--radius) var(--radius) 0 0; }
+.fui-drawer__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 10px 10px 18px; border-bottom: 1px solid var(--border-soft); }
+.fui-drawer__title { font-family: var(--font-heading); font-size: 15px; font-weight: var(--heading-weight); color: var(--text-strong); }
+.fui-drawer--held .fui-drawer__body { display: grid; gap: 6px; }
+/* The gallery's drawer: its button, and the panel held at its edge. */
+.fui-drawer__demo { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; width: 100%; }
+.fui-drawer__demo.is-left { align-items: flex-start; }
+.fui-drawer__demo.is-bottom { align-items: stretch; }
+
+/* FinUI: toast. The raised ground with its edge, its tone in the icon; the stack at the bottom right, newest at the foot. */
+.fui-toast__region { position: fixed; right: 16px; bottom: 16px; z-index: 80; display: flex; flex-direction: column-reverse; gap: 8px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+.fui-toast { display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 12px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 10px 28px color-mix(in srgb, var(--shadow) 40%, transparent); color: var(--text); font-size: 13px; pointer-events: auto; animation: fui-toast-in .22s cubic-bezier(.32, .72, 0, 1); }
+.fui-toast__text { flex: 1; min-width: 0; }
+.fui-toast__icon { color: var(--text-muted); }
+.fui-toast--good .fui-toast__icon { color: var(--good); }
+.fui-toast--warning .fui-toast__icon { color: var(--warning); }
+.fui-toast--critical { border-color: color-mix(in srgb, var(--critical) 45%, var(--border)); }
+.fui-toast--critical .fui-toast__icon { color: var(--critical-text); }
+.fui-toast__action { flex: none; }
+@keyframes fui-toast-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .fui-toast { animation: none; } }
+/* The gallery's toast, held where it can be seen, and a button to show one for real. */
+.fui-toast__demo { display: grid; gap: 12px; justify-items: start; width: min(100%, 380px); }
+.fui-toast__demo > .fui-toast { width: 100%; animation: none; }
+
+/* FinUI: callout. A wash of its tone with an edge of it, the icon in the tone, the words in the text's own colours. */
+.fui-callout { display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-2); color: var(--text); font-size: 13px; }
+.fui-callout__icon { margin-top: 2px; color: var(--text-muted); }
+.fui-callout__words { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.fui-callout__title { font-weight: 600; color: var(--text-strong); }
+.fui-callout__body { color: var(--text-muted); }
+.fui-callout__action { flex: none; align-self: center; }
+.fui-callout--info { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); background: color-mix(in srgb, var(--accent-wash) 60%, var(--bg-2)); }
+.fui-callout--info .fui-callout__icon { color: var(--accent-hi); }
+.fui-callout--good { border-color: color-mix(in srgb, var(--good) 40%, var(--border)); }
+.fui-callout--good .fui-callout__icon { color: var(--good); }
+.fui-callout--warning { border-color: color-mix(in srgb, var(--warning) 45%, var(--border)); background: var(--warn-wash); }
+.fui-callout--warning .fui-callout__icon { color: var(--warning); }
+.fui-callout--critical { border-color: color-mix(in srgb, var(--critical) 45%, var(--border)); background: var(--crit-wash); }
+.fui-callout--critical .fui-callout__icon { color: var(--critical-text); }
+@media (max-width: 520px) { .fui-callout { flex-wrap: wrap; } .fui-callout__action { flex-basis: 100%; padding-left: 26px; } }
+
+/* FinUI: progress. A thin track with the done share in the accent (or its tone); working, a short stretch travels along it. */
+.fui-progress { display: grid; gap: 6px; min-width: 0; }
+.fui-progress__head, .fui-progress__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fui-progress__label { font-size: 13px; font-weight: 550; color: var(--text); }
+.fui-progress__share { font: 12.5px var(--mono); color: var(--text-muted); }
+.fui-progress__foot { font-size: 12.5px; color: var(--text-faint); }
+.fui-progress__track { position: relative; height: 6px; overflow: hidden; border-radius: var(--radius-pill); background: var(--track); }
+.fui-progress__fill { position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-pill); background: var(--accent); transition: width .3s ease; }
+.fui-progress--good .fui-progress__fill { background: var(--good); }
+.fui-progress--critical .fui-progress__fill { background: var(--critical); }
+.fui-progress.is-working .fui-progress__fill { width: 30%; animation: fui-progress-work 1.4s ease-in-out infinite; }
+@keyframes fui-progress-work { from { left: -30%; } to { left: 100%; } }
+.fui-progress__ring { position: relative; display: inline-grid; place-items: center; flex: none; }
+.fui-progress__ring-svg { transform: rotate(-90deg); }
+.fui-progress__ring-track, .fui-progress__arc { fill: none; stroke-width: 4; }
+.fui-progress__ring-track { stroke: var(--track); }
+.fui-progress__arc { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .3s ease; }
+.fui-progress__ring.is-working .fui-progress__ring-svg { animation: fui-progress-turn 1s linear infinite; }
+@keyframes fui-progress-turn { to { transform: rotate(270deg); } }
+.fui-progress__ring-text { position: absolute; font: 600 10.5px var(--mono); color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .fui-progress.is-working .fui-progress__fill, .fui-progress__ring.is-working .fui-progress__ring-svg { animation: none; } }
+/* The gallery's bar and ring. */
+.fui-progress__demo { width: min(100%, 420px); }
+.fui-progress__demo-ring { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+
+/* FinUI: kbd. Each key a small cap on the sunken ground, in the mono face, with a deeper edge at its foot. */
+.fui-kbd { display: inline-flex; align-items: center; gap: 3px; vertical-align: middle; }
+.fui-kbd__key { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--radius-sm); background: var(--bg-sunken); color: var(--text); font: 500 11px var(--mono); }
+.fui-kbd__plus { font-size: 11px; color: var(--text-faint); }
+/* The gallery's shortcut, beside what it does. */
+.fui-kbd__demo { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); }
+
+/* FinUI: tabs. A hairline under the row; the selected tab stands on it in the accent; counts are small pills. */
+.fui-tabs { display: grid; gap: 14px; min-width: 0; }
+.fui-tabs__list { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border-soft); scrollbar-width: none; }
+.fui-tabs__list--fill > .fui-tabs__tab { flex: 1; justify-content: center; }
+.fui-tabs__tab {
+  display: inline-flex; align-items: center; gap: 7px; margin-bottom: -1px; padding: 8px 12px; border: 0; border-bottom: 2px solid transparent;
+  background: transparent; color: var(--text-muted); font: 500 13.5px var(--sans); white-space: nowrap; cursor: pointer;
+}
+.fui-tabs__tab:hover:not(:disabled) { color: var(--text); }
+.fui-tabs__tab[aria-selected="true"] { border-bottom-color: var(--accent); color: var(--text-strong); }
+.fui-tabs__tab:disabled { opacity: .45; cursor: default; }
+.fui-tabs__count { padding: 0 6px; border-radius: var(--radius-pill); background: var(--hover); color: var(--text-muted); font: 11px/18px var(--mono); }
+.fui-tabs__tab[aria-selected="true"] .fui-tabs__count { background: var(--accent-wash); color: var(--text); }
+.fui-tabs__panel { min-width: 0; font-size: 13.5px; }
+.fui-tabs__panel:focus-visible { border-radius: var(--radius-sm); }
+/* The gallery's tabs, at a card's width. */
+.fui-tabs__demo { width: min(100%, 480px); }
+
+/* FinUI: breadcrumb. Small, quiet links with chevrons between; the page itself in the text's colour. */
+.fui-breadcrumb__list { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.fui-breadcrumb__item { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.fui-breadcrumb__link { color: var(--text-muted); }
+.fui-breadcrumb__link:hover { color: var(--text); }
+.fui-breadcrumb__here { color: var(--text-strong); font-weight: 550; }
+.fui-breadcrumb__sep { color: var(--text-faint); }
+.fui-breadcrumb__more { padding: 0 6px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); font: inherit; cursor: pointer; }
+.fui-breadcrumb__more:hover { background: var(--hover); color: var(--text); }
+
+/* FinUI: steps. Numbered marks joined by a line; done in the accent and ticked, now ringed in it, to come quiet. */
+.fui-steps { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: none; }
+.fui-steps__step { position: relative; display: flex; flex: 1; min-width: 0; }
+.fui-steps__step:not(:last-child)::after { content: ''; flex: 1; height: 2px; margin: 13px 8px 0; border-radius: var(--radius-pill); background: var(--border); }
+.fui-steps__step.is-done:not(:last-child)::after { background: var(--accent); }
+.fui-steps__go { display: flex; align-items: flex-start; gap: 9px; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
+button.fui-steps__go { cursor: pointer; }
+button.fui-steps__go:hover .fui-steps__label { color: var(--text-strong); }
+.fui-steps__mark { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border: 2px solid var(--border); border-radius: 50%; background: var(--bg-2); color: var(--text-muted); font: 600 12px var(--mono); }
+.fui-steps__step.is-done .fui-steps__mark { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+.fui-steps__step.is-current .fui-steps__mark { border-color: var(--accent); color: var(--text-strong); box-shadow: 0 0 0 4px var(--accent-wash); }
+.fui-steps__words { display: grid; gap: 1px; padding-top: 4px; min-width: 0; }
+.fui-steps__label { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.fui-steps__step.is-later .fui-steps__label { color: var(--text-muted); font-weight: 500; }
+.fui-steps__detail { font-size: 12px; color: var(--text-faint); }
+.fui-steps--vertical { flex-direction: column; gap: 0; }
+.fui-steps--vertical .fui-steps__step { flex-direction: column; }
+.fui-steps--vertical .fui-steps__step:not(:last-child)::after { width: 2px; height: 22px; flex: none; margin: 4px 0 4px 13px; }
+@media (max-width: 560px) { .fui-steps:not(.fui-steps--vertical) .fui-steps__words { display: none; } .fui-steps:not(.fui-steps--vertical) .fui-steps__step.is-current .fui-steps__words { display: grid; } }
+
+/* FinUI: timeline. A hairline down the left joins the marks; each event's time in the mono face; a tone colours its mark. */
+.fui-timeline__days { display: grid; gap: 16px; }
+.fui-timeline__day-name { margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--text-faint); }
+.fui-timeline { position: relative; display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.fui-timeline::before { content: ''; position: absolute; top: 6px; bottom: 6px; left: 11px; width: 2px; border-radius: var(--radius-pill); background: var(--border-soft); }
+.fui-timeline__event { position: relative; display: flex; gap: 12px; min-width: 0; }
+.fui-timeline__mark { position: relative; display: grid; place-items: center; flex: none; width: 24px; height: 24px; border: 2px solid var(--border); border-radius: 50%; background: var(--bg-2); color: var(--text-muted); }
+.fui-timeline__mark:empty { width: 12px; height: 12px; margin: 6px; }
+.fui-timeline__event--good .fui-timeline__mark { border-color: var(--good); color: var(--good); }
+.fui-timeline__event--warning .fui-timeline__mark { border-color: var(--warning); color: var(--warning); }
+.fui-timeline__event--critical .fui-timeline__mark { border-color: var(--critical); color: var(--critical-text); }
+.fui-timeline__words { display: grid; gap: 2px; min-width: 0; padding-top: 2px; }
+.fui-timeline__line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fui-timeline__title { font-size: 13.5px; color: var(--text); }
+.fui-timeline__time { flex: none; font: 12px var(--mono); color: var(--text-faint); }
+.fui-timeline__detail { font-size: 12.5px; color: var(--text-muted); }
+/* The gallery's timeline, at a card's width. */
+.fui-timeline__demo { width: min(100%, 440px); }
+
+/* FinUI: avatar-group. Faces overlap, each ringed in the ground so the next one cuts a clean edge. */
+.fui-avatar-group { display: inline-flex; align-items: center; }
+.fui-avatar-group > .fui-avatar, .fui-avatar-group__more { box-shadow: 0 0 0 2px var(--bg-2); }
+.fui-avatar-group > * + * { margin-left: -8px; }
+.fui-avatar-group__more { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--hover); color: var(--text-muted); font-family: var(--mono); font-weight: 600; }
+/* The gallery's group, beside what it says. */
+.fui-avatar-group__demo { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); }
+
+/* FinUI: shelf. A row that scrolls on its own, a thin bar under it; round arrows beside its name. */
+.fui-shelf { display: grid; gap: 10px; min-width: 0; }
+.fui-shelf__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fui-shelf__title { font-family: var(--font-heading); font-size: 14px; font-weight: var(--heading-weight); color: var(--text-strong); }
+.fui-shelf__arrows { display: flex; gap: 4px; }
+.fui-shelf__arrow { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 1px solid var(--border-soft); border-radius: 50%; background: var(--bg-2); color: var(--text-muted); }
+.fui-shelf__arrow:hover:not([aria-disabled="true"]) { border-color: var(--border); color: var(--text); }
+.fui-shelf__arrow[aria-disabled="true"] { opacity: .4; cursor: default; }
+.fui-shelf__row { display: flex; gap: 14px; margin: 0; padding: 2px 2px 10px; overflow-x: auto; list-style: none; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.fui-shelf__item { flex: none; }
+/* The gallery's cards. */
+.fui-shelf__demo { width: 100%; }
+.fui-shelf__demo-card { display: grid; gap: 3px; width: 120px; color: var(--text); font-size: 12.5px; text-decoration: none; }
+.fui-shelf__demo-art { display: grid; place-items: center; aspect-ratio: 2 / 3; border-radius: var(--radius-control); background: var(--hover); color: var(--text-faint); font: 600 18px var(--mono); }
+
+/* FinUI: chart. A figure's title in the text's colours; the legend's keys carry the series' colours, never its words;
+   gridlines and axes recessive; marks thin. Every chart component's SVG classes are styled here. */
+.fui-chart { display: grid; gap: 10px; min-width: 0; margin: 0; }
+.fui-chart__head { display: grid; gap: 1px; }
+.fui-chart__title { font-size: 13.5px; font-weight: 600; color: var(--text-strong); }
+.fui-chart__sub { font-size: 12.5px; color: var(--text-faint); }
+.fui-chart__legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--text-muted); }
+.fui-chart__legend li { display: inline-flex; align-items: center; gap: 7px; }
+.fui-chart__key { width: 10px; height: 10px; flex: none; border-radius: 3px; }
+.fui-chart__legend-value { font-family: var(--mono); font-size: 12px; color: var(--text); }
+.fui-chart__plot { display: block; width: 100%; overflow: visible; border-radius: var(--radius-sm); }
+.fui-chart__target { border-radius: var(--radius-sm); }
+.fui-chart__target:focus-visible { outline: var(--focus-width) solid var(--focus-color); outline-offset: 4px; }
+.fui-chart__grid { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+.fui-chart__axis { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+.fui-chart__tick { fill: var(--text-faint); font: 10.5px var(--mono); }
+.fui-chart__cross { stroke: var(--axis); stroke-width: 1; }
+.fui-chart__line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fui-chart__area { fill-opacity: .1; stroke: none; }
+.fui-chart__dot { stroke: var(--bg-2); stroke-width: 2; }
+.fui-chart__hit { fill: transparent; }
+.fui-chart__bar { transition: opacity .12s ease; }
+.fui-chart__plot.is-pointing .fui-chart__bar:not(.is-on) { opacity: .45; }
+
+/* FinUI: bar-chart. Its marks are chart's; the box only holds the plot at its width. */
+.fui-bar-chart__box { min-width: 0; }
+.fui-bar-chart__demo { width: 100%; }
+
+/* FinUI: line-chart. Its marks are chart's; the box only holds the plot at its width. */
+.fui-line-chart__box { min-width: 0; }
+.fui-line-chart__demo { width: 100%; }
+
+/* FinUI: donut-chart. The ring beside its legend; the whole in the middle in the text's colours. */
+.fui-donut-chart__body { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; }
+.fui-donut-chart__ring { position: relative; flex: none; }
+.fui-donut-chart__svg { width: auto; }
+.fui-donut-chart__middle { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+.fui-donut-chart__total { font-size: 18px; font-weight: 650; color: var(--text-strong); }
+.fui-donut-chart__label { font-size: 11.5px; color: var(--text-faint); }
+.fui-donut-chart .fui-chart__legend { flex-direction: column; gap: 6px; }
+
+/* FinUI: heatmap. Small rounded cells in the heat steps; a cell pointed at is ringed in the text's colour. */
+.fui-heatmap__wrap { display: grid; gap: 8px; min-width: 0; }
+.fui-heatmap__box { min-width: 0; overflow-x: auto; }
+.fui-heatmap__svg { width: auto; max-width: none; }
+.fui-heatmap__cell { stroke: transparent; stroke-width: 1.5; }
+.fui-heatmap__cell.is-on { stroke: var(--text); }
+.fui-heatmap__key { display: flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--text-faint); }
+.fui-heatmap__key > span:first-child { margin-right: 4px; }
+.fui-heatmap__key > span:last-child { margin-left: 4px; }
+.fui-heatmap__swatch { width: 11px; height: 11px; border-radius: 2px; }
+.fui-heatmap__demo { width: 100%; }
+
+/* FinUI: sparkline. The line in the quiet spark colour, a faint wash of it, now in the accent ringed in the ground. */
+.fui-sparkline { display: inline-block; flex: none; overflow: visible; vertical-align: middle; }
+.fui-sparkline__line { fill: none; stroke: var(--spark); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fui-sparkline__area { fill: var(--spark); fill-opacity: .1; }
+.fui-sparkline__now { fill: var(--accent); stroke: var(--bg-2); stroke-width: 2; }
+.fui-sparkline__demo { display: inline-flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-muted); }
+
+/* FinUI: bar-list. Name and value on one line, a thin bar under them in the single-series colour; the summed rest quieter. */
+.fui-bar-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.fui-bar-list__row { display: grid; gap: 4px; }
+.fui-bar-list__line { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.fui-bar-list__name { min-width: 0; overflow: hidden; color: var(--text); text-overflow: ellipsis; white-space: nowrap; }
+a.fui-bar-list__name:hover { color: var(--text-strong); }
+.fui-bar-list__note { font-size: 12px; color: var(--text-faint); white-space: nowrap; }
+.fui-bar-list__value { margin-left: auto; padding-left: 8px; font: 12.5px var(--mono); color: var(--text-muted); white-space: nowrap; }
+.fui-bar-list__track { display: block; height: 6px; overflow: hidden; border-radius: var(--radius-pill); background: var(--track); }
+.fui-bar-list__fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--single); }
+.fui-bar-list__row.is-other .fui-bar-list__fill { background: var(--text-faint); }
+.fui-bar-list__row.is-other .fui-bar-list__name { color: var(--text-muted); }
+.fui-bar-list__demo { width: min(100%, 420px); }
+
+/* FinUI: to-top. Round, raised a little off the page, in the bottom-right corner where place() puts it (above the safe
+   area); it rises into view once the page is far from its top and sinks out of it when back. Hidden,
+   it is not there to the keyboard or a screen reader either: visibility goes with it. */
+.fui-to-top {
+  --fui-to-top-bottom: 16px; --fui-to-top-right: 16px;
+  position: fixed; right: var(--fui-to-top-right); bottom: calc(var(--fui-to-top-bottom) + env(safe-area-inset-bottom, 0px)); z-index: 35;
+  display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border-radius: var(--radius-pill); cursor: pointer;
+  background: var(--bg-2); border: 1px solid var(--border); color: var(--text); box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 40%, transparent);
+  opacity: 0; translate: 0 6px; visibility: hidden;
+  transition: opacity var(--ease), translate var(--ease), visibility var(--ease), bottom var(--ease), right var(--ease), background var(--ease);
+}
+.fui-to-top.is-shown { opacity: 1; translate: 0 0; visibility: visible; }
+.fui-to-top:hover { background: var(--hover); }
+.fui-to-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The gallery's example: a window's corner, drawn small, with the button where it would rest in it. */
+.fui-to-top__stage { position: relative; width: 100%; height: 160px; border: 1px dashed var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.fui-to-top--demo { position: absolute; }

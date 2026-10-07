@@ -1,0 +1,7 @@
+/* Radius: Pill */
+:root {
+  --radius: 16px;
+  --radius-sm: 8px;
+  --radius-control: 99px;
+  --radius-lg: 22px;
+}

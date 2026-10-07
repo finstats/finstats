@@ -1,0 +1,6 @@
+/* Focus ring: Soft */
+:root {
+  --focus-width: 3px;
+  --focus-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  --focus-offset: 1px;
+}

@@ -1,0 +1,9 @@
+/* Accent: Crimson & sky */
+:root {
+  --accent: light-dark(#b91c1c, #38bdf8);
+  --accent-hi: light-dark(color-mix(in srgb, #b91c1c 78%, #000000), color-mix(in srgb, #38bdf8 60%, #ffffff));
+  --accent-hover: light-dark(color-mix(in srgb, #b91c1c 85%, #000000), color-mix(in srgb, #38bdf8 85%, #000000));
+  --accent-wash: light-dark(color-mix(in srgb, #b91c1c 10%, transparent), color-mix(in srgb, #38bdf8 14%, transparent));
+  --selection: light-dark(color-mix(in srgb, #b91c1c 22%, transparent), color-mix(in srgb, #38bdf8 40%, transparent));
+  --on-accent: light-dark(#ffffff, #0a0a0a);
+}

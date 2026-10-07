@@ -1,0 +1,9 @@
+/* Accent: Sunset & lavender */
+:root {
+  --accent: light-dark(#c2410c, #a78bfa);
+  --accent-hi: light-dark(color-mix(in srgb, #c2410c 78%, #000000), color-mix(in srgb, #a78bfa 60%, #ffffff));
+  --accent-hover: light-dark(color-mix(in srgb, #c2410c 85%, #000000), color-mix(in srgb, #a78bfa 85%, #000000));
+  --accent-wash: light-dark(color-mix(in srgb, #c2410c 10%, transparent), color-mix(in srgb, #a78bfa 14%, transparent));
+  --selection: light-dark(color-mix(in srgb, #c2410c 22%, transparent), color-mix(in srgb, #a78bfa 40%, transparent));
+  --on-accent: light-dark(#ffffff, #0a0a0a);
+}

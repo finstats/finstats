@@ -1,0 +1,5 @@
+/* Borders: Strong */
+:root {
+  --border: var(--border-strong);
+  --border-soft: var(--border-strong);
+}
