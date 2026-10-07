@@ -1,6 +1,6 @@
 //! Everywhere FinStats can reach, in one list.
 //!
-//! The README and `docs/security.md` promise that nothing about you leaves your network and that
+//! The README and the docs (`finstats/privacy.md`, `finstats/security.md` in github.com/finstats/docs) promise that nothing about you leaves your network and that
 //! FinStats talks to your Jellyfin and, unless you say otherwise, to nothing else. A promise the
 //! owner cannot check is only a sentence, so this is the same claim assembled from what the running
 //! program actually knows: the collector's own connection, the two switches that can reach outside,

@@ -8,7 +8,7 @@ body:
         **a question you could not answer about your server**, not from a screen you imagine.
 
         Worth knowing first: FinStats never writes to Jellyfin, stays one small container, sends nothing anywhere,
-        and has no front-end build step. [CONTRIBUTING.md](https://github.com/finstats/finstats/blob/main/CONTRIBUTING.md)
+        and has no front-end build step. [The contributing guide](https://docs.finstats.no/finstats/contributing/#what-finstats-is-and-what-it-will-not-become)
         explains why. Ideas that fit get turned into issues.
   - type: textarea
     id: question

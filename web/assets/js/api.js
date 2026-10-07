@@ -1,4 +1,4 @@
-// Thin fetch wrapper for the FinStats API (see docs/api.md).
+// Thin fetch wrapper for the FinStats API (see the HTTP API page, docs/finstats/api.md in github.com/finstats/docs).
 
 export class ApiError extends Error {
   constructor(status, message) {

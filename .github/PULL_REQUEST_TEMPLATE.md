@@ -1,4 +1,4 @@
-<!-- Thanks! Keep it short. CONTRIBUTING.md explains each line of the checklist. -->
+<!-- Thanks! Keep it short. The contributing guide (https://docs.finstats.no/finstats/contributing/) explains each line of the checklist. -->
 
 ## What a user will notice
 
@@ -17,7 +17,7 @@
 - [ ] `cargo test` passes, and a test was added if this fixes a bug
 - [ ] the web UI still parses (`node --check` loop), and I did **not** run `cargo fmt`
 - [ ] UI changes were looked at on a desktop *and* at phone width, as an administrator *and* as a user without permissions
-- [ ] an endpoint change comes with its `docs/api.md` change
+- [ ] an endpoint change comes with its HTTP API change in [finstats/docs](https://github.com/finstats/docs) (`docs/finstats/api.md`)
 - [ ] nothing from a real server is in the code, tests, docs, screenshots or commit messages
 - [ ] `CHANGELOG.md` and the version in `Cargo.toml` are untouched
 - [ ] commits are conventional, one logical change each, and their bodies say why

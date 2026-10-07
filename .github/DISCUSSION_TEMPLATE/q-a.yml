@@ -4,8 +4,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Ask anything about installing, running or understanding FinStats. The README's
-        [Questions](https://github.com/finstats/finstats#questions) section covers the common ones (data folder
+        Ask anything about installing, running or understanding FinStats. The documentation's
+        [Questions](https://docs.finstats.no/finstats/faq/) page covers the common ones (data folder
         permissions, reverse proxies, backups, timezones, starting over). If something is *broken*, a
         [bug report](https://github.com/finstats/finstats/issues/new?template=bug_report.yml) gets it fixed faster.
 

@@ -13,7 +13,7 @@ const loadWatchlist = (signal) => api.get('/me/watchlist', null, { signal });
 export const prefetchWatchlist = ({ signal }) => [() => loadWatchlist(signal)];
 
 // Where each title stands, in the order a person would look: what they are part-way through first, what is already
-// watched last. The state names are the server's (docs/api.md).
+// watched last. The state names are the server's (the HTTP API page in github.com/finstats/docs).
 const GROUPS = [
   ['started', 'Started'],
   ['on_server', 'On the server'],

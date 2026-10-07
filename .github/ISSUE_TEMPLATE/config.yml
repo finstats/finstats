@@ -10,5 +10,5 @@ contact_links:
     url: https://github.com/finstats/finstats/security/advisories/new
     about: Please do not open a public issue for a vulnerability. SECURITY.md explains what to include.
   - name: Setting it up, and common questions
-    url: https://github.com/finstats/finstats#questions
+    url: https://docs.finstats.no/finstats/faq/
     about: '"Cannot write to its data directory", reverse proxies, backups, timezones, starting over.'
