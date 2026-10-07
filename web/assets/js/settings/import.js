@@ -51,8 +51,10 @@ export const IMPORTERS = [
     steps: [
       ['Open your Tautulli instance.'],
       ['Go to ', 'Settings', ' and select ', 'Import & Backups', '.'],
-      ['Under the database backups, click ', 'Backup Database', '.'],
-      ['Download the newest backup — a ', '.db', ' file, or a ', '.zip', ' holding one.'],
+      ['Under the database backups, click ', 'Backup Database', '. Tautulli saves it on its own machine, so nothing downloads.'],
+      ['Find it in Tautulli’s ', 'backups', ' folder, inside its data folder — with Docker, inside the folder you mounted as ', '/config', '.'],
+      ['Take the newest ', 'tautulli.backup-…', ' file, ending in .db or .db.zip — not a ', 'config.backup-…', ' one, which holds settings.'],
+      ['Copy it to this computer — scp, a shared folder or your NAS’s file manager all work.'],
       ['Upload it here, then connect each Plex user to who they are on Jellyfin.'],
     ],
     rows: [['plays_imported', 'Plays imported'], ['plays_skipped', 'Already here'], ['users_wired', 'Plex users connected'],
