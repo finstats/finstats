@@ -150,13 +150,16 @@ export function grow({ from, host, bar, list, show, fresh = false, ghost = null 
 export function shrink({ to, host, bar, list, show, hide, gone = false, ghost = null }) {
   if (still() || !shown(host)) { hide(); return Promise.resolve(); }
   const now = box(host), r1 = round(host, now);
+  // Held before it is measured, as grow() holds it: a host with a transition of its own (a rail's width) would otherwise be
+  // measured at the start of that transition — as wide as the search — and the shape would shrink into itself, staying
+  // whole until it vanished.
+  const free = hold(host);
   hide();
   const end = gone ? (shown(to) ? to : null) : host;
   const then = end ? box(end) : null, r0 = end ? round(end, then) : 0;
   const g = ghost ? ghost() : null;
   show();
-  if (!then) { if (g) g.remove(); hide(); return Promise.resolve(); }
-  const free = hold(host);
+  if (!then) { if (g) g.remove(); hide(); free(); return Promise.resolve(); }
   for (const n of rest(bar)) n.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'ease-in', fill: 'forwards' });
   for (const c of bar.children) c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, easing: 'ease-in', fill: 'forwards' });
   if (g) g.animate([{ opacity: 0 }, { opacity: 0, offset: 0.35 }, { opacity: 1 }], { duration: 340, easing: 'ease-out', fill: 'both' });
