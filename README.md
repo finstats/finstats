@@ -8,6 +8,10 @@
 </p>
 
 <p align="center">
+  <a href="https://finstats.github.io/finstats/"><b>Try the demo</b></a>: finstats in your browser, with invented people and titles. Nothing to install.
+</p>
+
+<p align="center">
   <a href="https://github.com/finstats/finstats/releases/latest"><img src="https://img.shields.io/github/v/release/finstats/finstats?label=release&color=8a5cf5" alt="Latest release"></a>
   <a href="https://github.com/finstats/finstats/pkgs/container/finstats"><img src="https://img.shields.io/badge/image-ghcr.io%2Ffinstats%2Ffinstats-8a5cf5" alt="Docker image on the GitHub Container Registry"></a>
   <a href="https://github.com/finstats/finstats/actions/workflows/docker.yml"><img src="https://img.shields.io/github/actions/workflow/status/finstats/finstats/docker.yml?label=build" alt="Build status"></a>
