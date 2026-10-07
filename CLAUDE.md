@@ -242,6 +242,32 @@ Any doubt falls back to polling on the next pass, because a play that is never s
 The handshake cannot ask for `profile="PascalCase"` the way every HTTP read does, so `socket.rs` re-cases keys and
 holds the first pushed snapshot against one real `/Sessions` read before a row is written from it.
 
+**The live channel (`live.rs`, `live.js`, `GET /api/live`, 2.3.0): one WebSocket per tab, from FinStats to its own pages,
+carrying what changes on its own (`now_playing`, `downloads`, `summary`).** Page loads stay on HTTP (`dataView`'s cache,
+prefetch, ETags and the API contract all rest on plain GETs); the socket only says that something a page already shows has
+changed, and `/api/now-playing`, `/api/downloads` and `/api/summary` stay as they are, for scripts and as the fallback.
+**One function per topic, two transports**: a frame's `data` is built by the very function the GET calls
+(`stats::now_playing_for` over `stats::marked_live`, which marks groups before anything is narrowed; `downloads::answer`;
+`stats::summary_for`), for the person the connection speaks for; never one snapshot broadcast to everyone. **The Jellyfin
+side is not touched**: `live::run` reads what the collector and the queue last wrote, from memory, once a second while
+anybody listens, and asks Jellyfin, Sonarr and Radarr for nothing. **Push on change**: `now_playing` when `live::shape`
+changes (everything a card draws but position, time watched and transcode progress, the UI's `shapeOf`) or a position
+leaves the course the page counts along (`off_course`, the UI's own 3 s / 15 s), never for a clock moving on; a
+connection sends a topic only when its answer differs from what it last sent. Each topic is a `watch` (a latest value, not
+a queue). **The downloads heartbeat**: a visible tab subscribed to `downloads` stamps the queue through
+`downloads::watched` every 10 s, exactly as `?live=1` does; a hidden or unsubscribed one does not (`live::stamps`, the rule
+`visibleOnly` held). **Permissions stay live**: the upgrade checks `Origin` with `api::cross_site` (a WebSocket upgrade is a
+GET, so `same_origin` does not see it), takes the cookie or a `Bearer` key and never a key in the address nor a calendar
+key, and each connection re-resolves what it presented every 30 s and at once on `Feed::recheck`, which every place that
+changes access calls (`update_settings`, a user's permissions, a key revoked, a sign-out, the users read); a credential
+that no longer opens FinStats closes it with 4401. **One person holds at most 20 (`PER_PERSON`), the oldest giving way**
+with 4429, as the oldest session does: a page in a browser's back/forward cache keeps its socket until the browser lets
+it go, and refusing the newest instead locked out somebody loading page after page in four tabs. `live.js` also gives
+the socket up on `pagehide`. **The fallback is today's polling**: `follow(topic, {poll, every, onData, signal})` runs the
+page's old poll (same endpoint, interval and `visibleOnly`) whenever the socket is not live and stops it when the socket
+is back, reconnecting with backoff (1 s to 15 s); nobody is told. `/api/status` says nothing about it. axum's `ws` brings
+tokio-tungstenite 0.29 beside the Jellyfin socket's 0.30.
+
 **One play-row shape, four producers.** `playback.rs::PlayRecord` + `media.rs` (stream/transcode extraction, labels,
 `effective_play_method`) are shared by the live `collector.rs`, the Jellystat `import.rs`, the Streamystats
 `streamystats.rs` and the Tautulli `tautulli.rs`, so every source produces identical columns. A fifth tracker is a reader,
