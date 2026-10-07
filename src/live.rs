@@ -119,10 +119,13 @@ pub struct Ticket {
     pub gone: Arc<tokio::sync::Notify>,
 }
 
-/// Who holds which connections, oldest first.
+/// One person's connections, oldest first: each one's number and how it is told to go.
+type Held = std::collections::VecDeque<(u64, Arc<tokio::sync::Notify>)>;
+
+/// Who holds which connections.
 #[derive(Default)]
 pub struct Seats {
-    held: Mutex<HashMap<String, std::collections::VecDeque<(u64, Arc<tokio::sync::Notify>)>>>,
+    held: Mutex<HashMap<String, Held>>,
     next: std::sync::atomic::AtomicU64,
 }
 
