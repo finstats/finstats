@@ -544,31 +544,62 @@ pub struct LiveQuery {
 
 pub async fn downloads(State(app): State<App>, DownloadsViewer(_): DownloadsViewer, Query(q): Query<LiveQuery>) -> ApiResult {
     if q.live.as_deref() == Some("1") {
-        let was = {
-            let mut watched = app.downloads_watched.lock().unwrap();
-            let was = *watched;
-            *watched = crate::db::now();
-            was
-        };
-        // Somebody has just opened the page: refresh now instead of at the end of a minute-long sleep.
-        if crate::db::now() - was > WATCHING_FOR_S {
-            app.downloads_wake.notify_waiters();
-        }
+        watched(&app, crate::db::now());
     }
+    Ok(Json(answer(&app)))
+}
+
+/// Somebody is looking at the queue (a page's `?live=1` poll, or a visible tab on the live channel): keep the snapshot
+/// fresh for the next [`WATCHING_FOR_S`]. The first look after a quiet spell also wakes the loop, so a page just opened
+/// is refreshed now instead of at the end of a minute-long sleep. Answers whether it woke it.
+pub fn watched(app: &App, now: i64) -> bool {
+    let was = std::mem::replace(&mut *app.downloads_watched.lock().unwrap(), now);
+    let wake = now - was > WATCHING_FOR_S;
+    if wake {
+        app.downloads_wake.notify_waiters();
+    }
+    wake
+}
+
+/// `/downloads` as it is answered, by HTTP or by the live channel. The same for everybody who may see it.
+pub fn answer(app: &App) -> Value {
     let snap = app.downloads.read().unwrap().clone();
     let wishes = app.wishes.read().unwrap().clone();
     let t = &snap.totals;
-    Ok(Json(json!({
+    json!({
         "rows": snap.rows.iter().map(|d| download_json(d, &wishes)).collect::<Vec<_>>(),
         "totals": { "down_bps": t.down_bps, "downloading": t.downloading, "queued": t.queued, "importing": t.importing, "failed": t.failed },
         "at": snap.at, "sources": snap.sources,
         "problems": snap.problems.iter().map(|(name, why)| json!({ "service": name, "error": why })).collect::<Vec<_>>(),
-    })))
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Somebody looking at the queue, by a page's poll or by the live channel: the stamp that keeps it on its 5-s
+    /// cadence, and a wake only for the first look in a while, so the loop is not woken on every one.
+    #[test]
+    fn a_look_stamps_the_queue_as_watched_and_wakes_it_only_after_a_quiet_spell() {
+        let app = crate::state::test_app();
+        assert!(watched(&app, 1_000), "nobody was watching: refresh now rather than after a minute");
+        assert_eq!(*app.downloads_watched.lock().unwrap(), 1_000);
+        assert!(!watched(&app, 1_010), "still watched: the loop is already fast");
+        assert_eq!(*app.downloads_watched.lock().unwrap(), 1_010, "but the stamp moves on");
+        assert!(watched(&app, 1_011 + WATCHING_FOR_S), "a look after a quiet spell wakes it again");
+    }
+
+    #[test]
+    fn the_answer_is_the_snapshot_as_the_page_reads_it() {
+        let app = crate::state::test_app();
+        *app.downloads.write().unwrap() = Arc::new(Snapshot { at: 42, sources: 2, problems: vec![("Radarr".into(), "timed out".into())], ..Default::default() });
+        assert_eq!(
+            answer(&app),
+            json!({ "rows": [], "totals": { "down_bps": 0, "downloading": 0, "queued": 0, "importing": 0, "failed": 0 },
+                    "at": 42, "sources": 2, "problems": [{ "service": "Radarr", "error": "timed out" }] })
+        );
+    }
 
     #[test]
     fn credentials_in_a_services_own_words_are_blanked() {
