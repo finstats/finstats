@@ -171,9 +171,14 @@ export function mobileNav({ style, pages, current = null, foot = null, onSearch 
     const gone = freshSearch;
     const hide = () => { el.classList.remove('is-searching'); if (gone) el.classList.add('is-instant', 'is-gone'); };
     const show = () => { el.classList.add('is-searching'); el.classList.remove('is-gone'); };
+    // Closing into the button, the menu goes too, without its own transitions (is-instant): the dimming fades with the
+    // shrink rather than holding at full strength until it ends and then dropping in one frame.
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const dimming = gone && !still ? scrim.animate([{ opacity: getComputedStyle(scrim).opacity }, { opacity: 0 }], { duration: 300, easing: 'ease-out', fill: 'forwards' }) : null;
     return shrink({ to: searchFrom, host, bar: p.bar, list: p.list, show, hide, gone, ghost: gone ? null : ghost }).then(() => {
       found.replaceChildren();
       close(false);
+      if (dimming) dimming.cancel();
       el.classList.remove('is-gone');
       requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('is-instant')));
       if (restore && searchFrom && searchFrom.isConnected) searchFrom.focus({ preventScroll: true });
