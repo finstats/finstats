@@ -925,6 +925,14 @@ tests, builds amd64 and arm64 on native runners (no QEMU), and publishes `:edge`
 `Cargo.toml` or has no changelog entry, so the release commit and its tag must be pushed together. Docs always point at the published
 image, never at a locally built tag.
 
+## No em-dashes
+
+**No em-dash is used anywhere in the fin\* repositories on GitHub** (finstats, FinUI, FinMotion): not in code, comments,
+UI text, docs, the changelog or commit messages (the owner's decision, 2026-10-07). Where a sentence wants one, rewrite
+the sentence: a full stop, a colon, a semicolon, commas, parentheses or a joining word. Another dash in its place (a
+hyphen, an en dash, two hyphens) or an escape for the character is not a rewrite. The one exception is
+`THIRD-PARTY.json`, whose licence texts are other projects' words as they wrote them. A QA static check holds finstats to it.
+
 ## Git conventions
 
 - Conventional-commit subjects, with a scope where one fits (`feat(recap):`, `fix(import):`, `refactor`, `docs`,
