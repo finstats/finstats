@@ -742,6 +742,11 @@ fn preflight(path: &Path) -> Result<()> {
 
 impl Db {
     pub fn open(path: &Path) -> Result<Self> {
+        Self::open_with(path, crate::upgrade::STEPS)
+    }
+
+    /// `open`, with the upgrade steps to apply named (a test names its own).
+    pub(crate) fn open_with(path: &Path, steps: &[crate::upgrade::Step]) -> Result<Self> {
         preflight(path)?;
         let manager = SqliteConnectionManager::file(path).with_init(|c| {
             c.execute_batch(&format!(
@@ -768,7 +773,10 @@ impl Db {
         let running = env!("CARGO_PKG_VERSION");
         refuse_downgrade(&*db.conn()?, running)?;
         back_up_before_update(&*db.conn()?, path, running)?;
+        // No schema yet: a database made just now, which needs none of the steps that bring an older one up to date.
+        let fresh = db.conn()?.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))? == 0;
         db.migrate()?;
+        crate::upgrade::run(&mut *db.conn()?, steps, fresh, running)?;
         record_version(&*db.conn()?, running)?;
         Ok(db)
     }
@@ -821,7 +829,7 @@ impl Db {
 const VERSION_KEY: &str = "app_version";
 
 /// `1.2.3` as a comparable triple; a pre-release or build suffix (`-rc.1`, `+abc`) is ignored.
-fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
+pub(crate) fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
     let mut parts = v.trim().split(['-', '+']).next()?.split('.').map(|p| p.parse::<u64>().ok());
     let triple = (parts.next()??, parts.next()??, parts.next()??);
     parts.next().is_none().then_some(triple)

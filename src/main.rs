@@ -51,6 +51,7 @@ mod sync;
 mod tautulli;
 mod timeline;
 mod trash;
+mod upgrade;
 mod watchlist;
 
 use std::net::SocketAddr;
