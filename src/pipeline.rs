@@ -217,10 +217,10 @@ pub fn upcoming_for_item(conn: &Connection, item_id: &str) -> Result<Vec<Value>>
 
 #[derive(Deserialize)]
 pub struct UpcomingQuery {
-    days: Option<i64>,
-    user_id: Option<String>,
+    pub(crate) days: Option<i64>,
+    pub(crate) user_id: Option<String>,
     /// Only what the person follows.
-    mine: Option<bool>,
+    pub(crate) mine: Option<bool>,
 }
 
 pub async fn upcoming(State(app): State<App>, user: AuthUser, Query(q): Query<UpcomingQuery>) -> ApiResult {

@@ -14,7 +14,7 @@ use axum::response::Response;
 use chrono::{DateTime, NaiveDate};
 use serde::Deserialize;
 
-use crate::auth::CalendarKey;
+use crate::auth::{AuthUser, CalendarKey};
 use crate::db;
 use crate::pipeline::Entry;
 use crate::state::{ApiResult, App};
@@ -164,20 +164,40 @@ fn truthy(v: Option<&str>) -> bool {
     matches!(v.map(|s| s.trim().to_ascii_lowercase()).as_deref(), Some("1" | "true" | "yes" | "on"))
 }
 
-/// `GET /api/calendar.ics?key=&days=&mine=`: the key's owner's agenda, as a calendar.
-pub async fn feed(State(app): State<App>, CalendarKey(user): CalendarKey, Query(q): Query<FeedQuery>) -> ApiResult<Response> {
-    let days = q.days.unwrap_or(90).clamp(1, 90);
-    let mine = truthy(q.mine.as_deref());
-    let subject = user.id.clone();
+/// One person's agenda as a calendar, `days` ahead: the one builder the feed and the export both send. It names nobody,
+/// by construction (`entries_for`), whoever it is for.
+async fn agenda(app: &App, days: i64, subject: String, mine: bool) -> anyhow::Result<String> {
     let public_url = app.settings().public_url.clone();
     let rows = app.db.call(move |c| crate::pipeline::entries_for(c, days, &subject, mine)).await?;
     let now = db::now();
     let events: Vec<String> = rows.iter().map(|(e, you)| vevent(e, now, &public_url, *you)).collect();
+    Ok(calendar(&events))
+}
+
+/// `GET /api/calendar.ics?key=&days=&mine=`: the key's owner's agenda, as a calendar.
+pub async fn feed(State(app): State<App>, CalendarKey(user): CalendarKey, Query(q): Query<FeedQuery>) -> ApiResult<Response> {
+    let days = q.days.unwrap_or(90).clamp(1, 90);
+    let body = agenda(&app, days, user.id.clone(), truthy(q.mine.as_deref())).await?;
     Ok(Response::builder()
         .header(CONTENT_TYPE, "text/calendar; charset=utf-8")
         .header(CACHE_CONTROL, "private, no-store")
         .header("content-disposition", "inline; filename=\"finstats.ics\"")
-        .body(Body::from(calendar(&events)))
+        .body(Body::from(body))
+        .unwrap())
+}
+
+/// `GET /api/upcoming.ics?days=&mine=&user_id=`: what Pipeline → Upcoming shows, as a file to import once. Its own route
+/// behind the session (`AuthUser`, so a calendar key is refused here as everywhere), never the feed, whose `CalendarKey`
+/// takes no cookie. Upcoming's query and Upcoming's narrowing: somebody else's agenda only with see everyone.
+pub async fn export(State(app): State<App>, user: AuthUser, Query(q): Query<crate::pipeline::UpcomingQuery>) -> ApiResult<Response> {
+    let days = q.days.unwrap_or(14).clamp(1, 90);
+    let subject = crate::stats::pinned_user(&user, q.user_id.as_deref()).unwrap_or_else(|| user.id.clone());
+    let body = agenda(&app, days, subject, q.mine.unwrap_or(false)).await?;
+    Ok(Response::builder()
+        .header(CONTENT_TYPE, "text/calendar; charset=utf-8")
+        .header(CACHE_CONTROL, "private, no-store")
+        .header("content-disposition", "attachment; filename=\"finstats-upcoming.ics\"")
+        .body(Body::from(body))
         .unwrap())
 }
 
