@@ -274,8 +274,16 @@ Your history comes with you, from any of them.
 **Streamystats:** open **Settings → Backup & Import**, scroll down to **Backup & Restore** and
 click **Download Backup**.
 
-**Tautulli** (coming from Plex): open **Settings → Import & Backups**, click **Backup Database**, and
-download the newest backup — the `.db` file, or the `.zip` holding it.
+**Tautulli** (coming from Plex):
+
+1. Open **Settings → Import & Backups** and click **Backup Database**. Tautulli saves the backup on
+   the machine it runs on; nothing downloads to your browser.
+2. Find it in Tautulli's `backups` folder, inside its data folder. With Docker that is `backups` inside
+   the folder you mounted as `/config` (for example `/opt/tautulli/config/backups`); with a native
+   install, inside the data folder Tautulli was installed with.
+3. Take the newest `tautulli.backup-….db` or `….db.zip` (the scheduled ones, `….sched.db.zip`, work
+   the same). Leave the `config.backup-…` files: they are Tautulli's settings, not its history.
+4. Copy it to the computer you are using, with `scp`, a shared folder or your NAS's file manager.
 
 In finstats, open **Settings → Import**, find the card for the one you used, and drop the file in.
 

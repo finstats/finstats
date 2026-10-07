@@ -1,7 +1,10 @@
 # How Tautulli data is imported
 
 Tautulli keeps what Plex played. finstats reads its database backup directly — the `.db` file, or
-the `.zip` holding it that Tautulli's download gives you — and brings that history over to Jellyfin.
+the `.zip` holding one, that **Backup Database** (Settings → Import & Backups) saves in the `backups`
+folder of Tautulli's data folder (`/config/backups` in Docker) — and brings that history over to
+Jellyfin. The file is saved where Tautulli runs, not downloaded, so copy it to the computer you
+upload from.
 The whole import is one transaction: it either fully succeeds or changes nothing.
 
 ## You say who is who
