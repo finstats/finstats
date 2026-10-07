@@ -6,6 +6,7 @@ mod audit;
 mod auth;
 mod backup;
 mod browse;
+mod capacity;
 mod card;
 mod changelog;
 mod channels;

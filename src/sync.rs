@@ -719,6 +719,10 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             if let Err(e) = crate::health::recompute(c, db::now()) {
                 tracing::warn!("working out library health failed: {e:#}");
             }
+            // So is Capacity: what is added to the disks is what this read just stored.
+            if let Err(e) = crate::capacity::recompute(c, db::now()) {
+                tracing::warn!("working out capacity failed: {e:#}");
+            }
             db::set_setting(c, "library_synced_at", &started.to_string())
         })
         .await?;
@@ -934,7 +938,7 @@ async fn sync_events(app: &App, jf: &Jellyfin) -> Result<String> {
 
 fn folder(label: &str, kind: &str, f: &Value) -> Option<Value> {
     let (free, used) = (f["FreeSpace"].as_i64()?, f["UsedSpace"].as_i64()?);
-    (free >= 0 && used >= 0 && free + used > 0).then(|| json!({ "label": label, "path": f["Path"], "free_bytes": free, "used_bytes": used, "kind": kind }))
+    (free >= 0 && used >= 0 && free + used > 0).then(|| json!({ "label": label, "path": f["Path"], "free_bytes": free, "used_bytes": used, "kind": kind, "device": f["DeviceId"] }))
 }
 
 /// The library's folders and Jellyfin's own, as the Server page lists them.
@@ -1040,6 +1044,10 @@ async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
                 }
             }
             tx.commit()?;
+            // Capacity reads the disks and the scan's schedule just stored; what it finds never fails the read.
+            if let Err(e) = crate::capacity::recompute(c, now) {
+                tracing::warn!("working out capacity failed: {e:#}");
+            }
             Ok(())
         })
         .await?;
@@ -1155,6 +1163,15 @@ mod tests {
         assert_eq!((t[0]["key"].as_str(), t[0]["interval_s"].as_i64()), (Some("RefreshLibrary"), Some(3_600)));
         assert_eq!((t[1]["key"].as_str(), t[1]["interval_s"].as_i64()), (Some("CleanTranscode"), None), "a time of day is no interval");
         assert_eq!((t[2]["key"].clone(), t[2]["interval_s"].clone()), (Value::Null, Value::Null), "a server that names no key");
+    }
+
+    /// Capacity tells two disks apart by the device Jellyfin names (10.11), where the free space alone could be equal.
+    #[test]
+    fn a_storage_folder_keeps_the_device_it_is_on() {
+        let st = json!({ "Libraries": [{ "Name": "Films", "Folders": [{ "Path": "/media/films", "FreeSpace": 10, "UsedSpace": 90, "DeviceId": "sda1" },
+                                                                        { "Path": "/media/more", "FreeSpace": 10, "UsedSpace": 90 }] }] });
+        let s = storage_of(&st);
+        assert_eq!((s[0]["device"].clone(), s[1]["device"].clone()), (json!("sda1"), Value::Null));
     }
 
     #[test]

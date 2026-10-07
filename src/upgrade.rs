@@ -20,7 +20,16 @@ pub struct Step {
 }
 
 /// Every step there is, in any order: they are run by version.
-pub const STEPS: &[Step] = &[];
+pub const STEPS: &[Step] = &[Step {
+    version: "2.3.0",
+    name: "capacity-first-look",
+    why: "Capacity is worked out after a read of the server's details; forgetting when they were last read makes that read, \
+          and Capacity, come at the first start instead of up to a quarter of an hour later.",
+    run: |c| {
+        c.execute("DELETE FROM task_runs WHERE task = 'sync_server'", [])?;
+        Ok(())
+    },
+}];
 
 /// Settings key: the names of the steps this database has had.
 const DONE_KEY: &str = "upgrade_steps";
@@ -138,5 +147,16 @@ mod tests {
         assert_eq!(get_setting(&c, "half-done").unwrap(), None, "what a failed step began is undone with it");
         assert_eq!(run(&mut c, &BREAKS[..1], false, "2.4.0").unwrap(), Vec::<&str>::new(), "the one before it stays done");
         assert!(run(&mut c, BREAKS, false, "2.4.0").is_err(), "and the failed one is tried again");
+    }
+
+    /// 2.3.0 brings Capacity, worked out after a read of the server's details: the first start reads them at once rather
+    /// than up to a quarter of an hour later, by forgetting when they were last read.
+    #[test]
+    fn the_first_start_of_2_3_0_reads_the_server_at_once() {
+        let mut c = conn();
+        c.execute_batch("INSERT INTO task_runs(task, state, started_at, finished_at) VALUES ('sync_server', 'ok', 1, 2), ('sync_users', 'ok', 1, 2);").unwrap();
+        assert_eq!(run(&mut c, STEPS, false, "2.3.0").unwrap(), ["capacity-first-look"]);
+        let left: Vec<String> = c.prepare("SELECT task FROM task_runs ORDER BY task").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(left, ["sync_users"], "only the server read is due");
     }
 }

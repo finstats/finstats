@@ -131,6 +131,7 @@ pub fn router(app: App) -> Router {
         .route("/library/health/findings", get(crate::health::get_findings))
         .route("/library/health/dismiss", post(crate::health::post_dismiss))
         .route("/library/health/undismiss", post(crate::health::post_undismiss))
+        .route("/server/capacity", get(crate::capacity::get_capacity))
         .route("/backups", get(list_backups).post(create_backup))
         .route("/backups/restore", post(restore_upload).layer(DefaultBodyLimit::disable()))
         .route("/backups/{name}", get(download_backup).put(set_backup_deleted))

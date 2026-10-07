@@ -701,6 +701,19 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE VIEW visible_playbacks AS SELECT * FROM playbacks WHERE deleted_at IS NULL;
     CREATE VIEW trashed_playbacks AS SELECT * FROM playbacks WHERE deleted_at IS NOT NULL;
     "#,
+    // user_version 38: Capacity (2.3.0): what the busiest moments, the disks and the server's settings say, worked out
+    //      after a library read and a read of the server's details, never on a request. The facts live in the settings
+    //      key `capacity`; the findings here, dismissed through `health_dismissed` like Library health's.
+    r#"
+    CREATE TABLE capacity_findings (
+        key         TEXT PRIMARY KEY,
+        kind        TEXT NOT NULL,
+        title       TEXT NOT NULL,
+        evidence    TEXT NOT NULL,
+        fingerprint TEXT NOT NULL,
+        found_at    INTEGER NOT NULL
+    ) WITHOUT ROWID;
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole

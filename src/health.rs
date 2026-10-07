@@ -215,7 +215,9 @@ pub fn after_changes(conn: &mut Connection, now: i64) -> Result<Option<usize>> {
 
 /// Sets a finding aside as it stands. `false` when there is no such finding.
 pub fn dismiss(conn: &Connection, key: &str, note: Option<&str>, by: &str, now: i64) -> Result<bool> {
-    let Some(fingerprint) = conn.query_row("SELECT fingerprint FROM health_findings WHERE key = ?1", [key], |r| r.get::<_, String>(0)).optional()? else { return Ok(false) };
+    // One dismissal for Library health's findings and Capacity's alike.
+    let sql = "SELECT fingerprint FROM health_findings WHERE key = ?1 UNION ALL SELECT fingerprint FROM capacity_findings WHERE key = ?1";
+    let Some(fingerprint) = conn.query_row(sql, [key], |r| r.get::<_, String>(0)).optional()? else { return Ok(false) };
     let note = note.map(str::trim).filter(|n| !n.is_empty());
     conn.execute(
         "INSERT INTO health_dismissed(key, fingerprint, note, at, by) VALUES (?1, ?2, ?3, ?4, ?5)
