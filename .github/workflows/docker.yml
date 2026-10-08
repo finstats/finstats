@@ -25,15 +25,9 @@ concurrency:
 jobs:
   test:
     name: Tests
-    # The self-hosted runner at home, except for a pull request, which may come from anyone's fork: that stays on GitHub.
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || 'self-hosted' }}
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      # GitHub's machines come with Rust and Node; the self-hosted runner gets them here.
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
       - uses: Swatinem/rust-cache@v2
       - name: Unit tests
         run: cargo test --locked
@@ -50,7 +44,7 @@ jobs:
   build:
     name: Build ${{ matrix.platform }}
     needs: test
-    runs-on: ${{ github.event_name == 'pull_request' && matrix.pr_runner || matrix.runner }}
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -58,14 +52,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # amd64 on the self-hosted runner at home (x86 only); arm64 natively on GitHub's ARM machine, since emulating
-          # it on x86 is many times slower. A pull request builds both on GitHub.
           - platform: linux/amd64
-            runner: self-hosted
-            pr_runner: ubuntu-24.04
+            runner: ubuntu-24.04
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
-            pr_runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
       - name: Image name (registries want lower case)
@@ -110,7 +100,7 @@ jobs:
     name: Publish the multi-platform tags
     needs: build
     if: github.event_name != 'pull_request'
-    runs-on: self-hosted
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
@@ -151,7 +141,7 @@ jobs:
     name: GitHub release
     needs: publish
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: self-hosted
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
