@@ -34,3 +34,14 @@
 .simple-head__note { font-size: 14px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--text-muted); }
 .simple-head__tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .simple-section + .simple-section { margin-top: 34px; }
+
+/* ---- home */
+.simple-empty { margin: 0; padding: 14px 16px; background: var(--bg-2); border-radius: var(--radius); color: var(--text-faint); font-size: 14px; }
+.simple-who { display: flex; align-items: center; gap: 9px; }
+.simple-days { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; background: var(--bg-2); border-radius: var(--radius-control); font-size: 14px; color: var(--text-muted); }
+.simple-days__field { width: 58px; height: 26px; padding: 0 6px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg); color: var(--text-strong); font: inherit; text-align: center; }
+.simple-recent .fui-shelf__item { width: 150px; }
+/* The section's heading names the shelf; its own stays for a screen reader, and its arrows on the right. */
+.simple-recent .fui-shelf__head { justify-content: flex-end; }
+.simple-recent .fui-shelf__title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.simple-recent .fui-media-card__sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
