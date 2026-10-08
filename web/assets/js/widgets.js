@@ -2,7 +2,9 @@
 
 import { h, icon, num, compact, bytes, duration, durationExact, clock, bitrate, humanize, episodeCode, store, mount, relTime, dateTime, dayLabelLong, languageName } from './dom.js';
 import { columnsChart, columnsTable, heatmap, heatmapTable, sparkline, bucketList, libBucketList, simpleColumns, simpleColumnsTable, radarChart } from './charts.js';
-import { card, chartCard, segmented, statTile, poster, avatar, methodBadge, facts } from './components.js';
+import { card, chartCard, segmented, statTile, poster, avatar, methodBadge, facts, sk } from './components.js';
+import { api, isAbort } from './api.js';
+import { follow } from './live.js';
 import { rangeLong, can } from './state.js';
 import { button } from '../finui/components/button/button.js';
 import { typed } from './menus.js';
@@ -163,6 +165,36 @@ export function nowPlayingView() {
     }
   }
   return { el: root, update, destroy: () => clearInterval(timer) };
+}
+
+/** Now playing as a home opens with it: the heading with a count, the live view, and the one way it is fed (pushed over the
+ *  live channel when it changes, asked for every 5 s only while that is not there). The dashboard and Simple view both
+ *  draw this, so both narrow, tick and fall back the same way. `el` goes on the page; `start()` once it is there. */
+export function nowPlayingSection(ctx, { title = 'Now playing', id } = {}) {
+  const count = h('span', { class: 'fui-badge--count mono', hidden: true });
+  const body = h('div', { class: 'np-wrap' }, h('div', { class: 'np-grid' }, h('div', { class: 'np fui-skeleton--wide' }, h('span', { class: 'fui-skeleton fui-skeleton--poster' }),
+    h('div', { class: 'fui-skeleton__lines' }, sk.line('50%', 14), sk.line('35%'), sk.line('80%', 8)))));
+  let first = true;
+  const live = nowPlayingView(); // ticks every second between the polls
+  ctx.onCleanup(() => live.destroy());
+  function paint(data) {
+    const sessions = data.sessions || [];
+    count.hidden = !sessions.length;
+    count.textContent = String(sessions.length);
+    if (first) mount(body, live.el);
+    live.update(sessions);
+    first = false;
+  }
+  async function load() {
+    try {
+      paint(await api.get('/now-playing', null, { signal: ctx.signal }));
+    } catch (e) {
+      if (isAbort(e) || e.status === 401) return;
+      if (first) mount(body, h('p', { class: 'np-empty' }, icon('alert', 14), ' Live sessions are unavailable: ' + e.message));
+    }
+  }
+  const el = h('section', { class: 'np-section', id, 'aria-label': title }, h('h2', { class: 'section-title' }, title, count), body);
+  return { el, start: () => { load(); follow('now_playing', { poll: load, every: 5000, onData: paint, signal: ctx.signal }); } };
 }
 
 export function nowPlayingList(sessions) {

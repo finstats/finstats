@@ -1,9 +1,9 @@
-import { h, icon, mount, relEl, episodeCode } from '../dom.js';
-import { api, isAbort, soft } from '../api.js';
+import { h, icon, relEl, episodeCode } from '../dom.js';
+import { api, soft } from '../api.js';
 import { state, readDays, saveDays, can } from '../state.js';
 import { replaceQuery } from '../router.js';
 import { pageHeader, card, filterBar, dataView, sk, topList, playsTable, emptyState, poster } from '../components.js';
-import { activityCard, heatmapCard, overviewTiles, nowPlayingView, insightTiles, genresCard, failedLoginsCard, shelfRow } from '../widgets.js';
+import { activityCard, heatmapCard, overviewTiles, nowPlayingSection, insightTiles, genresCard, failedLoginsCard, shelfRow } from '../widgets.js';
 import { openPlayModal } from '../playmodal.js';
 import { recapBanner } from './recap.js';
 import { loadUpcoming, entryCard, entryTitle, entryName } from '../upcoming.js';
@@ -47,28 +47,7 @@ export default function dashboard(ctx) {
   const admin = can('see_everyone'); // sees the whole server rather than only themselves
 
   // ---- now playing (live; not scoped by the filters below)
-  const npCount = h('span', { class: 'fui-badge--count mono', hidden: true });
-  const npBody = h('div', { class: 'np-wrap' }, h('div', { class: 'np-grid' }, h('div', { class: 'np fui-skeleton--wide' }, h('span', { class: 'fui-skeleton fui-skeleton--poster' }),
-    h('div', { class: 'fui-skeleton__lines' }, sk.line('50%', 14), sk.line('35%'), sk.line('80%', 8)))));
-  let npFirst = true;
-  const npLive = nowPlayingView(); // ticks every second between the polls
-  ctx.onCleanup(() => npLive.destroy());
-  function paintNow(data) {
-    const sessions = data.sessions || [];
-    npCount.hidden = !sessions.length;
-    npCount.textContent = String(sessions.length);
-    if (npFirst) mount(npBody, npLive.el);
-    npLive.update(sessions);
-    npFirst = false;
-  }
-  async function loadNow() {
-    try {
-      paintNow(await api.get('/now-playing', null, { signal: ctx.signal }));
-    } catch (e) {
-      if (isAbort(e) || e.status === 401) return;
-      if (npFirst) mount(npBody, h('p', { class: 'np-empty' }, icon('alert', 14), ' Live sessions are unavailable: ' + e.message));
-    }
-  }
+  const nowPlaying = nowPlayingSection(ctx);
 
   // ---- recently added: about the library, not the plays, so no filter applies and it loads on its own. The card is one node
   // that every render of the filtered view below slots in above the Activity chart. Hides itself on empty libraries.
@@ -173,12 +152,10 @@ export default function dashboard(ctx) {
   ctx.root.append(...[
     pageHeader('Dashboard', state.status && state.status.server_name ? `Playback on ${state.status.server_name}` : 'Playback on your Jellyfin server'),
     recapBanner(),
-    h('section', { class: 'np-section', 'aria-label': 'Now playing' }, h('h2', { class: 'section-title' }, 'Now playing', npCount), npBody),
+    nowPlaying.el,
     filters, view].filter(Boolean));
 
-  loadNow();
-  // Pushed when it changes; asked for every 5 s only while the live channel is not there.
-  follow('now_playing', { poll: loadNow, every: 5000, onData: paintNow, signal: ctx.signal });
+  nowPlaying.start();
   dv.load();
 }
 
