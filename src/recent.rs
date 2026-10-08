@@ -21,9 +21,41 @@ const MAX_LIMIT: usize = 60;
 /// single tracks (the album does).
 const TYPES: &str = "'Episode', 'Movie', 'MusicAlbum', 'Video', 'MusicVideo', 'Book', 'AudioBook'";
 
+/// Which arrivals: everything, or films, shows or music alone (Simple view's switch).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Kind {
+    All,
+    Movies,
+    Shows,
+    Music,
+}
+
+impl Kind {
+    /// The `kind` asked for; anything else is everything.
+    fn asked(kind: Option<&str>) -> Kind {
+        match kind {
+            Some("movies") => Kind::Movies,
+            Some("shows") => Kind::Shows,
+            Some("music") => Kind::Music,
+            _ => Kind::All,
+        }
+    }
+
+    /// The item types of `TYPES` that are this kind.
+    fn types(self) -> &'static str {
+        match self {
+            Kind::All => TYPES,
+            Kind::Movies => "'Movie'",
+            Kind::Shows => "'Episode'",
+            Kind::Music => "'MusicAlbum'",
+        }
+    }
+}
+
 #[derive(Deserialize)]
 pub struct RecentQuery {
     limit: Option<usize>,
+    kind: Option<String>,
 }
 
 #[derive(Clone, Default)]
@@ -111,8 +143,8 @@ const SQL: &str = "SELECT i.id, i.type, i.name, i.date_created, date(i.date_crea
  WHERE i.removed = 0 AND i.date_created IS NOT NULL AND +i.type IN ({TYPES})
  ORDER BY i.date_created DESC";
 
-fn recent(conn: &Connection, limit: usize) -> Result<Vec<Value>> {
-    let mut stmt = conn.prepare(&SQL.replace("{TYPES}", TYPES))?;
+fn recent(conn: &Connection, limit: usize, kind: Kind) -> Result<Vec<Value>> {
+    let mut stmt = conn.prepare(&SQL.replace("{TYPES}", kind.types()))?;
     let rows = stmt.query_map([], |r| {
         Ok(Added {
             id: r.get(0)?, item_type: r.get(1)?, name: r.get(2)?, at: r.get(3)?, day: r.get(4)?, series_id: r.get(5)?, series_name: r.get(6)?,
@@ -133,7 +165,7 @@ fn recent(conn: &Connection, limit: usize) -> Result<Vec<Value>> {
 pub fn announce(conn: &Connection, bus: &crate::notify::Fanout) -> Result<usize> {
     let cutoff = crate::db::now() - crate::notify::HISTORIC_S;
     let mut added = 0;
-    for entry in recent(conn, MAX_LIMIT)? {
+    for entry in recent(conn, MAX_LIMIT, Kind::All)? {
         let at = entry["added_at"].as_i64().unwrap_or(0);
         if at < cutoff {
             break; // the list is newest first
@@ -171,7 +203,8 @@ fn announce_key(entry: &Value) -> Option<String> {
 /// The library is the same for everyone who may sign in, so this is not scoped to the caller.
 pub async fn recently_added(State(app): State<App>, _user: AuthUser, Query(q): Query<RecentQuery>) -> ApiResult {
     let limit = q.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
-    let items = app.db.call(move |c| recent(c, limit)).await?;
+    let kind = Kind::asked(q.kind.as_deref());
+    let items = app.db.call(move |c| recent(c, limit, kind)).await?;
     Ok(Json(json!({ "items": items })))
 }
 
@@ -227,6 +260,31 @@ mod tests {
         assert_eq!(read, 4, "stopped at the first row of an older day");
     }
 
+    /// Simple view's switch: films, shows or music alone, folded the same way, so a week of episodes cannot push every
+    /// new album off a list the switch then filters.
+    #[test]
+    fn recent_arrivals_of_one_kind_leave_the_others_out_and_fold_the_same_way() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, series_id, series_name, parent_index_number, index_number, date_created, removed, updated_at) VALUES
+               ('e1', 'Episode', 'One', 'rookery', 'Rookery', 1, 1, 1790000300, 0, 0), ('e2', 'Episode', 'Two', 'rookery', 'Rookery', 1, 2, 1790000310, 0, 0),
+               ('m1', 'Movie', 'Big Buck Bunny', NULL, NULL, NULL, NULL, 1790000200, 0, 0), ('a1', 'MusicAlbum', 'First Light', NULL, NULL, NULL, NULL, 1790000100, 0, 0),
+               ('v1', 'Video', 'Home movie', NULL, NULL, NULL, NULL, 1790000400, 0, 0);",
+        )
+        .unwrap();
+        let names = |kind: Kind| -> Vec<String> { recent(&c, 30, kind).unwrap().iter().map(|e| e["name"].as_str().unwrap().to_string()).collect() };
+        assert_eq!(names(Kind::All), vec!["Home movie", "Rookery", "Big Buck Bunny", "First Light"]);
+        assert_eq!(names(Kind::Movies), vec!["Big Buck Bunny"]);
+        assert_eq!(names(Kind::Shows), vec!["Rookery"]);
+        assert_eq!(recent(&c, 30, Kind::Shows).unwrap()[0]["episodes"], 2);
+        assert_eq!(names(Kind::Music), vec!["First Light"]);
+        assert_eq!([Kind::asked(Some("music")), Kind::asked(Some("shows")), Kind::asked(Some("movies")), Kind::asked(Some("films")), Kind::asked(None)],
+                   [Kind::Music, Kind::Shows, Kind::Movies, Kind::All, Kind::All]);
+    }
+
     #[test]
     fn the_query_walks_the_added_index_instead_of_sorting_the_library() {
         let dir = std::env::temp_dir().join(format!("finstats-recent-test-{}", std::process::id()));
@@ -234,10 +292,12 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let db = crate::db::Db::open(&dir.join("finstats.db")).unwrap();
         let conn = db.conn().unwrap();
-        let plan: Vec<String> = conn.prepare(&format!("EXPLAIN QUERY PLAN {}", SQL.replace("{TYPES}", TYPES))).unwrap()
-            .query_map([], |r| r.get::<_, String>(3)).unwrap().map(|r| r.unwrap()).collect();
-        assert!(plan.iter().any(|p| p.contains("idx_items_added")) && !plan.iter().any(|p| p.contains("TEMP B-TREE")), "{plan:?}");
-        assert!(recent(&conn, 30).unwrap().is_empty());
+        for kind in [Kind::All, Kind::Movies, Kind::Shows, Kind::Music] {
+            let plan: Vec<String> = conn.prepare(&format!("EXPLAIN QUERY PLAN {}", SQL.replace("{TYPES}", kind.types()))).unwrap()
+                .query_map([], |r| r.get::<_, String>(3)).unwrap().map(|r| r.unwrap()).collect();
+            assert!(plan.iter().any(|p| p.contains("idx_items_added")) && !plan.iter().any(|p| p.contains("TEMP B-TREE")), "{kind:?}: {plan:?}");
+        }
+        assert!(recent(&conn, 30, Kind::All).unwrap().is_empty());
         drop(conn);
         drop(db);
         let _ = std::fs::remove_dir_all(&dir);
