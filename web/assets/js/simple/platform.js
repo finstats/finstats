@@ -24,3 +24,13 @@ export function platformOf(client = '') {
 
 /** An app's tile, `size` pixels square. */
 export const platformTile = (client, size = 48) => tile({ ...platformOf(client), size, label: client || 'Unknown app' });
+
+/** A library's icon, by what it holds. */
+export const libraryIcon = (type) => ({ movies: 'film', tvshows: 'tv', music: 'music', books: 'book', musicvideos: 'video', homevideos: 'camera' }[type] || 'library');
+
+/** A long duration as a table writes it: "75 days 0 hrs 20 mins", the larger units only when they are there. */
+export function longDuration(sec) {
+  const m = Math.floor(Math.max(0, Number(sec) || 0) / 60);
+  const d = Math.floor(m / 1440), hr = Math.floor((m % 1440) / 60), min = m % 60;
+  return d ? `${d} days ${hr} hrs ${min} mins` : hr ? `${hr} hrs ${min} mins` : `${min} mins`;
+}

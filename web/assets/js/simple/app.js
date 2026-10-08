@@ -11,6 +11,7 @@ import { button } from '../../finui/components/button/button.js';
 import { layout } from './shell.js';
 import home, { prefetchHome } from './pages/home.js';
 import history from './pages/history.js';
+import { librariesPage, libraryPage, prefetchLibraries, prefetchLibrary } from './pages/libraries.js';
 
 /** A page fetched when it is first opened: `load()` answers its function, drawn only if the reader is still there. */
 const later = (load) => (ctx) => load().then((page) => { if (!ctx.signal.aborted) page(ctx); });
@@ -20,6 +21,8 @@ route('/setup', later(() => import('../pages/auth.js').then((m) => m.setupPage))
 route('/login', later(() => import('../pages/auth.js').then((m) => m.loginPage)), { bare: true });
 route('/', home, { prefetch: prefetchHome });
 route('/history', history);
+route('/libraries', librariesPage, { prefetch: prefetchLibraries });
+route('/libraries/:id', libraryPage, { prefetch: prefetchLibrary });
 route('/settings', settings);
 route('/settings/:section', settings);
 route('/settings/:section/:task', settings);

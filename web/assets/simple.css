@@ -40,11 +40,11 @@
 .simple-who { display: flex; align-items: center; gap: 9px; }
 .simple-days { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; background: var(--bg-2); border-radius: var(--radius-control); font-size: 14px; color: var(--text-muted); }
 .simple-days__field { width: 58px; height: 26px; padding: 0 6px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg); color: var(--text-strong); font: inherit; text-align: center; }
-.simple-recent .fui-shelf__item { width: 150px; }
-/* The section's heading names the shelf; its own stays for a screen reader, and its arrows on the right. */
-.simple-recent .fui-shelf__head { justify-content: flex-end; }
-.simple-recent .fui-shelf__title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.simple-recent .fui-media-card__sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.simple-app .fui-shelf__item { width: 150px; }
+/* A shelf's section names it; its own heading stays for a screen reader, and its arrows on the right. */
+.simple-app .fui-shelf__head { justify-content: flex-end; }
+.simple-app .fui-shelf__title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.simple-app .fui-media-card__sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---- a page of its own: a title with its icon and the page's controls, on a panel; tables on the panel under it */
 .simple-panel-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 18px; padding: 16px 16px 14px; background: var(--bg-2); border-bottom: 1px solid var(--border-soft); border-radius: var(--radius) var(--radius) 0 0; }
@@ -61,3 +61,19 @@
 .simple-kind { display: inline-flex; color: var(--text-muted); }
 .simple-done { display: inline-block; width: 15px; height: 15px; border: 2px solid var(--text); border-radius: 50%; background: conic-gradient(var(--text) var(--done, 0%), transparent 0); vertical-align: middle; }
 .simple-history__who { min-width: 180px; }
+
+/* ---- a library's or a person's page: a header with its tabs, then boxed sections with a title bar */
+.simple-profile { display: flex; align-items: center; gap: 24px; margin-bottom: 26px; padding: 24px 18px; background: var(--bg-2); border-radius: var(--radius); }
+.simple-profile__picture { flex: none; }
+.simple-profile__name { margin: 0 0 8px; font-size: 26px; font-weight: 500; color: var(--text-strong); }
+.simple-tabs { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 15px; }
+.simple-tabs a { color: var(--text); }
+.simple-tabs a:hover { color: var(--text-strong); }
+.simple-tabs a[aria-current="page"] { color: var(--accent); }
+.simple-box { margin-bottom: 26px; background: var(--bg-2); border-radius: var(--radius); }
+.simple-box__title { display: flex; align-items: center; gap: 10px; margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--border-soft); font-size: 22px; font-weight: 500; color: var(--text-strong); }
+.simple-box__body { padding: 18px 16px 20px; }
+.simple-table__icon { width: 40px; color: var(--text); }
+@media (max-width: 520px) { .simple-profile { gap: 14px; padding: 16px 12px; } .simple-profile__name { font-size: 21px; } }
+/* A wide table's long headings wrap rather than push it past its panel. */
+.simple-table thead th { white-space: normal; vertical-align: bottom; }

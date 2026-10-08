@@ -13,7 +13,7 @@ import { statCard, statCards } from '../../../finui/components/stat-card/stat-ca
 import { tile } from '../../../finui/components/tile-stat/tile-stat.js';
 import { shelf } from '../../../finui/components/shelf/shelf.js';
 import { mediaCard } from '../../../finui/components/media-card/media-card.js';
-import { hhmm, rate, platformTile } from '../platform.js';
+import { hhmm, rate, platformTile, libraryIcon } from '../platform.js';
 
 const ROWS = 5;
 const DAYS_KEY = 'finstats.simpleDays', BY_KEY = 'finstats.simpleBy';
@@ -225,7 +225,6 @@ function watchCards(d, by) {
 
 // ---------------------------------------------------------------- libraries and arrivals
 
-const libraryIcon = (type) => ({ movies: 'film', tvshows: 'tv', music: 'music', books: 'book', musicvideos: 'video', homevideos: 'camera' }[type] || 'library');
 const COUNTS = [['movie_count', 'Movies'], ['series_count', 'Shows'], ['season_count', 'Seasons'], ['episode_count', 'Episodes'], ['artist_count', 'Artists'], ['album_count', 'Albums'], ['track_count', 'Tracks']];
 
 function libraryCard(l) {
