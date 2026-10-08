@@ -1595,6 +1595,80 @@
       "requires": [
         "core"
       ]
+    },
+    {
+      "name": "tile-stat",
+      "category": "pattern",
+      "files": [
+        "components/tile-stat/tile-stat.js",
+        "components/tile-stat/tile-stat.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--critical",
+        "--good",
+        "--on-accent",
+        "--on-fill",
+        "--radius-control",
+        "--series-2",
+        "--series-4",
+        "--text",
+        "--text-faint",
+        "--text-strong",
+        "--wash-2",
+        "--wash-2-text"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    {
+      "name": "stat-card",
+      "category": "pattern",
+      "files": [
+        "components/stat-card/stat-card.js",
+        "components/stat-card/stat-card.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--bg-2",
+        "--placeholder",
+        "--radius",
+        "--radius-control",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--text-strong"
+      ],
+      "requires": [
+        "core",
+        "poster"
+      ]
+    },
+    {
+      "name": "stream-card",
+      "category": "pattern",
+      "files": [
+        "components/stream-card/stream-card.js",
+        "components/stream-card/stream-card.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--bg-2",
+        "--border-strong",
+        "--placeholder",
+        "--radius",
+        "--radius-control",
+        "--text",
+        "--text-faint",
+        "--text-muted",
+        "--text-strong",
+        "--track"
+      ],
+      "requires": [
+        "core",
+        "poster"
+      ]
     }
   ]
 }

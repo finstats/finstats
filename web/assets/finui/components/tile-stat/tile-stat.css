@@ -1,0 +1,15 @@
+/* FinUI: tile-stat. A tile, a name and a figure; the figure large and in the accent. */
+.fui-tile-stat__grid { display: grid; gap: 16px 20px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
+.fui-tile-stat { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.fui-tile-stat__tile { display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: var(--radius-control); color: var(--on-fill); }
+.fui-tile-stat__tile--accent { background: var(--accent); color: var(--on-accent); }
+.fui-tile-stat__tile--good { background: var(--good); }
+.fui-tile-stat__tile--critical { background: var(--critical); }
+.fui-tile-stat__tile--series-2 { background: var(--series-2); }
+.fui-tile-stat__tile--series-4 { background: var(--series-4); }
+.fui-tile-stat__tile--neutral { background: var(--wash-2); color: var(--wash-2-text); }
+.fui-tile-stat__text { display: flex; flex-direction: column; min-width: 0; }
+.fui-tile-stat__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: var(--text); }
+a.fui-tile-stat__name:hover { color: var(--text-strong); }
+.fui-tile-stat__figure { font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--accent); }
+.fui-tile-stat__unit { margin-left: 5px; font-size: 13px; color: var(--text-faint); }
