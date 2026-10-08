@@ -1,0 +1,8 @@
+/* FinUI: stat-figure. The label in the text's colour, the numbers large in the accent, the units small and faint. */
+.fui-stat-figure__row { display: grid; gap: 18px 24px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.fui-stat-figure { min-width: 0; }
+.fui-stat-figure__label { margin-bottom: 6px; font-size: 17px; color: var(--text-strong); }
+.fui-stat-figure__value { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; padding-left: 10px; }
+.fui-stat-figure__number { font-size: 27px; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--accent); }
+.fui-stat-figure__unit { margin-right: 8px; font-size: 12px; color: var(--text-faint); }
+.fui-stat-figure__slash { margin-right: 10px; font-size: 24px; color: var(--text-strong); }

@@ -1669,6 +1669,22 @@
         "core",
         "poster"
       ]
+    },
+    {
+      "name": "stat-figure",
+      "category": "pattern",
+      "files": [
+        "components/stat-figure/stat-figure.js",
+        "components/stat-figure/stat-figure.css"
+      ],
+      "tokens": [
+        "--accent",
+        "--text-faint",
+        "--text-strong"
+      ],
+      "requires": [
+        "core"
+      ]
     }
   ]
 }
