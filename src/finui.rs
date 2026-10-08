@@ -195,12 +195,13 @@ mod tests {
     }
 
     /// A colour is a token, and every token is `light-dark(light, dark)`, in `tokens.css` alone (and in a preset's tokens,
-    /// `finui/p/`, which are tokens too): a literal anywhere else is right in one theme and wrong in the other.
+    /// `finui/p/`, and Simple mode's, `simple-tokens.css`, which are tokens too): a literal anywhere else is right in one
+    /// theme and wrong in the other.
     #[test]
     fn no_colour_literal_outside_the_tokens() {
         let assets = web().join("assets");
         let mut found = vec![];
-        for f in files_under(&assets).iter().filter(|f| (f.ends_with(".css") || f.ends_with(".js")) && f.as_str() != "finui/tokens.css" && !f.starts_with("finui/p/")) {
+        for f in files_under(&assets).iter().filter(|f| (f.ends_with(".css") || f.ends_with(".js")) && f.as_str() != "finui/tokens.css" && f.as_str() != "simple-tokens.css" && !f.starts_with("finui/p/")) {
             let text = read(&assets.join(f));
             let code = if f.ends_with(".css") { uncommented(&text) } else { js_code(&text) };
             for (n, line) in code.lines().enumerate() {

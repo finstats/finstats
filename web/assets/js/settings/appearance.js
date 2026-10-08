@@ -12,7 +12,7 @@ import { button } from '../../finui/components/button/button.js';
 import { STYLES, styleOf } from '../../finui/components/mobile-nav/mobile-nav.js';
 import { STYLES as DESKTOP_STYLES, styleOf as desktopStyleOf, sideOf } from '../../finui/components/desktop-nav/desktop-nav.js';
 import { toggle } from '../../finui/components/toggle/toggle.js';
-import { mobileNavChoice, setMobileNav, desktopNavChoice, setDesktopNav, searchMode, setSearchMode } from '../state.js';
+import { mobileNavChoice, setMobileNav, desktopNavChoice, setDesktopNav, searchMode, setSearchMode, layoutChoice, setLayoutChoice } from '../state.js';
 
 const CREATE = 'https://finui.finstats.no/create/';
 // Where the mobile menu is in use: app.css' own width for it. The choice is offered only there.
@@ -32,7 +32,8 @@ function restyle() {
 export default {
   key: 'appearance', label: 'Appearance', sub: 'How FinStats looks to you', group: 'Account', icon: 'sliders',
   visible: () => true,
-  entries: [{ id: 'desktop_menu', label: 'Menu', hint: 'menu sidebar navigation grouped rail search dock command bar pinned tiles', visible: () => !matchMedia(PHONE).matches },
+  entries: [{ id: 'layout', label: 'Layout', hint: 'layout simple mode classic tautulli plex top bar home look' },
+    { id: 'desktop_menu', label: 'Menu', hint: 'menu sidebar navigation grouped rail search dock command bar pinned tiles', visible: () => !matchMedia(PHONE).matches },
     { id: 'desktop_side', label: 'Menu on the right', hint: 'menu sidebar right left side', visible: () => !matchMedia(PHONE).matches },
     { id: 'search_mode', label: 'Search opens', hint: 'search find menu page integrated where ctrl space' },
     { id: 'mobile_menu', label: 'Menu on this phone', hint: 'mobile phone menu navigation tab bar peek full screen thumb arc address', visible: () => matchMedia(PHONE).matches },
@@ -112,21 +113,32 @@ export default {
     const [modeRow] = settingRow({ id: 'search_mode', label: 'Search opens', labelFor: 'f-search_mode',
       help: 'Inside your menu, which turns into the search, or in place of the page beside it. Kept by this browser alone.', control: h('div', { class: 'fui-field__row' }, modeNote, modeSel) });
 
+    // Which layout this browser wears, on every width. Switching loads the other layout's own modules, so it reloads here.
+    const layoutSel = h('select', { class: 'fui-field__input', id: 'f-layout', 'aria-describedby': 'layout-help' },
+      h('option', { value: 'finstats' }, 'FinStats'), h('option', { value: 'simple' }, 'Simple'));
+    layoutSel.value = layoutChoice();
+    layoutSel.addEventListener('change', () => setLayoutChoice(layoutSel.value));
+    const [layoutRow] = settingRow({ id: 'layout', label: 'Layout', labelFor: 'f-layout',
+      help: 'FinStats, or Simple: a bar across the top and the stats alone, the way a classic Plex stats server lays them out. Kept by this browser alone.', control: layoutSel });
+
     const phone = matchMedia(PHONE);
+    // Simple mode has no menu, no search of FinStats' kind and a look of its own: only the layout is chosen there.
+    const simple = layoutChoice() === 'simple';
     const fit = () => {
-      menuRow.hidden = !phone.matches;
-      deskRow.hidden = phone.matches;
-      sideRow.hidden = phone.matches || !sideOf(deskMenu.value, 'left');
+      menuRow.hidden = simple || !phone.matches;
+      deskRow.hidden = simple || phone.matches;
+      sideRow.hidden = simple || phone.matches || !sideOf(deskMenu.value, 'left');
+      modeRow.hidden = simple;
     };
     phone.addEventListener('change', fit, { signal: store.signal });
     fit();
 
     mount(body, h('div', { class: 'fui-setting-row__rows' },
-      menuRow, deskRow, sideRow, modeRow,
-      settingRow({ id: 'finui_preset', label: 'FinUI preset', labelFor: 'f-finui_preset',
+      layoutRow, menuRow, deskRow, sideRow, modeRow,
+      simple ? null : settingRow({ id: 'finui_preset', label: 'FinUI preset', labelFor: 'f-finui_preset',
         help: 'A code made at FinUI create: colours, corners, density and more. Every page wears it for you; others choose their own.',
         control: h('div', { class: 'fui-field__row' }, note, input, save, reset), error: err })),
-      meaning);
+      simple ? null : meaning);
     paint();
   },
 };

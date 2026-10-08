@@ -63,7 +63,7 @@ async function warmUp() {
   const gen = generation, me = state.user;
   if (!me || frugal()) return;
   const step = async (href) => { await visible(); await idle(); return gen === generation && state.user === me ? prefetch(href) : null; };
-  const top = ['/', `/users/${me.id}`, '/activity', '/together', '/libraries', '/users', '/playback', `/users/${me.id}/timeline`, '/changelog', '/server', '/server/log', '/recap', '/pipeline'];
+  const top = topPages(me);
   const got = {};
   for (const href of top) got[href] = await step(href);
   // Few enough to fetch one by one. Films, shows and episodes are not: they wait for a pointer.
@@ -80,7 +80,13 @@ const linkOf = (e) => {
   return href && href.startsWith('/') && !href.startsWith('/api/') ? href : null;
 };
 
-export function startPrefetching() {
+/** The pages a warm-up visits, in order, for the person signed in: each layout names its own (`startPrefetching`). */
+let topPages = () => [];
+
+/** `top(me)` answers the addresses the warm-up fetches one by one; the libraries and people it then warms individually
+ *  are read from what `/libraries` and `/users` loaded, so a layout that has those pages names them. */
+export function startPrefetching({ top }) {
+  topPages = top;
   // The first page gets the network to itself; everything else follows once it has settled.
   onRouteChange(() => {
     if (!state.user || warmedFor === generation || Date.now() - warmedAt < WARM_EVERY_MS) return;

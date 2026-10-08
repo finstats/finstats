@@ -100,6 +100,16 @@ const SEARCH_MODE_KEY = 'finstats.searchMode';
 export const searchMode = () => (store.get(SEARCH_MODE_KEY) === 'page' ? 'page' : 'menu');
 export const setSearchMode = (mode) => store.set(SEARCH_MODE_KEY, mode === 'page' ? 'page' : 'menu');
 
+// ---- which layout this browser wears: FinStats (the menu and every page), or Simple (a bar across the top and the half
+// of FinStats a classic Plex stats server has), this browser's choice like the menus. Nothing stored is FinStats.
+// theme.js reads the same key before the first paint; switching reloads, because each layout loads only its own modules.
+const LAYOUT_KEY = 'finstats.layout';
+export const layoutChoice = () => (store.get(LAYOUT_KEY) === 'simple' ? 'simple' : 'finstats');
+export function setLayoutChoice(layout, to = location.pathname + location.search) {
+  if (layout === 'simple') store.set(LAYOUT_KEY, 'simple'); else store.remove(LAYOUT_KEY);
+  location.assign(to);
+}
+
 // ---- theme: 'device' (nothing stored, app.css follows the device), 'light' or 'dark', this browser's
 // choice. theme.js applies the stored one before the first paint; this changes it afterwards.
 const THEME_KEY = 'finstats.theme';
