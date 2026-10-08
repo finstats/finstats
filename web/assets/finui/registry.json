@@ -958,6 +958,7 @@
       "tokens": [
         "--accent",
         "--bg",
+        "--bg-sunken",
         "--border-soft",
         "--font-heading",
         "--text",
