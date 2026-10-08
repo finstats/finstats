@@ -3,8 +3,7 @@
 import { h, icon, num, compact, bytes, duration, durationExact, clock, bitrate, humanize, episodeCode, store, mount, relTime, dateTime, dayLabelLong, languageName } from './dom.js';
 import { columnsChart, columnsTable, heatmap, heatmapTable, sparkline, bucketList, libBucketList, simpleColumns, simpleColumnsTable, radarChart } from './charts.js';
 import { card, chartCard, segmented, statTile, poster, avatar, methodBadge, facts, sk } from './components.js';
-import { api, isAbort } from './api.js';
-import { follow } from './live.js';
+import { nowPlayingView, followNowPlaying } from './nowplaying.js';
 import { rangeLong, can } from './state.js';
 import { button } from '../finui/components/button/button.js';
 import { typed } from './menus.js';
@@ -96,77 +95,6 @@ export function nowPlayingCard(sn) {
       details));
 }
 
-/**
- * The live "Now playing" block. The server is asked every few seconds; in between, the clock and
- * the bar of every playing session advance locally once a second so they move like a player does.
- *
- * Clients report their position to Jellyfin only every ten seconds or so, which means a poll often
- * returns a position that is a little *behind* what we are already showing. Snapping to it would
- * make the clock stutter backwards, so the local clock is kept unless the server disagrees in a way
- * that means something: it is ahead, the viewer paused, or the gap is too big to be reporting lag
- * (a skip).
- */
-const BEHIND_OK_S = 15; // the server may trail us by this much: that is just reporting lag
-const AHEAD_OK_S = 3;   // and lead us by this much: rounding and poll timing, not news
-export function nowPlayingView() {
-  const root = h('div', { class: 'np-live' });
-  let live = new Map(); // key -> { s, pos (whole seconds), shape, clockEl, fillEl, barEl }
-  // Everything about a session except the numbers that change every second: if this is the same,
-  // the card on screen is still right and only its clock needs attention.
-  const shapeOf = (s) => JSON.stringify({ ...s, position_s: 0, watched_s: 0, transcode: s.transcode ? { ...s.transcode, progress: 0 } : null });
-  function paint(l) {
-    const pos = l.s.runtime_s ? Math.min(l.pos, l.s.runtime_s) : l.pos;
-    if (l.clockEl) l.clockEl.textContent = l.s.runtime_s ? `${clock(pos)} / ${clock(l.s.runtime_s)}` : clock(pos);
-    if (l.fillEl && l.s.runtime_s) {
-      const pr = Math.max(0, Math.min(1, pos / l.s.runtime_s));
-      l.fillEl.style.width = pr * 100 + '%';
-      if (l.barEl) l.barEl.setAttribute('aria-valuenow', String(Math.round(pr * 100)));
-    }
-  }
-  // The ticker is the only thing that moves a clock: exactly one second per beat, so the display
-  // is a metronome. A poll landing between two beats must never nudge the number off the beat.
-  const timer = setInterval(() => { for (const l of live.values()) if (!l.s.is_paused) { l.pos += 1; paint(l); } }, 1000);
-
-  function update(sessions) {
-    const next = new Map();
-    // An empty view has drawn nothing yet, not even "nothing is playing": zero cards is not "the same cards".
-    let sameCards = sessions.length === live.size && root.hasChildNodes();
-    const corrected = [];
-    for (const s of sessions) {
-      const old = live.get(s.key);
-      const shape = shapeOf(s);
-      const server = Math.floor(s.position_s ?? 0);
-      let pos = server;
-      if (old && old.shape === shape && !s.is_paused) {
-        const drift = server - old.pos; // > 0: the server is ahead of what we show
-        if (drift <= AHEAD_OK_S && -drift <= BEHIND_OK_S) pos = old.pos; // close enough: keep counting, stay on the beat
-      }
-      if (!old || old.shape !== shape) sameCards = false;
-      const l = { s, pos, shape, clockEl: old && old.clockEl, fillEl: old && old.fillEl, barEl: old && old.barEl };
-      if (old && pos !== old.pos) corrected.push(l); // a skip, a pause, or real drift (a throttled background tab)
-      next.set(s.key, l);
-    }
-    live = next;
-    if (!sameCards) {
-      // Someone started, stopped, paused or changed quality: draw the cards again.
-      mount(root, nowPlayingList(sessions));
-      for (const l of live.values()) {
-        const card = root.querySelector(`[data-np-key="${CSS.escape(l.s.key)}"]`);
-        l.clockEl = card && card.querySelector('.np-time');
-        l.barEl = card && card.querySelector('.np-progress .fui-meter');
-        l.fillEl = card && card.querySelector('.np-progress .fui-meter__fill');
-        paint(l);
-      }
-    } else {
-      // Even a correction waits for the beat: set the clock one short and let the next tick land
-      // on the right second, so the number only ever changes in time with the others. A paused clock
-      // has no beat coming (the ticker skips it), so a paused viewer who scrubbed is shown at once.
-      for (const l of corrected) { if (l.s.is_paused) paint(l); else l.pos -= 1; }
-    }
-  }
-  return { el: root, update, destroy: () => clearInterval(timer) };
-}
-
 /** Now playing as a home opens with it: the heading with a count, the live view, and the one way it is fed (pushed over the
  *  live channel when it changes, asked for every 5 s only while that is not there). The dashboard and Simple view both
  *  draw this, so both narrow, tick and fall back the same way. `el` goes on the page; `start()` once it is there. */
@@ -175,7 +103,7 @@ export function nowPlayingSection(ctx, { title = 'Now playing', id } = {}) {
   const body = h('div', { class: 'np-wrap' }, h('div', { class: 'np-grid' }, h('div', { class: 'np fui-skeleton--wide' }, h('span', { class: 'fui-skeleton fui-skeleton--poster' }),
     h('div', { class: 'fui-skeleton__lines' }, sk.line('50%', 14), sk.line('35%'), sk.line('80%', 8)))));
   let first = true;
-  const live = nowPlayingView(); // ticks every second between the polls
+  const live = nowPlayingView({ list: nowPlayingList, parts: (card) => ({ clock: card.querySelector('.np-time'), bar: card.querySelector('.np-progress .fui-meter'), fill: card.querySelector('.np-progress .fui-meter__fill') }) }); // ticks every second between the polls
   ctx.onCleanup(() => live.destroy());
   function paint(data) {
     const sessions = data.sessions || [];
@@ -185,16 +113,9 @@ export function nowPlayingSection(ctx, { title = 'Now playing', id } = {}) {
     live.update(sessions);
     first = false;
   }
-  async function load() {
-    try {
-      paint(await api.get('/now-playing', null, { signal: ctx.signal }));
-    } catch (e) {
-      if (isAbort(e) || e.status === 401) return;
-      if (first) mount(body, h('p', { class: 'np-empty' }, icon('alert', 14), ' Live sessions are unavailable: ' + e.message));
-    }
-  }
+  const failed = (e) => { if (first) mount(body, h('p', { class: 'np-empty' }, icon('alert', 14), ' Live sessions are unavailable: ' + e.message)); };
   const el = h('section', { class: 'np-section', id, 'aria-label': title }, h('h2', { class: 'section-title' }, title, count), body);
-  return { el, start: () => { load(); follow('now_playing', { poll: load, every: 5000, onData: paint, signal: ctx.signal }); } };
+  return { el, start: () => followNowPlaying(ctx, { paint, failed }) };
 }
 
 export function nowPlayingList(sessions) {
