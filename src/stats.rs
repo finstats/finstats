@@ -1024,13 +1024,19 @@ fn library_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<
     }
     let sql = format!(
         "SELECT l.id, l.name, l.collection_type, l.removed,
-                COALESCE(c.item_count, 0) AS item_count, COALESCE(c.series_count, 0) AS series_count,
-                COALESCE(c.episode_count, 0) AS episode_count, COALESCE(c.size_bytes, 0) AS size_bytes,
+                COALESCE(c.item_count, 0) AS item_count, COALESCE(c.movie_count, 0) AS movie_count, COALESCE(c.series_count, 0) AS series_count,
+                COALESCE(c.season_count, 0) AS season_count, COALESCE(c.episode_count, 0) AS episode_count,
+                COALESCE(c.artist_count, 0) AS artist_count, COALESCE(c.album_count, 0) AS album_count, COALESCE(c.track_count, 0) AS track_count,
+                COALESCE(c.size_bytes, 0) AS size_bytes,
                 COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s, s.last_played_at
          FROM libraries l
          LEFT JOIN (SELECT library_id,
                            SUM(type IN ('Movie', 'Series', 'Audio', 'MusicVideo', 'Video', 'Book', 'AudioBook')) AS item_count,
-                           SUM(type = 'Series') AS series_count, SUM(type = 'Episode') AS episode_count, SUM(size_bytes) AS size_bytes
+                           SUM(type = 'Movie') AS movie_count, SUM(type = 'Series') AS series_count, SUM(type = 'Season') AS season_count,
+                           SUM(type = 'Episode') AS episode_count, SUM(type = 'MusicAlbum') AS album_count, SUM(type = 'Audio') AS track_count,
+                           -- The library read brings no artist items: the artists are the album artists its tracks name.
+                           COUNT(DISTINCT CASE WHEN type = 'Audio' THEN album_artist END) AS artist_count,
+                           SUM(size_bytes) AS size_bytes
                     FROM items WHERE removed = 0 GROUP BY library_id) c ON c.library_id = l.id
          LEFT JOIN (SELECT p.library_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, MAX(p.ended_at) AS last_played_at
                     FROM visible_playbacks p {} GROUP BY p.library_id) s ON s.library_id = l.id
@@ -2302,6 +2308,36 @@ mod tests {
         assert_eq!((v["peak"].as_i64(), v["peak_at"].as_i64(), v["peak_transcodes"].as_i64()), (Some(2), Some(y + 1800), Some(1)));
         let day = |s: i64| -> String { c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [s], |r| r.get(0)).unwrap() };
         assert_eq!(v["series"], json!([{ "date": day(y), "peak": 2 }, { "date": day(t), "peak": 1 }]));
+    }
+
+    /// Library statistics: what each library holds, by kind, files removed from Jellyfin left out. Artists are the album
+    /// artists its tracks name, since the library read brings no artist items.
+    #[test]
+    fn a_library_counts_films_seasons_albums_tracks_and_artists() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO libraries(id, name, collection_type, removed, updated_at) VALUES ('films', 'Films', 'movies', 0, 0), ('tv', 'Shows', 'tvshows', 0, 0), ('music', 'Music', 'music', 0, 0);
+             INSERT INTO items(id, type, name, library_id, album_artist, removed, updated_at) VALUES
+               ('m1', 'Movie', 'Big Buck Bunny', 'films', NULL, 0, 0), ('m2', 'Movie', 'Sintel', 'films', NULL, 0, 0), ('m3', 'Movie', 'Gone', 'films', NULL, 1, 0),
+               ('s1', 'Series', 'Rookery', 'tv', NULL, 0, 0), ('s1a', 'Season', 'Season 1', 'tv', NULL, 0, 0), ('s1b', 'Season', 'Season 2', 'tv', NULL, 0, 0),
+               ('e1', 'Episode', 'One', 'tv', NULL, 0, 0), ('e2', 'Episode', 'Two', 'tv', NULL, 0, 0), ('e3', 'Episode', 'Three', 'tv', NULL, 0, 0),
+               ('a1', 'MusicAlbum', 'First', 'music', 'Alya', 0, 0), ('a2', 'MusicAlbum', 'Second', 'music', 'Brook', 0, 0),
+               ('t1', 'Audio', 'Song', 'music', 'Alya', 0, 0), ('t2', 'Audio', 'Tune', 'music', 'Alya', 0, 0), ('t3', 'Audio', 'Air', 'music', 'Brook', 0, 0),
+               ('t4', 'Audio', 'Hum', 'music', NULL, 0, 0);",
+        )
+        .unwrap();
+        let scope = everyone().resolve(&c).unwrap();
+        let rows = library_rows(&c, &scope, None).unwrap();
+        let counts = |id: &str| -> Vec<i64> {
+            let r = rows.iter().find(|r| r["id"] == id).unwrap();
+            ["movie_count", "series_count", "season_count", "episode_count", "artist_count", "album_count", "track_count"].iter().map(|k| r[*k].as_i64().unwrap_or(-1)).collect()
+        };
+        assert_eq!(counts("films"), vec![2, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(counts("tv"), vec![0, 1, 2, 3, 0, 0, 0]);
+        assert_eq!(counts("music"), vec![0, 0, 0, 0, 2, 2, 4]);
     }
 
     /// Most concurrent streams: besides the peak, the most of each way of playing at once, each its own maximum, and a
