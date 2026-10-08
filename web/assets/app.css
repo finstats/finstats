@@ -22,7 +22,19 @@
 .brand-mark { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--accent-wash); color: var(--accent-hi); }
 .brand-mark-lg { width: 34px; height: 34px; border-radius: 9px; }
 .brand-logo { display: block; flex: none; }
+.brand-logo img { display: block; }
+/* One file per theme, both FinStats' violet (a darker one by day, for the paper; the logo is not the accent); the other is
+   hidden. Nothing chosen, the device decides. */
+.brand-logo .brand-logo-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand-logo .brand-logo-light { display: none; }
+  :root:not([data-theme="light"]) .brand-logo .brand-logo-dark { display: block; }
+}
+:root[data-theme="dark"] .brand-logo .brand-logo-light { display: none; }
+:root[data-theme="dark"] .brand-logo .brand-logo-dark { display: block; }
 .brand-name { font-weight: 650; font-size: 15px; letter-spacing: -.01em; }
+/* The name beside the mark is set in Inter whatever font a preset chooses for the page. */
+.brand-name, .desktop-nav .fui-desktop-nav__name { font-family: "Inter Variable", var(--sans); }
 
 kbd {
   font: 500 10.5px/1 var(--mono); color: var(--text-faint); background: var(--bg-2);

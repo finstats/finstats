@@ -9,9 +9,11 @@ const nf = new Intl.NumberFormat('en-US');   // the other formatters' numbers, t
 // FinUI's builder and icons, for the modules that still import them from here.
 export { h, s, clear, mount, icon, num, initials };
 
-/** The FinStats logo. One source for favicon, sidebar and sign-in: /assets/logo.svg. */
+/** The FinStats logo as a page wears it: the bare mark, one file per theme (app.css shows the one that fits). Where the
+ *  logo stands alone (README, favicon) it keeps its tile: /assets/logo.svg. */
 export function logo(size = 24) {
-  return h('img', { class: 'brand-logo', src: '/assets/logo.svg', width: size, height: size, alt: '', decoding: 'async' });
+  const mark = (theme) => h('img', { class: `brand-logo-${theme}`, src: `/assets/mark-${theme}.svg`, width: size, height: size, alt: '', decoding: 'async' });
+  return h('span', { class: 'brand-logo' }, mark('light'), mark('dark'));
 }
 
 // ---------------------------------------------------------------- formatting
