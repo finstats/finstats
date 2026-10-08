@@ -1,5 +1,5 @@
 // Settings → Appearance: how finstats looks to you, and to nobody else. A FinUI preset (the code FinUI create makes,
-// finstats.github.io/finui/create), whose tokens the server serves after FinUI's own in /assets/finui.css, to you
+// finui.finstats.no/create), whose tokens the server serves after FinUI's own in /assets/finui.css, to you
 // alone. Saving swaps that stylesheet on this page at once; your other pages get it on their next load.
 // Which menu this browser has: on a phone one of FinUI mobile-nav's styles, on a wider screen one of desktop-nav's and the side
 // it sits on. Kept by this browser (state.js) and nowhere else; each is offered only at the width where it is in use.
@@ -14,7 +14,7 @@ import { STYLES as DESKTOP_STYLES, styleOf as desktopStyleOf, sideOf } from '../
 import { toggle } from '../../finui/components/toggle/toggle.js';
 import { mobileNavChoice, setMobileNav, desktopNavChoice, setDesktopNav, searchMode, setSearchMode } from '../state.js';
 
-const CREATE = 'https://finstats.github.io/finui/create/';
+const CREATE = 'https://finui.finstats.no/create/';
 // Where the mobile menu is in use: app.css' own width for it. The choice is offered only there.
 const PHONE = '(max-width: 820px)';
 /** The code in anything that holds one: the code itself, the install line, a FinUI create address. */
