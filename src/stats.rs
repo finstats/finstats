@@ -13,7 +13,7 @@ use crate::db::rusqlite::types::ValueRef;
 use crate::db::rusqlite::{Connection, OptionalExtension, Row, params_from_iter};
 use crate::db::{self, SqlValue};
 use crate::media;
-use crate::playback::{PLAY_FRAC, STOP_MEASURED, STOP_S};
+use crate::playback::{PLAY_FRAC, SEEN_AT, STOP_MEASURED, STOP_S};
 use crate::state::{ApiError, ApiResult, App};
 
 const BOOL_COLS: [&str; 11] = ["active", "is_admin", "is_disabled", "removed", "has_image", "item_exists", "has_backdrop", "is_local", "is_favorite", "is_actor", "is_director"];
@@ -566,6 +566,8 @@ pub struct ActivityQuery {
     dir: Option<String>,
     /// `1`: the plays in the trash instead of history, scoped the same way.
     deleted: Option<i64>,
+    /// `1`: only plays that went far enough to count as seen (`playback::SEEN_AT`, the profile's rule).
+    watched: Option<i64>,
 }
 
 /// `ORDER BY` for a paginated list: a whitelisted column, empty values last whichever way it runs,
@@ -673,69 +675,73 @@ const ACTIVITY_SORTS: [(&str, &str); 8] = [
 ];
 
 pub async fn activity(State(app): State<App>, user: AuthUser, Query(q): Query<ActivityQuery>) -> ApiResult {
+    let filter = FilterQuery { days: q.days, user_id: q.user_id.clone(), library_id: q.library_id.clone() };
+    Ok(Json(scoped(&app, &user, &filter, move |c, scope| activity_page(c, scope, q)).await?))
+}
+
+/// One page of history (or of the trash) for `scope`, narrowed by the rest of `q`.
+fn activity_page(c: &Connection, scope: &Scope, q: ActivityQuery) -> Result<Value> {
     let page = page_number(q.page);
     let per_page = q.per_page.unwrap_or(50).clamp(1, 200);
-    let filter = FilterQuery { days: q.days, user_id: q.user_id.clone(), library_id: q.library_id.clone() };
-    let out = scoped(&app, &user, &filter, move |c, scope| {
-        let mut cond = scope.cond();
-        cond.add_in("p.play_method", &many(q.method.as_deref()));
-        if let Some((sql, vals)) = type_clause(&many(q.item_type.as_deref())) {
-            cond.clauses.push(sql);
-            for v in vals {
-                cond.args.push(v.into());
-            }
+    let mut cond = scope.cond();
+    cond.add_in("p.play_method", &many(q.method.as_deref()));
+    if let Some((sql, vals)) = type_clause(&many(q.item_type.as_deref())) {
+        cond.clauses.push(sql);
+        for v in vals {
+            cond.args.push(v.into());
         }
-        if let Some(id) = q.item_id.filter(|s| !s.is_empty()) {
-            cond.add("p.item_id = ?", db::norm_id(&id));
+    }
+    if let Some(id) = q.item_id.filter(|s| !s.is_empty()) {
+        cond.add("p.item_id = ?", db::norm_id(&id));
+    }
+    if let Some(id) = q.series_id.filter(|s| !s.is_empty()) {
+        cond.add("p.series_id = ?", db::norm_id(&id));
+    }
+    let sources: Vec<String> = many(q.source.as_deref()).iter().filter_map(|s| source_filter(Some(s))).map(str::to_string).collect();
+    cond.add_in("p.source", &sources);
+    if q.watched == Some(1) {
+        cond.add(&format!("{PLAY_FRAC} >= ?"), SEEN_AT);
+    }
+    // Word by word: "alya opera" finds plays of Alya… on Opera. Every word must be somewhere in the row.
+    for like in like_words(q.q.as_deref()) {
+        let mut fields = vec!["p.item_name", "p.series_name", "p.user_name", "p.client", "p.device_name"];
+        if scope.perms.see_network {
+            fields.push("p.remote_ip");
         }
-        if let Some(id) = q.series_id.filter(|s| !s.is_empty()) {
-            cond.add("p.series_id = ?", db::norm_id(&id));
+        let ors: Vec<String> = fields.iter().map(|f| format!("{f} LIKE ? ESCAPE '\\'")).collect();
+        cond.clauses.push(format!("({})", ors.join(" OR ")));
+        for _ in &fields {
+            cond.args.push(like.clone().into());
         }
-        let sources: Vec<String> = many(q.source.as_deref()).iter().filter_map(|s| source_filter(Some(s))).map(str::to_string).collect();
-        cond.add_in("p.source", &sources);
-        // Word by word: "alya opera" finds plays of Alya… on Opera. Every word must be somewhere in the row.
-        for like in like_words(q.q.as_deref()) {
-            let mut fields = vec!["p.item_name", "p.series_name", "p.user_name", "p.client", "p.device_name"];
-            if scope.perms.see_network {
-                fields.push("p.remote_ip");
-            }
-            let ors: Vec<String> = fields.iter().map(|f| format!("{f} LIKE ? ESCAPE '\\'")).collect();
-            cond.clauses.push(format!("({})", ors.join(" OR ")));
-            for _ in &fields {
-                cond.args.push(like.clone().into());
-            }
-        }
-        // The trash is listed like history, from its own view, newest deletion first.
-        let trash = q.deleted == Some(1);
-        let from = if trash { "trashed_playbacks" } else { "visible_playbacks" };
-        let total: i64 = c.query_row(&format!("SELECT COUNT(*) FROM {from} p {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0))?;
-        // Sorting by address is only for those who are shown addresses.
-        let sort = q.sort.as_deref().filter(|k| *k != "ip" || scope.perms.see_network);
-        let order = order_by(&ACTIVITY_SORTS, sort, q.dir.as_deref(), if trash { "p.deleted_at DESC, p.id DESC" } else { "p.ended_at DESC, p.id DESC" });
-        let select = PLAY_SELECT.replacen("FROM visible_playbacks p\n", &format!("FROM {from} p\n"), 1);
-        let sql = format!("{select} {} ORDER BY {order} LIMIT {per_page} OFFSET {}", cond.sql(), (page - 1) * per_page);
-        let rows: Vec<Value> = rows_json(c, &sql, &cond.args)?
-            .into_iter()
-            .map(|mut m| {
-                let purge_at = m.get("deleted_at").and_then(Value::as_i64).map(|at| at + crate::trash::KEEP_S);
-                m.insert("purge_at".into(), json!(purge_at));
-                decorate_play(m, scope.perms.see_network, false)
-            })
-            .collect();
-        // What this history is made of, so the page can offer a filter for it, and leave it out
-        // when there is only one answer.
-        let sources = sources_present(c, &scope.whose())?;
-        // How many of these filters' plays wait in the trash, for whoever may bring them back: the page offers the trash
-        // only when it holds something.
-        let in_trash: Option<i64> = if scope.perms.manage && !trash {
-            Some(c.query_row(&format!("SELECT COUNT(*) FROM trashed_playbacks p {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0))?)
-        } else {
-            None
-        };
-        Ok(json!({ "total": total, "page": page, "per_page": per_page, "rows": rows, "sources": sources, "in_trash": in_trash }))
-    })
-    .await?;
-    Ok(Json(out))
+    }
+    // The trash is listed like history, from its own view, newest deletion first.
+    let trash = q.deleted == Some(1);
+    let from = if trash { "trashed_playbacks" } else { "visible_playbacks" };
+    let total: i64 = c.query_row(&format!("SELECT COUNT(*) FROM {from} p LEFT JOIN items i ON i.id = p.item_id {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0))?;
+    // Sorting by address is only for those who are shown addresses.
+    let sort = q.sort.as_deref().filter(|k| *k != "ip" || scope.perms.see_network);
+    let order = order_by(&ACTIVITY_SORTS, sort, q.dir.as_deref(), if trash { "p.deleted_at DESC, p.id DESC" } else { "p.ended_at DESC, p.id DESC" });
+    let select = PLAY_SELECT.replacen("FROM visible_playbacks p\n", &format!("FROM {from} p\n"), 1);
+    let sql = format!("{select} {} ORDER BY {order} LIMIT {per_page} OFFSET {}", cond.sql(), (page - 1) * per_page);
+    let rows: Vec<Value> = rows_json(c, &sql, &cond.args)?
+        .into_iter()
+        .map(|mut m| {
+            let purge_at = m.get("deleted_at").and_then(Value::as_i64).map(|at| at + crate::trash::KEEP_S);
+            m.insert("purge_at".into(), json!(purge_at));
+            decorate_play(m, scope.perms.see_network, false)
+        })
+        .collect();
+    // What this history is made of, so the page can offer a filter for it, and leave it out
+    // when there is only one answer.
+    let sources = sources_present(c, &scope.whose())?;
+    // How many of these filters' plays wait in the trash, for whoever may bring them back: the page offers the trash
+    // only when it holds something.
+    let in_trash: Option<i64> = if scope.perms.manage && !trash {
+        Some(c.query_row(&format!("SELECT COUNT(*) FROM trashed_playbacks p LEFT JOIN items i ON i.id = p.item_id {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0))?)
+    } else {
+        None
+    };
+    Ok(json!({ "total": total, "page": page, "per_page": per_page, "rows": rows, "sources": sources, "in_trash": in_trash }))
 }
 
 pub async fn activity_detail(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -> ApiResult {
@@ -2317,6 +2323,34 @@ mod tests {
         assert_eq!(people.iter().map(|r| r["name"].as_str().unwrap()).collect::<Vec<_>>(), vec!["alice", "bob"]);
         // `sort` reaches SQL only as one of three orders.
         assert_eq!([Rank::asked(Some("users")), Rank::asked(Some("plays")), Rank::asked(Some("users DESC; --")), Rank::asked(None)], [Rank::Viewers, Rank::Plays, Rank::Watch, Rank::Watch]);
+    }
+
+    /// Recently watched: plays that went far enough to count as seen on a profile, and no others, counted the same way.
+    #[test]
+    fn activity_narrowed_to_watched_keeps_the_plays_the_profile_counts_as_seen() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, runtime_s, updated_at) VALUES ('i1', 'Movie', 'Big Buck Bunny', 600, 0), ('i2', 'Movie', 'Sintel', 600, 0),
+                                                                     ('i3', 'Movie', 'Tears of Steel', NULL, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, position_s) VALUES
+               ('live',      'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100,  700,  590, 590),
+               ('live',      'u1', 'alice', 'i2', 'Sintel',         'Movie', 800,  900,  100, 100),
+               ('jellystat', 'u2', 'bob',   'i2', 'Sintel',         'Movie', 1000, 1500, 500, NULL),
+               ('live',      'u2', 'bob',   'i3', 'Tears of Steel', 'Movie', 1600, 2200, 600, 600),
+               ('live',      'u2', 'bob',   'i1', 'Big Buck Bunny', 'Movie', 2300, 2400, 590, 470);",
+        )
+        .unwrap();
+        let scope = everyone().resolve(&c).unwrap();
+        let page = activity_page(&c, &scope, ActivityQuery { watched: Some(1), ..Default::default() }).unwrap();
+        // 590 of 600 and an imported 500 of 600 went far enough; 100 of 600, a title with no runtime and a play that
+        // stopped at 470 of 600 however long it ran did not.
+        let names: Vec<_> = page["rows"].as_array().unwrap().iter().map(|r| (r["user_name"].as_str().unwrap(), r["item_name"].as_str().unwrap())).collect();
+        assert_eq!(names, vec![("bob", "Sintel"), ("alice", "Big Buck Bunny")]);
+        assert_eq!(page["total"], 2);
+        assert_eq!(activity_page(&c, &scope, ActivityQuery::default()).unwrap()["total"], 5, "without it, every play");
     }
 
     /// A device id is `see_network`'s, like an address: on the user page as everywhere else.

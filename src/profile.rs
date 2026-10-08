@@ -13,13 +13,9 @@ use serde_json::{Value, json};
 use crate::auth::AuthUser;
 use crate::db::rusqlite::{Connection, params};
 use crate::db::{self};
-use crate::playback::PLAY_FRAC;
+use crate::playback::{PLAY_FRAC, SEEN_AT};
 use crate::recap::longest_run;
 use crate::state::{ApiError, ApiResult, App};
-
-/// Watched this much of an episode and it counts as seen. Lenient on purpose: skipped credits
-/// and imported plays (which only know time watched) should not leave holes in a season.
-const SEEN_AT: f64 = 0.8;
 
 /// The one reading of "seen", for an episode and a film alike: a play that went far enough, then Jellyfin's played
 /// flag, then a mark by hand; otherwise begun if it was ever played. (state, which source said seen).

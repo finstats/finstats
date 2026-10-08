@@ -17,6 +17,10 @@ pub const STOP_MEASURED: &str = "(p.position_s IS NOT NULL)";
 /// How far play `p` got through its title `i`, from 0 to 1, by `STOP_S` and the runtime the play or the title has.
 pub const PLAY_FRAC: &str = "MIN(1.0, COALESCE(p.position_s, p.duration_s) * 1.0 / NULLIF(COALESCE(p.runtime_s, i.runtime_s), 0))";
 
+/// Watched this much of an episode and it counts as seen. Lenient on purpose: skipped credits
+/// and imported plays (which only know time watched) should not leave holes in a season.
+pub const SEEN_AT: f64 = 0.8;
+
 #[derive(Debug, Clone, Default)]
 pub struct PlayRecord {
     pub source: &'static str,
