@@ -207,7 +207,7 @@ fn title(v: &Value) -> Title {
 }
 
 fn titles(c: &Connection, cond: &Cond, kind: &str) -> Result<Vec<Title>> {
-    Ok(stats::top(c, cond, kind, 5, false)?.iter().map(title).collect())
+    Ok(stats::top(c, cond, kind, 5, stats::Rank::Watch)?.iter().map(title).collect())
 }
 
 fn totals(c: &Connection, cond: &Cond) -> Result<Totals> {

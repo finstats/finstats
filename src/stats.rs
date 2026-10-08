@@ -387,8 +387,32 @@ const RESOLUTION_SQL: &str = "CASE
 const CHANNELS_SQL: &str = "CASE p.audio_channels WHEN 0 THEN NULL WHEN 1 THEN 'Mono' WHEN 2 THEN 'Stereo'
     WHEN 6 THEN '5.1' WHEN 8 THEN '7.1' ELSE p.audio_channels || ' ch' END";
 
-pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, by_plays: bool) -> Result<Vec<Value>> {
-    let order = if by_plays { "plays DESC, watch_s DESC" } else { "watch_s DESC, plays DESC" };
+/// What a top list is ranked by: time watched (the default), plays, or how many different people played it.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Rank {
+    Watch,
+    Plays,
+    Viewers,
+}
+
+impl Rank {
+    /// The `sort` a top list was asked for; anything else is the default.
+    fn asked(sort: Option<&str>) -> Rank {
+        match sort {
+            Some("plays") => Rank::Plays,
+            Some("users") => Rank::Viewers,
+            _ => Rank::Watch,
+        }
+    }
+}
+
+pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, rank: Rank) -> Result<Vec<Value>> {
+    let order = match rank {
+        Rank::Plays => "plays DESC, watch_s DESC",
+        // People are what is counted; a list of people has none of its own to count.
+        Rank::Viewers if kind != "users" => "users DESC, plays DESC, name COLLATE NOCASE",
+        _ => "watch_s DESC, plays DESC",
+    };
     let agg = "COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT p.user_id) AS users, MAX(p.ended_at) AS last_played";
     let (sql, cond) = match kind {
         "movies" | "music" => {
@@ -815,9 +839,9 @@ pub async fn top_handler(State(app): State<App>, user: AuthUser, Query(q): Query
         return Err(ApiError::bad_request("Unknown kind"));
     }
     let limit = q.limit.unwrap_or(10).clamp(1, 100);
-    let by_plays = q.sort.as_deref() == Some("plays");
+    let rank = Rank::asked(q.sort.as_deref());
     let filter = FilterQuery { days: q.days, user_id: q.user_id.clone(), library_id: q.library_id.clone() };
-    let rows = scoped(&app, &user, &filter, move |c, scope| top(c, &scope.cond(), &kind, limit, by_plays)).await?;
+    let rows = scoped(&app, &user, &filter, move |c, scope| top(c, &scope.cond(), &kind, limit, rank)).await?;
     Ok(Json(json!({ "rows": rows })))
 }
 
@@ -965,8 +989,8 @@ pub async fn user_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
         Ok(Some(json!({
             "user": u, "totals": t, "daily": series, "bucket": bucket,
             "heatmap": heatmap(c, &cond)?,
-            "top_series": top(c, &cond, "series", 8, false)?,
-            "top_movies": top(c, &cond, "movies", 8, false)?,
+            "top_series": top(c, &cond, "series", 8, Rank::Watch)?,
+            "top_movies": top(c, &cond, "movies", 8, Rank::Watch)?,
             "clients": buckets(c, &cond, "p.client", "", 8)?,
             "methods": buckets(c, &cond, "p.play_method", "", 8)?,
             "genres": genre_buckets(c, &cond)?,
@@ -1034,7 +1058,7 @@ pub async fn library_detail(State(app): State<App>, user: AuthUser, Path(id): Pa
             &[id.clone().into()],
         )?;
         Ok(Some(json!({
-            "library": lib, "top": top(c, &cond, "library_items", 10, false)?,
+            "library": lib, "top": top(c, &cond, "library_items", 10, Rank::Watch)?,
             "recently_added": recent, "daily": series, "bucket": bucket,
         })))
     })
@@ -2261,6 +2285,38 @@ mod tests {
         assert_eq!((v["peak"].as_i64(), v["peak_at"].as_i64(), v["peak_transcodes"].as_i64()), (Some(2), Some(y + 1800), Some(1)));
         let day = |s: i64| -> String { c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [s], |r| r.get(0)).unwrap() };
         assert_eq!(v["series"], json!([{ "date": day(y), "peak": 2 }, { "date": day(t), "peak": 1 }]));
+    }
+
+    /// Most popular: the most people, then the most plays, then the title, so equal rows never trade places.
+    #[test]
+    fn top_titles_rank_by_distinct_viewers_then_plays_then_title() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny',    'Movie', 100, 700, 600),
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny',    'Movie', 800, 1400, 600),
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny',    'Movie', 1500, 2100, 600),
+               ('live', 'u2', 'bob',   'i3', 'Tears of Steel',    'Movie', 100, 700, 600),
+               ('live', 'u1', 'alice', 'i3', 'Tears of Steel',    'Movie', 800, 1400, 600),
+               ('live', 'u1', 'alice', 'i2', 'Sintel',            'Movie', 100, 700, 600),
+               ('live', 'u2', 'bob',   'i2', 'Sintel',            'Movie', 800, 1400, 600),
+               ('live', 'u1', 'alice', 'i4', 'Cosmos Laundromat', 'Movie', 100, 200, 100),
+               ('live', 'u2', 'bob',   'i4', 'Cosmos Laundromat', 'Movie', 800, 900, 100),
+               ('live', 'u2', 'bob',   'i4', 'Cosmos Laundromat', 'Movie', 1000, 1100, 100);",
+        )
+        .unwrap();
+        let scope = everyone().resolve(&c).unwrap();
+        let rows = top(&c, &scope.cond(), "movies", 10, Rank::Viewers).unwrap();
+        let brief: Vec<_> = rows.iter().map(|r| (r["name"].as_str().unwrap(), r["users"].as_i64().unwrap(), r["plays"].as_i64().unwrap())).collect();
+        assert_eq!(brief, vec![("Cosmos Laundromat", 2, 3), ("Sintel", 2, 2), ("Tears of Steel", 2, 2), ("Big Buck Bunny", 1, 3)]);
+        // People have no viewers of their own to count: ranked by the people themselves, the default order stands.
+        let people = top(&c, &scope.cond(), "users", 10, Rank::Viewers).unwrap();
+        assert_eq!(people.iter().map(|r| r["name"].as_str().unwrap()).collect::<Vec<_>>(), vec!["alice", "bob"]);
+        // `sort` reaches SQL only as one of three orders.
+        assert_eq!([Rank::asked(Some("users")), Rank::asked(Some("plays")), Rank::asked(Some("users DESC; --")), Rank::asked(None)], [Rank::Viewers, Rank::Plays, Rank::Watch, Rank::Watch]);
     }
 
     /// A device id is `see_network`'s, like an address: on the user page as everywhere else.
