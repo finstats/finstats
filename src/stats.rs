@@ -1791,19 +1791,25 @@ impl<F: FnMut(i64) -> Result<String>> LocalDays<F> {
     }
 }
 
-/// Sweep over play intervals: the most streams (and transcodes) that ever overlapped, and the peak per bucket.
+/// The ways of playing the peak is split by, as `play_method` spells them.
+const METHODS: [&str; 3] = ["Transcode", "DirectStream", "DirectPlay"];
+
+/// Sweep over play intervals: the most streams that ever overlapped, the most of each of `METHODS` (each its own
+/// maximum, not the split at the peak), and the peak per bucket.
 fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
-    // COALESCE, because `play_method` may be NULL (a row restored from a backup written before the
-    // column existed has nothing to put there), and `NULL = 'Transcode'` is NULL, which is not a
-    // boolean and made this whole page a 500 for everybody until that one row was found.
-    let sql = format!("SELECT p.started_at, p.ended_at, COALESCE(p.play_method = 'Transcode', 0) FROM visible_playbacks p {} AND p.ended_at > p.started_at", cond.with_raw("1 = 1").sql());
-    let mut points: Vec<(i64, i32, i32)> = vec![];
+    // `play_method` may be NULL (a row restored from a backup written before the column existed has nothing to put
+    // there), so it is read as an Option: compared in SQL, `NULL = 'Transcode'` was NULL, not a boolean, and made this
+    // whole page a 500 for everybody until that one row was found. Such a play counts in the peak and in no split.
+    let sql = format!("SELECT p.started_at, p.ended_at, p.play_method FROM visible_playbacks p {} AND p.ended_at > p.started_at", cond.with_raw("1 = 1").sql());
+    // (when, +1 or -1, which of `METHODS` it played as, if it said)
+    let mut points: Vec<(i64, i32, Option<usize>)> = vec![];
     let mut stmt = conn.prepare(&sql)?;
     let mut rows = stmt.query(params_from_iter(cond.args.iter()))?;
     while let Some(r) = rows.next()? {
-        let (start, end, transcode): (i64, i64, bool) = (r.get(0)?, r.get(1)?, r.get(2)?);
-        points.push((start, 1, transcode as i32));
-        points.push((end, -1, -(transcode as i32)));
+        let (start, end, method): (i64, i64, Option<String>) = (r.get(0)?, r.get(1)?, r.get(2)?);
+        let method = method.and_then(|m| METHODS.iter().position(|x| *x == m));
+        points.push((start, 1, method));
+        points.push((end, -1, method));
     }
     // Ends sort before starts at the same instant, so back-to-back episodes are not "two streams".
     points.sort_by_key(|p| (p.0, p.1));
@@ -1811,22 +1817,25 @@ fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
     let (series_template, bucket) = daily(conn, scope, cond)?;
     let weekly = bucket == "week";
     let mut per_bucket: std::collections::HashMap<String, i32> = Default::default();
-    let (mut live, mut live_tc, mut peak, mut peak_at, mut peak_tc) = (0, 0, 0, None, 0);
+    let (mut live, mut peak, mut peak_at) = (0, 0, None);
+    let (mut live_by, mut peak_by) = ([0; METHODS.len()], [0; METHODS.len()]);
     let mut date_stmt = conn.prepare_cached(if weekly {
         "SELECT date(?1, 'unixepoch', 'localtime', 'weekday 0', '-6 days')"
     } else {
         "SELECT date(?1, 'unixepoch', 'localtime')"
     })?;
     let mut days = LocalDays::new(|at| Ok(date_stmt.query_row([at], |r| r.get(0))?));
-    for (at, delta, tc_delta) in points {
+    for (at, delta, method) in points {
         live += delta;
-        live_tc += tc_delta;
+        if let Some(m) = method {
+            live_by[m] += delta;
+            peak_by[m] = peak_by[m].max(live_by[m]);
+        }
         if delta > 0 {
             if live > peak {
                 peak = live;
                 peak_at = Some(at);
             }
-            peak_tc = peak_tc.max(live_tc);
             let date = days.of(at)?;
             match per_bucket.get_mut(date) {
                 Some(e) => *e = (*e).max(live),
@@ -1843,7 +1852,9 @@ fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
             json!({ "date": date, "peak": per_bucket.get(date).copied().unwrap_or(0) })
         })
         .collect();
-    Ok(json!({ "peak": peak, "peak_at": peak_at, "peak_transcodes": peak_tc, "series": series, "bucket": bucket }))
+    let [peak_transcodes, peak_direct_streams, peak_direct_plays] = peak_by;
+    Ok(json!({ "peak": peak, "peak_at": peak_at, "peak_transcodes": peak_transcodes, "peak_direct_streams": peak_direct_streams,
+               "peak_direct_plays": peak_direct_plays, "series": series, "bucket": bucket }))
 }
 
 /// A caller's scope, resolved once, for a handler that runs its queries side by side.
@@ -2291,6 +2302,32 @@ mod tests {
         assert_eq!((v["peak"].as_i64(), v["peak_at"].as_i64(), v["peak_transcodes"].as_i64()), (Some(2), Some(y + 1800), Some(1)));
         let day = |s: i64| -> String { c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [s], |r| r.get(0)).unwrap() };
         assert_eq!(v["series"], json!([{ "date": day(y), "peak": 2 }, { "date": day(t), "peak": 1 }]));
+    }
+
+    /// Most concurrent streams: besides the peak, the most of each way of playing at once, each its own maximum, and a
+    /// play that never said how it played counted in the peak and in none of the three.
+    #[test]
+    fn the_peak_says_the_most_transcodes_direct_streams_and_direct_plays_at_once() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, play_method, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny',    'Movie', 'DirectPlay',   1790000000, 1790001000, 1000),
+               ('live', 'u2', 'bob',   'i2', 'Sintel',            'Movie', 'DirectPlay',   1790000500, 1790001500, 1000),
+               ('live', 'u3', 'carol', 'i3', 'Tears of Steel',    'Movie', 'DirectStream', 1790000600, 1790000700, 100),
+               ('live', 'u1', 'alice', 'i4', 'Cosmos Laundromat', 'Movie', 'Transcode',    1790002000, 1790003000, 1000),
+               ('live', 'u2', 'bob',   'i4', 'Cosmos Laundromat', 'Movie', NULL,           1790002100, 1790002200, 100);",
+        )
+        .unwrap();
+        let scope = everyone().resolve(&c).unwrap();
+        let v = concurrency(&c, &scope, &scope.cond()).unwrap();
+        let split = |k: &str| v[k].as_i64();
+        assert_eq!(
+            (split("peak"), split("peak_transcodes"), split("peak_direct_streams"), split("peak_direct_plays")),
+            (Some(3), Some(1), Some(1), Some(2))
+        );
     }
 
     /// Most popular: the most people, then the most plays, then the title, so equal rows never trade places.
