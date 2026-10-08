@@ -45,3 +45,19 @@
 .simple-recent .fui-shelf__head { justify-content: flex-end; }
 .simple-recent .fui-shelf__title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .simple-recent .fui-media-card__sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- a page of its own: a title with its icon and the page's controls, on a panel; tables on the panel under it */
+.simple-panel-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 18px; padding: 16px 16px 14px; background: var(--bg-2); border-bottom: 1px solid var(--border-soft); border-radius: var(--radius) var(--radius) 0 0; }
+.simple-page-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 24px; font-weight: 600; color: var(--text-strong); }
+.simple-panel { padding: 16px; background: var(--bg-2); border-radius: 0 0 var(--radius) var(--radius); }
+.simple-table__bar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px 20px; margin-bottom: 14px; }
+.simple-table__show, .simple-table__find { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
+.simple-table__size { width: 76px; }
+.simple-table__search { width: min(220px, 60vw); }
+.simple-table__foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 14px; font-size: 14px; color: var(--text); }
+.simple-table .simple-title { display: inline-flex; align-items: center; gap: 7px; }
+.simple-table td a { color: var(--text); }
+.simple-table td a:hover { color: var(--accent); }
+.simple-kind { display: inline-flex; color: var(--text-muted); }
+.simple-done { display: inline-block; width: 15px; height: 15px; border: 2px solid var(--text); border-radius: 50%; background: conic-gradient(var(--text) var(--done, 0%), transparent 0); vertical-align: middle; }
+.simple-history__who { min-width: 180px; }
