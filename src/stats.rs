@@ -1970,25 +1970,54 @@ fn insight_failed_logins(c: &Connection, scope: &Scope) -> Result<Vec<Map<String
     )
 }
 
-pub async fn insights(State(app): State<App>, user: AuthUser, Query(q): Query<FilterQuery>) -> ApiResult {
+/// Every part of `/api/stats/insights`, in the order they are answered.
+const INSIGHTS: [&str; 8] = ["concurrency", "network", "data_bytes", "genres", "client_methods", "completion", "behaviour", "failed_logins"];
+
+/// The parts a caller asked for with `parts=` (comma-separated), in `INSIGHTS` order; none known, or none named, is all.
+fn insight_parts(asked: Option<&str>) -> Vec<&'static str> {
+    let named: Vec<&str> = asked.unwrap_or_default().split(',').map(str::trim).collect();
+    let picked: Vec<&'static str> = INSIGHTS.iter().copied().filter(|p| named.contains(p)).collect();
+    if picked.is_empty() { INSIGHTS.to_vec() } else { picked }
+}
+
+#[derive(Deserialize)]
+pub struct InsightsQuery {
+    // Not `#[serde(flatten)]`: flattening makes serde_urlencoded hand numbers over as strings.
+    days: Option<i64>,
+    user_id: Option<String>,
+    library_id: Option<String>,
+    parts: Option<String>,
+}
+
+/// A part's work, run only when one of the parts it answers was asked for.
+async fn when<T>(wanted: bool, work: impl std::future::Future<Output = Result<T>>) -> Result<Option<T>> {
+    Ok(if wanted { Some(work.await?) } else { None })
+}
+
+pub async fn insights(State(app): State<App>, user: AuthUser, Query(q): Query<InsightsQuery>) -> ApiResult {
     // Passes over the history that need nothing from each other, in five groups of about equal cost, each on a
     // connection of its own (one of the pool's six stays free for the collector). One after another they took the sum
-    // of their times, 4.1 s on a million plays.
-    let scope = resolved(&app, &user, &q).await?;
-    let (concurrency, genres, client_methods, (network, completion, behaviour), (data_bytes, failed_logins)) = tokio::try_join!(
-        apart(app.clone(), scope.clone(), |c, s| concurrency(c, s, &s.cond())),
-        apart(app.clone(), scope.clone(), |c, s| genre_buckets(c, &s.cond())),
-        apart(app.clone(), scope.clone(), insight_client_methods),
-        apart(app.clone(), scope.clone(), |c, s| Ok((insight_network(c, s)?, insight_completion(c, s)?, insight_behaviour(c, s)?))),
-        apart(app.clone(), scope.clone(), |c, s| Ok((insight_data_bytes(c, s)?, insight_failed_logins(c, s)?))),
+    // of their times, 4.1 s on a million plays. A group runs only for a part asked for (`parts=`).
+    let parts = insight_parts(q.parts.as_deref());
+    let wants = |names: &[&str]| names.iter().any(|n| parts.contains(n));
+    let filter = FilterQuery { days: q.days, user_id: q.user_id, library_id: q.library_id };
+    let scope = resolved(&app, &user, &filter).await?;
+    let (concurrency, genres, client_methods, people, sent) = tokio::try_join!(
+        when(wants(&["concurrency"]), apart(app.clone(), scope.clone(), |c, s| concurrency(c, s, &s.cond()))),
+        when(wants(&["genres"]), apart(app.clone(), scope.clone(), |c, s| genre_buckets(c, &s.cond()))),
+        when(wants(&["client_methods"]), apart(app.clone(), scope.clone(), insight_client_methods)),
+        when(wants(&["network", "completion", "behaviour"]), apart(app.clone(), scope.clone(), |c, s| Ok((insight_network(c, s)?, insight_completion(c, s)?, insight_behaviour(c, s)?)))),
+        when(wants(&["data_bytes", "failed_logins"]), apart(app.clone(), scope.clone(), |c, s| Ok((insight_data_bytes(c, s)?, insight_failed_logins(c, s)?)))),
     )?;
-    Ok(Json(json!({
-        "concurrency": concurrency,
-        "network": network, "data_bytes": data_bytes,
-        "genres": genres,
-        "client_methods": client_methods, "completion": completion,
-        "behaviour": behaviour, "failed_logins": failed_logins,
-    })))
+    let (network, completion, behaviour) = people.map_or((None, None, None), |(n, c, b)| (Some(n), Some(c), Some(b)));
+    let (data_bytes, failed_logins) = sent.map_or((None, None), |(d, f)| (Some(d), Some(f)));
+    let all = [
+        ("concurrency", concurrency.map(|v| json!(v))), ("network", network.map(|v| json!(v))), ("data_bytes", data_bytes.map(|v| json!(v))),
+        ("genres", genres.map(|v| json!(v))), ("client_methods", client_methods.map(|v| json!(v))), ("completion", completion.map(|v| json!(v))),
+        ("behaviour", behaviour.map(|v| json!(v))), ("failed_logins", failed_logins.map(|v| json!(v))),
+    ];
+    let out: Map<String, Value> = all.into_iter().filter(|(k, _)| parts.contains(k)).filter_map(|(k, v)| v.map(|v| (k.to_string(), v))).collect();
+    Ok(Json(Value::Object(out)))
 }
 
 // ---------------------------------------------------------------- v0.2: what the library is made of
@@ -2312,6 +2341,16 @@ mod tests {
         assert_eq!((v["peak"].as_i64(), v["peak_at"].as_i64(), v["peak_transcodes"].as_i64()), (Some(2), Some(y + 1800), Some(1)));
         let day = |s: i64| -> String { c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [s], |r| r.get(0)).unwrap() };
         assert_eq!(v["series"], json!([{ "date": day(y), "peak": 2 }, { "date": day(t), "peak": 1 }]));
+    }
+
+    /// `parts=` names the insights a page wants, so one that draws only the peak does not wait for the other passes. Only
+    /// names it knows reach the work; none known, or none named, is all of them.
+    #[test]
+    fn insights_are_worked_out_only_for_the_parts_asked() {
+        assert_eq!(insight_parts(None), INSIGHTS.to_vec());
+        assert_eq!(insight_parts(Some("concurrency")), vec!["concurrency"]);
+        assert_eq!(insight_parts(Some("genres,nonsense,concurrency")), vec!["concurrency", "genres"], "in their own order, the unknown left out");
+        assert_eq!(insight_parts(Some("nonsense")), INSIGHTS.to_vec());
     }
 
     /// Library statistics: what each library holds, by kind, files removed from Jellyfin left out. Artists are the album
