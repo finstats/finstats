@@ -810,6 +810,28 @@ second per beat). A poll never repaints it; it only corrects the position when t
 ahead or > 15 s behind; clients report to Jellyfin roughly every 10 s), and even then by setting it one short so the
 change lands on the next beat. Painting from the poll is what made the clock stutter.
 
+**Simple mode (`js/simple/`, `simple.css`, `simple-tokens.css`) is a second layout of FinStats**, laid out the way a
+classic Plex stats server is, for people who come from one: a solid FinUI `top-bar` instead of the menu (search, Home,
+Libraries, Users with `see_everyone`, History, Graphs, and a gear for My profile, Settings, the theme and signing out),
+and only those pages: Home (Activity, watch statistics, library statistics, recently added), Libraries and a library,
+Users and a person, a title, History, Graphs, Settings. **It is chosen per browser** (Settings → Appearance → Layout,
+`finstats.layout` in `state.js`, never the account; nothing stored is FinStats) and **loads only its own half**:
+`theme.js` marks `<html data-layout="simple">` before the first paint and writes its two stylesheets after the others,
+and `main.js` is a bootstrap that imports `simple/app.js` or `app.js` (the FinStats layout, unchanged), both ending in
+`boot.js`; Simple mode never fetches FinStats' pages, `shell.js`, `widgets.js` or FinMotion, and imports the pages it
+shares (sign-in, Settings, licences, patch notes) only when opened. Pages FinStats has and it does not (Recap, Together,
+Pipeline, Security, Server and the rest) are no page there. **It has its own look whatever FinUI preset a person wears**:
+`simple-tokens.css` (charcoal and orange in the dark, paper and orange in the light, IBM Plex Sans, every colour
+`light-dark()`, and still: FinUI's Motion: Off and FinMotion's springs set to nothing on the root) is a token file like
+FinUI's own, the only other place a colour may be written (`finui::tests::no_colour_literal_outside_the_tokens`).
+**It asks nothing a page of the FinStats layout does not**, through the same `Scope`: its cards, tables and charts read the
+same endpoints (`sort=users`, `watched=1`, `parts=`, the peak split, the heatmap's `by_type`, a library's and a person's
+last play, a session's `is_local`), and Most popular and Most active users are drawn only with `see_everyone`. Now playing
+runs on `nowplaying.js`, the clock and loader both layouts share, with its own stream cards. Its components are FinUI's
+(`stat-card`, `stream-card`, `tile-stat`, `stat-figure`, the solid `top-bar`), developed here and copied to `../finui`.
+History, a library's, a person's and a title's History tab are one server-sorted table (`simple/history.js`). No
+Tautulli name, logo or code: the layout is the familiar part, the name and the mark are FinStats'.
+
 Tables go through `tables.js`: `dataTable()` / `plainTable()` / `chartTable()` wrap a built `<table>` in its scroll box and make every
 header a sort button (`sortable()` for tables without a scroll box, like the bar lists). Sorting reads cell meaning (durations, sizes, %,
 `<time>`, switches; `data-sort` overrides, `data-nosort` opts a header out, `data-pin` keeps a row on top). Paginated lists must not be

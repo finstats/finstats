@@ -46,6 +46,7 @@ Already using Jellystat or Streamystats, or coming from Plex with Tautulli? [Bri
 ## What you get
 
 - **A live view of your server**: every stream as it happens, who, what, where, and whether it transcodes and why.
+- **Simple mode**, coming from Plex: a second layout with a bar across the top and the stats alone, laid out the way a classic Plex stats server is.
 - **Answers, not just charts**: how busy it gets, which apps transcode, where people give up on a title, which files
   are broken, what your library is made of and what nobody has ever watched.
 - **Library health**: missing episodes, odd resolutions, copies, thin files and dubs that stop, each with its numbers.
