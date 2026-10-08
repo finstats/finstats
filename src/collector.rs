@@ -9,7 +9,7 @@
 //! tell the difference and does not care: it is handed a list and works out what changed.
 //!
 //! **Nothing playing: listen.** An idle server has nothing to report, and asking it every few seconds
-//! to be told so was almost all the traffic finstats ever caused. Not one request goes out.
+//! to be told so was almost all the traffic FinStats ever caused. Not one request goes out.
 //! **Something playing: ask,** at `active_interval_s`, until the last play ends. A pause, a seek or a
 //! track change is only as sharp as the gap between two sightings, and how often a server pushes is
 //! its business, not ours; asking is also what ends a play whose client vanished without saying so,
@@ -31,7 +31,7 @@ use crate::media::{self, Streams, ticks_to_s};
 use crate::playback::{PlayEvent, PlayRecord, insert_events};
 use crate::state::App;
 
-/// What a play finstats recorded itself says it came from.
+/// What a play FinStats recorded itself says it came from.
 pub const SOURCE: &str = "live";
 
 const PERSIST_EVERY: Duration = Duration::from_secs(30);
@@ -192,7 +192,7 @@ fn remember_devices(c: &mut crate::db::rusqlite::Connection, rows: Vec<DeviceRow
 
 /// When each device's row was last written, forgetting any not written for longer than [`DEVICE_REFRESH`]: past that
 /// an entry decides nothing, and a device id is the app's own word, and one that invented a new id every time would
-/// otherwise grow the map for as long as finstats runs.
+/// otherwise grow the map for as long as FinStats runs.
 fn forget_stale_devices(seen: &mut HashMap<(String, String), Instant>, now: Instant) {
     seen.retain(|_, written| now.saturating_duration_since(*written) <= DEVICE_REFRESH);
 }
@@ -458,7 +458,7 @@ pub fn activity(sessions: &[Value]) -> (usize, usize) {
 
 /// Whether Jellyfin should be pushing session lists right now: not while a poll timer is running for
 /// a reason, which means while something is playing *and* through the pause debounce that follows it.
-/// Subscribing at the start of the debounce is what once had finstats subscribed and polling at the same
+/// Subscribing at the start of the debounce is what once had FinStats subscribed and polling at the same
 /// moment, the same list arriving twice for three seconds.
 ///
 /// Deliberately *not* "while the collector is in listening mode": listening needs a socket that has
@@ -512,7 +512,7 @@ const SUPPRESSED_EVERY: Duration = Duration::from_secs(60);
 /// and the net, and nothing else. More than this is the machine disagreeing with itself.
 const READS_WHILE_LISTENING: u32 = 2;
 
-/// Every `/Sessions` read finstats makes, from every caller (the beat while something plays, the
+/// Every `/Sessions` read FinStats makes, from every caller (the beat while something plays, the
 /// one-shot net, the catch-up after trusting a subscription, the socket's own consistency check)
 /// passes through this one gate. Not because any of them is expected to misbehave, but because
 /// a clock that stopped being reset once turned one of them into thousands, and a limiter
@@ -641,7 +641,7 @@ fn reads_in_mode(since: Instant) -> u32 {
 ///     it goes back on, a clock measured from the last push is already a minute stale and asks for
 ///     a read at once, and then for another, because nothing the read did touched the clock that
 ///     called for it.
-///   * `read`: when finstats last read `/Sessions`, by any route at all, the beat during a play
+///   * `read`: when FinStats last read `/Sessions`, by any route at all, the beat during a play
 ///     included. A poll a second ago is better evidence than any net could fetch, so the net is not
 ///     due; three minutes of playing therefore end in a pause that asks for nothing.
 ///
@@ -953,9 +953,9 @@ pub async fn run(app: App) {
             continue;
         };
 
-        // There is always a socket. Being told what is playing is how finstats collects; asking is
+        // There is always a socket. Being told what is playing is how FinStats collects; asking is
         // the half of it that a play deserves while it runs, not a mode of its own to switch to. A
-        // socket belongs to the server it was opened against, so pointing finstats at another
+        // socket belongs to the server it was opened against, so pointing FinStats at another
         // Jellyfin drops the old one rather than leaving it talking to the wrong machine.
         if sock.is_some() && socket_for.as_deref() != Some(jf.base()) {
             (sock, socket_live, socket_error, socket_for) = (None, false, None, None);
@@ -985,7 +985,7 @@ pub async fn run(app: App) {
 
         // Each transport where it is the better one. **Nothing playing**: listen. An idle server has
         // nothing to report, and asking it every few seconds to be told so was most of the traffic
-        // finstats ever caused. **Something playing**: ask, at `active_interval_s`. That is where the
+        // FinStats ever caused. **Something playing**: ask, at `active_interval_s`. That is where the
         // detail lives: a pause, a seek or a track change is only as sharp as the gap between two
         // sightings, and no push cadence is ours to promise. Every read is compressed, so the
         // busy half is also the cheap half. It also means the poll that ends a play whose client
@@ -1164,7 +1164,7 @@ pub async fn run(app: App) {
                 if failure.log {
                     tracing::warn!("cannot read sessions from Jellyfin: {e:#}");
                 }
-                // Not a blip: a reachable Jellyfin is the one thing finstats cannot do without, and a
+                // Not a blip: a reachable Jellyfin is the one thing FinStats cannot do without, and a
                 // play that is never seen cannot be backfilled later.
                 if failure.tell_down {
                     crate::notify::service_state(&app, "Jellyfin", "the server everything comes from", Some(&format!("{e:#}"))).await;
@@ -1190,7 +1190,7 @@ pub async fn run(app: App) {
             // hurried past the owner's own intervals, only slowed.
             let base = poll_interval_s(settings.active_interval_s, settings.idle_interval_s, playing, active, !socket_live) as u64;
             let wait = Duration::from_secs(if reach.failures > 0 { (base * reach.failures.min(12) as u64).min(60) } else { base });
-            // A socket that comes back must be heard while finstats is polling, or it never gets a
+            // A socket that comes back must be heard while FinStats is polling, or it never gets a
             // second chance: this is the only place a waiting poller listens to it.
             match sock.as_mut() {
                 None => {
@@ -1593,7 +1593,7 @@ mod tests {
     #[test]
     fn devices_not_seen_for_a_while_are_forgotten_so_the_map_cannot_grow_for_ever() {
         // The map only spares a device's row from being rewritten every second. A device id is the app's own word,
-        // and an app that made up a new one each time would otherwise have grown it for as long as finstats ran.
+        // and an app that made up a new one each time would otherwise have grown it for as long as FinStats ran.
         let now = Instant::now();
         let mut seen: HashMap<(String, String), Instant> = HashMap::new();
         let long_ago = now.checked_sub(DEVICE_REFRESH * 2).expect("the clock is far enough along");

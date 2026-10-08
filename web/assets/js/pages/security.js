@@ -183,7 +183,7 @@ export default function securityPage(ctx) {
     } }, icon('upload', 14), 'Download the database (about 60 MB)') : null;
     const note = h('p', { class: 'fui-field__help', 'aria-live': 'polite' });
     return emptyState('No geolocation database yet',
-      'Places come from a city database that finstats reads locally; no address is ever sent anywhere. Download DB-IP’s free one here, or put any MaxMind-format city file (.mmdb) into the geoip folder of the data directory. Settings → Security keeps it up to date.',
+      'Places come from a city database that FinStats reads locally; no address is ever sent anywhere. Download DB-IP’s free one here, or put any MaxMind-format city file (.mmdb) into the geoip folder of the data directory. Settings → Security keeps it up to date.',
       h('div', { class: 'fui-empty__action' }, btn, note));
   }
 
@@ -205,7 +205,7 @@ export default function securityPage(ctx) {
           statTile({ label: 'Countries', value: num(o.countries.length), hint: rangeLong(f.days) }),
           statTile({ label: 'Places away from home', value: num(away.length), hint: rangeLong(f.days) }),
           can('see_server') && !f.userId ? statTile({ label: 'Failed sign-ins from outside', value: num(failedTotal), hint: rangeLong(f.days) }) : null),
-        card({ title: 'Where people watch from', sub: o.home_known ? 'Plays, sign-ins and live streams by place; the home network is one dot' : 'Plays, sign-ins and live streams by place. Home is not on the map yet: finstats has not learned this network’s public address',
+        card({ title: 'Where people watch from', sub: o.home_known ? 'Plays, sign-ins and live streams by place; the home network is one dot' : 'Plays, sign-ins and live streams by place. Home is not on the map yet: FinStats has not learned this network’s public address',
           body: points.length ? [map.el, picked] : h('div', { class: 'fui-empty--chart' }, 'Nobody has watched from a public address in this range.') }),
         alertsCard(alerts, o.can_manage),
         h('div', { class: 'grid-heat' },

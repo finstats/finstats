@@ -181,7 +181,7 @@ async fn same_origin(State(app): State<App>, req: Request, next: Next) -> Respon
 /// `Origin` (a native client, curl) is not judged here: it carries either the SameSite=Lax cookie, which a
 /// browser attaches to a cross-site navigation only and never to a cross-site `fetch`, or a `Bearer` key,
 /// which no browser adds on its own: a cross-site page cannot set `Authorization` without a CORS
-/// preflight, and finstats answers none.
+/// preflight, and FinStats answers none.
 fn cross_site(origin: Option<&str>, host: Option<&str>, forwarded: Option<&str>, trust_proxy: bool) -> bool {
     let (Some(origin), Some(host)) = (origin, host) else { return false };
     let origin_host = origin.split_once("://").map(|(_, h)| h).unwrap_or(origin);
@@ -263,7 +263,7 @@ async fn static_handler(State(app): State<App>, headers: HeaderMap, uri: Uri) ->
             .header(CACHE_CONTROL, "no-cache")
             .body(Body::from(index.data.into_owned()))
             .unwrap(),
-        None => (StatusCode::NOT_FOUND, "finstats was built without its web UI").into_response(),
+        None => (StatusCode::NOT_FOUND, "FinStats was built without its web UI").into_response(),
     }
 }
 
@@ -367,7 +367,7 @@ async fn user_image(State(app): State<App>, _user: AuthUser, Path(id): Path<Stri
     current_picture(&app, Picture::User, valid_id(&id)?, pick_width(q.w.or(Some(96))), &headers).await
 }
 
-/// A picture through the cache, under the tag finstats last read for it (`artwork`): a poster replaced in
+/// A picture through the cache, under the tag FinStats last read for it (`artwork`): a poster replaced in
 /// Jellyfin has a new tag and so a new file. With a tag the browser is handed it as the ETag and asks again
 /// every time (a 304, before anything is read, when nothing changed) instead of keeping whatever it had for a week.
 async fn current_picture(app: &App, pic: Picture, id: String, width: u32, headers: &axum::http::HeaderMap) -> ApiResult<Response> {
@@ -382,7 +382,7 @@ async fn current_picture(app: &App, pic: Picture, id: String, width: u32, header
     Ok(r)
 }
 
-/// A picture from the cache or Jellyfin, under the tag finstats knows for it.
+/// A picture from the cache or Jellyfin, under the tag FinStats knows for it.
 async fn picture(app: &App, pic: Picture, id: String, width: u32) -> ApiResult<Response> {
     let tag = tag_of(app, pic, &id).await?;
     fetch_picture(app, pic, &id, width, tag.as_deref()).await
@@ -564,12 +564,12 @@ async fn poster_bytes(app: &App, id: &str) -> Option<Vec<u8>> {
 }
 
 /// The poster of a title that is not in the library yet: only Sonarr or Radarr has it. Both path segments
-/// are numbers, the upstream path is a constant, and only posters of titles finstats itself has listed are
+/// are numbers, the upstream path is a constant, and only posters of titles FinStats itself has listed are
 /// served, so this is no window into everything Sonarr and Radarr know.
 async fn arr_image(State(app): State<App>, user: AuthUser, Path((service_id, media_id)): Path<(i64, i64)>, Query(q): Query<ImageQuery>) -> ApiResult<Response> {
     let width = if q.w.unwrap_or(250) <= 250 { 250 } else { 500 };
     let svc = services::all(&app).iter().find(|s| s.id == service_id && s.enabled && s.kind.is_arr()).cloned().ok_or_else(|| ApiError::not_found("Image"))?;
-    // Only posters of titles finstats itself has listed: what is on the calendar, what somebody asked for, and
+    // Only posters of titles FinStats itself has listed: what is on the calendar, what somebody asked for, and
     // what is downloading now (for the people who may see that). Anything else and the proxy would be a way to
     // walk through the whole Arr library by counting upwards.
     let listed = media_id > 0
@@ -619,7 +619,7 @@ fn settings_json(app: &App) -> Value {
     v
 }
 
-/// The settings plus what is only read: the home addresses finstats knows, and who it would ask.
+/// The settings plus what is only read: the home addresses FinStats knows, and who it would ask.
 async fn settings_response(app: &App) -> ApiResult {
     let mut v = settings_json(app);
     let known = app.db.call(|c| crate::network::list(c)).await?;
@@ -736,7 +736,7 @@ fn task_json(t: &crate::state::TaskState, settings: &Settings) -> Value {
     v
 }
 
-/// The zone times of day are in: finstats' own, which is the process's `TZ`.
+/// The zone times of day are in: FinStats' own, which is the process's `TZ`.
 fn time_zone() -> String {
     std::env::var("TZ").ok().filter(|z| !z.trim().is_empty()).unwrap_or_else(|| chrono::Local::now().format("UTC%:z").to_string())
 }
@@ -801,17 +801,17 @@ async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path
 // ---------------------------------------------------------------- permissions
 
 /// Settings only a Jellyfin administrator may write: who gets in, what everyone may see, the address
-/// finstats puts in the messages it sends, and whether anything may be read without an account.
+/// FinStats puts in the messages it sends, and whether anything may be read without an account.
 const ACCESS_KEYS: [&str; 5] = ["allow_user_login", "default_permissions", "public_url", "public_profiles", "jellyfin_public_url"];
 
 const PERMISSION_INFO: [(&str, &str, &str); 7] = [
-    ("sign_in", "Sign in", "May use finstats and sees their own statistics and recap."),
+    ("sign_in", "Sign in", "May use FinStats and sees their own statistics and recap."),
     ("see_everyone", "See everyone's activity", "Other people's statistics and history, the Users page and every live stream."),
     ("see_network", "See network details", "IP addresses, device ids and whether a play was local or remote."),
     ("see_server", "See the server", "The Server page, the server log, failed sign-ins and file paths."),
     ("see_downloads", "See what is downloading", "The download queue with speeds, torrent names and which client. Without it, people still see how far their own request has got."),
     ("notify", "Be sent notifications", "May add destinations of their own (a webhook, Discord, ntfy or Gotify) and is sent what they are already allowed to see. Their destinations must point at a public address."),
-    ("manage", "Manage finstats", "Settings, tasks, the Jellystat import and deleting plays. Cannot change permissions."),
+    ("manage", "Manage FinStats", "Settings, tasks, the Jellystat import and deleting plays. Cannot change permissions."),
 ];
 
 #[derive(Deserialize)]
@@ -1078,7 +1078,7 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
-/// The trackers finstats can take history from, each with its own task so each Settings card can
+/// The trackers FinStats can take history from, each with its own task so each Settings card can
 /// watch its own import. Only one runs at a time whichever it is: they write to the same tables.
 /// The two imports and the restore. Each holds the database in one long transaction: only one of them at a time.
 const HISTORY_WRITERS: [&str; 4] = ["import", "import_streamystats", "import_tautulli", "restore"];
@@ -1329,7 +1329,7 @@ async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> Api
 mod tests {
     use super::*;
 
-    /// finstats draws both themes itself, so a browser extension that repaints pages dark (Dark Reader) is told to
+    /// FinStats draws both themes itself, so a browser extension that repaints pages dark (Dark Reader) is told to
     /// leave every page as it is: it inverted the light theme's paper into a muddy grey and fought the dark one.
     #[test]
     fn every_page_tells_dark_reader_to_leave_it_alone() {

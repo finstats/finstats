@@ -1,5 +1,5 @@
 //! FinMotion: how FinUI moves, put on top of it (`github.com/finstats/finmotion`, a copy in `web/assets/finmotion`).
-//! finstats always wears it: `/assets/finmotion.css` is every stylesheet its registry lists, in order (the springs,
+//! FinStats always wears it: `/assets/finmotion.css` is every stylesheet its registry lists, in order (the springs,
 //! then each part's), served as one, as `/assets/finui.css` is; `main.js` calls its `motion()`. The tests below hold the
 //! registry to what is on disk.
 
@@ -84,7 +84,7 @@ mod tests {
         let r = registry().unwrap();
         assert_eq!((r.name.as_str(), r.prefix.as_str(), r.on.as_str()), ("finmotion", "fm-", "finui"));
         let cargo = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml")).unwrap();
-        assert!(cargo.contains(&format!("license = \"{}\"", r.license)), "FinMotion is under {}, finstats under something else", r.license);
+        assert!(cargo.contains(&format!("license = \"{}\"", r.license)), "FinMotion is under {}, FinStats under something else", r.license);
     }
 
     #[test]

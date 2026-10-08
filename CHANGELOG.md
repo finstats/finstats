@@ -1,6 +1,6 @@
 # Patch notes
 
-Everything that changed in finstats, newest first. This file is compiled into the
+Everything that changed in FinStats, newest first. This file is compiled into the
 binary and is what the **Patch notes** tab in the app shows.
 
 Format: `## [version] - date`, or `## [version] - first day to release day` for a release made
@@ -18,21 +18,21 @@ Library health and FinUI
 - **A menu of your own on a computer**: Settings → Appearance offers eight: the sidebar as it was, grouped by what the pages are for, a rail of icons that opens into the sidebar under the pointer, a sidebar that leads with search, a dock, a command bar, pages you pin on top, and coloured tiles. The sidebars can sit on the right. The dock slides away while you scroll down and comes back when you scroll up or point at the bottom of the window; with it the status bar moves to the top.
 - **A menu of your own on a phone**: a tab bar with More (the new default), a sheet that opens half way, the whole screen, the pages fanned around the thumb, or an address bar that grows into the menu. Each searches its pages and hands any other words to search.
 - Both are kept by the browser they were chosen in, so a phone and a computer each keep their own; both are FinUI components, `desktop-nav` and `mobile-nav`.
-- **A context menu**: right-click a title, a person or a library anywhere in finstats (a poster on the dashboard, a row of a list, a name in a table, a film in Coming up that is not in the library yet), or hold a finger on it, or press the menu key, and a menu grows out of the point you pressed: open it, open it in a new tab, put a film or a show on your watchlist, open it in Jellyfin or on TMDB and TVDB, copy its link. Shift with a right-click is still the browser's own. FinUI's `context-menu`.
+- **A context menu**: right-click a title, a person or a library anywhere in FinStats (a poster on the dashboard, a row of a list, a name in a table, a film in Coming up that is not in the library yet), or hold a finger on it, or press the menu key, and a menu grows out of the point you pressed: open it, open it in a new tab, put a film or a show on your watchlist, open it in Jellyfin or on TMDB and TVDB, copy its link. Shift with a right-click is still the browser's own. FinUI's `context-menu`.
 - **Search without a dialog**: search grows out of your menu (a sidebar widens into it, the dock rises into it, the command bar's name turns into it, a phone's menu holds it) or, chosen in Settings → Appearance, takes the page's place while the menu stays. Ctrl+Space opens it as before; the window over everything is gone. FinUI's `search`.
 - **Everything in a library**: a library's Recently added card offers *Everything in it*, every film, show or album it holds as posters, by name, year, date added or size, narrowed as you type. More arrive as you scroll.
-- **Server → Library health**: finstats compares every file with its neighbours and lists what stands out, each with the numbers behind it. It only reports; nothing is changed, deleted or rescanned in Jellyfin.
+- **Server → Library health**: FinStats compares every file with its neighbours and lists what stands out, each with the numbers behind it. It only reports; nothing is changed, deleted or rescanned in Jellyfin.
 - **Gaps**: episodes missing between two files of a season ("Season 2: episodes 4 and 5 are missing between 3 and 6"). A file that holds two episodes counts as both; specials and the end of a season are left alone.
 - **Seasons that differ** in resolution, HDR or codec from the rest of their show, and **odd episodes**: one file unlike its season, such as an SD episode in a 1080p season. Resolution goes by width or height, so a cropped 1920×800 film is 1080p.
 - **Copies and versions**: the same film or episode twice, by the provider ids the watchlist and Pipeline already go by. Two copies in one resolution show the space kept twice; a 4K copy beside a 1080p one is listed as two versions and never counted as waste.
 - **Thin files**: a bitrate far below what its resolution and codec usually take ("4K HEVC at 1.1 Mbps"); a season's thin episodes are one finding.
 - **Dubs that stop**: an audio language some seasons have on every episode and others on none.
 - **Never identified**: films and shows Jellyfin matched with no TMDB, TVDB or IMDb id.
-- **Dismiss** a finding that is fine on purpose, with a note. It comes back by itself when its files change. Those who may manage finstats and see the server can dismiss; dismissals are in the audit log and part of a backup.
+- **Dismiss** a finding that is fine on purpose, with a note. It comes back by itself when its files change. Those who may manage FinStats and see the server can dismiss; dismissals are in the audit log and part of a backup.
 - A library's page says how many things there are to look at there, and leads to them.
-- **FinUI**, the components finstats is built from, is a project of its own (`github.com/finstats/finui`): every button, card and control in every state and both themes at `finui.finstats.no`, and **FinUI create** to change its colours, radius, density and more as you watch and take it home with one command. **Settings → System** leads there.
-- **Settings → Appearance**: everyone chooses how finstats looks to them, by the code of a FinUI preset: base colour, accent, chart colours, contrast, radius, density, borders, cards, buttons, fields, tables, highlight, motion, icons, the menu, the page behind it all, the focus ring, how headings are set, and the fonts for text, headings and numbers. Your choice is yours alone; it shows what the code means and leads to FinUI create to change it.
-- **Styles**: eleven whole looks to start from in one choice in FinUI create, whose code Settings → Appearance takes. They are Washi (finstats as it ships), Studio, Noir, Matinee, Console, Pastille, Ledger, Gazette, Arcade, Canopy and Harbour. finstats itself ships one look and offers no list of styles.
+- **FinUI**, the components FinStats is built from, is a project of its own (`github.com/finstats/finui`): every button, card and control in every state and both themes at `finui.finstats.no`, and **FinUI create** to change its colours, radius, density and more as you watch and take it home with one command. **Settings → System** leads there.
+- **Settings → Appearance**: everyone chooses how FinStats looks to them, by the code of a FinUI preset: base colour, accent, chart colours, contrast, radius, density, borders, cards, buttons, fields, tables, highlight, motion, icons, the menu, the page behind it all, the focus ring, how headings are set, and the fonts for text, headings and numbers. Your choice is yours alone; it shows what the code means and leads to FinUI create to change it.
+- **Styles**: eleven whole looks to start from in one choice in FinUI create, whose code Settings → Appearance takes. They are Washi (FinStats as it ships), Studio, Noir, Matinee, Console, Pastille, Ledger, Gazette, Arcade, Canopy and Harbour. FinStats itself ships one look and offers no list of styles.
 - **Icons that move**: every icon in a link, a button or a tab does its own move once when pointed at (refresh turns, download's arrow drops into its tray, the trash lifts its lid), and a refresh that was pressed keeps turning until its answer is in. Still with reduced motion, and with Motion: Off.
 - **Motion, with FinMotion**: FinUI's components now move: a switch's knob is thrown across, a tab's underline inches to the next tab, a refused field shakes its head, a copy is ticked in one stroke, notices pile like a hand of cards and fan open when pointed at, a phone's sheet gives like a band when pulled, a sorted table's rows move to their places, a figure that changes rolls like an odometer and charts draw themselves the first time they are seen. All of it follows Settings → Appearance's Motion choice and stays still with reduced motion. FinMotion is its own project (`github.com/finstats/finmotion`), put on top of FinUI.
 - **More icons in FinUI**: 239 now, up from 71, each with a move of its own (volume up and down, a headset and a deafened one, a pencil that writes, a bell that rings, a phone that buzzes), and every one can be downloaded from FinUI's gallery as an SVG, still or animated.
@@ -41,9 +41,9 @@ Library health and FinUI
 - **Deleting can be undone for 30 days**: a deleted play or backup waits in the trash, and **Undo** on the notice that follows brings it back. Activity and Settings → Backups each list what was recently deleted, with when it goes for good, whenever there is any. A play in the trash is out of every total, chart, recap and profile, and an import or a restore does not bring it back as new; whoever watched it with somebody is counted as alone until it returns.
 
 ### Changed
-- Dark Reader and extensions like it leave finstats' pages alone (`darkreader-lock`): finstats draws both themes itself, and a repainted page fought them.
+- Dark Reader and extensions like it leave FinStats' pages alone (`darkreader-lock`): FinStats draws both themes itself, and a repainted page fought them.
 - On a phone the menu no longer slides in from the left: the tab bar sits at the bottom unless another is chosen.
-- finstats reads your library once after this update, to learn where files that hold several episodes end.
+- FinStats reads your library once after this update, to learn where files that hold several episodes end.
 - On a title's page, **Add to watchlist** is as tall as **Open in Jellyfin** beside it; it was a size smaller.
 - The range and people filters stay at the top of the screen while a page scrolls, so 7d becomes All from the bottom of a long page; so do Pipeline's request and upcoming filters.
 - The scroll-to-top button keeps clear of whichever menu holds the bottom of the window: low in the corner beside the dock, just above a phone's tab bar, thumb button or address bar, and above the status bar otherwise. It is FinUI's `to-top`.
@@ -51,10 +51,10 @@ Library health and FinUI
 - **Patch notes** are one sheet instead of a stack of cards: every note is a line of its own with its kind (Added, Changed, Fixed and the rest) and that kind's icon in a column before it, under a heading for each series. The list of versions stays on the right.
 
 ### Performance
-- Opening finstats downloads only what changed: a stylesheet, script or font the browser already holds is confirmed in a few bytes instead of sent again. Every visit used to fetch all of finstats' stylesheets and modules in full, though each carried a tag to tell them apart.
+- Opening FinStats downloads only what changed: a stylesheet, script or font the browser already holds is confirmed in a few bytes instead of sent again. Every visit used to fetch all of FinStats' stylesheets and modules in full, though each carried a tag to tell them apart.
 
 ### Stability
-- Restoring a backup reads the settings from the settings row alone: a file from a newer finstats that keeps more there had its settings dropped without a word.
+- Restoring a backup reads the settings from the settings row alone: a file from a newer FinStats that keeps more there had its settings dropped without a word.
 - An open tab no longer grows with every page visited: every page that was left stayed in memory behind the one on screen (about 2,600 elements a visit), held by FinMotion's list of what it moves and by the filters bar's scroll listener, until the tab was closed.
 - A mistyped command (`finstats bakcup`), or `restore` without its file, no longer creates or upgrades a database before saying it does not know what to do.
 
@@ -66,7 +66,7 @@ Library health and FinUI
 - A row of stat tiles at a width between phone and desktop (four tiles three across) left the last one alone on a row of its own; four tiles now go four, two or one across, and three go three or one.
 - The server read counted a device nobody signed in on, which it does not keep: the task said three devices where the Server page listed two.
 - One second, one minute, one hour: alerts said "1 seconds apart" and "in 1 minutes", and a Jellyfin task on a one-minute interval ran "every 1 minutes".
-- `finstats --help` names every variable finstats reads; `FINSTATS_PUBLIC_IP_URL`, `FINSTATS_ALLOW_LIBRARY_SHRINK` and `FINSTATS_SKIP_PREUPDATE_BACKUP` were missing.
+- `finstats --help` names every variable FinStats reads; `FINSTATS_PUBLIC_IP_URL`, `FINSTATS_ALLOW_LIBRARY_SHRINK` and `FINSTATS_SKIP_PREUPDATE_BACKUP` were missing.
 - The setup wizard said an address that was not one "couldn’t connect", in a sentence that ran into the next; it now says the address is not one.
 - In Settings → Backups, a question asked while a backup was being written vanished when the backup finished.
 - With the menu as a rail that opens, closing search showed the open search and the closed rail at once and then left the rail open until the pointer came and went. Esc now gives the keyboard's focus back to where it was when search opened, and lets a click's go.
@@ -82,8 +82,8 @@ Library health and FinUI
 - **Import from Tautulli**: bring your Plex history over. Upload Tautulli's database backup (the `.db`, or the `.zip` holding it) under **Settings → Import**; its plays have a place of their own in Activity's *Recorded by* filter.
 - **A wiring board to say who is who**: Plex users on one side, Jellyfin users on the other. Drag a wire from each Plex user to who they are now, or click one and then the other, or use the keyboard. Anybody left unwired is not imported, and two Plex accounts can go into one person.
 - Films and episodes are matched to your library by name (a film by its title and year, an episode by its show and number), and one not on your server yet is kept and attached when it arrives. A resumed viewing is one play; music is not imported.
-- The backup holds Plex's access tokens: finstats never reads them, and removes the file once you import or start over.
-- **Unlinked media** under **Settings → Data**: every title from Tautulli, Jellystat or Streamystats that matches nothing in your library, with where it came from and where it most likely is already found. **Locate** links it from the best guesses or a search (a film can be located as a show's special), and finstats remembers the choice, so the same history imported again links itself. Choices are part of a backup.
+- The backup holds Plex's access tokens: FinStats never reads them, and removes the file once you import or start over.
+- **Unlinked media** under **Settings → Data**: every title from Tautulli, Jellystat or Streamystats that matches nothing in your library, with where it came from and where it most likely is already found. **Locate** links it from the best guesses or a search (a film can be located as a show's special), and FinStats remembers the choice, so the same history imported again links itself. Choices are part of a backup.
 
 ### Performance
 - **The recap opens three to five times faster**: the year's most watched actors and directors were worked out by rescanning the year once for every person in it. Measured on a real history, a year went from 0.29 s to 0.09 s and the last 12 months from 0.53 s to 0.12 s.
@@ -102,7 +102,7 @@ Library health and FinUI
 
 ### Stability
 - Saving a Sonarr, Radarr or Seerr connection while somebody had **Settings → Outbound** open could leave both waiting on each other for good.
-- **Settings that cannot be read stop finstats at start-up**, naming the setting at fault, instead of quietly resetting every setting to its default.
+- **Settings that cannot be read stop FinStats at start-up**, naming the setting at fault, instead of quietly resetting every setting to its default.
 - **Two changes to the settings at once** (the settings page and a task's schedule, say) no longer undo each other.
 - A pause, seek or track change seen while the database was busy is written on the next pass instead of lost.
 - A library read no longer fails on a watchlist holding several entries that turn out to be one title.
@@ -130,9 +130,9 @@ Watchlist
 ## [2.0.4] - 2026-09-29
 
 ### Added
-- **Task scheduling, the way Jellyfin does it**: every job finstats does by itself has triggers (daily at a time, weekly on a day, on an interval, at start-up, or after Jellyfin's library scan), each with an optional time limit. Click a task to see and change its schedule; *Add trigger* opens the same dialog Jellyfin has.
+- **Task scheduling, the way Jellyfin does it**: every job FinStats does by itself has triggers (daily at a time, weekly on a day, on an interval, at start-up, or after Jellyfin's library scan), each with an optional time limit. Click a task to see and change its schedule; *Add trigger* opens the same dialog Jellyfin has.
 - **Tasks is a section of its own** in Settings, with each job's last run in words ("Last ran 38 minutes ago, taking 6 minutes") and a Run button; it used to sit at the top of System.
-- **Metadata changes**: every hour finstats reads what Jellyfin saved since the last look (names, overviews, genres, ratings, cast and crew, file details and pictures), so an edit in Jellyfin shows up without waiting for a library scan.
+- **Metadata changes**: every hour FinStats reads what Jellyfin saved since the last look (names, overviews, genres, ratings, cast and crew, file details and pictures), so an edit in Jellyfin shows up without waiting for a library scan.
 - Backup and the geolocation database can be run from Tasks too; Esc steps back from a task's schedule to the list.
 
 ### Changed
@@ -146,8 +146,8 @@ Watchlist
 - **The Security map no longer lags**: dragging and zooming move the map already drawn and draw it once when the gesture settles, and the playing-now pulse no longer makes the whole map repaint 120 times a second while nobody touches it. A drag went from 34 to 60 frames a second on a slow computer.
 
 ### Fixed
-- **A poster or a portrait replaced in Jellyfin shows up in finstats**: pictures were cached for a week on the server and another week in the browser, whatever Jellyfin had since. They are now cached under Jellyfin's image tag, so a new picture is a new file, and the browser checks that its copy is current each time it shows one. Replacing a portrait re-saves only the person, so Metadata changes reads the people too.
-- **Server → Jobs shows an estimate as soon as the page opens**: the time left was measured only from readings the page itself made while open, so every visit started on "ETA…" until it had watched the percentage move. finstats now times a running Jellyfin job by itself, every 10 seconds while one runs, and the page is served the estimate. A job Jellyfin reports at 0% the whole time (a library scan's first phase) keeps its dots until it moves: nothing is guessed.
+- **A poster or a portrait replaced in Jellyfin shows up in FinStats**: pictures were cached for a week on the server and another week in the browser, whatever Jellyfin had since. They are now cached under Jellyfin's image tag, so a new picture is a new file, and the browser checks that its copy is current each time it shows one. Replacing a portrait re-saves only the person, so Metadata changes reads the people too.
+- **Server → Jobs shows an estimate as soon as the page opens**: the time left was measured only from readings the page itself made while open, so every visit started on "ETA…" until it had watched the percentage move. FinStats now times a running Jellyfin job by itself, every 10 seconds while one runs, and the page is served the estimate. A job Jellyfin reports at 0% the whole time (a library scan's first phase) keeps its dots until it moves: nothing is guessed.
 - **Map tooltips appear on the dot**: in Firefox the playing-now dot's tooltip could land far away, and where dots overlap (somebody playing at home) which tooltip showed depended on a pixel. One tooltip now names everything under the pointer.
 - **The status bar has one hover shape**: every link (the streams, Repo, the version) lights up as the same small box, and the dots between the items sit centred in the gaps. Hovering the version used to light up the dot and the gap before it too.
 - **A file path takes the whole width of its card**: on a title's File card, and for Jellyfin's folders on the Server page, a path was squeezed into one narrow cell and ran down nine lines beside empty space.
@@ -179,7 +179,7 @@ Watchlist
 - **A home address found by the lookup stays** when the same one is taken off the typed list.
 - **Pictures in the audit log and the keys list**, where there were only initials.
 - **An administrator's notification list says whose a personal destination is**, instead of "Yours" on everybody's; **Recently sent** shows every destination of its last event.
-- **Esc on a title or a person never leaves finstats**, and closes only the dialog on top.
+- **Esc on a title or a person never leaves FinStats**, and closes only the dialog on top.
 - **A page is drawn even when a save cancels the prefetch it was waiting on.**
 - **Now playing shows a paused viewer who scrubs** where they are now, not when they press play.
 - **Removing a connection updates which pages exist**, as saving one does.
@@ -188,8 +188,8 @@ Watchlist
 ## [2.0.2] - 2026-09-28
 
 ### Stability
-- **A halt is never lost**: when a library read was refused in the first moments after start-up, before the server was listening for it, the refusal was noted and finstats ran on instead of stopping.
-- **A Jellyfin that answers in a shape finstats cannot read is refused**, not believed: every user, or every title of a library, arriving under keys it does not know (`id` for `Id`) passed the guard with a full count and was then marked removed.
+- **A halt is never lost**: when a library read was refused in the first moments after start-up, before the server was listening for it, the refusal was noted and FinStats ran on instead of stopping.
+- **A Jellyfin that answers in a shape FinStats cannot read is refused**, not believed: every user, or every title of a library, arriving under keys it does not know (`id` for `Id`) passed the guard with a full count and was then marked removed.
 - **A play's end is never dropped**: when the database was busy past its wait (an import holding it), a play that ended in that moment stayed marked as playing until the next restart. It is written on the next pass now.
 - **Settings a restore cannot read are left alone**: a backup whose settings no longer fitted this version reset every setting on restore: merge window, permissions, home addresses, schedule.
 - **A control character in a name or a title no longer breaks the cards**: the profile card, every story card that showed that title and the ZIP of them answered with an error.
@@ -221,7 +221,7 @@ Watchlist
 
 ### Fixed
 - **A title's poster stays beside its name**: when the text next to it ran longer than the poster (a long synopsis, many studios), the poster sank to the bottom of the header, under empty artwork.
-- **A version finstats cannot read is called that**: an `app_version` edited by hand into something unreadable made finstats refuse to start as "the older finstats 2.0.1", which it was not. It still refuses, and now says which value it could not read and how to write it.
+- **A version FinStats cannot read is called that**: an `app_version` edited by hand into something unreadable made FinStats refuse to start as "the older FinStats 2.0.1", which it was not. It still refuses, and now says which value it could not read and how to write it.
 
 ## [2.0.0] - 2026-09-25 to 2026-09-28
 
@@ -245,7 +245,7 @@ Recap 2026, public profiles and watching together
 - Every pair counts: an evening of three counts for each of its three pairs, where the card used to count only the exact set of people. A pair's time together is the shorter of the two stays.
 - The **Watched together** card on the dashboard and on a profile links to the page, and a profile's card says what share of that person's watch time was in company.
 - `GET /api/stats/groups` gains `pairs`, `series`, `people`, `previous`, `bucket`, and `watch_s` and `share` in its totals; the keys it had are unchanged.
-- **Where people stop**, on every film and episode page: the share of plays still watching at each minute, from everyone at the start to whoever reached the end, with the rewinds and subtitle switch-ons of those plays marked on the same axis. The card says how many stops were measured (plays finstats recorded) and how many estimated (imported plays, from how long they ran), and needs three plays before it draws anything.
+- **Where people stop**, on every film and episode page: the share of plays still watching at each minute, from everyone at the start to whoever reached the end, with the rewinds and subtitle switch-ons of those plays marked on the same axis. The card says how many stops were measured (plays FinStats recorded) and how many estimated (imported plays, from how long they ran), and needs three plays before it draws anything.
 - **Who keeps watching**, on a show page: how many people started each episode, in order, and a **Finished** column per episode. "Everyone quits episode three" is people who never press play on episode four.
 - **Files that never play**, on Playback: a film or episode started three times or more that never got past thirty seconds, with who tried and on which apps. Jellyfin's log carries no playback errors, so the plays are the witness; the minimum play length does not apply here, since it is exactly what those plays never reach.
 - **Most rewound** and **Subtitles switched on**, on Playback: titles ranked by backwards skips per play with the minute they cluster in, and by the share of plays where subtitles went on within the first ten minutes. All three lists need *see everyone's activity*. Skips shorter than 20 seconds were never recorded, so a short replay of one line is invisible by design.
@@ -255,20 +255,20 @@ Recap 2026, public profiles and watching together
 - **A calendar feed**: `GET /api/calendar.ics?key=…` is what Sonarr and Radarr have coming, as an iCalendar a phone can subscribe to. A key with the *calendar* scope opens the feed and nothing else; the feed reads the key from the address because a subscribed calendar can send no header, never the cookie, and names nobody.
 - **An audit log** under Server → Audit, for Jellyfin administrators: every sign-in and failed attempt with its address, every setting or permission changed and to what, every key made, used or revoked, every connection, destination, backup and import, every play deleted and alert resolved, with who, from where, through which key, and whether it worked. Kept a year, part of backups. `GET /api/audit` pages through it.
 - **Import from Streamystats**, its own section under Settings beside Jellystat. Take its **Settings → Backup & Import → Download Backup** file and drop it in: years of history arrive in a couple of seconds, and nothing you already have is counted again. `finstats import-streamystats <file>` does it headless, `POST /api/import/streamystats` through the API; one import runs at a time, either kind.
-- **Ran both trackers? Import both files.** A play is recognised as one finstats already has by the tracker's own id for it and, failing that, by the same person watching the same item with either end of the play close to one in the history, so a Jellystat export and a Streamystats export of the same evenings can both be imported, in either order, and an evening finstats watched itself is not imported over either. "Close" is the Merge window under Settings → Collection.
+- **Ran both trackers? Import both files.** A play is recognised as one FinStats already has by the tracker's own id for it and, failing that, by the same person watching the same item with either end of the play close to one in the history, so a Jellystat export and a Streamystats export of the same evenings can both be imported, in either order, and an evening FinStats watched itself is not imported over either. "Close" is the Merge window under Settings → Collection.
 - Imported rows say what they cannot say. A play Streamystats watched itself keeps nothing about the file (no codec, resolution, bitrate or container), so those stay empty rather than being filled with a guess, and the cards that would show them hide themselves. A play it had taken from Jellystat carries the whole session, and that is read instead: dated by the moment it ended, the only moment either tracker kept, and described as a transcode only when the session really was one.
 - Rows Streamystats wrote because Jellyfin reported an item watched, for a viewing it never saw, are counted and skipped: they are as long as the whole film and would be watch time on an evening nobody watched. The result says how many there were.
 - How Streamystats data is interpreted, field by field, learned from a real export rather than from documentation: `docs/streamystats-import.md`.
-- **Which tracker each play came from**, as a filter on Activity: what finstats recorded itself, what came from Jellystat, what came from Streamystats. Only the ones your history actually holds are offered, and it is scoped like every other list, so somebody who may only see their own plays is only told where their own history came from.
+- **Which tracker each play came from**, as a filter on Activity: what FinStats recorded itself, what came from Jellystat, what came from Streamystats. Only the ones your history actually holds are offered, and it is scoped like every other list, so somebody who may only see their own plays is only told where their own history came from.
 - **The filters on Activity are dropdowns you tick**, so you can ask for films *and* episodes without music, two play methods, or two people at once, rather than one of each or all of them. Media type gained **Other** now that it can be combined.
 - Several people at once, anywhere the user filter appears (the dashboard, playback, libraries, security and the rest), with the map and every statistic following. A user filter still only ever narrows what somebody may see: without *see everyone's activity* a request is pinned to the caller, whoever the address names and however many.
-- **A light theme**: washi paper, with ink text and a vermilion accent. finstats follows the device's light or dark setting until you pick one.
+- **A light theme**: washi paper, with ink text and a vermilion accent. FinStats follows the device's light or dark setting until you pick one.
 - **A theme button beside Sign out** cycles Device, Light and Dark. The choice is kept in this browser and applied before the page is drawn, so it never flashes the other theme.
 - **Open in Jellyfin**: every film, show and episode page has a button that opens that title's page in Jellyfin, in a new tab.
-- **Jellyfin's address for people** under Settings → Jellyfin: where those buttons point, for when the address finstats connects to is not one a browser can reach. Empty keeps the address finstats connects to; only a Jellyfin administrator can set it.
+- **Jellyfin's address for people** under Settings → Jellyfin: where those buttons point, for when the address FinStats connects to is not one a browser can reach. Empty keeps the address FinStats connects to; only a Jellyfin administrator can set it.
 
 ### Changed
-- **finstats has a new home**: `github.com/finstats/finstats`, and the image is `ghcr.io/finstats/finstats`. Change the image name in your `docker run` or compose file to keep getting updates; the data folder stays as it is.
+- **FinStats has a new home**: `github.com/finstats/finstats`, and the image is `ghcr.io/finstats/finstats`. Change the image name in your `docker run` or compose file to keep getting updates; the data folder stays as it is.
 - **Settings is one section on screen at a time.** The page was fourteen cards in one column and six hundred words of help. Now each section has its own address (`/settings/collection`), a list on the left moves between them, and on a phone the list wraps into chips. Links to the old anchors still land.
 - **A setting is one row**: what it is, one line stating the rule, the control on the right. Numbers in a section save together with one button at the bottom; switches still save themselves. The status cards (Tasks, Outbound connections, Database) and the licences link live under **System**, and the two importers have a section of their own.
 - **Find a setting** from the box in the header (`/` focuses it) by any word in its name; it says which section the setting lives in, and Enter lands on the row.
@@ -276,31 +276,31 @@ Recap 2026, public profiles and watching together
 - **The Server page is one section on screen at a time**, the way Settings is: Overview (system and storage), Jobs, Devices, Plugins, Log and Audit, each at its own address. Links to `/server#jobs` still land.
 - **The server log is a section of the Server page** (`/server/log`) rather than a page of its own in the menu; `/events` forwards there with its filters.
 - A notification about a failed job, a failed backup or a connection that stopped answering links to the settings section that holds it, rather than to the top of the page.
-- What your library can tell an imported play (the kind of thing it was, which episode, its runtime, which library it belongs to) is filled in after **every** library read, not only at the moment of an import. History is usually imported before finstats has ever read the library, so those plays used to stay guessed or unknown for good.
-- Restoring a finstats backup no longer adds a play that arrived from a tracker under a different id, and still keeps two genuine viewings of the same thing minutes apart.
+- What your library can tell an imported play (the kind of thing it was, which episode, its runtime, which library it belongs to) is filled in after **every** library read, not only at the moment of an import. History is usually imported before FinStats has ever read the library, so those plays used to stay guessed or unknown for good.
+- Restoring a FinStats backup no longer adds a play that arrived from a tracker under a different id, and still keeps two genuine viewings of the same thing minutes apart.
 - A play's details name whichever tracker brought it in, rather than calling everything imported a Jellystat play.
 
 ### Performance
 - **A restart is near-instant on any history.** Every start worked out who watched together over the whole history and re-decided which plays were local, both to change nothing: 24 s and 5.5 s on ten million plays. A start now does only what the last run left behind, and all of it again only after an update or when the setting behind it changed.
 - **A crowd arriving at once is recorded in seconds.** Each new play, each progress save and each device was written on its own, and each ended play closed with its own look at the title's whole history; a pass now writes each kind at once. 100,000 plays starting together take 3 s, where 25,000 ending together used to take over four minutes.
 - **Now playing stays quick with thousands watching.** Finding who watches together compared every stream with every other and listed every companion by name: forty seconds at 10,000 streams, and gigabytes of memory beyond. Streams are now compared within a title, and each shows a few names and how many others.
-- Working out who watched together rewrote every grouped play of the history each time finstats started, imported or saw a play end; it now writes only what changed. Finding which plays had ended no longer gets slower with the square of the number playing.
+- Working out who watched together rewrote every grouped play of the history each time FinStats started, imported or saw a play end; it now writes only what changed. Finding which plays had ended no longer gets slower with the square of the number playing.
 - **Recognising a play the history already has goes through an index**, so an import of 150,000 plays takes seconds, and re-linking after a library read steps through the titles instead of reading every play while holding the database.
 - **Playback insights and the overview are quicker over all time**: their independent parts are worked out side by side, the concurrency chart looks up the local day once per quarter hour instead of once per play, and genres are counted per title. On a million plays: 4.1 s to 2.4 s, and 1.6 s to 1.1 s.
 
 ### Stability
-- **A library of television no longer reads as a library that has been gutted.** Reading a library makes two passes (every item, then a smaller one for the cast and crew of films and shows only), and the check that decides whether a read can be trusted to remove what it did not see was looking at the second. On a library of television or music the two counts are nowhere near, so the check refused every read and stopped finstats, and the install restarted and did the same again. Nothing was ever wrongly removed, but no library read could finish. If your Shows or Music library has not been picking up new titles, this is why.
+- **A library of television no longer reads as a library that has been gutted.** Reading a library makes two passes (every item, then a smaller one for the cast and crew of films and shows only), and the check that decides whether a read can be trusted to remove what it did not see was looking at the second. On a library of television or music the two counts are nowhere near, so the check refused every read and stopped FinStats, and the install restarted and did the same again. Nothing was ever wrongly removed, but no library read could finish. If your Shows or Music library has not been picking up new titles, this is why.
 - An import could fail with "database is locked" when another write (a play being refreshed) landed between its first read and its first write. Both importers take the write lock as they begin, and the database journal no longer stays as large as the largest import ever made.
 - **A database file that is damaged, cut short, somebody else's or read-only is refused at once**, naming the file and saying nothing was changed, instead of 30 silent seconds; another program's database is never written into.
 - A backup or pre-update snapshot interrupted half way no longer leaves a file behind, one that could take a good snapshot's place among the three kept.
-- **Overwriting the place database while finstats runs no longer crashes it**: finstats reads from a private copy of the file.
-- A Jellyfin app that reported a new device id every time could make finstats' memory grow for as long as it ran; devices not seen for five minutes are now forgotten.
+- **Overwriting the place database while FinStats runs no longer crashes it**: FinStats reads from a private copy of the file.
+- A Jellyfin app that reported a new device id every time could make FinStats' memory grow for as long as it ran; devices not seen for five minutes are now forgotten.
 - One person keeps at most 30 signed-in sessions; the oldest is signed out at the next sign-in.
 
 ### Fixed
-- **The same evening is no longer counted twice when an item has been renamed.** Re-linking history to a title that was re-added in Jellyfin could turn a play imported from a tracker into a duplicate of one already there, because the check that would have caught it ran before the id moved. It now runs again wherever ids are re-linked. Only imported plays are ever removed, never one finstats recorded itself, and how many went is in the log. The first start of 2.0 sweeps the whole history once for the ones already there.
-- **A session now follows the person as Jellyfin has them now.** An administrator Jellyfin demoted kept full access to finstats for the rest of their 30-day session, and somebody disabled or deleted in Jellyfin stayed signed in. They now lose it as soon as finstats reads Jellyfin's users (every 15 minutes, or at once from Settings), as API keys always do.
-- Signing in writes what Jellyfin says about the person into finstats' user list, so an imported tracker backup can no longer make somebody an administrator before the first read of the users corrects it.
+- **The same evening is no longer counted twice when an item has been renamed.** Re-linking history to a title that was re-added in Jellyfin could turn a play imported from a tracker into a duplicate of one already there, because the check that would have caught it ran before the id moved. It now runs again wherever ids are re-linked. Only imported plays are ever removed, never one FinStats recorded itself, and how many went is in the log. The first start of 2.0 sweeps the whole history once for the ones already there.
+- **A session now follows the person as Jellyfin has them now.** An administrator Jellyfin demoted kept full access to FinStats for the rest of their 30-day session, and somebody disabled or deleted in Jellyfin stayed signed in. They now lose it as soon as FinStats reads Jellyfin's users (every 15 minutes, or at once from Settings), as API keys always do.
+- Signing in writes what Jellyfin says about the person into FinStats' user list, so an imported tracker backup can no longer make somebody an administrator before the first read of the users corrects it.
 - Somebody deleted in Jellyfin is marked removed even when two reads of the users fall in the same second.
 - **Download errors never show a download client's password or an indexer's API key**, which Sonarr and Radarr can quote in them.
 - Plays re-linked to a renamed title during a library read were not checked for watching together until the next restart; they now are, at once.
@@ -308,13 +308,13 @@ Recap 2026, public profiles and watching together
 ## [1.6.5] - 2026-09-24
 
 ### Added
-- **A full backup is taken automatically before every upgrade.** The first time a newer finstats opens your database, it writes a complete copy of it (your whole history, settings and all) to `data/pre-update-backups/` *before* it changes anything. If an upgrade ever breaks something, your data is safe: stop finstats, put the copy back in place of `finstats.db`, start the version you were on, and report the bug. Nothing is lost. The newest few copies are kept; set `FINSTATS_SKIP_PREUPDATE_BACKUP=1` to turn it off if disk space is tight.
+- **A full backup is taken automatically before every upgrade.** The first time a newer FinStats opens your database, it writes a complete copy of it (your whole history, settings and all) to `data/pre-update-backups/` *before* it changes anything. If an upgrade ever breaks something, your data is safe: stop FinStats, put the copy back in place of `finstats.db`, start the version you were on, and report the bug. Nothing is lost. The newest few copies are kept; set `FINSTATS_SKIP_PREUPDATE_BACKUP=1` to turn it off if disk space is tight.
 
 ## [1.6.4] - 2026-09-24
 
 ### Added
 - **Five more places to send notifications**: Telegram, Slack, Pushover, Pushbullet and e-mail, beside the webhook, Discord, ntfy and Gotify destinations already there. Each asks only for what it needs (a chat id, a user key, a mailbox), and the three that live at one service (Telegram, Pushover, Pushbullet) can only ever be reached there, so a token cannot be posted to a look-alike host. Mail goes out over TLS from the first byte or `STARTTLS`, and there is no third option.
-- **Licences**, under **Settings**: finstats' own GPL and every third-party licence it is built on (253 Rust crates, the two bundled fonts, the map outlines and the geolocation database), each text in full, as its own project wrote it. Pick a component and its licence opens in the window beside the list; a crate that ships several files switches between them in place. The list is generated from the crates finstats is actually built from, so a dependency cannot be added without its licence being recorded.
+- **Licences**, under **Settings**: FinStats' own GPL and every third-party licence it is built on (253 Rust crates, the two bundled fonts, the map outlines and the geolocation database), each text in full, as its own project wrote it. Pick a component and its licence opens in the window beside the list; a crate that ships several files switches between them in place. The list is generated from the crates FinStats is actually built from, so a dependency cannot be added without its licence being recorded.
 
 ## [1.6.3] - 2026-09-24
 
@@ -324,12 +324,12 @@ Recap 2026, public profiles and watching together
 ## [1.6.2] - 2026-09-24
 
 ### Fixed
-- The data-integrity guard added in 1.6.1 was too eager: a library genuinely losing most of its items (a handful of clips whose files went, say) was mistaken for a broken read, so finstats refused to update it and stopped. It now steps in only for a *clearly* broken read: a library big enough to matter that reads back completely empty, or a large one gutted to almost nothing. Everyday changes apply as before, and the "Jellyfin returned nothing" case is still caught.
+- The data-integrity guard added in 1.6.1 was too eager: a library genuinely losing most of its items (a handful of clips whose files went, say) was mistaken for a broken read, so FinStats refused to update it and stopped. It now steps in only for a *clearly* broken read: a library big enough to matter that reads back completely empty, or a large one gutted to almost nothing. Everyday changes apply as before, and the "Jellyfin returned nothing" case is still caught.
 
 ## [1.6.1] - 2026-09-24
 
 ### Added
-- **finstats no longer trusts a Jellyfin read that would wipe your history.** If a library that finstats holds thousands of items for suddenly reads back empty or nearly so (a Jellyfin upgrade that changed its API, an error dressed as an empty result), finstats keeps the data it has, marks the sync failed (and notifies), and stops cleanly with a clear message rather than marking everything removed. Restart once Jellyfin is itself again, or set `FINSTATS_ALLOW_LIBRARY_SHRINK=1` if you really did empty a library. The same guard covers the library list and the user list.
+- **FinStats no longer trusts a Jellyfin read that would wipe your history.** If a library that FinStats holds thousands of items for suddenly reads back empty or nearly so (a Jellyfin upgrade that changed its API, an error dressed as an empty result), FinStats keeps the data it has, marks the sync failed (and notifies), and stops cleanly with a clear message rather than marking everything removed. Restart once Jellyfin is itself again, or set `FINSTATS_ALLOW_LIBRARY_SHRINK=1` if you really did empty a library. The same guard covers the library list and the user list.
 
 ### Fixed
 - **Security:** an `X-Forwarded-Host` header sent by a client could vouch for a foreign `Origin` and get a cross-site write past the same-origin guard. That header is trusted only behind a trusted proxy now (`FINSTATS_TRUST_PROXY`), the same rule the client-address lookup already uses. The `SameSite=Lax` session cookie was, and stays, the first line of defence.
@@ -350,17 +350,17 @@ Notifications
 - Personal destinations: grant **Be sent notifications** and somebody can add one of their own, which is sent only what they may already see: their own requests and alerts always, other people's with *see everyone's activity*, addresses with *see network details*. A personal destination must point at a public address; only an administrator may aim one inside the network.
 - **Include IP addresses and places**, per destination and off by default: a message about impossible travel otherwise names places only ("Oslo, Norway and London, United Kingdom").
 - **Recently sent**, in the same card: what was said, to which destination, and what the other side answered when it did not arrive. A failed message is retried four times over about an hour, and a destination that is rate-limiting is waited for.
-- **The address of finstats**, a setting for administrators, is what a notification's link is built from. Empty means messages carry no link.
-- Jellyfin's own scheduled tasks on the Server page: what each one does in words rather than by the name of its code, and whether it is one of the heavy ones. A running task shows a progress bar, a percentage and how much is left; the rest show when they next run, when they last ran and whether that went well. Tasks Jellyfin hides from its own dashboard are included, and nothing in finstats can start or stop a task.
+- **The address of FinStats**, a setting for administrators, is what a notification's link is built from. Empty means messages carry no link.
+- Jellyfin's own scheduled tasks on the Server page: what each one does in words rather than by the name of its code, and whether it is one of the heavy ones. A running task shows a progress bar, a percentage and how much is left; the rest show when they next run, when they last ran and whether that went well. Tasks Jellyfin hides from its own dashboard are included, and nothing in FinStats can start or stop a task.
 - How much of a task is left is measured from the rate its percentage has actually moved at, against the most recent reading far enough back to mean something rather than the average of the whole run, so a task that speeds up or slows down is described by the pace it has now.
-- The task lists finstats already reads for other reasons (the library-scan check every 5 minutes, the server details every 15) feed the same measurement, so a task that has been running an hour usually has an estimate the moment the page opens. Nothing extra is asked of Jellyfin for it.
+- The task lists FinStats already reads for other reasons (the library-scan check every 5 minutes, the server details every 15) feed the same measurement, so a task that has been running an hour usually has an estimate the moment the page opens. Nothing extra is asked of Jellyfin for it.
 - A running task with nothing measured yet shows **ETA** and a cycling ellipsis instead of a number, and one whose percentage has not moved for half a minute reads "68% for 4m" beside it. Nothing stands in for an estimate that was not measured.
 - A list of every version beside the patch notes: one click goes to any release, it marks the one being read, and on a narrow screen it becomes a row of series above the notes.
 
 ### Changed
 - Patch notes no longer fold. Every series stands open and the list of versions is how you get about, instead of one group open at a time and a click to reach any other.
 - **Settings → Outbound connections** lists every notification destination alongside Jellyfin and the service connections: what it is, its host, whether it is switched on, and when it last took a message.
-- Nothing about collection, history or any figure on screen changes. finstats still only ever *reads* from Jellyfin, Sonarr, Radarr and Seerr.
+- Nothing about collection, history or any figure on screen changes. FinStats still only ever *reads* from Jellyfin, Sonarr, Radarr and Seerr.
 
 ## [1.5.2] - 2026-09-22
 
@@ -371,7 +371,7 @@ Notifications
 ## [1.5.1] - 2026-09-22
 
 ### Fixed
-- A transcode is recorded once, not once a second. When a play starts by transcoding and settles back to direct play, Jellyfin leaves the transcoding details on the session; each reading was compared against a value finstats had just overwritten, so every reading looked like a change and the Activity page filled with "Transcoding" lines reading "Direct play: …" underneath.
+- A transcode is recorded once, not once a second. When a play starts by transcoding and settles back to direct play, Jellyfin leaves the transcoding details on the session; each reading was compared against a value FinStats had just overwritten, so every reading looked like a change and the Activity page filled with "Transcoding" lines reading "Direct play: …" underneath.
 - Lines already written are cleaned up on start-up: where a run of them says the same thing, the first is kept. A play that needed transcoding still counts as a transcode.
 
 ## [1.5.0] - 2026-09-22
@@ -379,14 +379,14 @@ Notifications
 WebSocket session tracking
 
 ### Changed
-- finstats keeps one connection open to Jellyfin from the moment it starts, and that is how it hears about a play. 1.4.0 shipped it as a setting, off by default, to prove itself against real servers; it is now always on. The same plays, pauses and skips, worked out by the same code.
-- Nothing playing: finstats asks Jellyfin nothing at all. An evening when nobody is watching costs no requests.
+- FinStats keeps one connection open to Jellyfin from the moment it starts, and that is how it hears about a play. 1.4.0 shipped it as a setting, off by default, to prove itself against real servers; it is now always on. The same plays, pauses and skips, worked out by the same code.
+- Nothing playing: FinStats asks Jellyfin nothing at all. An evening when nobody is watching costs no requests.
 - Something playing: the session list is read once a second. That is where a pause, a seek or a track change gets its sharpness, and it is what ends a play whose client vanished without saying goodbye.
 - Everything loaded paused for three readings in a row: the asking stops and the connection carries it instead, where before a paused film cost the same question every second, around 16 MB an hour. A resume, or somebody else starting something, is answered within about a second, and paused time still never counts as watch time.
 - Every outbound read asks for compressed answers and unpacks them (Jellyfin, Sonarr, Radarr and Seerr all compress when asked), which takes more than half off the two largest reads: the session list during a play, and the library read. The geolocation database is still downloaded as it is stored.
 - The Jellyfin card in Settings says which of the two halves is running, and the live dot follows whether the connection is carrying rather than which half you are in.
-- Only one of the two runs at a time: while finstats is asking it tells Jellyfin to stop sending, and asks it to start again the moment the last play ends. The connection stays open throughout.
-- A Jellyfin that answers the subscription with nothing is believed while it answers keep-alives: finstats says so once, reads the session list itself meanwhile, and stays subscribed until the first push settles it. "Cannot push" and "was restarting when we asked" look alike, so silence is never a verdict.
+- Only one of the two runs at a time: while FinStats is asking it tells Jellyfin to stop sending, and asks it to start again the moment the last play ends. The connection stays open throughout.
+- A Jellyfin that answers the subscription with nothing is believed while it answers keep-alives: FinStats says so once, reads the session list itself meanwhile, and stays subscribed until the first push settles it. "Cannot push" and "was restarting when we asked" look alike, so silence is never a verdict.
 - The fallback is untouched: a connection that closes, goes quiet or turns out not to speak this drops back to asking on a timer on the very next pass and keeps reconnecting, at the **While someone is watching, check every** and **While nothing is playing, check every** intervals.
 
 ### Added
@@ -396,7 +396,7 @@ WebSocket session tracking
 
 ### Fixed
 - Live updates really replace the polling. Switched on, 1.4.0 still asked for the session list every five seconds and reopened the connection every twenty to forty, because it judged the connection by how recently a list had arrived, and Jellyfin sends one when something *changes* and nothing in between. Liveness is now whether Jellyfin is answering at all, checked with a keep-alive about twice a minute.
-- A session list that arrived while finstats was between passes was thrown away, on the assumption that another was a second and a half behind. It is kept and used.
+- A session list that arrived while FinStats was between passes was thrown away, on the assumption that another was a second and a half behind. It is kept and used.
 - **Last checked** under Settings, and the Outbound connections card, no longer go stale while the connection is quiet: Jellyfin's answer to a keep-alive is what they show.
 
 ### Removed
@@ -407,20 +407,20 @@ WebSocket session tracking
 ## [1.4.1] - 2026-09-22
 
 ### Changed
-- Seerr is only read in full when something has changed: every five minutes finstats asks for one row, the most recently changed request, and the pass ends there if it already knows it. That is about a kilobyte against about sixty for a page of fifty. Requests still on their way are looked at every quarter of an hour, everything is listed once a day, and a new request still appears within five minutes.
+- Seerr is only read in full when something has changed: every five minutes FinStats asks for one row, the most recently changed request, and the pass ends there if it already knows it. That is about a kilobyte against about sixty for a page of fifty. Requests still on their way are looked at every quarter of an hour, everything is listed once a day, and a new request still appears within five minutes.
 - The Sonarr and Radarr queues are read every five seconds while a page is showing them, every minute while something is in the queue and every five minutes while it is empty, instead of every minute around the clock. Opening the page, connecting a service or a new request in Seerr refreshes them at once.
 
 ## [1.4.0] - 2026-09-21
 
-Optional WebSocket sessions, and everywhere finstats can reach
+Optional WebSocket sessions, and everywhere FinStats can reach
 
 ### Added
-- **Let Jellyfin push what is playing** under Settings → Collection, off until you turn it on: one connection carries the session list, and about 17,000 requests a day become almost none. The plays, pauses, skips and groups are worked out by exactly the code that worked them out before. While it is live finstats still makes one ordinary request a minute *while something is playing*, and none when nothing is. A connection that closes, goes quiet for fifteen seconds or turns out not to speak it falls back to the timer on the next pass and keeps reconnecting.
-- **Outbound connections**, a card in Settings for Jellyfin administrators: every destination finstats can reach (your Jellyfin, the "what is my IP" service, DB-IP's database, and each Sonarr, Radarr or Seerr), with what it is for, whether it is switched on, and when it last answered. Built from what finstats already knows, and it shows addresses only: never a key, never a base path.
+- **Let Jellyfin push what is playing** under Settings → Collection, off until you turn it on: one connection carries the session list, and about 17,000 requests a day become almost none. The plays, pauses, skips and groups are worked out by exactly the code that worked them out before. While it is live FinStats still makes one ordinary request a minute *while something is playing*, and none when nothing is. A connection that closes, goes quiet for fifteen seconds or turns out not to speak it falls back to the timer on the next pass and keeps reconnecting.
+- **Outbound connections**, a card in Settings for Jellyfin administrators: every destination FinStats can reach (your Jellyfin, the "what is my IP" service, DB-IP's database, and each Sonarr, Radarr or Seerr), with what it is for, whether it is switched on, and when it last answered. Built from what FinStats already knows, and it shows addresses only: never a key, never a base path.
 - **Look up now** under Settings → Home network, for the day your public address changes.
 
 ### Changed
-- The "what is my IP" lookup runs once, the first time finstats needs an address, instead of every fifteen minutes.
+- The "what is my IP" lookup runs once, the first time FinStats needs an address, instead of every fifteen minutes.
 - The Jellyfin card in Settings says how the collector is being told, and, when the connection is switched on but not carrying, why not.
 
 ## [1.3.0] - 2026-09-20
@@ -428,15 +428,15 @@ Optional WebSocket sessions, and everywhere finstats can reach
 Sonarr, Radarr and Seerr, on one page
 
 ### Added
-- **Connections** under Settings, for Jellyfin administrators: **Sonarr**, **Radarr** and **Seerr** (or Jellyseerr/Overseerr), several of a kind, each tested before it is saved. Your download client needs no setup of its own, because Sonarr and Radarr already talk to it and finstats reads what they know.
+- **Connections** under Settings, for Jellyfin administrators: **Sonarr**, **Radarr** and **Seerr** (or Jellyseerr/Overseerr), several of a kind, each tested before it is saved. Your download client needs no setup of its own, because Sonarr and Radarr already talk to it and FinStats reads what they know.
 - **Requests**: who asked for what, how long it took to arrive, and whether they ever watched it. Tiles for titles waiting and the typical wait, a chart of how that changed month by month, and lists of what arrived weeks ago and was never played, and who asks for the most.
 - **Upcoming**: new episodes and film releases from Sonarr and Radarr as an agenda by day, marked with whether *you* watch that show and, for people who may see everyone, who else does. A show counts as watched when somebody played an episode of it in the last four months. A "Coming up" row on the dashboard, one per profile for the shows that person watches, and what is next for a title on its own page.
 - **Downloads**: the live queue of every Sonarr and Radarr (what it is, how far along, how fast, what went wrong on import), with the person who asked for it beside it. A season pack is one line however many episodes it holds, and what needs attention is on top. Below it, what came in over a week, a month or a year by indexer, quality and download client, and which downloads failed. The dashboard shows the same list, shortened.
 - **See what is downloading**, a new permission. Without it people still see how far their *own* request has got and how long is left, and nothing else: no release names, no speeds, no other downloads. Other people's requests need *See everyone's activity*.
 
 ### Changed
-- finstats sends `GET` to these services and nothing else: there is no code in it that could approve a request, start a search, or add, pause or remove a download.
-- Their API keys are stored in finstats' own database, never sent back to the browser, never written to a log and never part of a backup. No redirect is followed, so a key cannot travel somewhere you did not enter, and certificates are verified unless you switch that off for one connection.
+- FinStats sends `GET` to these services and nothing else: there is no code in it that could approve a request, start a search, or add, pause or remove a download.
+- Their API keys are stored in FinStats' own database, never sent back to the browser, never written to a log and never part of a backup. No redirect is followed, so a key cannot travel somewhere you did not enter, and certificates are verified unless you switch that off for one connection.
 
 ## [1.2.2] - 2026-09-20
 
@@ -444,7 +444,7 @@ Sonarr, Radarr and Seerr, on one page
 - Audio and subtitle languages on every film and episode ("Audio: Japanese · English").
 - How far a dub goes: a show or season says how many of its episodes have each language ("English: 13 of 26 episodes"), and the episode list has an **Audio** column.
 - **Audio languages** and **Subtitle languages** on library pages: how many files can be played in each.
-- finstats re-reads the library once after this update to pick the languages up. It never says "dubbed", because Jellyfin does not give a title's original language, and a track without a language tag is listed as "Unknown".
+- FinStats re-reads the library once after this update to pick the languages up. It never says "dubbed", because Jellyfin does not give a title's original language, and a track without a language tag is listed as "Unknown".
 
 ## [1.2.1] - 2026-09-20
 
@@ -460,7 +460,7 @@ Where people watch from, on a map
 - **Impossible travel**: an alert when one account is seen in two places no flight connects, or in two distant places at once, with both sightings, the distance, the time between them and the speed that would have taken. **Show on map** draws the trip.
 - **New country**: the first time someone plays or signs in from a country they have not been seen in.
 - Resolve an alert with a note, or mute a pair of places for that person, for a VPN or a phone whose carrier sits in the capital. Alerts found in old history, after an import or on a fresh database, are filed as resolved rather than flooding the list. Alerts and what you decided about them are part of backups.
-- Places come from a city database read locally: no address is ever sent anywhere, and the map is drawn from outlines bundled with finstats rather than a map service. Download DB-IP's free database from the Security page or **Settings → Security**, let finstats refresh it monthly (off until you switch it on), or drop your own `.mmdb` (DB-IP, MaxMind GeoLite2-City) into `data/geoip/`. `FINSTATS_GEOIP_DB` names a file elsewhere.
+- Places come from a city database read locally: no address is ever sent anywhere, and the map is drawn from outlines bundled with FinStats rather than a map service. Download DB-IP's free database from the Security page or **Settings → Security**, let FinStats refresh it monthly (off until you switch it on), or drop your own `.mmdb` (DB-IP, MaxMind GeoLite2-City) into `data/geoip/`. `FINSTATS_GEOIP_DB` names a file elsewhere.
 - **Settings → Security**: the database in use, the monthly update, and how fast (900 km/h) and how far apart (500 km) two sightings must be to count as impossible travel. City databases are often a few hundred kilometres off, which is what the distance is for.
 
 ## [1.1.3] - 2026-09-20
@@ -479,7 +479,7 @@ Where people watch from, on a map
 ## [1.1.1] - 2026-09-20
 
 ### Added
-- Pages open at once: a moment after finstats has loaded it quietly fetches what you are likely to open next (the dashboard, your profile and timeline, Activity, Users, Libraries and each library, Playback, the server pages, the recap and the most active people), so opening one shows it immediately and it still refreshes behind the scenes.
+- Pages open at once: a moment after FinStats has loaded it quietly fetches what you are likely to open next (the dashboard, your profile and timeline, Activity, Users, Libraries and each library, Playback, the server pages, the recap and the most active people), so opening one shows it immediately and it still refreshes behind the scenes.
 - Films, shows and cast members are fetched on intent only, as there are thousands of them: resting the pointer on a link, touching it or reaching it with the keyboard fetches that one page.
 - It waits until the page you opened has finished loading, works one page at a time while the browser is idle, pauses in a background tab, does nothing on a data-saver or very slow connection, and is forgotten when you sign out.
 - A small **Repo** link with the GitHub mark in the status bar, next to the version.
@@ -492,7 +492,7 @@ Where people watch from, on a map
 A timeline of everything you have watched
 
 ### Added
-- **Timeline**, next to **Overview** on every profile: your watching as one trail from today back to the first play finstats knows about, with an evening of episodes folded into a single stop. Each stop is a poster with what was watched and when ("Season 2 · Episodes 3-6", a film and whether it took more than one sitting, or an album and how many tracks), and opens the title.
+- **Timeline**, next to **Overview** on every profile: your watching as one trail from today back to the first play FinStats knows about, with an evening of episodes folded into a single stop. Each stop is a poster with what was watched and when ("Season 2 · Episodes 3-6", a film and whether it took more than one sitting, or an album and how many tracks), and opens the title.
 - The trail follows the width of the window: three stops to a row on a wide screen, two on a narrower one, every other row running backwards with a bend joining it to the next, down to a single straight line on a phone. The first stop of each month carries the month.
 - Older stops load by themselves as you scroll, all the way back to where the history starts.
 - **Libraries** switches above the trail leave out what you do not want to see, such as music, and the choice is part of the address.
@@ -502,7 +502,7 @@ A timeline of everything you have watched
 ## [1.0.5] - 2026-09-20
 
 ### Added
-- Downgrade protection: the database remembers the newest finstats version that has opened it, and an older version refuses to start on it instead of quietly working on data it does not fully understand. The message says what to do. Versions up to 1.0.4 were released before this check existed.
+- Downgrade protection: the database remembers the newest FinStats version that has opened it, and an older version refuses to start on it instead of quietly working on data it does not fully understand. The message says what to do. Versions up to 1.0.4 were released before this check existed.
 
 ## [1.0.4] - 2026-09-20
 
@@ -526,7 +526,7 @@ A timeline of everything you have watched
 ## [1.0.1] - 2026-09-20
 
 ### Fixed
-- The published image would not start on a fresh machine: "unable to open database file: /data/finstats.db", after hanging for half a minute. Docker creates a missing `data` folder as root and finstats runs as an ordinary user. The container now makes the folder its own and then drops to that user, so `docker run` works on the first try. For files owned by someone other than user 1000, set `PUID` and `PGID`; `--user` works as before.
+- The published image would not start on a fresh machine: "unable to open database file: /data/finstats.db", after hanging for half a minute. Docker creates a missing `data` folder as root and FinStats runs as an ordinary user. The container now makes the folder its own and then drops to that user, so `docker run` works on the first try. For files owned by someone other than user 1000, set `PUID` and `PGID`; `--user` works as before.
 - A data folder that really cannot be written is reported at once, with the command that fixes it, instead of 30 seconds later as a database error.
 
 ## [1.0.0] - 2026-09-20
@@ -552,7 +552,7 @@ Ready for everyone
 ## [0.10.1] - 2026-09-20
 
 ### Fixed
-- Downloading a backup failed in the browser ("the source file could not be read" in Firefox) with nothing on the page to say why: finstats was compressing a backup, which is already compressed, a second time, and the doubly-packed transfer broke off before the end. Backups are sent as they are, with their size up front, so the browser can show real progress.
+- Downloading a backup failed in the browser ("the source file could not be read" in Firefox) with nothing on the page to say why: FinStats was compressing a backup, which is already compressed, a second time, and the doubly-packed transfer broke off before the end. Backups are sent as they are, with their size up front, so the browser can show real progress.
 
 ## [0.10.0] - 2026-09-20
 
@@ -571,10 +571,10 @@ Backups, and moving to a new install
 ## [0.9.1] - 2026-09-20
 
 ### Fixed
-- People at home were shown as remote. A device on your own network that reaches Jellyfin through its public name, such as a reverse proxy or a domain, arrives with the household's public IP, and only private addresses counted as local. finstats now learns the public address and counts those plays as local for the whole history, and it remembers earlier addresses.
+- People at home were shown as remote. A device on your own network that reaches Jellyfin through its public name, such as a reverse proxy or a domain, arrives with the household's public IP, and only private addresses counted as local. FinStats now learns the public address and counts those plays as local for the whole history, and it remembers earlier addresses.
 
 ### Added
-- **Settings → Home network**: the addresses finstats treats as home, adding your own (an earlier address, a second home, a VPN exit), or switching the lookup off. The lookup asks a plain "what is my IP" service every 15 minutes, trying several (Amazon, Cloudflare and others) because ad-blocking DNS such as Pi-hole often blocks them, and one of them needs no DNS at all. The request contains nothing about you or your server, and with the switch off finstats talks to nothing but Jellyfin. `FINSTATS_PUBLIC_IP_URL` sets a service of your own.
+- **Settings → Home network**: the addresses FinStats treats as home, adding your own (an earlier address, a second home, a VPN exit), or switching the lookup off. The lookup asks a plain "what is my IP" service every 15 minutes, trying several (Amazon, Cloudflare and others) because ad-blocking DNS such as Pi-hole often blocks them, and one of them needs no DNS at all. The request contains nothing about you or your server, and with the switch off FinStats talks to nothing but Jellyfin. `FINSTATS_PUBLIC_IP_URL` sets a service of your own.
 
 ## [0.9.0] - 2026-09-20
 
@@ -588,7 +588,7 @@ Every table, in the order you want
 ## [0.8.2] - 2026-09-20
 
 ### Changed
-- The recap's year picker is the same switch as every other range picker in finstats (7d · 30d · 90d …).
+- The recap's year picker is the same switch as every other range picker in FinStats (7d · 30d · 90d …).
 
 ## [0.8.1] - 2026-09-19
 
@@ -615,7 +615,7 @@ The recap has a new look, and more to say
 ## [0.7.10] - 2026-09-19
 
 ### Added
-- Library artwork: each library card, and the library's own page, shows the picture Jellyfin uses for it, through finstats' image proxy like the posters. A library without one keeps its icon.
+- Library artwork: each library card, and the library's own page, shows the picture Jellyfin uses for it, through FinStats' image proxy like the posters. A library without one keeps its icon.
 
 ## [0.7.9] - 2026-09-19
 
@@ -630,7 +630,7 @@ The recap has a new look, and more to say
 ## [0.7.7] - 2026-09-19
 
 ### Fixed
-- Movies that belong to a collection were shown as "No longer in library". With *group movies into collections* switched on, Jellyfin hands out the collection instead of the films inside it, so finstats never saw them; on one server that hid 556 of 1,238 items in the Movies library. finstats now asks for the films themselves, and the read this update triggers brings them back and re-attaches their plays.
+- Movies that belong to a collection were shown as "No longer in library". With *group movies into collections* switched on, Jellyfin hands out the collection instead of the films inside it, so FinStats never saw them; on one server that hid 556 of 1,238 items in the Movies library. FinStats now asks for the films themselves, and the read this update triggers brings them back and re-attaches their plays.
 
 ## [0.7.6] - 2026-09-19
 
@@ -656,7 +656,7 @@ The recap has a new look, and more to say
 ## [0.7.2] - 2026-09-19
 
 ### Added
-- Group watching, live: each Now playing card says "With maria" while people are watching the same thing together, where a group used to be recognised only once the plays had ended. Live, people count as together when they are on the same title and either started within the group window or are at nearly the same position, which still works if finstats was restarted mid-stream.
+- Group watching, live: each Now playing card says "With maria" while people are watching the same thing together, where a group used to be recognised only once the plays had ended. Live, people count as together when they are on the same title and either started within the group window or are at nearly the same position, which still works if FinStats was restarted mid-stream.
 
 ## [0.7.1] - 2026-09-19
 
@@ -668,7 +668,7 @@ The recap has a new look, and more to say
 Who watches together
 
 ### Added
-- Group watching: when different people start the same title at the same time, finstats counts it as watching together. A **Watched together** card on the dashboard shows the groups, the titles they share and their hours together, each profile shows who that person watches with most, shared plays carry a small people mark in Activity, and the play details say who it was watched with. It works on your whole history, imported plays included.
+- Group watching: when different people start the same title at the same time, FinStats counts it as watching together. A **Watched together** card on the dashboard shows the groups, the titles they share and their hours together, each profile shows who that person watches with most, shared plays carry a small people mark in Activity, and the play details say who it was watched with. It works on your whole history, imported plays included.
 - A setting for how close together the starts must be, 60 seconds by default: about a third of genuine group sessions start 6 to 60 seconds apart. People also have to keep watching alongside each other for a couple of minutes, so two people opening the same episode by coincidence is not a group.
 
 ### Changed
@@ -688,7 +688,7 @@ Your profile, and where you are in every show
 
 ### Added
 - Show progress on profiles: every series you have touched as a bar with one segment per episode (seen, started or not yet), openable season by season, sorted by how close you are to finishing, with separate views for finished shows and everything.
-- **Mark as seen** on your own profile, per episode, season or show, for what you watched while nothing was recording. Jellyfin's own played marks are used as well. Marks stay in finstats and never change anything in Jellyfin; a recorded play cannot be unmarked, your own marks can.
+- **Mark as seen** on your own profile, per episode, season or show, for what you watched while nothing was recording. Jellyfin's own played marks are used as well. Marks stay in FinStats and never change anything in Jellyfin; a recorded play cannot be unmarked, your own marks can.
 - Day streaks on profiles: your longest run of days in a row with a play, your current streak, and how many days you have watched something.
 - **My profile** in the sidebar.
 - Activity shows where playback stopped (for example `44:15 / 45:00`) under the progress bar, and the date and time under "3h ago". Plays imported from Jellystat have no stop position, because Jellystat never recorded one.
@@ -706,19 +706,19 @@ Your profile, and where you are in every show
 You decide who sees what
 
 ### Added
-- Permissions under Settings → Access, for everyone at once or person by person: **see everyone's activity** (other people's statistics and history, the Users page, every live stream), **see network details** (IP addresses, device ids, local or remote), **see the server** (the Server page, the server log, failed sign-ins, file paths) and **manage finstats** (settings, tasks, import, deleting plays).
-- Sign-in per person, to let a few people in without opening finstats to every Jellyfin user.
+- Permissions under Settings → Access, for everyone at once or person by person: **see everyone's activity** (other people's statistics and history, the Users page, every live stream), **see network details** (IP addresses, device ids, local or remote), **see the server** (the Server page, the server log, failed sign-ins, file paths) and **manage FinStats** (settings, tasks, import, deleting plays).
+- Sign-in per person, to let a few people in without opening FinStats to every Jellyfin user.
 - Changes apply immediately, including taking access away, and everything is enforced by the server rather than by hiding buttons.
 
 ### Changed
-- Jellyfin administrators still have everything and are the only ones who can change permissions; someone who may manage finstats cannot grant anything, to themselves or anyone else.
+- Jellyfin administrators still have everything and are the only ones who can change permissions; someone who may manage FinStats cannot grant anything, to themselves or anyone else.
 - The year recap stays personal whatever is granted.
 - Nothing changes for existing installs until you grant something.
 
 ## [0.4.5] - 2026-09-19
 
 ### Changed
-- finstats is licensed under the **GNU General Public License v3.0**. No earlier version was ever published, so nothing was released under different terms. The licenses of the bundled fonts ship alongside them.
+- FinStats is licensed under the **GNU General Public License v3.0**. No earlier version was ever published, so nothing was released under different terms. The licenses of the bundled fonts ship alongside them.
 
 ## [0.4.4] - 2026-09-19
 
@@ -728,7 +728,7 @@ You decide who sees what
 ## [0.4.3] - 2026-09-19
 
 ### Changed
-- finstats remembers what each page last showed: going back to a profile, a library or a time range you have already looked at paints it immediately, profile picture and all, while fresh numbers load behind it, and the page only redraws if something changed. What is remembered lives in the browser tab and is dropped when you sign out or change anything.
+- FinStats remembers what each page last showed: going back to a profile, a library or a time range you have already looked at paints it immediately, profile picture and all, while fresh numbers load behind it, and the page only redraws if something changed. What is remembered lives in the browser tab and is dropped when you sign out or change anything.
 - Loading placeholders appear only when loading is actually slow. Before, every page showed them for at least a third of a second.
 
 ### Fixed
@@ -758,7 +758,7 @@ See what changed without leaving the app
 ## [0.3.3] - 2026-09-19
 
 ### Changed
-- The library is re-read right after Jellyfin's **Scan Media Library** task finishes, never on a separate timer and never while a scan is running. finstats has always been read-only towards Jellyfin, and it never starts a scan there.
+- The library is re-read right after Jellyfin's **Scan Media Library** task finishes, never on a separate timer and never while a scan is running. FinStats has always been read-only towards Jellyfin, and it never starts a scan there.
 - A weekly safety-net read covers servers that rely on real-time monitoring, where the scan task may never run.
 - The old interval is now only a fallback, for when following is switched off or the server reports no scan task.
 
@@ -802,7 +802,7 @@ More than Jellystat ever recorded
 - A timeline for every play: start, pause, resume, skip, audio and subtitle switches, direct play turning into a transcode, and stop. Plus pause and skip counts, where playback resumed from, and whether the viewer was on the local network.
 - **Server** tab: Jellyfin version, pending updates and restarts, disk usage per library (Jellyfin 10.11+), plugins, scheduled task results and every registered device.
 - **Playback** insights: concurrent streams over time, which clients force transcodes, how far people get before stopping, local versus remote plays and viewing behaviour.
-- What your library is made of: resolutions, codecs, dynamic range, containers, titles per decade, additions per month, the largest titles, and the titles nobody has ever watched, checked against both finstats' history and Jellyfin's own played flags.
+- What your library is made of: resolutions, codecs, dynamic range, containers, titles per decade, additions per month, the largest titles, and the titles nobody has ever watched, checked against both FinStats' history and Jellyfin's own played flags.
 - Dashboard: peak concurrent streams, estimated data streamed, share of remote plays, genres by watch time and failed sign-ins.
 - Item pages: IMDb and TMDB links, studios, bit depth and frame rate, and who has the title marked as played in Jellyfin.
 - User pages: genres, and the movies, episodes and favourites Jellyfin has on record.
@@ -818,7 +818,7 @@ First release
 
 ### Added
 - Live collection from Jellyfin's sessions: user, title, client, device, IP address, play method, transcode reasons and hardware acceleration, video, audio and subtitle details, and time watched versus time paused.
-- Sign-in with your Jellyfin account. A two-step setup creates finstats' own API key, and passwords are never stored. Non-admin users can optionally sign in to see only their own statistics.
+- Sign-in with your Jellyfin account. A two-step setup creates FinStats' own API key, and passwords are never stored. Non-admin users can optionally sign in to see only their own statistics.
 - Dashboard, Activity, Users, Libraries, Playback and Server log pages, a command palette (Ctrl/⌘ K) and a live status bar.
 - Jellystat import: large backups stream to disk and import in seconds, and importing the same file twice is safe.
 - A single small binary with an embedded web UI and one SQLite file, plus a Docker image.

@@ -1,4 +1,4 @@
-//! Minimal Jellyfin API client: only the endpoints finstats needs.
+//! Minimal Jellyfin API client: only the endpoints FinStats needs.
 
 use std::time::Duration;
 
@@ -8,7 +8,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 pub const APP_NAME: &str = "finstats";
-/// The kinds of item finstats keeps from a library: what can be played, and what holds what can be played.
+/// The kinds of item FinStats keeps from a library: what can be played, and what holds what can be played.
 pub const ITEM_TYPES: &str = "Movie,Series,Season,Episode,Audio,MusicAlbum,MusicVideo,Video,Book,AudioBook";
 
 #[derive(Clone)]
@@ -451,7 +451,7 @@ impl Jellyfin {
     }
 }
 
-/// The library read's question: every real item of one library, with what finstats keeps of it.
+/// The library read's question: every real item of one library, with what FinStats keeps of it.
 fn library_query(library_id: &str, start: usize, limit: usize) -> Vec<(&'static str, String)> {
     vec![
         ("ParentId", library_id.to_string()),
@@ -518,7 +518,7 @@ pub fn scan_status(tasks: &[Value]) -> Option<(bool, Option<i64>)> {
     })
 }
 
-/// A title's own page in Jellyfin's web app, at `base` (the address people use, or finstats' own).
+/// A title's own page in Jellyfin's web app, at `base` (the address people use, or FinStats' own).
 pub fn web_link(base: &str, item_id: &str) -> String {
     format!("{}/web/#/details?id={item_id}", base.trim().trim_end_matches('/'))
 }

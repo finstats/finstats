@@ -11,7 +11,7 @@ const FINALE_LABEL = { season: 'Season finale', series: 'Series finale', midseas
 /** The same loader for the page, the cards and the prefetcher. */
 export const loadUpcoming = ({ days = 14, userId = '', mine = false } = {}, signal) => api.get('/upcoming', { days, user_id: userId, mine: mine ? 'true' : '' }, { signal });
 
-/** A title in the library has its poster there; one that is still to come only Sonarr or Radarr can show (through finstats). */
+/** A title in the library has its poster there; one that is still to come only Sonarr or Radarr can show (through FinStats). */
 export function upcomingPoster(e, { w = 160, cls = '' } = {}) {
   const name = e.series_title || e.title;
   const box = h('span', { class: 'fui-poster ' + cls, 'aria-hidden': 'true' });

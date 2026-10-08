@@ -7,12 +7,12 @@ body:
       value: |
         Thanks for taking the time. **Before you paste anything:** logs and screenshots contain the user names, titles,
         device names and IP addresses of the people on your server. Blur or replace them. **Never attach** `finstats.db`,
-        a finstats backup or a Jellystat export: each is a complete viewing history, and the database contains your
+        a FinStats backup or a Jellystat export: each is a complete viewing history, and the database contains your
         Jellyfin API key. Security problems do not belong here: see the security policy.
   - type: input
     id: version
     attributes:
-      label: finstats version
+      label: FinStats version
       description: Bottom right of every page, or the Patch notes tab.
       placeholder: "1.0.1"
     validations:
@@ -33,7 +33,7 @@ body:
     id: jellyfin
     attributes:
       label: Jellyfin version
-      description: Jellyfin Dashboard, or finstats → Server.
+      description: Jellyfin Dashboard, or FinStats → Server.
       placeholder: "10.11.0"
     validations:
       required: true

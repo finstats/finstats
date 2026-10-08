@@ -353,7 +353,7 @@ fn only_a_session(user: &AuthUser) -> Result<(), ApiError> {
     }
 }
 
-/// The address of a profile: absolute when finstats knows where it answers from outside.
+/// The address of a profile: absolute when FinStats knows where it answers from outside.
 fn link(settings: &Settings, token: &str) -> String {
     format!("{}/u/{token}", settings.public_url.trim_end_matches('/'))
 }
@@ -495,7 +495,7 @@ pub async fn read(State(app): State<App>, Path(token): Path<String>) -> ApiResul
 /// The page's preview: what a chat app shows under a pasted link. Every value is escaped for HTML.
 pub fn fill_page(page: &str, a: &PublicProfile, base: &str, token: &str) -> String {
     let url = format!("{base}/u/{token}");
-    let title = if a.name.is_empty() { "A finstats profile".to_string() } else { format!("{} on finstats", a.name) };
+    let title = if a.name.is_empty() { "A FinStats profile".to_string() } else { format!("{} on FinStats", a.name) };
     let description = match &a.totals {
         Some(t) => format!("{} hours watched, {} plays.", t.watch_s / 3600, t.plays),
         None => "What they watch, published by them.".to_string(),
@@ -764,7 +764,7 @@ mod tests {
         // Without a name and without an address: a plain title, and a card on this server's own path.
         let p = published(&c, &Edit { display_name: String::new(), ..all() });
         let html = fill_page(page, &answer(&c, &p, 0, NOW).unwrap(), "", "Tok3n");
-        assert!(html.contains("<title>A finstats profile</title>") && html.contains("content=\"/u/Tok3n/card.png\""), "{html}");
+        assert!(html.contains("<title>A FinStats profile</title>") && html.contains("content=\"/u/Tok3n/card.png\""), "{html}");
     }
 
     #[test]

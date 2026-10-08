@@ -1,4 +1,4 @@
-//! Third-party licences: what finstats is built on, and the licence each part is under.
+//! Third-party licences: what FinStats is built on, and the licence each part is under.
 
 use std::sync::OnceLock;
 
@@ -12,7 +12,7 @@ use crate::auth::AuthUser;
 const SOURCE: &str = include_str!("../THIRD-PARTY.json");
 
 /// What is inside the binary but is not a crate, so nothing generated can know about it:
-/// finstats itself, the fonts, the map, and the city database, which is not shipped at
+/// FinStats itself, the fonts, the map, and the city database, which is not shipped at
 /// all but is read by whoever switches it on, and asks to be credited.
 /// Each licence file that really exists on disk is compiled in; nothing here is retyped.
 const BUNDLED: &[(&str, &str, &str, &str, Option<&str>)] = &[
@@ -119,7 +119,7 @@ fn body() -> &'static str {
     })
 }
 
-/// `GET /api/licenses`: finstats' own licence and every third-party one it is built on.
+/// `GET /api/licenses`: FinStats' own licence and every third-party one it is built on.
 pub async fn licenses(_user: AuthUser) -> impl IntoResponse {
     ([(CONTENT_TYPE, HeaderValue::from_static("application/json"))], body())
 }
@@ -147,7 +147,7 @@ mod tests {
         };
         let (license, body) = text("finstats");
         assert_eq!(license, "GPL-3.0-only");
-        assert!(body.contains("GNU GENERAL PUBLIC LICENSE"), "finstats' own licence text belongs here too");
+        assert!(body.contains("GNU GENERAL PUBLIC LICENSE"), "FinStats' own licence text belongs here too");
         for font in ["Inter", "JetBrains Mono"] {
             let (license, body) = text(font);
             assert_eq!(license, "OFL-1.1");

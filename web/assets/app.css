@@ -1,4 +1,4 @@
-/* finstats: Obsidian's look, dark and light. */
+/* FinStats: Obsidian's look, dark and light. */
 /* The tokens, the fonts, the reset and the small utilities (.mono, .muted…) are FinUI's: /assets/finui.css, linked before
    this file. */
 
@@ -394,7 +394,7 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .task-progress { display: flex; flex-direction: column; gap: 5px; margin-top: 5px; max-width: 460px; }
 .task-side { display: flex; align-items: center; gap: 14px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
 
-/* Settings → Tasks: Jellyfin's scheduled-task list in finstats' look: a round icon, the job and how it last went, a
+/* Settings → Tasks: Jellyfin's scheduled-task list in FinStats' look: a round icon, the job and how it last went, a
    round Run button. The whole row opens the job's schedule (the link's ::after covers it; the button sits above). */
 .task-group + .task-group { margin-top: 22px; }
 .task-group-title { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); margin: 0 0 6px; }
@@ -1234,7 +1234,7 @@ button.ep[aria-disabled="true"]:hover { filter: none; outline: 0; }
 .job-meta { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-muted); }
 .job-what { margin: 0; max-width: 78ch; }
 .job-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-/* No estimate: three dots that fill up and start again, rather than a number finstats cannot stand behind.
+/* No estimate: three dots that fill up and start again, rather than a number FinStats cannot stand behind.
    One timeline shared by all three and `steps(1)`, so the cycle is . · .. · … in even thirds instead of a
    fade; opacity rather than `content`, because animating `content` is a Chromium thing and this has to
    work in Firefox too. The first dot never leaves, so the line never collapses to nothing. */
@@ -1530,6 +1530,6 @@ a.wl-poster:hover .fui-poster, a.wl-poster:focus-visible .fui-poster { outline: 
 .titles-tail { display: grid; justify-items: center; gap: 8px; padding: 8px 0 16px; }
 
 
-/* A long-press on a title, a person or a library opens finstats' menu (menus.js); Safari's own link preview would
+/* A long-press on a title, a person or a library opens FinStats' menu (menus.js); Safari's own link preview would
    open over it. */
 a[href^="/items/"], a[href^="/users/"], a[href^="/people/"], a[href^="/libraries/"] { -webkit-touch-callout: none; }

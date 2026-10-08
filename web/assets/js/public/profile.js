@@ -92,8 +92,8 @@ function recent(list) {
 }
 
 function page(a) {
-  const name = a.name || 'A finstats profile';
-  document.title = a.name ? `${a.name} on finstats` : 'A finstats profile';
+  const name = a.name || 'A FinStats profile';
+  document.title = a.name ? `${a.name} on finstats` : 'A FinStats profile';
   const profileCard = a.totals || a.habits;
   return [
     h('header', { class: 'pub-hero' },
@@ -105,7 +105,7 @@ function page(a) {
     a.habits ? habits(a.habits) : null,
     a.recap ? recap(a.recap, a.story) : null,
     a.recent ? recent(a.recent) : null,
-    h('footer', { class: 'pub-foot muted' }, logo(18), h('span', null, 'Made with finstats, a statistics server for Jellyfin.')),
+    h('footer', { class: 'pub-foot muted' }, logo(18), h('span', null, 'Made with FinStats, a statistics server for Jellyfin.')),
   ].filter(Boolean);
 }
 

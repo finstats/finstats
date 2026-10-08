@@ -602,7 +602,7 @@ pub(crate) fn sources_present(conn: &Connection, whose: &Cond) -> Result<Vec<&'s
     Ok(out)
 }
 
-/// The three kinds finstats charts by name; anything else is "Other".
+/// The three kinds FinStats charts by name; anything else is "Other".
 const CHARTED_TYPES: [&str; 3] = ["Movie", "Episode", "Audio"];
 
 /// The media-type filter as a clause and the values to bind, or `None` when it asks for everything
@@ -628,7 +628,7 @@ fn type_clause(types: &[String]) -> Option<(String, Vec<String>)> {
         let names = CHARTED_TYPES.map(|t| format!("'{t}'")).join(", ");
         ors.push(format!("p.item_type NOT IN ({names})"));
     }
-    // Only names finstats does not chart: an IN of exactly those, nothing clever.
+    // Only names FinStats does not chart: an IN of exactly those, nothing clever.
     if ors.is_empty() {
         let holes = std::iter::repeat_n("?", types.len()).collect::<Vec<_>>().join(", ");
         return Some((format!("(p.item_type IN ({holes}))"), types.to_vec()));
@@ -1061,7 +1061,7 @@ fn language_coverage(c: &Connection, item_type: &str, id: &str) -> Result<Option
     Ok(Some(json!({ "episodes": total, "audio": audio, "subtitles": subtitles })))
 }
 
-/// Where people open Jellyfin: the address an administrator gave, else the one finstats connects to.
+/// Where people open Jellyfin: the address an administrator gave, else the one FinStats connects to.
 pub(crate) fn jellyfin_base(app: &App) -> Option<String> {
     Some(app.settings().jellyfin_public_url.trim().to_string())
         .filter(|u| !u.is_empty())
@@ -1086,7 +1086,7 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
              FROM items i LEFT JOIN libraries l ON l.id = i.library_id WHERE i.id = ?1",
             &[id.clone().into()],
         )?;
-        // Deleted before finstats ever saw it, but it still has history: describe it from its plays.
+        // Deleted before FinStats ever saw it, but it still has history: describe it from its plays.
         let item = match item {
             Some(i) => Some(i),
             None => one_json(
@@ -1220,7 +1220,7 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
 // ---------------------------------------------------------------- v1.8: playback insights
 //
 // Where a title loses its viewers, drawn from where each play stopped. A stop is `position_s` for a
-// play finstats recorded itself and `duration_s` for an imported one (a tracker keeps how long it ran,
+// play FinStats recorded itself and `duration_s` for an imported one (a tracker keeps how long it ran,
 // not where it was; the play is taken to have started at 0:00), and the two are never mixed silently:
 // every curve carries how many stops were measured and how many estimated.
 
@@ -1290,7 +1290,7 @@ fn item_insights(c: &Connection, cond: &Cond, runtime_s: Option<i64>) -> Result<
     let stops: Vec<i64> = rows.iter().map(|r| r.0).collect();
     let measured = rows.iter().filter(|r| r.1).count();
     let bucket_s = bucket_width(runtime);
-    // Events exist only for plays finstats recorded itself, so these two are counted over those. A
+    // Events exist only for plays FinStats recorded itself, so these two are counted over those. A
     // rewind is a seek that landed before where it left from, counted where it landed; a switch-on
     // is a play's first subtitle change when it is to a track rather than to "Off"; the state before
     // the first change is never an event, so a later language change is not a second switch-on.
@@ -1404,7 +1404,7 @@ fn file_signals_for(c: &Connection, scope: &Scope) -> Result<Value> {
         ),
         &any.args,
     )?;
-    // Rewinds and subtitle switch-ons exist only for plays finstats recorded itself.
+    // Rewinds and subtitle switch-ons exist only for plays FinStats recorded itself.
     let live = scope.cond().with_raw("p.source = 'live' AND p.item_type IN ('Movie', 'Episode') AND p.active = 0");
     let rewound = rows_json(c, &rewound_sql(&live.sql()), &live.args)?;
     // A play's first subtitle change, when it is to a track and within the first ten minutes: the
@@ -2286,7 +2286,7 @@ mod tests {
     fn with_plays(c: &Connection) {
         c.execute_batch(
             "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, position_s, runtime_s) VALUES
-               -- finstats saw this one: it stopped at ten minutes after fifty minutes of playing (a resume)
+               -- FinStats saw this one: it stopped at ten minutes after fifty minutes of playing (a resume)
                (10, 'live',         'u1', 'alice', 'i9', 'Sintel', 'Movie', 1000, 4000, 3000, 600, 6000),
                -- imported: only how long it ran is known, so it is taken to have stopped at fifty minutes
                (11, 'jellystat',    'u1', 'alice', 'i9', 'Sintel', 'Movie', 5000, 8000, 3000, NULL, 6000),
@@ -2578,7 +2578,7 @@ mod tests {
 
     #[test]
     fn the_media_type_filter_can_ask_for_several_kinds_and_for_the_rest() {
-        // "Other" is not a type but the absence of the three finstats names by themselves, so it
+        // "Other" is not a type but the absence of the three FinStats names by themselves, so it
         // cannot go in the same IN list, and asking for Movies *and* Other has to mean either.
         assert_eq!(type_clause(&[]), None);
         let (sql, vals) = type_clause(&["Movie".into(), "Episode".into()]).unwrap();

@@ -208,7 +208,7 @@ pub struct SeenBody {
     seen: bool,
 }
 
-/// Mark episodes as seen (or take the mark back) for yourself. Stays inside finstats:
+/// Mark episodes as seen (or take the mark back) for yourself. Stays inside FinStats:
 /// nothing is written to Jellyfin, and plays that were really recorded are never touched.
 pub async fn mark_seen(State(app): State<App>, user: AuthUser, Json(body): Json<SeenBody>) -> ApiResult {
     if body.item_ids.is_empty() || body.item_ids.len() > 5000 {

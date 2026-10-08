@@ -1,7 +1,7 @@
 //! Sonarr and Radarr: what is about to air or be released.
 //!
 //! Both answer camelCase JSON (unlike Jellyfin's PascalCase) and are only ever sent `GET`.
-//! The calendar is small and answered in one piece, so a read either replaces everything finstats knew
+//! The calendar is small and answered in one piece, so a read either replaces everything FinStats knew
 //! from that instance or, when it fails, nothing: a half-read calendar would look like cancelled episodes.
 //!
 //! An episode has a moment (`airDateUtc`). A film has days: Radarr reports `inCinemas`, `digitalRelease` and

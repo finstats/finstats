@@ -370,7 +370,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     "#,
     // 15: what people asked for in Seerr. Seerr purges a request when its media is removed, so a request that
     //      disappears is kept and marked (`removed_at`): "asked for 14, watched 9" should not shrink.
-    //      `status` and `media_status` are Seerr's own numbers; `available_at` is worked out by finstats.
+    //      `status` and `media_status` are Seerr's own numbers; `available_at` is worked out by FinStats.
     //      `user_id` is the Jellyfin user behind Seerr's, when Seerr says who that is; `item_id` and
     //      `arr_*` say where the poster is: in the library, or still only in Sonarr or Radarr.
     r#"
@@ -390,7 +390,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         requested_at      INTEGER NOT NULL,
         updated_at        INTEGER NOT NULL,
         media_added_at    INTEGER,                   -- Seerr's own note of when it arrived
-        seen_available_at INTEGER,                   -- when finstats first saw it available
+        seen_available_at INTEGER,                   -- when FinStats first saw it available
         available_at      INTEGER,
         removed_at        INTEGER,
         seerr_user_id     INTEGER,
@@ -447,7 +447,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         ) WHERE IFNULL(detail, '') = IFNULL(before, '')
     );
     "#,
-    // 18: notifications: where finstats may send what it finds, what it found, and how each sending went.
+    // 18: notifications: where FinStats may send what it finds, what it found, and how each sending went.
     //      `notify_targets` holds the address *and* the secret of a destination (a Discord webhook URL is
     //      itself the credential), so like `services` it never leaves this table and is never backed up.
     //      An event is written once and deduped by `dedupe`, exactly like `security_alerts`, so deriving
@@ -477,13 +477,13 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         kind       TEXT NOT NULL,
         severity   TEXT NOT NULL,                -- info | warn | alert
         at         INTEGER NOT NULL,             -- when the thing itself happened
-        created_at INTEGER NOT NULL,             -- when finstats noticed
+        created_at INTEGER NOT NULL,             -- when FinStats noticed
         dedupe     TEXT NOT NULL UNIQUE,
         user_id    TEXT,
         user_name  TEXT,
         title      TEXT NOT NULL,
         body       TEXT NOT NULL,
-        link       TEXT,                         -- a path inside finstats, joined with public_url when sent
+        link       TEXT,                         -- a path inside FinStats, joined with public_url when sent
         data       TEXT NOT NULL DEFAULT '{}',   -- what any destination may be told
         private    TEXT NOT NULL DEFAULT '{}',   -- addresses and places: only with "include addresses"
         historic   INTEGER NOT NULL DEFAULT 0    -- found long after it happened: recorded, never sent
@@ -528,9 +528,9 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     WHERE kind = 'seek' AND detail LIKE '%:__ → %';
     CREATE INDEX idx_pbe_kind ON playback_events(kind, playback_id, position_s);
     "#,
-    // 22: API keys, and finstats' own audit log, in one migration: a long-lived credential without a
+    // 22: API keys, and FinStats' own audit log, in one migration: a long-lived credential without a
     //      record of what it did would be a step backwards. A key is stored as the hash of its token,
-    //      like a session, and is never part of a backup; the audit log is, being finstats' own data.
+    //      like a session, and is never part of a backup; the audit log is, being FinStats' own data.
     //      Ids are never reused (AUTOINCREMENT) so an audit row keeps pointing at the right key.
     r#"
     CREATE TABLE api_keys (
@@ -588,7 +588,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     //      `created_at` is whole seconds and the table has no rowid, so among sign-ins of one second the one
     //      that gave way to the limit was picked by its token's hash, not its age.
     "ALTER TABLE sessions ADD COLUMN seq INTEGER NOT NULL DEFAULT 0;",
-    // user_version 28: How each of finstats' own jobs last ended (2.0.4). An interval trigger counts from the
+    // user_version 28: How each of FinStats' own jobs last ended (2.0.4). An interval trigger counts from the
     //      last run, and a start must not forget it: every job used to run again at every start. Re-readable,
     //      so not part of a backup.
     r#"
@@ -682,7 +682,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         by          TEXT
     );
     "#,
-    // user_version 36: Appearance (2.2.0): the FinUI preset one person chose, how finstats looks to them and nobody
+    // user_version 36: Appearance (2.2.0): the FinUI preset one person chose, how FinStats looks to them and nobody
     //      else. No row: FinUI as it ships. Theirs to keep, so it travels in a backup.
     r#"
     CREATE TABLE appearance (
@@ -709,7 +709,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
 /// program's database is refused here, at once, by name, having only been read.
 fn preflight(path: &Path) -> Result<()> {
     let shown = path.display();
-    let recover = "Nothing was changed. If this is finstats' database and it was damaged, stop finstats and put the newest \
+    let recover = "Nothing was changed. If this is FinStats' database and it was damaged, stop FinStats and put the newest \
                    copy from pre-update-backups/ (or restore one from backups/) in its place.";
     match std::fs::metadata(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
@@ -720,7 +720,7 @@ fn preflight(path: &Path) -> Result<()> {
     }
     // SQLite opens a file it may not write read-only without a word, and the first write fails much later.
     if let Err(e) = std::fs::OpenOptions::new().read(true).write(true).open(path) {
-        bail!("{shown} cannot be written ({e}). Nothing was changed. It must belong to the user finstats runs as, with write permission.");
+        bail!("{shown} cannot be written ({e}). Nothing was changed. It must belong to the user FinStats runs as, with write permission.");
     }
     let read = (|| -> rusqlite::Result<(i64, Vec<String>)> {
         let c = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX)?;
@@ -732,8 +732,8 @@ fn preflight(path: &Path) -> Result<()> {
     match read {
         Err(e) => bail!("{shown} is damaged or is not a database ({e}). {recover}"),
         Ok((0, tables)) if !tables.is_empty() => bail!(
-            "{shown} is another program's database (it holds {}, which finstats did not make), so finstats will not write into it. \
-             Nothing was changed. Point FINSTATS_DATA_DIR at a folder of finstats' own.",
+            "{shown} is another program's database (it holds {}, which FinStats did not make), so FinStats will not write into it. \
+             Nothing was changed. Point FINSTATS_DATA_DIR at a folder of FinStats' own.",
             tables.iter().take(5).map(|t| format!("`{t}`")).collect::<Vec<_>>().join(", ")
         ),
         Ok(_) => Ok(()),
@@ -817,7 +817,7 @@ impl Db {
     }
 }
 
-/// Settings key: the newest finstats version that has opened this database.
+/// Settings key: the newest FinStats version that has opened this database.
 const VERSION_KEY: &str = "app_version";
 
 /// `1.2.3` as a comparable triple; a pre-release or build suffix (`-rc.1`, `+abc`) is ignored.
@@ -827,7 +827,7 @@ fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
     parts.next().is_none().then_some(triple)
 }
 
-/// A database only moves forward. An older finstats knows nothing about the tables and columns a newer one added,
+/// A database only moves forward. An older FinStats knows nothing about the tables and columns a newer one added,
 /// would skip the migrations without a word and write rows the newer one then misreads, so it refuses to start
 /// instead. Checked before anything is written; a stored version nobody can read counts as newer.
 fn refuse_downgrade(conn: &Connection, running: &str) -> Result<()> {
@@ -840,8 +840,8 @@ fn refuse_downgrade(conn: &Connection, running: &str) -> Result<()> {
     // Unreadable is refused like newer, since it may be, but said as what it is: only a hand edit makes it.
     if let Some(s) = stored.as_deref().filter(|s| parse_version(s).is_none()) {
         bail!(
-            "this database records the last finstats to open it as [{s}], which is not a version finstats can read,\n\
-             so this finstats {running} cannot tell whether the database is newer than it. Nothing was changed.\n\
+            "this database records the last FinStats to open it as [{s}], which is not a version FinStats can read,\n\
+             so this FinStats {running} cannot tell whether the database is newer than it. Nothing was changed.\n\
              It is the app_version setting. Write the version that last ran here as three numbers, without quotes,\n\
              and never an older one than that:   sqlite3 finstats.db \"UPDATE settings SET value='x.y.z' WHERE key='app_version'\""
         )
@@ -853,9 +853,9 @@ fn refuse_downgrade(conn: &Connection, running: &str) -> Result<()> {
     if !newer && schema as usize <= MIGRATIONS.len() {
         return Ok(());
     }
-    let theirs = stored.map(|s| format!("finstats {s}")).unwrap_or_else(|| "a newer finstats".into());
+    let theirs = stored.map(|s| format!("FinStats {s}")).unwrap_or_else(|| "a newer FinStats".into());
     bail!(
-        "this database was last used by {theirs}, and this is the older finstats {running}.\n\n\
+        "this database was last used by {theirs}, and this is the older FinStats {running}.\n\n\
          An older version cannot safely open a newer database, so it will not start. Nothing was changed.\n\
          Fix it by running that version or a newer one again (with Docker: the image tag you used before),\n\
          or start this version on an empty data folder and bring your history back from one of the files in\n\
@@ -864,7 +864,7 @@ fn refuse_downgrade(conn: &Connection, running: &str) -> Result<()> {
 }
 
 /// Whether opening this database is an *update* worth snapshotting first: a populated database (it has
-/// a schema, so it holds data) that a different finstats version is now opening, or that still has
+/// a schema, so it holds data) that a different FinStats version is now opening, or that still has
 /// migrations to run. A brand-new database has nothing to protect, and the same version restarting is
 /// not an update.
 fn is_update(schema: i64, stored: Option<&str>, running: &str, migrations_len: usize) -> bool {
@@ -880,7 +880,7 @@ const PRE_UPDATE_KEEP: usize = 3;
 /// The most the write-ahead journal keeps on disk once it has been checkpointed (64 MB).
 const JOURNAL_LIMIT: i64 = 64 * 1024 * 1024;
 
-/// Before a newer finstats touches an older database, copy the whole thing, so that nothing an upgrade
+/// Before a newer FinStats touches an older database, copy the whole thing, so that nothing an upgrade
 /// might break (a migration, or the new binary writing rows the old one cannot) can lose the user's
 /// data beyond recovery. They can go back to the copy and report the bug without having lost anything.
 /// The copy is a consistent full snapshot (`VACUUM INTO`), taken before any migration runs. Missing the
@@ -906,7 +906,7 @@ fn back_up_before_update(conn: &Connection, path: &Path, running: &str) -> Resul
     match snapshot_into(conn, &dir, &dst) {
         Ok(()) => {
             tracing::info!(
-                "update detected ({from} -> {running}); backed up the database to {} before upgrading. If anything looks wrong after this update, stop finstats, replace {} with that file, and start the previous version, then report the bug.",
+                "update detected ({from} -> {running}); backed up the database to {} before upgrading. If anything looks wrong after this update, stop FinStats, replace {} with that file, and start the previous version, then report the bug.",
                 dst.display(),
                 path.display()
             );
@@ -915,7 +915,7 @@ fn back_up_before_update(conn: &Connection, path: &Path, running: &str) -> Resul
         }
         Err(e) if pending => bail!(
             "could not back up the database before applying migrations ({from} -> {running}): {e:#}\n\n\
-             finstats will not run migrations without a safety copy, so nothing was changed. Free up disk\n\
+             FinStats will not run migrations without a safety copy, so nothing was changed. Free up disk\n\
              space (the copy needs about as much room as the database) or fix the permissions on {}, then\n\
              start again. To upgrade without a copy anyway, set FINSTATS_SKIP_PREUPDATE_BACKUP=1.",
             dir.display()
@@ -1280,20 +1280,20 @@ mod tests {
         // A newer patch, minor or major, and a schema from the future: none start.
         for (schema, stored) in [(n, Some("1.0.5")), (n, Some("1.1.0")), (n, Some("2.0.0")), (n, Some("1.10.0")), (n + 1, None), (n + 1, Some("1.0.4"))] {
             let err = refuse_downgrade(&db_at(schema, stored), "1.0.4").expect_err(&format!("{schema} {stored:?}")).to_string();
-            assert!(err.contains("older finstats 1.0.4") && err.contains("finstats restore"), "{err}");
+            assert!(err.contains("older FinStats 1.0.4") && err.contains("finstats restore"), "{err}");
         }
-        assert!(refuse_downgrade(&db_at(n, Some("1.1.0")), "1.0.4").unwrap_err().to_string().contains("last used by finstats 1.1.0"));
+        assert!(refuse_downgrade(&db_at(n, Some("1.1.0")), "1.0.4").unwrap_err().to_string().contains("last used by FinStats 1.1.0"));
     }
 
     #[test]
     fn a_version_nobody_can_read_is_named_as_unreadable_not_as_newer() {
         // Written by hand with JSON quotes, the install refused to start saying it had been "last used by
-        // finstats "2.0.1", and this is the older finstats 2.0.1", which is true of neither.
+        // FinStats "2.0.1", and this is the older FinStats 2.0.1", which is true of neither.
         let n = MIGRATIONS.len();
         for stored in ["\"2.0.1\"", "next", ""] {
             let err = refuse_downgrade(&db_at(n, Some(stored)), "2.0.1").expect_err(stored).to_string();
-            assert!(!err.contains("older finstats"), "{err}");
-            assert!(err.contains(&format!("[{stored}]")) && err.contains("not a version finstats can read"), "{err}");
+            assert!(!err.contains("older FinStats"), "{err}");
+            assert!(err.contains(&format!("[{stored}]")) && err.contains("not a version FinStats can read"), "{err}");
             assert!(err.contains("Nothing was changed") && err.contains("key='app_version'") && err.contains("without quotes"), "{err}");
         }
     }
@@ -1308,7 +1308,7 @@ mod tests {
             let db = Db::open(&path).unwrap();
             let c = db.conn().unwrap();
             set_setting(&c, "marker", "keep-me").unwrap();
-            // Pretend an older finstats last opened it, so the next open is an update.
+            // Pretend an older FinStats last opened it, so the next open is an update.
             set_setting(&c, VERSION_KEY, "0.1.0").unwrap();
         }
         // Opening as the current (newer) version detects the update and snapshots first.
@@ -1385,7 +1385,7 @@ mod tests {
             let wal = path.with_extension("db-wal");
             assert!(!wal.exists() || std::fs::metadata(&wal).unwrap().len() == 0, "{why}: a journal was left beside it");
         };
-        // Random bytes, and a finstats database cut in half: what a failed copy or a full disk leaves.
+        // Random bytes, and a FinStats database cut in half: what a failed copy or a full disk leaves.
         let garbage = dir.join("garbage.db");
         std::fs::write(&garbage, (0..300_000u32).map(|i| (i.wrapping_mul(2_654_435_761) >> 13) as u8).collect::<Vec<_>>()).unwrap();
         refused(&garbage, "random bytes");
@@ -1416,7 +1416,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
-    /// A database an older finstats last opened, in a folder of its own, so the next open is an update.
+    /// A database an older FinStats last opened, in a folder of its own, so the next open is an update.
     fn opened_by_an_older_finstats(name: &str) -> (std::path::PathBuf, std::path::PathBuf) {
         let dir = std::env::temp_dir().join(format!("finstats-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);

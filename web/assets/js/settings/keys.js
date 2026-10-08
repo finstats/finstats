@@ -1,4 +1,4 @@
-// Settings → API keys: use finstats from outside. A key carries exactly its maker's permissions, is
+// Settings → API keys: use FinStats from outside. A key carries exactly its maker's permissions, is
 // shown once when it is made, and dies with their access. A calendar key opens the calendar feed and
 // nothing else, which is why it may travel in a subscription address. Administrators see everyone's.
 
@@ -13,7 +13,7 @@ const SCOPE_LABEL = { full: 'Everything you may see', calendar: 'Calendar feed o
 const EXPIRY = [['', 'Never'], ['30', '30 days'], ['90', '90 days'], ['365', 'A year']];
 
 export default {
-  key: 'keys', label: 'API keys', sub: 'Use finstats from outside: scripts, and a calendar to subscribe to', group: 'Account', icon: 'link',
+  key: 'keys', label: 'API keys', sub: 'Use FinStats from outside: scripts, and a calendar to subscribe to', group: 'Account', icon: 'link',
   visible: () => true,
   entries: [
     { id: 'keys', label: 'API keys', hint: 'token bearer script curl calendar ics subscribe revoke' },
@@ -38,11 +38,11 @@ export default {
       const isCal = k.scope === 'calendar';
       return h('div', { class: 'key-reveal', role: 'status' },
         h('div', { class: 'fui-setting-row__label' }, `Your new key “${k.name}”`),
-        h('p', { class: 'fui-field__help' }, 'Shown once. Copy it now; finstats keeps only a hash of it.'),
+        h('p', { class: 'fui-field__help' }, 'Shown once. Copy it now; FinStats keeps only a hash of it.'),
         h('div', { class: 'key-line' }, h('code', { class: 'mono key-token' }, k.key), copyButton(k.key, 'Copy key')),
         isCal ? [h('p', { class: 'fui-field__help' }, 'Subscribe your calendar to this address. It opens the feed and nothing else.'),
           h('div', { class: 'key-line' }, h('code', { class: 'mono key-token' }, feedUrl(k.key)), copyButton(feedUrl(k.key), 'Copy address')),
-          settings && !base ? h('p', { class: 'fui-field__help' }, 'finstats does not know its own address yet, so this one only works from inside. Set it under Notifications for a link that works from your phone.') : null]
+          settings && !base ? h('p', { class: 'fui-field__help' }, 'FinStats does not know its own address yet, so this one only works from inside. Set it under Notifications for a link that works from your phone.') : null]
         : h('p', { class: 'fui-field__help' }, ['Send it as ', h('code', { class: 'mono' }, 'Authorization: Bearer ' + k.key.slice(0, 7) + '…'), ' with every request.']),
         h('div', { class: 'form-actions' }, button({ size: 'sm', type: 'button', onClick: () => { revealed = null; paint(); } }, 'Done')));
     }

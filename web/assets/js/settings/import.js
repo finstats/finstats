@@ -11,7 +11,7 @@ import { card, spinner, inlineError } from '../components.js';
 import { wiringBoard } from './wiring.js';
 import { button } from '../../finui/components/button/button.js';
 
-// The trackers finstats can take history from.
+// The trackers FinStats can take history from.
 export const IMPORTERS = [
   {
     key: 'jellystat', task: 'import', name: 'Jellystat', endpoint: '/import/jellystat', file: 'the .jsonl file', accept: '.jsonl,.json,application/json', pattern: /\.(jsonl|json)$/i,
@@ -59,7 +59,7 @@ export const IMPORTERS = [
     ],
     rows: [['plays_imported', 'Plays imported'], ['plays_skipped', 'Already here'], ['users_wired', 'Plex users connected'],
       ['not_wired', 'Left behind, without a wire'], ['other_media', 'Music and other media, not imported']],
-    note: 'Plex names rarely match Jellyfin’s, so you connect each Plex user yourself. Films and episodes are matched by name; one not on your server yet is kept, and attached when it arrives. The backup holds Plex’s access tokens: finstats never reads them, and removes the file once you import or start over.',
+    note: 'Plex names rarely match Jellyfin’s, so you connect each Plex user yourself. Films and episodes are matched by name; one not on your server yet is kept, and attached when it arrives. The backup holds Plex’s access tokens: FinStats never reads them, and removes the file once you import or start over.',
   },
 ];
 
@@ -84,7 +84,7 @@ function startUpload(file, imp) {
     .catch((e) => {
       const msg = e.status === -1 ? null
         : e.status === 409 ? 'An import is already running. Wait for it to finish, then try again.'
-        : e.status === 413 ? 'The server rejected the file as too large. If finstats sits behind a reverse proxy, raise its upload limit (for nginx: client_max_body_size) and try again.'
+        : e.status === 413 ? 'The server rejected the file as too large. If FinStats sits behind a reverse proxy, raise its upload limit (for nginx: client_max_body_size) and try again.'
         : e.message;
       Object.assign(upload, { active: false, error: msg, handle: null }); notifyUpload();
     });
@@ -181,7 +181,7 @@ export default {
             h('span', { class: 'fui-meter__fill', style: { width: upload.progress * 100 + '%' } })),
           h('div', { class: 'import-stage-row' }, h('span', { class: 'mono' }, `${Math.round(upload.progress * 100)}% · ${bytes(upload.loaded)} of ${bytes(upload.total)}`),
             button({ size: 'sm', type: 'button', onClick: () => upload.handle && upload.handle.abort() }, 'Cancel upload')),
-          h('p', { class: 'fui-field__help' }, 'Keep this tab open until the upload finishes. You can browse other finstats pages meanwhile.'));
+          h('p', { class: 'fui-field__help' }, 'Keep this tab open until the upload finishes. You can browse other FinStats pages meanwhile.'));
       } else if (waiting) {
         stage = boardView(imp);
       } else if (running || justUploaded) {

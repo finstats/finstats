@@ -637,7 +637,7 @@ mod tests {
             c.query_row("SELECT container, size_bytes, video_codec, audio_languages FROM items WHERE id = 'film1'", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).unwrap();
         assert_eq!(film, (Some("mkv".into()), 1_048_576, Some("h264".into()), Some(r#"["eng"]"#.into())));
         let kept: i64 = c.query_row("SELECT size_bytes FROM items WHERE id = 'show1'", [], |r| r.get(0)).unwrap();
-        assert_eq!(kept, 999, "what finstats read from Jellyfin itself is fresher than an old backup");
+        assert_eq!(kept, 999, "what FinStats read from Jellyfin itself is fresher than an old backup");
         let _ = std::fs::remove_dir_all(dir);
     }
 }

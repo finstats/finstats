@@ -9,7 +9,7 @@
 //! than the page of fifty a listing costs. When something has changed, the listing is read newest-modified first
 //! and stops a little past the newest change already known (`OVERLAP_S`, measured on Seerr's clock, so ours does
 //! not matter). That alone would miss a request whose *media* became available, because that does not always touch
-//! the request. So every request finstats believes to be open is looked at again (the ones a fresh
+//! the request. So every request FinStats believes to be open is looked at again (the ones a fresh
 //! "pending/processing" listing returns anyway, the rest one by one), but only while something *is* open, and at
 //! most every `OPEN_EVERY_S`: a title that has arrived is news within the quarter hour, not within the minute.
 //! Once a day everything is listed, and only if that listing was complete does a request that is no longer there
@@ -41,7 +41,7 @@ const FULL_EVERY_S: i64 = 86_400;
 const OPEN_EVERY_S: i64 = 900;
 /// Open requests that the listings did not return are asked for one by one, this many per pass.
 const RECHECK_MAX: usize = 60;
-/// Titles looked up per pass, and how long one rests before finstats looks again.
+/// Titles looked up per pass, and how long one rests before FinStats looks again.
 ///
 /// A request that is still moving is worth another look soon: Seerr creates it before Sonarr or Radarr have
 /// been told about it, so the first look often finds nothing through no fault of anyone's. One that is
@@ -117,7 +117,7 @@ pub fn parse(v: &Value) -> Option<Request> {
 }
 
 /// When it arrived, from the best witness there is: Seerr's own note, else the file in the library, else the
-/// moment finstats first saw it become available (Seerr's last change to it, when it was available the first time it was read). Never before it was asked for (an "arrived after −3 days" helps nobody):
+/// moment FinStats first saw it become available (Seerr's last change to it, when it was available the first time it was read). Never before it was asked for (an "arrived after −3 days" helps nobody):
 /// something that was already there when it was requested arrived at once.
 pub fn available_at(requested_at: i64, media_status: i64, media_added_at: Option<i64>, item_added_at: Option<i64>, seen_available_at: Option<i64>) -> Option<i64> {
     if media_status != MEDIA_AVAILABLE {
@@ -142,7 +142,7 @@ pub fn anything_changed(newest: Option<i64>, cursor: Option<i64>) -> bool {
     }
 }
 
-/// Is it time to look at what is still on its way? Only while finstats knows of something open: a request that
+/// Is it time to look at what is still on its way? Only while FinStats knows of something open: a request that
 /// has just been made reaches it through the listing above, because making one does touch `updatedAt`.
 pub fn recheck_open(now: i64, open: usize, open_at: Option<i64>) -> bool {
     open > 0 && now - open_at.unwrap_or(0) >= OPEN_EVERY_S
@@ -167,7 +167,7 @@ async fn page(app: &App, svc: &Service, filter: &str, take: usize, skip: usize) 
 
 /// The one question every pass starts with: when was anything last touched? One row, so the answer costs about a
 /// kilobyte. Read straight out of the JSON rather than through `parse`, because a row this pass may not understand
-/// (a kind of request finstats has no word for) still says that *something* moved.
+/// (a kind of request FinStats has no word for) still says that *something* moved.
 async fn newest_change(app: &App, svc: &Service) -> Result<Option<i64>> {
     let (results, _) = page(app, svc, "all", 1, 0).await?;
     Ok(results.first().and_then(|v| v["updatedAt"].as_str().or_else(|| v["createdAt"].as_str())).and_then(db::parse_ts))
@@ -297,7 +297,7 @@ async fn read(app: &App, svc: &Service) -> Result<(usize, usize)> {
                 }
             }
         }
-        // And what finstats believes to be open, but no listing returned, is asked for by name.
+        // And what FinStats believes to be open, but no listing returned, is asked for by name.
         open.retain(|id| !seen.contains(id));
         for id in open.into_iter().take(RECHECK_MAX) {
             if let Ok(v) = services::get_json(app, svc, &format!("/api/v1/request/{id}"), &[]).await
@@ -539,7 +539,7 @@ mod tests {
         assert_eq!(available_at(asked, 3, Some(asked + 50), Some(asked + 60), Some(asked + 70)), None, "not available yet");
         assert_eq!(available_at(asked, 5, Some(asked + 50), Some(asked + 60), Some(asked + 70)), Some(asked + 50), "Seerr's own note first");
         assert_eq!(available_at(asked, 5, None, Some(asked + 60), Some(asked + 70)), Some(asked + 60), "then the file in the library");
-        assert_eq!(available_at(asked, 5, None, None, Some(asked + 70)), Some(asked + 70), "then the moment finstats saw it");
+        assert_eq!(available_at(asked, 5, None, None, Some(asked + 70)), Some(asked + 70), "then the moment FinStats saw it");
         assert_eq!(available_at(asked, 5, Some(asked - 9_000), None, None), Some(asked), "it was there already: it arrived at once");
         assert_eq!(available_at(asked, 5, None, None, None), None);
     }

@@ -1,6 +1,6 @@
 //! A person's list of films and shows they mean to watch. It belongs to its owner and nobody else: every
 //! endpoint acts on the caller and takes no `user_id`, and no permission (`see_everyone`, a Jellyfin
-//! administrator) opens somebody else's. Written to finstats' own database only; nothing here talks to
+//! administrator) opens somebody else's. Written to FinStats' own database only; nothing here talks to
 //! Jellyfin, Seerr, Sonarr or Radarr.
 //!
 //! **An entry names a title in one of two ways**: by its Jellyfin item when it is in the library, or by a

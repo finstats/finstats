@@ -30,8 +30,8 @@ export const meta = {
       { key: 'action', label: 'An action', on: true },
       { key: 'dismiss', label: 'Dismissible' },
     ],
-    render: (o) => callout({ tone: o.tone, title: o.title ? { warning: 'Sonarr is not answering', info: 'finstats 2.2.0 is out', good: 'The import finished', critical: 'The library could not be read' }[o.tone] : null,
-      body: { warning: 'Coming up shows what it knew an hour ago.', info: 'Library health and FinUI.', good: '1,284 plays from Jellystat, none twice.', critical: 'Nothing was removed; finstats stopped to keep your data.' }[o.tone],
+    render: (o) => callout({ tone: o.tone, title: o.title ? { warning: 'Sonarr is not answering', info: 'FinStats 2.2.0 is out', good: 'The import finished', critical: 'The library could not be read' }[o.tone] : null,
+      body: { warning: 'Coming up shows what it knew an hour ago.', info: 'Library health and FinUI.', good: '1,284 plays from Jellystat, none twice.', critical: 'Nothing was removed; FinStats stopped to keep your data.' }[o.tone],
       action: o.action ? button({ size: 'sm' }, o.tone === 'info' ? 'What changed' : 'Look at it') : null, onDismiss: o.dismiss ? () => {} : null }),
   },
 };

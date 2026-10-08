@@ -194,7 +194,7 @@ export function libraryTitlesPage(ctx) {
       mount(kindSlot, d.types.length > 1 ? segmented({ label: 'Kind', size: 'sm', value: f.type,
         options: [{ value: '', label: 'All' }, ...d.types.map((t) => ({ value: t.type, label: `${TITLE_KIND[t.type] || t.type} (${num(t.count)})` }))],
         onChange: (v) => { f.type = v; apply(); } }) : null);
-      if (!d.items.length) return emptyState(f.q || f.type ? 'Nothing matches' : 'Nothing here yet', f.q || f.type ? 'No title in this library has every word you typed.' : 'Titles appear here after finstats reads the library.');
+      if (!d.items.length) return emptyState(f.q || f.type ? 'Nothing matches' : 'Nothing here yet', f.q || f.type ? 'No title in this library has every word you typed.' : 'Titles appear here after FinStats reads the library.');
       const grid = h('ul', { class: 'fui-media-card__grid titles-grid' }, d.items.map(titleCard));
       let page = 1, shown = d.items.length, busy = false;
       const more = button({ variant: 'ghost', class: 'titles-more', onClick: () => next() }, 'Show more');

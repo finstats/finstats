@@ -1,4 +1,4 @@
-//! Turning Jellyfin's session / media-stream JSON into the flat columns finstats stores.
+//! Turning Jellyfin's session / media-stream JSON into the flat columns FinStats stores.
 //! Shared by the live collector and the Jellystat importer so both produce identical rows.
 
 use serde_json::{Value, json};

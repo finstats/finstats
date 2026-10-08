@@ -44,7 +44,7 @@ pub struct AppState {
     /// Jellyfin's own scheduled tasks as they were last read, and how far each running one had moved:
     /// the only way to time a run, since Jellyfin says a percentage and never when it started.
     pub jf_jobs: Mutex<crate::jobs::Watch>,
-    /// Where finstats may send what it finds, read into memory so that `notify::raise` can be called
+    /// Where FinStats may send what it finds, read into memory so that `notify::raise` can be called
     /// from inside a transaction; `notify_wake` is how the sending loop is told there is something to do.
     pub notify_targets: RwLock<Arc<Vec<Arc<crate::notify::Target>>>>,
     pub notify_wake: Notify,
@@ -52,12 +52,12 @@ pub struct AppState {
     pub downloads_watched: Mutex<i64>,
     pub downloads_wake: Notify,
     /// Published profiles drawn as pictures (2.0), and the two drawing at most at once: a card is the one
-    /// thing a reader without an account can make finstats work for.
+    /// thing a reader without an account can make FinStats work for.
     pub public_cards: crate::card::Cache,
     pub card_permits: tokio::sync::Semaphore,
     /// Wakes background loops when configuration or settings change.
     pub wake: Notify,
-    /// A controlled, fail-closed shutdown: when finstats reads something from Jellyfin it refuses to
+    /// A controlled, fail-closed shutdown: when FinStats reads something from Jellyfin it refuses to
     /// act on (a library that came back empty where the database holds thousands of items, the shape
     /// of a Jellyfin that has changed under an upgrade), it declines the destructive change (the data
     /// is kept intact) and asks the process to stop, with a reason, so the operator sees it and can
@@ -110,14 +110,14 @@ pub struct Settings {
     pub travel_speed_kmh: i64,
     /// …when they are at least this far apart. City databases are often a few hundred km off.
     pub travel_min_km: i64,
-    /// Where finstats answers from outside, so a notification can carry a link back to the page it is
-    /// about. finstats cannot know this by itself; empty means messages carry no link.
+    /// Where FinStats answers from outside, so a notification can carry a link back to the page it is
+    /// about. FinStats cannot know this by itself; empty means messages carry no link.
     pub public_url: String,
     /// People may publish a profile readable without an account (2.0). Off until an administrator allows it.
     pub public_profiles: bool,
-    /// Where people open Jellyfin: its address from outside, which is often not the one finstats connects
+    /// Where people open Jellyfin: its address from outside, which is often not the one FinStats connects
     /// to (a container name, a LAN address). Every "Open in Jellyfin" button points here; empty means the
-    /// address finstats connects to.
+    /// address FinStats connects to.
     pub jellyfin_public_url: String,
     /// The owner's triggers, one list per job (`schedule`). A job missing here runs on its defaults.
     pub schedules: std::collections::BTreeMap<String, Vec<crate::schedule::Trigger>>,
@@ -136,7 +136,7 @@ impl Settings {
         let Some(raw) = db::get_setting(conn, "settings")? else { return Ok(Self::default()) };
         serde_json::from_str(&raw).map_err(|e| {
             anyhow::anyhow!(
-                "the settings stored in finstats' database cannot be read ({e}{}); nothing was changed",
+                "the settings stored in FinStats' database cannot be read ({e}{}); nothing was changed",
                 Self::unreadable(&raw).map(|keys| format!("; the setting{} at fault: {}", if keys.len() == 1 { "" } else { "s" }, keys.join(", "))).unwrap_or_default()
             )
         })
@@ -166,7 +166,7 @@ impl Settings {
         if !self.public_url.is_empty() {
             let url = self.public_url.trim();
             if !(url.starts_with("http://") || url.starts_with("https://")) || reqwest::Url::parse(url).is_err() {
-                return Err("The address of finstats must start with http:// or https://".into());
+                return Err("The address of FinStats must start with http:// or https://".into());
             }
             if url.len() > 300 {
                 return Err("That address is too long".into());
@@ -202,7 +202,7 @@ pub struct CollectorStatus {
     pub last_poll_at: i64,
     pub active_sessions: usize,
     pub error: Option<String>,
-    /// `socket` while Jellyfin is pushing, `poll` while finstats is asking.
+    /// `socket` while Jellyfin is pushing, `poll` while FinStats is asking.
     pub transport: &'static str,
     /// Why the socket is not the transport right now; `None` while it is.
     pub socket_error: Option<String>,
@@ -221,7 +221,7 @@ pub struct CollectorStatus {
     pub mode_since: i64,
 }
 
-/// Before the first sighting finstats is asking, like every version before this one.
+/// Before the first sighting FinStats is asking, like every version before this one.
 impl Default for CollectorStatus {
     fn default() -> Self {
         Self { connected: false, last_poll_at: 0, active_sessions: 0, error: None, transport: "poll", socket_error: None, socket_live: false, session_mode: "fallback", socket_connected: false, socket_subscribed: false, poll_interval_s: None, mode_since: 0 }
@@ -456,7 +456,7 @@ impl IntoResponse for ApiError {
 impl From<anyhow::Error> for ApiError {
     fn from(e: anyhow::Error) -> Self {
         tracing::error!("request failed: {e:#}");
-        ApiError(StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong on the server. Check the finstats log.".into())
+        ApiError(StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong on the server. Check the FinStats log.".into())
     }
 }
 
@@ -534,7 +534,7 @@ mod tests {
     #[test]
     fn jellyfins_address_for_people_is_an_http_address_or_nothing() {
         let with = |url: &str| Settings { jellyfin_public_url: url.into(), ..Settings::default() }.validate();
-        assert!(with("").is_ok(), "empty: the address finstats connects to");
+        assert!(with("").is_ok(), "empty: the address FinStats connects to");
         assert!(with("https://jellyfin.example.com").is_ok());
         assert!(with("http://192.168.1.10:8096/jf").is_ok());
         for bad in ["jellyfin.example.com", "ftp://jellyfin.example.com", "javascript:alert(1)", "https://"] {

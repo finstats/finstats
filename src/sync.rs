@@ -41,7 +41,7 @@ pub(crate) fn trustworthy_removal(seen: usize, current: i64) -> bool {
     !(would_remove >= WIPE_FLOOR && seen.saturating_mul(20) < current)
 }
 
-/// A whole set gone at once (Jellyfin listing zero libraries, or zero users, where finstats holds
+/// A whole set gone at once (Jellyfin listing zero libraries, or zero users, where FinStats holds
 /// some) is a broken read (an auth failure, an API change), never a normal day: you do not lose every
 /// library at once. Unlike the item guard there is no "big enough to matter" floor, because a set going
 /// entirely empty is the catastrophe whatever its size. Losing *some* (one library of five) is normal.
@@ -185,7 +185,7 @@ pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
     true
 }
 
-/// Runs every job on its triggers (`schedule`), looking once a minute or when woken. finstats only ever *reads*
+/// Runs every job on its triggers (`schedule`), looking once a minute or when woken. FinStats only ever *reads*
 /// from Jellyfin; it never starts a scan there, and "after Jellyfin's library scan" waits for Jellyfin's own.
 pub async fn scheduler(app: App) {
     let mut last_housekeeping = 0i64;
@@ -219,7 +219,7 @@ pub async fn scheduler(app: App) {
                 announce_ready_year(&app).await;
                 crate::geo::pick_up(&app).await;
                 crate::services::check_all(&app).await;
-                // A year of finstats' own audit log is enough to answer "who changed this in spring".
+                // A year of FinStats' own audit log is enough to answer "who changed this in spring".
                 let _ = app.db.call(|c| crate::audit::thin(c, db::now())).await;
                 // What a person deleted thirty days ago goes for good.
                 crate::trash::purge(&app).await;
@@ -331,7 +331,7 @@ async fn refresh_server_info(app: &App) {
 // ---------------------------------------------------------------- users
 
 /// One read of Jellyfin's users, written down. `Some(known)` = refused: the read came back empty where
-/// finstats knows people, which is a broken read, not everybody deleted.
+/// FinStats knows people, which is a broken read, not everybody deleted.
 pub(crate) fn store_users(c: &mut Connection, users: &[Value], shrink_ok: bool, now: i64) -> Result<Option<i64>> {
     let tx = c.transaction()?;
     {
@@ -357,9 +357,9 @@ pub(crate) fn store_users(c: &mut Connection, users: &[Value], shrink_ok: bool, 
             ])?;
         }
     }
-    // The same guard as libraries and items: an empty /Users where finstats knows people is a
+    // The same guard as libraries and items: an empty /Users where FinStats knows people is a
     // broken read, not everyone deleted, so do not mark them all removed.
-    // Counted by the ids it could read, not by entries: a reshaped answer is everybody in keys finstats
+    // Counted by the ids it could read, not by entries: a reshaped answer is everybody in keys FinStats
     // does not know, and that is a broken read too.
     let seen: Vec<String> = users.iter().filter_map(|u| u["Id"].as_str()).map(norm_id).collect();
     let current: i64 = tx.query_row("SELECT COUNT(*) FROM users WHERE removed = 0", [], |r| r.get(0))?;
@@ -383,7 +383,7 @@ async fn sync_users(app: &App, jf: &Jellyfin) -> Result<String> {
     let refused = app.db.call(move |c| store_users(c, &users, shrink_ok, db::now())).await?;
     if let Some(current) = refused {
         let msg = format!(
-            "Jellyfin returned {count} user(s) where finstats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read. Nothing was changed."
+            "Jellyfin returned {count} user(s) where FinStats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read. Nothing was changed."
         );
         app.request_halt(msg.clone());
         return Err(anyhow!(msg));
@@ -524,7 +524,7 @@ pub fn backfill_playbacks(conn: &Connection) -> Result<Vec<String>> {
             episode_number = (SELECT index_number FROM items WHERE items.id = playbacks.item_id)
          WHERE item_type = 'Episode' AND episode_number IS NULL;
 
-         -- Only for history that was imported: a play finstats watched itself was typed by the
+         -- Only for history that was imported: a play FinStats watched itself was typed by the
          -- session as it happened, and that is the better answer if the two ever disagree.
          UPDATE playbacks SET item_type = (SELECT type FROM items WHERE items.id = playbacks.item_id)
          WHERE source <> 'live' AND item_type <> 'Episode'
@@ -555,7 +555,7 @@ pub(crate) fn store_libraries(c: &mut Connection, lib_rows: &[Value], shrink_ok:
         )?;
     }
     // The same guard as items, at the level above: a Jellyfin that lists no libraries where
-    // finstats knows several is a broken read, not an emptied server.
+    // FinStats knows several is a broken read, not an emptied server.
     let current: i64 = tx.query_row("SELECT COUNT(*) FROM libraries WHERE removed = 0", [], |r| r.get(0))?;
     if !shrink_ok && whole_set_vanished(lib_rows.len(), current) {
         tx.rollback()?;
@@ -593,7 +593,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
     if let Some(current) = refused {
         let plural = if seen_libs == 1 { "y" } else { "ies" };
         let msg = format!(
-            "Jellyfin listed {seen_libs} librar{plural} where finstats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read, not an emptied server. Nothing was changed."
+            "Jellyfin listed {seen_libs} librar{plural} where FinStats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read, not an emptied server. Nothing was changed."
         );
         app.request_halt(msg.clone());
         return Err(anyhow!(msg));
@@ -609,7 +609,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
         // looked like a gutted library and halted the install.
         let mut seen = 0usize;
         // What of it could be stored: the guard's count. `seen` is the page cursor, and an answer whose
-        // items finstats cannot read (no `Id`) is a full page that stored nothing.
+        // items FinStats cannot read (no `Id`) is a full page that stored nothing.
         let mut stored = 0usize;
         let mut total = 0usize;
         loop {
@@ -680,7 +680,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
 
         // Only after a library was read completely is "not seen" proof of removal, and only if the
         // read is trustworthy. `seen` is how many of this library's items the read above actually
-        // saw; if that is a fraction of what finstats holds, the read is broken, not the library
+        // saw; if that is a fraction of what FinStats holds, the read is broken, not the library
         // empty. Refuse, keep the data, and halt so the operator can look (`trustworthy_removal`).
         let lib = lib_id.clone();
         let shrink_ok = allow_shrink();
@@ -697,7 +697,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             .await?;
         if let Some(current) = refused {
             let msg = format!(
-                "Jellyfin returned {stored} readable item(s) for library “{lib_name}” but finstats holds {current}. Refusing to mark {} items removed: this looks like a Jellyfin change or a bad read, not a deletion. The library was left exactly as it was.",
+                "Jellyfin returned {stored} readable item(s) for library “{lib_name}” but FinStats holds {current}. Refusing to mark {} items removed: this looks like a Jellyfin change or a bad read, not a deletion. The library was left exactly as it was.",
                 current - stored as i64
             );
             app.request_halt(msg.clone());
@@ -763,7 +763,7 @@ fn people_from(from: i64, portraits_known: bool) -> i64 {
 }
 
 /// The portraits of people Jellyfin saved since the last look, written onto every title they are in. Returns how many
-/// people's portraits changed; a person finstats does not know is passed over.
+/// people's portraits changed; a person FinStats does not know is passed over.
 pub fn store_portraits(c: &Connection, people: &[Value]) -> Result<usize> {
     let mut stmt = c.prepare_cached(
         "UPDATE item_people SET image_tag = ?2, has_image = ?3 WHERE person_id = ?1 AND (image_tag IS NOT ?2 OR has_image != ?3)",
@@ -1045,7 +1045,7 @@ async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
 // ---------------------------------------------------------------- per-user played & favourite flags
 
 /// Jellyfin remembers what each user has finished or favourited, including everything from
-/// before finstats existed. That is what makes "never watched" trustworthy.
+/// before FinStats existed. That is what makes "never watched" trustworthy.
 async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
     const ID: &str = "sync_userdata";
     let users: Vec<(String, String)> = app
@@ -1152,7 +1152,7 @@ mod tests {
             .query_map([], |r| r.get::<_, Option<String>>(0)).unwrap().map(Result::unwrap).collect::<Vec<_>>();
         assert_eq!(tags(&c), [Some("old".to_string())], "the library read keeps the portrait's tag");
         let answer = [json!({ "Id": "P1", "Type": "Person", "ImageTags": { "Primary": "new" } }), json!({ "Id": "p9", "ImageTags": { "Primary": "x" } })];
-        assert_eq!(store_portraits(&c, &answer).unwrap(), 1, "one person finstats knows");
+        assert_eq!(store_portraits(&c, &answer).unwrap(), 1, "one person FinStats knows");
         assert_eq!(tags(&c), [Some("new".to_string())], "on every title");
         assert_eq!(store_portraits(&c, &answer).unwrap(), 0, "the same answer twice changes nothing");
         store_portraits(&c, &[json!({ "Id": "p1", "ImageTags": {} })]).unwrap();
@@ -1211,10 +1211,10 @@ mod tests {
         assert_eq!(store_users(&mut c, &[user("a1", "alice")], false, 100).unwrap(), None);
         assert_eq!((removed(&c, "a1"), removed(&c, "b2")), (0, 1), "the read did not say bob is gone");
         store_users(&mut c, &[user("a1", "alice"), user("b2", "bob")], false, 101).unwrap();
-        assert_eq!(removed(&c, "b2"), 0, "back in Jellyfin, back in finstats");
+        assert_eq!(removed(&c, "b2"), 0, "back in Jellyfin, back in FinStats");
         assert_eq!(store_users(&mut c, &[], false, 102).unwrap(), Some(2), "an empty read is refused, not everybody removed");
         assert_eq!(removed(&c, "a1"), 0);
-        // A Jellyfin that changed shape under an upgrade answers everybody, in keys finstats cannot read:
+        // A Jellyfin that changed shape under an upgrade answers everybody, in keys FinStats cannot read:
         // that is an empty read too, not everybody deleted.
         let reshaped = [json!({ "id": "a1", "name": "alice" }), json!({ "id": "b2", "name": "bob" })];
         assert_eq!(store_users(&mut c, &reshaped, false, 103).unwrap(), Some(2), "nobody readable is refused like nobody at all");
@@ -1222,7 +1222,7 @@ mod tests {
     }
 
     /// The library guard counts what a read stored, and an item without an id stores nothing: a page of
-    /// items in keys finstats cannot read must count as an empty read, not a full one.
+    /// items in keys FinStats cannot read must count as an empty read, not a full one.
     /// A title's original-language name is kept beside Jellyfin's, so a history that knew it only by that name finds it.
     #[test]
     fn a_title_keeps_its_original_name() {
@@ -1282,7 +1282,7 @@ mod tests {
     }
 
     /// Jellystat keeps the series' name where an episode's should be (`NowPlayingItemName`); the library knows
-    /// the episode's. A play finstats recorded itself was named by the session and is left alone.
+    /// the episode's. A play FinStats recorded itself was named by the session and is left alone.
     #[test]
     fn an_imported_episode_play_is_called_what_the_library_calls_the_episode() {
         let c = Connection::open_in_memory().unwrap();
@@ -1340,7 +1340,7 @@ mod tests {
         for m in crate::db::MIGRATIONS {
             c.execute_batch(m).unwrap();
         }
-        // History imported before finstats had ever read the library: one tracker guessed the type
+        // History imported before FinStats had ever read the library: one tracker guessed the type
         // wrong, another could not tell at all, and neither knew which episode this was.
         c.execute_batch(
             "INSERT INTO items(id, type, name, runtime_s, parent_index_number, index_number, updated_at) VALUES
@@ -1359,7 +1359,7 @@ mod tests {
         let ty = |start: i64| -> String { c.query_row("SELECT item_type FROM playbacks WHERE started_at = ?1", [start], |r| r.get(0)).unwrap() };
         assert_eq!(ty(100), "Audio");
         assert_eq!(ty(100000), "Audio");
-        // A play finstats watched itself was typed by the session at the time; that stands.
+        // A play FinStats watched itself was typed by the session at the time; that stands.
         assert_eq!(ty(300000), "Movie");
         // And the episode now knows which one it is.
         let se: (i64, i64) = c.query_row("SELECT season_number, episode_number FROM playbacks WHERE item_id = 'e1'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();

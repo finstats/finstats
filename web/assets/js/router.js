@@ -62,10 +62,10 @@ function teardown() {
   current = null;
 }
 
-// How many of finstats' own pages lie behind this history entry. The entry a tab opened on is 0: going
+// How many of FinStats' own pages lie behind this history entry. The entry a tab opened on is 0: going
 // back from there leaves the app, which is not what Esc is for.
 const depth = () => (history.state && history.state.depth) || 0;
-/** Is the history entry behind this one a page of finstats? */
+/** Is the history entry behind this one a page of FinStats? */
 export const canGoBack = () => depth() > 0;
 
 export function navigate(to, { replace = false, scroll = true } = {}) {
@@ -131,7 +131,7 @@ function render(scroll = true) {
         if (!running && !abort.signal.aborted) { clearTimeout(timer); timer = setTimeout(tick, interval); }
       };
     },
-    title(t) { document.title = t ? `${t} · finstats` : 'finstats'; },
+    title(t) { document.title = t ? `${t} · FinStats` : 'FinStats'; },
   };
 
   if (scroll) window.scrollTo(0, 0);

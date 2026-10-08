@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build THIRD-PARTY.json, the notice finstats ships for the code it is built on.
+"""Build THIRD-PARTY.json, the notice FinStats ships for the code it is built on.
 
 Input:  `cargo metadata` for the dependency graph, and the crate sources cargo has already
         unpacked (~/.cargo/registry/src/...), where every crate keeps its own LICENSE files.
@@ -33,7 +33,7 @@ MIN_TEXT = 40
 def graph(meta):
     """Every package the binary is built from: the root's dependencies, minus dev-only ones.
 
-    No target filtering: finstats is built for several platforms, and a notice that only covers
+    No target filtering: FinStats is built for several platforms, and a notice that only covers
     the one it was generated on would be wrong on the others.
     """
     nodes = {n["id"]: n for n in meta["resolve"]["nodes"]}

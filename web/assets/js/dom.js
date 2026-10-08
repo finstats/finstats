@@ -9,7 +9,7 @@ const nf = new Intl.NumberFormat('en-US');   // the other formatters' numbers, t
 // FinUI's builder and icons, for the modules that still import them from here.
 export { h, s, clear, mount, icon, num, initials };
 
-/** The finstats logo. One source for favicon, sidebar and sign-in: /assets/logo.svg. */
+/** The FinStats logo. One source for favicon, sidebar and sign-in: /assets/logo.svg. */
 export function logo(size = 24) {
   return h('img', { class: 'brand-logo', src: '/assets/logo.svg', width: size, height: size, alt: '', decoding: 'async' });
 }
@@ -125,9 +125,9 @@ export const dayLabelYear = (str) => dayfy.format(parseDay(str));
 
 export const pct = (x, digits = 0) => (x == null ? '–' : (x * 100).toFixed(digits) + '%');
 
-/** Where a play came from, by the `source` the server gives it: finstats itself, or a tracker it imports from. One list
- *  for every page, so a tracker added to finstats is not missing from one of them. */
-export const TRACKERS = { live: 'finstats', jellystat: 'Jellystat', streamystats: 'Streamystats', tautulli: 'Tautulli' };
+/** Where a play came from, by the `source` the server gives it: FinStats itself, or a tracker it imports from. One list
+ *  for every page, so a tracker added to FinStats is not missing from one of them. */
+export const TRACKERS = { live: 'FinStats', jellystat: 'Jellystat', streamystats: 'Streamystats', tautulli: 'Tautulli' };
 
 
 export function episodeCode(season, episode) {

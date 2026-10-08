@@ -1,4 +1,4 @@
-// Search (Ctrl+Space, or the menu's own): FinUI's search run against finstats: a page, a user, anything in the library, or
+// Search (Ctrl+Space, or the menu's own): FinUI's search run against FinStats: a page, a user, anything in the library, or
 // someone who is in it. Where it lives (the menu, or the page) is shell.js' business; this only answers the words.
 
 import { h, icon, debounce } from './dom.js';
@@ -13,7 +13,7 @@ const TYPE = { Movie: 'Movie', Series: 'Series', MusicAlbum: 'Album', Audio: 'Tr
 const credit = (p) => [p.is_actor && p.is_director ? 'Actor and director' : p.is_director ? 'Director' : 'Actor',
   p.titles ? `${p.titles} ${p.titles === 1 ? 'title' : 'titles'}` : null].filter(Boolean).join(' · ');
 
-/** A search over finstats. `onPick(row)` opens what was chosen (every row has an `href`); `onEscape()` gives up. */
+/** A search over FinStats. `onPick(row)` opens what was chosen (every row has an `href`); `onEscape()` gives up. */
 export function finstatsSearch({ onPick, onEscape }) {
   const pages = pageCommands();
   let abort = null;

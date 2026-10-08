@@ -21,7 +21,7 @@ export default {
   ],
   async render(slot, store) {
     const body = h('div', { class: 'net-stack' }, sk.rows(2));
-    mount(slot, card({ title: 'Backups', sub: 'Your history, settings and permissions in one file, to keep safe or to move to another finstats', body, id: 'backups' }));
+    mount(slot, card({ title: 'Backups', sub: 'Your history, settings and permissions in one file, to keep safe or to move to another FinStats', body, id: 'backups' }));
     await store.loadSettings();
 
     let backupsData = null;

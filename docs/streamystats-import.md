@@ -1,23 +1,23 @@
 # How Streamystats data is imported
 
-finstats reads Streamystats' own backup directly: the one file its
+FinStats reads Streamystats' own backup directly: the one file its
 **Settings → Backup & Import → Backup & Restore → Download Backup** gives you. The file is walked
 rather than loaded, so a backup of years of history costs no more memory than a small one, and the
 whole import is one transaction: it either fully succeeds or changes nothing.
 
 A Streamystats backup is **sessions only**. It holds no libraries, items or users, so an import
 brings history and the names of the people in it, and nothing else. Titles, posters and runtimes
-come from your own Jellyfin, as they do for everything else finstats shows.
+come from your own Jellyfin, as they do for everything else FinStats shows.
 
 ## What the fields mean
 
 Learned from a real export rather than from documentation.
 
-| Streamystats field | How finstats reads it |
+| Streamystats field | How FinStats reads it |
 |---|---|
 | `startTime` **and** `endTime` | Two different moments means a play Streamystats watched itself: the first is the real start, and whatever the pair leaves over `playDuration` is time the play was not running. |
 | `startTime` **==** `endTime` | One moment, and it is the **end**: this is a play Streamystats imported from Jellystat, whose `ActivityDateInserted` it copied into both fields. Start = end − `playDuration`. |
-| `playDuration` | Seconds the play was actually running, so it is what finstats counts as watched. How much of the rest was a pause is not recorded, and is not guessed. |
+| `playDuration` | Seconds the play was actually running, so it is what FinStats counts as watched. How much of the rest was a pause is not recorded, and is not guessed. |
 | `isInferred` / an `inferred:` id | **Not a play.** Jellyfin reported the item watched, so Streamystats wrote a row as long as the whole runtime for a viewing nobody saw. Counted and skipped: importing it would add watch time to an evening nobody watched. |
 | `itemId` | The item, in both kinds of row (Streamystats re-links renamed items). `mediaSourceId` is *not* an item id and is not used. |
 | `positionTicks` | Taken only where the row also keeps the `runtimeTicks` it is a position in. A row from Jellystat has no runtime, and its position is the one Jellystat happened to catch rather than where playback stopped. |
@@ -35,12 +35,12 @@ trackers disagree about when a play *began* (Jellystat keeps only the end, so th
 worked back from the seconds played, and every minute the viewer spent paused moves it later), while
 they agree about when it ended. "Close" is the **Merge window** under Settings → Collection.
 
-The order does not matter, and neither does what finstats has already recorded itself.
+The order does not matter, and neither does what FinStats has already recorded itself.
 
 ## What imported history cannot have
 
 Both trackers store one row per play, so imported plays have no timeline of pauses, skips and track
-switches, no pause or skip counts, and no resume point. Everything finstats records itself does.
+switches, no pause or skip counts, and no resume point. Everything FinStats records itself does.
 
 Plays Streamystats watched itself carry nothing about the file either: no codec, resolution,
 bitrate, container or track language. Cards with nothing to show hide themselves rather than showing

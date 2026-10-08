@@ -1,4 +1,4 @@
-//! The four ways a message leaves finstats, and nothing else about notifications.
+//! The four ways a message leaves FinStats, and nothing else about notifications.
 //!
 //! A plain **webhook** (JSON, the shape documented in `docs/api.md`), **Discord** (an embed),
 //! **ntfy** and **Gotify**. Two rules hold for all of them:
@@ -275,7 +275,7 @@ fn hex(severity: &str) -> String {
 }
 
 /// Pushover has its own scale, from -2 (never disturb) to 2 (emergency, which needs an acknowledgement
-/// and is never what finstats sends). Quiet for the everyday, the usual for a warning, loud for an alert.
+/// and is never what FinStats sends). Quiet for the everyday, the usual for a warning, loud for an alert.
 fn pushover_priority(severity: &str) -> i64 {
     match severity {
         ALERT => 1,
@@ -316,11 +316,11 @@ pub fn payload(channel: Channel, base_url: &str, topic: Option<&str>, secret: &s
         Channel::Discord => (
             base_url.to_string(),
             json!({
-                "username": "finstats",
+                "username": "FinStats",
                 "embeds": [{
                     "title": title, "description": body, "url": m.link, "color": colour(&m.severity),
                     "timestamp": chrono::DateTime::from_timestamp(at, 0).map(|t| t.to_rfc3339()),
-                    "fields": fields_json(m, true), "footer": { "text": "finstats" },
+                    "fields": fields_json(m, true), "footer": { "text": "FinStats" },
                 }],
             }),
         ),
@@ -333,7 +333,7 @@ pub fn payload(channel: Channel, base_url: &str, topic: Option<&str>, secret: &s
                 "attachments": [{
                     "color": hex(&m.severity), "title": title, "title_link": m.link, "text": body,
                     "fields": m.fields.iter().take(FIELDS_MAX).map(|(l, v)| json!({ "title": cut(l, 100), "value": cut(v, FIELD_MAX), "short": true })).collect::<Vec<_>>(),
-                    "footer": "finstats", "ts": at,
+                    "footer": "FinStats", "ts": at,
                 }],
             }),
         ),
@@ -352,7 +352,7 @@ pub fn payload(channel: Channel, base_url: &str, topic: Option<&str>, secret: &s
             format!("{base_url}/1/messages.json"),
             json!({
                 "token": secret, "user": topic.unwrap_or_default(), "title": title, "message": text,
-                "priority": pushover_priority(&m.severity), "url": m.link, "url_title": "Open in finstats",
+                "priority": pushover_priority(&m.severity), "url": m.link, "url_title": "Open in FinStats",
             }),
         ),
         // A push with somewhere to go is a link; one without is a note, rather than a link to nowhere.
@@ -433,7 +433,7 @@ fn explain(e: reqwest::Error, t: &Target) -> String {
     if e.is_timeout() {
         format!("{label} at {host} did not answer in time")
     } else if e.is_connect() {
-        format!("Could not connect to {host}. Is it reachable from where finstats runs?")
+        format!("Could not connect to {host}. Is it reachable from where FinStats runs?")
     } else if e.is_decode() {
         format!("{host} did not answer like {label}")
     } else {
@@ -445,7 +445,7 @@ fn explain(e: reqwest::Error, t: &Target) -> String {
 fn refuse(status: StatusCode, t: &Target) -> String {
     let (label, host) = (t.channel.label(), crate::outbound::host_of(t.url()));
     if status.is_redirection() {
-        return format!("{host} answers with a redirect. finstats follows none, so that a token can never end up somewhere else: enter the address it redirects to");
+        return format!("{host} answers with a redirect. FinStats follows none, so that a token can never end up somewhere else: enter the address it redirects to");
     }
     match status.as_u16() {
         // Telegram and Pushover both answer 400 for a chat or a user key they do not know, and the one
@@ -466,7 +466,7 @@ fn refuse(status: StatusCode, t: &Target) -> String {
             _ => format!("{host} answered 404 Not Found. Is the address right, topic and base path included?"),
         },
         413 => format!("{label} found the message too large"),
-        429 => format!("{label} is rate-limiting finstats"),
+        429 => format!("{label} is rate-limiting FinStats"),
         _ => format!("{label} answered {status}"),
     }
 }
@@ -511,7 +511,7 @@ mod tests {
         let missing = said(404, Channel::Ntfy, "https://ntfy.example/topic");
         assert!(missing.starts_with("ntfy.example answered 404") && missing.contains("topic and base path"), "{missing}");
         assert!(said(413, Channel::Webhook, "https://hooks.example/x").ends_with("found the message too large"));
-        assert!(said(429, Channel::Webhook, "https://hooks.example/x").ends_with("is rate-limiting finstats"));
+        assert!(said(429, Channel::Webhook, "https://hooks.example/x").ends_with("is rate-limiting FinStats"));
         assert!(said(500, Channel::Webhook, "https://hooks.example/x").ends_with("answered 500 Internal Server Error"));
     }
 
