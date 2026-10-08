@@ -896,17 +896,28 @@ fn user_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<Vec
         "SELECT u.id, u.name, u.is_admin, u.is_disabled, u.removed, (u.image_tag IS NOT NULL) AS has_image,
                 u.last_login_at, u.last_activity_at,
                 COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s, l.last_played_at,
-                (SELECT CASE WHEN x.series_name IS NOT NULL AND x.item_type = 'Episode' THEN x.series_name || ' · ' || x.item_name ELSE x.item_name END
-                   FROM visible_playbacks x WHERE x.user_id = u.id ORDER BY x.ended_at DESC LIMIT 1) AS last_item_name,
-                (SELECT x.client FROM visible_playbacks x WHERE x.user_id = u.id ORDER BY x.ended_at DESC LIMIT 1) AS last_client
+                CASE WHEN l.series_name IS NOT NULL AND l.item_type = 'Episode' THEN l.series_name || ' · ' || l.item_name ELSE l.item_name END AS last_item_name,
+                l.item_id AS last_item_id, l.client AS last_client, l.device_name AS last_device, l.remote_ip AS last_ip
          FROM users u
          LEFT JOIN (SELECT p.user_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s FROM visible_playbacks p {} GROUP BY p.user_id) s ON s.user_id = u.id
-         LEFT JOIN (SELECT user_id, MAX(ended_at) AS last_played_at FROM visible_playbacks GROUP BY user_id) l ON l.user_id = u.id
+         -- The last play's own columns beside MAX(): SQLite takes a plain column from the row that holds the maximum.
+         LEFT JOIN (SELECT user_id, MAX(ended_at) AS last_played_at, item_id, item_name, series_name, item_type, client, device_name, remote_ip
+                    FROM visible_playbacks GROUP BY user_id) l ON l.user_id = u.id
          {filter}
          ORDER BY watch_s DESC, u.name COLLATE NOCASE",
         cond.sql()
     );
-    Ok(rows_json(conn, &sql, &args)?.into_iter().map(Value::Object).collect())
+    let see_network = scope.perms.see_network;
+    Ok(rows_json(conn, &sql, &args)?
+        .into_iter()
+        .map(|mut m| {
+            // Where somebody last played from is an address, and addresses are see_network's.
+            if !see_network {
+                m.insert("last_ip".into(), Value::Null);
+            }
+            Value::Object(m)
+        })
+        .collect())
 }
 
 pub async fn users(State(app): State<App>, user: AuthUser, Query(q): Query<FilterQuery>) -> ApiResult {
@@ -2354,6 +2365,30 @@ mod tests {
         assert_eq!(insight_parts(Some("concurrency")), vec!["concurrency"]);
         assert_eq!(insight_parts(Some("genres,nonsense,concurrency")), vec!["concurrency", "genres"], "in their own order, the unknown left out");
         assert_eq!(insight_parts(Some("nonsense")), INSIGHTS.to_vec());
+    }
+
+    /// The Users table says what each person last played, on which app and player, and from which address: that one only
+    /// for whoever may see addresses, as everywhere.
+    #[test]
+    fn a_person_says_what_where_and_on_what_they_last_played() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u1', 'alice', 0, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, client, device_name, remote_ip, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 'Jellyfin Web', 'Firefox', '192.168.1.10', 100, 700, 600),
+               ('live', 'u1', 'alice', 'i2', 'Sintel', 'Movie', 'Jellyfin Android TV', 'Living Room TV', '192.168.1.23', 800, 1400, 600);",
+        )
+        .unwrap();
+        let last = |see_network: bool| -> Vec<Value> {
+            let scope = Scope { perms: crate::auth::Perms { see_network, ..crate::auth::Perms::ALL }, ..everyone() }.resolve(&c).unwrap();
+            let r = user_rows(&c, &scope, None).unwrap().into_iter().next().unwrap();
+            ["last_item_id", "last_item_name", "last_client", "last_device", "last_ip"].iter().map(|k| r[*k].clone()).collect()
+        };
+        assert_eq!(last(true), vec![json!("i2"), json!("Sintel"), json!("Jellyfin Android TV"), json!("Living Room TV"), json!("192.168.1.23")]);
+        assert_eq!(last(false)[4], Value::Null, "an address needs see_network");
     }
 
     /// The Libraries table names what was played last in each, of the plays the caller may see, as it says when.
