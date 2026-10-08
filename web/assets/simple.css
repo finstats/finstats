@@ -6,7 +6,9 @@
 
 /* ---- the shell: a bar across the top, the page under it */
 .simple-app { min-height: 100vh; display: flex; flex-direction: column; }
-.simple-main { flex: 1; width: 100%; max-width: 1720px; margin: 0 auto; padding: 18px 20px 48px; min-width: 0; }
+.simple-main { flex: 1; width: 100%; max-width: 1720px; margin: 0 auto; padding: 18px 20px 48px; min-width: 0; position: relative; overflow-x: clip; }
+/* relative and clip: a chart's table for screen readers (.sr-only) is placed absolutely and cannot be narrower than its words;
+   held here, it no longer widens the page. */
 .simple-app .fui-top-bar__brand { font-size: 17px; letter-spacing: 0; font-weight: 650; }
 .simple-app .fui-top-bar__brand .brand-logo { display: block; }
 .simple-app .fui-top-bar__actions { gap: 4px; }
@@ -112,3 +114,11 @@
   .simple-episode { grid-template-columns: 26px minmax(0, 1fr) auto; }
   .simple-episode__runtime { display: none; }
 }
+
+/* ---- graphs: tabs as buttons, a line of what the charts show, the charts in pairs */
+.simple-tabs--boxed { gap: 4px; margin-bottom: 16px; }
+.simple-tabs--boxed a { padding: 6px 12px; border-radius: var(--radius-control); }
+.simple-tabs--boxed a[aria-current="page"] { background: var(--accent); color: var(--on-accent); }
+.simple-graphs__note { margin: 0 0 14px; font-size: 14px; color: var(--text-muted); }
+.simple-graphs__body > * + * { margin-top: 22px; }
+.simple-graphs__pair { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }

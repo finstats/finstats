@@ -14,6 +14,7 @@ import history from './pages/history.js';
 import { librariesPage, libraryPage, prefetchLibraries, prefetchLibrary } from './pages/libraries.js';
 import { usersPage, userPage, prefetchUsers, prefetchUser } from './pages/users.js';
 import itemPage, { prefetchItem } from './pages/item.js';
+import graphs, { prefetchGraphs } from './pages/graphs.js';
 
 /** A page fetched when it is first opened: `load()` answers its function, drawn only if the reader is still there. */
 const later = (load) => (ctx) => load().then((page) => { if (!ctx.signal.aborted) page(ctx); });
@@ -28,6 +29,7 @@ route('/libraries/:id', libraryPage, { prefetch: prefetchLibrary });
 route('/users', usersPage, { perm: 'see_everyone', prefetch: prefetchUsers });
 route('/users/:id', userPage, { prefetch: prefetchUser });
 route('/items/:id', itemPage, { prefetch: prefetchItem });
+route('/graphs', graphs, { prefetch: prefetchGraphs });
 route('/settings', settings);
 route('/settings/:section', settings);
 route('/settings/:section/:task', settings);
@@ -41,4 +43,4 @@ route('*', (ctx) => {
 
 setLayout(layout);
 
-boot({ top: () => ['/'] });
+boot({ top: (me) => ['/', '/libraries', '/history', '/graphs', `/users/${me.id}`, ...(me.is_admin || (me.permissions && me.permissions.see_everyone) ? ['/users'] : [])] });
