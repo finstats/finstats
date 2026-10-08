@@ -122,3 +122,14 @@
 .simple-graphs__note { margin: 0 0 14px; font-size: 14px; color: var(--text-muted); }
 .simple-graphs__body > * + * { margin-top: 22px; }
 .simple-graphs__pair { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+
+/* ---- settings: FinStats' own page, the section list a panel of rows with the open one in the accent's words */
+.simple-app .fui-page-header { margin-bottom: 18px; padding: 16px; background: var(--bg-2); border-radius: var(--radius); }
+@media (min-width: 821px) { .simple-app .fui-sections { grid-template-columns: 250px minmax(0, 1fr); } }
+.simple-app .fui-sections__nav { top: 66px; gap: 0; padding: 4px 0; background: var(--bg-2); border-radius: var(--radius); }
+.simple-app .fui-sections__group { gap: 0; }
+.simple-app .fui-sections__group-title { margin: 0; padding: 12px 16px 6px; }
+.simple-app .fui-sections__link { padding: 12px 16px; border-radius: 0; border-top: 1px solid var(--border-soft); font-size: 14.5px; color: var(--text); }
+.simple-app .fui-sections__link.is-active { background: var(--hover); box-shadow: none; color: var(--accent); }
+.simple-app .fui-sections__link.is-active .icon { color: var(--accent); }
+@media (max-width: 820px) { .simple-app .fui-sections__nav { padding: 0; background: none; } .simple-app .fui-sections__link { border-top: 0; } }
