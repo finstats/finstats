@@ -1,5 +1,5 @@
 //! A FinUI preset applied to finstats itself (Settings → Appearance). The preset is made at FinUI create
-//! (finstats.github.io/finui/create) and is a code: one base-36 digit per axis of `finui/create/presets.json`. finstats
+//! (finui.finstats.no/create) and is a code: one base-36 digit per axis of `finui/create/presets.json`. finstats
 //! keeps FinUI's own generated files of each option's tokens (`finui/p/<axis>/<option>.css`, built by FinUI's
 //! tools/build-site.mjs and copied here; the QA stage `finui` holds them to FinUI's) and does with them what FinUI's
 //! install.sh does: the files the code names, in axis order, after the stylesheet, so a later choice sets a token last.
@@ -32,7 +32,7 @@ pub fn overlay(code: &str) -> Option<String> {
     if blocks.is_empty() {
         return Some(String::new());
     }
-    Some(format!("\n/* FinUI preset {code}, set in Settings → Appearance: https://finstats.github.io/finui/create/?preset={code} */\n{blocks}"))
+    Some(format!("\n/* FinUI preset {code}, set in Settings → Appearance: https://finui.finstats.no/create/?preset={code} */\n{blocks}"))
 }
 
 #[cfg(test)]

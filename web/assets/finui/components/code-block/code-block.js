@@ -58,7 +58,7 @@ export const meta = {
       { key: 'note', label: 'A note on how to use it' },
     ],
     render: (o) => (o.kind === 'line'
-      ? h('div', { class: 'fui-code-block__demo' }, o.note ? h('p', null, 'Copies FinUI into ./finui:') : null, codeLine('curl -fsSL https://finstats.github.io/finui/install.sh | sh'))
+      ? h('div', { class: 'fui-code-block__demo' }, o.note ? h('p', null, 'Copies FinUI into ./finui:') : null, codeLine('curl -fsSL https://finui.finstats.no/install.sh | sh'))
       : codeBlock({ panes: [{ key: 'js', label: 'JavaScript', text: JS }, { key: 'css', label: 'CSS', text: CSS }], note: o.note ? 'Import the JavaScript and add the CSS.' : null })),
   },
 };

@@ -1680,7 +1680,7 @@ already has; the findings themselves are worked out again and are not in a backu
 # v2.2: Appearance
 
 How finstats looks is each person's own: a FinUI preset's code as FinUI create makes it
-(`https://finstats.github.io/finui/create/`), one letter or digit per choice, such as `0101`.
+(`https://finui.finstats.no/create/`), one letter or digit per choice, such as `0101`.
 
 `GET /api/me/appearance` → `{"finui_preset": "0101"}` (`""`: FinUI as it ships). `PUT /api/me/appearance` with
 `{"finui_preset"}` sets the caller's and nobody else's, and answers the same shape; `""` takes it back; `400` for a code that

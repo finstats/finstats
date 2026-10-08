@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://finstats.github.io/finstats/"><b>Try the demo</b></a>: finstats in your browser, with invented people and titles. Nothing to install.
+  <a href="https://finstats.no/"><b>Try the demo</b></a>: finstats in your browser, with invented people and titles. Nothing to install.
 </p>
 
 <p align="center">

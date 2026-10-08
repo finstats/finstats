@@ -30,7 +30,7 @@ export default {
         body: button({ href: '/licenses' }, icon('log', 14), 'Third-party licences', icon('chevronRight', 14)) }),
       // FinUI is its own project: its gallery and FinUI create are a static site of its own, not a page of finstats.
       card({ title: 'Components', sub: 'FinUI, the components this interface is built from: every one in both themes, and FinUI create to make them yours', id: 'components',
-        body: button({ href: 'https://finstats.github.io/finui/', target: '_blank', rel: 'noopener noreferrer' }, icon('layers', 14), 'FinUI', icon('external', 14)) }));
+        body: button({ href: 'https://finui.finstats.no/', target: '_blank', rel: 'noopener noreferrer' }, icon('layers', 14), 'FinUI', icon('external', 14)) }));
 
     function paintDb() {
       const d = store.tasks && store.tasks.db;

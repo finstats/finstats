@@ -717,7 +717,7 @@ registry order, built by the server: one request, no build step. **Every value a
 but also every corner (`--radius*`, a test refuses a literal radius), `--density`, `--card-shadow`, `--icon-stroke`,
 `--on-accent`. **FinUI is also a repository of its own, `github.com/finstats/finui`** (checked out beside finstats as
 `../finui`): the components are developed here, where they are used, and copied there as they change; its gallery,
-**FinUI create** (`create/`: presets, `preset.js`, the page) and the installer (`curl -fsSL https://finstats.github.io/finui/install.sh | sh -s --
+**FinUI create** (`create/`: presets, `preset.js`, the page) and the installer (`curl -fsSL https://finui.finstats.no/install.sh | sh -s --
 <code>`, built with the site by its pages workflow) live there only; finstats serves no gallery, and Settings → System
 links to the site. **Each person's finstats wears the preset they chose** (Settings → Appearance, `appearance.rs`, table
 `appearance`, `/api/me/appearance`, in `backup::TABLES`): finstats keeps FinUI's `create/presets.json` and the per-option
