@@ -1,4 +1,4 @@
-// finstats' context menus (FinUI's context-menu): wherever a title, a person or a library is a link (a poster on the
+// FinStats' context menus (FinUI's context-menu): wherever a title, a person or a library is a link (a poster on the
 // dashboard, a row of a list, a name in a table), a right-click, a long-press or the menu key offers what can be done
 // to it. One resolver for the whole app, reading the link itself: a page draws nothing for it, and a new page's links
 // have a menu the day they are written. The link's `data-type` (a Jellyfin type) is what says a title is a film or a
@@ -20,7 +20,7 @@ export function notHere(t) {
 
 const KINDS = { items: 'title', users: 'person', people: 'person', libraries: 'library' };
 
-/** What a link leads to, or null when it is not one of finstats' own things. */
+/** What a link leads to, or null when it is not one of FinStats' own things. */
 export function linkTarget(a) {
   const href = window.finstatsDemo.app(a.getAttribute('href') || '');
   if (!href || !href.startsWith('/') || href.startsWith('//')) return null;

@@ -1,4 +1,4 @@
-// Settings → Appearance: how finstats looks to you, and to nobody else. A FinUI preset (the code FinUI create makes,
+// Settings → Appearance: how FinStats looks to you, and to nobody else. A FinUI preset (the code FinUI create makes,
 // finui.finstats.no/create), whose tokens the server serves after FinUI's own in /assets/finui.css, to you
 // alone. Saving swaps that stylesheet on this page at once; your other pages get it on their next load.
 // Which menu this browser has: on a phone one of FinUI mobile-nav's styles, on a wider screen one of desktop-nav's and the side
@@ -30,7 +30,7 @@ function restyle() {
 }
 
 export default {
-  key: 'appearance', label: 'Appearance', sub: 'How finstats looks to you', group: 'Account', icon: 'sliders',
+  key: 'appearance', label: 'Appearance', sub: 'How FinStats looks to you', group: 'Account', icon: 'sliders',
   visible: () => true,
   entries: [{ id: 'desktop_menu', label: 'Menu', hint: 'menu sidebar navigation grouped rail search dock command bar pinned tiles', visible: () => !matchMedia(PHONE).matches },
     { id: 'desktop_side', label: 'Menu on the right', hint: 'menu sidebar right left side', visible: () => !matchMedia(PHONE).matches },
@@ -39,7 +39,7 @@ export default {
     { id: 'finui_preset', label: 'FinUI preset', hint: 'appearance look theme colours accent radius density borders cards buttons fields tables menu motion icons contrast finui preset code customize create' }],
   async render(slot, store) {
     const body = h('div');
-    mount(slot, card({ title: 'Appearance', sub: 'How finstats looks to you: your choice, nobody else’s', body, id: 'appearance' }));
+    mount(slot, card({ title: 'Appearance', sub: 'How FinStats looks to you: your choice, nobody else’s', body, id: 'appearance' }));
     const [presets, mine] = await Promise.all([fetch('/assets/finui/create/presets.json', { signal: store.signal }).then((r) => r.json()), api.get('/me/appearance', null, { signal: store.signal })]);
     let current = mine.finui_preset || '';
     const input = h('input', { class: 'fui-field__input mono', id: 'f-finui_preset', type: 'text', autocomplete: 'off', spellcheck: false,

@@ -1,4 +1,4 @@
-// Licences: finstats' own, and every third-party licence the binary is built on, in full.
+// Licences: FinStats' own, and every third-party licence the binary is built on, in full.
 //
 // One window, one licence: the one picked from the lists beside it. All 181 texts laid out at
 // once made the page eighty thousand pixels tall, which is a wall rather than a document, and
@@ -91,7 +91,7 @@ export const prefetchLicenses = ({ signal }) => [() => loadLicenses(signal)];
 export default function licensesPage(ctx) {
   ctx.title('Licences');
   const view = h('div');
-  ctx.root.append(pageHeader('Licences', 'finstats is free software, built on other people’s free software. Every licence involved is here, in full.'), view);
+  ctx.root.append(pageHeader('Licences', 'FinStats is free software, built on other people’s free software. Every licence involved is here, in full.'), view);
   dataView({
     container: view, signal: ctx.signal,
     skeleton: () => [sk.cardBlock(140), sk.cardRows(5)],
@@ -117,10 +117,10 @@ export default function licensesPage(ctx) {
 
       return h('div', { class: 'lic-wrap' },
         h('div', { class: 'stack lic-main' },
-          app ? card({ title: 'finstats itself', sub: `v${app.version} · ${app.license}`, id: 'lic-app', actions: source(app.repository),
-            body: [h('p', { class: 'fui-field__help' }, 'finstats is released under the GNU General Public License, version 3. You may use, study, share and change it; anything you pass on must stay under the same licence and carry its source.'),
+          app ? card({ title: 'FinStats itself', sub: `v${app.version} · ${app.license}`, id: 'lic-app', actions: source(app.repository),
+            body: [h('p', { class: 'fui-field__help' }, 'FinStats is released under the GNU General Public License, version 3. You may use, study, share and change it; anything you pass on must stay under the same licence and carry its source.'),
               app.notices.length ? button({ size: 'sm', type: 'button', onClick: () => go(app) }, icon('log', 14), 'Read the full licence') : null] }) : null,
-          bundled.length ? card({ title: 'Bundled with finstats', sub: 'Fonts, map data and the geolocation database: not code, but shipped or read all the same', id: 'lic-bundled',
+          bundled.length ? card({ title: 'Bundled with FinStats', sub: 'Fonts, map data and the geolocation database: not code, but shipped or read all the same', id: 'lic-bundled',
             body: componentTable(bundled, go) }) : null,
           card({ title: 'Rust crates', sub: `${num(crates.length)} ${crates.length === 1 ? 'crate' : 'crates'} the binary is built from · pick one to read its licence`, id: 'lic-crates',
             body: componentTable(crates, go, 'Find a component') })),

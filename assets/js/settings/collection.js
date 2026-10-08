@@ -26,7 +26,7 @@ export default {
     await store.loadSettings();
     mount(body,
       settingRow({ id: 'library-read', label: 'When the library is read',
-        help: 'After Jellyfin’s own library scan, unless you change it. finstats never starts a scan.',
+        help: 'After Jellyfin’s own library scan, unless you change it. FinStats never starts a scan.',
         control: button({ size: 'sm', href: '/settings/tasks/sync_libraries' }, icon('clock', 13), 'Schedule') }),
       numberForm(store, FIELDS, 'collect-err'));
   },

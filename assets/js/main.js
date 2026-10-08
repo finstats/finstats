@@ -1,4 +1,4 @@
-// finstats SPA entry point.
+// FinStats SPA entry point.
 
 import { h, icon } from './dom.js';
 import { api, setUnauthorizedHandler } from './api.js';
@@ -93,7 +93,7 @@ async function boot() {
     }
   } catch (e) {
     app.replaceChildren(h('main', { class: 'bare' }, h('div', { class: 'auth-card' },
-      h('h1', { class: 'auth-title' }, 'finstats isn’t responding'),
+      h('h1', { class: 'auth-title' }, 'FinStats isn’t responding'),
       h('p', { class: 'auth-sub' }, e.message),
       button({ variant: 'primary', type: 'button', onClick: (e) => { setBusy(e.currentTarget, true, 'Trying again…'); location.reload(); } }, icon('refresh', 14), 'Try again'))));
     return;

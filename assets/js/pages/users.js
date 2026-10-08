@@ -147,14 +147,14 @@ export function userPage(ctx) {
   dv.load();
 }
 
-/** Jellyfin's own flags: they cover history from before finstats was installed. */
+/** Jellyfin's own flags: they cover history from before FinStats was installed. */
 function jellyfinStrip(j) {
   if (!j) return null;
   const cell = (k, v) => h('div', null, h('dt', null, k), h('dd', { class: 'mono' }, num(v)));
   return h('section', { class: 'strip', 'aria-label': 'In Jellyfin' },
     h('h2', { class: 'strip-title' }, 'In Jellyfin'),
     h('dl', { class: 'strip-facts' }, cell('Movies played', j.played_movies), cell('Episodes played', j.played_episodes), cell('Favourites', j.favorites)),
-    h('p', { class: 'strip-note' }, 'From Jellyfin’s played flags, including history from before finstats.'));
+    h('p', { class: 'strip-note' }, 'From Jellyfin’s played flags, including history from before FinStats.'));
 }
 
 function devicesTable(devices) {

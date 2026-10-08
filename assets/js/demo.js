@@ -1,4 +1,4 @@
-// The demo: finstats with no server behind it. A classic script in <head>, so all of it is in place before the
+// The demo: FinStats with no server behind it. A classic script in <head>, so all of it is in place before the
 // first module runs.
 //
 // Every answer the API gave while somebody walked an instance built from invented data is a file under
@@ -65,7 +65,7 @@
   // ---- the API
   const realFetch = window.fetch.bind(window);
   const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-  const REFUSED = 'This is a demo with invented data, so nothing here can be changed. Run finstats on your own server to try it.';
+  const REFUSED = 'This is a demo with invented data, so nothing here can be changed. Run FinStats on your own server to try it.';
   const lists = new Map();
   const listOf = (path) => {
     if (!lists.has(path)) lists.set(path, realFetch(`${BASE}/data${path}/_.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));

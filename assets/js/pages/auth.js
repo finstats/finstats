@@ -9,7 +9,7 @@ import { setBusy, inlineError, formField as field } from '../components.js';
 import { button } from '../../finui/components/button/button.js';
 
 function brand() {
-  return h('div', { class: 'auth-brand' }, logo(34), h('span', { class: 'brand-name' }, 'finstats'));
+  return h('div', { class: 'auth-brand' }, logo(34), h('span', { class: 'brand-name' }, 'FinStats'));
 }
 
 function normalizeUrl(raw) {
@@ -27,7 +27,7 @@ export function setupPage(ctx) {
   let tested = null; // {url, server_name, version}
 
   const url = field({ id: 'jf-url', label: 'Jellyfin address', placeholder: 'http://jellyfin:8096', inputMode: 'url', autocomplete: 'url',
-    help: 'The address finstats can reach Jellyfin on. In Docker this is often the container name.' });
+    help: 'The address FinStats can reach Jellyfin on. In Docker this is often the container name.' });
   const testBtn = button({ variant: 'primary', type: 'submit' }, 'Test connection');
   const testResult = h('div', { 'aria-live': 'polite' });
   const step1 = h('form', { class: 'auth-form', noValidate: true }, url.el, h('div', { class: 'form-actions' }, testBtn), testResult);
@@ -38,7 +38,7 @@ export function setupPage(ctx) {
   const finishErr = h('div');
   const step2 = h('form', { class: 'auth-form', noValidate: true, hidden: true },
     user.el, pass.el,
-    h('p', { class: 'fui-field__help' }, icon('shield', 13), ' finstats signs in once to create its own API key. Your password is never stored.'),
+    h('p', { class: 'fui-field__help' }, icon('shield', 13), ' FinStats signs in once to create its own API key. Your password is never stored.'),
     h('div', { class: 'form-actions' }, finishBtn), finishErr);
 
   const s1 = h('li', { class: 'wizard-step is-current' }, h('h2', { class: 'wizard-title' }, 'Connect to Jellyfin'), step1);
@@ -94,8 +94,8 @@ export function setupPage(ctx) {
   });
 
   ctx.root.append(h('div', { class: 'auth-card auth-card-wide' }, brand(),
-    h('h1', { class: 'auth-title' }, 'Set up finstats'),
-    h('p', { class: 'auth-sub' }, 'Two steps, then finstats starts recording playback from your server.'),
+    h('h1', { class: 'auth-title' }, 'Set up FinStats'),
+    h('p', { class: 'auth-sub' }, 'Two steps, then FinStats starts recording playback from your server.'),
     h('ol', { class: 'wizard' }, s1, s2)));
   requestAnimationFrame(() => url.input.focus());
 }

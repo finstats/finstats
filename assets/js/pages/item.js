@@ -222,10 +222,10 @@ function externalLinks(list) {
     h('a', { class: 'fui-chip chip-link', href: x.url, target: '_blank', rel: 'noopener noreferrer' }, x.label, icon('external', 11), h('span', { class: 'sr-only' }, ' (opens in a new tab)'))));
 }
 
-/** Jellyfin's played flags: covers people who watched before finstats existed. */
+/** Jellyfin's played flags: covers people who watched before FinStats existed. */
 function playedBy(rows) {
   if (!Array.isArray(rows) || !rows.length) return null;
-  return card({ title: 'Marked played in Jellyfin', sub: 'Jellyfin’s own flags, including history from before finstats', cls: 'fui-card--flush',
+  return card({ title: 'Marked played in Jellyfin', sub: 'Jellyfin’s own flags, including history from before FinStats', cls: 'fui-card--flush',
     body: plainTable(h('table', { class: 'fui-data-table' },
       h('thead', null, h('tr', null, h('th', null, 'User'), h('th', null, 'Last played'), h('th', null, h('span', { class: 'sr-only' }, 'Favourite')))),
       h('tbody', null, rows.map((r) => h('tr', null,

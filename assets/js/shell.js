@@ -69,7 +69,7 @@ function buildShell() {
     const { edge, size } = DESKTOP_STYLES.find((x) => x.key === style);
     const bar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--statusbar-h')) || 26;
     desktop = desktopNav({ style, side, current: here, pages: pagesOf(), onSearch: () => openSearch(desktop.searchControl), keys: 'Ctrl Space',
-      brand: { href: '/', mark: brandMark(), name: 'finstats' },
+      brand: { href: '/', mark: brandMark(), name: 'FinStats' },
       me: { href: `/users/${me.id}`, avatar: avatar(me.id, me.name, { size: 26, hasImage: me.has_image }), name: me.name, role: me.is_admin ? 'Administrator' : 'Viewer' },
       theme: themeSwitch(), pins: chosen.pins, onPins: (pins) => setDesktopNav({ pins }),
       insets: edge === 'bottom' ? { top: bar, bottom: 0 } : edge === 'top' ? { top: 0, bottom: bar } : { top: 0, bottom: bar } });
@@ -86,7 +86,7 @@ function buildShell() {
   // ---- the mobile menu: FinUI's mobile-nav in the style this browser chose (Settings → Appearance, on a phone). The styles
   // that open from a button in the top bar (Peek, Full screen) hand it over; the others bring their own at the bottom.
   const menuSlot = h('span', { class: 'topbar-menu' });
-  const topbar = h('header', { class: 'topbar' }, menuSlot, h('a', { class: 'brand', href: '/' }, brandMark(), h('span', { class: 'brand-name' }, 'finstats'), h('span', { class: 'sb-demo-mark', title: 'Everything here is invented. Nothing can be changed.' }, 'Demo')),
+  const topbar = h('header', { class: 'topbar' }, menuSlot, h('a', { class: 'brand', href: '/' }, brandMark(), h('span', { class: 'brand-name' }, 'FinStats'), h('span', { class: 'sb-demo-mark', title: 'Everything here is invented. Nothing can be changed.' }, 'Demo')),
     button({ variant: 'icon', type: 'button', class: 'topbar-search', 'aria-label': 'Search', 'aria-keyshortcuts': 'Control+Space', onClick: (e) => openSearch(e.currentTarget) }, icon('search', 18)));
   const mobileSlot = h('div', { class: 'mobile-nav' });
   let mobile = null;
@@ -167,7 +167,7 @@ function buildShell() {
   const sbSync = h('span', { class: 'sb-item sb-sync' });
   // The demo says so on every page (demo.js answers the API from files taken from invented data).
   const sbDemo = h('span', { class: 'sb-item sb-right sb-demo', title: 'Everything here is invented: the people, the titles and the addresses. Nothing can be changed.' }, h('span', { class: 'sb-demo-mark' }, 'Demo'), 'invented data, read-only');
-  const sbRepo = h('a', { class: 'sb-item sb-link', href: 'https://github.com/finstats/finstats', target: '_blank', rel: 'noopener noreferrer', title: 'finstats on GitHub' }, icon('github', 12), 'Repo');
+  const sbRepo = h('a', { class: 'sb-item sb-link', href: 'https://github.com/finstats/finstats', target: '_blank', rel: 'noopener noreferrer', title: 'FinStats on GitHub' }, icon('github', 12), 'Repo');
   const version = state.status && state.status.version;
   const sbVerText = h('span', null, version ? 'v' + version : '');
   const sbVer = h('a', { class: 'sb-item sb-link', href: '/changelog', title: 'Patch notes', hidden: !version }, sbVerText);
@@ -185,7 +185,7 @@ function buildShell() {
         sbDot.className = 'sb-dot ' + (ok ? 'ok' : 'bad');
         const n = sum.active_sessions || 0;
         sbStream.lastChild.textContent = ok ? `${num(n)} streaming` : 'collector offline';
-        sbStream.title = !ok ? 'finstats can’t reach Jellyfin right now. Plays are not being recorded.'
+        sbStream.title = !ok ? 'FinStats can’t reach Jellyfin right now. Plays are not being recorded.'
           : sum.collector_live ? 'Jellyfin is pushing what is playing · go to now playing' : 'Go to now playing';
         sbPlays.textContent = `${num(sum.plays_total)} plays`;
         sbSync.textContent = sum.last_sync_at ? `synced ${relTime(sum.last_sync_at)}` : 'not synced yet';
@@ -194,7 +194,7 @@ function buildShell() {
       } catch (e) {
         if (!isAbort(e) && e.status !== 401) {
           sbDot.className = 'sb-dot bad';
-          sbStream.lastChild.textContent = 'finstats unreachable';
+          sbStream.lastChild.textContent = 'FinStats unreachable';
         }
       }
     }
@@ -296,7 +296,7 @@ document.addEventListener('keydown', (e) => {
   if (!target) return;
   e.preventDefault();
   // Going back through history restores the list exactly as it was left (scroll position, filters).
-  // Only when the entry behind this one is finstats' own: a title opened in a new tab has none.
+  // Only when the entry behind this one is FinStats' own: a title opened in a new tab has none.
   if (canGoBack() && cameFrom !== null && (target.back || cameFrom === target.up)) history.back();
   else navigate(target.up);
 });

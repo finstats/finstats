@@ -1,4 +1,4 @@
-// Settings → Notifications: where what finstats finds is sent. A destination belongs either to the
+// Settings → Notifications: where what FinStats finds is sent. A destination belongs either to the
 // server (Jellyfin administrators) or to one person, and a person's own destination is only ever sent
 // what they may already see in the app. The server decides that; this only draws it.
 //
@@ -24,9 +24,9 @@ const SECRET_HELP = {
 
 // The address field, where a channel needs more said about it than “post here”.
 const ADDRESS_HELP = {
-  discord: 'Discord → Channel settings → Integrations → Webhooks → Copy Webhook URL. That URL is the password: finstats stores it and never shows it again.',
-  slack: 'Slack → your app → Incoming Webhooks → Add New Webhook to Workspace, then copy the URL. That URL is the password: finstats stores it and never shows it again.',
-  email: 'Your mail server. smtps:// is encrypted from the first byte (port 465); smtp:// starts plain and must upgrade with STARTTLS (587). finstats sends neither the letter nor the password in the clear.',
+  discord: 'Discord → Channel settings → Integrations → Webhooks → Copy Webhook URL. That URL is the password: FinStats stores it and never shows it again.',
+  slack: 'Slack → your app → Incoming Webhooks → Add New Webhook to Workspace, then copy the URL. That URL is the password: FinStats stores it and never shows it again.',
+  email: 'Your mail server. smtps:// is encrypted from the first byte (port 465); smtp:// starts plain and must upgrade with STARTTLS (587). FinStats sends neither the letter nor the password in the clear.',
 };
 
 const STATE_LABEL = { sent: 'Sent', queued: 'Waiting', failed: 'Given up' };
@@ -115,7 +115,7 @@ export function notificationsPanel(ctx) {
     let channel = existing ? channelOf(existing.kind) : channels[0];
     const kindSel = h('select', { class: 'fui-field__input', id: 'notify-kind', 'aria-describedby': 'notify-kind-help' }, channels.map((c) => h('option', { value: c.key }, c.label)));
     const kindHelp = h('p', { class: 'fui-field__help', id: 'notify-kind-help' });
-    const name = formField({ id: 'notify-name', label: 'Name (optional)', autocomplete: 'off', help: 'Shown in finstats: “Household channel”, “My phone”.' });
+    const name = formField({ id: 'notify-name', label: 'Name (optional)', autocomplete: 'off', help: 'Shown in FinStats: “Household channel”, “My phone”.' });
     const url = formField({ id: 'notify-url', label: 'Address', autocomplete: 'off', inputMode: 'url', help: ' ' });
     const topic = formField({ id: 'notify-topic', label: 'Topic', autocomplete: 'off', help: ' ' });
     // One field per extra any channel asks for (only mail has any), shown for the one being added.
@@ -153,10 +153,10 @@ export function notificationsPanel(ctx) {
 
     function paintKind() {
       kindHelp.textContent = channel.what;
-      // A channel finstats already knows the address of asks for no address at all.
+      // A channel FinStats already knows the address of asks for no address at all.
       url.el.hidden = !!channel.fixed_url;
       url.input.placeholder = existing && existing.kind === channel.key ? 'Unchanged' : channel.example;
-      url.el.querySelector('.fui-field__help').textContent = ADDRESS_HELP[channel.key] || `The address finstats posts to, like ${channel.example}.`;
+      url.el.querySelector('.fui-field__help').textContent = ADDRESS_HELP[channel.key] || `The address FinStats posts to, like ${channel.example}.`;
       topic.el.hidden = !channel.needs_topic;
       if (channel.needs_topic) {
         topic.el.querySelector('.fui-field__label').textContent = channel.topic_label;
@@ -282,7 +282,7 @@ export function notificationsPanel(ctx) {
 
   function sentTable() {
     const events = (history && history.events) || [];
-    if (!events.length) return h('p', { class: 'fui-field__help' }, 'Nothing has been sent yet. What finstats notices from now on appears here, with how each message went.');
+    if (!events.length) return h('p', { class: 'fui-field__help' }, 'Nothing has been sent yet. What FinStats notices from now on appears here, with how each message went.');
     const delivery = (d) => h('div', { class: 'notify-delivery' },
       h('span', { class: ['fui-badge--status', d.state === 'sent' ? 'fui-badge--good' : d.state === 'failed' ? 'fui-badge--critical' : 'fui-badge--info'] },
         icon(d.state === 'sent' ? 'check' : d.state === 'failed' ? 'alert' : 'clock', 12),
@@ -308,8 +308,8 @@ export function notificationsPanel(ctx) {
 
   function publicUrlField() {
     if (!isAdmin()) return null;
-    const field = formField({ id: 'notify-public-url', label: 'The address of finstats', autocomplete: 'off', inputMode: 'url',
-      help: 'Used only to put a link in the messages finstats sends, since it cannot know from the inside how you reach it. Leave it empty and messages carry no link.' });
+    const field = formField({ id: 'notify-public-url', label: 'The address of FinStats', autocomplete: 'off', inputMode: 'url',
+      help: 'Used only to put a link in the messages FinStats sends, since it cannot know from the inside how you reach it. Leave it empty and messages carry no link.' });
     field.input.value = data.public_url || '';
     field.input.placeholder = 'https://finstats.example';
     const save = button({ size: 'sm', type: 'button' }, 'Save');
@@ -330,8 +330,8 @@ export function notificationsPanel(ctx) {
     const targets = data.targets || [];
     const existing = typeof editing === 'number' ? targets.find((t) => t.id === editing) : null;
     const intro = isAdmin()
-      ? 'finstats sends nothing anywhere until you add a destination here, and then only the kinds of event you tick for it. Addresses and tokens are stored in finstats’ own database, are never shown again and are never part of a backup.'
-      : 'Your own destination is sent only what you can already see in finstats, and it must point at a public address.';
+      ? 'FinStats sends nothing anywhere until you add a destination here, and then only the kinds of event you tick for it. Addresses and tokens are stored in FinStats’ own database, are never shown again and are never part of a backup.'
+      : 'Your own destination is sent only what you can already see in FinStats, and it must point at a public address.';
     mount(root,
       h('p', { class: 'fui-field__help' }, intro),
       publicUrlField(),

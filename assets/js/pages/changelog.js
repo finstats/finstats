@@ -145,7 +145,7 @@ export const prefetchChangelog = ({ signal }) => [() => loadChangelog(signal)];
 export default function changelogPage(ctx) {
   ctx.title('Patch notes');
   const view = h('div', { class: 'cl-page' });
-  ctx.root.append(pageHeader('Patch notes', 'What changed in finstats, newest first'), view);
+  ctx.root.append(pageHeader('Patch notes', 'What changed in FinStats, newest first'), view);
   let spy = null;
   ctx.onCleanup(() => spy?.disconnect());
   dataView({

@@ -1,4 +1,4 @@
-// Settings → Connections and Notifications: the services around Jellyfin, and where what finstats
+// Settings → Connections and Notifications: the services around Jellyfin, and where what FinStats
 // finds is sent. Both panels manage themselves; these sections only give them a place.
 
 import { h, mount } from '../dom.js';
@@ -17,11 +17,11 @@ export const connections = {
 };
 
 export const notifications = {
-  key: 'notifications', label: 'Notifications', sub: 'Where what finstats finds is sent', group: 'Services', icon: 'inbox',
+  key: 'notifications', label: 'Notifications', sub: 'Where what FinStats finds is sent', group: 'Services', icon: 'inbox',
   visible: () => mayNotify(),
   entries: [
     { id: 'notifications', label: 'Notification destinations', hint: 'discord slack telegram email ntfy gotify pushover pushbullet webhook send alerts' },
-    { id: 'notify-public-url', label: 'The address of finstats', hint: 'public url link messages' },
+    { id: 'notify-public-url', label: 'The address of FinStats', hint: 'public url link messages' },
   ],
   async render(slot, store) {
     mount(slot, card({ title: 'Notifications', sub: 'Discord, Slack, Telegram, e-mail, ntfy, Gotify, Pushover, Pushbullet or a webhook of your own', body: notificationsPanel(store.ctx), id: 'notifications' }));

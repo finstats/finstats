@@ -106,7 +106,7 @@ function fileCards(files) {
   const broken = (files.broken || []).length ? card({ title: 'Files that never play', sub: 'Started three times or more, never past thirty seconds', cls: 'fui-card--flush',
     body: table([['Title'], ['Tries', 1], ['People', 1], ['Apps'], ['Last tried']], files.broken,
       (x) => [r(num(x.plays)), r(num(x.users)), h('td', null, (x.clients || []).join(', ') || '–'), h('td', null, relEl(x.last_tried_at))]) }) : null;
-  const rewound = (files.rewound || []).length ? card({ title: 'Most rewound', sub: 'Backwards skips per play, from plays finstats recorded itself', cls: 'fui-card--flush',
+  const rewound = (files.rewound || []).length ? card({ title: 'Most rewound', sub: 'Backwards skips per play, from plays FinStats recorded itself', cls: 'fui-card--flush',
     body: table([['Title'], ['Plays', 1], ['Rewinds', 1], ['Per play', 1], ['Hot spot', 1]], files.rewound,
       (x) => [r(num(x.plays)), r(num(x.rewinds)), r(Number(x.per_play).toFixed(1)), r(x.hot_s == null ? '–' : clock(x.hot_s))]) }) : null;
   const subtitled = (files.subtitled || []).length ? card({ title: 'Subtitles switched on', sub: 'Plays where subtitles go on within the first ten minutes', cls: 'fui-card--flush',

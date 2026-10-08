@@ -1,4 +1,4 @@
-// Thin fetch wrapper for the finstats API (see docs/api.md).
+// Thin fetch wrapper for the FinStats API (see docs/api.md).
 
 export class ApiError extends Error {
   constructor(status, message) {
@@ -87,7 +87,7 @@ async function send(method, path, { body, signal, params, quiet401 = false } = {
     res = await fetch('/api' + path + qs(params), init);
   } catch (e) {
     if (e.name === 'AbortError') throw e;
-    throw new ApiError(0, 'Can’t reach finstats. Check that the server is running and try again.');
+    throw new ApiError(0, 'Can’t reach FinStats. Check that the server is running and try again.');
   }
   let data = null;
   const text = await res.text();
@@ -120,7 +120,7 @@ export function soft(promise) {
 
 // `v=3`: up to 2.0.3 a picture was sent to be kept for a week without asking again, and `v=2`, an earlier step of
 // 2.0.4, still sent a person's portrait that way, so at its old address a browser would go on showing a picture
-// replaced in Jellyfin. Since 2.0.4 every picture finstats knows the tag of is asked for every time (ETag); the
+// replaced in Jellyfin. Since 2.0.4 every picture FinStats knows the tag of is asked for every time (ETag); the
 // server ignores `v`.
 export const imgItem = (id, w = 120, kind = 'primary') => `/api/img/item/${encodeURIComponent(id)}?kind=${kind}&w=${w}&v=3`;
 export const imgUser = (id, w = 96) => `/api/img/user/${encodeURIComponent(id)}?w=${w}&v=3`;
@@ -131,7 +131,7 @@ export const imgUser = (id, w = 96) => `/api/img/user/${encodeURIComponent(id)}?
  */
 export function uploadRaw(path, file, onProgress) {
   // The demo has nowhere to send a file to.
-  return { promise: Promise.reject(new ApiError(403, 'This is a demo with invented data, so nothing here can be changed. Run finstats on your own server to try it.')), abort: () => {} };
+  return { promise: Promise.reject(new ApiError(403, 'This is a demo with invented data, so nothing here can be changed. Run FinStats on your own server to try it.')), abort: () => {} };
   const xhr = new XMLHttpRequest();
   const promise = new Promise((resolve, reject) => {
     xhr.open('POST', '/api' + path);
