@@ -97,7 +97,7 @@ fn timing(d: &Value) -> Option<Timing> {
     if end > start {
         // Two moments: the play began at the first, and nothing can have run for longer than the
         // time between them. What the pair leaves over is time it was paused or simply sitting
-        // there. Streamystats does not say which, so finstats does not either.
+        // there. Streamystats does not say which, so FinStats does not either.
         Some(Timing { started_at: start, ended_at: end, duration_s: played.min(end - start) })
     } else {
         // One moment, and it is the end.
@@ -590,7 +590,7 @@ mod tests {
     fn the_source_file_of_a_play_streamystats_watched_is_not_invented() {
         let c = conn();
         let rec = record(&c, &watched_live()).unwrap().unwrap();
-        // It recorded nothing about the file, so finstats claims nothing about it.
+        // It recorded nothing about the file, so FinStats claims nothing about it.
         assert_eq!(rec.streams.video_codec, None);
         assert_eq!(rec.streams.width, None);
         assert_eq!(rec.streams.audio_codec, None);

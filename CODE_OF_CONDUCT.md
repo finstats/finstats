@@ -1,6 +1,6 @@
 # Code of conduct
 
-finstats is a small project run in people's spare time. This page says how we treat each other here, what
+FinStats is a small project run in people's spare time. This page says how we treat each other here, what
 is not acceptable, and what happens when something goes wrong. It applies to everything under this
 repository: issues, pull requests, discussions, reviews and commit messages, and to anyone acting on the
 project's behalf elsewhere.
@@ -11,7 +11,7 @@ project's behalf elsewhere.
   in issue trackers is tiredness; most "stupid questions" are gaps in the documentation.
 - **Criticise the work, not the person.** "This query is slow because…" helps. "Did you even test this?"
   does not.
-- **Accept a no.** finstats has a narrow idea of itself (see [CONTRIBUTING.md](CONTRIBUTING.md)). A feature
+- **Accept a no.** FinStats has a narrow idea of itself (see [CONTRIBUTING.md](CONTRIBUTING.md)). A feature
   being declined is not a judgement of you, and a maintainer does not owe anyone an implementation.
 - **Give people room.** Not everyone writes English easily, knows Rust, or has run a server before.
   Explain rather than correct; nobody should feel foolish for asking.
@@ -26,7 +26,7 @@ project's behalf elsewhere.
 - Trolling, sustained disruption, and pile-ons.
 - Publishing someone else's private information without their explicit permission: addresses, real names
   behind usernames, private messages.
-- **Publishing other people's viewing data.** This one is specific to finstats. A database, a backup, a
+- **Publishing other people's viewing data.** This one is specific to FinStats. A database, a backup, a
   Jellystat export, an unblurred screenshot or a log can show what named people watched, when, and from
   which IP address. The people on your server did not agree to have that posted here. Remove or replace
   names, titles, device names and addresses before you paste anything, and never attach those files. Posts
@@ -58,6 +58,6 @@ the same address and it will be looked at again.
 
 ## Attribution
 
-Written for finstats, in its own words. The structure and much of the thinking follow the
+Written for FinStats, in its own words. The structure and much of the thinking follow the
 [Contributor Covenant](https://www.contributor-covenant.org), version 2.1, which is a good place to look if
 you are writing one of these yourself.

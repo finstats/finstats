@@ -1,16 +1,16 @@
-//! Everywhere finstats can reach, in one list.
+//! Everywhere FinStats can reach, in one list.
 //!
 //! The README and `docs/security.md` promise that nothing about you leaves your network and that
-//! finstats talks to your Jellyfin and, unless you say otherwise, to nothing else. A promise the
+//! FinStats talks to your Jellyfin and, unless you say otherwise, to nothing else. A promise the
 //! owner cannot check is only a sentence, so this is the same claim assembled from what the running
 //! program actually knows: the collector's own connection, the two switches that can reach outside,
 //! each connection the owner entered under Settings, and every notification destination, the only
-//! rows here finstats *sends* to rather than reads from.
+//! rows here FinStats *sends* to rather than reads from.
 //!
 //! Nothing new is recorded for it. Every row is read from something that was already being kept:
 //! the collector status, the addresses a lookup has produced, the geolocation file on disk, each
 //! service's last good read and each destination's last accepted message. So this page cannot itself
-//! be the reason finstats knows something. Hosts only, never a key: neither `Service` nor
+//! be the reason FinStats knows something. Hosts only, never a key: neither `Service` nor
 //! `notify::Target` even implements `Serialize`, and a destination's address is a credential of its own.
 
 use serde_json::{Value, json};
@@ -25,9 +25,9 @@ pub struct Dest {
     pub what: String,
     /// Host and port, never a path, never a key.
     pub hosts: Vec<String>,
-    /// Why finstats would talk to it at all.
+    /// Why FinStats would talk to it at all.
     pub why: String,
-    /// `always` (finstats is useless without it), `on`, or `off`.
+    /// `always` (FinStats is useless without it), `on`, or `off`.
     pub state: &'static str,
     /// When it last answered, as far as anything already recorded knows. `None` when never, or when
     /// nothing keeps that (an address looked up before this version, say).
@@ -54,7 +54,7 @@ pub fn host_of(url: &str) -> String {
 pub type ServiceRow = (i64, &'static str, String, String, bool, Option<i64>, Option<String>);
 
 /// One notification destination: id, kind, name, URL, whose it is, switched on, last message it took,
-/// last error. The only rows here that finstats *sends* to rather than reads from.
+/// last error. The only rows here that FinStats *sends* to rather than reads from.
 pub type TargetRow = (i64, &'static str, String, String, Option<String>, bool, Option<i64>, Option<String>);
 
 const ON: &str = "on";
@@ -81,7 +81,7 @@ pub fn destinations(
             id: "jellyfin".into(),
             what: "Your Jellyfin server".into(),
             hosts: vec![host_of(url)],
-            why: "everything finstats shows comes from here: what is playing, your library, your users".into(),
+            why: "everything FinStats shows comes from here: what is playing, your library, your users".into(),
             state: "always",
             last_at: Some(collector.last_poll_at).filter(|t| *t > 0),
             error: collector.error.clone(),
@@ -132,7 +132,7 @@ pub fn destinations(
         });
     }
 
-    // The one kind of destination finstats *sends* to. Nothing goes out but the events ticked for it.
+    // The one kind of destination FinStats *sends* to. Nothing goes out but the events ticked for it.
     for (id, kind, name, url, owner, enabled, last_ok_at, last_error) in targets {
         out.push(Dest {
             id: format!("notify:{id}"),
@@ -200,7 +200,7 @@ fn notification_targets(conn: &Connection) -> anyhow::Result<Vec<TargetRow>> {
         .query_map([], |r| {
             let kind: String = r.get(1)?;
             let Some(label) = crate::channels::Channel::from_key(&kind).map(crate::channels::Channel::label) else {
-                return Ok(None); // a kind from a newer finstats
+                return Ok(None); // a kind from a newer FinStats
             };
             Ok(Some((r.get(0)?, label, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?)))
         })?
@@ -209,7 +209,7 @@ fn notification_targets(conn: &Connection) -> anyhow::Result<Vec<TargetRow>> {
 }
 
 /// When a lookup last produced an address. A lookup that answered nothing leaves no trace, which is
-/// the honest thing for a page about what finstats knows to say.
+/// the honest thing for a page about what FinStats knows to say.
 fn last_lookup(conn: &Connection) -> anyhow::Result<Option<i64>> {
     Ok(conn.query_row("SELECT MAX(last_seen) FROM home_addresses WHERE source = 'lookup'", [], |r| r.get(0))?)
 }
@@ -248,7 +248,7 @@ mod tests {
         assert_eq!(dest(&list, "public_ip").0, "off");
         assert_eq!(dest(&list, "geoip").0, "off");
         assert_eq!(dest(&list, "service:3"), ("off", vec!["nas:7878".to_string()]), "a connection is listed by host and port, never by base path or key");
-        assert_eq!(list.iter().filter(|d| d.state != "off").count(), 1, "with both switches off, Jellyfin is the only thing finstats reaches");
+        assert_eq!(list.iter().filter(|d| d.state != "off").count(), 1, "with both switches off, Jellyfin is the only thing FinStats reaches");
     }
 
     #[test]

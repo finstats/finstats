@@ -1,4 +1,4 @@
-# Builds the finstats image and publishes it to the GitHub Container Registry.
+# Builds the FinStats image and publishes it to the GitHub Container Registry.
 #
 #   push to main      → ghcr.io/<owner>/finstats:edge
 #   tag vX.Y.Z        → :X.Y.Z, :X.Y, :X and :latest, plus a GitHub release with that version's patch notes
@@ -155,4 +155,4 @@ jobs:
           # Everything between this version's heading and the next one.
           awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {on=1; next} on && /^## \[/ {exit} on' CHANGELOG.md > notes.md
           printf '\n---\n\n```sh\ndocker pull %s:%s\n```\n' "$image" "$version" >> notes.md
-          gh release create "$GITHUB_REF_NAME" --title "finstats $version" --notes-file notes.md --verify-tag
+          gh release create "$GITHUB_REF_NAME" --title "FinStats $version" --notes-file notes.md --verify-tag

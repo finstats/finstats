@@ -2,7 +2,7 @@
 //!
 //! A private address is local, obviously. But so is the server's own public address: a phone on the
 //! home Wi-Fi that reaches Jellyfin through its public name (a reverse proxy, NAT loopback) shows up
-//! with the household's public IP, and calling that "remote" is wrong. finstats therefore learns the
+//! with the household's public IP, and calling that "remote" is wrong. FinStats therefore learns the
 //! public address of the network it runs on, remembers every one it has seen (they change), and lets
 //! the owner add more by hand.
 
@@ -76,7 +76,7 @@ pub fn reclassify(conn: &Connection) -> Result<usize> {
 /// What the history's networks were last decided against. Not in a backup (only the `settings` key is).
 const CLASSIFIED_KEY: &str = "network_classified";
 
-/// A play is local by the rules of this version of finstats and the set of home addresses; nothing else decides it.
+/// A play is local by the rules of this version of FinStats and the set of home addresses; nothing else decides it.
 fn classified_against(conn: &Connection) -> Result<Value> {
     let homes: Vec<String> = conn.prepare("SELECT ip FROM home_addresses ORDER BY ip")?.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?;
     Ok(json!({ "version": env!("CARGO_PKG_VERSION"), "homes": homes }))
@@ -150,7 +150,7 @@ pub fn ever_looked_up(conn: &Connection) -> Result<bool> {
 }
 
 /// At start-up, and only on an install that has never learned an address. A household's public
-/// address is not news that needs re-checking: one question, answered, and finstats stops asking.
+/// address is not news that needs re-checking: one question, answered, and FinStats stops asking.
 /// When it does change, the owner presses "Look up now" or types the new one in.
 pub async fn refresh_if_unknown(app: &App) {
     if !app.settings().public_ip_lookup {
@@ -251,7 +251,7 @@ mod tests {
     #[test]
     fn a_start_re_decides_the_history_only_when_the_home_addresses_changed() {
         // Every start re-decided every play's network (5.5 s on ten million plays), although what a play is only
-        // changes with the set of home addresses (or with the rules, which is another version of finstats).
+        // changes with the set of home addresses (or with the rules, which is another version of FinStats).
         let c = conn();
         let flag = |c: &Connection| -> Option<bool> { c.query_row("SELECT is_local FROM playbacks WHERE remote_ip = '198.51.100.9'", [], |r| r.get(0)).unwrap() };
         set_manual(&c, &["198.51.100.9".into()]).unwrap();

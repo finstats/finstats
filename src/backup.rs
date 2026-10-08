@@ -1,13 +1,13 @@
-//! finstats' own backups: everything that cannot be had again from Jellyfin, in one file.
+//! FinStats' own backups: everything that cannot be had again from Jellyfin, in one file.
 //!
 //! The format is gzip-compressed JSON Lines (`finstats-backup-YYYYMMDD-HHMMSS.jsonl.gz`). The first
 //! line describes the backup; every other line is one row, `{"t": "<table>", "r": {column: value}}`.
-//! A row is written and read back *by column name*, so a backup from an older finstats restores into
+//! A row is written and read back *by column name*, so a backup from an older FinStats restores into
 //! a newer one (missing columns take their defaults) and the other way round (unknown columns are
 //! dropped). It streams both ways: size is bounded by disk, not memory.
 //!
 //! What is in it: plays and their timelines, manual seen-marks, permissions, home addresses, the
-//! server log, known devices, finstats' own audit log and the settings. What is not, on purpose: the Jellyfin address and API
+//! server log, known devices, FinStats' own audit log and the settings. What is not, on purpose: the Jellyfin address and API
 //! key, sign-in sessions, API keys, and the library itself (items, people, played flags), which the next sync
 //! reads from Jellyfin again. A backup is still a complete viewing history with IP addresses in it:
 //! treat the file accordingly.
@@ -48,7 +48,7 @@ pub fn new_name() -> String {
     format!("{PREFIX}{}{SUFFIX}", chrono::Local::now().format("%Y%m%d-%H%M%S"))
 }
 
-/// Only names finstats itself would give a backup. This is what stands between a download or
+/// Only names FinStats itself would give a backup. This is what stands between a download or
 /// delete request and the rest of the disk.
 pub fn valid_name(name: &str) -> bool {
     name.strip_prefix(PREFIX)
@@ -216,7 +216,7 @@ fn in_trash(file: &str) -> Option<(&str, i64)> {
 
 #[derive(Debug)]
 pub enum TrashError {
-    /// Not one of finstats' own backup names: nothing outside them is ever moved.
+    /// Not one of FinStats' own backup names: nothing outside them is ever moved.
     NotABackup,
     NotFound,
     /// Coming back, a file of that name is there already.
@@ -344,17 +344,17 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
     let mut saw_header = false;
 
     for (n, line) in reader.lines().enumerate() {
-        let line = line.context("The file is damaged or not a finstats backup (could not be read)")?;
+        let line = line.context("The file is damaged or not a FinStats backup (could not be read)")?;
         if line.trim().is_empty() {
             continue;
         }
-        let v: Value = serde_json::from_str(&line).with_context(|| format!("The file is not a finstats backup (line {} is not JSON)", n + 1))?;
+        let v: Value = serde_json::from_str(&line).with_context(|| format!("The file is not a FinStats backup (line {} is not JSON)", n + 1))?;
         if !saw_header {
             let Some(format) = v["finstats_backup"].as_i64() else {
-                bail!("This is not a finstats backup. A Jellystat backup goes under “Import from Jellystat”.");
+                bail!("This is not a FinStats backup. A Jellystat backup goes under “Import from Jellystat”.");
             };
             if format > FORMAT {
-                bail!("This backup was made by a newer finstats (format {format}). Update finstats, then restore it.");
+                bail!("This backup was made by a newer FinStats (format {format}). Update FinStats, then restore it.");
             }
             res.from_version = v["app_version"].as_str().map(str::to_string);
             saw_header = true;
@@ -362,7 +362,7 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
         }
         let (Some(table), Some(row)) = (v["t"].as_str(), v["r"].as_object()) else { continue };
         match table {
-            // Only the settings themselves: a newer finstats may keep other rows in that table, and none of them is these.
+            // Only the settings themselves: a newer FinStats may keep other rows in that table, and none of them is these.
             "settings" if row.get("key").and_then(Value::as_str) == Some("settings") => settings_raw = row.get("value").and_then(Value::as_str).map(str::to_string),
             "settings" => {}
             "playbacks" => {
@@ -405,7 +405,7 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     res.other_rows += 1;
                 }
             }
-            // `located`: where the owner said a title is; `health_dismissed`: a finding set aside; `appearance`: how finstats
+            // `located`: where the owner said a title is; `health_dismissed`: a finding set aside; `appearance`: how FinStats
             // looks to a person. A choice this database already has for the same id, finding or person stands.
             "manual_seen" | "home_addresses" | "server_events" | "devices" | "located" | "health_dismissed" | "appearance" => {
                 let t = TABLES.iter().find(|t| **t == table).copied().unwrap_or("devices");
@@ -432,7 +432,7 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     res.other_rows += 1;
                 }
             }
-            _ => {} // a table from a newer finstats
+            _ => {} // a table from a newer FinStats
         }
         if n % 5000 == 0 {
             if let Some((t, id)) = tasks {
@@ -499,7 +499,7 @@ mod tests {
         }
     }
 
-    /// A folder of backups made a day apart, oldest first, named as finstats names them.
+    /// A folder of backups made a day apart, oldest first, named as FinStats names them.
     fn backups_on_disk(tag: &str, n: usize) -> (std::path::PathBuf, Vec<String>) {
         let dir = std::env::temp_dir().join(format!("finstats-backup-trash-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -558,7 +558,7 @@ mod tests {
     fn the_backup_trash_is_emptied_after_thirty_days_and_touches_nothing_it_did_not_name() {
         let (dir, names) = backups_on_disk("purge", 1);
         move_to_trash(&dir, &names[0], 1_000_000).unwrap();
-        // Things in the trash folder finstats did not put there: never removed.
+        // Things in the trash folder FinStats did not put there: never removed.
         std::fs::write(trash_dir(&dir).join("notes.txt"), b"mine").unwrap();
         std::fs::write(trash_dir(&dir).join("something.1"), b"mine too").unwrap();
         assert_eq!(purge_trashed(&dir, 1_000_000 + crate::trash::KEEP_S - 86_400), 0, "a day before the thirty were up");
@@ -582,7 +582,7 @@ mod tests {
         let db = Db::open(&tmp.join("finstats.db")).unwrap();
         export(&db, &tmp.join("backups"), None).unwrap();
         assert!(!stale.exists(), "the killed backup's partial file is still there");
-        assert!(unrelated.exists(), "a file finstats did not name was removed");
+        assert!(unrelated.exists(), "a file FinStats did not name was removed");
         drop(db);
         let _ = std::fs::remove_dir_all(&tmp);
     }
@@ -679,7 +679,7 @@ mod tests {
         assert_eq!(c2.query_row("SELECT COUNT(*) FROM user_permissions", [], |r| r.get::<_, i64>(0)).unwrap(), 0);
 
         std::fs::write(tmp.join("not.jsonl"), "{\"hello\": 1}\n").unwrap();
-        assert!(restore(&plain, &tmp.join("not.jsonl"), false, None).unwrap_err().to_string().contains("not a finstats backup"));
+        assert!(restore(&plain, &tmp.join("not.jsonl"), false, None).unwrap_err().to_string().contains("not a FinStats backup"));
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
@@ -759,7 +759,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
-    /// How finstats looks to a person is theirs, and Jellyfin cannot give it back: it travels. A look this database already
+    /// How FinStats looks to a person is theirs, and Jellyfin cannot give it back: it travels. A look this database already
     /// has for the same person stands.
     #[test]
     fn a_person_s_look_travels_and_one_already_here_stands() {
@@ -822,7 +822,7 @@ mod tests {
     fn a_backup_from_a_newer_finstats_is_refused_and_nothing_is_restored() {
         let (tmp, target, file) = restoring("backup-newer", &[json!({ "finstats_backup": FORMAT + 1, "app_version": "99.0.0" }), a_play()]);
         let err = format!("{:#}", restore(&target, &file, true, None).expect_err("restored a format it does not know"));
-        assert!(err.contains("newer finstats") && err.contains("Update finstats"), "{err}");
+        assert!(err.contains("newer FinStats") && err.contains("Update FinStats"), "{err}");
         assert_eq!(plays(&target), 0, "a refused backup wrote a play");
         let _ = std::fs::remove_dir_all(&tmp);
     }
@@ -863,7 +863,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
-    /// Files move between versions. One from a finstats that keeps another settings row beside the settings must
+    /// Files move between versions. One from a FinStats that keeps another settings row beside the settings must
     /// still bring the settings back, rather than reading whichever row came last as if it were them.
     #[test]
     fn only_the_settings_row_is_read_as_the_settings() {

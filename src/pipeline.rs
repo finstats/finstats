@@ -116,7 +116,7 @@ fn still_to_come(e: &Entry) -> bool {
 }
 
 fn entries(conn: &Connection, days: i64, only_item: Option<&str>) -> Result<Vec<Entry>> {
-    // Days are local days, like every "per day" number in finstats; a film already carries its day.
+    // Days are local days, like every "per day" number in FinStats; a film already carries its day.
     let sql = format!(
         "SELECT u.service_id, u.kind, u.release, COALESCE(u.day, date(u.at, 'unixepoch', 'localtime')) AS local_day, u.at, u.series_title, u.title,
                 u.season, u.episode, u.finale, u.year, u.tvdb_id, u.tmdb_id, u.arr_media_id, u.has_file, u.item_id, u.external_id

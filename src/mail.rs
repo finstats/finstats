@@ -1,6 +1,6 @@
 //! The one destination that is not an HTTP request: a letter, over SMTP.
 //!
-//! Everything else finstats sends is a POST of JSON, and `channels.rs` is all of it. Mail is different
+//! Everything else FinStats sends is a POST of JSON, and `channels.rs` is all of it. Mail is different
 //! enough to keep apart: a different transport, a different library, an envelope with a sender in it, and
 //! a password that must never cross the wire in the clear. Three rules hold here:
 //!
@@ -8,7 +8,7 @@
 //!   must upgrade with STARTTLS (587) or the letter does not go. A relay with a certificate of its own
 //!   making is covered by the same administrator-only "accept invalid certificates" switch every other
 //!   connection has: a switch, not the default.
-//! - **The address is the destination's, not finstats'.** The mailbox to send to is stored like an ntfy
+//! - **The address is the destination's, not FinStats'.** The mailbox to send to is stored like an ntfy
 //!   topic; the sender is asked for because most servers refuse a `From` they do not know.
 //! - **Nothing that comes back is repeated.** Errors say a host and a kind of failure, exactly like
 //!   `channels::explain` does, and never the server's own words or the password it refused.
@@ -32,7 +32,7 @@ const SUBJECT_MAX: usize = 200;
 const BODY_MAX: usize = 8_000;
 
 /// Where to connect, and how it is encrypted. `starttls` = start in the clear and upgrade, which is
-/// required rather than attempted: finstats does not fall back to sending a password in the open.
+/// required rather than attempted: FinStats does not fall back to sending a password in the open.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Server {
     pub host: String,
@@ -68,7 +68,7 @@ fn one_line(text: &str) -> String {
     flat.split_whitespace().collect::<Vec<_>>().join(" ").chars().take(SUBJECT_MAX).collect()
 }
 
-/// What finstats accepts as a mailbox: something lettre will send to, whose domain could be looked up.
+/// What FinStats accepts as a mailbox: something lettre will send to, whose domain could be looked up.
 /// Nothing here is a guess about whether it exists, only that it is an address at all.
 pub fn address(input: &str) -> Result<String> {
     let text = input.trim();
@@ -109,7 +109,7 @@ pub async fn deliver(acct: Account<'_>, m: &Message) -> std::result::Result<(), 
     let server = server(acct.url).map_err(refuse)?;
     let letter = letter(acct.from, acct.to, m).map_err(refuse)?;
     let built = lettre::Message::builder()
-        .from(mailbox(&letter.from, Some("finstats")).map_err(refuse)?)
+        .from(mailbox(&letter.from, Some("FinStats")).map_err(refuse)?)
         .to(mailbox(&letter.to, None).map_err(refuse)?)
         .subject(letter.subject)
         .header(ContentType::TEXT_PLAIN)
@@ -137,14 +137,14 @@ fn explain(e: &lettre::transport::smtp::Error, host: &str) -> String {
         return format!("{host} did not answer in time");
     }
     if e.is_tls() {
-        return format!("{host} would not start an encrypted connection. finstats does not send mail in the clear: use smtps://, or a server that offers STARTTLS");
+        return format!("{host} would not start an encrypted connection. FinStats does not send mail in the clear: use smtps://, or a server that offers STARTTLS");
     }
     match e.status().map(|s| s.severity) {
         Some(lettre::transport::smtp::response::Severity::PermanentNegativeCompletion) => {
             format!("{host} refused the letter. Check the user name, the password and the From address")
         }
         Some(_) => format!("{host} could not take the letter just now"),
-        None => format!("Could not connect to {host}. Is it reachable from where finstats runs?"),
+        None => format!("Could not connect to {host}. Is it reachable from where FinStats runs?"),
     }
 }
 

@@ -1,10 +1,10 @@
-//! What finstats has to say, and where it says it.
+//! What FinStats has to say, and where it says it.
 //!
-//! Everything finstats works out is otherwise only visible on a page somebody has to remember to open.
+//! Everything FinStats works out is otherwise only visible on a page somebody has to remember to open.
 //! This is the one way out: an *event* is raised where the thing is noticed, and every *destination*
 //! that asked for that kind of event is sent a message about it.
 //!
-//! This is also the first thing finstats ever sends anywhere, so the rules are narrow and every one of
+//! This is also the first thing FinStats ever sends anywhere, so the rules are narrow and every one of
 //! them is a test rather than a habit:
 //!
 //! - **Nothing leaves unless it was asked for.** A destination is a row somebody entered, with the kinds
@@ -21,7 +21,7 @@
 //!   Between them, adding a destination cannot flood it with a year of history.
 //! - **A personal destination carries exactly what its owner can see in the app** (`Need`, checked against
 //!   the same `Perms` every page is checked against), and may only point at a public host: it is somebody
-//!   else's address that finstats would be making requests to.
+//!   else's address that FinStats would be making requests to.
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
@@ -258,7 +258,7 @@ pub struct Event {
     pub user_name: Option<String>,
     pub title: String,
     pub body: String,
-    /// A path inside finstats (`/security`), joined with `public_url` when a message is built.
+    /// A path inside FinStats (`/security`), joined with `public_url` when a message is built.
     pub link: Option<String>,
     data: Vec<(String, String)>,
     private: Vec<(String, String)>,
@@ -455,7 +455,7 @@ impl Target {
 
 fn read_target(r: &crate::db::rusqlite::Row) -> crate::db::rusqlite::Result<Option<Target>> {
     let channel: String = r.get(1)?;
-    let Some(channel) = Channel::from_key(&channel) else { return Ok(None) }; // a kind from a newer finstats
+    let Some(channel) = Channel::from_key(&channel) else { return Ok(None) }; // a kind from a newer FinStats
     let events: String = r.get(7)?;
     Ok(Some(Target {
         id: r.get(0)?,
@@ -565,7 +565,7 @@ pub fn wanted_by(t: &Target, kind: Kind, severity: &str, at: i64, about: Option<
 
 /// At send time: `None` = no longer to be sent (switched off, or its owner may no longer see it, since a
 /// delivery can wait an hour between tries), else whether the addresses go with it. "Include addresses"
-/// is the owner's wish; on a personal destination it also takes `see_network`, as it does in finstats.
+/// is the owner's wish; on a personal destination it also takes `see_network`, as it does in FinStats.
 pub fn deliverable(t: &Target, e: &Stored, owner: Option<Perms>) -> Option<bool> {
     if !wanted_by(t, e.kind, &e.severity, e.at, e.user_id.as_deref(), owner) {
         return None;
@@ -678,7 +678,7 @@ fn task_failed_event(id: &str, error: &str) -> Event {
         Kind::TaskFailed,
         daily("task", id),
         format!("{} failed", task_label(id)),
-        format!("{} ended in an error. finstats will try again on its own schedule.", task_label(id)),
+        format!("{} ended in an error. FinStats will try again on its own schedule.", task_label(id)),
     )
     .field("Job", id.to_string())
     .field("Error", error.chars().take(400).collect::<String>())
@@ -695,13 +695,13 @@ fn backup_failed_event(error: &str) -> Event {
         Kind::BackupFailed,
         daily("backup", "write"),
         "A backup could not be written",
-        "finstats could not write its automatic backup. Check the finstats log and the data folder.",
+        "FinStats could not write its automatic backup. Check the FinStats log and the data folder.",
     )
     .field("Error", error.chars().take(400).collect::<String>())
     .link("/settings/backups")
 }
 
-/// Something finstats reads from stopped answering, or started again. Both are worth saying once.
+/// Something FinStats reads from stopped answering, or started again. Both are worth saying once.
 pub async fn service_state(app: &App, name: &str, what: &str, down: Option<&str>) {
     raise(app, service_state_event(name, what, down)).await;
 }
@@ -712,14 +712,14 @@ fn service_state_event(name: &str, what: &str, down: Option<&str>) -> Event {
             Kind::ServiceDown,
             daily("down", name),
             format!("{name} is not answering"),
-            format!("finstats cannot read from {name} ({what})."),
+            format!("FinStats cannot read from {name} ({what})."),
         )
         .field("Error", error.chars().take(400).collect::<String>()),
         None => Event::new(
             Kind::ServiceBack,
             daily("back", name),
             format!("{name} is answering again"),
-            format!("finstats can read from {name} ({what}) again."),
+            format!("FinStats can read from {name} ({what}) again."),
         ),
     };
     event.field("Connection", name.to_string()).link("/settings/connections")
@@ -734,8 +734,8 @@ fn test_event(user_name: &str, destination: &str) -> Stored {
         at: db::now(),
         user_id: None,
         user_name: Some(user_name.to_string()),
-        title: "finstats is connected".to_string(),
-        body: format!("A test message from finstats, sent by {user_name}. If you are reading this, this destination works."),
+        title: "FinStats is connected".to_string(),
+        body: format!("A test message from FinStats, sent by {user_name}. If you are reading this, this destination works."),
         link: Some("/settings/notifications".to_string()),
         data: vec![("Destination".to_string(), destination.to_string())],
         private: vec![],
@@ -795,7 +795,7 @@ fn due(conn: &Connection, now: i64, limit: usize) -> Result<Vec<Due>> {
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
-    // A kind this version does not know (a database from a newer finstats) is left in the queue untouched.
+    // A kind this version does not know (a database from a newer FinStats) is left in the queue untouched.
     Ok(rows.into_iter().filter(|(_, key)| Kind::from_key(key).is_some()).map(|(d, _)| d).collect())
 }
 
@@ -936,7 +936,7 @@ pub async fn run(app: App) {
 
 // ---------------------------------------------------------------- where a personal destination may point
 
-/// A personal destination is somebody else's address that finstats would be making requests to, so it may
+/// A personal destination is somebody else's address that FinStats would be making requests to, so it may
 /// only be a public one: otherwise granting the permission would be handing out a way to knock on doors
 /// inside the network. Checked when it is saved *and* before every send, because a name that answered
 /// publicly yesterday can be pointed at the router today.
@@ -989,7 +989,7 @@ pub fn clean_url(input: &str, channel: Channel) -> Result<String> {
     if parsed.query().is_some() && channel != Channel::Webhook {
         bail!("The address must not contain ?");
     }
-    // A service finstats knows the address of takes that address and no other: a token is for the
+    // A service FinStats knows the address of takes that address and no other: a token is for the
     // service it was issued by, and a look-alike host is how it would reach somebody else.
     if let Some(fixed) = channel.fixed_url() {
         let same = parsed.scheme() == "https" && parsed.host_str() == reqwest::Url::parse(fixed).ok().and_then(|f| f.host_str().map(str::to_string)).as_deref();
@@ -1022,7 +1022,7 @@ pub fn clean_url(input: &str, channel: Channel) -> Result<String> {
 
 /// A mail server, which is a host and a port and nothing else. `smtps://` is encrypted from the first
 /// byte and is what a bare host name becomes; `smtp://` must upgrade with STARTTLS before anything is
-/// said. There is no third option: finstats does not send mail, or a password, in the clear.
+/// said. There is no third option: FinStats does not send mail, or a password, in the clear.
 fn clean_mail_url(typed: &str) -> Result<String> {
     let lower = typed.to_ascii_lowercase();
     if lower.contains("://") && !lower.starts_with("smtp://") && !lower.starts_with("smtps://") {
@@ -1188,7 +1188,7 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
     let url = match (body.url.as_deref().filter(|u| !u.trim().is_empty()), stored) {
         (Some(u), _) => clean_url(u, channel).map_err(|e| bad(&format!("{e}")))?,
         (None, Some(s)) => s.url.clone(),
-        // A service finstats already knows the address of is never asked for one.
+        // A service FinStats already knows the address of is never asked for one.
         (None, None) => channel.fixed_url().map(str::to_string).ok_or_else(|| bad(&format!("Enter the address of {}", channel.label())))?,
     };
     let secret = match (body.secret.filter(|s| !s.is_empty()), stored) {
@@ -1209,7 +1209,7 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
         (None, None) => return Err(bad(&format!("Enter the {}", channel.topic_label().unwrap_or("value").to_lowercase()))),
     };
     // Only the fields this kind of destination asked for are kept: anything else a request carries is
-    // not something finstats would know what to do with, and is not stored.
+    // not something FinStats would know what to do with, and is not stored.
     let given = body.options.unwrap_or_default();
     let mut options = BTreeMap::new();
     for extra in channel.extras() {
@@ -1550,7 +1550,7 @@ pub(crate) mod tests {
         let m = message(&stored(Kind::Travel), true, Some("https://finstats.example"));
         assert!(names_an_address(&m.text()), "with the switch on, the addresses are the point");
         assert_eq!(m.link.as_deref(), Some("https://finstats.example/security"));
-        assert_eq!(message(&stored(Kind::Travel), true, Some("")).link, None, "no address for finstats, no link");
+        assert_eq!(message(&stored(Kind::Travel), true, Some("")).link, None, "no address for FinStats, no link");
     }
 
     #[test]
@@ -1641,7 +1641,7 @@ pub(crate) mod tests {
     }
 
     /// "Include addresses" is the owner's wish, not a permission: an address reaches a personal destination
-    /// only when its owner may see addresses in finstats itself.
+    /// only when its owner may see addresses in FinStats itself.
     #[test]
     fn a_personal_destination_is_sent_addresses_only_with_see_network() {
         let everyone = Perms::from_keys(["sign_in", "notify", "see_everyone"]);
@@ -1653,7 +1653,7 @@ pub(crate) mod tests {
         assert_eq!(deliverable(&t, &play, Some(everyone)), Some(false), "no see_network, no address");
         assert_eq!(deliverable(&t, &play, Some(network)), Some(true));
         play.user_id = Some("ub".into());
-        assert_eq!(deliverable(&t, &play, Some(Perms::from_keys(["sign_in", "notify"]))), Some(false), "not even one's own: finstats does not show it");
+        assert_eq!(deliverable(&t, &play, Some(Perms::from_keys(["sign_in", "notify"]))), Some(false), "not even one's own: FinStats does not show it");
         let mut server = target(2, None, &[Kind::PlayStarted]);
         server.with_addresses = true;
         assert_eq!(deliverable(&server, &play, None), Some(true), "the server's own destination is the administrators' choice");
@@ -1902,7 +1902,7 @@ pub(crate) mod tests {
         assert_eq!(clean_url("api.telegram.org", Channel::Telegram).unwrap(), "https://api.telegram.org");
         assert!(clean_url("https://telegram.example.com", Channel::Telegram).is_err(), "a token is not for somebody else's server");
         assert!(clean_url("http://api.pushover.net", Channel::Pushover).is_err(), "and never in the clear");
-        // Mail is not HTTP at all, and finstats will not send it in the clear.
+        // Mail is not HTTP at all, and FinStats will not send it in the clear.
         assert_eq!(clean_url("smtps://smtp.example.com:465", Channel::Email).unwrap(), "smtps://smtp.example.com:465");
         assert_eq!(clean_url("smtp.example.com", Channel::Email).unwrap(), "smtps://smtp.example.com", "a mail address with no scheme is the encrypted one");
         assert!(clean_url("https://smtp.example.com", Channel::Email).is_err());

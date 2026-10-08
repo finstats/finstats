@@ -38,8 +38,8 @@ const SECTIONS = [
   // Not the image's HEALTHCHECK: what is wrong with the files, found by comparing them with their neighbours.
   { key: 'health', label: 'Library health', sub: 'Holes in seasons, copies, thin files and seasons that differ, found by comparing each file with its neighbours', icon: 'gauge' },
   { key: 'log', label: 'Log', sub: 'Jellyfin’s own activity log: sign-ins, failed logins, playback, tasks', icon: 'log' },
-  // finstats' own doings, for administrators: it names who changed what.
-  { key: 'audit', label: 'Audit', sub: 'What changed in finstats, and who did it', icon: 'shield', visible: () => isAdmin() },
+  // FinStats' own doings, for administrators: it names who changed what.
+  { key: 'audit', label: 'Audit', sub: 'What changed in FinStats, and who did it', icon: 'shield', visible: () => isAdmin() },
 ];
 // The one-page card anchors, so a link from before still lands.
 const LEGACY = { jobs: 'jobs' };
@@ -126,7 +126,7 @@ export default function serverPage(ctx) {
       };
       timer = setTimeout(poll, 2000);
     });
-    return emptyState('No server details yet', 'finstats fetches version, storage, plugins, scheduled tasks and devices from Jellyfin on its regular sync. You can also fetch them now.',
+    return emptyState('No server details yet', 'FinStats fetches version, storage, plugins, scheduled tasks and devices from Jellyfin on its regular sync. You can also fetch them now.',
       h('div', { class: 'fui-empty__action' }, btn, err));
   }
   let timer = null;
@@ -228,7 +228,7 @@ export default function serverPage(ctx) {
     });
   }
 
-  /** "about 4 minutes left" when finstats has watched the percentage move and, when it has not, the same
+  /** "about 4 minutes left" when FinStats has watched the percentage move and, when it has not, the same
       sentence with three cycling dots where the time will go: "about . left", "about .. left", "about ... left".
       The words around them are what make the dots mean something: on their own they read as a page still
       loading. A guess put where an estimate goes would read exactly like an estimate, so there is no number. */
@@ -251,7 +251,7 @@ export default function serverPage(ctx) {
     return h('span', { class: 'muted' }, `· ${Math.round(job.progress || 0)}% for ${duration(job.unchanged_for_s)}`);
   }
 
-  /** How long finstats has been watching, which is how young the estimate is. Left out when the job has
+  /** How long FinStats has been watching, which is how young the estimate is. Left out when the job has
       stood still for that whole time, because then the line above has already said it. */
   function watchedText(job) {
     if (!job.watching_since) return null;

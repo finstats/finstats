@@ -144,7 +144,7 @@ pub fn svg(kind: Kind, a: &PublicProfile, posters: &Posters) -> String {
         Kind::Profile => profile(&mut c, a, posters),
         Kind::Recap => recap(&mut c, a, posters),
     }
-    c.text(64.0, 590.0, Style(22.0, 600, FAINT), "finstats");
+    c.text(64.0, 590.0, Style(22.0, 600, FAINT), "FinStats");
     c.finish()
 }
 
@@ -237,7 +237,7 @@ impl Canvas {
 }
 
 fn shown_name(a: &PublicProfile) -> &str {
-    if a.name.is_empty() { "A finstats profile" } else { &a.name }
+    if a.name.is_empty() { "A FinStats profile" } else { &a.name }
 }
 
 /// Series and films taken in turn, then music: the posters row, as many as there is room for: six on
@@ -312,7 +312,7 @@ fn heat(c: &mut Canvas, x: f64, y: f64, w: f64, row: f64, grid: &[Vec<i64>]) {
 fn recap(c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
     let Some(r) = &a.recap else { return };
     c.text_fit(64.0, 170.0, Style(132.0, 700, ACCENT_HI), &r.label, Some(620.0));
-    let whose = if a.name.is_empty() { "A year on finstats".to_string() } else { format!("{}’s year", a.name) };
+    let whose = if a.name.is_empty() { "A year on FinStats".to_string() } else { format!("{}’s year", a.name) };
     c.text_fit(64.0, 226.0, Style(34.0, 600, TEXT), &whose, Some(620.0));
     c.text(64.0, 330.0, Style(84.0, 700, TEXT), &thousands(r.totals.watch_s / 3600));
     c.text(64.0, 366.0, Style(24.0, 400, MUTED), "hours watched");

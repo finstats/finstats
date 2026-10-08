@@ -4,9 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-finstats is a playback-statistics server for Jellyfin: one Rust binary (axum + tokio + bundled SQLite)
+FinStats is a playback-statistics server for Jellyfin: one Rust binary (axum + tokio + bundled SQLite)
 with the web UI compiled into it. It only ever *reads* from Jellyfin; it never triggers scans or writes
 anything there except creating its own API key during setup.
+
+**The name is written FinStats** wherever a person reads it: prose, the UI, messages, notification
+senders, page titles. It stays `finstats` only where it is an identifier: the repository, organisation and
+domain, the image, the crate and the binary with its commands (`finstats restore <file>`), `finstats.db`,
+`FINSTATS_*`, `RUST_LOG=finstats=…`, browser-storage keys, the User-Agent, the calendar `PRODID`, and
+`jellyfin::APP_NAME`, which is how FinStats finds its own API key in Jellyfin, so renaming it would make
+every install create a second key.
 
 ## How we work: TDD
 
@@ -83,7 +90,7 @@ time. A transaction that only reads (the backup's snapshot) asks for `Deferred` 
 for the whole export. `journal_size_limit` (64 MB) is set there too: SQLite never shrinks its WAL on its own. **Before the
 pool touches the file, `preflight` looks at it once**: the pool retries a bad file for its 30-second timeout and its first
 connection switches the file to WAL (a write), so a damaged file, another program's database (tables, `user_version` 0), a
-folder or a file finstats may not write is refused there, in milliseconds, naming it and saying nothing was changed.
+folder or a file FinStats may not write is refused there, in milliseconds, naming it and saying nothing was changed.
 
 **Migrations** are the `MIGRATIONS` array in `db.rs`, applied by index against `PRAGMA user_version`. Released
 migrations are immutable: deployed databases have already run them. Add a new entry; never edit or reorder one.
@@ -95,14 +102,14 @@ writing anything. Releases up to 1.0.4 predate the check and cannot be stopped. 
 `refuse_downgrade` and the migrations, `is_update` asks whether a populated database is being opened by a *different*
 version, or still has migrations to run; if so a full `VACUUM INTO` copy (the library and the secrets included, unlike the
 exportable JSON backups) is written to `<data>/pre-update-backups/` **before** anything is changed, so a migration or a new
-binary that corrupts data can always be rolled back to (stop finstats, put the copy in place of `finstats.db`, run the old
+binary that corrupts data can always be rolled back to (stop FinStats, put the copy in place of `finstats.db`, run the old
 version). A brand-new database and a same-version restart snapshot nothing. The newest `PRE_UPDATE_KEEP` (3) are kept; the
 copies are never served over the API. A failed copy is fatal only when migrations are pending (the risky case); a plain
 version bump warns and continues. `FINSTATS_SKIP_PREUPDATE_BACKUP=1` turns it off. The copy is written to `<name>.db.part`
 and renamed when complete, and what a killed start left is swept first: `VACUUM INTO` writes straight into its target, and an
 empty file under a snapshot's name is a valid empty database to SQLite that counted toward the three kept.
 
-**Pictures are cached under their image tag (`artwork.rs`).** `/api/img/item|user` looks up the tag finstats holds
+**Pictures are cached under their image tag (`artwork.rs`).** `/api/img/item|user` looks up the tag FinStats holds
 (`items.image_tag` / `backdrop_tag`, `users.image_tag`), names the disk-cache file after it (`cache_name`; an untagged
 picture keeps the old name) and sends it as the ETag with `private, no-cache`, so a 304 answers before anything is read.
 Replacing a poster in Jellyfin saves the item but starts no scan; the tags come from the library read and from
@@ -116,7 +123,7 @@ so a query that silently hides items is a data-loss bug, not a cosmetic one.
 
 **Track languages.** `items.audio_languages` / `subtitle_languages` are JSON arrays from `media::track_languages` (every track, each code once,
 `und` for an untagged one), written by both item producers (`sync::upsert_item`, the import's `jf_item_info`). A series or season has none of its
-own: `item_detail` answers `language_coverage` (episodes per language, files only; the count is `media::language_counts`, shared with Library health), which is what shows a dub that stops half way. finstats never
+own: `item_detail` answers `language_coverage` (episodes per language, files only; the count is `media::language_counts`, shared with Library health), which is what shows a dub that stops half way. FinStats never
 claims "dubbed": it does not know a title's original language, so it lists the languages and lets the reader decide. Names come from the browser
 (`languageName` in `dom.js`: `Intl.DisplayNames` plus the bibliographic codes it lacks), so no language table is shipped.
 On the title page the hero names at most four languages per kind, one line each that never wraps, and the Languages card
@@ -148,7 +155,7 @@ PascalCase keys. Jellyfin ids are normalised with `db::norm_id` (no dashes, lowe
 
 **Compression (reqwest's `gzip` + `brotli` features).** Every outbound read asks for `Accept-Encoding: gzip, br` and is
 decoded transparently: Jellyfin, Sonarr, Radarr and Seerr all compress JSON when asked, and JSON is nearly everything
-finstats reads. The features are the whole mechanism: `default-features = false` without them means no header goes out
+FinStats reads. The features are the whole mechanism: `default-features = false` without them means no header goes out
 and nothing would be decoded, so the QA mocks answer compressed and a check holds the header. Two deliberate exceptions:
 `geo.rs` pins `Accept-Encoding: identity` on the `.mmdb.gz` download (a gzip *body* it unpacks itself; the header also
 keeps `content_length` honest, and setting it at all turns reqwest's own decoding off), and the WebSocket carries none:
@@ -157,7 +164,7 @@ frame compression is `permessage-deflate`, which tungstenite does not implement.
 **Two transports, one collector (`collector.rs`, `socket.rs`).** The session list arrives either by asking
 (`GET /Sessions` on the `active_interval_s` / `idle_interval_s` timers) or by being told (Jellyfin's `/socket` with
 `SessionsStart`); `tick()` cannot tell which and must not learn. **There is no setting**: the socket is spawned for whatever
-Jellyfin is configured, always, and being told is how finstats collects; 1.4.0's `live_socket` switch was removed in 1.5.0, so
+Jellyfin is configured, always, and being told is how FinStats collects; 1.4.0's `live_socket` switch was removed in 1.5.0, so
 `active_interval_s` / `idle_interval_s` are only what the asking half asks at, and the fallback for a socket that is not carrying.
 **Each does the half it is good at.** `collector::Decide::see` reads one session list (pushed or asked for, it
 decides the same) and answers `Mode::Poll` or `Mode::Listen`: **anything running** → poll at `active_interval_s`, because a pause or a
@@ -170,7 +177,7 @@ server has nothing to push about, and one 1 s poll per second of it asks the sam
 waits for `Handle::settled` before publishing, so nothing is ever subscribed and polling at once; and the one-shot read is `Net`/`safety_due`:
 after `PAUSED_SAFETY_SILENCE` of silence with something paused, or `SAFETY_EVERY` regardless (an early attempt restarted its wait on every push,
 so a client that kept reporting itself while paused meant the net never fell). **Silence is nothing heard *and* nothing asked, and the
-attempt re-arms the clock that called for it**: `Net` is reset by a push, by any `/Sessions` read of finstats' own (the beat
+attempt re-arms the clock that called for it**: `Net` is reset by a push, by any `/Sessions` read of FinStats' own (the beat
 during a play included) and by a fresh subscription, with `SAFETY_MIN_GAP` as a floor under all of it. Measured from the last
 push alone, as an early attempt did, it breaks: since the subscription is off for the whole of a play, the first pause after a minute of one was already "silent", and the read
 that followed reset nothing, so 2,625 of them went out in eight seconds until a push happened along. Anything that makes a repeat depend on
@@ -193,7 +200,7 @@ so the fallback latched on for good (connected, never subscribed, polling for ev
 for). Anything that gates the subscription on something the subscription itself produces is this bug again.
 A verdict is never kept either. **An absent list proves nothing**: a Jellyfin normally answers `SessionsStart` at once whether or
 not anything is loaded (measured: `0.0s after subscribing, 0 loaded`), but one was once seen not to, cause never established; most
-likely a server still starting. So after `SUBSCRIBE_MAX` finstats says so once, the collector polls meanwhile, and the connection is
+likely a server still starting. So after `SUBSCRIBE_MAX` FinStats says so once, the collector polls meanwhile, and the connection is
 kept, stays subscribed and re-sends `SessionsStart` every `PROBE_EVERY`; the first real push settles it. An earlier attempt concluded "cannot push"
 from that one silence and lost the socket altogether, which is why silence is never a verdict here. `End::Unsupported` is now only for a *shape* mismatch, which is real disproof; every
 other end uses the backoff. `looks_like_sessions` answers *what* differed for the
@@ -231,7 +238,7 @@ it every 30 s, counts only un-paused time, merges a restart within `merge_window
 consecutive sightings into `playback_events` (pause/seek/track/transcode timeline). **An event is a change, so the two
 sides of `diff_events` must be the same kind of value.** "Once a transcode, always a transcode" is applied to the new
 reading *before* the diff, never after: applied after, the kept record says `Transcode` while every reading that follows
-says what the client settled back to, and each one is a change: finstats wrote one `transcode` event per second for the
+says what the client settled back to, and each one is a change: FinStats wrote one `transcode` event per second for the
 rest of the play, reading `DirectPlay: <reasons>`, a line that contradicts itself (migration 17 clears them). Anything
 sticky that the diff also reads belongs above the diff.
 
@@ -288,7 +295,7 @@ later) while all three agree about the end. Measured on real history (3,162 play
 import held in common): either end recognised 2,750, the start alone 2,527, and the start's misses ran in an unbroken
 smear past ten minutes where the ends fall off a cliff inside one. **Within** one source it is the very same second and
 nothing wider: a tracker never exports the same play twice, so a second row of the same item minutes later is a restart
-the viewer really made, and a window there would silently drop it, on an import and, worse, on a restore of finstats'
+the viewer really made, and a window there would silently drop it, on an import and, worse, on a restore of FinStats'
 own backup. A new importer goes through `PlayRecord::insert_imported`, never `insert`. **Both statements of the rule
 (`SAME_PLAY_SQL`, `RELINKED_DUPLICATES_SQL`) are index ranges** over `(user_id, item_id, started_at)` and `…ended_at`
 (migration 25), and a test holds their plans: written as `ABS(started_at - ?) <= window` no index could narrow them, a
@@ -331,7 +338,7 @@ count, and too small a count only ever refuses) but nothing was read either. The
 both passes looked identical to it and a stage written for exactly this class of fault passed throughout.
 
 **What the library can tell a play lives in `sync::backfill_playbacks`**, not in an importer, because history is usually
-imported before finstats has ever read the library: it runs after every library read as well as after an import, and
+imported before FinStats has ever read the library: it runs after every library read as well as after an import, and
 fills `library_id`, `runtime_s`, season/episode numbers and, for imported rows only, the item type neither tracker
 records. A live row keeps the type the session gave it.
 
@@ -356,7 +363,7 @@ metadata in Jellyfin starts no scan), but never marks anything removed. It then 
 `item_people.image_tag`, migration 29): replacing a portrait re-saves the person and none of their titles, and `artwork::tag_of`
 falls back to that tag for a person's id; before that, a replaced portrait stayed a week on disk and a week in the browser. The `/ScheduledTasks` read (every 5 min) and `sync_server`'s both pass
 their task list to `jobs::observe`, which is the only reason the Jellyfin jobs card can open on an ETA: the watch that
-`eta_s` needs is fed by lists finstats already has, never by a request made for it. **A read never wipes what it cannot see.** Marking rows `removed` is destructive (they vanish from every page and stat) and
+`eta_s` needs is fed by lists FinStats already has, never by a request made for it. **A read never wipes what it cannot see.** Marking rows `removed` is destructive (they vanish from every page and stat) and
 `items_page` turns anything it cannot parse into an empty list, so a Jellyfin that changes shape under an upgrade, or answers
 `200 {"Items":[]}`, must not be read as "the library was emptied". `sync::trustworthy_removal(seen, current)` gates every
 destructive removal (items, libraries, users): a read that comes back empty, or a catastrophic shrink of a sizeable set, is
@@ -384,10 +391,10 @@ process `TZ` (the Docker image ships tzdata for this); Rust that needs the local
 serde_urlencoded then hands numbers over as strings and every numeric filter 400s.
 
 **Playback insights (`stats.rs`, 2.0).** Where a title loses its viewers, drawn from where each play stopped. **A stop is
-`position_s` where the play has one and `duration_s` otherwise** (finstats' own plays and Streamystats rows that kept their runtime
+`position_s` where the play has one and `duration_s` otherwise** (FinStats' own plays and Streamystats rows that kept their runtime
 know where they stopped; Jellystat keeps a length, not a place, so the play is taken to have started at 0:00), and the two are
 never mixed silently: every curve carries `measured` and `estimated`. The rule is `playback::STOP_S` / `STOP_MEASURED` /
-`PLAY_FRAC`, and every page uses it; the curve once trusted only finstats' own positions while the activity list and the profile
+`PLAY_FRAC`, and every page uses it; the curve once trusted only FinStats' own positions while the activity list and the profile
 trusted Streamystats' too, so one play finished on one page and stopped twenty minutes in on another. The grid
 (`bucket_width`) keeps any runtime to sixty points; under `MIN_CURVE_PLAYS` (3) or without a runtime there is no curve, not a thin
 one. Events exist only for live plays, so rewinds (a seek whose `from_s` is past its `position_s`) and subtitle switch-ons (a play's
@@ -434,7 +441,7 @@ accents, punctuation, leading article), every typed word must match some word of
 **Profiles (`profile.rs`).** Show progress counts only episodes that exist as files (`path`/`size_bytes` set; the sync
 asks Jellyfin to exclude virtual items, and season 0 is skipped). "Seen" merges three sources in order: a recorded
 play ≥ 80%, Jellyfin's played flag (`user_items`), a manual mark (`manual_seen`, written via `POST /api/me/seen` for
-the caller only; finstats never writes to Jellyfin). Streaks are all-time and share `recap::longest_run`.
+the caller only; FinStats never writes to Jellyfin). Streaks are all-time and share `recap::longest_run`.
 
 **Watchlist (`watchlist.rs`, `/users/:id/watchlist`, 2.1).** One person's films and shows to watch, **their own and nobody
 else's**: every endpoint (`/api/me/watchlist*`) acts on the caller and takes no `user_id`, so no permission, not even a Jellyfin
@@ -505,7 +512,7 @@ the read did not return, by id (a whole-second `updated_at` comparison missed a 
 opens only `/api/calendar.ics`: the `AuthUser` extractor refuses it with 403 everywhere, and the feed's own `CalendarKey`
 extractor takes `?key=` or the header and never the cookie (`ical.rs`; `pipeline::entries_for` carries no name by construction,
 since a subscribed calendar syncs through somebody's cloud). Minting or revoking through a key is refused (`keys::only_a_session`).
-`audit.rs` is the one record of finstats' own write paths (`KINDS`; `Actor::from(&AuthUser)`; `record` is fire-and-forget and
+`audit.rs` is the one record of FinStats' own write paths (`KINDS`; `Actor::from(&AuthUser)`; `record` is fire-and-forget and
 never the caller's error, `record_now` for a row that must land before what it announces, such as an import's transaction); a new
 write path gets a kind and one `record`, never a second log. `api_keys` is never in a backup; `audit` is.
 
@@ -534,7 +541,7 @@ never by `is_admin`. The recap ignores permissions: own for everyone, any one us
 (`style-src 'self'`: the UI must not use inline `<style>`/`style=""`; `el.style.x` via JS is fine).
 
 **Local vs remote (`network.rs`).** `is_local` = private range (`db::is_local_ip`) or a row in `home_addresses`: this network's own
-public IP, looked up **once** from a plain-text service (the only non-Jellyfin request finstats makes by default; setting
+public IP, looked up **once** from a plain-text service (the only non-Jellyfin request FinStats makes by default; setting
 `public_ip_lookup`, override `FINSTATS_PUBLIC_IP_URL`), at start-up when no `lookup` row exists, or when somebody presses the button,
 plus the manual `home_addresses` setting. Always go through
 `network::classify(conn, ip)`; after the set changes call `network::reclassify`, which re-decides the whole history and
@@ -564,7 +571,7 @@ worked out from the dots' positions (`hover`), one tooltip for everything under 
 
 **Pipeline: the services around Jellyfin (`services.rs`, `arr.rs`, `seerr.rs`, `downloads.rs`, `pipeline.rs`, `/pipeline`).**
 Connections (Sonarr, Radarr, Seerr; several of a kind) live in `services`, secrets and all, and are `JellyfinAdmin`-only. **Download clients are
-deliberately not connected**: Sonarr and Radarr already talk to them and report a torrent and a usenet download the same way, so finstats reads
+deliberately not connected**: Sonarr and Radarr already talk to them and report a torrent and a usenet download the same way, so FinStats reads
 their queues: three APIs to keep up with instead of six, and nothing for the owner to set up twice. What that gives up is ratio and peers; the
 speed is worked out from what moved between two readings (`downloads::speeds`). They get **their own HTTP clients that follow no redirect**: reqwest drops `Authorization`/`Cookie` across hosts but not
 `X-Api-Key`, and a 307 replays a POST body. `Service` is neither `Serialize` nor `Debug`; its JSON is hand-built with `has_secret`; errors name a
@@ -577,7 +584,7 @@ so joins go id → every item → plays, unlike `relink.rs`, which refuses ambig
 on *its* clock, plus a re-read of everything still open (a media status change does not touch the request); that one runs every 15 min and only while
 something *is* open. Only a whole listing may set `removed_at` (Seerr purges; the history must not shrink). Every pass starts with a `take=1`
 probe (`newest_change`): a newest `updatedAt` no newer than the cursor means nothing was created or changed, and the pass ends there, which is
-what keeps a five-minute cadence from being most of the traffic finstats makes. Users link by `jellyfinUserId`, then Jellyfin user name, never a display name or e-mail.
+what keeps a five-minute cadence from being most of the traffic FinStats makes. Users link by `jellyfinUserId`, then Jellyfin user name, never a display name or e-mail.
 `downloads.rs` is the only live part: its own loop and `Notify`, 5 s while a page says `?live=1`, otherwise 60 s while anything is in the queue
 (a request page shows how far along it is) and 5 min while it is empty (`wait_s`); an empty queue has nothing to go out of date, and opening the
 page, connecting a service or a read of Seerr all wake the loop. No DB work per tick, the snapshot in memory only. `fold()` turns queue records into downloads by `downloadId` + service: a season pack is one row, the same id in two
@@ -585,10 +592,10 @@ instances is two rows, a record without an id stands for itself. Scoping goes th
 need `see_everyone` (and then no follower *counts* either, since on a small server a number is a name), the queue needs `see_downloads`, while own-request
 progress (`state`, `progress`, `eta_s` and nothing else) is always allowed. A queue row's `error` is the service's own words
 passed through `downloads::redact`: Sonarr and Radarr quote the client or indexer they could not reach, `user:pass@` and
-`?apikey=` included. The poster proxy `/img/arr/{service}/{media}` serves only ids finstats
+`?apikey=` included. The poster proxy `/img/arr/{service}/{media}` serves only ids FinStats
 itself has listed. None of these tables are in `backup::TABLES`: they are re-readable, and `services` holds secrets.
 
-**Outbound connections (`outbound.rs`, `GET /api/outbound`, Settings card).** One row per destination finstats can reach
+**Outbound connections (`outbound.rs`, `GET /api/outbound`, Settings card).** One row per destination FinStats can reach
 (Jellyfin, the public-IP services, DB-IP, each `services` row, each `notify_targets` row), with whether it is on and when it
 last answered. Built entirely from what is already kept (collector status, `home_addresses`, the `.mmdb` on disk,
 `service_health`, a destination's `last_ok_at`): nothing is recorded for it, and hosts are shown without paths or keys. A new
@@ -598,7 +605,7 @@ that adds it.
 **Jellyfin's own jobs (`jobs.rs`, `GET /api/jellyfin/jobs`, the Server page).** Jellyfin's scheduled tasks say what the
 code is called ("Detect and Analyze Media Segments"); `explain` says what it does to the server, matching Jellyfin's
 **key first** (a name is in the server's language) and a keyword in the name second, and falling back to Jellyfin's own
-`Description`; a sentence finstats does not have is never invented. **A run is timed by watching it**: the API carries
+`Description`; a sentence FinStats does not have is never invented. **A run is timed by watching it**: the API carries
 a percentage and never a start time for the run in progress, so `Run` keeps the recent readings and `eta_s` works out
 the rest from the rate they moved at, measured against the *most recent* reading that is far enough back to say
 anything (0.5% and 5 s, within `WINDOW_S`), never the average of the whole run. **Nothing that was not measured is ever offered**: when there is no rate, `eta_s` is `None` and the page
@@ -606,7 +613,7 @@ shows a cycling ellipsis rather than a number. The tempting fallback (the last r
 is what put "about 2 minutes left" on the screen for a quarter of an hour (1.6.1 made it age, 1.6.2 removed it): it
 knows nothing about how much of *this* run has happened and reads exactly like an earned estimate. `unchanged_for_s` is published so a slow job reads as slow
 rather than as a stuck page; a percentage that goes backwards is the next run, not this one going back. `schedule` prints a time of day as
-a time, never a countdown (a daily trigger is in the *server's* local zone, which finstats cannot know), and only an
+a time, never a countdown (a daily trigger is in the *server's* local zone, which FinStats cannot know), and only an
 interval trigger, measured from the last run, produces `next_at`. The read is live but never more often than
 `MIN_GAP_S` (3 s) however many people watch, hidden tasks included, and read-only like everything else: nothing in the
 code can start or stop a task on Jellyfin. **The estimate is the backend's (2.0.4)**: `jobs::run` reads the list itself every
@@ -615,7 +622,7 @@ have to watch into being; before, only a page's own 3-s reads (and the five-minu
 nothing; the scheduler's read notices the next run. A job Jellyfin reports at 0% throughout has no rate, and the page keeps
 its cycling "ETA…" until the percentage moves.
 
-**Notifications (`notify.rs`, `channels.rs`, `/api/notifications*`, Settings card).** The only thing finstats *sends*. An
+**Notifications (`notify.rs`, `channels.rs`, `/api/notifications*`, Settings card).** The only thing FinStats *sends*. An
 **event** is raised where the thing is noticed and written once (`raise_in` is `INSERT OR IGNORE` on `dedupe`, exactly like
 `security_alerts`, so re-deriving the same thing announces nothing twice), and **delivery is a separate row per destination**
 with its own attempts and clock (`backoff`: 30 s → 2 min → 10 min → 1 h, then given up on; `Retry-After` honoured;
@@ -687,7 +694,7 @@ pre-compressed needs the same exemption.
 
 **HTTP contract.** `docs/api.md` is the contract the UI is written against; change it together with the endpoint.
 
-**The README says how finstats is built**: a blockquote under the hero shot disclosing that most of the code was
+**The README says how FinStats is built**: a blockquote under the hero shot disclosing that most of the code was
 written by Claude Code from the maintainer's decisions, and what that does and does not mean: test-first, reviewed
 before it lands, `cargo test` in CI on every push to `main` and every release tag, each release run against a real
 server. Those are promises, like the privacy sentences: if any of them stops being true, the blockquote changes in
@@ -709,26 +716,26 @@ its whole page, and `stickyFilters` refuses to be drawn without one); every new 
 non-admins, imported plays). Native `el.append(null)` prints the text "null", so pass possibly-absent nodes through
 `h()` or filter them first.
 
-**FinUI (`web/assets/finui/`, `finui.rs`) is finstats' own component library**, written "FinUI" wherever a person reads
+**FinUI (`web/assets/finui/`, `finui.rs`) is FinStats' own component library**, written "FinUI" wherever a person reads
 it (lowercase only in paths, the registry's name and the `fui-` prefix). Each component is a module with its `meta` and
 its CSS, listed in `registry.json` with the tokens its CSS reads (a test holds the list); a `fui-x` class is styled by
 component x alone, and its modules import nothing from outside `finui/`. `/assets/finui.css` is every CSS file in
 registry order, built by the server: one request, no build step. **Every value a theme may change is a token**: colours,
 but also every corner (`--radius*`, a test refuses a literal radius), `--density`, `--card-shadow`, `--icon-stroke`,
-`--on-accent`. **FinUI is also a repository of its own, `github.com/finstats/finui`** (checked out beside finstats as
+`--on-accent`. **FinUI is also a repository of its own, `github.com/finstats/finui`** (checked out beside FinStats as
 `../finui`): the components are developed here, where they are used, and copied there as they change; its gallery,
 **FinUI create** (`create/`: presets, `preset.js`, the page) and the installer (`curl -fsSL https://finui.finstats.no/install.sh | sh -s --
-<code>`, built with the site by its pages workflow) live there only; finstats serves no gallery, and Settings → System
-links to the site. **Each person's finstats wears the preset they chose** (Settings → Appearance, `appearance.rs`, table
-`appearance`, `/api/me/appearance`, in `backup::TABLES`): finstats keeps FinUI's `create/presets.json` and the per-option
+<code>`, built with the site by its pages workflow) live there only; FinStats serves no gallery, and Settings → System
+links to the site. **Each person's FinStats wears the preset they chose** (Settings → Appearance, `appearance.rs`, table
+`appearance`, `/api/me/appearance`, in `backup::TABLES`): FinStats keeps FinUI's `create/presets.json` and the per-option
 token files FinUI's site build generates (`finui/p/<axis>/<option>.css`), and `/assets/finui.css` answers in the look of
 the session cookie that asks (`appearance::of_request`; `private`, `Vary: Cookie`): the stylesheet followed by the files
-the code names in axis order, exactly what FinUI's `install.sh` does, so finstats has no copy of how a choice becomes
+the code names in axis order, exactly what FinUI's `install.sh` does, so FinStats has no copy of how a choice becomes
 tokens. `finui::preset::overlay` only decodes the code against the files; an unknown code is refused at save. There is no
 look for everyone: one person's choice never reaches another (the owner's decision). **A style is a whole look in one
-choice** (`presets.json` `styles`: a key, a label, a line and its picks by option key; FinUI create's first picker; finstats'
-Appearance offers none, the owner's decision: finstats ships one look, and a style reaches it only as the code FinUI
-create makes), and it is nothing but a code: Washi, every default, is saved as no preset at all. finstats' own
+choice** (`presets.json` `styles`: a key, a label, a line and its picks by option key; FinUI create's first picker; FinStats'
+Appearance offers none, the owner's decision: FinStats ships one look, and a style reaches it only as the code FinUI
+create makes), and it is nothing but a code: Washi, every default, is saved as no preset at all. FinStats' own
 chrome reads FinUI's tokens where a choice should reach it: the menu's open page is `--selected-*` (the Menu axis), as
 FinUI's section list is. **Presets choose fonts too**
 (axes Font, Heading and Mono; Heading is the token `--font-heading`, the text's own by default): every family a preset may name
@@ -745,14 +752,14 @@ built site): copy a change across in the same sitting.
 
 **FinMotion (`web/assets/finmotion/`, `finmotion.rs`) is how FinUI moves, and FinUI is not an animation library** (the
 owner's words): FinUI's components are still and complete on their own, and nothing of motion goes back into FinUI but
-its animated icons. FinMotion is a repository of its own (`github.com/finstats/finmotion`, checked out beside finstats as
-`../finmotion`, its own CLAUDE.md) put on top of FinUI, and **finstats always wears it**: `/assets/finmotion.css` is its
+its animated icons. FinMotion is a repository of its own (`github.com/finstats/finmotion`, checked out beside FinStats as
+`../finmotion`, its own CLAUDE.md) put on top of FinUI, and **FinStats always wears it**: `/assets/finmotion.css` is its
 stylesheets in its registry's order, served as one like `finui.css` and linked after it, and `main.js` calls `motion()`
 once. Everything moves on four springs (`--spring-settle | -snap | -drift | -glide`) paced by the person's Motion choice
 (FinUI's `--ease` read as `--fm-pace`) and stilled by reduced motion. Each of its parts finds a FinUI component by FinUI's
 own classes and moves what FinUI draws, so FinUI needs no change for it; what a person does moves at once, while an
 entrance or a flourish waits for an `fm-` class a page adds (`fm-roll`, `fm-arrive`, `fm-develop`, `fm-light`,
-`fm-gathers`, `fm-film`), because finstats redraws its pages. FinMotion is developed in its own repository and copied
+`fm-gathers`, `fm-film`), because FinStats redraws its pages. FinMotion is developed in its own repository and copied
 here; the QA stage `finmotion` runs its QA (`../finmotion/qa`) and fails while `web/assets/finmotion` differs from it.
 
 "Now playing" (`nowPlayingView` in `widgets.js`) is polled every 5 s, but **only the 1 s ticker moves a clock** (+1 whole
@@ -795,7 +802,7 @@ Run button lights the button, never the row (the row reads as "open"). It repain
 has a `next_at` of "now", which moves every second. Backups, Security and Collection link to their job's schedule; none of them
 holds a timing control of its own any more.
 Esc is handled globally in `shell.js` (steps back out of `/libraries/:id`, `/users/:id`,
-`/items/:id`), going back through history only onto an entry of finstats' own: every entry the router writes carries
+`/items/:id`), going back through history only onto an entry of FinStats' own: every entry the router writes carries
 `history.state.depth`, and a tab opened on a title has none behind it. Overlays must keep calling `stopPropagation()` on
 their own Esc, and `openModal` keeps a stack: only the dialog on top answers keys. Tables read numbers as `num()` prints
 them (en-US), never with the browser's separators.
@@ -886,7 +893,7 @@ commit that touches Rust must build and pass `cargo test` on its own.
 
 ## Licensing
 
-finstats is `GPL-3.0-only` (`LICENSE`, `Cargo.toml`). A new dependency must carry a GPL-3.0-compatible license
+FinStats is `GPL-3.0-only` (`LICENSE`, `Cargo.toml`). A new dependency must carry a GPL-3.0-compatible license
 (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0 and similar are fine; check with `cargo metadata`). The bundled fonts are
 OFL-1.1 and their license texts live next to them in `web/assets/fonts/`; keep them together.
 
@@ -895,7 +902,7 @@ OFL-1.1 and their license texts live next to them in `web/assets/fonts/`; keep t
 generated it would be wrong on the others) and reads each crate's own `LICENSE` files out of the sources cargo has
 unpacked. Identical texts are stored once (hundreds of crates ship the same MIT wording), and every crate points at
 the ones it carries. **Nothing in here is retyped**: each text is a licence file as its project wrote it, and the
-bundled half (`BUNDLED` in `licenses.rs`: finstats' own GPL, every font in `web/assets/fonts` (a test holds each licence there to the notice), the map, DB-IP's database) is
+bundled half (`BUNDLED` in `licenses.rs`: FinStats' own GPL, every font in `web/assets/fonts` (a test holds each licence there to the notice), the map, DB-IP's database) is
 `include_str!` of the file that really sits on disk. Re-run the generator whenever a dependency is added, removed or
 bumped: a test holds the file against every package in `Cargo.lock`, so a dependency whose licence was never recorded
 fails `cargo test`. The answer is rendered once into a `OnceLock`: half a megabyte, the same for everyone, unchanging
@@ -905,7 +912,7 @@ while the process runs. The page reaches it from a button in Settings; the route
 
 The image has no `USER` line on purpose: `docker-entrypoint.sh` starts as root only to make the data directory belong to `PUID:PGID`
 (default 1000:1000; Docker creates a missing bind-mount folder as root, which is what broke 1.0.0 on fresh machines), then `su-exec`s
-to that user; with `--user` it changes nothing. finstats itself never runs as root. `main.rs::ensure_writable` fails fast with the fix.
+to that user; with `--user` it changes nothing. FinStats itself never runs as root. `main.rs::ensure_writable` fails fast with the fix.
 Test the image on folders Docker creates (`qa/run.sh docker`), not on a data folder that already exists on the dev machine.
 
 **The owner's own install runs from this checkout, and it is redeployed at the end of every change.** When a container named `finstats`
@@ -927,11 +934,11 @@ image, never at a locally built tag.
 
 ## No em-dashes
 
-**No em-dash is used anywhere in the fin\* repositories on GitHub** (finstats, FinUI, FinMotion): not in code, comments,
+**No em-dash is used anywhere in the fin\* repositories on GitHub** (FinStats, FinUI, FinMotion): not in code, comments,
 UI text, docs, the changelog or commit messages (the owner's decision, 2026-10-07). Where a sentence wants one, rewrite
 the sentence: a full stop, a colon, a semicolon, commas, parentheses or a joining word. Another dash in its place (a
 hyphen, an en dash, two hyphens) or an escape for the character is not a rewrite. The one exception is
-`THIRD-PARTY.json`, whose licence texts are other projects' words as they wrote them. A QA static check holds finstats to it.
+`THIRD-PARTY.json`, whose licence texts are other projects' words as they wrote them. A QA static check holds FinStats to it.
 
 ## Git conventions
 

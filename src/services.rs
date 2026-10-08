@@ -1,6 +1,6 @@
 //! Connections to the services around Jellyfin: Sonarr, Radarr, Seerr and the torrent clients.
 //!
-//! finstats only ever *reads* from them. Everything that makes that safe lives here:
+//! FinStats only ever *reads* from them. Everything that makes that safe lives here:
 //!
 //! - **Own HTTP clients that follow no redirect.** reqwest drops `Authorization` and `Cookie` when a redirect
 //!   leaves the host, but not `X-Api-Key`, and a 307 replays a POST body (a password) wherever it points.
@@ -12,7 +12,7 @@
 //!   whatever was read from a service belongs to that id: pointing a connection at another address throws
 //!   its rows away, because ids from one instance mean nothing in the next.
 //!
-//! Only Jellyfin administrators may add or change a connection: it is a secret plus an address finstats will call.
+//! Only Jellyfin administrators may add or change a connection: it is a secret plus an address FinStats will call.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -195,11 +195,11 @@ fn chain_mentions_certificate(e: &reqwest::Error) -> bool {
 pub fn explain(e: reqwest::Error, svc: &Service) -> anyhow::Error {
     let (label, url) = (svc.kind.label(), &svc.url);
     if chain_mentions_certificate(&e) {
-        anyhow!("{url} presented a certificate finstats does not trust (self-signed, or from your own authority). Use its http:// address, or switch on “Accept a self-signed certificate” for this connection")
+        anyhow!("{url} presented a certificate FinStats does not trust (self-signed, or from your own authority). Use its http:// address, or switch on “Accept a self-signed certificate” for this connection")
     } else if e.is_timeout() {
         anyhow!("{label} at {url} did not answer in time")
     } else if e.is_connect() {
-        anyhow!("Could not connect to {url}. Is {label} running, and reachable from where finstats runs?")
+        anyhow!("Could not connect to {url}. Is {label} running, and reachable from where FinStats runs?")
     } else if e.is_decode() {
         anyhow!("{url} did not answer like {label}")
     } else {
@@ -212,7 +212,7 @@ pub fn refuse(status: StatusCode, headers: &HeaderMap, svc: &Service) -> anyhow:
     let (label, url) = (svc.kind.label(), &svc.url);
     if status.is_redirection() {
         let to: String = headers.get(LOCATION).and_then(|v| v.to_str().ok()).unwrap_or("another address").chars().filter(|c| !c.is_control()).take(200).collect();
-        return anyhow!("{url} answers with a redirect to {to}. finstats follows no redirects, so that a key can never end up somewhere else: enter the final address, including any base path");
+        return anyhow!("{url} answers with a redirect to {to}. FinStats follows no redirects, so that a key can never end up somewhere else: enter the final address, including any base path");
     }
     match (status.as_u16(), ()) {
         (401 | 403, _) => anyhow!("{label} refused the API key"),
@@ -271,7 +271,7 @@ pub async fn test(app: &App, svc: &Service) -> Result<(String, String)> {
 
 fn read(r: &crate::db::rusqlite::Row) -> crate::db::rusqlite::Result<Option<(Service, Health)>> {
     let kind: String = r.get(1)?;
-    let Some(kind) = Kind::from_key(&kind) else { return Ok(None) }; // a kind from a newer finstats
+    let Some(kind) = Kind::from_key(&kind) else { return Ok(None) }; // a kind from a newer FinStats
     Ok(Some((
         Service { id: r.get(0)?, kind, name: r.get(2)?, url: r.get(3)?, username: r.get(4)?, secret: r.get(5)?, accept_invalid_certs: r.get(6)?, enabled: r.get(7)? },
         Health { version: r.get(8)?, last_ok_at: r.get(9)?, last_error: r.get(10)? },
@@ -452,7 +452,7 @@ fn describe(body: ServiceBody, stored: Option<&Service>, taken: &[String]) -> st
     if secret.len() > 512 || secret.chars().any(char::is_control) {
         return Err(ApiError::bad_request("That does not look like a key or password"));
     }
-    // Nothing finstats connects to needs a user name any more; the column stays for databases that have one.
+    // Nothing FinStats connects to needs a user name any more; the column stays for databases that have one.
     let username = stored.and_then(|s| s.username.clone());
     let wanted: String = body.name.as_deref().map(str::trim).filter(|n| !n.is_empty()).map(|n| n.chars().filter(|c| !c.is_control()).take(60).collect()).unwrap_or_default();
     let name = if !wanted.is_empty() {

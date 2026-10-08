@@ -1,4 +1,4 @@
-// Server → Audit: what changed in finstats, and who did it. Jellyfin administrators only; the
+// Server → Audit: what changed in FinStats, and who did it. Jellyfin administrators only; the
 // server refuses everyone else, this only draws. The shape is the server log's: When · Who · What ·
 // Detail · From, a search, a kind you can pin, and paging.
 
@@ -10,7 +10,7 @@ import { dataTable } from '../tables.js';
 
 const PER_PAGE = 50;
 const KIND_LABEL = {
-  sign_in: 'Signed in', sign_in_failed: 'Sign-in failed', sign_in_refused: 'Sign-in refused', sign_out: 'Signed out', setup_completed: 'Set up finstats',
+  sign_in: 'Signed in', sign_in_failed: 'Sign-in failed', sign_in_refused: 'Sign-in refused', sign_out: 'Signed out', setup_completed: 'Set up FinStats',
   key_created: 'Made a key', key_revoked: 'Revoked a key', key_used: 'Used a key for the first time',
   setting_changed: 'Changed settings', permissions_changed: 'Changed permissions',
   service_added: 'Added a connection', service_changed: 'Changed a connection', service_removed: 'Removed a connection',
@@ -88,7 +88,7 @@ export function auditView(ctx) {
           return h('tr', null,
             h('td', { class: 'mono nowrap', title: dateTime(e.at) }, relTime(e.at)),
             h('td', null, e.user_id ? h('span', { class: 'user-cell' }, avatar(e.user_id, e.user_name || '?', { size: 20, hasImage: e.has_image }), h('a', { href: `/users/${e.user_id}` }, e.user_name || 'User'))
-              : e.user_name ? h('span', { class: 'muted', title: 'as typed' }, e.user_name) : h('span', { class: 'muted' }, 'finstats')),
+              : e.user_name ? h('span', { class: 'muted', title: 'as typed' }, e.user_name) : h('span', { class: 'muted' }, 'FinStats')),
             h('td', null, h('div', { class: 'event-name' }, h('button', { type: 'button', class: 'fui-chip fui-chip--button', title: 'Show only this kind', onClick: () => { f.kind = e.kind; apply(); } }, KIND_LABEL[e.kind] || e.kind),
               out ? h('span', { class: 'fui-badge--status ' + out[0] }, icon(out[1], 12), out[2]) : null, e.key_name ? h('span', { class: 'muted' }, ` via key “${e.key_name}”`) : null)),
             h('td', { class: 'wrap-cell' }, h('div', { class: 'event-overview' }, detailText(e))),

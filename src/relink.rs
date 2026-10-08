@@ -355,7 +355,7 @@ mod tests {
                 VALUES (4, 'live', 'u', 'u', 'e-old', 'Episode 1', 'Episode', 's-old', 'Test Show', 1, 1, 300, 310, 10);",
         )
         .unwrap();
-        // Every row here is one finstats recorded itself, so none of them can be a duplicate of
+        // Every row here is one FinStats recorded itself, so none of them can be a duplicate of
         // another tracker's, so re-linking them takes nothing away.
         let r = relink_orphans(&conn, 600).unwrap();
         assert_eq!((r.titles, r.episodes, r.names_cleaned, r.duplicates_removed), (1, 1, 1, 0));

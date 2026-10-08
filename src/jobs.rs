@@ -7,17 +7,17 @@
 //!
 //! **A run is timed by watching it, because Jellyfin does not say when it started.** A task carries a
 //! percentage and nothing else (no start time for the run in progress), so `Watch` remembers the
-//! percentages this finstats has seen and `eta_s` works the rest out from the rate they moved at. When
+//! percentages this FinStats has seen and `eta_s` works the rest out from the rate they moved at. When
 //! nothing has been seen to move there is no number, and the page says so rather than guessing.
 //!
 //! **The watching does not wait for somebody to look.** `observe` feeds the same `Watch` from task lists
-//! finstats has already read for other reasons (the scan check every 5 minutes, the server details every
+//! FinStats has already read for other reasons (the scan check every 5 minutes, the server details every
 //! 15), so a run that has been going for an hour is an estimate the moment the page opens, instead of an
 //! ellipsis until it has been watched. Those reads happen either way; this only stops throwing the
 //! percentages in them away.
 //!
 //! **Nothing is asked for unless somebody is looking.** The list is read from Jellyfin *for this endpoint*
-//! at most every `MIN_GAP_S`, only when it is called, and finstats never starts, stops or changes a task
+//! at most every `MIN_GAP_S`, only when it is called, and FinStats never starts, stops or changes a task
 //! there: it is the same read-only relationship as everywhere else.
 
 use std::collections::HashMap;
@@ -39,14 +39,14 @@ const TICKS_PER_S: i64 = 10_000_000;
 // ---------------------------------------------------------------- what a job actually does
 
 /// The plain-English sentence for a task, by Jellyfin's key first (which does not change with the
-/// server's language) and by its name second. `None` when finstats has never heard of it.
+/// server's language) and by its name second. `None` when FinStats has never heard of it.
 pub fn explain(key: &str, name: &str) -> Option<&'static str> {
     let k = key.to_ascii_lowercase();
     let n = name.to_ascii_lowercase();
     let is = |needles: &[&str]| needles.iter().any(|needle| k == *needle || n.contains(needle));
 
     if is(&["refreshlibrary", "scan media library"]) {
-        return Some("Looks through your media folders for files that are new, changed or gone and updates Jellyfin's database. This is the job that makes a new film appear. finstats reads your library right after it finishes, so anything it finds is on your statistics within a minute or two.");
+        return Some("Looks through your media folders for files that are new, changed or gone and updates Jellyfin's database. This is the job that makes a new film appear. FinStats reads your library right after it finishes, so anything it finds is on your statistics within a minute or two.");
     }
     if is(&["mediasegment", "media segments", "intro skip", "introskipper"]) {
         return Some("Goes through your episodes looking for the parts a player can offer to skip (the intro, a recap, the closing credits) and writes down where they are. It reads the audio and video of each file to do it, so it is one of the heaviest things Jellyfin ever runs, and it only looks at what it has not analysed before. Leaving it to run overnight is normal; nothing about it touches your library files.");
@@ -73,7 +73,7 @@ pub fn explain(key: &str, name: &str) -> Option<&'static str> {
         return Some("Tidies Jellyfin's own database file: reclaims the space deleted rows left behind and rebuilds the indexes. Jellyfin is briefly slower while it runs and quicker afterwards. It has nothing to do with your media.");
     }
     if is(&["cleanactivitylog", "activity log"]) {
-        return Some("Deletes old entries from Jellyfin's activity log: the sign-ins and errors you see under Dashboard → Activity. finstats has already copied those into its own history, so nothing on the finstats Server page disappears with them.");
+        return Some("Deletes old entries from Jellyfin's activity log: the sign-ins and errors you see under Dashboard → Activity. FinStats has already copied those into its own history, so nothing on the FinStats Server page disappears with them.");
     }
     if is(&["cleanlogs", "log file", "log files"]) {
         return Some("Deletes Jellyfin's own log files once they are older than the number of days set in its settings. Housekeeping; it never touches media.");
@@ -102,11 +102,11 @@ pub fn explain(key: &str, name: &str) -> Option<&'static str> {
     None
 }
 
-/// What finstats says about a task it does not know: Jellyfin's own description, when there is one.
+/// What FinStats says about a task it does not know: Jellyfin's own description, when there is one.
 fn fallback(description: Option<&str>) -> String {
     match description.map(str::trim).filter(|d| !d.is_empty()) {
-        Some(d) => format!("{d} (Jellyfin's own words: finstats does not know this job, so it is probably from a plugin.)"),
-        None => "finstats does not know this job and Jellyfin does not describe it, which usually means a plugin added it.".into(),
+        Some(d) => format!("{d} (Jellyfin's own words: FinStats does not know this job, so it is probably from a plugin.)"),
+        None => "FinStats does not know this job and Jellyfin does not describe it, which usually means a plugin added it.".into(),
     }
 }
 
@@ -117,7 +117,7 @@ fn fallback(description: Option<&str>) -> String {
 /// `WINDOW_S`), so a job that speeds up or slows down is described by the pace it has now rather than the
 /// one it averaged, and a job creeping a percent every few minutes is still measurable.
 ///
-/// `None` means finstats has not seen the percentage move and has nothing to work from. There is a
+/// `None` means FinStats has not seen the percentage move and has nothing to work from. There is a
 /// tempting number to put there (how long the last run took, applied to the fraction that is left), and
 /// it is a guess: it stands still while the job does, it knows nothing about how much of this run has
 /// already happened, and on the screen it is indistinguishable from an estimate that was earned. So it is
@@ -159,7 +159,7 @@ fn every(seconds: i64) -> String {
 const DAYS: [&str; 7] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 /// When Jellyfin will run this, in the words its own settings page uses. A time of day is the *server's*
-/// local time, which is why it is printed as a time rather than turned into a countdown finstats cannot
+/// local time, which is why it is printed as a time rather than turned into a countdown FinStats cannot
 /// promise; an interval is a real countdown, because it is measured from the last run.
 pub fn schedule(triggers: &[Value], last_run_at: Option<i64>) -> (Vec<String>, Option<i64>) {
     let mut words = vec![];
@@ -193,10 +193,10 @@ pub fn schedule(triggers: &[Value], last_run_at: Option<i64>) -> (Vec<String>, O
 
 // ---------------------------------------------------------------- watching a run
 
-/// What finstats has seen of one run. Jellyfin reports a percentage and never says when the run began,
+/// What FinStats has seen of one run. Jellyfin reports a percentage and never says when the run began,
 /// so this is the only clock there is: the recent percentages, and when the last one actually changed.
 pub struct Run {
-    /// When finstats first saw this run, which may be long after Jellyfin started it.
+    /// When FinStats first saw this run, which may be long after Jellyfin started it.
     pub first_at: i64,
     /// When the percentage last moved. Equal to `first_at` until it does.
     pub changed_at: i64,
@@ -250,7 +250,7 @@ impl Run {
     }
 }
 
-/// What finstats remembers between two reads: the last answer, and how each running job has moved.
+/// What FinStats remembers between two reads: the last answer, and how each running job has moved.
 #[derive(Default)]
 pub struct Watch {
     pub fetched_at: i64,
@@ -285,7 +285,7 @@ impl Watch {
     /// Jellyfin is read for it are exactly as they were.
     ///
     /// A job the list says is idle has finished, and its run is dropped. A job the list does not mention
-    /// at all is left alone, because the lists finstats reads elsewhere leave out the hidden tasks and a
+    /// at all is left alone, because the lists FinStats reads elsewhere leave out the hidden tasks and a
     /// hidden job the page is watching must not be forgotten by a read that could not see it.
     pub fn observe(&mut self, tasks: &[Value], now: i64) {
         for t in tasks {
@@ -299,7 +299,7 @@ impl Watch {
     }
 }
 
-/// Time the runs in a task list finstats read for another reason. Costs no request: the caller already
+/// Time the runs in a task list FinStats read for another reason. Costs no request: the caller already
 /// has the list in hand.
 pub fn observe(app: &App, tasks: &[Value]) {
     if tasks.is_empty() {
@@ -337,7 +337,7 @@ fn job_json(t: &Value, watch: &mut Watch, now: i64) -> Value {
         "state": state, "running": running, "hidden": t["IsHidden"].as_bool().unwrap_or(false),
         "progress": progress,
         "eta_s": eta,
-        // When finstats first saw this run. It may have been going for hours before anybody opened the page.
+        // When FinStats first saw this run. It may have been going for hours before anybody opened the page.
         "watching_since": watched_since,
         // How long the percentage has been standing still. A slow job is not a broken page.
         "unchanged_for_s": unchanged_for,
@@ -453,7 +453,7 @@ mod tests {
         // The one that started this: a name that says what the code is called.
         let segments = explain("MediaSegmentDetect", "Detect and Analyze Media Segments").expect("media segments");
         assert!(segments.contains("skip") && segments.contains("heaviest"), "{segments}");
-        assert!(explain("RefreshLibrary", "Scan Media Library").is_some_and(|s| s.contains("finstats reads your library")));
+        assert!(explain("RefreshLibrary", "Scan Media Library").is_some_and(|s| s.contains("FinStats reads your library")));
         assert!(explain("", "Generate Trickplay Images").is_some(), "matched by name when the key is unknown");
         assert!(explain("OptimizeDatabase", "").is_some(), "matched by key when the name is in another language");
         assert!(explain("SomePluginTask", "Do the thing").is_none());
@@ -491,7 +491,7 @@ mod tests {
         let daily = json!([{ "Type": "DailyTrigger", "TimeOfDayTicks": 3i64 * 3600 * TICKS_PER_S }]);
         let (words, next) = schedule(daily.as_array().unwrap(), Some(1_000));
         assert_eq!(words, vec!["every day at 03:00"]);
-        assert_eq!(next, None, "a time of day is the server's own, so finstats does not turn it into a countdown");
+        assert_eq!(next, None, "a time of day is the server's own, so FinStats does not turn it into a countdown");
 
         let interval = json!([{ "Type": "IntervalTrigger", "IntervalTicks": 86_400i64 * TICKS_PER_S }, { "Type": "StartupTrigger" }]);
         let (words, next) = schedule(interval.as_array().unwrap(), Some(1_000));
@@ -520,7 +520,7 @@ mod tests {
         assert_eq!(w.note("a", 5.0, 300).first_at, 300, "a job that stopped is not remembered");
     }
 
-    /// The whole point of `observe`: the reads finstats already makes time the run, so the first thing a
+    /// The whole point of `observe`: the reads FinStats already makes time the run, so the first thing a
     /// page is ever told about a slow job is a number rather than an ellipsis.
     #[test]
     fn a_job_is_already_timed_by_the_time_anybody_opens_the_page() {
@@ -546,7 +546,7 @@ mod tests {
     }
 
     /// The owner's request: the estimate lives in the backend, so the page is told one the moment it opens. A run is
-    /// timed by finstats itself while it goes on, not only while somebody has the page open.
+    /// timed by FinStats itself while it goes on, not only while somebody has the page open.
     #[test]
     fn a_running_job_keeps_being_timed_with_nobody_looking() {
         let mut w = Watch::default();
@@ -563,7 +563,7 @@ mod tests {
         w.note("hidden-one", 10.0, 0);
         w.note("scan", 10.0, 0);
 
-        // The lists finstats reads elsewhere leave the hidden tasks out. A job missing from one of them
+        // The lists FinStats reads elsewhere leave the hidden tasks out. A job missing from one of them
         // has not stopped; it was never in the list to begin with.
         w.observe(&[json!({ "Id": "scan", "State": "Idle", "CurrentProgressPercentage": 0.0 })], 60);
         assert_eq!(w.note("hidden-one", 12.0, 60).first_at, 0, "a hidden run the read could not see is still being watched");

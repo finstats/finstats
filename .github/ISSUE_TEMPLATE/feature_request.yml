@@ -1,12 +1,12 @@
 name: Feature request
-description: Something finstats cannot tell you yet
+description: Something FinStats cannot tell you yet
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
         The most useful requests describe **the question you could not answer**, not the screen you imagine. There is
-        often a smaller way to get there. CONTRIBUTING.md lists what finstats deliberately will not become (no writes to
+        often a smaller way to get there. CONTRIBUTING.md lists what FinStats deliberately will not become (no writes to
         Jellyfin, no second container, no telemetry, no front-end build step): worth a look first.
   - type: textarea
     id: question

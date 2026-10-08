@@ -11,7 +11,7 @@ import { dataView, segmented, poster, emptyState, sk, combobox, openModal, avata
 import { showTip, hideTip } from '../charts.js';
 import { button } from '../../finui/components/button/button.js';
 
-const BAR = 'var(--single)'; // the single series hue used everywhere else in finstats
+const BAR = 'var(--single)'; // the single series hue used everywhere else in FinStats
 const BAR_PEAK = 'var(--peak)'; // emphasis: the extreme, nothing else
 
 // ---------------------------------------------------------------- formatting
@@ -564,7 +564,7 @@ function discoveryChapter(d, v) {
   });
 }
 
-// ---------------------------------------------------------------- 2.0: what the rest of finstats left lying around
+// ---------------------------------------------------------------- 2.0: what the rest of FinStats left lying around
 
 /** Evenings in company. Companions are named here, in the app, and never on a card. */
 function togetherChapter(d, v) {

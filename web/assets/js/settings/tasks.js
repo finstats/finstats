@@ -1,4 +1,4 @@
-// Settings → Tasks: every job finstats does by itself, when it last ran, and (a click on a row) when it runs,
+// Settings → Tasks: every job FinStats does by itself, when it last ran, and (a click on a row) when it runs,
 // laid out the way Jellyfin lays out its scheduled tasks: a list, then a job's own page with its triggers and an
 // "Add trigger" dialog. `/settings/tasks` is the list, `/settings/tasks/:task` one job. The server holds every
 // rule (`schedule.rs`); this page only says it in words and sends the whole list back when it changes.
@@ -21,14 +21,14 @@ export const TASK_LABEL = {
   sync_upcoming: ['Read Sonarr and Radarr calendars', 'What is about to air or be released. Read-only', 'Sonarr, Radarr and Seerr'],
   sync_grabs: ['Read the download history', 'What Sonarr and Radarr grabbed, imported or failed. Read-only', 'Sonarr, Radarr and Seerr'],
   sync_requests: ['Read requests from Seerr', 'Who asked for what, and how far it has got. Read-only', 'Sonarr, Radarr and Seerr'],
-  backup: ['Backup', 'Writes a finstats backup; the newest ones are kept, as set under Backups', 'finstats'],
-  geoip: ['Geolocation database', 'Downloads DB-IP’s free city file when a newer month is out (about 60 MB). Places addresses on the Security page', 'finstats'],
-  import: ['Jellystat import', 'Runs when you upload a Jellystat backup under Import', 'finstats'],
-  import_streamystats: ['Streamystats import', 'Runs when you upload a Streamystats backup under Import', 'finstats'],
-  import_tautulli: ['Tautulli import', 'Runs when the wires of an uploaded Tautulli backup are connected under Import', 'finstats'],
-  restore: ['Restore', 'Runs when you restore a finstats backup under Backups', 'finstats'],
+  backup: ['Backup', 'Writes a FinStats backup; the newest ones are kept, as set under Backups', 'FinStats'],
+  geoip: ['Geolocation database', 'Downloads DB-IP’s free city file when a newer month is out (about 60 MB). Places addresses on the Security page', 'FinStats'],
+  import: ['Jellystat import', 'Runs when you upload a Jellystat backup under Import', 'FinStats'],
+  import_streamystats: ['Streamystats import', 'Runs when you upload a Streamystats backup under Import', 'FinStats'],
+  import_tautulli: ['Tautulli import', 'Runs when the wires of an uploaded Tautulli backup are connected under Import', 'FinStats'],
+  restore: ['Restore', 'Runs when you restore a FinStats backup under Backups', 'FinStats'],
 };
-const GROUPS = ['Jellyfin', 'Sonarr, Radarr and Seerr', 'finstats'];
+const GROUPS = ['Jellyfin', 'Sonarr, Radarr and Seerr', 'FinStats'];
 // Where a job that runs on an upload is started instead.
 const STARTED_FROM = { import: ['/settings/import', 'Import'], import_streamystats: ['/settings/import', 'Import'], import_tautulli: ['/settings/import', 'Import'], restore: ['/settings/backups#restore', 'Backups'] };
 const SERVICE_TASKS = { sync_upcoming: 'upcoming' };   // task → the feature it belongs to
@@ -110,7 +110,7 @@ function runButton(t, store, paint) {
 // ---------------------------------------------------------------- the list
 function listView(slot, store) {
   const body = h('div', null, sk.rows(6));
-  mount(slot, card({ title: 'Tasks', sub: 'What finstats does by itself. Open one to change when it runs.', body, id: 'tasks' }));
+  mount(slot, card({ title: 'Tasks', sub: 'What FinStats does by itself. Open one to change when it runs.', body, id: 'tasks' }));
   let sig = '';
   function paint(force = false) {
     if (!store.tasks) return;
@@ -137,7 +137,7 @@ function listView(slot, store) {
               h('p', { class: 'sr-only' }, what)),
             runButton(t, store, paint));
         })));
-    }), h('p', { class: 'fui-field__help task-zone' }, `Times of day are in ${store.tasks.time_zone || 'finstats’ time zone'}.`));
+    }), h('p', { class: 'fui-field__help task-zone' }, `Times of day are in ${store.tasks.time_zone || 'FinStats’ time zone'}.`));
   }
   store.onTasks(() => paint());
   return store.loadTasks().then(() => paint(true));
@@ -199,7 +199,7 @@ function taskView(slot, store, id) {
     mount(body, status,
       h('div', { class: 'form-actions task-actions' }, add, run, reset),
       h('div', { class: 'fui-field' }, h('div', { class: 'fui-field__label' }, 'Runs'), list, err ? inlineError('trigger-err', err) : null),
-      h('p', { class: 'fui-field__help' }, `Times of day are in ${store.tasks.time_zone || 'finstats’ time zone'}. `,
+      h('p', { class: 'fui-field__help' }, `Times of day are in ${store.tasks.time_zone || 'FinStats’ time zone'}. `,
         t.next_at ? `Next run: ${dateTime(t.next_at)}.` : ''));
   }
   store.onTasks(() => paint());
@@ -257,7 +257,7 @@ function addDialog(t, onAdd) {
 }
 
 export default {
-  key: 'tasks', label: 'Tasks', sub: 'What finstats does by itself, and when', group: 'Data', icon: 'clock',
+  key: 'tasks', label: 'Tasks', sub: 'What FinStats does by itself, and when', group: 'Data', icon: 'clock',
   visible: () => can('manage'),
   entries: Object.entries(TASK_LABEL).map(([id, [label, what]]) => ({ id: `task-${id}`, label, hint: `${what} task job schedule trigger run` })),
   async render(slot, store) {

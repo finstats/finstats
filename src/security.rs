@@ -1,6 +1,6 @@
 //! Where people watch from, and what looks wrong about it.
 //!
-//! A *sighting* is a moment finstats knows where an account was: a play (`playbacks.remote_ip`, for as long
+//! A *sighting* is a moment FinStats knows where an account was: a play (`playbacks.remote_ip`, for as long
 //! as it ran) or a sign-in in Jellyfin's activity log (`server_events.remote_ip`). `geo.rs` turns the address
 //! into a place; plays from the home network count as being at home, which is wherever this network's own
 //! public address is. Two things are reported, both derived from the whole history of one person by the pure

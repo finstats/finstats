@@ -1,4 +1,4 @@
-//! How finstats looks to one person (Settings → Appearance): a FinUI preset's code, theirs alone. `/assets/finui.css`
+//! How FinStats looks to one person (Settings → Appearance): a FinUI preset's code, theirs alone. `/assets/finui.css`
 //! answers in the look of whoever asks for it; somebody signed out, and somebody who chose nothing, get FinUI as it
 //! ships. A preset is made at FinUI create and applied as FinUI applies it (`finui::preset`).
 

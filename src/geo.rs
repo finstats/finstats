@@ -1,9 +1,9 @@
 //! Where an address is, roughly: country, city and a coordinate, read from a local database file.
 //!
-//! Nothing is asked of anyone per lookup. finstats reads a MaxMind-format city database (`.mmdb`) from
+//! Nothing is asked of anyone per lookup. FinStats reads a MaxMind-format city database (`.mmdb`) from
 //! `<data dir>/geoip/` (or the file named in `FINSTATS_GEOIP_DB`): DB-IP's free "IP to City Lite",
 //! MaxMind's GeoLite2-City or anything else with the same record shape. The owner can drop a file there, or
-//! let finstats fetch DB-IP's monthly file (setting `geoip_download`, off by default). That download is a
+//! let FinStats fetch DB-IP's monthly file (setting `geoip_download`, off by default). That download is a
 //! plain GET of a public file: no address, version or identifier of this install goes with it.
 //!
 //! A coordinate from such a database is the centre of a city or of an ISP's region, never a household.
@@ -40,7 +40,7 @@ pub struct Place {
     pub timezone: Option<String>,
 }
 
-// Only the fields finstats uses, and every one optional: vendors differ in what they fill in.
+// Only the fields FinStats uses, and every one optional: vendors differ in what they fill in.
 #[derive(Deserialize, Default)]
 struct Named {
     #[serde(default)]
@@ -85,7 +85,7 @@ pub struct Database {
 }
 
 /// A copy of `src` that nothing else can reach: written into `scratch`, opened, and its name removed at once, so it
-/// lives on as an open file only this process holds, and its space goes back the moment finstats lets go of it.
+/// lives on as an open file only this process holds, and its space goes back the moment FinStats lets go of it.
 fn private_copy(src: &Path, scratch: &Path) -> Result<std::fs::File> {
     std::fs::create_dir_all(scratch).with_context(|| format!("creating {}", scratch.display()))?;
     // A copy left by a process killed between copying and removing its name: nothing holds it any more.
@@ -104,7 +104,7 @@ fn private_copy(src: &Path, scratch: &Path) -> Result<std::fs::File> {
 }
 
 impl Database {
-    /// `scratch` is a folder of finstats' own, for the private copy that is actually read.
+    /// `scratch` is a folder of FinStats' own, for the private copy that is actually read.
     pub fn open(path: &Path, scratch: &Path) -> Result<Self> {
         // Memory-mapped, because a city database is over 100 MB and only the pages a lookup touches get read, but
         // mapped from a private copy, never from `path` itself: the owner can overwrite that file in place (a `cp`
@@ -117,7 +117,7 @@ impl Database {
         let meta = reader.metadata();
         let kind = meta.database_type.clone();
         if !kind.to_ascii_lowercase().contains("city") {
-            bail!("{} is a `{kind}` database; finstats needs a city database", path.display());
+            bail!("{} is a `{kind}` database; FinStats needs a city database", path.display());
         }
         let built_at = meta.build_epoch as i64;
         Ok(Database { reader, path: path.to_path_buf(), kind, built_at, stamp: stamp(path) })
@@ -395,7 +395,7 @@ mod tests {
 
     #[test]
     fn what_is_mapped_is_a_private_copy_the_original_can_be_overwritten_under() {
-        // `cp newer.mmdb dbip.mmdb` truncates the very file a running finstats had mapped and writes it again: the
+        // `cp newer.mmdb dbip.mmdb` truncates the very file a running FinStats had mapped and writes it again: the
         // next lookup read past the new end of the file and the process died of SIGBUS. What is mapped must be a
         // copy nobody else can reach, and it must leave nothing behind in the folder.
         let dir = std::env::temp_dir().join(format!("finstats-geo-copy-{}", std::process::id()));

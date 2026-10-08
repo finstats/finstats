@@ -56,7 +56,7 @@ fn cluster(rows: &[Row], window_s: i64) -> Vec<(i64, i64)> {
 
 /// The same idea for streams that are running right now: same title, different people, and either
 /// started within the window or sitting at nearly the same position. While something is playing,
-/// position is the stronger signal; start times are only as exact as the moment finstats first
+/// position is the stronger signal; start times are only as exact as the moment FinStats first
 /// noticed each stream. Adds `"group": {"size", "with": [{user_id, user_name}]}` to each member.
 /// How many companions a live stream names; its group's size says how many there are in all.
 pub const COMPANIONS_NAMED: usize = 6;
@@ -168,7 +168,7 @@ pub enum Regrouped {
     Titles(usize),
 }
 
-/// Which finstats, with which window, last regrouped at a start, and when that began. Not in a backup (only the `settings`
+/// Which FinStats, with which window, last regrouped at a start, and when that began. Not in a backup (only the `settings`
 /// key is), so a restore never brings another install's record along.
 const REGROUPED_KEY: &str = "groups_detected";
 
@@ -176,7 +176,7 @@ const REGROUPED_KEY: &str = "groups_detected";
 /// everything themselves, so a start has only to catch what the last run left behind: plays it was still recording
 /// when it stopped, and every one of those was saved after that run's start, with `ended_at` at or past `now` as it was
 /// then. Regrouping the whole history at every start instead took 24 s on ten million plays. A different version of
-/// finstats, or a different window, still regroups everything: the rule itself may be what changed. `now` is when
+/// FinStats, or a different window, still regroups everything: the rule itself may be what changed. `now` is when
 /// this pass begins.
 pub fn regroup_at_start(conn: &mut Connection, window_s: i64, now: i64) -> Result<Regrouped> {
     let version = env!("CARGO_PKG_VERSION");
@@ -807,7 +807,7 @@ mod tests {
     #[test]
     fn live_streams_at_the_same_spot_are_a_group() {
         let s = |user: &str, item: &str, pos: i64, started: i64| json!({ "user_id": user, "user_name": user, "item_id": item, "position_s": pos, "started_at": started });
-        // a and b: same episode, same position, though finstats noticed them minutes apart (it restarted).
+        // a and b: same episode, same position, though FinStats noticed them minutes apart (it restarted).
         // c: same episode, far behind, started long before. d: something else at the same position.
         let mut live = vec![s("a", "ep", 902, 5000), s("b", "ep", 905, 5400), s("c", "ep", 120, 1000), s("d", "other", 902, 5000), s("a", "ep", 903, 5001)];
         mark_live(&mut live, 60);
@@ -859,7 +859,7 @@ mod tests {
         .unwrap();
         assert_eq!(regroup_at_start(&mut c, 60, 8000).unwrap(), Regrouped::Titles(1));
         assert_eq!((group_of(&c, 2), group_of(&c, 4)), (None, Some(3)));
-        // Another window, or another version of finstats: everything again.
+        // Another window, or another version of FinStats: everything again.
         assert_eq!(regroup_at_start(&mut c, 90, 9000).unwrap(), Regrouped::Everything);
         assert_eq!(group_of(&c, 2), Some(1));
         c.execute("UPDATE settings SET value = json_set(value, '$.version', '0.0.1') WHERE key = 'groups_detected'", []).unwrap();

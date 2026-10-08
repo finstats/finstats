@@ -1,6 +1,6 @@
 //! Sign-in with Jellyfin credentials.
 //!
-//! finstats never stores passwords. A login is forwarded to Jellyfin's
+//! FinStats never stores passwords. A login is forwarded to Jellyfin's
 //! `AuthenticateByName`; on success we mint our own opaque session token (stored
 //! hashed) and immediately end the Jellyfin session the check created.
 
@@ -373,7 +373,7 @@ impl FromRequestParts<App> for Manager {
     async fn from_request_parts(parts: &mut Parts, app: &App) -> Result<Self, Self::Rejection> {
         let user = AuthUser::from_request_parts(parts, app).await?;
         if !user.perms.manage {
-            return Err(ApiError::not_permitted("manage finstats"));
+            return Err(ApiError::not_permitted("manage FinStats"));
         }
         Ok(Manager(user))
     }
@@ -507,7 +507,7 @@ async fn start_session(
     Ok(resp)
 }
 
-/// Sliding-window limiter against password guessing through finstats.
+/// Sliding-window limiter against password guessing through FinStats.
 fn check_rate_limit(app: &App, ip: IpAddr) -> Result<(), ApiError> {
     let now = db::now();
     let mut map = app.login_attempts.lock().unwrap();
@@ -544,7 +544,7 @@ pub async fn login(
 ) -> ApiResult<Response> {
     let jf = app
         .jellyfin()
-        .ok_or_else(|| ApiError::new(StatusCode::CONFLICT, "finstats is not connected to Jellyfin yet"))?;
+        .ok_or_else(|| ApiError::new(StatusCode::CONFLICT, "FinStats is not connected to Jellyfin yet"))?;
     let username = body.username.trim();
     if username.is_empty() {
         return Err(ApiError::bad_request("Enter your Jellyfin username"));
@@ -575,7 +575,7 @@ pub async fn login(
         audit::record(&app, audit::Entry::new("sign_in_refused", actor).outcome("refused"));
         return Err(ApiError::new(
             StatusCode::FORBIDDEN,
-            "You haven't been given access to finstats. A Jellyfin administrator can allow you in Settings.",
+            "You haven't been given access to FinStats. A Jellyfin administrator can allow you in Settings.",
         ));
     };
     clear_rate_limit(&app, ip);
@@ -636,7 +636,7 @@ pub async fn status(State(app): State<App>) -> Json<Value> {
 
 fn ensure_unconfigured(app: &App) -> Result<(), ApiError> {
     if app.is_configured() {
-        return Err(ApiError::new(StatusCode::CONFLICT, "finstats is already set up"));
+        return Err(ApiError::new(StatusCode::CONFLICT, "FinStats is already set up"));
     }
     Ok(())
 }
@@ -692,7 +692,7 @@ pub async fn setup(
         jf.logout(&auth.access_token).await;
         return Err(ApiError::new(
             StatusCode::FORBIDDEN,
-            "That account is not a Jellyfin administrator. Set finstats up with an administrator account.",
+            "That account is not a Jellyfin administrator. Set FinStats up with an administrator account.",
         ));
     }
     let key = jf.ensure_api_key(&auth.access_token).await;

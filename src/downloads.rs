@@ -1,7 +1,7 @@
 //! What is arriving right now, from Sonarr's and Radarr's queues.
 //!
 //! They already talk to the download client, whichever it is, and report the same things for a torrent as for
-//! a usenet download: what it is, how far along, and what went wrong on import. That is what finstats reads,
+//! a usenet download: what it is, how far along, and what went wrong on import. That is what FinStats reads,
 //! rather than each client's own API: three services to keep up with instead of six, and nothing to set up
 //! twice. What is lost is what only a client knows (ratio, peers), and the speed, which is worked out here
 //! instead: bytes that moved between two readings, divided by the time between them.
@@ -132,7 +132,7 @@ pub fn timespan(v: &Value) -> Option<i64> {
     Some(((days * 24 + h) * 60 + m) * 60 + s)
 }
 
-/// What a queue record is doing, in finstats' words. Importing and failing matter: that is where things get stuck.
+/// What a queue record is doing, in FinStats' words. Importing and failing matter: that is where things get stuck.
 pub fn queue_state(status: &str, tracked_state: &str, tracked_status: &str) -> &'static str {
     match tracked_state {
         "importPending" | "importBlocked" | "importing" => return "importing",
@@ -251,7 +251,7 @@ pub struct Totals {
     pub failed: usize,
 }
 
-/// The words finstats uses for what a download is doing, worst first: what needs a person's attention is on top.
+/// The words FinStats uses for what a download is doing, worst first: what needs a person's attention is on top.
 pub const STATES: [&str; 7] = ["failed", "importing", "downloading", "stalled", "queued", "paused", "checking"];
 
 fn rank(state: &str) -> usize {
@@ -429,7 +429,7 @@ fn download_json(d: &Download, wishes: &Wishes) -> Value {
     })
 }
 
-/// Is this title in the queue right now? The queue is a listing finstats itself makes, so its posters are
+/// Is this title in the queue right now? The queue is a listing FinStats itself makes, so its posters are
 /// ones it may show to the people who are allowed to see the queue in the first place.
 pub fn in_queue(app: &App, service_id: i64, media_id: i64) -> bool {
     app.downloads.read().unwrap().rows.iter().any(|d| d.arr == Some((service_id, media_id)))

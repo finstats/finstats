@@ -1,6 +1,6 @@
 // Server → Library health: what is wrong with a file only shows beside its neighbours: a hole in a season, a season in
 // another resolution, the same film twice, a file far too thin for what it claims, a dub that stops, a title Jellyfin
-// never identified. The server works the findings out after a library read; this only draws them, and finstats changes
+// never identified. The server works the findings out after a library read; this only draws them, and FinStats changes
 // nothing in Jellyfin. A tile per kind picks the list below it; a finding can be set aside, and comes back by itself
 // when the file behind it changes.
 
@@ -42,7 +42,7 @@ const Seasons = (list) => { const s = seasons(list); return s[0].toUpperCase() +
 const run = ([a, b]) => (a === b ? `${a}` : b === a + 1 ? `${a} and ${b}` : `${a}–${b}`);
 const plural = (n, one, many = one + 's') => `${num(n)} ${n === 1 ? one : many}`;
 
-/** One line, in numbers, saying what was found. Never a verdict: finstats cannot know why a file is the way it is. */
+/** One line, in numbers, saying what was found. Never a verdict: FinStats cannot know why a file is the way it is. */
 export function describe(f) {
   const e = f.evidence || {};
   switch (f.kind) {
@@ -223,7 +223,7 @@ export function healthView(ctx) {
     fetch: () => Promise.all([loadSummary(f, ctx.signal), loadFindings(f, ctx.signal)]).then(([summary, list]) => ({ summary, list })),
     render: ({ summary: s, list }) => {
       if (!s.computed_at) {
-        return emptyState('Not worked out yet', 'finstats looks the library over after its next library read, and again after each look for metadata changes. Nothing is worked out when this page opens.');
+        return emptyState('Not worked out yet', 'FinStats looks the library over after its next library read, and again after each look for metadata changes. Nothing is worked out when this page opens.');
       }
       const filtered = f.kind || f.library_id;
       const count = h('p', { class: 'result-count', 'aria-live': 'polite' }, `${plural(list.total, 'finding')} ${f.dismissed ? 'set aside' : 'to look at'}`);
@@ -232,7 +232,7 @@ export function healthView(ctx) {
         : f.dismissed ? emptyState('Nothing set aside', filtered ? 'Nothing of this kind was dismissed here.' : 'A dismissed finding waits here until somebody brings it back, or its files change.')
           : emptyState(filtered ? 'Nothing here' : 'Nothing to look at', filtered ? 'Nothing of this kind was found in this part of the library.' : 'No holes, no copies, nothing too thin, and every season alike.');
       const thinNote = (!f.kind || f.kind === 'thin') && list.items.some((it) => it.kind === 'thin')
-        ? h('p', { class: 'fui-field__help' }, 'Jellyfin keeps the first version of an item for finstats to read, so an item with several versions is judged by its first.') : null;
+        ? h('p', { class: 'fui-field__help' }, 'Jellyfin keeps the first version of an item for FinStats to read, so an item with several versions is judged by its first.') : null;
       return [tiles(s), controls(s), count, card({ cls: 'fui-card--flush', id: 'health', body }), thinNote];
     },
   });

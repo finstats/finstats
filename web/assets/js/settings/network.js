@@ -1,6 +1,6 @@
 // Settings → Home network: which plays count as local and which as remote. Private addresses are
 // local by nature. The household's own public address is local too (a phone on the Wi-Fi reaching
-// Jellyfin through its public name arrives with it), and finstats has to learn that one.
+// Jellyfin through its public name arrives with it), and FinStats has to learn that one.
 
 import { h, mount, relTime, dateTime } from '../dom.js';
 import { can } from '../state.js';
@@ -28,7 +28,7 @@ export default {
       const list = known.length
         ? h('ul', { class: 'home-ips' }, known.map((a) => h('li', null, h('span', { class: 'mono' }, a.ip),
           h('span', { class: 'muted' }, a.source === 'manual' ? 'added by you' : ['found automatically · last seen ', h('span', { title: dateTime(a.last_seen) }, relTime(a.last_seen))]))))
-        : h('p', { class: 'fui-field__help' }, s.public_ip_lookup ? 'None learned yet; finstats looks one up within a few minutes of starting.' : 'None. Private addresses (192.168.x.x, 10.x.x.x and the like) always count as local.');
+        : h('p', { class: 'fui-field__help' }, s.public_ip_lookup ? 'None learned yet; FinStats looks one up within a few minutes of starting.' : 'None. Private addresses (192.168.x.x, 10.x.x.x and the like) always count as local.');
 
       // The only thing that ever asks again, because a person pressed it.
       const lookupErr = h('div');
@@ -67,7 +67,7 @@ export default {
         settingRow({ id: 'known-home', label: 'Known home addresses', help: 'Public addresses of this household, past and present.',
           control: [h('div', { class: 'home-known' }, list, s.public_ip_lookup ? h('div', { class: 'form-actions' }, lookup) : null, lookupErr)] }),
         form,
-        h('p', { class: 'fui-field__help fui-setting-row__foot' }, `That request goes to ${services.join(' or ') || 'nowhere: no service is configured'} and says nothing about you or your server. With it and the geolocation download under Security both off, finstats makes no outside requests at all.`));
+        h('p', { class: 'fui-field__help fui-setting-row__foot' }, `That request goes to ${services.join(' or ') || 'nowhere: no service is configured'} and says nothing about you or your server. With it and the geolocation download under Security both off, FinStats makes no outside requests at all.`));
     };
     paint();
   },

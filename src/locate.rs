@@ -292,7 +292,7 @@ mod tests {
         ], "films by name, then shows; never a title the library has, nor a channel");
     }
 
-    /// Each missing title says where its plays came from (Tautulli, Jellystat, finstats itself), in the filter's order.
+    /// Each missing title says where its plays came from (Tautulli, Jellystat, FinStats itself), in the filter's order.
     #[test]
     fn a_missing_title_says_which_trackers_its_plays_came_from() {
         let c = conn();

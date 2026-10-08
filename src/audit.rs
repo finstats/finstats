@@ -1,6 +1,6 @@
-//! finstats' own audit log: who signed in, who changed a setting, who granted a permission, who made
+//! FinStats' own audit log: who signed in, who changed a setting, who granted a permission, who made
 //! a key and what it did. Jellyfin's activity is mirrored meticulously in `server_events`; until now
-//! finstats' own actions left nothing but a line in the process log.
+//! FinStats' own actions left nothing but a line in the process log.
 //!
 //! An entry is written where the thing happens, by the handler that did it, and **never fails the
 //! caller**: a setting that was changed is changed whether or not the note about it could be

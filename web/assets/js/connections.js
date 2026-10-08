@@ -50,7 +50,7 @@ export function connectionsPanel(ctx) {
   function row(s) {
     const act = async (fn) => { try { data = await fn(); } catch (e) { rowErr = { id: s.id, text: e.message }; } removing = null; lastSig = ''; render(); };
     const actions = removing === s.id
-      ? [h('span', { class: 'muted' }, 'Remove it, and everything finstats read from it?'),
+      ? [h('span', { class: 'muted' }, 'Remove it, and everything FinStats read from it?'),
         button({ size: 'sm', variant: 'danger', type: 'button', onClick: (e) => {
           setBusy(e.currentTarget, true, 'Removing…');
           act(async () => {
@@ -76,7 +76,7 @@ export function connectionsPanel(ctx) {
     let kind = existing ? kinds.find((k) => k.key === existing.kind) : kinds[0];
     const kindSel = h('select', { class: 'fui-field__input', id: 'conn-kind', 'aria-describedby': 'conn-kind-help' }, kinds.map((k) => h('option', { value: k.key }, k.label)));
     const kindHelp = h('p', { class: 'fui-field__help', id: 'conn-kind-help' });
-    const name = formField({ id: 'conn-name', label: 'Name (optional)', autocomplete: 'off', help: 'Shown in finstats. Useful with two of a kind: “Radarr 4K”.' });
+    const name = formField({ id: 'conn-name', label: 'Name (optional)', autocomplete: 'off', help: 'Shown in FinStats. Useful with two of a kind: “Radarr 4K”.' });
     const url = formField({ id: 'conn-url', label: 'Address', autocomplete: 'off', inputMode: 'url' });
     const secret = formField({ id: 'conn-secret', label: 'API key', type: 'password', autocomplete: 'new-password', help: ' ' });
     const certs = h('input', { type: 'checkbox', id: 'conn-certs', 'aria-describedby': 'conn-certs-help' });
@@ -138,7 +138,7 @@ export function connectionsPanel(ctx) {
         name.el, url.el, secret.el,
         h('div', { class: 'fui-field' },
           h('label', { class: 'fui-field__check' }, certs, 'Accept a self-signed certificate'),
-          h('p', { class: 'fui-field__help', id: 'conn-certs-help' }, 'Only for an https:// address whose certificate is your own. finstats then does not verify who answers at this address. Leave it off otherwise.'),
+          h('p', { class: 'fui-field__help', id: 'conn-certs-help' }, 'Only for an https:// address whose certificate is your own. FinStats then does not verify who answers at this address. Leave it off otherwise.'),
           existing ? h('label', { class: 'fui-field__check' }, enabled, 'Switched on') : null)),
       result, formErr,
       h('div', { class: 'form-actions' }, saveBtn, testBtn, button({ variant: 'ghost', type: 'button', onClick: () => { editing = null; render(); } }, 'Cancel')));
@@ -162,10 +162,10 @@ export function connectionsPanel(ctx) {
     if (!data) return;
     const list = data.services.length
       ? h('ul', { class: 'conn-list' }, data.services.map(row))
-      : h('p', { class: 'fui-field__help' }, 'Nothing connected yet. With Sonarr and Radarr, finstats knows what is coming and what is downloading; with Seerr, who asked for what.');
+      : h('p', { class: 'fui-field__help' }, 'Nothing connected yet. With Sonarr and Radarr, FinStats knows what is coming and what is downloading; with Seerr, who asked for what.');
     const existing = typeof editing === 'number' ? data.services.find((s) => s.id === editing) : null;
     mount(root,
-      h('p', { class: 'fui-field__help' }, 'finstats only reads from these services: it never approves a request, starts a search or touches a download. Keys and passwords are stored in finstats’ own database, are never shown again and are never part of a backup.'),
+      h('p', { class: 'fui-field__help' }, 'FinStats only reads from these services: it never approves a request, starts a search or touches a download. Keys and passwords are stored in FinStats’ own database, are never shown again and are never part of a backup.'),
       list,
       editing === null
         ? h('div', { class: 'form-actions' }, button({ type: 'button', onClick: () => { editing = 'new'; removing = null; render(); } }, icon('plus', 14), 'Add a connection'))

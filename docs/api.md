@@ -1,4 +1,4 @@
-# finstats HTTP API
+# FinStats HTTP API
 
 All endpoints live under `/api` and speak JSON. Authentication is a session
 cookie (`finstats_session`, HttpOnly, SameSite=Lax) issued by `POST /api/auth/login`, **or** an API key
@@ -208,7 +208,7 @@ titles, and breaks ties: more first). Matched like titles, by name only. Open to
 - `GET /api/img/item/{id}?kind=primary|backdrop&w=300`: proxied + cached from Jellyfin. `404` when Jellyfin has none.
 - `GET /api/img/user/{id}?w=96`
 
-A picture finstats knows the Jellyfin image tag of is cached under that tag and answered with `ETag` and
+A picture FinStats knows the Jellyfin image tag of is cached under that tag and answered with `ETag` and
 `Cache-Control: private, no-cache`: the browser asks again every time and gets `304` while the picture is the same.
 A poster replaced in Jellyfin has a new tag, and so is fetched and sent again. The tags are read by the library read
 and, in between, by the task `sync_changes` (Metadata changes, below).
@@ -246,7 +246,7 @@ Both send long-lived `Cache-Control`. Use as `<img loading="lazy">` with an `one
 ### Scheduling (2.0.4)
 
 Every job that runs by itself carries triggers, the way Jellyfin's scheduled tasks do. `GET /api/tasks` answers
-`"time_zone": "Europe/London"` (the zone times of day are in: finstats' `TZ`) and, on every task:
+`"time_zone": "Europe/London"` (the zone times of day are in: FinStats' `TZ`) and, on every task:
 
 ```jsonc
 {"schedulable": true,              // false for import, import_streamystats and restore: each needs a file
@@ -456,7 +456,7 @@ New task ids in `/api/tasks`: `sync_server` (server info, plugins, tasks, device
 
 ## Small additions to existing responses
 
-- `GET /api/users/{id}` gains `"genres": [Bucket]` and `"jellyfin": {"played_movies": 0, "played_episodes": 0, "favorites": 0} | null` (Jellyfin's own flags; covers history from before finstats).
+- `GET /api/users/{id}` gains `"genres": [Bucket]` and `"jellyfin": {"played_movies": 0, "played_episodes": 0, "favorites": 0} | null` (Jellyfin's own flags; covers history from before FinStats).
 - `GET /api/items/{id}` → `item` gains `"studios": ["…"]`, `"external": [{"label": "IMDb", "url": "https://…"}]`, `"bit_depth"`, `"framerate"`; top level gains
   `"played_by": [{"user_id","user_name","last_played_at": 0|null,"is_favorite": false}]` (Jellyfin's played flags; admins see everyone, others only themselves).
 
@@ -588,7 +588,7 @@ precedence; `started` = played, but not that far. Shows with nothing seen or sta
 The same `streaks` object is also part of `GET /api/users/{id}`.
 
 `POST /api/me/seen` `{"item_ids": ["…"], "seen": true|false}` → `{"changed": 12}`: marks episodes as seen for the
-caller only (1–5000 ids; non-episodes are ignored). Marks live in finstats alone: nothing is written to Jellyfin,
+caller only (1–5000 ids; non-episodes are ignored). Marks live in FinStats alone: nothing is written to Jellyfin,
 and `seen: false` only removes manual marks, never a recorded play.
 
 `Play` rows were already carrying `position_s` and `runtime_s`; the Activity table now shows them as the stop position.
@@ -869,7 +869,7 @@ in track order, `"und"` for a track without a language. Filled by the library re
 
 # v1.3: Connections (Sonarr, Radarr, Seerr)
 
-finstats reads from these services and never changes anything in them. **Jellyfin administrators only** (`403` for everyone else, including
+FinStats reads from these services and never changes anything in them. **Jellyfin administrators only** (`403` for everyone else, including
 `manage`). A key or password is write-only: the API says `has_secret`, never the value, and none of this is part of a backup.
 
 `GET /api/services`
@@ -889,7 +889,7 @@ Every write answers with the same list.
   is needed to connect tests again. Pointing a connection at another host, port or base path throws away everything read from the old one.
 - `DELETE /api/services/{id}`: also removes everything that was read from it.
 
-Addresses: `http://` or `https://`, a base path is kept (`/sonarr`), no `user:password@`, `?` or `#` (`400`). finstats follows no redirect to a
+Addresses: `http://` or `https://`, a base path is kept (`/sonarr`), no `user:password@`, `?` or `#` (`400`). FinStats follows no redirect to a
 service: a redirect is reported as the error it is. `accept_invalid_certs` switches certificate verification off for that one connection.
 
 `GET /api/auth/me` → `user.features: {"upcoming": true, "requests": true}`: which optional pages have a connected service behind them.
@@ -919,7 +919,7 @@ film that is already on disk is left out, because a disc date for a copy that ar
 that is not here yet, are listed as before. Switched-off connections say nothing. Without `see_everyone` there is no count either: on a small server a number is a name.
 
 - `GET /api/img/arr/{service_id}/{media_id}?w=`: the poster of a title that is not in the library yet, proxied from Sonarr or Radarr and cached on
-  disk. Both ids are numbers; only posters of titles finstats itself lists are served (what is on a calendar, what somebody asked for, and, for
+  disk. Both ids are numbers; only posters of titles FinStats itself lists are served (what is on a calendar, what somebody asked for, and, for
   people with `see_downloads`, what is downloading now), and the browser never talks to TMDB.
 - `GET /api/items/{id}` gains `item.upcoming` for a series or film with something due in the next 90 days: entries as above, without any of the
   keys about people.
@@ -969,7 +969,7 @@ otherwise the key is absent, "arrived after" included.
 ## Downloads (Sonarr and Radarr)
 
 Live, from memory: the queues of every connected Sonarr and Radarr. They already talk to the download client, whichever it is, and report a
-torrent and a usenet download the same way, so finstats reads them rather than each client's own API. Nothing is stored. Needs the
+torrent and a usenet download the same way, so FinStats reads them rather than each client's own API. Nothing is stored. Needs the
 permission **`see_downloads`** (`403` without it; Jellyfin administrators always have it).
 
 `GET /api/downloads?live=1`: `live=1` means "a page is showing this": the snapshot is then refreshed every 5 seconds for the next 20.
@@ -1017,17 +1017,17 @@ renames, deletions and ignores say nothing about what arrived.
 
 # v1.5: Live session tracking
 
-The collector is *told* when something starts instead of asking for it: finstats keeps one WebSocket open to Jellyfin's `/socket`. There
+The collector is *told* when something starts instead of asking for it: FinStats keeps one WebSocket open to Jellyfin's `/socket`. There
 is no setting: it is how the collector works, and `active_interval_s` / `idle_interval_s` are what it asks at, plus the fallback for a
 socket that is not carrying. Nothing else about the API changes: the same rows, the same `/api/now-playing`, only sooner.
 
-Each transport does the half it is good at. **Nothing playing:** finstats listens and asks for nothing at all. Jellyfin sends a session
+Each transport does the half it is good at. **Nothing playing:** FinStats listens and asks for nothing at all. Jellyfin sends a session
 list when something changes and nothing in between, so a quiet server is a quiet socket and not a broken one. **Something playing:**
-finstats reads `/Sessions` every `active_interval_s`, because a pause, a seek or a track change is only as sharp as the gap between two
+FinStats reads `/Sessions` every `active_interval_s`, because a pause, a seek or a track change is only as sharp as the gap between two
 sightings, and because the push carries no `ActiveWithinSeconds`; asking is what ends a play whose client vanished. **Everything paused:**
 back to listening after three readings in a row of it, since a frozen position is nothing for a server to report; a single `/Sessions` read stands as a net
 (after a minute of silence, and in any case every five minutes), and anyone starting again is pushed and answered within about a
-second. Silence means *nothing heard and nothing asked*: a push, a read of finstats' own and a fresh subscription all start the minute
+second. Silence means *nothing heard and nothing asked*: a push, a read of FinStats' own and a fresh subscription all start the minute
 again, the read the net itself calls for included, and two reads are never closer together than five seconds. So a pause that follows
 three minutes of playing asks for nothing at all for the next minute, however long ago the last push was. Measured from the last push
 alone, as an earlier attempt did, the clock is already stale the moment the subscription comes back on, since it is off for the whole of a
@@ -1039,11 +1039,11 @@ Jellyfin is subscribed to whenever nothing is actually running (idle or all-paus
 moment its pushes would be a second copy of what is already being asked for. Jellyfin normally answers `SessionsStart` at once, whether or not anything is loaded. A server that does
 not is polled meanwhile, but not written off: the connection is kept and stays subscribed, `SessionsStart` is re-sent every five minutes,
 and the first real push settles it. Neither that silence nor an app left open with nothing playing is ever evidence against the socket. The two never
-run at once: finstats sends Jellyfin `SessionsStop` for as long as it is polling (otherwise the same list would arrive twice, and the
+run at once: FinStats sends Jellyfin `SessionsStop` for as long as it is polling (otherwise the same list would arrive twice, and the
 pushed copy is not compressed) and subscribes again on the pass where the last play ends.
 
 A socket that closes, says nothing at all for 90 s (not even an answer to a keep-alive), or never answers `SessionsStart` with a first
-session list drops finstats back to polling at `active_interval_s` / `idle_interval_s` on the next pass, and it keeps trying to reconnect.
+session list drops FinStats back to polling at `active_interval_s` / `idle_interval_s` on the next pass, and it keeps trying to reconnect.
 
 `GET /api/tasks` → `collector` gains:
 ```jsonc
@@ -1065,7 +1065,7 @@ outside without reading a log:
   "sessions_requests_last_min": 0, // /Sessions reads in the last 60 s, counted where they go out
   "mode_since": "2026-09-22T18:16:27Z" }
 ```
-These always hold, and finstats logs a warning about itself if they ever stop: listening means connected, subscribed and
+These always hold, and FinStats logs a warning about itself if they ever stop: listening means connected, subscribed and
 `poll_interval_s: null`; `playing_poll` means *not* subscribed and a beat that is running; `fallback` always has a beat. A
 safety read is not a beat, so it does not appear. `sessions_requests_last_min` is about 60 while something plays and at most 2
 while listening, counted at the one gate every `/Sessions` read passes through, so it is what a packet capture counts and not
@@ -1079,7 +1079,7 @@ and answered from memory: no request to Jellyfin, no query.
 thing that asks after the first answer: the lookup no longer runs on the 15-minute timer, only once at start-up on an install that has
 never learned an address, when `public_ip_lookup` is switched on, and when this is called. `400` when the setting is off.
 
-`GET /api/outbound` 🔒: every destination finstats can reach, for the **Outbound connections** card. Read from what is already kept;
+`GET /api/outbound` 🔒: every destination FinStats can reach, for the **Outbound connections** card. Read from what is already kept;
 nothing is recorded for it. Hosts (with ports) only: never a path, never a key.
 ```jsonc
 { "destinations": [
@@ -1099,8 +1099,8 @@ nothing is recorded for it. Hosts (with ports) only: never a path, never a key.
 
 # v1.6: Notifications
 
-Where what finstats finds is sent. A destination belongs either to the **server** (Jellyfin administrators) or to **one
-person** (anybody with `notify`), and finstats sends nothing at all until one exists: no destination, no request.
+Where what FinStats finds is sent. A destination belongs either to the **server** (Jellyfin administrators) or to **one
+person** (anybody with `notify`), and FinStats sends nothing at all until one exists: no destination, no request.
 
 Every route here needs `notify`, which administrators always have. A person sees and may touch only their own
 destinations; an administrator sees every one. **A destination's address is never given back**: a Discord webhook URL
@@ -1110,7 +1110,7 @@ stored one, the way a service's API key does.
 Nine kinds of destination. Eight are one POST of JSON (`webhook`, `discord`, `slack`, `telegram`, `ntfy`, `gotify`,
 `pushover`, `pushbullet`); `email` is the one that is not, and goes over SMTP. Three of them (`telegram`, `pushover`,
 `pushbullet`) are always reached at their own service's address, which the catalogue gives as `fixed_url` and which
-finstats fills in rather than asking for.
+FinStats fills in rather than asking for.
 
 `GET /api/notifications`
 ```jsonc
@@ -1203,7 +1203,7 @@ title is not markup), Pushover and Pushbullet what they take; email is a plain-t
 
 Needs *see the server*. Jellyfin's own scheduled tasks, read live (at most one read of Jellyfin every 3 seconds however
 many people are watching), with the hidden ones included: "what is running" must not leave something out because
-Jellyfin's dashboard does not draw it. finstats only ever reads this; there is no way in the code to start, stop or
+Jellyfin's dashboard does not draw it. FinStats only ever reads this; there is no way in the code to start, stop or
 change a task on Jellyfin.
 
 ```jsonc
@@ -1226,13 +1226,13 @@ change a task on Jellyfin.
 ```
 
 **`eta_s` is an estimate, and the shape of the answer says so.** Jellyfin reports a percentage and never when the
-current run started, so finstats times the run by watching it. The rate is measured against the most recent reading far
+current run started, so FinStats times the run by watching it. The rate is measured against the most recent reading far
 enough back to say anything (at least 0.5% ago and at least 5 s ago, within a 15-minute memory), so a job that speeds up
 or slows down is described by the pace it has now rather than the one it averaged, and a job creeping a percent every
 few minutes is still measurable at all.
 
-**The watching is the backend's, and starts before the first call.** The task lists finstats reads anyway (the
-library-scan check every 5 minutes, the server details every 15) notice a run, and from then on finstats reads the whole
+**The watching is the backend's, and starts before the first call.** The task lists FinStats reads anyway (the
+library-scan check every 5 minutes, the server details every 15) notice a run, and from then on FinStats reads the whole
 list itself every 10 seconds for as long as anything runs (2.0.4), whether or not a page is open. So a page opened on a
 running job is answered with an `eta_s` measured over the last minutes, not one it has to watch into being. Idle, nothing
 extra is asked of Jellyfin. This endpoint's own read is still at most every 3 s, and a page reading it spares the
@@ -1242,10 +1242,10 @@ and stays `null` until the percentage moves.
 **When nothing has been measured, `eta_s` is `null` and stays `null`.** There is a tempting number to put there (how
 long the last run took, applied to the fraction that is left), and it is a guess: it knows nothing about how much of
 *this* run has already happened, it does not move while the job does not, and on a page it is indistinguishable from an
-estimate that was earned. finstats does not offer it. The page shows a cycling ellipsis in place of the number, and
+estimate that was earned. FinStats does not offer it. The page shows a cycling ellipsis in place of the number, and
 `last_duration_s` sits beside it for anyone who wants to judge for themselves. The page writes "ETA" in front of the
 ellipsis, so the dots read as an estimate that cannot be given yet rather than as a page still loading.
-`unchanged_for_s` is what makes a slow job legible rather than a broken page, and `watching_since` is when finstats
+`unchanged_for_s` is what makes a slow job legible rather than a broken page, and `watching_since` is when FinStats
 started watching, not when Jellyfin started the job.
 
 Running jobs come first, then whatever ran most recently.
@@ -1254,7 +1254,7 @@ Running jobs come first, then whatever ran most recently.
 
 # v1.6.4: Licences
 
-`GET /api/licenses` (any signed-in user): what finstats is built on, and the licence each part is under. It is the
+`GET /api/licenses` (any signed-in user): what FinStats is built on, and the licence each part is under. It is the
 same for every caller and cannot change while the process runs, so it is rendered once at the first call and handed out
 unchanged after that; it runs to about half a megabyte of licence text (≈ 55 KB over the wire, compressed).
 
@@ -1276,7 +1276,7 @@ unchanged after that; it runs to about half a megabyte of licence text (≈ 55 K
 **The texts are deduplicated, not summarised.** Hundreds of crates ship the same MIT wording, so each distinct text
 appears once in `notices` and every component points at the ones it carries. Nothing is retyped from memory: each text
 is a licence file as its own project wrote it, read out of the crate sources by `tools/make-third-party.py` and
-compiled in as `THIRD-PARTY.json`. `kind` separates the three halves: `app` is finstats itself under the GPL, `bundled`
+compiled in as `THIRD-PARTY.json`. `kind` separates the three halves: `app` is FinStats itself under the GPL, `bundled`
 is what is shipped or read but is not a crate (the fonts, the map outlines, the city database), and `crate` is the
 generated dependency list. A component with an empty `notices` has no licence file to show; its SPDX `license` is then
 all there is to say.
@@ -1308,9 +1308,9 @@ A film or episode answers where its plays stopped:
 ```
 
 `null` for anything but a film or an episode, under three plays in scope, or without a runtime to draw on. The stop rule
-is the one `completion` has always used, made explicit: `position_s` when finstats saw the play end, else `duration_s`.
+is the one `completion` has always used, made explicit: `position_s` when FinStats saw the play end, else `duration_s`.
 The two are never mixed silently: `measured` and `estimated` always travel with the curve. Rewinds and subtitle
-switch-ons exist only for plays finstats recorded itself. A seek shorter than 20 s was never recorded, so a short rewind
+switch-ons exist only for plays FinStats recorded itself. A seek shorter than 20 s was never recorded, so a short rewind
 is invisible by design.
 
 A show's `seasons[].episodes[]` gain `"users": 3` (distinct people who started the episode, in scope) and
@@ -1435,7 +1435,7 @@ caller follows the title, because a subscribed calendar syncs through somebody's
 
 ## The audit log: Jellyfin administrators only (🔒)
 
-Every write path in finstats leaves a row: who did it, from where, through which key if any, to what, and how it
+Every write path in FinStats leaves a row: who did it, from where, through which key if any, to what, and how it
 went. Reads leave none. `GET /api/audit` pages through it.
 
 | Query | Meaning |
@@ -1546,8 +1546,8 @@ A new event kind, `recap_ready` (Library group, the person it is about): in Dece
 
 `GET /api/items/{id}` gains `item.jellyfin_link`: Jellyfin's web app on that title's page
 (`{base}/web/#/details?id={id}`), or `null` for a title Jellyfin no longer has. `base` is the setting
-`jellyfin_public_url` (where people open Jellyfin, which is often not the address finstats connects to) or,
-while it is empty, the address finstats connects to. `jellyfin_public_url` is an http(s) address naming a host
+`jellyfin_public_url` (where people open Jellyfin, which is often not the address FinStats connects to) or,
+while it is empty, the address FinStats connects to. `jellyfin_public_url` is an http(s) address naming a host
 (`400` otherwise) and, being a link everyone follows, only a Jellyfin administrator may set it (`403` for anyone else).
 
 
@@ -1557,7 +1557,7 @@ while it is empty, the address finstats connects to. `jellyfin_public_url` is an
 
 Every endpoint acts on the caller and takes no `user_id`: nobody (not `see_everyone`, not a Jellyfin administrator)
 reads or changes somebody else's list. A session or a full key may use them; a calendar key is refused `403`. Nothing is
-written anywhere but finstats' own database, and nothing is audit-logged.
+written anywhere but FinStats' own database, and nothing is audit-logged.
 
 | Method | Path | Body | Response |
 |---|---|---|---|
@@ -1619,7 +1619,7 @@ It is ticked on no destination until its owner ticks it. The catalogue in `GET /
 
 ## Library health 🔒 *see server details*
 
-What is wrong with a file only shows beside its neighbours. finstats works the findings out after every library read
+What is wrong with a file only shows beside its neighbours. FinStats works the findings out after every library read
 and every look for metadata changes, never on a request, and only reports: nothing here changes anything in Jellyfin.
 Nothing in an answer is about plays or people; the one name is who dismissed a finding.
 
@@ -1672,14 +1672,14 @@ among them lead to different titles; a show's episodes are copies through it, by
 
 `POST /api/library/health/dismiss` with `{"key", "note"}` → `{"ok": true}`; `404` when there is no such finding, `400`
 for a note over 500 characters. `POST /api/library/health/undismiss` with `{"key"}` → `{"ok": true}`; `404` when it was
-not dismissed. Both need *manage finstats* **and** *see server details*. A dismissal holds while the values behind the
+not dismissed. Both need *manage FinStats* **and** *see server details*. A dismissal holds while the values behind the
 finding do: a replaced file or a re-encoded season brings it back if it is still true. Recorded in the audit log as
 `finding_dismissed` and `finding_undismissed`. Dismissals travel with a backup and a restore keeps one this database
 already has; the findings themselves are worked out again and are not in a backup.
 
 # v2.2: Appearance
 
-How finstats looks is each person's own: a FinUI preset's code as FinUI create makes it
+How FinStats looks is each person's own: a FinUI preset's code as FinUI create makes it
 (`https://finui.finstats.no/create/`), one letter or digit per choice, such as `0101`.
 
 `GET /api/me/appearance` → `{"finui_preset": "0101"}` (`""`: FinUI as it ships). `PUT /api/me/appearance` with
@@ -1697,5 +1697,5 @@ names are `/assets/finui/create/presets.json`, FinUI's file.
 
 `/api/auth/me` gains `user.jellyfin_details`: a title's page in Jellyfin is this followed by its id.
 It reads like `"https://jellyfin.example.com/web/#/details?id="` and comes from the address an administrator set for "Open in Jellyfin", else the one
-finstats connects to; `null` before Jellyfin is set up. The context menu offers "Open in Jellyfin" on any link to a title
+FinStats connects to; `null` before Jellyfin is set up. The context menu offers "Open in Jellyfin" on any link to a title
 with it, where the answer that drew the link had no `jellyfin_link` to give.

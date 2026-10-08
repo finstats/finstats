@@ -1,4 +1,4 @@
-//! When finstats' own jobs run. Every job that can run by itself carries a list of triggers, the way Jellyfin's
+//! When FinStats' own jobs run. Every job that can run by itself carries a list of triggers, the way Jellyfin's
 //! scheduled tasks do: daily at a time, weekly on a day at a time, on an interval, at start-up. There is also one Jellyfin has
 //! no need for: after Jellyfin's own library scan, because a library read in the middle of one is half old and half
 //! new. A trigger may carry a time limit; a run that outlasts it is stopped and reported as failed.
@@ -8,7 +8,7 @@
 //! so many days, the monthly GeoIP download. Those settings are no longer shown; they only decide the defaults of
 //! a job nobody has scheduled yet.
 //!
-//! Times of day are in finstats' own time zone (`TZ`), the one every chart is drawn in.
+//! Times of day are in FinStats' own time zone (`TZ`), the one every chart is drawn in.
 
 use chrono::{Datelike, NaiveDate, NaiveTime, TimeZone};
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ pub enum When {
     Weekly { day: u32, at_min: u32 },
     /// This long after the job last finished.
     Interval { every_s: i64 },
-    /// Once, when finstats starts.
+    /// Once, when FinStats starts.
     Startup,
     /// When Jellyfin's "Scan Media Library" has finished since the job last started.
     AfterScan,
@@ -484,7 +484,7 @@ mod tests {
         assert!(!fires(&three, &look(at(29, 3, 0), at(29, 3, 1)), &oslo()), "the same 03:00 twice");
         assert!(!fires(&three, &look(at(29, 3, 1), at(29, 4, 0)), &oslo()));
         assert!(fires(&three, &look(at(28, 23, 0), at(29, 3, 30)), &oslo()), "a look that spans midnight");
-        // The trigger is in finstats' zone, not in UTC: 03:00 in Oslo is 01:00 UTC.
+        // The trigger is in FinStats' zone, not in UTC: 03:00 in Oslo is 01:00 UTC.
         assert!(!fires(&three, &look(at(29, 4, 59), at(29, 5, 1)), &oslo()));
         let tuesday = t(When::Weekly { day: 2, at_min: 180 });
         let monday = t(When::Weekly { day: 1, at_min: 180 });

@@ -94,7 +94,7 @@ pub fn unpack(path: &Path) -> Result<()> {
             8 => std::io::copy(&mut flate2::read::DeflateDecoder::new(packed), &mut out),
             m => {
                 let _ = std::fs::remove_file(&unpacked);
-                bail!("The zip is packed in a way finstats cannot open (method {m}). Unzip it and upload the .db file inside.");
+                bail!("The zip is packed in a way FinStats cannot open (method {m}). Unzip it and upload the .db file inside.");
             }
         }
     };
@@ -624,7 +624,7 @@ mod tests {
         dir
     }
 
-    /// finstats with two Jellyfin users and a little library.
+    /// FinStats with two Jellyfin users and a little library.
     fn finstats(dir: &Path) -> Db {
         let db = Db::open(&dir.join("finstats.db")).unwrap();
         db.conn()

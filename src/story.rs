@@ -2,7 +2,7 @@
 //! stories use, drawn by the same means as the profile cards (`card.rs`).
 //!
 //! Every card is drawn from a `StoryYear`, never from the recap's JSON: a typed, name-free copy of the
-//! year that holds only what may leave finstats. It has no field for a companion, a rank among other
+//! year that holds only what may leave FinStats. It has no field for a companion, a rank among other
 //! people or an app, so a card cannot carry one however the recap grows. The same type is what a
 //! published profile shows (`public.rs`), so a card someone downloads in the app and the one a
 //! stranger sees under a link can never say different things.
@@ -172,7 +172,7 @@ fn titles(v: &Value) -> Vec<Title> {
 }
 
 impl StoryYear {
-    /// The year as `recap::build` answers it, copied field by field into what may leave finstats.
+    /// The year as `recap::build` answers it, copied field by field into what may leave FinStats.
     /// Anything the recap has that is not a field here (companions, the rank, the apps) stays behind.
     pub fn from_recap(r: &Value, whose: &str) -> Option<StoryYear> {
         if r["empty"] == true || int(&r["totals"]["plays"]) == 0 {
@@ -304,7 +304,7 @@ fn frame(c: &mut Canvas, y: &StoryYear, word: &str) {
     c.push(format!(r#"<rect width="{W}" height="{H}" fill="{BG}"/><rect width="{W}" height="10" fill="{ACCENT}"/>"#));
     c.text(X - 8.0, 420.0, Style(230.0, 800, "#242424"), word);
     c.text_fit(X, 150.0, Style(38.0, 600, MUTED), &y.heading(), Some(WIDE));
-    c.text(X, 1840.0, Style(30.0, 600, FAINT), &format!("finstats · {}", y.label));
+    c.text(X, 1840.0, Style(30.0, 600, FAINT), &format!("FinStats · {}", y.label));
 }
 
 fn headline(c: &mut Canvas, top: f64, s: &str) -> f64 {

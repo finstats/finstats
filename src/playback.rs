@@ -7,7 +7,7 @@ use crate::db::rusqlite::{Connection, named_params, params};
 use crate::media::Streams;
 
 /// Where play `p` stopped, in seconds, the one rule every page uses: where it was when it ended, for a play that
-/// knows (finstats' own, and a Streamystats play that kept its runtime), and otherwise how long it ran, the play
+/// knows (FinStats' own, and a Streamystats play that kept its runtime), and otherwise how long it ran, the play
 /// taken to have started at 0:00 (Jellystat keeps a length, not a place).
 pub const STOP_S: &str = "COALESCE(p.position_s, p.duration_s)";
 
@@ -195,7 +195,7 @@ pub struct Play<'a> {
 /// recorded the other row.
 ///
 /// **Between** sources it is `window` seconds at *either* end, because the trackers disagree about
-/// what they record. Jellystat keeps only the moment a play *ended*, so finstats works the start
+/// what they record. Jellystat keeps only the moment a play *ended*, so FinStats works the start
 /// back from the seconds played, and every minute the viewer spent paused moves that start later;
 /// Streamystats and the collector keep the real start. The ends, on the other hand, are the same
 /// moment for all three, give or take how quickly each noticed. Measured against real history
@@ -235,7 +235,7 @@ const SAME_PLAY_SQL: &str = "
 /// wherever ids are rewritten rather than only where rows are written: for the titles plays were
 /// moved onto, the only place one can have appeared.
 ///
-/// Only a row somebody imported is ever removed, and never one finstats recorded itself: its own
+/// Only a row somebody imported is ever removed, and never one FinStats recorded itself: its own
 /// row carries a timeline and the counts that go with it, which no import can have. Between two
 /// imported rows the one that arrived first stays. Rows of one tracker are never compared with each
 /// other: a second row of the same item is a restart the viewer really made.
@@ -372,7 +372,7 @@ mod tests {
                -- the same second, two trackers: the imported one goes
                (1, 'jellystat',    'js:1', 'u1', 'alice', 'i1', 'A track', 'Audio', 100, 101, 1),
                (2, 'streamystats', 'ss:1', 'u1', 'alice', 'i1', 'A track', 'Audio', 100, 101, 1),
-               -- finstats' own recording is the better row and is never the one removed, whenever it arrived
+               -- FinStats' own recording is the better row and is never the one removed, whenever it arrived
                (3, 'streamystats', 'ss:2', 'u1', 'alice', 'i2', 'A film', 'Movie', 1000, 4600, 3600),
                (4, 'live',         NULL,   'u1', 'alice', 'i2', 'A film', 'Movie', 1000, 4600, 3600),
                -- a real second viewing, days later: not a duplicate of anything
@@ -463,7 +463,7 @@ mod tests {
     #[test]
     fn the_same_evening_from_another_tracker_is_recognised_by_person_item_and_start() {
         let c = conn();
-        // Jellystat records the end and finstats derives the start; Streamystats records the true
+        // Jellystat records the end and FinStats derives the start; Streamystats records the true
         // start. The same play therefore arrives a little off, and must still be the same play.
         for start in [10000, 10045, 9955] {
             assert!(already_recorded(&c, Play { source: "streamystats", source_id: Some("streamystats:x"), user_id: "u1", item_id: "i1", started_at: start, ended_at: start + 5400 }, 600).unwrap(), "{start}");
@@ -479,7 +479,7 @@ mod tests {
     fn the_same_evening_is_recognised_by_its_end_when_a_pause_moved_its_start() {
         let c = conn();
         // The trackers agree about when a play ended far better than about when it began: Jellystat
-        // keeps only the end, so finstats works its start back from the seconds played, and every
+        // keeps only the end, so FinStats works its start back from the seconds played, and every
         // minute the viewer spent paused moves that start later. Half an hour of pause puts it well
         // outside any sane window, while both still say the play ended at the same moment.
         assert!(already_recorded(&c, Play { source: "jellystat", source_id: Some("jellystat:x"), user_id: "u1", item_id: "i1", started_at: 11_800, ended_at: 15_400 }, 600).unwrap());
@@ -495,7 +495,7 @@ mod tests {
         let c = conn();
         // One tracker never exports the same play twice, so a second row of the same item minutes
         // later is a restart the viewer really made. Widening the window inside a source would
-        // silently drop it, on an import and, worse, on a restore of finstats' own backup.
+        // silently drop it, on an import and, worse, on a restore of FinStats' own backup.
         assert!(!already_recorded(&c, Play { source: "live", source_id: None, user_id: "u1", item_id: "i1", started_at: 10180, ended_at: 99999 }, 600).unwrap());
         assert!(already_recorded(&c, Play { source: "live", source_id: None, user_id: "u1", item_id: "i1", started_at: 10000, ended_at: 99999 }, 600).unwrap());
     }

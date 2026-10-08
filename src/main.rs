@@ -62,15 +62,15 @@ use tokio::sync::Notify;
 
 use state::{AppState, CollectorStatus, JfConfig, Settings, Tasks};
 
-const USAGE: &str = "finstats: playback statistics for Jellyfin
+const USAGE: &str = "FinStats: playback statistics for Jellyfin
 
 USAGE:
-    finstats                            Run the server
+    FinStats                            Run the server
     finstats import-jellystat <file>    Import a Jellystat backup (.jsonl / .json), then exit
     finstats import-streamystats <file> Import a Streamystats backup (.json), then exit
     finstats backup                     Write a backup into <data dir>/backups, then exit
-    finstats restore <file>             Merge a finstats backup into the database (history, settings, permissions), then exit
-    finstats relink                     Re-attach history to renamed items now, then exit (also runs after every sync)
+    finstats restore <file>             Merge a FinStats backup into the database (history, settings, permissions), then exit
+    FinStats relink                     Re-attach history to renamed items now, then exit (also runs after every sync)
     finstats --version
 
 ENVIRONMENT:
@@ -96,17 +96,17 @@ fn ensure_writable(data_dir: &std::path::Path) -> Result<()> {
             Ok(())
         }
         Err(e) => bail!(
-            "finstats cannot write to its data directory {dir} ({e}).\n\n\
+            "FinStats cannot write to its data directory {dir} ({e}).\n\n\
              It belongs to another user. This usually happens when Docker created the folder itself, as root.\n\
              Fix it with:   sudo chown -R 1000:1000 <your data folder>\n\
              or let the container start as root (no --user / user: setting): it then fixes this by itself\n\
-             and drops to an unprivileged user before finstats runs. PUID and PGID choose that user.",
+             and drops to an unprivileged user before FinStats runs. PUID and PGID choose that user.",
             dir = data_dir.display()
         ),
     }
 }
 
-/// What finstats was asked to do; everything but `--version` and `--help`, which need nothing at all.
+/// What FinStats was asked to do; everything but `--version` and `--help`, which need nothing at all.
 enum Command {
     Serve,
     ImportJellystat(PathBuf),
@@ -133,7 +133,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("--version" | "-V") => {
-            println!("finstats {}", env!("CARGO_PKG_VERSION"));
+            println!("FinStats {}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
         Some("--help" | "-h" | "help") => {
@@ -316,8 +316,8 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
     let bind = env("FINSTATS_BIND").unwrap_or_else(|| "0.0.0.0:8080".into());
     let listener = tokio::net::TcpListener::bind(&bind).await.with_context(|| format!("listening on {bind}"))?;
     match app.config.read().unwrap().as_ref() {
-        Some(c) => tracing::info!("finstats {} on http://{bind}, connected to {}", env!("CARGO_PKG_VERSION"), c.url),
-        None => tracing::info!("finstats {} on http://{bind}; open it in a browser to finish setup", env!("CARGO_PKG_VERSION")),
+        Some(c) => tracing::info!("FinStats {} on http://{bind}, connected to {}", env!("CARGO_PKG_VERSION"), c.url),
+        None => tracing::info!("FinStats {} on http://{bind}; open it in a browser to finish setup", env!("CARGO_PKG_VERSION")),
     }
 
     let serve_app = app.clone();
@@ -325,7 +325,7 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
         .with_graceful_shutdown(async move {
             let ctrl_c = tokio::signal::ctrl_c();
             let mut term = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).expect("SIGTERM handler");
-            // A fail-closed halt (`request_halt`) is a third way out, next to Ctrl-C and SIGTERM: finstats
+            // A fail-closed halt (`request_halt`) is a third way out, next to Ctrl-C and SIGTERM: FinStats
             // refused to apply something from Jellyfin and is stopping so the operator can look.
             tokio::select! {
                 _ = ctrl_c => tracing::info!("shutting down"),
@@ -338,9 +338,9 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
     // surfaces it (a restart loop stops as soon as the operator sets FINSTATS_ALLOW_LIBRARY_SHRINK=1 or
     // fixes Jellyfin). The refused change was never applied: the database is exactly as it was.
     if let Some(reason) = app.halt_reason() {
-        tracing::error!("finstats stopped without applying a change it did not trust: {reason}");
+        tracing::error!("FinStats stopped without applying a change it did not trust: {reason}");
         eprintln!("
-finstats halted: {reason}
+FinStats halted: {reason}
 
 Nothing was changed. Check Jellyfin (an upgrade may have changed its API),
 then restart. To allow it through once (for example after really emptying a library),

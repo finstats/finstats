@@ -1,7 +1,7 @@
 //! Which picture of a title or a person is the current one. Jellyfin names every image with a tag that
-//! changes when the image does, and finstats keeps it on the row (`items.image_tag` / `backdrop_tag`,
+//! changes when the image does, and FinStats keeps it on the row (`items.image_tag` / `backdrop_tag`,
 //! `users.image_tag`). The image cache names its copy after that tag and the browser is handed it as the
-//! ETag, so a poster replaced in Jellyfin is fetched again as soon as finstats has read the new tag,
+//! ETag, so a poster replaced in Jellyfin is fetched again as soon as FinStats has read the new tag,
 //! instead of the old one being served from the disk for a week and from the browser for another.
 //!
 //! The tags themselves are refreshed by the library read and, in between, by `sync_changes`: one read of what
@@ -42,7 +42,7 @@ fn safe_tag(tag: &str) -> String {
     }
 }
 
-/// The tag finstats last read for a picture, if it knows the row at all.
+/// The tag FinStats last read for a picture, if it knows the row at all.
 pub fn tag_of(c: &Connection, pic: Picture, id: &str) -> Result<Option<String>> {
     let sql = match pic {
         // A title's poster, else a person's portrait: people are no titles, and keep theirs with the cast they are in.

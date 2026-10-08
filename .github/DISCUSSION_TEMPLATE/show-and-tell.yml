@@ -4,7 +4,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Show how you run finstats: a setup, a reverse-proxy config, a dashboard on a wall, something you learned about
+        Show how you run FinStats: a setup, a reverse-proxy config, a dashboard on a wall, something you learned about
         your server from it. Other people's setups are the best documentation.
 
         **Screenshots show what named people watched.** Blur user names, titles, device names and IP addresses, or use
@@ -19,7 +19,7 @@ body:
     id: setup
     attributes:
       label: The setup
-      description: Hardware, how finstats and Jellyfin run, proxy, anything that took you a while to get right.
+      description: Hardware, how FinStats and Jellyfin run, proxy, anything that took you a while to get right.
   - type: textarea
     id: config
     attributes:

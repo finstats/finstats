@@ -1,4 +1,4 @@
-// Settings → Access: who can use finstats and what they can see. Jellyfin administrators only.
+// Settings → Access: who can use FinStats and what they can see. Jellyfin administrators only.
 // Rows: "Everyone" (the defaults) and one per user. A switch takes effect at once. What everyone
 // has is shown as on, and locked, on each person's row, because personal grants only ever add.
 
@@ -9,12 +9,12 @@ import { card, sk, toggle, spinner, inlineError, errorState, avatar } from '../c
 import { dataTable } from '../tables.js';
 
 export default {
-  key: 'access', label: 'Access', sub: 'Who can use finstats and what they can see', icon: 'users',
+  key: 'access', label: 'Access', sub: 'Who can use FinStats and what they can see', icon: 'users',
   visible: () => isAdmin(),
   entries: [{ id: 'access', label: 'Permissions', hint: 'who can see everyone network server downloads notify manage sign in users' }],
   async render(slot, store) {
     const body = h('div', null, sk.rows(3));
-    mount(slot, card({ title: 'Access', sub: 'Who can use finstats and what they can see', body, id: 'access' }));
+    mount(slot, card({ title: 'Access', sub: 'Who can use FinStats and what they can see', body, id: 'access' }));
     let data;
     try { data = await api.get('/permissions', null, { signal: store.signal }); }
     catch (e) { if (isAbort(e) || e.status === 401) return; mount(body, errorState(e, () => this.render(slot, store))); return; }

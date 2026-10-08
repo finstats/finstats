@@ -1,18 +1,18 @@
 # How Jellystat data is imported
 
-finstats reads Jellystat's backup format directly (`.jsonl`, and the older single-file `.json`).
+FinStats reads Jellystat's backup format directly (`.jsonl`, and the older single-file `.json`).
 The backup is streamed to disk and parsed line by line, so its size barely matters, and the whole
 import is one transaction: it either fully succeeds or changes nothing. Plays are de-duplicated by
 their Jellystat id, which makes importing the same backup twice safe.
 
-Backups that also contain libraries, items and users are welcome: finstats uses those tables to
+Backups that also contain libraries, items and users are welcome: FinStats uses those tables to
 fill in anything it has not yet read from Jellyfin itself, and never overwrites fresher data.
 
 ## What the fields mean
 
 Learned from real exports rather than documentation:
 
-| Jellystat field | How finstats reads it |
+| Jellystat field | How FinStats reads it |
 |---|---|
 | `ActivityDateInserted` | The **end** of the play. Start = end − `PlaybackDuration`. |
 | `NowPlayingItemId` + `EpisodeId` | For episodes the first is the *series*, the second the episode. |
@@ -23,7 +23,7 @@ Learned from real exports rather than documentation:
 
 ## Importing alongside Streamystats
 
-An evening is not counted twice if it arrives from both trackers, or if finstats recorded it itself.
+An evening is not counted twice if it arrives from both trackers, or if FinStats recorded it itself.
 Beyond the Jellystat id above, a play is recognised as one already here when the same person watched
 the same item with either end of the play within the **Merge window** (Settings → Collection) of one
 in the history. Either end, because the two trackers disagree about when a play *began*: Jellystat
@@ -34,7 +34,7 @@ spent paused moves it later, while both agree about when it ended.
 ## What imported history cannot have
 
 Jellystat stores one row per play, so imported plays have no timeline of pauses, skips and track
-switches, no pause or skip counts, and no resume point. Everything finstats records itself does.
+switches, no pause or skip counts, and no resume point. Everything FinStats records itself does.
 
 ## Without the browser
 

@@ -155,7 +155,7 @@ pub struct FeedQuery {
     #[allow(dead_code)]
     key: Option<String>,
     days: Option<i64>,
-    /// `1`, `true`, `yes`, `on`: an address typed by hand, not a form finstats wrote.
+    /// `1`, `true`, `yes`, `on`: an address typed by hand, not a form FinStats wrote.
     mine: Option<String>,
 }
 
@@ -247,7 +247,7 @@ mod tests {
         assert!(!v.contains("DURATION"));
         assert!(v.contains("SUMMARY:Paper Moons\\, Part 2\\; the Return (2026) · In cinemas\r\n"), "{v}");
         assert!(v.contains("CATEGORIES:Film\r\n"));
-        assert!(!v.contains("URL:"), "no address of finstats, no link");
+        assert!(!v.contains("URL:"), "no address of FinStats, no link");
         assert!(!v.contains("DESCRIPTION:"), "nothing to say");
     }
 

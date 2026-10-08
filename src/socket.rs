@@ -16,7 +16,7 @@
 //!   * **Silence.** A socket can stop delivering without closing, which a poll cannot, but silence is
 //!     also the *normal* state here: Jellyfin pushes a session list when something changes and sends
 //!     nothing at all while nobody is watching, for hours. So what is watched is the server answering,
-//!     not sessions arriving: finstats sends `KeepAlive` and Jellyfin answers, and nothing heard for
+//!     not sessions arriving: FinStats sends `KeepAlive` and Jellyfin answers, and nothing heard for
 //!     `LOST_AFTER` is death. Judging a quiet socket by its sessions is what made 1.4.0 and 1.4.1 drop
 //!     the connection every fifteen seconds on an idle server and never stop polling.
 //!
@@ -42,7 +42,7 @@ use crate::jellyfin::Jellyfin;
 /// and why one with something playing says something every 1.5 s, since a position never stops moving.
 const SESSIONS_START: &str = r#"{"MessageType":"SessionsStart","Data":"0,1500"}"#;
 /// Unsubscribe, and the reason this exists: the moment a play is being polled for, those pushes are a
-/// second copy of what finstats is already asking for: the same list twice, and the pushed one is not
+/// second copy of what FinStats is already asking for: the same list twice, and the pushed one is not
 /// even compressed. The connection stays open and keeps answering `KeepAlive`, so it costs nothing and
 /// is one message away from carrying again the moment the last play ends.
 const SESSIONS_STOP: &str = r#"{"MessageType":"SessionsStop","Data":""}"#;
@@ -160,7 +160,7 @@ impl Drop for Handle {
     }
 }
 
-/// One message from Jellyfin, as far as finstats cares.
+/// One message from Jellyfin, as far as FinStats cares.
 #[derive(Debug, PartialEq)]
 pub enum Msg {
     /// The whole session list, already in PascalCase.
@@ -497,7 +497,7 @@ mod tests {
         assert_eq!(
             parse(camel),
             Msg::Sessions(vec![json!({"Id": "a", "UserId": "u1", "NowPlayingItem": {"Id": "i", "RunTimeTicks": 10}})]),
-            "a camelCase server is put back into the one casing the rest of finstats reads"
+            "a camelCase server is put back into the one casing the rest of FinStats reads"
         );
     }
 

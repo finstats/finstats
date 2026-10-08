@@ -1,7 +1,7 @@
 //! Library health: what is wrong with a file only shows beside its neighbours: a season in another resolution, a hole
 //! in a season, the same film twice, a file far too thin for what it claims, a dub that stops, a title Jellyfin never
 //! identified. Every rule here is a pure function over item rows; nothing reads the database, so each can be tried on
-//! invented data. finstats only reports: nothing here changes anything in Jellyfin.
+//! invented data. FinStats only reports: nothing here changes anything in Jellyfin.
 
 use std::collections::BTreeMap;
 
@@ -353,7 +353,7 @@ pub fn summary(conn: &Connection, library_id: Option<&str>) -> Result<Value> {
 
 // ---------------------------------------------------------------- HTTP
 
-/// Who may set a finding aside: somebody who manages finstats and may read the finding in the first place.
+/// Who may set a finding aside: somebody who manages FinStats and may read the finding in the first place.
 pub fn may_dismiss(perms: &crate::auth::Perms) -> bool {
     perms.manage && perms.see_server
 }
