@@ -1028,7 +1028,8 @@ fn library_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<
                 COALESCE(c.season_count, 0) AS season_count, COALESCE(c.episode_count, 0) AS episode_count,
                 COALESCE(c.artist_count, 0) AS artist_count, COALESCE(c.album_count, 0) AS album_count, COALESCE(c.track_count, 0) AS track_count,
                 COALESCE(c.size_bytes, 0) AS size_bytes,
-                COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s, s.last_played_at
+                COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s, s.last_played_at,
+                s.last_item_id, s.last_item_name, s.last_series_name, s.last_item_type
          FROM libraries l
          LEFT JOIN (SELECT library_id,
                            SUM(type IN ('Movie', 'Series', 'Audio', 'MusicVideo', 'Video', 'Book', 'AudioBook')) AS item_count,
@@ -1038,7 +1039,9 @@ fn library_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<
                            COUNT(DISTINCT CASE WHEN type = 'Audio' THEN album_artist END) AS artist_count,
                            SUM(size_bytes) AS size_bytes
                     FROM items WHERE removed = 0 GROUP BY library_id) c ON c.library_id = l.id
-         LEFT JOIN (SELECT p.library_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, MAX(p.ended_at) AS last_played_at
+         -- The last play's own columns beside MAX(): SQLite takes a plain column from the row that holds the maximum.
+         LEFT JOIN (SELECT p.library_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, MAX(p.ended_at) AS last_played_at,
+                           p.item_id AS last_item_id, p.item_name AS last_item_name, p.series_name AS last_series_name, p.item_type AS last_item_type
                     FROM visible_playbacks p {} GROUP BY p.library_id) s ON s.library_id = l.id
          {filter}
          ORDER BY l.removed, watch_s DESC, l.name COLLATE NOCASE",
@@ -2351,6 +2354,30 @@ mod tests {
         assert_eq!(insight_parts(Some("concurrency")), vec!["concurrency"]);
         assert_eq!(insight_parts(Some("genres,nonsense,concurrency")), vec!["concurrency", "genres"], "in their own order, the unknown left out");
         assert_eq!(insight_parts(Some("nonsense")), INSIGHTS.to_vec());
+    }
+
+    /// The Libraries table names what was played last in each, of the plays the caller may see, as it says when.
+    #[test]
+    fn a_library_names_what_was_played_last_in_it_of_the_plays_one_may_see() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO libraries(id, name, collection_type, removed, updated_at) VALUES ('tv', 'Shows', 'tvshows', 0, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, series_name, season_number, episode_number, library_id, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'e1', 'Pilot',  'Episode', 's1', 'The Rookery', 1, 1, 'tv', 100, 700, 600),
+               ('live', 'u2', 'bob',   'e2', 'Second', 'Episode', 's1', 'The Rookery', 1, 2, 'tv', 800, 1400, 600),
+               ('live', 'u1', 'alice', 'e3', 'Third',  'Episode', 's1', 'The Rookery', 1, 3, 'tv', 300, 900, 600);",
+        )
+        .unwrap();
+        let last = |scope: &Scope| -> Vec<Value> {
+            let r = library_rows(&c, scope, None).unwrap().into_iter().next().unwrap();
+            ["last_played_at", "last_item_id", "last_item_name", "last_series_name", "last_item_type"].iter().map(|k| r[*k].clone()).collect()
+        };
+        assert_eq!(last(&everyone().resolve(&c).unwrap()), vec![json!(1400), json!("e2"), json!("Second"), json!("The Rookery"), json!("Episode")]);
+        let alice = Scope { user_ids: vec!["u1".into()], perms: crate::auth::Perms { see_everyone: false, ..Default::default() }, ..everyone() };
+        assert_eq!(last(&alice.resolve(&c).unwrap())[..3], [json!(900), json!("e3"), json!("Third")], "of her own plays only");
     }
 
     /// Library statistics: what each library holds, by kind, files removed from Jellyfin left out. Artists are the album
