@@ -1626,8 +1626,10 @@ pub fn marked_live(app: &App) -> Vec<Value> {
 pub fn now_playing_for(marked: &[Value], user: &AuthUser) -> Value {
     let mut sessions: Vec<Value> = marked.iter().filter(|s| user.perms.see_everyone || s["user_id"].as_str() == Some(user.id.as_str())).cloned().collect();
     if !user.perms.see_network {
+        // Whether somebody plays from home says where they are, as their address does.
         for s in &mut sessions {
             s["remote_ip"] = Value::Null;
+            s["is_local"] = Value::Null;
         }
     }
     json!({ "sessions": sessions })
@@ -2196,7 +2198,7 @@ mod tests {
     #[test]
     fn now_playing_marks_companions_before_it_narrows_to_the_caller() {
         let stream = |user: &str, name: &str| {
-            json!({ "key": format!("k-{user}"), "user_id": user, "user_name": name, "item_id": "i1", "position_s": 100, "started_at": 1000, "remote_ip": "192.168.1.10" })
+            json!({ "key": format!("k-{user}"), "user_id": user, "user_name": name, "item_id": "i1", "position_s": 100, "started_at": 1000, "remote_ip": "192.168.1.10", "is_local": true })
         };
         let mut sessions = vec![stream("u1", "alice"), stream("u2", "bob")];
         crate::groups::mark_live(&mut sessions, 60);
@@ -2206,12 +2208,14 @@ mod tests {
         assert_eq!(list.len(), 1, "without see_everyone only one's own streams");
         assert_eq!((list[0]["user_id"].as_str(), list[0]["group"]["size"].as_i64()), (Some("u2"), Some(2)), "but who one watches with");
         assert_eq!(list[0]["remote_ip"], Value::Null, "an address needs see_network");
+        assert_eq!(list[0]["is_local"], Value::Null, "and so does whether it is at home");
 
         let mut all = caller("u3", true);
         all.perms.see_network = true;
         let everyone = now_playing_for(&sessions, &all);
         assert_eq!(everyone["sessions"].as_array().unwrap().len(), 2);
         assert_eq!(everyone["sessions"][0]["remote_ip"], "192.168.1.10");
+        assert_eq!(everyone["sessions"][0]["is_local"], true);
     }
 
     /// The status bar's numbers, scoped as `/summary` scopes them: one's own plays and streams without see_everyone.
