@@ -329,21 +329,33 @@ pub(crate) fn heatmap(conn: &Connection, cond: &Cond) -> Result<Value> {
     let sql = format!(
         "SELECT CAST(strftime('%w', p.started_at, 'unixepoch', 'localtime') AS INTEGER),
                 CAST(strftime('%H', p.started_at, 'unixepoch', 'localtime') AS INTEGER),
+                CASE WHEN p.item_type IN ('Movie', 'Episode', 'Audio') THEN p.item_type ELSE 'Other' END,
                 COUNT(*), COALESCE(SUM(p.duration_s), 0)
-         FROM visible_playbacks p {} GROUP BY 1, 2",
+         FROM visible_playbacks p {} GROUP BY 1, 2, 3",
         cond.sql()
     );
     let mut plays = vec![vec![0i64; 24]; 7];
     let mut watch = vec![vec![0i64; 24]; 7];
+    // Per kind of media, [plays, watch_s] by weekday (0 = Monday) and by hour: what the Graphs page stacks.
+    let mut by_type: Map<String, Value> = Map::new();
+    let mut kinds: std::collections::HashMap<String, (Vec<[i64; 2]>, Vec<[i64; 2]>)> =
+        ["Movie", "Episode", "Audio", "Other"].into_iter().map(|k| (k.to_string(), (vec![[0; 2]; 7], vec![[0; 2]; 24]))).collect();
     let mut stmt = conn.prepare(&sql)?;
     let mut rows = stmt.query(params_from_iter(cond.args.iter()))?;
     while let Some(r) = rows.next()? {
-        let (dow, hour): (i64, i64) = (r.get(0)?, r.get(1)?);
-        let day = ((dow + 6) % 7) as usize; // SQLite: 0 = Sunday. Ours: 0 = Monday.
-        plays[day][hour.clamp(0, 23) as usize] = r.get(2)?;
-        watch[day][hour.clamp(0, 23) as usize] = r.get(3)?;
+        let (dow, hour, kind, n, w): (i64, i64, String, i64, i64) = (r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?);
+        let (day, hour) = (((dow + 6) % 7) as usize, hour.clamp(0, 23) as usize); // SQLite: 0 = Sunday. Ours: 0 = Monday.
+        plays[day][hour] += n;
+        watch[day][hour] += w;
+        if let Some((days, hours)) = kinds.get_mut(&kind) {
+            days[day] = [days[day][0] + n, days[day][1] + w];
+            hours[hour] = [hours[hour][0] + n, hours[hour][1] + w];
+        }
     }
-    Ok(json!({ "plays": plays, "watch_s": watch }))
+    for (kind, (days, hours)) in kinds {
+        by_type.insert(kind, json!({ "weekday": days, "hour": hours }));
+    }
+    Ok(json!({ "plays": plays, "watch_s": watch, "by_type": by_type }))
 }
 
 /// `expr` is grouped on; rows beyond `max` are folded into "Other".
@@ -2365,6 +2377,35 @@ mod tests {
         assert_eq!(insight_parts(Some("concurrency")), vec!["concurrency"]);
         assert_eq!(insight_parts(Some("genres,nonsense,concurrency")), vec!["concurrency", "genres"], "in their own order, the unknown left out");
         assert_eq!(insight_parts(Some("nonsense")), INSIGHTS.to_vec());
+    }
+
+    /// The Graphs page stacks plays by weekday and by hour by kind of media: the heatmap says each kind's, which add up to it.
+    #[test]
+    fn the_heatmap_splits_weekdays_and_hours_by_kind_of_media() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let at = |sql: &str| -> i64 { c.query_row(&format!("SELECT CAST(strftime('%s', {sql}, 'utc') AS INTEGER)"), [], |r| r.get(0)).unwrap() };
+        // 2026-10-05 is a Monday.
+        let (mon20, mon21, tue20) = (at("'2026-10-05 20:10:00'"), at("'2026-10-05 21:10:00'"), at("'2026-10-06 20:10:00'"));
+        c.execute(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie',   ?1, ?1 + 600, 600),
+               ('live', 'u1', 'alice', 'e1', 'Pilot',          'Episode', ?2, ?2 + 300, 300),
+               ('live', 'u1', 'alice', 'e2', 'Second',         'Episode', ?3, ?3 + 300, 300),
+               ('live', 'u1', 'alice', 'b1', 'A book',         'AudioBook', ?3, ?3 + 60, 60)",
+            [mon20, mon21, tue20],
+        )
+        .unwrap();
+        let v = heatmap(&c, &Scope { days: 0, ..everyone() }.resolve(&c).unwrap().cond()).unwrap();
+        let t = &v["by_type"];
+        assert_eq!((t["Movie"]["weekday"][0].clone(), t["Movie"]["hour"][20].clone()), (json!([1, 600]), json!([1, 600])));
+        assert_eq!((t["Episode"]["weekday"][0].clone(), t["Episode"]["weekday"][1].clone(), t["Episode"]["hour"][20].clone(), t["Episode"]["hour"][21].clone()),
+                   (json!([1, 300]), json!([1, 300]), json!([1, 300]), json!([1, 300])));
+        assert_eq!(t["Other"]["weekday"][1], json!([1, 60]), "anything else is Other");
+        assert_eq!(t["Audio"]["hour"].as_array().unwrap().len(), 24);
+        assert_eq!(v["plays"][0][20], 1, "the grid is as it was");
     }
 
     /// The Users table says what each person last played, on which app and player, and from which address: that one only
