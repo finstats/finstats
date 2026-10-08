@@ -70,7 +70,7 @@ USAGE:
     finstats import-streamystats <file> Import a Streamystats backup (.json), then exit
     finstats backup                     Write a backup into <data dir>/backups, then exit
     finstats restore <file>             Merge a FinStats backup into the database (history, settings, permissions), then exit
-    FinStats relink                     Re-attach history to renamed items now, then exit (also runs after every sync)
+    finstats relink                     Re-attach history to renamed items now, then exit (also runs after every sync)
     finstats --version
 
 ENVIRONMENT:
