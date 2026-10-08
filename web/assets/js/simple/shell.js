@@ -39,6 +39,7 @@ const THEME_LABEL = { device: 'Theme: as the device', light: 'Theme: light', dar
 
 function gear() {
   const btn = dropdownMenu({ label: 'Settings and account', icon: 'settings', iconOnly: true, items: () => [
+    { label: 'My profile', icon: 'user', href: `/users/${state.user.id}` },
     { label: 'Settings', icon: 'settings', href: '/settings' },
     { separator: true },
     ...['device', 'light', 'dark'].map((t) => ({ label: THEME_LABEL[t], icon: t === 'light' ? 'sun' : t === 'dark' ? 'moon' : 'monitor', hint: themeChoice() === t ? '✓' : null, onSelect: () => setTheme(t) })),

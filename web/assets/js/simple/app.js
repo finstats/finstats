@@ -12,6 +12,7 @@ import { layout } from './shell.js';
 import home, { prefetchHome } from './pages/home.js';
 import history from './pages/history.js';
 import { librariesPage, libraryPage, prefetchLibraries, prefetchLibrary } from './pages/libraries.js';
+import { usersPage, userPage, prefetchUsers, prefetchUser } from './pages/users.js';
 
 /** A page fetched when it is first opened: `load()` answers its function, drawn only if the reader is still there. */
 const later = (load) => (ctx) => load().then((page) => { if (!ctx.signal.aborted) page(ctx); });
@@ -23,6 +24,8 @@ route('/', home, { prefetch: prefetchHome });
 route('/history', history);
 route('/libraries', librariesPage, { prefetch: prefetchLibraries });
 route('/libraries/:id', libraryPage, { prefetch: prefetchLibrary });
+route('/users', usersPage, { perm: 'see_everyone', prefetch: prefetchUsers });
+route('/users/:id', userPage, { prefetch: prefetchUser });
 route('/settings', settings);
 route('/settings/:section', settings);
 route('/settings/:section/:task', settings);
