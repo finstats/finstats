@@ -272,8 +272,29 @@ pub(crate) fn totals(conn: &Connection, cond: &Cond) -> Result<Value> {
 
 const TYPE_GROUPS: [&str; 4] = ["Movie", "Episode", "Audio", "Other"];
 
+/// What one row or bucket holds of each part it is split into: (plays, watch_s).
+type Parts = std::collections::HashMap<String, (i64, i64)>;
+
 /// Gap-free time series. Day buckets, or ISO weeks once the span passes 120 days.
 pub(crate) fn daily(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<(Vec<Value>, &'static str)> {
+    let (rows, bucket) = periods(conn, scope, cond, SplitBy::Type, false)?;
+    let rows = rows
+        .into_iter()
+        .map(|mut r| {
+            if let Some(o) = r.as_object_mut()
+                && let Some(by) = o.remove("by")
+            {
+                o.insert("by_type".into(), by);
+            }
+            r
+        })
+        .collect();
+    Ok((rows, bucket))
+}
+
+/// A gap-free series of `{date, plays, watch_s, by}`, each part of `by` as `[plays, watch_s]`. Day buckets, or ISO weeks
+/// once the span passes 120 days; or calendar months (`date` is then `YYYY-MM`) from the first month to this one.
+fn periods(conn: &Connection, scope: &Scope, cond: &Cond, by: SplitBy, monthly: bool) -> Result<(Vec<Value>, &'static str)> {
     let today: String = conn.query_row("SELECT date('now', 'localtime')", [], |r| r.get(0))?;
     let today = NaiveDate::parse_from_str(&today, "%Y-%m-%d")?;
     let first: Option<String> = match scope.since {
@@ -285,42 +306,48 @@ pub(crate) fn daily(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<(Ve
         )?,
     };
     let Some(first) = first.and_then(|f| NaiveDate::parse_from_str(&f, "%Y-%m-%d").ok()) else {
-        return Ok((vec![], "day"));
+        return Ok((vec![], if monthly { "month" } else { "day" }));
     };
-    let weekly = (today - first).num_days() > 120;
-    let (bucket_sql, step, name) = if weekly {
-        ("date(p.started_at, 'unixepoch', 'localtime', 'weekday 0', '-6 days')", 7, "week")
+    let weekly = !monthly && (today - first).num_days() > 120;
+    let (bucket_sql, name) = if monthly {
+        ("strftime('%Y-%m', p.started_at, 'unixepoch', 'localtime')", "month")
+    } else if weekly {
+        ("date(p.started_at, 'unixepoch', 'localtime', 'weekday 0', '-6 days')", "week")
     } else {
-        ("date(p.started_at, 'unixepoch', 'localtime')", 1, "day")
+        ("date(p.started_at, 'unixepoch', 'localtime')", "day")
     };
-    let sql = format!(
-        "SELECT {bucket_sql} AS d,
-                CASE p.item_type WHEN 'Movie' THEN 'Movie' WHEN 'Episode' THEN 'Episode' WHEN 'Audio' THEN 'Audio' ELSE 'Other' END AS g,
-                COUNT(*), COALESCE(SUM(p.duration_s), 0)
-         FROM visible_playbacks p {} GROUP BY d, g",
-        cond.sql()
-    );
-    let mut found: std::collections::HashMap<(String, String), (i64, i64)> = Default::default();
+    let sql = format!("SELECT {bucket_sql} AS d, {} AS g, COUNT(*), COALESCE(SUM(p.duration_s), 0) FROM visible_playbacks p {} GROUP BY d, g", by.sql(), cond.sql());
+    // date → (its total, its parts). A play whose part is unknown counts in the total only.
+    let mut found: std::collections::HashMap<String, ((i64, i64), Parts)> = Default::default();
     let mut stmt = conn.prepare(&sql)?;
     let mut rows = stmt.query(params_from_iter(cond.args.iter()))?;
     while let Some(r) = rows.next()? {
-        found.insert((r.get(0)?, r.get(1)?), (r.get(2)?, r.get(3)?));
+        let (date, part, n, w): (String, Option<String>, i64, i64) = (r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?);
+        let (total, parts) = found.entry(date).or_default();
+        *total = (total.0 + n, total.1 + w);
+        if let Some(part) = part {
+            let e = parts.entry(part).or_default();
+            *e = (e.0 + n, e.1 + w);
+        }
     }
 
-    let mut cursor = if weekly { first - chrono::Duration::days(first.weekday().num_days_from_monday() as i64) } else { first };
+    let mut cursor = if monthly {
+        first.with_day(1).unwrap_or(first)
+    } else if weekly {
+        first - chrono::Duration::days(first.weekday().num_days_from_monday() as i64)
+    } else {
+        first
+    };
     let mut out = vec![];
     while cursor <= today {
-        let date = cursor.format("%Y-%m-%d").to_string();
-        let mut by_type = Map::new();
-        let (mut plays, mut watch) = (0, 0);
-        for g in TYPE_GROUPS {
-            let (p, w) = found.get(&(date.clone(), g.to_string())).copied().unwrap_or((0, 0));
-            plays += p;
-            watch += w;
-            by_type.insert(g.to_string(), json!([p, w]));
-        }
-        out.push(json!({ "date": date, "plays": plays, "watch_s": watch, "by_type": by_type }));
-        cursor += chrono::Duration::days(step);
+        let date = cursor.format(if monthly { "%Y-%m" } else { "%Y-%m-%d" }).to_string();
+        let ((plays, watch), parts) = found.remove(&date).unwrap_or_default();
+        out.push(json!({ "date": date, "plays": plays, "watch_s": watch, "by": by.parts(&parts) }));
+        cursor = if monthly {
+            cursor.checked_add_months(chrono::Months::new(1)).unwrap_or(today.succ_opt().unwrap_or(today))
+        } else {
+            cursor + chrono::Duration::days(if weekly { 7 } else { 1 })
+        };
     }
     Ok((out, name))
 }
@@ -1829,7 +1856,7 @@ impl<F: FnMut(i64) -> Result<String>> LocalDays<F> {
 const METHODS: [&str; 3] = ["Transcode", "DirectStream", "DirectPlay"];
 
 /// Sweep over play intervals: the most streams that ever overlapped, the most of each of `METHODS` (each its own
-/// maximum, not the split at the peak), and the peak per bucket.
+/// maximum, not the split at the peak), and the peak per bucket, with the most of each way of playing in it.
 fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
     // `play_method` may be NULL (a row restored from a backup written before the column existed has nothing to put
     // there), so it is read as an Option: compared in SQL, `NULL = 'Transcode'` was NULL, not a boolean, and made this
@@ -1850,7 +1877,8 @@ fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
 
     let (series_template, bucket) = daily(conn, scope, cond)?;
     let weekly = bucket == "week";
-    let mut per_bucket: std::collections::HashMap<String, i32> = Default::default();
+    // The bucket's peak, and the most of each of `METHODS` at once in it.
+    let mut per_bucket: std::collections::HashMap<String, (i32, [i32; METHODS.len()])> = Default::default();
     let (mut live, mut peak, mut peak_at) = (0, 0, None);
     let (mut live_by, mut peak_by) = ([0; METHODS.len()], [0; METHODS.len()]);
     let mut date_stmt = conn.prepare_cached(if weekly {
@@ -1872,9 +1900,14 @@ fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
             }
             let date = days.of(at)?;
             match per_bucket.get_mut(date) {
-                Some(e) => *e = (*e).max(live),
+                Some((e, by)) => {
+                    *e = (*e).max(live);
+                    for (b, l) in by.iter_mut().zip(live_by) {
+                        *b = (*b).max(l);
+                    }
+                }
                 None => {
-                    per_bucket.insert(date.to_string(), live);
+                    per_bucket.insert(date.to_string(), (live, live_by));
                 }
             }
         }
@@ -1883,7 +1916,9 @@ fn concurrency(conn: &Connection, scope: &Scope, cond: &Cond) -> Result<Value> {
         .iter()
         .map(|d| {
             let date = d["date"].as_str().unwrap_or_default();
-            json!({ "date": date, "peak": per_bucket.get(date).copied().unwrap_or(0) })
+            let (peak, by) = per_bucket.get(date).copied().unwrap_or_default();
+            let by: Map<String, Value> = METHODS.iter().zip(by).map(|(m, n)| (m.to_string(), json!(n))).collect();
+            json!({ "date": date, "peak": peak, "by": by })
         })
         .collect();
     let [peak_transcodes, peak_direct_streams, peak_direct_plays] = peak_by;
@@ -1994,6 +2029,161 @@ fn insight_failed_logins(c: &Connection, scope: &Scope) -> Result<Vec<Map<String
         ),
         &args,
     )
+}
+
+// ---------------------------------------------------------------- a breakdown: plays by one thing, split by another
+
+/// What each row of a breakdown is split by: the kind of media, or how it was played.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum SplitBy {
+    Type,
+    Method,
+}
+
+impl SplitBy {
+    fn asked(v: Option<&str>) -> SplitBy {
+        if v == Some("method") { SplitBy::Method } else { SplitBy::Type }
+    }
+    fn sql(self) -> &'static str {
+        match self {
+            SplitBy::Type => "CASE WHEN p.item_type IN ('Movie', 'Episode', 'Audio') THEN p.item_type ELSE 'Other' END",
+            // A play that never said how it played (restored from before the column) counts in its row and in no part.
+            SplitBy::Method => "p.play_method",
+        }
+    }
+    fn keys(self) -> &'static [&'static str] {
+        match self {
+            SplitBy::Type => &TYPE_GROUPS,
+            SplitBy::Method => &["DirectPlay", "DirectStream", "Transcode"],
+        }
+    }
+    /// Every part, `[plays, watch_s]`, in `keys` order and zero where nothing was found.
+    fn parts(self, found: &Parts) -> Value {
+        let mut m = Map::new();
+        for k in self.keys() {
+            let (n, w) = found.get(*k).copied().unwrap_or_default();
+            m.insert(k.to_string(), json!([n, w]));
+        }
+        Value::Object(m)
+    }
+}
+
+/// What the rows of a breakdown are: ranked things (apps, people, resolutions) or a run of days or months.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Group {
+    Client,
+    User,
+    SourceResolution,
+    StreamResolution,
+    Day,
+    Month,
+}
+
+impl Group {
+    fn asked(v: &str) -> Option<Group> {
+        Some(match v {
+            "client" => Group::Client,
+            "user" => Group::User,
+            "source_resolution" => Group::SourceResolution,
+            "stream_resolution" => Group::StreamResolution,
+            "day" => Group::Day,
+            "month" => Group::Month,
+            _ => return None,
+        })
+    }
+}
+
+/// The resolution that was sent: a video transcode's own, else the file's.
+fn stream_resolution_sql() -> String {
+    let sent = |d: &str| {
+        format!(
+            "(CASE WHEN p.play_method = 'Transcode' AND json_extract(p.transcode, '$.is_video_direct') = 0 AND json_extract(p.transcode, '$.{d}') IS NOT NULL
+                   THEN json_extract(p.transcode, '$.{d}') ELSE p.{d} END)"
+        )
+    };
+    RESOLUTION_SQL.replace("p.width", &sent("width")).replace("p.height", &sent("height"))
+}
+
+/// Plays grouped by one thing and split by another: ranked rows (`rank`, at most `limit`) of `{id, name, plays, watch_s,
+/// by}`, or a gap-free series of `{date, …}`. Each part of `by` is `[plays, watch_s]`.
+pub(crate) fn breakdown(conn: &Connection, scope: &Scope, group: Group, by: SplitBy, rank: Rank, limit: usize) -> Result<Value> {
+    let cond = scope.cond();
+    if matches!(group, Group::Day | Group::Month) {
+        let (rows, bucket) = periods(conn, scope, &cond, by, group == Group::Month)?;
+        return Ok(json!({ "keys": by.keys(), "bucket": bucket, "rows": rows }));
+    }
+    // (what is grouped on, what it is called, what is joined to name it)
+    let (key, name, join) = match group {
+        Group::User => ("p.user_id".to_string(), "COALESCE(u.name, MAX(p.user_name))".to_string(), "LEFT JOIN users u ON u.id = p.user_id"),
+        Group::SourceResolution => (RESOLUTION_SQL.to_string(), RESOLUTION_SQL.to_string(), ""),
+        Group::StreamResolution => (stream_resolution_sql(), stream_resolution_sql(), ""),
+        _ => ("p.client".to_string(), "p.client".to_string(), ""),
+    };
+    let sql = format!(
+        "SELECT {key} AS key, {name} AS name, {} AS g, COUNT(*), COALESCE(SUM(p.duration_s), 0) FROM visible_playbacks p {join} {} GROUP BY key, g",
+        by.sql(),
+        cond.sql()
+    );
+    struct Row {
+        name: String,
+        plays: i64,
+        watch: i64,
+        parts: Parts,
+    }
+    let mut found: Vec<(String, Row)> = vec![];
+    let mut stmt = conn.prepare(&sql)?;
+    let mut rows = stmt.query(params_from_iter(cond.args.iter()))?;
+    while let Some(r) = rows.next()? {
+        let (key, name, part, n, w): (Option<String>, Option<String>, Option<String>, i64, i64) = (r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?);
+        let Some(key) = key else { continue };
+        let i = match found.iter().position(|(k, _)| *k == key) {
+            Some(i) => i,
+            None => {
+                found.push((key.clone(), Row { name: name.unwrap_or_else(|| key.clone()), plays: 0, watch: 0, parts: Default::default() }));
+                found.len() - 1
+            }
+        };
+        let row = &mut found[i].1;
+        (row.plays, row.watch) = (row.plays + n, row.watch + w);
+        if let Some(part) = part {
+            let e = row.parts.entry(part).or_default();
+            *e = (e.0 + n, e.1 + w);
+        }
+    }
+    found.sort_by(|(_, a), (_, b)| {
+        let (x, y) = if rank == Rank::Watch { ((b.watch, b.plays), (a.watch, a.plays)) } else { ((b.plays, b.watch), (a.plays, a.watch)) };
+        x.cmp(&y).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+    });
+    let rows: Vec<Value> = found
+        .into_iter()
+        .take(limit)
+        .map(|(key, r)| {
+            let id = if group == Group::User { json!(key) } else { Value::Null };
+            json!({ "id": id, "name": r.name, "plays": r.plays, "watch_s": r.watch, "by": by.parts(&r.parts) })
+        })
+        .collect();
+    Ok(json!({ "keys": by.keys(), "bucket": Value::Null, "rows": rows }))
+}
+
+#[derive(Deserialize)]
+pub struct SplitQuery {
+    // Not `#[serde(flatten)]`: flattening makes serde_urlencoded hand numbers over as strings.
+    days: Option<i64>,
+    user_id: Option<String>,
+    library_id: Option<String>,
+    group: Option<String>,
+    by: Option<String>,
+    sort: Option<String>,
+    limit: Option<i64>,
+}
+
+pub async fn split(State(app): State<App>, user: AuthUser, Query(q): Query<SplitQuery>) -> ApiResult {
+    let group = q.group.as_deref().and_then(Group::asked).ok_or_else(|| ApiError::bad_request("Unknown group"))?;
+    let by = SplitBy::asked(q.by.as_deref());
+    let rank = if q.sort.as_deref() == Some("watch") { Rank::Watch } else { Rank::Plays };
+    let limit = q.limit.unwrap_or(10).clamp(1, 50) as usize;
+    let filter = FilterQuery { days: q.days, user_id: q.user_id, library_id: q.library_id };
+    Ok(Json(scoped(&app, &user, &filter, move |c, s| breakdown(c, s, group, by, rank, limit)).await?))
 }
 
 /// Every part of `/api/stats/insights`, in the order they are answered.
@@ -2366,7 +2556,8 @@ mod tests {
         let v = concurrency(&c, &scope, &scope.cond()).unwrap();
         assert_eq!((v["peak"].as_i64(), v["peak_at"].as_i64(), v["peak_transcodes"].as_i64()), (Some(2), Some(y + 1800), Some(1)));
         let day = |s: i64| -> String { c.query_row("SELECT date(?1, 'unixepoch', 'localtime')", [s], |r| r.get(0)).unwrap() };
-        assert_eq!(v["series"], json!([{ "date": day(y), "peak": 2 }, { "date": day(t), "peak": 1 }]));
+        let series: Vec<Value> = v["series"].as_array().unwrap().iter().map(|b| json!({ "date": b["date"], "peak": b["peak"] })).collect();
+        assert_eq!(series, vec![json!({ "date": day(y), "peak": 2 }), json!({ "date": day(t), "peak": 1 })]);
     }
 
     /// `parts=` names the insights a page wants, so one that draws only the peak does not wait for the other passes. Only
@@ -3063,5 +3254,129 @@ mod tests {
         // Anything that is not on the list never reaches the SQL.
         assert_eq!(order_by(&ACTIVITY_SORTS, Some("p.id; DROP TABLE playbacks"), Some("asc"), default), default);
         assert_eq!(order_by(&ACTIVITY_SORTS, None, None, default), default);
+    }
+
+    // ---- Simple mode's Graphs: a breakdown of plays by one thing, split by another
+
+    fn graphs_conn() -> Connection {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u1', 'alice', 0, 0), ('u2', 'bob', 0, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, client, play_method, width, height, transcode, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie',   'Jellyfin Web',     'DirectPlay', 1920, 1080, NULL, 100, 700, 600),
+               ('live', 'u1', 'alice', 'e1', 'Pilot',          'Episode', 'Jellyfin Web',     'Transcode',  3840, 2160, '{\"is_video_direct\": false, \"width\": 1280, \"height\": 720}', 800, 1100, 300),
+               ('live', 'u2', 'bob',   'e2', 'Second',         'Episode', 'Jellyfin Android', 'DirectStream', 1920, 1080, '{\"is_video_direct\": true}', 1200, 1500, 300),
+               ('live', 'u2', 'bob',   'a1', 'A song',         'Audio',   'Jellyfin Web',     'DirectPlay', NULL, NULL, NULL, 1600, 1800, 200);",
+        )
+        .unwrap();
+        c
+    }
+
+    fn split_of(c: &Connection, group: Group, by: SplitBy, rank: Rank, limit: usize) -> Value {
+        breakdown(c, &everyone().resolve(c).unwrap(), group, by, rank, limit).unwrap()
+    }
+
+    /// Top platforms, each split by the kind of media played on it: ranked by plays, each kind as [plays, seconds].
+    #[test]
+    fn a_breakdown_ranks_its_rows_and_splits_each_by_kind_of_media() {
+        let c = graphs_conn();
+        let v = split_of(&c, Group::Client, SplitBy::Type, Rank::Plays, 10);
+        assert_eq!(v["keys"], json!(["Movie", "Episode", "Audio", "Other"]));
+        let rows = v["rows"].as_array().unwrap();
+        assert_eq!(rows.iter().map(|r| r["name"].clone()).collect::<Vec<_>>(), vec![json!("Jellyfin Web"), json!("Jellyfin Android")]);
+        assert_eq!((rows[0]["plays"].clone(), rows[0]["watch_s"].clone()), (json!(3), json!(1100)));
+        assert_eq!(rows[0]["by"], json!({ "Movie": [1, 600], "Episode": [1, 300], "Audio": [1, 200], "Other": [0, 0] }));
+        let one = split_of(&c, Group::Client, SplitBy::Type, Rank::Plays, 1);
+        assert_eq!(one["rows"].as_array().unwrap().len(), 1, "no more than asked for");
+    }
+
+    /// People, split by how they played: the name is the person's as Jellyfin has it, and the id travels with it.
+    #[test]
+    fn a_breakdown_by_person_splits_by_stream_type_and_ranks_by_what_was_asked() {
+        let c = graphs_conn();
+        let v = split_of(&c, Group::User, SplitBy::Method, Rank::Watch, 10);
+        assert_eq!(v["keys"], json!(["DirectPlay", "DirectStream", "Transcode"]));
+        let rows = v["rows"].as_array().unwrap();
+        assert_eq!((rows[0]["id"].clone(), rows[0]["name"].clone()), (json!("u1"), json!("alice")), "alice watched longer");
+        assert_eq!(rows[0]["by"], json!({ "DirectPlay": [1, 600], "DirectStream": [0, 0], "Transcode": [1, 300] }));
+        assert_eq!(rows[1]["by"]["DirectStream"], json!([1, 300]));
+    }
+
+    /// The source is the file's resolution; the stream is what was sent, which a video transcode changes. Music has none.
+    #[test]
+    fn stream_resolution_is_what_a_transcode_sent_and_source_resolution_is_the_file() {
+        let c = graphs_conn();
+        let names = |g| split_of(&c, g, SplitBy::Method, Rank::Plays, 10)["rows"].as_array().unwrap().iter().map(|r| (r["name"].as_str().unwrap().to_string(), r["plays"].as_i64().unwrap())).collect::<Vec<_>>();
+        assert_eq!(names(Group::SourceResolution), vec![("1080p".to_string(), 2), ("4K".to_string(), 1)]);
+        assert_eq!(names(Group::StreamResolution), vec![("1080p".to_string(), 2), ("720p".to_string(), 1)]);
+    }
+
+    /// Day by day the series has no gaps; month by month it runs from the first month to this one.
+    #[test]
+    fn a_breakdown_over_time_is_gap_free_by_day_and_by_month() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let now: i64 = c.query_row("SELECT CAST(strftime('%s', 'now') AS INTEGER)", [], |r| r.get(0)).unwrap();
+        c.execute(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, play_method, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 'Transcode', ?1, ?1 + 60, 60),
+               ('live', 'u1', 'alice', 'i2', 'Sintel', 'Movie', 'DirectPlay', ?2, ?2 + 60, 60)",
+            [now - 2 * 86_400, now - 60],
+        )
+        .unwrap();
+        let days = split_of(&c, Group::Day, SplitBy::Method, Rank::Plays, 10);
+        assert_eq!(days["bucket"], json!("day"));
+        let rows = days["rows"].as_array().unwrap();
+        assert_eq!(rows.len(), 3, "the empty day between is there");
+        assert_eq!((rows[0]["by"]["Transcode"].clone(), rows[1]["plays"].clone(), rows[2]["by"]["DirectPlay"].clone()), (json!([1, 60]), json!(0), json!([1, 60])));
+
+        c.execute("INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES ('live', 'u1', 'alice', 'i3', 'Old', 'Episode', ?1, ?1 + 60, 60)", [now - 75 * 86_400]).unwrap();
+        let months = split_of(&c, Group::Month, SplitBy::Type, Rank::Plays, 10);
+        assert_eq!(months["bucket"], json!("month"));
+        let rows = months["rows"].as_array().unwrap();
+        let this: String = c.query_row("SELECT strftime('%Y-%m', 'now', 'localtime')", [], |r| r.get(0)).unwrap();
+        let first: String = c.query_row("SELECT strftime('%Y-%m', ?1, 'unixepoch', 'localtime')", [now - 75 * 86_400], |r| r.get(0)).unwrap();
+        assert_eq!((rows[0]["date"].as_str().unwrap(), rows.last().unwrap()["date"].as_str().unwrap()), (first.as_str(), this.as_str()));
+        assert!((3..=4).contains(&rows.len()), "every month between, even one without a play");
+        assert_eq!(rows.iter().map(|r| r["plays"].as_i64().unwrap()).sum::<i64>(), 3);
+        assert_eq!(rows[0]["by"]["Episode"], json!([1, 60]));
+    }
+
+    #[test]
+    fn a_breakdown_is_asked_for_by_name() {
+        assert_eq!(Group::asked("client"), Some(Group::Client));
+        assert_eq!(Group::asked("stream_resolution"), Some(Group::StreamResolution));
+        assert_eq!(Group::asked("month"), Some(Group::Month));
+        assert_eq!(Group::asked("p.client; DROP TABLE playbacks"), None);
+        assert_eq!(SplitBy::asked(Some("method")), SplitBy::Method);
+        assert_eq!(SplitBy::asked(None), SplitBy::Type);
+    }
+
+    /// Each bucket of the peak says the most of each way of playing at once that day, as Tautulli-style graphs draw it.
+    #[test]
+    fn the_peak_of_each_day_is_split_by_stream_type() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let now: i64 = c.query_row("SELECT CAST(strftime('%s', 'now') AS INTEGER)", [], |r| r.get(0)).unwrap();
+        c.execute(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, play_method, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 'Transcode',  ?1, ?1 + 600, 600),
+               ('live', 'u2', 'bob',   'i2', 'Sintel',         'Movie', 'Transcode',  ?1 + 10, ?1 + 600, 590),
+               ('live', 'u3', 'carol', 'i3', 'Tears of Steel', 'Movie', 'DirectPlay', ?1 + 20, ?1 + 600, 580)",
+            [now - 3600],
+        )
+        .unwrap();
+        let scope = Scope { days: 1, ..everyone() }.resolve(&c).unwrap();
+        let v = concurrency(&c, &scope, &scope.cond()).unwrap();
+        let today = v["series"].as_array().unwrap().last().unwrap().clone();
+        assert_eq!(today["peak"], json!(3));
+        assert_eq!(today["by"], json!({ "Transcode": 2, "DirectStream": 0, "DirectPlay": 1 }));
     }
 }
