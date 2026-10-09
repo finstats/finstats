@@ -447,7 +447,11 @@ async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms
     // `features`: which optional pages have something behind them (a connected Sonarr, a Seerr, …). `jellyfin_details`:
     // a title's page in Jellyfin is this followed by its id, for a link offered where the answer had none to give (a menu).
     let jellyfin_details = crate::stats::jellyfin_base(app).map(|b| crate::jellyfin::web_link(&b, ""));
-    json!({ "id": id, "name": name, "is_admin": is_admin, "has_image": has_image, "permissions": perms, "features": crate::services::features(app), "jellyfin_details": jellyfin_details })
+    // `public_url`: the address FinStats is reached at, for a link made in the page (a calendar feed's); the settings
+    // that hold it are a manager's to read.
+    let public_url = Some(app.settings().public_url.trim_end_matches('/').to_string()).filter(|u| !u.is_empty());
+    json!({ "id": id, "name": name, "is_admin": is_admin, "has_image": has_image, "permissions": perms, "features": crate::services::features(app),
+            "jellyfin_details": jellyfin_details, "public_url": public_url })
 }
 
 /// What Jellyfin has just said about somebody it let in, written to their users row: a session reads that
@@ -1010,5 +1014,21 @@ mod me_tests {
         // The page of a title is this followed by its id: one rule for the link, `jellyfin::web_link`'s.
         assert_eq!(me().await["jellyfin_details"], json!(crate::jellyfin::web_link("https://jellyfin.example.com/", "")));
         assert_eq!(me().await["jellyfin_details"], json!("https://jellyfin.example.com/web/#/details?id="));
+    }
+
+    /// Everybody signed in is told the address FinStats is reached at, so a calendar feed's link is made with it. It was
+    /// read from the settings, which only a manager may read: anybody else got a 403 and a link that works only at home.
+    #[tokio::test]
+    async fn me_says_the_address_finstats_is_reached_at() {
+        let app = crate::state::test_app();
+        let me = || user_json(&app, "u1", "alice", false, Perms::default());
+        assert_eq!(me().await["public_url"], Value::Null, "none set, none said");
+        app.update_settings(|s| {
+            s.public_url = "https://stats.example.com/".into();
+            Ok(())
+        })
+        .await
+        .unwrap();
+        assert_eq!(me().await["public_url"], json!("https://stats.example.com"), "without the slash a path is put after");
     }
 }
