@@ -2188,6 +2188,46 @@ pub async fn split(State(app): State<App>, user: AuthUser, Query(q): Query<Split
     Ok(Json(scoped(&app, &user, &filter, move |c, s| breakdown(c, s, group, by, rank, limit)).await?))
 }
 
+// ---------------------------------------------------------------- a profile's four figures
+
+/// The spans a profile shows: today, the last 7 and 30 days, and all time.
+const SPANS: [i64; 4] = [1, 7, 30, 0];
+
+/// Plays and time watched over every one of `SPANS`, for whoever and wherever `scope` names, in one pass: a page that
+/// fetched a whole list per span to find one row in it read every person's or library's plays four times.
+pub(crate) fn spans(conn: &Connection, scope: &Scope) -> Result<Vec<Value>> {
+    let cond = Scope { days: 0, since: None, ..scope.clone() }.cond();
+    let mut parts = vec![];
+    for days in SPANS {
+        // Each span starts where the pages' own `days` would: local midnight `days - 1` days ago.
+        let since = Scope { days, ..scope.clone() }.resolve(conn)?.since;
+        let within = since.map_or("1".to_string(), |s| format!("p.started_at >= {s}"));
+        parts.push(format!("COALESCE(SUM({within}), 0), COALESCE(SUM(CASE WHEN {within} THEN p.duration_s END), 0)"));
+    }
+    let sql = format!("SELECT {} FROM visible_playbacks p {}", parts.join(", "), cond.sql());
+    let row: Vec<i64> = conn.query_row(&sql, params_from_iter(cond.args.iter()), |r| (0..SPANS.len() * 2).map(|i| r.get(i)).collect())?;
+    Ok(SPANS.iter().enumerate().map(|(i, d)| json!({ "days": d, "plays": row[2 * i], "watch_s": row[2 * i + 1] })).collect())
+}
+
+/// `/api/stats/spans`: the four figures and whose or which they are (the person's row as `/api/users` gives it, or the
+/// library's as `/api/libraries` does), so a profile is one request.
+fn spans_answer(conn: &Connection, scope: &Scope) -> Result<Value> {
+    let whole = Scope { days: 0, since: None, ..scope.clone() };
+    let user = match scope.user_ids.as_slice() {
+        [one] => user_rows(conn, &Scope { user_ids: vec![], ..whole.clone() }, Some(one))?.into_iter().next(),
+        _ => None,
+    };
+    let library = match &scope.library_id {
+        Some(l) => library_rows(conn, &whole, Some(l))?.into_iter().next(),
+        None => None,
+    };
+    Ok(json!({ "user": user, "library": library, "spans": spans(conn, scope)? }))
+}
+
+pub async fn spans_handler(State(app): State<App>, user: AuthUser, Query(q): Query<FilterQuery>) -> ApiResult {
+    Ok(Json(scoped(&app, &user, &FilterQuery { days: None, ..q }, spans_answer).await?))
+}
+
 /// Every part of `/api/stats/insights`, in the order they are answered.
 const INSIGHTS: [&str; 8] = ["concurrency", "network", "data_bytes", "genres", "client_methods", "completion", "behaviour", "failed_logins"];
 
@@ -3397,5 +3437,47 @@ mod tests {
         assert!(people.contains(&(json!("u1"), json!(true))) && people.contains(&(json!("u2"), json!(false))), "{people:?}");
         let film = &top(&c, &cond, "movies", 10, Rank::Plays).unwrap()[0];
         assert_eq!((film["has_image"].clone(), film["has_backdrop"].clone()), (json!(true), json!(false)));
+    }
+
+    /// A profile's four figures (today, the last 7 and 30 days, all time) come from one pass over one person's or one
+    /// library's plays, counted as every other page counts them: whole local days, and only plays long enough to count.
+    #[test]
+    fn the_spans_of_a_profile_are_one_pass_counted_like_every_page() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let now: i64 = c.query_row("SELECT CAST(strftime('%s', 'now') AS INTEGER)", [], |r| r.get(0)).unwrap();
+        c.execute(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, library_id, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 'l1', ?1, ?1 + 600, 600),
+               ('live', 'u1', 'alice', 'i2', 'Sintel', 'Movie', 'l1', ?2, ?2 + 300, 300),
+               ('live', 'u1', 'alice', 'i3', 'Tears of Steel', 'Movie', 'l1', ?3, ?3 + 200, 200),
+               ('live', 'u1', 'alice', 'i4', 'A trailer', 'Movie', 'l1', ?1, ?1 + 10, 10),
+               ('live', 'u2', 'bob', 'i1', 'Big Buck Bunny', 'Movie', 'l2', ?1, ?1 + 600, 600)",
+            [now - 60, now - 3 * 86_400, now - 100 * 86_400],
+        )
+        .unwrap();
+        let scope = Scope { user_ids: vec!["u1".into()], min_play_s: 30, ..everyone() };
+        let got: Vec<(i64, i64, i64)> = spans(&c, &scope).unwrap().iter().map(|s| (s["days"].as_i64().unwrap(), s["plays"].as_i64().unwrap(), s["watch_s"].as_i64().unwrap())).collect();
+        assert_eq!(got, vec![(1, 1, 600), (7, 2, 900), (30, 2, 900), (0, 3, 1100)], "the trailer is too short to count, and bob is not alice");
+        for d in [1, 7, 30, 0] {
+            let one = Scope { days: d, ..scope.clone() }.resolve(&c).unwrap();
+            let t = totals(&c, &one.cond()).unwrap();
+            let s = spans(&c, &scope).unwrap().into_iter().find(|s| s["days"] == json!(d)).unwrap();
+            assert_eq!((s["plays"].clone(), s["watch_s"].clone()), (t["plays"].clone(), t["watch_s"].clone()), "{d} days counts as the totals do");
+        }
+        let lib = Scope { library_id: Some("l2".into()), ..everyone() };
+        assert_eq!(spans(&c, &lib).unwrap()[3]["plays"], json!(1));
+
+        // The page's subject comes with them, so a profile is one request: the person's row, or the library's.
+        c.execute_batch("INSERT INTO users(id, name, is_admin, image_tag, updated_at) VALUES ('u1', 'alice', 0, 'abc', 0);
+                         INSERT INTO libraries(id, name, collection_type, updated_at) VALUES ('l2', 'Films', 'movies', 0);").unwrap();
+        let person = spans_answer(&c, &scope).unwrap();
+        assert_eq!((person["user"]["name"].clone(), person["user"]["has_image"].clone(), person["spans"][3]["plays"].clone()), (json!("alice"), json!(true), json!(3)));
+        assert_eq!(person["library"], Value::Null);
+        let shelf = spans_answer(&c, &lib).unwrap();
+        assert_eq!((shelf["library"]["name"].clone(), shelf["user"].clone()), (json!("Films"), Value::Null));
+        assert_eq!(spans_answer(&c, &Scope { user_ids: vec!["nobody".into()], ..everyone() }).unwrap()["user"], Value::Null, "nobody by that id");
     }
 }

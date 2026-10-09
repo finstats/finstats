@@ -47,6 +47,7 @@ pub fn router(app: App) -> Router {
         .route("/stats/playback", get(stats::playback))
         .route("/stats/insights", get(stats::insights))
         .route("/stats/split", get(stats::split))
+        .route("/stats/spans", get(stats::spans_handler))
         .route("/stats/files", get(stats::file_signals))
         .route("/stats/groups", get(groups::groups))
         .route("/library/insights", get(stats::library_insights))
