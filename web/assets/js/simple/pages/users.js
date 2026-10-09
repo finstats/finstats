@@ -33,7 +33,7 @@ function table(users) {
         network ? h('td', { class: 'mono' }, u.last_ip || 'n/a') : null,
         h('td', null, u.last_client || ''),
         h('td', null, u.last_device || ''),
-        h('td', null, u.last_item_id ? h('a', { href: `/items/${u.last_item_id}` }, u.last_item_name) : u.last_item_name || 'n/a'),
+        h('td', null, u.last_item_id && u.last_item_exists !== false ? h('a', { href: `/items/${u.last_item_id}` }, u.last_item_name) : u.last_item_name || 'n/a'),
         sorted(u.plays, num(u.plays)),
         sorted(u.watch_s, longDuration(u.watch_s)));
     }))));
@@ -122,7 +122,7 @@ export function userPage(ctx) {
       const seen = new Set();
       const watched = ((d.recent && d.recent.rows) || []).filter((p) => { const k = p.series_id || p.item_id; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 18);
       const recent = watched.length ? box({ id: 'simple-user-recent', title: 'Recently Watched', icon: 'repeat',
-        body: shelf({ label: 'Recently watched', items: watched.map((p) => mediaCard({ href: `/items/${p.series_id || p.item_id}`, poster: poster(p.image_item_id, p.series_name || p.item_name, { w: 240, cls: 'fui-poster--grid' }),
+        body: shelf({ label: 'Recently watched', items: watched.map((p) => mediaCard({ href: p.item_exists !== false ? `/items/${p.series_id || p.item_id}` : null, poster: poster(p.image_item_id, p.series_name || p.item_name, { w: 240, cls: 'fui-poster--grid' }),
           name: p.series_name || p.item_name, sub: relTime(p.ended_at) })) }) }) : null;
       return [box({ id: 'simple-global', title: 'Global Stats', icon: 'trendUp', body: globalStats(d.spans) }), apps, recent].filter(Boolean);
     },

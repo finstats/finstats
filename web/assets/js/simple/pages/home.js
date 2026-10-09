@@ -204,7 +204,7 @@ function ranked(id, title, rows, { by, href, picture, backdrop = true }) {
 }
 
 function watchCards(d, by) {
-  const titles = (id, title, rows, measureBy) => ranked(id, title, rowsOf(rows), { by: measureBy, href: (r) => (r.id ? `/items/${r.id}` : null),
+  const titles = (id, title, rows, measureBy) => ranked(id, title, rowsOf(rows), { by: measureBy, href: (r) => (r.id && r.item_exists !== false ? `/items/${r.id}` : null),
     picture: (r) => poster(r.image_item_id, r.name, { w: 200 }) });
   const watched = (d.watched && d.watched.rows) || [];
   const recent = watched.length ? statCard({ title: 'Recently watched', art: art(watched[0].image_item_id), picture: poster(watched[0].image_item_id, watched[0].series_name || watched[0].item_name, { w: 200 }),

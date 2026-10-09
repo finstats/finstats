@@ -30,7 +30,7 @@ function holds(l) {
 function lastPlayed(l) {
   if (!l.last_item_id) return h('span', { class: 'muted' }, 'n/a');
   const words = l.last_series_name ? `${l.last_series_name} - ${l.last_item_name}` : l.last_item_name;
-  return h('span', { class: 'simple-title' }, h('span', { class: 'simple-kind', 'aria-hidden': 'true' }, icon(KIND_ICON[l.last_item_type] || 'play', 14)), h('a', { href: `/items/${l.last_item_id}` }, words));
+  return h('span', { class: 'simple-title' }, h('span', { class: 'simple-kind', 'aria-hidden': 'true' }, icon(KIND_ICON[l.last_item_type] || 'play', 14)), l.last_item_exists !== false ? h('a', { href: `/items/${l.last_item_id}` }, words) : h('span', null, words));
 }
 
 function table(libs) {
@@ -112,7 +112,7 @@ export function libraryPage(ctx) {
       const seen = new Set();
       const watched = ((d.recent && d.recent.rows) || []).filter((p) => { const k = p.series_id || p.item_id; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 18);
       const recent = watched.length ? box({ id: 'simple-library-recent', title: 'Recently Watched', icon: 'repeat',
-        body: shelf({ label: 'Recently watched', items: watched.map((p) => mediaCard({ href: `/items/${p.series_id || p.item_id}`, poster: poster(p.image_item_id, p.series_name || p.item_name, { w: 240, cls: 'fui-poster--grid' }),
+        body: shelf({ label: 'Recently watched', items: watched.map((p) => mediaCard({ href: p.item_exists !== false ? `/items/${p.series_id || p.item_id}` : null, poster: poster(p.image_item_id, p.series_name || p.item_name, { w: 240, cls: 'fui-poster--grid' }),
           name: p.series_name || p.item_name, sub: relTime(p.ended_at) })) }) }) : null;
       return [box({ id: 'simple-global', title: 'Global Stats', icon: 'trendUp', body: globalStats(d.spans) }), people, recent].filter(Boolean);
     },
