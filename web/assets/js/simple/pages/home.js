@@ -72,11 +72,14 @@ export default function home(ctx) {
 
   // ---- watch statistics
   const grid = h('div');
+  // The measure is drawn from outside the answer, and the view draws an answer only when it differs from the last: when
+  // both rankings come back the same, switching would change nothing on screen. So a switch draws what is here again.
+  let lastStats = null;
   const stats = dataView({
     container: grid, signal: ctx.signal,
     skeleton: () => statCards(Array.from({ length: 6 }, () => sk.cardRows(ROWS))),
     fetch: () => loadStats({ days, by }, ctx.signal),
-    render: (d) => statCards(watchCards(d, by)),
+    render: (d) => { lastStats = d; return statCards(watchCards(d, by)); },
   });
   const sync = () => replaceQuery({ days: days === 30 ? null : days, by: by === 'plays' ? null : by });
   const daysField = h('input', { class: 'simple-days__field', id: 'simple-days', type: 'number', min: '1', max: '3650', value: String(days), 'aria-label': 'Days' });
@@ -88,7 +91,11 @@ export default function home(ctx) {
   daysField.addEventListener('change', setDays);
   daysField.addEventListener('keydown', (e) => { if (e.key === 'Enter') setDays(); });
   const tools = [
-    segmented({ label: 'Rank by', value: by, options: MEASURES, onChange: (v) => { by = v; store.set(BY_KEY, v); sync(); stats.load(); } }),
+    segmented({ label: 'Rank by', value: by, options: MEASURES, onChange: (v) => {
+      by = v; store.set(BY_KEY, v); sync();
+      if (lastStats) mount(grid, statCards(watchCards(lastStats, by)));
+      stats.load();
+    } }),
     h('label', { class: 'simple-days', for: 'simple-days' }, h('span', null, 'Last'), daysField, h('span', null, 'days')),
   ];
 
