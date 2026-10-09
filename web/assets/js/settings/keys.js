@@ -4,7 +4,7 @@
 
 import { h, icon, num, mount, relEl, dateTime } from '../dom.js';
 import { api, isAbort } from '../api.js';
-import { isAdmin } from '../state.js';
+import { isAdmin, state } from '../state.js';
 import { card, sk, setBusy, inlineError, errorState, formField, segmented, copyButton, avatar } from '../components.js';
 import { plainTable } from '../tables.js';
 import { button } from '../../finui/components/button/button.js';
@@ -23,8 +23,9 @@ export default {
     const body = h('div', { class: 'net-stack' }, sk.rows(2));
     mount(slot, card({ title: 'API keys', sub: 'A key does what you may do, no more, and stops the moment your access does', body, id: 'keys' }));
     let data = null, revealed = null, pending = null, err = null, scope = 'full';
-    const settings = await store.loadSettings().catch(() => null);
-    const base = (settings && settings.public_url ? settings.public_url.replace(/\/+$/, '') : '');
+    // FinStats' own address, which /auth/me tells everybody: the settings that hold it are a manager's to read, and
+    // reading them made a 403 for anybody else and a feed link that only worked at home.
+    const base = (state.user && state.user.public_url) || '';
 
     async function load() {
       try { data = await api.get('/keys', null, { signal: store.signal }); }
@@ -42,7 +43,8 @@ export default {
         h('div', { class: 'key-line' }, h('code', { class: 'mono key-token' }, k.key), copyButton(k.key, 'Copy key')),
         isCal ? [h('p', { class: 'fui-field__help' }, 'Subscribe your calendar to this address. It opens the feed and nothing else.'),
           h('div', { class: 'key-line' }, h('code', { class: 'mono key-token' }, feedUrl(k.key)), copyButton(feedUrl(k.key), 'Copy address')),
-          settings && !base ? h('p', { class: 'fui-field__help' }, 'FinStats does not know its own address yet, so this one only works from inside. Set it under Notifications for a link that works from your phone.') : null]
+          // Only an administrator can set the address (it is one of the access settings), so only they are told to.
+          !base && isAdmin() ? h('p', { class: 'fui-field__help' }, 'FinStats does not know its own address yet, so this one only works from inside. Set it under Notifications for a link that works from your phone.') : null]
         : h('p', { class: 'fui-field__help' }, ['Send it as ', h('code', { class: 'mono' }, 'Authorization: Bearer ' + k.key.slice(0, 7) + '…'), ' with every request.']),
         h('div', { class: 'form-actions' }, button({ size: 'sm', type: 'button', onClick: () => { revealed = null; paint(); } }, 'Done')));
     }
