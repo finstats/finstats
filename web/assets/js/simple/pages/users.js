@@ -5,7 +5,7 @@
 import { h, icon, num, relTime, dateTime } from '../../dom.js';
 import { api } from '../../api.js';
 import { can } from '../../state.js';
-import { dataView, poster, avatar, sk, errorState } from '../../components.js';
+import { dataView, poster, avatar, sk, emptyState } from '../../components.js';
 import { dataTable } from '../../tables.js';
 import { tileStat, tileStats } from '../../../finui/components/tile-stat/tile-stat.js';
 import { shelf } from '../../../finui/components/shelf/shelf.js';
@@ -108,7 +108,7 @@ export function userPage(ctx) {
     container: body, signal: ctx.signal, skeleton: () => sk.cardRows(6),
     fetch: () => loadUser(id, ctx.signal),
     render: (d) => {
-      if (!d.user) return errorState('No such person', 'They may have been removed from Jellyfin, or their page is not yours to see.');
+      if (!d.user) return emptyState('No such person', 'They may have been removed from Jellyfin, or their page is not yours to see.');
       named(d.user);
       const apps = d.clients && d.clients.rows.length ? box({ id: 'simple-player-stats', title: 'Player Stats', icon: 'monitor',
         body: tileStats(d.clients.rows.map((c) => tileStat({ picture: platformTile(c.name, 80), name: c.name, figure: num(c.plays), unit: c.plays === 1 ? 'play' : 'plays' }))) }) : null;

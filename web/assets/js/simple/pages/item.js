@@ -5,7 +5,7 @@
 import { h, icon, num, relTime } from '../../dom.js';
 import { api, imgItem } from '../../api.js';
 import { can } from '../../state.js';
-import { dataView, poster, avatar, sk, errorState } from '../../components.js';
+import { dataView, poster, avatar, sk, emptyState } from '../../components.js';
 import { breadcrumb } from '../../../finui/components/breadcrumb/breadcrumb.js';
 import { mediaCard, mediaGrid } from '../../../finui/components/media-card/media-card.js';
 import { tileStat, tileStats } from '../../../finui/components/tile-stat/tile-stat.js';
@@ -95,7 +95,7 @@ export default function itemPage(ctx) {
     container: body, signal: ctx.signal, skeleton: () => sk.cardRows(6),
     fetch: () => loadItem(id, ctx.signal),
     render: (d) => {
-      if (!d || !d.item) return errorState('No such title', 'It may have been removed from Jellyfin.');
+      if (!d || !d.item) return emptyState('No such title', 'It may have been removed from Jellyfin.');
       top(d);
       const t = d.totals || {};
       const figures = box({ id: 'simple-global', title: 'Global Stats', icon: 'trendUp', body: statFigures([

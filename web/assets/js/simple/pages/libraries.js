@@ -5,7 +5,7 @@
 import { h, icon, num, relTime } from '../../dom.js';
 import { api } from '../../api.js';
 import { can } from '../../state.js';
-import { dataView, poster, avatar, sk, errorState } from '../../components.js';
+import { dataView, poster, avatar, sk, emptyState } from '../../components.js';
 import { dataTable } from '../../tables.js';
 import { tile, tileStat, tileStats } from '../../../finui/components/tile-stat/tile-stat.js';
 import { shelf } from '../../../finui/components/shelf/shelf.js';
@@ -104,7 +104,7 @@ export function libraryPage(ctx) {
     container: body, signal: ctx.signal, skeleton: () => sk.cardRows(6),
     fetch: () => loadLibrary(id, ctx.signal),
     render: (d) => {
-      if (!d.library) return errorState('No such library', 'It may have been removed from Jellyfin.');
+      if (!d.library) return emptyState('No such library', 'It may have been removed from Jellyfin.');
       ctx.title(d.library.name);
       head.replaceChildren(tabs({ text: d.library.name, type: d.library.collection_type }));
       const people = d.users && d.users.rows.length ? box({ id: 'simple-user-stats', title: 'User Stats', icon: 'users',
