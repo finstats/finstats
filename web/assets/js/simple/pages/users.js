@@ -4,7 +4,7 @@
 
 import { h, icon, num, relTime, dateTime } from '../../dom.js';
 import { api } from '../../api.js';
-import { can } from '../../state.js';
+import { can, state } from '../../state.js';
 import { dataView, poster, avatar, sk, emptyState } from '../../components.js';
 import { dataTable } from '../../tables.js';
 import { tileStat, tileStats } from '../../../finui/components/tile-stat/tile-stat.js';
@@ -80,6 +80,13 @@ function addresses(ips) {
 
 export function userPage(ctx) {
   const id = ctx.params.id;
+  // Somebody else's page, for a person who may see only their own: every list on it would be narrowed to their own
+  // plays by the server, and the History tab showed exactly that under the other person's address.
+  if (!can('see_everyone') && id !== state.user.id) {
+    ctx.title('Not found');
+    ctx.root.append(emptyState('No such person', 'They may have been removed from Jellyfin, or their page is not yours to see.'));
+    return;
+  }
   const network = can('see_network');
   const tab = ['history', 'ips'].includes(ctx.query.get('tab')) && (ctx.query.get('tab') !== 'ips' || network) ? ctx.query.get('tab') : 'profile';
   const head = h('div');
