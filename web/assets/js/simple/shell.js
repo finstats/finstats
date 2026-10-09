@@ -1,5 +1,5 @@
 // Simple mode's shell: FinUI's top bar, solid, across the top of every page. FinStats' name and mark on the left; on the
-// right the search, the sections (Home as an icon) and a gear for settings, the theme and signing out. Below 820 px the
+// right the search, the sections (Home as an icon) and a gear for settings, the patch notes, the theme and signing out. Below 820 px the
 // sections fold into one menu button. Esc steps back out of a detail page, as it does in the FinStats layout.
 
 import { h, icon, logo, mount, debounce } from '../dom.js';
@@ -41,6 +41,7 @@ function gear() {
   const btn = dropdownMenu({ label: 'Settings and account', icon: 'settings', iconOnly: true, items: () => [
     { label: 'My profile', icon: 'user', href: `/users/${state.user.id}` },
     { label: 'Settings', icon: 'settings', href: '/settings' },
+    { label: 'Patch notes', icon: 'tag', href: '/changelog' },
     { separator: true },
     ...['device', 'light', 'dark'].map((t) => ({ label: THEME_LABEL[t], icon: t === 'light' ? 'sun' : t === 'dark' ? 'moon' : 'monitor', hint: themeChoice() === t ? '✓' : null, onSelect: () => setTheme(t) })),
     { separator: true },
