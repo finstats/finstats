@@ -453,6 +453,8 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, rank: 
         _ => "watch_s DESC, plays DESC",
     };
     let agg = "COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT p.user_id) AS users, MAX(p.ended_at) AS last_played";
+    // Whether the title has a poster and a backdrop, so a page asks for neither when it is not there.
+    let pictures = "(i.image_tag IS NOT NULL) AS has_image, (i.backdrop_tag IS NOT NULL) AS has_backdrop";
     let (sql, cond) = match kind {
         "movies" | "music" => {
             let ty = if kind == "movies" { "Movie" } else { "Audio" };
@@ -460,7 +462,7 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, rank: 
             let c = cond.with("p.item_type = ?", ty.to_string());
             (
                 format!(
-                    "SELECT p.item_id AS id, COALESCE(i.name, MAX(p.item_name)) AS name, {sub} AS sub, p.item_id AS image_item_id, {agg}
+                    "SELECT p.item_id AS id, COALESCE(i.name, MAX(p.item_name)) AS name, {sub} AS sub, p.item_id AS image_item_id, {agg}, {pictures}
                      FROM visible_playbacks p LEFT JOIN items i ON i.id = p.item_id {} GROUP BY p.item_id ORDER BY {order} LIMIT {limit}",
                     c.sql()
                 ),
@@ -472,7 +474,7 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, rank: 
             (
                 format!(
                     "SELECT p.series_id AS id, COALESCE(i.name, MAX(p.series_name), 'Unknown series') AS name,
-                            CAST(i.production_year AS TEXT) AS sub, p.series_id AS image_item_id, {agg}
+                            CAST(i.production_year AS TEXT) AS sub, p.series_id AS image_item_id, {agg}, {pictures}
                      FROM visible_playbacks p LEFT JOIN items i ON i.id = p.series_id {}
                      GROUP BY COALESCE(p.series_id, p.series_name) ORDER BY {order} LIMIT {limit}",
                     c.sql()
@@ -482,7 +484,7 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, rank: 
         }
         "users" => (
             format!(
-                "SELECT p.user_id AS id, COALESCE(u.name, MAX(p.user_name)) AS name, NULL AS sub, NULL AS image_item_id,
+                "SELECT p.user_id AS id, COALESCE(u.name, MAX(p.user_name)) AS name, NULL AS sub, NULL AS image_item_id, (u.image_tag IS NOT NULL) AS has_image,
                         COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s, MAX(p.ended_at) AS last_played
                  FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id ORDER BY {order} LIMIT {limit}",
                 cond.sql()
@@ -1229,7 +1231,7 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
         let watchers = rows_json(
             c,
             &format!(
-                "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) AS user_name, COUNT(*) AS plays,
+                "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) AS user_name, (u.image_tag IS NOT NULL) AS has_image, COUNT(*) AS plays,
                         COALESCE(SUM(p.duration_s), 0) AS watch_s, MAX(p.ended_at) AS last_played_at
                  FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id ORDER BY watch_s DESC LIMIT 50",
                 cond.sql()
@@ -1564,7 +1566,7 @@ pub async fn person_detail(State(app): State<App>, user: AuthUser, Path(id): Pat
         let watchers = rows_json(
             c,
             &format!(
-                "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) AS user_name, COUNT(*) AS plays,
+                "SELECT p.user_id, COALESCE(u.name, MAX(p.user_name)) AS user_name, (u.image_tag IS NOT NULL) AS has_image, COUNT(*) AS plays,
                         COALESCE(SUM(p.duration_s), 0) AS watch_s, MAX(p.ended_at) AS last_played_at
                  FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id {} GROUP BY p.user_id ORDER BY watch_s DESC LIMIT 50",
                 cond.sql()
@@ -3378,5 +3380,22 @@ mod tests {
         let today = v["series"].as_array().unwrap().last().unwrap().clone();
         assert_eq!(today["peak"], json!(3));
         assert_eq!(today["by"], json!({ "Transcode": 2, "DirectStream": 0, "DirectPlay": 1 }));
+    }
+
+    /// A ranked list says whether each person or title has a picture (and a title a backdrop), so a page asks for none that
+    /// is not there: a person without one was a 404 in every card that listed them.
+    #[test]
+    fn a_top_list_says_which_rows_have_a_picture() {
+        let c = graphs_conn();
+        c.execute_batch(
+            "UPDATE users SET image_tag = 'abc' WHERE id = 'u1';
+             INSERT INTO items(id, name, type, image_tag, backdrop_tag, updated_at) VALUES ('i1', 'Big Buck Bunny', 'Movie', 'p1', NULL, 0);",
+        )
+        .unwrap();
+        let cond = everyone().resolve(&c).unwrap().cond();
+        let people: Vec<(Value, Value)> = top(&c, &cond, "users", 10, Rank::Plays).unwrap().iter().map(|r| (r["id"].clone(), r["has_image"].clone())).collect();
+        assert!(people.contains(&(json!("u1"), json!(true))) && people.contains(&(json!("u2"), json!(false))), "{people:?}");
+        let film = &top(&c, &cond, "movies", 10, Rank::Plays).unwrap()[0];
+        assert_eq!((film["has_image"].clone(), film["has_backdrop"].clone()), (json!(true), json!(false)));
     }
 }
