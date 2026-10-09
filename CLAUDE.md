@@ -820,10 +820,12 @@ Users and a person, a title, History, Graphs, Settings. **It is chosen per brows
 and `main.js` is a bootstrap that imports `simple/app.js` or `app.js` (the FinStats layout, unchanged), both ending in
 `boot.js`; Simple mode never fetches FinStats' pages, `shell.js`, `widgets.js` or FinMotion, and imports the pages it
 shares (sign-in, Settings, licences, patch notes) only when opened. Pages FinStats has and it does not (Recap, Together,
-Pipeline, Security, Server and the rest) are no page there. **It has its own look whatever FinUI preset a person wears**:
-`simple-tokens.css` (charcoal and orange in the dark, paper and orange in the light, IBM Plex Sans, every colour
-`light-dark()`, and still: FinUI's Motion: Off and FinMotion's springs set to nothing on the root) is a token file like
-FinUI's own, the only other place a colour may be written (`finui::tests::no_colour_literal_outside_the_tokens`).
+Pipeline, Security, Server and the rest) are no page there. **It wears FinStats' own colours**, the person's FinUI
+preset in the light and the dark like every other page (the owner's decision: an orange look of its own was too close
+to the stats server it imitates); `simple-tokens.css` holds only what makes it read like a classic stats page (IBM Plex
+Sans, squarer corners, no card shadow) and its stillness (FinUI's Motion: Off and FinMotion's springs set to nothing on
+the root), and no colour (`finui::tests::no_colour_literal_outside_the_tokens` holds it like any stylesheet). Its charts
+put the kinds of media in FinStats' order, so films, episodes and music wear their colours there too.
 **Everything it asks goes through the same `Scope`**: its cards and tables read the FinStats layout's endpoints
 (`sort=users`, `watched=1`, `parts=`, the peak split, the heatmap's `by_type`, a library's and a person's last play, a
 session's `is_local`), and Most popular and Most active users are drawn only with `see_everyone`. Graphs has the set a
