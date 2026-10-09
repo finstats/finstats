@@ -1,49 +1,12 @@
-/* Simple mode's tokens: the layout's whole look, whatever FinUI preset the person wears, every colour light-dark(). Dark
-   is charcoal with an orange accent; light is the same on paper. A token file, like FinUI's tokens.css and a preset's:
-   the only place outside those where a colour may be written. theme.js writes it, then simple.css, for a browser that
-   chose the layout. */
+/* Simple mode's tokens: what makes the layout read like a classic stats page, and nothing of colour. It wears FinStats'
+   own colours (the person's FinUI preset, light and dark) like every other page; here are only its face, its squarer
+   corners and its stillness. theme.js writes it, then simple.css, for a browser that chose the layout. */
 
 /* IBM Plex Sans: SIL Open Font License 1.1, fonts/LICENSE-IBMPlexSans.txt (the face FinUI's Font option declares). */
 @font-face { font-family: "IBM Plex Sans Variable"; font-style: normal; font-weight: 100 700; font-display: swap; src: url("fonts/ibm-plex-sans-latin-ext-wght-normal.woff2") format("woff2-variations"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 @font-face { font-family: "IBM Plex Sans Variable"; font-style: normal; font-weight: 100 700; font-display: swap; src: url("fonts/ibm-plex-sans-latin-wght-normal.woff2") format("woff2-variations"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
 
 :root[data-layout="simple"] {
-  --bg: light-dark(#f1eee7, #282828);
-  --page-glow: transparent;
-  --page-bg: var(--bg);
-  --bg-2: light-dark(#fdfcf9, #333333);
-  --bg-lift: light-dark(#ffffff, #3c3c3c);
-  --bg-sunken: light-dark(#e4dfd4, #121212);
-  --hover: light-dark(rgba(0, 0, 0, .06), #3a3a3a);
-  --btn-hover: light-dark(rgba(0, 0, 0, .1), #454545);
-  --border: light-dark(#d4cdbd, #444444);
-  --border-soft: light-dark(#e2dccf, #3a3a3a);
-  --border-strong: light-dark(#bdb4a0, #555555);
-  --text: light-dark(#23201b, #e6e6e6);
-  --text-muted: light-dark(#575249, #b3b3b3);
-  --text-faint: light-dark(#6a6457, #959595);
-  --text-strong: light-dark(#14120f, #ffffff);
-  --text-hero: var(--text-strong);
-  --accent: light-dark(#a25607, #e5a00d);
-  --accent-hi: light-dark(#8c4a05, #f0b43a);
-  --accent-hover: light-dark(#8c4a05, #cc8e0b);
-  --accent-wash: light-dark(color-mix(in srgb, #a25607 12%, transparent), rgba(229, 160, 13, .14));
-  --selection: light-dark(color-mix(in srgb, #a25607 24%, transparent), rgba(229, 160, 13, .35));
-  --on-accent: light-dark(#ffffff, #1b1b1b);
-  --series-1: light-dark(#a25607, #e5a00d);
-  --series-2: light-dark(#3d3a35, #f2f2f2);
-  --series-3: light-dark(#b0323a, #e5484d);
-  --series-4: light-dark(#2f6db0, #4c9be8);
-  --single: var(--accent);
-  --peak: var(--accent-hi);
-  --spark: var(--accent);
-  --grid: light-dark(#e2dccf, #3a3a3a);
-  --axis: light-dark(#c9c0ad, #555555);
-  --wash-2: light-dark(#e4dfd4, #444444);
-  --wash-2-text: light-dark(#3d3a35, #e6e6e6);
-  --placeholder: light-dark(#e4dfd4, #3a3a3a);
-  --skeleton: light-dark(#e4dfd4, #3a3a3a);
-  --track: light-dark(#e2dccf, #4a4a4a);
   --sans: "IBM Plex Sans Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-heading: var(--sans);
   --radius: 3px;
@@ -53,9 +16,6 @@
   --radius-field: 3px;
   --density: 1;
   --card-shadow: none;
-  --selected-bg: var(--accent-wash);
-  --selected-icon: var(--accent);
-  --focus-color: var(--accent);
   /* Still: FinUI's own Motion: Off, and FinMotion's springs (set on the root itself, so they need no re-deriving). */
   --ease: 0s;
   --icon-cycle: 0s;
