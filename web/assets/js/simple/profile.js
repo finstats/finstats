@@ -4,7 +4,7 @@
 import { h, icon, num } from '../dom.js';
 import { statFigure, statFigures, durationMeasure } from '../../finui/components/stat-figure/stat-figure.js';
 
-/** The spans the global figures cover, as /api/libraries and /api/users count them: whole local days, or all time. */
+/** The spans the global figures cover, as /api/stats/spans answers them: whole local days, or all time. */
 export const SPANS = [[1, 'Today'], [7, 'Last 7 days'], [30, 'Last 30 days'], [0, 'All time']];
 
 /** The header: picture, name, and tabs as links ([{ label, href, current }]); the open one marked. */

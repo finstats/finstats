@@ -11,7 +11,7 @@ import { tileStat, tileStats } from '../../../finui/components/tile-stat/tile-st
 import { shelf } from '../../../finui/components/shelf/shelf.js';
 import { mediaCard } from '../../../finui/components/media-card/media-card.js';
 import { platformTile, longDuration } from '../platform.js';
-import { SPANS, profileHead, box, globalStats } from '../profile.js';
+import { profileHead, box, globalStats } from '../profile.js';
 import { historyList } from '../history.js';
 
 export const loadUsers = (signal) => api.get('/users', { days: 0 }, { signal });
@@ -53,17 +53,17 @@ export function usersPage(ctx) {
   ctx.root.append(h('div', { class: 'simple-panel-head' }, h('h1', { class: 'simple-page-title' }, icon('users', 22), 'All Users')), h('div', { class: 'simple-panel' }, body));
 }
 
-/** A person's page, in one go: their row over each span, the apps they play on, and what they watched lately. */
+/** A person, their four figures and who they are in one answer (it was the whole list once per span). */
+const loadSpans = (id, signal) => api.get('/stats/spans', { user_id: id }, { signal });
+
+/** A person's page, in one go: who they are and their figures, the apps they play on, and what they watched lately. */
 export function loadUser(id, signal) {
   const o = { signal };
   return Promise.all([
-    ...SPANS.map(([days]) => api.get('/users', { days }, o)),
+    loadSpans(id, signal),
     api.get('/stats/top', { days: 0, kind: 'clients', user_id: id, limit: 24, sort: 'plays' }, o),
     api.get('/activity', { days: 0, user_id: id, page: 1, per_page: 30 }, o),
-  ]).then(([today, week, month, ever, clients, recent]) => {
-    const mine = (d) => (d.users || []).find((u) => u.id === id) || null;
-    return { user: mine(ever), spans: [today, week, month, ever].map(mine), clients, recent };
-  });
+  ]).then(([p, clients, recent]) => ({ user: p.user, spans: p.spans, clients, recent }));
 }
 export const prefetchUser = ({ params, signal }) => [() => loadUser(params.id, signal)];
 
@@ -100,7 +100,7 @@ export function userPage(ctx) {
   ctx.root.append(head, body);
   if (tab !== 'profile') {
     // The header needs only the name; each tab asks for its own list.
-    api.get('/users', { days: 0 }, { signal: ctx.signal }).then((d) => { const u = (d.users || []).find((x) => x.id === id); if (u) named(u); }).catch(() => {});
+    loadSpans(id, ctx.signal).then((d) => { if (d.user) named(d.user); }).catch(() => {});
     if (tab === 'history') {
       const list = historyList(ctx, { id: 'simple-user-history', fixed: { user_id: id } });
       body.append(h('div', { class: 'simple-panel-head' }, h('h2', { class: 'simple-page-title' }, 'History'), h('div', { class: 'simple-head__tools' }, list.tools)), list.el);

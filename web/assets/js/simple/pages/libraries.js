@@ -11,7 +11,7 @@ import { tile, tileStat, tileStats } from '../../../finui/components/tile-stat/t
 import { shelf } from '../../../finui/components/shelf/shelf.js';
 import { mediaCard } from '../../../finui/components/media-card/media-card.js';
 import { libraryIcon, longDuration } from '../platform.js';
-import { SPANS, profileHead, box, globalStats } from '../profile.js';
+import { profileHead, box, globalStats } from '../profile.js';
 import { historyList } from '../history.js';
 
 const TYPE = { movies: 'Movie', tvshows: 'Show', music: 'Artist', musicvideos: 'Music video', books: 'Book', homevideos: 'Video', boxsets: 'Collection' };
@@ -68,17 +68,17 @@ export function librariesPage(ctx) {
   ctx.root.append(h('div', { class: 'simple-panel-head' }, h('h1', { class: 'simple-page-title' }, icon('library', 22), 'All Libraries')), h('div', { class: 'simple-panel' }, body));
 }
 
-/** A library's page, in one go: its row over each span, who watches it (with see_everyone), and what was watched in it. */
+/** A library, its four figures and which it is in one answer (it was the whole list once per span). */
+const loadSpans = (id, signal) => api.get('/stats/spans', { library_id: id }, { signal });
+
+/** A library's page, in one go: which it is and its figures, who watches it (with see_everyone), and what was watched in it. */
 export function loadLibrary(id, signal) {
   const o = { signal };
   return Promise.all([
-    ...SPANS.map(([days]) => api.get('/libraries', { days }, o)),
+    loadSpans(id, signal),
     can('see_everyone') ? api.get('/stats/top', { days: 0, kind: 'users', library_id: id, limit: 24, sort: 'plays' }, o) : null,
     api.get('/activity', { days: 0, library_id: id, page: 1, per_page: 30 }, o),
-  ]).then(([today, week, month, ever, users, recent]) => {
-    const mine = (d) => (d.libraries || []).find((l) => l.id === id) || null;
-    return { library: mine(ever), spans: [today, week, month, ever].map(mine), users, recent };
-  });
+  ]).then(([p, users, recent]) => ({ library: p.library, spans: p.spans, users, recent }));
 }
 export const prefetchLibrary = ({ params, signal }) => [() => loadLibrary(params.id, signal)];
 
@@ -92,8 +92,8 @@ export function libraryPage(ctx) {
   ctx.root.append(head, body);
   if (history) {
     // The header needs only the library's name; the list asks for its own plays.
-    api.get('/libraries', { days: 0 }, { signal: ctx.signal }).then((d) => {
-      const l = (d.libraries || []).find((x) => x.id === id);
+    loadSpans(id, ctx.signal).then((d) => {
+      const l = d.library;
       if (l) { ctx.title(l.name); head.replaceChildren(tabs({ text: l.name, type: l.collection_type })); }
     }).catch(() => {});
     const list = historyList(ctx, { id: 'simple-library-history', fixed: { library_id: id } });
