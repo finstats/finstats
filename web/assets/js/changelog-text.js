@@ -13,7 +13,8 @@ export function inline(text) {
   let m;
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index));
-    out.push(m[1] != null ? h('strong', null, m[1]) : m[2] != null ? h('em', null, m[2]) : h('code', { class: 'mono cl-code' }, m[3]));
+    // Emphasis may hold code (**a broken `%`-escape**), so what it holds is drawn the same way.
+    out.push(m[1] != null ? h('strong', null, inline(m[1])) : m[2] != null ? h('em', null, inline(m[2])) : h('code', { class: 'mono cl-code' }, m[3]));
     last = re.lastIndex;
   }
   if (last < text.length) out.push(text.slice(last));
