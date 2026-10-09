@@ -824,9 +824,13 @@ Pipeline, Security, Server and the rest) are no page there. **It has its own loo
 `simple-tokens.css` (charcoal and orange in the dark, paper and orange in the light, IBM Plex Sans, every colour
 `light-dark()`, and still: FinUI's Motion: Off and FinMotion's springs set to nothing on the root) is a token file like
 FinUI's own, the only other place a colour may be written (`finui::tests::no_colour_literal_outside_the_tokens`).
-**It asks nothing a page of the FinStats layout does not**, through the same `Scope`: its cards, tables and charts read the
-same endpoints (`sort=users`, `watched=1`, `parts=`, the peak split, the heatmap's `by_type`, a library's and a person's
-last play, a session's `is_local`), and Most popular and Most active users are drawn only with `see_everyone`. Now playing
+**Everything it asks goes through the same `Scope`**: its cards and tables read the FinStats layout's endpoints
+(`sort=users`, `watched=1`, `parts=`, the peak split, the heatmap's `by_type`, a library's and a person's last play, a
+session's `is_local`), and Most popular and Most active users are drawn only with `see_everyone`. Graphs has the set a
+classic stats page draws (Media Type, Stream Type, Play Totals) and the one query of its own, `stats::breakdown`
+(`/api/stats/split`): plays by app, person, source or sent resolution, day or month, each split by kind of media or by
+how it played, the day's rule shared with `overview.daily` through `periods`; the concurrency series says each day's most
+of each way of playing. Now playing
 runs on `nowplaying.js`, the clock and loader both layouts share, with its own stream cards. Its components are FinUI's
 (`stat-card`, `stream-card`, `tile-stat`, `stat-figure`, the solid `top-bar`), developed here and copied to `../finui`.
 History, a library's, a person's and a title's History tab are one server-sorted table (`simple/history.js`). No
