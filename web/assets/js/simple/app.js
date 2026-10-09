@@ -33,7 +33,7 @@ route('/graphs', graphs, { prefetch: prefetchGraphs });
 route('/settings', settings);
 route('/settings/:section', settings);
 route('/settings/:section/:task', settings);
-route('/changelog', later(() => import('../pages/changelog.js').then((m) => m.default)));
+route('/changelog', later(() => import('./pages/changelog.js').then((m) => m.default)));
 route('/licenses', later(() => import('../pages/licenses.js').then((m) => m.default)));
 route('*', (ctx) => {
   ctx.title('Not found');

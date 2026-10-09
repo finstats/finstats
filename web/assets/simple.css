@@ -136,3 +136,19 @@
 .simple-app .fui-sections__link.is-active { background: var(--hover); box-shadow: none; color: var(--accent); }
 .simple-app .fui-sections__link.is-active .icon { color: var(--accent); }
 @media (max-width: 820px) { .simple-app .fui-sections__nav { padding: 0; background: none; } .simple-app .fui-sections__link { border-top: 0; } }
+
+/* Patch notes: a release a block, its kinds named once over plain lists, in a column a line can be read across. */
+.simple-changelog__body { padding: 8px 24px 24px; }
+.simple-release { max-width: 860px; padding: 22px 0; border-top: 1px solid var(--border-soft); scroll-margin-top: 68px; }
+.simple-release:first-child { border-top: 0; }
+.simple-release__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 0; font-size: 20px; font-weight: 650; color: var(--text-strong); }
+.simple-release__head:focus { outline: none; }
+.simple-release__day { font-size: 14px; font-weight: 400; color: var(--text-muted); }
+.simple-release__now { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--accent-wash); color: var(--accent); font-size: 12px; font-weight: 600; }
+.simple-release__title { margin: 6px 0 0; font-size: 15px; color: var(--text); }
+.simple-release__kind { margin: 16px 0 6px; font-size: 13px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.simple-release__notes { margin: 0; padding-left: 20px; list-style: disc; font-size: 14px; line-height: 1.55; color: var(--text); }
+.simple-release__notes li + li { margin-top: 6px; }
+.simple-release__notes code { padding: 0 4px; border-radius: var(--radius-sm); background: var(--bg-sunken); font-size: .9em; }
+.simple-select { height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-field); background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+@media (max-width: 560px) { .simple-changelog__body { padding: 4px 14px 18px; } .simple-release__head { font-size: 18px; } }
