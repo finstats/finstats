@@ -119,7 +119,11 @@
 .simple-tabs--boxed { gap: 4px; margin-bottom: 16px; }
 .simple-tabs--boxed a { padding: 6px 12px; border-radius: var(--radius-control); }
 .simple-tabs--boxed a[aria-current="page"] { background: var(--accent); color: var(--on-accent); }
-.simple-graphs__note { margin: 0 0 14px; font-size: 14px; color: var(--text-muted); }
+.simple-graph { min-width: 0; }
+.simple-graph__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; font-size: 17px; font-weight: 600; }
+.simple-graph__title .icon { align-self: center; color: var(--text-muted); }
+.simple-graph__title small { font-size: 13px; font-weight: 400; color: var(--text-muted); }
+.simple-graph__help { margin: 4px 0 12px; font-size: 13px; color: var(--text-muted); }
 .simple-graphs__body > * + * { margin-top: 22px; }
 .simple-graphs__pair { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
 
