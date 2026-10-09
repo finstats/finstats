@@ -2,12 +2,14 @@
 // of a line and of a ring's slice, how busy a heat cell is, and numbers said compactly. Pure; tested in FinUI's repository.
 
 const dust = (n) => Number(n.toPrecision(12));
-/** Round ticks from 0 (or below) covering `min`…`max`, about `count` of them: steps of 1, 2, 2.5 or 5 times a power of ten. */
-export function niceTicks(min, max, count = 4) {
+/** Round ticks from 0 (or below) covering `min`…`max`, about `count` of them: steps of 1, 2, 2.5 or 5 times a power of ten,
+ *  and only whole ones with `whole`. */
+export function niceTicks(min, max, count = 4, { whole = false } = {}) {
   if (!(max > min)) return [min, min + 1];
   const raw = (max - min) / Math.max(1, count);
   const pow = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw);
+  // Whole things are counted in whole steps: 2.5 or 0.5 of a play would be printed rounded, and the axis would lie.
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw && (!whole || Number.isInteger(s))) || Math.ceil(raw);
   const out = [];
   for (let v = Math.floor(min / step) * step; v < max + step * 0.999; v += step) out.push(dust(v));
   return out;

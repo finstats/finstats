@@ -24,7 +24,7 @@ export function barChart({ title = null, sub = null, categories, series, format 
   let spec = null;
   hoverable(box, () => spec, `${title || 'A bar chart'}: ${categories.length} columns, the highest ${format(Math.max(...totals, 0))}`);
   sized(box, (width) => {
-    const ticks = niceTicks(0, Math.max(...totals, 0), 4);
+    const ticks = niceTicks(0, Math.max(...totals, 0), 4, { whole: all.every((x) => x.values.every((v) => Number.isInteger(v || 0))) });
     const m = { top: 8, right: 4, bottom: 22, left: Math.max(28, 8 + 7 * Math.max(...ticks.map((t) => format(t).length))) };
     const pw = width - m.left - m.right, ph = height - m.top - m.bottom;
     const y = linear([0, ticks[ticks.length - 1]], [m.top + ph, m.top]);

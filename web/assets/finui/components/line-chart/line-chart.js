@@ -18,7 +18,7 @@ export function lineChart({ title = null, sub = null, labels, series, format = c
   hoverable(box, () => spec, `${title || 'A line chart'}: ${labels[0]} to ${labels[labels.length - 1]}`);
   sized(box, (width) => {
     const top = Math.max(0, ...all.flatMap((x) => x.values));
-    const ticks = niceTicks(0, top, 4);
+    const ticks = niceTicks(0, top, 4, { whole: all.every((x) => x.values.every((v) => Number.isInteger(v || 0))) });
     const m = { top: 10, right: 10, bottom: 22, left: Math.max(28, 8 + 7 * Math.max(...ticks.map((t) => format(t).length))) };
     const pw = width - m.left - m.right, ph = height - m.top - m.bottom;
     const y = linear([0, ticks[ticks.length - 1]], [m.top + ph, m.top]);
