@@ -104,7 +104,7 @@ export default function itemPage(ctx) {
         statFigure({ label: 'Last played', measures: [[[t.last_played_at ? relTime(t.last_played_at) : 'never', null]]] }),
       ].filter(Boolean)) });
       const watchers = can('see_everyone') && (d.watchers || []).length ? box({ id: 'simple-user-stats', title: 'User Stats', icon: 'users',
-        body: tileStats(d.watchers.map((w) => tileStat({ picture: avatar(w.user_id, w.user_name, { size: 80 }), name: w.user_name, href: `/users/${w.user_id}`, figure: num(w.plays), unit: w.plays === 1 ? 'play' : 'plays' }))) }) : null;
+        body: tileStats(d.watchers.map((w) => tileStat({ picture: avatar(w.user_id, w.user_name, { size: 80, hasImage: w.has_image }), name: w.user_name, href: `/users/${w.user_id}`, figure: num(w.plays), unit: w.plays === 1 ? 'play' : 'plays' }))) }) : null;
       return [...seasons(d.seasons || []), figures, watchers].filter(Boolean);
     },
   }).load();

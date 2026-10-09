@@ -108,7 +108,7 @@ export function libraryPage(ctx) {
       ctx.title(d.library.name);
       head.replaceChildren(tabs({ text: d.library.name, type: d.library.collection_type }));
       const people = d.users && d.users.rows.length ? box({ id: 'simple-user-stats', title: 'User Stats', icon: 'users',
-        body: tileStats(d.users.rows.map((u) => tileStat({ picture: avatar(u.id, u.name, { size: 80 }), name: u.name, href: `/users/${u.id}`, figure: num(u.plays), unit: u.plays === 1 ? 'play' : 'plays' }))) }) : null;
+        body: tileStats(d.users.rows.map((u) => tileStat({ picture: avatar(u.id, u.name, { size: 80, hasImage: u.has_image }), name: u.name, href: `/users/${u.id}`, figure: num(u.plays), unit: u.plays === 1 ? 'play' : 'plays' }))) }) : null;
       const seen = new Set();
       const watched = ((d.recent && d.recent.rows) || []).filter((p) => { const k = p.series_id || p.item_id; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 18);
       const recent = watched.length ? box({ id: 'simple-library-recent', title: 'Recently Watched', icon: 'repeat',

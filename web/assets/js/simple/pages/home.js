@@ -176,7 +176,7 @@ function stream(s) {
     paused: s.is_paused,
     title: { text: episode && s.series_name ? `${s.series_name} - ${s.item_name}` : s.item_name, href: `/items/${s.item_id}` },
     sub: episode ? { icon: 'tv', text: episodeCode(s.season_number, s.episode_number) || 'Episode' } : s.item_type === 'Audio' ? { icon: 'music', text: 'Track' } : { icon: 'film', text: 'Movie' },
-    who: h('span', { class: 'simple-who' }, h('span', { class: 'simple-who__name' }, s.user_name), avatar(s.user_id, s.user_name, { size: 34 })),
+    who: h('span', { class: 'simple-who' }, h('span', { class: 'simple-who__name' }, s.user_name), avatar(s.user_id, s.user_name, { size: 34, hasImage: s.user_has_image })),
   });
 }
 
@@ -190,7 +190,7 @@ const columnOf = (by) => (by === 'users' ? 'Users' : by === 'plays' ? 'Plays' : 
 /** A ranked card, or nothing when there is nothing to rank. */
 function ranked(id, title, rows, { by, href, picture, backdrop = true }) {
   if (!rows.length) return null;
-  const el = statCard({ title, column: columnOf(by), art: backdrop ? art(rows[0].image_item_id) : null, picture: picture(rows[0]),
+  const el = statCard({ title, column: columnOf(by), art: backdrop && rows[0].has_backdrop !== false ? art(rows[0].image_item_id) : null, picture: picture(rows[0]),
     rows: rows.slice(0, ROWS).map((r) => ({ href: href(r), name: r.name, value: measure(by, r) })) });
   el.dataset.card = id;
   return el;
@@ -217,7 +217,7 @@ function watchCards(d, by) {
     titles('popular-music', 'Most popular music', d.popMusic, 'users'),
     recent,
     ranked('libraries', 'Most active libraries', rowsOf(d.libraries), { by, backdrop: false, href: (r) => `/libraries/${r.id}`, picture: (r) => tile({ icon: libraryIcon(r.sub), tone: 'neutral', size: 64 }) }),
-    d.users ? ranked('users', 'Most active users', rowsOf(d.users), { by, backdrop: false, href: (r) => `/users/${r.id}`, picture: (r) => avatar(r.id, r.name, { size: 64 }) }) : null,
+    d.users ? ranked('users', 'Most active users', rowsOf(d.users), { by, backdrop: false, href: (r) => `/users/${r.id}`, picture: (r) => avatar(r.id, r.name, { size: 64, hasImage: r.has_image }) }) : null,
     ranked('platforms', 'Most active platforms', rowsOf(d.clients), { by, backdrop: false, href: () => null, picture: (r) => platformTile(r.name, 64) }),
     peak,
   ].filter(Boolean);
