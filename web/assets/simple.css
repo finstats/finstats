@@ -11,7 +11,6 @@
    held here, it no longer widens the page. */
 .simple-app .fui-top-bar__brand { font-size: 17px; letter-spacing: 0; font-weight: 650; }
 .simple-app .fui-top-bar__brand .brand-logo { display: block; }
-.simple-app .fui-top-bar__actions { gap: 4px; }
 .simple-menu-button { display: none; }
 .simple-search { position: relative; display: flex; align-items: center; }
 .simple-search__field { width: min(280px, 60vw); height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }

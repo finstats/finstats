@@ -21,6 +21,10 @@
 .fui-top-bar--solid .fui-top-bar__link { padding: 0 15px; border-bottom: 0; color: var(--text-muted); }
 .fui-top-bar--solid .fui-top-bar__link:hover { color: var(--text-strong); background: var(--bg); }
 .fui-top-bar--solid .fui-top-bar__link.is-active { color: var(--accent); background: var(--bg); }
+/* Its own controls, in the lead and among the actions, are as tall as the bar and light up as its sections do. */
+.fui-top-bar--solid :is(.fui-top-bar__lead, .fui-top-bar__actions) { align-self: stretch; align-items: stretch; gap: 0; }
+.fui-top-bar--solid :is(.fui-top-bar__lead, .fui-top-bar__actions) button { height: 100%; min-width: 46px; border-radius: 0; color: var(--text-muted); }
+.fui-top-bar--solid :is(.fui-top-bar__lead, .fui-top-bar__actions) button:hover { color: var(--text-strong); background: var(--bg); }
 /* The gallery's bar, in a frame rather than at the top of the window. */
 .fui-top-bar__demo { width: 100%; }
 .fui-top-bar__demo > .fui-top-bar { position: static; }
