@@ -15,8 +15,9 @@ import { barChart } from '../../../finui/components/bar-chart/bar-chart.js';
 const TABS = [{ key: 'media', label: 'Media Type' }, { key: 'streams', label: 'Stream Type' }, { key: 'totals', label: 'Play Totals' }];
 const MEASURES = [{ value: 'plays', label: 'Play Count' }, { value: 'duration', label: 'Play Duration' }];
 const DAYS_KEY = 'finstats.simpleGraphDays', MONTHS_KEY = 'finstats.simpleGraphMonths', BY_KEY = 'finstats.simpleBy';
-// The parts a breakdown is split into, as the answer names them, in the order a series takes its colour.
-const KINDS = { Episode: 'TV', Movie: 'Movies', Audio: 'Music', Other: 'Other' };
+// The parts a breakdown is split into, as the answer names them, in the order a series takes its colour. The kinds of media
+// are in FinStats' order, so each wears the colour it has on every other chart (films, episodes, music, the rest).
+const KINDS = { Movie: 'Movies', Episode: 'TV', Audio: 'Music', Other: 'Other' };
 const METHODS = { DirectPlay: 'Direct Play', DirectStream: 'Direct Stream', Transcode: 'Transcode' };
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
@@ -119,8 +120,8 @@ function partsOf(answer, names, rows = answer?.rows || []) {
   const held = keys.filter((k) => rows.some((r) => r.by && r.by[k] && r.by[k][0]));
   return (held.length ? held : keys.slice(0, 3)).map((k) => [k, names[k]]);
 }
-// TV leads, as on a classic stats page: the answer's order is the database's.
-const kindsOf = (answer, rows) => partsOf({ ...answer, keys: Object.keys(KINDS) }, KINDS, rows);
+/** Films, TV and music always, each keeping its colour even when it has nothing; the rest only when it holds something. */
+const kindsOf = (answer, rows = []) => Object.entries(KINDS).filter(([k], i) => i < 3 || rows.some((r) => r.by && r.by[k] && r.by[k][0]));
 
 /** A series of days or months as lines, one per part. */
 function overTime(answer, parts, by, label) {
