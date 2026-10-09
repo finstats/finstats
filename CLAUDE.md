@@ -819,7 +819,9 @@ Users and a person, a title, History, Graphs, Settings. **It is chosen per brows
 `theme.js` marks `<html data-layout="simple">` before the first paint and writes its two stylesheets after the others,
 and `main.js` is a bootstrap that imports `simple/app.js` or `app.js` (the FinStats layout, unchanged), both ending in
 `boot.js`; Simple mode never fetches FinStats' pages, `shell.js`, `widgets.js` or FinMotion, and imports the pages it
-shares (sign-in, Settings, licences, patch notes) only when opened. Pages FinStats has and it does not (Recap, Together,
+shares (sign-in, Settings, licences) only when opened. Its Patch notes are a page of its own (`simple/pages/changelog.js`:
+every release, each kind named once over a plain list, a version list to jump by), drawing the words through
+`changelog-text.js` as the FinStats layout's page does. Pages FinStats has and it does not (Recap, Together,
 Pipeline, Security, Server and the rest) are no page there. **It wears FinStats' own colours**, the person's FinUI
 preset in the light and the dark like every other page (the owner's decision: an orange look of its own was too close
 to the stats server it imitates); `simple-tokens.css` holds only what makes it read like a classic stats page (IBM Plex
