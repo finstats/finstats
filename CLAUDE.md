@@ -1005,6 +1005,12 @@ tests, builds amd64 and arm64 on native runners (no QEMU), and publishes `:edge`
 `Cargo.toml` or has no changelog entry, so the release commit and its tag must be pushed together. Docs always point at the published
 image, never at a locally built tag.
 
+## Logos
+
+The logos' masters, their PNGs and the brand guidelines live in the branding repository (`../FinBranding`).
+This repository keeps byte-identical copies of the three SVGs it serves, `web/assets/logo.svg`, `mark-light.svg` and `mark-dark.svg`: the rounded tile for the README and the favicon, the bare marks for the sidebar, top bar, sign-in and public profile (`apple-touch-icon.png` and `web/favicon.ico` stay here too). A logo changes
+there first and is copied here in the same sitting; no other logo file (a `logo/` folder of PNGs) belongs here.
+
 ## No em-dashes
 
 **No em-dash is used anywhere in the fin\* repositories on GitHub** (FinStats, FinUI, FinMotion): not in code, comments,
