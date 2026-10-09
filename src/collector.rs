@@ -114,6 +114,8 @@ struct Started {
     counters: Option<(i64, i64, Option<i64>)>,
     /// Whether it plays from home, as its row was written to say (`network::classify`); `None` without an address.
     is_local: Option<bool>,
+    /// Whether its person has a picture, so a page asks for none that is not there.
+    user_has_image: bool,
 }
 
 /// Every play first seen in one pass, written in one transaction: the same person, item and device moments after a play
@@ -125,6 +127,11 @@ fn start_plays(c: &mut crate::db::rusqlite::Connection, plays: Vec<PlayRecord>, 
     for probe in plays {
         let start = |detail: Option<&str>| PlayEvent { at: now, kind: "start", position_s: probe.position_s, from_s: None, detail: detail.map(str::to_string) };
         let is_local = match probe.remote_ip.as_deref() { Some(ip) => crate::network::classify(&tx, ip)?, None => None };
+        let user_has_image: bool = tx
+            .prepare_cached("SELECT image_tag IS NOT NULL FROM users WHERE id = ?1")?
+            .query_row([&probe.user_id], |r| r.get(0))
+            .optional()?
+            .unwrap_or(false);
         // Same person, same item, same device, moments later: that's one viewing.
         let resumed = tx
             .prepare_cached(
@@ -141,6 +148,7 @@ fn start_plays(c: &mut crate::db::rusqlite::Connection, plays: Vec<PlayRecord>, 
                     paused: r.get::<_, i64>(3)? as f64,
                     counters: Some((r.get(4)?, r.get(5)?, r.get(6)?)),
                     is_local,
+                    user_has_image,
                 })
             })
             .optional()?
@@ -152,7 +160,7 @@ fn start_plays(c: &mut crate::db::rusqlite::Connection, plays: Vec<PlayRecord>, 
         } else {
             let row_id = probe.insert(&tx)?.expect("live rows have no source_id and cannot collide");
             insert_events(&tx, row_id, &[start(None)])?;
-            out.push(Started { row_id, started_at: probe.started_at, watched: 0.0, paused: 0.0, counters: None, is_local });
+            out.push(Started { row_id, started_at: probe.started_at, watched: 0.0, paused: 0.0, counters: None, is_local, user_has_image });
         }
     }
     tx.commit()?;
@@ -273,6 +281,8 @@ struct Tracked {
     is_paused: bool,
     /// Whether it plays from home, decided when it was first written.
     is_local: Option<bool>,
+    /// Whether its person has a picture, read when it started.
+    user_has_image: bool,
     last_tick: Instant,
     last_persist: Instant,
     transcode_progress: Option<f64>,
@@ -382,7 +392,7 @@ fn live_json(key: &str, t: &Tracked) -> Value {
         "is_paused": t.is_paused,
         "started_at": r.started_at, "watched_s": t.watched.round() as i64,
         "client": r.client, "device_name": r.device_name, "app_version": r.app_version,
-        "remote_ip": r.remote_ip, "is_local": t.is_local,
+        "remote_ip": r.remote_ip, "is_local": t.is_local, "user_has_image": t.user_has_image,
         "play_method": r.play_method,
         "video": media::video_label(st.video_codec.as_deref(), st.width, st.height, st.video_range.as_deref()),
         "audio": media::audio_label(st.audio_codec.as_deref(), st.audio_channels, None),
@@ -1347,7 +1357,7 @@ async fn tick(
             tokio::spawn(async move { crate::notify::raise(&teller, event).await; });
             tracked.insert(
                 key,
-                Tracked { row_id, rec, watched: s.watched, paused: s.paused, is_paused, is_local: s.is_local, last_tick: tick_at, last_persist: tick_at, transcode_progress, unsaved: vec![] },
+                Tracked { row_id, rec, watched: s.watched, paused: s.paused, is_paused, is_local: s.is_local, user_has_image: s.user_has_image, last_tick: tick_at, last_persist: tick_at, transcode_progress, unsaved: vec![] },
             );
         }
     }
@@ -1564,8 +1574,21 @@ mod tests {
         let started = start_plays(&mut c, vec![from("alice", Some("192.168.1.10")), from("bob", Some("203.0.113.41")), from("carol", Some("198.51.100.7")), from("dave", None)], 5000, 600).unwrap();
         assert_eq!(started.iter().map(|s| s.is_local).collect::<Vec<_>>(), vec![Some(true), Some(false), Some(true), None]);
         let tracked = Tracked { row_id: started[1].row_id, rec: from("bob", Some("203.0.113.41")), watched: 0.0, paused: 0.0, is_paused: false, is_local: started[1].is_local,
-                                last_tick: Instant::now(), last_persist: Instant::now(), transcode_progress: None, unsaved: vec![] };
+                                user_has_image: false, last_tick: Instant::now(), last_persist: Instant::now(), transcode_progress: None, unsaved: vec![] };
         assert_eq!(live_json("k", &tracked)["is_local"], json!(false), "the live session says it too");
+    }
+
+    /// A play says whether its person has a picture, read once when it starts, so a page drawing it asks for no picture that
+    /// is not there; somebody the users read has not reached yet has none to ask for either.
+    #[test]
+    fn a_play_says_whether_its_person_has_a_picture_when_it_starts() {
+        let mut c = migrated();
+        c.execute_batch("INSERT INTO users(id, name, is_admin, image_tag, updated_at) VALUES ('alice', 'alice', 0, 'abc', 0), ('bob', 'bob', 0, NULL, 0);").unwrap();
+        let started = start_plays(&mut c, vec![playing("alice", "film", "phone"), playing("bob", "film", "tv"), playing("carol", "film", "pc")], 5000, 600).unwrap();
+        assert_eq!(started.iter().map(|s| s.user_has_image).collect::<Vec<_>>(), vec![true, false, false]);
+        let tracked = Tracked { row_id: started[0].row_id, rec: playing("alice", "film", "phone"), watched: 0.0, paused: 0.0, is_paused: false, is_local: None,
+                                user_has_image: started[0].user_has_image, last_tick: Instant::now(), last_persist: Instant::now(), transcode_progress: None, unsaved: vec![] };
+        assert_eq!(live_json("k", &tracked)["user_has_image"], json!(true), "the live session says it too");
     }
 
     /// A play resumed after its row went to the trash is a new play: continuing the deleted row would bring the evening
