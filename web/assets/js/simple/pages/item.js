@@ -82,10 +82,10 @@ export default function itemPage(ctx) {
         h('a', { href: `/items/${id}`, 'aria-current': history ? null : 'page' }, 'Profile'), h('a', { href: `/items/${id}?tab=history`, 'aria-current': history ? 'page' : null }, 'History')));
   };
   if (history) {
-    loadItem(id, ctx.signal).then((d) => { if (d && d.item) top(d); }).catch(() => {});
-    // A show's history is its episodes'; anything else is its own plays.
+    // A show's history is its episodes'; anything else is its own plays. One answer names the page and picks the list.
     loadItem(id, ctx.signal).then((d) => {
       if (ctx.signal.aborted || !d || !d.item) return;
+      top(d);
       const list = historyList(ctx, { id: 'simple-item-history', fixed: d.item.type === 'Series' ? { series_id: id } : { item_id: id } });
       body.append(h('div', { class: 'simple-panel-head' }, h('h2', { class: 'simple-page-title' }, 'History'), h('div', { class: 'simple-head__tools' }, list.tools)), list.el);
     }).catch(() => {});
