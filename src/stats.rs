@@ -16,7 +16,7 @@ use crate::media;
 use crate::playback::{PLAY_FRAC, SEEN_AT, STOP_MEASURED, STOP_S};
 use crate::state::{ApiError, ApiResult, App};
 
-const BOOL_COLS: [&str; 11] = ["active", "is_admin", "is_disabled", "removed", "has_image", "item_exists", "has_backdrop", "is_local", "is_favorite", "is_actor", "is_director"];
+const BOOL_COLS: [&str; 12] = ["active", "is_admin", "is_disabled", "removed", "has_image", "item_exists", "last_item_exists", "has_backdrop", "is_local", "is_favorite", "is_actor", "is_director"];
 const JSON_COLS: [&str; 7] = ["genres", "transcode", "studios", "provider_ids", "audio_languages", "subtitle_languages", "clients"];
 
 // ---------------------------------------------------------------- plumbing
@@ -454,7 +454,8 @@ pub(crate) fn top(conn: &Connection, cond: &Cond, kind: &str, limit: i64, rank: 
     };
     let agg = "COUNT(*) AS plays, COALESCE(SUM(p.duration_s), 0) AS watch_s, COUNT(DISTINCT p.user_id) AS users, MAX(p.ended_at) AS last_played";
     // Whether the title has a poster and a backdrop, so a page asks for neither when it is not there.
-    let pictures = "(i.image_tag IS NOT NULL) AS has_image, (i.backdrop_tag IS NOT NULL) AS has_backdrop";
+    // …and whether the library still has it, as a play says (`item_exists`), so a page links only to what is there.
+    let pictures = "(i.image_tag IS NOT NULL) AS has_image, (i.backdrop_tag IS NOT NULL) AS has_backdrop, (i.id IS NOT NULL AND i.removed = 0) AS item_exists";
     let (sql, cond) = match kind {
         "movies" | "music" => {
             let ty = if kind == "movies" { "Movie" } else { "Audio" };
@@ -938,7 +939,8 @@ fn user_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<Vec
                 u.last_login_at, u.last_activity_at,
                 COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s, l.last_played_at,
                 CASE WHEN l.series_name IS NOT NULL AND l.item_type = 'Episode' THEN l.series_name || ' · ' || l.item_name ELSE l.item_name END AS last_item_name,
-                l.item_id AS last_item_id, l.client AS last_client, l.device_name AS last_device, l.remote_ip AS last_ip
+                l.item_id AS last_item_id, l.client AS last_client, l.device_name AS last_device, l.remote_ip AS last_ip,
+                EXISTS (SELECT 1 FROM items i WHERE i.id = l.item_id AND i.removed = 0) AS last_item_exists
          FROM users u
          LEFT JOIN (SELECT p.user_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s FROM visible_playbacks p {} GROUP BY p.user_id) s ON s.user_id = u.id
          -- The last play's own columns beside MAX(): SQLite takes a plain column from the row that holds the maximum.
@@ -1081,7 +1083,8 @@ fn library_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<
                 COALESCE(c.artist_count, 0) AS artist_count, COALESCE(c.album_count, 0) AS album_count, COALESCE(c.track_count, 0) AS track_count,
                 COALESCE(c.size_bytes, 0) AS size_bytes,
                 COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s, s.last_played_at,
-                s.last_item_id, s.last_item_name, s.last_series_name, s.last_item_type
+                s.last_item_id, s.last_item_name, s.last_series_name, s.last_item_type,
+                EXISTS (SELECT 1 FROM items x WHERE x.id = s.last_item_id AND x.removed = 0) AS last_item_exists
          FROM libraries l
          LEFT JOIN (SELECT library_id,
                            SUM(type IN ('Movie', 'Series', 'Audio', 'MusicVideo', 'Video', 'Book', 'AudioBook')) AS item_count,
@@ -3479,5 +3482,34 @@ mod tests {
         let shelf = spans_answer(&c, &lib).unwrap();
         assert_eq!((shelf["library"]["name"].clone(), shelf["user"].clone()), (json!("Films"), Value::Null));
         assert_eq!(spans_answer(&c, &Scope { user_ids: vec!["nobody".into()], ..everyone() }).unwrap()["user"], Value::Null, "nobody by that id");
+    }
+
+    /// What a page links to is a title the library has: a person's and a library's last play, and every title a top list
+    /// names, say whether it is still there, as a play does (`item_exists`), so a removed or never-attached title is
+    /// named without a link to a page that would say "No such title".
+    #[test]
+    fn last_plays_and_top_titles_say_whether_the_library_still_has_them() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u1', 'alice', 0, 0), ('u2', 'bob', 0, 0);
+             INSERT INTO libraries(id, name, collection_type, updated_at) VALUES ('l1', 'Films', 'movies', 0), ('l2', 'Old', 'movies', 0);
+             INSERT INTO items(id, name, type, library_id, removed, updated_at) VALUES ('here', 'Big Buck Bunny', 'Movie', 'l1', 0, 0), ('gone', 'Sintel', 'Movie', 'l2', 1, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, library_id, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'here', 'Big Buck Bunny', 'Movie', 'l1', 100, 700, 600),
+               ('live', 'u2', 'bob', 'gone', 'Sintel', 'Movie', 'l2', 100, 700, 600),
+               ('import', 'u2', 'bob', 'plex:42', 'Elephants Dream', 'Movie', 'l2', 800, 1400, 600);",
+        )
+        .unwrap();
+        let scope = everyone().resolve(&c).unwrap();
+        let last = |rows: Vec<Value>, id: &str| rows.into_iter().find(|r| r["id"] == json!(id)).map(|r| r["last_item_exists"].clone()).unwrap();
+        assert_eq!(last(user_rows(&c, &scope, None).unwrap(), "u1"), json!(true));
+        assert_eq!(last(user_rows(&c, &scope, None).unwrap(), "u2"), json!(false), "bob last played a title never attached");
+        assert_eq!(last(library_rows(&c, &scope, None).unwrap(), "l1"), json!(true));
+        assert_eq!(last(library_rows(&c, &scope, None).unwrap(), "l2"), json!(false));
+        let films: Vec<(Value, Value)> = top(&c, &scope.cond(), "movies", 10, Rank::Plays).unwrap().into_iter().map(|r| (r["id"].clone(), r["item_exists"].clone())).collect();
+        assert!(films.contains(&(json!("here"), json!(true))) && films.contains(&(json!("gone"), json!(false))) && films.contains(&(json!("plex:42"), json!(false))), "{films:?}");
     }
 }
