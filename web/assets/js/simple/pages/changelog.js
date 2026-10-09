@@ -33,7 +33,7 @@ export default function changelogPage(ctx) {
     jump.value = '';
   });
   const body = h('div', { class: 'simple-panel simple-changelog__body' });
-  ctx.root.append(h('div', { id: 'simple-changelog' },
+  ctx.root.append(h('div', { id: 'simple-changelog', class: 'simple-changelog' },
     h('div', { class: 'simple-panel-head' }, h('h1', { class: 'simple-page-title' }, icon('tag', 22), 'Patch notes'), h('div', { class: 'simple-head__tools' }, jump)),
     body));
   dataView({
