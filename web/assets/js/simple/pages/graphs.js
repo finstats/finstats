@@ -107,7 +107,10 @@ const word = (by) => (by === 'plays' ? 'count' : 'duration');
 const Word = (by) => (by === 'plays' ? 'Play count' : 'Play duration');
 const fmt = (by) => (by === 'plays' ? compact : hm);
 const pick = (by, pair) => (pair ? (by === 'plays' ? pair[0] : pair[1]) : 0);
-const spanOf = (n, unit) => (n === 1 && unit === 'days' ? 'Today' : `Last ${n} ${unit}`);
+const spanOf = (n, unit) => (n === 1 ? (unit === 'days' ? 'Today' : 'This month') : `Last ${n} ${unit}`);
+// Past 120 days a series counts weeks, not days (overview.daily's rule), and its title says so.
+const every = (bucket) => (bucket === 'week' ? 'Weekly' : 'Daily');
+const each = (bucket) => (bucket === 'week' ? 'week' : 'day');
 
 /** A chart under its heading, with what it shows in a line: the way a classic stats page lays one out. */
 const graph = (iconName, title, span, help, chart, wide = false) => h('section', { class: ['simple-graph', wide && 'simple-graph--wide'] },
@@ -144,7 +147,7 @@ function media(d, by, days) {
   const grid = (axis, categories) => barChart({ categories, format: fmt(by), series: kinds.map(([k, name]) => ({ name, values: ((t[k] && t[k][axis]) || []).map((x) => pick(by, x)) })) });
   const ranked = (iconName, answer, title, help) => (answer && answer.rows.length ? graph(iconName, title, span, help, columns(answer, kindsOf(answer, answer.rows), by)) : null);
   return [
-    graph('activity', `Daily play ${word(by)} by media type`, span, `The total play ${word(by)} of TV, movies and music played each ${d.daily?.bucket === 'week' ? 'week' : 'day'}.`, overTime(d.daily, kinds, by, dayLabel), true),
+    graph('activity', `${every(d.daily?.bucket)} play ${word(by)} by media type`, span, `The total play ${word(by)} of TV, movies and music played each ${each(d.daily?.bucket)}.`, overTime(d.daily, kinds, by, dayLabel), true),
     pair(graph('calendar', `${Word(by)} by day of week`, span, 'TV, movies and music together, by the day of the week they were played.', grid('weekday', WEEKDAYS)),
       graph('clock', `${Word(by)} by hour of day`, span, 'TV, movies and music together, by the hour of the day they were played.', grid('hour', HOURS))),
     pair(ranked('monitor', d.clients, `${Word(by)} by top 10 platforms`, 'TV, movies and music together, on the ten apps that played the most.'),
@@ -161,9 +164,9 @@ function streams(d, by, days) {
     ...Object.entries(METHODS).map(([k, name]) => ({ name, values: c.series.map((b) => (b.by && b.by[k]) || 0) })),
     { name: 'Most at once', values: c.series.map((b) => b.peak) }] }) : null;
   return [
-    graph('video', `Daily play ${word(by)} by stream type`, span, `The total play ${word(by)} of TV, movies and music each ${d.daily?.bucket === 'week' ? 'week' : 'day'}, by whether it played as it is or was converted.`,
+    graph('video', `${every(d.daily?.bucket)} play ${word(by)} by stream type`, span, `The total play ${word(by)} of TV, movies and music each ${each(d.daily?.bucket)}, by whether it played as it is or was converted.`,
       overTime(d.daily, methods(d.daily), by, dayLabel), true),
-    peaks ? graph('video', 'Daily concurrent stream count by stream type', span, 'The most streams at once each day, of each kind and in all.', peaks, true) : null,
+    peaks ? graph('video', `${every(c.bucket)} concurrent stream count by stream type`, span, `The most streams at once each ${each(c.bucket)}, of each kind and in all.`, peaks, true) : null,
     pair(ranked('maximize', d.source, `${Word(by)} by source resolution`, 'TV and movies by the resolution of the file, before any conversion.'),
       ranked('maximize', d.stream, `${Word(by)} by stream resolution`, 'TV and movies by the resolution that was sent, after any conversion.')),
     pair(ranked('monitor', d.clients, `${Word(by)} by platform and stream type`, 'TV, movies and music by app and by how they played.'),
