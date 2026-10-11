@@ -936,8 +936,12 @@ pub async fn playback(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
 
 /// The users list's statement; with `one`, a single person's row, which then reads only that person's plays (the outer
 /// `WHERE` does not reach into the grouped subqueries). Arguments: the scope's, then the person three times when `one`.
-fn user_rows_sql(cond: &str, one: bool) -> String {
-    let (filter, theirs, only_theirs) = if one { ("WHERE u.id = ?", if cond.is_empty() { "WHERE p.user_id = ?" } else { "AND p.user_id = ?" }, "WHERE user_id = ?") } else { ("", "", "") };
+/// `min_play_s`: the last play is one long enough to count, as everywhere else; it is all-time, so the rest of `cond` (the
+/// window) is not its.
+fn user_rows_sql(cond: &str, one: bool, min_play_s: i64) -> String {
+    let (filter, theirs) = if one { ("WHERE u.id = ?", if cond.is_empty() { "WHERE p.user_id = ?" } else { "AND p.user_id = ?" }) } else { ("", "") };
+    let last: Vec<String> = [one.then(|| "user_id = ?".to_string()), (min_play_s > 0).then(|| format!("duration_s >= {min_play_s}"))].into_iter().flatten().collect();
+    let only_theirs = if last.is_empty() { String::new() } else { format!("WHERE {}", last.join(" AND ")) };
     format!(
         "SELECT u.id, u.name, u.is_admin, u.is_disabled, u.removed, (u.image_tag IS NOT NULL) AS has_image,
                 u.last_login_at, u.last_activity_at,
@@ -963,7 +967,7 @@ fn user_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<Vec
             args.push(id.to_string().into());
         }
     }
-    let sql = user_rows_sql(&cond.sql(), only.is_some());
+    let sql = user_rows_sql(&cond.sql(), only.is_some(), scope.min_play_s);
     let see_network = scope.perms.see_network;
     Ok(rows_json(conn, &sql, &args)?
         .into_iter()
@@ -2827,7 +2831,7 @@ mod tests {
     #[test]
     fn one_persons_row_reads_only_their_plays() {
         let c = conn();
-        let mut stmt = c.prepare(&format!("EXPLAIN QUERY PLAN {}", user_rows_sql("", true))).unwrap();
+        let mut stmt = c.prepare(&format!("EXPLAIN QUERY PLAN {}", user_rows_sql("", true, 30))).unwrap();
         let unbound = vec![crate::db::rusqlite::types::Value::Null; stmt.parameter_count()];
         let plan: Vec<String> = stmt.query_map(params_from_iter(unbound), |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
         assert!(!plan.iter().any(|p| p.starts_with("SCAN playbacks")), "{plan:?}");
@@ -2836,6 +2840,24 @@ mod tests {
         for row in &all {
             let id = row["id"].as_str().unwrap();
             assert_eq!(user_rows(&c, &scope, Some(id)).unwrap(), vec![row.clone()], "one person's row is their row in the list");
+        }
+    }
+
+    /// A person's last play is one their History shows: a few seconds under the minimum play length are not a play
+    /// anywhere else, and the row named that blip, the app and the address it came from.
+    #[test]
+    fn a_persons_last_play_is_one_long_enough_to_count() {
+        let c = conn();
+        c.execute_batch(
+            "INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u9', 'carol', 0, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, client) VALUES
+               ('live', 'u9', 'carol', 'i1', 'Big Buck Bunny', 'Movie', 100, 700, 600, 'Web'),
+               ('live', 'u9', 'carol', 'i2', 'Sintel', 'Movie', 900, 905, 5, 'Android')",
+        )
+        .unwrap();
+        let scope = Scope { min_play_s: 30, ..everyone() }.resolve(&c).unwrap();
+        for row in [user_rows(&c, &scope, None).unwrap().into_iter().find(|r| r["id"] == "u9").unwrap(), user_rows(&c, &scope, Some("u9")).unwrap().remove(0)] {
+            assert_eq!((row["last_item_id"].clone(), row["last_client"].clone(), row["last_played_at"].clone()), (json!("i1"), json!("Web"), json!(700)), "{row}");
         }
     }
 
