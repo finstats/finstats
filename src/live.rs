@@ -481,7 +481,18 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
             }
         }
         // A subscription or a re-read is answered from a fresh reading: while nobody listened the watcher kept nothing.
-        let marked = if fresh { Arc::new(crate::stats::marked_live(&app)) } else { np.borrow_and_update().clone() };
+        // Otherwise the watcher's value is read without marking it seen: `changed()` marks what it wakes for, and a
+        // value marked here, on a pass that woke for something else, was never sent. Somebody beginning or ending
+        // announces now playing and the status bar in one instant, and a page that took the status bar first lost the
+        // play until the next change.
+        let marked = if fresh {
+            if due.contains(&"now_playing") {
+                np.borrow_and_update();
+            }
+            Arc::new(crate::stats::marked_live(&app))
+        } else {
+            np.borrow().clone()
+        };
         due.sort_unstable();
         due.dedup();
         for topic in due {
