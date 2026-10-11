@@ -96,6 +96,8 @@ function search(signal) {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); open.focus(); }
   });
   results.addEventListener('click', (e) => { if (e.target.closest('a')) setTimeout(close); });
+  // Safari focuses no link it presses: the field lost the focus to nothing, the list closed, and the click found no link.
+  results.addEventListener('mousedown', (e) => { if (e.target.closest('a')) e.preventDefault(); });
   box.addEventListener('focusout', (e) => { if (!box.contains(e.relatedTarget) && !results.contains(e.relatedTarget)) setTimeout(() => { if (!box.contains(document.activeElement)) close(); }, 0); }, { signal });
   open.addEventListener('click', () => { mount(box, [field, results]); field.focus(); });
   mount(box, open);
