@@ -390,7 +390,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         requested_at      INTEGER NOT NULL,
         updated_at        INTEGER NOT NULL,
         media_added_at    INTEGER,                   -- Seerr's own note of when it arrived
-        seen_available_at INTEGER,                   -- when FinStats first saw it available
+        seen_available_at INTEGER,                   -- when finstats first saw it available
         available_at      INTEGER,
         removed_at        INTEGER,
         seerr_user_id     INTEGER,
@@ -477,13 +477,13 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         kind       TEXT NOT NULL,
         severity   TEXT NOT NULL,                -- info | warn | alert
         at         INTEGER NOT NULL,             -- when the thing itself happened
-        created_at INTEGER NOT NULL,             -- when FinStats noticed
+        created_at INTEGER NOT NULL,             -- when finstats noticed
         dedupe     TEXT NOT NULL UNIQUE,
         user_id    TEXT,
         user_name  TEXT,
         title      TEXT NOT NULL,
         body       TEXT NOT NULL,
-        link       TEXT,                         -- a path inside FinStats, joined with public_url when sent
+        link       TEXT,                         -- a path inside finstats, joined with public_url when sent
         data       TEXT NOT NULL DEFAULT '{}',   -- what any destination may be told
         private    TEXT NOT NULL DEFAULT '{}',   -- addresses and places: only with "include addresses"
         historic   INTEGER NOT NULL DEFAULT 0    -- found long after it happened: recorded, never sent
@@ -1058,6 +1058,22 @@ pub use rusqlite::types::Value as SqlValue;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Released migrations are immutable, down to a comment inside one: a database created by a fresh install keeps that
+    /// text in `sqlite_master`, and an upgraded one keeps what it ran. The newest release's count and hash are pinned here;
+    /// a release that adds migrations moves both forward.
+    #[test]
+    fn released_migrations_are_never_edited() {
+        use sha2::Digest;
+        const RELEASED: usize = 37; // 2.2.0
+        const HASH: &str = "6570368806e9d955fdbb822a80e2b4f0c581ee6b4c8838567fd62b07b5bc765a";
+        let mut h = sha2::Sha256::new();
+        for m in &MIGRATIONS[..RELEASED] {
+            h.update(m.as_bytes());
+            h.update([0]);
+        }
+        assert_eq!(format!("{:x}", h.finalize()), HASH, "a migration a release already ran was edited; add a new one instead");
+    }
 
     /// A play in the trash is out of every reading of history (the view) and still there for identity (the table).
     #[test]
