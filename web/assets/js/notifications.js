@@ -317,6 +317,8 @@ export function notificationsPanel(ctx) {
       setBusy(save, true, 'Saving…');
       try {
         await api.put('/settings', { public_url: field.input.value.trim() });
+        // What /auth/me told this page at its start: API keys makes a calendar's address with it, in this tab too.
+        if (state.user) state.user.public_url = field.input.value.trim().replace(/\/+$/, '') || null;
         field.setError('');
         lastSig = '';
         await load();
