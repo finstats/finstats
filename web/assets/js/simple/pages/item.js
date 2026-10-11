@@ -103,7 +103,8 @@ export default function itemPage(ctx) {
   }
   dataView({
     container: body, signal: ctx.signal, skeleton: () => sk.cardRows(6),
-    fetch: () => loadItem(id, ctx.signal),
+    // An address of no title is said to be one, as its History tab and the library and person pages say it.
+    fetch: () => loadItem(id, ctx.signal).catch((e) => { if (e.status === 404) return null; throw e; }),
     render: (d) => {
       if (!d || !d.item) return emptyState('No such title', 'It may have been removed from Jellyfin.');
       top(d);
