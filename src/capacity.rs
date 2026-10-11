@@ -26,12 +26,15 @@ pub enum Way {
 }
 
 impl Way {
-    /// From a play's method and the `hw_accel` its transcode kept (`media::compact_transcode`).
-    pub fn of(play_method: Option<&str>, hw_accel: Option<&str>) -> Way {
-        match (play_method, hw_accel) {
-            (Some("Transcode"), Some("none")) => Way::Software,
-            (Some("Transcode"), Some(_)) => Way::Hardware,
-            (Some("Transcode"), None) => Way::Unsaid,
+    /// From a play's method and the `hw_accel` and `is_video_direct` its transcode kept (`media::compact_transcode`). A
+    /// transcode that kept the picture (only the sound or the container converted) makes no video, which is what costs,
+    /// so it counts as direct here, as the Playback page's hardware chart leaves it out.
+    pub fn of(play_method: Option<&str>, hw_accel: Option<&str>, video_direct: Option<bool>) -> Way {
+        match (play_method, hw_accel, video_direct) {
+            (Some("Transcode"), _, Some(true)) => Way::Direct,
+            (Some("Transcode"), Some("none"), _) => Way::Software,
+            (Some("Transcode"), Some(_), _) => Way::Hardware,
+            (Some("Transcode"), None, _) => Way::Unsaid,
             _ => Way::Direct,
         }
     }
@@ -271,8 +274,12 @@ fn moment_json(m: &Moment) -> Value {
 /// and after a read of the server's details, never on a request. Answers how many findings there are.
 pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
     let plays: Vec<Play> = conn
-        .prepare("SELECT started_at, ended_at, play_method, json_extract(transcode, '$.hw_accel') FROM visible_playbacks WHERE ended_at > started_at")?
-        .query_map([], |r| Ok(Play { start: r.get(0)?, end: r.get(1)?, way: Way::of(r.get::<_, Option<String>>(2)?.as_deref(), r.get::<_, Option<String>>(3)?.as_deref()) }))?
+        .prepare("SELECT started_at, ended_at, play_method, json_extract(transcode, '$.hw_accel'), json_extract(transcode, '$.is_video_direct')
+                  FROM visible_playbacks WHERE ended_at > started_at")?
+        .query_map([], |r| {
+            let way = Way::of(r.get::<_, Option<String>>(2)?.as_deref(), r.get::<_, Option<String>>(3)?.as_deref(), r.get::<_, Option<bool>>(4)?);
+            Ok(Play { start: r.get(0)?, end: r.get(1)?, way })
+        })?
         .collect::<Result<_, _>>()?;
     let files: Vec<File> = conn
         .prepare("SELECT l.name, i.path, i.size_bytes, i.date_created FROM items i LEFT JOIN libraries l ON l.id = i.library_id
@@ -358,12 +365,22 @@ mod tests {
 
     #[test]
     fn a_play_is_direct_or_transcoded_with_hardware_without_or_unsaid() {
-        assert_eq!(Way::of(Some("DirectPlay"), None), Way::Direct);
-        assert_eq!(Way::of(Some("DirectStream"), Some("none")), Way::Direct);
-        assert_eq!(Way::of(Some("Transcode"), Some("nvenc")), Way::Hardware);
-        assert_eq!(Way::of(Some("Transcode"), Some("none")), Way::Software);
-        assert_eq!(Way::of(Some("Transcode"), None), Way::Unsaid);
-        assert_eq!(Way::of(None, None), Way::Direct);
+        assert_eq!(Way::of(Some("DirectPlay"), None, None), Way::Direct);
+        assert_eq!(Way::of(Some("DirectStream"), Some("none"), None), Way::Direct);
+        assert_eq!(Way::of(Some("Transcode"), Some("nvenc"), Some(false)), Way::Hardware);
+        assert_eq!(Way::of(Some("Transcode"), Some("none"), Some(false)), Way::Software);
+        assert_eq!(Way::of(Some("Transcode"), None, None), Way::Unsaid);
+        assert_eq!(Way::of(None, None, None), Way::Direct);
+    }
+
+    /// Converting only the sound (or only the container) makes no picture, which is what a server has to cope with: the
+    /// Playback page's hardware chart leaves such plays out, and so does Capacity, whatever Jellyfin says of hardware.
+    #[test]
+    fn a_transcode_that_kept_the_picture_is_not_a_video_transcode() {
+        assert_eq!(Way::of(Some("Transcode"), Some("nvenc"), Some(true)), Way::Direct);
+        assert_eq!(Way::of(Some("Transcode"), Some("none"), Some(true)), Way::Direct);
+        assert_eq!(Way::of(Some("Transcode"), None, Some(true)), Way::Direct);
+        assert_eq!(Way::of(Some("Transcode"), Some("none"), None), Way::Software, "a transcode that did not say keeps what it said of hardware");
     }
 
     #[test]
@@ -530,6 +547,14 @@ mod tests {
         }
         drop(stmt);
         c
+    }
+
+    #[test]
+    fn a_recompute_reads_transcodes_that_kept_the_picture_as_direct() {
+        let mut c = db();
+        c.execute(r#"UPDATE playbacks SET transcode = '{"hw_accel":"none","is_video_direct":true}' WHERE play_method = 'Transcode'"#, []).unwrap();
+        assert_eq!(recompute(&mut c, NOW).unwrap(), 2, "a busy scan and a disk; the sound converted is no software transcode");
+        assert_eq!(answer(&c).unwrap()["busiest"][0]["transcodes"], 0);
     }
 
     #[test]
