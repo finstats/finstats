@@ -38,8 +38,8 @@ function table(rows, sort) {
   const everyone = can('see_everyone'), network = can('see_network');
   const th = (label, key, first = null) => h('th', { 'data-key': key || null, 'data-first': first, 'data-nosort': key ? null : '' }, label);
   return dataTable(h('table', { class: 'fui-data-table fui-data-table--dense fui-data-table--hover simple-table' },
-    h('thead', null, h('tr', null, th('Date', 'when'), everyone ? th('User', 'user', 'asc') : null, network ? th('IP Address', 'ip', 'asc') : null,
-      th('Platform', 'client', 'asc'), th('Player'), th('Title', 'title', 'asc'), th('Started'), th('Paused'), th('Stopped'), th('Duration', 'watched'), th('', 'progress'))),
+    h('thead', null, h('tr', null, th('Date', 'when', 'desc'), everyone ? th('User', 'user', 'asc') : null, network ? th('IP Address', 'ip', 'asc') : null,
+      th('Platform', 'client', 'asc'), th('Player'), th('Title', 'title', 'asc'), th('Started'), th('Paused'), th('Stopped'), th('Duration', 'watched', 'desc'), th('', 'progress'))),
     h('tbody', null, rows.map((p) => h('tr', null,
       h('td', { class: 'mono' }, day(p.started_at)),
       everyone ? h('td', null, p.user_id ? h('a', { href: `/users/${p.user_id}` }, p.user_name) : p.user_name) : null,
