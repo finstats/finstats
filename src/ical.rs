@@ -139,7 +139,7 @@ pub fn vevent(e: &Entry, now: i64, public_url: &str, you_follow: bool) -> String
 /// The whole file around its events.
 pub fn calendar(events: &[String]) -> String {
     let mut out = String::new();
-    for l in ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//finstats//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:finstats: coming up"] {
+    for l in ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//finstats//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:FinStats: coming up"] {
         out.push_str(&fold(l));
     }
     for e in events {
@@ -166,18 +166,19 @@ fn truthy(v: Option<&str>) -> bool {
 
 /// One person's agenda as a calendar, `days` ahead: the one builder the feed and the export both send. It names nobody,
 /// by construction (`entries_for`), whoever it is for.
-async fn agenda(app: &App, days: i64, subject: String, mine: bool) -> anyhow::Result<String> {
+/// `own`: the agenda is its reader's own. Somebody else's, exported into an administrator's calendar, is not "You".
+async fn agenda(app: &App, days: i64, subject: String, mine: bool, own: bool) -> anyhow::Result<String> {
     let public_url = app.settings().public_url.clone();
     let rows = app.db.call(move |c| crate::pipeline::entries_for(c, days, &subject, mine)).await?;
     let now = db::now();
-    let events: Vec<String> = rows.iter().map(|(e, you)| vevent(e, now, &public_url, *you)).collect();
+    let events: Vec<String> = rows.iter().map(|(e, you)| vevent(e, now, &public_url, *you && own)).collect();
     Ok(calendar(&events))
 }
 
 /// `GET /api/calendar.ics?key=&days=&mine=`: the key's owner's agenda, as a calendar.
 pub async fn feed(State(app): State<App>, CalendarKey(user): CalendarKey, Query(q): Query<FeedQuery>) -> ApiResult<Response> {
     let days = q.days.unwrap_or(90).clamp(1, 90);
-    let body = agenda(&app, days, user.id.clone(), truthy(q.mine.as_deref())).await?;
+    let body = agenda(&app, days, user.id.clone(), truthy(q.mine.as_deref()), true).await?;
     Ok(Response::builder()
         .header(CONTENT_TYPE, "text/calendar; charset=utf-8")
         .header(CACHE_CONTROL, "private, no-store")
@@ -192,7 +193,8 @@ pub async fn feed(State(app): State<App>, CalendarKey(user): CalendarKey, Query(
 pub async fn export(State(app): State<App>, user: AuthUser, Query(q): Query<crate::pipeline::UpcomingQuery>) -> ApiResult<Response> {
     let days = q.days.unwrap_or(14).clamp(1, 90);
     let subject = crate::stats::pinned_user(&user, q.user_id.as_deref()).unwrap_or_else(|| user.id.clone());
-    let body = agenda(&app, days, subject, q.mine.unwrap_or(false)).await?;
+    let own = subject == user.id;
+    let body = agenda(&app, days, subject, q.mine.unwrap_or(false), own).await?;
     Ok(Response::builder()
         .header(CONTENT_TYPE, "text/calendar; charset=utf-8")
         .header(CACHE_CONTROL, "private, no-store")
@@ -290,7 +292,7 @@ mod tests {
     fn a_calendar_wraps_its_events_with_crlf() {
         let c = calendar(&[vevent(&film(), 0, "", false)]);
         assert!(c.starts_with("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//finstats//EN\r\n"));
-        assert!(c.contains("METHOD:PUBLISH\r\n") && c.contains("X-WR-CALNAME:finstats: coming up\r\n"));
+        assert!(c.contains("METHOD:PUBLISH\r\n") && c.contains("X-WR-CALNAME:FinStats: coming up\r\n"));
         assert!(c.ends_with("END:VCALENDAR\r\n"));
         assert!(!c.replace("\r\n", "").contains('\n'), "no bare newline anywhere");
     }
