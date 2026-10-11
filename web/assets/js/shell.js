@@ -173,7 +173,7 @@ function buildShell() {
   const sep = () => h('span', { class: 'sb-sep', 'aria-hidden': 'true' }, '·');
   const statusbar = h('footer', { class: 'statusbar', role: 'status', 'aria-label': 'Collector status' }, sbStream, sep(), sbPlays, sep(), sbSync, sbRepo, sep(), sbVer);
 
-  let sbAbort = null, sbShown = null;
+  let sbAbort = null, sbShown = null, sbPushes = 0;
   const sbStop = new AbortController();
   function paintSummary(sum) {
     sbShown = sum;
@@ -191,10 +191,14 @@ function buildShell() {
   async function loadSummary() {
     if (sbStop.signal.aborted) return;
     sbAbort = new AbortController();
+    const pushes = sbPushes;
     try {
-      paintSummary(await api.get('/summary', null, { signal: sbAbort.signal }));
+      const sum = await api.get('/summary', null, { signal: sbAbort.signal });
+      if (pushes === sbPushes) paintSummary(sum); // a push since it was asked for is newer
     } catch (e) {
       if (!isAbort(e) && e.status !== 401) {
+        // The last good answer is not said again while FinStats cannot be reached: the bar's ageing repainted it.
+        sbShown = null;
         sbDot.className = 'sb-dot bad';
         sbStream.lastChild.textContent = 'FinStats unreachable';
       }
@@ -202,7 +206,7 @@ function buildShell() {
   }
   loadSummary();
   // Pushed when it changes; asked for every 10 s (while the tab is on screen) only while the live channel is not there.
-  follow('summary', { poll: loadSummary, every: 10000, onData: paintSummary, signal: sbStop.signal });
+  follow('summary', { poll: loadSummary, every: 10000, onData: (sum) => { sbPushes += 1; paintSummary(sum); }, signal: sbStop.signal });
   // "synced 3 min ago" ages by itself: said again from what is already here, without asking.
   const sbAge = setInterval(() => { if (sbShown && !document.hidden) paintSummary(sbShown); }, 30000);
 

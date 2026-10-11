@@ -81,14 +81,19 @@ export function nowPlayingView({ list, parts, cls = 'np-live' }) {
 
 /** Feed `paint(data)` with `/now-playing` for as long as the page is open; `failed(error)` when an answer cannot be had. */
 export function followNowPlaying(ctx, { paint, failed = () => {} }) {
+  // An answer asked for before the live channel last spoke is older than what it said, and the channel speaks only on
+  // change: painted after it, a play that had ended kept its card until something else happened.
+  let pushes = 0;
   async function load() {
+    const asked = pushes;
     try {
-      paint(await api.get('/now-playing', null, { signal: ctx.signal }));
+      const d = await api.get('/now-playing', null, { signal: ctx.signal });
+      if (asked === pushes) paint(d);
     } catch (e) {
       if (isAbort(e) || e.status === 401) return;
       failed(e);
     }
   }
   load();
-  follow('now_playing', { poll: load, every: 5000, onData: paint, signal: ctx.signal });
+  follow('now_playing', { poll: load, every: 5000, onData: (d) => { pushes += 1; paint(d); }, signal: ctx.signal });
 }

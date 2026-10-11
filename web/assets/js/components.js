@@ -139,7 +139,8 @@ export function dataView({ container, skeleton, fetch, render, signal }) {
   /** The same answer as `fetch` gives, pushed rather than asked for (the live channel): drawn as a load would draw it. */
   function show(data) {
     if (signal && signal.aborted) return;
-    ++seq; // whatever load is on its way is older than this
+    ++seq; // whatever load is on its way is older than this, and will not clear its own busy mark
+    container.removeAttribute('aria-busy');
     if (lastKey) viewCacheSet(lastKey, data);
     const json = JSON.stringify(data);
     container.classList.remove('is-stale');
