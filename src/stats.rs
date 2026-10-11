@@ -1086,15 +1086,26 @@ pub async fn user_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
 
 fn library_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<Vec<Value>> {
     let cond = scope.cond();
-    let mut args = cond.args.clone();
+    // In the order the statement reads them: its titles, its plays (the scope's own first), the library.
+    let args: Vec<_> = match only {
+        Some(id) => std::iter::once(id.to_string().into()).chain(cond.args.iter().cloned()).chain([id.to_string().into(), id.to_string().into()]).collect(),
+        None => cond.args.clone(),
+    };
+    let sql = library_rows_sql(&cond.sql(), only.is_some());
+    Ok(rows_json(conn, &sql, &args)?.into_iter().map(Value::Object).collect())
+}
+
+fn library_rows_sql(cond: &str, one: bool) -> String {
     // A library that was deleted in Jellyfin and never had a single play is just noise in the list.
     // (It stays reachable by id, and one with history stays listed, marked as removed.)
-    let mut filter = "WHERE (l.removed = 0 OR EXISTS (SELECT 1 FROM visible_playbacks x WHERE x.library_id = l.id))".to_string();
-    if let Some(id) = only {
-        filter = "WHERE l.id = ?".into();
-        args.push(id.to_string().into());
-    }
-    let sql = format!(
+    let filter = if one { "WHERE l.id = ?" } else { "WHERE (l.removed = 0 OR EXISTS (SELECT 1 FROM visible_playbacks x WHERE x.library_id = l.id))" };
+    // One library's page reads its own titles and plays: a subquery is not narrowed by the WHERE outside it.
+    let (its_items, its_plays) = match (one, cond.is_empty()) {
+        (false, _) => ("", ""),
+        (true, true) => ("AND library_id = ?", "WHERE p.library_id = ?"),
+        (true, false) => ("AND library_id = ?", "AND p.library_id = ?"),
+    };
+    format!(
         "SELECT l.id, l.name, l.collection_type, l.removed,
                 COALESCE(c.item_count, 0) AS item_count, COALESCE(c.movie_count, 0) AS movie_count, COALESCE(c.series_count, 0) AS series_count,
                 COALESCE(c.season_count, 0) AS season_count, COALESCE(c.episode_count, 0) AS episode_count,
@@ -1111,16 +1122,14 @@ fn library_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<
                            -- The library read brings no artist items: the artists are the album artists its tracks name.
                            COUNT(DISTINCT CASE WHEN type = 'Audio' THEN album_artist END) AS artist_count,
                            SUM(size_bytes) AS size_bytes
-                    FROM items WHERE removed = 0 GROUP BY library_id) c ON c.library_id = l.id
+                    FROM items WHERE removed = 0 {its_items} GROUP BY library_id) c ON c.library_id = l.id
          -- The last play's own columns beside MAX(): SQLite takes a plain column from the row that holds the maximum.
          LEFT JOIN (SELECT p.library_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, MAX(p.ended_at) AS last_played_at,
                            p.item_id AS last_item_id, p.item_name AS last_item_name, p.series_name AS last_series_name, p.item_type AS last_item_type
-                    FROM visible_playbacks p {} GROUP BY p.library_id) s ON s.library_id = l.id
+                    FROM visible_playbacks p {cond} {its_plays} GROUP BY p.library_id) s ON s.library_id = l.id
          {filter}
-         ORDER BY l.removed, watch_s DESC, l.name COLLATE NOCASE",
-        cond.sql()
-    );
-    Ok(rows_json(conn, &sql, &args)?.into_iter().map(Value::Object).collect())
+         ORDER BY l.removed, watch_s DESC, l.name COLLATE NOCASE"
+    )
 }
 
 const ITEM_CARD: &str = "SELECT i.id, i.name, i.type, i.production_year AS year,
@@ -2847,6 +2856,30 @@ mod tests {
         for row in &all {
             let id = row["id"].as_str().unwrap();
             assert_eq!(user_rows(&c, &scope, Some(id)).unwrap(), vec![row.clone()], "one person's row is their row in the list");
+        }
+    }
+
+    /// One library's row reads only that library's titles and plays: its page counted every library's and kept one.
+    #[test]
+    fn one_librarys_row_reads_only_its_own() {
+        let c = conn();
+        let mut stmt = c.prepare(&format!("EXPLAIN QUERY PLAN {}", library_rows_sql("", true))).unwrap();
+        let unbound = vec![crate::db::rusqlite::types::Value::Null; stmt.parameter_count()];
+        let plan: Vec<String> = stmt.query_map(params_from_iter(unbound), |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
+        assert!(plan.iter().any(|p| p.contains("idx_items_library (library_id=?)")), "{plan:?}");
+        c.execute_batch(
+            "INSERT INTO libraries(id, name, collection_type, updated_at) VALUES ('l1', 'Films', 'movies', 0), ('l2', 'Shows', 'tvshows', 0);
+             INSERT INTO items(id, type, name, library_id, size_bytes, removed, updated_at) VALUES ('f1', 'Movie', 'Big Buck Bunny', 'l1', 100, 0, 0), ('s1', 'Series', 'Rookery', 'l2', 50, 0, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, library_id, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'f1', 'Big Buck Bunny', 'Movie', 'l1', 100, 700, 600), ('live', 'u2', 'bob', 'e1', 'Pilot', 'Episode', 'l2', 800, 1100, 300);",
+        )
+        .unwrap();
+        let scope = everyone().resolve(&c).unwrap();
+        let all = library_rows(&c, &scope, None).unwrap();
+        assert_eq!(all.len(), 2);
+        for row in &all {
+            let id = row["id"].as_str().unwrap();
+            assert_eq!(library_rows(&c, &scope, Some(id)).unwrap(), vec![row.clone()], "one library's row is its row in the list");
         }
     }
 
