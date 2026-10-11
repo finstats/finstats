@@ -79,6 +79,8 @@ function search(signal) {
         ...(can('see_everyone') ? d.users || [] : []).map((u) => h('a', { class: 'simple-search__row', href: `/users/${u.id}`, role: 'option' },
           icon('user', 16), h('span', null, u.name), h('span', { class: 'simple-search__kind' }, 'User'))),
       ];
+      // Where the results hang on a phone, where they take the screen's width (simple.css): just under the field.
+      results.style.setProperty('--simple-search-top', `${Math.round(field.getBoundingClientRect().bottom) + 8}px`);
       results.replaceChildren(...(rows.length ? rows : [h('div', { class: 'simple-search__none' }, 'Nothing matches.')]));
     } catch (e) { if (!isAbort(e)) results.replaceChildren(h('div', { class: 'simple-search__none' }, e.message)); }
   }, 150);

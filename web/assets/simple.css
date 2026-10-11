@@ -17,6 +17,12 @@
 .simple-search__results { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; width: min(380px, 92vw); max-height: 70vh; overflow: auto; padding: 6px 0;
   background: var(--bg-lift); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 24px var(--shadow); }
 .simple-search__results:empty { display: none; }
+/* On a phone the field leaves the bar room, and the results take the screen's width under the bar, its gutters kept:
+   anchored to the field they ran off the right edge. The bar's own bottom is measured (shell.js, --simple-search-top). */
+@media (max-width: 600px) {
+  .simple-search__field { width: min(280px, 44vw); }
+  .simple-search__results { position: fixed; top: var(--simple-search-top, 60px); left: 16px; right: 16px; width: auto; }
+}
 .simple-search__row { display: flex; align-items: center; gap: 10px; padding: 6px 12px; color: var(--text); text-decoration: none; font-size: 14px; }
 .simple-search__row:hover, .simple-search__row:focus-visible { background: var(--hover); text-decoration: none; }
 .simple-search__row .fui-poster { width: 28px; flex: none; }
