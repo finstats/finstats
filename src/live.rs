@@ -40,6 +40,9 @@ pub enum ClientMsg {
     Unsubscribe { topics: Vec<String> },
     /// Whether the tab is on screen. A hidden tab keeps its subscriptions but stops vouching for anybody looking.
     Visible { visible: bool },
+    /// Does this connection still carry? Answered `{"type": "pong"}` at once. A path that died silently closes nothing
+    /// on the page's side, and on a quiet evening nothing is pushed: only an answer it asked for tells the two apart.
+    Ping,
 }
 
 /// One frame of a topic: `{"type": topic, "v": 1, "data": …}`.
@@ -200,7 +203,7 @@ const SUMMARY_EVERY: Duration = Duration::from_secs(30);
 const STAMP_EVERY: Duration = Duration::from_secs(10);
 /// How often the watcher looks at what the collector and the queue last wrote.
 const LOOK_EVERY: Duration = Duration::from_secs(1);
-/// What a page may send: three kinds of short message.
+/// What a page may send: four kinds of short message.
 const MESSAGE_MAX: usize = 4096;
 /// A page that stops reading must not hold its connection's task: a send that cannot be written within this long ends
 /// the connection. Without it a reader who never read pinned the task, its socket and its buffers for good, a seat given
@@ -469,6 +472,12 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                             }
                         }
                         Ok(ClientMsg::Unsubscribe { topics }) => tab.topics.retain(|t| !topics.iter().any(|x| x == t)),
+                        Ok(ClientMsg::Ping) => {
+                            let pong = json!({ "type": "pong", "v": FRAME_V }).to_string();
+                            if !send(&mut socket, Message::Text(pong.into())).await {
+                                return;
+                            }
+                        }
                         Ok(ClientMsg::Visible { visible }) => {
                             if visible && !tab.visible {
                                 if tab.topics.contains("now_playing") {
@@ -641,11 +650,12 @@ mod tests {
     }
 
     #[test]
-    fn a_page_speaks_three_kinds_of_message_and_nothing_else() {
+    fn a_page_speaks_four_kinds_of_message_and_nothing_else() {
         let read = |s: &str| serde_json::from_str::<ClientMsg>(s).ok();
         assert_eq!(read(r#"{"type":"subscribe","topics":["now_playing","summary"]}"#), Some(ClientMsg::Subscribe { topics: vec!["now_playing".into(), "summary".into()] }));
         assert_eq!(read(r#"{"type":"unsubscribe","topics":["downloads"]}"#), Some(ClientMsg::Unsubscribe { topics: vec!["downloads".into()] }));
         assert_eq!(read(r#"{"type":"visible","visible":false}"#), Some(ClientMsg::Visible { visible: false }));
+        assert_eq!(read(r#"{"type":"ping"}"#), Some(ClientMsg::Ping));
         assert_eq!(read(r#"{"type":"delete_everything"}"#), None);
         assert_eq!(read("not json"), None);
     }

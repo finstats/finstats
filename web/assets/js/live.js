@@ -8,6 +8,11 @@
 
 const RETRY_FIRST_MS = 1000;
 const RETRY_MAX_MS = 15000;
+// A path that died silently (a laptop woken, a proxy that dropped it) closes nothing here, and on a quiet evening nothing
+// is pushed: so a visible page asks every so often, and when it is shown again, and a socket that does not answer in
+// time is given up for the poll and a new connection.
+const PING_EVERY_MS = 30000;
+const PONG_WITHIN_MS = 10000;
 
 const follows = new Set();          // { topic, poll, every, visibleOnly, onData, timer }
 let ws = null;
@@ -16,6 +21,8 @@ let retryMs = RETRY_FIRST_MS;
 let retryTimer = null;
 let watchingVisibility = false;
 let away = false;                   // the page was left and may sit in the back/forward cache
+let pinger = null;                  // the interval that asks whether the socket still carries
+let pongDue = null;                 // the timer that gives it up when no answer came
 
 const address = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/live`;
 const send = (msg) => { if (live && ws) { try { ws.send(JSON.stringify(msg)); } catch { /* closing */ } } };
@@ -24,7 +31,7 @@ const topics = () => [...new Set([...follows].map((f) => f.topic))];
 /** The poll a follow falls back to: `fn` every `every` ms, skipped while hidden when `visibleOnly`. Each start is a chain
  *  of its own, and a chain that is no longer the follow's stops: a poll still on its way when the socket came back and
  *  went again would otherwise schedule its next turn beside the new chain's, and the page would ask twice as often. */
-function startPolling(f) {
+function startPolling(f, at = f.every) {
   if (f.chain) return;
   const chain = {};
   f.chain = chain;
@@ -35,13 +42,30 @@ function startPolling(f) {
     if (f.chain !== chain) return;
     if (!live && follows.has(f)) f.timer = setTimeout(tick, f.every); else f.chain = null;
   };
-  f.timer = setTimeout(tick, f.every);
+  f.timer = setTimeout(tick, at);
 }
 function stopPolling(f) { clearTimeout(f.timer); f.timer = null; f.chain = null; }
 
-function fallBack() {
+function stopPinging() { clearInterval(pinger); pinger = null; clearTimeout(pongDue); pongDue = null; }
+/** Ask whether `sock` still carries; with no answer in time, give it up as if it had closed. */
+function ping(sock) {
+  if (ws !== sock || !live || pongDue) return;
+  send({ type: 'ping' });
+  pongDue = setTimeout(() => {
+    pongDue = null;
+    if (ws !== sock) return;
+    ws = null;
+    stopPinging();
+    try { sock.close(); } catch { /* already gone */ }
+    fallBack(true);   // nothing has been heard for a while: what the page shows may be stale already
+    reconnectLater();
+  }, PONG_WITHIN_MS);
+}
+
+/** Poll while the socket is not live; `now` when what the page shows may already be out of date. */
+function fallBack(now = false) {
   live = false;
-  for (const f of follows) startPolling(f);
+  for (const f of follows) startPolling(f, now ? 0 : f.every);
 }
 
 function connect() {
@@ -50,13 +74,18 @@ function connect() {
   try { sock = new WebSocket(address()); } catch { fallBack(); reconnectLater(); return; }
   ws = sock;
   sock.onmessage = (e) => {
+    // Anything heard is an answer: the socket carries.
+    clearTimeout(pongDue); pongDue = null;
     let msg; try { msg = JSON.parse(e.data); } catch { return; }
+    if (msg.type === 'pong') return;
     if (msg.type === 'hello') {
       live = true;
       retryMs = RETRY_FIRST_MS;
       for (const f of follows) stopPolling(f);
       send({ type: 'visible', visible: !document.hidden });
       send({ type: 'subscribe', topics: topics() });
+      stopPinging();
+      pinger = setInterval(() => { if (!document.hidden) ping(sock); }, PING_EVERY_MS);
       return;
     }
     // A topic this person may not have: their page's own GET says so; nothing to poll either.
@@ -66,6 +95,7 @@ function connect() {
   sock.onclose = (e) => {
     if (ws !== sock) return;
     ws = null;
+    stopPinging();
     if (away) { live = false; return; }
     fallBack();
     // 4429: this person has more tabs listening than FinStats keeps, and this was the oldest. It asks, as before.
@@ -86,7 +116,11 @@ function watchVisibility() {
   if (watchingVisibility) return;
   watchingVisibility = true;
   // The app's own listeners, for as long as the tab lives: a hidden tab stops vouching that somebody watches the queue.
-  document.addEventListener('visibilitychange', () => send({ type: 'visible', visible: !document.hidden }));
+  document.addEventListener('visibilitychange', () => {
+    send({ type: 'visible', visible: !document.hidden });
+    // Shown again after a while (a laptop opened): make sure the socket survived it before trusting it.
+    if (!document.hidden && ws) ping(ws);
+  });
   // A page left for another may be kept, frozen, in the back/forward cache: its socket would stay open with it and hold one
   // of its person's seats until the browser let the page go. So it is given up as the page is left, and taken up again
   // if the page is shown once more.
@@ -94,6 +128,7 @@ function watchVisibility() {
     away = true;
     clearTimeout(retryTimer); retryTimer = null;
     for (const f of follows) stopPolling(f);
+    stopPinging();
     if (ws) { const s = ws; ws = null; live = false; s.close(1001); }
   });
   window.addEventListener('pageshow', (e) => {
@@ -117,7 +152,7 @@ export function follow(topic, { poll, every, visibleOnly = true, onData, signal 
     if (!follows.delete(f)) return;
     stopPolling(f);
     if (!topics().includes(topic)) send({ type: 'unsubscribe', topics: [topic] });
-    if (!follows.size && ws) { const s = ws; ws = null; live = false; s.close(); }
+    if (!follows.size && ws) { const s = ws; ws = null; live = false; stopPinging(); s.close(); }
   };
   signal?.addEventListener('abort', stop, { once: true });
   if (live) send({ type: 'subscribe', topics: [topic] });
