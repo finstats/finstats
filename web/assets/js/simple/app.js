@@ -16,8 +16,14 @@ import { usersPage, userPage, prefetchUsers, prefetchUser } from './pages/users.
 import itemPage, { prefetchItem } from './pages/item.js';
 import graphs, { prefetchGraphs } from './pages/graphs.js';
 
-/** A page fetched when it is first opened: `load()` answers its function, drawn only if the reader is still there. */
-const later = (load) => (ctx) => load().then((page) => { if (!ctx.signal.aborted) page(ctx); });
+/** A page fetched when it is first opened: `load()` answers its function, drawn only if the reader is still there. It
+ *  runs after the router's own guard has returned, so a module that cannot load (a tab left open across an update) or a
+ *  page that throws says so here, as the router says it for every other page. */
+const later = (load) => (ctx) => load().then((page) => { if (!ctx.signal.aborted) page(ctx); }).catch((e) => {
+  if (ctx.signal.aborted) return;
+  console.error(e);
+  ctx.root.textContent = 'This page failed to render. Reload to try again.';
+});
 const settings = later(() => import('../pages/settings.js').then((m) => m.default));
 
 route('/setup', later(() => import('../pages/auth.js').then((m) => m.setupPage)), { bare: true });
