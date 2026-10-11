@@ -2117,14 +2117,34 @@ impl Group {
 }
 
 /// The resolution that was sent: a video transcode's own, else the file's.
-fn stream_resolution_sql() -> String {
-    let sent = |d: &str| {
-        format!(
-            "(CASE WHEN p.play_method = 'Transcode' AND json_extract(p.transcode, '$.is_video_direct') = 0 AND json_extract(p.transcode, '$.{d}') IS NOT NULL
-                   THEN json_extract(p.transcode, '$.{d}') ELSE p.{d} END)"
-        )
+/// The size a play was sent at: a transcode that changed the picture says its own, anything else sends the file's.
+fn sent_size(d: &str) -> String {
+    format!(
+        "(CASE WHEN p.play_method = 'Transcode' AND json_extract(p.transcode, '$.is_video_direct') = 0 AND json_extract(p.transcode, '$.{d}') IS NOT NULL
+               THEN json_extract(p.transcode, '$.{d}') ELSE p.{d} END)"
+    )
+}
+
+/// The rows of a ranked split: `key`, `name`, the part `g`, plays and seconds, one row per key and part.
+fn split_sql(group: Group, by: SplitBy, cond: &str) -> String {
+    // (what is grouped on, what it is called, what is joined to name it)
+    let (key, name, join) = match group {
+        Group::User => ("p.user_id", "COALESCE(u.name, MAX(p.user_name))", "LEFT JOIN users u ON u.id = p.user_id"),
+        Group::SourceResolution | Group::StreamResolution => {
+            // The plays are counted by size first, and each size there is is classed once.
+            let (w, h) = if group == Group::StreamResolution { (sent_size("width"), sent_size("height")) } else { ("p.width".into(), "p.height".into()) };
+            let class = RESOLUTION_SQL.replace("p.", "r.");
+            return format!(
+                "SELECT {class} AS key, {class} AS name, r.g, SUM(r.n), SUM(r.secs)
+                 FROM (SELECT {w} AS width, {h} AS height, {} AS g, COUNT(*) AS n, COALESCE(SUM(p.duration_s), 0) AS secs
+                       FROM visible_playbacks p {cond} GROUP BY 1, 2, 3) r
+                 GROUP BY key, r.g",
+                by.sql()
+            );
+        }
+        _ => ("p.client", "p.client", ""),
     };
-    RESOLUTION_SQL.replace("p.width", &sent("width")).replace("p.height", &sent("height"))
+    format!("SELECT {key} AS key, {name} AS name, {} AS g, COUNT(*), COALESCE(SUM(p.duration_s), 0) FROM visible_playbacks p {join} {cond} GROUP BY key, g", by.sql())
 }
 
 /// Plays grouped by one thing and split by another: ranked rows (`rank`, at most `limit`) of `{id, name, plays, watch_s,
@@ -2135,18 +2155,7 @@ pub(crate) fn breakdown(conn: &Connection, scope: &Scope, group: Group, by: Spli
         let (rows, bucket) = periods(conn, scope, &cond, by, group == Group::Month)?;
         return Ok(json!({ "keys": by.keys(), "bucket": bucket, "rows": rows }));
     }
-    // (what is grouped on, what it is called, what is joined to name it)
-    let (key, name, join) = match group {
-        Group::User => ("p.user_id".to_string(), "COALESCE(u.name, MAX(p.user_name))".to_string(), "LEFT JOIN users u ON u.id = p.user_id"),
-        Group::SourceResolution => (RESOLUTION_SQL.to_string(), RESOLUTION_SQL.to_string(), ""),
-        Group::StreamResolution => (stream_resolution_sql(), stream_resolution_sql(), ""),
-        _ => ("p.client".to_string(), "p.client".to_string(), ""),
-    };
-    let sql = format!(
-        "SELECT {key} AS key, {name} AS name, {} AS g, COUNT(*), COALESCE(SUM(p.duration_s), 0) FROM visible_playbacks p {join} {} GROUP BY key, g",
-        by.sql(),
-        cond.sql()
-    );
+    let sql = split_sql(group, by, &cond.sql());
     struct Row {
         name: String,
         plays: i64,
@@ -2154,18 +2163,16 @@ pub(crate) fn breakdown(conn: &Connection, scope: &Scope, group: Group, by: Spli
         parts: Parts,
     }
     let mut found: Vec<(String, Row)> = vec![];
+    let mut at: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     let mut stmt = conn.prepare(&sql)?;
     let mut rows = stmt.query(params_from_iter(cond.args.iter()))?;
     while let Some(r) = rows.next()? {
         let (key, name, part, n, w): (Option<String>, Option<String>, Option<String>, i64, i64) = (r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?);
         let Some(key) = key else { continue };
-        let i = match found.iter().position(|(k, _)| *k == key) {
-            Some(i) => i,
-            None => {
-                found.push((key.clone(), Row { name: name.unwrap_or_else(|| key.clone()), plays: 0, watch: 0, parts: Default::default() }));
-                found.len() - 1
-            }
-        };
+        let i = *at.entry(key.clone()).or_insert_with(|| {
+            found.push((key.clone(), Row { name: name.unwrap_or_else(|| key.clone()), plays: 0, watch: 0, parts: Default::default() }));
+            found.len() - 1
+        });
         let row = &mut found[i].1;
         (row.plays, row.watch) = (row.plays + n, row.watch + w);
         if let Some(part) = part {
@@ -3424,6 +3431,36 @@ mod tests {
         let names = |g| split_of(&c, g, SplitBy::Method, Rank::Plays, 10)["rows"].as_array().unwrap().iter().map(|r| (r["name"].as_str().unwrap().to_string(), r["plays"].as_i64().unwrap())).collect::<Vec<_>>();
         assert_eq!(names(Group::SourceResolution), vec![("1080p".to_string(), 2), ("4K".to_string(), 1)]);
         assert_eq!(names(Group::StreamResolution), vec![("1080p".to_string(), 2), ("720p".to_string(), 1)]);
+    }
+
+    /// A resolution is worked out once for each size there is, not for every play: the class reads the width and the height
+    /// fourteen times, and pasted in where each is read (and again for its name) a play's transcode was parsed 84 times,
+    /// twice as slow on a million plays as the split by the file's resolution.
+    #[test]
+    fn a_split_by_resolution_reads_each_plays_size_once() {
+        let sql = split_sql(Group::StreamResolution, SplitBy::Method, "");
+        assert_eq!(sql.matches("json_extract").count(), 6, "{sql}");
+        assert_eq!(split_sql(Group::SourceResolution, SplitBy::Method, "").matches("p.width").count(), 1);
+    }
+
+    /// Rows are gathered by key with a look-up, not by searching everything gathered so far: by person, a server of tens
+    /// of thousands of accounts made that quadratic, seconds of a pooled connection held for one chart.
+    #[test]
+    fn a_split_of_many_people_is_gathered_in_one_pass() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "WITH RECURSIVE k(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM k WHERE i < 40000)
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, play_method, started_at, ended_at, duration_s)
+             SELECT 'live', 'u' || i, 'person ' || i, 'i1', 'Big Buck Bunny', CASE WHEN i % 2 THEN 'Movie' ELSE 'Episode' END, 'DirectPlay', i, i + 60, 60 FROM k",
+        )
+        .unwrap();
+        let started = std::time::Instant::now();
+        let v = split_of(&c, Group::User, SplitBy::Type, Rank::Plays, 10);
+        assert_eq!(v["rows"].as_array().unwrap().len(), 10);
+        assert!(started.elapsed() < std::time::Duration::from_secs(3), "{:?} for 40,000 people", started.elapsed());
     }
 
     /// Day by day the series has no gaps; month by month it runs from the first month to this one.
