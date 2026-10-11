@@ -1036,6 +1036,8 @@ fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bo
                 }
             }
             worker.wake.notify_waiters();
+            // A restore with settings rewrites who may see what: an open socket hears it now, not at its next re-read.
+            worker.live_feed.recheck();
         }
         worker.tasks.finish(
             "restore",
