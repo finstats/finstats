@@ -3,7 +3,7 @@
 // was watched and by whom; and its own history.
 
 import { h, icon, num, relTime } from '../../dom.js';
-import { api, imgItem } from '../../api.js';
+import { api, imgItem, isAbort } from '../../api.js';
 import { can } from '../../state.js';
 import { dataView, poster, avatar, sk, emptyState } from '../../components.js';
 import { breadcrumb } from '../../../finui/components/breadcrumb/breadcrumb.js';
@@ -55,8 +55,16 @@ function trail(it) {
 /** A show's seasons as posters, and every episode under them, with how often each was played. */
 function seasons(list) {
   if (!list.length) return [];
-  const cards = mediaGrid(list.map((s) => mediaCard({ href: `#season-${s.season_number}`, poster: poster(s.id, s.name, { w: 240, cls: 'fui-poster--grid' }), name: s.name, sub: `${s.episodes.length} episodes` })));
-  const episodes = h('div', { id: 'simple-episodes' }, list.map((s) => h('div', { class: 'simple-season', id: `season-${s.season_number}` },
+  // Each season's card jumps to its episodes on this page. By its place in the list, since a season may have no number.
+  const cards = mediaGrid(list.map((s, i) => mediaCard({ href: `#season-${i}`, poster: poster(s.id, s.name, { w: 240, cls: 'fui-poster--grid' }), name: s.name, sub: `${s.episodes.length} episodes` })));
+  cards.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#season-"]');
+    const target = a && document.getElementById(a.getAttribute('href').slice(1));
+    if (!target) return;
+    e.preventDefault();   // a bare #fragment is a history entry, and the router re-mounts the page on popstate
+    target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  });
+  const episodes = h('div', { id: 'simple-episodes' }, list.map((s, i) => h('div', { class: 'simple-season', id: `season-${i}` },
     h('h3', null, s.name),
     h('ol', { class: 'simple-season__list' }, s.episodes.map((e) => h('li', { class: 'simple-episode' },
       h('span', { class: 'simple-episode__n' }, e.episode_number != null ? String(e.episode_number) : ''),
@@ -83,12 +91,14 @@ export default function itemPage(ctx) {
   };
   if (history) {
     // A show's history is its episodes'; anything else is its own plays. One answer names the page and picks the list.
+    const missing = () => body.replaceChildren(emptyState('No such title', 'It may have been removed from Jellyfin.'));
     loadItem(id, ctx.signal).then((d) => {
-      if (ctx.signal.aborted || !d || !d.item) return;
+      if (ctx.signal.aborted) return;
+      if (!d || !d.item) return missing();
       top(d);
       const list = historyList(ctx, { id: 'simple-item-history', fixed: d.item.type === 'Series' ? { series_id: id } : { item_id: id } });
       body.append(h('div', { class: 'simple-panel-head' }, h('h2', { class: 'simple-page-title' }, 'History'), h('div', { class: 'simple-head__tools' }, list.tools)), list.el);
-    }).catch(() => {});
+    }).catch((e) => { if (!ctx.signal.aborted && !isAbort(e)) missing(); });
     return;
   }
   dataView({
