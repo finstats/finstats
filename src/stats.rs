@@ -934,15 +934,11 @@ pub async fn playback(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
 
 // ---------------------------------------------------------------- users
 
-fn user_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<Vec<Value>> {
-    let cond = scope.cond();
-    let mut args = cond.args.clone();
-    let mut filter = String::new();
-    if let Some(id) = only {
-        filter = "WHERE u.id = ?".into();
-        args.push(id.to_string().into());
-    }
-    let sql = format!(
+/// The users list's statement; with `one`, a single person's row, which then reads only that person's plays (the outer
+/// `WHERE` does not reach into the grouped subqueries). Arguments: the scope's, then the person three times when `one`.
+fn user_rows_sql(cond: &str, one: bool) -> String {
+    let (filter, theirs, only_theirs) = if one { ("WHERE u.id = ?", if cond.is_empty() { "WHERE p.user_id = ?" } else { "AND p.user_id = ?" }, "WHERE user_id = ?") } else { ("", "", "") };
+    format!(
         "SELECT u.id, u.name, u.is_admin, u.is_disabled, u.removed, (u.image_tag IS NOT NULL) AS has_image,
                 u.last_login_at, u.last_activity_at,
                 COALESCE(s.plays, 0) AS plays, COALESCE(s.watch_s, 0) AS watch_s, l.last_played_at,
@@ -950,14 +946,24 @@ fn user_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<Vec
                 l.item_id AS last_item_id, l.client AS last_client, l.device_name AS last_device, l.remote_ip AS last_ip,
                 EXISTS (SELECT 1 FROM items i WHERE i.id = l.item_id AND i.removed = 0) AS last_item_exists
          FROM users u
-         LEFT JOIN (SELECT p.user_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s FROM visible_playbacks p {} GROUP BY p.user_id) s ON s.user_id = u.id
+         LEFT JOIN (SELECT p.user_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s FROM visible_playbacks p {cond} {theirs} GROUP BY p.user_id) s ON s.user_id = u.id
          -- The last play's own columns beside MAX(): SQLite takes a plain column from the row that holds the maximum.
          LEFT JOIN (SELECT user_id, MAX(ended_at) AS last_played_at, item_id, item_name, series_name, item_type, client, device_name, remote_ip
-                    FROM visible_playbacks GROUP BY user_id) l ON l.user_id = u.id
+                    FROM visible_playbacks {only_theirs} GROUP BY user_id) l ON l.user_id = u.id
          {filter}
-         ORDER BY watch_s DESC, u.name COLLATE NOCASE",
-        cond.sql()
-    );
+         ORDER BY watch_s DESC, u.name COLLATE NOCASE"
+    )
+}
+
+fn user_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<Vec<Value>> {
+    let cond = scope.cond();
+    let mut args = cond.args.clone();
+    if let Some(id) = only {
+        for _ in 0..3 {
+            args.push(id.to_string().into());
+        }
+    }
+    let sql = user_rows_sql(&cond.sql(), only.is_some());
     let see_network = scope.perms.see_network;
     Ok(rows_json(conn, &sql, &args)?
         .into_iter()
@@ -2814,6 +2820,23 @@ mod tests {
         assert_eq!(names, vec![("bob", "Sintel"), ("alice", "Big Buck Bunny")]);
         assert_eq!(page["total"], 2);
         assert_eq!(activity_page(&c, &scope, ActivityQuery::default()).unwrap()["total"], 5, "without it, every play");
+    }
+
+    /// One person's row (a profile, `/stats/spans`) reads that person's plays and nobody else's: the outer `WHERE` does not
+    /// reach into the grouped subqueries, and on a million plays both grouped every play for one row.
+    #[test]
+    fn one_persons_row_reads_only_their_plays() {
+        let c = conn();
+        let mut stmt = c.prepare(&format!("EXPLAIN QUERY PLAN {}", user_rows_sql("", true))).unwrap();
+        let unbound = vec![crate::db::rusqlite::types::Value::Null; stmt.parameter_count()];
+        let plan: Vec<String> = stmt.query_map(params_from_iter(unbound), |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
+        assert!(!plan.iter().any(|p| p.starts_with("SCAN playbacks")), "{plan:?}");
+        let scope = everyone().resolve(&c).unwrap();
+        let all = user_rows(&c, &scope, None).unwrap();
+        for row in &all {
+            let id = row["id"].as_str().unwrap();
+            assert_eq!(user_rows(&c, &scope, Some(id)).unwrap(), vec![row.clone()], "one person's row is their row in the list");
+        }
     }
 
     /// Activity's counts read the library only for the one filter that needs a runtime: SQLite keeps a LEFT JOIN nobody
