@@ -323,10 +323,11 @@ fn moment_json(m: &Moment) -> Value {
 /// and after a read of the server's details, never on a request. Answers how many findings there are.
 pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
     // How a play went is read from its transcode only where there is one, so the history is not parsed play by play.
+    // A history imported from Tautulli is Plex's, another server, which says nothing about how this one copes.
     const PLAY: &str = "SELECT started_at, ended_at, play_method,
                                CASE WHEN play_method = 'Transcode' THEN json_extract(transcode, '$.hw_accel') END,
                                CASE WHEN play_method = 'Transcode' THEN json_extract(transcode, '$.is_video_direct') END
-                        FROM visible_playbacks WHERE ended_at > started_at";
+                        FROM visible_playbacks WHERE ended_at > started_at AND source <> 'tautulli'";
     let way = |r: &crate::db::rusqlite::Row| -> crate::db::rusqlite::Result<Way> {
         Ok(Way::of(r.get::<_, Option<String>>(2)?.as_deref(), r.get::<_, Option<String>>(3)?.as_deref(), r.get::<_, Option<bool>>(4)?))
     };
@@ -687,6 +688,22 @@ mod tests {
         let (rss, t) = (kb("VmRSS:"), std::time::Instant::now());
         recompute(&mut c, NOW).unwrap();
         println!("{n} plays: recompute took {:?} and {} MB more at its peak", t.elapsed(), (kb("VmHWM:") - rss) / 1024);
+    }
+
+    #[test]
+    fn plays_imported_from_plex_say_nothing_about_this_server() {
+        // A Tautulli history is another server's: its hardware transcodes hid that Jellyfin never used any, and its
+        // evenings were listed among this server's busiest.
+        let mut c = db();
+        for i in 0..3i64 {
+            c.execute(&format!("INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, play_method, transcode)
+                                VALUES ('{}', 'u{i}', 'bob', 'plex:1', 'Sintel', 'Movie', ?1, ?2, 600, 'Transcode', '{{\"hw_accel\":\"Intel (VAAPI)\"}}')", crate::tautulli::SOURCE),
+                      crate::db::rusqlite::params![NOW - 5 * DAY, NOW - 5 * DAY + 600]).unwrap();
+        }
+        assert_eq!(recompute(&mut c, NOW).unwrap(), 3, "software, a busy scan, and a disk with five months");
+        let a = answer(&c).unwrap();
+        assert_eq!(a["busiest"][0]["streams"], 1, "Plex's evening is listed as this server's");
+        assert!(a["findings"].as_array().unwrap().iter().any(|f| f["kind"] == "software_transcodes"), "{}", a["findings"]);
     }
 
     #[test]
