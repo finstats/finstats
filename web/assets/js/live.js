@@ -21,17 +21,23 @@ const address = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${loca
 const send = (msg) => { if (live && ws) { try { ws.send(JSON.stringify(msg)); } catch { /* closing */ } } };
 const topics = () => [...new Set([...follows].map((f) => f.topic))];
 
-/** The poll a follow falls back to: `fn` every `every` ms, skipped while hidden when `visibleOnly`. */
+/** The poll a follow falls back to: `fn` every `every` ms, skipped while hidden when `visibleOnly`. Each start is a chain
+ *  of its own, and a chain that is no longer the follow's stops: a poll still on its way when the socket came back and
+ *  went again would otherwise schedule its next turn beside the new chain's, and the page would ask twice as often. */
 function startPolling(f) {
-  if (f.timer) return;
+  if (f.chain) return;
+  const chain = {};
+  f.chain = chain;
   const tick = async () => {
-    if (live || !follows.has(f)) { f.timer = null; return; }
+    if (f.chain !== chain) return;
+    if (live || !follows.has(f)) { f.chain = null; return; }
     if (!(f.visibleOnly && document.hidden)) { try { await f.poll(); } catch (e) { if (e.name !== 'AbortError') console.warn(e); } }
-    if (!live && follows.has(f)) f.timer = setTimeout(tick, f.every); else f.timer = null;
+    if (f.chain !== chain) return;
+    if (!live && follows.has(f)) f.timer = setTimeout(tick, f.every); else f.chain = null;
   };
   f.timer = setTimeout(tick, f.every);
 }
-function stopPolling(f) { clearTimeout(f.timer); f.timer = null; }
+function stopPolling(f) { clearTimeout(f.timer); f.timer = null; f.chain = null; }
 
 function fallBack() {
   live = false;
@@ -104,7 +110,7 @@ function watchVisibility() {
  * whenever the socket is not live. Stops with `signal` (a page's `ctx.signal`) or the returned function.
  */
 export function follow(topic, { poll, every, visibleOnly = true, onData, signal }) {
-  const f = { topic, poll, every, visibleOnly, onData, timer: null };
+  const f = { topic, poll, every, visibleOnly, onData, timer: null, chain: null };
   follows.add(f);
   watchVisibility();
   const stop = () => {
