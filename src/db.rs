@@ -840,6 +840,8 @@ impl Db {
 
 /// Settings key: the newest FinStats version that has opened this database.
 const VERSION_KEY: &str = "app_version";
+/// Settings key: the copy an update took before it changed anything, while that update is not done.
+const UPDATE_COPY_KEY: &str = "update_copy";
 
 /// `1.2.3` as a comparable triple; a pre-release or build suffix (`-rc.1`, `+abc`) is ignored.
 pub(crate) fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
@@ -922,10 +924,21 @@ fn back_up_before_update(conn: &Connection, path: &Path, running: &str) -> Resul
         return Ok(());
     }
     let dir = path.parent().unwrap_or_else(|| Path::new(".")).join(PRE_UPDATE_DIR);
+    let tag = stored.as_deref().unwrap_or("pre-1.0.5");
+    // The version is recorded only once an update is done, so one that failed after a migration is an update again at
+    // the next start, which a supervisor makes at once. A copy of that half-updated database is no use to the version
+    // before, and three of them pruned the one that was. The copy this update took is noted in the database itself: a
+    // folder cannot tell it from the copy of an earlier update from the same version that finished.
+    if let Some(kept) = get_setting(conn, UPDATE_COPY_KEY)?.map(|name| dir.join(name)).filter(|p| p.exists()) {
+        tracing::warn!("this update ({from} -> {running}) stopped part way at an earlier start; the copy from before it, {}, is kept as it is", kept.display());
+        return Ok(());
+    }
     let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
-    let dst = dir.join(format!("finstats-{}-{stamp}.db", stored.as_deref().unwrap_or("pre-1.0.5")));
+    let dst = dir.join(format!("finstats-{tag}-{stamp}.db"));
     match snapshot_into(conn, &dir, &dst) {
         Ok(()) => {
+            // After the copy, so the copy has no note of itself; `record_version` takes it away when the update is done.
+            set_setting(conn, UPDATE_COPY_KEY, &dst.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default())?;
             tracing::info!(
                 "update detected ({from} -> {running}); backed up the database to {} before upgrading. If anything looks wrong after this update, stop FinStats, replace {} with that file, and start the previous version, then report the bug.",
                 dst.display(),
@@ -988,11 +1001,13 @@ fn prune_snapshots(dir: &Path, keep: usize) {
     }
 }
 
-/// Remember the newest version that has opened this database; never lowers it.
+/// Remember the newest version that has opened this database; never lowers it. The update is done, so the note of the
+/// copy it took goes.
 fn record_version(conn: &Connection, running: &str) -> Result<()> {
     if get_setting(conn, VERSION_KEY)?.as_deref() != Some(running) {
         set_setting(conn, VERSION_KEY, running)?;
     }
+    conn.execute("DELETE FROM settings WHERE key = ?1", [UPDATE_COPY_KEY])?;
     Ok(())
 }
 
@@ -1505,6 +1520,61 @@ mod tests {
         let schema: i64 = c.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap();
         assert_eq!(schema, pending, "a migration ran anyway");
         assert_eq!(get_setting(&c, VERSION_KEY).unwrap().as_deref(), Some("0.1.0"), "the version was recorded anyway");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// As the version before this one left a database: every migration but the last, and 0.1.0 recorded.
+    fn older_schema(name: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+        let dir = std::env::temp_dir().join(format!("finstats-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("finstats.db");
+        let c = Connection::open(&path).unwrap();
+        for m in &MIGRATIONS[..MIGRATIONS.len() - 1] {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(&format!("PRAGMA user_version = {}", MIGRATIONS.len() - 1)).unwrap();
+        set_setting(&c, VERSION_KEY, "0.1.0").unwrap();
+        (dir, path)
+    }
+
+    #[test]
+    fn an_update_that_fails_after_migrating_keeps_the_copy_the_old_version_can_open() {
+        // The migrations commit one by one and the version is recorded only at the end, so an update that fails after a
+        // migration (an upgrade step, a full disk) is still an update at the next start, and a supervisor restarts it at
+        // once. Each start copied the half-updated database again, and three starts pruned away the only copy the
+        // previous version could open.
+        let (dir, path) = older_schema("snaploop");
+        let before = MIGRATIONS.len() as i64 - 1;
+        let fails = [crate::upgrade::Step { version: "0.0.1", name: "always-fails", why: "", run: |_| anyhow::bail!("disk full") }];
+        for _ in 0..4 {
+            let err = format!("{:#}", Db::open_with(&path, &fails).err().expect("the step failed and the start went on"));
+            assert!(err.contains("disk full"), "{err}");
+        }
+        let schemas: Vec<i64> = std::fs::read_dir(dir.join(PRE_UPDATE_DIR))
+            .unwrap()
+            .flatten()
+            .filter(|e| e.path().extension().is_some_and(|x| x == "db"))
+            .map(|e| Connection::open(e.path()).unwrap().query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap())
+            .collect();
+        assert!(schemas.contains(&before), "no copy from before the migrations is left: {schemas:?}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_copy_left_by_an_earlier_update_that_finished_does_not_stand_for_this_one() {
+        // A copy under the version this database records, older than its schema, is also what an update from the same
+        // version that finished leaves behind (a build of a version that added a migration since): judged by the folder,
+        // the next update took no copy at all.
+        let (dir, path) = older_schema("snapearlier");
+        let before = MIGRATIONS.len() as i64 - 1;
+        // As an earlier update of this same 0.1.0 database finished: its copy kept, the database moved on since.
+        let snaps = dir.join(PRE_UPDATE_DIR);
+        std::fs::create_dir_all(&snaps).unwrap();
+        Connection::open(snaps.join("finstats-0.1.0-20200101-000000.db")).unwrap().execute_batch(&format!("PRAGMA user_version = {}", before - 1)).unwrap();
+        drop(Db::open(&path).unwrap());
+        let ours = std::fs::read_dir(&snaps).unwrap().flatten().filter(|e| e.file_name().to_string_lossy().starts_with("finstats-0.1.0-")).count();
+        assert_eq!(ours, 2, "no copy was taken before this update's migration");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
