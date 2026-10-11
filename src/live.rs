@@ -202,6 +202,10 @@ const STAMP_EVERY: Duration = Duration::from_secs(10);
 const LOOK_EVERY: Duration = Duration::from_secs(1);
 /// What a page may send: three kinds of short message.
 const MESSAGE_MAX: usize = 4096;
+/// A page that stops reading must not hold its connection's task: a send that cannot be written within this long ends
+/// the connection. Without it a reader who never read pinned the task, its socket and its buffers for good, a seat given
+/// way included (the task that would have closed it was the one waiting).
+const SEND_WITHIN: Duration = Duration::from_secs(10);
 /// Close codes: the credential no longer opens FinStats.
 const CLOSE_SIGNED_OUT: u16 = 4401;
 /// …and: this person opened more than [`PER_PERSON`], and this was the oldest. The page polls rather than coming back.
@@ -414,12 +418,17 @@ impl Tab {
     }
 }
 
+/// Send one message, or give up after [`SEND_WITHIN`]: false means the connection is done.
+async fn send(socket: &mut WebSocket, msg: Message) -> bool {
+    matches!(tokio::time::timeout(SEND_WITHIN, socket.send(msg)).await, Ok(Ok(())))
+}
+
 async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Presented, _seat: Seat, gone: Arc<tokio::sync::Notify>) {
     let feed = &app.live_feed;
     let (mut np, mut dl, mut sum, mut auth) = (feed.now_playing.subscribe(), feed.downloads.subscribe(), feed.summary.subscribe(), feed.auth.subscribe());
     let mut tab = Tab { topics: HashSet::new(), visible: false, sent: HashMap::new(), drawn: Drawn::default(), user };
     let hello = json!({ "type": "hello", "v": FRAME_V, "topics": allowed(&tab.user) }).to_string();
-    if socket.send(Message::Text(hello.into())).await.is_err() {
+    if !send(&mut socket, Message::Text(hello.into())).await {
         return;
     }
     let every = |d: Duration| {
@@ -450,8 +459,8 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                                     fresh = true;
                                 } else {
                                     let denied = json!({ "type": "denied", "v": FRAME_V, "topic": t }).to_string();
-                                    if socket.send(Message::Text(denied.into())).await.is_err() {
-                                        break;
+                                    if !send(&mut socket, Message::Text(denied.into())).await {
+                                        return;
                                     }
                                 }
                             }
@@ -489,11 +498,11 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
             _ = gone.notified() => {
                 app.live_feed.noted("one person's oldest connection gave way to a newer one");
                 let bye = CloseFrame { code: CLOSE_REPLACED, reason: "a newer tab took this seat".into() };
-                let _ = socket.send(Message::Close(Some(bye))).await;
+                let _ = send(&mut socket, Message::Close(Some(bye))).await;
                 break;
             }
             _ = ping.tick() => {
-                if heard.elapsed() > SILENT_FOR || socket.send(Message::Ping(Default::default())).await.is_err() {
+                if heard.elapsed() > SILENT_FOR || !send(&mut socket, Message::Ping(Default::default())).await {
                     break;
                 }
             }
@@ -506,8 +515,8 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                     for t in lost {
                         tab.topics.remove(t);
                         let denied = json!({ "type": "denied", "v": FRAME_V, "topic": t }).to_string();
-                        if socket.send(Message::Text(denied.into())).await.is_err() {
-                            break;
+                        if !send(&mut socket, Message::Text(denied.into())).await {
+                            return;
                         }
                     }
                     // What this person may see may have narrowed: every answer again, sent only where it differs.
@@ -517,7 +526,7 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                 Err(e) if e.0.is_server_error() => tracing::debug!("live channel: could not re-read a connection's user: {}", e.1),
                 _ => {
                     let bye = CloseFrame { code: CLOSE_SIGNED_OUT, reason: "signed out".into() };
-                    let _ = socket.send(Message::Close(Some(bye))).await;
+                    let _ = send(&mut socket, Message::Close(Some(bye))).await;
                     break;
                 }
             }
@@ -539,7 +548,7 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
         due.dedup();
         for topic in due {
             if let Some(f) = tab.update(&app, topic, &marked).await
-                && socket.send(Message::Text(f.into())).await.is_err()
+                && !send(&mut socket, Message::Text(f.into())).await
             {
                 return;
             }
