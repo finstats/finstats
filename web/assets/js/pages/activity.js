@@ -47,9 +47,10 @@ function filtersOf(q0) {
 function trashTable(rows, { showUser, onRestored }) {
   if (!rows.length) return emptyState('Nothing in the trash.', 'A deleted play waits here for 30 days before it is removed for good.');
   const restore = (p) => button({ size: 'sm', type: 'button', onClick: async (e) => {
-    setBusy(e.currentTarget, true, 'Restoring…');
+    const btn = e.currentTarget; // gone from the event once it has been handled
+    setBusy(btn, true, 'Restoring…');
     try { await api.put(`/activity/${p.id}`, { deleted: false }); toast({ text: `Restored ${p.item_name}.`, tone: 'good' }); onRestored(); }
-    catch (err) { setBusy(e.currentTarget, false); toast({ text: `Couldn’t restore: ${err.message}`, tone: 'critical' }); }
+    catch (err) { setBusy(btn, false); toast({ text: `Couldn’t restore: ${err.message}`, tone: 'critical' }); }
   } }, icon('refresh', 13), 'Restore');
   const th = (label, cls) => h('th', { class: cls || null, 'data-nosort': '' }, label);
   return plainTable(h('table', { class: 'fui-data-table trash' },

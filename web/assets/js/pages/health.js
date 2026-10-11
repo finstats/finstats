@@ -11,6 +11,7 @@ import { replaceQuery } from '../router.js';
 import { card, dataView, sk, pagination, emptyState, poster, facts, openModal, setBusy, inlineError, openInJellyfin } from '../components.js';
 import { dataTable } from '../tables.js';
 import { button } from '../../finui/components/button/button.js';
+import { toast } from '../../finui/components/toast/toast.js';
 
 /** Each kind as the page names it, with one line saying what it is. In the order the server lists them. */
 export const KINDS = {
@@ -161,7 +162,9 @@ export function healthView(ctx) {
 
   async function bringBack(btn, item) {
     setBusy(btn, true, 'Bringing back…');
-    try { await api.post('/library/health/undismiss', { key: item.key }); } finally { dv.load(); }
+    // Refused, the page has nothing new to draw, so the button would stay busy and nobody would be told.
+    try { await api.post('/library/health/undismiss', { key: item.key }); } catch (e) { setBusy(btn, false); toast({ text: `Couldn’t bring it back: ${e.message}`, tone: 'critical' }); return; }
+    dv.load();
   }
 
   function tiles(s) {

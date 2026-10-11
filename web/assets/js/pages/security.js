@@ -7,6 +7,7 @@ import { bucketList } from '../charts.js';
 import { dataTable } from '../tables.js';
 import { worldMap, placeTip } from '../worldmap.js';
 import { button } from '../../finui/components/button/button.js';
+import { toast } from '../../finui/components/toast/toast.js';
 
 const PER_PAGE = 5;
 // Status colours always ship with an icon and a word.
@@ -84,12 +85,20 @@ export default function securityPage(ctx) {
     });
   }
 
+  /** A button's write, then the page again; refused, the page has nothing new to draw, so the button is given back and the
+   *  refusal said, or it would stay busy and nobody would be told. */
+  async function pressed(btn, busy, write) {
+    setBusy(btn, true, busy);
+    try { await write(); } catch (e) { setBusy(btn, false); toast({ text: e.message, tone: 'critical' }); return; }
+    dv.load();
+  }
+
   function alertRow(a, manage) {
     const sev = SEVERITY[a.severity] || SEVERITY.medium, d = a.details || {};
     const travel = a.kind === 'impossible_travel' && d.from && d.to;
     const showBtn = d.to ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => map && map.show(travel ? [d.from, d.to] : [d.to], { line: !!travel }) }, icon('compass', 13), 'Show on map') : null;
     const act = !manage ? null : a.resolved_at
-      ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: async (e) => { setBusy(e.currentTarget, true, 'Reopening…'); try { await api.post(`/security/alerts/${a.id}/reopen`); } finally { dv.load(); } } }, icon('refresh', 13), 'Reopen')
+      ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: (e) => pressed(e.currentTarget, 'Reopening…', () => api.post(`/security/alerts/${a.id}/reopen`)) }, icon('refresh', 13), 'Reopen')
       : button({ size: 'sm', type: 'button', onClick: () => resolveDialog(a) }, icon('check', 13), 'Resolve…');
     return h('li', { class: 'alert-row' + (a.resolved_at ? ' is-resolved' : '') },
       h('div', { class: 'alert-head' },
@@ -108,7 +117,7 @@ export default function securityPage(ctx) {
     const tabs = segmented({ label: 'Which alerts', size: 'sm', value: f.status, options: [{ value: 'open', label: `Open${alerts.open ? ` (${num(alerts.open)})` : ''}` }, { value: 'resolved', label: 'Resolved' }, { value: 'all', label: 'All' }],
       onChange: (v) => { f.status = v; f.page = 1; reload(); } });
     const resolveAll = manage && f.status === 'open' && alerts.open > 1 && !f.userId
-      ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: async (e) => { setBusy(e.currentTarget, true, 'Resolving…'); try { await api.post('/security/alerts/resolve-all'); } finally { dv.load(); } } }, icon('check', 13), 'Resolve all')
+      ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: (e) => pressed(e.currentTarget, 'Resolving…', () => api.post('/security/alerts/resolve-all')) }, icon('check', 13), 'Resolve all')
       : null;
     const body = alerts.rows.length
       ? [h('ul', { class: 'alert-list' }, alerts.rows.map((a) => alertRow(a, manage))),

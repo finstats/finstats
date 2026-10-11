@@ -9,6 +9,7 @@ import { card, dataView, sk, emptyState, setBusy, facts, statTile } from '../com
 import { plainTable } from '../tables.js';
 import { askDismiss } from './health.js';
 import { button } from '../../finui/components/button/button.js';
+import { toast } from '../../finui/components/toast/toast.js';
 
 // Shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
 const loadCapacity = (signal) => api.get('/server/capacity', null, { signal });
@@ -44,7 +45,9 @@ export function capacityView(ctx) {
 
   async function bringBack(btn, f) {
     setBusy(btn, true, 'Bringing back…');
-    try { await api.post('/library/health/undismiss', { key: f.key }); } finally { dv.load(); }
+    // Refused, the page has nothing new to draw, so the button would stay busy and nobody would be told.
+    try { await api.post('/library/health/undismiss', { key: f.key }); } catch (e) { setBusy(btn, false); toast({ text: `Couldn’t bring it back: ${e.message}`, tone: 'critical' }); return; }
+    dv.load();
   }
 
   function findings(list) {
