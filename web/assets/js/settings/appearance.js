@@ -29,15 +29,18 @@ function restyle() {
   old.after(next);
 }
 
+const simpleLayout = () => layoutChoice() === 'simple';
+
 export default {
   key: 'appearance', label: 'Appearance', sub: 'How FinStats looks to you', group: 'Account', icon: 'sliders',
   visible: () => true,
+  // The finder offers what render() draws: in Simple mode, the layout alone.
   entries: [{ id: 'layout', label: 'Layout', hint: 'layout simple mode classic tautulli plex top bar home look' },
-    { id: 'desktop_menu', label: 'Menu', hint: 'menu sidebar navigation grouped rail search dock command bar pinned tiles', visible: () => !matchMedia(PHONE).matches },
-    { id: 'desktop_side', label: 'Menu on the right', hint: 'menu sidebar right left side', visible: () => !matchMedia(PHONE).matches },
-    { id: 'search_mode', label: 'Search opens', hint: 'search find menu page integrated where ctrl space' },
-    { id: 'mobile_menu', label: 'Menu on this phone', hint: 'mobile phone menu navigation tab bar peek full screen thumb arc address', visible: () => matchMedia(PHONE).matches },
-    { id: 'finui_preset', label: 'FinUI preset', hint: 'appearance look theme colours accent radius density borders cards buttons fields tables menu motion icons contrast finui preset code customize create' }],
+    { id: 'desktop_menu', label: 'Menu', hint: 'menu sidebar navigation grouped rail search dock command bar pinned tiles', visible: () => !simpleLayout() && !matchMedia(PHONE).matches },
+    { id: 'desktop_side', label: 'Menu on the right', hint: 'menu sidebar right left side', visible: () => !simpleLayout() && !matchMedia(PHONE).matches },
+    { id: 'search_mode', label: 'Search opens', hint: 'search find menu page integrated where ctrl space', visible: () => !simpleLayout() },
+    { id: 'mobile_menu', label: 'Menu on this phone', hint: 'mobile phone menu navigation tab bar peek full screen thumb arc address', visible: () => !simpleLayout() && matchMedia(PHONE).matches },
+    { id: 'finui_preset', label: 'FinUI preset', hint: 'appearance look theme colours accent radius density borders cards buttons fields tables menu motion icons contrast finui preset code customize create', visible: () => !simpleLayout() }],
   async render(slot, store) {
     const body = h('div');
     mount(slot, card({ title: 'Appearance', sub: 'How FinStats looks to you: your choice, nobody else’s', body, id: 'appearance' }));
@@ -123,7 +126,7 @@ export default {
 
     const phone = matchMedia(PHONE);
     // Simple mode has no menu, no search of FinStats' kind and a look of its own: only the layout is chosen there.
-    const simple = layoutChoice() === 'simple';
+    const simple = simpleLayout();
     const fit = () => {
       menuRow.hidden = simple || !phone.matches;
       deskRow.hidden = simple || phone.matches;
