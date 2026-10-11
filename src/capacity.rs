@@ -297,7 +297,7 @@ pub fn runway(disk: &Disk) -> Option<Finding> {
     Some(Finding {
         key: format!("capacity:runway:{place}"),
         kind: "runway",
-        title: format!("{place}: about {} of space left at the pace of the last {} months", months_said(months), disk.window_months),
+        title: format!("{place}: {} of space left at the pace of the last {} months", months_said(months), disk.window_months),
         evidence: json!({ "folders": disk.folders, "libraries": disk.libraries, "free_bytes": disk.free, "added_per_month": disk.per_month,
                           "months_left": (months * 10.0).round() / 10.0, "window_months": disk.window_months }),
         fingerprint: format!("under {mark} months"),
@@ -308,8 +308,8 @@ pub fn runway(disk: &Disk) -> Option<Finding> {
 fn months_said(m: f64) -> String {
     match m {
         m if m < 1.0 => "under a month".into(),
-        m if m < 1.5 => "a month".into(),
-        m => format!("{} months", m.round() as i64),
+        m if m < 1.5 => "about a month".into(),
+        m => format!("about {} months", m.round() as i64),
     }
 }
 
@@ -636,6 +636,8 @@ mod tests {
         assert_ne!(runway(&disk(250, 100)).unwrap().fingerprint, five.fingerprint, "under three: said again");
         assert_ne!(runway(&disk(50, 100)).unwrap().fingerprint, runway(&disk(250, 100)).unwrap().fingerprint, "under one: again");
         assert_eq!(runway(&disk(250, 100)).unwrap().key, five.key, "the same disk, the same finding");
+        assert!(five.title.contains(": about 5 months of space left"), "{}", five.title);
+        assert!(runway(&disk(50, 100)).unwrap().title.contains(": under a month of space left"), "{}", runway(&disk(50, 100)).unwrap().title);
     }
 
     // ------------------------------------------------------------ stored, and read back
