@@ -133,18 +133,23 @@ fn fold(added: impl Iterator<Item = Added>, limit: usize) -> Vec<Value> {
     order.iter().map(Entry::json).collect()
 }
 
-/// `+i.type` keeps the planner off the type index: walking `idx_items_added` newest first and stopping early
-/// reads a few dozen rows, where sorting every episode by date took a quarter of a second on a real library.
+/// Everything walks `idx_items_added` newest first and stops early: a few dozen rows, where sorting every episode by date
+/// took a quarter of a second on a real library, so `+i.type` keeps the planner off the type index. One kind walks its own
+/// type's slice of `idx_items_type_added` the same way.
 const SQL: &str = "SELECT i.id, i.type, i.name, i.date_created, date(i.date_created, 'unixepoch', 'localtime'), i.series_id, COALESCE(s.name, i.series_name),
         i.parent_index_number, i.index_number, CASE WHEN sn.image_tag IS NOT NULL THEN sn.id END, i.production_year, i.album_artist
  FROM items i
  LEFT JOIN items s ON s.id = i.series_id
  LEFT JOIN items sn ON sn.id = i.season_id
- WHERE i.removed = 0 AND i.date_created IS NOT NULL AND +i.type IN ({TYPES})
+ WHERE i.removed = 0 AND i.date_created IS NOT NULL AND {TYPE} IN ({TYPES})
  ORDER BY i.date_created DESC";
 
+fn sql(kind: Kind) -> String {
+    SQL.replace("{TYPE}", if kind == Kind::All { "+i.type" } else { "i.type" }).replace("{TYPES}", kind.types())
+}
+
 fn recent(conn: &Connection, limit: usize, kind: Kind) -> Result<Vec<Value>> {
-    let mut stmt = conn.prepare(&SQL.replace("{TYPES}", kind.types()))?;
+    let mut stmt = conn.prepare(&sql(kind))?;
     let rows = stmt.query_map([], |r| {
         Ok(Added {
             id: r.get(0)?, item_type: r.get(1)?, name: r.get(2)?, at: r.get(3)?, day: r.get(4)?, series_id: r.get(5)?, series_name: r.get(6)?,
@@ -292,10 +297,12 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let db = crate::db::Db::open(&dir.join("finstats.db")).unwrap();
         let conn = db.conn().unwrap();
-        for kind in [Kind::All, Kind::Movies, Kind::Shows, Kind::Music] {
-            let plan: Vec<String> = conn.prepare(&format!("EXPLAIN QUERY PLAN {}", SQL.replace("{TYPES}", kind.types()))).unwrap()
+        // One kind walks its own type newest first: through every title's, a kind the library has few of (no music at
+        // all, a handful of films among thousands of episodes) read the whole library before it knew it had them all.
+        for (kind, index) in [(Kind::All, "idx_items_added"), (Kind::Movies, "idx_items_type_added"), (Kind::Shows, "idx_items_type_added"), (Kind::Music, "idx_items_type_added")] {
+            let plan: Vec<String> = conn.prepare(&format!("EXPLAIN QUERY PLAN {}", sql(kind))).unwrap()
                 .query_map([], |r| r.get::<_, String>(3)).unwrap().map(|r| r.unwrap()).collect();
-            assert!(plan.iter().any(|p| p.contains("idx_items_added")) && !plan.iter().any(|p| p.contains("TEMP B-TREE")), "{kind:?}: {plan:?}");
+            assert!(plan.iter().any(|p| p.contains(&format!("{index} "))) && !plan.iter().any(|p| p.contains("TEMP B-TREE")), "{kind:?}: {plan:?}");
         }
         assert!(recent(&conn, 30, Kind::All).unwrap().is_empty());
         drop(conn);

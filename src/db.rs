@@ -714,6 +714,11 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         found_at    INTEGER NOT NULL
     ) WITHOUT ROWID;
     "#,
+    // user_version 39: Recently added by kind (2.3.0): one kind walks its own type newest first and stops at the shelf's
+    //      end. Through every title's newest first, a kind the library has few of was a walk of the whole library.
+    r#"
+    CREATE INDEX idx_items_type_added ON items(type, date_created DESC) WHERE removed = 0 AND date_created IS NOT NULL;
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole
