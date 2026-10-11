@@ -470,9 +470,11 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                         }
                         Ok(ClientMsg::Unsubscribe { topics }) => tab.topics.retain(|t| !topics.iter().any(|x| x == t)),
                         Ok(ClientMsg::Visible { visible }) => {
-                            if visible && !tab.visible && tab.topics.contains("now_playing") {
-                                tab.resend("now_playing");
-                                due.push("now_playing");
+                            if visible && !tab.visible {
+                                if tab.topics.contains("now_playing") {
+                                    tab.resend("now_playing");
+                                }
+                                due.extend(["now_playing", "summary"]);
                             }
                             tab.visible = visible;
                             if stamps(tab.topics.contains("downloads"), tab.visible) {
@@ -489,7 +491,8 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
             Ok(()) = sum.changed() => due.push("summary"),
             Ok(()) = auth.changed() => recheck = true,
             _ = resolve.tick() => recheck = true,
-            _ = backstop.tick() => due.push("summary"),
+            // A hidden tab shows no status bar: it is asked again when it is shown.
+            _ = backstop.tick() => if tab.visible { due.push("summary") },
             _ = stamp.tick() => {
                 if stamps(tab.topics.contains("downloads"), tab.visible) {
                     crate::downloads::watched(&app, crate::db::now());
@@ -511,7 +514,7 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
             match crate::auth::resolve_presented(presented.clone(), tab.user.ip, &app).await {
                 Ok(user) if crate::auth::refuse_calendar_key(&user).is_ok() => {
                     let lost: Vec<&'static str> = tab.topics.iter().copied().filter(|t| !allowed(&user).contains(t)).collect();
-                    tab.user = user;
+                    let before = std::mem::replace(&mut tab.user, user);
                     for t in lost {
                         tab.topics.remove(t);
                         let denied = json!({ "type": "denied", "v": FRAME_V, "topic": t }).to_string();
@@ -519,9 +522,12 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                             return;
                         }
                     }
-                    // What this person may see may have narrowed: every answer again, sent only where it differs.
-                    due.extend(TOPICS);
-                    fresh = true;
+                    // What this person may see may have changed: every answer again, sent only where it differs. The
+                    // same grants answer the same, so the half-minute re-read costs nothing more when nothing changed.
+                    if before.perms != tab.user.perms {
+                        due.extend(TOPICS);
+                        fresh = true;
+                    }
                 }
                 Err(e) if e.0.is_server_error() => tracing::debug!("live channel: could not re-read a connection's user: {}", e.1),
                 _ => {
