@@ -18,7 +18,8 @@ import { follow } from './live.js';
 const BEHIND_OK_S = 15; // the server may trail us by this much: that is just reporting lag
 const AHEAD_OK_S = 3;   // and lead us by this much: rounding and poll timing, not news
 /** `list(sessions)` draws the cards, each carrying `data-np-key`; `parts(card)` finds in one the clock to move and the bar
- *  to fill: `{ clock, fill, bar }`, any of them absent. Both layouts draw their own cards on this one clock. */
+ *  to fill: `{ clock, fill, bar, also }`, any of them absent; `also(session, position)` is said on the same beat, for what
+ *  else on a card follows the position or the latest answer. Both layouts draw their own cards on this one clock. */
 export function nowPlayingView({ list, parts, cls = 'np-live' }) {
   const root = h('div', { class: cls });
   let live = new Map(); // key -> { s, pos (whole seconds), shape, clockEl, fillEl, barEl }
@@ -33,6 +34,7 @@ export function nowPlayingView({ list, parts, cls = 'np-live' }) {
       l.fillEl.style.width = pr * 100 + '%';
       if (l.barEl) l.barEl.setAttribute('aria-valuenow', String(Math.round(pr * 100)));
     }
+    if (l.also) l.also(l.s, pos);
   }
   // The ticker is the only thing that moves a clock: exactly one second per beat, so the display
   // is a metronome. A poll landing between two beats must never nudge the number off the beat.
@@ -53,7 +55,7 @@ export function nowPlayingView({ list, parts, cls = 'np-live' }) {
         if (drift <= AHEAD_OK_S && -drift <= BEHIND_OK_S) pos = old.pos; // close enough: keep counting, stay on the beat
       }
       if (!old || old.shape !== shape) sameCards = false;
-      const l = { s, pos, shape, clockEl: old && old.clockEl, fillEl: old && old.fillEl, barEl: old && old.barEl };
+      const l = { s, pos, shape, clockEl: old && old.clockEl, fillEl: old && old.fillEl, barEl: old && old.barEl, also: old && old.also };
       if (old && pos !== old.pos) corrected.push(l); // a skip, a pause, or real drift (a throttled background tab)
       next.set(s.key, l);
     }
@@ -67,6 +69,7 @@ export function nowPlayingView({ list, parts, cls = 'np-live' }) {
         l.clockEl = found.clock || null;
         l.barEl = found.bar || null;
         l.fillEl = found.fill || null;
+        l.also = found.also || null;
         paint(l);
       }
     } else {

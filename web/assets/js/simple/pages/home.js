@@ -58,7 +58,16 @@ export default function home(ctx) {
   // ---- activity
   const note = h('span', { class: 'simple-head__note' });
   const live = nowPlayingView({ list: streams, cls: 'simple-activity',
-    parts: (card) => ({ clock: card.querySelector('.fui-stream-card__time'), fill: card.querySelector('.fui-stream-card__fill'), bar: card.querySelector('.fui-stream-card__bar') }) });
+    parts: (card) => {
+      // The ETA follows a skip and the buffer a conversion running ahead: neither redraws the card.
+      const eta = card.querySelector('.fui-stream-card__when span:not(.fui-stream-card__time)'), buffer = card.querySelector('.fui-stream-card__buffer');
+      return { clock: card.querySelector('.fui-stream-card__time'), fill: card.querySelector('.fui-stream-card__fill'), bar: card.querySelector('.fui-stream-card__bar'),
+        also: (s, pos) => {
+          const at = etaOf(s, pos);
+          if (eta && at) eta.textContent = at;
+          if (buffer && s.transcode && s.transcode.progress != null) buffer.style.width = `${Math.max(0, Math.min(1, s.transcode.progress)) * 100}%`;
+        } };
+    } });
   ctx.onCleanup(() => live.destroy());
   const activityBody = h('div', null, h('p', { class: 'simple-empty' }, 'Looking for streams…'));
   let first = true;
@@ -157,12 +166,22 @@ function streams(sessions) {
   return streamCards(sessions.map(stream));
 }
 
+/** "ETA: 21:40" from where a playing stream is, or nothing for one paused or without a length. */
+function etaOf(s, pos) {
+  if (!s.runtime_s || s.is_paused) return null;
+  const left = Math.max(0, s.runtime_s - pos);
+  return `ETA: ${new Date(Date.now() + left * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+/** What a stream is, under its title: an episode's code, and a name for every other kind Jellyfin plays. */
+const KIND = { Audio: ['music', 'Track'], TvChannel: ['tv', 'Live TV'], MusicVideo: ['music', 'Music video'], AudioBook: ['music', 'Audiobook'], Video: ['film', 'Video'], Movie: ['film', 'Movie'] };
+
 function stream(s) {
   const tc = s.transcode;
   const changed = (direct, from, to) => (tc && !direct ? `Transcode (${from || '?'} → ${up(to) || '?'})` : `Direct play${from ? ` (${from})` : ''}`);
-  const left = s.runtime_s ? Math.max(0, s.runtime_s - (s.position_s || 0)) : null;
-  const eta = left != null && !s.is_paused ? new Date(Date.now() + left * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+  const eta = etaOf(s, s.position_s || 0);
   const episode = s.item_type === 'Episode';
+  const [kindIcon, kindName] = KIND[s.item_type] || ['film', s.item_type || 'Video'];
   const where = s.is_local == null ? 'Unknown' : s.is_local ? 'LAN' : 'WAN';
   return streamCard({
     key: s.key,
@@ -176,13 +195,13 @@ function stream(s) {
         ['Subtitle', s.subtitle || 'None']].filter(([, v]) => v != null),
       [['Location', s.remote_ip ? `${where}: ${s.remote_ip}` : where], ['Bandwidth', rate(s.bitrate)]],
     ],
-    eta: eta ? `ETA: ${eta}` : null,
+    eta,
     time: s.runtime_s ? `${clock(s.position_s || 0)} / ${clock(s.runtime_s)}` : clock(s.position_s || 0),
     progress: s.runtime_s ? (s.position_s || 0) / s.runtime_s : 0,
     buffer: tc && tc.progress != null ? tc.progress : null,
     paused: s.is_paused,
     title: { text: episode && s.series_name ? `${s.series_name} - ${s.item_name}` : s.item_name, href: `/items/${s.item_id}` },
-    sub: episode ? { icon: 'tv', text: episodeCode(s.season_number, s.episode_number) || 'Episode' } : s.item_type === 'Audio' ? { icon: 'music', text: 'Track' } : { icon: 'film', text: 'Movie' },
+    sub: episode ? { icon: 'tv', text: episodeCode(s.season_number, s.episode_number) || 'Episode' } : { icon: kindIcon, text: kindName },
     who: h('span', { class: 'simple-who' }, h('span', { class: 'simple-who__name' }, s.user_name), avatar(s.user_id, s.user_name, { size: 34, hasImage: s.user_has_image })),
   });
 }
