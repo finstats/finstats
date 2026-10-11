@@ -137,16 +137,23 @@ pub struct Disk {
     pub months_left: Option<f64>,
 }
 
-/// The disks behind the library folders. Folders that report the same device (when Jellyfin names one) and the same free
-/// space in one reading are on one disk: free space is the disk's, read at one instant, and two disks with the very same
-/// number of free bytes do not happen. A file counts towards the disk whose folder its path is under.
+/// The disks behind the library folders. Folders on the device Jellyfin names (the mount, on Linux; the drive, on Windows)
+/// are one disk, whatever free space was read for each: Jellyfin reads folder by folder, and a disk being written to
+/// reports a little less for the next. Without a device, the same free space is the same disk, since two disks with the
+/// very same number of free bytes do not happen. A file counts towards the disk whose folder its path is under, with
+/// either separator a Jellyfin may use.
 pub fn disks(folders: &[Folder], files: &[File], now: i64) -> Vec<Disk> {
     let mut by_disk: BTreeMap<(Option<String>, i64), Vec<&Folder>> = BTreeMap::new();
     for f in folders {
-        by_disk.entry((f.device.clone(), f.free)).or_default().push(f);
+        let key = match &f.device {
+            Some(device) => (Some(device.clone()), 0),
+            None => (None, f.free),
+        };
+        by_disk.entry(key).or_default().push(f);
     }
     let since = now - GROWTH_MONTHS * MONTH_S;
-    let under = |path: &str, folder: &str| path.strip_prefix(folder.trim_end_matches('/')).is_some_and(|rest| rest.starts_with('/'));
+    let sep = |c: char| c == '/' || c == '\\';
+    let under = |path: &str, folder: &str| path.strip_prefix(folder.trim_end_matches(sep)).is_some_and(|rest| rest.starts_with(sep));
     by_disk
         .into_values()
         .map(|on| {
@@ -158,7 +165,7 @@ pub fn disks(folders: &[Folder], files: &[File], now: i64) -> Vec<Disk> {
             libraries.dedup();
             let added: i64 = files.iter().filter(|f| f.added >= since && paths.iter().any(|p| under(&f.path, p))).map(|f| f.bytes.max(0)).sum();
             let per_month = added / GROWTH_MONTHS;
-            let (free, used) = (on[0].free, on.iter().map(|f| f.used).max().unwrap_or(0));
+            let (free, used) = (on.iter().map(|f| f.free).min().unwrap_or(0), on.iter().map(|f| f.used).max().unwrap_or(0));
             Disk { folders: paths, libraries, free, used, per_month, months_left: (per_month > 0).then(|| free as f64 / per_month as f64) }
         })
         .collect()
@@ -445,6 +452,23 @@ mod tests {
         assert_eq!((big.libraries.clone(), big.per_month), (vec!["Shows".to_string()], 15_000_000_000));
         let quiet = d.iter().find(|x| x.free == 7).unwrap();
         assert_eq!((quiet.per_month, quiet.months_left), (0, None), "nothing added: no pace to tell");
+    }
+
+    /// Jellyfin reads each folder's free space on its own, so a disk being written to reports a little less for the next
+    /// folder: where it names the device (the mount, on Linux), that alone says it is one disk, at the freest reading.
+    #[test]
+    fn folders_on_one_named_device_are_one_disk_whatever_the_free_space_read_for_each() {
+        let d = disks(&[folder("Films", "/mnt/media/films", 500_000, Some("/mnt/media")), folder("Shows", "/mnt/media/shows", 499_000, Some("/mnt/media"))], &[], NOW);
+        assert_eq!(d.len(), 1, "{d:?}");
+        assert_eq!((d[0].folders.len(), d[0].free), (2, 499_000), "the lower reading: the disk is filling");
+    }
+
+    /// A Jellyfin on Windows names folders and files with backslashes.
+    #[test]
+    fn a_windows_folder_fills_by_what_is_added_under_it() {
+        let d = disks(&[folder("Films", r"D:\Movies", 600_000_000_000, Some(r"D:\"))],
+                      &[file("Films", r"D:\Movies\Big Buck Bunny (2008)\bbb.mkv", 60, 30), file("Films", r"D:\Moviesx\elsewhere.mkv", 5, 1)], NOW);
+        assert_eq!(d[0].per_month, 60_000_000_000 / GROWTH_MONTHS, "{d:?}");
     }
 
     #[test]
