@@ -722,6 +722,13 @@ pub async fn activity(State(app): State<App>, user: AuthUser, Query(q): Query<Ac
 }
 
 /// One page of history (or of the trash) for `scope`, narrowed by the rest of `q`.
+/// How many plays a page of Activity has. Titles are joined only when a condition reads them (`watched` reads a title's
+/// runtime): SQLite keeps a LEFT JOIN nobody reads, one lookup per counted play.
+fn activity_count_sql(from: &str, cond: &str, reads_titles: bool) -> String {
+    let titles = if reads_titles { "LEFT JOIN items i ON i.id = p.item_id" } else { "" };
+    format!("SELECT COUNT(*) FROM {from} p {titles} {cond}")
+}
+
 fn activity_page(c: &Connection, scope: &Scope, q: ActivityQuery) -> Result<Value> {
     let page = page_number(q.page);
     let per_page = q.per_page.unwrap_or(50).clamp(1, 200);
@@ -759,7 +766,8 @@ fn activity_page(c: &Connection, scope: &Scope, q: ActivityQuery) -> Result<Valu
     // The trash is listed like history, from its own view, newest deletion first.
     let trash = q.deleted == Some(1);
     let from = if trash { "trashed_playbacks" } else { "visible_playbacks" };
-    let total: i64 = c.query_row(&format!("SELECT COUNT(*) FROM {from} p LEFT JOIN items i ON i.id = p.item_id {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0))?;
+    let reads_titles = q.watched == Some(1);
+    let total: i64 = c.query_row(&activity_count_sql(from, &cond.sql(), reads_titles), params_from_iter(cond.args.iter()), |r| r.get(0))?;
     // Sorting by address is only for those who are shown addresses.
     let sort = q.sort.as_deref().filter(|k| *k != "ip" || scope.perms.see_network);
     let order = order_by(&ACTIVITY_SORTS, sort, q.dir.as_deref(), if trash { "p.deleted_at DESC, p.id DESC" } else { "p.ended_at DESC, p.id DESC" });
@@ -779,7 +787,7 @@ fn activity_page(c: &Connection, scope: &Scope, q: ActivityQuery) -> Result<Valu
     // How many of these filters' plays wait in the trash, for whoever may bring them back: the page offers the trash
     // only when it holds something.
     let in_trash: Option<i64> = if scope.perms.manage && !trash {
-        Some(c.query_row(&format!("SELECT COUNT(*) FROM trashed_playbacks p LEFT JOIN items i ON i.id = p.item_id {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0))?)
+        Some(c.query_row(&activity_count_sql("trashed_playbacks", &cond.sql(), reads_titles), params_from_iter(cond.args.iter()), |r| r.get(0))?)
     } else {
         None
     };
@@ -2806,6 +2814,20 @@ mod tests {
         assert_eq!(names, vec![("bob", "Sintel"), ("alice", "Big Buck Bunny")]);
         assert_eq!(page["total"], 2);
         assert_eq!(activity_page(&c, &scope, ActivityQuery::default()).unwrap()["total"], 5, "without it, every play");
+    }
+
+    /// Activity's counts read the library only for the one filter that needs a runtime: SQLite keeps a LEFT JOIN nobody
+    /// reads, and on a million plays it made every page's count seven times slower.
+    #[test]
+    fn activity_counts_look_up_titles_only_when_watched_asks_for_their_runtime() {
+        let c = conn();
+        let plan = |sql: &str| -> String {
+            c.prepare(&format!("EXPLAIN QUERY PLAN {sql}")).unwrap().query_map([], |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect::<Vec<_>>().join(" | ")
+        };
+        let plain = plan(&activity_count_sql("visible_playbacks", "", false));
+        assert!(!plain.contains(" i "), "{plain}");
+        let watched = plan(&activity_count_sql("visible_playbacks", &format!("WHERE {PLAY_FRAC} >= 0.8"), true));
+        assert!(watched.contains(" i "), "{watched}");
     }
 
     /// A device id is `see_network`'s, like an address: on the user page as everywhere else.
