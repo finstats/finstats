@@ -30,7 +30,7 @@ export function describe(f) {
         + `${e.unsaid ? ` (${num(e.unsaid)} did not say)` : ''}, at most ${num(e.most_at_once)} at once. Whether Jellyfin transcodes on a graphics card is set in its Playback settings`;
     case 'scan_busy':
       return `Jellyfin's library scan is set to run every ${duration(e.interval_s)} and last took ${duration(e.last_duration_s)}: `
-        + `${num(e.duty_pct)}% of the time, over ${plural(e.items, 'file')}. How often it runs is set in Jellyfin's scheduled tasks`;
+        + `${e.duty_pct >= 100 ? 'longer than it waits between runs, so it is scanning all the time' : `${num(e.duty_pct)}% of the time`}, over ${plural(e.items, 'file')}. How often it runs is set in Jellyfin's scheduled tasks`;
     case 'runway':
       return `${bytes(e.free_bytes)} free, and ${bytes(e.added_per_month)} added a month over the last ${num(e.window_months)} months `
         + `(${and(e.libraries || [])}): at that pace, ${months(e.months_left)} of space are left`;
@@ -64,8 +64,8 @@ export function capacityView(ctx) {
   }
 
   function busiest(d) {
-    const tile = (label, m) => statTile({ label, value: m ? plural(m.streams, 'stream') : '–',
-      hint: m ? `${m.transcodes ? `${plural(m.transcodes, 'transcode')}, ` : ''}${relTime(m.at)}` : `Nothing played in the last ${num(d.recent_days)} days` });
+    const tile = (label, m, none) => statTile({ label, value: m ? plural(m.streams, 'stream') : '–',
+      hint: m ? `${m.transcodes ? `${plural(m.transcodes, 'transcode')}, ` : ''}${relTime(m.at)}` : none });
     const rows = (d.busiest || []).map((m) => h('tr', null,
       h('td', { class: 'nowrap' }, h('time', { datetime: new Date(m.at * 1000).toISOString(), title: relTime(m.at) }, dateTime(m.at))),
       h('td', { class: 'mono r' }, num(m.streams)),
@@ -75,7 +75,7 @@ export function capacityView(ctx) {
       h('td', { class: 'mono r' }, num(m.unsaid))));
     return card({ title: 'Busiest moments', sub: 'The most streams at once FinStats has seen, and how many were transcoded. It cannot know what your server could do; this is what it has done.', id: 'capacity-busiest',
       body: h('div', { class: 'stack' },
-        h('div', { class: 'fui-stat-tile__grid' }, tile('Busiest on record', (d.busiest || [])[0]), tile(`Busiest in ${num(d.recent_days)} days`, d.recent)),
+        h('div', { class: 'fui-stat-tile__grid' }, tile('Busiest on record', (d.busiest || [])[0], 'Nothing played yet'), tile(`Busiest in ${num(d.recent_days)} days`, d.recent, `Nothing played in the last ${num(d.recent_days)} days`)),
         rows.length ? plainTable(h('table', { class: 'fui-data-table' },
           h('thead', null, h('tr', null, h('th', null, 'When'), h('th', { class: 'r' }, 'Streams'), h('th', { class: 'r' }, 'Transcoded'),
             h('th', { class: 'r', title: 'Jellyfin said it used hardware acceleration' }, 'In hardware'), h('th', { class: 'r', title: 'Jellyfin said it used none' }, 'In software'),
@@ -102,7 +102,8 @@ export function capacityView(ctx) {
       body: h('div', { class: 'stack' },
         h('div', { class: 'stack-sm' }, d.disks.map((k) => h('div', { class: 'capacity-disk' },
           h('p', null, said(k)),
-          facts([['Folders', k.folders.join(', '), { wide: true }], ['Free', bytes(k.free_bytes), { mono: true }], ['Added a month', bytes(k.added_per_month), { mono: true }]])))),
+          // A disk too new to have a pace has none to show, not one of nothing.
+          facts([['Folders', k.folders.join(', '), { wide: true }], ['Free', bytes(k.free_bytes), { mono: true }], k.young ? null : ['Added a month', bytes(k.added_per_month), { mono: true }]].filter(Boolean))))),
         h('p', { class: 'fui-field__help' }, 'Growth is counted by the date Jellyfin added each file, so a replaced file counts as new and one deleted since is not counted.')) });
   }
 
