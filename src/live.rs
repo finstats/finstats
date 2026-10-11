@@ -102,6 +102,27 @@ impl Course {
     }
 }
 
+/// What one page was last sent of now playing: the shape of its cards and where their clocks were set. A page is sent
+/// now playing again only when its own answer is news by these, never because the server's picture moved: somebody
+/// else's pause is not news to a person who sees only their own streams, and a frame sent just then would say when it
+/// happened.
+#[derive(Debug, Default)]
+pub struct Drawn {
+    shape: Option<u64>,
+    course: Course,
+}
+
+impl Drawn {
+    pub fn news(&self, own: &[Value], now: i64) -> bool {
+        self.shape != Some(shape(own)) || self.course.moved(own, now)
+    }
+
+    pub fn set(&mut self, own: &[Value], now: i64) {
+        self.shape = Some(shape(own));
+        self.course.set(own, now);
+    }
+}
+
 /// Whether a connection vouches for somebody looking at the queue: only a visible tab subscribed to it, the rule
 /// `visibleOnly` held for the poll it replaces. A forgotten background tab must not keep Sonarr and Radarr on 5 s.
 pub fn stamps(subscribed: bool, visible: bool) -> bool {
@@ -350,6 +371,8 @@ struct Tab {
     topics: HashSet<&'static str>,
     visible: bool,
     sent: HashMap<&'static str, String>,
+    /// Now playing's own measure of news (see [`Drawn`]); the other topics go by `sent`.
+    drawn: Drawn,
 }
 
 impl Tab {
@@ -368,18 +391,33 @@ impl Tab {
         if !self.topics.contains(topic) {
             return None;
         }
-        let f = frame(topic, &self.answer(app, topic, marked).await?);
+        let data = self.answer(app, topic, marked).await?;
+        if topic == "now_playing" {
+            let own = data["sessions"].as_array().map(Vec::as_slice).unwrap_or_default();
+            let now = crate::db::now();
+            if self.sent.contains_key(topic) && !self.drawn.news(own, now) {
+                return None;
+            }
+            self.drawn.set(own, now);
+        }
+        let f = frame(topic, &data);
         (self.sent.get(topic) != Some(&f)).then(|| {
             self.sent.insert(topic, f.clone());
             f
         })
+    }
+
+    /// Send this topic whole the next time round, whatever was sent before: a new subscription, or a tab shown again
+    /// whose clocks ran slow while it was hidden (a browser throttles a hidden tab's timers to once a minute).
+    fn resend(&mut self, topic: &'static str) {
+        self.sent.remove(topic);
     }
 }
 
 async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Presented, _seat: Seat, gone: Arc<tokio::sync::Notify>) {
     let feed = &app.live_feed;
     let (mut np, mut dl, mut sum, mut auth) = (feed.now_playing.subscribe(), feed.downloads.subscribe(), feed.summary.subscribe(), feed.auth.subscribe());
-    let mut tab = Tab { topics: HashSet::new(), visible: false, sent: HashMap::new(), user };
+    let mut tab = Tab { topics: HashSet::new(), visible: false, sent: HashMap::new(), drawn: Drawn::default(), user };
     let hello = json!({ "type": "hello", "v": FRAME_V, "topics": allowed(&tab.user) }).to_string();
     if socket.send(Message::Text(hello.into())).await.is_err() {
         return;
@@ -407,7 +445,7 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                             for t in TOPICS.into_iter().filter(|t| topics.iter().any(|x| x == t)) {
                                 if may.contains(&t) {
                                     tab.topics.insert(t);
-                                    tab.sent.remove(t); // the whole state on subscribing, whatever was sent before
+                                    tab.resend(t); // the whole state on subscribing, whatever was sent before
                                     due.push(t);
                                     fresh = true;
                                 } else {
@@ -423,6 +461,10 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                         }
                         Ok(ClientMsg::Unsubscribe { topics }) => tab.topics.retain(|t| !topics.iter().any(|x| x == t)),
                         Ok(ClientMsg::Visible { visible }) => {
+                            if visible && !tab.visible && tab.topics.contains("now_playing") {
+                                tab.resend("now_playing");
+                                due.push("now_playing");
+                            }
                             tab.visible = visible;
                             if stamps(tab.topics.contains("downloads"), tab.visible) {
                                 crate::downloads::watched(&app, crate::db::now());
@@ -513,6 +555,24 @@ mod tests {
         json!({ "key": key, "user_id": "u1", "user_name": "alice", "item_id": "i1", "item_name": "Big Buck Bunny", "position_s": pos,
                 "watched_s": pos, "is_paused": false, "play_method": "DirectPlay", "audio": "AAC 2.0", "subtitle": null,
                 "transcode": { "video_codec": "h264", "progress": 0.1 } })
+    }
+
+    /// A page is sent now playing when what *it* shows changed: its own streams' cards or clocks. Somebody else's pause
+    /// moves the server's picture, and must not reach a person who sees only their own streams, even as a frame with
+    /// nothing new in it: when frames arrive would say when other people press play.
+    #[test]
+    fn a_page_hears_of_now_playing_only_when_its_own_answer_changed() {
+        let mut drawn = Drawn::default();
+        let mine = [stream("k1", 100)];
+        assert!(drawn.news(&mine, 1_000), "nothing drawn yet");
+        drawn.set(&mine, 1_000);
+        assert!(!drawn.news(&[stream("k1", 110)], 1_010), "ten seconds on, on course");
+        assert!(drawn.news(&[stream("k1", 400)], 1_010), "a seek");
+        let mut paused = stream("k1", 110);
+        paused["is_paused"] = json!(true);
+        assert!(drawn.news(&[paused], 1_010), "a pause");
+        assert!(drawn.news(&[], 1_010), "it ended");
+        assert!(drawn.news(&[stream("k1", 110), stream("k2", 5)], 1_010), "another of one's own began");
     }
 
     #[test]
