@@ -88,9 +88,13 @@ export function capacityView(ctx) {
         body: [h('p', { class: 'fui-field__help' }, 'Jellyfin 10.11 and newer report how much space is free; this server does not, so only how fast each library grows is shown, not how long the space will last.'),
           rows.length ? plainTable(h('table', { class: 'fui-data-table' }, h('thead', null, h('tr', null, h('th', null, 'Library'), h('th', { class: 'r' }, `Added in ${num(d.window_months)} months`), h('th', { class: 'r' }, 'A month'))), h('tbody', null, rows))) : null] });
     }
-    const said = (k) => (k.added_per_month > 0
-      ? `${and(k.libraries)} grew ${bytes(k.added_per_month)} a month over ${window}; at that pace ${months(k.months_left)} of space are left.`
-      : `Nothing was added to ${and(k.libraries)} over ${window}.`);
+    // Each disk's own window: a disk filled more recently is measured from a month after its first file, and not before.
+    const over = (k) => (k.window_months != null ? `the last ${num(k.window_months)} months` : window);
+    const said = (k) => (k.young
+      ? `${and(k.libraries)} came to Jellyfin within the last two months; how fast this disk fills is told once a month has passed since it was filled.`
+      : k.added_per_month > 0
+        ? `${and(k.libraries)} grew ${bytes(k.added_per_month)} a month over ${over(k)}; at that pace ${months(k.months_left)} of space are left.`
+        : `Nothing was added to ${and(k.libraries)} over ${over(k)}.`);
     return card({ title: 'Disk space', sub: `Each disk the libraries are on, and how fast what Jellyfin added over ${window} fills it`, id: 'capacity-disks',
       body: h('div', { class: 'stack' },
         h('div', { class: 'stack-sm' }, d.disks.map((k) => h('div', { class: 'capacity-disk' },

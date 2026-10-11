@@ -131,11 +131,22 @@ pub struct Disk {
     pub libraries: Vec<String>,
     pub free: i64,
     pub used: i64,
-    /// Bytes added under these folders over the last [`GROWTH_MONTHS`], per month.
+    /// Bytes added under these folders per month, over [`Disk::window_months`].
     pub per_month: i64,
     /// Months until full at that pace; `None` when nothing was added.
     pub months_left: Option<f64>,
+    /// How long the pace was measured over: [`GROWTH_MONTHS`], or less on a disk that was filled more recently.
+    pub window_months: f64,
+    /// Filled too recently to have a pace yet (see [`SETTLE_S`]).
+    pub young: bool,
 }
+
+/// A disk's first month is its filling, not its growth: Jellyfin dates every file of a library it was just given within
+/// days, and read as growth that is a disk "full within a month". The pace is measured from this long after the disk's
+/// first file...
+pub const SETTLE_S: i64 = 30 * 86_400;
+/// ...and told only once it covers this long.
+pub const MIN_WINDOW_S: i64 = 30 * 86_400;
 
 /// The disks behind the library folders. Folders on the device Jellyfin names (the mount, on Linux; the drive, on Windows)
 /// are one disk, whatever free space was read for each: Jellyfin reads folder by folder, and a disk being written to
@@ -163,10 +174,15 @@ pub fn disks(folders: &[Folder], files: &[File], now: i64) -> Vec<Disk> {
             let mut libraries: Vec<String> = on.iter().map(|f| f.library.clone()).collect();
             libraries.sort();
             libraries.dedup();
-            let added: i64 = files.iter().filter(|f| f.added >= since && paths.iter().any(|p| under(&f.path, p))).map(|f| f.bytes.max(0)).sum();
-            let per_month = added / GROWTH_MONTHS;
+            let here: Vec<&File> = files.iter().filter(|f| paths.iter().any(|p| under(&f.path, p))).collect();
+            let start = here.iter().map(|f| f.added).min().map_or(since, |first| since.max(first + SETTLE_S));
+            let window = now - start;
+            let young = window < MIN_WINDOW_S;
+            let added: i64 = here.iter().filter(|f| f.added >= start).map(|f| f.bytes.max(0)).sum();
+            let per_month = if young { 0 } else { (added as i128 * MONTH_S as i128 / window as i128) as i64 };
             let (free, used) = (on.iter().map(|f| f.free).min().unwrap_or(0), on.iter().map(|f| f.used).max().unwrap_or(0));
-            Disk { folders: paths, libraries, free, used, per_month, months_left: (per_month > 0).then(|| free as f64 / per_month as f64) }
+            let window_months = if young { 0.0 } else { (window as f64 / MONTH_S as f64 * 10.0).round() / 10.0 };
+            Disk { folders: paths, libraries, free, used, per_month, months_left: (per_month > 0).then(|| free as f64 / per_month as f64), window_months, young }
         })
         .collect()
 }
@@ -255,9 +271,9 @@ pub fn runway(disk: &Disk) -> Option<Finding> {
     Some(Finding {
         key: format!("capacity:runway:{place}"),
         kind: "runway",
-        title: format!("{place}: about {} of space left at the pace of the last {GROWTH_MONTHS} months", months_said(months)),
+        title: format!("{place}: about {} of space left at the pace of the last {} months", months_said(months), disk.window_months),
         evidence: json!({ "folders": disk.folders, "libraries": disk.libraries, "free_bytes": disk.free, "added_per_month": disk.per_month,
-                          "months_left": (months * 10.0).round() / 10.0, "window_months": GROWTH_MONTHS }),
+                          "months_left": (months * 10.0).round() / 10.0, "window_months": disk.window_months }),
         fingerprint: format!("under {mark} months"),
     })
 }
@@ -317,7 +333,8 @@ pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
         "recent_days": RECENT_DAYS,
         "free_space_reported": !folders.is_empty(),
         "disks": disks.iter().map(|d| json!({ "folders": d.folders, "libraries": d.libraries, "free_bytes": d.free, "used_bytes": d.used,
-                                                "added_per_month": d.per_month, "months_left": d.months_left.map(|m| (m * 10.0).round() / 10.0) })).collect::<Vec<_>>(),
+                                                "added_per_month": d.per_month, "months_left": d.months_left.map(|m| (m * 10.0).round() / 10.0),
+                                                "window_months": d.window_months, "young": d.young })).collect::<Vec<_>>(),
         "growth": growth_by_library(&files, now).into_iter().map(|(library, added)| json!({ "library": library, "added_bytes": added })).collect::<Vec<_>>(),
         "window_months": GROWTH_MONTHS,
     });
@@ -437,6 +454,7 @@ mod tests {
             file("Films", "/media/films/Big Buck Bunny (2008)/bbb.mkv", 60, 30),
             file("Shows", "/media/shows/Low Orbit/S01E01.mkv", 30, 100),
             file("Shows", "/mnt/big/shows/Harbour Street/S01E01.mkv", 90, 10),
+            file("Shows", "/mnt/big/shows/Harbour Street/S00E01.mkv", 1, 300), // long before: the disk is not new
             file("Films", "/media/films/Sintel (2010)/sintel.mkv", 500, 400), // before the window: not growth
             file("Films", "/media/filmsx/elsewhere.mkv", 5, 1),               // a folder whose name only starts the same
         ];
@@ -454,6 +472,26 @@ mod tests {
         assert_eq!((quiet.per_month, quiet.months_left), (0, None), "nothing added: no pace to tell");
     }
 
+    /// A library's first weeks are its filling, not its growth: a Jellyfin set up three months ago dates every file in the
+    /// last three months, and read as growth that is "a month of space left" for a disk that is barely filling. The pace
+    /// is measured from a month after the disk's first file, and not at all until a month after that.
+    #[test]
+    fn a_young_library_is_measured_from_after_its_filling() {
+        let folders = [folder("Films", "/media/films", 2_000_000_000_000, Some("/media"))];
+        // Ten TB arrived 120 days ago, the day Jellyfin was set up; since then 100 GB 60 days ago and 100 GB 10 days ago.
+        let files = [file("Films", "/media/films/all.mkv", 10_000, 120), file("Films", "/media/films/a.mkv", 100, 60), file("Films", "/media/films/b.mkv", 100, 10)];
+        let d = &disks(&folders, &files, NOW)[0];
+        let window = 90.0 * DAY as f64 / MONTH_S as f64; // from 30 days after the first file
+        assert!((d.per_month as f64 - 200_000_000_000.0 / window).abs() < 1_000.0, "{d:?}");
+        assert!((d.window_months - 3.0).abs() < 0.05, "{d:?}");
+        assert!(!d.young);
+        // Set up 50 days ago: not a month of growth since its filling yet, so no pace and no runway.
+        let files = [file("Films", "/media/films/all.mkv", 10_000, 50), file("Films", "/media/films/b.mkv", 100, 10)];
+        let d = &disks(&folders, &files, NOW)[0];
+        assert_eq!((d.per_month, d.months_left, d.young), (0, None, true), "{d:?}");
+        assert!(runway(d).is_none());
+    }
+
     /// Jellyfin reads each folder's free space on its own, so a disk being written to reports a little less for the next
     /// folder: where it names the device (the mount, on Linux), that alone says it is one disk, at the freest reading.
     #[test]
@@ -467,7 +505,8 @@ mod tests {
     #[test]
     fn a_windows_folder_fills_by_what_is_added_under_it() {
         let d = disks(&[folder("Films", r"D:\Movies", 600_000_000_000, Some(r"D:\"))],
-                      &[file("Films", r"D:\Movies\Big Buck Bunny (2008)\bbb.mkv", 60, 30), file("Films", r"D:\Moviesx\elsewhere.mkv", 5, 1)], NOW);
+                      &[file("Films", r"D:\Movies\Big Buck Bunny (2008)\bbb.mkv", 60, 30), file("Films", r"D:\Moviesx\elsewhere.mkv", 5, 1),
+                        file("Films", r"D:\Movies\Sintel (2010)\sintel.mkv", 1, 400)], NOW);
         assert_eq!(d[0].per_month, 60_000_000_000 / GROWTH_MONTHS, "{d:?}");
     }
 
@@ -528,7 +567,7 @@ mod tests {
 
     fn disk(free_gb: i64, per_month_gb: i64) -> Disk {
         let (free, per_month) = (free_gb * 1_000_000_000, per_month_gb * 1_000_000_000);
-        Disk { folders: vec!["/media/films".into()], libraries: vec!["Films".into()], free, used: 1, per_month, months_left: (per_month > 0).then(|| free as f64 / per_month as f64) }
+        Disk { folders: vec!["/media/films".into()], libraries: vec!["Films".into()], free, used: 1, per_month, months_left: (per_month > 0).then(|| free as f64 / per_month as f64), window_months: 6.0, young: false }
     }
 
     #[test]
@@ -552,7 +591,7 @@ mod tests {
             c.execute_batch(m).unwrap();
         }
         c.execute_batch("INSERT INTO libraries(id, name, updated_at) VALUES ('lf', 'Films', 0);").unwrap();
-        for (n, gb, days) in [(1, 60, 20), (2, 60, 50)] {
+        for (n, gb, days) in [(1, 60, 20), (2, 60, 50), (3, 1, 400)] {
             c.execute(
                 "INSERT INTO items(id, type, name, library_id, path, size_bytes, date_created, removed, updated_at) VALUES (?1, 'Movie', ?2, 'lf', ?3, ?4, ?5, 0, 0)",
                 crate::db::rusqlite::params![format!("f{n}"), format!("Big Buck Bunny {n}"), format!("/media/films/bbb{n}.mkv"), gb * 1_000_000_000i64, NOW - days * DAY],
