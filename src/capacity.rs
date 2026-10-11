@@ -68,24 +68,43 @@ pub const RECENT_DAYS: i64 = 90;
 /// first: most streams, then most transcodes, then the earlier. One evening of four streams is one moment, not the
 /// dozen instants it touched four.
 pub fn busiest(plays: &[Play], n: usize) -> Vec<Moment> {
-    // Ends before starts at the same instant, so back-to-back plays are not two at once, and a spell only ends when an
-    // instant leaves nothing playing: an evening of episodes back to back is one spell.
-    let mut points: Vec<(i64, i64, Way)> = plays.iter().filter(|p| p.end > p.start).flat_map(|p| [(p.start, 1, p.way), (p.end, -1, p.way)]).collect();
-    points.sort_by_key(|&(at, delta, _)| (at, delta));
+    let mut points: Vec<u64> = plays.iter().filter(|p| p.end > p.start).flat_map(|p| points_of(p.start, p.end, p.way)).collect();
+    busiest_of(&mut points, n)
+}
+
+/// A play's start and end as two points of eight bytes each: the instant, then end before start at the same instant (so
+/// back-to-back plays are not two at once), then how it played. Sorting the numbers sorts the points. A long history is
+/// read straight into these, never into a list of plays first: ten million plays were the better part of a gigabyte.
+pub fn points_of(start: i64, end: i64, way: Way) -> [u64; 2] {
+    let way = match way {
+        Way::Direct => 0,
+        Way::Hardware => 1,
+        Way::Software => 2,
+        Way::Unsaid => 3,
+    };
+    [((start.max(0) as u64) << 3) | 0b100 | way, ((end.max(0) as u64) << 3) | way]
+}
+
+/// [`busiest`] over points from [`points_of`], in any order (they are sorted here).
+pub fn busiest_of(points: &mut [u64], n: usize) -> Vec<Moment> {
+    points.sort_unstable();
     let mut now = Moment::default();
     let mut spells: Vec<Moment> = vec![];
     let mut best: Option<Moment> = None;
-    for (i, &(at, delta, way)) in points.iter().enumerate() {
+    let rank = |a: &Moment, b: &Moment| (b.streams, b.transcodes).cmp(&(a.streams, a.transcodes)).then(a.at.cmp(&b.at));
+    for (i, &point) in points.iter().enumerate() {
+        let (at, delta) = ((point >> 3) as i64, if point & 0b100 != 0 { 1 } else { -1 });
         now.streams += delta;
-        match way {
-            Way::Direct => {}
-            Way::Hardware => now.hardware += delta,
-            Way::Software => now.software += delta,
-            Way::Unsaid => now.unsaid += delta,
+        match point & 0b11 {
+            1 => now.hardware += delta,
+            2 => now.software += delta,
+            3 => now.unsaid += delta,
+            _ => {}
         }
         now.transcodes = now.hardware + now.software + now.unsaid;
         now.at = at;
-        let instant_done = points.get(i + 1).is_none_or(|next| next.0 != at);
+        // A spell only ends when an instant leaves nothing playing: an evening of episodes back to back is one spell.
+        let instant_done = points.get(i + 1).is_none_or(|next| (next >> 3) as i64 != at);
         if !instant_done {
             continue;
         }
@@ -94,9 +113,14 @@ pub fn busiest(plays: &[Play], n: usize) -> Vec<Moment> {
         }
         if now.streams == 0 {
             spells.extend(best.take());
+            // Only the best few are kept: a long history has a spell for nearly every evening.
+            if spells.len() >= 4 * n.max(1) {
+                spells.sort_by(rank);
+                spells.truncate(n);
+            }
         }
     }
-    spells.sort_by(|a, b| (b.streams, b.transcodes).cmp(&(a.streams, a.transcodes)).then(a.at.cmp(&b.at)));
+    spells.sort_by(rank);
     spells.truncate(n);
     spells
 }
@@ -213,6 +237,8 @@ pub struct Finding {
 
 /// Software transcodes are looked at over this window...
 pub const SOFTWARE_WINDOW_DAYS: i64 = 90;
+// The software finding is worked out from the plays of the last [`RECENT_DAYS`], so its window must lie within them.
+const _: () = assert!(SOFTWARE_WINDOW_DAYS <= RECENT_DAYS);
 /// ...and said about only with this many transcodes Jellyfin said either way about: a handful proves nothing.
 pub const SOFTWARE_MIN_SAID: i64 = 20;
 /// ...and only where transcoding is common: at least this share of plays. A server that rarely transcodes has no need of
@@ -296,13 +322,29 @@ fn moment_json(m: &Moment) -> Value {
 /// Everything again from what is stored: the plays, the files and the server's last details. Run after a library read
 /// and after a read of the server's details, never on a request. Answers how many findings there are.
 pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
-    let plays: Vec<Play> = conn
-        .prepare("SELECT started_at, ended_at, play_method, json_extract(transcode, '$.hw_accel'), json_extract(transcode, '$.is_video_direct')
-                  FROM visible_playbacks WHERE ended_at > started_at")?
-        .query_map([], |r| {
-            let way = Way::of(r.get::<_, Option<String>>(2)?.as_deref(), r.get::<_, Option<String>>(3)?.as_deref(), r.get::<_, Option<bool>>(4)?);
-            Ok(Play { start: r.get(0)?, end: r.get(1)?, way })
-        })?
+    // How a play went is read from its transcode only where there is one, so the history is not parsed play by play.
+    const PLAY: &str = "SELECT started_at, ended_at, play_method,
+                               CASE WHEN play_method = 'Transcode' THEN json_extract(transcode, '$.hw_accel') END,
+                               CASE WHEN play_method = 'Transcode' THEN json_extract(transcode, '$.is_video_direct') END
+                        FROM visible_playbacks WHERE ended_at > started_at";
+    let way = |r: &crate::db::rusqlite::Row| -> crate::db::rusqlite::Result<Way> {
+        Ok(Way::of(r.get::<_, Option<String>>(2)?.as_deref(), r.get::<_, Option<String>>(3)?.as_deref(), r.get::<_, Option<bool>>(4)?))
+    };
+    let mut points: Vec<u64> = vec![];
+    {
+        let mut stmt = conn.prepare(PLAY)?;
+        let mut rows = stmt.query([])?;
+        while let Some(r) = rows.next()? {
+            points.extend(points_of(r.get(0)?, r.get(1)?, way(r)?));
+        }
+    }
+    let busiest_ever = busiest_of(&mut points, BUSIEST_LISTED);
+    drop(points);
+    // The last 90 days, through the index on when plays ended: a play that began in them ended in them.
+    let recent_since = now - RECENT_DAYS * 86_400;
+    let recent: Vec<Play> = conn
+        .prepare(&format!("{PLAY} AND ended_at >= ?1 AND started_at >= ?1"))?
+        .query_map([recent_since], |r| Ok(Play { start: r.get(0)?, end: r.get(1)?, way: way(r)? }))?
         .collect::<Result<_, _>>()?;
     let files: Vec<File> = conn
         .prepare("SELECT l.name, i.path, i.size_bytes, i.date_created FROM items i LEFT JOIN libraries l ON l.id = i.library_id
@@ -318,17 +360,15 @@ pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
     let scan = info["scheduled_tasks"].as_array().map(Vec::as_slice).unwrap_or_default().iter().find(|t| t["key"] == "RefreshLibrary").cloned().unwrap_or(Value::Null);
 
     let disks = disks(&folders, &files, now);
-    let recent_since = now - RECENT_DAYS * 86_400;
-    let recent: Vec<Play> = plays.iter().filter(|p| p.start >= recent_since).copied().collect();
     let mut found: Vec<Finding> = vec![];
     found.extend(disks.iter().filter_map(runway));
     found.extend(scan_busy(scan["interval_s"].as_i64(), scan["last_duration_s"].as_i64(), files.len() as i64));
-    found.extend(software_transcodes(&plays, now));
+    found.extend(software_transcodes(&recent, now));
     found.sort_by(|a, b| a.kind.cmp(b.kind).then(a.key.cmp(&b.key)));
 
     let facts = json!({
         "computed_at": now,
-        "busiest": busiest(&plays, BUSIEST_LISTED).iter().map(moment_json).collect::<Vec<_>>(),
+        "busiest": busiest_ever.iter().map(moment_json).collect::<Vec<_>>(),
         "recent": busiest(&recent, 1).first().map(moment_json),
         "recent_days": RECENT_DAYS,
         "free_space_reported": !folders.is_empty(),
@@ -426,6 +466,20 @@ mod tests {
         assert_eq!((b[2].at, b[2].streams, b[2].transcodes), (2 * DAY + 60, 2, 0));
         assert_eq!(busiest(&plays, 1).len(), 1);
         assert!(busiest(&[], 5).is_empty());
+    }
+
+    #[test]
+    fn of_many_spells_the_busiest_are_kept_wherever_they_fall() {
+        // Twenty evenings, one stream each, but for three: four streams on the first, three on the tenth, four on the last.
+        let mut plays = vec![];
+        for day in 0..20i64 {
+            let at_once = match day { 0 | 19 => 4, 9 => 3, _ => 1 };
+            plays.extend((0..at_once).map(|k| play(day * DAY + k, day * DAY + 3_600, Way::Direct)));
+        }
+        let b = busiest(&plays, 2);
+        assert_eq!(b.iter().map(|m| (m.at / DAY, m.streams)).collect::<Vec<_>>(), [(0, 4), (19, 4)], "{b:?}");
+        assert_eq!(busiest(&plays, 3)[2].streams, 3);
+        assert_eq!(busiest(&plays, 50).len(), 20);
     }
 
     #[test]
@@ -610,6 +664,29 @@ mod tests {
         }
         drop(stmt);
         c
+    }
+
+    /// How long a recompute takes and what it holds on a long history: `cargo test --release capacity_at_scale -- --ignored
+    /// --nocapture`, under `/usr/bin/time -v` for the memory. Not part of the suite.
+    #[test]
+    #[ignore]
+    fn capacity_at_scale() {
+        let mut c = db();
+        let n: i64 = std::env::var("PLAYS").ok().and_then(|v| v.parse().ok()).unwrap_or(2_000_000);
+        c.execute_batch(&format!(
+            "WITH RECURSIVE k(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM k WHERE i < {n})
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, play_method, transcode)
+             SELECT 'live', 'u' || (i % 40), 'alice', 'f1', 'Big Buck Bunny', 'Movie', {NOW} - i * 300, {NOW} - i * 300 + 2400, 2400,
+                    CASE WHEN i % 4 = 0 THEN 'Transcode' ELSE 'DirectPlay' END,
+                    CASE WHEN i % 4 = 0 THEN '{{\"hw_accel\":\"nvenc\",\"is_video_direct\":false}}' END FROM k"
+        )).unwrap();
+        let kb = |field: &str| -> i64 {
+            std::fs::read_to_string("/proc/self/status").unwrap().lines().find(|l| l.starts_with(field)).unwrap().split_whitespace().nth(1).unwrap().parse().unwrap()
+        };
+        std::fs::write("/proc/self/clear_refs", "5").unwrap(); // the peak starts again from here
+        let (rss, t) = (kb("VmRSS:"), std::time::Instant::now());
+        recompute(&mut c, NOW).unwrap();
+        println!("{n} plays: recompute took {:?} and {} MB more at its peak", t.elapsed(), (kb("VmHWM:") - rss) / 1024);
     }
 
     #[test]
