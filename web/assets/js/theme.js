@@ -6,8 +6,9 @@ try { const t = localStorage.getItem('finstats.theme'); if (t === 'light' || t =
 // [data-layout="simple"], and main.js loads that layout's modules from it.
 // Its stylesheet is written here, parser-inserted after app.css, so it holds the first paint as the others do and a
 // FinStats browser never fetches it.
+// A public profile (public.html, data-page="public") stands outside the app, and is seen as anyone sees it.
 try {
-  if (localStorage.getItem('finstats.layout') === 'simple') {
+  if (localStorage.getItem('finstats.layout') === 'simple' && document.documentElement.dataset.page !== 'public') {
     document.documentElement.dataset.layout = 'simple';
     document.write('<link rel="stylesheet" href="/assets/simple-tokens.css"><link rel="stylesheet" href="/assets/simple.css">');
   }
