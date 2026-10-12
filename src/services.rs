@@ -555,6 +555,9 @@ pub async fn update(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, 
         })
         .await?;
     app.service_health.write().unwrap().remove(&id);
+    if moved {
+        forget_posters(&app.data_dir.join("cache").join("img"), id);
+    }
     changed(&app).await?;
     Ok(Json(list_json(&app)))
 }
@@ -580,6 +583,14 @@ fn forget(conn: &Connection, id: i64) -> Result<()> {
     Ok(())
 }
 
+/// The posters cached for a connection (`api::arr_image` names them `arr-{id}-{media}-{width}`), thrown away with the rest
+/// when it points at another instance: kept, they were the old instance's pictures under the new one's media ids.
+fn forget_posters(img_dir: &std::path::Path, id: i64) -> usize {
+    let prefix = format!("arr-{id}-");
+    let Ok(entries) = std::fs::read_dir(img_dir) else { return 0 };
+    entries.flatten().filter(|e| e.file_name().to_str().is_some_and(|n| n.starts_with(&prefix))).filter(|e| std::fs::remove_file(e.path()).is_ok()).count()
+}
+
 /// Tables whose rows belong to one connection (`service_id … REFERENCES services ON DELETE CASCADE`).
 const CHILD_TABLES: [&str; 3] = ["upcoming", "requests", "grabs"];
 
@@ -596,6 +607,23 @@ mod tests {
 
     fn service(kind: Kind, url: &str) -> Service {
         Service { id: 1, kind, name: kind.label().into(), url: url.into(), username: None, secret: "hunter2-secret-key".into(), accept_invalid_certs: false, enabled: true }
+    }
+
+    /// A connection pointed at another instance keeps its id, so the posters cached for it were the old instance's
+    /// pictures under the new one's media ids, for a week. They go with what else was read from it.
+    #[test]
+    fn a_moved_connection_leaves_no_poster_of_the_old_instance() {
+        let dir = std::env::temp_dir().join(format!("finstats-arrposters-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in ["arr-1-12-250", "arr-1-7-500", "arr-12-1-250", "item-abc-300"] {
+            std::fs::write(dir.join(name), b"x").unwrap();
+        }
+        assert_eq!(forget_posters(&dir, 1), 2);
+        let mut left: Vec<String> = std::fs::read_dir(&dir).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
+        left.sort();
+        assert_eq!(left, ["arr-12-1-250", "item-abc-300"]);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
