@@ -24,6 +24,8 @@ COPY fonts ./fonts
 # Compiled into the binary: the in-app patch notes, and the licences: finstats' own and
 # the notice generated for every crate it is built on.
 COPY CHANGELOG.md LICENSE THIRD-PARTY.json ./
+# The Patch notes in every other language, compiled in beside CHANGELOG.md.
+COPY changelog ./changelog
 RUN --mount=type=cache,target=/usr/local/cargo/registry,id=finstats-registry \
     --mount=type=cache,target=/src/target,id=finstats-target \
     cargo build --release --locked && cp target/release/finstats /finstats
