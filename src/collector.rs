@@ -342,8 +342,9 @@ fn record_from_session(s: &Value, now: i64) -> Option<PlayRecord> {
 }
 
 /// A play beginning or ending, as the thing a destination is told. The title, the person and the device
-/// are the message; the address it came from is a `private_field`, like everywhere else.
-fn play_event(rec: &crate::playback::PlayRecord, starting: bool, row_id: i64) -> crate::notify::Event {
+/// are the message; the address it came from is a `private_field`, like everywhere else. `watched_s` is how far the
+/// play had got: a play resumed within the merge window continues its row, and each start and stop of it is a notice.
+fn play_event(rec: &crate::playback::PlayRecord, starting: bool, row_id: i64, watched_s: i64) -> crate::notify::Event {
     let what = match (&rec.series_name, rec.season_number, rec.episode_number) {
         (Some(series), Some(season), Some(episode)) => format!("{series} S{season:02}E{episode:02} · {}", rec.item_name),
         (Some(series), _, _) => format!("{series} · {}", rec.item_name),
@@ -357,7 +358,7 @@ fn play_event(rec: &crate::playback::PlayRecord, starting: bool, row_id: i64) ->
             (crate::notify::Kind::PlayStopped, format!("{} stopped watching", rec.user_name), format!("{what}: {minutes} minute{} on {device}.", if minutes == 1 { "" } else { "s" }))
         }
     };
-    let mut event = crate::notify::Event::new(kind, format!("notify:play:{}:{row_id}", if starting { "start" } else { "stop" }), title, body)
+    let mut event = crate::notify::Event::new(kind, format!("notify:play:{}:{row_id}:{watched_s}", if starting { "start" } else { "stop" }), title, body)
         .about(rec.user_id.clone(), rec.user_name.clone())
         .field("Person", rec.user_name.clone())
         .field("Title", what)
@@ -1353,7 +1354,7 @@ async fn tick(
             let (checker, who) = (app.clone(), rec.user_id.clone());
             tokio::spawn(async move { crate::security::check(&checker, Some(who)).await });
             // …and, for whoever asked to hear about it, somebody has started watching something.
-            let (teller, event) = (app.clone(), play_event(&rec, true, row_id));
+            let (teller, event) = (app.clone(), play_event(&rec, true, row_id, s.watched.round() as i64));
             tokio::spawn(async move { crate::notify::raise(&teller, event).await; });
             tracked.insert(
                 key,
@@ -1385,7 +1386,7 @@ async fn tick(
         for (row_id, rec, _) in finished {
             tracing::info!("{} stopped {} after {}s", rec.user_name, rec.item_name, rec.duration_s);
             if rec.duration_s >= MIN_KEEP_S {
-                let (teller, event) = (app.clone(), play_event(&rec, false, row_id));
+                let (teller, event) = (app.clone(), play_event(&rec, false, row_id, rec.duration_s));
                 tokio::spawn(async move { crate::notify::raise(&teller, event).await; });
             }
         }
@@ -1562,6 +1563,23 @@ mod tests {
         let starts: Vec<(i64, Option<String>)> = c.prepare("SELECT playback_id, detail FROM playback_events WHERE kind = 'start' ORDER BY playback_id").unwrap()
             .query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
         assert_eq!(starts, vec![(old, Some("Continued after a short break".into())), (started[0].row_id, None)]);
+    }
+
+    /// A play resumed within the merge window continues its row, so a notice named after the row alone was told once: the
+    /// stop five minutes in was sent and the real one two hours later never was, nor the resume between them. Each start and
+    /// stop is named after how far the play had got, so each is told once and every one is told.
+    #[test]
+    fn every_start_and_stop_of_a_continued_play_is_told_once() {
+        let mut rec = playing("alice", "film", "tv");
+        let first = play_event(&rec, true, 7, 0).dedupe;
+        rec.duration_s = 300;
+        let stop = play_event(&rec, false, 7, 300).dedupe;
+        let resumed = play_event(&rec, true, 7, 300).dedupe;
+        rec.duration_s = 7200;
+        let end = play_event(&rec, false, 7, 7200).dedupe;
+        let keys: std::collections::HashSet<_> = [&first, &stop, &resumed, &end].into_iter().collect();
+        assert_eq!(keys.len(), 4, "{first} {stop} {resumed} {end}");
+        assert_eq!(play_event(&rec, false, 7, 7200).dedupe, end, "the same stop seen again is the same notice");
     }
 
     /// Whether a play comes from home is decided once, when it is first written, as its row decides it: a private address,
