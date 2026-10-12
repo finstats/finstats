@@ -273,5 +273,45 @@
     },
     "menu": "Innstillinger og konto",
     "sections": "Sider"
+  },
+  "server": {
+    "errors": {
+      "not_found": "Fant ikke {what}",
+      "not_permitted": "Du har ikke tillatelse til å {what}. En Jellyfin-administrator kan gi den under Innstillinger.",
+      "admins_only": "Bare Jellyfin-administratorer kan gjøre dette",
+      "internal": "Noe gikk galt på serveren. Sjekk loggen til FinStats."
+    },
+    "not_found": {
+      "alert": "Fant ikke varselet",
+      "backup": "Fant ikke sikkerhetskopien",
+      "chapter": "Fant ikke kapitlet",
+      "connection": "Fant ikke tilkoblingen",
+      "destination": "Fant ikke mottakeren",
+      "dismissed_finding": "Fant ikke det avviste funnet",
+      "endpoint": "Fant ikke endepunktet",
+      "film_or_show": "Fant ikke filmen eller serien",
+      "finding": "Fant ikke funnet",
+      "image": "Fant ikke bildet",
+      "item": "Fant ikke elementet",
+      "key": "Fant ikke nøkkelen",
+      "library": "Fant ikke biblioteket",
+      "missing_title": "Fant ikke den manglende tittelen",
+      "person": "Fant ikke personen",
+      "play": "Fant ikke avspillingen",
+      "profile": "Fant ikke profilen",
+      "task": "Fant ikke oppgaven",
+      "title": "Fant ikke tittelen",
+      "user": "Fant ikke brukeren",
+      "watchlist_entry": "Fant ikke oppføringen på Min liste",
+      "year": "Fant ikke året"
+    },
+    "not_permitted": {
+      "be_sent_notifications": "Du har ikke tillatelse til å få varsler. En Jellyfin-administrator kan gi den under Innstillinger.",
+      "manage_finstats": "Du har ikke tillatelse til å administrere FinStats. En Jellyfin-administrator kan gi den under Innstillinger.",
+      "see_other_people_s_statistics": "Du har ikke tillatelse til å se andres statistikk. En Jellyfin-administrator kan gi den under Innstillinger.",
+      "see_the_server": "Du har ikke tillatelse til å se serveren. En Jellyfin-administrator kan gi den under Innstillinger.",
+      "see_what_is_downloading": "Du har ikke tillatelse til å se hva som lastes ned. En Jellyfin-administrator kan gi den under Innstillinger.",
+      "see_where_people_watch_from": "Du har ikke tillatelse til å se hvor folk ser fra. En Jellyfin-administrator kan gi den under Innstillinger."
+    }
   }
 }

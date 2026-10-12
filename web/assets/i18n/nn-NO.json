@@ -273,5 +273,45 @@
     },
     "menu": "Innstillingar og konto",
     "sections": "Sider"
+  },
+  "server": {
+    "errors": {
+      "not_found": "Fann ikkje {what}",
+      "not_permitted": "Du har ikkje løyve til å {what}. Ein Jellyfin-administrator kan gje det under Innstillingar.",
+      "admins_only": "Berre Jellyfin-administratorar kan gjere dette",
+      "internal": "Noko gjekk gale på serveren. Sjekk loggen til FinStats."
+    },
+    "not_found": {
+      "alert": "Fann ikkje varselet",
+      "backup": "Fann ikkje tryggingskopien",
+      "chapter": "Fann ikkje kapittelet",
+      "connection": "Fann ikkje tilkoplinga",
+      "destination": "Fann ikkje mottakaren",
+      "dismissed_finding": "Fann ikkje det avviste funnet",
+      "endpoint": "Fann ikkje endepunktet",
+      "film_or_show": "Fann ikkje filmen eller serien",
+      "finding": "Fann ikkje funnet",
+      "image": "Fann ikkje biletet",
+      "item": "Fann ikkje elementet",
+      "key": "Fann ikkje nøkkelen",
+      "library": "Fann ikkje biblioteket",
+      "missing_title": "Fann ikkje den manglande tittelen",
+      "person": "Fann ikkje personen",
+      "play": "Fann ikkje avspelinga",
+      "profile": "Fann ikkje profilen",
+      "task": "Fann ikkje oppgåva",
+      "title": "Fann ikkje tittelen",
+      "user": "Fann ikkje brukaren",
+      "watchlist_entry": "Fann ikkje oppføringa på Lista mi",
+      "year": "Fann ikkje året"
+    },
+    "not_permitted": {
+      "be_sent_notifications": "Du har ikkje løyve til å få varsel. Ein Jellyfin-administrator kan gje det under Innstillingar.",
+      "manage_finstats": "Du har ikkje løyve til å administrere FinStats. Ein Jellyfin-administrator kan gje det under Innstillingar.",
+      "see_other_people_s_statistics": "Du har ikkje løyve til å sjå statistikken til andre. Ein Jellyfin-administrator kan gje det under Innstillingar.",
+      "see_the_server": "Du har ikkje løyve til å sjå serveren. Ein Jellyfin-administrator kan gje det under Innstillingar.",
+      "see_what_is_downloading": "Du har ikkje løyve til å sjå kva som vert lasta ned. Ein Jellyfin-administrator kan gje det under Innstillingar.",
+      "see_where_people_watch_from": "Du har ikkje løyve til å sjå kvar folk ser frå. Ein Jellyfin-administrator kan gje det under Innstillingar."
+    }
   }
 }

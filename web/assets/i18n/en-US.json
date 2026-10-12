@@ -273,5 +273,45 @@
     },
     "menu": "Settings and account",
     "sections": "Sections"
+  },
+  "server": {
+    "errors": {
+      "not_found": "{what} not found",
+      "not_permitted": "You don't have permission to {what}. A Jellyfin administrator can grant it in Settings.",
+      "admins_only": "Only Jellyfin administrators can do this",
+      "internal": "Something went wrong on the server. Check the FinStats log."
+    },
+    "not_found": {
+      "alert": "Alert not found",
+      "backup": "Backup not found",
+      "chapter": "Chapter not found",
+      "connection": "Connection not found",
+      "destination": "Destination not found",
+      "dismissed_finding": "Dismissed finding not found",
+      "endpoint": "Endpoint not found",
+      "film_or_show": "Movie or show not found",
+      "finding": "Finding not found",
+      "image": "Image not found",
+      "item": "Item not found",
+      "key": "Key not found",
+      "library": "Library not found",
+      "missing_title": "Missing title not found",
+      "person": "Person not found",
+      "play": "Play not found",
+      "profile": "Profile not found",
+      "task": "Task not found",
+      "title": "Title not found",
+      "user": "User not found",
+      "watchlist_entry": "Watchlist entry not found",
+      "year": "Year not found"
+    },
+    "not_permitted": {
+      "be_sent_notifications": "You don't have permission to be sent notifications. A Jellyfin administrator can grant it in Settings.",
+      "manage_finstats": "You don't have permission to manage FinStats. A Jellyfin administrator can grant it in Settings.",
+      "see_other_people_s_statistics": "You don't have permission to see other people's statistics. A Jellyfin administrator can grant it in Settings.",
+      "see_the_server": "You don't have permission to see the server. A Jellyfin administrator can grant it in Settings.",
+      "see_what_is_downloading": "You don't have permission to see what is downloading. A Jellyfin administrator can grant it in Settings.",
+      "see_where_people_watch_from": "You don't have permission to see where people watch from. A Jellyfin administrator can grant it in Settings."
+    }
   }
 }

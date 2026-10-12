@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tokio::sync::Notify;
 
+use crate::i18n;
 use crate::db::{self, Db};
 use crate::jellyfin::Jellyfin;
 
@@ -441,15 +442,25 @@ impl ApiError {
     pub fn bad_request(msg: impl Into<String>) -> Self {
         ApiError(StatusCode::BAD_REQUEST, msg.into())
     }
+    /// "Play not found", in the page's language: `what` names the thing in English, and its sentence is
+    /// `server.not_found.<what as a key>` (`Film or show` → `film_or_show`).
     pub fn not_found(what: &str) -> Self {
-        ApiError(StatusCode::NOT_FOUND, format!("{what} not found"))
+        ApiError(StatusCode::NOT_FOUND, said("server.not_found", what, "server.errors.not_found"))
     }
     pub fn forbidden() -> Self {
-        ApiError(StatusCode::FORBIDDEN, "Only Jellyfin administrators can do this".into())
+        ApiError(StatusCode::FORBIDDEN, i18n::t("server.errors.admins_only", &[]))
     }
+    /// "You don't have permission to see the server…": `what` in English, its sentence `server.not_permitted.<key>`.
     pub fn not_permitted(what: &str) -> Self {
-        ApiError(StatusCode::FORBIDDEN, format!("You don't have permission to {what}. A Jellyfin administrator can grant it in Settings."))
+        ApiError(StatusCode::FORBIDDEN, said("server.not_permitted", what, "server.errors.not_permitted"))
     }
+}
+
+/// The sentence about `what` under `branch`, or the general one with `what` in it for a thing that has none.
+fn said(branch: &str, what: &str, general: &str) -> String {
+    let key = format!("{branch}.{}", what.to_ascii_lowercase().replace(|c: char| !c.is_ascii_alphanumeric(), "_"));
+    let s = i18n::t(&key, &[]);
+    if s == key { i18n::t(general, &[("what", what.into())]) } else { s }
 }
 
 impl IntoResponse for ApiError {
@@ -461,7 +472,7 @@ impl IntoResponse for ApiError {
 impl From<anyhow::Error> for ApiError {
     fn from(e: anyhow::Error) -> Self {
         tracing::error!("request failed: {e:#}");
-        ApiError(StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong on the server. Check the FinStats log.".into())
+        ApiError(StatusCode::INTERNAL_SERVER_ERROR, i18n::t("server.errors.internal", &[]))
     }
 }
 

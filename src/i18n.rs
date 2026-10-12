@@ -108,7 +108,6 @@ pub fn say(lang: &str, key: &str, args: &[(&str, Arg)]) -> String {
 }
 
 /// `key` in the language of the request being answered.
-#[allow(dead_code)] // the server's words move onto it next
 pub fn t(key: &str, args: &[(&str, Arg)]) -> String {
     say(current(), key, args)
 }
@@ -120,6 +119,12 @@ tokio::task_local! {
 /// The language of the request being answered; the source outside one.
 pub fn current() -> &'static str {
     LANG.try_with(|l| *l).unwrap_or(LOCALES[0])
+}
+
+/// `fut` in the language of the request that starts it: work spawned from a request (an import, a task run by hand)
+/// says what it says in the words of whoever started it, where a spawned future would otherwise have none.
+pub fn carry<F: std::future::Future>(fut: F) -> impl std::future::Future<Output = F::Output> {
+    LANG.scope(current(), fut)
 }
 
 /// Keeps the language a request asked for while it is answered.
@@ -147,6 +152,21 @@ mod say_tests {
         assert_eq!(say("nn-NO", "time.days_ago", &[("count", 3.into())]), "for 3 dagar sidan");
         assert_eq!(say("en-GB", "statusbar.plays", &[("count", 1390.into())]), "1,390 plays");
         assert_eq!(say("nb-NO", "statusbar.plays", &[("count", 1390.into())]), "1\u{a0}390 avspillinger");
+    }
+
+    #[test]
+    fn the_shared_errors_speak_the_language_of_the_request() {
+        use crate::state::ApiError;
+        let rt = tokio::runtime::Builder::new_current_thread().build().unwrap();
+        let (play, odd, perm, carried) = rt.block_on(LANG.scope("nb-NO", async {
+            let carried = tokio::task::LocalSet::new().run_until(async { tokio::task::spawn_local(carry(async { current() })).await.unwrap() }).await;
+            (ApiError::not_found("Play").1, ApiError::not_found("Gizmo").1, ApiError::not_permitted("see the server").1, carried)
+        }));
+        assert_eq!(play, "Fant ikke avspillingen");
+        assert_eq!(odd, "Fant ikke Gizmo", "a thing with no sentence of its own is named in the general one");
+        assert_eq!(perm, "Du har ikke tillatelse til å se serveren. En Jellyfin-administrator kan gi den under Innstillinger.");
+        assert_eq!(carried, "nb-NO");
+        assert_eq!(ApiError::not_found("Film or show").1, "Film or show not found", "outside a request: the source");
     }
 
     #[test]
@@ -332,8 +352,8 @@ mod tests {
         let (gb, us) = (words("en-GB"), words("en-US"));
         for (british, american) in PAIRS {
             assert!(!us.iter().any(|w| w.starts_with(british)), "en-US says {british}…; Americans write {american}");
-            // To license is British too: only the noun differs.
-            if american != "license" {
+            // To license is British too (only the noun differs), and British English says movie as well as film.
+            if american != "license" && american != "movie" {
                 assert!(!gb.iter().any(|w| w.starts_with(american)), "en-GB says {american}…; FinStats' British writes {british}");
             }
         }
