@@ -1,5 +1,6 @@
 // FinUI: chart, the arithmetic every chart shares: round steps on an axis, a value's place along it, stacks, the path
-// of a line and of a ring's slice, how busy a heat cell is, and numbers said compactly. Pure; tested in FinUI's repository.
+// of a line and of a ring's slice, how busy a heat cell is, where something happened, and numbers said compactly. Pure;
+// tested in FinUI's repository.
 
 import { say, locale } from '../../i18n.js';
 
@@ -36,6 +37,17 @@ export function slice(cx, cy, outer, inner, a0, a1) {
 }
 /** How busy a cell is, 0 (nothing) to `steps`: anything at all is at least the first step. */
 export const level = (v, max, steps = 6) => (!(v > 0) || !(max > 0) ? 0 : Math.max(1, Math.min(steps, Math.round((v / max) * steps))));
+/** Where something happened (a value above 0), as runs of neighbouring indexes: [[first, last], …]. */
+export function runs(values) {
+  const out = [];
+  values.forEach((v, i) => {
+    if (!(v > 0)) return;
+    const last = out[out.length - 1];
+    if (last && last[1] === i - 1) last[1] = i;
+    else out.push([i, i]);
+  });
+  return out;
+}
 let whole = null, tenth = null, numFor = '';
 /** 1,284 · 12.9K · 4.2M */
 export function compact(n) {

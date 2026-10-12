@@ -4,7 +4,7 @@
 // the component passed beside it.
 
 let given = {};
-let tag = 'en-US';
+let tag = 'en-GB';
 let rules = new Intl.PluralRules(tag);
 
 /** Speak `locale` (a BCP 47 tag) with `dict`: { component: { key: text } }, a text with `{name}` placeholders or an
