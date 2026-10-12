@@ -1040,13 +1040,27 @@ pub fn is_local_ip(ip: &str) -> Option<bool> {
     use std::net::IpAddr;
     let v4_local = |v4: std::net::Ipv4Addr| {
         v4.is_private() || v4.is_loopback() || v4.is_link_local() || v4.octets()[0] == 0 || (v4.octets()[0] == 100 && (v4.octets()[1] & 0xC0) == 64)
+            || v4.is_multicast() || v4.is_broadcast()
     };
     match ip.trim().parse::<IpAddr>().ok()? {
         IpAddr::V4(v4) => Some(v4_local(v4)),
-        IpAddr::V6(v6) => Some(match v6.to_ipv4_mapped() {
-            Some(v4) => v4_local(v4),
-            None => v6.is_loopback() || v6.is_unspecified() || (v6.segments()[0] & 0xfe00) == 0xfc00 || (v6.segments()[0] & 0xffc0) == 0xfe80,
-        }),
+        IpAddr::V6(v6) => {
+            let s = v6.segments();
+            let v4 = |hi: u16, lo: u16| std::net::Ipv4Addr::new((hi >> 8) as u8, hi as u8, (lo >> 8) as u8, lo as u8);
+            // An IPv4 address carried inside IPv6 is that address: mapped, NAT64 (64:ff9b::/96), 6to4 (2002::/16) and the old
+            // compatible form (::a.b.c.d) all reach it.
+            let carried = match s {
+                _ if v6.to_ipv4_mapped().is_some() => v6.to_ipv4_mapped(),
+                [0x64, 0xff9b, 0, 0, 0, 0, hi, lo] => Some(v4(hi, lo)),
+                [0x2002, hi, lo, ..] => Some(v4(hi, lo)),
+                [0, 0, 0, 0, 0, 0, hi, lo] if (hi, lo) > (0, 1) => Some(v4(hi, lo)),
+                _ => None,
+            };
+            Some(match carried {
+                Some(v4) => v4_local(v4),
+                None => v6.is_loopback() || v6.is_unspecified() || v6.is_multicast() || (s[0] & 0xfe00) == 0xfc00 || (s[0] & 0xffc0) == 0xfe80,
+            })
+        }
     }
 }
 
@@ -1290,10 +1304,14 @@ mod tests {
         // The unspecified forms are the point: `connect()` to either reaches this machine, so a
         // notification destination spelled that way would be loopback wearing a public face.
         for local in ["0.0.0.0", "::", "0:0:0:0:0:0:0:0", "0.1.2.3", "127.0.0.1", "10.0.0.1", "192.168.1.10",
-                      "172.16.0.1", "169.254.169.254", "100.64.0.1", "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1", "::ffff:0.0.0.0"] {
+                      "172.16.0.1", "169.254.169.254", "100.64.0.1", "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1", "::ffff:0.0.0.0",
+                      // An IPv4 address carried inside IPv6 is that address: NAT64, 6to4 and the old compatible form all reach it.
+                      "64:ff9b::a00:1", "64:ff9b::7f00:1", "2002:c0a8:10a::1", "::127.0.0.1", "::10.0.0.1",
+                      // Nobody's host: multicast and the broadcast address.
+                      "224.0.0.1", "255.255.255.255", "ff02::1"] {
             assert_eq!(is_local_ip(local), Some(true), "{local} should be local");
         }
-        for public in ["8.8.8.8", "1.1.1.1", "203.0.113.7", "99.64.0.1", "101.64.0.1", "2001:4860:4860::8888", "::ffff:8.8.8.8"] {
+        for public in ["8.8.8.8", "1.1.1.1", "203.0.113.7", "99.64.0.1", "101.64.0.1", "2001:4860:4860::8888", "::ffff:8.8.8.8", "64:ff9b::808:808", "2002:808:808::1"] {
             assert_eq!(is_local_ip(public), Some(false), "{public} should be public");
         }
         for nonsense in ["", "localhost", "not-an-ip", "999.1.1.1"] {
