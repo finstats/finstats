@@ -147,9 +147,10 @@ impl Database {
     }
 }
 
-/// The open database, swapped as a whole when a newer file arrives.
+/// The open database, swapped as a whole when a newer file arrives; and the file last refused, so it is not tried again
+/// until it changes.
 #[derive(Default)]
-pub struct Geo(RwLock<Option<Arc<Database>>>);
+pub struct Geo(RwLock<Option<Arc<Database>>>, std::sync::Mutex<Option<(PathBuf, Stamp)>>);
 
 impl Geo {
     pub fn get(&self) -> Option<Arc<Database>> {
@@ -159,6 +160,15 @@ impl Geo {
     fn set(&self, db: Option<Database>) {
         *self.0.write().unwrap() = db.map(Arc::new);
     }
+}
+
+/// A file as `stamp` sees it.
+type Stamp = Option<(u64, std::time::SystemTime)>;
+
+/// Whether the file found is worth opening: not when it is what is open already, nor when it is the very file last
+/// refused, which was copied again (a hundred megabytes and more) and every address placed again on every beat.
+fn worth_opening(found: Option<&(PathBuf, Stamp)>, open: Option<&(PathBuf, Stamp)>, refused: Option<&(PathBuf, Stamp)>) -> bool {
+    found != open && (found.is_none() || found != refused)
 }
 
 pub fn dir(data_dir: &Path) -> PathBuf {
@@ -185,26 +195,23 @@ pub fn find(data_dir: &Path) -> Option<PathBuf> {
 
 /// Open whatever `find` finds. True when the database in use changed (a new file, or none any more).
 pub fn load(app: &App) -> bool {
-    let found = find(&app.data_dir);
-    let current = app.geo.get();
-    let same = match (&found, &current) {
-        (Some(p), Some(db)) => *p == db.path && stamp(p) == db.stamp,
-        (None, None) => true,
-        _ => false,
-    };
-    if same {
+    let found = find(&app.data_dir).map(|p| { let s = stamp(&p); (p, s) });
+    let open = app.geo.get().map(|db| (db.path.clone(), db.stamp));
+    if !worth_opening(found.as_ref(), open.as_ref(), app.geo.1.lock().unwrap().as_ref()) {
         return false;
     }
     match found {
         None => app.geo.set(None),
-        Some(path) => match Database::open(&path, &dir(&app.data_dir)) {
+        Some((path, at)) => match Database::open(&path, &dir(&app.data_dir)) {
             Ok(db) => {
                 tracing::info!("geolocation database: {} ({}, built {})", path.display(), db.kind, chrono::DateTime::from_timestamp(db.built_at, 0).map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default());
                 app.geo.set(Some(db));
+                *app.geo.1.lock().unwrap() = None;
             }
             Err(e) => {
                 tracing::warn!("geolocation database unusable: {e:#}");
                 app.geo.set(None);
+                *app.geo.1.lock().unwrap() = Some((path, at));
             }
         },
     }
@@ -416,6 +423,21 @@ mod tests {
 
     /// `geoipupdate` writes City, Country and ASN into one folder; whichever it wrote last was taken, refused as
     /// not a city database, and lookups stopped altogether with a good city file right beside it.
+    /// A file that cannot be opened was copied again (a hundred megabytes and more) on every quarter-hour beat, and every
+    /// address's place emptied and looked up again with it: it is tried once, and again only when it changes.
+    #[test]
+    fn a_file_that_was_refused_is_not_tried_again_until_it_changes() {
+        let at = std::time::SystemTime::UNIX_EPOCH;
+        let file = (PathBuf::from("/data/geoip/city.mmdb"), Some((100u64, at)));
+        assert!(worth_opening(Some(&file), None, None), "a file and nothing open: open it");
+        assert!(!worth_opening(Some(&file), None, Some(&file)), "the very file that was refused");
+        let replaced = (file.0.clone(), Some((200u64, at)));
+        assert!(worth_opening(Some(&replaced), None, Some(&file)), "the same name, written again");
+        assert!(!worth_opening(Some(&file), Some(&file), None), "already open");
+        assert!(worth_opening(None, Some(&file), None), "gone: let it go");
+        assert!(!worth_opening(None, None, None));
+    }
+
     #[test]
     fn a_city_database_is_found_beside_country_and_asn_ones() {
         let data = std::env::temp_dir().join(format!("finstats-geo-find-{}", std::process::id()));
