@@ -1,7 +1,7 @@
 {
   "$meta": {
     "tag": "nb-NO",
-    "name": "Norsk bokmål",
+    "name": "Norsk Bokmål",
     "fallback": "en-GB"
   },
   "terms": {

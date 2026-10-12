@@ -65,7 +65,7 @@ what the server says. Each browser picks its own under Settings → Appearance �
 of FinStats each one has:
 
 <!-- languages: i18n::readme_tests writes this; FINSTATS_WRITE_README=1 cargo test readme rewrites it -->
-<p align="center"><img src=".github/languages.svg" width="560" alt="Translation status: English (UK) 100%, English (US) 100%, Norsk bokmål 100%, Norsk nynorsk 100%"></p>
+<p align="center"><img src=".github/languages.svg" width="560" alt="Translation status: English (UK) 100%, English (US) 100%, Norsk Bokmål 100%, Norsk Nynorsk 100%"></p>
 <!-- /languages -->
 
 ## Get started

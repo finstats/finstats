@@ -28,12 +28,12 @@
 <rect class="track" x="206" y="115" width="270" height="10" rx="5"/>
 <rect class="bar" x="206" y="115" width="270" height="10" rx="5"/>
 <text class="share" x="536" y="125" text-anchor="end">100%</text>
-<text class="name" x="24" y="159">Norsk bokmål</text>
+<text class="name" x="24" y="159">Norsk Bokmål</text>
 <text class="tag" x="140" y="159">nb-NO</text>
 <rect class="track" x="206" y="149" width="270" height="10" rx="5"/>
 <rect class="bar" x="206" y="149" width="270" height="10" rx="5"/>
 <text class="share" x="536" y="159" text-anchor="end">100%</text>
-<text class="name" x="24" y="193">Norsk nynorsk</text>
+<text class="name" x="24" y="193">Norsk Nynorsk</text>
 <text class="tag" x="140" y="193">nn-NO</text>
 <rect class="track" x="206" y="183" width="270" height="10" rx="5"/>
 <rect class="bar" x="206" y="183" width="270" height="10" rx="5"/>

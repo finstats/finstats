@@ -260,7 +260,7 @@ mod pages_tests {
     ];
     /// What may stay English in the code, each with why: names, and words the code reads rather than shows.
     const ENGLISH_ON_PURPOSE: &[&str] = &[
-        "js/i18n.js:Norsk bokmål", "js/i18n.js:Norsk nynorsk", // each language by its own name, in i18n.js's list
+        "js/i18n.js:Norsk Bokmål", "js/i18n.js:Norsk Nynorsk", // each language by its own name, in i18n.js's list
         "js/state.js:not all", // a media query
         // The buttons and menus of Jellystat's, Streamystats' and Tautulli's own (English) pages, named in the import steps.
         "js/settings/import.js:Settings", "js/settings/import.js:Backup", "js/settings/import.js:Activity", "js/settings/import.js:Backups",

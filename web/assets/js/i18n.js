@@ -14,8 +14,8 @@ import { words as finuiWords } from '../finui/i18n.js';
 export const LANGUAGES = [
   { tag: 'en-GB', name: 'English (UK)' },
   { tag: 'en-US', name: 'English (US)' },
-  { tag: 'nb-NO', name: 'Norsk bokmål' },
-  { tag: 'nn-NO', name: 'Norsk nynorsk' },
+  { tag: 'nb-NO', name: 'Norsk Bokmål' },
+  { tag: 'nn-NO', name: 'Norsk Nynorsk' },
 ];
 const SOURCE = LANGUAGES[0].tag;
 const KEY = 'finstats.language';
