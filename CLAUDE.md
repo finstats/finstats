@@ -335,7 +335,9 @@ import held in common): either end recognised 2,750, the start alone 2,527, and 
 smear past ten minutes where the ends fall off a cliff inside one. **Within** one source it is the very same second and
 nothing wider: a tracker never exports the same play twice, so a second row of the same item minutes later is a restart
 the viewer really made, and a window there would silently drop it, on an import and, worse, on a restore of FinStats'
-own backup. A new importer goes through `PlayRecord::insert_imported`, never `insert`. **Both statements of the rule
+own backup. The same person's same two seconds from the same source are the same play whatever title it is under,
+because re-linking rewrites `item_id` and nothing else: a backup from before a re-link restored every moved play a second
+time otherwise. A new importer goes through `PlayRecord::insert_imported`, never `insert`. **Both statements of the rule
 (`SAME_PLAY_SQL`, `RELINKED_DUPLICATES_SQL`) are index ranges** over `(user_id, item_id, started_at)` and `…ended_at`
 (migration 25), and a test holds their plans: written as `ABS(started_at - ?) <= window` no index could narrow them, a
 120,000-play import took five minutes, and the sweep held the write lock for 25 s at every start and library read.

@@ -620,6 +620,27 @@ mod tests {
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
+    /// A file upgraded or renamed since the backup has a new Jellyfin id, and re-linking moved its plays onto it. Restoring
+    /// that backup matched them by their old title, found nothing, and doubled every one for good.
+    #[test]
+    fn a_backup_from_before_a_relink_restores_none_of_the_relinked_plays_twice() {
+        let tmp = std::env::temp_dir().join(format!("finstats-backup-relinked-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let db = Db::open(&tmp.join("finstats.db")).unwrap();
+        db.conn().unwrap().execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES (1, 'live', 'u1', 'alice', 'old', 'Big Buck Bunny', 'Movie', 1000, 1600, 600);",
+        ).unwrap();
+        let file = dir(&tmp).join(export(&db, &dir(&tmp), None).unwrap().name);
+        db.conn().unwrap().execute("UPDATE playbacks SET item_id = 'new' WHERE id = 1", []).unwrap(); // what re-linking does
+        let r = restore(&db, &file, false, None).unwrap();
+        assert_eq!((r.plays_imported, r.plays_skipped), (0, 1));
+        assert_eq!(db.conn().unwrap().query_row("SELECT COUNT(*) FROM playbacks", [], |r| r.get::<_, i64>(0)).unwrap(), 1);
+        drop(db);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
     #[test]
     fn a_backup_round_trips_and_restoring_twice_adds_nothing() {
         let tmp = std::env::temp_dir().join(format!("finstats-backup-test-{}", std::process::id()));

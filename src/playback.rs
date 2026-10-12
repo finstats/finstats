@@ -219,11 +219,14 @@ pub fn already_recorded(conn: &Connection, p: Play<'_>, window: i64) -> Result<b
     Ok(conn.prepare_cached(SAME_PLAY_SQL)?.exists(params![p.user_id, p.item_id, p.started_at, p.ended_at, p.source, window.max(0)])?)
 }
 
-/// The same person, the same item, and the same second, or, from another tracker, either end within the window.
-/// Written as three index ranges rather than `ABS(started_at - ?3) <= ?6`, which the index cannot narrow: that form
+/// The same person, the same item, and the same second, or, from another tracker, either end within the window; or from
+/// its own source the same person's same two seconds, under whatever title re-linking has moved it to since.
+/// Written as index ranges rather than `ABS(started_at - ?3) <= ?6`, which the index cannot narrow: that form
 /// read every play this person ever made of the title, for every row of an import.
 const SAME_PLAY_SQL: &str = "
     SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2 AND started_at = ?3
+    UNION ALL
+    SELECT 1 FROM playbacks WHERE user_id = ?1 AND ended_at = ?4 AND started_at = ?3 AND source = ?5
     UNION ALL
     SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2 AND started_at BETWEEN ?3 - ?6 AND ?3 + ?6 AND source <> ?5
     UNION ALL
@@ -331,7 +334,8 @@ mod tests {
                 .query_map(crate::db::rusqlite::params_from_iter(args.iter()), |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
             // (The sweep's delete also reaches each play's events through their foreign key, which is not the rule.)
             let searches: Vec<&String> = plan.iter().filter(|p| p.contains("SEARCH playbacks") || p.contains("SEARCH k ")).collect();
-            assert!(!searches.is_empty() && searches.iter().all(|p| p.contains("user_id=? AND item_id=?") && (p.contains("started_at") || p.contains("ended_at"))), "{what}: {plan:?}");
+            // One person's plays of one title, or one person's plays ending at one second (a play re-linked since).
+            assert!(!searches.is_empty() && searches.iter().all(|p| (p.contains("user_id=? AND item_id=?") && (p.contains("started_at") || p.contains("ended_at"))) || p.contains("user_id=? AND ended_at=?")), "{what}: {plan:?}");
         }
     }
 
@@ -502,6 +506,21 @@ mod tests {
         // silently drop it, on an import and, worse, on a restore of FinStats' own backup.
         assert!(!already_recorded(&c, Play { source: "live", source_id: None, user_id: "u1", item_id: "i1", started_at: 10180, ended_at: 99999 }, 600).unwrap());
         assert!(already_recorded(&c, Play { source: "live", source_id: None, user_id: "u1", item_id: "i1", started_at: 10000, ended_at: 99999 }, 600).unwrap());
+    }
+
+    /// Re-linking rewrites a play's title and nothing else, so a backup taken before it holds the play under a title that is
+    /// gone: matched by title, every play re-linked since was restored a second time, doubled for good (the sweep never
+    /// compares two rows of one source). Within one source the same person's same two seconds are the same play, whatever
+    /// title it is under now.
+    #[test]
+    fn a_play_relinked_since_is_still_the_same_play_from_its_own_source() {
+        let c = conn();
+        c.execute("UPDATE playbacks SET item_id = 'renamed' WHERE item_id = 'i1' AND source = 'live'", []).unwrap();
+        assert!(already_recorded(&c, Play { source: "live", source_id: None, user_id: "u1", item_id: "i1", started_at: 10000, ended_at: 15400 }, 600).unwrap());
+        // Another tracker's row of that evening is still told apart by its title, as before.
+        assert!(!already_recorded(&c, Play { source: "streamystats", source_id: None, user_id: "u1", item_id: "i1", started_at: 10000, ended_at: 15400 }, 600).unwrap());
+        // A restart is a play of its own, as before.
+        assert!(!already_recorded(&c, Play { source: "live", source_id: None, user_id: "u1", item_id: "i1", started_at: 10000, ended_at: 15500 }, 600).unwrap());
     }
 
     #[test]
