@@ -135,7 +135,8 @@ export default function dashboard(ctx) {
           usersMode ? card({ title: 'Top users', sub: 'By watch time', body: topList(users.rows, { kind: 'users' }) })
                     : card({ title: 'Top music', sub: 'By watch time', body: topList(users.rows, { empty: 'No music played in this range.' }) })),
         insights ? h('div', { class: 'grid-heat' }, heatmapCard({ data: heat }), genresCard(insights.genres)) : heatmapCard({ data: heat }),
-        groupsCard(groups, { forUser: userId || (admin ? null : state.user.id) }),
+        // One person's companions only when one person is picked: several (`a,b`) are a group, not somebody to be with.
+        groupsCard(groups, { forUser: (userId && !userId.includes(',') ? userId : null) || (admin ? null : state.user.id) }),
         insights ? failedLoginsCard(insights.failed_logins) : null,
         card({ title: 'Recent activity', actions: button({ variant: 'ghost', size: 'sm', href: '/activity' }, 'View all', icon('chevronRight', 14)),
           cls: 'fui-card--flush', body: playsTable(recent.rows, { showUser: admin, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }), empty: 'No plays in this range.' }) }),
