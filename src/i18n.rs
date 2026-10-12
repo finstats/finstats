@@ -4,6 +4,182 @@
 //! that depends on a number is an object of the CLDR plural categories that language has (`one`, `other`), picked with
 //! `Intl.PluralRules` and filled from `{count}`. `$meta` says which language a file is and what it falls back to. The
 //! tests below hold the catalogues to each other.
+//!
+//! The page says which language it reads in `Accept-Language` (`api.js` sends the one this browser chose), and
+//! `middleware` keeps it for the request (`current()`), so whatever answers in words answers in that one.
+
+use axum::extract::Request;
+use axum::http::header::ACCEPT_LANGUAGE;
+use axum::middleware::Next;
+use axum::response::Response;
+
+/// Every language FinStats speaks; the first is the source, and what nothing else matches.
+pub const LOCALES: [&str; 4] = ["en-GB", "en-US", "nb-NO", "nn-NO"];
+
+/// The language of `Accept-Language` that FinStats speaks, by weight then order: a tag as written, else its
+/// language (`nb`, `nn`, `no` for Bokmål; `en` is British unless it says America). Nothing usable is the source.
+pub fn pick(header: &str) -> &'static str {
+    let mut asked: Vec<(f32, usize, &'static str)> = vec![];
+    for (i, part) in header.split(',').enumerate() {
+        let mut bits = part.split(';');
+        let tag = bits.next().unwrap_or("").trim().to_ascii_lowercase();
+        let q = bits.filter_map(|b| b.trim().strip_prefix("q=")).next().map_or(Some(1.0), |q| q.trim().parse::<f32>().ok());
+        let Some(q) = q.filter(|q| *q > 0.0) else { continue };
+        let lang = tag.split('-').next().unwrap_or("");
+        let found = LOCALES.iter().find(|l| l.eq_ignore_ascii_case(&tag)).copied().or(match lang {
+            "nb" | "no" => Some("nb-NO"),
+            "nn" => Some("nn-NO"),
+            "en" => Some("en-GB"),
+            _ => None,
+        });
+        if let Some(l) = found { asked.push((q, i, l)); }
+    }
+    asked.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)));
+    asked.first().map_or(LOCALES[0], |a| a.2)
+}
+
+/// What fills a placeholder: words as they are, or a number written the language's way (and, as `count`, the one that
+/// picks a plural's form).
+pub enum Arg {
+    Text(String),
+    Number(i64),
+}
+impl From<&str> for Arg { fn from(s: &str) -> Self { Arg::Text(s.to_string()) } }
+impl From<String> for Arg { fn from(s: String) -> Self { Arg::Text(s) } }
+impl From<&String> for Arg { fn from(s: &String) -> Self { Arg::Text(s.clone()) } }
+impl From<i64> for Arg { fn from(n: i64) -> Self { Arg::Number(n) } }
+impl From<i32> for Arg { fn from(n: i32) -> Self { Arg::Number(n.into()) } }
+impl From<u32> for Arg { fn from(n: u32) -> Self { Arg::Number(n.into()) } }
+impl From<u64> for Arg { fn from(n: u64) -> Self { Arg::Number(n as i64) } }
+impl From<usize> for Arg { fn from(n: usize) -> Self { Arg::Number(n as i64) } }
+
+/// The catalogues, the same files the pages read, parsed once.
+fn catalogue(lang: &str) -> &'static serde_json::Value {
+    static ALL: std::sync::OnceLock<Vec<(&'static str, serde_json::Value)>> = std::sync::OnceLock::new();
+    let all = ALL.get_or_init(|| {
+        [
+            ("en-GB", include_str!("../web/assets/i18n/en-GB.json")),
+            ("en-US", include_str!("../web/assets/i18n/en-US.json")),
+            ("nb-NO", include_str!("../web/assets/i18n/nb-NO.json")),
+            ("nn-NO", include_str!("../web/assets/i18n/nn-NO.json")),
+        ]
+        .into_iter()
+        .map(|(tag, text)| (tag, serde_json::from_str(text).unwrap_or_else(|e| panic!("{tag}.json: {e}"))))
+        .collect()
+    });
+    all.iter().find(|(tag, _)| *tag == lang).map_or(&all[0].1, |(_, v)| v)
+}
+
+/// A whole number as `lang` writes it: 1,390 in English, 1 390 (a no-break space) in Norwegian, as `Intl` does.
+fn number(lang: &str, n: i64) -> String {
+    let digits = n.unsigned_abs().to_string();
+    let sep = if lang.starts_with("en") { ',' } else { '\u{a0}' };
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) { out.push(sep); }
+        out.push(c);
+    }
+    if n < 0 { format!("-{out}") } else { out }
+}
+
+/// `key` in `lang`, `{name}` filled from `args`; a plural takes its form from `count` (English, Bokmål and Nynorsk say
+/// `one` for exactly 1 and `other` for anything else). A key with no text is the key itself.
+pub fn say(lang: &str, key: &str, args: &[(&str, Arg)]) -> String {
+    let lang = LOCALES.iter().copied().find(|l| *l == lang).unwrap_or(LOCALES[0]);
+    let mut v = catalogue(lang);
+    for part in key.split('.') {
+        match v.get(part) { Some(x) => v = x, None => return key.to_string() }
+    }
+    let text = match v {
+        serde_json::Value::String(s) => s.as_str(),
+        serde_json::Value::Object(m) if m.get("other").is_some_and(|o| o.is_string()) => {
+            let count = args.iter().find_map(|(n, a)| match a { Arg::Number(c) if *n == "count" => Some(*c), _ => None });
+            let form = if count == Some(1) { "one" } else { "other" };
+            m.get(form).or(m.get("other")).and_then(|x| x.as_str()).unwrap_or(key)
+        }
+        _ => return key.to_string(),
+    };
+    let mut out = text.to_string();
+    for (name, arg) in args {
+        let value = match arg { Arg::Text(s) => s.clone(), Arg::Number(n) => number(lang, *n) };
+        out = out.replace(&format!("{{{name}}}"), &value);
+    }
+    out
+}
+
+/// `key` in the language of the request being answered.
+#[allow(dead_code)] // the server's words move onto it next
+pub fn t(key: &str, args: &[(&str, Arg)]) -> String {
+    say(current(), key, args)
+}
+
+tokio::task_local! {
+    static LANG: &'static str;
+}
+
+/// The language of the request being answered; the source outside one.
+pub fn current() -> &'static str {
+    LANG.try_with(|l| *l).unwrap_or(LOCALES[0])
+}
+
+/// Keeps the language a request asked for while it is answered.
+pub async fn middleware(req: Request, next: Next) -> Response {
+    let lang = pick(req.headers().get(ACCEPT_LANGUAGE).and_then(|v| v.to_str().ok()).unwrap_or(""));
+    LANG.scope(lang, next.run(req)).await
+}
+
+#[cfg(test)]
+mod say_tests {
+    use super::*;
+
+    #[test]
+    fn a_key_is_its_text_in_the_language_asked_for() {
+        assert_eq!(say("en-GB", "nav.dashboard", &[]), "Dashboard");
+        assert_eq!(say("nb-NO", "nav.dashboard", &[]), "Oversikt");
+        assert_eq!(say("nn-NO", "nav.my_profile", &[]), "Profilen min");
+        assert_eq!(say("de-DE", "nav.dashboard", &[]), "Dashboard", "a language FinStats does not speak is the source");
+    }
+
+    #[test]
+    fn placeholders_are_filled_and_plurals_follow_the_count() {
+        assert_eq!(say("en-GB", "auth.login.sub_on", &[("server", "Jellyfin".into())]), "Use your Jellyfin account on Jellyfin.");
+        assert_eq!(say("nn-NO", "time.days_ago", &[("count", 1.into())]), "for 1 dag sidan");
+        assert_eq!(say("nn-NO", "time.days_ago", &[("count", 3.into())]), "for 3 dagar sidan");
+        assert_eq!(say("en-GB", "statusbar.plays", &[("count", 1390.into())]), "1,390 plays");
+        assert_eq!(say("nb-NO", "statusbar.plays", &[("count", 1390.into())]), "1\u{a0}390 avspillinger");
+    }
+
+    #[test]
+    fn a_key_with_no_text_is_the_key() {
+        assert_eq!(say("en-GB", "no.such.key", &[]), "no.such.key");
+        assert_eq!(say("en-GB", "nav.groups", &[]), "nav.groups");
+    }
+}
+
+#[cfg(test)]
+mod pick_tests {
+    use super::*;
+
+    #[test]
+    fn the_first_language_asked_for_that_finstats_speaks_is_the_one() {
+        assert_eq!(pick("nb-NO,nb;q=0.9,en;q=0.8"), "nb-NO");
+        assert_eq!(pick("nn"), "nn-NO");
+        assert_eq!(pick("no"), "nb-NO", "Norwegian without saying which is Bokmål, as browsers mean it");
+        assert_eq!(pick("en-US,en;q=0.9"), "en-US");
+        assert_eq!(pick("en"), "en-GB");
+        assert_eq!(pick("en-AU"), "en-GB", "any English but America's is the source");
+        assert_eq!(pick("de-DE,nn;q=0.5"), "nn-NO", "a language FinStats does not speak is passed over");
+        assert_eq!(pick("en;q=0.2,nb;q=0.9"), "nb-NO", "the weights decide, not the order");
+        assert_eq!(pick("NB-no"), "nb-NO");
+    }
+
+    #[test]
+    fn nothing_usable_is_british_english() {
+        for header in ["", "*", "de", "fr-FR;q=1", ";;,", "nb;q=0"] {
+            assert_eq!(pick(header), "en-GB", "{header:?}");
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

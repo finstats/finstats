@@ -150,6 +150,8 @@ pub fn router(app: App) -> Router {
         .route("/u/{token}/recap.zip", get(public_story_zip))
         .fallback(static_handler)
         .layer(middleware::from_fn(security_headers))
+        // The language the page reads in (Accept-Language), for whatever answers in words.
+        .layer(middleware::from_fn(crate::i18n::middleware))
         // A backup is gzip already. Compressing it again gains nothing, and the doubly-encoded stream
         // broke off in browsers: downloads failed without a word.
         .layer(CompressionLayer::new().gzip(true).compress_when(DefaultPredicate::new().and(NotForContentType::new("application/gzip"))))
