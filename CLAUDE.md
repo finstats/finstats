@@ -747,10 +747,17 @@ it never undeletes.
 The response compression layer skips `application/gzip`: re-compressing a backup broke the download in browsers. Anything served
 pre-compressed needs the same exemption.
 
-**Languages (`i18n.rs`, `web/assets/js/i18n.js`, `web/assets/i18n/`, 2.3.0): FinStats speaks en-GB, en-US, nb-NO and
-nn-NO, and every word a person reads comes from a catalogue.** One JSON file per BCP 47 tag; **British English is the source**
-and the others answer to it (`i18n::tests`: the same keys, the same `{placeholders}`, plural objects of exactly the CLDR forms
-the language has, `one`/`other` with `{count}`, no em-dash, each English spelled its own way). A key says where it is used
+**Languages (`i18n.rs`, `web/assets/js/i18n.js`, `web/assets/i18n/`, 2.3.0): FinStats speaks 23 languages, and every word a
+person reads comes from a catalogue.** One JSON file per BCP 47 tag (`i18n::LOCALES` and `LANGUAGES` in `i18n.js` are the
+same list, and `theme.js` repeats the tags); **British English is the source**. **Four are checked by the owner, who reads
+them (`i18n::CHECKED`: en-GB, en-US, nb-NO, nn-NO), and are whole in every change**; the other nineteen are translations
+nobody here can check, may lag behind, and say what they lack in British English (the page loads en-GB beside them,
+`i18n::say` falls back the same way), the README's picture showing how far each has come and the Settings list and the
+README saying they are unchecked. Every catalogue answers to the source (`i18n::tests`: no key the source lacks, the same
+`{placeholders}`, plural objects of exactly the CLDR forms the language has (`one`/`few`/`many`/`other` for Russian,
+Ukrainian and Polish, `other` alone for Japanese, Korean and Chinese; `i18n::plural` is the server's copy of the rules),
+no em-dash, each English spelled its own way). Cards (Recap, public profile) are drawn in a language their font has
+letters for (`i18n::drawable`: Japanese, Korean, Chinese and Hindi draw in en-GB). A key says where it is used
 (`pages.watchlist.empty_title`, `settings.sections.backups.sub`, `server.not_found.play`); a sentence is one key, never glued
 from translated pieces, because Norwegian orders words differently. **The browser side**: `t(key, vars)` (numbers in `vars` are
 written the language's way), `tParts` when a placeholder is an element, `tOr(key, fallback)` for an id from the server the
@@ -769,8 +776,8 @@ outside a request and so in en-GB, which is why en-GB keeps the code's English e
 change with the language: the pages translate them by id (``t(`pages.audit.kind.${k}`)``). Two guards in `i18n::pages_tests`
 hold the pages to it: every literal key a page asks for has an en-GB text, and no English sentence or capitalised label is left
 in `web/assets/js` or FinUI's components outside `t()`/`tParts()`/`say()` (`IDS` and `ENGLISH_ON_PURPOSE` list the exceptions,
-each with its reason). **A new text is a key in all four catalogues in the same change**, written in Bokmål and Nynorsk by the
-glossary the existing catalogues set (play = avspilling/avspeling, watch time = visningstid/visingstid, watchlist = Min liste /
+each with its reason). **A new text is a key in the four checked catalogues in the same change** (the others may follow, and say
+it in English until they do), written in Bokmål and Nynorsk by the glossary the existing catalogues set (play = avspilling/avspeling, watch time = visningstid/visingstid, watchlist = Min liste /
 Lista mi, Recap = Tilbakeblikk, Pipeline = På vei/På veg); the owner reads Norwegian and checks it. The README's **Languages** section is a picture drawn
 like a translation platform's status widget (`.github/languages.svg`, a bar per language, in GitHub's light or dark) and
 worked out from the catalogues and the changelogs by `i18n::readme_tests`, which fails when the picture or the README is
@@ -926,7 +933,7 @@ Esc is handled globally in `shell.js` (steps back out of `/libraries/:id`, `/use
 `/items/:id`), going back through history only onto an entry of FinStats' own: every entry the router writes carries
 `history.state.depth`, and a tab opened on a title has none behind it. Overlays must keep calling `stopPropagation()` on
 their own Esc, and `openModal` keeps a stack: only the dialog on top answers keys. Tables read numbers as `num()` prints
-them (en-US), never with the browser's separators.
+them (in the language in use), never with the browser's own separators.
 **The menus are FinUI's `desktop-nav` and `mobile-nav`, each in the style its browser chose** (Settings → Appearance; the
 owner's decision: kept by the browser, `state.js`, never the account). Above 820 px one of eight: Sidebar (today's, the
 default), Grouped, Rail that opens (icons until the pointer or the keyboard's focus comes (`:focus-visible`, never a link a click left
@@ -995,10 +1002,10 @@ run that too before a release, and after work on the database or on anything lon
 
 ## Releases and patch notes
 
-`CHANGELOG.md` is the source of the in-app **Patch notes** tab (`changelog.rs` parses it), and `changelog/<tag>.md` is the
-same file in each other language (en-US, nb-NO, nn-NO), answered by `Accept-Language`. **A note lands in all four in the same
-commit**: a test holds every translation to the source release by release (the same headings byte for byte, groups, number of
-bullets, `code` and bold), so a release cannot ship in one language only. A test fails if
+`CHANGELOG.md` is the source of the in-app **Patch notes** tab (`changelog.rs` parses it), and `changelog/<tag>.md` (embedded) is the
+same file in another language, answered by `Accept-Language`. **A note lands in the four checked languages in the same
+commit**; another language may tell a release later, and shows the source's until it does. A test holds every translation to
+the source release by release (the same headings byte for byte, groups, number of bullets, `code` and bold). A test fails if
 the top entry's version differs from `Cargo.toml`, or an entry lacks a date/notes/known group, so a version bump
 and its changelog entry land together. Format: `## [x.y.z] - YYYY-MM-DD`, or `- YYYY-MM-DD to YYYY-MM-DD` for a release
 made over several days (`date` stays the release day, `started` the first; the page shows both), then

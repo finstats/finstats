@@ -188,7 +188,7 @@ impl StoryYear {
         Some(StoryYear {
             label: match r["year"].as_i64() {
                 Some(y) => y.to_string(),
-                None => crate::i18n::t("server.story.last_12_months", &[]),
+                None => crate::i18n::say(crate::i18n::drawable(crate::i18n::current()), "server.story.last_12_months", &[]),
             },
             whose: whose.trim().to_string(),
             totals: Totals {
@@ -292,7 +292,7 @@ impl StoryYear {
     /// What a chapter's card is kept under: the chapter, the language it is said in and everything it says, so
     /// a card in one language is never served to a reader of another.
     pub fn cache_key(&self, ch: Chapter) -> String {
-        self.cache_key_in(crate::i18n::current(), ch)
+        self.cache_key_in(crate::i18n::drawable(crate::i18n::current()), ch)
     }
 
     fn cache_key_in(&self, lang: &str, ch: Chapter) -> String {
@@ -393,7 +393,7 @@ fn long_day(lang: &str, d: &str) -> String {
 const WEEKDAYS: [&str; 7] = crate::card::DAYS;
 
 pub fn svg(ch: Chapter, y: &StoryYear, posters: &Posters) -> String {
-    svg_in(crate::i18n::current(), ch, y, posters)
+    svg_in(crate::i18n::drawable(crate::i18n::current()), ch, y, posters)
 }
 
 fn svg_in(lang: &str, ch: Chapter, y: &StoryYear, posters: &Posters) -> String {

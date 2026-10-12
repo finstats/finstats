@@ -14,10 +14,32 @@ use axum::middleware::Next;
 use axum::response::Response;
 
 /// Every language FinStats speaks; the first is the source, and what nothing else matches.
-pub const LOCALES: [&str; 4] = ["en-GB", "en-US", "nb-NO", "nn-NO"];
+pub const LOCALES: [&str; 23] = [
+    "en-GB", "en-US", "nb-NO", "nn-NO", "da-DK", "de-DE", "es-ES", "fi-FI", "fr-FR", "hi-IN", "is-IS", "it-IT", "ja-JP", "ko-KR",
+    "nl-NL", "pl-PL", "pt-BR", "ru-RU", "sv-SE", "tr-TR", "uk-UA", "zh-CN", "zh-TW",
+];
+/// The languages the owner reads and has checked: complete in every change. The others are translations nobody here
+/// can check; they may lag behind, and what one lacks is said in British English until it has it.
+#[allow(dead_code)] // read by the tests that hold the catalogues and the changelogs, and by the README's picture
+pub const CHECKED: [&str; 4] = ["en-GB", "en-US", "nb-NO", "nn-NO"];
 
-/// The language of `Accept-Language` that FinStats speaks, by weight then order: a tag as written, else its
-/// language (`nb`, `nn`, `no` for Bokmål; `en` is British unless it says America). Nothing usable is the source.
+/// The catalogue a language tag (lower case) asks for, if FinStats speaks that language: the tag as written, else its
+/// language (`no` is Bokmål, `en` British unless it says America, `pt` Brazilian, Chinese by its script or region).
+fn language_of(tag: &str) -> Option<&'static str> {
+    if let Some(l) = LOCALES.iter().find(|l| l.eq_ignore_ascii_case(tag)) { return Some(l) }
+    let mut parts = tag.split('-');
+    let lang = parts.next().unwrap_or("");
+    match lang {
+        "nb" | "no" => Some("nb-NO"),
+        "nn" => Some("nn-NO"),
+        "en" => Some("en-GB"),
+        "zh" => Some(if parts.any(|p| matches!(p, "hant" | "tw" | "hk" | "mo")) { "zh-TW" } else { "zh-CN" }),
+        _ => LOCALES.iter().find(|l| l.split('-').next() == Some(lang)).copied(),
+    }
+}
+
+/// The language of `Accept-Language` that FinStats speaks, by weight then order (`language_of`). Nothing usable is the
+/// source.
 pub fn pick(header: &str) -> &'static str {
     let mut asked: Vec<(f32, usize, &'static str)> = vec![];
     for (i, part) in header.split(',').enumerate() {
@@ -25,17 +47,34 @@ pub fn pick(header: &str) -> &'static str {
         let tag = bits.next().unwrap_or("").trim().to_ascii_lowercase();
         let q = bits.filter_map(|b| b.trim().strip_prefix("q=")).next().map_or(Some(1.0), |q| q.trim().parse::<f32>().ok());
         let Some(q) = q.filter(|q| *q > 0.0) else { continue };
-        let lang = tag.split('-').next().unwrap_or("");
-        let found = LOCALES.iter().find(|l| l.eq_ignore_ascii_case(&tag)).copied().or(match lang {
-            "nb" | "no" => Some("nb-NO"),
-            "nn" => Some("nn-NO"),
-            "en" => Some("en-GB"),
-            _ => None,
-        });
-        if let Some(l) = found { asked.push((q, i, l)); }
+        if let Some(l) = language_of(&tag) { asked.push((q, i, l)); }
     }
     asked.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)));
     asked.first().map_or(LOCALES[0], |a| a.2)
+}
+
+/// The plural form a whole number takes in `lang` (CLDR's rules for integers; `Intl.PluralRules` says the same).
+pub fn plural(lang: &str, n: i64) -> &'static str {
+    let n = n.unsigned_abs();
+    let (ten, hundred) = (n % 10, n % 100);
+    let few = (2..=4).contains(&ten) && !(12..=14).contains(&hundred);
+    match lang.split('-').next().unwrap_or("") {
+        "ja" | "ko" | "zh" => "other",
+        "fr" | "pt" | "hi" => if n <= 1 { "one" } else { "other" },
+        "is" => if ten == 1 && hundred != 11 { "one" } else { "other" },
+        "ru" | "uk" => if ten == 1 && hundred != 11 { "one" } else if few { "few" } else { "many" },
+        "pl" => if n == 1 { "one" } else if few { "few" } else { "many" },
+        _ => if n == 1 { "one" } else { "other" },
+    }
+}
+
+/// The language a card is drawn in: `lang`, unless its letters are not in the card's font (Inter: Latin, Greek and
+/// Cyrillic), when the card is drawn in the source rather than in boxes.
+pub fn drawable(lang: &str) -> &'static str {
+    match lang.split('-').next().unwrap_or("") {
+        "ja" | "ko" | "zh" | "hi" => LOCALES[0],
+        _ => LOCALES.iter().copied().find(|l| *l == lang).unwrap_or(LOCALES[0]),
+    }
 }
 
 /// What fills a placeholder: words as they are, or a number written the language's way (and, as `count`, the one that
@@ -53,51 +92,71 @@ impl From<u32> for Arg { fn from(n: u32) -> Self { Arg::Number(n.into()) } }
 impl From<u64> for Arg { fn from(n: u64) -> Self { Arg::Number(n as i64) } }
 impl From<usize> for Arg { fn from(n: usize) -> Self { Arg::Number(n as i64) } }
 
-/// The catalogues, the same files the pages read, parsed once.
+/// The catalogues, the same files the pages read (embedded with them), parsed once. A file that is missing or does not
+/// parse is an empty catalogue: the tests hold every one to be there and whole.
 fn catalogue(lang: &str) -> &'static serde_json::Value {
     static ALL: std::sync::OnceLock<Vec<(&'static str, serde_json::Value)>> = std::sync::OnceLock::new();
     let all = ALL.get_or_init(|| {
-        [
-            ("en-GB", include_str!("../web/assets/i18n/en-GB.json")),
-            ("en-US", include_str!("../web/assets/i18n/en-US.json")),
-            ("nb-NO", include_str!("../web/assets/i18n/nb-NO.json")),
-            ("nn-NO", include_str!("../web/assets/i18n/nn-NO.json")),
-        ]
-        .into_iter()
-        .map(|(tag, text)| (tag, serde_json::from_str(text).unwrap_or_else(|e| panic!("{tag}.json: {e}"))))
-        .collect()
+        LOCALES.iter().map(|&tag| {
+            let file = crate::api::WebAssets::get(&format!("assets/i18n/{tag}.json"));
+            (tag, file.and_then(|f| serde_json::from_slice(&f.data).ok()).unwrap_or_else(|| serde_json::json!({})))
+        }).collect()
     });
     all.iter().find(|(tag, _)| *tag == lang).map_or(&all[0].1, |(_, v)| v)
 }
 
-/// A whole number as `lang` writes it: 1,390 in English, 1 390 (a no-break space) in Norwegian, as `Intl` does.
+/// A whole number as `lang` writes it, as `Intl` does: 1,390 in English, 1.390 in German, 1 390 in Norwegian (a no-break
+/// space; French a narrow one), Spanish and Polish grouping only from five digits, Hindi in lakhs and crores.
 fn number(lang: &str, n: i64) -> String {
     let digits = n.unsigned_abs().to_string();
-    let sep = if lang.starts_with("en") { ',' } else { '\u{a0}' };
+    let code = lang.split('-').next().unwrap_or("");
+    let (sep, from) = match code {
+        "de" | "it" | "pt" | "nl" | "da" | "tr" | "is" => ('.', 4),
+        "es" => ('.', 5),
+        "fr" => ('\u{202f}', 4),
+        "nb" | "nn" | "sv" | "fi" | "ru" | "uk" => ('\u{a0}', 4),
+        "pl" => ('\u{a0}', 5),
+        _ => (',', 4),
+    };
     let mut out = String::new();
-    for (i, c) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i).is_multiple_of(3) { out.push(sep); }
-        out.push(c);
+    if digits.len() >= from {
+        let len = digits.len();
+        for (i, c) in digits.chars().enumerate() {
+            let left = len - i;
+            // Indian grouping: the last three digits, then pairs.
+            let cut = if code == "hi" { left == 3 || (left > 3 && (left - 3).is_multiple_of(2)) } else { left.is_multiple_of(3) };
+            if i > 0 && cut { out.push(sep); }
+            out.push(c);
+        }
+    } else {
+        out = digits;
     }
     if n < 0 { format!("-{out}") } else { out }
 }
 
-/// `key` in `lang`, `{name}` filled from `args`; a plural takes its form from `count` (English, Bokmål and Nynorsk say
-/// `one` for exactly 1 and `other` for anything else). A key with no text is the key itself.
+/// `key` in `lang`, `{name}` filled from `args`; a plural takes `plural`'s form for `count`. A language that does not have
+/// the text yet says it in British English; a key with no text at all is the key itself.
 pub fn say(lang: &str, key: &str, args: &[(&str, Arg)]) -> String {
     let lang = LOCALES.iter().copied().find(|l| *l == lang).unwrap_or(LOCALES[0]);
-    let mut v = catalogue(lang);
-    for part in key.split('.') {
-        match v.get(part) { Some(x) => v = x, None => return key.to_string() }
-    }
+    if lang == LOCALES[0] { said(&[catalogue(lang)], lang, key, args) } else { said(&[catalogue(lang), catalogue(LOCALES[0])], lang, key, args) }
+}
+
+/// `key` from the first of `chain` that has it: the language's own, then the source's (whose rules then apply).
+fn said(chain: &[&serde_json::Value], lang: &str, key: &str, args: &[(&str, Arg)]) -> String {
+    let found = chain.iter().enumerate().find_map(|(i, cat)| {
+        let mut v = *cat;
+        for part in key.split('.') { v = v.get(part)?; }
+        (v.is_string() || v.get("other").is_some_and(|o| o.is_string())).then_some((i, v))
+    });
+    let Some((i, v)) = found else { return key.to_string() };
+    let lang = if i == 0 { lang } else { LOCALES[0] };
     let text = match v {
         serde_json::Value::String(s) => s.as_str(),
-        serde_json::Value::Object(m) if m.get("other").is_some_and(|o| o.is_string()) => {
+        _ => {
             let count = args.iter().find_map(|(n, a)| match a { Arg::Number(c) if *n == "count" => Some(*c), _ => None });
-            let form = if count == Some(1) { "one" } else { "other" };
-            m.get(form).or(m.get("other")).and_then(|x| x.as_str()).unwrap_or(key)
+            let form = count.map_or("other", |c| plural(lang, c));
+            v.get(form).or(v.get("other")).and_then(|x| x.as_str()).unwrap_or(key)
         }
-        _ => return key.to_string(),
     };
     let mut out = text.to_string();
     for (name, arg) in args {
@@ -260,7 +319,11 @@ mod pages_tests {
     ];
     /// What may stay English in the code, each with why: names, and words the code reads rather than shows.
     const ENGLISH_ON_PURPOSE: &[&str] = &[
-        "js/i18n.js:Norsk Bokmål", "js/i18n.js:Norsk Nynorsk", // each language by its own name, in i18n.js's list
+        // Each language by its own name, in i18n.js's list.
+        "js/i18n.js:Norsk Bokmål", "js/i18n.js:Norsk Nynorsk", "js/i18n.js:Dansk", "js/i18n.js:Deutsch", "js/i18n.js:Español",
+        "js/i18n.js:Suomi", "js/i18n.js:Français", "js/i18n.js:Íslenska", "js/i18n.js:Italiano", "js/i18n.js:Nederlands",
+        "js/i18n.js:Polski", "js/i18n.js:Русский", "js/i18n.js:Svenska", "js/i18n.js:Türkçe", "js/i18n.js:Українська",
+        "js/i18n.js:Português (Brasil)",
         "js/state.js:not all", // a media query
         // The buttons and menus of Jellystat's, Streamystats' and Tautulli's own (English) pages, named in the import steps.
         "js/settings/import.js:Settings", "js/settings/import.js:Backup", "js/settings/import.js:Activity", "js/settings/import.js:Backups",
@@ -380,12 +443,17 @@ mod readme_tests {
         if whole == 0 { 0 } else { part * 100 / whole }
     }
 
-    /// The picture: a card with a bar per language, its own name and tag on the left and its share on the right, in
+    /// The picture: a card with a bar per language, its own name and tag on the left and its share on the right, the
+    /// languages the owner checks first and the others under a heading that says nobody here has checked them, in
     /// GitHub's light or dark colours as the reader's page is.
     fn picture() -> String {
         let (total, notes, all) = status();
-        let (w, top, row, bar_x, bar_w) = (560, 76, 34, 206, 270);
-        let h = top + row * all.len() + 8;
+        let (w, row, bar_x, bar_w) = (600, 30, 268, 250);
+        let groups: [(&str, Vec<&Status>); 2] = [
+            ("Checked by the maintainer", all.iter().filter(|l| CHECKED.contains(&l.tag)).collect()),
+            ("Not checked by a native speaker: may hold mistakes, corrections welcome", all.iter().filter(|l| !CHECKED.contains(&l.tag)).collect()),
+        ];
+        let h = 70 + groups.iter().map(|(_, ls)| 34 + row * ls.len()).sum::<usize>() + 4;
         let font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif";
         let mut out = format!(
             "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{w}\" height=\"{h}\" viewBox=\"0 0 {w} {h}\" role=\"img\" aria-labelledby=\"title\">\n\
@@ -393,16 +461,19 @@ mod readme_tests {
 <style>\n\
   .card {{ fill: #ffffff; stroke: #d0d7de; }}\n\
   .title {{ fill: #1f2328; font: 600 16px {font}; }}\n\
+  .group {{ fill: #1f2328; font: 600 12.5px {font}; }}\n\
   .sub, .tag {{ fill: #59636e; font: 12px {font}; }}\n\
   .name {{ fill: #1f2328; font: 500 14px {font}; }}\n\
   .share {{ fill: #1f2328; font: 600 14px {font}; }}\n\
   .track {{ fill: #ece6fd; }}\n\
   .bar {{ fill: #8a5cf5; }}\n\
+  .bar.unchecked {{ fill: #b39af8; }}\n\
   @media (prefers-color-scheme: dark) {{\n\
     .card {{ fill: #0d1117; stroke: #3d444d; }}\n\
-    .title, .name, .share {{ fill: #f0f6fc; }}\n\
+    .title, .group, .name, .share {{ fill: #f0f6fc; }}\n\
     .sub, .tag {{ fill: #9198a1; }}\n\
     .track {{ fill: #2b2440; }}\n\
+    .bar.unchecked {{ fill: #6f52c9; }}\n\
   }}\n\
 </style>\n\
 <rect class=\"card\" x=\"0.5\" y=\"0.5\" width=\"{}\" height=\"{}\" rx=\"10\"/>\n\
@@ -410,16 +481,22 @@ mod readme_tests {
 <text class=\"sub\" x=\"24\" y=\"54\">{} texts in the interface and {} Patch notes releases, counted from the catalogues</text>\n",
             w - 1, h - 1, number(total), notes
         );
-        for (i, l) in all.iter().enumerate() {
-            let y = top + row * i;
-            let pct = share(l.texts + l.releases, total + notes);
-            out.push_str(&format!(
-                "<text class=\"name\" x=\"24\" y=\"{}\">{}</text>\n<text class=\"tag\" x=\"140\" y=\"{}\">{}</text>\n\
+        let mut y = 70;
+        for (i, (heading, langs)) in groups.iter().enumerate() {
+            out.push_str(&format!("<text class=\"group\" x=\"24\" y=\"{}\">{heading}</text>\n", y + 20));
+            y += 34;
+            for l in langs {
+                let pct = share(l.texts + l.releases, total + notes);
+                let class = if i == 0 { "bar" } else { "bar unchecked" };
+                out.push_str(&format!(
+                    "<text class=\"name\" x=\"24\" y=\"{}\">{}</text>\n<text class=\"tag\" x=\"196\" y=\"{}\">{}</text>\n\
 <rect class=\"track\" x=\"{bar_x}\" y=\"{}\" width=\"{bar_w}\" height=\"10\" rx=\"5\"/>\n\
-<rect class=\"bar\" x=\"{bar_x}\" y=\"{}\" width=\"{}\" height=\"10\" rx=\"5\"/>\n\
+<rect class=\"{class}\" x=\"{bar_x}\" y=\"{}\" width=\"{}\" height=\"10\" rx=\"5\"/>\n\
 <text class=\"share\" x=\"{}\" y=\"{}\" text-anchor=\"end\">{pct}%</text>\n",
-                y + 15, l.name, y + 15, l.tag, y + 5, y + 5, bar_w * pct / 100, w - 24, y + 15
-            ));
+                    y + 12, l.name, y + 12, l.tag, y + 2, y + 2, bar_w * pct / 100, w - 24, y + 12
+                ));
+                y += row;
+            }
         }
         out.push_str("</svg>\n");
         out
@@ -429,7 +506,7 @@ mod readme_tests {
     fn section() -> String {
         let (total, notes, all) = status();
         let said = all.iter().map(|l| format!("{} {}%", l.name, share(l.texts + l.releases, total + notes))).collect::<Vec<_>>().join(", ");
-        format!("{START}\n<p align=\"center\"><img src=\"{PICTURE}\" width=\"560\" alt=\"Translation status: {said}\"></p>\n{END}")
+        format!("{START}\n<p align=\"center\"><img src=\"{PICTURE}\" width=\"600\" alt=\"Translation status: {said}\"></p>\n{END}")
     }
 
     #[test]
@@ -505,6 +582,64 @@ mod say_tests {
 }
 
 #[cfg(test)]
+mod more_languages_tests {
+    use super::*;
+
+    #[test]
+    fn every_language_finds_its_catalogue_from_what_a_browser_says() {
+        for (asked, got) in [("de-DE", "de-DE"), ("de-AT", "de-DE"), ("de", "de-DE"), ("fr-CA", "fr-FR"), ("es-MX", "es-ES"), ("pt", "pt-BR"),
+            ("pt-PT", "pt-BR"), ("it", "it-IT"), ("nl-BE", "nl-NL"), ("sv", "sv-SE"), ("da", "da-DK"), ("fi", "fi-FI"), ("is", "is-IS"),
+            ("pl", "pl-PL"), ("ru", "ru-RU"), ("uk", "uk-UA"), ("tr", "tr-TR"), ("ja", "ja-JP"), ("ko", "ko-KR"), ("hi", "hi-IN"),
+            ("zh", "zh-CN"), ("zh-CN", "zh-CN"), ("zh-Hans-CN", "zh-CN"), ("zh-SG", "zh-CN"), ("zh-TW", "zh-TW"), ("zh-HK", "zh-TW"),
+            ("zh-Hant", "zh-TW"), ("zh-Hant-HK", "zh-TW"), ("no", "nb-NO"), ("en-US", "en-US"), ("en", "en-GB")] {
+            assert_eq!(pick(asked), got, "{asked}");
+        }
+    }
+
+    #[test]
+    fn a_count_takes_the_plural_form_its_language_gives_it() {
+        let forms = |lang: &str, ns: &[i64]| ns.iter().map(|&n| plural(lang, n)).collect::<Vec<_>>();
+        assert_eq!(forms("en-GB", &[0, 1, 2]), ["other", "one", "other"]);
+        assert_eq!(forms("fr-FR", &[0, 1, 2]), ["one", "one", "other"]);
+        assert_eq!(forms("pt-BR", &[0, 1, 2]), ["one", "one", "other"]);
+        assert_eq!(forms("hi-IN", &[0, 1, 2]), ["one", "one", "other"]);
+        assert_eq!(forms("is-IS", &[1, 11, 21, 2]), ["one", "other", "one", "other"]);
+        assert_eq!(forms("ru-RU", &[1, 2, 5, 11, 21, 22, 25, 112]), ["one", "few", "many", "many", "one", "few", "many", "many"]);
+        assert_eq!(forms("uk-UA", &[1, 3, 0, 14]), ["one", "few", "many", "many"]);
+        assert_eq!(forms("pl-PL", &[1, 2, 5, 12, 22, 21]), ["one", "few", "many", "many", "few", "many"]);
+        assert_eq!(forms("ja-JP", &[0, 1, 2]), ["other", "other", "other"]);
+        assert_eq!(forms("zh-TW", &[1]), ["other"]);
+    }
+
+    #[test]
+    fn a_text_a_language_has_not_yet_falls_back_to_british_english() {
+        let source: serde_json::Value = serde_json::json!({ "a": { "b": "Hello {name}" }, "n": { "one": "{count} play", "other": "{count} plays" } });
+        let partial: serde_json::Value = serde_json::json!({ "a": {} });
+        assert_eq!(said(&[&partial, &source], "fr-FR", "a.b", &[("name", "Ada".into())]), "Hello Ada");
+        assert_eq!(said(&[&partial, &source], "fr-FR", "n", &[("count", 2.into())]), "2 plays");
+        assert_eq!(said(&[&partial, &source], "fr-FR", "x.y", &[]), "x.y");
+    }
+
+    #[test]
+    fn numbers_are_written_as_each_language_writes_them() {
+        assert_eq!(number("de-DE", 1_390), "1.390");
+        assert_eq!(number("fr-FR", 1_390), "1\u{202f}390");
+        assert_eq!(number("es-ES", 1_390), "1390", "Spanish groups from five digits");
+        assert_eq!(number("es-ES", 12_390), "12.390");
+        assert_eq!(number("pl-PL", 1_390), "1390");
+        assert_eq!(number("ru-RU", 1_390), "1\u{a0}390");
+        assert_eq!(number("ja-JP", 1_390), "1,390");
+        assert_eq!(number("hi-IN", 12_345_678), "1,23,45,678", "Indian grouping");
+    }
+
+    #[test]
+    fn a_card_is_drawn_in_a_language_its_font_has_letters_for() {
+        for l in ["ja-JP", "ko-KR", "zh-CN", "zh-TW", "hi-IN"] { assert_eq!(drawable(l), "en-GB", "{l}"); }
+        for l in ["ru-RU", "uk-UA", "is-IS", "pl-PL", "tr-TR", "nb-NO"] { assert_eq!(drawable(l), l); }
+    }
+}
+
+#[cfg(test)]
 mod pick_tests {
     use super::*;
 
@@ -516,7 +651,7 @@ mod pick_tests {
         assert_eq!(pick("en-US,en;q=0.9"), "en-US");
         assert_eq!(pick("en"), "en-GB");
         assert_eq!(pick("en-AU"), "en-GB", "any English but America's is the source");
-        assert_eq!(pick("de-DE,nn;q=0.5"), "nn-NO", "a language FinStats does not speak is passed over");
+        assert_eq!(pick("eo,nn;q=0.5"), "nn-NO", "a language FinStats does not speak is passed over");
         assert_eq!(pick("en;q=0.2,nb;q=0.9"), "nb-NO", "the weights decide, not the order");
         assert_eq!(pick("NB-no"), "nb-NO");
     }
@@ -533,13 +668,13 @@ mod pick_tests {
         // A picture or a download is fetched by the browser itself, with the browser's own languages.
         assert_eq!(asked(&h("en-US,en;q=0.9", Some("finstats_session=x; finstats_lang=nn-NO"))), "nn-NO");
         assert_eq!(asked(&h("en-US", None)), "en-US");
-        assert_eq!(asked(&h("nb", Some("finstats_lang=de-DE"))), "nb-NO", "a cookie naming a language FinStats does not speak is ignored");
+        assert_eq!(asked(&h("nb", Some("finstats_lang=xx-YY"))), "nb-NO", "a cookie naming a language FinStats does not speak is ignored");
         assert_eq!(asked(&HeaderMap::new()), "en-GB");
     }
 
     #[test]
     fn nothing_usable_is_british_english() {
-        for header in ["", "*", "de", "fr-FR;q=1", ";;,", "nb;q=0"] {
+        for header in ["", "*", "eo", "ar-EG;q=1", ";;,", "nb;q=0"] {
             assert_eq!(pick(header), "en-GB", "{header:?}");
         }
     }
@@ -551,8 +686,7 @@ mod tests {
     use std::collections::{BTreeMap, BTreeSet};
     use std::path::{Path, PathBuf};
 
-    /// Every catalogue, the source first.
-    const LOCALES: [&str; 4] = ["en-GB", "en-US", "nb-NO", "nn-NO"];
+    use super::{CHECKED, LOCALES};
     /// CLDR's plural categories; an object whose keys are only these is one text in its forms.
     const CATEGORIES: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
 
@@ -610,7 +744,7 @@ mod tests {
     }
 
     #[test]
-    fn the_catalogues_are_the_four_languages_and_say_which_they_are() {
+    fn the_catalogues_are_the_languages_finstats_speaks_and_say_which_they_are() {
         let on_disk: BTreeSet<String> = std::fs::read_dir(dir()).expect("web/assets/i18n").filter_map(|e| {
             let name = e.ok()?.file_name().into_string().ok()?;
             name.strip_suffix(".json").map(str::to_string)
@@ -628,6 +762,8 @@ mod tests {
         }
     }
 
+    /// The languages the owner checks have every text British English has; the others may lag behind (what they lack is
+    /// said in British English, and the README shows how far each has come), but none has a text the source does not.
     #[test]
     fn every_catalogue_has_the_keys_british_english_has() {
         let source = texts(&load("en-GB"));
@@ -636,9 +772,10 @@ mod tests {
             let these = texts(&cat);
             let missing: Vec<_> = source.keys().filter(|k| !these.contains_key(*k)).collect();
             let extra: Vec<_> = these.keys().filter(|k| !source.contains_key(*k)).collect();
-            assert!(missing.is_empty() && extra.is_empty(), "{tag}: missing {missing:?}, not in en-GB {extra:?}");
-            for (k, v) in &source {
-                assert_eq!(v.is_object(), these[k].is_object(), "{tag}: {k} is a plural in one catalogue and not in the other");
+            assert!(extra.is_empty(), "{tag}: not in en-GB {extra:?}");
+            assert!(missing.is_empty() || !CHECKED.contains(&tag), "{tag} is checked and must be whole: missing {missing:?}");
+            for (k, v) in &these {
+                assert_eq!(v.is_object(), source[k].is_object(), "{tag}: {k} is a plural in one catalogue and not in the other");
             }
         }
     }
@@ -648,7 +785,8 @@ mod tests {
         let source = texts(&load("en-GB"));
         for (tag, cat) in every_catalogue() {
             for (k, v) in texts(&cat) {
-                let want: BTreeSet<String> = strings(&source[&k]).iter().flat_map(|s| placeholders(s)).collect();
+                let Some(src) = source.get(&k) else { continue };
+                let want: BTreeSet<String> = strings(src).iter().flat_map(|s| placeholders(s)).collect();
                 for s in strings(&v) {
                     assert_eq!(placeholders(s), want, "{tag}: {k} = {s:?}");
                 }
@@ -658,12 +796,24 @@ mod tests {
 
     #[test]
     fn a_plural_has_the_forms_its_language_has_and_counts_with_count() {
-        // English, Bokmål and Nynorsk all have one and other (CLDR); a language with more lists them here.
-        let forms = |_tag: &str| BTreeSet::from(["one", "other"]);
+        // The forms a whole number takes in each language (CLDR; `i18n::plural` picks among them), and the one some
+        // languages also have for round millions, which a catalogue may give.
+        let forms = |tag: &str| -> (BTreeSet<&str>, BTreeSet<&str>) {
+            let need = match tag.split('-').next().unwrap() {
+                "pl" | "ru" | "uk" => BTreeSet::from(["one", "few", "many", "other"]),
+                "ja" | "ko" | "zh" => BTreeSet::from(["other"]),
+                _ => BTreeSet::from(["one", "other"]),
+            };
+            let mut may = need.clone();
+            if matches!(tag.split('-').next().unwrap(), "es" | "fr" | "it" | "pt") { may.insert("many"); }
+            (need, may)
+        };
         for (tag, cat) in every_catalogue() {
+            let (need, may) = forms(tag);
             for (k, v) in texts(&cat) {
                 let Value::Object(m) = &v else { continue };
-                assert_eq!(m.keys().map(String::as_str).collect::<BTreeSet<_>>(), forms(tag), "{tag}: {k}");
+                let has: BTreeSet<&str> = m.keys().map(String::as_str).collect();
+                assert!(need.is_subset(&has) && has.is_subset(&may), "{tag}: {k} has {has:?}, its language needs {need:?}");
                 assert!(m["other"].as_str().is_some_and(|s| s.contains("{count}")), "{tag}: {k} other says how many");
             }
         }

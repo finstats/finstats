@@ -278,6 +278,9 @@
       "language_hint": "språk language norsk engelsk english bokmål nynorsk omsetjing translation",
       "language_help": "Språket FinStats vert vist på i denne nettlesaren.",
       "language_browser": "Følg nettlesaren",
+      "language_checked": "Kontrollert av utviklaren",
+      "language_unchecked": "Ikkje kontrollert av ein morsmålsbrukar",
+      "language_unchecked_note": "Denne omsetjinga er ikkje kontrollert av ein morsmålsbrukar: rettingar vert gjerne tekne imot på GitHub.",
       "layout": "Oppsett",
       "layout_hint": "oppsett enkel modus klassisk tautulli plex topplinje heim utsjånad layout simple mode classic top bar home look",
       "layout_help": "FinStats, eller Enkel: ei linje øvst og berre statistikken, slik ein klassisk statistikkserver for Plex viser han. Vert lagra berre i denne nettlesaren.",
@@ -3100,7 +3103,8 @@
         "server": "Ingenting vart spela av på {name} i denne perioden. Vel ein annan ovanfor."
       },
       "share": "Del året som kort",
-      "banner": "Tilbakeblikket ditt for {year} er klart"
+      "banner": "Tilbakeblikket ditt for {year} er klart",
+      "full_stop": "."
     },
     "changelog": {
       "sub": "Kva som er endra i FinStats, nyaste først",

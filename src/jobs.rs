@@ -648,7 +648,7 @@ mod tests {
             let mut said = std::collections::BTreeSet::new();
             for key in jobs {
                 let text = explain_in(lang, key, key).unwrap_or_else(|| panic!("{key} is not known"));
-                assert!(!text.starts_with("server.") && text.ends_with('.'), "{lang}: {key}: {text}");
+                assert!(!text.starts_with("server.") && text.ends_with(['.', '。', '।']), "{lang}: {key}: {text}"); // each language's own full stop
                 said.insert(text);
             }
             assert_eq!(said.len(), jobs.len(), "{lang}: two jobs share a sentence");

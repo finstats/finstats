@@ -277,6 +277,9 @@
       "language_hint": "language språk norsk english bokmål nynorsk translation",
       "language_help": "The language FinStats is shown in, in this browser.",
       "language_browser": "Follow the browser",
+      "language_checked": "Checked by the maintainer",
+      "language_unchecked": "Not checked by a native speaker",
+      "language_unchecked_note": "This translation has not been checked by a native speaker: corrections are welcome on GitHub.",
       "layout": "Layout",
       "layout_hint": "layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats, or Simple: a bar across the top and the stats alone, the way a classic Plex stats server lays them out. Kept by this browser alone.",
@@ -3099,7 +3102,8 @@
         "server": "{name} didn’t play anything in this period. Pick another one above."
       },
       "share": "Share the year as cards",
-      "banner": "Your {year} recap is ready"
+      "banner": "Your {year} recap is ready",
+      "full_stop": "."
     },
     "changelog": {
       "sub": "What changed in FinStats, newest first",

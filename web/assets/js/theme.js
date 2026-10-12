@@ -13,19 +13,28 @@ try {
     document.write('<link rel="stylesheet" href="/assets/simple-tokens.css"><link rel="stylesheet" href="/assets/simple.css">');
   }
 } catch { /* storage blocked: FinStats */ }
-// The words of the language this browser reads in (i18n.js decides the same way): fetched while the rest of the page
-// loads, so main.js finds them already here. <html lang> is set now, for the first paint's hyphenation and screen readers.
+// The words of the language this browser reads in (i18n.js decides the same way, and LANGUAGES there is this list): fetched
+// while the rest of the page loads, so main.js finds them already here, with British English beside a language nobody here
+// checks (what it lacks is said in that). <html lang> is set now, for the first paint's hyphenation and screen readers.
 try {
-  const tags = ['en-GB', 'en-US', 'nb-NO', 'nn-NO'];
+  const tags = ['en-GB', 'en-US', 'nb-NO', 'nn-NO', 'da-DK', 'de-DE', 'es-ES', 'fi-FI', 'fr-FR', 'hi-IN', 'is-IS', 'it-IT', 'ja-JP', 'ko-KR',
+    'nl-NL', 'pl-PL', 'pt-BR', 'ru-RU', 'sv-SE', 'tr-TR', 'uk-UA', 'zh-CN', 'zh-TW'];
+  const checked = tags.slice(0, 4);
+  const of = (raw) => {
+    const t = String(raw || '').toLowerCase(), [l, ...rest] = t.split('-');
+    const exact = tags.find((x) => x.toLowerCase() === t);
+    if (exact) return exact;
+    if (l === 'nb' || l === 'no') return 'nb-NO';
+    if (l === 'nn') return 'nn-NO';
+    if (l === 'en') return 'en-GB';
+    if (l === 'zh') return rest.some((p) => ['hant', 'tw', 'hk', 'mo'].includes(p)) ? 'zh-TW' : 'zh-CN';
+    return tags.find((x) => x.split('-')[0].toLowerCase() === l) || null;
+  };
   let tag = localStorage.getItem('finstats.language');
   if (!tags.includes(tag)) {
     tag = 'en-GB';
-    for (const raw of navigator.languages || [navigator.language]) {
-      const t = String(raw || '').toLowerCase(), l = t.split('-')[0];
-      const hit = tags.find((x) => x.toLowerCase() === t) || (l === 'nb' || l === 'no' ? 'nb-NO' : l === 'nn' ? 'nn-NO' : l === 'en' ? 'en-GB' : null);
-      if (hit) { tag = hit; break; }
-    }
+    for (const raw of navigator.languages || [navigator.language]) { const hit = of(raw); if (hit) { tag = hit; break; } }
   }
   document.documentElement.lang = tag;
-  document.write('<link rel="preload" href="/assets/i18n/' + tag + '.json" as="fetch" crossorigin="anonymous">');
+  for (const t of checked.includes(tag) ? [tag] : [tag, 'en-GB']) document.write('<link rel="preload" href="/assets/i18n/' + t + '.json" as="fetch" crossorigin="anonymous">');
 } catch { /* storage blocked: i18n.js decides by itself */ }

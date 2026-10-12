@@ -62,7 +62,7 @@ finstats/
 │       │   ├── settings/         One module per Settings section
 │       │   ├── simple/           Simple mode (Tautulli-like layout) and its pages/
 │       │   └── public/           Public profile page script
-│       ├── i18n/                 UI catalogues: en-GB (source), en-US, nb-NO, nn-NO (JSON)
+│       ├── i18n/                 UI catalogues, one JSON per language (23; en-GB the source)
 │       ├── finui/                FinUI copy: registry.json, tokens.css, base.css, core.js, components/, create/, p/
 │       ├── finmotion/            FinMotion copy: registry.json, core/, parts/, components/
 │       ├── fonts/                Bundled woff2 families + their OFL licences (preset-selectable)
@@ -481,7 +481,7 @@ ETags by image tag), `ical.rs` (hand-written RFC 5545 feed), `keys.rs`, `audit.r
 | `nowplaying.js` | Now-playing view with a 1 s ticker clock (polls only correct, never repaint) |
 | `prefetch.js` | Warm-up and on-intent prefetch, calling the page's own loaders |
 | `shell.js`, `sections.js`, `menus.js`, `search.js` | Layout chrome (FinUI menus, status bar, Esc), section pages, context menus, search |
-| `i18n.js` | `t(key, vars)`, `tParts`, `lang()`, `loadLanguage`, `setLanguage` (work in progress, see §12) |
+| `i18n.js` | `t(key, vars)`, `tParts`, `tOr`, `lang()`, `LANGUAGES` (23, four `checked`), `pickLanguage`, `loadLanguage` (with en-GB beside an unchecked language), `setLanguage` |
 | Feature helpers | `watchlist.js`, `worldmap.js`, `notifications.js`, `connections.js`, `downloads.js`, `upcoming.js`, `playmodal.js`, `changelog-text.js` |
 | `simple/*` | Simple mode shell, helpers (`platform.js`, `profile.js`, `history.js`) and pages |
 | `public/profile.js` | Public page; no state, api.js, router or prefetch |
@@ -602,7 +602,8 @@ let (a, b) = tokio::try_join!(apart(app.clone(), scope.clone(), |c, s| totals(c,
 7. No inline styles (CSP); `el.style.x` from JS is fine. Every colour is a token, reached as `'var(--x)'`.
 8. Live data uses `follow()`, never a bare `setInterval`.
 9. Overlays stop propagation of their own Esc; `shell.js` handles Esc globally.
-10. UI text moves to `t('key')` with catalogue entries in all four locales (work in progress).
+10. Every word a person reads comes from `t('key')`. A new key lands in the four checked catalogues (en-GB, en-US, nb-NO,
+    nn-NO) in the same change; the other nineteen say it in en-GB until translated (see `CLAUDE.md`, Languages).
 11. Content stays visible: no folds; use navigation and jump lists instead.
 
 ### 9.4 Writing rules (all repositories)
@@ -749,23 +750,20 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 
 **Open issues found while writing this file (2026-10-12)**
 
-- **The Docker build is broken on this branch.** `src/changelog.rs` `include_str!`s `changelog/*.md`, but the
-  `Dockerfile` copies only `CHANGELOG.md LICENSE THIRD-PARTY.json`; it needs `COPY changelog ./changelog`.
-- **Internationalisation is half done and uncommitted in `web/`.** `src/i18n.rs`, the catalogues and translated
-  changelogs are committed; the browser side (`js/i18n.js`, `finui/i18n.js`, many converted modules) is not. Many `t()`
-  keys used in JS do not exist in `en-GB.json` yet and render as raw keys; the catalogues have no `finui` section, so
-  FinUI's own words stay English. On the server only `/api/changelog` is translated, and `i18n::current()` is a task-local
-  that is **not** inherited inside `db.call` / `spawn` (returns en-GB there).
-- **The public profile page would show raw keys**: `public/profile.js` uses `dom.js` formatters that now call `t()`, but
-  `public.html` never runs `loadLanguage()`.
-- **FinUI copy drift:** `web/assets/finui` (new `i18n.js`, changed `format.js`, `data-table.js`, many components) differs
-  from `../finui`; the QA `finui` stage fails until the changes are copied across.
+- **Nineteen of the 23 languages are unchecked translations.** Only en-GB, en-US, nb-NO and nn-NO are read by the owner;
+  the README, the docs and Settings → Appearance → Language say so. Cards (Recap, public profile) draw Japanese, Korean,
+  Chinese and Hindi readers' cards in en-GB, because the card font (Inter) has no CJK or Devanagari letters.
+- **A few labels beside a number choose between two keys in code** (`n === 1 ? a : b`: Together's sessions, Recap's genres,
+  a task's interval, the concurrent-streams unit) rather than through a plural key, so Russian, Ukrainian and Polish use a
+  form that fits any number there instead of their own few/many.
+- **Notification messages stay English** (they are sent outside any request, to external services), and stored texts
+  written by scheduled runs (a task's error) are in en-GB.
 - **CI's `node --check` covers only `web/assets/js/*.js` and `pages/*.js`**, not `settings/`, `simple/`, `public/`,
   FinUI or FinMotion (the QA static stage covers everything).
 - **`sync_userdata` has no removal guard**: it deletes a person's `user_items` then inserts what the read returned, so an
   empty or reshaped read clears played/favourite flags until the next read.
 - **Documentation drift to fix:** `CLAUDE.md` still places theme tokens at the top of `app.css` (they are FinUI's
-  `tokens.css`), says tables read numbers as en-US, has no section on `capacity.rs`, `browse.rs`, `upgrade.rs` or i18n,
+  `tokens.css`), has no section on `capacity.rs`, `browse.rs` or `upgrade.rs`,
   and states the subscription rule two ways (the code is `playing == 0 && !settling`); it gives the clippy budget as ~12
   (baseline is 20). `api.md` says the 21st API key is 409 (code: 400) and describes image caching inconsistently. Stale
   comments mention torrent clients (`services.rs`, `state.rs`), "four" notification channels (there are nine), and "the

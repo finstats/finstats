@@ -10,27 +10,57 @@
 
 import { words as finuiWords } from '../finui/i18n.js';
 
-/** Every language FinStats speaks, by its own name; the first is the source. */
+/** Every language FinStats speaks, by its own name; the first is the source. `checked`: the owner reads it and has
+ *  checked it; the others are translations nobody here can check, and may lag behind (what one lacks is said in British
+ *  English). The server's `i18n::LOCALES` is the same list. */
 export const LANGUAGES = [
-  { tag: 'en-GB', name: 'English (UK)' },
-  { tag: 'en-US', name: 'English (US)' },
-  { tag: 'nb-NO', name: 'Norsk Bokmål' },
-  { tag: 'nn-NO', name: 'Norsk Nynorsk' },
+  { tag: 'en-GB', name: 'English (UK)', checked: true },
+  { tag: 'en-US', name: 'English (US)', checked: true },
+  { tag: 'nb-NO', name: 'Norsk Bokmål', checked: true },
+  { tag: 'nn-NO', name: 'Norsk Nynorsk', checked: true },
+  { tag: 'da-DK', name: 'Dansk' },
+  { tag: 'de-DE', name: 'Deutsch' },
+  { tag: 'es-ES', name: 'Español' },
+  { tag: 'fi-FI', name: 'Suomi' },
+  { tag: 'fr-FR', name: 'Français' },
+  { tag: 'hi-IN', name: 'हिन्दी' },
+  { tag: 'is-IS', name: 'Íslenska' },
+  { tag: 'it-IT', name: 'Italiano' },
+  { tag: 'ja-JP', name: '日本語' },
+  { tag: 'ko-KR', name: '한국어' },
+  { tag: 'nl-NL', name: 'Nederlands' },
+  { tag: 'pl-PL', name: 'Polski' },
+  { tag: 'pt-BR', name: 'Português (Brasil)' },
+  { tag: 'ru-RU', name: 'Русский' },
+  { tag: 'sv-SE', name: 'Svenska' },
+  { tag: 'tr-TR', name: 'Türkçe' },
+  { tag: 'uk-UA', name: 'Українська' },
+  { tag: 'zh-CN', name: '简体中文' },
+  { tag: 'zh-TW', name: '繁體中文' },
 ];
 const SOURCE = LANGUAGES[0].tag;
 const KEY = 'finstats.language';
 
-/** The first of a browser's languages that FinStats speaks: a tag as written, else its language (nb, nn, and no for
- *  Bokmål; en is British unless it says America). Nothing usable is the source. The server's `i18n::pick` is the same rule. */
+/** The catalogue a browser language asks for: the tag as written, else its language (no is Bokmål; en is British unless
+ *  it says America; pt is Brazilian; Chinese by its script or region). The server's `i18n::language_of` is the same rule. */
+function languageOf(raw) {
+  const tag = String(raw || '').trim().toLowerCase();
+  const exact = LANGUAGES.find((l) => l.tag.toLowerCase() === tag);
+  if (exact) return exact.tag;
+  const [lang, ...rest] = tag.split('-');
+  if (lang === 'nb' || lang === 'no') return 'nb-NO';
+  if (lang === 'nn') return 'nn-NO';
+  if (lang === 'en') return SOURCE;
+  if (lang === 'zh') return rest.some((p) => ['hant', 'tw', 'hk', 'mo'].includes(p)) ? 'zh-TW' : 'zh-CN';
+  const same = LANGUAGES.find((l) => l.tag.split('-')[0].toLowerCase() === lang);
+  return same ? same.tag : null;
+}
+
+/** The first of a browser's languages that FinStats speaks; nothing usable is the source. */
 export function pickLanguage(list) {
   for (const raw of list || []) {
-    const tag = String(raw || '').trim().toLowerCase();
-    const exact = LANGUAGES.find((l) => l.tag.toLowerCase() === tag);
-    if (exact) return exact.tag;
-    const lang = tag.split('-')[0];
-    if (lang === 'nb' || lang === 'no') return 'nb-NO';
-    if (lang === 'nn') return 'nn-NO';
-    if (lang === 'en') return SOURCE;
+    const found = languageOf(raw);
+    if (found) return found;
   }
   return SOURCE;
 }
@@ -51,16 +81,18 @@ export function setLanguage(tag) {
 
 let current = SOURCE;
 let words = {};
+let fallback = null;   // the source's words, for a language that does not have every text yet
 let plurals = new Intl.PluralRules(SOURCE);
 let numbers = new Intl.NumberFormat(SOURCE);
 
 /** The language in use, for Intl and <html lang>. */
 export const lang = () => current;
 
-/** Speak `tag` from `catalogue` (its JSON). */
-export function useCatalogue(tag, catalogue) {
+/** Speak `tag` from `catalogue` (its JSON), with `source` (British English's) for what it lacks. */
+export function useCatalogue(tag, catalogue, source = null) {
   current = tag;
   words = catalogue || {};
+  fallback = source && source !== catalogue ? source : null;
   plurals = new Intl.PluralRules(tag);
   numbers = new Intl.NumberFormat(tag);
   finuiWords(words.finui, tag);
@@ -68,10 +100,12 @@ export function useCatalogue(tag, catalogue) {
 
 /** Fetch the chosen language's catalogue and put it in use; the source's words if it cannot be had. */
 export async function loadLanguage(tag = chosenLanguage()) {
+  const get = async (t) => { const res = await fetch(`/assets/i18n/${t}.json`); if (!res.ok) throw new Error(String(res.status)); return res.json(); };
   try {
-    const res = await fetch(`/assets/i18n/${tag}.json`);
-    if (!res.ok) throw new Error(String(res.status));
-    useCatalogue(tag, await res.json());
+    // A language nobody here checks may lack a text: the source's words come along to say it.
+    const checked = (LANGUAGES.find((l) => l.tag === tag) || {}).checked;
+    const [own, source] = await Promise.all([get(tag), checked || tag === SOURCE ? null : get(SOURCE)]);
+    useCatalogue(tag, own, source);
   } catch {
     if (tag !== SOURCE) return loadLanguage(SOURCE);
   }
@@ -85,18 +119,26 @@ export async function loadLanguage(tag = chosenLanguage()) {
 }
 
 const missing = new Set();
-function lookup(key) {
-  let v = words;
+function find(from, key) {
+  let v = from;
   for (const part of String(key).split('.')) { v = v && typeof v === 'object' ? v[part] : undefined; }
-  return v;
+  return typeof v === 'string' || (v && typeof v === 'object' && typeof v.other === 'string') ? v : undefined;
 }
+let sourcePlurals = new Intl.PluralRules(SOURCE);
+/** The text of `key` and the plural rules that fit it: the language's own, else the source's. */
+function lookup(key) {
+  const own = find(words, key);
+  if (own !== undefined || !fallback) return own;
+  return find(fallback, key);
+}
+const rulesFor = (key) => (find(words, key) === undefined && fallback ? sourcePlurals : plurals);
 /** The text of `key` (a plural picks its form by `vars.count`), its placeholders not yet filled; null if there is none. */
 function text(key, vars) {
   const v = lookup(key);
   if (typeof v === 'string') return v;
   if (v && typeof v === 'object' && typeof v.other === 'string') {
     const n = vars && vars.count != null ? Number(vars.count) : NaN;
-    return v[Number.isFinite(n) ? plurals.select(n) : 'other'] ?? v.other;
+    return v[Number.isFinite(n) ? rulesFor(key).select(n) : 'other'] ?? v.other;
   }
   if (!missing.has(key)) { missing.add(key); if (typeof console !== 'undefined') console.warn(`i18n: no text for ${key} in ${current}`); }
   return null;

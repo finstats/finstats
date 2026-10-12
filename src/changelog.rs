@@ -1,25 +1,43 @@
 //! Patch notes. `CHANGELOG.md` is the source: it is compiled into the binary and parsed into the structure the
-//! "Patch notes" tab renders. Each other language FinStats speaks has its own copy (`changelog/<tag>.md`), the same
-//! releases, groups and bullets in its words, and the tab reads the one the page asked in (`i18n::current`). The
-//! headings (`## [x.y.z] - date`, `### Added`) stay as the source writes them: they are structure, not words.
+//! "Patch notes" tab renders. Each other language FinStats speaks may have its own copy (`changelog/<tag>.md`, embedded),
+//! the same releases, groups and bullets in its words, and the tab reads the one the page asked in (`i18n::current`).
+//! The languages the owner checks (`i18n::CHECKED`) tell every release; another may lag behind, and a release it has not
+//! told yet is shown as the source tells it. The headings (`## [x.y.z] - date`, `### Added`) stay as the source writes
+//! them: they are structure, not words.
+
+use std::collections::HashMap;
 
 use axum::Json;
+use rust_embed::RustEmbed;
 use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::auth::AuthUser;
 
 const SOURCE: &str = include_str!("../CHANGELOG.md");
-/// The source in every other language FinStats speaks.
-const TRANSLATIONS: [(&str, &str); 3] = [
-    ("en-US", include_str!("../changelog/en-US.md")),
-    ("nb-NO", include_str!("../changelog/nb-NO.md")),
-    ("nn-NO", include_str!("../changelog/nn-NO.md")),
-];
 
-/// The changelog in `lang`; the source for the source, and for anything it does not know.
-fn text_for(lang: &str) -> &'static str {
-    TRANSLATIONS.iter().find(|(tag, _)| *tag == lang).map_or(SOURCE, |(_, text)| text)
+/// The source in the other languages FinStats speaks.
+#[derive(RustEmbed)]
+#[folder = "$CARGO_MANIFEST_DIR/changelog"]
+struct Translations;
+
+/// The source told in `lang`, if it has been.
+fn translation(lang: &str) -> Option<String> {
+    Translations::get(&format!("{lang}.md")).map(|f| String::from_utf8_lossy(&f.data).into_owned())
+}
+
+/// The releases in `lang`: each as the language tells it, the source's where it does not (yet), in the source's order.
+fn told(source: Vec<Release>, translated: Vec<Release>) -> Vec<Release> {
+    let mut by_version: HashMap<String, Release> = translated.into_iter().map(|r| (r.version.clone(), r)).collect();
+    source.into_iter().map(|r| by_version.remove(&r.version).unwrap_or(r)).collect()
+}
+
+/// The Patch notes in `lang`.
+fn releases_for(lang: &str) -> Vec<Release> {
+    match translation(lang) {
+        Some(text) if lang != crate::i18n::LOCALES[0] => told(parse(SOURCE), parse(&text)),
+        _ => parse(SOURCE),
+    }
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -89,7 +107,7 @@ pub fn parse(source: &str) -> Vec<Release> {
 }
 
 pub async fn changelog(_user: AuthUser) -> Json<Value> {
-    Json(json!({ "current": env!("CARGO_PKG_VERSION"), "releases": parse(text_for(crate::i18n::current())) }))
+    Json(json!({ "current": env!("CARGO_PKG_VERSION"), "releases": releases_for(crate::i18n::current()) }))
 }
 
 #[cfg(test)]
@@ -175,17 +193,26 @@ mod tests {
         s.split('`').skip(1).step_by(2).collect()
     }
 
-    /// A translation tells the same releases as the source, bullet for bullet: same versions, days, groups and
-    /// number of notes, a title where the source has one, the same `code` and as much **bold**. A release
-    /// cannot ship in one language and not the others.
+    /// A translation tells the source's releases, bullet for bullet: for every release it tells, the same day, groups
+    /// and number of notes, a title where the source has one, the same `code` and as much **bold**, and no release the
+    /// source does not have. The languages the owner checks tell every release: a release cannot ship in one of them and
+    /// not the others.
     #[test]
     fn every_translation_tells_the_releases_the_source_tells() {
         let source = parse(SOURCE);
-        for (tag, text) in TRANSLATIONS {
-            let these = parse(text);
-            assert_eq!(these.iter().map(|r| &r.version).collect::<Vec<_>>(), source.iter().map(|r| &r.version).collect::<Vec<_>>(), "{tag}: not the same releases");
-            for (s, t) in source.iter().zip(&these) {
-                let v = &s.version;
+        let by_version: HashMap<&str, &Release> = source.iter().map(|r| (r.version.as_str(), r)).collect();
+        for tag in crate::i18n::LOCALES.iter().skip(1) {
+            let Some(text) = translation(tag) else {
+                assert!(!crate::i18n::CHECKED.contains(tag), "{tag} is checked and has no changelog/{tag}.md");
+                continue;
+            };
+            let these = parse(&text);
+            if crate::i18n::CHECKED.contains(tag) {
+                assert_eq!(these.iter().map(|r| &r.version).collect::<Vec<_>>(), source.iter().map(|r| &r.version).collect::<Vec<_>>(), "{tag}: not the same releases");
+            }
+            for t in &these {
+                let v = &t.version;
+                let Some(s) = by_version.get(v.as_str()) else { panic!("{tag}: a release {v} the source does not have") };
                 assert_eq!((&t.date, &t.started), (&s.date, &s.started), "{tag} {v}: another day");
                 assert_eq!(t.summary.is_some(), s.summary.is_some(), "{tag} {v}: a title where the source has none, or none where it has one");
                 assert_eq!(t.groups.iter().map(|g| (&g.kind, g.items.len())).collect::<Vec<_>>(), s.groups.iter().map(|g| (&g.kind, g.items.len())).collect::<Vec<_>>(), "{tag} {v}: other groups or another number of notes");
@@ -204,10 +231,16 @@ mod tests {
 
     #[test]
     fn the_changelog_is_read_in_the_language_asked_for() {
-        assert_eq!(text_for("en-GB"), SOURCE);
-        assert_eq!(text_for("de-DE"), SOURCE);
-        for (tag, text) in TRANSLATIONS {
-            assert_eq!(text_for(tag), text, "{tag}");
-        }
+        assert_eq!(releases_for("en-GB"), parse(SOURCE));
+        assert_eq!(releases_for("xx-YY"), parse(SOURCE), "a language with no translation reads the source");
+        assert_eq!(releases_for("nb-NO"), parse(&translation("nb-NO").unwrap()));
+    }
+
+    #[test]
+    fn a_release_a_language_has_not_told_yet_is_the_source_s() {
+        let source = parse("## [1.1.0] - 2026-01-02\nTitle\n### Added\n- new\n\n## [1.0.0] - 2026-01-01\n### Fixed\n- old\n");
+        let partial = parse("## [1.0.0] - 2026-01-01\n### Fixed\n- gammel\n");
+        let r = told(source, partial);
+        assert_eq!(r.iter().map(|x| (x.version.as_str(), x.groups[0].items[0].as_str())).collect::<Vec<_>>(), [("1.1.0", "new"), ("1.0.0", "gammel")]);
     }
 }

@@ -129,7 +129,7 @@ impl Cache {
 
 /// What a card is drawn from: its link, its kind, the language it is said in and everything it would say.
 pub fn key(token: &str, kind: Kind, a: &PublicProfile) -> String {
-    key_in(crate::i18n::current(), token, kind, a)
+    key_in(crate::i18n::drawable(crate::i18n::current()), token, kind, a)
 }
 
 fn key_in(lang: &str, token: &str, kind: Kind, a: &PublicProfile) -> String {
@@ -143,7 +143,7 @@ pub type Posters = HashMap<String, Vec<u8>>;
 
 /// The card in the language of the request that asks for it (a visitor's browser says which).
 pub fn svg(kind: Kind, a: &PublicProfile, posters: &Posters) -> String {
-    svg_in(crate::i18n::current(), kind, a, posters)
+    svg_in(crate::i18n::drawable(crate::i18n::current()), kind, a, posters)
 }
 
 fn svg_in(lang: &str, kind: Kind, a: &PublicProfile, posters: &Posters) -> String {

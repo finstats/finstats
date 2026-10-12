@@ -12,7 +12,7 @@ import { button } from '../../finui/components/button/button.js';
 import { STYLES, styleOf } from '../../finui/components/mobile-nav/mobile-nav.js';
 import { STYLES as DESKTOP_STYLES, styleOf as desktopStyleOf, sideOf } from '../../finui/components/desktop-nav/desktop-nav.js';
 import { toggle } from '../../finui/components/toggle/toggle.js';
-import { t, tOr, LANGUAGES, storedLanguage, setLanguage } from '../i18n.js';
+import { t, tOr, lang, LANGUAGES, storedLanguage, setLanguage } from '../i18n.js';
 import { mobileNavChoice, setMobileNav, desktopNavChoice, setDesktopNav, searchMode, setSearchMode, layoutChoice, setLayoutChoice } from '../state.js';
 
 // FinUI create's names for a preset's axes and options, in the language in use where the catalogue has them; a palette's or a
@@ -131,12 +131,18 @@ export default {
       help: t('settings.appearance.layout_help'), control: layoutSel });
 
     // The language this browser reads FinStats in, on every width and in both layouts. Choosing one reloads the page in it.
+    // The owner reads English and Norwegian and has checked those; the rest are translations nobody here can check, and the
+    // list and the help line say so.
+    const option = (l) => h('option', { value: l.tag, lang: l.tag }, l.name);
     const langSel = h('select', { class: 'fui-field__input', id: 'f-language', 'aria-describedby': 'language-help' },
-      h('option', { value: '' }, t('settings.appearance.language_browser')), LANGUAGES.map((l) => h('option', { value: l.tag, lang: l.tag }, l.name)));
+      h('option', { value: '' }, t('settings.appearance.language_browser')),
+      h('optgroup', { label: t('settings.appearance.language_checked') }, LANGUAGES.filter((l) => l.checked).map(option)),
+      h('optgroup', { label: t('settings.appearance.language_unchecked') }, LANGUAGES.filter((l) => !l.checked).map(option)));
     langSel.value = storedLanguage();
     langSel.addEventListener('change', () => setLanguage(langSel.value));
+    const unchecked = !(LANGUAGES.find((l) => l.tag === lang()) || {}).checked;
     const [languageRow] = settingRow({ id: 'language', label: t('settings.appearance.language'), labelFor: 'f-language',
-      help: t('settings.appearance.language_help'), control: langSel });
+      help: unchecked ? `${t('settings.appearance.language_help')} ${t('settings.appearance.language_unchecked_note')}` : t('settings.appearance.language_help'), control: langSel });
 
     const phone = matchMedia(PHONE);
     // Simple mode has no menu, no search of FinStats' kind and a look of its own: only the layout is chosen there.

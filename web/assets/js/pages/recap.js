@@ -308,7 +308,7 @@ function numbersChapter(d, v, periodLabel) {
     id: 'numbers', icon: 'chart', eyebrow: t('pages.recap.numbers_eyebrow'), mark: /^\d{4}$/.test(periodLabel) ? periodLabel : '365',
     title: say(v, 'pages.recap.numbers_title', { numbers: em(t('pages.recap.numbers_word')) }),
     lead: [say(v, 'pages.recap.numbers_lead', { times: b(t('pages.recap.times', { count: tot.plays || 0 })), titles: b(t('pages.recap.different_titles', { count: tot.distinct_items || 0 })) }),
-      hrs >= 24 ? tail(t('pages.recap.numbers_days', { count: daysRounded })) : '.'],
+      hrs >= 24 ? tail(t('pages.recap.numbers_days', { count: daysRounded })) : t('pages.recap.full_stop')],
     body: [
       h('div', { class: 'rc-tiles' },
         tile('play', countUp(tot.plays), t('pages.recap.plays_label')),
@@ -340,7 +340,7 @@ function genresChapter(d, v) {
     id: 'genres', icon: 'tag', eyebrow: t('pages.recap.genres'), mark: top.name,
     title: say(v, an ? 'pages.recap.genres_title_an' : 'pages.recap.genres_title', { genre: em(top.name) }),
     lead: [tParts('pages.recap.genres_lead', { genre: b(top.name), time: b(duration(top.watch_s)), plays: b(t('terms.play', { count: top.plays || 0 })) }),
-      rows[1] ? tail(t('pages.recap.genres_close', { genre: rows[1].name })) : '.'],
+      rows[1] ? tail(t('pages.recap.genres_close', { genre: rows[1].name })) : t('pages.recap.full_stop')],
     stats: [
       g.count ? { value: countUp(g.count), label: g.count === 1 ? t('pages.recap.genre') : t('pages.recap.genres') } : null,
       share != null ? { value: countUp(share * 100, (x) => pct(Math.round(x) / 100)), label: t('pages.recap.stat_was', { genre: top.name }) } : null,
@@ -361,7 +361,7 @@ function peopleChapter(d, v) {
     const rows = sets.find((x) => x[0] === tab)[2], top = rows[0];
     mount(title, tParts(tab === 'actors' ? 'pages.recap.actor_title' : 'pages.recap.director_title', { person: em(top.name) }));
     mount(lead, [tParts(tab === 'actors' ? 'pages.recap.actor_lead' : 'pages.recap.director_lead', { time: b(duration(top.watch_s)), titles: b(t('terms.title', { count: top.titles || 0 })) }),
-      top.top_title ? tail(t('pages.recap.people_most', { title: top.top_title })) : '.']);
+      top.top_title ? tail(t('pages.recap.people_most', { title: top.top_title })) : t('pages.recap.full_stop')]);
     mount(grid, rows.map((x, i) => h('li', null, h('a', { class: 'rc-person', href: `/people/${x.id}` },
       h('span', { class: 'rc-person-n mono', 'aria-hidden': 'true' }, '.' + String(i + 1).padStart(2, '0')),
       poster(x.has_image ? x.id : null, x.name, { w: 300, cls: 'rc-person-photo' }),
@@ -388,7 +388,7 @@ function personaChapter(d, v) {
   return chapter({
     id: 'persona', icon: 'sparkle', eyebrow: t('pages.recap.persona_eyebrow'), mark: name, cls: 'rc-persona',
     title: say(v, 'pages.recap.persona_title', { persona: tParts(`pages.recap.persona.article.${known ? p.key : /^[aeiou]/i.test(name) ? 'other_an' : 'other'}`, { persona: em(name.toLocaleLowerCase(lang())) }) }),
-    lead: p.line ? [p.line, '.'] : null,
+    lead: p.line ? [p.line, t('pages.recap.full_stop')] : null,
   });
 }
 
@@ -410,13 +410,13 @@ function rhythmChapter(d, v) {
     if (tab === 'hours') {
       const i = peakOf(hours);
       mount(title, say(v, 'pages.recap.hours_title', { hour: em(hour2(i)) }));
-      mount(lead, [tParts('pages.recap.hours_lead', { time: b(duration(hours[i])), from: hour2(i), to: hour2((i + 1) % 24) }), total ? tail(t('pages.recap.hours_share', { pct: pct(hours[i] / total) })) : '.']);
+      mount(lead, [tParts('pages.recap.hours_lead', { time: b(duration(hours[i])), from: hour2(i), to: hour2((i + 1) % 24) }), total ? tail(t('pages.recap.hours_share', { pct: pct(hours[i] / total) })) : t('pages.recap.full_stop')]);
       mount(plot, barStrip({ rows: hours.map((x, k) => ({ label: String(k).padStart(2, '0'), title: `${hour2(k)} – ${hour2((k + 1) % 24)}`, value: x })), format: duration, ariaLabel: t('pages.recap.hours_aria'), head: [t('pages.recap.head_hour'), t('terms.watch_time')], labelEvery: 3, cls: 'rc-bars-24' }));
     } else if (tab === 'days') {
       const i = peakOf(weekdays), avg = weekdays.reduce((a, x) => a + x, 0) / 7;
       const over = avg > 0 ? weekdays[i] / avg - 1 : 0;
       mount(title, tParts('pages.recap.days_title_crown', { weekday: em(WEEKDAYS[i]) }));
-      mount(lead, [tParts('pages.recap.days_lead', { time: b(duration(weekdays[i])), weekday: WEEKDAYS[i] }), over >= 0.05 ? tail(t('pages.recap.days_over', { pct: pct(over) })) : '.']);
+      mount(lead, [tParts('pages.recap.days_lead', { time: b(duration(weekdays[i])), weekday: WEEKDAYS[i] }), over >= 0.05 ? tail(t('pages.recap.days_over', { pct: pct(over) })) : t('pages.recap.full_stop')]);
       mount(plot, barStrip({ rows: weekdays.map((x, k) => ({ label: WEEKDAYS_SHORT[k], title: WEEKDAYS[k], value: x })), format: duration, ariaLabel: t('pages.recap.weekday_aria'), head: [t('pages.recap.head_weekday'), t('terms.watch_time')], cls: 'rc-bars-7' }));
     } else {
       const spansYears = new Set(months.map((m) => String(m.month).slice(0, 4))).size > 1;
@@ -427,7 +427,7 @@ function rhythmChapter(d, v) {
           foot: h('span', { class: 'rc-col-foot', title: name || null }, m.top ? [poster(m.top.image_item_id, name, { w: 120, cls: 'fui-poster--xs' }), h('span', { class: 'rc-col-foot-name' }, name)] : null) };
       });
       mount(title, tParts('pages.recap.month_title', { month: em(mF.format(monthDate(best.month))) }));
-      mount(lead, [tParts('pages.recap.month_lead', { time: b(duration(best.watch_s)) }), best.top && best.top.name ? tail(t('pages.recap.month_most', { title: best.top.name })) : '.']);
+      mount(lead, [tParts('pages.recap.month_lead', { time: b(duration(best.watch_s)) }), best.top && best.top.name ? tail(t('pages.recap.month_most', { title: best.top.name })) : t('pages.recap.full_stop')]);
       mount(plot, [barStrip({ rows, format: duration, ariaLabel: t('pages.recap.month_aria'), head: [t('pages.recap.head_month'), t('terms.watch_time')], cls: 'rc-bars-months' }),
         h('table', { class: 'sr-only' }, h('caption', null, t('pages.recap.month_caption')),
           h('tbody', null, rows.map((r, k) => h('tr', null, h('td', null, r.title), h('td', null, (months[k].top && months[k].top.name) || t('pages.recap.nothing'))))))]);
@@ -531,7 +531,7 @@ function daysChapter(d, v) {
     title: countParts('pages.recap.days_on', tot.active_days, em(num(tot.active_days))),
     lead: streak
       ? [say(v, 'pages.recap.streak_lead', { days: b(t('pages.recap.streak_days', { count: streak.days })), range: dayRange(streak.from, streak.to) }),
-        r.biggest_day ? tail(t('pages.recap.biggest_tail', { day: longDay(r.biggest_day.date), time: duration(r.biggest_day.watch_s) })) : '.']
+        r.biggest_day ? tail(t('pages.recap.biggest_tail', { day: longDay(r.biggest_day.date), time: duration(r.biggest_day.watch_s) })) : t('pages.recap.full_stop')]
       : r.biggest_day ? [tParts('pages.recap.biggest_lead', { day: b(longDay(r.biggest_day.date)) }), tail(t('pages.recap.biggest_lead_tail', { time: duration(r.biggest_day.watch_s) }))] : null,
     body: map,
   });
@@ -589,7 +589,7 @@ function togetherChapter(d, v) {
   return chapter({
     id: 'together', icon: 'together', eyebrow: t('nav.together'), mark: t('pages.recap.together_mark'),
     title: tParts('pages.recap.together_title', { evenings: em(t('pages.recap.evenings', { count: g.evenings })) }),
-    lead: [tParts('pages.recap.together_lead', { hours: hoursB(g.together_s) }), g.share ? tail(sayText(v, 'pages.recap.together_share', { pct: pct(g.share) })) : '.'],
+    lead: [tParts('pages.recap.together_lead', { hours: hoursB(g.together_s) }), g.share ? tail(sayText(v, 'pages.recap.together_share', { pct: pct(g.share) })) : t('pages.recap.full_stop')],
     body: [
       people.length ? h('div', null, h('h3', { class: 'rc-subhead' }, sayText(v, 'pages.recap.watched_with')),
         h('ul', { class: 'rc-chips' }, people.map((p) => h('li', { class: 'rc-chip' },
@@ -731,7 +731,7 @@ function buildStory(d, me, periodLabel, picker, share) {
     topChapter('movies', d.top_movies, {
       icon: 'film', eyebrow: t('pages.recap.top_movies'), mark: t('pages.recap.movies_mark'),
       title: (x) => say(v, 'pages.recap.movies_title', { title: em(x.name) }),
-      lead: (x) => [tParts('pages.recap.movies_lead', { time: b(duration(x.watch_s)) }), x.plays > 1 ? tail(sayText(v, 'pages.recap.movies_back', { count: x.plays })) : '.'],
+      lead: (x) => [tParts('pages.recap.movies_lead', { time: b(duration(x.watch_s)) }), x.plays > 1 ? tail(sayText(v, 'pages.recap.movies_back', { count: x.plays })) : t('pages.recap.full_stop')],
       facts: (x) => [[t('terms.watch_time'), duration(x.watch_s)], [t('pages.recap.plays_label'), num(x.plays)]],
       extra: (x) => t('terms.play', { count: x.plays || 0 }),
     }),

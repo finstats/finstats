@@ -1,0 +1,5021 @@
+{
+  "$meta": {
+    "tag": "zh-CN",
+    "name": "简体中文",
+    "fallback": "en-GB"
+  },
+  "terms": {
+    "play": {
+      "other": "{count} 次播放"
+    },
+    "title": {
+      "other": "{count} 部作品"
+    },
+    "film": {
+      "other": "{count} 部电影"
+    },
+    "show": {
+      "other": "{count} 部剧集"
+    },
+    "season": {
+      "other": "{count} 季"
+    },
+    "episode": {
+      "other": "{count} 集"
+    },
+    "album": {
+      "other": "{count} 张专辑"
+    },
+    "track": {
+      "other": "{count} 首曲目"
+    },
+    "library": {
+      "other": "{count} 个媒体库"
+    },
+    "user": {
+      "other": "{count} 位用户"
+    },
+    "person": {
+      "other": "{count} 人"
+    },
+    "device": {
+      "other": "{count} 台设备"
+    },
+    "watch_time": "观看时长",
+    "watchlist": "待看清单",
+    "recap": "年度回顾",
+    "cast_and_crew": "演职人员",
+    "now_playing": "正在播放",
+    "watched_together": "一起观看"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "close": "关闭",
+    "back": "返回",
+    "try_again": "重试",
+    "trying_again": "正在重试…",
+    "working": "处理中…",
+    "loading": "加载中…",
+    "unknown": "未知",
+    "unknown_item": "未知项目",
+    "other": "其他",
+    "none": "无",
+    "everyone": "所有人",
+    "couldnt_load": "无法加载",
+    "page_failed": "此页面渲染失败。请刷新页面重试。",
+    "open_in_jellyfin": "在 Jellyfin 中打开",
+    "filters": "筛选",
+    "time_range": "时间范围"
+  },
+  "errors": {
+    "unreachable": "无法连接 FinStats。请检查服务器是否正在运行，然后重试。",
+    "request_failed": "请求失败（{status}）",
+    "upload_failed": "上传失败（{status}）",
+    "upload_interrupted": "上传已中断。请检查网络连接，然后重试。",
+    "upload_cancelled": "上传已取消。"
+  },
+  "time": {
+    "never": "从未",
+    "just_now": "刚刚",
+    "minutes_ago": {
+      "other": "{count} 分钟前"
+    },
+    "hours_ago": {
+      "other": "{count} 小时前"
+    },
+    "days_ago": {
+      "other": "{count} 天前"
+    },
+    "months_ago": {
+      "other": "{count} 个月前"
+    },
+    "years_ago": {
+      "other": "{count} 年前"
+    },
+    "due_now": "现在",
+    "within_minutes": "一两分钟内",
+    "in_minutes": {
+      "other": "{count} 分钟后"
+    },
+    "in_hours": {
+      "other": "{count} 小时后"
+    },
+    "in_days": {
+      "other": "{count} 天后"
+    },
+    "today": "今天",
+    "tomorrow": "明天",
+    "yesterday": "昨天"
+  },
+  "units": {
+    "seconds": "{count} 秒",
+    "minutes": "{count} 分钟",
+    "hours": "{count} 小时",
+    "days": "{count} 天",
+    "exact": "{hours} 小时 {minutes} 分 {seconds} 秒"
+  },
+  "range": {
+    "7": { "short": "7 天", "long": "最近 7 天" },
+    "30": { "short": "30 天", "long": "最近 30 天" },
+    "90": { "short": "90 天", "long": "最近 90 天" },
+    "365": { "short": "1 年", "long": "最近一年" },
+    "0": { "short": "全部", "long": "全部时间" }
+  },
+  "play_method": {
+    "DirectPlay": "直接播放",
+    "DirectStream": "直接串流",
+    "Transcode": "转码"
+  },
+  "item_type": {
+    "Movie": "电影",
+    "Series": "剧集",
+    "Season": "季",
+    "Episode": "单集",
+    "MusicAlbum": "专辑",
+    "Audio": "曲目",
+    "TvChannel": "电视直播"
+  },
+  "credit": {
+    "actor": "演员",
+    "director": "导演",
+    "actor_and_director": "演员兼导演"
+  },
+  "nav": {
+    "dashboard": "仪表板",
+    "recap": "年度回顾",
+    "my_profile": "我的资料",
+    "activity": "活动",
+    "together": "一起看",
+    "users": "用户",
+    "libraries": "媒体库",
+    "playback": "播放",
+    "pipeline": "待入库",
+    "server": "服务器",
+    "security": "安全",
+    "settings": "设置",
+    "patch_notes": "更新日志",
+    "groups": {
+      "you": "个人",
+      "watching": "观看",
+      "library": "媒体库",
+      "server": "服务器"
+    },
+    "pinned": "已固定",
+    "search": "搜索",
+    "role_admin": "管理员",
+    "role_viewer": "观众"
+  },
+  "theme": {
+    "label": "主题",
+    "light": "浅色",
+    "device": "跟随设备",
+    "dark": "深色",
+    "is_device": "主题：跟随设备",
+    "is_light": "主题：浅色",
+    "is_dark": "主题：深色"
+  },
+  "statusbar": {
+    "label": "采集器状态",
+    "connecting": "正在连接…",
+    "streaming": {
+      "other": "{count} 个正在播放"
+    },
+    "collector_offline": "采集器离线",
+    "offline_title": "FinStats 目前无法连接 Jellyfin，播放未被记录。",
+    "pushing_title": "Jellyfin 正在推送播放状态 · 前往正在播放",
+    "go_now_playing": "前往正在播放",
+    "plays": {
+      "other": "{count} 次播放"
+    },
+    "synced": "{when}已同步",
+    "not_synced": "尚未同步",
+    "last_sync": "上次媒体库同步：{when}",
+    "unreachable": "无法连接 FinStats",
+    "repo": "仓库",
+    "repo_title": "GitHub 上的 FinStats"
+  },
+  "search": {
+    "label": "搜索",
+    "placeholder": "搜索作品、人物和页面",
+    "placeholder_simple": "搜索作品和人物",
+    "results": "搜索结果",
+    "pages": "页面",
+    "users": "用户",
+    "library": "媒体库",
+    "cast_and_crew": "演职人员",
+    "user": "用户",
+    "searching": "正在搜索…",
+    "no_match": "没有与“{query}”匹配的结果。",
+    "no_match_short": "没有匹配的结果。",
+    "unavailable": "搜索暂时不可用。"
+  },
+  "auth": {
+    "setup": {
+      "page_title": "设置向导",
+      "title": "设置 FinStats",
+      "sub": "只需两步，FinStats 就会开始记录服务器上的播放。",
+      "step_connect": "连接 Jellyfin",
+      "step_sign_in": "以管理员身份登录",
+      "address": "Jellyfin 地址",
+      "address_help": "FinStats 访问 Jellyfin 所用的地址。在 Docker 中通常是容器名称。",
+      "address_empty": "请输入 Jellyfin 服务器的地址，例如 http://jellyfin:8096。",
+      "address_invalid": "这看起来不像网址。请试试类似 http://192.168.1.10:8096 的地址。",
+      "test": "测试连接",
+      "testing": "正在测试…",
+      "connected": "已连接到 {server}",
+      "couldnt_connect": "无法连接：{reason} 请检查地址，并确认 Jellyfin 正在运行。",
+      "test_first": "请先测试连接。",
+      "admin_username": "Jellyfin 管理员用户名",
+      "password_note": "FinStats 只登录一次，用来创建自己的 API 密钥。你的密码不会被保存。",
+      "finish": "完成设置",
+      "finishing": "正在设置…",
+      "not_admin": "该账户不是 Jellyfin 管理员。设置需要管理员账户。"
+    },
+    "login": {
+      "title": "登录",
+      "sub": "使用你的 Jellyfin 账户。",
+      "sub_on": "使用你在 {server} 上的 Jellyfin 账户。",
+      "username": "用户名",
+      "password": "密码",
+      "sign_in": "登录",
+      "signing_in": "正在登录…",
+      "username_empty": "请输入你的 Jellyfin 用户名。",
+      "wrong": "用户名或密码错误。",
+      "admins_only": "只有 Jellyfin 管理员可以在此登录。管理员可以在“设置 → 访问权限”中允许其他用户登录。",
+      "too_many": "尝试次数过多。请等待一分钟后重试。"
+    },
+    "sign_out": "退出登录"
+  },
+  "boot": {
+    "not_responding": "FinStats 没有响应"
+  },
+  "not_found": {
+    "page_title": "未找到",
+    "title": "页面不存在",
+    "nothing_here": "此地址没有任何内容。",
+    "removed": "这可能是指向已删除内容的链接。",
+    "simple": "简洁模式包含首页、媒体库、用户、历史记录和图表；FinStats 的其他部分在它自己的布局中（设置 → 外观）。",
+    "go_dashboard": "前往仪表板",
+    "go_home": "返回首页"
+  },
+  "plays_table": {
+    "user": "用户",
+    "title": "标题",
+    "when": "时间",
+    "watched": "观看时长",
+    "progress": "进度",
+    "client": "客户端",
+    "method": "方式",
+    "ip_address": "IP 地址",
+    "open_details": "打开《{title}》的详情",
+    "playing_now": "正在播放",
+    "together_title": {
+      "other": "一起观看 · {count} 人"
+    },
+    "local": "本地网络",
+    "remote": "远程",
+    "stopped_at": "停在 {position}",
+    "empty": "没有符合这些筛选条件的播放。",
+    "empty_range": "此时间范围内没有播放。"
+  },
+  "settings": {
+    "find": "查找设置…",
+    "find_label": "查找设置",
+    "matching": "匹配的设置",
+    "sections_label": "设置分区",
+    "groups": {
+      "account": "账户",
+      "tracking": "记录",
+      "services": "服务",
+      "data": "数据"
+    },
+    "sections": {
+      "access": { "label": "访问权限", "sub": "谁可以使用 FinStats，以及能看到什么" },
+      "jellyfin": { "label": "Jellyfin", "sub": "FinStats 读取数据的服务器" },
+      "account": { "label": "账户", "sub": "当前登录的账户，以及退出登录" },
+      "appearance": { "label": "外观", "sub": "FinStats 在你眼中的样子" },
+      "keys": { "label": "API 密钥", "sub": "从外部使用 FinStats：脚本，以及可订阅的日历" },
+      "public": { "label": "公开资料", "sub": "通过链接分享你资料的一部分，并附一张可发布的卡片" },
+      "collection": { "label": "采集", "sub": "跟踪播放的精细程度" },
+      "network": { "label": "家庭网络", "sub": "哪些播放算作本地播放" },
+      "security": { "label": "安全", "sub": "地点，以及不可能的旅行" },
+      "connections": { "label": "连接", "sub": "Sonarr、Radarr 和 Seerr" },
+      "notifications": { "label": "通知", "sub": "FinStats 发现的情况发送到哪里" },
+      "import": { "label": "导入", "sub": "从其他统计工具导入你的历史记录" },
+      "unlinked": { "label": "未关联媒体", "sub": "导入的播放中与媒体库无法匹配的部分" },
+      "backups": { "label": "备份", "sub": "保护你的历史记录，或将其迁移" },
+      "tasks": { "label": "任务", "sub": "FinStats 自动执行的工作，以及执行时间" },
+      "system": { "label": "系统", "sub": "出站连接、数据库、许可证" }
+    },
+    "page": {
+      "title": "{section} · 设置"
+    },
+    "common": {
+      "saved": "已保存",
+      "couldnt_save": "无法保存：{reason}",
+      "save_changes": "保存更改",
+      "whole_number": "请输入 {min} 到 {max} 之间的整数。",
+      "between": "必须在 {min} 到 {max} 之间。",
+      "saving": "正在保存…"
+    },
+    "appearance": {
+      "language": "语言",
+      "language_hint": "语言 界面语言 中文 简体中文 翻译 language språk norsk english bokmål nynorsk translation",
+      "language_help": "此浏览器中 FinStats 显示所用的语言。",
+      "language_browser": "跟随浏览器",
+      "language_checked": "已由维护者检查",
+      "language_unchecked": "未经母语者检查",
+      "language_unchecked_note": "此翻译尚未经过母语者检查：欢迎在 GitHub 上提出更正。",
+      "layout": "布局",
+      "layout_hint": "布局 简洁模式 经典 顶栏 首页 外观 layout simple mode classic tautulli plex top bar home look",
+      "layout_help": "FinStats 布局，或简洁布局：顶部一条导航栏，只显示统计数据，就像经典的 Plex 统计服务器那样。仅保存在此浏览器中。",
+      "layout_simple": "简洁",
+      "menu": "菜单",
+      "menu_hint": "菜单 侧边栏 导航 分组 图标栏 搜索 程序坞 命令栏 固定 磁贴 menu sidebar navigation grouped rail search dock command bar pinned tiles",
+      "menu_help": "此电脑上页面的排布方式。仅保存在此浏览器中：你的其他设备各自保留自己的设置。",
+      "menu_right": "菜单在右侧",
+      "menu_right_hint": "菜单 侧边栏 右侧 左侧 menu sidebar right left side",
+      "menu_right_help": "将侧边栏放在窗口右边缘，而不是左边缘。",
+      "search_opens": "搜索打开位置",
+      "search_opens_hint": "搜索 查找 菜单 页面 集成 位置 search find menu page integrated where ctrl space",
+      "search_opens_help": "在菜单内（菜单会变成搜索），或在旁边页面的位置。仅保存在此浏览器中。",
+      "search_in_menu": "在菜单中",
+      "search_in_page": "在页面中",
+      "phone_menu": "手机上的菜单",
+      "phone_menu_hint": "手机 移动 菜单 导航 标签栏 窥视 全屏 拇指弧 地址栏 mobile phone menu navigation tab bar peek full screen thumb arc address",
+      "phone_menu_help": "菜单在这里的打开方式。仅保存在此浏览器中：每台手机和平板各自保留自己的设置。",
+      "preset": "FinUI 预设",
+      "preset_hint": "外观 样式 主题 颜色 强调色 圆角 密度 边框 卡片 按钮 输入框 表格 菜单 动效 图标 对比度 预设 代码 自定义 appearance look theme colours accent radius density borders cards buttons fields tables menu motion icons contrast finui preset code customize create",
+      "preset_help": "在 FinUI create 中生成的代码：颜色、圆角、密度等。所有页面都会为你使用它；其他人各自选择。",
+      "preset_placeholder": "无：FinUI 默认样式",
+      "preset_default": "所有选项均为默认值：FinUI 默认样式。",
+      "preset_change": "在 FinUI create 中修改",
+      "preset_make": "在 FinUI create 中创建",
+      "reset": "重置",
+      "card_sub": "FinStats 在你眼中的样子：由你选择，与他人无关",
+      "preset_axis": {
+        "base": "基础色",
+        "accent": "强调色",
+        "charts": "图表颜色",
+        "radius": "圆角",
+        "density": "密度",
+        "borders": "边框",
+        "cards": "卡片",
+        "highlight": "高亮",
+        "motion": "动效",
+        "icons": "图标线宽",
+        "font": "字体",
+        "heading": "标题字体",
+        "mono": "等宽字体",
+        "headings": "标题",
+        "buttons": "按钮",
+        "fields": "输入框",
+        "tables": "表格",
+        "menu": "菜单",
+        "icon-ends": "图标端点",
+        "page": "页面",
+        "focus": "焦点环",
+        "contrast": "对比度"
+      },
+      "preset_option": {
+        "washi": "和纸与黑曜石",
+        "neutral": "中性",
+        "stone": "岩石",
+        "zinc": "锌灰",
+        "slate": "石板",
+        "gray": "灰色",
+        "ocean": "海洋",
+        "sage": "鼠尾草",
+        "blush": "腮红",
+        "mist": "薄雾",
+        "seal": "朱印与紫罗兰",
+        "violet": "紫罗兰",
+        "blue": "蓝色",
+        "teal": "青绿",
+        "green": "绿色",
+        "amber": "琥珀",
+        "orange": "橙色",
+        "rose": "玫瑰",
+        "pink": "粉色",
+        "ink": "墨色",
+        "indigo": "靛蓝",
+        "cyan": "青色",
+        "emerald": "祖母绿",
+        "red": "红色",
+        "fuchsia": "紫红",
+        "sky": "天蓝",
+        "lime": "青柠",
+        "gold": "金色",
+        "indigo-cyan": "靛蓝与青色",
+        "teal-coral": "青绿与珊瑚",
+        "plum-gold": "梅紫与金色",
+        "navy-amber": "海军蓝与琥珀",
+        "crimson-sky": "绯红与天蓝",
+        "moss-lilac": "苔绿与丁香",
+        "brick-mint": "砖红与薄荷",
+        "ink-lime": "墨色与青柠",
+        "forest-peach": "森林与蜜桃",
+        "berry-aqua": "浆果与水蓝",
+        "sunset-lavender": "日落与薰衣草",
+        "lagoon-rose": "泻湖与玫瑰",
+        "dyes": "染料",
+        "signal": "信号",
+        "ember": "余烬",
+        "lagoon": "泻湖",
+        "meadow": "草地",
+        "dusk": "黄昏",
+        "pastel": "粉彩",
+        "neon": "霓虹",
+        "earth": "大地",
+        "default": "默认",
+        "none": "无",
+        "small": "小",
+        "large": "大",
+        "round": "圆润",
+        "pill": "胶囊",
+        "compact": "紧凑",
+        "comfortable": "舒适",
+        "spacious": "宽松",
+        "tight": "紧密",
+        "hairline": "极细",
+        "strong": "粗重",
+        "faint": "淡",
+        "flat": "扁平",
+        "raised": "凸起",
+        "floating": "悬浮",
+        "glow": "发光",
+        "block": "色块",
+        "subtle": "柔和",
+        "bold": "醒目",
+        "quick": "快速",
+        "slow": "缓慢",
+        "off": "关闭",
+        "springy": "弹性",
+        "regular": "常规",
+        "light": "细",
+        "thin": "纤细",
+        "heavy": "粗",
+        "text": "与正文相同",
+        "caps": "大写",
+        "solid": "实心",
+        "soft": "柔和填充",
+        "outline": "轮廓",
+        "outlined": "描边",
+        "filled": "填充",
+        "underlined": "下划线",
+        "lines": "线条",
+        "striped": "条纹",
+        "open": "开放",
+        "wash": "淡彩",
+        "bar": "条形",
+        "square": "方形",
+        "plain": "朴素",
+        "dots": "圆点",
+        "grid": "网格",
+        "high": "高"
+      }
+    },
+    "system": {
+      "state": {
+        "always": "始终开启",
+        "on": "开启",
+        "off": "关闭"
+      },
+      "outbound": "出站连接",
+      "outbound_hint": "隐私 出站 连接 主机 遥测 privacy what FinStats reaches hosts telemetry",
+      "outbound_sub": "FinStats 可能访问的所有地方，以及是否已开启",
+      "database": "数据库",
+      "database_hint": "数据库 磁盘占用 播放 项目 最早 size on disk plays items oldest",
+      "licences": "许可证",
+      "licences_hint": "许可证 第三方 开源 字体 地图 gpl third-party open source fonts map",
+      "licences_sub": "GNU GPL v3，基于开源 Rust crate、开放许可的字体和公有领域的地图数据",
+      "gallery": "组件库",
+      "gallery_hint": "组件 组件库 设计系统 自定义 预设 主题 FinUI finui components gallery design system create customize preset theme",
+      "third_party": "第三方许可证",
+      "components": "组件",
+      "components_sub": "FinUI，构成此界面的组件：每个组件都有两种主题，还有用来定制它们的 FinUI create",
+      "size_on_disk": "磁盘占用",
+      "plays": "播放",
+      "library_items": "媒体库项目",
+      "oldest_play": "最早的播放",
+      "last_answered": "上次响应：{when}",
+      "last_failed": "上次尝试失败：{error}",
+      "reach_all": "已开启 {on} 个，共 {total} 个。",
+      "reach_some_off": "已开启 {on} 个，共 {total} 个，{off} 个已关闭。",
+      "promise": "FinStats 从不向其中任何一处发送关于你或你服务器的信息，除此之外也没有其他出站连接：没有遥测，没有更新检查，不从互联网加载字体或脚本。"
+    },
+    "jellyfin": {
+      "connection": "Jellyfin 连接",
+      "connection_hint": "服务器 地址 版本 采集器 实时 套接字 轮询 推送 server address version collector live socket asked told",
+      "connection_sub": "只读：FinStats 从不修改服务器上的任何内容",
+      "public_url": "供用户访问的 Jellyfin 地址",
+      "public_url_hint": "在 Jellyfin 中打开 播放按钮 外部地址 链接 域名 反向代理 open in jellyfin play button external url link domain reverse proxy",
+      "public_url_help": "“在 Jellyfin 中打开”按钮指向的地址。留空则使用 FinStats 连接所用的地址。",
+      "checking": "正在检查…",
+      "connected": {
+        "other": "已连接 · {count} 个活动会话"
+      },
+      "not_connected": "未连接",
+      "not_connected_because": "未连接：{error}",
+      "told_live": "由 Jellyfin 实时推送",
+      "asked_every": "观看时每 {active} 秒查询一次，其他时候每 {idle} 秒一次",
+      "server": "服务器",
+      "address": "地址",
+      "version": "Jellyfin 版本",
+      "collector": "采集器",
+      "how": "方式",
+      "last_checked": "上次检查",
+      "asking_now": "当前是否在查询",
+      "asking_yes": "是，有内容正在播放",
+      "asking_no": "否，没有播放或全部已暂停",
+      "live_note": "没有播放或全部暂停时不会发出查询；有内容在播放时，FinStats 每 {active} 秒查询一次，这样暂停和跳转才能记录准确。",
+      "socket_error": "实时连接未传输数据：{error}。FinStats 会持续重试，期间不会遗漏任何播放。",
+      "own_key": "使用设置时创建的专用 API 密钥连接。要让 FinStats 改用另一台服务器，请使用新的数据目录启动它。"
+    },
+    "collection": {
+      "seconds": "秒",
+      "active": {
+        "label": "有人观看时，检查间隔",
+        "help": "暂停、跳转和音轨切换按此精度记录。1–60。"
+      },
+      "idle": {
+        "label": "没有播放时，检查间隔",
+        "help": "仅在 Jellyfin 没有推送时使用；发现播放之前的时间不计入。1–60。"
+      },
+      "merge": {
+        "label": "视为同一次播放的重新开始间隔",
+        "help": "同一个人、同一作品、同一设备。设为 0 则不合并。"
+      },
+      "group": {
+        "label": "视为一起观看的开始间隔",
+        "help": "不同的人在这个时间内开始播放同一作品，并至少同时观看几分钟。5–600。"
+      },
+      "min_play": {
+        "label": "忽略短于此时长的播放",
+        "help": "保留在数据库中，但不计入统计。设为 0 则全部计入。"
+      },
+      "field_hint": "间隔 轮询 秒 interval poll seconds",
+      "card_sub": "跟踪播放的精细程度，以及什么算作一次播放",
+      "library_read": "读取媒体库的时机",
+      "library_read_help": "默认在 Jellyfin 自身的媒体库扫描之后，除非你更改。FinStats 从不发起扫描。",
+      "schedule": "计划"
+    },
+    "unlinked": {
+      "entry": "手动关联作品",
+      "entry_hint": "未关联 缺失 未匹配 定位 匹配 作品 导入 unlinked missing unmatched locate match title tautulli jellystat streamystats import plex",
+      "card_sub": "在你的媒体库中名称不同或已不存在的作品的播放",
+      "empty": "历史记录中的所有内容都已关联到媒体库中的作品。"
+    },
+    "missing": {
+      "from": "来自 {sources}",
+      "unknown_show": "未知剧集",
+      "probably": "可能是 {title}",
+      "nothing_like": "媒体库中没有相似的内容",
+      "locate": "定位",
+      "intro": {
+        "other": "历史记录中有 {count} 部作品在媒体库中找不到同名项，通常是因为导入来源的服务器给它们起了别的名字。定位一部作品即可关联它的播放；不处理的内容会原样保留在历史记录中。"
+      },
+      "search_placeholder": "搜索电影和剧集",
+      "search_label": "搜索媒体库",
+      "video": "视频",
+      "no_match": "媒体库中没有与“{query}”匹配的内容。",
+      "no_likely": "媒体库中没有相似的内容。请用媒体库中使用的名称搜索。",
+      "where_is": "“{name}”在哪里？",
+      "will_move": {
+        "other": "{what} 的 {count} 次播放将移到你选择的作品下，以后重新导入同一份历史记录时也会自动找到它。"
+      },
+      "will_move_film": {
+        "other": "这部电影的 {count} 次播放将移到你选择的作品下，以后重新导入同一份历史记录时也会自动找到它。"
+      }
+    },
+    "services": {
+      "connections_hint": "连接 服务 请求 下载 日历 API 密钥 connections services arr requests downloads calendar api key",
+      "connections_sub": "Sonarr、Radarr 和 Seerr：请求了什么、即将上线什么、正在下载什么",
+      "destinations": "通知目标",
+      "destinations_hint": "通知 发送 提醒 邮件 discord slack telegram email ntfy gotify pushover pushbullet webhook send alerts",
+      "public_url": "FinStats 的地址",
+      "public_url_hint": "公开地址 链接 消息 public url link messages",
+      "notifications_sub": "Discord、Slack、Telegram、电子邮件、ntfy、Gotify、Pushover、Pushbullet 或你自己的 Webhook"
+    },
+    "account": {
+      "signing_out": "正在退出登录…",
+      "sign_out_hint": "退出 登出 注销 会话 log out logout leave session",
+      "card_sub": "退出登录只结束此浏览器中的会话；API 密钥和其他浏览器仍可继续使用",
+      "role_admin": "Jellyfin 管理员",
+      "role_user": "已通过 Jellyfin 登录"
+    },
+    "access": {
+      "permissions": "权限",
+      "permissions_hint": "权限 谁 所有人 网络 服务器 下载 通知 管理 登录 用户 who can see everyone network server downloads notify manage sign in users",
+      "saved": "已保存",
+      "couldnt_save": "无法保存：{error}",
+      "inherited": "所有人都有此权限，因此无法单独取消某个人的",
+      "everyone_sub": "适用于所有 Jellyfin 用户",
+      "disabled": "已在 Jellyfin 中禁用",
+      "intro": "Jellyfin 管理员始终拥有完全访问权限。其他人获得你在此开启的权限；年度回顾始终只属于每个人自己。",
+      "intro_named": "Jellyfin 管理员（{names}）始终拥有完全访问权限。其他人获得你在此开启的权限；年度回顾始终只属于每个人自己。",
+      "who": "用户",
+      "status": "状态",
+      "perm": {
+        "sign_in": {
+          "label": "登录",
+          "description": "可以使用 FinStats，查看自己的统计和年度回顾。"
+        },
+        "see_everyone": {
+          "label": "查看所有人的活动",
+          "description": "其他人的统计和历史记录、用户页面以及所有正在进行的播放。"
+        },
+        "see_network": {
+          "label": "查看网络详情",
+          "description": "IP 地址、设备 ID，以及播放来自本地还是远程。"
+        },
+        "see_server": {
+          "label": "查看服务器",
+          "description": "服务器页面、服务器日志、登录失败记录和文件路径。"
+        },
+        "see_downloads": {
+          "label": "查看下载内容",
+          "description": "下载队列，包括速度、种子名称和下载客户端。没有此权限时，用户仍可看到自己请求的进度。"
+        },
+        "notify": {
+          "label": "接收通知",
+          "description": "可以添加自己的通知目标（Webhook、Discord、ntfy 或 Gotify），并接收自己本就有权查看的内容。这些目标必须指向公网地址。"
+        },
+        "manage": {
+          "label": "管理 FinStats",
+          "description": "设置、任务、Jellystat 导入和删除播放。不能更改权限。"
+        }
+      }
+    },
+    "public": {
+      "section": {
+        "totals": {
+          "label": "总计与热门作品",
+          "help": "小时数、播放次数，以及你最常看的剧集、电影和音乐及其海报。"
+        },
+        "habits": {
+          "label": "连续天数与观看时段",
+          "help": "你最长的连续观看天数、星期与小时分布图，以及你的类型偏好。"
+        },
+        "recap": {
+          "label": "你的这一年",
+          "help": "今年年度回顾的标题，以及一张可发布的卡片。"
+        },
+        "recent": {
+          "label": "最近观看",
+          "help": "你最近的十次播放，只显示日期，且至少一天后才会显示。"
+        }
+      },
+      "yours": "你的公开资料",
+      "yours_hint": "分享 发布 链接 卡片 图片 资料 公开 share publish link card image profile public",
+      "yours_sub": "无论这里勾选了什么，设备、地址和文件路径都不会被公开",
+      "allow": "允许公开资料",
+      "allow_hint": "公开资料 服务器 开关 分享 public profiles server switch share",
+      "allow_help": "用户可以通过链接公开自己资料的一部分。关闭后，所有链接立即失效。",
+      "server_title": "此服务器上的公开资料",
+      "server_sub": "在你于此处允许之前，没有账户的人无法读取任何内容",
+      "col_who": "用户",
+      "col_shown_as": "显示名称",
+      "col_sections": "内容",
+      "col_changed": "更改时间",
+      "col_actions": "操作",
+      "no_name": "无名称",
+      "not_published": "未公开",
+      "take_down_confirm": "要撤下吗？链接将失效；对方可以重新公开。",
+      "taking_down": "正在撤下…",
+      "take_down": "撤下",
+      "take_down_ask": "撤下…",
+      "saved": "已保存",
+      "couldnt_save": "无法保存：{error}",
+      "profile_card": "资料卡片",
+      "year_card": "年度卡片",
+      "card_alt": "{card}：聊天应用在你的链接下方显示的内容",
+      "download": "下载",
+      "your_link": "你的链接",
+      "your_link_unpublished": "你的链接（未公开：打开后没有内容）",
+      "copy_link": "复制链接",
+      "open": "打开",
+      "reset_confirm": "要重置吗？旧链接的所有副本都将失效。",
+      "resetting": "正在重置…",
+      "reset": "重置",
+      "reset_ask": "重置链接…",
+      "name_placeholder": "留空则不显示名称",
+      "publish": "公开我的资料",
+      "publish_help": "任何拥有链接的人无需登录即可查看下方开启的内容。",
+      "name": "显示名称",
+      "name_help": "除非你在这里输入，否则你的 Jellyfin 用户名不会显示。",
+      "avatar": "显示我的头像",
+      "avatar_help": "在名称旁显示你的 Jellyfin 头像。",
+      "allow_above": "请先在上方允许公开资料，才能公开你自己的。",
+      "not_allowed": "管理员尚未允许公开资料。"
+    },
+    "keys": {
+      "scope": {
+        "full": "你可以查看的所有内容",
+        "calendar": "仅日历订阅"
+      },
+      "scope_help": {
+        "full": "{scope}：与你登录时相同，供脚本和其他工具使用。",
+        "calendar": "{scope}：可以放心写进订阅地址的密钥。"
+      },
+      "expiry": {
+        "never": "永不过期",
+        "d30": "30 天",
+        "d90": "90 天",
+        "year": "一年"
+      },
+      "keys_hint": "密钥 令牌 脚本 日历 订阅 吊销 token bearer script curl calendar ics subscribe revoke",
+      "make": "创建密钥",
+      "make_hint": "创建 新建 令牌 日历订阅 create new token calendar feed",
+      "card_sub": "密钥能做的不会超过你本人能做的，你的访问权限一旦失效，它也随即失效",
+      "new_key": "你的新密钥“{name}”",
+      "shown_once": "只显示一次。请立即复制；FinStats 只保存它的哈希值。",
+      "copy_key": "复制密钥",
+      "subscribe": "用你的日历订阅此地址。它只能打开日历订阅，别无其他。",
+      "copy_address": "复制地址",
+      "no_public_url": "FinStats 还不知道自己的地址，因此这个地址只能在内网使用。在“通知”中设置地址后，即可获得手机上也能用的链接。",
+      "send_as": "每次请求时以 {header} 发送。",
+      "done": "完成",
+      "name": "名称",
+      "name_placeholder": "笔记本脚本、手机日历…",
+      "expires": "有效期",
+      "what_it_opens": "访问范围",
+      "everything": "全部",
+      "calendar_only": "仅日历",
+      "calendar": "日历",
+      "name_missing": "请为密钥命名。",
+      "making": "正在创建…",
+      "col_opens": "访问范围",
+      "col_owner": "所有者",
+      "col_made": "创建时间",
+      "col_last_used": "上次使用",
+      "col_actions": "操作",
+      "revoke_confirm": "要吊销吗？所有使用它的程序将立即停止工作。",
+      "revoking": "正在吊销…",
+      "revoke": "吊销",
+      "revoke_ask": "吊销…",
+      "you": "（你）",
+      "from_ip": "来自 {ip}",
+      "expired": "已过期",
+      "none_yet": "还没有密钥。",
+      "foot": "你有 {mine} 个，最多 {max} 个。密钥只以哈希值保存，从不包含在备份中，也不能自行创建或吊销密钥。"
+    },
+    "network": {
+      "lookup": "识别我自己的公网地址",
+      "lookup_hint": "公网 IP 查询 我的 IP 本地 远程 public ip lookup what is my ip local remote",
+      "lookup_help": "在首次需要时向公共的“我的 IP 是什么”服务查询一次，这样家里通过公网域名访问 Jellyfin 的设备也会算作本地。",
+      "known": "已知的家庭地址",
+      "known_hint": "公网 IP 已发现 立即查询 public ip found look up now",
+      "known_help": "这个家庭过去和现在使用的公网地址。",
+      "other": "其他算作家庭的地址",
+      "other_hint": "VPN 第二个家 IP 手动 本地 vpn second home ip manual local",
+      "other_help": "每行一个：你以前的地址、另一处住所、VPN 出口。保存后会重新分类你的历史记录。",
+      "card_sub": "哪些播放算作本地，哪些算作远程",
+      "added_by_you": "由你添加",
+      "found": "自动发现 · 最后出现于 {when}",
+      "none_yet": "尚未获得；FinStats 会在启动后几分钟内查询一次。",
+      "none": "无。私有地址（192.168.x.x、10.x.x.x 等）始终算作本地。",
+      "look_up": "立即查询",
+      "asking": "正在查询…",
+      "lookup_failed": "无法查询：{error}",
+      "save": "保存地址",
+      "saving": "正在保存…",
+      "couldnt_save": "无法保存：{error}",
+      "foot": "该请求发送到 {services}，不包含任何关于你或你服务器的信息。如果关闭它，同时关闭“安全”中的地理位置数据库下载，FinStats 将不会发出任何外部请求。",
+      "foot_none": "该请求不会发往任何地方：没有配置任何服务，也不包含任何关于你或你服务器的信息。如果关闭它，同时关闭“安全”中的地理位置数据库下载，FinStats 将不会发出任何外部请求。"
+    },
+    "security": {
+      "speed": "不可能的旅行：速度超过",
+      "speed_help": "同一个人的两次出现若需要超过此速度才能实现，就会发出警报。900 略高于客机速度。100–5,000。",
+      "distance": "仅当两地相距至少",
+      "distance_unit": "公里",
+      "distance_help": "城市数据库常有几百公里的误差；比这更近的地点从不触发警报。50–5,000。",
+      "database": "地理位置数据库",
+      "database_hint": "地理位置 数据库 城市 下载 地点 地图 geoip mmdb city db-ip maxmind download places map",
+      "up_to_date": "保持数据库为最新",
+      "up_to_date_hint": "地理位置 下载 每月 计划 任务 geoip download monthly db-ip schedule task",
+      "travel_hint": "不可能的旅行 警报 速度 距离 公里 impossible travel alert speed distance km",
+      "card_sub": "地址被定位到哪里，以及什么算作不可能的旅行",
+      "built": "{kind}，构建于 {date}",
+      "none_yet": "还没有。在有数据库之前，安全页面会一直是空的。",
+      "downloading": "正在下载…",
+      "download_newest": "下载最新版本",
+      "download": "下载（约 60 MB）",
+      "starting": "正在开始…",
+      "download_failed": "下载失败。",
+      "from_env": "由 FINSTATS_GEOIP_DB 指定；替换该文件即可更新。",
+      "from_folder": "地址通过本机上的文件定位，从不经过网络：使用 {folder} 中最新的 .mmdb 文件。",
+      "from_default_folder": "地址通过本机上的文件定位，从不经过网络：使用 geoip 文件夹中最新的 .mmdb 文件。",
+      "scheduled": "已计划：{triggers}。会获取 DB-IP 免费文件（CC BY 4.0）的新月份版本；不会发送任何关于你的信息。",
+      "not_scheduled": "未计划。该任务会在有新月份版本时获取 DB-IP 的免费城市数据库（约 60 MB，CC BY 4.0）。",
+      "schedule": "计划"
+    },
+    "tasks": {
+      "task": {
+        "sync_users": {
+          "name": "同步用户",
+          "what": "来自 Jellyfin 的名称、角色和最后活动时间"
+        },
+        "sync_libraries": {
+          "name": "读取媒体库和项目",
+          "what": "来自 Jellyfin 的作品和文件详情。只读：从不在那里发起扫描"
+        },
+        "sync_changes": {
+          "name": "元数据变更",
+          "what": "自上次查看以来在 Jellyfin 中更改的作品、演职人员、海报、人物照片和文件详情"
+        },
+        "sync_userdata": {
+          "name": "已观看和收藏",
+          "what": "来自 Jellyfin 的每位用户的已播放标记和收藏"
+        },
+        "sync_events": {
+          "name": "同步服务器日志",
+          "what": "Jellyfin 的活动日志：登录、登录失败、任务"
+        },
+        "sync_server": {
+          "name": "服务器详情",
+          "what": "版本、存储、插件、计划任务和设备"
+        },
+        "sync_upcoming": {
+          "name": "读取 Sonarr 和 Radarr 日历",
+          "what": "即将播出或上映的内容。只读"
+        },
+        "sync_grabs": {
+          "name": "读取下载历史",
+          "what": "Sonarr 和 Radarr 抓取、导入或失败的内容。只读"
+        },
+        "sync_requests": {
+          "name": "读取 Seerr 中的请求",
+          "what": "谁请求了什么，以及进展到哪一步。只读"
+        },
+        "backup": {
+          "name": "备份",
+          "what": "写入一份 FinStats 备份；按“备份”中的设置保留最新的几份"
+        },
+        "geoip": {
+          "name": "地理位置数据库",
+          "what": "有新月份版本时下载 DB-IP 的免费城市数据库（约 60 MB），用于在安全页面上定位地址"
+        },
+        "import": {
+          "name": "Jellystat 导入",
+          "what": "在“导入”中上传 Jellystat 备份时运行"
+        },
+        "import_streamystats": {
+          "name": "Streamystats 导入",
+          "what": "在“导入”中上传 Streamystats 备份时运行"
+        },
+        "import_tautulli": {
+          "name": "Tautulli 导入",
+          "what": "在“导入”中为上传的 Tautulli 备份完成连线时运行"
+        },
+        "restore": {
+          "name": "恢复",
+          "what": "在“备份”中恢复 FinStats 备份时运行"
+        }
+      },
+      "group": {
+        "jellyfin": "Jellyfin",
+        "arr": "Sonarr、Radarr 和 Seerr",
+        "finstats": "FinStats"
+      },
+      "spoken": {
+        "under_minute": "不到一分钟",
+        "minutes": {
+          "other": "{count} 分钟"
+        },
+        "hours": {
+          "other": "{count} 小时"
+        },
+        "days": {
+          "other": "{count} 天"
+        }
+      },
+      "ago_under": "不到一分钟前",
+      "ago": "{time}前",
+      "every": {
+        "minute": "每分钟",
+        "minutes": "每 {count} 分钟",
+        "hour": "每小时",
+        "hours": "每 {count} 小时",
+        "day": "每天",
+        "days": "每 {count} 天"
+      },
+      "trigger": {
+        "daily_at": "每天 {time}",
+        "weekly_at": "每{day} {time}",
+        "startup": "应用程序启动时",
+        "after_scan": "Jellyfin 媒体库扫描之后"
+      },
+      "running": "正在运行…",
+      "not_run": "尚未运行。",
+      "last_ran": "上次运行：{when}。",
+      "last_ran_taking": "上次运行：{when}，耗时 {took}。",
+      "failed": "运行失败：{when}。",
+      "failed_taking": "运行失败：{when}，耗时 {took}。",
+      "only_by_hand": "仅在手动运行时",
+      "next_within_minute": "一分钟内再次运行",
+      "next_in": "下次运行：{time}后",
+      "run_aria": "运行{name}",
+      "run_now": "立即运行",
+      "list_sub": "FinStats 自动执行的工作。打开一项即可更改其运行时间。",
+      "progress_aria": "{name}进度",
+      "couldnt_start": "无法启动：{error}",
+      "zone": "时间按 {zone} 时区计算。",
+      "zone_unknown": "时间按 FinStats 所在时区计算。",
+      "all_tasks": "所有任务",
+      "no_such_task": "没有这个任务。",
+      "needs_file": "此任务没有计划：它需要一个文件。在“{where}”中上传文件时运行。",
+      "add_trigger": "添加触发器",
+      "reset": "恢复默认",
+      "resetting": "正在恢复…",
+      "remove_aria": "移除“{trigger}”",
+      "remove": "移除",
+      "stops_after": "{time}后停止",
+      "no_triggers": "没有触发器：只有按下“立即运行”时才会运行。",
+      "runs": "运行时间",
+      "next_run": "下次运行：{when}。",
+      "dialog": {
+        "type": "触发器类型",
+        "daily": "每天",
+        "weekly": "每周",
+        "interval": "按间隔",
+        "day": "星期",
+        "time": "时间",
+        "every": "间隔",
+        "limit": "时间限制（小时）",
+        "limit_help": "超过此时长的运行会被停止。留空：不限制。",
+        "add": "添加",
+        "limit_range": "时间限制须在一刻钟到 168 小时之间。",
+        "duplicate": "该触发器已存在。"
+      },
+      "find_hint": "任务 计划 触发器 运行 task job schedule trigger run"
+    },
+    "import": {
+      "title": "从 {name} 导入",
+      "jellystat": {
+        "file": ".jsonl 文件",
+        "sub": "带上你的播放历史",
+        "note": "再次导入同一份备份是安全的：已有的播放会被跳过。同时包含媒体库和用户的备份也可以导入。",
+        "step": {
+          "open": "打开你的 Jellystat。",
+          "settings_backup": "前往 {a}，选择 {b} 标签页。",
+          "only_activity": "只选择 {a}。选中后会变成紫色。",
+          "under_settings": "在设置下方点击 {a}。",
+          "start_backup": "滚动到页面最底部，开始备份。",
+          "back_to_backups": "返回 {a}。",
+          "download": "新备份出现后，打开它的 {a} 菜单，点击 {b}。",
+          "upload": "在这里上传该文件。"
+        }
+      },
+      "streamystats": {
+        "file": ".json 文件",
+        "sub": "带上你的播放历史",
+        "note": "两个统计工具都用过？两个文件都导入即可；其中一个已导入的播放不会重复计算。Streamystats 不保存媒体库数据，因此作品信息来自你自己的 Jellyfin。",
+        "step": {
+          "open": "打开你的 Streamystats。",
+          "settings_backup_import": "前往 {a}，选择 {b}。",
+          "scroll_to": "向下滚动到 {a}。",
+          "click_download": "点击 {a}。",
+          "upload": "在这里上传该文件。"
+        }
+      },
+      "tautulli": {
+        "file": ".db 或 .zip 文件",
+        "sub": "按人迁移你的 Plex 历史记录",
+        "note": "Plex 中的用户名很少与 Jellyfin 一致，所以需要你亲自连接每位 Plex 用户。电影和剧集按名称匹配；服务器上还没有的作品会被保留，等它出现后再关联。备份中包含 Plex 的访问令牌：FinStats 从不读取它们，并会在导入完成或重新开始后删除该文件。",
+        "step": {
+          "open": "打开你的 Tautulli。",
+          "settings_import_backups": "前往 {a}，选择 {b}。",
+          "backup_database": "在数据库备份下点击 {a}。Tautulli 会把它保存在自己所在的机器上，因此不会下载任何东西。",
+          "find_it": "在 Tautulli 数据文件夹内的 {a} 文件夹中找到它（使用 Docker 时，在你挂载为 {b} 的文件夹内）。",
+          "newest": "选择最新的 {a} 文件，以 .db 或 .db.zip 结尾，不要选 {b} 文件，那是设置。",
+          "copy": "把它复制到这台电脑：scp、共享文件夹或 NAS 的文件管理器都可以。",
+          "upload_then_wire": "在这里上传，然后把每位 Plex 用户连接到其在 Jellyfin 上对应的用户。"
+        }
+      },
+      "result": {
+        "plays_imported": "已导入的播放",
+        "plays_skipped": "已存在",
+        "users": "用户",
+        "libraries": "媒体库",
+        "items": "电影、剧集和曲目",
+        "seasons": "季",
+        "episodes": "单集",
+        "item_info": "文件详情",
+        "marked_watched": "标记为已观看但从未播放",
+        "sessions_read": "已读取的会话",
+        "users_wired": "已连接的 Plex 用户",
+        "not_wired": "未连线，已跳过",
+        "other_media": "音乐和其他媒体，未导入"
+      },
+      "already_running": "已有导入正在进行。请等待其完成后重试。",
+      "too_large": "服务器以文件过大为由拒绝了上传。如果 FinStats 位于反向代理之后，请提高代理的上传限制（nginx 为 client_max_body_size）后重试。",
+      "find_hint": "备份 上传 历史记录 统计工具 backup upload history tracker",
+      "unlinked": {
+        "other": "历史记录中有 {count} 部作品与媒体库中的任何内容都不匹配，通常是因为另一台服务器使用了不同的名称。{link}。"
+      },
+      "unlinked_link": "在“未关联媒体”中关联它们",
+      "wrong_file": "“{file}”不是 {name} 备份。请选择你从 {name} 下载的{what}。",
+      "empty_file": "该文件是空的。请重新从 {name} 下载备份。",
+      "uploading": "正在上传 {file}",
+      "upload_progress": "上传进度",
+      "upload_line": "{percent}% · {loaded} / {total}",
+      "cancel_upload": "取消上传",
+      "keep_open": "上传完成前请保持此标签页打开。期间你可以浏览 FinStats 的其他页面。",
+      "importing": "正在导入你的历史记录",
+      "upload_complete": "上传完成",
+      "import_progress": "导入进度",
+      "reading": "正在读取备份…",
+      "starting": "正在开始导入…",
+      "safe_to_leave": "导入在服务器上运行，可以放心离开此页面。",
+      "choose_aria": "选择 {name} 备份文件",
+      "another_running": "另一项导入正在进行",
+      "drop_here": "将 {name} 备份拖放到这里",
+      "one_at_a_time": "一次只能进行一项：那一项完成后才能开始这一项",
+      "or_click": "或点击选择{what}。大型备份也没问题",
+      "finished": "导入完成",
+      "see_stats": "查看统计",
+      "failed": "导入失败：{error}",
+      "unknown_error": "未知错误",
+      "nothing_half": "没有导入到一半的内容。请确认该文件是未经修改的 {name} 备份，然后重新上传。",
+      "upload_failed": "上传失败：{error}",
+      "connect_wires": "连线",
+      "export_from": "从 {name} 导出",
+      "upload_backup": "上传备份"
+    },
+    "wiring": {
+      "plex_users": "Plex 用户（来自 Tautulli）",
+      "no_plays": "没有电影或剧集",
+      "jellyfin_users": "Jellyfin 用户",
+      "board_aria": "将 Plex 用户连接到 Jellyfin 用户",
+      "start_over": "重新开始",
+      "help": "从每位 Plex 用户拖一条线到其在 Jellyfin 上对应的用户，或先点击一方再点击另一方。多位 Plex 用户可以连到同一个人。没有连线的 Plex 用户不会被导入。",
+      "said_connected": "已将 {plex} 连接到 {jellyfin}。",
+      "said_unplugged": "已断开 {name}。",
+      "said_choose": "选择 {name} 在 Jellyfin 上对应的用户。按 Esc 取消。",
+      "plug_connected": {
+        "other": "Plex 上的 {name}，{count} 次播放：已连接到 {to}"
+      },
+      "plug_free": {
+        "other": "Plex 上的 {name}，{count} 次播放：未连接"
+      },
+      "socket_pick": "将 {plex} 连接到 {jellyfin}",
+      "socket": "Jellyfin 上的 {name}",
+      "socket_wired": {
+        "other": "Jellyfin 上的 {name}，已连接 {count} 位 Plex 用户"
+      },
+      "summary_users": {
+        "other": "已连接 {wired} 位 Plex 用户，共 {count} 位"
+      },
+      "summary_plays": {
+        "other": "将导入 {count} 次播放"
+      },
+      "summary_rest": "其余的不导入",
+      "import_plays": {
+        "other": "导入 {count} 次播放"
+      },
+      "import": "导入"
+    },
+    "backups": {
+      "back_up_now": "立即备份",
+      "restore_title": "从文件恢复",
+      "when_written": "备份写入时间",
+      "keep_newest": "保留最新的",
+      "recently_deleted": "最近删除",
+      "hint": {
+        "backups": "备份 下载 删除 列表 backups download delete list",
+        "restore": "恢复 上传 迁移 新安装 合并 restore upload move new install merge",
+        "schedule": "计划 自动 每天 每周 任务 schedule automatic every days weekly daily task",
+        "keep": "计划 保留 数量 清理 schedule keep count prune",
+        "deleted": "回收站 撤销 恢复 已删除 备份 trash undo undelete restore deleted backup"
+      },
+      "card_sub": "把你的历史记录、设置和权限保存在一个文件里，用于妥善保管或迁移到另一个 FinStats",
+      "deleted_toast": "已删除 {date} 的备份。30 天内可以撤销。",
+      "undo": "撤销",
+      "when_written_help": "备份任务的计划：每天、每周、按间隔，或仅手动。",
+      "schedule": "计划",
+      "keep_help": "写入新备份时会删除较旧的备份。1–100。",
+      "keep_unit": "份备份",
+      "keep_invalid": "保留数量必须是 1 到 100 之间的整数。",
+      "saving": "正在保存…",
+      "couldnt_save": "无法保存：{error}",
+      "made": "创建时间",
+      "size": "大小",
+      "actions": "操作",
+      "delete_ask": "要删除此备份吗？30 天内可以撤销。",
+      "delete": "删除",
+      "restore_ask_settings": "合并其中的历史记录，并替换设置和权限？",
+      "restore_ask": "合并其中的历史记录？",
+      "restore": "恢复",
+      "download": "下载",
+      "delete_aria": "删除 {date} 的备份",
+      "empty_scheduled": "还没有备份。一旦有内容可备份，第一份备份会自动写入；你也可以现在创建一份。",
+      "empty_unscheduled": "还没有备份，也没有计划备份。",
+      "deleted_help": "已删除的备份会在这里保留 30 天，之后被永久删除。恢复之前无法下载或用于还原。",
+      "removed_for_good": "永久删除时间",
+      "undelete": "恢复",
+      "restored": {
+        "other": "已恢复 {count} 次播放，{skipped} 次已存在。"
+      },
+      "restored_settings": {
+        "other": "已恢复 {count} 次播放，{skipped} 次已存在；设置和权限已恢复。"
+      },
+      "restore_failed": "恢复失败：{error} 未做任何更改。",
+      "too_large": "服务器以文件过大为由拒绝了上传。如果位于反向代理之后，请提高其上传限制后重试。",
+      "also_settings": "同时恢复设置和权限",
+      "head": "按{link}写入，保留最新的 {count} 份。",
+      "head_next": "按{link}写入，保留最新的 {count} 份，下次：{next}。",
+      "head_single": "按{link}写入，保留最新的 1 份。",
+      "head_single_next": "按{link}写入，保留最新的 1 份，下次：{next}。",
+      "head_link": "备份任务的计划",
+      "head_unscheduled": "没有计划备份（{link}）。",
+      "head_unscheduled_link": "设置计划",
+      "folder": "备份存放在数据目录的 {folder} 文件夹中。",
+      "backup_progress": "备份进度",
+      "backup_failed": "备份失败：{error}",
+      "restore_help": "恢复采用合并方式：已有的播放会被跳过，因此执行两次也是安全的。备份包含所有人的历史记录和地址，但从不包含你的 Jellyfin API 密钥。",
+      "upload_progress": "上传进度",
+      "uploading": "正在上传 {file} · {percent}%",
+      "choose_file": "选择备份文件…",
+      "restore_progress": "恢复进度"
+    }
+  },
+  "simple": {
+    "nav": {
+      "home": "首页",
+      "libraries": "媒体库",
+      "users": "用户",
+      "history": "历史记录",
+      "graphs": "图表"
+    },
+    "menu": "设置和账户",
+    "sections": "分区",
+    "graphs": {
+      "concurrent": {
+        "day": "按串流类型划分的每日并发串流数",
+        "week": "按串流类型划分的每周并发串流数"
+      },
+      "concurrent_help": {
+        "day": "每天同时进行的最多串流数，按类型及总计。",
+        "week": "每周同时进行的最多串流数，按类型及总计。"
+      },
+      "hm": "{hours} 小时 {minutes} 分",
+      "hour": {
+        "duration": "按一天中的小时划分的播放时长",
+        "plays": "按一天中的小时划分的播放次数"
+      },
+      "hour_help": "电视剧、电影和音乐合计，按播放时所在的小时划分。",
+      "kind": {
+        "movies": "电影",
+        "music": "音乐",
+        "tv": "电视剧"
+      },
+      "last_months": "最近 {field} 个月",
+      "last_n_days": "最近 {count} 天",
+      "last_n_months": "最近 {count} 个月",
+      "measure": "度量",
+      "media_daily": {
+        "day": {
+          "duration": "按媒体类型划分的每日播放时长",
+          "plays": "按媒体类型划分的每日播放次数"
+        },
+        "week": {
+          "duration": "按媒体类型划分的每周播放时长",
+          "plays": "按媒体类型划分的每周播放次数"
+        }
+      },
+      "media_daily_help": {
+        "day": {
+          "duration": "每天播放的电视剧、电影和音乐的总播放时长。",
+          "plays": "每天播放的电视剧、电影和音乐的总播放次数。"
+        },
+        "week": {
+          "duration": "每周播放的电视剧、电影和音乐的总播放时长。",
+          "plays": "每周播放的电视剧、电影和音乐的总播放次数。"
+        }
+      },
+      "method": {
+        "DirectPlay": "直接播放",
+        "DirectStream": "直接串流",
+        "Transcode": "转码"
+      },
+      "monthly": {
+        "duration": "按月划分的总播放时长",
+        "plays": "按月划分的总播放次数"
+      },
+      "monthly_help": "电视剧、电影和音乐合计，逐月统计。",
+      "months_aria": "月份",
+      "most_at_once": "最多同时",
+      "platform_method": {
+        "duration": "按平台和串流类型划分的播放时长",
+        "plays": "按平台和串流类型划分的播放次数"
+      },
+      "platform_method_help": "电视剧、电影和音乐，按应用及播放方式划分。",
+      "source_resolution": {
+        "duration": "按源分辨率划分的播放时长",
+        "plays": "按源分辨率划分的播放次数"
+      },
+      "source_resolution_help": "电视剧和电影，按文件本身的分辨率（任何转换之前）划分。",
+      "stream_resolution": {
+        "duration": "按串流分辨率划分的播放时长",
+        "plays": "按串流分辨率划分的播放次数"
+      },
+      "stream_resolution_help": "电视剧和电影，按实际发送的分辨率（任何转换之后）划分。",
+      "streams_daily": {
+        "day": {
+          "duration": "按串流类型划分的每日播放时长",
+          "plays": "按串流类型划分的每日播放次数"
+        },
+        "week": {
+          "duration": "按串流类型划分的每周播放时长",
+          "plays": "按串流类型划分的每周播放次数"
+        }
+      },
+      "streams_daily_help": {
+        "day": {
+          "duration": "每天电视剧、电影和音乐的总播放时长，按原样播放还是经过转换划分。",
+          "plays": "每天电视剧、电影和音乐的总播放次数，按原样播放还是经过转换划分。"
+        },
+        "week": {
+          "duration": "每周电视剧、电影和音乐的总播放时长，按原样播放还是经过转换划分。",
+          "plays": "每周电视剧、电影和音乐的总播放次数，按原样播放还是经过转换划分。"
+        }
+      },
+      "tab": {
+        "media": "媒体类型",
+        "streams": "串流类型",
+        "totals": "播放总计"
+      },
+      "this_month": "本月",
+      "top_platforms": {
+        "duration": "前 10 个平台的播放时长",
+        "plays": "前 10 个平台的播放次数"
+      },
+      "top_platforms_help": "电视剧、电影和音乐合计，取播放最多的十个应用。",
+      "top_users": {
+        "duration": "前 10 位用户的播放时长",
+        "plays": "前 10 位用户的播放次数"
+      },
+      "top_users_help": "电视剧、电影和音乐合计，取播放最多的十个人。",
+      "user_method": {
+        "duration": "按用户和串流类型划分的播放时长",
+        "plays": "按用户和串流类型划分的播放次数"
+      },
+      "user_method_help": "电视剧、电影和音乐，按人及播放方式划分。",
+      "weekday": {
+        "duration": "按星期划分的播放时长",
+        "plays": "按星期划分的播放次数"
+      },
+      "weekday_help": "电视剧、电影和音乐合计，按播放时所在的星期几划分。"
+    },
+    "history": {
+      "col": {
+        "date": "日期",
+        "duration": "时长",
+        "ip": "IP 地址",
+        "paused": "暂停",
+        "platform": "平台",
+        "player": "播放器",
+        "started": "开始",
+        "stopped": "停止"
+      },
+      "done_aria": "已观看 {percent}%",
+      "done_title": "{percent}%",
+      "empty": "没有匹配的播放。",
+      "kind": {
+        "all": "全部",
+        "movies": "电影",
+        "music": "音乐",
+        "shows": "电视剧"
+      },
+      "media": "媒体",
+      "na": "无",
+      "per_page": "每页条目数",
+      "search_aria": "搜索历史记录",
+      "search_label": "搜索：",
+      "show_entries": "每页显示 {size} 条",
+      "showing": "显示第 {from} 至 {to} 条，共 {total} 条"
+    },
+    "home": {
+      "card": {
+        "libraries": "最活跃的媒体库",
+        "platforms": "最活跃的平台",
+        "popular_movies": "最受欢迎的电影",
+        "popular_music": "最受欢迎的音乐",
+        "popular_series": "最受欢迎的电视剧",
+        "users": "最活跃的用户",
+        "watched_movies": "观看最多的电影",
+        "watched_music": "播放最多的音乐",
+        "watched_series": "观看最多的电视剧"
+      },
+      "col": {
+        "duration": "时长",
+        "plays": "播放次数",
+        "users": "用户"
+      },
+      "count": {
+        "albums": "专辑",
+        "artists": "艺术家",
+        "episodes": "单集",
+        "items": "项目",
+        "last_played": "最后播放",
+        "movies": "电影",
+        "never": "从未",
+        "seasons": "季",
+        "shows": "剧集",
+        "tracks": "曲目"
+      },
+      "days_aria": "天数",
+      "direct_play_of": "直接播放（{from}）",
+      "episode_n": "第 {number} 集",
+      "eta": "预计剩余：{time}",
+      "fact": {
+        "audio": "音频",
+        "bandwidth": "带宽",
+        "container": "容器",
+        "location": "位置",
+        "player": "播放器",
+        "product": "产品",
+        "quality": "质量",
+        "stream": "串流",
+        "subtitle": "字幕",
+        "video": "视频"
+      },
+      "kind": {
+        "audiobook": "有声书",
+        "movie": "电影",
+        "music_video": "音乐视频",
+        "video": "视频"
+      },
+      "lan": "局域网",
+      "last_days": "最近 {field} 天",
+      "library_statistics": "媒体库统计",
+      "live_unavailable": "实时会话不可用：{reason}",
+      "looking": "正在查找串流…",
+      "measure": {
+        "duration": "播放时长",
+        "plays": "播放次数"
+      },
+      "nothing_added": "最近没有添加任何内容。",
+      "nothing_playing": "当前没有任何播放。",
+      "peak": {
+        "direct_plays": "直接播放",
+        "direct_streams": "直接串流",
+        "streams": "并发串流",
+        "title": "最多并发串流",
+        "transcodes": "转码"
+      },
+      "quality_converted": "已转换（{rate}）",
+      "quality_original": "原始（{rate}）",
+      "rank_by": "排序依据",
+      "recently_added": "最近添加",
+      "recently_watched": "最近观看",
+      "summary": {
+        "bandwidth_split": "{total}（局域网：{lan}，广域网：{wan}）",
+        "direct_plays": {
+          "other": "{count} 个直接播放"
+        },
+        "direct_streams": {
+          "other": "{count} 个直接串流"
+        },
+        "line": "串流：{streams} | 带宽：{bandwidth}",
+        "line_kinds": "串流：{streams}（{kinds}）| 带宽：{bandwidth}",
+        "streams": {
+          "other": "{count} 个串流"
+        },
+        "transcodes": {
+          "other": "{count} 个转码"
+        }
+      },
+      "transcode_from_to": "转码（{from} → {to}）",
+      "wan": "广域网",
+      "watch_statistics": "观看统计"
+    },
+    "item": {
+      "aired": "播出日期",
+      "episode_list": "单集列表",
+      "genres": "类型",
+      "library": "媒体库",
+      "missing_text": "它可能已从 Jellyfin 中删除。",
+      "missing_title": "没有这个作品",
+      "rated": "评分",
+      "rated_aria": "评分 {rating}/5",
+      "runtime": "片长",
+      "season_list": "季列表",
+      "show": "剧集",
+      "starring": "主演",
+      "studio": "制片公司",
+      "unit_people": "人",
+      "unit_person": "人",
+      "watched_by": "观看者"
+    },
+    "libraries": {
+      "all": "所有媒体库",
+      "col": {
+        "episodes": "单集 / 曲目总数",
+        "last_accessed": "最后访问",
+        "name": "媒体库名称",
+        "seasons": "季 / 专辑总数",
+        "titles": "电影 / 电视剧 / 艺术家总数",
+        "type": "媒体库类型"
+      },
+      "empty": "还没有媒体库。",
+      "missing_text": "它可能已从 Jellyfin 中删除。",
+      "missing_title": "没有这个媒体库",
+      "showing": "显示 {shown} 个媒体库，共 {total} 个",
+      "type": {
+        "books": "书籍",
+        "boxsets": "合集",
+        "homevideos": "视频",
+        "movies": "电影",
+        "music": "艺术家",
+        "musicvideos": "音乐视频",
+        "tvshows": "剧集"
+      }
+    },
+    "platform": {
+      "days_hrs_mins": "{days} 天 {hours} 小时 {minutes} 分钟",
+      "hrs_mins": "{hours} 小时 {minutes} 分钟",
+      "mins": "{minutes} 分钟",
+      "unknown_app": "未知应用"
+    },
+    "profile": {
+      "global_stats": "总体统计",
+      "recently_watched": "最近观看",
+      "tab_profile": "资料",
+      "unit": {
+        "days": "天",
+        "hrs": "小时",
+        "mins": "分钟",
+        "play": "次播放",
+        "plays": "次播放"
+      },
+      "user_stats": "用户统计",
+      "views": "观看次数"
+    },
+    "users": {
+      "all": "所有用户",
+      "col": {
+        "first_seen": "首次出现",
+        "last_ip": "最后已知 IP",
+        "last_platform": "最后使用的平台",
+        "last_played": "最后播放",
+        "last_player": "最后使用的播放器",
+        "last_seen": "最后出现",
+        "network": "网络",
+        "total_duration": "总播放时长",
+        "total_plays": "总播放次数"
+      },
+      "ip_addresses": "IP 地址",
+      "missing_text": "此人可能已从 Jellyfin 中删除，或者你无权查看其页面。",
+      "missing_title": "没有这个人",
+      "no_addresses": "没有记录到地址。",
+      "player_stats": "播放器统计",
+      "showing": "显示 {shown} 位用户，共 {total} 位"
+    },
+    "changelog": {
+      "jump": "跳转到版本",
+      "empty_title": "没有更新日志",
+      "empty_sub": "此版本未包含更新日志。",
+      "running": "当前运行",
+      "running_option": "{version}（当前运行）"
+    }
+  },
+  "server": {
+    "errors": {
+      "not_found": "未找到{what}",
+      "not_permitted": "你无权{what}。Jellyfin 管理员可以在“设置”中授予此权限。",
+      "admins_only": "只有 Jellyfin 管理员可以执行此操作",
+      "internal": "服务器出现问题。请查看 FinStats 日志。"
+    },
+    "not_found": {
+      "alert": "未找到警报",
+      "backup": "未找到备份",
+      "chapter": "未找到章节",
+      "connection": "未找到连接",
+      "destination": "未找到通知目标",
+      "dismissed_finding": "未找到已忽略的问题",
+      "endpoint": "未找到接口",
+      "film_or_show": "未找到电影或剧集",
+      "finding": "未找到问题",
+      "image": "未找到图片",
+      "item": "未找到项目",
+      "key": "未找到密钥",
+      "library": "未找到媒体库",
+      "missing_title": "未找到缺失的作品",
+      "person": "未找到人物",
+      "play": "未找到播放",
+      "profile": "未找到资料",
+      "task": "未找到任务",
+      "title": "未找到作品",
+      "user": "未找到用户",
+      "watchlist_entry": "未找到待看清单条目",
+      "year": "未找到该年份"
+    },
+    "not_permitted": {
+      "be_sent_notifications": "你无权接收通知。Jellyfin 管理员可以在“设置”中授予此权限。",
+      "manage_finstats": "你无权管理 FinStats。Jellyfin 管理员可以在“设置”中授予此权限。",
+      "see_other_people_s_statistics": "你无权查看其他人的统计。Jellyfin 管理员可以在“设置”中授予此权限。",
+      "see_the_server": "你无权查看服务器。Jellyfin 管理员可以在“设置”中授予此权限。",
+      "see_what_is_downloading": "你无权查看下载内容。Jellyfin 管理员可以在“设置”中授予此权限。",
+      "see_where_people_watch_from": "你无权查看大家从哪里观看。Jellyfin 管理员可以在“设置”中授予此权限。"
+    },
+    "api": {
+      "cross_site": "已拒绝跨站请求",
+      "lookup_off": "请先开启“识别我自己的公网地址”",
+      "expected_object": "需要一个 JSON 对象",
+      "invalid_settings": "设置无效：{error}",
+      "invalid_triggers": "触发器无效：{error}",
+      "geoip_from_env": "数据库由 FINSTATS_GEOIP_DB 指定；请改为替换该文件",
+      "task_running": "该任务已在运行",
+      "unknown_permission": "未知权限 `{name}`",
+      "admins_have_all": "Jellyfin 管理员已拥有所有权限",
+      "backup_running": "已有备份正在写入",
+      "backup_name_taken": "已存在同名备份：请先删除或重命名它",
+      "restore_running": "已有恢复或导入正在进行",
+      "import_running": "已有导入或恢复正在进行",
+      "no_tautulli_backup": "没有等待处理的 Tautulli 备份。请先上传一个。",
+      "locate_wrong_kind": "播放只能对应电影、视频或单集，不能对应整部剧集或整季",
+      "upload_interrupted": "上传已中断：{error}",
+      "upload_empty": "上传的文件是空的",
+      "reading_backup": "正在读取备份",
+      "receiving_backup": "正在接收备份",
+      "importing": "正在导入",
+      "restored": {
+        "other": "已恢复 {count} 次播放（{skipped} 次已存在）"
+      },
+      "imported": {
+        "other": "已导入 {count} 次播放（{skipped} 次已存在）"
+      },
+      "imported_marked": {
+        "other": "已导入 {count} 次播放（{skipped} 次已存在），{marked} 项标记为已观看但从未播放"
+      },
+      "no_profile_title": "未找到",
+      "no_profile": "这里没有资料。"
+    },
+    "state": {
+      "between": "{name} 必须在 {lo} 到 {hi} 之间",
+      "unknown_permission": "未知权限 `{name}`",
+      "not_an_ip": "`{address}` 不是 IP 地址",
+      "too_many_homes": "最多 {max} 个家庭地址",
+      "public_url": "FinStats 的地址必须以 http:// 或 https:// 开头",
+      "address_too_long": "该地址太长",
+      "jellyfin_public_url": "Jellyfin 的地址必须以 http:// 或 https:// 开头，并包含主机名",
+      "failed": "失败"
+    },
+    "auth": {
+      "bearer_form": "请使用 `Authorization: Bearer <key>`",
+      "sign_in_to_continue": "请登录以继续",
+      "calendar_key_only": "此密钥只能打开日历订阅",
+      "feed_needs_key": "此订阅需要密钥：请在地址后加上 ?key=…",
+      "too_many_attempts": {
+        "other": "登录尝试次数过多。请在 {count} 分钟后重试。"
+      },
+      "not_connected": "FinStats 尚未连接到 Jellyfin",
+      "enter_username": "请输入你的 Jellyfin 用户名",
+      "wrong_password": "用户名或密码错误",
+      "unreachable": "无法连接 Jellyfin 来验证你的登录",
+      "no_access": "你尚未获得 FinStats 的访问权限。Jellyfin 管理员可以在“设置”中允许你访问。",
+      "already_set_up": "FinStats 已经设置完成",
+      "not_admin": "该账户不是 Jellyfin 管理员。请使用管理员账户设置 FinStats。"
+    },
+    "keys": {
+      "session_only": "请登录后管理密钥；密钥不能创建或吊销密钥",
+      "name": "请为密钥起一个不超过 60 个字符的名称",
+      "expiry": "有效期为 1 到 3650 天",
+      "scope": "范围只能是 `full` 或 `calendar`",
+      "too_many": "你已持有 {max} 个密钥；请先吊销一个"
+    },
+    "appearance": {
+      "unknown_preset": "`{preset}` 不是任何 FinUI 预设：代码由每个选项一个字母或数字组成，例如 0101"
+    },
+    "public": {
+      "session_only": "请登录后公开资料；密钥不能公开任何内容",
+      "not_allowed": "管理员尚未允许此服务器上的公开资料",
+      "page_title": "FinStats 资料",
+      "page_title_named": "{name} 的 FinStats",
+      "page_description": "观看 {hours} 小时，{plays} 次播放。",
+      "page_description_none": "他们看了什么，由本人公开。"
+    },
+    "jellyfin": {
+      "enter_address": "请输入 Jellyfin 服务器的地址",
+      "enter_address_of": "请输入 {what} 的地址",
+      "invalid_url": "这看起来不是有效的 URL",
+      "timed_out": "连接 {address} 超时",
+      "could_not_connect": "无法连接到 {address}",
+      "could_not_reach": "无法访问 {address}：{error}",
+      "not_jellyfin_status": "{address} 返回了 {status}。这是 Jellyfin 服务器吗？",
+      "not_jellyfin": "{address} 的响应不像 Jellyfin 服务器",
+      "unreachable": "无法连接 Jellyfin：{error}",
+      "answered": "Jellyfin 返回了 {status}",
+      "answered_for": "Jellyfin 对 {path} 返回了 {status}",
+      "answered_for_user_items": "Jellyfin 对某位用户的项目返回了 {status}",
+      "keys_list_refused": "Jellyfin 拒绝列出 API 密钥（{status}）",
+      "key_create_refused": "Jellyfin 拒绝创建 API 密钥（{status}）",
+      "key_unreadable": "已创建 API 密钥，但无法读回"
+    },
+    "jobs": {
+      "explain": {
+        "scan_library": "检查你的媒体文件夹，找出新增、更改或已删除的文件，并更新 Jellyfin 的数据库。新电影就是靠这个任务出现的。FinStats 会在它完成后立即读取你的媒体库，所以它找到的内容一两分钟内就会出现在你的统计中。",
+        "media_segments": "逐一检查你的剧集，找出播放器可以提供跳过的片段（片头、前情提要、片尾字幕），并记下它们的位置。为此它要读取每个文件的音频和视频，所以这是 Jellyfin 运行的最繁重的任务之一，而且只会处理之前没分析过的内容。让它在夜间运行是正常的；它不会改动你的媒体文件。",
+        "trickplay": "生成拖动进度条时看到的那排小缩略图。它会把每个视频解码一次，并把缩略图存放在视频旁边，所以在大型媒体库上首次运行需要好几个小时，还会占用磁盘空间。之后的运行只处理新内容。",
+        "chapter_images": "为电影的每个章节生成缩略图，让章节菜单显示图片而不是数字。它会定位到每个带章节的文件中；首次运行之后只处理新文件。",
+        "keyframes": "记录每个文件中播放器可以跳转到的位置。有了它们，在转码中的视频上拖动进度条时，会停在你松手的地方，而不是偏差几秒。",
+        "audio_normalization": "测量每个文件的响度，让播放器可以平衡安静的电影和响亮的电影之间的差别。它会读取每个尚未测量过的文件的音频。",
+        "refresh_people": "从你启用的元数据提供商获取媒体库中演员和导演的资料与照片。它会访问互联网，但不会改动你的文件。",
+        "refresh_guide": "从你设置的节目单提供商下载接下来几天的电视直播节目指南。只有在你使用电视直播时才会有作用。",
+        "optimize_database": "整理 Jellyfin 自己的数据库文件：回收删除的行留下的空间，并重建索引。运行期间 Jellyfin 会短暂变慢，之后会更快。它与你的媒体无关。",
+        "clean_activity_log": "删除 Jellyfin 活动日志中的旧条目：也就是你在“控制台 → 活动”中看到的登录和错误。FinStats 已经把它们复制到自己的历史记录中，所以 FinStats 服务器页面上的内容不会随之消失。",
+        "clean_logs": "删除超过 Jellyfin 设置中所设天数的 Jellyfin 日志文件。属于日常维护；从不触及媒体。",
+        "clean_cache": "清空 Jellyfin 缓存文件夹中不再需要的部分。安全、快速，只会释放磁盘空间。",
+        "clean_transcode": "删除 Jellyfin 转码时留下的临时文件：也就是为无法处理原始文件的播放器生成的视频片段。在繁忙的服务器上它们可能多达数 GB。",
+        "plugin_updates": "向插件存储库查询你的插件是否有新版本，并在你要求时安装更新。此任务会代表你的服务器访问互联网。",
+        "subtitles": "处理字幕：从你启用的提供商获取你要求的字幕，或把视频文件中已有的字幕提取出来，让播放器无需转码就能打开它们。",
+        "thumbnails": "从每个视频中截取一帧画面，在元数据提供商没有提供图片时用作它的图片。",
+        "system_update": "检查是否发布了新版 Jellyfin。它会访问互联网；除非你设置过，否则不会自行安装任何东西。"
+      },
+      "from_plugin": "{description}（这是 Jellyfin 自己的描述：FinStats 不认识这个任务，它可能来自某个插件。）",
+      "unknown": "FinStats 不认识这个任务，Jellyfin 也没有描述它，这通常意味着它是由插件添加的。",
+      "unnamed": "未命名任务",
+      "not_connected": "未连接到 Jellyfin",
+      "no_answer": "Jellyfin 没有响应",
+      "daily": "每天 {time}",
+      "weekly": {
+        "mon": "每周一 {time}",
+        "tue": "每周二 {time}",
+        "wed": "每周三 {time}",
+        "thu": "每周四 {time}",
+        "fri": "每周五 {time}",
+        "sat": "每周六 {time}",
+        "sun": "每周日 {time}",
+        "any": "每周 {time}"
+      },
+      "at_startup": "Jellyfin 启动时",
+      "every": {
+        "day": "每天",
+        "days": "每 {count} 天",
+        "hour": "每小时",
+        "hours": "每 {count} 小时",
+        "minute": "每分钟",
+        "minutes": "每 {count} 分钟",
+        "second": "每秒",
+        "seconds": "每 {count} 秒"
+      }
+    },
+    "socket": {
+      "closed": "Jellyfin 关闭了连接",
+      "failed": "连接失败（{detail}）",
+      "mismatch": "Jellyfin 推送的内容与它对 /Sessions 的响应不一致（{detail}）",
+      "collector_gone": "采集器已停止监听",
+      "unreadable": "Jellyfin 发送的会话列表无法读取",
+      "no_answer": "{seconds} 秒内没有任何响应",
+      "silent": "Jellyfin 已有 {seconds} 秒没有任何消息",
+      "no_handshake": "{url} 未在 {seconds} 秒内响应握手",
+      "refused": "{url} 拒绝了连接（{detail}）"
+    },
+    "card": {
+      "a_profile": "FinStats 资料",
+      "hours_watched": {
+        "other": "观看 {count} 小时"
+      },
+      "when_they_watch": "观看时段",
+      "longest_streak": {
+        "other": "最长连续 {count} 天"
+      },
+      "a_year": "FinStats 上的一年",
+      "whose_year": "{name} 的一年",
+      "hours_watched_unit": "小时观看时长",
+      "streak": "连续 {count} 天",
+      "top_show": "最爱剧集",
+      "top_film": "最爱电影",
+      "weekday": {
+        "mon": "周一",
+        "tue": "周二",
+        "wed": "周三",
+        "thu": "周四",
+        "fri": "周五",
+        "sat": "周六",
+        "sun": "周日"
+      }
+    },
+    "story": {
+      "last_12_months": "过去 12 个月",
+      "in_review": "{label} 回顾",
+      "whose": "{whose} 的 {label}",
+      "word": {
+        "year": "年度",
+        "numbers": "数字",
+        "shows": "剧集",
+        "films": "电影",
+        "music": "音乐",
+        "genres": "类型",
+        "persona": "你",
+        "rhythm": "节奏",
+        "days": "日子",
+        "records": "纪录",
+        "together": "一起",
+        "finished": "看完",
+        "asked": "请求",
+        "versus": "对比"
+      },
+      "hours_of_watching": "小时观看时长",
+      "plays": {
+        "other": "{count} 次播放"
+      },
+      "titles": {
+        "other": "{count} 部作品"
+      },
+      "days": {
+        "other": "{count} 天"
+      },
+      "in_numbers": "数字里的这一年",
+      "tile": {
+        "plays": "播放",
+        "hours": "小时",
+        "titles": "作品",
+        "days": "天数",
+        "episodes": "集数",
+        "films": "电影",
+        "songs": "歌曲"
+      },
+      "top": {
+        "shows": "你最爱的剧集",
+        "films": "你最爱的电影",
+        "songs": "你最爱的歌曲"
+      },
+      "hours_short": "{count} 小时",
+      "minutes_short": "{count} 分钟",
+      "mostly": "最爱类型：{genre}",
+      "you_were": "今年的你是",
+      "around": "大多在 {time} 前后",
+      "busiest": "{days}最忙",
+      "weekdays": {
+        "mon": "周一",
+        "tue": "周二",
+        "wed": "周三",
+        "thu": "周四",
+        "fri": "周五",
+        "sat": "周六",
+        "sun": "周日"
+      },
+      "with_something_on": {
+        "other": "{count} 天有内容在播放"
+      },
+      "longest_streak": {
+        "other": "最长连续：{count} 天"
+      },
+      "records": "值得炫耀的纪录",
+      "record": {
+        "streak": "最长连续天数",
+        "day": "最忙的一天",
+        "binge": "最长的连看",
+        "rewatched": "重看最多",
+        "oldest": "最老的作品"
+      },
+      "day_hours": "{day}：{hours} 小时",
+      "binge": {
+        "other": "《{show}》{count} 集"
+      },
+      "rewatched": {
+        "other": "《{name}》，{count} 天"
+      },
+      "day_month": "{month} {day} 日",
+      "months": {
+        "jan": "1 月",
+        "feb": "2 月",
+        "mar": "3 月",
+        "apr": "4 月",
+        "may": "5 月",
+        "jun": "6 月",
+        "jul": "7 月",
+        "aug": "8 月",
+        "sep": "9 月",
+        "oct": "10 月",
+        "nov": "11 月",
+        "dec": "12 月"
+      },
+      "evening_in_company": "个结伴观看的夜晚",
+      "evenings_in_company": "个结伴观看的夜晚",
+      "together_line": "一起观看 {hours} 小时 · 占你观看时长的 {percent}%",
+      "together_top": "最常让大家聚在一起的作品",
+      "evenings": {
+        "other": "{count} 个夜晚"
+      },
+      "finished": {
+        "other": "看完了 {count} 部剧集"
+      },
+      "left_for_later": {
+        "other": "还有 {count} 部留待以后"
+      },
+      "request": "个请求",
+      "requests": "个请求",
+      "arrived": "{count} 个已上线",
+      "watched": "{count} 个已观看",
+      "more_than": "比 {year} 年多 {percent}%",
+      "less_than": "比 {year} 年少 {percent}%"
+    },
+    "stats": {
+      "unknown_kind": "未知类型",
+      "unknown_group": "未知分组",
+      "completion": {
+        "under_10": "不到 10%",
+        "from_10_to_50": "10–50%",
+        "from_50_to_90": "50–90%",
+        "finished": "看完（90% 以上）"
+      }
+    },
+    "health": {
+      "note_too_long": "备注最多 {max} 个字符"
+    },
+    "timeline": {
+      "bad_cursor": "这不是有效的时间线游标",
+      "bad_libraries": "这看起来不是媒体库 ID 列表",
+      "specials": "特别篇",
+      "season": "第 {n} 季"
+    },
+    "profile": {
+      "how_many_ids": "请发送 1 到 5000 个项目 ID",
+      "bad_ids": "这看起来不是项目 ID 列表"
+    },
+    "watchlist": {
+      "only_films_and_shows": "只有电影和剧集可以加入待看清单",
+      "needs_an_id": "不在媒体库中的作品需要 TMDB、TVDB 或 IMDb ID",
+      "bad_id": "这看起来不是 TMDB、TVDB 或 IMDb ID",
+      "bad_name": "作品名称不能为空，且最多 300 个字符",
+      "bad_year": "这不是电影或剧集可能有的年份",
+      "full": "你的待看清单已有 {max} 部作品，达到上限。请先移除一部。"
+    },
+    "capacity": {
+      "software_transcodes": "最近 {days} 天内 Jellyfin 报告的每次转码都没有使用硬件加速",
+      "scan_busy": "Jellyfin 的媒体库扫描占用了很大一部分时间",
+      "runway_under_a_month": "{place}：按最近 {window} 个月的速度，剩余空间不足一个月",
+      "runway_about_a_month": "{place}：按最近 {window} 个月的速度，剩余空间约可用一个月",
+      "runway_about": "{place}：按最近 {window} 个月的速度，剩余空间约可用 {count} 个月"
+    },
+    "recap": {
+      "bad_scope": "范围只能是 `user` 或 `server`",
+      "persona": {
+        "night_owl": {
+          "title": "夜猫子",
+          "line": "{n}% 的观看发生在 22:00 到 04:00 之间"
+        },
+        "early_bird": {
+          "title": "早起鸟",
+          "line": "{n}% 的观看发生在上午 10 点之前"
+        },
+        "music_lover": {
+          "title": "音乐迷",
+          "line": "所有播放中有 {n}% 是音乐"
+        },
+        "weekend_warrior": {
+          "title": "周末战士",
+          "line": "{n}% 的观看发生在周六和周日"
+        },
+        "binge_watcher": {
+          "title": "追剧狂",
+          "line": "有观看的日子里平均每天看 {n} 集"
+        },
+        "movie_buff": {
+          "title": "电影迷",
+          "line": "{n}% 的播放是电影"
+        },
+        "creature_of_habit": {
+          "title": "规律达人",
+          "line": "大部分观看都在 {n} 前后开始，周周如此"
+        }
+      }
+    },
+    "security": {
+      "unknown_place": "未知地点",
+      "home_place": "家（{place}）",
+      "played_on": "在 {device} 上播放《{title}》",
+      "found_in_older_history": "在较早的历史记录中发现",
+      "same_two_places": "相同的两个地点",
+      "database_from_env": "数据库由 FINSTATS_GEOIP_DB 指定；请改为替换该文件",
+      "already_downloading": "数据库已在下载中"
+    },
+    "geo": {
+      "not_a_city_database": "{file} 是 `{kind}` 数据库；FinStats 需要城市数据库",
+      "already_have": "已有 {month} 版本",
+      "downloaded": "已下载 DB-IP City Lite {month}",
+      "download_failed": "下载地理位置数据库",
+      "downloading": "正在下载",
+      "answered": "{url} 返回了 {status}",
+      "downloading_part": "正在下载（{got} / {total} MB）",
+      "unpacking": "正在解压"
+    },
+    "schedule": {
+      "cannot_be_scheduled": "“{task}”不能设置计划",
+      "too_many_triggers": "每个任务最多 {max} 个触发器",
+      "same_trigger_twice": "同一个触发器出现了两次",
+      "time_of_day": "时间须在 00:00 到 23:59 之间",
+      "day_of_week": "星期须为 0（周日）到 6（周六）",
+      "interval": "间隔须在 5 分钟到 30 天之间",
+      "after_scan": "只有读取媒体库的任务才能跟随 Jellyfin 的扫描",
+      "no_time_limit": "此任务不能中途停止，因此不能设置时间限制",
+      "time_limit": "时间限制须在 1 分钟到 168 小时之间",
+      "past_time_limit": "已停止：运行时间超过了 {limit} 的时间限制",
+      "no_message": "无消息",
+      "panicked": "FinStats 遇到程序错误，停止了这次运行（{why}）；它会在下一次触发时再次运行",
+      "cancelled": "运行已取消（{error}）",
+      "hours": {
+        "other": "{count} 小时"
+      },
+      "minutes": {
+        "other": "{count} 分钟"
+      }
+    },
+    "sync": {
+      "starting": "正在开始…",
+      "writing_backup": "正在写入备份",
+      "backup_panicked": "FinStats 遇到程序错误，停止写入这份备份；它会在下一次触发时重新写入",
+      "backup_written": {
+        "other": "{count} 次播放，{size} MB"
+      },
+      "fetching_users": "正在获取用户",
+      "users_refused": {
+        "other": "Jellyfin 返回了 {count} 位用户，而 FinStats 已知 {current} 位。拒绝将缺少的用户标记为已删除：这看起来是 Jellyfin 的变更或读取出错。未做任何更改。"
+      },
+      "users_read": {
+        "other": "{count} 位用户"
+      },
+      "fetching_libraries": "正在获取媒体库",
+      "libraries_refused": {
+        "other": "Jellyfin 列出了 {count} 个媒体库，而 FinStats 已知 {current} 个。拒绝将缺少的媒体库标记为已删除：这看起来是 Jellyfin 的变更或读取出错，而不是服务器被清空。未做任何更改。"
+      },
+      "items_read": "{library}：{done} / {total} 个项目",
+      "cast_and_crew": "{library}：演职人员",
+      "items_refused": {
+        "other": "Jellyfin 为媒体库“{library}”返回了 {count} 个可读取的项目，但 FinStats 保存了 {current} 个。拒绝将 {missing} 个项目标记为已删除：这看起来是 Jellyfin 的变更或读取出错，而不是删除。媒体库保持原样。"
+      },
+      "linking": "正在将播放关联到媒体库",
+      "libraries_read": {
+        "other": "{count} 个媒体库中的 {items} 个项目"
+      },
+      "waiting_for_library_read": "正在等待首次读取媒体库",
+      "changed_items": "{library}：{count} 个项目有变更",
+      "people_looked_at": "人物：已查看 {count} 位",
+      "nothing_changed": "没有变更",
+      "titles_changed": {
+        "other": "{count} 部作品有变更"
+      },
+      "portraits_changed": {
+        "other": "{count} 张人物照片有变更"
+      },
+      "titles": {
+        "other": "{count} 部作品"
+      },
+      "portraits": {
+        "other": "{count} 张人物照片"
+      },
+      "titles_and_portraits_changed": "{titles}、{portraits}有变更",
+      "fetching_activity": "正在获取服务器活动",
+      "entries_read": "{done} / {total} 条记录",
+      "new_entries": {
+        "other": "{count} 条新记录"
+      },
+      "reading_server": "正在读取服务器详情",
+      "reading_devices": "正在读取设备",
+      "server_read": {
+        "other": "{count} 台设备，{plugins} 个插件"
+      },
+      "server_read_without_plugins": {
+        "other": "{count} 台设备；无法读取插件"
+      },
+      "reading_watched": "正在读取 {name} 看过的内容",
+      "userdata_read": {
+        "other": "{count} 个已播放或收藏的项目"
+      }
+    },
+    "import": {
+      "reading_libraries": "正在读取媒体库",
+      "reading_items": "正在读取电影、剧集和音乐",
+      "reading_seasons": "正在读取季",
+      "reading_episodes": "正在读取单集",
+      "reading_users": "正在读取用户",
+      "importing_history": "正在导入播放历史",
+      "reading_file_details": "正在读取文件详情",
+      "reading_backup": "正在读取备份",
+      "empty_file": "文件是空的",
+      "reading_legacy": "正在读取备份（旧版单文件格式，需要更多内存）",
+      "not_json": "该文件不是有效的 Jellystat 备份（无法解析 JSON）",
+      "not_jellystat": "该文件不是 Jellystat 备份",
+      "not_jellystat_at": "这看起来不像 Jellystat 备份（第 {line} 行：{error}）",
+      "damaged_at": "备份在第 {line} 行损坏：{error}",
+      "no_records_at_first": "这看起来不像 Jellystat 备份：开头几行都不是备份记录",
+      "no_records": "这看起来不像 Jellystat 备份：没有找到备份记录",
+      "linking": "正在将播放关联到你的媒体库",
+      "saving": "正在保存"
+    },
+    "streamystats": {
+      "is_jellystat": "这是 Jellystat 备份，请在“从 Jellystat 导入”中上传。",
+      "not_streamystats": "这看起来不像 Streamystats 备份（{error}）。",
+      "no_sessions": "这看起来不像 Streamystats 备份：其中没有会话列表。"
+    },
+    "tautulli": {
+      "zip_method": "这个 zip 的压缩方式 FinStats 无法打开（方法 {method}）。请解压后上传其中的 .db 文件。",
+      "zip_damaged": "这个 zip 已损坏。请重新下载 Tautulli 备份。",
+      "zip_without_database": "这个 zip 中没有 Tautulli 数据库。请上传 .db 文件，或 Tautulli 备份下载得到的 zip。",
+      "zip_with_databases": "这个 zip 中有不止一个数据库。请解压后上传 Tautulli 的那个。",
+      "not_tautulli": "这看起来不像 Tautulli 备份。请上传 Tautulli 备份中的 .db 文件（或其 zip）。",
+      "no_wires": "请至少将一位 Plex 用户连接到 Jellyfin 用户",
+      "no_such_plex_user": "备份中没有 Plex 用户 {id}",
+      "no_such_jellyfin_user": "有一条连线连到了此服务器上不存在的用户",
+      "wired_twice": "一位 Plex 用户只能连接到一位 Jellyfin 用户",
+      "reading_backup": "正在读取备份"
+    },
+    "backup": {
+      "writing": "正在写入 {table}：{done} / {total} 行",
+      "unreadable": "文件已损坏或不是 FinStats 备份（无法读取）",
+      "not_json": "该文件不是 FinStats 备份（第 {line} 行不是 JSON）",
+      "not_finstats": "这不是 FinStats 备份。Jellystat 备份请在“从 Jellystat 导入”中上传。",
+      "newer_format": "此备份由较新版本的 FinStats 创建（格式 {format}）。请先更新 FinStats，再恢复它。",
+      "restoring": {
+        "other": "正在恢复：已恢复 {count} 次播放"
+      },
+      "linking": "正在将播放关联到媒体库"
+    },
+    "notify": {
+      "group": {
+        "security": "安全",
+        "housekeeping": "日常维护",
+        "library": "媒体库",
+        "playback": "播放"
+      },
+      "kind": {
+        "travel": {
+          "label": "不可能的旅行",
+          "what": "同一账户的两次出现，任何航班都无法连接"
+        },
+        "new_country": {
+          "label": "新的国家",
+          "what": "某个账户首次出现在一个国家"
+        },
+        "failed_sign_ins": {
+          "label": "登录失败",
+          "what": "同一账户或同一地址连续多次登录失败"
+        },
+        "task_failed": {
+          "label": "任务失败",
+          "what": "同步、导入或读取已连接服务时出错"
+        },
+        "backup_failed": {
+          "label": "备份失败",
+          "what": "无法写入备份"
+        },
+        "service_down": {
+          "label": "服务停止响应",
+          "what": "Jellyfin、Sonarr、Radarr 或 Seerr 停止响应"
+        },
+        "service_back": {
+          "label": "服务恢复响应",
+          "what": "…以及何时再次响应"
+        },
+        "new_items": {
+          "label": "媒体库新增内容",
+          "what": "添加到媒体库的作品，按剧集和日期合并"
+        },
+        "request_available": {
+          "label": "请求的内容可以观看了",
+          "what": "有人在 Seerr 中请求的内容现在可以观看了"
+        },
+        "play_started": {
+          "label": "有人开始观看",
+          "what": "播放开始：作品、观看者和设备"
+        },
+        "play_stopped": {
+          "label": "有人停止观看",
+          "what": "播放结束，以及看了多少"
+        },
+        "recap_ready": {
+          "label": "年度回顾已就绪",
+          "what": "每年 12 月一次：某人的年度回顾已可查看和分享"
+        },
+        "watchlist_available": {
+          "label": "待看清单：现已上线",
+          "what": "你在待看清单中等待的电影或剧集已进入媒体库。只会发送到你自己的通知目标"
+        },
+        "test": {
+          "label": "测试消息",
+          "what": "只由“测试”按钮发送"
+        }
+      },
+      "bad_url": "这看起来不是有效的 URL",
+      "needs_host": "地址需要包含主机名",
+      "lookup_failed": "无法解析 {host}",
+      "not_public": "{host} 是此网络中的地址。你自己的通知目标必须指向公网服务。请让管理员将它添加为服务器的通知目标",
+      "enter_address": "请输入要发送到的地址",
+      "http_only": "地址必须以 http:// 或 https:// 开头",
+      "no_login": "地址中不要包含用户名和密码",
+      "no_fragment": "地址中不能包含 #",
+      "no_query": "地址中不能包含 ?",
+      "fixed_url": "{channel} 始终通过 {url} 访问，因此无需输入地址",
+      "not_discord": "这不是 Discord Webhook 地址。在 Discord 中：Channel settings → Integrations → Webhooks → Copy Webhook URL",
+      "discord_no_token": "该 Discord Webhook 地址缺少令牌。请复制完整的 URL",
+      "not_slack": "这不是 Slack Webhook 地址。在 Slack 中：your app → Incoming Webhooks → Add New Webhook to Workspace，然后复制 URL",
+      "slack_no_token": "该 Slack Webhook 地址缺少令牌。请复制完整的 URL",
+      "mail_scheme": "邮件服务器地址以 smtps:// 或 smtp:// 开头",
+      "not_mail_url": "这看起来不是邮件服务器地址",
+      "mail_no_login": "地址中不要包含用户名和密码；它们各有单独的输入框",
+      "mail_host_port": "邮件服务器地址由主机和端口组成，后面不能有其他内容",
+      "enter": "请输入{what}",
+      "value": "值",
+      "token": "令牌",
+      "ntfy_topic": "ntfy 主题只能包含字母、数字、- 和 _",
+      "telegram_chat": "聊天 ID 是类似 -1001234567890 的数字，公开频道也可以写成 @name",
+      "pushover_key": "Pushover 用户密钥或群组密钥由 30 个字母和数字组成，见 pushover.net 首页",
+      "nothing_to_enter": "{channel} 在这里无需输入任何内容",
+      "unknown_kind": "未知的通知目标类型 `{kind}`",
+      "say_kind": "请指定通知目标的类型",
+      "enter_address_of": "请输入 {channel} 的地址",
+      "not_a_token": "这看起来不是令牌",
+      "too_long": "{what}太长，或包含无法发送的内容",
+      "unknown_event": "未知事件 `{event}`",
+      "unknown_severity": "未知严重程度 `{severity}`",
+      "max_targets": {
+        "other": "最多 {count} 个通知目标"
+      },
+      "max_own": {
+        "other": "你自己最多 {count} 个通知目标"
+      }
+    },
+    "channels": {
+      "webhook": "Webhook",
+      "email": "电子邮件",
+      "what": {
+        "webhook": "以 POST 方式向任意地址发送 JSON：你自己的脚本、Home Assistant、n8n",
+        "discord": "你服务器中的一个频道，通过你在那里创建的 Webhook",
+        "slack": "你工作区中的一个频道，通过传入 Webhook",
+        "telegram": "与你自己的机器人的聊天，或它所在的群组或频道",
+        "email": "任意邮箱，通过你已有的 SMTP 服务器",
+        "ntfy": "ntfy.sh 或你自己的 ntfy，发送到你选择的主题",
+        "gotify": "你自己的 Gotify 服务器，使用应用令牌",
+        "pushover": "手机上的 Pushover，使用你自己的应用",
+        "pushbullet": "Pushbullet，发送到登录你账户的每台设备"
+      },
+      "topic": {
+        "ntfy": {
+          "label": "主题",
+          "help": "要发布到的 ntfy 主题。知道它的任何人都能读取你的通知，所以请设置得难以猜测。"
+        },
+        "telegram": {
+          "label": "聊天 ID",
+          "help": "先给你的机器人发一条消息，然后打开 https://api.telegram.org/bot<token>/getUpdates，使用其中显示的 chat id。频道可以写成 @name。"
+        },
+        "pushover": {
+          "label": "用户或群组密钥",
+          "help": "你的用户密钥（在 pushover.net 首页），或群组密钥。"
+        },
+        "email": {
+          "label": "收件人",
+          "help": "要发送到的邮箱。"
+        }
+      },
+      "secret": {
+        "webhook": "Authorization 头（可选）",
+        "telegram": "机器人令牌",
+        "email": "密码（可选）",
+        "ntfy": "访问令牌（可选）",
+        "gotify": "应用令牌",
+        "pushover": "应用令牌",
+        "pushbullet": "访问令牌"
+      },
+      "extra": {
+        "from": {
+          "label": "发件人地址",
+          "help": "邮件的发件地址。很多服务器只接受它认识的地址。"
+        },
+        "username": {
+          "label": "用户名（可选）",
+          "help": "如果中继服务器不需要登录，请留空。通常与发件人地址相同。"
+        }
+      },
+      "timeout": "{host} 上的 {channel} 未及时响应",
+      "connect": "无法连接到 {host}。从 FinStats 运行的位置能访问它吗？",
+      "decode": "{host} 的响应不像 {channel}",
+      "unreachable": "无法访问 {host}",
+      "redirect": "{host} 返回了重定向。FinStats 从不跟随重定向，以免令牌被发到别处：请输入它重定向到的地址",
+      "telegram_chat": "{channel} 不认识这个聊天。请先给机器人发一条消息，然后使用它显示的 chat id",
+      "pushover_key": "{channel} 不接受该用户密钥或应用令牌",
+      "not_understood": "{channel} 无法理解这条消息",
+      "discord_refused": "{channel} 拒绝了该 Webhook。它是否已被删除？",
+      "telegram_refused": "{channel} 拒绝了该机器人令牌",
+      "pushbullet_refused": "{channel} 拒绝了该访问令牌",
+      "token_refused": "{channel} 拒绝了该令牌",
+      "slack_gone": "{channel} 已不认识该 Webhook。应用或频道是否已被删除？",
+      "not_found": "{host} 返回了 404 Not Found。地址是否正确，是否包含了主题和基础路径？",
+      "too_large": "{channel} 认为消息太大",
+      "rate_limited": "{channel} 正在对 FinStats 限流",
+      "answered": "{channel} 返回了 {status}"
+    },
+    "mail": {
+      "bad_url": "这看起来不是邮件服务器地址",
+      "scheme": "邮件服务器地址以 smtps:// 或 smtp:// 开头",
+      "needs_host": "地址需要包含主机名",
+      "not_an_address": "{address} 不是电子邮件地址",
+      "no_domain": "{address} 不是电子邮件地址：@ 之后需要域名",
+      "not_a_letter": "无法将这条消息生成电子邮件",
+      "no_tls_setup": "无法与 {host} 建立加密连接",
+      "timeout": "{host} 未及时响应",
+      "tls": "{host} 不肯建立加密连接。FinStats 不会以明文发送邮件：请使用 smtps://，或支持 STARTTLS 的服务器",
+      "refused": "{host} 拒收了邮件。请检查用户名、密码和发件人地址",
+      "busy": "{host} 暂时无法接收邮件",
+      "connect": "无法连接到 {host}。从 FinStats 运行的位置能访问它吗？"
+    },
+    "services": {
+      "what": {
+        "sonarr": "剧集：什么时候播出，以及正在下载什么",
+        "radarr": "电影：什么时候上映，以及正在下载什么",
+        "seerr": "请求：谁请求了什么（Seerr、Jellyseerr 或 Overseerr）"
+      },
+      "like": "{service}，例如 {example}",
+      "http_only": "地址必须以 http:// 或 https:// 开头",
+      "bad_url": "这看起来不是有效的 URL",
+      "no_login": "地址中不要包含用户名和密码；它们各有单独的输入框",
+      "no_query": "地址中不能包含 ? 或 #",
+      "certificate": "{url} 出示的证书不受 FinStats 信任（自签名，或来自你自己的证书颁发机构）。请使用它的 http:// 地址，或为此连接开启“接受自签名证书”",
+      "timeout": "{url} 上的 {service} 未及时响应",
+      "connect": "无法连接到 {url}。{service} 是否正在运行，并且能从 FinStats 运行的位置访问？",
+      "decode": "{url} 的响应不像 {service}",
+      "unreachable": "无法访问 {url}：{error}",
+      "redirect": "{url} 返回了指向 {to} 的重定向。FinStats 从不跟随重定向，以免密钥被发到别处：请输入最终地址，包括基础路径",
+      "redirect_elsewhere": "{url} 返回了指向另一个地址的重定向。FinStats 从不跟随重定向，以免密钥被发到别处：请输入最终地址，包括基础路径",
+      "key_refused": "{service} 拒绝了该 API 密钥",
+      "not_found": "{url} 返回了 404 Not Found。地址是否正确，是否包含类似 /{path} 的基础路径？",
+      "answered": "{service} 返回了 {status}",
+      "answers_as": "{url} 有响应，但它是 {app}，不是 {service}",
+      "answers_as_other": "{url} 有响应，但它是别的服务，不是 {service}",
+      "not_seerr": "{url} 的响应不像 Seerr",
+      "unknown_kind": "未知的服务类型 `{kind}`",
+      "say_kind": "请指定服务的类型",
+      "enter_address": "请输入 {service} 的地址",
+      "enter_key": "请输入 API 密钥",
+      "not_a_key": "这看起来不是密钥或密码",
+      "max": {
+        "other": "最多 {count} 个连接"
+      },
+      "starting": "正在开始…"
+    },
+    "arr": {
+      "not_calendar": "{url} 的日历响应不像 {service}",
+      "none": "没有连接 Sonarr 或 Radarr",
+      "reading": "正在读取 {name}",
+      "reading_history": "正在读取 {name} 的历史记录",
+      "no_answer": "{names} 没有响应",
+      "ahead": {
+        "other": "即将发布 {count} 项"
+      },
+      "ahead_partly": {
+        "other": "即将发布 {count} 项；{names} 没有响应"
+      },
+      "events": {
+        "other": "{count} 个事件"
+      }
+    },
+    "seerr": {
+      "not_requests": "{url} 的请求响应不像 Seerr",
+      "none": "没有连接 Seerr",
+      "reading": "正在读取 {name}",
+      "looking_up": "正在查找作品",
+      "no_answer": "{names} 没有响应",
+      "nothing_new": "没有新内容",
+      "read": {
+        "other": "已读取 {count} 个请求"
+      },
+      "read_gone": {
+        "other": "已读取 {count} 个请求，{gone} 个已不在 Seerr 中"
+      }
+    },
+    "downloads": {
+      "no_answer": "{name} 未及时响应",
+      "season": "第 {season} 季",
+      "episodes": {
+        "other": "{count} 集"
+      },
+      "season_episodes": {
+        "other": "第 {season} 季 · {count} 集"
+      },
+      "seasons_episodes": {
+        "other": "{seasons} 季 · {count} 集"
+      }
+    },
+    "outbound": {
+      "jellyfin": "你的 Jellyfin 服务器",
+      "jellyfin_why": "FinStats 显示的一切都来自这里：正在播放的内容、你的媒体库、你的用户",
+      "jellyfin_off": "尚未连接",
+      "public_ip": "“我的 IP 是什么”服务",
+      "public_ip_why": "让在家通过公网地址观看的人不被算作远程。只查询一次，之后只有你按下按钮时才会查询",
+      "geoip": "DB-IP 的免费城市数据库",
+      "geoip_env": "未使用：数据库是 FINSTATS_GEOIP_DB 指定的文件",
+      "geoip_why": "在计划了相应任务时，下载用于在安全页面上定位地址的月度文件。查询地址从不离开本机",
+      "service_why": "你在“设置 → 连接”中添加的连接。只读，除非你指向别处，否则位于你自己的网络中",
+      "target_why_theirs": "{owner} 自己的通知目标，在“设置 → 通知”中添加。会收到对方勾选的事件，且仅限对方本就有权查看的内容",
+      "target_why": "你在“设置 → 通知”中添加的通知目标。只会收到你在那里勾选的事件，别无其他"
+    }
+  },
+  "shell": {
+    "pages_label": "页面",
+    "menu_label": "菜单",
+    "to_top": "回到顶部"
+  },
+  "router": {
+    "page_title": "{page} · FinStats"
+  },
+  "components": {
+    "pct_watched": "已观看 {pct}",
+    "a_play": "播放",
+    "together_aria": {
+      "other": "{count} 人一起观看"
+    }
+  },
+  "menus": {
+    "open": "打开",
+    "timeline": "时间线",
+    "new_tab": "在新标签页中打开",
+    "copy_link": "复制链接",
+    "open_tmdb": "在 TMDB 上打开",
+    "open_tvdb": "在 TVDB 上打开",
+    "in_pipeline": "在待入库中查看",
+    "copy_title": "复制标题",
+    "actions_for": "{name} 的操作",
+    "actions": "操作"
+  },
+  "watchlist_toggle": {
+    "add": "加入待看清单",
+    "remove": "从待看清单移除",
+    "add_failed": "无法加入待看清单：{error}",
+    "remove_failed": "无法从待看清单移除：{error}",
+    "add_show": "将剧集加入待看清单",
+    "show_on": "剧集已在待看清单中",
+    "show_on_title": "剧集已在待看清单中。点击移除。",
+    "on": "已在待看清单中",
+    "on_title": "已在待看清单中。点击移除。",
+    "named": "{words}：{name}"
+  },
+  "pages": {
+    "activity": {
+      "sub": "FinStats 知道的每一次播放。最新的在前，或点击列名按该列排序",
+      "type": {
+        "movies": "电影",
+        "episodes": "单集",
+        "music": "音乐"
+      },
+      "play_method": "播放方式",
+      "all_methods": "所有方式",
+      "media_type": "媒体类型",
+      "all_types": "所有类型",
+      "recorded_by": "记录来源",
+      "all_trackers": "所有来源",
+      "search_placeholder": "搜索作品…",
+      "search_label": "搜索作品",
+      "one_series": "单部剧集",
+      "one_title": "单部作品",
+      "remove_title_filter": "移除作品筛选",
+      "empty": "没有符合这些筛选条件的播放。请尝试更长的时间范围，或清除搜索。",
+      "recently_deleted": "最近删除（{count}）",
+      "trash": {
+        "summary": {
+          "other": "回收站中有 {count} 次播放，每一次都会在删除 30 天后被永久删除"
+        },
+        "back": "返回所有播放",
+        "empty_title": "回收站是空的。",
+        "empty_body": "删除的播放会在这里保留 30 天，之后被永久删除。",
+        "restore": "恢复",
+        "restoring": "正在恢复…",
+        "restored": "已恢复《{title}》。",
+        "restore_failed": "无法恢复：{reason}",
+        "person": "用户",
+        "played": "播放时间",
+        "deleted": "删除时间",
+        "purge_at": "永久删除时间"
+      }
+    },
+    "playback": {
+      "sub": "媒体如何送达观众：播放方式、编解码器和客户端",
+      "methods_title": "播放方式",
+      "methods_sub": "直接播放原样传输文件；转码会消耗服务器的 CPU 或 GPU",
+      "measure": "度量",
+      "plays": "播放次数",
+      "share": "占比",
+      "reasons_title": "转码原因",
+      "reasons_sub": "由 Jellyfin 报告的原因",
+      "nothing_transcoded": "此时间范围内没有转码。",
+      "hw_title": "转码硬件",
+      "hw_sub": "使用的加速方式",
+      "software": "软件",
+      "clients_title": "客户端",
+      "clients_sub": "大家用来播放的应用",
+      "video_codecs": "视频编解码器",
+      "source_files": "源文件",
+      "resolutions": "分辨率",
+      "dynamic_range": "动态范围",
+      "audio_codecs": "音频编解码器",
+      "selected_audio": "所选音轨",
+      "audio_channels": "音频声道",
+      "containers": "容器",
+      "subtitles": "字幕",
+      "selected_subtitle": "所选字幕语言",
+      "off": "关闭",
+      "mono": "单声道",
+      "stereo": "立体声",
+      "channels": {
+        "other": "{count} 声道"
+      },
+      "channels_short": "{count} 声道",
+      "concurrency_title": "并发串流",
+      "per_day": "每日最多同时",
+      "per_week": "每周最多同时",
+      "peak_day": "每日最多同时 · 峰值 {peak}",
+      "peak_week": "每周最多同时 · 峰值 {peak}",
+      "peak_at_day": "每日最多同时 · 峰值 {peak}（{when}）",
+      "peak_at_week": "每周最多同时 · 峰值 {peak}（{when}）",
+      "peak_transcodes": {
+        "other": "最多同时 {count} 个转码"
+      },
+      "week_of": "{date} 所在周",
+      "week_of_head": "周",
+      "date": "日期",
+      "peak_streams": "串流峰值",
+      "peak_aria": "并发串流峰值",
+      "unit_stream": "个串流",
+      "unit_streams": "个串流",
+      "which_clients": "哪些客户端会转码",
+      "which_clients_sub": "每个客户端的播放次数，按播放方式划分",
+      "how_far": "大家看到了哪里",
+      "how_far_sub": "电影和单集，按播放停止的位置划分",
+      "no_video_plays": "此时间范围内没有电影或单集的播放。",
+      "completion": {
+        "under_10": "不到 10%",
+        "from_10": "10–50%",
+        "from_50": "50–90%",
+        "finished": "看完（90% 以上）"
+      },
+      "network": "网络",
+      "network_sub": "播放来自哪里",
+      "local": "本地",
+      "behaviour_title": "观看行为",
+      "based_on": {
+        "other": "基于 {count} 次实时记录的播放"
+      },
+      "pauses": "每次播放的暂停次数",
+      "skips": "每次播放的跳转次数",
+      "picked_up": "从中途接着看",
+      "broken_title": "从未成功播放的文件",
+      "broken_sub": "开始播放三次以上，但从未超过三十秒",
+      "tries": "尝试次数",
+      "people": "人数",
+      "apps": "应用",
+      "last_tried": "最后尝试",
+      "rewound_title": "回退最多",
+      "rewound_sub": "每次播放的向后跳转次数，仅统计 FinStats 自己记录的播放",
+      "rewinds": "回退次数",
+      "per_play": "每次播放",
+      "hot_spot": "热点位置",
+      "subtitled_title": "开启字幕",
+      "subtitled_sub": "在前十分钟内开启字幕的播放",
+      "switched_on": "开启次数",
+      "typically_at": "通常位置",
+      "reason": {
+        "ContainerNotSupported": "不支持该容器",
+        "VideoCodecNotSupported": "不支持该视频编解码器",
+        "AudioCodecNotSupported": "不支持该音频编解码器",
+        "SubtitleCodecNotSupported": "不支持该字幕编解码器",
+        "AudioIsExternal": "音频为外部文件",
+        "SecondaryAudioNotSupported": "不支持次要音频",
+        "VideoProfileNotSupported": "不支持该视频配置文件",
+        "VideoLevelNotSupported": "不支持该视频级别",
+        "VideoResolutionNotSupported": "不支持该视频分辨率",
+        "VideoBitDepthNotSupported": "不支持该视频位深度",
+        "VideoFramerateNotSupported": "不支持该视频帧率",
+        "RefFramesNotSupported": "不支持该参考帧数",
+        "AnamorphicVideoNotSupported": "不支持变形视频",
+        "InterlacedVideoNotSupported": "不支持隔行扫描视频",
+        "AudioChannelsNotSupported": "不支持该音频声道数",
+        "AudioProfileNotSupported": "不支持该音频配置文件",
+        "AudioSampleRateNotSupported": "不支持该音频采样率",
+        "AudioBitDepthNotSupported": "不支持该音频位深度",
+        "ContainerBitrateExceedsLimit": "容器比特率超出限制",
+        "VideoBitrateNotSupported": "不支持该视频比特率",
+        "AudioBitrateNotSupported": "不支持该音频比特率",
+        "UnknownVideoStreamInfo": "未知的视频流信息",
+        "UnknownAudioStreamInfo": "未知的音频流信息",
+        "DirectPlayError": "直接播放出错",
+        "VideoRangeTypeNotSupported": "不支持该视频动态范围类型",
+        "VideoCodecTagNotSupported": "不支持该视频编解码器标签",
+        "StreamCountExceedsLimit": "流数量超出限制"
+      }
+    },
+    "together": {
+      "sub": "谁和谁一起看，看了多少",
+      "empty_title": "还没有人一起看过",
+      "empty_body": "当不同的人同时播放同一内容时，就会显示在这里。",
+      "vs_previous": {
+        "other": "与之前 {count} 天相比"
+      },
+      "people": "人",
+      "watched_with": "一起观看的人",
+      "time_together": "一起观看时长",
+      "evenings": "夜晚",
+      "share_of_watch_time": "占观看时长的比例",
+      "spent_in_company": "与他人一起度过",
+      "over_time_title": "一起观看的变化",
+      "over_time_sub_day": "每天与他人一起和独自观看的小时数",
+      "over_time_sub_week": "每周与他人一起和独自观看的小时数",
+      "pairs_title": "谁和谁一起看",
+      "pairs_sub": "每一对，按一起观看的时长排列；三人共度的夜晚会计入其中的每一对",
+      "pair": "组合",
+      "last": "最近一次",
+      "watches_most": "最常看",
+      "most_title": "最常一起看的作品",
+      "recent_title": "最近的夜晚",
+      "people_title": "独自还是结伴",
+      "people_sub": "每个人在此时间范围内的观看时长，以及其中有多少是和别人一起",
+      "person": "用户",
+      "alone": "独自",
+      "share": "占比"
+    },
+    "security": {
+      "severity": {
+        "high": "高",
+        "medium": "中"
+      },
+      "kind": {
+        "impossible_travel": "不可能的旅行",
+        "new_country": "新的国家"
+      },
+      "km": "{distance} 公里",
+      "gap_seconds": "{count} 秒",
+      "gap_minutes": "{count} 分钟",
+      "travel_overlap": "同一时间相距 {distance}",
+      "travel_speed": "{gap}内移动 {distance}，即 {speed} km/h",
+      "home_place": "家（{place}）",
+      "home_tip": "家 · {place}",
+      "home": "家",
+      "note_placeholder": "在度假、用了 VPN、手机用的是移动数据…",
+      "resolve": "解决",
+      "resolve_more": "解决…",
+      "resolve_title": "解决警报",
+      "resolving": "正在解决…",
+      "resolve_all": "全部解决",
+      "resolve_help_travel": "{user}：{travel}。",
+      "resolve_help_country": "{user}：首次出现在 {country}。",
+      "note_label": "备注（可选）",
+      "mute_pair": "不再报告 {user} 在 {from} 和 {to} 之间的情况",
+      "show_on_map": "在地图上显示",
+      "reopen": "重新打开",
+      "reopening": "正在重新打开…",
+      "travel_text": "{from} → {to}：{travel}。",
+      "first_time": "首次出现在 {country}。",
+      "first_time_place": "首次出现在 {country}（{place}）。",
+      "known_before": {
+        "other": "此前已知：{count} 个国家。"
+      },
+      "side_before": "之前",
+      "side_then": "之后",
+      "side_seen": "出现",
+      "resolved_by": "由 {name} 于 {when}解决",
+      "someone": "某人",
+      "muted": "这对地点不再报告",
+      "which_alerts": "显示哪些警报",
+      "tab_open": "未处理",
+      "tab_open_count": "未处理（{count}）",
+      "tab_resolved": "已解决",
+      "tab_all": "全部",
+      "alerts_title": "警报",
+      "alerts_sub": "这只是值得查看的理由，绝不是证据：地点最多精确到城市中心，而 VPN 看起来就像一次旅行",
+      "alerts_empty_open": "没有需要查看的内容。不可能的旅行和首次出现在新国家的情况会显示在这里。",
+      "alerts_empty": "这里没有警报。",
+      "sign_ins": {
+        "other": "{count} 次登录"
+      },
+      "failed_sign_ins": {
+        "other": "{count} 次登录失败"
+      },
+      "addresses": {
+        "other": "{count} 个地址"
+      },
+      "last_seen_tip": "最后出现",
+      "last_attempt": "最后尝试",
+      "user_in_place": "{user} 在 {place}",
+      "user_playing_now": "{user} · 正在播放",
+      "close_place": "关闭地点详情",
+      "failed_summary": {
+        "other": "{count} 次登录失败，最近一次在 {when}。"
+      },
+      "open_server_log": "打开服务器日志",
+      "live_playing": "{user} 正在播放《{title}》。",
+      "live_playing_on": "{user} 正在 {device} 上播放《{title}》。",
+      "place_summary": "{plays}（{time}）。最后出现：{when}。",
+      "place_summary_sign_ins": "{plays}（{time}），{sign_ins}。最后出现：{when}。",
+      "place_summary_addresses": "{plays}（{time}），来自 {addresses}。最后出现：{when}。",
+      "place_summary_sign_ins_addresses": "{plays}（{time}），{sign_ins}，来自 {addresses}。最后出现：{when}。",
+      "col": {
+        "place": "地点",
+        "people": "人数",
+        "plays": "播放次数",
+        "sign_ins": "登录",
+        "last_seen": "最后出现",
+        "map": "地图"
+      },
+      "show_place_on_map": "在地图上显示 {place}",
+      "downloading": "正在下载…",
+      "download_failed": "下载失败。",
+      "download_database": "下载数据库（约 60 MB）",
+      "no_database_title": "还没有地理位置数据库",
+      "no_database_text": "地点来自 FinStats 在本地读取的城市数据库；任何地址都不会被发送到别处。可以在这里下载 DB-IP 的免费数据库，或者把任意 MaxMind 格式的城市数据库文件（.mmdb）放到数据目录的 geoip 文件夹中。“设置 → 安全”会让它保持最新。",
+      "tile": {
+        "open_alerts": "未处理的警报",
+        "waiting": "等待查看",
+        "all_clear": "一切正常",
+        "countries": "国家",
+        "places_away": "家以外的地点",
+        "failed_outside": "来自外部的登录失败"
+      },
+      "map_title": "大家从哪里观看",
+      "map_sub": "按地点显示播放、登录和正在进行的串流；家庭网络显示为一个点",
+      "map_sub_no_home": "按地点显示播放、登录和正在进行的串流。家还没有显示在地图上：FinStats 尚未获知此网络的公网地址",
+      "map_empty": "此时间范围内没有人从公网地址观看。",
+      "places_title": "地点",
+      "nothing_in_range": "此时间范围内没有内容。",
+      "countries_title": "国家",
+      "countries_sub": "按播放次数",
+      "database_built": "{kind}，构建于 {date}",
+      "addresses_without_place": {
+        "other": "{count} 个地址没有已知地点"
+      },
+      "map_outlines": "地图轮廓：Natural Earth",
+      "page_sub": "大家从哪里观看，以及哪些情况对不上"
+    },
+    "dashboard": {
+      "sub": "{server} 上的播放",
+      "sub_default": "你的 Jellyfin 服务器上的播放",
+      "recent": {
+        "title": "最近添加",
+        "sub": "媒体库中的最新内容",
+        "aria": "最近添加，最新的在前"
+      },
+      "downloads": {
+        "title": "正在下载",
+        "sub": "来自 Sonarr、Radarr 和你的下载客户端",
+        "all": "所有下载"
+      },
+      "coming": {
+        "title": "即将上线",
+        "sub": "Sonarr 和 Radarr 中接下来的七天",
+        "calendar": "日历",
+        "aria": "即将上线，最近的在前"
+      },
+      "empty": {
+        "title": "还没有记录到播放",
+        "manager": "FinStats 现在正在关注你的 Jellyfin 服务器。新的播放会实时显示在这里。你也可以从 Jellystat 或 Streamystats 导入已有的历史记录。",
+        "viewer": "你的播放会实时显示在这里。",
+        "import_jellystat": "从 Jellystat 导入",
+        "import_streamystats": "从 Streamystats 导入"
+      },
+      "top": {
+        "series": "热门剧集",
+        "movies": "热门电影",
+        "users": "活跃用户",
+        "music": "热门音乐",
+        "no_music": "此时间范围内没有播放音乐。"
+      },
+      "recent_activity": "最近活动",
+      "view_all": "查看全部",
+      "arrived": {
+        "Movie": "电影",
+        "MusicAlbum": "专辑",
+        "MusicVideo": "音乐视频",
+        "Video": "视频",
+        "Book": "书籍",
+        "AudioBook": "有声书",
+        "episode_number": "第 {number} 集"
+      }
+    },
+    "item": {
+      "page_title": "作品",
+      "community_rating": "社区评分",
+      "runtime": "片长",
+      "not_in_library": "已不在媒体库中",
+      "in_library": "位于 {library}",
+      "in_library_added": "位于 {library} · {when}添加",
+      "library_fallback": "媒体库",
+      "container": "容器",
+      "size": "大小",
+      "bitrate": "比特率",
+      "bit_depth": "位深度",
+      "bits": "{bits} 位",
+      "frame_rate": "帧率",
+      "fps": "{fps} fps",
+      "path": "路径",
+      "plays": "播放次数",
+      "last_when": "最近一次：{when}",
+      "never_played": "从未播放",
+      "watched_by": "观看者",
+      "plays_over_time": "播放次数变化",
+      "seasons": "季",
+      "seasons_sub": "此时间范围内每集的播放次数",
+      "recent_plays": "最近播放",
+      "view_all": "查看全部",
+      "file": "文件",
+      "stop_measured": "{measured} 精确测得，{estimated} 根据观看时长估算",
+      "stop_skips": "短于 20 秒的跳转不会被记录",
+      "where_people_stop": "大家在哪里停下",
+      "who_keeps_watching": "谁一直在看",
+      "who_keeps_watching_sub": "依次开始观看每一集的人",
+      "viewers_n": {
+        "other": "{count} 位观众"
+      },
+      "viewers_per_episode": "每集观众数",
+      "episode": "单集",
+      "viewers_head": "观众",
+      "next_episodes": "接下来的剧集",
+      "coming_releases": "即将发布",
+      "from_arr": "来自 Sonarr 和 Radarr",
+      "of_episodes": {
+        "other": "{seen} / {count} 集"
+      },
+      "n_more": "还有 {count} 个",
+      "by_episode": "按集",
+      "audio": "音频",
+      "subtitles": "字幕",
+      "in_all_episodes": "全部 {total} 集都有",
+      "in_some": "部分剧集有",
+      "in_some_of": "{total} 集中的部分剧集有",
+      "of_total": "{seen} / {total}",
+      "languages": "语言",
+      "across_episodes": "磁盘上的 {total} 集",
+      "tracks_in_file": "文件中的轨道",
+      "cast": "演职人员",
+      "new_tab": "（在新标签页中打开）",
+      "marked_played": "在 Jellyfin 中标记为已播放",
+      "marked_played_sub": "Jellyfin 自己的标记，包括使用 FinStats 之前的历史",
+      "last_played": "最后播放",
+      "favourite": "收藏",
+      "unknown_user": "未知用户",
+      "nobody_played": "所选时间范围内没有人播放过此内容。",
+      "season_n": "第 {number} 季",
+      "season_meta": "{episodes} 集 · {plays}",
+      "share": "占比",
+      "finished": "看完",
+      "finished_title": {
+        "other": "{count} 次播放中有 {finished} 次看到了该集的 90%"
+      }
+    },
+    "libraries": {
+      "kind": {
+        "movies": "电影",
+        "tvshows": "剧集",
+        "music": "音乐",
+        "musicvideos": "音乐视频",
+        "homevideos": "家庭视频",
+        "books": "书籍",
+        "boxsets": "合集",
+        "mixed": "混合"
+      },
+      "library": "媒体库",
+      "series": {
+        "other": "{count} 部剧集"
+      },
+      "items": {
+        "other": "{count} 个项目"
+      },
+      "empty_title": "还没有媒体库",
+      "empty_sub": "媒体库会在首次与 Jellyfin 同步后出现。你可以在“设置 → 任务”中开始同步。",
+      "removed": "已从 Jellyfin 中删除",
+      "plays": "播放次数",
+      "last_played": "最后播放",
+      "never": "从未",
+      "sub": "服务器上有什么，以及其中有多少被观看",
+      "most_watched": "观看最多",
+      "by_watch_time": "按观看时长",
+      "recently_added": "最近添加",
+      "everything_in_it": "全部内容",
+      "health": "媒体库健康",
+      "health_line": "{things}：{kinds}。",
+      "things_to_look_at": {
+        "other": "{count} 个需要查看的问题"
+      },
+      "nothing_added": "还没有添加任何内容。",
+      "added": "{when}添加",
+      "title_kind": {
+        "Movie": "电影",
+        "Series": "剧集",
+        "MusicAlbum": "专辑",
+        "MusicVideo": "音乐视频",
+        "Video": "视频",
+        "Book": "书籍",
+        "AudioBook": "有声书"
+      },
+      "sort": {
+        "name": "名称",
+        "year": "年份",
+        "added": "添加时间",
+        "size": "大小"
+      },
+      "everything_in": "{name} 中的全部内容",
+      "find_title": "查找作品…",
+      "find_title_aria": "在此媒体库中查找作品",
+      "sort_by": "排序方式",
+      "kind_label": "类型",
+      "all": "全部",
+      "no_match_title": "没有匹配项",
+      "no_match_sub": "此媒体库中没有包含你输入的所有词语的作品。",
+      "nothing_here_title": "这里还没有内容",
+      "nothing_here_sub": "FinStats 读取媒体库后，作品会显示在这里。",
+      "show_more": "显示更多",
+      "show_n_more": "再显示 {count} 个"
+    },
+    "users": {
+      "empty_title": "还没有用户",
+      "empty_sub": "用户会在首次与 Jellyfin 同步后出现。",
+      "plays": "播放次数",
+      "last_played": "最后播放",
+      "last_title": "最后的作品",
+      "last_client": "最后的客户端",
+      "last_seen_jellyfin": "最后出现在 Jellyfin",
+      "admin": "管理员",
+      "disabled": "已禁用",
+      "removed_chip": "已从 Jellyfin 中删除",
+      "never": "从未",
+      "sub": "在你的 Jellyfin 服务器上拥有账户的所有人",
+      "tabs_label": "资料分区",
+      "tab_overview": "概览",
+      "tab_timeline": "时间线",
+      "page_title": "用户",
+      "coming_up": "即将播出",
+      "coming_up_sub": "此人观看的剧集在接下来 30 天内的新剧集",
+      "calendar": "日历",
+      "open_recap": "打开年度回顾",
+      "role_user": "用户",
+      "disabled_lower": "已禁用",
+      "removed": "已从 Jellyfin 中删除",
+      "last_seen": "最后出现：{when}",
+      "different_titles": {
+        "other": "{count} 部不同的作品"
+      },
+      "movies": "电影",
+      "plays_hint": "次播放",
+      "episodes": "单集",
+      "and_music_plays": {
+        "other": "以及 {count} 次音乐播放"
+      },
+      "top_series": "热门剧集",
+      "top_movies": "热门电影",
+      "by_watch_time": "按观看时长",
+      "when_watches": "{name} 的观看时段",
+      "play_methods": "播放方式",
+      "share_of_plays": "播放占比",
+      "clients": "客户端",
+      "by_plays": "按播放次数",
+      "devices": "设备",
+      "ip_addresses": "IP 地址",
+      "ip_addresses_sub": "此用户从哪些地方播放过",
+      "recent_plays": "最近播放",
+      "view_all": "查看全部",
+      "in_jellyfin": "在 Jellyfin 中",
+      "movies_played": "已播放的电影",
+      "episodes_played": "已播放的单集",
+      "favourites": "收藏",
+      "jellyfin_note": "来自 Jellyfin 的已播放标记，包括使用 FinStats 之前的历史。",
+      "no_devices": "此时间范围内没有设备。",
+      "device": "设备",
+      "version": "版本",
+      "last_used": "最后使用",
+      "no_ips": "此时间范围内没有记录到 IP 地址。",
+      "network": "网络",
+      "first_seen": "首次出现",
+      "last_seen_head": "最后出现",
+      "local": "本地",
+      "remote": "远程"
+    },
+    "person": {
+      "page_title": "人物",
+      "titles_in_library": {
+        "other": "媒体库中有 {count} 部作品"
+      },
+      "watch_time_hint": "其参与的所有作品合计",
+      "plays": "播放次数",
+      "last_when": "最近一次：{when}",
+      "never_played": "从未播放",
+      "titles_watched": "看过的作品",
+      "of_total": "{seen} / {total}",
+      "watched": "已观看",
+      "watched_sub": "此时间范围内，观看最多的在前",
+      "nothing_played": "所选时间范围内没有播放过此人参与的作品。",
+      "also_in_library": "媒体库中的其他作品",
+      "not_played": "此时间范围内未播放",
+      "watched_by": "观看者",
+      "director_as": "导演 · 饰 {role}",
+      "director_actor": "导演 · 演员",
+      "as_role": "饰 {role}",
+      "not_in_library": "已不在媒体库中",
+      "last_played": "最后播放"
+    },
+    "showprogress": {
+      "longest_streak": "最长连续天数",
+      "days": {
+        "other": "{count} 天"
+      },
+      "no_plays_yet": "还没有播放",
+      "current_streak": "当前连续天数",
+      "nothing_today": "今天和昨天都没有播放",
+      "since": "自 {day} 起",
+      "since_keep": "自 {day} 起 · 今天播放点什么就能保持",
+      "days_with_play": "有播放的天数",
+      "all_time": "全部时间",
+      "source": {
+        "played": "已观看",
+        "jellyfin": "在 Jellyfin 中标记为已播放",
+        "manual": "由你标记"
+      },
+      "seen": "已看",
+      "seen_how": "已看（{how}）",
+      "episodes_seen": {
+        "other": "已看 {seen} / {count} 集"
+      },
+      "started": "已开始，未看完",
+      "not_seen": "未看",
+      "click_unmark": "{title}。点击取消标记。",
+      "click_mark": "{title}。点击标记为已看。",
+      "couldnt_save": "无法保存：{error}",
+      "not_in_library": "已不在媒体库中",
+      "undo_marks": "撤销我的标记",
+      "season_n": "第 {number} 季",
+      "mark_season": "将整季标记为已看",
+      "mark_show": "将整部剧集标记为已看",
+      "marks_help": "点击某一集即可标记。标记只保存在 FinStats 中，从不更改 Jellyfin 中的任何内容。",
+      "no_shows": "还没有剧集。",
+      "no_shows_sub": "剧集中有内容被播放后，单集就会显示在这里。",
+      "no_finished": "还没有看完的剧集。",
+      "nothing_in_progress": "没有在看的剧集。开始看的都已看完。",
+      "show_all": "显示全部 {count} 部",
+      "shows": "剧集",
+      "shows_sub": "已看的单集，占服务器上所有单集的比例。全部时间。",
+      "which_shows": "显示哪些剧集",
+      "in_progress_n": "在看 · {count}",
+      "finished_n": "已看完 · {count}",
+      "all": "全部"
+    },
+    "watchlist": {
+      "group": {
+        "started": "已开始",
+        "on_server": "已在服务器上",
+        "coming_up": "即将上线",
+        "requested": "已请求",
+        "not_on_server": "不在服务器上",
+        "left_library": "已离开媒体库",
+        "watched": "已观看"
+      },
+      "state": {
+        "all_watched": {
+          "other": "全部 {count} 集已观看"
+        },
+        "progress": {
+          "other": "{seen} / {count} 集"
+        },
+        "requested_by_you": "由你请求",
+        "requested_by": "由 {name} 请求",
+        "coming_today": "今天上线",
+        "coming_tomorrow": "明天上线",
+        "coming_on": "{day}上线"
+      },
+      "empty_title": "待看清单中还没有内容",
+      "empty_sub": "可以在电影或剧集的页面、即将上线、最近添加或搜索中添加。",
+      "page_title": "{name} · 待看清单",
+      "sub": "想看的电影和剧集，最新加入的在前。只有你能看到这个清单。",
+      "remove_aria": "从待看清单中移除《{title}》",
+      "remove": "从待看清单移除",
+      "kind_show": "剧集",
+      "kind_film": "电影"
+    },
+    "timeline": {
+      "page_title": "时间线",
+      "empty_title": "这里还没有内容",
+      "empty_picked": "你选择的媒体库中没有播放。",
+      "empty_sub": "一旦有内容被观看，播放就会显示在这里。",
+      "title_of": "{name} · 时间线",
+      "sub": "看过的所有内容，最新的在前",
+      "show_all": "显示全部",
+      "show_older": "显示更早的",
+      "history_starts": "历史记录从这里开始。",
+      "episode_n": "第 {number} 集",
+      "episodes_range": "第 {from}–{to} 集",
+      "movie": "电影",
+      "movie_sittings": {
+        "other": "电影 · 分 {count} 次看完"
+      }
+    },
+    "recap": {
+      "this_server": "此服务器",
+      "this_user": "此用户",
+      "unknown_title": "未知作品",
+      "unknown_show": "未知剧集",
+      "bars_aria": "{label}。使用左右方向键查看数值。",
+      "period": "时间段",
+      "last_12_months": "过去 12 个月",
+      "this_period": "此时间段",
+      "twelve_months": "12 个月",
+      "nothing_played": "没有播放",
+      "nothing": "无",
+      "wave_caption": "每周一根柱。最高的一周：{week}，共 {time}。",
+      "eyebrow_year": "年度回顾",
+      "hero_title_year": {
+        "you": "重温你的 {year} 年",
+        "user": "重温 {name} 的 {year} 年",
+        "server": "重温此服务器的 {year} 年"
+      },
+      "hero_title_last12": {
+        "you": "重温你过去的 {months}",
+        "user": "重温 {name} 过去的 {months}",
+        "server": "重温此服务器过去的 {months}"
+      },
+      "hours": {
+        "other": "{count} 小时"
+      },
+      "hero_line": "共 {hours}，{plays}，{titles}。",
+      "rank": {
+        "other": "在 {count} 位观众中排第 {position}"
+      },
+      "rank_share": {
+        "other": "在 {count} 位观众中排第 {position} · 占全部观看的 {share}"
+      },
+      "numbers_eyebrow": "数字",
+      "numbers_title": {
+        "you": "用{numbers}看你的这一年",
+        "user": "用{numbers}看 {name} 的这一年",
+        "server": "用{numbers}看此服务器的这一年"
+      },
+      "numbers_word": "数字",
+      "numbers_lead": {
+        "you": "你按了 {times}播放，看了 {titles}",
+        "user": "{name} 按了 {times}播放，看了 {titles}",
+        "server": "{name}按了 {times}播放，看了 {titles}"
+      },
+      "times": {
+        "other": "{count} 次"
+      },
+      "different_titles": {
+        "other": "{count} 部不同的作品"
+      },
+      "numbers_days": {
+        "other": "，相当于不间断地看了 {count} 天。"
+      },
+      "plays_label": "播放",
+      "tile_titles": "不同的作品",
+      "tile_days": "观看天数",
+      "tile_streak": "最长连续天数",
+      "tile_rewatches": "重看",
+      "rewatch_you": {
+        "other": "{count} 次观看的是你已经看过的内容"
+      },
+      "rewatch_other": {
+        "other": "{count} 次观看的是已经看过的内容"
+      },
+      "episodes_label": "单集",
+      "movies_label": "电影",
+      "music_label": "音乐",
+      "made_of": "这一年由什么组成",
+      "genres": "类型",
+      "genre": "类型",
+      "genres_title": {
+        "you": "你是“{genre}”迷",
+        "user": "{name} 是“{genre}”迷",
+        "server": "{name}是“{genre}”迷"
+      },
+      "genres_title_an": {
+        "you": "你是“{genre}”迷",
+        "user": "{name} 是“{genre}”迷",
+        "server": "{name}是“{genre}”迷"
+      },
+      "genres_lead": "“{genre}”以 {time}、{plays}领先",
+      "genres_close": "，“{genre}”紧随其后。",
+      "stat_was": "属于“{genre}”",
+      "genres_note": "一部作品会计入它的每一个类型，剧集按单集计算。",
+      "people": "看得最多的人物",
+      "people_mark": "演职人员",
+      "tab_actors": "演员",
+      "tab_directors": "导演",
+      "who": "人物",
+      "actor_title": "{person} 无处不在",
+      "director_title": "{person} 执导最多",
+      "actor_lead": "在 {titles}中出镜 {time}",
+      "director_lead": "执导的 {titles}共看了 {time}",
+      "people_most": "，大部分在《{title}》中。",
+      "persona_eyebrow": "观看性格",
+      "persona_title": {
+        "you": "你是{persona}",
+        "user": "{name} 是{persona}",
+        "server": "{name}是{persona}"
+      },
+      "persona": {
+        "name": {
+          "night_owl": "夜猫子",
+          "early_bird": "早起鸟",
+          "music_lover": "音乐迷",
+          "weekend_warrior": "周末战士",
+          "binge_watcher": "追剧狂",
+          "movie_buff": "电影迷",
+          "creature_of_habit": "规律达人"
+        },
+        "article": {
+          "night_owl": "{persona}",
+          "early_bird": "{persona}",
+          "music_lover": "{persona}",
+          "weekend_warrior": "{persona}",
+          "binge_watcher": "{persona}",
+          "movie_buff": "{persona}",
+          "creature_of_habit": "{persona}",
+          "other": "{persona}",
+          "other_an": "{persona}"
+        }
+      },
+      "rhythm": "观看规律",
+      "rhythm_mark": "时段",
+      "tab_hours": "小时",
+      "tab_days": "星期",
+      "tab_months": "月份",
+      "rhythm_by": "观看时长显示方式",
+      "hours_title": {
+        "you": "{hour} 是你的黄金时段",
+        "user": "{hour} 是 {name} 的黄金时段",
+        "server": "{hour} 是此服务器的黄金时段"
+      },
+      "hours_lead": "有 {time}的观看在 {from} 到 {to} 之间开始",
+      "hours_share": "，占全部的 {pct}，集中在一天中的一个小时里。",
+      "hours_aria": "按小时划分的观看时长",
+      "head_hour": "小时",
+      "days_title_crown": "{weekday}夺冠",
+      "days_lead": "有 {time}的观看落在{weekday}",
+      "days_over": "，比平均每天多 {pct}。",
+      "weekday_aria": "按星期划分的观看时长",
+      "head_weekday": "星期",
+      "month_mostly": "主要是《{title}》",
+      "month_title": "{month}看得最多",
+      "month_lead": "一个月内看了 {time}",
+      "month_most": "，大部分是《{title}》。",
+      "month_aria": "每月观看时长",
+      "head_month": "月份",
+      "month_caption": "每月观看最多的作品",
+      "heat_aria": {
+        "other": "每天的观看时长：有播放的天数为 {count} 天。使用方向键查看某一天。"
+      },
+      "less": "少",
+      "more": "多",
+      "heat_live": "{day}：{time}，{plays}",
+      "heat_live_none": "{day}：没有播放",
+      "days_eyebrow": {
+        "you": "你这一年的每一天",
+        "user": "{name} 这一年的每一天",
+        "server": "此服务器这一年的每一天"
+      },
+      "days_mark": "日子",
+      "days_on": {
+        "other": "{count} 天有内容在播放"
+      },
+      "streak_lead": {
+        "you": "你最长连续观看了 {days}，{range}",
+        "user": "{name} 最长连续观看了 {days}，{range}",
+        "server": "此服务器最长连续观看了 {days}，{range}"
+      },
+      "streak_days": {
+        "other": "{count} 天"
+      },
+      "biggest_tail": "。观看最多的一天是 {day}，共 {time}。",
+      "biggest_lead": "观看最多的一天是 {day}",
+      "biggest_lead_tail": "，一口气看了 {time}。",
+      "records": "纪录",
+      "records_title_you": "你会{word}的日子",
+      "remember": "记住",
+      "records_title_other": "{word}的日子",
+      "stood_out": "格外突出",
+      "biggest_day": "最忙的一天",
+      "biggest_binge": "最长的连看",
+      "binge_context": "{day}，《{show}》",
+      "one_show": "一部剧集",
+      "longest_streak": "最长连续天数",
+      "in_a_row": {
+        "other": "连续 {count} 天"
+      },
+      "longest_play": "最长的单次播放",
+      "most_rewatched": "重看最多",
+      "first_play_year": "年度第一次播放",
+      "first_play_period": "此时间段第一次播放",
+      "first_play_at": "{day} {time}",
+      "oldest_title": "最老的作品",
+      "from_year": "{year} 年",
+      "discovery": "新发现",
+      "discovery_mark": "新",
+      "discovery_title": {
+        "you": "{shows}，你此前从未看过",
+        "user": "{shows}，{name} 此前从未看过",
+        "server": "{shows}，{name}此前从未看过"
+      },
+      "seen_end": "看到{end}",
+      "end": "最后",
+      "shows_started": "开始看的剧集",
+      "movies_finished": "看完的电影",
+      "episodes_finished": "看完的单集",
+      "one_and_done": "看一集就停",
+      "one_and_done_note": "只看了一集、从没看第二集的剧集。",
+      "together_mark": "结伴",
+      "together_title": "{evenings}与人结伴",
+      "evenings": {
+        "other": "{count} 个夜晚"
+      },
+      "together_lead": "与他人一起观看了 {hours}",
+      "together_share": {
+        "you": "，占你观看时长的 {pct}。",
+        "user": "，占 {name} 观看时长的 {pct}。",
+        "server": "，占此服务器观看时长的 {pct}。"
+      },
+      "watched_with": {
+        "you": "你和谁一起看",
+        "user": "{name} 和谁一起看",
+        "server": "{name}和谁一起看"
+      },
+      "together_top": "最常让大家聚在一起的作品",
+      "people_in_company": {
+        "other": "今年有 {count} 人与他人结伴观看。"
+      },
+      "finished": "看完",
+      "finished_mark": "完成",
+      "finished_title": "看完了 {shows}",
+      "left_title": "留待{later}",
+      "later": "以后",
+      "left_for_later": "留待以后",
+      "dropped_note": "今年开始看，看了不到一半，并且两个月没有再看。",
+      "seen_of": {
+        "other": "{seen} / {count} 集"
+      },
+      "asked": "请求",
+      "asked_mark": "心愿",
+      "asked_title": {
+        "you": "你提出了 {requests}",
+        "user": "{name} 提出了 {requests}",
+        "server": "共提出了 {requests}"
+      },
+      "requests": {
+        "other": "{count} 个请求"
+      },
+      "arrived": "已上线",
+      "watched_after": "上线后观看",
+      "versus_eyebrow": "与 {year} 年对比",
+      "versus_mark": "对比",
+      "versus_more": "多 {pct}",
+      "versus_less": "少 {pct}",
+      "versus_title": "比 {year} 年{change}",
+      "hours_in": "{year} 年的小时数",
+      "plays_in": "{year} 年的播放次数",
+      "card": {
+        "year": "这一年",
+        "numbers": "数字",
+        "shows": "热门剧集",
+        "films": "热门电影",
+        "music": "热门音乐",
+        "genres": "类型",
+        "persona": "观看性格",
+        "rhythm": "时段与星期",
+        "days": "每一天",
+        "records": "纪录",
+        "together": "结伴",
+        "finished": "看完的剧集",
+        "asked": "请求",
+        "versus": "与上一年对比"
+      },
+      "card_alt": "{card}卡片",
+      "cards_help": "每一章都是一张图片，采用手机快拍的尺寸。卡片上从不出现其他人的名字。",
+      "download": "下载",
+      "download_all": "下载所有卡片",
+      "cards_title": "这一年的卡片",
+      "clients_eyebrow": {
+        "you": "你如何观看",
+        "user": "{name} 如何观看",
+        "server": "{name}如何观看"
+      },
+      "clients_mark": "屏幕",
+      "clients_title": "主要在 {app} 上",
+      "of_plays": "占播放的 {pct}",
+      "credit": {
+        "starring": "主演",
+        "feature": "正片",
+        "with": "联合主演",
+        "directed": "导演",
+        "soundtrack": "原声",
+        "genre": "类型",
+        "screened": "放映于",
+        "running": "片长"
+      },
+      "credits": "演职员表",
+      "roll_credits": "滚动片尾字幕",
+      "that_was": "这就是 {year} 年",
+      "that_was_last12": "这就是过去的 {months}",
+      "outro_line": {
+        "you": "从现在起你看的每一部，都已经在为下一次回顾计数。",
+        "user": "从现在起 {name} 看的每一部，都已经在为下一次回顾计数。",
+        "server": "从现在起{name}看的每一部，都已经在为下一次回顾计数。"
+      },
+      "see_activity": "查看所有活动",
+      "profile": {
+        "you": "你的资料",
+        "user": "{name} 的资料",
+        "server": "此服务器的资料"
+      },
+      "top_shows": "热门剧集",
+      "shows_mark": "剧集",
+      "shows_title": {
+        "you": "《{title}》统治了你的这一年",
+        "user": "《{title}》统治了 {name} 的这一年",
+        "server": "《{title}》统治了此服务器的这一年"
+      },
+      "shows_lead": "共看了 {hours}",
+      "shows_lead_episodes": "共看了 {hours}，{episodes}",
+      "shows_more": "，超过其他任何剧集。",
+      "top_movies": "热门电影",
+      "movies_mark": "电影",
+      "movies_title": {
+        "you": "你的年度电影：《{title}》",
+        "user": "{name} 的年度电影：《{title}》",
+        "server": "此服务器的年度电影：《{title}》"
+      },
+      "movies_lead": "共 {time}",
+      "movies_back": {
+        "you": {
+          "other": "。你又回来看了 {count} 次。"
+        },
+        "user": {
+          "other": "。{name} 又回来看了 {count} 次。"
+        },
+        "server": {
+          "other": "。{name}又回来看了 {count} 次。"
+        }
+      },
+      "top_tracks": "热门曲目",
+      "tracks_mark": "循环",
+      "tracks_title": "{repeat}播放",
+      "repeat": "单曲循环",
+      "my_recap": "我的年度回顾",
+      "whose_recap": "谁的年度回顾",
+      "whose_year": "谁的一年",
+      "a_person": "某个人",
+      "title_period": "{period} 年度回顾",
+      "empty_last12": "过去 12 个月没有任何播放。",
+      "empty_period": "{period} 年没有任何播放。",
+      "empty_sub": {
+        "you": "你在这个时间段没有播放任何内容。请在上方选择其他时间段。",
+        "user": "{name} 在这个时间段没有播放任何内容。请在上方选择其他时间段。",
+        "server": "{name}在这个时间段没有播放任何内容。请在上方选择其他时间段。"
+      },
+      "share": "以卡片分享这一年",
+      "banner": "你的 {year} 年度回顾已就绪",
+      "full_stop": "。"
+    },
+    "changelog": {
+      "sub": "FinStats 的变化，最新的在前",
+      "empty_title": "还没有更新日志。",
+      "empty_sub": "此版本构建时未包含更新日志。",
+      "running": "当前运行",
+      "releases": {
+        "other": "{count} 个版本"
+      },
+      "versions": "版本"
+    },
+    "health": {
+      "kind": {
+        "gap": {
+          "label": "缺集",
+          "what": "一季中两个文件之间缺少的单集"
+        },
+        "season_drift": {
+          "label": "不一致的季",
+          "what": "某一季的分辨率、动态范围或编解码器与其他季不同"
+        },
+        "episode_drift": {
+          "label": "异常单集",
+          "what": "与同季其他文件不同的文件"
+        },
+        "copies": {
+          "label": "副本",
+          "what": "同一内容以相同分辨率存了两份"
+        },
+        "versions": {
+          "label": "多版本",
+          "what": "同一作品以不止一种分辨率保存"
+        },
+        "thin": {
+          "label": "低码率文件",
+          "what": "比特率远低于该分辨率的常见水平"
+        },
+        "dub": {
+          "label": "中断的配音",
+          "what": "某种语言有的季有、有的季没有"
+        },
+        "unidentified": {
+          "label": "从未识别",
+          "what": "没有匹配到任何 TMDB、TVDB 或 IMDb ID"
+        }
+      },
+      "words": {
+        "season": "第 {list} 季",
+        "seasons": "第 {list} 季",
+        "gap_one": "第 {season} 季：{from} 和 {to} 之间缺少第 {episodes} 集",
+        "gap_many": "第 {season} 季：{from} 和 {to} 之间缺少第 {episodes} 集",
+        "season_is": "第 {list} 季为 {value}",
+        "seasons_are": "第 {list} 季为 {value}",
+        "the_rest": "{odd}，其余为 {usual}",
+        "episode_drift": "{code} 为 {value}，第 {season} 季其余为 {usual}",
+        "copies_files": {
+          "other": "{resolutions} 有 {count} 份副本，重复占用 {size}"
+        },
+        "copies_episodes": {
+          "other": "{count} 集存在多份，重复占用 {size}"
+        },
+        "versions_files": "以 {resolutions} 保存",
+        "versions_episodes": {
+          "other": "{count} 集以 {resolutions} 保存"
+        },
+        "thin_file": "{look}，{rate}；类似文件通常超过 {usual}",
+        "thin_season": {
+          "other": "第 {season} 季：{count} 集中有 {files} 集为 {rate}，{look}；类似文件通常超过 {usual}"
+        },
+        "dub": "{full}有{language}，{none}没有",
+        "dub_partial": "第 {season} 季的 {of} 集中只有 {episodes} 集有",
+        "unidentified_show": "Jellyfin 没有将此剧集匹配到任何资料库，因此依靠 TMDB、TVDB 或 IMDb ID 的工具都无法识别它",
+        "unidentified_film": "Jellyfin 没有将此电影匹配到任何资料库，因此依靠 TMDB、TVDB 或 IMDb ID 的工具都无法识别它"
+      },
+      "facts": {
+        "resolution": "分辨率",
+        "size": "大小",
+        "library": "媒体库",
+        "path": "路径"
+      },
+      "more_episodes": {
+        "other": "还有 {count} 集"
+      },
+      "dismiss": {
+        "note_placeholder": "为什么没问题，留给下一个查看的人",
+        "dismiss": "忽略",
+        "note": "备注（可选）",
+        "comes_back_capacity": "如果它所依据的情况发生变化，会自动重新出现。",
+        "comes_back": "如果相关文件发生变化，会自动重新出现。",
+        "title": "忽略问题",
+        "dismissing": "正在忽略…"
+      },
+      "bringing_back": "正在恢复…",
+      "couldnt_bring_back": "无法恢复：{error}",
+      "show_every_kind": "显示所有类型",
+      "show_only": "只显示{kind}",
+      "kept_twice_size": "重复占用 {size}",
+      "all_libraries": "所有媒体库",
+      "unlisted_library": "Jellyfin 已不再列出的媒体库",
+      "this_library_empty": "此媒体库（没有需要查看的问题）",
+      "back_to_open": "返回待查看的问题",
+      "set_aside_count": "已搁置（{count}）",
+      "col": {
+        "what": "内容",
+        "kept_twice": "重复占用",
+        "found": "发现时间"
+      },
+      "removed_library": "已删除的媒体库",
+      "not_in_jellyfin": "已不在 Jellyfin 中",
+      "set_aside_when": "{when}搁置",
+      "set_aside_by": "由 {name} 于 {when}搁置",
+      "bring_back": "恢复",
+      "dismiss_button": "忽略…",
+      "empty": {
+        "not_yet_title": "尚未分析",
+        "not_yet": "FinStats 会在下一次读取媒体库后检查媒体库，并在每次查看元数据变更后再次检查。打开此页面时不会进行任何分析。",
+        "aside_title": "没有搁置的问题",
+        "aside_filtered": "这里没有被忽略的此类问题。",
+        "aside": "被忽略的问题会留在这里，直到有人恢复它，或其文件发生变化。",
+        "filtered_title": "这里什么都没有",
+        "clean_title": "没有需要查看的问题",
+        "filtered": "媒体库的这一部分没有发现此类问题。",
+        "clean": "没有缺集，没有副本，没有码率过低的文件，每一季都一致。"
+      },
+      "count_aside": {
+        "other": "已搁置 {count} 个问题"
+      },
+      "count_open": {
+        "other": "{count} 个待查看的问题"
+      },
+      "thin_note": "Jellyfin 只把一个项目的第一个版本提供给 FinStats 读取，因此有多个版本的项目按第一个版本判断。"
+    },
+    "pipeline": {
+      "tabs": {
+        "requests": { "label": "请求", "sub": "谁请求了什么，花了多长时间，以及后来有没有人看" },
+        "upcoming": { "label": "即将上线", "sub": "Sonarr 和 Radarr 预计的内容，以及谁在等待" },
+        "downloads": { "label": "下载", "sub": "正在到来的内容" }
+      },
+      "days": {
+        "other": "{count} 天"
+      },
+      "a_year": "一年",
+      "sections_aria": "待入库分区",
+      "state": {
+        "pending": "等待批准",
+        "approved": "已批准",
+        "processing": "处理中",
+        "partial": "部分可用",
+        "available": "可用",
+        "declined": "已拒绝",
+        "failed": "失败",
+        "removed": "已从 Seerr 移除"
+      },
+      "status": {
+        "all": "全部",
+        "open": "未完成",
+        "arrived": "可用",
+        "declined": "已拒绝"
+      },
+      "seasons": {
+        "every": "所有季",
+        "one": "第 {season} 季",
+        "run": "第 {first}–{last} 季"
+      },
+      "unknown_title": "未知作品",
+      "col": {
+        "title": "标题",
+        "asked_by": "请求者",
+        "asked": "请求时间",
+        "state": "状态",
+        "took": "耗时",
+        "watched": "已观看"
+      },
+      "unlinked_user": "Seerr 没有说明这是哪位 Jellyfin 用户",
+      "watched": {
+        "by_them": "请求者已看",
+        "yes": "是",
+        "by_someone_else": "他人已看",
+        "not_yet": "还没有"
+      },
+      "requests_empty_filtered": "没有符合这些筛选条件的请求",
+      "requests_empty": "还没有请求",
+      "requests_empty_sub": "有人在 Seerr 中提出请求后，几分钟内就会显示在这里。",
+      "tile": {
+        "titles": "被请求的作品",
+        "requests_in_all": {
+          "other": "共 {count} 个请求"
+        },
+        "waiting": "仍在等待",
+        "not_here_yet": "尚未可用",
+        "nothing_outstanding": "没有未完成的请求",
+        "typical_wait": "通常等待时间",
+        "typical_wait_hint": "从请求到可用的中位数",
+        "watched_after": "可用后被观看",
+        "watched_after_hint": "{arrived} 个可用的作品中有 {watched} 个"
+      },
+      "trend": {
+        "title": "一个请求需要多久",
+        "sub": "从请求到可用的中位小时数，按请求所在月份划分",
+        "hours": {
+          "other": "{count} 小时"
+        },
+        "aria": "每月可用所需的中位小时数",
+        "month": "月份",
+        "hours_to_arrive": "可用所需小时数"
+      },
+      "never": {
+        "title": "已可用，从未播放",
+        "sub": "已上线超过两周，却没有人看过",
+        "here_since": "上线时间"
+      },
+      "people": {
+        "title": "谁请求了什么",
+        "sub": "请求的作品，以及之后有多少被观看",
+        "person": "用户",
+        "asked_for": "请求数",
+        "arrived": "已可用"
+      },
+      "search_placeholder": "搜索作品…",
+      "search_aria": "搜索请求",
+      "which_requests": "显示哪些请求",
+      "export_ics": "导出 .ics",
+      "export_help": "“导出 .ics”会把此列表保存为快照，用于导入日历应用；它不会自动更新。如需始终保持最新的日历，请使用{link}中的日历密钥订阅。",
+      "film_releases": {
+        "other": "{count} 部电影上映"
+      },
+      "upcoming_empty_mine": "这里观看的剧集近期没有新内容",
+      "upcoming_empty": "日历上没有内容",
+      "upcoming_empty_mine_sub": "如果一部剧集在过去四个月内有单集被播放过，就算作在追。",
+      "upcoming_empty_sub": "Sonarr 和 Radarr 在这段时间内没有预计的内容。只计算已监控的作品。",
+      "which_titles": "显示哪些作品",
+      "everything": "全部",
+      "only_theirs": "只看对方在追的",
+      "only_mine": "只看我在追的",
+      "how_far_ahead": "向后多远",
+      "history": {
+        "arrived": "已入库",
+        "in_the_last_year": "最近一年",
+        "in_the_last_days": {
+          "other": "最近 {count} 天"
+        },
+        "downloaded": "已下载",
+        "on_average": "平均 {size}",
+        "failed": "失败",
+        "of_grabbed": "共抓取 {grabbed} 个",
+        "per_day_title": "每日导入量",
+        "per_day_sub": "下载完成的 GB 数",
+        "per_day_aria": "每日导入的 GB 数",
+        "day": "日期",
+        "indexers": "索引器",
+        "indexers_sub": "来源",
+        "quality": "质量",
+        "quality_sub": "按 Sonarr 和 Radarr 的划分",
+        "clients": "下载客户端",
+        "clients_sub": "由什么下载",
+        "gb": {
+          "other": "{count} GB"
+        },
+        "failures_title": "失败的下载",
+        "failures_sub": "已抓取但随后放弃",
+        "when": "时间",
+        "indexer": "索引器",
+        "title": "入库内容",
+        "how_far_back": "向前多远"
+      },
+      "downloads_empty": "没有正在下载的内容",
+      "downloads_empty_sub": "Sonarr、Radarr 和你的下载客户端目前没有任务。",
+      "downloads_empty_connect": "连接下载客户端，或 Sonarr 和 Radarr，即可查看正在到来的内容。",
+      "sub": "请求了什么、即将上线什么、正在下载什么",
+      "nothing_connected": "还没有任何连接",
+      "nothing_connected_sub": "连接 Sonarr、Radarr、Seerr 或下载客户端后，此页面会显示大家请求了什么、什么时候播出，以及正在到来的内容。",
+      "add_connection": "添加连接"
+    },
+    "server": {
+      "result": {
+        "Completed": "已完成",
+        "Failed": "失败",
+        "Aborted": "已中止",
+        "Cancelled": "已取消"
+      },
+      "sections": {
+        "overview": { "label": "概览", "sub": "版本、系统和存储" },
+        "jobs": { "label": "后台任务", "sub": "Jellyfin 正在做什么，实时显示" },
+        "devices": { "label": "设备", "sub": "所有登录过的设备" },
+        "plugins": { "label": "插件", "sub": "Jellyfin 上安装了什么" },
+        "capacity": { "label": "容量", "sub": "有记录以来最繁忙的时刻、各磁盘被填满的速度，以及这些对服务器设置意味着什么" },
+        "health": { "label": "媒体库健康", "sub": "缺集、副本、低码率文件和不一致的季，通过将每个文件与相邻文件比较发现" },
+        "log": { "label": "日志", "sub": "Jellyfin 自己的活动日志：登录、登录失败、播放、任务" },
+        "audit": { "label": "审计日志", "sub": "FinStats 中改了什么，由谁改的" }
+      },
+      "sections_aria": "服务器分区",
+      "update_available": "有可用更新",
+      "restart_pending": "等待重启",
+      "your_server": "你的 Jellyfin 服务器",
+      "details_from": "· 详情获取于 {when}",
+      "system": {
+        "title": "系统",
+        "version": "版本",
+        "os": "操作系统",
+        "transcoder": "转码器",
+        "transcode_folder": "转码文件夹",
+        "cache_folder": "缓存文件夹",
+        "data_folder": "数据文件夹",
+        "log_folder": "日志文件夹"
+      },
+      "fetch": {
+        "button": "获取服务器详情",
+        "busy": "正在获取…",
+        "timeout": "Jellyfin 尚未响应。请在“设置 → 任务”中查看原因，然后重试。",
+        "empty": "还没有服务器详情",
+        "empty_sub": "FinStats 会在定期同步时从 Jellyfin 获取版本、存储、插件、计划任务和设备。你也可以现在获取。"
+      },
+      "storage": {
+        "title": "存储",
+        "unreported": "此 Jellyfin 版本不报告磁盘使用情况（10.11 起才支持）。",
+        "sub": "Jellyfin 所在卷的磁盘使用情况。数字完全相同的条目位于同一块磁盘上。",
+        "volume": "卷",
+        "library": "媒体库",
+        "free_of": "可用 {free}，共 {total}",
+        "usage_aria": "{volume} 磁盘使用情况",
+        "almost_full": "即将用满",
+        "getting_full": "逐渐变满",
+        "used": "已用 {pct}%",
+        "folder": {
+          "program_data": "程序数据",
+          "cache": "缓存",
+          "transcodes": "转码",
+          "metadata": "元数据",
+          "logs": "日志"
+        }
+      },
+      "devices": {
+        "shown_of": "{shown} / {total}",
+        "none": "还没有已知设备。",
+        "no_match": "没有匹配的设备",
+        "no_match_sub": "试试设备名、应用名或用户名。",
+        "device": "设备",
+        "app": "应用",
+        "last_user": "最后使用者",
+        "last_seen": "最后出现",
+        "unknown_device": "未知设备",
+        "unknown_user": "未知用户",
+        "filter_placeholder": "筛选设备…",
+        "filter_aria": "筛选设备",
+        "title": "设备",
+        "sub": "所有登录过 Jellyfin 的设备"
+      },
+      "plugins": {
+        "title": "插件",
+        "none": "没有报告任何插件。",
+        "plugin": "插件",
+        "version": "版本",
+        "status": "状态",
+        "state": {
+          "Active": "已启用",
+          "Restart": "需要重启",
+          "Deleted": "已删除",
+          "Superceded": "已被取代",
+          "Malfunctioned": "出现故障",
+          "NotSupported": "不受支持",
+          "Disabled": "已禁用"
+        }
+      },
+      "jobs": {
+        "title": "Jellyfin 的后台任务",
+        "sub": "你的服务器在后台做什么、每个任务的用途，以及进行到哪一步",
+        "eta_dots": "约剩 {dots}",
+        "eta_none": "运行中；暂无预计时间",
+        "finishing": "即将完成",
+        "eta": "约剩 {time}",
+        "still": "· 停在 {pct}% 已 {time}",
+        "watched_for": "· 已观察 {time}",
+        "stopping": "正在停止",
+        "running": "正在运行",
+        "percent": "{pct}%",
+        "progress_aria": "{name}进度",
+        "last_took": "· 上次耗时 {time}",
+        "on_demand": "仅在需要时运行",
+        "hidden": "隐藏",
+        "next": "下次：{when}",
+        "never_run": "从未运行",
+        "stale": "Jellyfin 刚才没有响应（{error}）；以下是它最后一次报告的内容。",
+        "nothing_running": "Jellyfin 目前没有正在运行的任务。",
+        "job": "任务",
+        "runs": "运行时间",
+        "last_run": "上次运行",
+        "running_count": {
+          "other": "{count} 个正在运行"
+        }
+      }
+    },
+    "capacity": {
+      "left": {
+        "under_a_month": "不到一个月",
+        "about_a_month": "约一个月",
+        "months": {
+          "other": "约 {count} 个月"
+        },
+        "years": {
+          "other": "约 {count} 年"
+        }
+      },
+      "describe": {
+        "software_transcodes": {
+          "transcoded": {
+            "other": "最近 {days} 天内，{plays} 次播放中有 {count} 次被转码。"
+          },
+          "software": "在 Jellyfin 报告了的转码中，有 {software} 次未使用硬件加速，没有一次使用了硬件加速，最多同时 {most} 个。",
+          "software_unsaid": "在 Jellyfin 报告了的转码中，有 {software} 次未使用硬件加速，没有一次使用了硬件加速（{unsaid} 次未说明），最多同时 {most} 个。",
+          "where": "Jellyfin 是否使用显卡转码，在其“播放”设置中设定"
+        },
+        "scan_busy": {
+          "always": {
+            "other": "Jellyfin 的媒体库扫描设置为每 {interval}运行一次，上次耗时 {last}：比两次运行之间的间隔还长，所以它一直在扫描，涉及 {count} 个文件。"
+          },
+          "share": {
+            "other": "Jellyfin 的媒体库扫描设置为每 {interval}运行一次，上次耗时 {last}：占全部时间的 {pct}%，涉及 {count} 个文件。"
+          },
+          "where": "运行频率在 Jellyfin 的计划任务中设定"
+        },
+        "runway": {
+          "other": "可用 {free}，最近 {count} 个月每月新增 {added}（{libraries}）：按此速度，剩余空间还够用{left}"
+        }
+      },
+      "bringing_back": "正在恢复…",
+      "bring_back_failed": "无法恢复：{error}",
+      "findings": {
+        "title": "值得一看",
+        "sub": "最繁忙的时刻、磁盘和服务器设置说明了什么",
+        "set_aside": "{when}搁置",
+        "set_aside_by": "由 {name} 于 {when}搁置",
+        "found": "{when}发现",
+        "bring_back": "恢复",
+        "dismiss": "忽略…"
+      },
+      "busiest": {
+        "streams": {
+          "other": "{count} 个串流"
+        },
+        "transcodes": {
+          "other": "{count} 个转码"
+        },
+        "hint_transcodes": "{transcodes}，{when}",
+        "title": "最繁忙的时刻",
+        "sub": "FinStats 见过的最多同时串流数，以及其中有多少被转码。它无法知道你的服务器能承受多少；这是它实际承受过的。",
+        "on_record": "有记录以来最繁忙",
+        "nothing_played": "还没有播放",
+        "in_days": {
+          "other": "{count} 天内最繁忙"
+        },
+        "nothing_in_days": {
+          "other": "最近 {count} 天没有播放"
+        },
+        "when": "时间",
+        "col_streams": "串流",
+        "col_transcoded": "转码",
+        "hardware_title": "Jellyfin 报告使用了硬件加速",
+        "hardware": "硬件",
+        "software_title": "Jellyfin 报告未使用硬件加速",
+        "software": "软件",
+        "unsaid_title": "较旧的 Jellyfin 或导入的播放，两者都没有说明",
+        "unsaid": "未说明",
+        "empty_sub": "有内容播放后，最繁忙的时刻就会显示在这里。"
+      },
+      "disks": {
+        "title": "磁盘空间",
+        "growth_sub": {
+          "other": "最近 {count} 个月每个媒体库新增的内容"
+        },
+        "unreported": "Jellyfin 10.11 及更新版本会报告可用空间；此服务器不会，因此只显示每个媒体库的增长速度，不显示空间还能用多久。",
+        "library": "媒体库",
+        "added_in": {
+          "other": "{count} 个月内新增"
+        },
+        "a_month": "每月",
+        "young": "{libraries} 是最近两个月内才加入 Jellyfin 的；填满后满一个月，才能得知这块磁盘被填满的速度。",
+        "grew": {
+          "other": "{libraries} 在最近 {count} 个月每月增长 {added}；按此速度，剩余空间还够用{left}。"
+        },
+        "nothing_added": {
+          "other": "最近 {count} 个月 {libraries} 没有新增任何内容。"
+        },
+        "sub": {
+          "other": "媒体库所在的每块磁盘，以及 Jellyfin 最近 {count} 个月新增的内容填满它的速度"
+        },
+        "folders": "文件夹",
+        "free": "可用",
+        "added_a_month": "每月新增",
+        "counted_by": "增长按 Jellyfin 添加每个文件的日期计算，所以被替换的文件算作新增，之后删除的文件不计入。"
+      },
+      "empty": "尚未分析",
+      "empty_sub": "FinStats 会在下一次读取服务器详情后（一刻钟内）以及每次读取媒体库后进行分析。打开此页面时不会进行任何分析。"
+    },
+    "events": {
+      "level": {
+        "error": "错误",
+        "critical": "严重",
+        "fatal": "致命",
+        "warning": "警告",
+        "info": "信息",
+        "debug": "调试",
+        "trace": "跟踪"
+      },
+      "type_chip": "类型：{type}",
+      "remove_type": "移除类型筛选",
+      "entries": {
+        "other": "{count} 条记录"
+      },
+      "empty_filtered": "没有符合这些筛选条件的日志记录。",
+      "empty": "还没有日志记录",
+      "empty_sub": "记录会随下一次“同步服务器日志”任务到来。",
+      "col": {
+        "when": "时间",
+        "level": "级别",
+        "event": "事件",
+        "user": "用户",
+        "type": "类型"
+      },
+      "only_this_type": "只显示此类型",
+      "search_placeholder": "搜索日志…",
+      "search_aria": "搜索日志"
+    },
+    "audit": {
+      "kind": {
+        "sign_in": "登录",
+        "sign_in_failed": "登录失败",
+        "sign_in_refused": "登录被拒绝",
+        "sign_out": "退出登录",
+        "setup_completed": "设置了 FinStats",
+        "key_created": "创建了密钥",
+        "key_revoked": "吊销了密钥",
+        "key_used": "首次使用密钥",
+        "setting_changed": "更改了设置",
+        "permissions_changed": "更改了权限",
+        "service_added": "添加了连接",
+        "service_changed": "更改了连接",
+        "service_removed": "移除了连接",
+        "target_added": "添加了通知目标",
+        "target_changed": "更改了通知目标",
+        "target_removed": "移除了通知目标",
+        "backup_made": "写入了备份",
+        "backup_restored": "恢复了备份",
+        "backup_deleted": "删除了备份",
+        "backup_undeleted": "找回了已删除的备份",
+        "backup_downloaded": "下载了备份",
+        "task_run": "运行了任务",
+        "task_schedule_changed": "更改了任务计划",
+        "import_started": "开始导入",
+        "import_finished": "导入完成",
+        "play_deleted": "删除了播放",
+        "play_undeleted": "找回了已删除的播放",
+        "trash_purged": "清空了回收站",
+        "title_located": "定位了缺失的作品",
+        "alert_resolved": "解决了警报",
+        "alert_reopened": "重新打开了警报",
+        "finding_dismissed": "忽略了媒体库问题",
+        "finding_undismissed": "恢复了媒体库问题",
+        "profile_published": "公开了资料",
+        "profile_changed": "更改了公开资料",
+        "profile_unpublished": "撤下了公开资料",
+        "profile_link_reset": "生成了新的公开资料链接",
+        "appearance_changed": "更改了外观"
+      },
+      "outcome": {
+        "failed": "失败",
+        "refused": "被拒绝"
+      },
+      "detail": {
+        "nothing": "无",
+        "permissions_everyone": "所有人：{permissions}",
+        "permissions_user": "用户 {user}：{permissions}",
+        "expires": "{when}过期",
+        "key": "密钥 {id}",
+        "moved": "已迁移到另一个实例",
+        "target_personal": "{name}（{channel}，个人）",
+        "target_server": "{name}（{channel}，服务器）",
+        "by_schedule": "按计划",
+        "on_request": "手动请求",
+        "plays_restored": {
+          "other": "恢复了 {count} 次播放，{skipped} 次已存在"
+        },
+        "settings_too": "包括设置",
+        "plays_imported": {
+          "other": "{count} 次播放，{skipped} 次已存在"
+        },
+        "title_by": "{user} 的《{title}》",
+        "purged": "{plays}、{backups}已永久删除",
+        "backups": {
+          "other": "{count} 份备份"
+        },
+        "no_sections": "无内容",
+        "preset": "预设 {code}",
+        "as_it_ships": "FinStats 默认样式",
+        "plays_moved": {
+          "other": "移动了 {count} 次播放"
+        },
+        "alerts": {
+          "other": "{count} 个警报"
+        },
+        "alert": "警报 {id}",
+        "muted": "已静默"
+      },
+      "kind_chip": "类型：{kind}",
+      "remove_kind": "移除类型筛选",
+      "entries": {
+        "other": "{count} 条记录"
+      },
+      "empty_filtered": "没有符合这些筛选条件的记录。",
+      "empty": "还没有任何记录",
+      "empty_sub": "从现在起，登录、设置更改、密钥和备份都会记录在这里。",
+      "col": {
+        "when": "时间",
+        "who": "操作者",
+        "what": "操作",
+        "detail": "详情",
+        "from": "来源"
+      },
+      "user": "用户",
+      "as_typed": "按输入",
+      "only_this_kind": "只显示此类型",
+      "via_key": "通过密钥“{name}”",
+      "search_placeholder": "搜索审计日志…",
+      "search_aria": "搜索审计日志"
+    },
+    "licenses": {
+      "new_tab": "（在新标签页中打开）",
+      "text_aria": "许可证文本",
+      "none_stated": "未声明许可证",
+      "no_file": "{name} 声明了许可证，但没有附带自己的许可证文件。",
+      "shared": {
+        "other": "另有 {count} 个组件使用相同的文本"
+      },
+      "see_text": "查看文本",
+      "col": {
+        "component": "组件",
+        "version": "版本",
+        "licence": "许可证",
+        "source": "来源"
+      },
+      "title": "许可证",
+      "sub": "FinStats 是自由软件，构建在他人的自由软件之上。涉及的每一份许可证都完整列在这里。",
+      "empty": "此版本中没有许可证声明。",
+      "empty_sub": "它由 tools/make-third-party.py 生成并编译进来。",
+      "app": {
+        "title": "FinStats 本身",
+        "body": "FinStats 以 GNU 通用公共许可证第 3 版发布。你可以使用、研究、分享和修改它；你传递出去的任何内容都必须保持同一许可证并附带源代码。",
+        "read": "阅读完整许可证"
+      },
+      "bundled": {
+        "title": "随 FinStats 附带",
+        "sub": "字体、地图数据和地理位置数据库：不是代码，但同样随附或被读取"
+      },
+      "crates": {
+        "title": "Rust crate",
+        "sub": {
+          "other": "构建此程序所用的 {count} 个 crate · 选择一个查看其许可证"
+        },
+        "find": "查找组件"
+      }
+    }
+  },
+  "public_profile": {
+    "default_name": "FinStats 资料",
+    "doc_title": "{name} 的 FinStats",
+    "hero": "他们看了什么，由本人公开。这里的所有内容至少是一天前的。",
+    "download_card": "下载为卡片",
+    "what_they_watch": "他们看了什么",
+    "when_they_watch": "他们何时观看",
+    "hours_watched": "观看小时数",
+    "plays": "播放次数",
+    "films": "电影",
+    "episodes": "单集",
+    "songs": "歌曲",
+    "longest_streak": "最长连续天数",
+    "days_with_something_on": "有播放的天数",
+    "days": {
+      "other": "{count} 天"
+    },
+    "streak": {
+      "other": "连续 {count} 天"
+    },
+    "recap_title": "他们的 {label}",
+    "year_line": "{hours} 小时，{days}内共 {plays}。",
+    "year_line_streak": "{hours} 小时，{days}内共 {plays}，{streak}。",
+    "open_card": "打开卡片：{chapter}",
+    "card_alt": "{chapter}卡片",
+    "download": "下载",
+    "download_all": "下载所有卡片",
+    "download_wide": "下载宽版卡片",
+    "lately": "最近",
+    "made_with": "由 FinStats 生成，一个 Jellyfin 统计服务器。",
+    "gone_title": "这里没有资料",
+    "gone_body": "链接可能已被重置，或者其主人已停止公开。",
+    "chapter": {
+      "year": "这一年",
+      "numbers": "数字",
+      "shows": "热门剧集",
+      "films": "热门电影",
+      "music": "热门音乐",
+      "genres": "类型",
+      "persona": "观看性格",
+      "rhythm": "时段与星期",
+      "days": "每一天",
+      "records": "纪录",
+      "together": "结伴",
+      "finished": "看完的剧集",
+      "asked": "请求",
+      "versus": "与上一年对比"
+    }
+  },
+  "charts": {
+    "types": {
+      "movies": "电影",
+      "episodes": "单集",
+      "music": "音乐"
+    },
+    "together": "一起",
+    "alone": "独自",
+    "arrows_aria": "{label}。使用左右方向键查看数值。",
+    "columns_aria": {
+      "plays": {
+        "day": "每日播放次数。使用左右方向键查看数值。",
+        "week": "每周播放次数。使用左右方向键查看数值。",
+        "month": "每月播放次数。使用左右方向键查看数值。"
+      },
+      "watch_s": {
+        "day": "每日观看时长。使用左右方向键查看数值。",
+        "week": "每周观看时长。使用左右方向键查看数值。",
+        "month": "每月观看时长。使用左右方向键查看数值。"
+      }
+    },
+    "week_of": "{date} 所在周",
+    "week_of_head": "周",
+    "total": "总计",
+    "date": "日期",
+    "plays": "播放次数",
+    "heat_aria": "按星期和小时划分的播放次数。使用方向键查看数值。",
+    "less": "少",
+    "more": "多",
+    "watched": "已观看",
+    "methods_aria": "各播放方式的播放占比",
+    "nothing_recorded": "此时间范围内没有记录。",
+    "nothing_yet": "暂时没有可显示的内容。",
+    "name": "名称",
+    "share": "占比",
+    "files": "文件",
+    "size": "大小",
+    "items": {
+      "other": "{count} 个项目"
+    },
+    "column_chart": "柱状图",
+    "period": "时间段",
+    "count": "数量",
+    "where_people_stop": "大家在哪里停下",
+    "not_enough_plays": "播放次数还不够。",
+    "still_watching_tip": "仍在观看",
+    "rewinds_here": {
+      "other": "{count} 次回退到这里"
+    },
+    "subtitles_here": {
+      "other": "{count} 次在此开启字幕"
+    },
+    "still_watching": "仍在观看",
+    "rewinds": "回退",
+    "subtitles_switched_on": "开启字幕",
+    "from": "起点",
+    "subtitles_on": "字幕开启",
+    "split": "拆分",
+    "unknown_client": "未知客户端",
+    "radar_chart": "雷达图",
+    "radar_too_few": "雷达图至少需要三个类型。列表中显示了现有的内容。",
+    "of_these": "占其中 {share}"
+  },
+  "worldmap": {
+    "kinds": {
+      "home": "家庭网络",
+      "remote": "家以外",
+      "failed": "登录失败"
+    },
+    "load_failed": "无法加载地图",
+    "aria": "世界地图。拖动可移动，使用按钮或按住 Ctrl 滚动滚轮可缩放。",
+    "wheel_hint": "按住 Ctrl 并滚动即可缩放",
+    "loading": "正在加载地图…",
+    "zoom_in": "放大",
+    "zoom_in_key": "放大（+）",
+    "zoom_out": "缩小",
+    "zoom_out_key": "缩小（−）",
+    "show_all": "显示所有点",
+    "show_all_key": "显示所有点（0）",
+    "places_near": {
+      "other": "{place} 附近的 {count} 个地点"
+    },
+    "places": {
+      "other": "{count} 个地点"
+    },
+    "click_to_zoom": "点击放大"
+  },
+  "widgets": {
+    "plays": "播放次数",
+    "by_watch_time": "按观看时长",
+    "activity": {
+      "title": "活动",
+      "per_week": "每周，按媒体类型",
+      "per_day": "每天，按媒体类型",
+      "measure": "度量"
+    },
+    "heatmap": {
+      "title": "大家何时观看",
+      "sub": "按星期和小时划分的播放次数，服务器时间"
+    },
+    "tiles": {
+      "vs_year": "与上一年相比",
+      "vs_days": {
+        "other": "与之前 {count} 天相比"
+      },
+      "active_users": "活跃用户",
+      "distinct_titles": "播放过的不同作品"
+    },
+    "media": {
+      "video": "视频",
+      "audio": "音频",
+      "container": "容器",
+      "bitrate": "比特率",
+      "subtitles": "字幕",
+      "hardware": "硬件",
+      "software": "软件",
+      "copied_direct": "直接复制",
+      "transcoded": "已转码",
+      "reasons": "原因"
+    },
+    "np": {
+      "transcode_details": "转码详情",
+      "client_on_device": "{device} 上的 {client}",
+      "paused": "已暂停",
+      "playing": "正在播放",
+      "together_title": {
+        "other": "一起观看 · {count} 人"
+      },
+      "with": "与 {names} 一起",
+      "with_more": {
+        "other": "与 {names} 及另外 {count} 人一起"
+      },
+      "position_aria": "播放位置",
+      "unavailable": "实时会话不可用：{reason}",
+      "empty": "当前没有任何播放。"
+    },
+    "insights": {
+      "peak": "并发串流峰值",
+      "peak_transcodes": {
+        "other": "同时 {count} 个转码"
+      },
+      "data_streamed": "串流数据量",
+      "bytes": {
+        "other": "{count} 字节"
+      },
+      "estimated": "根据串流比特率估算",
+      "remote_plays": "远程播放",
+      "remote_of": {
+        "other": "{count} 次播放中的 {remote} 次"
+      }
+    },
+    "genres": {
+      "title": "类型",
+      "aria": "按观看时长划分的类型",
+      "empty": "这些播放还没有类型信息。",
+      "view": "类型视图",
+      "list": "列表",
+      "radar": "雷达图"
+    },
+    "groups": {
+      "sub": "同时播放同一内容的人",
+      "time_together": "一起观看时长",
+      "evening_word": "个夜晚",
+      "evenings_word": "个夜晚",
+      "evenings": {
+        "other": "{count} 个夜晚"
+      },
+      "people_word": "人",
+      "share": "的观看时长与他人一起",
+      "most_often_with": "最常一起看的人",
+      "groups": "组合",
+      "sessions": {
+        "other": "{count} 次"
+      },
+      "titles": "最常一起看的作品"
+    },
+    "failed_logins": {
+      "title": "登录失败",
+      "sub": "你的 Jellyfin 服务器上最近的登录尝试",
+      "server_log": "服务器日志",
+      "one": "登录失败"
+    },
+    "library": {
+      "added": "{when}添加",
+      "title_this": "这个媒体库由什么组成",
+      "title_yours": "你的媒体库由什么组成",
+      "after_sync": "文件详情会在下一次媒体库同步后出现。",
+      "about_files": "关于文件本身。上方的时间范围在这里不适用。",
+      "files": "文件",
+      "count": {
+        "movies": {
+          "other": "{count} 部电影"
+        },
+        "series": {
+          "other": "{count} 部剧集"
+        },
+        "episodes": {
+          "other": "{count} 集"
+        },
+        "tracks": {
+          "other": "{count} 首曲目"
+        }
+      },
+      "total_size": "总大小",
+      "per_file": "平均每个文件 {size}",
+      "total_runtime": "总时长",
+      "play_all_once": "全部播放一遍所需的时长",
+      "resolutions": "分辨率",
+      "video_files": "视频文件",
+      "video_codecs": "视频编解码器",
+      "dynamic_range": "动态范围",
+      "containers": "容器",
+      "all_files": "所有文件",
+      "audio_codecs": "音频编解码器",
+      "first_audio": "第一条音轨",
+      "movies_and_series": "电影和剧集",
+      "titles": "作品",
+      "audio_languages": "音频语言",
+      "audio_languages_sub": "含有该语言音轨的视频文件；配音文件会在每种语言中各计一次",
+      "subtitle_languages": "字幕语言",
+      "subtitle_languages_sub": "含有该语言字幕的视频文件",
+      "by_decade": "按年代",
+      "by_decade_sub": "按发行年份划分的作品",
+      "by_decade_aria": "每个年代的作品数",
+      "decade": "年代",
+      "added_per_month": "每月新增",
+      "last_24_months": "最近 24 个月",
+      "added_aria": "每月新增的作品",
+      "month": "月份",
+      "added_head": "新增",
+      "largest": "最大",
+      "largest_sub": "剧集计入其所有单集",
+      "no_sizes": "还不知道文件大小。",
+      "never_watched": "从未观看",
+      "never_watched_sub": {
+        "other": "{count} 部作品 · {size} 无人播放过"
+      },
+      "all_played": "所有内容都至少播放过一次",
+      "nothing_unwatched": "没有未观看的内容，或尚不知道文件大小。",
+      "played_note": "结合了 FinStats 记录的播放和 Jellyfin 自己的已播放标记，因此使用 FinStats 之前的历史也会计入。"
+    },
+    "shelf": {
+      "back": "向后滚动",
+      "on": "向前滚动"
+    }
+  },
+  "playmodal": {
+    "title": "播放详情",
+    "event": {
+      "start": "开始",
+      "pause": "暂停",
+      "resume": "继续",
+      "seek": "跳转",
+      "audio": "音轨",
+      "subtitle": "字幕",
+      "transcode": "转码",
+      "stop": "停止",
+      "other": "事件",
+      "transcode_detail": "{method}：{reasons}"
+    },
+    "network": {
+      "local_title": "从你的本地网络播放",
+      "remote_title": "从你的网络之外播放",
+      "local": "本地",
+      "remote": "远程"
+    },
+    "source": {
+      "live": "由 FinStats 记录",
+      "imported_from": "从 {tracker} 导入",
+      "imported": "导入"
+    },
+    "no_events": {
+      "imported_from": "从 {tracker} 导入，它每次播放只记录一行，不记录播放过程中发生的任何事。",
+      "imported": "导入的播放，每次播放只记录一行，不记录播放过程中发生的任何事。",
+      "live": "这次播放过程中没有记录到任何事件。"
+    },
+    "position_title": "在文件中的位置",
+    "at": "位于 {time}",
+    "channels": {
+      "mono": "单声道",
+      "stereo": "立体声",
+      "count": {
+        "other": "{count} 声道"
+      }
+    },
+    "bit_depth": "{bits} 位",
+    "not_in_library": "已不在媒体库中",
+    "started": "开始",
+    "ended": "结束",
+    "still_playing": "仍在播放",
+    "paused_for": "暂停时长",
+    "resumed_from": "从此处继续",
+    "pauses": "暂停次数",
+    "skips": "跳转次数",
+    "stopped_at": "停止位置",
+    "device": "设备",
+    "device_id": "设备 ID",
+    "copy_device_id": "复制设备 ID",
+    "watched_with": "一起观看的人",
+    "copy_ip": "复制 IP 地址",
+    "off": "关闭",
+    "section": {
+      "session": "会话",
+      "media": "媒体",
+      "timeline": "时间线"
+    },
+    "delete": {
+      "start": "删除此播放",
+      "confirm": "删除播放",
+      "deleting": "正在删除…",
+      "aria": "确认删除",
+      "question": "要从统计中删除此播放吗？30 天内可以撤销。"
+    },
+    "undo": {
+      "deleted_named": "已删除《{title}》。30 天内可以撤销。",
+      "deleted": "已删除该播放。30 天内可以撤销。",
+      "undo": "撤销",
+      "failed": "无法撤销：{reason}"
+    }
+  },
+  "upcoming": {
+    "release": {
+      "air": "播出",
+      "cinema": "院线上映",
+      "digital": "数字发行",
+      "physical": "光盘发行",
+      "other": "发行"
+    },
+    "finale": {
+      "season": "季终集",
+      "series": "剧终集",
+      "midseason": "季中完结集",
+      "other": "完结集"
+    },
+    "new_episode": "新剧集",
+    "already_here": "已在库中",
+    "new": "尚未入库",
+    "new_title": "Sonarr 或 Radarr 正在等待它；它还不在你的 Jellyfin 媒体库中",
+    "you_watch": "你在追"
+  },
+  "downloads": {
+    "state": {
+      "downloading": "下载中",
+      "importing": "导入中",
+      "stalled": "已停滞",
+      "queued": "排队中",
+      "paused": "已暂停",
+      "checking": "校验中",
+      "failed": "失败"
+    },
+    "done": "已完成 {pct}",
+    "of": "{done} / {size}",
+    "left": "剩余 {time}",
+    "handed": "{service} 已交给 {client}",
+    "speed_title": "根据自上次读取以来的传输量计算",
+    "totals": {
+      "downloading": {
+        "other": "{count} 个下载中"
+      },
+      "queued": {
+        "other": "{count} 个排队中"
+      },
+      "importing": {
+        "other": "{count} 个导入中"
+      },
+      "failed": {
+        "other": "{count} 个失败"
+      }
+    },
+    "updated": "{when}更新"
+  },
+  "finui": {
+    "avatar_group": {
+      "and_more": "{names} 等另外 {count} 人"
+    },
+    "bar_chart": {
+      "name": "柱状图",
+      "aria": {
+        "other": "{title}：{count} 根柱，最高为 {highest}"
+      }
+    },
+    "chart": {
+      "numbers": "数值",
+      "total": "总计",
+      "in_all": "合计",
+      "other": "其他",
+      "thousands": "{n}K",
+      "millions": "{n}M",
+      "billions": "{n}B"
+    },
+    "bar_list": {
+      "and_more": "还有 {count} 项"
+    },
+    "breadcrumb": {
+      "show_all": "显示所有层级",
+      "label": "面包屑导航"
+    },
+    "calendar": {
+      "label": "日历",
+      "previous_month": "上个月",
+      "next_month": "下个月"
+    },
+    "callout": {
+      "dismiss": "关闭"
+    },
+    "card": {
+      "table": "表格",
+      "chart": "图表"
+    },
+    "chip": {
+      "remove": "移除"
+    },
+    "code_block": {
+      "copy_command": "复制命令",
+      "copy_pane": "复制 {name}",
+      "label": "代码"
+    },
+    "combobox": {
+      "all_users": "所有用户",
+      "user": "用户",
+      "type_to_filter": "输入以筛选…",
+      "filter_aria": "筛选{label}",
+      "no_results": "没有结果"
+    },
+    "context_menu": {
+      "label": "操作"
+    },
+    "copy": {
+      "copy": "复制",
+      "copied": "已复制",
+      "failed": "复制失败。请手动选中文本"
+    },
+    "data_table": {
+      "sort_by": "按{label}排序",
+      "filter_rows": "筛选行",
+      "none": "没有匹配的行。",
+      "filter_placeholder": "{label}…"
+    },
+    "date_picker": {
+      "placeholder": "例如 {example}",
+      "choose": "在日历上选择{label}",
+      "none": "尚未选择日期。",
+      "between": "从 {from} 到 {to}。",
+      "from": "从 {from} 起。",
+      "until": "直到 {to}。",
+      "outside": "该日期不在可选范围内。",
+      "not_a_day": "这不是一个日期。请试试 {example} 或 2026-10-05。"
+    },
+    "desktop_nav": {
+      "pages": "页面",
+      "new": "新",
+      "search": "搜索",
+      "search_more": "搜索…",
+      "search_keys": "搜索 · {keys}",
+      "me_theme": "{name}：你和主题",
+      "theme": "主题",
+      "pinned": "已固定",
+      "pin_hint": "指向一个页面并点击它的图钉，即可把它固定在这里。",
+      "pin": "固定{page}",
+      "search_from": "搜索，从{label}打开",
+      "styles": {
+        "sidebar": {
+          "label": "侧边栏",
+          "line": "所有页面排成侧边一列安静的列表。"
+        },
+        "grouped": {
+          "label": "分组",
+          "line": "同样的列表按名称分组，按页面所在位置找到它。"
+        },
+        "rail": {
+          "label": "可展开的图标栏",
+          "line": "平时只显示图标，指针移过来时整个侧边栏覆盖在页面上方展开。"
+        },
+        "search": {
+          "label": "搜索优先",
+          "line": "页面上方是一个大搜索框，列表行也稍大一些。"
+        },
+        "dock": {
+          "label": "程序坞",
+          "line": "页面放在底部的程序坞中；状态栏移到顶部。"
+        },
+        "command": {
+          "label": "命令栏",
+          "line": "屏幕上没有列表：点击顶部的页面名称即可打开所有页面。"
+        },
+        "pinned": {
+          "label": "固定",
+          "line": "你固定的页面在上方，所有页面按分组排在下方。"
+        },
+        "tiles": {
+          "label": "彩色磁贴",
+          "line": "每个图标放在按分组着色的磁贴中。"
+        }
+      }
+    },
+    "mobile_nav": {
+      "styles": {
+        "tabs": {
+          "label": "标签栏",
+          "line": "底部始终显示四个页面；“更多”可展开其余页面。"
+        },
+        "peek": {
+          "label": "窥视",
+          "line": "一个半开的面板，显示最常用的页面；向上拖动可显示全部。"
+        },
+        "full": {
+          "label": "全屏",
+          "line": "整个屏幕变成菜单，使用大号字体。"
+        },
+        "arc": {
+          "label": "拇指弧",
+          "line": "角落里的按钮把所有页面围绕拇指呈扇形展开。"
+        },
+        "address": {
+          "label": "地址栏",
+          "line": "底部的胶囊显示当前页面的名称，并可展开为菜单。"
+        }
+      },
+      "menu": "菜单",
+      "new": "新",
+      "search": "搜索",
+      "close_menu": "关闭菜单",
+      "pages": "页面",
+      "open_menu": "打开菜单",
+      "more": "更多",
+      "more_pages": "更多页面",
+      "main": "主要",
+      "all_pages": "所有页面",
+      "most_used": "最常用",
+      "search_or_go": "搜索或前往…"
+    },
+    "modal": {
+      "close": "关闭"
+    },
+    "drawer": {
+      "close": "关闭"
+    },
+    "number_stepper": {
+      "in_unit": "{label}（单位：{unit}）",
+      "less": "减少：{label}",
+      "more": "增加：{label}"
+    },
+    "otp": {
+      "code": "验证码",
+      "box": "{label}，第 {n} 位，共 {total} 位"
+    },
+    "pagination": {
+      "label": "分页",
+      "range": "第 {from}–{to} 条，共 {total} 条",
+      "previous": "上一页",
+      "next": "下一页"
+    },
+    "picker": {
+      "custom": "自定义",
+      "lock": "锁定{label}"
+    },
+    "popover": {
+      "held": "已固定打开的弹出框"
+    },
+    "progress": {
+      "done": "已完成",
+      "seconds_left": "还剩几秒",
+      "under_a_minute": "还剩不到一分钟",
+      "a_minute_left": "还剩约一分钟",
+      "minutes_left": {
+        "other": "还剩约 {count} 分钟"
+      },
+      "hours": {
+        "other": "{count} 小时"
+      },
+      "minutes": {
+        "other": "{count} 分钟"
+      },
+      "hours_minutes": "{hours} {minutes}",
+      "about_left": "还剩约 {time}",
+      "percent": "{pct}%",
+      "working": "处理中…",
+      "working_valuetext": "处理中"
+    },
+    "search": {
+      "search": "搜索",
+      "close": "关闭搜索",
+      "results": "结果",
+      "keys_watchlist": "加入待看清单",
+      "keys_move": "移动",
+      "keys_open": "打开",
+      "keys_close": "关闭",
+      "nothing_found": "没有找到任何内容"
+    },
+    "sections": {
+      "label": "分区"
+    },
+    "shelf": {
+      "back": "在{label}中向后",
+      "on": "在{label}中向前"
+    },
+    "slider": {
+      "highest": "{label}，最高",
+      "lowest": "{label}，最低"
+    },
+    "stat_tile": {
+      "no_change": "无变化",
+      "new": "新",
+      "delta": "{delta}%"
+    },
+    "steps": {
+      "label": "步骤"
+    },
+    "stream_card": {
+      "progress": "进度"
+    },
+    "tag_input": {
+      "add": "添加…",
+      "remove": "移除 {tag}"
+    },
+    "file_drop": {
+      "label": "将文件拖放到这里",
+      "choose_files": "或点击选择文件",
+      "choose_one": "或点击选择一个",
+      "wrong_kind": "不接受此类型（{accept}）",
+      "too_large": "超过 {size}",
+      "progress": "{size} 的 {pct}%",
+      "uploading": "正在上传 {name}",
+      "remove": "移除 {name}"
+    },
+    "heatmap": {
+      "less": "少",
+      "more": "多",
+      "caption": "繁忙程度",
+      "name": "热力图",
+      "aria": "{title}：最繁忙的是 {busiest}"
+    },
+    "line_chart": {
+      "name": "折线图",
+      "aria": "{title}：{from} 至 {to}",
+      "limit": "上限"
+    },
+    "donut_chart": {
+      "share": "{pct}%",
+      "name": "环形图",
+      "caption": "各部分",
+      "value": "数值",
+      "share_head": "占比"
+    },
+    "toast": {
+      "dismiss": "关闭"
+    },
+    "to_top": {
+      "label": "回到顶部"
+    },
+    "top_bar": {
+      "label": "分区"
+    },
+    "theme_switch": {
+      "device": "跟随设备",
+      "light": "浅色",
+      "dark": "深色",
+      "label": "主题",
+      "title": "主题：{name}"
+    },
+    "error": {
+      "title": "无法加载",
+      "retry": "重试"
+    }
+  },
+  "notifications": {
+    "switched_off": "已关闭",
+    "switched_on": "已开启",
+    "last_failed": "上一条消息未送达：{error}",
+    "last_ok": "{when}收到了上一条消息",
+    "nothing_sent": "尚未发送任何内容",
+    "test": "测试",
+    "sending": "正在发送…",
+    "test_sent": "测试消息已发送。",
+    "remove_confirm": "要移除此通知目标吗？",
+    "removing": "正在移除…",
+    "remove": "移除",
+    "remove_ask": "移除…",
+    "edit": "编辑",
+    "events_ticked": "{total} 种事件中的 {ticked} 种",
+    "addresses_included": "包含地址",
+    "severity_above": {
+      "warn": "警告及以上",
+      "alert": "警报及以上"
+    },
+    "yours": "你的",
+    "owners": "{name} 的",
+    "somebodys": "某人的",
+    "name_label": "名称（可选）",
+    "name_help": "在 FinStats 中显示，例如“家庭频道”“我的手机”。",
+    "address": "地址",
+    "topic": "主题",
+    "token": "令牌",
+    "severity": {
+      "info": "全部",
+      "warn": "警告和警报",
+      "alert": "仅警报"
+    },
+    "add_destination": "添加通知目标",
+    "add_title": "添加通知目标",
+    "edit_title": "编辑 {name}",
+    "unchanged": "未更改",
+    "address_help_any": "FinStats 发送 POST 请求的地址，例如 {example}。",
+    "address_help": {
+      "discord": "Discord → Channel settings → Integrations → Webhooks → Copy Webhook URL。这个 URL 就是密码：FinStats 会保存它，并且不再显示。",
+      "slack": "Slack → your app → Incoming Webhooks → Add New Webhook to Workspace，然后复制 URL。这个 URL 就是密码：FinStats 会保存它，并且不再显示。",
+      "email": "你的邮件服务器。smtps:// 从第一个字节起就加密（端口 465）；smtp:// 以明文开始，必须通过 STARTTLS 升级（587）。FinStats 不会以明文发送邮件或密码。"
+    },
+    "keep_secret": "留空则保留已保存的值。",
+    "secret_help": {
+      "webhook": "以“Authorization: Bearer …”发送。如果接收方不需要此请求头，请留空。",
+      "ntfy": "仅用于受保护的主题，或带访问控制的自建 ntfy。",
+      "gotify": "Gotify → Apps → 创建一个应用 → 它的令牌。",
+      "telegram": "在 Telegram 中与 @BotFather 对话 → /newbot → 它给你的令牌。",
+      "pushover": "pushover.net → Your Applications → Create an Application → 它的 API token。",
+      "pushbullet": "pushbullet.com → Settings → Account → Create Access Token。",
+      "email": "如果中继服务器不需要登录，请留空。邮件服务商通常要求使用应用专用密码，而不是你的登录密码。"
+    },
+    "enter_address": "请输入地址，例如 {example}。",
+    "enter_value": "请输入{what}。",
+    "went_wrong": "出现问题。",
+    "kind": "类型",
+    "who_for": "接收范围",
+    "scope_server": "服务器：你勾选的所有内容，涉及任何人",
+    "scope_me": "仅我自己：只包含我本就能看到的内容",
+    "how_much": "发送多少",
+    "what_to_send": "发送什么",
+    "with_addresses": "包含 IP 地址和地点",
+    "with_addresses_help": "关闭：消息只会说地点是“Oslo, Norway”，从不包含来源地址。开启：地址也会发出，如果通知目标由他人运营（例如 Discord），值得三思。",
+    "self_signed": "接受自签名证书",
+    "self_signed_help": "仅用于证书由你自己签发的地址：你自己网络中的服务，或你自己的邮件服务器。",
+    "saving": "正在保存…",
+    "history_empty": "尚未发送任何内容。从现在起 FinStats 发现的情况会显示在这里，并附上每条消息的发送结果。",
+    "state": {
+      "sent": "已发送",
+      "queued": "等待中",
+      "failed": "已放弃"
+    },
+    "historic": "未发送：已超过几个小时",
+    "nobody_listening": "没有通知目标订阅此事件",
+    "col_when": "时间",
+    "col_what": "内容",
+    "col_sent_to": "发送到",
+    "public_url": "FinStats 的地址",
+    "public_url_help": "仅用于在 FinStats 发送的消息中附上链接，因为它从内部无法知道你通过什么地址访问它。留空则消息不带链接。",
+    "intro_admin": "在你于此添加通知目标之前，FinStats 不会向任何地方发送任何内容，添加之后也只发送你为它勾选的事件类型。地址和令牌保存在 FinStats 自己的数据库中，不会再次显示，也从不包含在备份中。",
+    "intro_own": "你自己的通知目标只会收到你在 FinStats 中本就能看到的内容，并且必须指向公网地址。",
+    "none_yet": "还没有通知目标。",
+    "recently_sent": "最近发送",
+    "group": {
+      "security": "安全",
+      "housekeeping": "日常维护",
+      "library": "媒体库",
+      "playback": "播放"
+    },
+    "event": {
+      "travel": {
+        "label": "不可能的旅行",
+        "what": "同一账户的两次出现，任何航班都无法连接"
+      },
+      "new_country": {
+        "label": "新的国家",
+        "what": "某个账户首次出现在一个国家"
+      },
+      "failed_sign_ins": {
+        "label": "登录失败",
+        "what": "同一账户或同一地址连续多次登录失败"
+      },
+      "task_failed": {
+        "label": "任务失败",
+        "what": "同步、导入或读取已连接服务时出错"
+      },
+      "backup_failed": {
+        "label": "备份失败",
+        "what": "无法写入备份"
+      },
+      "service_down": {
+        "label": "服务停止响应",
+        "what": "Jellyfin、Sonarr、Radarr 或 Seerr 停止响应"
+      },
+      "service_back": {
+        "label": "服务恢复响应",
+        "what": "…以及何时再次响应"
+      },
+      "new_items": {
+        "label": "媒体库新增内容",
+        "what": "添加到媒体库的作品，按剧集和日期合并"
+      },
+      "request_available": {
+        "label": "请求的内容可以观看了",
+        "what": "有人在 Seerr 中请求的内容现在可以观看了"
+      },
+      "play_started": {
+        "label": "有人开始观看",
+        "what": "播放开始：作品、观看者和设备"
+      },
+      "play_stopped": {
+        "label": "有人停止观看",
+        "what": "播放结束，以及看了多少"
+      },
+      "recap_ready": {
+        "label": "年度回顾已就绪",
+        "what": "每年 12 月一次：某人的年度回顾已可查看和分享"
+      },
+      "watchlist_available": {
+        "label": "待看清单：现已上线",
+        "what": "你在待看清单中等待的电影或剧集已进入媒体库。只会发送到你自己的通知目标"
+      },
+      "test": {
+        "label": "测试消息",
+        "what": "只由“测试”按钮发送"
+      }
+    },
+    "channel": {
+      "discord": {
+        "label": "Discord",
+        "what": "你服务器中的一个频道，通过你在那里创建的 Webhook"
+      },
+      "slack": {
+        "label": "Slack",
+        "what": "你工作区中的一个频道，通过传入 Webhook"
+      },
+      "telegram": {
+        "label": "Telegram",
+        "what": "与你自己的机器人的聊天，或它所在的群组或频道",
+        "topic_label": "聊天 ID",
+        "topic_help": "先给你的机器人发一条消息，然后打开 https://api.telegram.org/bot<token>/getUpdates，使用其中显示的 chat id。频道可以写成 @name。",
+        "topic_missing": "请输入聊天 ID。",
+        "secret_label": "机器人令牌",
+        "secret_missing": "请输入机器人令牌。"
+      },
+      "email": {
+        "label": "电子邮件",
+        "what": "任意邮箱，通过你已有的 SMTP 服务器",
+        "topic_label": "收件人",
+        "topic_help": "要发送到的邮箱。",
+        "topic_missing": "请输入收件地址。",
+        "secret_label": "密码（可选）"
+      },
+      "ntfy": {
+        "label": "ntfy",
+        "what": "ntfy.sh 或你自己的 ntfy，发送到你选择的主题",
+        "topic_label": "主题",
+        "topic_help": "要发布到的 ntfy 主题。知道它的任何人都能读取你的通知，所以请设置得难以猜测。",
+        "topic_missing": "请输入主题。",
+        "secret_label": "访问令牌（可选）"
+      },
+      "gotify": {
+        "label": "Gotify",
+        "what": "你自己的 Gotify 服务器，使用应用令牌",
+        "secret_label": "应用令牌",
+        "secret_missing": "请输入应用令牌。"
+      },
+      "pushover": {
+        "label": "Pushover",
+        "what": "手机上的 Pushover，使用你自己的应用",
+        "topic_label": "用户或群组密钥",
+        "topic_help": "你的用户密钥（在 pushover.net 首页），或群组密钥。",
+        "topic_missing": "请输入用户或群组密钥。",
+        "secret_label": "应用令牌",
+        "secret_missing": "请输入应用令牌。"
+      },
+      "pushbullet": {
+        "label": "Pushbullet",
+        "what": "Pushbullet，发送到登录你账户的每台设备",
+        "secret_label": "访问令牌",
+        "secret_missing": "请输入访问令牌。"
+      },
+      "webhook": {
+        "label": "Webhook",
+        "what": "以 POST 方式向任意地址发送 JSON：你自己的脚本、Home Assistant、n8n",
+        "secret_label": "Authorization 头（可选）"
+      }
+    },
+    "extra": {
+      "from": {
+        "label": "发件人地址",
+        "help": "邮件的发件地址。很多服务器只接受它认识的地址。",
+        "missing": "请输入发件人地址。"
+      },
+      "username": {
+        "label": "用户名（可选）",
+        "help": "如果中继服务器不需要登录，请留空。通常与发件人地址相同。"
+      }
+    }
+  },
+  "connections": {
+    "switched_off": "已关闭",
+    "switched_on": "已开启",
+    "not_answering": "无响应：{error}",
+    "connected": "已连接",
+    "checked": "{when}检查",
+    "not_checked": "尚未检查",
+    "remove_confirm": "要移除它，以及 FinStats 从它读取的所有内容吗？",
+    "removing": "正在移除…",
+    "remove": "移除",
+    "remove_ask": "移除…",
+    "edit": "编辑",
+    "name_label": "名称（可选）",
+    "name_help": "在 FinStats 中显示。同类服务有两个时很有用，例如“Radarr 4K”。",
+    "address": "地址",
+    "api_key": "API 密钥",
+    "test": "测试连接",
+    "test_and_save": "测试并保存",
+    "kind": {
+      "sonarr": "剧集：什么时候播出，以及正在下载什么",
+      "radarr": "电影：什么时候上映，以及正在下载什么",
+      "seerr": "请求：谁请求了什么（Seerr、Jellyseerr 或 Overseerr）"
+    },
+    "keep_secret": "留空则保留已保存的值。",
+    "secret_help": {
+      "sonarr": "Sonarr → Settings → General → Security → API Key。",
+      "radarr": "Radarr → Settings → General → Security → API Key。",
+      "seerr": "Seerr → Settings → General → API Key。"
+    },
+    "unchanged": "未更改",
+    "enter_address": "请输入 {service} 的地址，例如 {example}。",
+    "enter_key": "请输入 API 密钥。",
+    "went_wrong": "出现问题。",
+    "testing": "正在测试…",
+    "connected_to": "已连接到 {app}",
+    "edit_title": "编辑 {name}",
+    "add": "添加连接",
+    "service": "服务",
+    "self_signed": "接受自签名证书",
+    "self_signed_help": "仅用于证书由你自己签发的 https:// 地址。开启后，FinStats 不再验证在此地址响应的是谁。其他情况请保持关闭。",
+    "none_yet": "还没有任何连接。连接 Sonarr 和 Radarr 后，FinStats 就知道即将上线什么、正在下载什么；连接 Seerr 后，就知道谁请求了什么。",
+    "intro": "FinStats 只从这些服务读取数据：它从不批准请求、发起搜索或干预下载。密钥和密码保存在 FinStats 自己的数据库中，不会再次显示，也从不包含在备份中。"
+  },
+  "changelog_text": {
+    "kind": {
+      "Added": "新增",
+      "Changed": "变更",
+      "Performance": "性能",
+      "Stability": "稳定性",
+      "Fixed": "修复",
+      "Removed": "移除"
+    }
+  }
+}
