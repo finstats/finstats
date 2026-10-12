@@ -747,6 +747,34 @@ it never undeletes.
 The response compression layer skips `application/gzip`: re-compressing a backup broke the download in browsers. Anything served
 pre-compressed needs the same exemption.
 
+**Languages (`i18n.rs`, `web/assets/js/i18n.js`, `web/assets/i18n/`, 2.3.0): FinStats speaks en-GB, en-US, nb-NO and
+nn-NO, and every word a person reads comes from a catalogue.** One JSON file per BCP 47 tag; **British English is the source**
+and the others answer to it (`i18n::tests`: the same keys, the same `{placeholders}`, plural objects of exactly the CLDR forms
+the language has, `one`/`other` with `{count}`, no em-dash, each English spelled its own way). A key says where it is used
+(`pages.watchlist.empty_title`, `settings.sections.backups.sub`, `server.not_found.play`); a sentence is one key, never glued
+from translated pieces, because Norwegian orders words differently. **The browser side**: `t(key, vars)` (numbers in `vars` are
+written the language's way), `tParts` when a placeholder is an element, `tOr(key, fallback)` for an id from the server the
+catalogue may not know, `lang()` for every `Intl` call and `localeCompare` (never `undefined`, `'en'` or `'en-US'`). The
+language is the browser's (Settings → Appearance → Language, `finstats.language`, nothing stored follows `navigator.languages`;
+`theme.js` decides the same way to preload the file and set `<html lang>`; `i18n.js` also keeps it in the `finstats_lang` cookie, which `i18n::asked` prefers to `Accept-Language`, because a picture or a download the browser fetches by itself carries the browser's own languages), choosing another reloads, and `main.js` puts the
+catalogue in use **before** importing either layout, so a module may say `t()` at its top level; the public profile does the
+same before its own imports. FinUI's components speak through `finui/i18n.js` (`say(key, english)`, `locale()`), fed the
+catalogue's `finui` section. Numbers follow the language everywhere (FinUI's `num`, `dom.js`'s formatters), and FinUI's table
+reader parses them back with that language's separators and any language's units (`3 d 2 t`, `48 min`, `5 av 26`). **The
+server side**: `api.js` sends the page's language as `Accept-Language`, `i18n::middleware` keeps it for the request
+(`i18n::current`, a task-local; `i18n::pick` is `pickLanguage`'s rule), `i18n::t` says a catalogue text in it (the same files,
+`include_str!`'d), `i18n::carry` hands it to work spawned from a request, and `i18n::within` to a blocking thread (`Db::call` and `api.rs`'s `blocking` do, so `db.call` and imports keep it). Errors and everything else the server answers in
+words go through it (`server.*` keys); `ApiError::not_found("Thing")` finds `server.not_found.thing` by itself. Tests run
+outside a request and so in en-GB, which is why en-GB keeps the code's English exactly. Ids, kinds and states in answers never
+change with the language: the pages translate them by id (``t(`pages.audit.kind.${k}`)``). Two guards in `i18n::pages_tests`
+hold the pages to it: every literal key a page asks for has an en-GB text, and no English sentence or capitalised label is left
+in `web/assets/js` or FinUI's components outside `t()`/`tParts()`/`say()` (`IDS` and `ENGLISH_ON_PURPOSE` list the exceptions,
+each with its reason). **A new text is a key in all four catalogues in the same change**, written in Bokmål and Nynorsk by the
+glossary the existing catalogues set (play = avspilling/avspeling, watch time = visningstid/visingstid, watchlist = Min liste /
+Lista mi, Recap = Tilbakeblikk, Pipeline = På vei/På veg); the owner reads Norwegian and checks it. The local QA stage `i18n`
+runs `i18n.js`'s rules in node; the browser stage pins its pages to en-GB (it overrides `navigator.languages`, since headless Chromium says
+en-US whatever `--lang` says), and sweeps every page in Bokmål and Nynorsk for a missing key.
+
 **HTTP contract.** The docs' `finstats/api.md` (`../docs/docs/finstats/api.md`) is the contract the UI is written against;
 change it together with the endpoint. The QA `routes` check reads it from there.
 
@@ -769,7 +797,7 @@ rules in step with this file, and do not add a second developer guide next to th
 No build step, no dependencies, no CDN: vanilla ES modules served from the binary, fonts bundled. `dom.js` (`h()`
 element builder, icon map, formatters), `api.js`, `router.js` (History API; the server returns `index.html` for any
 non-`/api`, non-`/assets` path), `components.js`, `charts.js` (hand-rolled SVG), `pages/*.js`. Rules that hold
-everywhere: API/user strings reach the DOM only via `h()`/`textContent` (never `innerHTML` with data); fetches are
+everywhere: every word a person reads comes from `t()` (the Languages paragraph above); API/user strings reach the DOM only via `h()`/`textContent` (never `innerHTML` with data); fetches are
 aborted, timers cleared and listeners on `window` or `document` removed on route change (`ctx.signal`: a listener left behind holds
 its whole page, and `stickyFilters` refuses to be drawn without one); every new card must hide itself when its data is missing (older servers,
 non-admins, imported plays). Native `el.append(null)` prints the text "null", so pass possibly-absent nodes through
@@ -963,7 +991,10 @@ run that too before a release, and after work on the database or on anything lon
 
 ## Releases and patch notes
 
-`CHANGELOG.md` is the single source for the in-app **Patch notes** tab (`changelog.rs` parses it). A test fails if
+`CHANGELOG.md` is the source of the in-app **Patch notes** tab (`changelog.rs` parses it), and `changelog/<tag>.md` is the
+same file in each other language (en-US, nb-NO, nn-NO), answered by `Accept-Language`. **A note lands in all four in the same
+commit**: a test holds every translation to the source release by release (the same headings byte for byte, groups, number of
+bullets, `code` and bold), so a release cannot ship in one language only. A test fails if
 the top entry's version differs from `Cargo.toml`, or an entry lacks a date/notes/known group, so a version bump
 and its changelog entry land together. Format: `## [x.y.z] - YYYY-MM-DD`, or `- YYYY-MM-DD to YYYY-MM-DD` for a release
 made over several days (`date` stays the release day, `started` the first; the page shows both), then
