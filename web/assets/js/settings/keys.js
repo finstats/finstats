@@ -2,7 +2,7 @@
 // shown once when it is made, and dies with their access. A calendar key opens the calendar feed and
 // nothing else, which is why it may travel in a subscription address. Administrators see everyone's.
 
-import { h, icon, num, mount, relEl, dateTime } from '../dom.js';
+import { h, icon, num, mount, relEl, dateTime, untilText } from '../dom.js';
 import { api, isAbort } from '../api.js';
 import { isAdmin, state } from '../state.js';
 import { card, sk, setBusy, inlineError, errorState, formField, segmented, copyButton, avatar } from '../components.js';
@@ -95,7 +95,8 @@ export default {
             admin ? h('td', null, h('span', { class: 'user-cell' }, avatar(k.user_id, k.user_name, { size: 20, hasImage: k.has_image }), k.user_name, k.mine ? h('span', { class: 'muted' }, ' (you)') : null)) : null,
             h('td', { 'data-sort': k.created_at }, relEl(k.created_at)),
             h('td', { 'data-sort': k.last_used_at || 0 }, k.last_used_at ? h('span', { title: k.last_used_ip ? `from ${k.last_used_ip}` : null }, relEl(k.last_used_at)) : h('span', { class: 'muted' }, 'never')),
-            h('td', { 'data-sort': k.expires_at || 0 }, k.expires_at ? h('span', { title: dateTime(k.expires_at) }, relEl(k.expires_at)) : h('span', { class: 'muted' }, 'never')),
+            // When it runs out is ahead, which relTime cannot say ("just now" for every key): untilText looks forward.
+            h('td', { 'data-sort': k.expires_at || 0 }, k.expires_at ? h('span', { title: dateTime(k.expires_at) }, k.expires_at > Date.now() / 1000 ? untilText(k.expires_at) : 'expired') : h('span', { class: 'muted' }, 'never')),
             h('td', null, h('div', { class: 'backup-actions' }, actions)));
         }))));
     }
