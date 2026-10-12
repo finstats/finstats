@@ -955,7 +955,7 @@ pub async fn run(app: App) {
     // Carrying on trust rather than on a pushed list; the first real push is held against it.
     let mut trusted_unproven = false;
     let (mut active, mut playing) = (0usize, 0usize);
-    let mut socket_error: Option<String> = None;
+    let mut socket_error: Option<crate::socket::Why> = None;
     // Somebody has been told Jellyfin is not answering, and is owed the news that it is again.
     let mut socket_for: Option<String> = None;
 
@@ -1069,7 +1069,7 @@ pub async fn run(app: App) {
                             // Say it once per spell, at the level of a thing that fixed itself, and
                             // only about a socket that *was* carrying. One that has not proved itself
                             // yet has already said so in its own words.
-                            if socket_error.as_deref() != Some(why.as_str()) && socket_live {
+                            if socket_error.as_ref() != Some(&why) && socket_live {
                                 match active > 0 && playing == 0 {
                                     true => tracing::info!("socket lost while paused ({why}) → catch-up poll, then every {PAUSED_POLL_S}s"),
                                     false => tracing::info!("Jellyfin is no longer pushing what is playing ({why}); checking on a timer again"),
@@ -1250,7 +1250,7 @@ pub async fn run(app: App) {
                                 // Worth saying even though this pass was asking anyway: once the play
                                 // ends there is nothing left to hear it from, and a socket that dies
                                 // quietly is how 1.4.0 hid for a day.
-                                if socket_error.as_deref() != Some(why.as_str()) && socket_live {
+                                if socket_error.as_ref() != Some(&why) && socket_live {
                                     match active > 0 && playing == 0 {
                                         true => tracing::info!("socket lost while paused ({why}) → catch-up poll, then every {PAUSED_POLL_S}s"),
                                         false => tracing::info!("Jellyfin is no longer pushing what is playing ({why}); checking on a timer again"),

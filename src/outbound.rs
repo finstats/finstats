@@ -16,6 +16,7 @@
 use serde_json::{Value, json};
 
 use crate::db::rusqlite::Connection;
+use crate::i18n::t;
 use crate::state::{App, CollectorStatus, Settings};
 
 /// One destination, as the page shows it.
@@ -51,10 +52,10 @@ pub fn host_of(url: &str) -> String {
 }
 
 /// One connection as this page needs it: id, kind, name, URL, switched on, last good read, last error.
-pub type ServiceRow = (i64, &'static str, String, String, bool, Option<i64>, Option<String>);
+pub type ServiceRow = (i64, &'static str, String, String, bool, Option<i64>, Option<crate::services::Said>);
 
-/// One notification destination: id, kind, name, URL, whose it is, switched on, last message it took,
-/// last error. The only rows here that FinStats *sends* to rather than reads from.
+/// One notification destination: id, kind (its key, named in the reader's language here), name, URL, whose it is,
+/// switched on, last message it took, last error. The only rows here that FinStats *sends* to rather than reads from.
 pub type TargetRow = (i64, &'static str, String, String, Option<String>, bool, Option<i64>, Option<String>);
 
 const ON: &str = "on";
@@ -79,18 +80,18 @@ pub fn destinations(
     out.push(match jellyfin_url {
         Some(url) => Dest {
             id: "jellyfin".into(),
-            what: "Your Jellyfin server".into(),
+            what: t("server.outbound.jellyfin", &[]),
             hosts: vec![host_of(url)],
-            why: "everything FinStats shows comes from here: what is playing, your library, your users".into(),
+            why: t("server.outbound.jellyfin_why", &[]),
             state: "always",
-            last_at: Some(collector.last_poll_at).filter(|t| *t > 0),
+            last_at: Some(collector.last_poll_at).filter(|at| *at > 0),
             error: collector.error.clone(),
         },
         None => Dest {
             id: "jellyfin".into(),
-            what: "Your Jellyfin server".into(),
+            what: t("server.outbound.jellyfin", &[]),
             hosts: vec![],
-            why: "not connected yet".into(),
+            why: t("server.outbound.jellyfin_off", &[]),
             state: OFF,
             last_at: None,
             error: None,
@@ -99,9 +100,9 @@ pub fn destinations(
 
     out.push(Dest {
         id: "public_ip".into(),
-        what: "A \"what is my IP\" service".into(),
+        what: t("server.outbound.public_ip", &[]),
         hosts: lookup_services.iter().map(|u| host_of(u)).collect(),
-        why: "so that people watching at home through your public address are not counted as remote. Asked once, and after that only when you press the button".into(),
+        why: t("server.outbound.public_ip_why", &[]),
         state: if settings.public_ip_lookup { ON } else { OFF },
         last_at: last_lookup_at,
         error: None,
@@ -109,11 +110,11 @@ pub fn destinations(
 
     out.push(Dest {
         id: "geoip".into(),
-        what: "DB-IP's free city database".into(),
+        what: t("server.outbound.geoip", &[]),
         hosts: vec![host_of(&crate::geo::download_url("YYYY-MM"))],
         why: match geoip_from_env {
-            true => "not used: the database is the file FINSTATS_GEOIP_DB names".into(),
-            false => "the download of the monthly file that places addresses on the Security page, when its task is scheduled. Looking an address up never leaves this machine".into(),
+            true => t("server.outbound.geoip_env", &[]),
+            false => t("server.outbound.geoip_why", &[]),
         },
         state: if !crate::schedule::effective("geoip", settings).is_empty() && !geoip_from_env { ON } else { OFF },
         last_at: geoip_built_at,
@@ -125,22 +126,23 @@ pub fn destinations(
             id: format!("service:{id}"),
             what: format!("{name} ({kind})"),
             hosts: vec![host_of(url)],
-            why: "a connection you added under Settings → Connections. Read-only, and on your own network unless you pointed it elsewhere".into(),
+            why: t("server.outbound.service_why", &[]),
             state: if *enabled { ON } else { OFF },
             last_at: *last_ok_at,
-            error: last_error.clone(),
+            error: last_error.as_ref().map(crate::services::Said::now),
         });
     }
 
     // The one kind of destination FinStats *sends* to. Nothing goes out but the events ticked for it.
     for (id, kind, name, url, owner, enabled, last_ok_at, last_error) in targets {
+        let kind = crate::channels::Channel::from_key(kind).map_or_else(|| kind.to_string(), crate::channels::Channel::title);
         out.push(Dest {
             id: format!("notify:{id}"),
             what: format!("{name} ({kind})"),
             hosts: vec![host_of(url)],
             why: match owner {
-                Some(owner) => format!("{owner}'s own notification destination, added under Settings → Notifications. It is sent the events they ticked, about things they are already allowed to see"),
-                None => "a notification destination you added under Settings → Notifications. It is sent the events you ticked there, and nothing else".into(),
+                Some(owner) => t("server.outbound.target_why_theirs", &[("owner", owner.into())]),
+                None => t("server.outbound.target_why", &[]),
             },
             state: if *enabled { ON } else { OFF },
             last_at: *last_ok_at,
@@ -199,7 +201,7 @@ fn notification_targets(conn: &Connection) -> anyhow::Result<Vec<TargetRow>> {
     let rows = stmt
         .query_map([], |r| {
             let kind: String = r.get(1)?;
-            let Some(label) = crate::channels::Channel::from_key(&kind).map(crate::channels::Channel::label) else {
+            let Some(label) = crate::channels::Channel::from_key(&kind).map(crate::channels::Channel::key) else {
                 return Ok(None); // a kind from a newer FinStats
             };
             Ok(Some((r.get(0)?, label, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?)))

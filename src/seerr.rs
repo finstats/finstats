@@ -26,6 +26,7 @@ use serde_json::Value;
 
 use crate::db::rusqlite::{Connection, params};
 use crate::db::{self, norm_id};
+use crate::i18n::t;
 use crate::services::{self, Kind, Service};
 use crate::state::App;
 
@@ -161,7 +162,7 @@ async fn page(app: &App, svc: &Service, filter: &str, take: usize, skip: usize) 
     let query = [("take", take.to_string()), ("skip", skip.to_string()), ("filter", filter.to_string()), ("sort", "modified".to_string()), ("sortDirection", "desc".to_string())];
     let mut body = services::get_json(app, svc, "/api/v1/request", &query).await?;
     let total = body["pageInfo"]["results"].as_u64();
-    let Some(results) = body.get_mut("results").and_then(Value::as_array_mut) else { bail!("{} did not answer its requests like Seerr", svc.url) };
+    let Some(results) = body.get_mut("results").and_then(Value::as_array_mut) else { return Err(services::words("server.seerr.not_requests", vec![("url", svc.url.clone())])) };
     Ok((std::mem::take(results), total))
 }
 
@@ -408,24 +409,24 @@ pub async fn sync_requests(app: &App) -> Result<String> {
     const ID: &str = "sync_requests";
     let list = services::enabled(app, |k| k == Kind::Seerr);
     if list.is_empty() {
-        return Ok("No Seerr connected".into());
+        return Ok(t("server.seerr.none", &[]));
     }
-    let (mut total, mut gone, mut failed) = (0, 0, vec![]);
+    let (mut total, mut gone, mut failed) = (0usize, 0usize, vec![]);
     for svc in &list {
-        app.tasks.update(ID, format!("Reading {}", svc.name), None);
+        app.tasks.update(ID, t("server.seerr.reading", &[("name", svc.name.as_str().into())]), None);
         match read(app, svc).await {
             Ok((n, removed)) => {
                 total += n;
                 gone += removed;
                 services::record(app, svc.id, Ok(None)).await;
-                app.tasks.update(ID, "Looking up titles", None);
+                app.tasks.update(ID, t("server.seerr.looking_up", &[]), None);
                 if let Err(e) = name_the_unnamed(app, svc).await {
                     tracing::debug!("titles for {}: {e}", svc.name);
                 }
             }
             Err(e) => {
                 tracing::warn!("requests of {}: {e}", svc.name);
-                services::record(app, svc.id, Err(e.to_string())).await;
+                services::record(app, svc.id, Err(services::Said::of(&e))).await;
                 failed.push(svc.name.clone());
             }
         }
@@ -434,13 +435,16 @@ pub async fn sync_requests(app: &App) -> Result<String> {
     app.downloads_wake.notify_waiters();
     check_available(app).await;
     if failed.len() == list.len() {
-        bail!("{} did not answer", failed.join(", "));
+        bail!(t("server.seerr.no_answer", &[("names", failed.join(", ").into())]));
     }
     if total == 0 && gone == 0 {
         // A pass that found nothing has read a single row to find that out, and stopped there.
-        return Ok("Nothing new".into());
+        return Ok(t("server.seerr.nothing_new", &[]));
     }
-    Ok(format!("{total} requests read{}", if gone > 0 { format!(", {gone} no longer in Seerr") } else { String::new() }))
+    Ok(match gone {
+        0 => t("server.seerr.read", &[("count", total.into())]),
+        gone => t("server.seerr.read_gone", &[("count", total.into()), ("gone", gone.into())]),
+    })
 }
 
 /// "The thing you asked for is watchable now": the one notification 1.3 was missing somewhere to say.

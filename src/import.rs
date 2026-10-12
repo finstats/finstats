@@ -43,17 +43,20 @@ fn opt_str(v: &Value) -> Option<String> {
     v.as_str().map(str::trim).filter(|s| !s.is_empty()).map(str::to_string)
 }
 
-fn phase_label(table: &str) -> &'static str {
-    match table {
-        "jf_libraries" => "Reading libraries",
-        "jf_library_items" => "Reading movies, shows and music",
-        "jf_library_seasons" => "Reading seasons",
-        "jf_library_episodes" => "Reading episodes",
-        "jf_users" => "Reading users",
-        "jf_playback_activity" => "Importing playback history",
-        "jf_item_info" => "Reading file details",
-        _ => "Reading backup",
-    }
+/// What an import is doing while it reads `table`, in the language of whoever started it. The words of every import
+/// are here (`server.import`), the other trackers' readers use them too.
+fn phase_label(table: &str) -> String {
+    let key = match table {
+        "jf_libraries" => "reading_libraries",
+        "jf_library_items" => "reading_items",
+        "jf_library_seasons" => "reading_seasons",
+        "jf_library_episodes" => "reading_episodes",
+        "jf_users" => "reading_users",
+        "jf_playback_activity" => "importing_history",
+        "jf_item_info" => "reading_file_details",
+        _ => "reading_backup",
+    };
+    crate::i18n::t(&format!("server.import.{key}"), &[])
 }
 
 /// Blocking. Parses the backup at `path` and writes it in a single transaction, so a
@@ -66,7 +69,7 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
     let mut first = [0u8; 1];
     let legacy = loop {
         if file.read(&mut first)? == 0 {
-            bail!("The file is empty");
+            bail!(crate::i18n::t("server.import.empty_file", &[]));
         }
         if !first[0].is_ascii_whitespace() {
             break first[0] == b'[';
@@ -87,15 +90,15 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
     };
 
     if legacy {
-        report("Reading backup (older single-file format, this needs more memory)", 0.05);
+        report(&crate::i18n::t("server.import.reading_legacy", &[]), 0.05);
         let doc: Value = serde_json::from_reader(BufReader::with_capacity(1 << 20, file))
-            .context("The file is not a valid Jellystat backup (JSON could not be parsed)")?;
-        let sections = doc.as_array().context("The file is not a Jellystat backup")?;
+            .context(crate::i18n::t("server.import.not_json", &[]))?;
+        let sections = doc.as_array().context(crate::i18n::t("server.import.not_jellystat", &[]))?;
         let count = sections.len().max(1);
         for (i, section) in sections.iter().enumerate() {
             let Some(obj) = section.as_object() else { continue };
             for (table, rows) in obj {
-                report(phase_label(table), 0.1 + 0.8 * i as f64 / count as f64);
+                report(&phase_label(table), 0.1 + 0.8 * i as f64 / count as f64);
                 for row in rows.as_array().map(Vec::as_slice).unwrap_or_default() {
                     import_row(&tx, table, row, &mut res, settings.merge_window_s)?;
                 }
@@ -123,9 +126,9 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
             let mut v: Value = match serde_json::from_str(trimmed) {
                 Ok(v) => v,
                 Err(e) if line_no <= 3 && recognised == 0 => {
-                    bail!("This does not look like a Jellystat backup (line {line_no}: {e})")
+                    bail!(crate::i18n::t("server.import.not_jellystat_at", &[("line", line_no.to_string().into()), ("error", e.to_string().into())]))
                 }
-                Err(e) => bail!("The backup is damaged at line {line_no}: {e}"),
+                Err(e) => bail!(crate::i18n::t("server.import.damaged_at", &[("line", line_no.to_string().into()), ("error", e.to_string().into())])),
             };
             match v["type"].as_str() {
                 Some("table") => {
@@ -141,20 +144,20 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
                 _ => res.unknown_rows += 1,
             }
             if line_no % 2000 == 0 {
-                report(phase_label(&current_table), 0.95 * read_bytes as f64 / total_bytes as f64);
+                report(&phase_label(&current_table), 0.95 * read_bytes as f64 / total_bytes as f64);
             }
             if line_no == 50 && recognised == 0 {
-                bail!("This does not look like a Jellystat backup: none of the first lines are backup records");
+                bail!(crate::i18n::t("server.import.no_records_at_first", &[]));
             }
         }
         if recognised == 0 {
-            bail!("This does not look like a Jellystat backup: no backup records found");
+            bail!(crate::i18n::t("server.import.no_records", &[]));
         }
     }
 
-    report("Linking plays to your library", 0.96);
+    report(&crate::i18n::t("server.import.linking", &[]), 0.96);
     finalize(&tx)?;
-    report("Saving", 0.99);
+    report(&crate::i18n::t("server.import.saving", &[]), 0.99);
     tx.commit()?;
     crate::groups::detect(&mut conn, settings.group_window_s, None)?;
     conn.execute_batch("PRAGMA optimize;")?;

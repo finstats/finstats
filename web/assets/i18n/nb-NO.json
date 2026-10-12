@@ -1431,6 +1431,710 @@
       "see_the_server": "Du har ikke tillatelse til å se serveren. En Jellyfin-administrator kan gi den under Innstillinger.",
       "see_what_is_downloading": "Du har ikke tillatelse til å se hva som lastes ned. En Jellyfin-administrator kan gi den under Innstillinger.",
       "see_where_people_watch_from": "Du har ikke tillatelse til å se hvor folk ser fra. En Jellyfin-administrator kan gi den under Innstillinger."
+    },
+    "api": {
+      "cross_site": "Forespørsel fra et annet nettsted ble avvist",
+      "lookup_off": "Slå på «Kjenn igjen min egen offentlige adresse» først",
+      "expected_object": "Forventet et JSON-objekt",
+      "invalid_settings": "Ugyldige innstillinger: {error}",
+      "invalid_triggers": "Ugyldige utløsere: {error}",
+      "geoip_from_env": "Databasen er angitt med FINSTATS_GEOIP_DB; bytt ut den filen i stedet",
+      "task_running": "Den oppgaven kjører allerede",
+      "unknown_permission": "Ukjent tillatelse `{name}`",
+      "admins_have_all": "Jellyfin-administratorer har allerede alle tillatelser",
+      "backup_running": "En sikkerhetskopi blir allerede skrevet",
+      "backup_name_taken": "Det finnes allerede en sikkerhetskopi med det navnet: slett den eller gi den et nytt navn først",
+      "restore_running": "En gjenoppretting eller en import kjører allerede",
+      "import_running": "En import eller en gjenoppretting kjører allerede",
+      "no_tautulli_backup": "Ingen sikkerhetskopi fra Tautulli venter. Last opp en først.",
+      "locate_wrong_kind": "En avspilling gjelder en film, en video eller en episode, aldri en hel serie eller sesong",
+      "upload_interrupted": "Opplastingen ble avbrutt: {error}",
+      "upload_empty": "Den opplastede filen var tom",
+      "reading_backup": "Leser sikkerhetskopien",
+      "receiving_backup": "Tar imot sikkerhetskopien",
+      "importing": "Importerer",
+      "restored": { "one": "Gjenopprettet {count} avspilling ({skipped} fantes fra før)", "other": "Gjenopprettet {count} avspillinger ({skipped} fantes fra før)" },
+      "imported": { "one": "Importerte {count} avspilling ({skipped} fantes fra før)", "other": "Importerte {count} avspillinger ({skipped} fantes fra før)" },
+      "imported_marked": { "one": "Importerte {count} avspilling ({skipped} fantes fra før); {marked} merket som sett, men aldri spilt av", "other": "Importerte {count} avspillinger ({skipped} fantes fra før); {marked} merket som sett, men aldri spilt av" },
+      "no_profile_title": "Ikke funnet",
+      "no_profile": "Det finnes ingen profil her."
+    },
+    "state": {
+      "between": "{name} må være mellom {lo} og {hi}",
+      "unknown_permission": "ukjent tillatelse `{name}`",
+      "not_an_ip": "`{address}` er ikke en IP-adresse",
+      "too_many_homes": "høyst {max} hjemmeadresser",
+      "public_url": "Adressen til FinStats må begynne med http:// eller https://",
+      "address_too_long": "Den adressen er for lang",
+      "jellyfin_public_url": "Jellyfins adresse må begynne med http:// eller https:// og angi en vert",
+      "failed": "Mislyktes"
+    },
+    "auth": {
+      "bearer_form": "Bruk `Authorization: Bearer <key>`",
+      "sign_in_to_continue": "Logg inn for å fortsette",
+      "calendar_key_only": "Denne nøkkelen åpner bare kalenderabonnementet",
+      "feed_needs_key": "Dette abonnementet trenger en nøkkel: legg til ?key=… i adressen",
+      "too_many_attempts": { "one": "For mange innloggingsforsøk. Prøv igjen om {count} minutt.", "other": "For mange innloggingsforsøk. Prøv igjen om {count} minutter." },
+      "not_connected": "FinStats er ikke koblet til Jellyfin ennå",
+      "enter_username": "Skriv inn Jellyfin-brukernavnet ditt",
+      "wrong_password": "Feil brukernavn eller passord",
+      "unreachable": "Fikk ikke kontakt med Jellyfin for å sjekke innloggingen din",
+      "no_access": "Du har ikke fått tilgang til FinStats. En Jellyfin-administrator kan slippe deg inn under Innstillinger.",
+      "already_set_up": "FinStats er allerede satt opp",
+      "not_admin": "Den kontoen er ikke Jellyfin-administrator. Sett opp FinStats med en administratorkonto."
+    },
+    "keys": {
+      "session_only": "Logg inn for å administrere nøkler; en nøkkel kan ikke lage eller trekke tilbake nøkler",
+      "name": "Gi nøkkelen et navn på opptil 60 tegn",
+      "expiry": "En utløpstid er 1 til 3 650 dager",
+      "scope": "Omfanget er `full` eller `calendar`",
+      "too_many": "Du har allerede {max} nøkler; trekk tilbake én først"
+    },
+    "appearance": {
+      "unknown_preset": "`{preset}` er ikke et FinUI-forhåndsvalg: en kode er én bokstav eller ett siffer per valg, for eksempel 0101"
+    },
+    "public": {
+      "session_only": "Logg inn for å publisere en profil; en nøkkel kan ikke gjøre noe offentlig",
+      "not_allowed": "En administrator har ikke tillatt offentlige profiler på denne serveren",
+      "page_title": "En FinStats-profil",
+      "page_title_named": "{name} på FinStats",
+      "page_description": "Visningstid: {hours} t. Avspillinger: {plays}.",
+      "page_description_none": "Det de ser på, publisert av dem selv."
+    },
+    "jellyfin": {
+      "enter_address": "Skriv inn adressen til Jellyfin-serveren din",
+      "enter_address_of": "Skriv inn adressen til {what}",
+      "invalid_url": "Det ser ikke ut som en gyldig nettadresse",
+      "timed_out": "Tidsavbrudd mot {address}",
+      "could_not_connect": "Kunne ikke koble til {address}",
+      "could_not_reach": "Fikk ikke kontakt med {address}: {error}",
+      "not_jellyfin_status": "{address} svarte {status}. Er dette en Jellyfin-server?",
+      "not_jellyfin": "{address} svarte ikke som en Jellyfin-server",
+      "unreachable": "Fikk ikke kontakt med Jellyfin: {error}",
+      "answered": "Jellyfin svarte {status}",
+      "answered_for": "Jellyfin svarte {status} på {path}",
+      "answered_for_user_items": "Jellyfin svarte {status} på elementene til en bruker",
+      "keys_list_refused": "Jellyfin nektet å vise API-nøklene ({status})",
+      "key_create_refused": "Jellyfin nektet å opprette en API-nøkkel ({status})",
+      "key_unreadable": "Opprettet en API-nøkkel, men kunne ikke lese den tilbake"
+    },
+    "jobs": {
+      "explain": {
+        "scan_library": "Går gjennom mediemappene dine etter filer som er nye, endret eller borte, og oppdaterer databasen til Jellyfin. Det er denne jobben som får en ny film til å dukke opp. FinStats leser biblioteket ditt rett etter at den er ferdig, så alt den finner, er med i statistikken innen et par minutter.",
+        "media_segments": "Går gjennom episodene dine og leter etter delene en avspiller kan tilby å hoppe over (introen, en oppsummering, rulleteksten), og noterer hvor de er. Den leser lyden og bildet i hver fil for å gjøre det, så den er noe av det tyngste Jellyfin kjører, og den ser bare på det den ikke har analysert før. Det er helt vanlig å la den gå over natten; ingenting av dette rører filene i biblioteket ditt.",
+        "trickplay": "Lager stripen med små bilder du ser når du drar i fremdriftslinjen. Den dekoder hver video én gang og lagrer miniatyrbildene ved siden av, så første kjøring på et stort bibliotek tar timer og koster diskplass. Senere kjøringer tar seg bare av det som er nytt.",
+        "chapter_images": "Lager miniatyrbildet for hvert kapittel i en film, så kapittelmenyer får bilder i stedet for tall. Den spoler inn i hver fil som har kapitler; etter første kjøring bare i nye filer.",
+        "keyframes": "Noterer punktene i hver fil en avspiller har lov til å hoppe til. Med dem lander du der du slapp når du drar i fremdriftslinjen på en video som kodes om, i stedet for noen sekunder unna.",
+        "audio_normalization": "Måler hvor høy lyden er i hver fil, så en avspiller kan jevne ut forskjellen mellom en lavmælt film og en høylytt. Den leser lyden i hver fil den ikke har målt ennå.",
+        "refresh_people": "Henter opplysninger om og bilder av skuespillerne og regissørene i biblioteket ditt fra metadataleverandørene du har slått på. Den går ut på internett; den rører ikke filene dine.",
+        "refresh_guide": "Laster ned programoversikten for direkte-TV for de neste dagene fra den leverandøren av programoversikt du har satt opp. Gjør bare noe hvis du har direkte-TV.",
+        "optimize_database": "Rydder i Jellyfins egen databasefil: henter tilbake plassen slettede rader etterlot seg, og bygger indeksene på nytt. Jellyfin er litt tregere mens jobben kjører, og raskere etterpå. Den har ingenting med mediene dine å gjøre.",
+        "clean_activity_log": "Sletter gamle oppføringer fra aktivitetsloggen til Jellyfin: innloggingene og feilene du ser under Kontrollpanel → Aktivitet. FinStats har allerede kopiert dem inn i sin egen historikk, så ingenting på Server-siden i FinStats forsvinner med dem.",
+        "clean_logs": "Sletter Jellyfins egne loggfiler når de er eldre enn antall dager som er satt i innstillingene. Rent vedlikehold; den rører aldri mediene.",
+        "clean_cache": "Tømmer de delene av cache-mappen til Jellyfin som ingenting trenger lenger. Trygt og raskt, og det frigjør bare diskplass.",
+        "clean_transcode": "Sletter de midlertidige filene Jellyfin etterlater seg når den koder om noe: bitene av video den laget for en avspiller som ikke klarte originalen. De kan utgjøre mange gigabyte på en travel server.",
+        "plugin_updates": "Spør programtilleggsarkivene om noen av programtilleggene dine har en nyere versjon, og installerer oppdateringene hvis du har bedt om det. Denne går ut på internett på vegne av serveren din.",
+        "subtitles": "Tar seg av undertekster: henter dem du har bedt om, fra leverandørene du har slått på, eller trekker ut dem som allerede ligger inne i en videofil, så en avspiller kan slå dem på uten omkoding.",
+        "thumbnails": "Tar et stillbilde fra hver video og bruker det som bilde der ingen metadataleverandør har gitt noe.",
+        "system_update": "Sjekker om en nyere Jellyfin er kommet ut. Den går ut på internett; den installerer ingenting av seg selv med mindre du har bedt om det."
+      },
+      "from_plugin": "{description} (Jellyfins egne ord: FinStats kjenner ikke denne jobben, så den kommer sannsynligvis fra et programtillegg.)",
+      "unknown": "FinStats kjenner ikke denne jobben, og Jellyfin beskriver den ikke. Det betyr som regel at et programtillegg har lagt den til.",
+      "unnamed": "Jobb uten navn",
+      "not_connected": "Ikke koblet til Jellyfin",
+      "no_answer": "Jellyfin svarte ikke",
+      "daily": "hver dag kl. {time}",
+      "weekly": {
+        "mon": "hver mandag kl. {time}",
+        "tue": "hver tirsdag kl. {time}",
+        "wed": "hver onsdag kl. {time}",
+        "thu": "hver torsdag kl. {time}",
+        "fri": "hver fredag kl. {time}",
+        "sat": "hver lørdag kl. {time}",
+        "sun": "hver søndag kl. {time}",
+        "any": "hver uke kl. {time}"
+      },
+      "at_startup": "når Jellyfin starter",
+      "every": {
+        "day": "hver dag",
+        "days": "hver {count}. dag",
+        "hour": "hver time",
+        "hours": "hver {count}. time",
+        "minute": "hvert minutt",
+        "minutes": "hvert {count}. minutt",
+        "second": "hvert sekund",
+        "seconds": "hvert {count}. sekund"
+      }
+    },
+    "socket": {
+      "closed": "Jellyfin lukket tilkoblingen",
+      "failed": "tilkoblingen feilet ({detail})",
+      "mismatch": "det Jellyfin sender av seg selv, stemmer ikke med det den svarer på /Sessions ({detail})",
+      "collector_gone": "innsamleren sluttet å lytte",
+      "unreadable": "Jellyfin sendte en øktliste som ikke kunne leses",
+      "no_answer": "ikke noe svar i det hele tatt innen {seconds} s",
+      "silent": "Jellyfin sa ingenting på {seconds} s",
+      "no_handshake": "{url} svarte ikke på håndtrykket innen {seconds} s",
+      "refused": "{url} avviste tilkoblingen ({detail})"
+    },
+    "card": {
+      "a_profile": "En FinStats-profil",
+      "hours_watched": { "one": "{count} time visningstid", "other": "{count} timer visningstid" },
+      "when_they_watch": "Når de ser på",
+      "longest_streak": { "one": "Lengste rekke: {count} dag", "other": "Lengste rekke: {count} dager på rad" },
+      "a_year": "Et år på FinStats",
+      "whose_year": "Året til {name}",
+      "hours_watched_unit": "timer visningstid",
+      "streak": "{count} dager på rad",
+      "top_show": "Toppserie",
+      "top_film": "Toppfilm",
+      "weekday": {
+        "mon": "man",
+        "tue": "tir",
+        "wed": "ons",
+        "thu": "tor",
+        "fri": "fre",
+        "sat": "lør",
+        "sun": "søn"
+      }
+    },
+    "story": {
+      "last_12_months": "Siste 12 måneder",
+      "in_review": "{label} i tilbakeblikk",
+      "whose": "{label} for {whose}",
+      "word": {
+        "year": "ÅRET",
+        "numbers": "TALL",
+        "shows": "SERIER",
+        "films": "FILMER",
+        "music": "MUSIKK",
+        "genres": "SJANGRE",
+        "persona": "DEG",
+        "rhythm": "RYTME",
+        "days": "DAGER",
+        "records": "REKORDER",
+        "together": "SAMMEN",
+        "finished": "FULLFØRT",
+        "asked": "ØNSKER",
+        "versus": "MOT"
+      },
+      "hours_of_watching": "timer visningstid",
+      "plays": { "one": "{count} avspilling", "other": "{count} avspillinger" },
+      "titles": { "one": "{count} tittel", "other": "{count} titler" },
+      "days": { "one": "{count} dag", "other": "{count} dager" },
+      "in_numbers": "Året i tall",
+      "tile": {
+        "plays": "Avspillinger",
+        "hours": "Timer",
+        "titles": "Titler",
+        "days": "Dager",
+        "episodes": "Episoder",
+        "films": "Filmer",
+        "songs": "Sanger"
+      },
+      "top": {
+        "shows": "Toppseriene dine",
+        "films": "Toppfilmene dine",
+        "songs": "Toppsangene dine"
+      },
+      "hours_short": "{count} t",
+      "minutes_short": "{count} min",
+      "mostly": "Mest {genre}",
+      "you_were": "I år var du",
+      "around": "Mest rundt kl. {time}",
+      "busiest": "Travlest på {days}",
+      "weekdays": {
+        "mon": "mandager",
+        "tue": "tirsdager",
+        "wed": "onsdager",
+        "thu": "torsdager",
+        "fri": "fredager",
+        "sat": "lørdager",
+        "sun": "søndager"
+      },
+      "with_something_on": { "one": "{count} dag med noe på skjermen", "other": "{count} dager med noe på skjermen" },
+      "longest_streak": { "one": "Lengste rekke: {count} dag", "other": "Lengste rekke: {count} dager på rad" },
+      "records": "Rekorder verdt å skryte av",
+      "record": {
+        "streak": "Lengste rekke",
+        "day": "Største dag",
+        "binge": "Største maraton",
+        "rewatched": "Mest gjensett",
+        "oldest": "Eldste tittel"
+      },
+      "day_hours": "{hours} t den {day}",
+      "binge": { "one": "{count} episode av {show}", "other": "{count} episoder av {show}" },
+      "rewatched": { "one": "{name}, sett på {count} dag", "other": "{name}, sett på {count} ulike dager" },
+      "day_month": "{day}. {month}",
+      "months": {
+        "jan": "januar",
+        "feb": "februar",
+        "mar": "mars",
+        "apr": "april",
+        "may": "mai",
+        "jun": "juni",
+        "jul": "juli",
+        "aug": "august",
+        "sep": "september",
+        "oct": "oktober",
+        "nov": "november",
+        "dec": "desember"
+      },
+      "evening_in_company": "kveld i selskap",
+      "evenings_in_company": "kvelder i selskap",
+      "together_line": "{hours} t sammen · {percent} % av det du så",
+      "together_top": "Det som samlet folk mest",
+      "evenings": { "one": "{count} kveld", "other": "{count} kvelder" },
+      "finished": { "one": "{count} serie sett til slutt", "other": "{count} serier sett til slutt" },
+      "left_for_later": { "one": "og {count} serie lagt til side", "other": "og {count} serier lagt til side" },
+      "request": "forespørsel",
+      "requests": "forespørsler",
+      "arrived": "{count} kom på serveren",
+      "watched": "{count} sett",
+      "more_than": "{percent} % mer enn i {year}",
+      "less_than": "{percent} % mindre enn i {year}"
+    },
+    "stats": {
+      "unknown_kind": "Ukjent type",
+      "unknown_group": "Ukjent gruppering",
+      "completion": {
+        "under_10": "Under 10 %",
+        "from_10_to_50": "10–50 %",
+        "from_50_to_90": "50–90 %",
+        "finished": "Fullført (90 %+)"
+      }
+    },
+    "health": {
+      "note_too_long": "Et notat kan være på høyst {max} tegn"
+    },
+    "timeline": {
+      "bad_cursor": "Det er ikke en gyldig posisjon i tidslinjen",
+      "bad_libraries": "Det ser ikke ut som en liste med bibliotek-ID-er",
+      "specials": "Spesialepisoder",
+      "season": "Sesong {n}"
+    },
+    "profile": {
+      "how_many_ids": "Send mellom 1 og 5000 element-ID-er",
+      "bad_ids": "Det ser ikke ut som en liste med element-ID-er"
+    },
+    "watchlist": {
+      "only_films_and_shows": "Bare filmer og serier kan legges til i Min liste",
+      "needs_an_id": "En tittel som ikke finnes i biblioteket, trenger en TMDB-, TVDB- eller IMDb-ID",
+      "bad_id": "Det ser ikke ut som en TMDB-, TVDB- eller IMDb-ID",
+      "bad_name": "En tittel trenger et navn på høyst 300 tegn",
+      "bad_year": "Det året kan ikke en film eller serie ha",
+      "full": "Min liste har {max} titler, som er det meste den kan ha. Fjern en først."
+    },
+    "capacity": {
+      "software_transcodes": "Hver omkoding de siste {days} dagene som Jellyfin rapporterte om, kjørte uten maskinvareakselerasjon",
+      "scan_busy": "Biblioteksskanningen i Jellyfin går en stor del av tiden",
+      "runway_under_a_month": "{place}: under en måned med plass igjen i tempoet fra de siste {window} månedene",
+      "runway_about_a_month": "{place}: omtrent en måned med plass igjen i tempoet fra de siste {window} månedene",
+      "runway_about": "{place}: omtrent {count} måneder med plass igjen i tempoet fra de siste {window} månedene"
+    },
+    "recap": {
+      "bad_scope": "Omfanget er `user` eller `server`",
+      "persona": {
+        "night_owl": {
+          "title": "Nattugle",
+          "line": "{n} % av visningstiden var mellom 22:00 og 04:00"
+        },
+        "early_bird": {
+          "title": "Morgenfugl",
+          "line": "{n} % av visningstiden var før klokka 10 om morgenen"
+        },
+        "music_lover": {
+          "title": "Musikkelsker",
+          "line": "{n} % av alt som ble spilt av, var musikk"
+        },
+        "weekend_warrior": {
+          "title": "Helgekriger",
+          "line": "{n} % av visningstiden var på lørdager og søndager"
+        },
+        "binge_watcher": {
+          "title": "Maratonseer",
+          "line": "{n} episoder i snitt på en dag med visning"
+        },
+        "movie_buff": {
+          "title": "Filmentusiast",
+          "line": "{n} % av avspillingene var filmer"
+        },
+        "creature_of_habit": {
+          "title": "Vanedyr",
+          "line": "Det meste av visningstiden begynte rundt {n}, uke etter uke"
+        }
+      }
+    },
+    "security": {
+      "unknown_place": "Ukjent sted",
+      "home_place": "Hjemme ({place})",
+      "played_on": "{title} på {device}",
+      "found_in_older_history": "Funnet i eldre historikk",
+      "same_two_places": "De samme to stedene",
+      "database_from_env": "Databasen er satt med FINSTATS_GEOIP_DB; bytt ut den filen i stedet",
+      "already_downloading": "Databasen lastes allerede ned"
+    },
+    "geo": {
+      "not_a_city_database": "{file} er en `{kind}`-database; FinStats trenger en database med byer",
+      "already_have": "Har allerede {month}",
+      "downloaded": "Lastet ned DB-IP City Lite {month}",
+      "download_failed": "nedlasting av geolokasjonsdatabasen",
+      "downloading": "Laster ned",
+      "answered": "{url} svarte {status}",
+      "downloading_part": "Laster ned ({got} av {total} MB)",
+      "unpacking": "Pakker ut"
+    },
+    "schedule": {
+      "cannot_be_scheduled": "«{task}» kan ikke tidsplanlegges",
+      "too_many_triggers": "Høyst {max} utløsere per oppgave",
+      "same_trigger_twice": "Den samme utløseren står der to ganger",
+      "time_of_day": "Et klokkeslett er mellom 00:00 og 23:59",
+      "day_of_week": "En ukedag er fra 0 (søndag) til 6 (lørdag)",
+      "interval": "Et intervall er mellom 5 minutter og 30 dager",
+      "after_scan": "Bare oppgavene som leser biblioteket, kan følge biblioteksskanningen i Jellyfin",
+      "no_time_limit": "Denne oppgaven kan ikke stoppes halvveis, så den kan ikke ha en tidsgrense",
+      "time_limit": "En tidsgrense er mellom 1 minutt og 168 timer",
+      "past_time_limit": "Stoppet: den kjørte forbi tidsgrensen på {limit}",
+      "no_message": "ingen melding",
+      "panicked": "FinStats traff en feil og stoppet denne kjøringen ({why}); den kjører igjen ved neste utløser",
+      "cancelled": "kjøringen ble avbrutt ({error})",
+      "hours": { "one": "{count} time", "other": "{count} timer" },
+      "minutes": { "one": "{count} minutt", "other": "{count} minutter" }
+    },
+    "sync": {
+      "starting": "Starter …",
+      "writing_backup": "Skriver sikkerhetskopi",
+      "backup_panicked": "FinStats traff en feil og sluttet å skrive denne sikkerhetskopien; den skrives igjen ved neste utløser",
+      "backup_written": { "one": "{count} avspilling, {size} MB", "other": "{count} avspillinger, {size} MB" },
+      "fetching_users": "Henter brukere",
+      "users_refused": { "one": "Jellyfin ga {count} bruker der FinStats kjenner {current}. De som mangler, blir ikke merket som fjernet: dette ser ut som en endring i Jellyfin eller en feillesing. Ingenting ble endret.", "other": "Jellyfin ga {count} brukere der FinStats kjenner {current}. De som mangler, blir ikke merket som fjernet: dette ser ut som en endring i Jellyfin eller en feillesing. Ingenting ble endret." },
+      "users_read": { "one": "{count} bruker", "other": "{count} brukere" },
+      "fetching_libraries": "Henter biblioteker",
+      "libraries_refused": { "one": "Jellyfin listet {count} bibliotek der FinStats kjenner {current}. De som mangler, blir ikke merket som fjernet: dette ser ut som en endring i Jellyfin eller en feillesing, ikke en tømt server. Ingenting ble endret.", "other": "Jellyfin listet {count} biblioteker der FinStats kjenner {current}. De som mangler, blir ikke merket som fjernet: dette ser ut som en endring i Jellyfin eller en feillesing, ikke en tømt server. Ingenting ble endret." },
+      "items_read": "{library}: {done} av {total} elementer",
+      "cast_and_crew": "{library}: medvirkende",
+      "items_refused": { "one": "Jellyfin ga {count} lesbart element for biblioteket «{library}», men FinStats har {current}. {missing} elementer blir ikke merket som fjernet: dette ser ut som en endring i Jellyfin eller en feillesing, ikke en sletting. Biblioteket ble latt være akkurat som det var.", "other": "Jellyfin ga {count} lesbare elementer for biblioteket «{library}», men FinStats har {current}. {missing} elementer blir ikke merket som fjernet: dette ser ut som en endring i Jellyfin eller en feillesing, ikke en sletting. Biblioteket ble latt være akkurat som det var." },
+      "linking": "Kobler avspillinger til biblioteker",
+      "libraries_read": { "one": "{items} elementer i {count} bibliotek", "other": "{items} elementer i {count} biblioteker" },
+      "waiting_for_library_read": "Venter på første lesing av biblioteket",
+      "changed_items": "{library}: {count} endrede elementer",
+      "people_looked_at": "Personer: {count} sett på",
+      "nothing_changed": "Ingenting er endret",
+      "titles_changed": { "one": "{count} tittel er endret", "other": "{count} titler er endret" },
+      "portraits_changed": { "one": "{count} portrett er endret", "other": "{count} portretter er endret" },
+      "titles": { "one": "{count} tittel", "other": "{count} titler" },
+      "portraits": { "one": "{count} portrett", "other": "{count} portretter" },
+      "titles_and_portraits_changed": "{titles} og {portraits} er endret",
+      "fetching_activity": "Henter serveraktivitet",
+      "entries_read": "{done} av {total} oppføringer",
+      "new_entries": { "one": "{count} ny oppføring", "other": "{count} nye oppføringer" },
+      "reading_server": "Leser serverdetaljer",
+      "reading_devices": "Leser enheter",
+      "server_read": { "one": "{count} enhet, {plugins} programtillegg", "other": "{count} enheter, {plugins} programtillegg" },
+      "server_read_without_plugins": { "one": "{count} enhet; programtilleggene kunne ikke leses", "other": "{count} enheter; programtilleggene kunne ikke leses" },
+      "reading_watched": "Leser hva {name} har sett",
+      "userdata_read": { "one": "{count} avspilt eller favorittmerket element", "other": "{count} avspilte eller favorittmerkede elementer" }
+    },
+    "import": {
+      "reading_libraries": "Leser biblioteker",
+      "reading_items": "Leser filmer, serier og musikk",
+      "reading_seasons": "Leser sesonger",
+      "reading_episodes": "Leser episoder",
+      "reading_users": "Leser brukere",
+      "importing_history": "Importerer avspillingshistorikk",
+      "reading_file_details": "Leser fildetaljer",
+      "reading_backup": "Leser sikkerhetskopien",
+      "empty_file": "Filen er tom",
+      "reading_legacy": "Leser sikkerhetskopien (eldre format i én fil, som trenger mer minne)",
+      "not_json": "Filen er ikke en gyldig sikkerhetskopi fra Jellystat (JSON kunne ikke tolkes)",
+      "not_jellystat": "Filen er ikke en sikkerhetskopi fra Jellystat",
+      "not_jellystat_at": "Dette ser ikke ut som en sikkerhetskopi fra Jellystat (linje {line}: {error})",
+      "damaged_at": "Sikkerhetskopien er skadet på linje {line}: {error}",
+      "no_records_at_first": "Dette ser ikke ut som en sikkerhetskopi fra Jellystat: ingen av de første linjene er poster fra en sikkerhetskopi",
+      "no_records": "Dette ser ikke ut som en sikkerhetskopi fra Jellystat: fant ingen poster fra en sikkerhetskopi",
+      "linking": "Kobler avspillinger til biblioteket ditt",
+      "saving": "Lagrer"
+    },
+    "streamystats": {
+      "is_jellystat": "Det er en sikkerhetskopi fra Jellystat. Den hører hjemme under «Importer fra Jellystat».",
+      "not_streamystats": "Dette ser ikke ut som en sikkerhetskopi fra Streamystats ({error}).",
+      "no_sessions": "Dette ser ikke ut som en sikkerhetskopi fra Streamystats: den inneholder ingen liste over økter."
+    },
+    "tautulli": {
+      "zip_method": "Zip-filen er pakket på en måte FinStats ikke kan åpne (metode {method}). Pakk den ut og last opp .db-filen den inneholder.",
+      "zip_damaged": "Zip-filen er skadet. Last ned sikkerhetskopien fra Tautulli på nytt.",
+      "zip_without_database": "Det er ingen Tautulli-database i denne zip-filen. Last opp .db-filen, eller zip-filen du får når du laster ned en sikkerhetskopi i Tautulli.",
+      "zip_with_databases": "Denne zip-filen inneholder mer enn én database. Pakk den ut og last opp den fra Tautulli.",
+      "not_tautulli": "Dette ser ikke ut som en sikkerhetskopi fra Tautulli. Last opp .db-filen (eller zip-filen med den) fra sikkerhetskopiene i Tautulli.",
+      "no_wires": "Koble minst én Plex-bruker til en Jellyfin-bruker",
+      "no_such_plex_user": "Sikkerhetskopien har ingen Plex-bruker {id}",
+      "no_such_jellyfin_user": "En av ledningene ender hos noen denne serveren ikke har",
+      "wired_twice": "En Plex-bruker kan bare kobles til én Jellyfin-bruker",
+      "reading_backup": "Leser sikkerhetskopien"
+    },
+    "backup": {
+      "writing": "Skriver {table}: {done} av {total} rader",
+      "unreadable": "Filen er skadet eller ikke en sikkerhetskopi fra FinStats (kunne ikke leses)",
+      "not_json": "Filen er ikke en sikkerhetskopi fra FinStats (linje {line} er ikke JSON)",
+      "not_finstats": "Dette er ikke en sikkerhetskopi fra FinStats. En sikkerhetskopi fra Jellystat hører hjemme under «Importer fra Jellystat».",
+      "newer_format": "Denne sikkerhetskopien ble laget av en nyere FinStats (format {format}). Oppdater FinStats, og gjenopprett den deretter.",
+      "restoring": { "one": "Gjenoppretter: {count} avspilling så langt", "other": "Gjenoppretter: {count} avspillinger så langt" },
+      "linking": "Kobler avspillinger til biblioteket"
+    },
+    "notify": {
+      "group": {
+        "security": "Sikkerhet",
+        "housekeeping": "Vedlikehold",
+        "library": "Bibliotek",
+        "playback": "Avspilling"
+      },
+      "kind": {
+        "travel": {
+          "label": "Umulig reise",
+          "what": "To observasjoner av samme konto som ingen flytur rekker mellom"
+        },
+        "new_country": {
+          "label": "Et nytt land",
+          "what": "Første gang en konto er sett i et land"
+        },
+        "failed_sign_ins": {
+          "label": "Mislykkede innlogginger",
+          "what": "Flere mislykkede innlogginger på rad for én konto, eller fra én adresse"
+        },
+        "task_failed": {
+          "label": "En oppgave feilet",
+          "what": "En synkronisering, en import eller en lesing fra en tilkoblet tjeneste endte med en feil"
+        },
+        "backup_failed": {
+          "label": "En sikkerhetskopi feilet",
+          "what": "En sikkerhetskopi kunne ikke skrives"
+        },
+        "service_down": {
+          "label": "Noe sluttet å svare",
+          "what": "Jellyfin, Sonarr, Radarr eller Seerr sluttet å svare"
+        },
+        "service_back": {
+          "label": "Noe svarer igjen",
+          "what": "…og når det svarer igjen"
+        },
+        "new_items": {
+          "label": "Nytt i biblioteket",
+          "what": "Titler lagt til i biblioteket, samlet per serie og dag"
+        },
+        "request_available": {
+          "label": "En forespørsel kan ses",
+          "what": "Noe noen ba om i Seerr, kan nå ses"
+        },
+        "play_started": {
+          "label": "Noen begynte å se",
+          "what": "En avspilling begynner: tittelen, personen og enheten"
+        },
+        "play_stopped": {
+          "label": "Noen sluttet å se",
+          "what": "En avspilling slutter, med hvor mye av den som ble sett"
+        },
+        "recap_ready": {
+          "label": "Tilbakeblikket på året er klart",
+          "what": "I desember, én gang: en persons tilbakeblikk på året er klart til å se tilbake på og dele"
+        },
+        "watchlist_available": {
+          "label": "På Min liste: nå tilgjengelig",
+          "what": "En film eller serie du ventet på i Min liste, er i biblioteket. Sendes bare til dine egne mottakere"
+        },
+        "test": {
+          "label": "Testmelding",
+          "what": "Sendes av Test-knappen, og av ingenting annet"
+        }
+      },
+      "bad_url": "Det ser ikke ut som en gyldig nettadresse",
+      "needs_host": "Adressen trenger et vertsnavn",
+      "lookup_failed": "{host} kunne ikke slås opp",
+      "not_public": "{host} er en adresse på dette nettverket. Dine egne mottakere må peke på en offentlig tjeneste. Be en administrator om å legge den til for serveren i stedet",
+      "enter_address": "Skriv inn adressen det skal sendes til",
+      "http_only": "Adressen må begynne med http:// eller https://",
+      "no_login": "Ikke ta med brukernavn og passord i adressen",
+      "no_fragment": "Adressen kan ikke inneholde #",
+      "no_query": "Adressen kan ikke inneholde ?",
+      "fixed_url": "{channel} nås alltid på {url}, så det er ingen adresse å skrive inn",
+      "not_discord": "Det er ikke en Discord-webhookadresse. I Discord: Kanalinnstillinger → Integrasjoner → Webhooks → Kopier webhook-URL",
+      "discord_no_token": "Denne Discord-webhookadressen mangler tokenet sitt. Kopier hele nettadressen",
+      "not_slack": "Det er ikke en Slack-webhookadresse. I Slack: appen din → Incoming Webhooks → Add New Webhook to Workspace, og kopier så nettadressen",
+      "slack_no_token": "Denne Slack-webhookadressen mangler tokenet sitt. Kopier hele nettadressen",
+      "mail_scheme": "En e-postserveradresse begynner med smtps:// eller smtp://",
+      "not_mail_url": "Det ser ikke ut som en e-postserveradresse",
+      "mail_no_login": "Ikke ta med brukernavn og passord i adressen; de har hvert sitt felt",
+      "mail_host_port": "En e-postserveradresse er en vert og en port, uten noe etter",
+      "enter": "Feltet «{what}» må fylles ut",
+      "value": "verdi",
+      "token": "token",
+      "ntfy_topic": "Et ntfy-emne kan bare inneholde bokstaver, sifre, - og _",
+      "telegram_chat": "En chat-ID er et tall som -1001234567890, eller en offentlig kanal som @navn",
+      "pushover_key": "En bruker- eller gruppenøkkel for Pushover er 30 bokstaver og sifre, fra forsiden av pushover.net",
+      "nothing_to_enter": "{channel} har ingenting å fylle inn her",
+      "unknown_kind": "Ukjent type mottaker `{kind}`",
+      "say_kind": "Si hvilken type mottaker dette er",
+      "enter_address_of": "Skriv inn adressen til {channel}",
+      "not_a_token": "Det ser ikke ut som et token",
+      "too_long": "Feltet «{what}» er for langt, eller inneholder noe som ikke kan sendes",
+      "unknown_event": "Ukjent hendelse `{event}`",
+      "unknown_severity": "Ukjent alvorlighetsgrad `{severity}`",
+      "max_targets": { "one": "Høyst {count} mottaker", "other": "Høyst {count} mottakere" },
+      "max_own": { "one": "Høyst {count} egen mottaker", "other": "Høyst {count} egne mottakere" }
+    },
+    "channels": {
+      "webhook": "Webhook",
+      "email": "E-post",
+      "what": {
+        "webhook": "En POST med JSON til hvilken som helst adresse: ditt eget skript, Home Assistant, n8n",
+        "discord": "En kanal på serveren din, via en webhook du lager der",
+        "slack": "En kanal i arbeidsområdet ditt, via en innkommende webhook",
+        "telegram": "En chat med en egen bot, eller en gruppe eller kanal den er med i",
+        "email": "Hvilken som helst innboks, via en SMTP-server du allerede har",
+        "ntfy": "ntfy.sh eller din egen ntfy, til et emne du velger",
+        "gotify": "Din egen Gotify-server, med et applikasjonstoken",
+        "pushover": "Pushover på telefonen, med en egen applikasjon",
+        "pushbullet": "Pushbullet, på alle enheter som er logget inn på kontoen din"
+      },
+      "topic": {
+        "ntfy": {
+          "label": "Emne",
+          "help": "ntfy-emnet det publiseres til. Alle som kjenner det, kan lese varslene dine, så gjør det vanskelig å gjette."
+        },
+        "telegram": {
+          "label": "Chat-ID",
+          "help": "Send boten en melding én gang, åpne så https://api.telegram.org/bot<token>/getUpdates og bruk chat-ID-en den oppgir. En kanal kan oppgis som @navn."
+        },
+        "pushover": {
+          "label": "Bruker- eller gruppenøkkel",
+          "help": "Brukernøkkelen din, på forsiden av pushover.net, eller en gruppenøkkel."
+        },
+        "email": {
+          "label": "Til",
+          "help": "Innboksen det skal sendes til."
+        }
+      },
+      "secret": {
+        "webhook": "Authorization-header (valgfritt)",
+        "telegram": "Bot-token",
+        "email": "Passord (valgfritt)",
+        "ntfy": "Tilgangstoken (valgfritt)",
+        "gotify": "Applikasjonstoken",
+        "pushover": "Applikasjonstoken",
+        "pushbullet": "Tilgangstoken"
+      },
+      "extra": {
+        "from": {
+          "label": "Avsenderadresse",
+          "help": "Adressen e-posten sendes som. Mange servere godtar bare en de kjenner."
+        },
+        "username": {
+          "label": "Brukernavn (valgfritt)",
+          "help": "La stå tomt for en server som ikke krever innlogging. Ofte det samme som avsenderadressen."
+        }
+      },
+      "timeout": "{channel} på {host} svarte ikke i tide",
+      "connect": "Fikk ikke kontakt med {host}. Er serveren tilgjengelig fra der FinStats kjører?",
+      "decode": "{host} svarte ikke som {channel}",
+      "unreachable": "Nådde ikke {host}",
+      "redirect": "{host} svarer med en omdirigering. FinStats følger ingen, slik at et token aldri kan havne et annet sted: skriv inn adressen det omdirigeres til",
+      "telegram_chat": "{channel} kjenner ikke den chatten. Send boten en melding først, og bruk så chat-ID-en den oppgir",
+      "pushover_key": "{channel} godtok ikke brukernøkkelen eller applikasjonstokenet",
+      "not_understood": "{channel} forsto ikke meldingen",
+      "discord_refused": "{channel} avviste webhooken. Er den slettet?",
+      "telegram_refused": "{channel} avviste bot-tokenet",
+      "pushbullet_refused": "{channel} avviste tilgangstokenet",
+      "token_refused": "{channel} avviste tokenet",
+      "slack_gone": "{channel} kjenner ikke lenger den webhooken. Er appen eller kanalen fjernet?",
+      "not_found": "{host} svarte 404 Not Found. Er adressen riktig, med emne og basesti?",
+      "too_large": "{channel} syntes meldingen var for stor",
+      "rate_limited": "{channel} begrenser hvor ofte FinStats kan sende",
+      "answered": "{channel} svarte {status}"
+    },
+    "mail": {
+      "bad_url": "Det ser ikke ut som en e-postserveradresse",
+      "scheme": "En e-postserveradresse begynner med smtps:// eller smtp://",
+      "needs_host": "Adressen trenger et vertsnavn",
+      "not_an_address": "{address} er ikke en e-postadresse",
+      "no_domain": "{address} er ikke en e-postadresse: delen etter @ trenger et domene",
+      "not_a_letter": "Meldingen kunne ikke gjøres om til en e-post",
+      "no_tls_setup": "Kunne ikke sette opp en kryptert forbindelse til {host}",
+      "timeout": "{host} svarte ikke i tide",
+      "tls": "{host} ville ikke starte en kryptert forbindelse. FinStats sender ikke e-post ukryptert: bruk smtps://, eller en server som tilbyr STARTTLS",
+      "refused": "{host} avviste e-posten. Sjekk brukernavnet, passordet og avsenderadressen",
+      "busy": "{host} kunne ikke ta imot e-posten akkurat nå",
+      "connect": "Fikk ikke kontakt med {host}. Er serveren tilgjengelig fra der FinStats kjører?"
+    },
+    "services": {
+      "what": {
+        "sonarr": "Serier: hva som sendes når, og hva som lastes ned",
+        "radarr": "Filmer: hva som kommer ut når, og hva som lastes ned",
+        "seerr": "Forespørsler: hvem som ba om hva (Seerr, Jellyseerr eller Overseerr)"
+      },
+      "like": "{service}, for eksempel {example}",
+      "http_only": "Adressen må begynne med http:// eller https://",
+      "bad_url": "Det ser ikke ut som en gyldig nettadresse",
+      "no_login": "Ikke ta med brukernavn og passord i adressen; de har egne felt",
+      "no_query": "Adressen kan ikke inneholde ? eller #",
+      "certificate": "{url} viste et sertifikat FinStats ikke stoler på (selvsignert, eller fra din egen sertifiseringsinstans). Bruk http://-adressen, eller slå på «Godta et selvsignert sertifikat» for denne tilkoblingen",
+      "timeout": "{service} på {url} svarte ikke i tide",
+      "connect": "Fikk ikke kontakt med {url}. Kjører {service}, og kan tjenesten nås fra der FinStats kjører?",
+      "decode": "{url} svarte ikke som {service}",
+      "unreachable": "Nådde ikke {url}: {error}",
+      "redirect": "{url} svarer med en omdirigering til {to}. FinStats følger ingen omdirigeringer, slik at en nøkkel aldri kan havne et annet sted: skriv inn den endelige adressen, med eventuell basesti",
+      "redirect_elsewhere": "{url} svarer med en omdirigering til en annen adresse. FinStats følger ingen omdirigeringer, slik at en nøkkel aldri kan havne et annet sted: skriv inn den endelige adressen, med eventuell basesti",
+      "key_refused": "{service} avviste API-nøkkelen",
+      "not_found": "{url} svarte 404 Not Found. Er adressen riktig, med en basesti som /{path}?",
+      "answered": "{service} svarte {status}",
+      "answers_as": "{url} svarer, men som {app}, ikke som {service}",
+      "answers_as_other": "{url} svarer, men som noe annet, ikke som {service}",
+      "not_seerr": "{url} svarte ikke som Seerr",
+      "unknown_kind": "Ukjent type tjeneste `{kind}`",
+      "say_kind": "Si hvilken type tjeneste dette er",
+      "enter_address": "Skriv inn adressen til {service}",
+      "enter_key": "Skriv inn API-nøkkelen",
+      "not_a_key": "Det ser ikke ut som en nøkkel eller et passord",
+      "max": { "one": "Høyst {count} tilkobling", "other": "Høyst {count} tilkoblinger" },
+      "starting": "Starter …"
+    },
+    "arr": {
+      "not_calendar": "Kalenderen fra {url} så ikke ut som en fra {service}",
+      "none": "Ingen Sonarr eller Radarr tilkoblet",
+      "reading": "Leser {name}",
+      "reading_history": "Leser historikken til {name}",
+      "no_answer": "{names} svarte ikke",
+      "ahead": { "one": "{count} kommende utgivelse", "other": "{count} kommende utgivelser" },
+      "ahead_partly": { "one": "{count} kommende utgivelse; {names} svarte ikke", "other": "{count} kommende utgivelser; {names} svarte ikke" },
+      "events": { "one": "{count} hendelse", "other": "{count} hendelser" }
+    },
+    "seerr": {
+      "not_requests": "Forespørslene fra {url} så ikke ut som fra Seerr",
+      "none": "Ingen Seerr tilkoblet",
+      "reading": "Leser {name}",
+      "looking_up": "Slår opp titler",
+      "no_answer": "{names} svarte ikke",
+      "nothing_new": "Ingenting nytt",
+      "read": { "one": "{count} forespørsel lest", "other": "{count} forespørsler lest" },
+      "read_gone": { "one": "{count} forespørsel lest, {gone} finnes ikke lenger i Seerr", "other": "{count} forespørsler lest, {gone} finnes ikke lenger i Seerr" }
+    },
+    "downloads": {
+      "no_answer": "{name} svarte ikke i tide",
+      "season": "Sesong {season}",
+      "episodes": { "one": "{count} episode", "other": "{count} episoder" },
+      "season_episodes": { "one": "Sesong {season} · {count} episode", "other": "Sesong {season} · {count} episoder" },
+      "seasons_episodes": { "one": "{seasons} sesonger · {count} episode", "other": "{seasons} sesonger · {count} episoder" }
+    },
+    "outbound": {
+      "jellyfin": "Jellyfin-serveren din",
+      "jellyfin_why": "alt FinStats viser, kommer herfra: hva som spilles, biblioteket ditt, brukerne dine",
+      "jellyfin_off": "ikke tilkoblet ennå",
+      "public_ip": "En «hva er IP-adressen min»-tjeneste",
+      "public_ip_why": "slik at folk som ser hjemme via den offentlige adressen din, ikke telles som utenfra. Spørres én gang, og etter det bare når du trykker på knappen",
+      "geoip": "Den gratis bydatabasen til DB-IP",
+      "geoip_env": "brukes ikke: databasen er filen FINSTATS_GEOIP_DB peker på",
+      "geoip_why": "nedlastingen av månedsfilen som plasserer adresser på siden Sikkerhet, når oppgaven er planlagt. Oppslag av en adresse forlater aldri denne maskinen",
+      "service_why": "en tilkobling du har lagt til under Innstillinger → Tilkoblinger. Bare lesing, og på ditt eget nettverk med mindre du har pekt den et annet sted",
+      "target_why_theirs": "den egne varselmottakeren til {owner}, lagt til under Innstillinger → Varsler. Den får hendelsene vedkommende har krysset av for, om ting vedkommende allerede har lov til å se",
+      "target_why": "en varselmottaker du har lagt til under Innstillinger → Varsler. Den får hendelsene du har krysset av for der, og ingenting annet"
     }
   },
   "shell": {

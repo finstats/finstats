@@ -249,7 +249,7 @@ fn record(conn: &Connection, d: &Value) -> Result<Option<PlayRecord>> {
 pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> {
     let file = File::open(path).context("opening the uploaded backup")?;
     if file.metadata()?.len() == 0 {
-        bail!("The file is empty");
+        bail!(crate::i18n::t("server.import.empty_file", &[]));
     }
     let mut conn = db.conn()?;
     let settings = crate::state::Settings::load(&conn)?;
@@ -263,7 +263,7 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
         }
     };
 
-    report("Reading backup", Some(0.02));
+    report(&crate::i18n::t("server.import.reading_backup", &[]), Some(0.02));
     // How many sessions the file says it holds, when it says so before the list itself.
     let expected = std::cell::Cell::new(0u64);
     let mut each = |row: Value| -> Result<()> {
@@ -271,7 +271,7 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
         session(&tx, &row, &mut res, settings.merge_window_s)?;
         if res.sessions_read % 500 == 0 {
             let (done, total) = (res.sessions_read, expected.get());
-            report("Importing playback history", (total > 0).then(|| 0.95 * done as f64 / total.max(done) as f64));
+            report(&crate::i18n::t("server.import.importing_history", &[]), (total > 0).then(|| 0.95 * done as f64 / total.max(done) as f64));
         }
         Ok(())
     };
@@ -281,9 +281,9 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
         return Err(unexpected(path, None));
     }
 
-    report("Linking plays to your library", Some(0.96));
+    report(&crate::i18n::t("server.import.linking", &[]), Some(0.96));
     crate::import::finalize(&tx)?;
-    report("Saving", Some(0.99));
+    report(&crate::i18n::t("server.import.saving", &[]), Some(0.99));
     tx.commit()?;
     crate::groups::detect(&mut conn, settings.group_window_s, None)?;
     conn.execute_batch("PRAGMA optimize;")?;
@@ -294,11 +294,11 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
 /// this is plainly *its* backup in the wrong place.
 fn unexpected(path: &Path, e: Option<serde_json::Error>) -> anyhow::Error {
     if is_jellystat(path) {
-        return anyhow::anyhow!("That is a Jellystat backup. It goes under “Import from Jellystat”.");
+        return anyhow::anyhow!(crate::i18n::t("server.streamystats.is_jellystat", &[]));
     }
     match e {
-        Some(e) => anyhow::anyhow!("This does not look like a Streamystats backup ({e})."),
-        None => anyhow::anyhow!("This does not look like a Streamystats backup: there is no list of sessions in it."),
+        Some(e) => anyhow::anyhow!(crate::i18n::t("server.streamystats.not_streamystats", &[("error", e.to_string().into())])),
+        None => anyhow::anyhow!(crate::i18n::t("server.streamystats.no_sessions", &[])),
     }
 }
 

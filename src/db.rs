@@ -829,9 +829,11 @@ impl Db {
         F: FnOnce(&mut Connection) -> Result<T> + Send + 'static,
     {
         let pool = self.pool.clone();
+        // The request's language goes along: whatever the closure says in words is said in it.
+        let lang = crate::i18n::current();
         tokio::task::spawn_blocking(move || {
             let mut conn = pool.get().context("database pool exhausted")?;
-            f(&mut conn)
+            crate::i18n::within(lang, || f(&mut conn))
         })
         .await
         .context("database task panicked")?

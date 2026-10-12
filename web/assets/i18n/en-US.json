@@ -1431,6 +1431,710 @@
       "see_the_server": "You don't have permission to see the server. A Jellyfin administrator can grant it in Settings.",
       "see_what_is_downloading": "You don't have permission to see what is downloading. A Jellyfin administrator can grant it in Settings.",
       "see_where_people_watch_from": "You don't have permission to see where people watch from. A Jellyfin administrator can grant it in Settings."
+    },
+    "api": {
+      "cross_site": "Cross-site request refused",
+      "lookup_off": "Turn on \"Recognize my own public address\" first",
+      "expected_object": "Expected a JSON object",
+      "invalid_settings": "Invalid settings: {error}",
+      "invalid_triggers": "Invalid triggers: {error}",
+      "geoip_from_env": "The database is set with FINSTATS_GEOIP_DB; replace that file instead",
+      "task_running": "That task is already running",
+      "unknown_permission": "Unknown permission `{name}`",
+      "admins_have_all": "Jellyfin administrators already have every permission",
+      "backup_running": "A backup is already being written",
+      "backup_name_taken": "A backup of that name is there already: delete or rename it first",
+      "restore_running": "A restore or an import is already running",
+      "import_running": "An import or a restore is already running",
+      "no_tautulli_backup": "No Tautulli backup is waiting. Upload one first.",
+      "locate_wrong_kind": "A play is of a movie, a video or an episode, never of a whole show or season",
+      "upload_interrupted": "The upload was interrupted: {error}",
+      "upload_empty": "The uploaded file was empty",
+      "reading_backup": "Reading backup",
+      "receiving_backup": "Receiving backup",
+      "importing": "Importing",
+      "restored": { "one": "Restored {count} play ({skipped} already present)", "other": "Restored {count} plays ({skipped} already present)" },
+      "imported": { "one": "Imported {count} play ({skipped} already present)", "other": "Imported {count} plays ({skipped} already present)" },
+      "imported_marked": { "one": "Imported {count} play ({skipped} already present), {marked} marked watched but never played", "other": "Imported {count} plays ({skipped} already present), {marked} marked watched but never played" },
+      "no_profile_title": "Not found",
+      "no_profile": "There is no profile here."
+    },
+    "state": {
+      "between": "{name} must be between {lo} and {hi}",
+      "unknown_permission": "unknown permission `{name}`",
+      "not_an_ip": "`{address}` is not an IP address",
+      "too_many_homes": "at most {max} home addresses",
+      "public_url": "The address of FinStats must start with http:// or https://",
+      "address_too_long": "That address is too long",
+      "jellyfin_public_url": "Jellyfin's address must start with http:// or https:// and name a host",
+      "failed": "Failed"
+    },
+    "auth": {
+      "bearer_form": "Use `Authorization: Bearer <key>`",
+      "sign_in_to_continue": "Sign in to continue",
+      "calendar_key_only": "This key only opens the calendar feed",
+      "feed_needs_key": "This feed needs a key: add ?key=… to its address",
+      "too_many_attempts": { "one": "Too many sign-in attempts. Try again in {count} minute.", "other": "Too many sign-in attempts. Try again in {count} minutes." },
+      "not_connected": "FinStats is not connected to Jellyfin yet",
+      "enter_username": "Enter your Jellyfin username",
+      "wrong_password": "Wrong username or password",
+      "unreachable": "Could not reach Jellyfin to check your sign-in",
+      "no_access": "You haven't been given access to FinStats. A Jellyfin administrator can allow you in Settings.",
+      "already_set_up": "FinStats is already set up",
+      "not_admin": "That account is not a Jellyfin administrator. Set FinStats up with an administrator account."
+    },
+    "keys": {
+      "session_only": "Sign in to manage keys; a key cannot make or revoke keys",
+      "name": "Give the key a name of up to 60 characters",
+      "expiry": "An expiry is 1 to 3650 days",
+      "scope": "The scope is `full` or `calendar`",
+      "too_many": "You already hold {max} keys; revoke one first"
+    },
+    "appearance": {
+      "unknown_preset": "`{preset}` names no FinUI preset: a code is one letter or digit per choice, such as 0101"
+    },
+    "public": {
+      "session_only": "Sign in to publish a profile; a key cannot make anything public",
+      "not_allowed": "An administrator has not allowed public profiles on this server",
+      "page_title": "A FinStats profile",
+      "page_title_named": "{name} on FinStats",
+      "page_description": "{hours} hours watched, {plays} plays.",
+      "page_description_none": "What they watch, published by them."
+    },
+    "jellyfin": {
+      "enter_address": "Enter the address of your Jellyfin server",
+      "enter_address_of": "Enter the address of {what}",
+      "invalid_url": "That doesn't look like a valid URL",
+      "timed_out": "Timed out reaching {address}",
+      "could_not_connect": "Could not connect to {address}",
+      "could_not_reach": "Could not reach {address}: {error}",
+      "not_jellyfin_status": "{address} answered {status}. Is this a Jellyfin server?",
+      "not_jellyfin": "{address} did not answer like a Jellyfin server",
+      "unreachable": "Could not reach Jellyfin: {error}",
+      "answered": "Jellyfin answered {status}",
+      "answered_for": "Jellyfin answered {status} for {path}",
+      "answered_for_user_items": "Jellyfin answered {status} for a user's items",
+      "keys_list_refused": "Jellyfin refused to list API keys ({status})",
+      "key_create_refused": "Jellyfin refused to create an API key ({status})",
+      "key_unreadable": "Created an API key but could not read it back"
+    },
+    "jobs": {
+      "explain": {
+        "scan_library": "Looks through your media folders for files that are new, changed or gone and updates Jellyfin's database. This is the job that makes a new movie appear. FinStats reads your library right after it finishes, so anything it finds is on your statistics within a minute or two.",
+        "media_segments": "Goes through your episodes looking for the parts a player can offer to skip (the intro, a recap, the closing credits) and writes down where they are. It reads the audio and video of each file to do it, so it is one of the heaviest things Jellyfin ever runs, and it only looks at what it has not analyzed before. Leaving it to run overnight is normal; nothing about it touches your library files.",
+        "trickplay": "Builds the strip of little pictures you see when you drag the progress bar. It decodes every video once and stores the thumbnails next to them, so the first run on a large library takes hours and costs disk space. Later runs only handle what is new.",
+        "chapter_images": "Makes the thumbnail for each chapter of a movie, so chapter menus have pictures instead of numbers. It seeks into every file that has chapters; new files only, after the first run.",
+        "keyframes": "Notes the points in each file a player is allowed to jump to. With them, dragging the progress bar of a video that is being transcoded lands where you let go instead of a few seconds off.",
+        "audio_normalization": "Measures how loud each file is, so a player can even out the difference between a quiet movie and a loud one. It reads the audio of every file it has not measured yet.",
+        "refresh_people": "Fetches the details and pictures of the actors and directors in your library from the metadata providers you have switched on. It talks to the internet; it does not touch your files.",
+        "refresh_guide": "Downloads the Live TV program guide for the next few days from whichever listings provider you have set up. Only does anything if you have Live TV.",
+        "optimize_database": "Tidies Jellyfin's own database file: reclaims the space deleted rows left behind and rebuilds the indexes. Jellyfin is briefly slower while it runs and quicker afterwards. It has nothing to do with your media.",
+        "clean_activity_log": "Deletes old entries from Jellyfin's activity log: the sign-ins and errors you see under Dashboard → Activity. FinStats has already copied those into its own history, so nothing on the FinStats Server page disappears with them.",
+        "clean_logs": "Deletes Jellyfin's own log files once they are older than the number of days set in its settings. Housekeeping; it never touches media.",
+        "clean_cache": "Empties the parts of Jellyfin's cache folder nothing needs any more. Safe, quick, and it only frees disk space.",
+        "clean_transcode": "Deletes the temporary files left behind when Jellyfin transcodes something: the pieces of video it made for a player that could not handle the original. They can be many gigabytes on a busy server.",
+        "plugin_updates": "Asks the plugin repositories whether any of your plugins has a newer version, and installs the updates if you asked it to. This one talks to the internet on your server's behalf.",
+        "subtitles": "Deals with subtitles: fetching the ones you asked for from the providers you enabled, or pulling the ones already inside a video file out so a player can switch them on without transcoding.",
+        "thumbnails": "Pulls a still out of each video to use as its picture where there is no artwork from a metadata provider.",
+        "system_update": "Checks whether a newer Jellyfin has been released. It talks to the internet; it installs nothing by itself unless you told it to."
+      },
+      "from_plugin": "{description} (Jellyfin's own words: FinStats does not know this job, so it is probably from a plugin.)",
+      "unknown": "FinStats does not know this job and Jellyfin does not describe it, which usually means a plugin added it.",
+      "unnamed": "Unnamed job",
+      "not_connected": "Not connected to Jellyfin",
+      "no_answer": "Jellyfin did not answer",
+      "daily": "every day at {time}",
+      "weekly": {
+        "mon": "every Monday at {time}",
+        "tue": "every Tuesday at {time}",
+        "wed": "every Wednesday at {time}",
+        "thu": "every Thursday at {time}",
+        "fri": "every Friday at {time}",
+        "sat": "every Saturday at {time}",
+        "sun": "every Sunday at {time}",
+        "any": "every week at {time}"
+      },
+      "at_startup": "when Jellyfin starts",
+      "every": {
+        "day": "every day",
+        "days": "every {count} days",
+        "hour": "every hour",
+        "hours": "every {count} hours",
+        "minute": "every minute",
+        "minutes": "every {count} minutes",
+        "second": "every second",
+        "seconds": "every {count} seconds"
+      }
+    },
+    "socket": {
+      "closed": "Jellyfin closed the connection",
+      "failed": "the connection failed ({detail})",
+      "mismatch": "what Jellyfin pushes does not match what it answers for /Sessions ({detail})",
+      "collector_gone": "the collector stopped listening",
+      "unreadable": "Jellyfin sent a session list that could not be read",
+      "no_answer": "no answer of any kind within {seconds}s",
+      "silent": "Jellyfin said nothing for {seconds}s",
+      "no_handshake": "{url} did not answer the handshake within {seconds}s",
+      "refused": "{url} refused the connection ({detail})"
+    },
+    "card": {
+      "a_profile": "A FinStats profile",
+      "hours_watched": { "one": "{count} hour watched", "other": "{count} hours watched" },
+      "when_they_watch": "When they watch",
+      "longest_streak": { "one": "Longest streak {count} day", "other": "Longest streak {count} days" },
+      "a_year": "A year on FinStats",
+      "whose_year": "{name}’s year",
+      "hours_watched_unit": "hours watched",
+      "streak": "a {count}-day streak",
+      "top_show": "Top show",
+      "top_film": "Top movie",
+      "weekday": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      }
+    },
+    "story": {
+      "last_12_months": "The last 12 months",
+      "in_review": "{label} in review",
+      "whose": "{whose}’s {label}",
+      "word": {
+        "year": "YEAR",
+        "numbers": "NUMBERS",
+        "shows": "SHOWS",
+        "films": "MOVIES",
+        "music": "MUSIC",
+        "genres": "GENRES",
+        "persona": "YOU",
+        "rhythm": "RHYTHM",
+        "days": "DAYS",
+        "records": "RECORDS",
+        "together": "TOGETHER",
+        "finished": "FINISHED",
+        "asked": "ASKED",
+        "versus": "VERSUS"
+      },
+      "hours_of_watching": "hours of watching",
+      "plays": { "one": "{count} play", "other": "{count} plays" },
+      "titles": { "one": "{count} title", "other": "{count} titles" },
+      "days": { "one": "{count} day", "other": "{count} days" },
+      "in_numbers": "The year in numbers",
+      "tile": {
+        "plays": "Plays",
+        "hours": "Hours",
+        "titles": "Titles",
+        "days": "Days",
+        "episodes": "Episodes",
+        "films": "Movies",
+        "songs": "Songs"
+      },
+      "top": {
+        "shows": "Your top shows",
+        "films": "Your top movies",
+        "songs": "Your top songs"
+      },
+      "hours_short": "{count} h",
+      "minutes_short": "{count} min",
+      "mostly": "Mostly {genre}",
+      "you_were": "This year you were",
+      "around": "Most of it around {time}",
+      "busiest": "{days} were busiest",
+      "weekdays": {
+        "mon": "Mondays",
+        "tue": "Tuesdays",
+        "wed": "Wednesdays",
+        "thu": "Thursdays",
+        "fri": "Fridays",
+        "sat": "Saturdays",
+        "sun": "Sundays"
+      },
+      "with_something_on": { "one": "{count} day with something on", "other": "{count} days with something on" },
+      "longest_streak": { "one": "Longest streak: {count} day", "other": "Longest streak: {count} days" },
+      "records": "Records worth bragging about",
+      "record": {
+        "streak": "Longest streak",
+        "day": "Biggest day",
+        "binge": "Biggest binge",
+        "rewatched": "Most rewatched",
+        "oldest": "Oldest title"
+      },
+      "day_hours": "{hours} h on {day}",
+      "binge": { "one": "{count} episode of {show}", "other": "{count} episodes of {show}" },
+      "rewatched": { "one": "{name}, on {count} day", "other": "{name}, on {count} days" },
+      "day_month": "{month} {day}",
+      "months": {
+        "jan": "January",
+        "feb": "February",
+        "mar": "March",
+        "apr": "April",
+        "may": "May",
+        "jun": "June",
+        "jul": "July",
+        "aug": "August",
+        "sep": "September",
+        "oct": "October",
+        "nov": "November",
+        "dec": "December"
+      },
+      "evening_in_company": "evening in company",
+      "evenings_in_company": "evenings in company",
+      "together_line": "{hours} h together · {percent}% of your watching",
+      "together_top": "What brought people together most",
+      "evenings": { "one": "{count} evening", "other": "{count} evenings" },
+      "finished": { "one": "{count} show seen to the end", "other": "{count} shows seen to the end" },
+      "left_for_later": { "one": "and {count} show left for later", "other": "and {count} shows left for later" },
+      "request": "request",
+      "requests": "requests",
+      "arrived": "{count} arrived",
+      "watched": "{count} watched",
+      "more_than": "{percent}% more than {year}",
+      "less_than": "{percent}% less than {year}"
+    },
+    "stats": {
+      "unknown_kind": "Unknown kind",
+      "unknown_group": "Unknown group",
+      "completion": {
+        "under_10": "Under 10%",
+        "from_10_to_50": "10–50%",
+        "from_50_to_90": "50–90%",
+        "finished": "Finished (90%+)"
+      }
+    },
+    "health": {
+      "note_too_long": "A note is at most {max} characters"
+    },
+    "timeline": {
+      "bad_cursor": "That is not a timeline cursor",
+      "bad_libraries": "That doesn't look like a list of library ids",
+      "specials": "Specials",
+      "season": "Season {n}"
+    },
+    "profile": {
+      "how_many_ids": "Send between 1 and 5000 item ids",
+      "bad_ids": "That doesn't look like a list of item ids"
+    },
+    "watchlist": {
+      "only_films_and_shows": "Only movies and shows can go on a watchlist",
+      "needs_an_id": "A title that is not in the library needs a TMDB, TVDB or IMDb id",
+      "bad_id": "That doesn't look like a TMDB, TVDB or IMDb id",
+      "bad_name": "A title needs a name of at most 300 characters",
+      "bad_year": "That year is not one a movie or show could have",
+      "full": "Your watchlist holds {max} titles, the most it can. Remove one first."
+    },
+    "capacity": {
+      "software_transcodes": "Every transcode in the last {days} days that Jellyfin reported on ran without hardware acceleration",
+      "scan_busy": "Jellyfin's library scan runs for a large share of the time",
+      "runway_under_a_month": "{place}: under a month of space left at the pace of the last {window} months",
+      "runway_about_a_month": "{place}: about a month of space left at the pace of the last {window} months",
+      "runway_about": "{place}: about {count} months of space left at the pace of the last {window} months"
+    },
+    "recap": {
+      "bad_scope": "The scope is `user` or `server`",
+      "persona": {
+        "night_owl": {
+          "title": "Night owl",
+          "line": "{n}% of the watching happened between 22:00 and 04:00"
+        },
+        "early_bird": {
+          "title": "Early bird",
+          "line": "{n}% of the watching happened before 10 in the morning"
+        },
+        "music_lover": {
+          "title": "Music lover",
+          "line": "{n}% of everything played was music"
+        },
+        "weekend_warrior": {
+          "title": "Weekend warrior",
+          "line": "{n}% of the watching happened on Saturdays and Sundays"
+        },
+        "binge_watcher": {
+          "title": "Binge watcher",
+          "line": "{n} episodes on an average day of watching"
+        },
+        "movie_buff": {
+          "title": "Movie buff",
+          "line": "{n}% of plays were movies"
+        },
+        "creature_of_habit": {
+          "title": "Creature of habit",
+          "line": "Most of the watching started around {n}, week in, week out"
+        }
+      }
+    },
+    "security": {
+      "unknown_place": "Unknown place",
+      "home_place": "Home ({place})",
+      "played_on": "{title} on {device}",
+      "found_in_older_history": "Found in older history",
+      "same_two_places": "Same two places",
+      "database_from_env": "The database is set with FINSTATS_GEOIP_DB; replace that file instead",
+      "already_downloading": "The database is already being downloaded"
+    },
+    "geo": {
+      "not_a_city_database": "{file} is a `{kind}` database; FinStats needs a city database",
+      "already_have": "Already have {month}",
+      "downloaded": "Downloaded DB-IP City Lite {month}",
+      "download_failed": "downloading the geolocation database",
+      "downloading": "Downloading",
+      "answered": "{url} answered {status}",
+      "downloading_part": "Downloading ({got} of {total} MB)",
+      "unpacking": "Unpacking"
+    },
+    "schedule": {
+      "cannot_be_scheduled": "“{task}” cannot be scheduled",
+      "too_many_triggers": "At most {max} triggers per task",
+      "same_trigger_twice": "The same trigger is there twice",
+      "time_of_day": "A time of day is between 00:00 and 23:59",
+      "day_of_week": "A day of the week is 0 (Sunday) to 6 (Saturday)",
+      "interval": "An interval is between 5 minutes and 30 days",
+      "after_scan": "Only the jobs that read the library can follow Jellyfin’s scan",
+      "no_time_limit": "This job cannot be stopped half way, so it takes no time limit",
+      "time_limit": "A time limit is between 1 minute and 168 hours",
+      "past_time_limit": "Stopped: it ran past its time limit of {limit}",
+      "no_message": "no message",
+      "panicked": "FinStats hit a bug and stopped this run ({why}); it runs again at its next trigger",
+      "cancelled": "the run was canceled ({error})",
+      "hours": { "one": "{count} hour", "other": "{count} hours" },
+      "minutes": { "one": "{count} minute", "other": "{count} minutes" }
+    },
+    "sync": {
+      "starting": "Starting…",
+      "writing_backup": "Writing backup",
+      "backup_panicked": "FinStats hit a bug and stopped writing this backup; it is written again at its next trigger",
+      "backup_written": { "one": "{count} play, {size} MB", "other": "{count} plays, {size} MB" },
+      "fetching_users": "Fetching users",
+      "users_refused": { "one": "Jellyfin returned {count} user where FinStats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read. Nothing was changed.", "other": "Jellyfin returned {count} users where FinStats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read. Nothing was changed." },
+      "users_read": { "one": "{count} user", "other": "{count} users" },
+      "fetching_libraries": "Fetching libraries",
+      "libraries_refused": { "one": "Jellyfin listed {count} library where FinStats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read, not an emptied server. Nothing was changed.", "other": "Jellyfin listed {count} libraries where FinStats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read, not an emptied server. Nothing was changed." },
+      "items_read": "{library}: {done} of {total} items",
+      "cast_and_crew": "{library}: cast and crew",
+      "items_refused": { "one": "Jellyfin returned {count} readable item for library “{library}” but FinStats holds {current}. Refusing to mark {missing} items removed: this looks like a Jellyfin change or a bad read, not a deletion. The library was left exactly as it was.", "other": "Jellyfin returned {count} readable items for library “{library}” but FinStats holds {current}. Refusing to mark {missing} items removed: this looks like a Jellyfin change or a bad read, not a deletion. The library was left exactly as it was." },
+      "linking": "Linking plays to libraries",
+      "libraries_read": { "one": "{items} items in {count} library", "other": "{items} items in {count} libraries" },
+      "waiting_for_library_read": "Waiting for the first library read",
+      "changed_items": "{library}: {count} changed items",
+      "people_looked_at": "People: {count} looked at",
+      "nothing_changed": "Nothing changed",
+      "titles_changed": { "one": "{count} title changed", "other": "{count} titles changed" },
+      "portraits_changed": { "one": "{count} portrait changed", "other": "{count} portraits changed" },
+      "titles": { "one": "{count} title", "other": "{count} titles" },
+      "portraits": { "one": "{count} portrait", "other": "{count} portraits" },
+      "titles_and_portraits_changed": "{titles} and {portraits} changed",
+      "fetching_activity": "Fetching server activity",
+      "entries_read": "{done} of {total} entries",
+      "new_entries": { "one": "{count} new entry", "other": "{count} new entries" },
+      "reading_server": "Reading server details",
+      "reading_devices": "Reading devices",
+      "server_read": { "one": "{count} device, {plugins} plugins", "other": "{count} devices, {plugins} plugins" },
+      "server_read_without_plugins": { "one": "{count} device; the plugins could not be read", "other": "{count} devices; the plugins could not be read" },
+      "reading_watched": "Reading what {name} has watched",
+      "userdata_read": { "one": "{count} played or favorite item", "other": "{count} played or favorite items" }
+    },
+    "import": {
+      "reading_libraries": "Reading libraries",
+      "reading_items": "Reading movies, shows and music",
+      "reading_seasons": "Reading seasons",
+      "reading_episodes": "Reading episodes",
+      "reading_users": "Reading users",
+      "importing_history": "Importing playback history",
+      "reading_file_details": "Reading file details",
+      "reading_backup": "Reading backup",
+      "empty_file": "The file is empty",
+      "reading_legacy": "Reading backup (older single-file format, this needs more memory)",
+      "not_json": "The file is not a valid Jellystat backup (JSON could not be parsed)",
+      "not_jellystat": "The file is not a Jellystat backup",
+      "not_jellystat_at": "This does not look like a Jellystat backup (line {line}: {error})",
+      "damaged_at": "The backup is damaged at line {line}: {error}",
+      "no_records_at_first": "This does not look like a Jellystat backup: none of the first lines are backup records",
+      "no_records": "This does not look like a Jellystat backup: no backup records found",
+      "linking": "Linking plays to your library",
+      "saving": "Saving"
+    },
+    "streamystats": {
+      "is_jellystat": "That is a Jellystat backup. It goes under “Import from Jellystat”.",
+      "not_streamystats": "This does not look like a Streamystats backup ({error}).",
+      "no_sessions": "This does not look like a Streamystats backup: there is no list of sessions in it."
+    },
+    "tautulli": {
+      "zip_method": "The zip is packed in a way FinStats cannot open (method {method}). Unzip it and upload the .db file inside.",
+      "zip_damaged": "The zip is damaged. Download the Tautulli backup again.",
+      "zip_without_database": "There is no Tautulli database in this zip. Upload the .db file, or the zip Tautulli's backup download gives.",
+      "zip_with_databases": "This zip holds more than one database. Unzip it and upload the Tautulli one.",
+      "not_tautulli": "This does not look like a Tautulli backup. Upload the .db file (or its zip) from Tautulli's backups.",
+      "no_wires": "Connect at least one Plex user to a Jellyfin user",
+      "no_such_plex_user": "The backup has no Plex user {id}",
+      "no_such_jellyfin_user": "One of the wires ends at somebody this server does not have",
+      "wired_twice": "A Plex user can be connected to one Jellyfin user only",
+      "reading_backup": "Reading the backup"
+    },
+    "backup": {
+      "writing": "Writing {table}: {done} of {total} rows",
+      "unreadable": "The file is damaged or not a FinStats backup (could not be read)",
+      "not_json": "The file is not a FinStats backup (line {line} is not JSON)",
+      "not_finstats": "This is not a FinStats backup. A Jellystat backup goes under “Import from Jellystat”.",
+      "newer_format": "This backup was made by a newer FinStats (format {format}). Update FinStats, then restore it.",
+      "restoring": { "one": "Restoring: {count} play so far", "other": "Restoring: {count} plays so far" },
+      "linking": "Linking plays to the library"
+    },
+    "notify": {
+      "group": {
+        "security": "Security",
+        "housekeeping": "Housekeeping",
+        "library": "Library",
+        "playback": "Playback"
+      },
+      "kind": {
+        "travel": {
+          "label": "Impossible travel",
+          "what": "Two sightings of one account that no flight connects"
+        },
+        "new_country": {
+          "label": "A new country",
+          "what": "The first time an account is seen in a country"
+        },
+        "failed_sign_ins": {
+          "label": "Failed sign-ins",
+          "what": "Several failed sign-ins for one account, or from one address, in a row"
+        },
+        "task_failed": {
+          "label": "A task failed",
+          "what": "A sync, an import or a read of a connected service ended in an error"
+        },
+        "backup_failed": {
+          "label": "A backup failed",
+          "what": "A backup could not be written"
+        },
+        "service_down": {
+          "label": "Something stopped answering",
+          "what": "Jellyfin, Sonarr, Radarr or Seerr stopped answering"
+        },
+        "service_back": {
+          "label": "Something is answering again",
+          "what": "…and when it answers again"
+        },
+        "new_items": {
+          "label": "New in the library",
+          "what": "Titles added to the library, folded per show and day"
+        },
+        "request_available": {
+          "label": "A request is watchable",
+          "what": "Something somebody asked for in Seerr can now be watched"
+        },
+        "play_started": {
+          "label": "Somebody started watching",
+          "what": "A play begins: the title, the person and the device"
+        },
+        "play_stopped": {
+          "label": "Somebody stopped watching",
+          "what": "A play ends, with how much of it was watched"
+        },
+        "recap_ready": {
+          "label": "The year in review is ready",
+          "what": "In December, once: a person's year in review is ready to look back on and share"
+        },
+        "watchlist_available": {
+          "label": "On your watchlist: now available",
+          "what": "A movie or show you were waiting for on your watchlist is in the library. Only ever sent to your own destinations"
+        },
+        "test": {
+          "label": "Test message",
+          "what": "Sent by the Test button, and by nothing else"
+        }
+      },
+      "bad_url": "That doesn't look like a valid URL",
+      "needs_host": "The address needs a host name",
+      "lookup_failed": "{host} could not be looked up",
+      "not_public": "{host} is an address on this network. Your own destinations must point at a public service. Ask an administrator to add it for the server instead",
+      "enter_address": "Enter the address to send to",
+      "http_only": "The address must start with http:// or https://",
+      "no_login": "Leave the user name and password out of the address",
+      "no_fragment": "The address must not contain #",
+      "no_query": "The address must not contain ?",
+      "fixed_url": "{channel} is always reached at {url}, so there is no address to enter",
+      "not_discord": "That is not a Discord webhook address. In Discord: Channel settings → Integrations → Webhooks → Copy Webhook URL",
+      "discord_no_token": "That Discord webhook address is missing its token. Copy the whole URL",
+      "not_slack": "That is not a Slack webhook address. In Slack: your app → Incoming Webhooks → Add New Webhook to Workspace, then copy the URL",
+      "slack_no_token": "That Slack webhook address is missing its token. Copy the whole URL",
+      "mail_scheme": "A mail server address starts with smtps:// or smtp://",
+      "not_mail_url": "That doesn't look like a mail server address",
+      "mail_no_login": "Leave the user name and password out of the address; there is a field for each of them",
+      "mail_host_port": "A mail server address is a host and a port, with nothing after it",
+      "enter": "Enter the {what}",
+      "value": "value",
+      "token": "token",
+      "ntfy_topic": "An ntfy topic may hold letters, digits, - and _ only",
+      "telegram_chat": "A chat id is a number like -1001234567890, or a public channel as @name",
+      "pushover_key": "A Pushover user or group key is 30 letters and digits, from the front page of pushover.net",
+      "nothing_to_enter": "{channel} has nothing to enter here",
+      "unknown_kind": "Unknown kind of destination `{kind}`",
+      "say_kind": "Say which kind of destination this is",
+      "enter_address_of": "Enter the address of {channel}",
+      "not_a_token": "That does not look like a token",
+      "too_long": "The {what} is too long, or has something in it that cannot be sent",
+      "unknown_event": "Unknown event `{event}`",
+      "unknown_severity": "Unknown severity `{severity}`",
+      "max_targets": { "one": "At most {count} destination", "other": "At most {count} destinations" },
+      "max_own": { "one": "At most {count} destination of your own", "other": "At most {count} destinations of your own" }
+    },
+    "channels": {
+      "webhook": "Webhook",
+      "email": "Email",
+      "what": {
+        "webhook": "A POST of JSON to any address: your own script, Home Assistant, n8n",
+        "discord": "A channel in your server, through a webhook you create there",
+        "slack": "A channel in your workspace, through an incoming webhook",
+        "telegram": "A chat with a bot of your own, or a group or channel it is in",
+        "email": "Any mailbox, through an SMTP server you already have",
+        "ntfy": "ntfy.sh or your own ntfy, to a topic of your choosing",
+        "gotify": "Your own Gotify server, with an application token",
+        "pushover": "Pushover on your phone, with an application of your own",
+        "pushbullet": "Pushbullet, on every device signed in to your account"
+      },
+      "topic": {
+        "ntfy": {
+          "label": "Topic",
+          "help": "The ntfy topic to publish to. Anybody who knows it can read your notifications, so make it hard to guess."
+        },
+        "telegram": {
+          "label": "Chat ID",
+          "help": "Message your bot once, then open https://api.telegram.org/bot<token>/getUpdates and use the chat id it reports. A channel may be given as @name."
+        },
+        "pushover": {
+          "label": "User or group key",
+          "help": "Your user key, on the front page of pushover.net, or a group key."
+        },
+        "email": {
+          "label": "To",
+          "help": "The mailbox to send to."
+        }
+      },
+      "secret": {
+        "webhook": "Authorization header (optional)",
+        "telegram": "Bot token",
+        "email": "Password (optional)",
+        "ntfy": "Access token (optional)",
+        "gotify": "Application token",
+        "pushover": "Application token",
+        "pushbullet": "Access token"
+      },
+      "extra": {
+        "from": {
+          "label": "From address",
+          "help": "The address the mail is sent as. Many servers only accept one they know."
+        },
+        "username": {
+          "label": "User name (optional)",
+          "help": "Leave empty for a relay that needs no sign-in. Often the same as the From address."
+        }
+      },
+      "timeout": "{channel} at {host} did not answer in time",
+      "connect": "Could not connect to {host}. Is it reachable from where FinStats runs?",
+      "decode": "{host} did not answer like {channel}",
+      "unreachable": "Could not reach {host}",
+      "redirect": "{host} answers with a redirect. FinStats follows none, so that a token can never end up somewhere else: enter the address it redirects to",
+      "telegram_chat": "{channel} does not know that chat. Send the bot a message first, then use the chat id it reports",
+      "pushover_key": "{channel} did not accept the user key or the application token",
+      "not_understood": "{channel} did not understand the message",
+      "discord_refused": "{channel} refused the webhook. Has it been deleted?",
+      "telegram_refused": "{channel} refused the bot token",
+      "pushbullet_refused": "{channel} refused the access token",
+      "token_refused": "{channel} refused the token",
+      "slack_gone": "{channel} no longer knows that webhook. Has the app or the channel been removed?",
+      "not_found": "{host} answered 404 Not Found. Is the address right, topic and base path included?",
+      "too_large": "{channel} found the message too large",
+      "rate_limited": "{channel} is rate-limiting FinStats",
+      "answered": "{channel} answered {status}"
+    },
+    "mail": {
+      "bad_url": "That doesn't look like a mail server address",
+      "scheme": "A mail server address starts with smtps:// or smtp://",
+      "needs_host": "The address needs a host name",
+      "not_an_address": "{address} is not an e-mail address",
+      "no_domain": "{address} is not an e-mail address: the part after @ needs a domain",
+      "not_a_letter": "That message could not be made into an e-mail",
+      "no_tls_setup": "Could not set up an encrypted connection to {host}",
+      "timeout": "{host} did not answer in time",
+      "tls": "{host} would not start an encrypted connection. FinStats does not send mail in the clear: use smtps://, or a server that offers STARTTLS",
+      "refused": "{host} refused the letter. Check the user name, the password and the From address",
+      "busy": "{host} could not take the letter just now",
+      "connect": "Could not connect to {host}. Is it reachable from where FinStats runs?"
+    },
+    "services": {
+      "what": {
+        "sonarr": "Series: what airs when, and what is downloading",
+        "radarr": "Movies: what is released when, and what is downloading",
+        "seerr": "Requests: who asked for what (Seerr, Jellyseerr or Overseerr)"
+      },
+      "like": "{service}, like {example}",
+      "http_only": "The address must start with http:// or https://",
+      "bad_url": "That doesn't look like a valid URL",
+      "no_login": "Leave the user name and password out of the address; they have their own fields",
+      "no_query": "The address must not contain ? or #",
+      "certificate": "{url} presented a certificate FinStats does not trust (self-signed, or from your own authority). Use its http:// address, or switch on “Accept a self-signed certificate” for this connection",
+      "timeout": "{service} at {url} did not answer in time",
+      "connect": "Could not connect to {url}. Is {service} running, and reachable from where FinStats runs?",
+      "decode": "{url} did not answer like {service}",
+      "unreachable": "Could not reach {url}: {error}",
+      "redirect": "{url} answers with a redirect to {to}. FinStats follows no redirects, so that a key can never end up somewhere else: enter the final address, including any base path",
+      "redirect_elsewhere": "{url} answers with a redirect to another address. FinStats follows no redirects, so that a key can never end up somewhere else: enter the final address, including any base path",
+      "key_refused": "{service} refused the API key",
+      "not_found": "{url} answered 404 Not Found. Is the address right, including a base path like /{path}?",
+      "answered": "{service} answered {status}",
+      "answers_as": "{url} answers, but as {app}, not as {service}",
+      "answers_as_other": "{url} answers, but as something else, not as {service}",
+      "not_seerr": "{url} did not answer like Seerr",
+      "unknown_kind": "Unknown kind of service `{kind}`",
+      "say_kind": "Say which kind of service this is",
+      "enter_address": "Enter the address of {service}",
+      "enter_key": "Enter the API key",
+      "not_a_key": "That does not look like a key or password",
+      "max": { "one": "At most {count} connection", "other": "At most {count} connections" },
+      "starting": "Starting…"
+    },
+    "arr": {
+      "not_calendar": "{url} did not answer its calendar like {service}",
+      "none": "No Sonarr or Radarr connected",
+      "reading": "Reading {name}",
+      "reading_history": "Reading the history of {name}",
+      "no_answer": "{names} did not answer",
+      "ahead": { "one": "{count} release ahead", "other": "{count} releases ahead" },
+      "ahead_partly": { "one": "{count} release ahead; {names} did not answer", "other": "{count} releases ahead; {names} did not answer" },
+      "events": { "one": "{count} event", "other": "{count} events" }
+    },
+    "seerr": {
+      "not_requests": "{url} did not answer its requests like Seerr",
+      "none": "No Seerr connected",
+      "reading": "Reading {name}",
+      "looking_up": "Looking up titles",
+      "no_answer": "{names} did not answer",
+      "nothing_new": "Nothing new",
+      "read": { "one": "{count} request read", "other": "{count} requests read" },
+      "read_gone": { "one": "{count} request read, {gone} no longer in Seerr", "other": "{count} requests read, {gone} no longer in Seerr" }
+    },
+    "downloads": {
+      "no_answer": "{name} did not answer in time",
+      "season": "Season {season}",
+      "episodes": { "one": "{count} episode", "other": "{count} episodes" },
+      "season_episodes": { "one": "Season {season} · {count} episode", "other": "Season {season} · {count} episodes" },
+      "seasons_episodes": { "one": "{seasons} seasons · {count} episode", "other": "{seasons} seasons · {count} episodes" }
+    },
+    "outbound": {
+      "jellyfin": "Your Jellyfin server",
+      "jellyfin_why": "everything FinStats shows comes from here: what is playing, your library, your users",
+      "jellyfin_off": "not connected yet",
+      "public_ip": "A \"what is my IP\" service",
+      "public_ip_why": "so that people watching at home through your public address are not counted as remote. Asked once, and after that only when you press the button",
+      "geoip": "DB-IP's free city database",
+      "geoip_env": "not used: the database is the file FINSTATS_GEOIP_DB names",
+      "geoip_why": "the download of the monthly file that places addresses on the Security page, when its task is scheduled. Looking an address up never leaves this machine",
+      "service_why": "a connection you added under Settings → Connections. Read-only, and on your own network unless you pointed it elsewhere",
+      "target_why_theirs": "{owner}'s own notification destination, added under Settings → Notifications. It is sent the events they ticked, about things they are already allowed to see",
+      "target_why": "a notification destination you added under Settings → Notifications. It is sent the events you ticked there, and nothing else"
     }
   },
   "shell": {

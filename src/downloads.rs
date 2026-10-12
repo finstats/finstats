@@ -165,7 +165,7 @@ fn queue_row(svc_id: i64, svc_name: &str, kind: Kind, r: &Value) -> Option<Queue
         let episode = &r["episode"];
         let code = match (r["seasonNumber"].as_i64().or_else(|| episode["seasonNumber"].as_i64()), episode["episodeNumber"].as_i64()) {
             (Some(s), Some(e)) => Some(format!("S{s:02}E{e:02}")),
-            (Some(s), None) => Some(format!("Season {s}")),
+            (Some(s), None) => Some(season_line(SOURCE, s)),
             _ => None,
         };
         let name = text(&series["title"]).or_else(|| text(&r["title"])).unwrap_or_else(|| "Unknown".into());
@@ -258,6 +258,35 @@ fn rank(state: &str) -> usize {
     STATES.iter().position(|s| *s == state).unwrap_or(STATES.len())
 }
 
+/// The queue is read in the background, where nobody's language is known, so its lines are written in the source's and
+/// said again in the reader's when they are answered (`download_json`).
+const SOURCE: &str = crate::i18n::LOCALES[0];
+
+/// "Season 3": a record for a whole season.
+fn season_line(lang: &str, season: i64) -> String {
+    crate::i18n::say(lang, "server.downloads.season", &[("season", season.to_string().into())])
+}
+
+/// "Season 3 · 10 episodes": what a pack of `parts` records holds. A season is said as written (2024 is a season too).
+fn pack_line(lang: &str, parts: usize, seasons: &[i64]) -> String {
+    match seasons {
+        [s] => crate::i18n::say(lang, "server.downloads.season_episodes", &[("season", s.to_string().into()), ("count", parts.into())]),
+        [] => crate::i18n::say(lang, "server.downloads.episodes", &[("count", parts.into())]),
+        seasons => crate::i18n::say(lang, "server.downloads.seasons_episodes", &[("seasons", seasons.len().to_string().into()), ("count", parts.into())]),
+    }
+}
+
+/// A download's second line in the reader's language: FinStats' own lines are said again, anything else (an episode's
+/// code and title) is the queue's own.
+fn sub_of(d: &Download) -> Option<String> {
+    let lang = crate::i18n::current();
+    match d.seasons.as_slice() {
+        _ if d.parts > 1 => Some(pack_line(lang, d.parts, &d.seasons)),
+        [s] if d.sub.as_deref() == Some(season_line(SOURCE, *s).as_str()) => Some(season_line(lang, *s)),
+        _ => d.sub.clone(),
+    }
+}
+
 /// The queue records of every connected Sonarr and Radarr as one list. Pure: the loop only feeds it.
 pub fn fold(queue: Vec<Queued>) -> (Vec<Download>, Totals) {
     let mut out: Vec<Download> = vec![];
@@ -314,13 +343,8 @@ pub fn fold(queue: Vec<Queued>) -> (Vec<Download>, Totals) {
     let mut totals = Totals::default();
     for d in &mut out {
         if d.parts > 1 {
-            let episodes = format!("{} episodes", d.parts);
             d.seasons.sort_unstable();
-            d.sub = Some(match d.seasons.as_slice() {
-                [s] => format!("Season {s} · {episodes}"),
-                [] => episodes,
-                seasons => format!("{} seasons · {episodes}", seasons.len()),
-            });
+            d.sub = Some(pack_line(SOURCE, d.parts, &d.seasons));
         }
         if d.size > 0 {
             d.progress = ((d.size - d.left) as f64 / d.size as f64).clamp(0.0, 1.0);
@@ -362,7 +386,7 @@ pub struct Snapshot {
     pub totals: Totals,
     pub at: i64,
     /// A service that did not answer, and why. Shown as a note, not as an empty list.
-    pub problems: Vec<(String, String)>,
+    pub problems: Vec<(String, services::Said)>,
     pub sources: usize,
 }
 
@@ -424,7 +448,7 @@ fn download_json(d: &Download, wishes: &Wishes, viewer: &crate::auth::AuthUser) 
         _ => Value::Null,
     };
     json!({
-        "key": d.key, "title": d.title, "sub": d.sub, "state": d.state, "progress": d.progress, "size": d.size, "left": d.left, "eta_s": d.eta_s,
+        "key": d.key, "title": d.title, "sub": sub_of(d), "state": d.state, "progress": d.progress, "size": d.size, "left": d.left, "eta_s": d.eta_s,
         "down_bps": d.down_bps, "release": d.release, "client": d.client, "protocol": d.protocol, "service_name": d.service_name, "error": d.error, "poster": poster,
         "requested_by": who.map(|(id, name)| json!({ "user_id": id, "user_name": name })),
         "item_id": item,
@@ -467,7 +491,7 @@ async fn tick(app: &App, before: &HashMap<String, (i64, i64)>) -> HashMap<String
         return HashMap::new();
     }
     let queues = futures_util::future::join_all(arrs.iter().map(|svc| async move {
-        let out = tokio::time::timeout(PER_SERVICE_TIMEOUT, read_queue(app, svc)).await.unwrap_or_else(|_| Err(anyhow::anyhow!("{} did not answer in time", svc.name)));
+        let out = tokio::time::timeout(PER_SERVICE_TIMEOUT, read_queue(app, svc)).await.unwrap_or_else(|_| Err(services::words("server.downloads.no_answer", vec![("name", svc.name.clone())])));
         (svc.clone(), out)
     }))
     .await;
@@ -481,7 +505,7 @@ async fn tick(app: &App, before: &HashMap<String, (i64, i64)>) -> HashMap<String
             }
             Err(e) => {
                 tracing::debug!("{}: {e}", svc.name);
-                problems.push((svc.name.clone(), e.to_string()));
+                problems.push((svc.name.clone(), services::Said::of(&e)));
             }
         }
     }
@@ -572,7 +596,7 @@ pub fn answer(app: &App, viewer: &crate::auth::AuthUser) -> Value {
         "rows": snap.rows.iter().map(|d| download_json(d, &wishes, viewer)).collect::<Vec<_>>(),
         "totals": { "down_bps": t.down_bps, "downloading": t.downloading, "queued": t.queued, "importing": t.importing, "failed": t.failed },
         "at": snap.at, "sources": snap.sources,
-        "problems": snap.problems.iter().map(|(name, why)| json!({ "service": name, "error": why })).collect::<Vec<_>>(),
+        "problems": snap.problems.iter().map(|(name, why)| json!({ "service": name, "error": why.now() })).collect::<Vec<_>>(),
     })
 }
 
@@ -755,6 +779,18 @@ mod tests {
         assert_eq!(timespan(&json!("00:00:04.5000000")), Some(4));
         assert_eq!(timespan(&json!(null)), None);
         assert_eq!(timespan(&json!("soon")), None);
+    }
+
+    /// The queue is read where nobody's language is known; FinStats' own lines are said again in the reader's, and a
+    /// season stays the number it is (2024 is a season, not "2,024").
+    #[test]
+    fn the_lines_finstats_writes_about_a_download_are_said_in_the_readers_language() {
+        assert_eq!(pack_line(SOURCE, 10, &[3]), "Season 3 · 10 episodes");
+        assert_eq!(pack_line("nn-NO", 10, &[3]), "Sesong 3 · 10 episodar");
+        assert_eq!(pack_line("nb-NO", 20, &[1, 2]), "2 sesonger · 20 episoder");
+        assert_eq!(season_line("nb-NO", 2024), "Sesong 2024");
+        let record = json!({ "seasonNumber": 2024, "series": { "title": "Low Orbit" }, "size": 1.0, "sizeleft": 1.0, "status": "queued" });
+        assert_eq!(queue_row(1, "Sonarr", Kind::Sonarr, &record).unwrap().sub.as_deref(), Some("Season 2024"), "kept in the source's words");
     }
 
     #[test]

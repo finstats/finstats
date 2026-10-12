@@ -26,7 +26,7 @@ pub const MAX_KEYS_PER_USER: i64 = 20;
 pub fn only_a_session(user: &AuthUser) -> Result<(), ApiError> {
     match user.credential {
         Credential::Session => Ok(()),
-        Credential::Key { .. } => Err(ApiError::new(StatusCode::FORBIDDEN, "Sign in to manage keys; a key cannot make or revoke keys")),
+        Credential::Key { .. } => Err(ApiError::new(StatusCode::FORBIDDEN, crate::i18n::t("server.keys.session_only", &[]))),
     }
 }
 
@@ -47,10 +47,10 @@ pub fn may_mint(live: i64) -> bool {
 pub fn check_request(name: &str, expires_in_d: Option<i64>) -> Result<(String, Option<i64>), ApiError> {
     let name = name.trim();
     if name.is_empty() || name.chars().count() > 60 {
-        return Err(ApiError::bad_request("Give the key a name of up to 60 characters"));
+        return Err(ApiError::bad_request(crate::i18n::t("server.keys.name", &[])));
     }
     if expires_in_d.is_some_and(|d| !(1..=3650).contains(&d)) {
-        return Err(ApiError::bad_request("An expiry is 1 to 3650 days"));
+        return Err(ApiError::bad_request(crate::i18n::t("server.keys.expiry", &[])));
     }
     Ok((name.to_string(), expires_in_d))
 }
@@ -89,7 +89,7 @@ pub struct CreateBody {
 pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<CreateBody>) -> ApiResult<axum::response::Response> {
     only_a_session(&user)?;
     let (name, expires_in_d) = check_request(&body.name, body.expires_in_d)?;
-    let scope = KeyScope::parse(body.scope.as_deref().unwrap_or("full")).ok_or_else(|| ApiError::bad_request("The scope is `full` or `calendar`"))?;
+    let scope = KeyScope::parse(body.scope.as_deref().unwrap_or("full")).ok_or_else(|| ApiError::bad_request(crate::i18n::t("server.keys.scope", &[])))?;
     let actor = Actor::from(&user);
     let (uid, name_for_audit) = (user.id.clone(), name.clone());
     let made = app
@@ -105,7 +105,7 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Cre
             Ok(Some(json!({ "id": id, "key": token, "name": name, "scope": scope.as_str(), "created_at": now, "expires_at": expires_at })))
         })
         .await?
-        .ok_or_else(|| ApiError::bad_request(format!("You already hold {MAX_KEYS_PER_USER} keys; revoke one first")))?;
+        .ok_or_else(|| ApiError::bad_request(crate::i18n::t("server.keys.too_many", &[("max", MAX_KEYS_PER_USER.into())])))?;
     Ok((StatusCode::CREATED, Json(made)).into_response())
 }
 

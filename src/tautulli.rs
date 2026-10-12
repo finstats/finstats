@@ -94,7 +94,7 @@ pub fn unpack(path: &Path) -> Result<()> {
             8 => std::io::copy(&mut flate2::read::DeflateDecoder::new(packed), &mut out),
             m => {
                 let _ = std::fs::remove_file(&unpacked);
-                bail!("The zip is packed in a way FinStats cannot open (method {m}). Unzip it and upload the .db file inside.");
+                bail!(crate::i18n::t("server.tautulli.zip_method", &[("method", m.to_string().into())]));
             }
         }
     };
@@ -102,7 +102,7 @@ pub fn unpack(path: &Path) -> Result<()> {
         Ok(n) if n == entry.size => Ok(std::fs::rename(&unpacked, path)?),
         Ok(_) | Err(_) => {
             let _ = std::fs::remove_file(&unpacked);
-            bail!("The zip is damaged. Download the Tautulli backup again.")
+            bail!(crate::i18n::t("server.tautulli.zip_damaged", &[]))
         }
     }
 }
@@ -131,7 +131,7 @@ fn zip_entry(file: &mut std::fs::File) -> Result<ZipEntry> {
     let mut tail = vec![0u8; tail_len as usize];
     file.read_exact(&mut tail)?;
     let Some(end) = (0..tail.len().saturating_sub(21)).rev().find(|&i| u32_at(&tail, i) == 0x0605_4b50) else {
-        bail!("The zip is damaged. Download the Tautulli backup again.");
+        bail!(crate::i18n::t("server.tautulli.zip_damaged", &[]));
     };
     let (count, dir_len, dir_at) = (u16_at(&tail, end + 10), u32_at(&tail, end + 12), u32_at(&tail, end + 16));
     file.seek(SeekFrom::Start(dir_at as u64))?;
@@ -140,11 +140,11 @@ fn zip_entry(file: &mut std::fs::File) -> Result<ZipEntry> {
     let (mut at, mut found) = (0usize, vec![]);
     for _ in 0..count {
         if at + 46 > dir.len() || u32_at(&dir, at) != 0x0201_4b50 {
-            bail!("The zip is damaged. Download the Tautulli backup again.");
+            bail!(crate::i18n::t("server.tautulli.zip_damaged", &[]));
         }
         let name_len = u16_at(&dir, at + 28) as usize;
         let Some(name) = dir.get(at + 46..at + 46 + name_len).map(|n| String::from_utf8_lossy(n).to_string()) else {
-            bail!("The zip is damaged. Download the Tautulli backup again.");
+            bail!(crate::i18n::t("server.tautulli.zip_damaged", &[]));
         };
         let base = name.rsplit('/').next().unwrap_or_default();
         if name.to_lowercase().ends_with(".db") && !name.starts_with("__MACOSX") && !base.starts_with("._") {
@@ -154,8 +154,8 @@ fn zip_entry(file: &mut std::fs::File) -> Result<ZipEntry> {
     }
     match found.len() {
         1 => Ok(found.pop().expect("one")),
-        0 => bail!("There is no Tautulli database in this zip. Upload the .db file, or the zip Tautulli's backup download gives."),
-        _ => bail!("This zip holds more than one database. Unzip it and upload the Tautulli one."),
+        0 => bail!(crate::i18n::t("server.tautulli.zip_without_database", &[])),
+        _ => bail!(crate::i18n::t("server.tautulli.zip_with_databases", &[])),
     }
 }
 
@@ -176,7 +176,7 @@ pub fn sweep(data_dir: &Path, older_than: std::time::Duration) -> bool {
 
 /// The backup, read-only, once it is plainly a Tautulli database.
 pub fn open(path: &Path) -> Result<Connection> {
-    let not_one = || anyhow::anyhow!("This does not look like a Tautulli backup. Upload the .db file (or its zip) from Tautulli's backups.");
+    let not_one = || anyhow::anyhow!(crate::i18n::t("server.tautulli.not_tautulli", &[]));
     let t = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX).map_err(|_| not_one())?;
     let tables: HashSet<String> = t
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -210,18 +210,18 @@ pub fn plex_users(t: &Connection) -> Result<Vec<PlexUser>> {
 /// The wires as a map from Plex user to Jellyfin user, or what is wrong with them.
 pub fn check_wires(wires: &[Wire], plex: &HashSet<i64>, jellyfin: &HashSet<String>) -> Result<HashMap<i64, String>, String> {
     if wires.is_empty() {
-        return Err("Connect at least one Plex user to a Jellyfin user".into());
+        return Err(crate::i18n::t("server.tautulli.no_wires", &[]));
     }
     let mut map = HashMap::new();
     for w in wires {
         if !plex.contains(&w.plex_user_id) {
-            return Err(format!("The backup has no Plex user {}", w.plex_user_id));
+            return Err(crate::i18n::t("server.tautulli.no_such_plex_user", &[("id", w.plex_user_id.to_string().into())]));
         }
         if !jellyfin.contains(&w.jellyfin_user_id) {
-            return Err("One of the wires ends at somebody this server does not have".into());
+            return Err(crate::i18n::t("server.tautulli.no_such_jellyfin_user", &[]));
         }
         if map.insert(w.plex_user_id, w.jellyfin_user_id.clone()).is_some() {
-            return Err("A Plex user can be connected to one Jellyfin user only".into());
+            return Err(crate::i18n::t("server.tautulli.wired_twice", &[]));
         }
     }
     Ok(map)
@@ -491,7 +491,7 @@ pub fn run(db: &Db, path: &Path, wires: &[Wire], tasks: Option<&Tasks>) -> Resul
             t.update(TASK, msg, p);
         }
     };
-    report("Reading the backup", Some(0.02));
+    report(&crate::i18n::t("server.tautulli.reading_backup", &[]), Some(0.02));
     let t = open(path)?;
     let total: i64 = t.query_row("SELECT COUNT(DISTINCT reference_id) FROM session_history", [], |r| r.get(0))?;
 
@@ -519,7 +519,7 @@ pub fn run(db: &Db, path: &Path, wires: &[Wire], tasks: Option<&Tasks>) -> Resul
         }
         viewing.clear();
         if seen % 200 == 0 {
-            report("Importing playback history", Some(0.05 + 0.9 * seen as f64 / total.max(1) as f64));
+            report(&crate::i18n::t("server.import.importing_history", &[]), Some(0.05 + 0.9 * seen as f64 / total.max(1) as f64));
         }
         Ok(())
     };
@@ -535,9 +535,9 @@ pub fn run(db: &Db, path: &Path, wires: &[Wire], tasks: Option<&Tasks>) -> Resul
     take(&mut viewing, &mut res)?;
     drop(rows);
 
-    report("Linking plays to your library", Some(0.96));
+    report(&crate::i18n::t("server.import.linking", &[]), Some(0.96));
     crate::import::finalize(&tx)?;
-    report("Saving", Some(0.99));
+    report(&crate::i18n::t("server.import.saving", &[]), Some(0.99));
     tx.commit()?;
     crate::groups::detect(&mut conn, settings.group_window_s, None)?;
     conn.execute_batch("PRAGMA optimize;")?;

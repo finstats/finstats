@@ -68,10 +68,36 @@ pub struct Sighting {
     pub until: i64,
     pub spot: Spot,
     /// "Big Buck Bunny on Living room TV", "signed in"
-    pub what: String,
+    pub what: What,
     pub ip: String,
     /// Stable across rescans: `play:12`, `event:340`.
     pub id: String,
+}
+
+/// What a sighting was: a title played on a device, or the line Jellyfin's log wrote. Kept in parts, so an alert says
+/// it in the reader's language and not in the words it was filed in.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct What {
+    /// "Big Buck Bunny", "Rookery · Episode 3", or the log's own line.
+    pub title: String,
+    /// The device a title was played on.
+    pub device: Option<String>,
+}
+
+impl From<&str> for What {
+    fn from(title: &str) -> Self {
+        What { title: title.into(), device: None }
+    }
+}
+
+impl What {
+    /// In `lang`'s words: the title, on its device.
+    fn said(&self, lang: &str) -> String {
+        match &self.device {
+            Some(device) => crate::i18n::say(lang, "server.security.played_on", &[("title", (&self.title).into()), ("device", device.into())]),
+            None => self.title.clone(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -83,20 +109,31 @@ pub struct Finding {
     pub details: Value,
 }
 
-pub fn place_label(p: &Place) -> String {
+/// "London, United Kingdom", in the language of the request. Every caller in FinStats runs on a thread of the
+/// database's and says which language it means (`place_label_in`).
+#[cfg(test)]
+fn place_label(p: &Place) -> String {
+    place_label_in(p, crate::i18n::current())
+}
+
+/// `place_label` in `lang`'s words, for work on a thread where no request's language is.
+fn place_label_in(p: &Place, lang: &str) -> String {
     match (&p.city, &p.country) {
         (Some(city), Some(country)) => format!("{city}, {country}"),
         (None, Some(country)) => country.clone(),
         (Some(city), None) => city.clone(),
-        (None, None) => p.country_code.clone().unwrap_or_else(|| "Unknown place".into()),
+        (None, None) => p.country_code.clone().unwrap_or_else(|| crate::i18n::say(lang, "server.security.unknown_place", &[])),
     }
 }
+
+/// The language an alert is filed in. It is said again in the reader's when it is read (`say_alert`).
+const FILED_IN: &str = crate::i18n::LOCALES[0];
 
 fn spot_of(p: &Place, home: bool) -> Option<Spot> {
     let (lat, lon) = (p.latitude?, p.longitude?);
     Some(Spot {
         key: if home { "home".into() } else { format!("{lat:.1},{lon:.1}") },
-        label: if home { format!("Home ({})", place_label(p)) } else { place_label(p) },
+        label: if home { crate::i18n::say(FILED_IN, "server.security.home_place", &[("place", place_label_in(p, FILED_IN).into())]) } else { place_label_in(p, FILED_IN) },
         country_code: p.country_code.clone(),
         country: p.country.clone(),
         lat,
@@ -110,7 +147,44 @@ fn pair_key(a: &Spot, b: &Spot) -> String {
 
 fn side(s: &Sighting) -> Value {
     json!({ "place": s.spot.label, "country_code": s.spot.country_code, "latitude": s.spot.lat, "longitude": s.spot.lon,
-            "at": s.at, "until": s.until, "what": s.what, "ip": s.ip, "home": s.spot.key == "home" })
+            "at": s.at, "until": s.until, "what": s.what.said(FILED_IN), "title": s.what.title, "device": s.what.device,
+            "ip": s.ip, "home": s.spot.key == "home" })
+}
+
+/// One side of a stored alert in the reader's words: its place and what was seen there. Alerts filed before the parts
+/// were kept say what they were filed with.
+fn say_side(side: &mut Value, lang: &str) {
+    let unknown = crate::i18n::say(FILED_IN, "server.security.unknown_place", &[]);
+    let place = |p: &str| if p == unknown { crate::i18n::say(lang, "server.security.unknown_place", &[]) } else { p.to_string() };
+    if let Some(filed) = side["place"].as_str() {
+        // "Home (Oslo, Norway)": the words around the place are the filed language's, the place is the database's.
+        let home = crate::i18n::say(FILED_IN, "server.security.home_place", &[("place", "\u{0}".into())]);
+        let (before, after) = home.split_once('\u{0}').unwrap_or((home.as_str(), ""));
+        let said = match filed.strip_prefix(before).and_then(|p| p.strip_suffix(after)).filter(|_| side["home"] == true) {
+            Some(inner) => crate::i18n::say(lang, "server.security.home_place", &[("place", place(inner).into())]),
+            None => place(filed),
+        };
+        side["place"] = json!(said);
+    }
+    if let (Some(title), Some(device)) = (side["title"].as_str(), side["device"].as_str()) {
+        let what = What { title: title.into(), device: Some(device.into()) }.said(lang);
+        side["what"] = json!(what);
+    }
+}
+
+/// A stored alert in the reader's words: both sides, and a note FinStats wrote itself.
+fn say_alert(alert: &mut Value, lang: &str) {
+    for side in ["from", "to"] {
+        if alert["details"][side].is_object() {
+            say_side(&mut alert["details"][side], lang);
+        }
+    }
+    let own = [("server.security.found_in_older_history", alert["resolved_by"] == "finstats"), ("server.security.same_two_places", true)];
+    for (key, by_finstats) in own {
+        if by_finstats && alert["note"].as_str() == Some(crate::i18n::say(FILED_IN, key, &[]).as_str()) {
+            alert["note"] = json!(crate::i18n::say(lang, key, &[]));
+        }
+    }
 }
 
 /// Everything wrong with one person's sightings, which must be in the order they began.
@@ -434,15 +508,16 @@ pub fn home_place(conn: &Connection) -> Result<Option<Place>> {
 fn sightings_of(conn: &Connection, user_id: &str, home: Option<&Spot>) -> Result<Vec<Sighting>> {
     let mut stmt = conn.prepare_cached(&format!(
         "SELECT 'play:' || p.id, p.started_at, p.ended_at, p.remote_ip, p.is_local,
-                COALESCE(p.series_name || ' · ', '') || p.item_name || COALESCE(' on ' || p.device_name, '')
+                COALESCE(p.series_name || ' · ', '') || p.item_name, p.device_name
          FROM visible_playbacks p WHERE p.user_id = ?1 AND p.remote_ip IS NOT NULL
          UNION ALL
-         SELECT 'event:' || e.id, e.date, e.date, e.remote_ip, NULL, e.name
+         SELECT 'event:' || e.id, e.date, e.date, e.remote_ip, NULL, e.name, NULL
          FROM server_events e WHERE e.user_id = ?1 AND e.remote_ip <> '' AND e.type IN ({SIGN_IN_TYPES})
          ORDER BY 2, 1"
     ))?;
-    let rows: Vec<(String, i64, i64, String, Option<bool>, String)> =
-        stmt.query_map([user_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?.collect::<Result<_, _>>()?;
+    let rows: Vec<(String, i64, i64, String, Option<bool>, What)> = stmt
+        .query_map([user_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, What { title: r.get(5)?, device: r.get(6)? })))?
+        .collect::<Result<_, _>>()?;
     let mut spots: HashMap<String, Option<Spot>> = HashMap::new();
     let mut out = Vec::with_capacity(rows.len());
     for (id, at, until, ip, is_local, what) in rows {
@@ -501,7 +576,7 @@ fn file_alerts(conn: &Connection, rules: &Rules, only_user: Option<&str>, bus: O
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             )?
             .execute(params![f.kind, f.severity, user_id, user_name, f.at, f.dedupe, f.details.to_string(), now,
-                historic.then_some(now), historic.then_some("finstats"), historic.then_some("Found in older history")])?;
+                historic.then_some(now), historic.then_some("finstats"), historic.then(|| crate::i18n::say(FILED_IN, "server.security.found_in_older_history", &[]))])?;
             added += filed;
             // An alert nobody is looking at is the whole reason notifications exist.
             if filed > 0 && let Some(bus) = bus {
@@ -596,6 +671,7 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
     let mut live = app.live.read().unwrap().clone();
     let geo = app.geo.get();
     let with_failed = user.perms.see_server;
+    let lang = crate::i18n::current();
     let mut body = app
         .db
         .call(move |c| {
@@ -705,7 +781,7 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
                 let Some(p) = place.filter(|p| p.latitude.is_some()) else { continue };
                 now_playing.push(json!({
                     "user_id": s["user_id"], "user_name": s["user_name"], "item_name": s["item_name"], "series_name": s["series_name"],
-                    "device_name": s["device_name"], "home": local, "place": place_label(&p), "latitude": p.latitude, "longitude": p.longitude,
+                    "device_name": s["device_name"], "home": local, "place": place_label_in(&p, lang), "latitude": p.latitude, "longitude": p.longitude,
                 }));
             }
 
@@ -740,7 +816,7 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
                     let mut users: Vec<Value> = a.users.into_iter().map(|(id, (name, plays, sign_ins))| json!({ "id": id, "name": name, "plays": plays, "sign_ins": sign_ins })).collect();
                     users.sort_by_key(|u| std::cmp::Reverse(u["plays"].as_i64().unwrap_or(0) * 1000 + u["sign_ins"].as_i64().unwrap_or(0)));
                     json!({
-                        "label": place_label(&a.place), "home": a.home, "city": a.place.city, "region": a.place.region, "country": a.place.country,
+                        "label": place_label_in(&a.place, lang), "home": a.home, "city": a.place.city, "region": a.place.region, "country": a.place.country,
                         "country_code": a.place.country_code, "latitude": a.place.latitude, "longitude": a.place.longitude,
                         "plays": a.plays, "watch_s": a.watch_s, "sign_ins": a.sign_ins, "addresses": a.ips, "last_seen": a.last_seen, "users": users,
                     })
@@ -749,7 +825,7 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
             list.sort_by_key(|v| std::cmp::Reverse(v["plays"].as_i64().unwrap_or(0) * 1000 + v["sign_ins"].as_i64().unwrap_or(0)));
             let failed: Vec<Value> = failed
                 .into_values()
-                .map(|(p, n, last, names)| json!({ "label": place_label(&p), "country_code": p.country_code, "latitude": p.latitude, "longitude": p.longitude, "attempts": n, "last_at": last, "events": names }))
+                .map(|(p, n, last, names)| json!({ "label": place_label_in(&p, lang), "country_code": p.country_code, "latitude": p.latitude, "longitude": p.longitude, "attempts": n, "last_at": last, "events": names }))
                 .collect();
 
             let open_alerts: i64 = c.query_row(
@@ -798,7 +874,7 @@ pub async fn alerts(State(app): State<App>, user: AuthUser, Query(q): Query<Aler
     // The page's person picker sends several (`a,b`), as every filter does; read as one id it matched nobody.
     let who: Vec<String> = q.user_id.as_deref().unwrap_or_default().split(',').map(norm_id).filter(|s| !s.is_empty()).collect();
     let status = q.status.unwrap_or_else(|| "open".into());
-    let body = app
+    let mut body = app
         .db
         .call(move |c| {
             let mut wh = vec!["1 = 1".to_string()];
@@ -825,6 +901,10 @@ pub async fn alerts(State(app): State<App>, user: AuthUser, Query(q): Query<Aler
             Ok(json!({ "rows": rows, "total": total, "open": open, "page": page, "per_page": per_page }))
         })
         .await?;
+    let lang = crate::i18n::current();
+    for alert in body["rows"].as_array_mut().into_iter().flatten() {
+        say_alert(alert, lang);
+    }
     Ok(Json(body))
 }
 
@@ -860,8 +940,8 @@ pub async fn resolve(State(app): State<App>, Manager(user): Manager, Path(id): P
                 let pair = serde_json::from_str::<Value>(&details).ok().and_then(|d| d["pair"].as_str().map(str::to_string));
                 if let Some(pair) = pair {
                     also = tx.execute(
-                        "UPDATE security_alerts SET resolved_at = ?1, resolved_by = ?2, note = 'Same two places' WHERE resolved_at IS NULL AND user_id = ?3 AND kind = 'impossible_travel' AND json_extract(details, '$.pair') = ?4",
-                        params![now, user.name, user_id, pair],
+                        "UPDATE security_alerts SET resolved_at = ?1, resolved_by = ?2, note = ?5 WHERE resolved_at IS NULL AND user_id = ?3 AND kind = 'impossible_travel' AND json_extract(details, '$.pair') = ?4",
+                        params![now, user.name, user_id, pair, crate::i18n::say(FILED_IN, "server.security.same_two_places", &[])],
                     )?;
                 }
             }
@@ -902,10 +982,10 @@ pub async fn resolve_all(State(app): State<App>, Manager(user): Manager) -> ApiR
 /// Fetch the database now. Managers only; the monthly refresh is the `geoip_download` setting.
 pub async fn download_database(State(app): State<App>, Manager(user): Manager) -> ApiResult<Response> {
     if std::env::var("FINSTATS_GEOIP_DB").is_ok_and(|p| !p.trim().is_empty()) {
-        return Err(ApiError::bad_request("The database is set with FINSTATS_GEOIP_DB; replace that file instead"));
+        return Err(ApiError::bad_request(crate::i18n::t("server.security.database_from_env", &[])));
     }
     if !geo::spawn_download(&app) {
-        return Err(ApiError::new(StatusCode::CONFLICT, "The database is already being downloaded"));
+        return Err(ApiError::new(StatusCode::CONFLICT, crate::i18n::t("server.security.already_downloading", &[])));
     }
     crate::audit::record(&app, crate::audit::Entry::new("task_run", crate::audit::Actor::from(&user)).target("geoip"));
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
@@ -914,6 +994,25 @@ pub async fn download_database(State(app): State<App>, Manager(user): Manager) -
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_alert_is_filed_in_the_source_and_read_in_the_readers_language() {
+        let spot = |home: bool| spot_of(&Place { city: Some("Oslo".into()), country: Some("Norway".into()), latitude: Some(59.9), longitude: Some(10.7), ..Default::default() }, home).unwrap();
+        let played = Sighting { at: 0, until: 60, spot: spot(true), what: What { title: "Big Buck Bunny".into(), device: Some("Living room TV".into()) }, ip: "192.168.1.10".into(), id: "play:1".into() };
+        let signed_in = Sighting { what: "alice signed in".into(), spot: spot(false), ..played.clone() };
+        let (from, to) = (side(&played), side(&signed_in));
+        assert_eq!((from["place"].as_str(), from["what"].as_str()), (Some("Home (Oslo, Norway)"), Some("Big Buck Bunny on Living room TV")), "filed in the source's words");
+        let mut alert = json!({ "details": { "from": from, "to": to }, "note": "Found in older history", "resolved_by": "finstats" });
+        say_alert(&mut alert, "nb-NO");
+        assert_eq!(alert["details"]["from"]["place"], "Hjemme (Oslo, Norway)");
+        assert_eq!(alert["details"]["from"]["what"], "Big Buck Bunny på Living room TV");
+        assert_eq!((alert["details"]["to"]["place"].as_str(), alert["details"]["to"]["what"].as_str()), (Some("Oslo, Norway"), Some("alice signed in")), "the log's own line is Jellyfin's words");
+        assert_eq!(alert["note"], "Funnet i eldre historikk");
+        // Filed before the parts were kept: the words it was filed with.
+        let mut old = json!({ "details": { "from": { "place": "Somewhere", "what": "Big Buck Bunny on TV" } }, "note": "On holiday", "resolved_by": "alice" });
+        say_alert(&mut old, "nn-NO");
+        assert_eq!((old["details"]["from"]["what"].as_str(), old["note"].as_str()), (Some("Big Buck Bunny on TV"), Some("On holiday")));
+    }
 
     #[test]
     fn how_far_apart_and_how_long_are_said_in_words_with_the_right_number() {

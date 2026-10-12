@@ -208,11 +208,11 @@ pub struct SeenBody {
 /// nothing is written to Jellyfin, and plays that were really recorded are never touched.
 pub async fn mark_seen(State(app): State<App>, user: AuthUser, Json(body): Json<SeenBody>) -> ApiResult {
     if body.item_ids.is_empty() || body.item_ids.len() > 5000 {
-        return Err(ApiError::bad_request("Send between 1 and 5000 item ids"));
+        return Err(ApiError::bad_request(crate::i18n::t("server.profile.how_many_ids", &[])));
     }
     let ids: Vec<String> = body.item_ids.iter().map(|i| db::norm_id(i)).filter(|i| i.len() == 32 && i.chars().all(|c| c.is_ascii_hexdigit())).collect();
     if ids.len() != body.item_ids.len() {
-        return Err(ApiError::bad_request("That doesn't look like a list of item ids"));
+        return Err(ApiError::bad_request(crate::i18n::t("server.profile.bad_ids", &[])));
     }
     let (uid, seen) = (user.id.clone(), body.seen);
     let changed = app

@@ -10,7 +10,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::card::{ACCENT, ACCENT_HI, BG, Canvas, FAINT, HEAT_EMPTY, HEAT_RAMP, MUTED, Posters, Style, TEXT, TILE, thousands};
+use crate::card::{ACCENT, ACCENT_HI, BG, Canvas, FAINT, HEAT_EMPTY, HEAT_RAMP, MUTED, Posters, Style, TEXT, TILE, number};
+use crate::i18n::Arg;
 use crate::public::{Persona, Title};
 
 pub const W: u32 = 1080;
@@ -187,7 +188,7 @@ impl StoryYear {
         Some(StoryYear {
             label: match r["year"].as_i64() {
                 Some(y) => y.to_string(),
-                None => "The last 12 months".into(),
+                None => crate::i18n::t("server.story.last_12_months", &[]),
             },
             whose: whose.trim().to_string(),
             totals: Totals {
@@ -279,9 +280,25 @@ impl StoryYear {
         self.drawn(ch).into_iter().filter_map(|t| t.image.clone()).collect()
     }
 
-    /// "Alice's 2025", "Home's 2025", or "2025 in review".
-    fn heading(&self) -> String {
-        if self.whose.is_empty() { format!("{} in review", self.label) } else { format!("{}’s {}", self.whose, self.label) }
+    /// "Alice's 2025", "Home's 2025", or "2025 in review", in `lang`.
+    fn heading(&self, lang: &str) -> String {
+        if self.whose.is_empty() {
+            say(lang, "server.story.in_review", &[("label", self.label.as_str().into())])
+        } else {
+            say(lang, "server.story.whose", &[("whose", self.whose.as_str().into()), ("label", self.label.as_str().into())])
+        }
+    }
+
+    /// What a chapter's card is kept under: the chapter, the language it is said in and everything it says, so
+    /// a card in one language is never served to a reader of another.
+    pub fn cache_key(&self, ch: Chapter) -> String {
+        self.cache_key_in(crate::i18n::current(), ch)
+    }
+
+    fn cache_key_in(&self, lang: &str, ch: Chapter) -> String {
+        use sha2::{Digest, Sha256};
+        let said = serde_json::to_vec(self).unwrap_or_default();
+        format!("story:{}:{lang}:{}", ch.key(), hex::encode(&Sha256::digest(&said)[..12]))
     }
 }
 
@@ -290,20 +307,26 @@ impl StoryYear {
 const X: f64 = 64.0;
 const WIDE: f64 = W as f64 - 2.0 * X;
 
-fn hours(secs: i64) -> String {
-    thousands(secs / 3600)
+/// Every word on a card is said in the language of the request that draws it (`svg`), passed down as `lang`.
+fn say(lang: &str, key: &str, args: &[(&str, Arg)]) -> String {
+    crate::i18n::say(lang, key, args)
 }
 
-fn plural(n: i64, one: &str, many: &str) -> String {
-    format!("{} {}", thousands(n), if n == 1 { one } else { many })
+/// A catalogue text that counts something: `{count}` filled and its plural form picked.
+fn count(lang: &str, key: &str, n: i64) -> String {
+    say(lang, key, &[("count", n.into())])
+}
+
+fn hours(lang: &str, secs: i64) -> String {
+    number(lang, secs / 3600)
 }
 
 /// The frame every chapter shares: the accent band, the chapter's word standing faint behind, whose
 /// year it is, and the footer.
-fn frame(c: &mut Canvas, y: &StoryYear, word: &str) {
+fn frame(lang: &str, c: &mut Canvas, y: &StoryYear, ch: Chapter) {
     c.push(format!(r#"<rect width="{W}" height="{H}" fill="{BG}"/><rect width="{W}" height="10" fill="{ACCENT}"/>"#));
-    c.text(X - 8.0, 420.0, Style(230.0, 800, "#242424"), word);
-    c.text_fit(X, 150.0, Style(38.0, 600, MUTED), &y.heading(), Some(WIDE));
+    c.text(X - 8.0, 420.0, Style(230.0, 800, "#242424"), &say(lang, &format!("server.story.word.{}", ch.key()), &[]));
+    c.text_fit(X, 150.0, Style(38.0, 600, MUTED), &y.heading(lang), Some(WIDE));
     c.text(X, 1840.0, Style(30.0, 600, FAINT), &format!("FinStats · {}", y.label));
 }
 
@@ -318,24 +341,24 @@ fn big_number(c: &mut Canvas, top: f64, value: &str, unit: &str) -> f64 {
     top + 140.0
 }
 
-/// A ranked list: the first as a large poster, the rest as rows.
-fn ranked(c: &mut Canvas, list: &[Title], posters: &Posters, unit: &str, what: &str) {
+/// A ranked list: the first as a large poster, the rest as rows. `what` is the headline's key.
+fn ranked(lang: &str, c: &mut Canvas, list: &[Title], posters: &Posters, unit: &str, what: &str) {
     let Some(first) = list.first() else { return };
-    headline(c, 560.0, &format!("Your top {what}"));
+    headline(c, 560.0, &say(lang, what, &[]));
     c.poster(X, 780.0, 420.0, 630.0, first.image.as_ref().and_then(|i| posters.get(i)));
     c.text(X + 460.0, 830.0, Style(40.0, 700, ACCENT_HI), "#1");
     c.wrap(X + 460.0, 900.0, Style(48.0, 700, TEXT), &first.name, WIDE - 460.0, 3);
-    c.text_fit(X + 460.0, 1100.0, Style(34.0, 400, MUTED), &format!("{} · {}", plural(first.plays, "play", "plays"), unit_of(first.watch_s, unit)), Some(WIDE - 460.0));
+    c.text_fit(X + 460.0, 1100.0, Style(34.0, 400, MUTED), &format!("{} · {}", count(lang, "server.story.plays", first.plays), unit_of(lang, first.watch_s, unit)), Some(WIDE - 460.0));
     for (i, t) in list.iter().enumerate().skip(1).take(4) {
         let top = 1460.0 + (i - 1) as f64 * 90.0;
         c.text(X, top + 50.0, Style(36.0, 700, FAINT), &format!("#{}", i + 1));
         c.text_fit(X + 90.0, top + 50.0, Style(38.0, 600, TEXT), &t.name, Some(WIDE - 360.0));
-        c.text(X + WIDE - 250.0, top + 50.0, Style(32.0, 400, MUTED), &unit_of(t.watch_s, unit));
+        c.text(X + WIDE - 250.0, top + 50.0, Style(32.0, 400, MUTED), &unit_of(lang, t.watch_s, unit));
     }
 }
 
-fn unit_of(secs: i64, unit: &str) -> String {
-    if unit == "minutes" { format!("{} min", thousands(secs / 60)) } else { format!("{} h", hours(secs)) }
+fn unit_of(lang: &str, secs: i64, unit: &str) -> String {
+    if unit == "minutes" { count(lang, "server.story.minutes_short", secs / 60) } else { count(lang, "server.story.hours_short", secs / 3600) }
 }
 
 fn bars(c: &mut Canvas, x: f64, top: f64, w: f64, h: f64, values: &[i64], labels: &[(usize, String)]) {
@@ -354,149 +377,160 @@ fn bars(c: &mut Canvas, x: f64, top: f64, w: f64, h: f64, values: &[i64], labels
     }
 }
 
-/// "28 February", for a day the recap gives as `2025-02-28`.
-fn long_day(d: &str) -> String {
-    chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").map_or_else(|_| d.to_string(), |d| d.format("%-d %B").to_string())
+/// The months by their keys in the catalogue (`server.story.months.<key>`): no calendar library on the server.
+const MONTHS: [&str; 12] = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/// "28 February" (or "February 28", "28. februar"), for a day the recap gives as `2025-02-28`.
+fn long_day(lang: &str, d: &str) -> String {
+    use chrono::Datelike;
+    match chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d") {
+        Ok(d) => say(lang, "server.story.day_month", &[("day", d.day().into()), ("month", say(lang, &format!("server.story.months.{}", MONTHS[d.month0() as usize]), &[]).into())]),
+        Err(_) => d.to_string(),
+    }
 }
 
-const WEEKDAYS: [&str; 7] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+/// The weekdays by their keys in the catalogue, Monday first.
+const WEEKDAYS: [&str; 7] = crate::card::DAYS;
 
 pub fn svg(ch: Chapter, y: &StoryYear, posters: &Posters) -> String {
+    svg_in(crate::i18n::current(), ch, y, posters)
+}
+
+fn svg_in(lang: &str, ch: Chapter, y: &StoryYear, posters: &Posters) -> String {
     let mut c = Canvas::new();
     let poster_of = |t: &Title| t.image.as_ref().and_then(|i| posters.get(i));
+    frame(lang, &mut c, y, ch);
     match ch {
         Chapter::Year => {
-            frame(&mut c, y, "YEAR");
-            let next = big_number(&mut c, 760.0, &hours(y.totals.watch_s), "hours of watching");
-            c.text_fit(X, next + 60.0, Style(40.0, 400, MUTED), &format!("{} · {} · {}", plural(y.totals.plays, "play", "plays"), plural(y.totals.titles, "title", "titles"), plural(y.totals.active_days, "day", "days")), Some(WIDE));
+            let next = big_number(&mut c, 760.0, &hours(lang, y.totals.watch_s), &say(lang, "server.story.hours_of_watching", &[]));
+            let line = [("server.story.plays", y.totals.plays), ("server.story.titles", y.totals.titles), ("server.story.days", y.totals.active_days)].map(|(key, n)| count(lang, key, n)).join(" · ");
+            c.text_fit(X, next + 60.0, Style(40.0, 400, MUTED), &line, Some(WIDE));
             for (i, t) in y.favourites().into_iter().enumerate() {
                 c.poster(X + i as f64 * 330.0, 1150.0, 292.0, 438.0, poster_of(t));
                 c.wrap(X + i as f64 * 330.0, 1640.0, Style(30.0, 600, TEXT), &t.name, 292.0, 2);
             }
         }
         Chapter::Numbers => {
-            frame(&mut c, y, "NUMBERS");
-            headline(&mut c, 560.0, "The year in numbers");
+            headline(&mut c, 560.0, &say(lang, "server.story.in_numbers", &[]));
             let t = &y.totals;
-            let mut tiles = vec![("Plays", thousands(t.plays)), ("Hours", hours(t.watch_s)), ("Titles", thousands(t.titles)), ("Days", thousands(t.active_days))];
-            if t.episodes > 0 { tiles.push(("Episodes", thousands(t.episodes))) }
-            if t.movies > 0 { tiles.push(("Films", thousands(t.movies))) }
-            if t.tracks > 0 { tiles.push(("Songs", thousands(t.tracks))) }
+            let mut tiles = vec![("plays", number(lang, t.plays)), ("hours", hours(lang, t.watch_s)), ("titles", number(lang, t.titles)), ("days", number(lang, t.active_days))];
+            if t.episodes > 0 { tiles.push(("episodes", number(lang, t.episodes))) }
+            if t.movies > 0 { tiles.push(("films", number(lang, t.movies))) }
+            if t.tracks > 0 { tiles.push(("songs", number(lang, t.tracks))) }
             for (i, (label, value)) in tiles.into_iter().take(6).enumerate() {
                 let (cx, cy) = (X + (i % 2) as f64 * 490.0, 760.0 + (i / 2) as f64 * 330.0);
                 c.push(format!(r#"<rect x="{cx}" y="{cy}" width="462" height="290" rx="16" fill="{TILE}"/>"#));
-                c.text(cx + 40.0, cy + 80.0, Style(34.0, 500, MUTED), label);
+                c.text(cx + 40.0, cy + 80.0, Style(34.0, 500, MUTED), &say(lang, &format!("server.story.tile.{label}"), &[]));
                 c.text_fit(cx + 40.0, cy + 210.0, Style(110.0, 800, TEXT), &value, Some(390.0));
             }
         }
-        Chapter::Shows => { frame(&mut c, y, "SHOWS"); ranked(&mut c, &y.top_series, posters, "hours", "shows") }
-        Chapter::Films => { frame(&mut c, y, "FILMS"); ranked(&mut c, &y.top_movies, posters, "hours", "films") }
-        Chapter::Music => { frame(&mut c, y, "MUSIC"); ranked(&mut c, &y.top_tracks, posters, "minutes", "songs") }
+        Chapter::Shows => ranked(lang, &mut c, &y.top_series, posters, "hours", "server.story.top.shows"),
+        Chapter::Films => ranked(lang, &mut c, &y.top_movies, posters, "hours", "server.story.top.films"),
+        Chapter::Music => ranked(lang, &mut c, &y.top_tracks, posters, "minutes", "server.story.top.songs"),
         Chapter::Genres => {
-            frame(&mut c, y, "GENRES");
-            let top = headline(&mut c, 560.0, &format!("Mostly {}", y.genres[0].name));
+            let top = headline(&mut c, 560.0, &say(lang, "server.story.mostly", &[("genre", y.genres[0].name.as_str().into())]));
             let max = y.genres.iter().map(|g| g.watch_s).max().unwrap_or(1).max(1);
             for (i, g) in y.genres.iter().enumerate() {
                 let gy = top + 120.0 + i as f64 * 160.0;
                 c.text_fit(X, gy, Style(40.0, 600, TEXT), &g.name, Some(WIDE - 200.0));
-                c.text(X + WIDE - 180.0, gy, Style(34.0, 400, MUTED), &format!("{} h", hours(g.watch_s)));
+                c.text(X + WIDE - 180.0, gy, Style(34.0, 400, MUTED), &count(lang, "server.story.hours_short", g.watch_s / 3600));
                 let w = (WIDE * g.watch_s as f64 / max as f64).max(8.0);
                 c.push(format!(r#"<rect x="{X}" y="{:.0}" width="{WIDE}" height="28" rx="14" fill="{TILE}"/><rect x="{X}" y="{:.0}" width="{w:.0}" height="28" rx="14" fill="{}"/>"#, gy + 30.0, gy + 30.0, if i == 0 { ACCENT_HI } else { "#5e4ba8" }));
             }
         }
         Chapter::Persona => {
-            frame(&mut c, y, "YOU");
             if let Some(p) = &y.persona {
-                c.text(X, 760.0, Style(44.0, 500, MUTED), "This year you were");
+                c.text(X, 760.0, Style(44.0, 500, MUTED), &say(lang, "server.story.you_were", &[]));
                 c.wrap(X, 900.0, Style(120.0, 800, ACCENT_HI), &p.title, WIDE, 3);
                 c.wrap(X, 1300.0, Style(46.0, 400, TEXT), &p.line, WIDE, 4);
             }
         }
         Chapter::Rhythm => {
-            frame(&mut c, y, "RHYTHM");
             let peak_h = y.hours.iter().enumerate().max_by_key(|(_, v)| **v).map_or(0, |(i, _)| i);
-            headline(&mut c, 560.0, &format!("Most of it around {peak_h:02}:00"));
+            headline(&mut c, 560.0, &say(lang, "server.story.around", &[("time", format!("{peak_h:02}:00").into())]));
             let labels: Vec<(usize, String)> = (0..24).step_by(6).map(|h| (h, format!("{h:02}"))).collect();
             bars(&mut c, X, 820.0, WIDE, 360.0, &y.hours, &labels);
             if y.weekdays.iter().sum::<i64>() > 0 {
                 let peak_d = y.weekdays.iter().enumerate().max_by_key(|(_, v)| **v).map_or(0, |(i, _)| i);
-                c.text_fit(X, 1360.0, Style(48.0, 700, TEXT), &format!("{}s were busiest", WEEKDAYS[peak_d]), Some(WIDE));
-                let labels: Vec<(usize, String)> = (0..7).map(|d| (d, WEEKDAYS[d][..3].to_string())).collect();
+                let days = say(lang, &format!("server.story.weekdays.{}", WEEKDAYS[peak_d % 7]), &[]);
+                c.text_fit(X, 1360.0, Style(48.0, 700, TEXT), &say(lang, "server.story.busiest", &[("days", days.into())]), Some(WIDE));
+                let labels: Vec<(usize, String)> = (0..7).map(|d| (d, crate::card::weekday_short(lang, d))).collect();
                 bars(&mut c, X, 1420.0, WIDE, 220.0, &y.weekdays, &labels);
             }
         }
         Chapter::Days => {
-            frame(&mut c, y, "DAYS");
-            headline(&mut c, 560.0, &format!("{} with something on", plural(y.totals.active_days, "day", "days")));
+            headline(&mut c, 560.0, &count(lang, "server.story.with_something_on", y.totals.active_days));
             calendar(&mut c, &y.days, y.label.parse().ok(), 820.0);
             if let Some(d) = y.records.longest_streak_days {
-                c.text_fit(X, 1560.0, Style(46.0, 600, TEXT), &format!("Longest streak: {}", plural(d, "day", "days")), Some(WIDE));
+                c.text_fit(X, 1560.0, Style(46.0, 600, TEXT), &count(lang, "server.story.longest_streak", d), Some(WIDE));
             }
         }
         Chapter::Records => {
-            frame(&mut c, y, "RECORDS");
-            headline(&mut c, 560.0, "Records worth bragging about");
+            headline(&mut c, 560.0, &say(lang, "server.story.records", &[]));
             let r = &y.records;
             let mut rows: Vec<(&str, String)> = vec![];
-            if let Some(d) = r.longest_streak_days { rows.push(("Longest streak", plural(d, "day", "days"))) }
-            if let Some((day, secs)) = &r.biggest_day { rows.push(("Biggest day", format!("{} h on {}", hours(*secs), long_day(day)))) }
-            if let Some((show, n)) = &r.biggest_binge { rows.push(("Biggest binge", format!("{} of {show}", plural(*n, "episode", "episodes")))) }
-            if let Some((name, n)) = &r.most_rewatched { rows.push(("Most rewatched", format!("{name}, on {}", plural(*n, "day", "days")))) }
-            if let Some((name, year)) = &r.oldest { rows.push(("Oldest title", format!("{name} ({year})"))) }
+            if let Some(d) = r.longest_streak_days { rows.push(("streak", count(lang, "server.story.days", d))) }
+            if let Some((day, secs)) = &r.biggest_day { rows.push(("day", say(lang, "server.story.day_hours", &[("hours", (secs / 3600).into()), ("day", long_day(lang, day).into())]))) }
+            if let Some((show, n)) = &r.biggest_binge { rows.push(("binge", say(lang, "server.story.binge", &[("count", (*n).into()), ("show", show.into())]))) }
+            if let Some((name, n)) = &r.most_rewatched { rows.push(("rewatched", say(lang, "server.story.rewatched", &[("count", (*n).into()), ("name", name.into())]))) }
+            if let Some((name, year)) = &r.oldest { rows.push(("oldest", format!("{name} ({year})"))) }
             for (i, (label, value)) in rows.iter().enumerate() {
                 let ry = 800.0 + i as f64 * 190.0;
-                c.text(X, ry, Style(32.0, 500, MUTED), label);
+                c.text(X, ry, Style(32.0, 500, MUTED), &say(lang, &format!("server.story.record.{label}"), &[]));
                 c.wrap(X, ry + 60.0, Style(46.0, 700, TEXT), value, WIDE, 2);
             }
         }
         Chapter::Together => {
-            frame(&mut c, y, "TOGETHER");
             if let Some(g) = &y.together {
-                let next = big_number(&mut c, 780.0, &thousands(g.evenings), if g.evenings == 1 { "evening in company" } else { "evenings in company" });
-                c.text_fit(X, next + 60.0, Style(40.0, 400, MUTED), &format!("{} h together · {}% of your watching", hours(g.together_s), (g.share * 100.0).round() as i64), Some(WIDE));
+                let unit = say(lang, if g.evenings == 1 { "server.story.evening_in_company" } else { "server.story.evenings_in_company" }, &[]);
+                let next = big_number(&mut c, 780.0, &number(lang, g.evenings), &unit);
+                let line = say(lang, "server.story.together_line", &[("hours", (g.together_s / 3600).into()), ("percent", ((g.share * 100.0).round() as i64).into())]);
+                c.text_fit(X, next + 60.0, Style(40.0, 400, MUTED), &line, Some(WIDE));
                 if let Some(t) = &g.top_title {
-                    c.text(X, 1160.0, Style(34.0, 500, FAINT), "What brought people together most");
+                    c.text(X, 1160.0, Style(34.0, 500, FAINT), &say(lang, "server.story.together_top", &[]));
                     c.poster(X, 1200.0, 300.0, 450.0, poster_of(t));
                     c.wrap(X + 340.0, 1270.0, Style(50.0, 700, TEXT), &t.name, WIDE - 340.0, 3);
-                    c.text(X + 340.0, 1500.0, Style(36.0, 400, MUTED), &plural(t.plays, "evening", "evenings"));
+                    c.text(X + 340.0, 1500.0, Style(36.0, 400, MUTED), &count(lang, "server.story.evenings", t.plays));
                 }
             }
         }
         Chapter::Finished => {
-            frame(&mut c, y, "FINISHED");
             if let Some(f) = &y.finished {
-                headline(&mut c, 560.0, &format!("{} seen to the end", plural(f.count, "show", "shows")));
+                headline(&mut c, 560.0, &count(lang, "server.story.finished", f.count));
                 for (i, t) in f.series.iter().take(4).enumerate() {
                     let (px, py) = (X + (i % 2) as f64 * 490.0, 780.0 + (i / 2) as f64 * 520.0);
                     c.poster(px, py, 280.0, 420.0, poster_of(t));
                     c.wrap(px, py + 470.0, Style(32.0, 600, TEXT), &t.name, 440.0, 1);
                 }
                 if f.dropped_count > 0 {
-                    c.text_fit(X, 1800.0 - 40.0, Style(36.0, 400, MUTED), &format!("and {} left for later", plural(f.dropped_count, "show", "shows")), Some(WIDE));
+                    c.text_fit(X, 1800.0 - 40.0, Style(36.0, 400, MUTED), &count(lang, "server.story.left_for_later", f.dropped_count), Some(WIDE));
                 }
             }
         }
         Chapter::Asked => {
-            frame(&mut c, y, "ASKED");
             if let Some(q) = &y.asked {
-                let next = big_number(&mut c, 780.0, &thousands(q.made), if q.made == 1 { "request" } else { "requests" });
-                c.text_fit(X, next + 80.0, Style(50.0, 600, TEXT), &format!("{} arrived", thousands(q.available)), Some(WIDE));
-                c.text_fit(X, next + 160.0, Style(50.0, 600, TEXT), &format!("{} watched", thousands(q.watched)), Some(WIDE));
+                let next = big_number(&mut c, 780.0, &number(lang, q.made), &say(lang, if q.made == 1 { "server.story.request" } else { "server.story.requests" }, &[]));
+                c.text_fit(X, next + 80.0, Style(50.0, 600, TEXT), &count(lang, "server.story.arrived", q.available), Some(WIDE));
+                c.text_fit(X, next + 160.0, Style(50.0, 600, TEXT), &count(lang, "server.story.watched", q.watched), Some(WIDE));
             }
         }
         Chapter::Versus => {
-            frame(&mut c, y, "VERSUS");
             if let Some(v) = &y.versus {
                 let (now, then) = (y.totals.watch_s, v.watch_s);
                 let change = if then > 0 { ((now - then) as f64 / then as f64 * 100.0).round() as i64 } else { 0 };
-                let word = if change >= 0 { format!("{change}% more than {}", v.year) } else { format!("{}% less than {}", -change, v.year) };
+                let year = v.year.to_string();
+                let word = if change >= 0 {
+                    say(lang, "server.story.more_than", &[("percent", change.into()), ("year", year.as_str().into())])
+                } else {
+                    say(lang, "server.story.less_than", &[("percent", (-change).into()), ("year", year.as_str().into())])
+                };
                 headline(&mut c, 560.0, &word);
                 let max = now.max(then).max(1) as f64;
-                for (i, (label, secs)) in [(y.label.clone(), now), (v.year.to_string(), then)].into_iter().enumerate() {
+                for (i, (label, secs)) in [(y.label.clone(), now), (year, then)].into_iter().enumerate() {
                     let by = 860.0 + i as f64 * 300.0;
                     c.text(X, by, Style(40.0, 600, if i == 0 { TEXT } else { MUTED }), &label);
                     c.push(format!(r#"<rect x="{X}" y="{:.0}" width="{:.0}" height="90" rx="16" fill="{}"/>"#, by + 30.0, (WIDE * secs as f64 / max).max(12.0), if i == 0 { ACCENT_HI } else { "#4b3f80" }));
-                    c.text(X, by + 190.0, Style(40.0, 400, MUTED), &format!("{} h", hours(secs)));
+                    c.text(X, by + 190.0, Style(40.0, 400, MUTED), &count(lang, "server.story.hours_short", secs / 3600));
                 }
             }
         }
@@ -658,6 +692,39 @@ mod tests {
             let svg = svg(ch, &s, &Posters::new());
             assert!(!svg.contains("<Jerry>") && !svg.contains("<script>"), "{ch:?}");
         }
+    }
+
+    /// A card is drawn in the language of whoever asks for it, months, weekdays and numbers included.
+    #[test]
+    fn every_chapter_is_drawn_in_the_reader_s_language() {
+        let s = story();
+        let all = |lang: &str| s.chapters().into_iter().map(|ch| svg_in(lang, ch, &s, &Posters::new())).collect::<Vec<_>>().join("\n");
+        let nb = all("nb-NO");
+        for said in ["Året i tall", "1\u{a0}203 avspillinger", "Toppseriene dine", "Travlest på søndager", "28. februar", "2025 for Alice", "skryte av", "6 episoder av Sintel Stories", "4 kom på serveren", "37 % mer enn i 2024", ">søn<", ">ÅRET<"] {
+            assert!(nb.contains(said), "nb-NO lacks {said:?}");
+        }
+        let nn = all("nn-NO");
+        for said in ["Året i tal", "Travlast på sundagar", "2 seriar sett til", "og 1 serie lagt til sides"] {
+            assert!(nn.contains(said), "nn-NO lacks {said:?}");
+        }
+        let us = all("en-US");
+        assert!(us.contains("Your top movies") && us.contains("February 28") && !us.contains("FILMS"), "American English says movies and writes the month first");
+        let gb = all("en-GB");
+        for said in ["The year in numbers", "1,203 plays", "Sundays were busiest", "28 February", "Alice’s 2025", "37% more than 2024"] {
+            assert!(gb.contains(said), "en-GB lacks {said:?}");
+        }
+        for (lang, text) in [("en-GB", &gb), ("en-US", &us), ("nb-NO", &nb), ("nn-NO", &nn)] {
+            assert!(!text.contains("server."), "{lang}: a key was drawn instead of its words");
+        }
+    }
+
+    /// The card cache is keyed by what a card says, and the language is part of what it says.
+    #[test]
+    fn a_card_in_one_language_is_never_served_in_another() {
+        let s = story();
+        assert_ne!(s.cache_key_in("en-GB", Chapter::Year), s.cache_key_in("nb-NO", Chapter::Year));
+        assert_eq!(s.cache_key_in("nb-NO", Chapter::Year), s.cache_key_in("nb-NO", Chapter::Year));
+        assert_ne!(s.cache_key_in("nb-NO", Chapter::Year), s.cache_key_in("nb-NO", Chapter::Days));
     }
 
     #[test]

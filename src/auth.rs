@@ -183,7 +183,7 @@ pub(crate) fn cookie_token(headers: &HeaderMap) -> Option<String> {
 /// `Some(Err)` when there is one that is not a bearer token, which is never quietly ignored.
 pub fn bearer_token(headers: &HeaderMap) -> Option<Result<String, ApiError>> {
     let raw = headers.get(AUTHORIZATION)?.to_str().ok().map(str::trim).unwrap_or_default();
-    let bad = || ApiError::new(StatusCode::UNAUTHORIZED, "Use `Authorization: Bearer <key>`");
+    let bad = || ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.bearer_form", &[]));
     let Some((scheme, rest)) = raw.split_once(char::is_whitespace) else { return Some(Err(bad())) };
     let token = rest.trim();
     Some(if scheme.eq_ignore_ascii_case("bearer") && !token.is_empty() { Ok(token.to_string()) } else { Err(bad()) })
@@ -194,7 +194,7 @@ pub fn bearer_token(headers: &HeaderMap) -> Option<Result<String, ApiError>> {
 pub fn pick_credential(headers: &HeaderMap) -> Result<Presented, ApiError> {
     match bearer_token(headers) {
         Some(t) => Ok(Presented::Bearer(t?)),
-        None => cookie_token(headers).map(Presented::Cookie).ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, "Sign in to continue")),
+        None => cookie_token(headers).map(Presented::Cookie).ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.sign_in_to_continue", &[]))),
     }
 }
 
@@ -274,7 +274,7 @@ pub(crate) fn resolve_key_in(c: &Connection, settings: &crate::state::Settings, 
 /// A calendar key opens the calendar feed and nothing else.
 pub fn refuse_calendar_key(user: &AuthUser) -> Result<(), ApiError> {
     match user.credential {
-        Credential::Key { scope: KeyScope::Calendar, .. } => Err(ApiError::new(StatusCode::FORBIDDEN, "This key only opens the calendar feed")),
+        Credential::Key { scope: KeyScope::Calendar, .. } => Err(ApiError::new(StatusCode::FORBIDDEN, crate::i18n::t("server.auth.calendar_key_only", &[]))),
         _ => Ok(()),
     }
 }
@@ -292,7 +292,7 @@ pub(crate) async fn resolve_presented(presented: Presented, ip: Option<IpAddr>, 
 
 /// A presented credential to its user: the one place a request proves who it is.
 async fn resolve(presented: Presented, ip: Option<IpAddr>, app: &App) -> Result<AuthUser, ApiError> {
-    let unauthorized = || ApiError::new(StatusCode::UNAUTHORIZED, "Sign in to continue");
+    let unauthorized = || ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.sign_in_to_continue", &[]));
     let settings = app.settings();
     let user = app
         .db
@@ -366,7 +366,7 @@ impl FromRequestParts<App> for CalendarKey {
             Some(token) => Presented::Bearer(token),
             None => match bearer_token(&parts.headers) {
                 Some(t) => Presented::Bearer(t?),
-                None => return Err(ApiError::new(StatusCode::UNAUTHORIZED, "This feed needs a key: add ?key=… to its address")),
+                None => return Err(ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.feed_needs_key", &[]))),
             },
         };
         Ok(CalendarKey(resolve(presented, request_ip(parts, app), app).await?))
@@ -527,7 +527,7 @@ fn check_rate_limit(app: &App, ip: IpAddr) -> Result<(), ApiError> {
         let wait = (ATTEMPT_WINDOW_S - (now - entry.1)).max(1);
         return Err(ApiError::new(
             StatusCode::TOO_MANY_REQUESTS,
-            format!("Too many sign-in attempts. Try again in {} minutes.", (wait + 59) / 60),
+            crate::i18n::t("server.auth.too_many_attempts", &[("count", ((wait + 59) / 60).into())]),
         ));
     }
     entry.0 += 1;
@@ -554,10 +554,10 @@ pub async fn login(
 ) -> ApiResult<Response> {
     let jf = app
         .jellyfin()
-        .ok_or_else(|| ApiError::new(StatusCode::CONFLICT, "FinStats is not connected to Jellyfin yet"))?;
+        .ok_or_else(|| ApiError::new(StatusCode::CONFLICT, crate::i18n::t("server.auth.not_connected", &[])))?;
     let username = body.username.trim();
     if username.is_empty() {
-        return Err(ApiError::bad_request("Enter your Jellyfin username"));
+        return Err(ApiError::bad_request(crate::i18n::t("server.auth.enter_username", &[])));
     }
     let ip = client_ip(&app, &headers, peer);
     check_rate_limit(&app, ip)?;
@@ -569,11 +569,11 @@ pub async fn login(
             // The name as typed: it is the administrator's own server, and Jellyfin's log says the same.
             let who = Actor { user_id: None, user_name: Some(username.chars().take(100).collect()), ip: Some(ip), key_id: None };
             audit::record(&app, audit::Entry::new("sign_in_failed", who).outcome("failed"));
-            return Err(ApiError::new(StatusCode::UNAUTHORIZED, "Wrong username or password"));
+            return Err(ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.wrong_password", &[])));
         }
         Err(AuthError::Other(e)) => {
             tracing::warn!("login could not be checked against Jellyfin: {e:#}");
-            return Err(ApiError::new(StatusCode::BAD_GATEWAY, "Could not reach Jellyfin to check your sign-in"));
+            return Err(ApiError::new(StatusCode::BAD_GATEWAY, crate::i18n::t("server.auth.unreachable", &[])));
         }
     };
     jf.logout(&auth.access_token).await;
@@ -585,7 +585,7 @@ pub async fn login(
         audit::record(&app, audit::Entry::new("sign_in_refused", actor).outcome("refused"));
         return Err(ApiError::new(
             StatusCode::FORBIDDEN,
-            "You haven't been given access to FinStats. A Jellyfin administrator can allow you in Settings.",
+            crate::i18n::t("server.auth.no_access", &[]),
         ));
     };
     clear_rate_limit(&app, ip);
@@ -648,7 +648,7 @@ pub async fn status(State(app): State<App>) -> Json<Value> {
 
 fn ensure_unconfigured(app: &App) -> Result<(), ApiError> {
     if app.is_configured() {
-        return Err(ApiError::new(StatusCode::CONFLICT, "FinStats is already set up"));
+        return Err(ApiError::new(StatusCode::CONFLICT, crate::i18n::t("server.auth.already_set_up", &[])));
     }
     Ok(())
 }
@@ -696,7 +696,7 @@ pub async fn setup(
     let auth = match jf.authenticate(body.username.trim(), &body.password).await {
         Ok(a) => a,
         Err(AuthError::InvalidCredentials) => {
-            return Err(ApiError::new(StatusCode::UNAUTHORIZED, "Wrong username or password"));
+            return Err(ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.wrong_password", &[])));
         }
         Err(AuthError::Other(e)) => return Err(ApiError::new(StatusCode::BAD_GATEWAY, e.to_string())),
     };
@@ -704,7 +704,7 @@ pub async fn setup(
         jf.logout(&auth.access_token).await;
         return Err(ApiError::new(
             StatusCode::FORBIDDEN,
-            "That account is not a Jellyfin administrator. Set FinStats up with an administrator account.",
+            crate::i18n::t("server.auth.not_admin", &[]),
         ));
     }
     let key = jf.ensure_api_key(&auth.access_token).await;

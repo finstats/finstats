@@ -96,12 +96,7 @@ impl Stop {
     fn json(&self) -> Value {
         let p = &self.newest;
         let (kind, id, name, sub, image) = if self.key.starts_with("s:") {
-            let season = match p.season_number {
-                Some(0) => Some("Specials".to_string()),
-                Some(n) => Some(format!("Season {n}")),
-                None => None,
-            };
-            ("season", p.series_id.clone().unwrap_or_default(), p.series_name.clone().unwrap_or_else(|| p.item_name.clone()), season,
+            ("season", p.series_id.clone().unwrap_or_default(), p.series_name.clone().unwrap_or_else(|| p.item_name.clone()), season_label(p.season_number),
              p.season_image_id.clone().or_else(|| p.series_id.clone()).unwrap_or_default())
         } else if self.key.starts_with("a:") {
             ("album", p.item_id.clone(), p.album.clone().unwrap_or_default(), p.album_artist.clone(), p.item_id.clone())
@@ -112,11 +107,20 @@ impl Stop {
         let run = (self.episodes.len() == self.titles.len()).then(|| (self.episodes.first().copied(), self.episodes.last().copied()));
         let contiguous = matches!(run, Some((Some(a), Some(b))) if (b - a + 1) as usize == self.episodes.len());
         json!({
-            "kind": kind, "type": p.item_type, "id": id, "name": name, "sub": sub, "image_item_id": image,
+            "kind": kind, "type": p.item_type, "id": id, "name": name, "sub": sub, "image_item_id": image, "season": p.season_number,
             "from": self.from, "to": self.to, "plays": self.plays, "titles": self.titles.len(), "watch_s": self.watch_s, "active": self.active,
             "episode_from": if contiguous { self.episodes.first().copied() } else { None },
             "episode_to": if contiguous { self.episodes.last().copied() } else { None },
         })
+    }
+}
+
+/// "Season 2", "Specials": what a season stop says under its show, in the language of the request.
+fn season_label(n: Option<i64>) -> Option<String> {
+    match n? {
+        0 => Some(crate::i18n::t("server.timeline.specials", &[])),
+        // As written, never grouped: a show may number its seasons by year.
+        n => Some(crate::i18n::t("server.timeline.season", &[("n", n.to_string().into())])),
     }
 }
 
@@ -190,11 +194,11 @@ pub async fn timeline(State(app): State<App>, user: AuthUser, Path(id): Path<Str
     }
     let before = match q.before.as_deref() {
         None | Some("") => (i64::MAX, i64::MAX),
-        Some(c) => c.split_once('.').and_then(|(at, id)| Some((at.parse().ok()?, id.parse().ok()?))).ok_or_else(|| ApiError::bad_request("That is not a timeline cursor"))?,
+        Some(c) => c.split_once('.').and_then(|(at, id)| Some((at.parse().ok()?, id.parse().ok()?))).ok_or_else(|| ApiError::bad_request(crate::i18n::t("server.timeline.bad_cursor", &[])))?,
     };
     let libraries: Vec<String> = q.libraries.as_deref().unwrap_or("").split(',').map(db::norm_id).filter(|l| !l.is_empty()).collect();
     if libraries.len() > 100 || libraries.iter().any(|l| l.len() != 32 || !l.chars().all(|c| c.is_ascii_hexdigit())) {
-        return Err(ApiError::bad_request("That doesn't look like a list of library ids"));
+        return Err(ApiError::bad_request(crate::i18n::t("server.timeline.bad_libraries", &[])));
     }
     let limit = q.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
     let min_play_s = app.settings().min_play_s;
@@ -209,7 +213,12 @@ pub async fn timeline(State(app): State<App>, user: AuthUser, Path(id): Path<Str
             Ok(Some(json!({ "user": who, "stops": stops, "next": next, "libraries": libraries_of(c, &id, min_play_s)? })))
         })
         .await?;
-    out.map(Json).ok_or_else(|| ApiError::not_found("User"))
+    let mut out = out.ok_or_else(|| ApiError::not_found("User"))?;
+    // The stops were folded on a thread of the database's, where no request's language is; a season says its own here.
+    for stop in out["stops"].as_array_mut().into_iter().flatten().filter(|s| s["kind"] == "season") {
+        stop["sub"] = json!(season_label(stop["season"].as_i64()));
+    }
+    Ok(Json(out))
 }
 
 #[cfg(test)]

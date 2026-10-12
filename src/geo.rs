@@ -117,7 +117,7 @@ impl Database {
         let meta = reader.metadata();
         let kind = meta.database_type.clone();
         if !kind.to_ascii_lowercase().contains("city") {
-            bail!("{} is a `{kind}` database; FinStats needs a city database", path.display());
+            bail!(crate::i18n::t("server.geo.not_a_city_database", &[("file", path.display().to_string().into()), ("kind", kind.into())]));
         }
         let built_at = meta.build_epoch as i64;
         Ok(Database { reader, path: path.to_path_buf(), kind, built_at, stamp: stamp(path) })
@@ -259,7 +259,7 @@ pub async fn download(app: &App) -> Result<String> {
         let target = folder.join(format!("dbip-city-lite-{month}.mmdb"));
         if target.is_file() {
             load(app);
-            return Ok(format!("Already have {month}"));
+            return Ok(crate::i18n::t("server.geo.already_have", &[("month", month.into())]));
         }
         match fetch(app, &download_url(&month), &folder, &target, ID).await {
             Ok(()) => {
@@ -273,7 +273,7 @@ pub async fn download(app: &App) -> Result<String> {
                     }
                 }
                 load(app);
-                return Ok(format!("Downloaded DB-IP City Lite {month}"));
+                return Ok(crate::i18n::t("server.geo.downloaded", &[("month", month.into())]));
             }
             Err(e) => {
                 tracing::debug!("geolocation database for {month}: {e:#}");
@@ -281,11 +281,11 @@ pub async fn download(app: &App) -> Result<String> {
             }
         }
     }
-    Err(last_err.context("downloading the geolocation database"))
+    Err(last_err.context(crate::i18n::t("server.geo.download_failed", &[])))
 }
 
 async fn fetch(app: &App, url: &str, folder: &Path, target: &Path, task: &'static str) -> Result<()> {
-    app.tasks.update(task, "Downloading", Some(0.0));
+    app.tasks.update(task, crate::i18n::t("server.geo.downloading", &[]), Some(0.0));
     // Says nothing about this install: a fixed agent string, no version, no identifiers.
     // `identity`: the file is a gzip *body* that this code unpacks itself, and asking for it verbatim also keeps
     // the length honest, so the progress means something. Setting the header at all turns reqwest's own
@@ -300,7 +300,7 @@ async fn fetch(app: &App, url: &str, folder: &Path, target: &Path, task: &'stati
         .send()
         .await?;
     if !resp.status().is_success() {
-        bail!("{url} answered {}", resp.status());
+        bail!(crate::i18n::t("server.geo.answered", &[("url", url.into()), ("status", resp.status().to_string().into())]));
     }
     let total = resp.content_length().unwrap_or(0);
     let packed = folder.join("download.mmdb.gz.tmp");
@@ -312,12 +312,13 @@ async fn fetch(app: &App, url: &str, folder: &Path, target: &Path, task: &'stati
             got += chunk.len() as u64;
             file.write_all(&chunk).await?;
             if total > 0 {
-                app.tasks.update(task, format!("Downloading ({:.0} of {:.0} MB)", got as f64 / 1e6, total as f64 / 1e6), Some(got as f64 / total as f64 * 0.9));
+                let mb = |bytes: u64| ((bytes as f64 / 1e6).round() as i64).into();
+                app.tasks.update(task, crate::i18n::t("server.geo.downloading_part", &[("got", mb(got)), ("total", mb(total))]), Some(got as f64 / total as f64 * 0.9));
             }
         }
         file.flush().await?;
         drop(file);
-        app.tasks.update(task, "Unpacking", Some(0.92));
+        app.tasks.update(task, crate::i18n::t("server.geo.unpacking", &[]), Some(0.92));
         let (from, to) = (packed.clone(), unpacked.clone());
         tokio::task::spawn_blocking(move || -> Result<()> {
             let mut gz = flate2::read::GzDecoder::new(std::io::BufReader::new(std::fs::File::open(&from)?));
@@ -338,18 +339,19 @@ async fn fetch(app: &App, url: &str, folder: &Path, target: &Path, task: &'stati
 
 /// Start the download unless one is running. Returns false in that case.
 pub fn spawn_download(app: &App) -> bool {
-    if !app.tasks.try_start("geoip", "Starting…") {
+    if !app.tasks.try_start("geoip", &crate::i18n::t("server.sync.starting", &[])) {
         return false;
     }
     let app = app.clone();
-    tokio::spawn(async move {
+    // Started by somebody pressing the button: what it says is said in their language.
+    tokio::spawn(crate::i18n::carry(async move {
         let work = app.clone();
         let outcome = crate::schedule::caught(async move { download(&work).await }).await;
         if outcome.is_ok() {
             crate::security::refresh_all(&app).await;
         }
         app.tasks.finish("geoip", outcome.map(|m| (m, None)));
-    });
+    }));
     true
 }
 

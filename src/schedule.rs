@@ -93,26 +93,27 @@ pub fn effective(task: &str, s: &Settings) -> Vec<Trigger> {
 
 /// Whether this list may be stored for this job.
 pub fn validate(task: &str, triggers: &[Trigger]) -> Result<(), String> {
+    let no = |key: &str| Err(crate::i18n::t(&format!("server.schedule.{key}"), &[]));
     if !SCHEDULED.contains(&task) {
-        return Err(format!("“{task}” cannot be scheduled"));
+        return Err(crate::i18n::t("server.schedule.cannot_be_scheduled", &[("task", task.into())]));
     }
     if triggers.len() > MAX_TRIGGERS {
-        return Err(format!("At most {MAX_TRIGGERS} triggers per task"));
+        return Err(crate::i18n::t("server.schedule.too_many_triggers", &[("max", MAX_TRIGGERS.into())]));
     }
     for (i, t) in triggers.iter().enumerate() {
         if triggers[..i].contains(t) {
-            return Err("The same trigger is there twice".into());
+            return no("same_trigger_twice");
         }
         match t.when {
-            When::Daily { at_min } | When::Weekly { at_min, .. } if at_min >= 1440 => return Err("A time of day is between 00:00 and 23:59".into()),
-            When::Weekly { day, .. } if day > 6 => return Err("A day of the week is 0 (Sunday) to 6 (Saturday)".into()),
-            When::Interval { every_s } if !(MIN_INTERVAL_S..=MAX_INTERVAL_S).contains(&every_s) => return Err("An interval is between 5 minutes and 30 days".into()),
-            When::AfterScan if !AFTER_SCAN.contains(&task) => return Err("Only the jobs that read the library can follow Jellyfin’s scan".into()),
+            When::Daily { at_min } | When::Weekly { at_min, .. } if at_min >= 1440 => return no("time_of_day"),
+            When::Weekly { day, .. } if day > 6 => return no("day_of_week"),
+            When::Interval { every_s } if !(MIN_INTERVAL_S..=MAX_INTERVAL_S).contains(&every_s) => return no("interval"),
+            When::AfterScan if !AFTER_SCAN.contains(&task) => return no("after_scan"),
             _ => {}
         }
         match t.limit_s {
-            Some(_) if NO_LIMIT.contains(&task) => return Err("This job cannot be stopped half way, so it takes no time limit".into()),
-            Some(limit) if !(60..=MAX_LIMIT_S).contains(&limit) => return Err("A time limit is between 1 minute and 168 hours".into()),
+            Some(_) if NO_LIMIT.contains(&task) => return no("no_time_limit"),
+            Some(limit) if !(60..=MAX_LIMIT_S).contains(&limit) => return no("time_limit"),
             _ => {}
         }
     }
@@ -229,29 +230,30 @@ pub async fn within<T>(limit: Option<std::time::Duration>, run: impl std::future
     let Some(limit) = limit else { return run.await };
     match tokio::time::timeout(limit, run).await {
         Ok(outcome) => outcome,
-        Err(_) => Err(anyhow::anyhow!("Stopped: it ran past its time limit of {}", human(limit.as_secs() as i64))),
+        Err(_) => Err(anyhow::anyhow!(crate::i18n::t("server.schedule.past_time_limit", &[("limit", human(limit.as_secs() as i64).into())]))),
     }
 }
 
 /// A job's work in a task of its own, so a panic in it is a failure the job ends with rather than the end of the task
-/// that would have finished it: a job that panicked stayed "running" for good and no trigger started it again.
+/// that would have finished it: a job that panicked stayed "running" for good and no trigger started it again. The task
+/// speaks the language of whoever started the job.
 pub async fn caught<T: Send + 'static>(run: impl std::future::Future<Output = Result<T>> + Send + 'static) -> Result<T> {
-    match tokio::spawn(run).await {
+    match tokio::spawn(crate::i18n::carry(run)).await {
         Ok(outcome) => outcome,
         Err(e) if e.is_panic() => {
             let p = e.into_panic();
-            let why = p.downcast_ref::<&str>().map(|s| s.to_string()).or_else(|| p.downcast_ref::<String>().cloned()).unwrap_or_else(|| "no message".into());
-            Err(anyhow::anyhow!("FinStats hit a bug and stopped this run ({why}); it runs again at its next trigger"))
+            let why = p.downcast_ref::<&str>().map(|s| s.to_string()).or_else(|| p.downcast_ref::<String>().cloned()).unwrap_or_else(|| crate::i18n::t("server.schedule.no_message", &[]));
+            Err(anyhow::anyhow!(crate::i18n::t("server.schedule.panicked", &[("why", why.into())])))
         }
-        Err(e) => Err(anyhow::anyhow!("the run was cancelled ({e})")),
+        Err(e) => Err(anyhow::anyhow!(crate::i18n::t("server.schedule.cancelled", &[("error", e.to_string().into())]))),
     }
 }
 
 /// "2 hours", "90 minutes": a limit as the owner set it.
 fn human(s: i64) -> String {
     match s {
-        s if s % 3600 == 0 => format!("{} hour{}", s / 3600, if s == 3600 { "" } else { "s" }),
-        s => format!("{} minute{}", s / 60, if s / 60 == 1 { "" } else { "s" }),
+        s if s % 3600 == 0 => crate::i18n::t("server.schedule.hours", &[("count", (s / 3600).into())]),
+        s => crate::i18n::t("server.schedule.minutes", &[("count", (s / 60).into())]),
     }
 }
 

@@ -411,7 +411,7 @@ pub async fn post_dismiss(State(app): State<App>, Manager(user): Manager, Json(b
     }
     let note = body.note.map(|n| n.trim().to_string()).filter(|n| !n.is_empty());
     if note.as_ref().is_some_and(|n| n.chars().count() > NOTE_MAX) {
-        return Err(ApiError::bad_request(format!("A note is at most {NOTE_MAX} characters")));
+        return Err(ApiError::bad_request(crate::i18n::t("server.health.note_too_long", &[("max", NOTE_MAX.into())])));
     }
     let (key, by, said) = (body.key.clone(), user.name.clone(), note.clone());
     let done = app.db.call(move |c| dismiss(c, &key, said.as_deref(), &by, crate::db::now())).await?;

@@ -892,7 +892,7 @@ pub struct TopQuery {
 pub async fn top_handler(State(app): State<App>, user: AuthUser, Query(q): Query<TopQuery>) -> ApiResult {
     let kind = q.kind.clone().unwrap_or_else(|| "movies".into());
     if !["movies", "series", "music", "users", "clients", "devices", "libraries"].contains(&kind.as_str()) {
-        return Err(ApiError::bad_request("Unknown kind"));
+        return Err(ApiError::bad_request(crate::i18n::t("server.stats.unknown_kind", &[])));
     }
     let limit = q.limit.unwrap_or(10).clamp(1, 100);
     let rank = Rank::asked(q.sort.as_deref());
@@ -2009,7 +2009,8 @@ fn insight_client_methods(c: &Connection, scope: &Scope) -> Result<Vec<Map<Strin
     )
 }
 
-fn insight_completion(c: &Connection, scope: &Scope) -> Result<Vec<Value>> {
+/// `lang`: the bands are named in the caller's language, and this runs on a thread of the database's.
+fn insight_completion(c: &Connection, scope: &Scope, lang: &str) -> Result<Vec<Value>> {
     let video = scope.cond().with_raw("p.item_type IN ('Movie', 'Episode') AND COALESCE(p.runtime_s, 0) > 0");
     let comp = one_json(
         c,
@@ -2022,9 +2023,9 @@ fn insight_completion(c: &Connection, scope: &Scope) -> Result<Vec<Value>> {
         &video.args,
     )?
     .unwrap_or_default();
-    Ok([("Under 10%", "a"), ("10–50%", "b"), ("50–90%", "c"), ("Finished (90%+)", "d")]
+    Ok([("under_10", "a"), ("from_10_to_50", "b"), ("from_50_to_90", "c"), ("finished", "d")]
         .iter()
-        .map(|(name, k)| json!({ "name": name, "plays": comp.get(*k).cloned().unwrap_or(json!(0)) }))
+        .map(|(band, k)| json!({ "name": crate::i18n::say(lang, &format!("server.stats.completion.{band}"), &[]), "plays": comp.get(*k).cloned().unwrap_or(json!(0)) }))
         .collect())
 }
 
@@ -2217,7 +2218,7 @@ pub struct SplitQuery {
 }
 
 pub async fn split(State(app): State<App>, user: AuthUser, Query(q): Query<SplitQuery>) -> ApiResult {
-    let group = q.group.as_deref().and_then(Group::asked).ok_or_else(|| ApiError::bad_request("Unknown group"))?;
+    let group = q.group.as_deref().and_then(Group::asked).ok_or_else(|| ApiError::bad_request(crate::i18n::t("server.stats.unknown_group", &[])))?;
     let by = SplitBy::asked(q.by.as_deref());
     let rank = if q.sort.as_deref() == Some("watch") { Rank::Watch } else { Rank::Plays };
     let limit = q.limit.unwrap_or(10).clamp(1, 50) as usize;
@@ -2297,11 +2298,12 @@ pub async fn insights(State(app): State<App>, user: AuthUser, Query(q): Query<In
     let wants = |names: &[&str]| names.iter().any(|n| parts.contains(n));
     let filter = FilterQuery { days: q.days, user_id: q.user_id, library_id: q.library_id };
     let scope = resolved(&app, &user, &filter).await?;
+    let lang = crate::i18n::current();
     let (concurrency, genres, client_methods, people, sent) = tokio::try_join!(
         when(wants(&["concurrency"]), apart(app.clone(), scope.clone(), |c, s| concurrency(c, s, &s.cond()))),
         when(wants(&["genres"]), apart(app.clone(), scope.clone(), |c, s| genre_buckets(c, &s.cond()))),
         when(wants(&["client_methods"]), apart(app.clone(), scope.clone(), insight_client_methods)),
-        when(wants(&["network", "completion", "behaviour"]), apart(app.clone(), scope.clone(), |c, s| Ok((insight_network(c, s)?, insight_completion(c, s)?, insight_behaviour(c, s)?)))),
+        when(wants(&["network", "completion", "behaviour"]), apart(app.clone(), scope.clone(), |c, s| Ok((insight_network(c, s)?, insight_completion(c, s, lang)?, insight_behaviour(c, s)?)))),
         when(wants(&["data_bytes", "failed_logins"]), apart(app.clone(), scope.clone(), |c, s| Ok((insight_data_bytes(c, s)?, insight_failed_logins(c, s)?)))),
     )?;
     let (network, completion, behaviour) = people.map_or((None, None, None), |(n, c, b)| (Some(n), Some(c), Some(b)));

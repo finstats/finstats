@@ -56,7 +56,7 @@ fn whose_year(user: &AuthUser, q: &RecapQuery) -> Result<(Option<String>, bool),
         None | Some("") | Some("user") => false,
         Some("server") if user.is_admin => true,
         Some("server") => return Err(ApiError::forbidden()),
-        Some(_) => return Err(ApiError::bad_request("The scope is `user` or `server`")),
+        Some(_) => return Err(ApiError::bad_request(crate::i18n::t("server.recap.bad_scope", &[]))),
     };
     let requested_user = q.user_id.as_deref().map(db::norm_id).filter(|s| !s.is_empty());
     let scope_user = (!server).then(|| match requested_user {
@@ -75,6 +75,8 @@ async fn year_for(app: &App, user: &AuthUser, q: &RecapQuery) -> Result<(Value, 
     let name = server_name.clone();
     let out = app.db.call(move |c| build(c, scope_user, min_play_s, &name, &requested, None)).await?;
     let mut out = if server { server_edition(out) } else { out };
+    // The year was read on a thread of the database's, where no request's language is: the persona says itself here.
+    say_persona(&mut out["persona"]);
     // Which cards the year has: said here, so the page never works it out again and drifts.
     out["story"] = match crate::story::StoryYear::from_recap(&out, "") {
         Some(y) => json!(y.chapters().into_iter().map(|ch| ch.key()).collect::<Vec<_>>()),
@@ -625,24 +627,46 @@ fn persona(totals: &Value, hours: &[i64], weekdays: &[i64]) -> Value {
     let plays = n("plays").max(1.0);
     // Per person: on a shared server ten people watching one episode each is not a binge.
     let per_day = n("episodes") / n("user_days").max(n("active_days")).max(1.0);
-    let make = |key: &str, title: &str, line: String| json!({ "key": key, "title": title, "line": line });
+    // `n` is the number its line says: a share in percent, episodes a day, or the hour most of it started.
+    let make = |key: &str, n: f64| {
+        let mut p = json!({ "key": key, "n": n });
+        say_persona(&mut p);
+        p
+    };
 
     if night >= 0.35 {
-        make("night_owl", "Night owl", format!("{}% of the watching happened between 22:00 and 04:00", pct(night)))
+        make("night_owl", pct(night) as f64)
     } else if morning >= 0.30 {
-        make("early_bird", "Early bird", format!("{}% of the watching happened before 10 in the morning", pct(morning)))
+        make("early_bird", pct(morning) as f64)
     } else if n("tracks") / plays >= 0.5 {
-        make("music_lover", "Music lover", format!("{}% of everything played was music", pct(n("tracks") / plays)))
+        make("music_lover", pct(n("tracks") / plays) as f64)
     } else if weekend >= 0.45 {
-        make("weekend_warrior", "Weekend warrior", format!("{}% of the watching happened on Saturdays and Sundays", pct(weekend)))
+        make("weekend_warrior", pct(weekend) as f64)
     } else if per_day >= 4.0 {
-        make("binge_watcher", "Binge watcher", format!("{per_day:.1} episodes on an average day of watching"))
+        make("binge_watcher", (per_day * 10.0).round() / 10.0)
     } else if n("movies") / plays >= 0.4 {
-        make("movie_buff", "Movie buff", format!("{}% of plays were films", pct(n("movies") / plays)))
+        make("movie_buff", pct(n("movies") / plays) as f64)
     } else {
         let peak = hours.iter().enumerate().max_by_key(|(_, s)| **s).map(|(h, _)| h).unwrap_or(20);
-        make("creature_of_habit", "Creature of habit", format!("Most of the watching started around {peak:02}:00, week in, week out"))
+        make("creature_of_habit", peak as f64)
     }
+}
+
+/// A persona's name and line, from its key and its number, in the language of the request. One without a number
+/// keeps the words it has.
+pub fn say_persona(p: &mut Value) {
+    let (Some(key), Some(n)) = (p["key"].as_str().map(str::to_string), p["n"].as_f64()) else { return };
+    let value = match key.as_str() {
+        // Episodes a day keep their tenth, with the decimal mark of the language.
+        "binge_watcher" => {
+            let one = format!("{n:.1}");
+            if crate::i18n::current().starts_with("en") { one } else { one.replace('.', ",") }
+        }
+        "creature_of_habit" => format!("{:02}:00", n as i64),
+        _ => (n as i64).to_string(),
+    };
+    p["title"] = json!(crate::i18n::t(&format!("server.recap.persona.{key}.title"), &[]));
+    p["line"] = json!(crate::i18n::t(&format!("server.recap.persona.{key}.line"), &[("n", value.into())]));
 }
 
 fn records(c: &Connection, w: &Window) -> Result<Value> {

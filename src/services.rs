@@ -28,9 +28,94 @@ use serde_json::{Value, json};
 use crate::auth::JellyfinAdmin;
 use crate::db::rusqlite::{Connection, OptionalExtension, params};
 use crate::db;
+use crate::i18n::t;
+use crate::notify::{FormError, FormResult};
 use crate::state::{ApiError, ApiResult, App};
 
 const MAX_SERVICES: usize = 20;
+
+// ---------------------------------------------------------------- words said later
+
+/// A sentence kept as its key and what fills it, and said in the language of whoever reads it. A read of a service
+/// mostly happens in the background, where nobody's language is known, and what went wrong is shown later, on a page,
+/// to somebody who reads it in theirs.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Words {
+    key: &'static str,
+    args: Vec<(&'static str, String)>,
+}
+
+impl Words {
+    pub fn new(key: &'static str, args: Vec<(&'static str, String)>) -> Words {
+        Words { key, args }
+    }
+
+    pub fn key(&self) -> &'static str {
+        self.key
+    }
+
+    pub fn say(&self, lang: &str) -> String {
+        let args: Vec<(&str, crate::i18n::Arg)> = self.args.iter().map(|(name, value)| (*name, value.as_str().into())).collect();
+        crate::i18n::say(lang, self.key, &args)
+    }
+}
+
+/// Said in the language of the request being answered, or the source outside one.
+impl std::fmt::Display for Words {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.say(crate::i18n::current()))
+    }
+}
+
+impl std::error::Error for Words {}
+
+/// What went wrong, as it is kept to be shown: words FinStats can say in anybody's language, or a text as it was
+/// written (an error from elsewhere, or one read back from the database).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Said {
+    Words(Words),
+    Text(String),
+}
+
+impl Said {
+    pub fn of(e: &anyhow::Error) -> Said {
+        e.downcast_ref::<Words>().map_or_else(|| Said::Text(e.to_string()), |w| Said::Words(w.clone()))
+    }
+
+    pub fn say(&self, lang: &str) -> String {
+        match self {
+            Said::Words(w) => w.say(lang),
+            Said::Text(s) => s.clone(),
+        }
+    }
+
+    /// In the language of the request being answered.
+    pub fn now(&self) -> String {
+        self.say(crate::i18n::current())
+    }
+
+    /// In the source language: what the database keeps and a notification carries.
+    pub fn source(&self) -> String {
+        self.say(crate::i18n::LOCALES[0])
+    }
+}
+
+impl From<&str> for Said {
+    fn from(s: &str) -> Said {
+        Said::Text(s.to_string())
+    }
+}
+
+impl From<String> for Said {
+    fn from(s: String) -> Said {
+        Said::Text(s)
+    }
+}
+
+/// The catalogue's `key` as an error that is said when it is shown.
+pub fn words(key: &'static str, args: Vec<(&'static str, String)>) -> anyhow::Error {
+    anyhow::Error::new(Words::new(key, args))
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Kind {
@@ -70,12 +155,8 @@ impl Kind {
         }
     }
 
-    fn what(self) -> &'static str {
-        match self {
-            Kind::Sonarr => "Series: what airs when, and what is downloading",
-            Kind::Radarr => "Films: what is released when, and what is downloading",
-            Kind::Seerr => "Requests: who asked for what (Seerr, Jellyseerr or Overseerr)",
-        }
+    fn what(self) -> String {
+        t(&format!("server.services.what.{}", self.key()), &[])
     }
 
     pub fn is_arr(self) -> bool {
@@ -108,7 +189,8 @@ impl Service {
 pub struct Health {
     pub version: Option<String>,
     pub last_ok_at: Option<i64>,
-    pub last_error: Option<String>,
+    /// Said in the reader's language where FinStats has the words; the database keeps the source's.
+    pub last_error: Option<Said>,
 }
 
 pub struct Http {
@@ -155,18 +237,19 @@ pub fn clean_url(input: &str, kind: Kind) -> Result<String> {
     // Whatever scheme was typed must be http(s); a missing one is added below, and would otherwise hide another.
     let typed = input.trim().to_ascii_lowercase();
     if typed.contains("://") && !typed.starts_with("http://") && !typed.starts_with("https://") {
-        bail!("The address must start with http:// or https://");
+        bail!(t("server.services.http_only", &[]));
     }
-    let url = crate::jellyfin::normalize_url_of(input, &format!("{}, like {}", kind.label(), kind.example()))?;
-    let parsed = reqwest::Url::parse(&url).map_err(|_| anyhow!("That doesn't look like a valid URL"))?;
+    let what = t("server.services.like", &[("service", kind.label().into()), ("example", kind.example().into())]);
+    let url = crate::jellyfin::normalize_url_of(input, &what)?;
+    let parsed = reqwest::Url::parse(&url).map_err(|_| anyhow!(t("server.services.bad_url", &[])))?;
     if !matches!(parsed.scheme(), "http" | "https") || parsed.host_str().is_none() {
-        bail!("The address must start with http:// or https://");
+        bail!(t("server.services.http_only", &[]));
     }
     if !parsed.username().is_empty() || parsed.password().is_some() {
-        bail!("Leave the user name and password out of the address; they have their own fields");
+        bail!(t("server.services.no_login", &[]));
     }
     if parsed.query().is_some() || parsed.fragment().is_some() {
-        bail!("The address must not contain ? or #");
+        bail!(t("server.services.no_query", &[]));
     }
     Ok(url)
 }
@@ -193,33 +276,39 @@ fn chain_mentions_certificate(e: &reqwest::Error) -> bool {
 
 /// Why a request never got an answer, in words, and without the URL reqwest would print (it is in the sentence already).
 pub fn explain(e: reqwest::Error, svc: &Service) -> anyhow::Error {
-    let (label, url) = (svc.kind.label(), &svc.url);
+    let (service, url) = (svc.kind.label().to_string(), svc.url.clone());
     if chain_mentions_certificate(&e) {
-        anyhow!("{url} presented a certificate FinStats does not trust (self-signed, or from your own authority). Use its http:// address, or switch on “Accept a self-signed certificate” for this connection")
+        words("server.services.certificate", vec![("url", url)])
     } else if e.is_timeout() {
-        anyhow!("{label} at {url} did not answer in time")
+        words("server.services.timeout", vec![("service", service), ("url", url)])
     } else if e.is_connect() {
-        anyhow!("Could not connect to {url}. Is {label} running, and reachable from where FinStats runs?")
+        words("server.services.connect", vec![("service", service), ("url", url)])
     } else if e.is_decode() {
-        anyhow!("{url} did not answer like {label}")
+        words("server.services.decode", vec![("service", service), ("url", url)])
     } else {
-        anyhow!("Could not reach {url}: {}", e.without_url())
+        words("server.services.unreachable", vec![("url", url), ("error", e.without_url().to_string())])
     }
 }
 
 /// An answer that is not the one asked for. Says the status and what it usually means, never the body.
 pub fn refuse(status: StatusCode, headers: &HeaderMap, svc: &Service) -> anyhow::Error {
-    let (label, url) = (svc.kind.label(), &svc.url);
+    let (service, url) = (svc.kind.label().to_string(), svc.url.clone());
     if status.is_redirection() {
-        let to: String = headers.get(LOCATION).and_then(|v| v.to_str().ok()).unwrap_or("another address").chars().filter(|c| !c.is_control()).take(200).collect();
-        return anyhow!("{url} answers with a redirect to {to}. FinStats follows no redirects, so that a key can never end up somewhere else: enter the final address, including any base path");
+        let to: Option<String> = headers.get(LOCATION).and_then(|v| v.to_str().ok()).map(|to| to.chars().filter(|c| !c.is_control()).take(200).collect());
+        return match to {
+            Some(to) => words("server.services.redirect", vec![("url", url), ("to", to)]),
+            None => words("server.services.redirect_elsewhere", vec![("url", url)]),
+        };
     }
     match (status.as_u16(), ()) {
-        (401 | 403, _) => anyhow!("{label} refused the API key"),
-        (404, _) => anyhow!("{url} answered 404 Not Found. Is the address right, including a base path like /{}?", svc.kind.key()),
-        _ => anyhow!("{label} answered {status}"),
+        (401 | 403, _) => words(KEY_REFUSED, vec![("service", service)]),
+        (404, _) => words("server.services.not_found", vec![("url", url), ("path", svc.kind.key().to_string())]),
+        _ => words("server.services.answered", vec![("service", service), ("status", status.to_string())]),
     }
 }
+
+/// The one refusal that is about the key rather than the address.
+const KEY_REFUSED: &str = "server.services.key_refused";
 
 /// `GET` on Sonarr, Radarr or Seerr. The key is a header; the query never carries it.
 pub async fn get_json(app: &App, svc: &Service, path: &str, query: &[(&str, String)]) -> Result<Value> {
@@ -253,14 +342,18 @@ pub async fn test(app: &App, svc: &Service) -> Result<(String, String)> {
             let status = get_json(app, svc, "/api/v3/system/status", &[]).await?;
             let name = status["appName"].as_str().unwrap_or("");
             if !name.eq_ignore_ascii_case(svc.kind.label()) {
-                bail!("{} answers, but as {}, not as {}", svc.url, if name.is_empty() { "something else" } else { name }, svc.kind.label());
+                let (url, service) = (svc.url.clone(), svc.kind.label().to_string());
+                return Err(match name {
+                    "" => words("server.services.answers_as_other", vec![("url", url), ("service", service)]),
+                    app => words("server.services.answers_as", vec![("url", url), ("app", app.to_string()), ("service", service)]),
+                });
             }
             Ok((name.to_string(), status["version"].as_str().unwrap_or("").to_string()))
         }
         Kind::Seerr => {
             // The status needs no key and says what this is; `auth/me` says whether the key is good.
             let status = get_json(app, svc, "/api/v1/status", &[]).await?;
-            let Some(version) = status["version"].as_str() else { bail!("{} did not answer like Seerr", svc.url) };
+            let Some(version) = status["version"].as_str() else { return Err(words("server.services.not_seerr", vec![("url", svc.url.clone())])) };
             get_json(app, svc, "/api/v1/auth/me", &[]).await?;
             Ok(("Seerr".into(), version.to_string()))
         }
@@ -274,7 +367,7 @@ fn read(r: &crate::db::rusqlite::Row) -> crate::db::rusqlite::Result<Option<(Ser
     let Some(kind) = Kind::from_key(&kind) else { return Ok(None) }; // a kind from a newer FinStats
     Ok(Some((
         Service { id: r.get(0)?, kind, name: r.get(2)?, url: r.get(3)?, username: r.get(4)?, secret: r.get(5)?, accept_invalid_certs: r.get(6)?, enabled: r.get(7)? },
-        Health { version: r.get(8)?, last_ok_at: r.get(9)?, last_error: r.get(10)? },
+        Health { version: r.get(8)?, last_ok_at: r.get(9)?, last_error: r.get::<_, Option<String>>(10)?.map(Said::Text) },
     )))
 }
 
@@ -309,7 +402,7 @@ pub fn enabled(app: &App, want: impl Fn(Kind) -> bool) -> Vec<Arc<Service>> {
 }
 
 /// Note how a request to a service went. Touches the database only when the picture changed.
-pub async fn record(app: &App, id: i64, outcome: std::result::Result<Option<String>, String>) {
+pub async fn record(app: &App, id: i64, outcome: std::result::Result<Option<String>, Said>) {
     let now = db::now();
     let (before, after) = {
         let mut map = app.service_health.write().unwrap();
@@ -331,13 +424,14 @@ pub async fn record(app: &App, id: i64, outcome: std::result::Result<Option<Stri
     // Every success moves `last_ok_at`; that alone is not worth a write more than once in a while.
     let changed = before.last_error != after.last_error || before.version != after.version || after.last_ok_at.unwrap_or(0) - before.last_ok_at.unwrap_or(0) >= 900;
     if changed {
-        let _ = app.db.call(move |c| Ok(c.execute("UPDATE services SET version = ?1, last_ok_at = ?2, last_error = ?3 WHERE id = ?4", params![after.version, after.last_ok_at, after.last_error, id])?)).await;
+        let error = after.last_error.as_ref().map(Said::source);
+        let _ = app.db.call(move |c| Ok(c.execute("UPDATE services SET version = ?1, last_ok_at = ?2, last_error = ?3 WHERE id = ?4", params![after.version, after.last_ok_at, error, id])?)).await;
     }
-    // Going quiet, and coming back, are each worth one message.
+    // Going quiet, and coming back, are each worth one message, which goes outside FinStats in its own words.
     if before.last_error.is_some() != error_now.is_some()
         && let Some(svc) = all(app).iter().find(|s| s.id == id)
     {
-        crate::notify::service_state(app, &svc.name, svc.kind.label(), error_now.as_deref()).await;
+        crate::notify::service_state(app, &svc.name, svc.kind.label(), error_now.as_ref().map(Said::source).as_deref()).await;
     }
 }
 
@@ -352,25 +446,27 @@ pub fn spawn(app: &App, id: &str) -> bool {
 /// `spawn`, stopped once it has run for `limit`: the time limit of the trigger that started it.
 pub fn spawn_within(app: &App, id: &str, limit: Option<std::time::Duration>) -> bool {
     let Some(id) = TASKS.into_iter().find(|t| *t == id) else { return false };
-    if !app.tasks.try_start(id, "Starting…") {
+    if !app.tasks.try_start(id, &t("server.services.starting", &[])) {
         return false;
     }
     let app = app.clone();
-    tokio::spawn(async move {
+    // Run by hand, the task reports in the words of whoever pressed the button.
+    tokio::spawn(crate::i18n::carry(async move {
         let work = app.clone();
-        let outcome = crate::schedule::caught(async move { let app = work; crate::schedule::within(limit, async { match id {
+        // `caught` spawns the run again, which would leave the language behind, so it is carried in there too.
+        let outcome = crate::schedule::caught(crate::i18n::carry(async move { let app = work; crate::schedule::within(limit, async { match id {
             "sync_upcoming" => crate::arr::sync_upcoming(&app).await,
             "sync_requests" => crate::seerr::sync_requests(&app).await,
             "sync_grabs" => crate::arr::sync_grabs(&app).await,
             other => Err(anyhow!("unknown task {other}")),
         } })
-        .await })
+        .await }))
         .await;
         if let Err(e) = &outcome {
             crate::notify::task_failed(&app, id, &format!("{e:#}")).await;
         }
         app.tasks.finish(id, outcome.map(|m| (m, None)));
-    });
+    }));
     true
 }
 
@@ -382,7 +478,7 @@ pub async fn check_all(app: &App) {
         if let Err(e) = &outcome {
             tracing::debug!("{} ({}) is not answering: {e}", svc.name, svc.kind.label());
         }
-        record(app, svc.id, outcome.map(|(_, version)| Some(version)).map_err(|e| e.to_string())).await;
+        record(app, svc.id, outcome.map(|(_, version)| Some(version)).map_err(|e| Said::of(&e))).await;
     }
 }
 
@@ -407,7 +503,7 @@ fn service_json(svc: &Service, health: Option<&Health>) -> Value {
     json!({
         "id": svc.id, "kind": svc.kind.key(), "label": svc.kind.label(), "name": svc.name, "url": svc.url,
         "has_secret": !svc.secret.is_empty(), "accept_invalid_certs": svc.accept_invalid_certs, "enabled": svc.enabled,
-        "version": h.version, "last_ok_at": h.last_ok_at, "last_error": h.last_error,
+        "version": h.version, "last_ok_at": h.last_ok_at, "last_error": h.last_error.as_ref().map(Said::now),
     })
 }
 
@@ -435,24 +531,24 @@ pub struct ServiceBody {
 }
 
 /// The connection a request describes: its fields where given, the stored ones otherwise.
-fn describe(body: ServiceBody, stored: Option<&Service>, taken: &[String]) -> std::result::Result<Service, ApiError> {
+fn describe(body: ServiceBody, stored: Option<&Service>, taken: &[String]) -> std::result::Result<Service, FormError> {
     let kind = match (stored, body.kind.as_deref()) {
         (Some(s), _) => s.kind, // a connection never changes its kind
-        (None, Some(k)) => Kind::from_key(k).ok_or_else(|| ApiError::bad_request(format!("Unknown kind of service `{k}`")))?,
-        (None, None) => return Err(ApiError::bad_request("Say which kind of service this is")),
+        (None, Some(k)) => Kind::from_key(k).ok_or_else(|| ApiError::bad_request(t("server.services.unknown_kind", &[("kind", k.into())])))?,
+        (None, None) => return Err(ApiError::bad_request(t("server.services.say_kind", &[])).into()),
     };
     let url = match (body.url.as_deref(), stored) {
-        (Some(u), _) => clean_url(u, kind).map_err(|e| ApiError::bad_request(format!("{e}")))?,
+        (Some(u), _) => clean_url(u, kind).map_err(|e| FormError::at("url", format!("{e}")))?,
         (None, Some(s)) => s.url.clone(),
-        (None, None) => return Err(ApiError::bad_request(format!("Enter the address of {}", kind.label()))),
+        (None, None) => return Err(FormError::at("url", t("server.services.enter_address", &[("service", kind.label().into())]))),
     };
     let secret = match (body.secret.filter(|s| !s.is_empty()), stored) {
         (Some(s), _) => s,
         (None, Some(s)) => s.secret.clone(),
-        (None, None) => return Err(ApiError::bad_request("Enter the API key")),
+        (None, None) => return Err(FormError::at("secret", t("server.services.enter_key", &[]))),
     };
     if secret.len() > 512 || secret.chars().any(char::is_control) {
-        return Err(ApiError::bad_request("That does not look like a key or password"));
+        return Err(FormError::at("secret", t("server.services.not_a_key", &[])));
     }
     // Nothing FinStats connects to needs a user name any more; the column stays for databases that have one.
     let username = stored.and_then(|s| s.username.clone());
@@ -485,15 +581,17 @@ fn names(app: &App) -> Vec<String> {
     all(app).iter().map(|s| s.name.clone()).collect()
 }
 
-fn unreachable_service(e: anyhow::Error) -> ApiError {
-    ApiError::new(StatusCode::BAD_GATEWAY, format!("{e}"))
+/// The service did not answer as it should: a refused key is about the key, anything else about the address.
+fn unreachable_service(e: anyhow::Error) -> FormError {
+    let field = if e.downcast_ref::<Words>().is_some_and(|w| w.key() == KEY_REFUSED) { "secret" } else { "url" };
+    FormError { error: ApiError::new(StatusCode::BAD_GATEWAY, format!("{e}")), field: Some(field) }
 }
 
 pub async fn list(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -> ApiResult {
     Ok(Json(list_json(&app)))
 }
 
-pub async fn test_connection(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Json(body): Json<ServiceBody>) -> ApiResult {
+pub async fn test_connection(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Json(body): Json<ServiceBody>) -> FormResult {
     let stored = match body.id {
         Some(id) => Some(find(&app, id)?),
         None => None,
@@ -503,9 +601,9 @@ pub async fn test_connection(State(app): State<App>, JellyfinAdmin(_): JellyfinA
     Ok(Json(json!({ "ok": true, "app": what, "version": version })))
 }
 
-pub async fn create(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Json(body): Json<ServiceBody>) -> ApiResult {
+pub async fn create(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Json(body): Json<ServiceBody>) -> FormResult {
     if all(&app).len() >= MAX_SERVICES {
-        return Err(ApiError::bad_request(format!("At most {MAX_SERVICES} connections")));
+        return Err(ApiError::bad_request(t("server.services.max", &[("count", MAX_SERVICES.into())])).into());
     }
     let mut body = body;
     body.id = None;
@@ -528,7 +626,7 @@ pub async fn create(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, 
     Ok(Json(list_json(&app)))
 }
 
-pub async fn update(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(id): Path<i64>, Json(body): Json<ServiceBody>) -> ApiResult {
+pub async fn update(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(id): Path<i64>, Json(body): Json<ServiceBody>) -> FormResult {
     let stored = find(&app, id)?;
     let taken: Vec<String> = names(&app).into_iter().filter(|n| *n != stored.name).collect();
     let svc = describe(body, Some(&stored), &taken)?;
@@ -665,6 +763,19 @@ mod tests {
         for e in [StatusCode::FOUND, StatusCode::UNAUTHORIZED, StatusCode::BAD_GATEWAY] {
             assert!(!refuse(e, &headers, &svc).to_string().contains("hunter2"));
         }
+    }
+
+    /// A read in the background knows nobody's language; what went wrong is kept as words and said in the language of
+    /// whoever looks, while the database and a notification keep the source's.
+    #[test]
+    fn a_refusal_is_kept_as_words_and_said_in_the_readers_language() {
+        let svc = service(Kind::Sonarr, "http://nas:8989");
+        let said = Said::of(&refuse(StatusCode::UNAUTHORIZED, &HeaderMap::new(), &svc));
+        assert_eq!(said.source(), "Sonarr refused the API key");
+        assert_eq!(said.say("nb-NO"), "Sonarr avviste API-nøkkelen");
+        assert_eq!(Said::of(&anyhow!("disk full")).say("nn-NO"), "disk full", "words FinStats does not have stay as they were");
+        assert_eq!(unreachable_service(refuse(StatusCode::UNAUTHORIZED, &HeaderMap::new(), &svc)).field, Some("secret"), "a refused key is the key's fault");
+        assert_eq!(unreachable_service(refuse(StatusCode::NOT_FOUND, &HeaderMap::new(), &svc)).field, Some("url"));
     }
 
     #[test]

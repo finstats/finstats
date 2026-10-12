@@ -13,6 +13,7 @@ use serde_json::Value;
 
 use crate::db::rusqlite::params;
 use crate::db;
+use crate::i18n::t;
 use crate::services::{self, Kind, Service};
 use crate::state::App;
 
@@ -124,7 +125,7 @@ async fn read_calendar(app: &App, svc: &Service) -> Result<Vec<Upcoming>> {
     }
     let calendar = services::get_json(app, svc, "/api/v3/calendar", &query).await?;
     if !calendar.is_array() {
-        bail!("{} did not answer its calendar like {}", svc.url, svc.kind.label());
+        return Err(services::words("server.arr.not_calendar", vec![("url", svc.url.clone()), ("service", svc.kind.label().to_string())]));
     }
     Ok(match svc.kind {
         Kind::Sonarr => episodes_from(&calendar),
@@ -137,11 +138,11 @@ pub async fn sync_upcoming(app: &App) -> Result<String> {
     const ID: &str = "sync_upcoming";
     let list = services::enabled(app, Kind::is_arr);
     if list.is_empty() {
-        return Ok("No Sonarr or Radarr connected".into());
+        return Ok(t("server.arr.none", &[]));
     }
     let (mut total, mut failed) = (0usize, vec![]);
     for (n, svc) in list.iter().enumerate() {
-        app.tasks.update(ID, format!("Reading {}", svc.name), Some(n as f64 / list.len() as f64));
+        app.tasks.update(ID, t("server.arr.reading", &[("name", svc.name.as_str().into())]), Some(n as f64 / list.len() as f64));
         match read_calendar(app, svc).await {
             Ok(rows) => {
                 total += rows.len();
@@ -168,17 +169,17 @@ pub async fn sync_upcoming(app: &App) -> Result<String> {
             }
             Err(e) => {
                 tracing::warn!("calendar of {} ({}): {e}", svc.name, svc.kind.label());
-                services::record(app, svc.id, Err(e.to_string())).await;
+                services::record(app, svc.id, Err(services::Said::of(&e))).await;
                 failed.push(svc.name.clone());
             }
         }
     }
     if failed.len() == list.len() {
-        bail!("{} did not answer", failed.join(", "));
+        bail!(t("server.arr.no_answer", &[("names", failed.join(", ").into())]));
     }
     Ok(match failed.is_empty() {
-        true => format!("{total} releases ahead"),
-        false => format!("{total} releases ahead; {} did not answer", failed.join(", ")),
+        true => t("server.arr.ahead", &[("count", total.into())]),
+        false => t("server.arr.ahead_partly", &[("count", total.into()), ("names", failed.join(", ").into())]),
     })
 }
 
@@ -338,11 +339,11 @@ pub async fn sync_grabs(app: &App) -> Result<String> {
     const ID: &str = "sync_grabs";
     let list = services::enabled(app, Kind::is_arr);
     if list.is_empty() {
-        return Ok("No Sonarr or Radarr connected".into());
+        return Ok(t("server.arr.none", &[]));
     }
     let (mut total, mut failed) = (0usize, vec![]);
     for svc in &list {
-        app.tasks.update(ID, format!("Reading the history of {}", svc.name), None);
+        app.tasks.update(ID, t("server.arr.reading_history", &[("name", svc.name.as_str().into())]), None);
         let key = format!("service:{}:grabs_since", svc.id);
         let (k, sid) = (key.clone(), svc.id);
         let since: Option<i64> = app.db.call(move |c| Ok(db::get_setting(c, &k)?.and_then(|v| v.parse().ok()))).await?;
@@ -378,15 +379,15 @@ pub async fn sync_grabs(app: &App) -> Result<String> {
             }
             Err(e) => {
                 tracing::warn!("history of {}: {e}", svc.name);
-                services::record(app, svc.id, Err(e.to_string())).await;
+                services::record(app, svc.id, Err(services::Said::of(&e))).await;
                 failed.push(svc.name.clone());
             }
         }
     }
     if failed.len() == list.len() {
-        bail!("{} did not answer", failed.join(", "));
+        bail!(t("server.arr.no_answer", &[("names", failed.join(", ").into())]));
     }
-    Ok(format!("{total} events"))
+    Ok(t("server.arr.events", &[("count", total.into())]))
 }
 
 /// Where a title's poster lives in Sonarr or Radarr. A constant shape: nothing a caller sends ends up in it but a number.

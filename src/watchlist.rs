@@ -52,7 +52,7 @@ pub enum Refused {
     NotATitle,
     /// Already `MAX_ENTRIES`.
     Full,
-    /// Something in the request that cannot be a title.
+    /// Something in the request that cannot be a title: which, as its sentence's key under `server.watchlist`.
     Invalid(&'static str),
 }
 
@@ -108,21 +108,21 @@ fn snapshot(conn: &Connection, item_id: &str) -> Result<Option<Title>> {
 fn valid(mut t: Title) -> Result<Title, Refused> {
     let digits = |v: &Option<String>| v.as_deref().is_none_or(|v| (1..=12).contains(&v.len()) && v.bytes().all(|b| b.is_ascii_digit()));
     if !KINDS.contains(&t.kind.as_str()) {
-        return Err(Refused::Invalid("Only films and shows can go on a watchlist"));
+        return Err(Refused::Invalid("only_films_and_shows"));
     }
     if t.tmdb_id.is_none() && t.tvdb_id.is_none() && t.imdb_id.is_none() {
-        return Err(Refused::Invalid("A title that is not in the library needs a TMDB, TVDB or IMDb id"));
+        return Err(Refused::Invalid("needs_an_id"));
     }
     let imdb_ok = t.imdb_id.as_deref().is_none_or(|v| v.strip_prefix("tt").is_some_and(|n| (5..=12).contains(&n.len()) && n.bytes().all(|b| b.is_ascii_digit())));
     if !digits(&t.tmdb_id) || !digits(&t.tvdb_id) || !imdb_ok {
-        return Err(Refused::Invalid("That doesn't look like a TMDB, TVDB or IMDb id"));
+        return Err(Refused::Invalid("bad_id"));
     }
     t.title = t.title.trim().to_string();
     if t.title.is_empty() || t.title.chars().count() > 300 {
-        return Err(Refused::Invalid("A title needs a name of at most 300 characters"));
+        return Err(Refused::Invalid("bad_name"));
     }
     if t.year.is_some_and(|y| !(1870..=2200).contains(&y)) {
-        return Err(Refused::Invalid("That year is not one a film or show could have"));
+        return Err(Refused::Invalid("bad_year"));
     }
     Ok(t)
 }
@@ -219,7 +219,7 @@ fn provider_id(v: Option<Value>) -> Result<Option<String>, Refused> {
         None | Some(Value::Null) => Ok(None),
         Some(Value::String(s)) => Ok(Some(s.trim().to_string()).filter(|s| !s.is_empty())),
         Some(Value::Number(n)) if n.is_u64() => Ok(Some(n.to_string())),
-        Some(_) => Err(Refused::Invalid("That doesn't look like a TMDB, TVDB or IMDb id")),
+        Some(_) => Err(Refused::Invalid("bad_id")),
     }
 }
 
@@ -510,8 +510,8 @@ impl From<Refused> for ApiError {
     fn from(r: Refused) -> Self {
         match r {
             Refused::NotATitle => ApiError::not_found("Film or show"),
-            Refused::Full => ApiError::bad_request("Your watchlist holds 1,000 titles, the most it can. Remove one first."),
-            Refused::Invalid(why) => ApiError::bad_request(why),
+            Refused::Full => ApiError::bad_request(crate::i18n::t("server.watchlist.full", &[("max", MAX_ENTRIES.into())])),
+            Refused::Invalid(why) => ApiError::bad_request(crate::i18n::t(&format!("server.watchlist.{why}"), &[])),
         }
     }
 }

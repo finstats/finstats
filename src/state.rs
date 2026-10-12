@@ -155,31 +155,31 @@ impl Settings {
 
     pub fn validate(&self) -> Result<(), String> {
         let check = |name: &str, v: i64, lo: i64, hi: i64| {
-            if (lo..=hi).contains(&v) { Ok(()) } else { Err(format!("{name} must be between {lo} and {hi}")) }
+            if (lo..=hi).contains(&v) { Ok(()) } else { Err(i18n::t("server.state.between", &[("name", name.into()), ("lo", lo.into()), ("hi", hi.into())])) }
         };
         if let Some(bad) = self.default_permissions.iter().find(|p| !crate::auth::GRANTABLE.contains(&p.as_str())) {
-            return Err(format!("unknown permission `{bad}`"));
+            return Err(i18n::t("server.state.unknown_permission", &[("name", bad.into())]));
         }
         if let Some(bad) = self.home_addresses.iter().find(|a| crate::network::canonical(a).is_none()) {
-            return Err(format!("`{bad}` is not an IP address"));
+            return Err(i18n::t("server.state.not_an_ip", &[("address", bad.into())]));
         }
         if self.home_addresses.len() > 50 {
-            return Err("at most 50 home addresses".into());
+            return Err(i18n::t("server.state.too_many_homes", &[("max", 50.into())]));
         }
         if !self.public_url.is_empty() {
             let url = self.public_url.trim();
             if !(url.starts_with("http://") || url.starts_with("https://")) || reqwest::Url::parse(url).is_err() {
-                return Err("The address of FinStats must start with http:// or https://".into());
+                return Err(i18n::t("server.state.public_url", &[]));
             }
             if url.len() > 300 {
-                return Err("That address is too long".into());
+                return Err(i18n::t("server.state.address_too_long", &[]));
             }
         }
         if !self.jellyfin_public_url.is_empty() {
             let url = self.jellyfin_public_url.trim();
             let parsed = reqwest::Url::parse(url).ok().filter(|u| matches!(u.scheme(), "http" | "https") && u.host_str().is_some_and(|h| !h.is_empty()));
             if parsed.is_none() || url.len() > 300 {
-                return Err("Jellyfin's address must start with http:// or https:// and name a host".into());
+                return Err(i18n::t("server.state.jellyfin_public_url", &[]));
             }
         }
         for (task, triggers) in &self.schedules {
@@ -208,7 +208,7 @@ pub struct CollectorStatus {
     /// `socket` while Jellyfin is pushing, `poll` while FinStats is asking.
     pub transport: &'static str,
     /// Why the socket is not the transport right now; `None` while it is.
-    pub socket_error: Option<String>,
+    pub socket_error: Option<crate::socket::Why>,
     /// The socket is open and carrying, whichever transport brought the last list. While something
     /// plays that list comes from a poll, and the socket is still the thing that will say it stopped.
     pub socket_live: bool,
@@ -370,7 +370,7 @@ impl Tasks {
                     tracing::error!("task {id} failed: {e:#}");
                     t.state = "error";
                     t.error = Some(format!("{e:#}"));
-                    t.message = Some("Failed".into());
+                    t.message = Some(i18n::t("server.state.failed", &[]));
                 }
             }
         }

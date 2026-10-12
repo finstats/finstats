@@ -21,7 +21,7 @@ pub fn of(conn: &Connection, user_id: &str) -> anyhow::Result<String> {
 /// Choose a preset for a person, or none with "". Err for a code that names no option, and nothing is stored.
 pub fn set(conn: &Connection, user_id: &str, preset: &str, now: i64) -> anyhow::Result<Result<(), String>> {
     if crate::finui::preset::overlay(preset).is_none() {
-        return Ok(Err(format!("`{preset}` names no FinUI preset: a code is one letter or digit per choice, such as 0101")));
+        return Ok(Err(no_such_preset(preset)));
     }
     if preset.is_empty() {
         conn.execute("DELETE FROM appearance WHERE user_id = ?1", params![user_id])?;
@@ -32,6 +32,11 @@ pub fn set(conn: &Connection, user_id: &str, preset: &str, now: i64) -> anyhow::
         )?;
     }
     Ok(Ok(()))
+}
+
+/// Why `preset` is refused, in the language of the request (the source on the database's own thread).
+fn no_such_preset(preset: &str) -> String {
+    crate::i18n::t("server.appearance.unknown_preset", &[("preset", preset.into())])
 }
 
 /// The preset of whoever sent these headers: their session cookie's person, or "" for somebody signed out. Only the
@@ -63,6 +68,10 @@ pub async fn get_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
 pub async fn put_mine(State(app): State<App>, user: AuthUser, Json(look): Json<Look>) -> ApiResult {
     let actor = Actor::from(&user);
     let preset = look.finui_preset.trim().to_string();
+    // Checked here as well as in `set`, which runs on the database's thread: there the refusal could only be in English.
+    if crate::finui::preset::overlay(&preset).is_none() {
+        return Err(ApiError::bad_request(no_such_preset(&preset)));
+    }
     app.db
         .call(move |c| {
             if let Err(why) = set(c, &user.id, &preset, db::now())? {

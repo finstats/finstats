@@ -37,6 +37,7 @@ use crate::auth::{AuthUser, Perms};
 use crate::channels::{self, Channel};
 use crate::db::rusqlite::{Connection, OptionalExtension, params};
 use crate::db;
+use crate::i18n::t;
 use crate::state::{ApiError, ApiResult, App, Settings};
 
 /// Found this long after it happened, an event is history: it is recorded, and nobody is told.
@@ -76,13 +77,8 @@ impl Group {
         }
     }
 
-    pub fn label(self) -> &'static str {
-        match self {
-            Group::Security => "Security",
-            Group::Housekeeping => "Housekeeping",
-            Group::Library => "Library",
-            Group::Playback => "Playback",
-        }
+    pub fn label(self) -> String {
+        t(&format!("server.notify.group.{}", self.key()), &[])
     }
 }
 
@@ -156,43 +152,14 @@ impl Kind {
         Kind::ALL.into_iter().find(|k| k.key() == key)
     }
 
-    pub fn label(self) -> &'static str {
-        match self {
-            Kind::Travel => "Impossible travel",
-            Kind::NewCountry => "A new country",
-            Kind::FailedSignIns => "Failed sign-ins",
-            Kind::TaskFailed => "A task failed",
-            Kind::BackupFailed => "A backup failed",
-            Kind::ServiceDown => "Something stopped answering",
-            Kind::ServiceBack => "Something is answering again",
-            Kind::NewItems => "New in the library",
-            Kind::RequestAvailable => "A request is watchable",
-            Kind::PlayStarted => "Somebody started watching",
-            Kind::PlayStopped => "Somebody stopped watching",
-            Kind::RecapReady => "The year in review is ready",
-            Kind::WatchlistAvailable => "On your watchlist: now available",
-            Kind::Test => "Test message",
-        }
+    /// Its name on a page, in the reader's language.
+    pub fn label(self) -> String {
+        t(&format!("server.notify.kind.{}.label", self.key()), &[])
     }
 
     /// One line, in the owner's words, for the list of things a destination can be told about.
-    pub fn what(self) -> &'static str {
-        match self {
-            Kind::Travel => "Two sightings of one account that no flight connects",
-            Kind::NewCountry => "The first time an account is seen in a country",
-            Kind::FailedSignIns => "Several failed sign-ins for one account, or from one address, in a row",
-            Kind::TaskFailed => "A sync, an import or a read of a connected service ended in an error",
-            Kind::BackupFailed => "A backup could not be written",
-            Kind::ServiceDown => "Jellyfin, Sonarr, Radarr or Seerr stopped answering",
-            Kind::ServiceBack => "…and when it answers again",
-            Kind::NewItems => "Titles added to the library, folded per show and day",
-            Kind::RequestAvailable => "Something somebody asked for in Seerr can now be watched",
-            Kind::PlayStarted => "A play begins: the title, the person and the device",
-            Kind::PlayStopped => "A play ends, with how much of it was watched",
-            Kind::RecapReady => "In December, once: a person's year in review is ready to look back on and share",
-            Kind::WatchlistAvailable => "A film or show you were waiting for on your watchlist is in the library. Only ever sent to your own destinations",
-            Kind::Test => "Sent by the Test button, and by nothing else",
-        }
+    pub fn what(self) -> String {
+        t(&format!("server.notify.kind.{}.what", self.key()), &[])
     }
 
     pub fn group(self) -> Option<Group> {
@@ -945,19 +912,16 @@ pub async fn run(app: App) {
 /// inside the network. Checked when it is saved *and* before every send, because a name that answered
 /// publicly yesterday can be pointed at the router today.
 pub async fn must_be_public(url: &str) -> Result<()> {
-    let parsed = reqwest::Url::parse(url).map_err(|_| anyhow!("That doesn't look like a valid URL"))?;
-    let host = parsed.host_str().ok_or_else(|| anyhow!("The address needs a host name"))?;
+    let parsed = reqwest::Url::parse(url).map_err(|_| anyhow!(t("server.notify.bad_url", &[])))?;
+    let host = parsed.host_str().ok_or_else(|| anyhow!(t("server.notify.needs_host", &[])))?;
     let port = parsed.port_or_known_default().unwrap_or(443);
-    let addresses: Vec<std::net::IpAddr> = tokio::net::lookup_host((host, port))
-        .await
-        .map_err(|_| anyhow!("{host} could not be looked up"))?
-        .map(|a| a.ip())
-        .collect();
+    let not_found = || anyhow!(t("server.notify.lookup_failed", &[("host", host.into())]));
+    let addresses: Vec<std::net::IpAddr> = tokio::net::lookup_host((host, port)).await.map_err(|_| not_found())?.map(|a| a.ip()).collect();
     if addresses.is_empty() {
-        bail!("{host} could not be looked up");
+        return Err(not_found());
     }
     if addresses.iter().any(|a| db::is_local_ip(&a.to_string()).unwrap_or(true)) {
-        bail!("{host} is an address on this network. Your own destinations must point at a public service. Ask an administrator to add it for the server instead");
+        bail!(t("server.notify.not_public", &[("host", host.into())]));
     }
     Ok(())
 }
@@ -970,35 +934,35 @@ pub async fn must_be_public(url: &str) -> Result<()> {
 pub fn clean_url(input: &str, channel: Channel) -> Result<String> {
     let typed = input.trim();
     if typed.is_empty() {
-        bail!("Enter the address to send to");
+        bail!(t("server.notify.enter_address", &[]));
     }
     if channel.is_mail() {
         return clean_mail_url(typed);
     }
     let lower = typed.to_ascii_lowercase();
     if lower.contains("://") && !lower.starts_with("http://") && !lower.starts_with("https://") {
-        bail!("The address must start with http:// or https://");
+        bail!(t("server.notify.http_only", &[]));
     }
     let with_scheme = if lower.contains("://") { typed.to_string() } else { format!("https://{typed}") };
-    let parsed = reqwest::Url::parse(&with_scheme).map_err(|_| anyhow!("That doesn't look like a valid URL"))?;
+    let parsed = reqwest::Url::parse(&with_scheme).map_err(|_| anyhow!(t("server.notify.bad_url", &[])))?;
     if !matches!(parsed.scheme(), "http" | "https") || parsed.host_str().is_none() {
-        bail!("The address must start with http:// or https://");
+        bail!(t("server.notify.http_only", &[]));
     }
     if !parsed.username().is_empty() || parsed.password().is_some() {
-        bail!("Leave the user name and password out of the address");
+        bail!(t("server.notify.no_login", &[]));
     }
     if parsed.fragment().is_some() {
-        bail!("The address must not contain #");
+        bail!(t("server.notify.no_fragment", &[]));
     }
     if parsed.query().is_some() && channel != Channel::Webhook {
-        bail!("The address must not contain ?");
+        bail!(t("server.notify.no_query", &[]));
     }
     // A service FinStats knows the address of takes that address and no other: a token is for the
     // service it was issued by, and a look-alike host is how it would reach somebody else.
     if let Some(fixed) = channel.fixed_url() {
         let same = parsed.scheme() == "https" && parsed.host_str() == reqwest::Url::parse(fixed).ok().and_then(|f| f.host_str().map(str::to_string)).as_deref();
         if !same || !parsed.path().trim_matches('/').is_empty() {
-            bail!("{} is always reached at {fixed}, so there is no address to enter", channel.label());
+            bail!(t("server.notify.fixed_url", &[("channel", channel.title().into()), ("url", fixed.into())]));
         }
         return Ok(fixed.to_string());
     }
@@ -1006,18 +970,18 @@ pub fn clean_url(input: &str, channel: Channel) -> Result<String> {
     if channel == Channel::Discord {
         let discord = host == "discord.com" || host == "discordapp.com" || host.ends_with(".discord.com");
         if !discord || !parsed.path().starts_with("/api/webhooks/") {
-            bail!("That is not a Discord webhook address. In Discord: Channel settings → Integrations → Webhooks → Copy Webhook URL");
+            bail!(t("server.notify.not_discord", &[]));
         }
         if parsed.path().trim_end_matches('/').split('/').count() < 5 {
-            bail!("That Discord webhook address is missing its token. Copy the whole URL");
+            bail!(t("server.notify.discord_no_token", &[]));
         }
     }
     if channel == Channel::Slack {
         if host != "hooks.slack.com" || !parsed.path().starts_with("/services/") {
-            bail!("That is not a Slack webhook address. In Slack: your app → Incoming Webhooks → Add New Webhook to Workspace, then copy the URL");
+            bail!(t("server.notify.not_slack", &[]));
         }
         if parsed.path().trim_end_matches('/').split('/').count() < 5 {
-            bail!("That Slack webhook address is missing its token. Copy the whole URL");
+            bail!(t("server.notify.slack_no_token", &[]));
         }
     }
     let trimmed = parsed.as_str().trim_end_matches('/').to_string();
@@ -1030,17 +994,17 @@ pub fn clean_url(input: &str, channel: Channel) -> Result<String> {
 fn clean_mail_url(typed: &str) -> Result<String> {
     let lower = typed.to_ascii_lowercase();
     if lower.contains("://") && !lower.starts_with("smtp://") && !lower.starts_with("smtps://") {
-        bail!("A mail server address starts with smtps:// or smtp://");
+        bail!(t("server.notify.mail_scheme", &[]));
     }
     let with_scheme = if lower.contains("://") { typed.to_string() } else { format!("smtps://{typed}") };
-    let parsed = reqwest::Url::parse(&with_scheme).map_err(|_| anyhow!("That doesn't look like a mail server address"))?;
+    let parsed = reqwest::Url::parse(&with_scheme).map_err(|_| anyhow!(t("server.notify.not_mail_url", &[])))?;
     if !parsed.username().is_empty() || parsed.password().is_some() {
-        bail!("Leave the user name and password out of the address; there is a field for each of them");
+        bail!(t("server.notify.mail_no_login", &[]));
     }
     if !parsed.path().trim_matches('/').is_empty() || parsed.query().is_some() || parsed.fragment().is_some() {
-        bail!("A mail server address is a host and a port, with nothing after it");
+        bail!(t("server.notify.mail_host_port", &[]));
     }
-    let host = parsed.host_str().filter(|h| !h.is_empty()).ok_or_else(|| anyhow!("The address needs a host name"))?;
+    let host = parsed.host_str().filter(|h| !h.is_empty()).ok_or_else(|| anyhow!(t("server.notify.needs_host", &[])))?;
     let scheme = parsed.scheme();
     Ok(match parsed.port() {
         Some(port) => format!("{scheme}://{host}:{port}"),
@@ -1053,14 +1017,13 @@ fn clean_mail_url(typed: &str) -> Result<String> {
 /// address. Refusing a typo here is what saves somebody reading a 400 out of a log.
 fn clean_topic(channel: Channel, topic: &str) -> Result<String> {
     let topic = topic.trim();
-    let what = channel.topic_label().unwrap_or("value").to_lowercase();
     if topic.is_empty() {
-        bail!("Enter the {what}");
+        bail!(enter_topic(channel));
     }
     match channel {
         Channel::Ntfy => {
             if topic.len() > 64 || !topic.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
-                bail!("An ntfy topic may hold letters, digits, - and _ only");
+                bail!(t("server.notify.ntfy_topic", &[]));
             }
         }
         Channel::Telegram => {
@@ -1073,19 +1036,66 @@ fn clean_topic(channel: Channel, topic: &str) -> Result<String> {
                 }
             };
             if !ok {
-                bail!("A chat id is a number like -1001234567890, or a public channel as @name");
+                bail!(t("server.notify.telegram_chat", &[]));
             }
         }
         Channel::Pushover => {
             if topic.len() != 30 || !topic.chars().all(|c| c.is_ascii_alphanumeric()) {
-                bail!("A Pushover user or group key is 30 letters and digits, from the front page of pushover.net");
+                bail!(t("server.notify.pushover_key", &[]));
             }
         }
         Channel::Email => return crate::mail::address(topic),
-        _ => bail!("{} has nothing to enter here", channel.label()),
+        _ => bail!(t("server.notify.nothing_to_enter", &[("channel", channel.title().into())])),
     }
     Ok(topic.to_string())
 }
+
+/// "Enter the topic", naming the field as the form does.
+fn enter_topic(channel: Channel) -> String {
+    let what = channel.topic_title().unwrap_or_else(|| t("server.notify.value", &[])).to_lowercase();
+    t("server.notify.enter", &[("what", what.into())])
+}
+
+// ---------------------------------------------------------------- a refusal about one field
+
+/// A form refused, and which of its fields the refusal is about: a page puts the words under that field by its name,
+/// never by finding a field's name in the words, which are in the reader's language.
+#[derive(Debug)]
+pub struct FormError {
+    pub error: ApiError,
+    pub field: Option<&'static str>,
+}
+
+impl FormError {
+    /// A 400 about `field`, the key the request carried it under (`url`, `topic`, `secret`, `from`, …).
+    pub fn at(field: &'static str, message: impl Into<String>) -> FormError {
+        FormError { error: ApiError::bad_request(message), field: Some(field) }
+    }
+}
+
+impl From<ApiError> for FormError {
+    fn from(error: ApiError) -> FormError {
+        FormError { error, field: None }
+    }
+}
+
+impl From<anyhow::Error> for FormError {
+    fn from(e: anyhow::Error) -> FormError {
+        ApiError::from(e).into()
+    }
+}
+
+impl axum::response::IntoResponse for FormError {
+    fn into_response(self) -> axum::response::Response {
+        match self.field {
+            None => self.error.into_response(),
+            Some(field) => (self.error.0, Json(json!({ "error": self.error.1, "field": field }))).into_response(),
+        }
+    }
+}
+
+/// What a handler with a form answers: an `ApiResult` whose refusal may name its field.
+pub type FormResult = std::result::Result<Json<Value>, FormError>;
 
 // ---------------------------------------------------------------- API
 
@@ -1105,10 +1115,10 @@ fn catalogue() -> Value {
     let channels: Vec<Value> = Channel::ALL
         .into_iter()
         .map(|c| {
-            json!({ "key": c.key(), "label": c.label(), "what": c.what(), "example": c.example(), "fixed_url": c.fixed_url(),
-                    "topic_label": c.topic_label(), "topic_help": c.topic_help(), "topic_example": c.topic_example(),
+            json!({ "key": c.key(), "label": c.title(), "what": c.what(), "example": c.example(), "fixed_url": c.fixed_url(),
+                    "topic_label": c.topic_title(), "topic_help": c.topic_help(), "topic_example": c.topic_example(),
                     "needs_topic": c.needs_topic(), "secret_label": c.secret_label(), "secret_required": c.secret_required(),
-                    "extras": c.extras().iter().map(|e| json!({ "key": e.key, "label": e.label, "help": e.help, "example": e.example, "required": e.required })).collect::<Vec<_>>() })
+                    "extras": c.extras().iter().map(|e| json!({ "key": e.key, "label": e.title(), "help": e.help_text(), "example": e.example, "required": e.required })).collect::<Vec<_>>() })
         })
         .collect();
     json!({ "events": events, "channels": channels, "severities": SEVERITIES, "groups": Group::ALL.map(|g| json!({ "key": g.key(), "label": g.label() })) })
@@ -1138,10 +1148,21 @@ fn targets_json(conn: &Connection, only_owner: Option<&str>) -> Result<Vec<Value
     Ok(rows.into_iter().flatten().collect())
 }
 
+/// The destinations as read, with each kind named in the reader's language: the read itself runs where the request's
+/// language is not known.
+fn named(mut rows: Vec<Value>) -> Vec<Value> {
+    for row in &mut rows {
+        if let Some(c) = row["kind"].as_str().and_then(Channel::from_key) {
+            row["label"] = c.title().into();
+        }
+    }
+    rows
+}
+
 pub async fn list(State(app): State<App>, user: AuthUser) -> ApiResult {
     gate(&user)?;
     let only = (!user.is_admin).then(|| user.id.clone());
-    let targets = app.db.call(move |c| targets_json(c, only.as_deref())).await?;
+    let targets = named(app.db.call(move |c| targets_json(c, only.as_deref())).await?);
     let public_url = app.settings().public_url.clone();
     Ok(Json(json!({
         "targets": targets, "catalogue": catalogue(), "public_url": public_url,
@@ -1169,31 +1190,31 @@ pub struct TargetBody {
 
 /// The destination a request describes: its fields where given, the stored ones otherwise, so that
 /// changing which events a destination wants never means typing the address and the token again.
-fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::result::Result<Target, ApiError> {
-    let bad = |m: &str| ApiError::bad_request(m.to_string());
+fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::result::Result<Target, FormError> {
+    let bad = |m: String| FormError::from(ApiError::bad_request(m));
     let channel = match (stored, body.kind.as_deref()) {
         (Some(s), _) => s.channel, // a destination never changes its kind
-        (None, Some(k)) => Channel::from_key(k).ok_or_else(|| bad(&format!("Unknown kind of destination `{k}`")))?,
-        (None, None) => return Err(bad("Say which kind of destination this is")),
+        (None, Some(k)) => Channel::from_key(k).ok_or_else(|| bad(t("server.notify.unknown_kind", &[("kind", k.into())])))?,
+        (None, None) => return Err(bad(t("server.notify.say_kind", &[]))),
     };
     let owner_id = match stored {
         Some(s) => s.owner_id.clone(),
         None => match body.scope.as_deref() {
             Some("server") | None if user.is_admin => None,
-            Some("server") => return Err(ApiError::forbidden()),
+            Some("server") => return Err(ApiError::forbidden().into()),
             _ => Some(user.id.clone()),
         },
     };
     let name = match (body.name.as_deref().map(str::trim).filter(|n| !n.is_empty()), stored) {
         (Some(n), _) => n.chars().take(80).collect::<String>(),
         (None, Some(s)) => s.name.clone(),
-        (None, None) => channel.label().to_string(),
+        (None, None) => channel.title(),
     };
     let url = match (body.url.as_deref().filter(|u| !u.trim().is_empty()), stored) {
-        (Some(u), _) => clean_url(u, channel).map_err(|e| bad(&format!("{e}")))?,
+        (Some(u), _) => clean_url(u, channel).map_err(|e| FormError::at("url", format!("{e}")))?,
         (None, Some(s)) => s.url.clone(),
         // A service FinStats already knows the address of is never asked for one.
-        (None, None) => channel.fixed_url().map(str::to_string).ok_or_else(|| bad(&format!("Enter the address of {}", channel.label())))?,
+        (None, None) => channel.fixed_url().map(str::to_string).ok_or_else(|| FormError::at("url", t("server.notify.enter_address_of", &[("channel", channel.title().into())])))?,
     };
     let secret = match (body.secret.filter(|s| !s.is_empty()), stored) {
         (Some(s), _) => s,
@@ -1201,16 +1222,17 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
         (None, None) => String::new(),
     };
     if secret.len() > 512 || secret.chars().any(char::is_control) {
-        return Err(bad("That does not look like a token"));
+        return Err(FormError::at("secret", t("server.notify.not_a_token", &[])));
     }
     if secret.is_empty() && channel.secret_required() {
-        return Err(bad(&format!("Enter the {}", channel.secret_label().unwrap_or("token"))));
+        let what = channel.secret_label().unwrap_or_else(|| t("server.notify.token", &[]));
+        return Err(FormError::at("secret", t("server.notify.enter", &[("what", what.into())])));
     }
     let topic = match (body.topic.as_deref().filter(|t| !t.trim().is_empty()), stored) {
         _ if !channel.needs_topic() => None,
-        (Some(t), _) => Some(clean_topic(channel, t).map_err(|e| bad(&format!("{e}")))?),
+        (Some(t), _) => Some(clean_topic(channel, t).map_err(|e| FormError::at("topic", format!("{e}")))?),
         (None, Some(s)) => s.topic.clone(),
-        (None, None) => return Err(bad(&format!("Enter the {}", channel.topic_label().unwrap_or("value").to_lowercase()))),
+        (None, None) => return Err(FormError::at("topic", enter_topic(channel))),
     };
     // Only the fields this kind of destination asked for are kept: anything else a request carries is
     // not something FinStats would know what to do with, and is not stored.
@@ -1222,24 +1244,25 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
             (None, Some(s)) => s.option(extra.key).to_string(),
             (None, None) => String::new(),
         };
+        let what = || extra.title().to_lowercase();
         if value.is_empty() {
             if extra.required {
-                return Err(bad(&format!("Enter the {}", extra.label.to_lowercase())));
+                return Err(FormError::at(extra.key, t("server.notify.enter", &[("what", what().into())])));
             }
             continue;
         }
         if value.len() > 200 || value.chars().any(char::is_control) {
-            return Err(bad(&format!("The {} is too long, or has something in it that cannot be sent", extra.label.to_lowercase())));
+            return Err(FormError::at(extra.key, t("server.notify.too_long", &[("what", what().into())])));
         }
         if extra.address {
-            crate::mail::address(&value).map_err(|e| bad(&format!("{e}")))?;
+            crate::mail::address(&value).map_err(|e| FormError::at(extra.key, format!("{e}")))?;
         }
         options.insert(extra.key.to_string(), value);
     }
     let events = match (body.events, stored) {
         (Some(list), _) => {
             if let Some(bad_key) = list.iter().find(|k| Kind::from_key(k).is_none_or(|k| k.group().is_none())) {
-                return Err(bad(&format!("Unknown event `{bad_key}`")));
+                return Err(bad(t("server.notify.unknown_event", &[("event", bad_key.into())])));
             }
             list
         }
@@ -1248,7 +1271,7 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
     };
     let min_severity = match (body.min_severity.as_deref(), stored) {
         (Some(s), _) if SEVERITIES.contains(&s) => s.to_string(),
-        (Some(s), _) => return Err(bad(&format!("Unknown severity `{s}`"))),
+        (Some(s), _) => return Err(bad(t("server.notify.unknown_severity", &[("severity", s.into())]))),
         (None, Some(s)) => s.min_severity.clone(),
         (None, None) => INFO.to_string(),
     };
@@ -1284,11 +1307,11 @@ fn may_touch(user: &AuthUser, t: &Target) -> bool {
     user.is_admin || t.owner_id.as_deref() == Some(user.id.as_str())
 }
 
-pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<TargetBody>) -> ApiResult {
+pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<TargetBody>) -> FormResult {
     gate(&user)?;
     let next = describe(body, None, &user)?;
     if next.owner_id.is_some() {
-        must_be_public(next.url()).await.map_err(|e| ApiError::bad_request(format!("{e}")))?;
+        must_be_public(next.url()).await.map_err(|e| FormError::at("url", format!("{e}")))?;
     }
     let owner = next.owner_id.clone();
     let (total, own): (i64, i64) = app
@@ -1298,10 +1321,10 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Tar
         })
         .await?;
     if total as usize >= MAX_TARGETS {
-        return Err(ApiError::bad_request(format!("At most {MAX_TARGETS} destinations")));
+        return Err(ApiError::bad_request(t("server.notify.max_targets", &[("count", MAX_TARGETS.into())])).into());
     }
     if next.owner_id.is_some() && own as usize >= MAX_OWN_TARGETS {
-        return Err(ApiError::bad_request(format!("At most {MAX_OWN_TARGETS} destinations of your own")));
+        return Err(ApiError::bad_request(t("server.notify.max_own", &[("count", MAX_OWN_TARGETS.into())])).into());
     }
     tracing::info!("notification destination added: {} ({})", next.name, next.channel.label());
     let detail = target_detail(&next.name, next.channel, next.owner_id.is_some());
@@ -1320,18 +1343,18 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Tar
         .await?;
     reload(&app).await?;
     crate::audit::record(&app, crate::audit::Entry::new("target_added", crate::audit::Actor::from(&user)).target(id.to_string()).detail(detail));
-    one(&app, &user, id).await
+    Ok(one(&app, &user, id).await?)
 }
 
-pub async fn update(State(app): State<App>, user: AuthUser, Path(id): Path<i64>, Json(body): Json<TargetBody>) -> ApiResult {
+pub async fn update(State(app): State<App>, user: AuthUser, Path(id): Path<i64>, Json(body): Json<TargetBody>) -> FormResult {
     gate(&user)?;
     let stored = app.db.call(move |c| stored_target(c, id)).await?.ok_or_else(|| ApiError::not_found("Destination"))?;
     if !may_touch(&user, &stored) {
-        return Err(ApiError::forbidden());
+        return Err(ApiError::forbidden().into());
     }
     let next = describe(body, Some(&stored), &user)?;
     if next.owner_id.is_some() && next.url != stored.url {
-        must_be_public(next.url()).await.map_err(|e| ApiError::bad_request(format!("{e}")))?;
+        must_be_public(next.url()).await.map_err(|e| FormError::at("url", format!("{e}")))?;
     }
     app.db
         .call(move |c| {
@@ -1346,7 +1369,7 @@ pub async fn update(State(app): State<App>, user: AuthUser, Path(id): Path<i64>,
         .await?;
     reload(&app).await?;
     crate::audit::record(&app, crate::audit::Entry::new("target_changed", crate::audit::Actor::from(&user)).target(id.to_string()).detail(target_detail(&stored.name, stored.channel, stored.owner_id.is_some())));
-    one(&app, &user, id).await
+    Ok(one(&app, &user, id).await?)
 }
 
 /// Name, channel and whose it is, never the address, which is the credential.
@@ -1396,7 +1419,7 @@ pub async fn test(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -
 
 async fn one(app: &App, user: &AuthUser, id: i64) -> ApiResult {
     let only = (!user.is_admin).then(|| user.id.clone());
-    let list = app.db.call(move |c| targets_json(c, only.as_deref())).await?;
+    let list = named(app.db.call(move |c| targets_json(c, only.as_deref())).await?);
     let found = list.into_iter().find(|t| t["id"].as_i64() == Some(id)).ok_or_else(|| ApiError::not_found("Destination"))?;
     Ok(Json(json!({ "target": found })))
 }
@@ -1414,7 +1437,14 @@ pub async fn history(State(app): State<App>, user: AuthUser, Query(q): Query<His
     let only = (!user.is_admin).then(|| user.id.clone());
     let caller = user.id.clone();
     let rows = app.db.call(move |c| recent_rows(c, only.as_deref(), &caller, limit)).await?;
-    Ok(Json(json!({ "events": fold_recent(rows, limit) })))
+    let mut events = fold_recent(rows, limit);
+    // Read where the request's language is not known: each kind is named here, in the reader's.
+    for e in &mut events {
+        if let Some(kind) = e["kind"].as_str().and_then(Kind::from_key) {
+            e["label"] = kind.label().into();
+        }
+    }
+    Ok(Json(json!({ "events": events })))
 }
 
 /// What was raised lately, one row per delivery. `only`: just what went to this person's own destinations. Whatever
@@ -1850,6 +1880,26 @@ pub(crate) mod tests {
         assert!(clean_topic(Channel::Email, "me@example.com").is_ok());
         assert!(clean_topic(Channel::Email, "me at example.com").is_err());
         assert!(clean_topic(Channel::Email, "me@example").is_err(), "a mailbox needs a domain that resolves");
+    }
+
+    /// The form puts a refusal under the field it names, never by finding a field's name in the words: the words are in
+    /// the reader's language.
+    #[tokio::test]
+    async fn a_refusal_about_one_field_says_which_field() {
+        let user = admin();
+        let field = |v: Value| describe(body(v), None, &user).err().expect("refused").field;
+        assert_eq!(field(json!({ "kind": "ntfy", "url": "https://ntfy.sh", "topic": "with/a/slash" })), Some("topic"));
+        assert_eq!(field(json!({ "kind": "ntfy", "url": "ftp://ntfy.sh", "topic": "abc" })), Some("url"));
+        assert_eq!(field(json!({ "kind": "gotify", "url": "http://192.168.1.10:8070" })), Some("secret"));
+        assert_eq!(field(json!({ "kind": "email", "url": "smtps://smtp.example.com", "topic": "me@example.com", "options": { "from": "finstats" } })), Some("from"));
+        assert_eq!(field(json!({ "kind": "pigeon" })), None, "a kind the form never offers is no field's");
+
+        let answer = |e: FormError| async {
+            let resp = axum::response::IntoResponse::into_response(e);
+            serde_json::from_slice::<Value>(&axum::body::to_bytes(resp.into_body(), 4096).await.unwrap()).unwrap()
+        };
+        assert_eq!(answer(FormError::at("topic", "Enter the topic")).await, json!({ "error": "Enter the topic", "field": "topic" }));
+        assert_eq!(answer(ApiError::bad_request("At most 20 destinations").into()).await, json!({ "error": "At most 20 destinations" }));
     }
 
     #[test]

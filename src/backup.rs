@@ -142,7 +142,7 @@ pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Res
                 out.write_all(b"\n")?;
                 written += 1;
                 if written % 5000 == 0 {
-                    report(format!("Writing {table}: {written} of {total} rows"), written as f64 / total as f64);
+                    report(crate::i18n::t("server.backup.writing", &[("table", table.into()), ("done", written.into()), ("total", total.into())]), written as f64 / total as f64);
                 }
             }
         }
@@ -344,17 +344,17 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
     let mut saw_header = false;
 
     for (n, line) in reader.lines().enumerate() {
-        let line = line.context("The file is damaged or not a FinStats backup (could not be read)")?;
+        let line = line.with_context(|| crate::i18n::t("server.backup.unreadable", &[]))?;
         if line.trim().is_empty() {
             continue;
         }
-        let v: Value = serde_json::from_str(&line).with_context(|| format!("The file is not a FinStats backup (line {} is not JSON)", n + 1))?;
+        let v: Value = serde_json::from_str(&line).with_context(|| crate::i18n::t("server.backup.not_json", &[("line", (n + 1).to_string().into())]))?;
         if !saw_header {
             let Some(format) = v["finstats_backup"].as_i64() else {
-                bail!("This is not a FinStats backup. A Jellystat backup goes under “Import from Jellystat”.");
+                bail!(crate::i18n::t("server.backup.not_finstats", &[]));
             };
             if format > FORMAT {
-                bail!("This backup was made by a newer FinStats (format {format}). Update FinStats, then restore it.");
+                bail!(crate::i18n::t("server.backup.newer_format", &[("format", format.to_string().into())]));
             }
             res.from_version = v["app_version"].as_str().map(str::to_string);
             saw_header = true;
@@ -437,12 +437,12 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
         if n % 5000 == 0 {
             if let Some((t, id)) = tasks {
                 let p = counter.load(std::sync::atomic::Ordering::Relaxed) as f64 / total_bytes as f64;
-                t.update(id, format!("Restoring: {} plays so far", res.plays_imported), Some(p.min(0.97)));
+                t.update(id, crate::i18n::t("server.backup.restoring", &[("count", res.plays_imported.into())]), Some(p.min(0.97)));
             }
         }
     }
     if !saw_header {
-        bail!("The file is empty");
+        bail!(crate::i18n::t("server.import.empty_file", &[]));
     }
 
     if with_settings {
@@ -460,7 +460,7 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
         }
     }
     if let Some((t, id)) = tasks {
-        t.update(id, "Linking plays to the library", Some(0.98));
+        t.update(id, crate::i18n::t("server.backup.linking", &[]), Some(0.98));
     }
     let settings = Settings::load(&tx)?;
     crate::network::set_manual(&tx, &settings.home_addresses)?;

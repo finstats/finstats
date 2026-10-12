@@ -73,11 +73,12 @@ pub fn spawn_within(app: &App, id: &'static str, limit: Option<Duration>) -> boo
         return false;
     }
     let Some(jf) = app.jellyfin() else { return false };
-    if !app.tasks.try_start(id, "Starting…") {
+    if !app.tasks.try_start(id, &crate::i18n::t("server.sync.starting", &[])) {
         return false;
     }
     let app = app.clone();
-    tokio::spawn(async move {
+    // A job run by hand speaks the language of whoever ran it; one its trigger started, the source's.
+    tokio::spawn(crate::i18n::carry(async move {
         let work = app.clone();
         let outcome = crate::schedule::caught(async move { let app = work; crate::schedule::within(limit, async { match id {
             "sync_users" => sync_users(&app, &jf).await,
@@ -112,7 +113,7 @@ pub fn spawn_within(app: &App, id: &'static str, limit: Option<Duration>) -> boo
             crate::notify::task_failed(&app, id, &format!("{e:#}")).await;
         }
         app.tasks.finish(id, outcome.map(|m| (m, None)));
-    });
+    }));
     true
 }
 
@@ -157,21 +158,23 @@ const SCAN_CHECK_EVERY_S: i64 = 300;
 /// Write a backup in the background and thin out old ones. Returns false when one is already being written.
 pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
     const ID: &str = "backup";
-    if !app.tasks.try_start(ID, "Writing backup") {
+    if !app.tasks.try_start(ID, &crate::i18n::t("server.sync.writing_backup", &[])) {
         return false;
     }
     let app = app.clone();
     let automatic = actor.is_none();
-    tokio::task::spawn_blocking(move || {
+    // The work is blocking; it runs inside a future that carries the language of whoever asked for it (none, for a
+    // trigger), polled to its end on the blocking thread, so what the backup says is said in that language.
+    let job = crate::i18n::carry(async move {
         let dir = crate::backup::dir(&app.data_dir);
         // A panic is a failed backup, not a job left "running" for good (`schedule::caught`'s reason).
         let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| crate::backup::export(&app.db, &dir, Some((&app.tasks, ID))).map(|made| {
             let removed = crate::backup::prune(&dir, app.settings().backup_keep.clamp(1, 100) as usize);
             tracing::info!("{} backup written: {} ({} plays){}", if automatic { "automatic" } else { "manual" }, made.name, made.plays,
                 if removed > 0 { format!("; removed {removed} old") } else { String::new() });
-            (format!("{} plays, {:.1} MB", made.plays, made.size_bytes as f64 / 1e6), serde_json::to_value(&made).ok())
+            (said_backup(made.plays, made.size_bytes), serde_json::to_value(&made).ok())
         })))
-        .unwrap_or_else(|_| Err(anyhow!("FinStats hit a bug and stopped writing this backup; it is written again at its next trigger")));
+        .unwrap_or_else(|_| Err(anyhow!(crate::i18n::t("server.sync.backup_panicked", &[]))));
         if let Ok(c) = app.db.conn() {
             let who = actor.unwrap_or_default();
             let entry = match &outcome {
@@ -188,7 +191,15 @@ pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
         }
         app.tasks.finish(ID, outcome);
     });
+    tokio::task::spawn_blocking(move || tokio::runtime::Handle::current().block_on(job));
     true
+}
+
+/// "1,390 plays, 12.5 MB": what a backup holds, in the language of the request.
+fn said_backup(plays: i64, bytes: u64) -> String {
+    let mb = format!("{:.1}", bytes as f64 / 1e6);
+    let mb = if crate::i18n::current().starts_with("en") { mb } else { mb.replace('.', ",") };
+    crate::i18n::t("server.sync.backup_written", &[("count", plays.into()), ("size", mb.into())])
 }
 
 /// Runs every job on its triggers (`schedule`), looking once a minute or when woken. FinStats only ever *reads*
@@ -391,21 +402,19 @@ pub(crate) fn store_users(c: &mut Connection, users: &[Value], shrink_ok: bool, 
 }
 
 async fn sync_users(app: &App, jf: &Jellyfin) -> Result<String> {
-    app.tasks.update("sync_users", "Fetching users", None);
+    app.tasks.update("sync_users", crate::i18n::t("server.sync.fetching_users", &[]), None);
     let users = jf.users().await?;
     let count = users.iter().filter(|u| u["Id"].is_string()).count();
     let shrink_ok = allow_shrink();
     let refused = app.db.call(move |c| store_users(c, &users, shrink_ok, db::now())).await?;
     if let Some(current) = refused {
-        let msg = format!(
-            "Jellyfin returned {count} user(s) where FinStats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read. Nothing was changed."
-        );
+        let msg = crate::i18n::t("server.sync.users_refused", &[("count", count.into()), ("current", current.into())]);
         app.request_halt(msg.clone());
         return Err(anyhow!(msg));
     }
     // Who is an administrator, disabled or gone is what Jellyfin just said: open live connections re-read who they speak for.
     app.live_feed.recheck();
-    Ok(format!("{count} users"))
+    Ok(crate::i18n::t("server.sync.users_read", &[("count", count.into())]))
 }
 
 // ---------------------------------------------------------------- libraries & items
@@ -588,7 +597,7 @@ pub(crate) fn store_libraries(c: &mut Connection, lib_rows: &[Value], shrink_ok:
 
 async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
     const ID: &str = "sync_libraries";
-    app.tasks.update(ID, "Fetching libraries", None);
+    app.tasks.update(ID, crate::i18n::t("server.sync.fetching_libraries", &[]), None);
     let started = db::now();
     let folders = jf.virtual_folders().await?;
 
@@ -608,10 +617,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
     let shrink_ok = allow_shrink();
     let refused = app.db.call(move |c| store_libraries(c, &lib_rows, shrink_ok, started)).await?;
     if let Some(current) = refused {
-        let plural = if seen_libs == 1 { "y" } else { "ies" };
-        let msg = format!(
-            "Jellyfin listed {seen_libs} librar{plural} where FinStats knows {current}. Refusing to mark the missing ones removed: this looks like a Jellyfin change or a bad read, not an emptied server. Nothing was changed."
-        );
+        let msg = crate::i18n::t("server.sync.libraries_refused", &[("count", seen_libs.into()), ("current", current.into())]);
         app.request_halt(msg.clone());
         return Err(anyhow!(msg));
     }
@@ -657,7 +663,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             let within = if total > 0 { seen as f64 / total as f64 } else { 1.0 };
             app.tasks.update(
                 ID,
-                format!("{lib_name}: {seen} of {} items", total.max(seen)),
+                crate::i18n::t("server.sync.items_read", &[("library", (&lib_name).into()), ("done", seen.into()), ("total", total.max(seen).into())]),
                 Some((n as f64 + within.min(1.0)) / lib_count.max(1) as f64),
             );
             if got < PAGE {
@@ -678,7 +684,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             if got == 0 {
                 break;
             }
-            app.tasks.update(ID, format!("{lib_name}: cast and crew"), None);
+            app.tasks.update(ID, crate::i18n::t("server.sync.cast_and_crew", &[("library", (&lib_name).into())]), None);
             app.db
                 .call(move |c| {
                     let tx = c.transaction()?;
@@ -743,16 +749,13 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             })
             .await?;
         if let Some(current) = refused {
-            let msg = format!(
-                "Jellyfin returned {stored} readable item(s) for library “{lib_name}” but FinStats holds {current}. Refusing to mark {} items removed: this looks like a Jellyfin change or a bad read, not a deletion. The library was left exactly as it was.",
-                current - stored as i64
-            );
+            let msg = crate::i18n::t("server.sync.items_refused", &[("count", stored.into()), ("library", (&lib_name).into()), ("current", current.into()), ("missing", (current - stored as i64).into())]);
             app.request_halt(msg.clone());
             return Err(anyhow!(msg));
         }
     }
 
-    app.tasks.update(ID, "Linking plays to libraries", Some(1.0));
+    app.tasks.update(ID, crate::i18n::t("server.sync.linking", &[]), Some(1.0));
     let window = app.settings().group_window_s;
     app.db
         .call(move |c| {
@@ -771,7 +774,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             db::set_setting(c, "library_synced_at", &started.to_string())
         })
         .await?;
-    Ok(format!("{total_items} items in {lib_count} libraries"))
+    Ok(crate::i18n::t("server.sync.libraries_read", &[("items", total_items.into()), ("count", lib_count.into())]))
 }
 
 /// How far back each look reaches past the last one: the two clocks may differ a little, and an item saved while
@@ -844,7 +847,7 @@ async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
             Ok((from, libraries))
         })
         .await?;
-    let Some(from) = from else { return Ok("Waiting for the first library read".into()) };
+    let Some(from) = from else { return Ok(crate::i18n::t("server.sync.waiting_for_library_read", &[])) };
     let mut changed = 0usize;
     for (lib_id, lib_name) in libraries {
         let mut looked = 0usize;
@@ -865,7 +868,7 @@ async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
             if got < PAGE {
                 break;
             }
-            app.tasks.update(ID, format!("{lib_name}: {looked} changed items"), None);
+            app.tasks.update(ID, crate::i18n::t("server.sync.changed_items", &[("library", (&lib_name).into()), ("count", looked.into())]), None);
         }
     }
     // People are in no library, and a replaced portrait re-saves the person and nothing else. After a scan Jellyfin
@@ -887,7 +890,7 @@ async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
         if got < PEOPLE_PAGE {
             break;
         }
-        app.tasks.update(ID, format!("People: {looked} looked at"), None);
+        app.tasks.update(ID, crate::i18n::t("server.sync.people_looked_at", &[("count", looked.into())]), None);
     }
     let window = app.settings().group_window_s;
     app.db
@@ -911,12 +914,12 @@ async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
 
 /// "3 titles and 1 portrait changed".
 fn changes_said(titles: usize, portraits: usize) -> String {
-    let count = |n: usize, one: &str| format!("{n} {one}{}", if n == 1 { "" } else { "s" });
+    let t = |key: &str, args: &[(&str, crate::i18n::Arg)]| crate::i18n::t(&format!("server.sync.{key}"), args);
     match (titles, portraits) {
-        (0, 0) => "Nothing changed".into(),
-        (t, 0) => format!("{} changed", count(t, "title")),
-        (0, p) => format!("{} changed", count(p, "portrait")),
-        (t, p) => format!("{} and {} changed", count(t, "title"), count(p, "portrait")),
+        (0, 0) => t("nothing_changed", &[]),
+        (n, 0) => t("titles_changed", &[("count", n.into())]),
+        (0, n) => t("portraits_changed", &[("count", n.into())]),
+        (n, p) => t("titles_and_portraits_changed", &[("titles", t("titles", &[("count", n.into())]).into()), ("portraits", t("portraits", &[("count", p.into())]).into())]),
     }
 }
 
@@ -924,7 +927,7 @@ fn changes_said(titles: usize, portraits: usize) -> String {
 
 async fn sync_events(app: &App, jf: &Jellyfin) -> Result<String> {
     const ID: &str = "sync_events";
-    app.tasks.update(ID, "Fetching server activity", None);
+    app.tasks.update(ID, crate::i18n::t("server.sync.fetching_activity", &[]), None);
     let newest: Option<i64> = app.db.call(|c| Ok(c.query_row("SELECT MAX(date) FROM server_events", [], |r| r.get(0))?)).await?;
     let min_date = newest
         .and_then(|t| chrono::DateTime::from_timestamp(t - 60, 0))
@@ -970,13 +973,13 @@ async fn sync_events(app: &App, jf: &Jellyfin) -> Result<String> {
             })
             .await?;
         start += got;
-        app.tasks.update(ID, format!("{start} of {} entries", total.max(start)), Some(start as f64 / total.max(start) as f64));
+        app.tasks.update(ID, crate::i18n::t("server.sync.entries_read", &[("done", start.into()), ("total", total.max(start).into())]), Some(start as f64 / total.max(start) as f64));
         // Cap the very first backfill; the log can be enormous on old servers.
         if got < PAGE || start >= 20_000 {
             break;
         }
     }
-    Ok(format!("{added} new entries"))
+    Ok(crate::i18n::t("server.sync.new_entries", &[("count", added.into())]))
 }
 
 // ---------------------------------------------------------------- server details & devices
@@ -1042,7 +1045,7 @@ fn server_snapshot(info: &Value, storage: Option<Vec<Value>>, plugins: Option<&[
 
 async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
     const ID: &str = "sync_server";
-    app.tasks.update(ID, "Reading server details", None);
+    app.tasks.update(ID, crate::i18n::t("server.sync.reading_server", &[]), None);
     let info = jf.system_info().await?;
     // Each of these may fail on its own, and what could not be read keeps the last reading (`server_snapshot`).
     let unread = |what: &str, e: &anyhow::Error| tracing::warn!("could not read Jellyfin's {what}; keeping the last reading: {e:#}");
@@ -1055,7 +1058,7 @@ async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
     if let Some(tasks) = &tasks {
         crate::jobs::observe(app, tasks);
     }
-    app.tasks.update(ID, "Reading devices", Some(0.6));
+    app.tasks.update(ID, crate::i18n::t("server.sync.reading_devices", &[]), Some(0.6));
     let devices = jf.devices().await.unwrap_or_default();
     let previous: Option<Value> = app.db.call(|c| Ok(db::get_setting(c, "server_info")?.and_then(|raw| serde_json::from_str(&raw).ok()))).await?;
     let plugin_count = plugins.as_ref().map(Vec::len);
@@ -1097,8 +1100,8 @@ async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
         })
         .await?;
     Ok(match plugin_count {
-        Some(n) => format!("{device_count} devices, {n} plugins"),
-        None => format!("{device_count} devices; the plugins could not be read"),
+        Some(n) => crate::i18n::t("server.sync.server_read", &[("count", device_count.into()), ("plugins", n.into())]),
+        None => crate::i18n::t("server.sync.server_read_without_plugins", &[("count", device_count.into())]),
     })
 }
 
@@ -1119,7 +1122,7 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
     let mut total = 0usize;
     let count = users.len().max(1);
     for (n, (user_id, name)) in users.into_iter().enumerate() {
-        app.tasks.update(ID, format!("Reading what {name} has watched"), Some(n as f64 / count as f64));
+        app.tasks.update(ID, crate::i18n::t("server.sync.reading_watched", &[("name", (&name).into())]), Some(n as f64 / count as f64));
         let mut rows: Vec<Value> = vec![];
         for (filter, types) in [("IsPlayed", "Movie,Episode"), ("IsFavorite", "Movie,Series,Episode")] {
             let mut start = 0;
@@ -1162,7 +1165,7 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
             })
             .await?;
     }
-    Ok(format!("{total} played or favourite items"))
+    Ok(crate::i18n::t("server.sync.userdata_read", &[("count", total.into())]))
 }
 
 #[cfg(test)]

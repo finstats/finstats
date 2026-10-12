@@ -254,7 +254,9 @@ fn habits(c: &Connection, cond: &Cond) -> Result<Habits> {
 /// The ready year, as the whole story (2.0): the same `StoryYear` the app's cards are drawn from, so it
 /// carries no companion, no rank among other people and no app, and it wears the name the owner chose.
 fn recap(c: &Connection, p: &Published, min_play_s: i64, until: i64) -> Result<Option<StoryYear>> {
-    let r = crate::recap::build(c, Some(p.user_id.clone()), min_play_s, "", "", Some(until))?;
+    let mut r = crate::recap::build(c, Some(p.user_id.clone()), min_play_s, "", "", Some(until))?;
+    // The persona in the visitor's language (the database thread carries it), as the app's recap says it.
+    crate::recap::say_persona(&mut r["persona"]);
     Ok(StoryYear::from_recap(&r, &p.display_name))
 }
 
@@ -349,7 +351,7 @@ pub fn reset(c: &Connection, user_id: &str, now: i64) -> Result<Option<String>> 
 fn only_a_session(user: &AuthUser) -> Result<(), ApiError> {
     match user.credential {
         Credential::Session => Ok(()),
-        Credential::Key { .. } => Err(ApiError::new(StatusCode::FORBIDDEN, "Sign in to publish a profile; a key cannot make anything public")),
+        Credential::Key { .. } => Err(ApiError::new(StatusCode::FORBIDDEN, crate::i18n::t("server.public.session_only", &[]))),
     }
 }
 
@@ -387,7 +389,7 @@ pub async fn put_mine(State(app): State<App>, user: AuthUser, Json(e): Json<Edit
     only_a_session(&user)?;
     let settings = app.settings();
     if !settings.public_profiles {
-        return Err(ApiError::new(StatusCode::CONFLICT, "An administrator has not allowed public profiles on this server"));
+        return Err(ApiError::new(StatusCode::CONFLICT, crate::i18n::t("server.public.not_allowed", &[])));
     }
     let actor = Actor::from(&user);
     let out = app
@@ -495,10 +497,10 @@ pub async fn read(State(app): State<App>, Path(token): Path<String>) -> ApiResul
 /// The page's preview: what a chat app shows under a pasted link. Every value is escaped for HTML.
 pub fn fill_page(page: &str, a: &PublicProfile, base: &str, token: &str) -> String {
     let url = format!("{base}/u/{token}");
-    let title = if a.name.is_empty() { "A FinStats profile".to_string() } else { format!("{} on FinStats", a.name) };
+    let title = if a.name.is_empty() { crate::i18n::t("server.public.page_title", &[]) } else { crate::i18n::t("server.public.page_title_named", &[("name", a.name.as_str().into())]) };
     let description = match &a.totals {
-        Some(t) => format!("{} hours watched, {} plays.", t.watch_s / 3600, t.plays),
-        None => "What they watch, published by them.".to_string(),
+        Some(t) => crate::i18n::t("server.public.page_description", &[("hours", (t.watch_s / 3600).into()), ("plays", t.plays.into())]),
+        None => crate::i18n::t("server.public.page_description_none", &[]),
     };
     page.replace("{{title}}", &html_escape(&title))
         .replace("{{description}}", &html_escape(&description))

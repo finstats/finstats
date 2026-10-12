@@ -24,7 +24,7 @@ use crate::audit::{self, Actor};
 use crate::auth::{self, AuthUser, JellyfinAdmin, Manager};
 use crate::state::{ApiError, ApiResult, App, Settings};
 use crate::db::rusqlite::OptionalExtension;
-use crate::{changelog, db, groups, import, pipeline, profile, recap, recent, security, services, stats, streamystats, sync, timeline};
+use crate::{changelog, db, groups, i18n, import, pipeline, profile, recap, recent, security, services, stats, streamystats, sync, timeline};
 
 #[derive(RustEmbed)]
 #[folder = "$CARGO_MANIFEST_DIR/web"]
@@ -158,6 +158,13 @@ pub fn router(app: App) -> Router {
         .with_state(app)
 }
 
+/// `spawn_blocking` in the request's language: an import, a restore or a Tautulli check run on a blocking thread says what
+/// it says (progress, results, refusals) in the words of whoever started it.
+fn blocking<R: Send + 'static>(f: impl FnOnce() -> R + Send + 'static) -> tokio::task::JoinHandle<R> {
+    let lang = crate::i18n::current();
+    tokio::task::spawn_blocking(move || crate::i18n::within(lang, f))
+}
+
 // ---------------------------------------------------------------- middleware
 
 /// Browsers attach `Origin` to cross-site writes. Refuse any write whose origin is not us.
@@ -177,7 +184,7 @@ async fn same_origin(State(app): State<App>, req: Request, next: Next) -> Respon
     let host = h.get(HOST).and_then(|v| v.to_str().ok());
     let forwarded = h.get("x-forwarded-host").and_then(|v| v.to_str().ok());
     if write && cross_site(origin, host, forwarded, app.trust_proxy) {
-        return ApiError::new(StatusCode::FORBIDDEN, "Cross-site request refused").into_response();
+        return ApiError::new(StatusCode::FORBIDDEN, i18n::t("server.api.cross_site", &[])).into_response();
     }
     next.run(req).await
 }
@@ -440,7 +447,8 @@ async fn public_page(State(app): State<App>, Path(token): Path<String>) -> Respo
     let found = crate::public::resolve(&app, token.clone()).await;
     let page = WebAssets::get("public.html").map(|f| String::from_utf8_lossy(&f.data).into_owned());
     let (Ok((_, a)), Some(page)) = (found, page) else {
-        let body = "<!doctype html><meta charset=utf-8><title>Not found</title><p>There is no profile here.</p>";
+        let (title, text) = (crate::public::html_escape(&i18n::t("server.api.no_profile_title", &[])), crate::public::html_escape(&i18n::t("server.api.no_profile", &[])));
+        let body = format!("<!doctype html><meta charset=utf-8><title>{title}</title><p>{text}</p>");
         return crate::public::noindex((StatusCode::NOT_FOUND, [(CONTENT_TYPE, "text/html; charset=utf-8")], body).into_response());
     };
     let base = app.settings().public_url.trim_end_matches('/').to_string();
@@ -466,6 +474,7 @@ async fn public_card(State(app): State<App>, Path(token): Path<String>, Query(q)
     let r = Response::builder()
         .header(CONTENT_TYPE, "image/png")
         .header(CACHE_CONTROL, "public, max-age=3600")
+        .header("vary", "Accept-Language")
         .body(Body::from(png.as_ref().clone()))
         .unwrap();
     Ok(crate::public::noindex(r))
@@ -492,7 +501,7 @@ where
         }
     }
     let svg = svg(&posters);
-    let png = tokio::task::spawn_blocking(move || crate::card::render_png(&svg)).await.map_err(anyhow::Error::from)??;
+    let png = blocking(move || crate::card::render_png(&svg)).await.map_err(anyhow::Error::from)??;
     Ok(app.public_cards.put(key, png))
 }
 
@@ -505,6 +514,7 @@ async fn public_story_card(State(app): State<App>, Path((token, chapter)): Path<
     let r = Response::builder()
         .header(CONTENT_TYPE, "image/png")
         .header(CACHE_CONTROL, "public, max-age=3600")
+        .header("vary", "Accept-Language")
         .body(Body::from(png.as_ref().clone()))
         .unwrap();
     Ok(crate::public::noindex(r))
@@ -527,6 +537,7 @@ async fn story_card(State(app): State<App>, user: AuthUser, Path(chapter): Path<
     Ok(Response::builder()
         .header(CONTENT_TYPE, "image/png")
         .header(CACHE_CONTROL, "private, max-age=300")
+        .header("vary", "Accept-Language")
         .body(Body::from(png.as_ref().clone()))
         .unwrap())
 }
@@ -551,14 +562,13 @@ pub(crate) fn zip_response(files: &[(String, Vec<u8>)], label: &str) -> Response
         .header(CONTENT_TYPE, "application/zip")
         .header("content-disposition", format!("attachment; filename=\"finstats-{}.zip\"", slug.trim_matches('-')))
         .header(CACHE_CONTROL, "private, max-age=300")
+        .header("vary", "Accept-Language")
         .body(Body::from(crate::card::zip(files)))
         .unwrap()
 }
 
 pub(crate) async fn draw_story(app: &App, story: &crate::story::StoryYear, ch: crate::story::Chapter) -> ApiResult<std::sync::Arc<Vec<u8>>> {
-    use sha2::{Digest, Sha256};
-    let said = serde_json::to_vec(story).map_err(anyhow::Error::from)?;
-    let key = format!("story:{}:{}", ch.key(), hex::encode(&Sha256::digest(&said)[..12]));
+    let key = story.cache_key(ch);
     let story = story.clone();
     draw(app, key, story.poster_ids(ch), move |posters| crate::story::svg(ch, &story, posters)).await
 }
@@ -598,7 +608,7 @@ async fn arr_image(State(app): State<App>, user: AuthUser, Path((service_id, med
 pub async fn prune_image_cache(app: App) {
     loop {
         let dir = app.data_dir.join("cache").join("img");
-        let _ = tokio::task::spawn_blocking(move || {
+        let _ = blocking(move || {
             let Ok(entries) = std::fs::read_dir(&dir) else { return };
             for e in entries.flatten() {
                 let old = e.metadata().and_then(|m| m.modified()).ok().and_then(|m| SystemTime::now().duration_since(m).ok()).is_some_and(|a| a > Duration::from_secs(30 * 86_400));
@@ -646,7 +656,7 @@ async fn get_settings(State(app): State<App>, Manager(_): Manager) -> ApiResult 
 /// It is the only thing that asks after the first answer: there is no timer behind this.
 async fn lookup_public_ip(State(app): State<App>, Manager(_): Manager) -> ApiResult {
     if !app.settings().public_ip_lookup {
-        return Err(ApiError::bad_request("Turn on \"Recognise my own public address\" first"));
+        return Err(ApiError::bad_request(i18n::t("server.api.lookup_off", &[])));
     }
     crate::network::refresh(&app).await;
     settings_response(&app).await
@@ -654,7 +664,7 @@ async fn lookup_public_ip(State(app): State<App>, Manager(_): Manager) -> ApiRes
 
 async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch): Json<Value>) -> ApiResult {
     let Some(patch) = patch.as_object() else {
-        return Err(ApiError::bad_request("Expected a JSON object"));
+        return Err(ApiError::bad_request(i18n::t("server.api.expected_object", &[])));
     };
     // Who gets in and what everyone may see is an administrator's call: a manager must not be able to promote themselves.
     if !user.is_admin && ACCESS_KEYS.iter().any(|k| patch.contains_key(*k)) {
@@ -669,7 +679,7 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
                     target.insert(k.clone(), v.clone());
                 }
             }
-            *s = serde_json::from_value(merged).map_err(|e| ApiError::bad_request(format!("Invalid settings: {e}")))?;
+            *s = serde_json::from_value(merged).map_err(|e| ApiError::bad_request(i18n::t("server.api.invalid_settings", &[("error", e.to_string().into())])))?;
             Ok(())
         })
         .await?;
@@ -752,7 +762,7 @@ fn time_zone() -> String {
 async fn put_triggers(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>, Json(body): Json<Value>) -> ApiResult {
     let Some(id) = crate::state::TASK_IDS.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
     let triggers: Vec<crate::schedule::Trigger> =
-        serde_json::from_value(body["triggers"].clone()).map_err(|e| ApiError::bad_request(format!("Invalid triggers: {e}")))?;
+        serde_json::from_value(body["triggers"].clone()).map_err(|e| ApiError::bad_request(i18n::t("server.api.invalid_triggers", &[("error", e.to_string().into())])))?;
     crate::schedule::validate(id, &triggers).map_err(ApiError::bad_request)?;
     let detail = json!({ "triggers": triggers });
     save_schedule(&app, &user, id, move |s| _ = s.schedules.insert(id.to_string(), triggers), detail).await
@@ -791,7 +801,7 @@ async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path
         "backup" => sync::run_backup(&app, Some(Actor::from(&user))),
         "geoip" => {
             if std::env::var("FINSTATS_GEOIP_DB").is_ok_and(|p| !p.trim().is_empty()) {
-                return Err(ApiError::bad_request("The database is set with FINSTATS_GEOIP_DB; replace that file instead"));
+                return Err(ApiError::bad_request(i18n::t("server.api.geoip_from_env", &[])));
             }
             crate::geo::spawn_download(&app)
         }
@@ -799,7 +809,7 @@ async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path
         _ => sync::spawn(&app, id) || services::spawn(&app, id),
     };
     if !started {
-        return Err(ApiError::new(StatusCode::CONFLICT, "That task is already running"));
+        return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.task_running", &[])));
     }
     audit::record(&app, audit::Entry::new("task_run", Actor::from(&user)).target(id));
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
@@ -829,7 +839,7 @@ struct PermissionsBody {
 
 fn clean_permissions(list: Vec<String>) -> Result<Vec<String>, ApiError> {
     if let Some(bad) = list.iter().find(|p| !auth::GRANTABLE.contains(&p.as_str())) {
-        return Err(ApiError::bad_request(format!("Unknown permission `{bad}`")));
+        return Err(ApiError::bad_request(i18n::t("server.api.unknown_permission", &[("name", bad.into())])));
     }
     // Stored in a fixed order, without duplicates.
     Ok(auth::GRANTABLE.iter().filter(|g| list.iter().any(|p| p == *g)).map(|g| g.to_string()).collect())
@@ -907,7 +917,7 @@ async fn put_user_permissions(State(app): State<App>, JellyfinAdmin(user): Jelly
         .await?;
     match found {
         None => Err(ApiError::not_found("User")),
-        Some(false) => Err(ApiError::bad_request("Jellyfin administrators already have every permission")),
+        Some(false) => Err(ApiError::bad_request(i18n::t("server.api.admins_have_all", &[]))),
         Some(true) => {
             audit::record(&app, audit::Entry::new("permissions_changed", actor).target(target).detail(json!({ "permissions": granted })));
             app.live_feed.recheck();
@@ -937,7 +947,7 @@ fn backup_path(app: &App, name: &str) -> ApiResult<PathBuf> {
 
 async fn list_backups(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -> ApiResult {
     let dir = crate::backup::dir(&app.data_dir);
-    let (backups, deleted) = tokio::task::spawn_blocking(move || (crate::backup::list(&dir), crate::backup::trashed(&dir))).await.map_err(anyhow::Error::from)?;
+    let (backups, deleted) = blocking(move || (crate::backup::list(&dir), crate::backup::trashed(&dir))).await.map_err(anyhow::Error::from)?;
     let s = app.settings();
     // When the next one is written is the backup task's schedule (Settings → Tasks), measured from its last run.
     let triggers = crate::schedule::effective("backup", &s);
@@ -948,7 +958,7 @@ async fn list_backups(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -
 
 async fn create_backup(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin) -> ApiResult<Response> {
     if !sync::run_backup(&app, Some(Actor::from(&user))) {
-        return Err(ApiError::new(StatusCode::CONFLICT, "A backup is already being written"));
+        return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.backup_running", &[])));
     }
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
@@ -987,13 +997,13 @@ async fn set_backup_deleted(State(app): State<App>, JellyfinAdmin(user): Jellyfi
     use crate::backup::TrashError;
     let dir = crate::backup::dir(&app.data_dir);
     let (n, deleted) = (name.clone(), body.deleted);
-    let moved = tokio::task::spawn_blocking(move || if deleted { crate::backup::move_to_trash(&dir, &n, db::now()) } else { crate::backup::take_out_of_trash(&dir, &n) })
+    let moved = blocking(move || if deleted { crate::backup::move_to_trash(&dir, &n, db::now()) } else { crate::backup::take_out_of_trash(&dir, &n) })
         .await
         .map_err(anyhow::Error::from)?;
     let at = match moved {
         Ok(at) => at,
         Err(TrashError::NotABackup | TrashError::NotFound) => return Err(ApiError::not_found("Backup")),
-        Err(TrashError::Taken) => return Err(ApiError::new(StatusCode::CONFLICT, "A backup of that name is there already: delete or rename it first")),
+        Err(TrashError::Taken) => return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.backup_name_taken", &[]))),
         Err(TrashError::Io(e)) => return Err(anyhow::Error::from(e).into()),
     };
     let kind = if deleted { "backup_deleted" } else { "backup_undeleted" };
@@ -1014,8 +1024,8 @@ fn import_finished(app: &App, actor: Actor, tracker: &str, outcome: Result<(u64,
 
 /// Run a restore in the background, then load what it may have changed (the settings) into the running app.
 fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bool, actor: Actor, source: String) {
-    let worker = app.clone();
-    tokio::task::spawn_blocking(move || {
+    let (worker, lang) = (app.clone(), i18n::current());
+    blocking(move || {
         // A restore that brings settings is a change to them like any other: nothing else may write the blob over
         // it, or hold the one it replaces in memory, until the restored one is the one in use.
         let _settings = with_settings.then(|| worker.settings_write.blocking_lock());
@@ -1043,15 +1053,15 @@ fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bo
         }
         worker.tasks.finish(
             "restore",
-            outcome.map(|r| (format!("Restored {} plays ({} already present)", r.plays_imported, r.plays_skipped), serde_json::to_value(&r).ok())),
+            outcome.map(|r| (i18n::say(lang, "server.api.restored", &[("count", r.plays_imported.into()), ("skipped", r.plays_skipped.into())]), serde_json::to_value(&r).ok())),
         );
     });
 }
 
 async fn restore_stored(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(name): Path<String>, Query(q): Query<RestoreQuery>) -> ApiResult<Response> {
     let path = backup_path(&app, &name)?;
-    if !app.tasks.try_start_alone("restore", "Reading backup", &HISTORY_WRITERS) {
-        return Err(ApiError::new(StatusCode::CONFLICT, "A restore or an import is already running"));
+    if !app.tasks.try_start_alone("restore", &i18n::t("server.api.reading_backup", &[]), &HISTORY_WRITERS) {
+        return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.restore_running", &[])));
     }
     spawn_restore(&app, path, q.settings.unwrap_or(true), false, Actor::from(&user), name);
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
@@ -1079,8 +1089,8 @@ async fn write_whole(file: &std::path::Path, bytes: &[u8]) {
 }
 
 async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Query(q): Query<RestoreQuery>, req: Request) -> ApiResult<Response> {
-    if !app.tasks.try_start_alone("restore", "Receiving backup", &HISTORY_WRITERS) {
-        return Err(ApiError::new(StatusCode::CONFLICT, "A restore or an import is already running"));
+    if !app.tasks.try_start_alone("restore", &i18n::t("server.api.receiving_backup", &[]), &HISTORY_WRITERS) {
+        return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.restore_running", &[])));
     }
     let path = app.data_dir.join(UPLOADS[2]);
     let received = async {
@@ -1088,7 +1098,7 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
         let mut stream = req.into_body().into_data_stream();
         let mut total = 0u64;
         while let Some(chunk) = stream.next().await {
-            let chunk = chunk.map_err(|e| anyhow::anyhow!("The upload was interrupted: {e}"))?;
+            let chunk = chunk.map_err(|e| anyhow::anyhow!(i18n::t("server.api.upload_interrupted", &[("error", e.to_string().into())])))?;
             total += chunk.len() as u64;
             file.write_all(&chunk).await?;
         }
@@ -1100,7 +1110,7 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
         Ok(n) if n > 0 => {}
         other => {
             let _ = tokio::fs::remove_file(&path).await;
-            let msg = other.map(|_| "The uploaded file was empty".to_string()).unwrap_or_else(|e| format!("{e:#}"));
+            let msg = other.map(|_| i18n::t("server.api.upload_empty", &[])).unwrap_or_else(|e| format!("{e:#}"));
             app.tasks.finish("restore", Err(anyhow::anyhow!(msg.clone())));
             return Err(ApiError::bad_request(msg));
         }
@@ -1118,12 +1128,12 @@ async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: R
     let path = receive(&app, req, "import", UPLOADS[0]).await?;
     let actor = Actor::from(&user);
     audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("jellystat")).await;
-    let worker = app.clone();
-    tokio::task::spawn_blocking(move || {
+    let (worker, lang) = (app.clone(), i18n::current());
+    blocking(move || {
         let outcome = import::run(&worker.db, &path, Some(&worker.tasks));
         let _ = std::fs::remove_file(&path);
         import_finished(&worker, actor, "jellystat", outcome.as_ref().map(|r| (r.plays_imported, r.plays_skipped)).map_err(|e| format!("{e:#}")));
-        worker.tasks.finish("import", outcome.map(|r| (format!("Imported {} plays ({} already present)", r.plays_imported, r.plays_skipped), serde_json::to_value(&r).ok())));
+        worker.tasks.finish("import", outcome.map(|r| (i18n::say(lang, "server.api.imported", &[("count", r.plays_imported.into()), ("skipped", r.plays_skipped.into())]), serde_json::to_value(&r).ok())));
     });
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
@@ -1132,18 +1142,19 @@ async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req
     let path = receive(&app, req, "import_streamystats", UPLOADS[1]).await?;
     let actor = Actor::from(&user);
     audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("streamystats")).await;
-    let worker = app.clone();
-    tokio::task::spawn_blocking(move || {
+    let (worker, lang) = (app.clone(), i18n::current());
+    blocking(move || {
         let outcome = streamystats::run(&worker.db, &path, Some(&worker.tasks));
         let _ = std::fs::remove_file(&path);
         import_finished(&worker, actor, "streamystats", outcome.as_ref().map(|r| (r.plays_imported, r.plays_skipped)).map_err(|e| format!("{e:#}")));
         worker.tasks.finish(
             "import_streamystats",
             outcome.map(|r| {
-                let mut msg = format!("Imported {} plays ({} already present)", r.plays_imported, r.plays_skipped);
-                if r.marked_watched > 0 {
-                    msg.push_str(&format!(", {} marked watched but never played", r.marked_watched));
-                }
+                let msg = if r.marked_watched > 0 {
+                    i18n::say(lang, "server.api.imported_marked", &[("count", r.plays_imported.into()), ("skipped", r.plays_skipped.into()), ("marked", r.marked_watched.into())])
+                } else {
+                    i18n::say(lang, "server.api.imported", &[("count", r.plays_imported.into()), ("skipped", r.plays_skipped.into())])
+                };
                 (msg, serde_json::to_value(&r).ok())
             }),
         );
@@ -1216,7 +1227,7 @@ async fn locate_title(State(app): State<App>, Manager(user): Manager, Json(body)
     let moved = done.map_err(|why| match why {
         crate::locate::Refused::NotMissing => ApiError::not_found("Missing title"),
         crate::locate::Refused::NoSuchTitle => ApiError::not_found("Title"),
-        crate::locate::Refused::WrongKind => ApiError::bad_request("A play is of a film, a video or an episode, never of a whole show or season"),
+        crate::locate::Refused::WrongKind => ApiError::bad_request(i18n::t("server.api.locate_wrong_kind", &[])),
     })?;
     audit::record(&app, audit::Entry::new("title_located", Actor::from(&user)).target(body.from).detail(json!({ "to": body.to, "plays": moved })));
     Ok(Json(json!({ "moved": moved })))
@@ -1234,7 +1245,7 @@ async fn tautulli_board(State(app): State<App>, Manager(_): Manager) -> ApiResul
         return Ok(Json(json!({ "board": null })));
     }
     let db = app.db.clone();
-    let board = tokio::task::spawn_blocking(move || crate::tautulli::board(&db, &path)).await.map_err(anyhow::Error::from)?;
+    let board = blocking(move || crate::tautulli::board(&db, &path)).await.map_err(anyhow::Error::from)?;
     Ok(Json(json!({ "board": board.ok() })))
 }
 
@@ -1242,7 +1253,7 @@ async fn tautulli_board(State(app): State<App>, Manager(_): Manager) -> ApiResul
 /// imported yet: the backup waits for its wires, and the answer is the board to draw them on.
 async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult {
     if history_being_written(&app) {
-        return Err(ApiError::new(StatusCode::CONFLICT, "An import or a restore is already running"));
+        return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
     }
     let path = app.data_dir.join(crate::tautulli::UPLOAD);
     let part = path.with_extension("part");
@@ -1252,12 +1263,12 @@ async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Reque
         Err(ApiError::bad_request(msg))
     };
     match received {
-        Ok(0) => return fail("The uploaded file was empty".into()),
+        Ok(0) => return fail(i18n::t("server.api.upload_empty", &[])),
         Err(e) => return fail(format!("{e:#}")),
         Ok(total) => tracing::info!("received a Tautulli backup ({:.1} MB)", total as f64 / 1e6),
     }
     let (db, checked) = (app.db.clone(), part.clone());
-    let board = tokio::task::spawn_blocking(move || {
+    let board = blocking(move || {
         crate::tautulli::unpack(&checked)?;
         crate::tautulli::open(&checked)?;
         std::fs::rename(&checked, &path)?;
@@ -1274,7 +1285,7 @@ async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Reque
 /// `DELETE /api/import/tautulli`: put a waiting board away without importing anything.
 async fn tautulli_cancel(State(app): State<App>, Manager(_): Manager) -> ApiResult {
     if history_being_written(&app) {
-        return Err(ApiError::new(StatusCode::CONFLICT, "An import or a restore is already running"));
+        return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
     }
     crate::tautulli::sweep(&app.data_dir, std::time::Duration::ZERO);
     Ok(Json(json!({ "ok": true })))
@@ -1290,26 +1301,26 @@ struct TautulliWires {
 async fn tautulli_run(State(app): State<App>, Manager(user): Manager, Json(body): Json<TautulliWires>) -> ApiResult<Response> {
     let path = app.data_dir.join(crate::tautulli::UPLOAD);
     if !path.exists() {
-        return Err(ApiError::new(StatusCode::CONFLICT, "No Tautulli backup is waiting. Upload one first."));
+        return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.no_tautulli_backup", &[])));
     }
     let (db, at, wires) = (app.db.clone(), path.clone(), body.wires.clone());
-    let wrong = tokio::task::spawn_blocking(move || crate::tautulli::check(&db, &at, &wires)).await.map_err(anyhow::Error::from)??;
+    let wrong = blocking(move || crate::tautulli::check(&db, &at, &wires)).await.map_err(anyhow::Error::from)??;
     if let Err(why) = wrong {
         return Err(ApiError::bad_request(why));
     }
-    if !app.tasks.try_start_alone(crate::tautulli::TASK, "Importing", &HISTORY_WRITERS) {
-        return Err(ApiError::new(StatusCode::CONFLICT, "An import or a restore is already running"));
+    if !app.tasks.try_start_alone(crate::tautulli::TASK, &i18n::t("server.api.importing", &[]), &HISTORY_WRITERS) {
+        return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
     }
     let actor = Actor::from(&user);
     audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("tautulli").detail(json!({ "wires": body.wires.len() }))).await;
-    let worker = app.clone();
-    tokio::task::spawn_blocking(move || {
+    let (worker, lang) = (app.clone(), i18n::current());
+    blocking(move || {
         let outcome = crate::tautulli::run(&worker.db, &path, &body.wires, Some(&worker.tasks));
         crate::tautulli::sweep(&worker.data_dir, std::time::Duration::ZERO);
         import_finished(&worker, actor, "tautulli", outcome.as_ref().map(|r| (r.plays_imported, r.plays_skipped)).map_err(|e| format!("{e:#}")));
         worker.tasks.finish(
             crate::tautulli::TASK,
-            outcome.map(|r| (format!("Imported {} plays ({} already present)", r.plays_imported, r.plays_skipped), serde_json::to_value(&r).ok())),
+            outcome.map(|r| (i18n::say(lang, "server.api.imported", &[("count", r.plays_imported.into()), ("skipped", r.plays_skipped.into())]), serde_json::to_value(&r).ok())),
         );
     });
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
@@ -1321,7 +1332,7 @@ async fn store_upload(req: Request, path: &std::path::Path) -> anyhow::Result<u6
     let mut stream = req.into_body().into_data_stream();
     let mut total = 0u64;
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| anyhow::anyhow!("The upload was interrupted: {e}"))?;
+        let chunk = chunk.map_err(|e| anyhow::anyhow!(i18n::t("server.api.upload_interrupted", &[("error", e.to_string().into())])))?;
         total += chunk.len() as u64;
         file.write_all(&chunk).await?;
     }
@@ -1331,8 +1342,8 @@ async fn store_upload(req: Request, path: &std::path::Path) -> anyhow::Result<u6
 
 /// Stream an uploaded export to disk. One import at a time, whichever tracker it came from.
 async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> ApiResult<std::path::PathBuf> {
-    if !app.tasks.try_start_alone(task, "Receiving backup", &HISTORY_WRITERS) {
-        return Err(ApiError::new(StatusCode::CONFLICT, "An import or a restore is already running"));
+    if !app.tasks.try_start_alone(task, &i18n::t("server.api.receiving_backup", &[]), &HISTORY_WRITERS) {
+        return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
     }
     let path = app.data_dir.join(name);
     let received = store_upload(req, &path).await;
@@ -1340,8 +1351,9 @@ async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> Api
     match received {
         Ok(0) => {
             let _ = tokio::fs::remove_file(&path).await;
-            app.tasks.finish(task, Err(anyhow::anyhow!("The uploaded file was empty")));
-            Err(ApiError::bad_request("The uploaded file was empty"))
+            let msg = i18n::t("server.api.upload_empty", &[]);
+            app.tasks.finish(task, Err(anyhow::anyhow!(msg.clone())));
+            Err(ApiError::bad_request(msg))
         }
         Ok(total) => {
             tracing::info!("received a history export ({:.1} MB)", total as f64 / 1e6);

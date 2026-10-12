@@ -22,6 +22,7 @@ use lettre::transport::smtp::client::{Tls, TlsParameters};
 use lettre::{Address, AsyncSmtpTransport, AsyncTransport, Tokio1Executor};
 
 use crate::channels::SendError;
+use crate::i18n::t;
 use crate::notify::Message;
 
 /// How long one letter may take, end to end. A mail server is slower than a webhook, and a queue that
@@ -43,13 +44,13 @@ pub struct Server {
 /// The stored address, read. `smtps://` is 465 and encrypted from the first byte, `smtp://` is 587 and
 /// must upgrade; a port that was typed always wins.
 pub fn server(url: &str) -> Result<Server> {
-    let parsed = reqwest::Url::parse(url).map_err(|_| anyhow!("That doesn't look like a mail server address"))?;
+    let parsed = reqwest::Url::parse(url).map_err(|_| anyhow!(t("server.mail.bad_url", &[])))?;
     let starttls = match parsed.scheme() {
         "smtps" => false,
         "smtp" => true,
-        _ => bail!("A mail server address starts with smtps:// or smtp://"),
+        _ => bail!(t("server.mail.scheme", &[])),
     };
-    let host = parsed.host_str().filter(|h| !h.is_empty()).ok_or_else(|| anyhow!("The address needs a host name"))?;
+    let host = parsed.host_str().filter(|h| !h.is_empty()).ok_or_else(|| anyhow!(t("server.mail.needs_host", &[])))?;
     Ok(Server { host: host.to_string(), port: parsed.port().unwrap_or(if starttls { 587 } else { 465 }), starttls })
 }
 
@@ -72,15 +73,15 @@ fn one_line(text: &str) -> String {
 /// Nothing here is a guess about whether it exists, only that it is an address at all.
 pub fn address(input: &str) -> Result<String> {
     let text = input.trim();
-    let parsed: Address = text.parse().map_err(|_| anyhow!("{text} is not an e-mail address"))?;
+    let parsed: Address = text.parse().map_err(|_| anyhow!(t("server.mail.not_an_address", &[("address", text.into())])))?;
     if !parsed.domain().contains('.') {
-        bail!("{text} is not an e-mail address: the part after @ needs a domain");
+        bail!(t("server.mail.no_domain", &[("address", text.into())]));
     }
     Ok(text.to_string())
 }
 
 fn mailbox(address: &str, name: Option<&str>) -> Result<Mailbox> {
-    let address: Address = address.trim().parse().map_err(|_| anyhow!("{} is not an e-mail address", address.trim()))?;
+    let address: Address = address.trim().parse().map_err(|_| anyhow!(t("server.mail.not_an_address", &[("address", address.trim().into())])))?;
     Ok(Mailbox::new(name.map(str::to_string), address))
 }
 
@@ -114,13 +115,13 @@ pub async fn deliver(acct: Account<'_>, m: &Message) -> std::result::Result<(), 
         .subject(letter.subject)
         .header(ContentType::TEXT_PLAIN)
         .body(letter.text)
-        .map_err(|_| SendError::of("That message could not be made into an e-mail"))?;
+        .map_err(|_| SendError::of(t("server.mail.not_a_letter", &[])))?;
 
     let tls = TlsParameters::builder(server.host.clone())
         .dangerous_accept_invalid_certs(acct.lax)
         .dangerous_accept_invalid_hostnames(acct.lax)
         .build()
-        .map_err(|_| SendError::of(format!("Could not set up an encrypted connection to {}", server.host)))?;
+        .map_err(|_| SendError::of(t("server.mail.no_tls_setup", &[("host", server.host.as_str().into())])))?;
     let mut builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&server.host)
         .port(server.port)
         .timeout(Some(Duration::from_secs(TIMEOUT_S)))
@@ -133,19 +134,18 @@ pub async fn deliver(acct: Account<'_>, m: &Message) -> std::result::Result<(), 
 
 /// Why a letter did not go, in words, and without anything the server said back.
 fn explain(e: &lettre::transport::smtp::Error, host: &str) -> String {
-    if e.is_timeout() {
-        return format!("{host} did not answer in time");
-    }
-    if e.is_tls() {
-        return format!("{host} would not start an encrypted connection. FinStats does not send mail in the clear: use smtps://, or a server that offers STARTTLS");
-    }
-    match e.status().map(|s| s.severity) {
-        Some(lettre::transport::smtp::response::Severity::PermanentNegativeCompletion) => {
-            format!("{host} refused the letter. Check the user name, the password and the From address")
+    let key = if e.is_timeout() {
+        "timeout"
+    } else if e.is_tls() {
+        "tls"
+    } else {
+        match e.status().map(|s| s.severity) {
+            Some(lettre::transport::smtp::response::Severity::PermanentNegativeCompletion) => "refused",
+            Some(_) => "busy",
+            None => "connect",
         }
-        Some(_) => format!("{host} could not take the letter just now"),
-        None => format!("Could not connect to {host}. Is it reachable from where FinStats runs?"),
-    }
+    };
+    t(&format!("server.mail.{key}"), &[("host", host.into())])
 }
 
 #[cfg(test)]

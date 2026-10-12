@@ -18,6 +18,7 @@ use reqwest::StatusCode;
 use reqwest::header::RETRY_AFTER;
 use serde_json::{Value, json};
 
+use crate::i18n::t;
 use crate::notify::{ALERT, Message, Target, WARN};
 use crate::state::App;
 
@@ -33,29 +34,25 @@ pub struct Extra {
     pub key: &'static str,
     /// This one holds an e-mail address, and is checked as one before it is stored.
     pub address: bool,
-    pub label: &'static str,
-    pub help: &'static str,
     pub example: &'static str,
     pub required: bool,
 }
 
+impl Extra {
+    /// What the field is called (`server.channels.extra.<key>.label`), in the language of whoever is reading.
+    pub fn title(&self) -> String {
+        t(&format!("server.channels.extra.{}.label", self.key), &[])
+    }
+
+    /// One line on what goes in it, in the language of whoever is reading.
+    pub fn help_text(&self) -> String {
+        t(&format!("server.channels.extra.{}.help", self.key), &[])
+    }
+}
+
 const EMAIL_EXTRAS: [Extra; 2] = [
-    Extra {
-        key: "from",
-        address: true,
-        label: "From address",
-        help: "The address the mail is sent as. Many servers only accept one they know.",
-        example: "finstats@example.com",
-        required: true,
-    },
-    Extra {
-        key: "username",
-        address: false,
-        label: "User name (optional)",
-        help: "Leave empty for a relay that needs no sign-in. Often the same as the From address.",
-        example: "finstats@example.com",
-        required: false,
-    },
+    Extra { key: "from", address: true, example: "finstats@example.com", required: true },
+    Extra { key: "username", address: false, example: "finstats@example.com", required: false },
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -109,18 +106,18 @@ impl Channel {
         }
     }
 
-    pub fn what(self) -> &'static str {
+    /// What a page calls it, in the reader's language: `label` is the name itself, which only "Webhook" and "Email"
+    /// are not.
+    pub fn title(self) -> String {
         match self {
-            Channel::Webhook => "A POST of JSON to any address: your own script, Home Assistant, n8n",
-            Channel::Discord => "A channel in your server, through a webhook you create there",
-            Channel::Slack => "A channel in your workspace, through an incoming webhook",
-            Channel::Telegram => "A chat with a bot of your own, or a group or channel it is in",
-            Channel::Email => "Any mailbox, through an SMTP server you already have",
-            Channel::Ntfy => "ntfy.sh or your own ntfy, to a topic of your choosing",
-            Channel::Gotify => "Your own Gotify server, with an application token",
-            Channel::Pushover => "Pushover on your phone, with an application of your own",
-            Channel::Pushbullet => "Pushbullet, on every device signed in to your account",
+            Channel::Webhook | Channel::Email => t(&format!("server.channels.{}", self.key()), &[]),
+            _ => self.label().to_string(),
         }
+    }
+
+    /// One line on what it is, in the reader's language.
+    pub fn what(self) -> String {
+        t(&format!("server.channels.what.{}", self.key()), &[])
     }
 
     /// Where the service lives, when that is not something anybody should have to type. A channel with
@@ -159,14 +156,13 @@ impl Channel {
         }
     }
 
-    pub fn topic_help(self) -> &'static str {
-        match self {
-            Channel::Ntfy => "The ntfy topic to publish to. Anybody who knows it can read your notifications, so make it hard to guess.",
-            Channel::Telegram => "Message your bot once, then open https://api.telegram.org/bot<token>/getUpdates and use the chat id it reports. A channel may be given as @name.",
-            Channel::Pushover => "Your user key, on the front page of pushover.net, or a group key.",
-            Channel::Email => "The mailbox to send to.",
-            _ => "",
-        }
+    /// `topic_label`, in the reader's language.
+    pub fn topic_title(self) -> Option<String> {
+        self.needs_topic().then(|| t(&format!("server.channels.topic.{}.label", self.key()), &[]))
+    }
+
+    pub fn topic_help(self) -> String {
+        if self.needs_topic() { t(&format!("server.channels.topic.{}.help", self.key()), &[]) } else { String::new() }
     }
 
     pub fn topic_example(self) -> &'static str {
@@ -185,16 +181,10 @@ impl Channel {
 
     /// What the secret beside the address is called, when there is one. A Discord or Slack webhook
     /// carries its own token in the URL, so there is nothing else to enter.
-    pub fn secret_label(self) -> Option<&'static str> {
+    pub fn secret_label(self) -> Option<String> {
         match self {
-            Channel::Webhook => Some("Authorization header (optional)"),
             Channel::Discord | Channel::Slack => None,
-            Channel::Telegram => Some("Bot token"),
-            Channel::Email => Some("Password (optional)"),
-            Channel::Ntfy => Some("Access token (optional)"),
-            Channel::Gotify => Some("Application token"),
-            Channel::Pushover => Some("Application token"),
-            Channel::Pushbullet => Some("Access token"),
+            _ => Some(t(&format!("server.channels.secret.{}", self.key()), &[])),
         }
     }
 
@@ -428,47 +418,49 @@ pub async fn send(app: &App, t: &Target, m: &Message) -> Result<(), SendError> {
 
 /// Why a request never got an answer, in words, and without the URL reqwest would print: that URL is the
 /// credential. Errors from here are shown in the UI and written to the log.
-fn explain(e: reqwest::Error, t: &Target) -> String {
-    let (label, host) = (t.channel.label(), crate::outbound::host_of(t.url()));
-    if e.is_timeout() {
-        format!("{label} at {host} did not answer in time")
+fn explain(e: reqwest::Error, target: &Target) -> String {
+    let key = if e.is_timeout() {
+        "timeout"
     } else if e.is_connect() {
-        format!("Could not connect to {host}. Is it reachable from where FinStats runs?")
+        "connect"
     } else if e.is_decode() {
-        format!("{host} did not answer like {label}")
+        "decode"
     } else {
-        format!("Could not reach {host}")
-    }
+        "unreachable"
+    };
+    t(&format!("server.channels.{key}"), &[("channel", target.channel.title().into()), ("host", crate::outbound::host_of(target.url()).into())])
 }
 
 /// An answer that is not the one asked for: the status and what it usually means, never the body.
-fn refuse(status: StatusCode, t: &Target) -> String {
-    let (label, host) = (t.channel.label(), crate::outbound::host_of(t.url()));
-    if status.is_redirection() {
-        return format!("{host} answers with a redirect. FinStats follows none, so that a token can never end up somewhere else: enter the address it redirects to");
-    }
-    match status.as_u16() {
-        // Telegram and Pushover both answer 400 for a chat or a user key they do not know, and the one
-        // the owner just typed is far more likely to be wrong than the token they pasted.
-        400 => match t.channel {
-            Channel::Telegram => format!("{label} does not know that chat. Send the bot a message first, then use the chat id it reports"),
-            Channel::Pushover => format!("{label} did not accept the user key or the application token"),
-            _ => format!("{label} did not understand the message"),
-        },
-        401 | 403 => match t.channel {
-            Channel::Discord => format!("{label} refused the webhook. Has it been deleted?"),
-            Channel::Telegram => format!("{label} refused the bot token"),
-            Channel::Pushbullet => format!("{label} refused the access token"),
-            _ => format!("{label} refused the token"),
-        },
-        404 => match t.channel {
-            Channel::Slack => format!("{label} no longer knows that webhook. Has the app or the channel been removed?"),
-            _ => format!("{host} answered 404 Not Found. Is the address right, topic and base path included?"),
-        },
-        413 => format!("{label} found the message too large"),
-        429 => format!("{label} is rate-limiting FinStats"),
-        _ => format!("{label} answered {status}"),
-    }
+fn refuse(status: StatusCode, target: &Target) -> String {
+    let key = if status.is_redirection() {
+        "redirect"
+    } else {
+        match status.as_u16() {
+            // Telegram and Pushover both answer 400 for a chat or a user key they do not know, and the one
+            // the owner just typed is far more likely to be wrong than the token they pasted.
+            400 => match target.channel {
+                Channel::Telegram => "telegram_chat",
+                Channel::Pushover => "pushover_key",
+                _ => "not_understood",
+            },
+            401 | 403 => match target.channel {
+                Channel::Discord => "discord_refused",
+                Channel::Telegram => "telegram_refused",
+                Channel::Pushbullet => "pushbullet_refused",
+                _ => "token_refused",
+            },
+            404 => match target.channel {
+                Channel::Slack => "slack_gone",
+                _ => "not_found",
+            },
+            413 => "too_large",
+            429 => "rate_limited",
+            _ => "answered",
+        }
+    };
+    let host = crate::outbound::host_of(target.url());
+    t(&format!("server.channels.{key}"), &[("channel", target.channel.title().into()), ("host", host.into()), ("status", status.to_string().into())])
 }
 
 #[cfg(test)]

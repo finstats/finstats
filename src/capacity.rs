@@ -257,11 +257,12 @@ pub fn software_transcodes(plays: &[Play], now: i64) -> Option<Finding> {
         return None;
     }
     let at_once = busiest(&recent.iter().filter(|p| p.way == Way::Software).copied().collect::<Vec<_>>(), 1).first().map_or(0, |m| m.streams);
+    let evidence = json!({ "days": SOFTWARE_WINDOW_DAYS, "plays": total, "transcodes": transcodes, "software": software, "hardware": hardware, "unsaid": unsaid, "most_at_once": at_once });
     Some(Finding {
         key: "capacity:software_transcodes".into(),
         kind: "software_transcodes",
-        title: format!("Every transcode in the last {SOFTWARE_WINDOW_DAYS} days that Jellyfin reported on ran without hardware acceleration"),
-        evidence: json!({ "days": SOFTWARE_WINDOW_DAYS, "plays": total, "transcodes": transcodes, "software": software, "hardware": hardware, "unsaid": unsaid, "most_at_once": at_once }),
+        title: said("software_transcodes", &evidence).unwrap_or_default(),
+        evidence,
         // The situation, not its numbers: they move every day, and a dismissal is of the situation.
         fingerprint: "no hardware transcodes".into(),
     })
@@ -275,11 +276,12 @@ pub const SCAN_DUTY_PCT: i64 = 25;
 pub fn scan_busy(interval_s: Option<i64>, last_duration_s: Option<i64>, items: i64) -> Option<Finding> {
     let (interval, took) = (interval_s.filter(|i| *i > 0)?, last_duration_s?);
     let duty = took * 100 / interval;
+    let evidence = json!({ "interval_s": interval, "last_duration_s": took, "duty_pct": duty, "items": items });
     (duty >= SCAN_DUTY_PCT).then(|| Finding {
         key: "capacity:scan_busy".into(),
         kind: "scan_busy",
-        title: "Jellyfin's library scan runs for a large share of the time".into(),
-        evidence: json!({ "interval_s": interval, "last_duration_s": took, "duty_pct": duty, "items": items }),
+        title: said("scan_busy", &evidence).unwrap_or_default(),
+        evidence,
         // The owner's setting: changing the interval is a new situation, a slower run of the same one is not.
         fingerprint: format!("every {interval} s"),
     })
@@ -294,23 +296,38 @@ pub fn runway(disk: &Disk) -> Option<Finding> {
     let months = disk.months_left.filter(|m| *m < RUNWAY_SHORT_MONTHS)?;
     let mark = RUNWAY_MARKS.iter().find(|m| months < **m).copied().unwrap_or(RUNWAY_SHORT_MONTHS);
     let place = disk.folders.join(", ");
+    let evidence = json!({ "folders": disk.folders, "libraries": disk.libraries, "free_bytes": disk.free, "added_per_month": disk.per_month,
+                           "months_left": (months * 10.0).round() / 10.0, "window_months": disk.window_months });
     Some(Finding {
         key: format!("capacity:runway:{place}"),
         kind: "runway",
-        title: format!("{place}: {} of space left at the pace of the last {} months", months_said(months), disk.window_months),
-        evidence: json!({ "folders": disk.folders, "libraries": disk.libraries, "free_bytes": disk.free, "added_per_month": disk.per_month,
-                          "months_left": (months * 10.0).round() / 10.0, "window_months": disk.window_months }),
+        title: said("runway", &evidence).unwrap_or_default(),
+        evidence,
         fingerprint: format!("under {mark} months"),
     })
 }
 
-/// "about four months", "under a month".
-fn months_said(m: f64) -> String {
-    match m {
-        m if m < 1.0 => "under a month".into(),
-        m if m < 1.5 => "about a month".into(),
-        m => format!("about {} months", m.round() as i64),
-    }
+/// A finding in a sentence, from its kind and its evidence alone, in the language of the request: worked out when it is
+/// found (the source's words, which are stored), and again when it is answered, in the reader's. `None` for a kind
+/// this version does not know.
+fn said(kind: &str, e: &Value) -> Option<String> {
+    let n = |k: &str| e[k].as_i64().unwrap_or(0);
+    let t = |key: &str, args: &[(&str, crate::i18n::Arg)]| crate::i18n::t(&format!("server.capacity.{key}"), args);
+    Some(match kind {
+        "software_transcodes" => t("software_transcodes", &[("days", n("days").into())]),
+        "scan_busy" => t("scan_busy", &[]),
+        "runway" => {
+            let place = e["folders"].as_array().map(|f| f.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(", ")).unwrap_or_default();
+            let (window, months) = (n("window_months"), e["months_left"].as_f64().unwrap_or(0.0));
+            let args = |about: i64| [("place", place.clone().into()), ("window", window.into()), ("count", about.into())];
+            match months {
+                m if m < 1.0 => t("runway_under_a_month", &args(0)),
+                m if m < 1.5 => t("runway_about_a_month", &args(1)),
+                m => t("runway_about", &args(m.round() as i64)),
+            }
+        }
+        _ => return None,
+    })
 }
 
 // ---------------------------------------------------------------- worked out after a read, kept, read back
@@ -414,7 +431,14 @@ pub fn answer(conn: &Connection) -> Result<Value> {
 
 /// `GET /api/server/capacity`: what the last recompute found. Read only; worked out after the server's reads.
 pub async fn get_capacity(State(app): State<App>, ServerViewer(_): ServerViewer) -> ApiResult {
-    Ok(Json(app.db.call(|c| answer(c)).await?))
+    let mut out = app.db.call(|c| answer(c)).await?;
+    // A finding is stored in the source's words; it is said again here, in the reader's.
+    for f in out["findings"].as_array_mut().into_iter().flatten() {
+        if let Some(title) = said(f["kind"].as_str().unwrap_or(""), &f["evidence"]) {
+            f["title"] = json!(title);
+        }
+    }
+    Ok(Json(out))
 }
 
 #[cfg(test)]

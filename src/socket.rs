@@ -26,7 +26,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::Value;
 use tokio::sync::{mpsc, watch};
@@ -78,15 +78,63 @@ pub enum Event {
     /// Jellyfin answered a `KeepAlive`. No news, and that is the point: it says the picture the collector
     /// already has is still the current one, which is what "last checked" means on this transport.
     Alive,
-    Down(String),
+    Down(Why),
+}
+
+/// Why the socket is not carrying. The collector notes it outside any request, so what is kept is what
+/// happened and its detail as it came; the words are chosen when somebody reads the status (`Serialize`,
+/// in the language of the request), and the log says it in English (`Display`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Why {
+    Closed,
+    Failed(String),
+    Mismatch(String),
+    CollectorGone,
+    Unreadable,
+    NoAnswer(u64),
+    Silent(u64),
+    NoHandshake(String, u64),
+    Refused(String, String),
+    /// Anything else, as the error said it.
+    Other(String),
+}
+
+impl Why {
+    pub fn say(&self, lang: &str) -> String {
+        use crate::i18n::say;
+        match self {
+            Why::Closed => say(lang, "server.socket.closed", &[]),
+            Why::Failed(d) => say(lang, "server.socket.failed", &[("detail", d.into())]),
+            Why::Mismatch(d) => say(lang, "server.socket.mismatch", &[("detail", d.into())]),
+            Why::CollectorGone => say(lang, "server.socket.collector_gone", &[]),
+            Why::Unreadable => say(lang, "server.socket.unreadable", &[]),
+            Why::NoAnswer(s) => say(lang, "server.socket.no_answer", &[("seconds", (*s).into())]),
+            Why::Silent(s) => say(lang, "server.socket.silent", &[("seconds", (*s).into())]),
+            Why::NoHandshake(url, s) => say(lang, "server.socket.no_handshake", &[("url", url.into()), ("seconds", (*s).into())]),
+            Why::Refused(url, d) => say(lang, "server.socket.refused", &[("url", url.into()), ("detail", d.into())]),
+            Why::Other(d) => d.clone(),
+        }
+    }
+}
+
+impl std::fmt::Display for Why {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.say(crate::i18n::LOCALES[0]))
+    }
+}
+
+impl serde::Serialize for Why {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.say(crate::i18n::current()))
+    }
 }
 
 /// How one connection ended. The difference matters only in how soon to try again: a server that does
 /// not answer a subscription is asked again in `PROBE_EVERY` rather than in a second or two, and a
 /// verdict is never kept: "does not speak this" and "was restarting when we asked" look the same.
 enum End {
-    Unsupported(String),
-    Broken(String),
+    Unsupported(Why),
+    Broken(Why),
 }
 
 /// A running socket task. Dropping it stops the task: one assignment, for a Jellyfin that changed.
@@ -301,7 +349,7 @@ pub fn spawn(jf: Jellyfin) -> Handle {
             tracing::debug!("socket: connecting to {}", jf.base());
             let end = match serve(&jf, &tx, &mut want_rx, &mine).await {
                 Ok(end) => end,
-                Err(e) => End::Broken(format!("{e:#}")),
+                Err(e) => End::Broken(Why::Other(format!("{e:#}"))),
             };
             // Nothing is open and nothing is subscribed between one connection and the next.
             mine.set(false, false);
@@ -335,7 +383,7 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
     req.headers_mut().insert("Authorization", auth.parse().context("the Jellyfin key is not a header value")?);
     let connect = tokio_tungstenite::connect_async_with_config(req, Some(config), false);
     let mut ws = match tokio::time::timeout(HANDSHAKE_MAX, connect).await {
-        Err(_) => bail!("{url} did not answer the handshake within {}s", HANDSHAKE_MAX.as_secs()),
+        Err(_) => return Ok(End::Broken(Why::NoHandshake(url.to_string(), HANDSHAKE_MAX.as_secs()))),
         Ok(Ok((ws, _))) => ws,
         // Some setups refuse an Authorization header on an upgrade; the key may go in the query instead.
         // The URL carrying it is built here and dropped here: it is never logged and never stored.
@@ -343,7 +391,7 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
             let with_key = jf.socket_url_with_key()?.into_client_request().context("building the socket request")?;
             match tokio::time::timeout(HANDSHAKE_MAX, tokio_tungstenite::connect_async_with_config(with_key, Some(config), false)).await {
                 Ok(Ok((ws, _))) => ws,
-                _ => bail!("{url} refused the connection ({first})"),
+                _ => return Ok(End::Broken(Why::Refused(url.to_string(), first.to_string()))),
             }
         }
     };
@@ -382,8 +430,8 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
     loop {
         tokio::select! {
             frame = ws.next() => match frame {
-                None => return Ok(End::Broken("Jellyfin closed the connection".into())),
-                Some(Err(e)) => return Ok(End::Broken(format!("the connection failed ({e})"))),
+                None => return Ok(End::Broken(Why::Closed)),
+                Some(Err(e)) => return Ok(End::Broken(Why::Failed(e.to_string()))),
                 Some(Ok(Message::Text(text))) => {
                     heard = Some(Instant::now());
                     match parse(text.as_str()) {
@@ -397,7 +445,7 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
                             let polled = crate::collector::sessions_waiting(jf, "socket_check", "socket_check").await.context("comparing the first pushed sessions with /Sessions")?;
                             if let Some(how) = looks_like_sessions(&list, &polled) {
                                 tracing::info!("socket: consistency check mismatch: {how}");
-                                return Ok(End::Unsupported(format!("what Jellyfin pushes does not match what it answers for /Sessions ({how})")));
+                                return Ok(End::Unsupported(Why::Mismatch(how)));
                             }
                         }
                         if subscribed.is_none() {
@@ -407,7 +455,7 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
                         subscribed = Some(Instant::now());
                         // A newer picture is on its way in a moment; dropping one is better than waiting.
                         if let Err(mpsc::error::TrySendError::Closed(_)) = tx.try_send(Event::Snapshot(list)) {
-                            return Ok(End::Broken("the collector stopped listening".into()));
+                            return Ok(End::Broken(Why::CollectorGone));
                         }
                     }
                     Msg::ForceKeepAlive(secs) => {
@@ -415,7 +463,7 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
                         keepalive = tokio::time::interval(period);
                         keepalive.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
                     }
-                    Msg::Unreadable => return Ok(End::Broken("Jellyfin sent a session list that could not be read".into())),
+                    Msg::Unreadable => return Ok(End::Broken(Why::Unreadable)),
                     // Worth saying only once the socket carries: before that the collector is polling
                     // and has a better answer of its own.
                     Msg::KeepAlive => {
@@ -426,7 +474,7 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
                     Msg::Other => {}
                     }
                 }
-                Some(Ok(Message::Close(_))) => return Ok(End::Broken("Jellyfin closed the connection".into())),
+                Some(Ok(Message::Close(_))) => return Ok(End::Broken(Why::Closed)),
                 // A pong (the library answers pings itself) is not a message, but it is a sign of life.
                 Some(Ok(_)) => heard = Some(Instant::now()),
             },
@@ -437,14 +485,14 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
                     listening = on;
                     listening_since = Instant::now();
                     if let Err(e) = ws.send(Message::Text(if on { SESSIONS_START } else { SESSIONS_STOP }.into())).await {
-                        return Ok(End::Broken(format!("the connection failed ({e})")));
+                        return Ok(End::Broken(Why::Failed(e.to_string())));
                     }
                     wire.set(true, on);
                 }
             }
             _ = keepalive.tick() => {
                 if let Err(e) = ws.send(Message::Text(KEEP_ALIVE.into())).await {
-                    return Ok(End::Broken(format!("the connection failed ({e})")));
+                    return Ok(End::Broken(Why::Failed(e.to_string())));
                 }
             }
             _ = watchdog.tick() => {
@@ -462,7 +510,7 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
                         }
                         // Nothing at all from it, not even an answer to a KeepAlive: that is different.
                         None if listening_since.elapsed() > NOT_ANSWERING => {
-                            return Ok(End::Broken(format!("no answer of any kind within {}s", NOT_ANSWERING.as_secs())));
+                            return Ok(End::Broken(Why::NoAnswer(NOT_ANSWERING.as_secs())));
                         }
                         None => {}
                     }
@@ -472,12 +520,12 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
                     asked_at = Instant::now();
                     tracing::info!("socket: still nothing pushed; subscribing again");
                     if let Err(e) = ws.send(Message::Text(SESSIONS_START.into())).await {
-                        return Ok(End::Broken(format!("the connection failed ({e})")));
+                        return Ok(End::Broken(Why::Failed(e.to_string())));
                     }
                 }
                 let lost = lost_after(period);
                 if heard.is_some_and(|at| at.elapsed() > lost) {
-                    return Ok(End::Broken(format!("Jellyfin said nothing for {}s", lost.as_secs())));
+                    return Ok(End::Broken(Why::Silent(lost.as_secs())));
                 }
             },
         }
@@ -488,6 +536,24 @@ async fn serve(jf: &Jellyfin, tx: &mpsc::Sender<Event>, want: &mut watch::Receiv
 mod tests {
     use super::*;
     use serde_json::json;
+
+    /// The collector notes why the socket stopped outside any request, so it keeps what happened and says it
+    /// in the words of whoever reads the status; the log keeps the English.
+    #[test]
+    fn why_the_socket_stopped_is_said_in_the_reader_s_language_and_logged_in_english() {
+        let silent = Why::Silent(130);
+        assert_eq!(silent.to_string(), "Jellyfin said nothing for 130s");
+        assert_eq!(silent.say("nb-NO"), "Jellyfin sa ingenting på 130 s");
+        assert_eq!(Why::Failed("reset by peer".into()).say("nn-NO"), "tilkoplinga feila (reset by peer)");
+        assert_eq!(Why::NoHandshake("ws://jellyfin.local:8096/socket".into(), 10).to_string(), "ws://jellyfin.local:8096/socket did not answer the handshake within 10s");
+        assert_eq!(Why::Other("building the socket request: bad".into()).say("nb-NO"), "building the socket request: bad", "a detail with no words of FinStats' own is passed on");
+        for why in [Why::Closed, Why::Failed("x".into()), Why::Mismatch("x".into()), Why::CollectorGone, Why::Unreadable, Why::NoAnswer(1), Why::Silent(1), Why::NoHandshake("u".into(), 1), Why::Refused("u".into(), "x".into())] {
+            for lang in crate::i18n::LOCALES {
+                assert!(!why.say(lang).starts_with("server."), "{lang}: {why:?} has no words");
+            }
+        }
+        assert_eq!(serde_json::to_value(Some(Why::Closed)).unwrap(), json!("Jellyfin closed the connection"), "outside a request: the source");
+    }
 
     #[test]
     fn a_session_list_is_read_in_either_casing() {

@@ -127,22 +127,31 @@ impl Cache {
     }
 }
 
-/// What a card is drawn from: its link, its kind and everything it would say.
+/// What a card is drawn from: its link, its kind, the language it is said in and everything it would say.
 pub fn key(token: &str, kind: Kind, a: &PublicProfile) -> String {
+    key_in(crate::i18n::current(), token, kind, a)
+}
+
+fn key_in(lang: &str, token: &str, kind: Kind, a: &PublicProfile) -> String {
     use sha2::{Digest, Sha256};
     let said = serde_json::to_vec(a).unwrap_or_default();
-    format!("{token}:{kind:?}:{}", hex::encode(&Sha256::digest(&said)[..12]))
+    format!("{token}:{kind:?}:{lang}:{}", hex::encode(&Sha256::digest(&said)[..12]))
 }
 
 /// Posters by item id, as the image cache holds them (JPEG, PNG or WebP bytes).
 pub type Posters = HashMap<String, Vec<u8>>;
 
+/// The card in the language of the request that asks for it (a visitor's browser says which).
 pub fn svg(kind: Kind, a: &PublicProfile, posters: &Posters) -> String {
+    svg_in(crate::i18n::current(), kind, a, posters)
+}
+
+fn svg_in(lang: &str, kind: Kind, a: &PublicProfile, posters: &Posters) -> String {
     let mut c = Canvas::new();
     c.push(format!(r#"<rect width="{W}" height="{H}" fill="{BG}"/><rect width="{W}" height="6" fill="{ACCENT}"/>"#));
     match kind {
-        Kind::Profile => profile(&mut c, a, posters),
-        Kind::Recap => recap(&mut c, a, posters),
+        Kind::Profile => profile(lang, &mut c, a, posters),
+        Kind::Recap => recap(lang, &mut c, a, posters),
     }
     c.text(64.0, 590.0, Style(22.0, 600, FAINT), "FinStats");
     c.finish()
@@ -159,7 +168,13 @@ pub(crate) const ACCENT_HI: &str = "#a68af9";
 // The weekday × hour grid's colours, as `charts.js` has them.
 pub(crate) const HEAT_EMPTY: &str = "#2f2f2f";
 pub(crate) const HEAT_RAMP: [&str; 6] = ["#3a3358", "#4b3f80", "#5e4ba8", "#7459d0", "#8f6ff0", "#b49dfb"];
-pub(crate) const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/// The weekdays, Monday first as the grid's rows are, by their keys in the catalogue (`server.card.weekday.<key>`).
+pub(crate) const DAYS: [&str; 7] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+/// A weekday's short name in `lang`, Monday first: the grid's row labels.
+pub(crate) fn weekday_short(lang: &str, d: usize) -> String {
+    crate::i18n::say(lang, &format!("server.card.weekday.{}", DAYS[d % 7]), &[])
+}
 
 /// Size, weight and colour of a line of text.
 #[derive(Clone, Copy)]
@@ -236,8 +251,8 @@ impl Canvas {
     }
 }
 
-fn shown_name(a: &PublicProfile) -> &str {
-    if a.name.is_empty() { "A FinStats profile" } else { &a.name }
+fn shown_name(lang: &str, a: &PublicProfile) -> String {
+    if a.name.is_empty() { crate::i18n::say(lang, "server.card.a_profile", &[]) } else { a.name.clone() }
 }
 
 /// Series and films taken in turn, then music: the posters row, as many as there is room for: six on
@@ -254,15 +269,17 @@ fn shelf(a: &PublicProfile) -> Vec<&Title> {
     out
 }
 
+/// The posters the year's card draws, each with its label's key.
 fn recap_picks(a: &PublicProfile) -> Vec<(&'static str, &Title)> {
     let Some(r) = &a.recap else { return vec![] };
-    [("Top show", r.top_series.first()), ("Top film", r.top_movies.first())].into_iter().filter_map(|(l, t)| t.map(|t| (l, t))).collect()
+    [("server.card.top_show", r.top_series.first()), ("server.card.top_film", r.top_movies.first())].into_iter().filter_map(|(l, t)| t.map(|t| (l, t))).collect()
 }
 
-fn profile(c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
-    c.text_fit(64.0, 118.0, Style(60.0, 700, TEXT), shown_name(a), Some(1072.0));
+fn profile(lang: &str, c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
+    let say = |key: &str, args: &[(&str, crate::i18n::Arg)]| crate::i18n::say(lang, key, args);
+    c.text_fit(64.0, 118.0, Style(60.0, 700, TEXT), &shown_name(lang, a), Some(1072.0));
     if let Some(t) = &a.totals {
-        let line = format!("{} hours watched · {} plays", thousands(t.watch_s / 3600), thousands(t.plays));
+        let line = format!("{} · {}", say("server.card.hours_watched", &[("count", (t.watch_s / 3600).into())]), say("server.story.plays", &[("count", t.plays.into())]));
         c.text(64.0, 168.0, Style(28.0, 400, MUTED), &line);
         let (pw, ph, gap) = (150.0, 225.0, 24.0);
         for (i, title) in shelf(a).into_iter().enumerate() {
@@ -276,23 +293,22 @@ fn profile(c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
     }
     if let Some(hb) = &a.habits {
         let (x, y, w, row) = if a.totals.is_some() { (780.0, 232.0, 356.0, 14.0) } else { (64.0, 214.0, 1072.0, 30.0) };
-        c.text(x, y - 18.0, Style(18.0, 600, FAINT), "When they watch");
-        heat(c, x, y, w, row, &hb.heatmap.watch_s);
+        c.text(x, y - 18.0, Style(18.0, 600, FAINT), &say("server.card.when_they_watch", &[]));
+        heat(lang, c, x, y, w, row, &hb.heatmap.watch_s);
         let under = y + 7.0 * (row + 2.0) + 58.0;
-        let streak = format!("Longest streak {} {}", thousands(hb.longest_streak_days), if hb.longest_streak_days == 1 { "day" } else { "days" });
-        c.text(x, under, Style(24.0, 600, TEXT), &streak);
-        c.text(x, under + 32.0, Style(20.0, 400, MUTED), &format!("{} days with something on", thousands(hb.active_days)));
+        c.text(x, under, Style(24.0, 600, TEXT), &say("server.card.longest_streak", &[("count", hb.longest_streak_days.into())]));
+        c.text(x, under + 32.0, Style(20.0, 400, MUTED), &say("server.story.with_something_on", &[("count", hb.active_days.into())]));
     }
 }
 
 /// The weekday × hour grid, the way the page draws it: day labels on the left, 24 columns of cells.
-fn heat(c: &mut Canvas, x: f64, y: f64, w: f64, row: f64, grid: &[Vec<i64>]) {
+fn heat(lang: &str, c: &mut Canvas, x: f64, y: f64, w: f64, row: f64, grid: &[Vec<i64>]) {
     let (label, gap) = (40.0, 2.0);
     let cw = (w - label - gap * 23.0) / 24.0;
     let max = grid.iter().flatten().copied().max().unwrap_or(0);
-    for (d, name) in DAYS.iter().enumerate() {
+    for d in 0..DAYS.len() {
         let cy = y + d as f64 * (row + gap);
-        c.text(x, cy + row * 0.5 + 5.0, Style(13.0, 400, FAINT), name);
+        c.text(x, cy + row * 0.5 + 5.0, Style(13.0, 400, FAINT), &weekday_short(lang, d));
         for hr in 0..24 {
             let v = grid.get(d).and_then(|r| r.get(hr)).copied().unwrap_or(0);
             let fill = if v <= 0 || max <= 0 { HEAT_EMPTY } else { HEAT_RAMP[((v as f64 / max as f64 * HEAT_RAMP.len() as f64 - 1e-9).floor() as usize).min(HEAT_RAMP.len() - 1)] };
@@ -309,23 +325,24 @@ fn heat(c: &mut Canvas, x: f64, y: f64, w: f64, row: f64, grid: &[Vec<i64>]) {
     }
 }
 
-fn recap(c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
+fn recap(lang: &str, c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
     let Some(r) = &a.recap else { return };
+    let say = |key: &str, args: &[(&str, crate::i18n::Arg)]| crate::i18n::say(lang, key, args);
     c.text_fit(64.0, 170.0, Style(132.0, 700, ACCENT_HI), &r.label, Some(620.0));
-    let whose = if a.name.is_empty() { "A year on FinStats".to_string() } else { format!("{}’s year", a.name) };
+    let whose = if a.name.is_empty() { say("server.card.a_year", &[]) } else { say("server.card.whose_year", &[("name", a.name.as_str().into())]) };
     c.text_fit(64.0, 226.0, Style(34.0, 600, TEXT), &whose, Some(620.0));
-    c.text(64.0, 330.0, Style(84.0, 700, TEXT), &thousands(r.totals.watch_s / 3600));
-    c.text(64.0, 366.0, Style(24.0, 400, MUTED), "hours watched");
-    let mut facts = vec![format!("{} plays", thousands(r.totals.plays)), format!("{} days", thousands(r.totals.active_days))];
+    c.text(64.0, 330.0, Style(84.0, 700, TEXT), &number(lang, r.totals.watch_s / 3600));
+    c.text(64.0, 366.0, Style(24.0, 400, MUTED), &say("server.card.hours_watched_unit", &[]));
+    let mut facts = vec![say("server.story.plays", &[("count", r.totals.plays.into())]), say("server.story.days", &[("count", r.totals.active_days.into())])];
     if let Some(d) = r.records.longest_streak_days {
-        facts.push(format!("a {d}-day streak"));
+        facts.push(say("server.card.streak", &[("count", d.into())]));
     }
     c.text_fit(64.0, 414.0, Style(22.0, 400, MUTED), &facts.join(" · "), Some(620.0));
     if let Some(p) = &r.persona {
         c.text_fit(64.0, 480.0, Style(30.0, 700, ACCENT_HI), &p.title, Some(620.0));
         c.text_fit(64.0, 514.0, Style(20.0, 400, MUTED), &p.line, Some(620.0));
     } else if let Some(g) = r.genres.first() {
-        c.text_fit(64.0, 480.0, Style(30.0, 700, ACCENT_HI), &format!("Mostly {}", g.name), Some(620.0));
+        c.text_fit(64.0, 480.0, Style(30.0, 700, ACCENT_HI), &say("server.story.mostly", &[("genre", g.name.as_str().into())]), Some(620.0));
     }
     let picks = recap_picks(a);
     let (pw, ph) = (200.0, 300.0);
@@ -333,7 +350,7 @@ fn recap(c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
     let n = picks.len();
     for (i, (label, t)) in picks.into_iter().enumerate() {
         let x = 1136.0 - (n - i) as f64 * (pw + 24.0) + 24.0;
-        c.text(x, 122.0, Style(16.0, 600, FAINT), label);
+        c.text(x, 122.0, Style(16.0, 600, FAINT), &say(label, &[]));
         c.poster(x, 136.0, pw, ph, t.image.as_ref().and_then(|id| posters.get(id)));
         c.wrap(x, 466.0, Style(20.0, 600, TEXT), &t.name, pw, 2);
     }
@@ -381,12 +398,20 @@ fn base64(b: &[u8]) -> String {
     out
 }
 
+/// A number as the source language writes it.
+#[cfg(test)]
 pub(crate) fn thousands(n: i64) -> String {
+    number(crate::i18n::LOCALES[0], n)
+}
+
+/// A whole number as `lang` writes it, as the pages do: 1,203 in English, 1 203 (a no-break space) in Norwegian.
+pub(crate) fn number(lang: &str, n: i64) -> String {
+    let sep = if lang.starts_with("en") { ',' } else { '\u{a0}' };
     let digits = n.unsigned_abs().to_string();
     let mut out = String::new();
     for (i, ch) in digits.chars().enumerate() {
         if i > 0 && (digits.len() - i).is_multiple_of(3) {
-            out.push(',');
+            out.push(sep);
         }
         out.push(ch);
     }
@@ -564,6 +589,39 @@ mod tests {
         assert_eq!(thousands(999), "999");
         assert_eq!(thousands(1_234_567), "1,234,567");
         assert!(svg(Kind::Profile, &profile(), &Posters::new()).contains("412"));
+    }
+
+    /// Both cards are drawn in the language of whoever asks (a visitor's browser says which), and a card in one
+    /// language is never answered from the cache to a reader of another.
+    #[test]
+    fn a_card_is_drawn_and_kept_in_the_reader_s_language() {
+        let a = profile();
+        let nb = svg_in("nb-NO", Kind::Profile, &a, &Posters::new()) + &svg_in("nb-NO", Kind::Recap, &a, &Posters::new());
+        for said in ["412 timer visningstid", "1\u{a0}203 avspillinger", "Når de ser på", "Lengste rekke: 23 dager på rad", "200 dager med noe på skjermen", ">man<", ">søn<", "Året til Alice", "12 dager på rad", "Toppserie", "Mest Drama"] {
+            assert!(nb.contains(said), "nb-NO lacks {said:?}: {nb}");
+        }
+        let nn = svg_in("nn-NO", Kind::Profile, &a, &Posters::new());
+        assert!(nn.contains("Når dei ser på") && nn.contains(">mån<"), "{nn}");
+        let gb = svg_in("en-GB", Kind::Profile, &a, &Posters::new()) + &svg_in("en-GB", Kind::Recap, &a, &Posters::new());
+        for said in ["412 hours watched", "1,203 plays", "When they watch", "Longest streak 23 days", ">Mon<", "Alice’s year", "a 12-day streak", "Top show"] {
+            assert!(gb.contains(said), "en-GB lacks {said:?}");
+        }
+        assert_ne!(key_in("en-GB", "tok", Kind::Profile, &a), key_in("nb-NO", "tok", Kind::Profile, &a));
+    }
+
+    /// Norwegian letters are in the bundled font: a card that says «Året» must not lose its Å.
+    #[test]
+    fn norwegian_letters_are_drawn() {
+        // A letter the font lacks is drawn as every other letter it lacks (a private-use one, here).
+        let draw = |s: &str| {
+            let mut c = Canvas::new();
+            c.text(10.0, 50.0, Style(40.0, 700, TEXT), s);
+            render_png(&c.finish_sized(80, 80)).unwrap()
+        };
+        let missing = draw("\u{E000}");
+        for letter in ["æ", "ø", "å", "Æ", "Ø", "Å"] {
+            assert_ne!(draw(letter), missing, "the bundled font does not draw {letter}");
+        }
     }
 
     #[test]

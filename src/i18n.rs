@@ -127,10 +127,193 @@ pub fn carry<F: std::future::Future>(fut: F) -> impl std::future::Future<Output 
     LANG.scope(current(), fut)
 }
 
+/// `f` in `lang`, on a thread with no request around it (the database's): the synchronous half of `carry`.
+pub fn within<R>(lang: &'static str, f: impl FnOnce() -> R) -> R {
+    LANG.sync_scope(lang, f)
+}
+
+/// The language a request asks for: the one chosen in FinStats (the `finstats_lang` cookie the pages keep, which a
+/// picture or a download fetched by the browser itself carries too), else `Accept-Language`.
+pub fn asked(headers: &axum::http::HeaderMap) -> &'static str {
+    let chosen = headers.get_all(axum::http::header::COOKIE).iter().filter_map(|v| v.to_str().ok()).flat_map(|v| v.split(';'))
+        .filter_map(|c| c.trim().strip_prefix("finstats_lang=")).find_map(|tag| LOCALES.iter().copied().find(|l| *l == tag));
+    chosen.unwrap_or_else(|| pick(headers.get(ACCEPT_LANGUAGE).and_then(|v| v.to_str().ok()).unwrap_or("")))
+}
+
 /// Keeps the language a request asked for while it is answered.
 pub async fn middleware(req: Request, next: Next) -> Response {
-    let lang = pick(req.headers().get(ACCEPT_LANGUAGE).and_then(|v| v.to_str().ok()).unwrap_or(""));
+    let lang = asked(req.headers());
     LANG.scope(lang, next.run(req)).await
+}
+
+/// The pages hold up their side: every key they ask for has a text, and no English sentence is left in them outside one.
+#[cfg(test)]
+mod pages_tests {
+    use super::*;
+    use std::path::{Path, PathBuf};
+
+    fn web() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("web/assets")
+    }
+    fn js_files(dir: &Path) -> Vec<PathBuf> {
+        let mut out = vec![];
+        let mut todo = vec![dir.to_path_buf()];
+        while let Some(d) = todo.pop() {
+            for e in std::fs::read_dir(&d).unwrap().flatten() {
+                let p = e.path();
+                if p.is_dir() { todo.push(p) } else if p.extension().is_some_and(|x| x == "js") { out.push(p) }
+            }
+        }
+        out.sort();
+        out
+    }
+    /// The interface's code: FinStats' modules and FinUI's components, not FinUI create or its gallery.
+    fn interface() -> Vec<(String, String)> {
+        let w = web();
+        js_files(&w.join("js")).into_iter().chain(js_files(&w.join("finui/components")))
+            .map(|p| (p.strip_prefix(&w).unwrap().to_string_lossy().replace('\\', "/"), std::fs::read_to_string(&p).unwrap()))
+            .collect()
+    }
+    /// The code without comments and without FinUI's `meta` (its gallery's documentation, never shown in FinStats).
+    fn code(js: &str) -> String {
+        // FinUI's gallery: `meta`, and the demo data its pages are drawn with, after the component's last function.
+        let js = match js.find("export const meta") { Some(at) => js[..at].rfind("\n}\n").map_or(&js[..at], |end| &js[..end + 3]), None => js };
+        let mut out = String::new();
+        let mut rest = js;
+        while let Some(at) = rest.find("/*") {
+            out.push_str(&rest[..at]);
+            rest = rest[at..].find("*/").map_or("", |end| &rest[at + end + 2..]);
+        }
+        out.push_str(rest);
+        out.lines().map(|l| match l.find("// ") { Some(at) if !l[..at].ends_with(':') && l[..at].matches('\'').count() % 2 == 0 && l[..at].matches('`').count() % 2 == 0 => &l[..at], _ => l }).collect::<Vec<_>>().join("\n")
+    }
+    /// Every string literal of a line, with what stands before it on that line.
+    fn literals(line: &str) -> Vec<(String, String)> {
+        let b = line.as_bytes();
+        let mut out = vec![];
+        let mut i = 0;
+        while i < b.len() {
+            let q = b[i];
+            if q == b'\'' || q == b'"' || q == b'`' {
+                let start = i;
+                i += 1;
+                let mut s = String::new();
+                while i < b.len() && b[i] != q {
+                    if b[i] == b'\\' { i += 1; }
+                    if i < b.len() { s.push(b[i] as char); }
+                    i += 1;
+                }
+                out.push((line[..start].to_string(), String::from_utf8_lossy(&line.as_bytes()[start + 1..i.min(b.len())]).into_owned()));
+            }
+            i += 1;
+        }
+        out
+    }
+    fn has_text(cat: &serde_json::Value, key: &str) -> bool {
+        let mut v = cat;
+        for part in key.split('.') {
+            match v.get(part) { Some(x) => v = x, None => return false }
+        }
+        v.is_string() || v.get("other").is_some_and(|o| o.is_string())
+    }
+    fn has_branch(cat: &serde_json::Value, key: &str) -> bool {
+        let mut v = cat;
+        for part in key.trim_end_matches('.').split('.') {
+            match v.get(part) { Some(x) => v = x, None => return false }
+        }
+        v.is_object()
+    }
+
+    #[test]
+    fn every_key_the_pages_ask_for_has_a_text() {
+        let cat = catalogue("en-GB");
+        let mut missing = vec![];
+        for (file, js) in interface() {
+            for line in code(&js).lines() {
+                for (before, lit) in literals(line) {
+                    let b = before.trim_end();
+                    let call = ["tParts(", "t(", "tr(", "say("].into_iter().find(|c| b.ends_with(c) && !b[..b.len() - c.len()].ends_with(|x: char| x.is_alphanumeric() || x == '.' || x == '_' || x == '$'));
+                    let Some(call) = call else { continue };
+                    if lit.contains(char::is_whitespace) || lit.is_empty() || lit.starts_with("${") { continue }
+                    let key = if call == "say(" { format!("finui.{lit}") } else { lit.clone() };
+                    let ok = match key.split_once("${") {
+                        Some((stem, _)) => has_branch(cat, stem) || has_text(cat, stem.trim_end_matches('.')),
+                        None => has_text(cat, &key),
+                    };
+                    if !ok { missing.push(format!("{file}: {key}")); }
+                }
+            }
+        }
+        assert!(missing.is_empty(), "keys with no text in en-GB:\n  {}", missing.join("\n  "));
+    }
+
+    /// Single words the code compares or sends rather than shows: ids from Jellyfin and the API (item, person and
+    /// changelog kinds, play methods), key names, an HTTP header, and names that are the same in every language.
+    const IDS: &[&str] = &[
+        "Movie", "Series", "Season", "Episode", "Audio", "Video", "Book", "MusicAlbum", "MusicArtist", "TvChannel", "Trailer", "BoxSet", "Folder", "Playlist", "Photo",
+        "Actor", "Director", "Writer", "Producer", "Composer", "GuestStar",
+        "Added", "Changed", "Performance", "Stability", "Fixed", "Removed",
+        "Transcode", "DirectPlay", "DirectStream", "Software", "Hardware", "None", "Other", "Unknown", "Remote", "Local",
+        "Escape", "Enter", "Tab", "Home", "End", "Space", "Backspace", "Delete", "PageUp", "PageDown", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Control", "Shift", "Meta", "Alt",
+        "Active", "Restart", "Deleted", "Superceded", "Malfunctioned", "NotSupported", "Disabled", "Cancelling", "Running", "Idle", "Off",
+        "Ctrl", "Esc", "Accept", "Mbps", "kbps", "Jellyfin", "Jellystat", "Streamystats", "Tautulli", "Sonarr", "Radarr", "Seerr", "Plex", "FinStats", "FinUI", "GitHub", "Discord", "Telegram", "Gotify", "Pushover", "Pushbullet",
+    ];
+    /// What may stay English in the code, each with why: names, and words the code reads rather than shows.
+    const ENGLISH_ON_PURPOSE: &[&str] = &[
+        "js/i18n.js:Norsk bokmål", "js/i18n.js:Norsk nynorsk", // each language by its own name, in i18n.js's list
+        "js/state.js:not all", // a media query
+        // The buttons and menus of Jellystat's, Streamystats' and Tautulli's own (English) pages, named in the import steps.
+        "js/settings/import.js:Settings", "js/settings/import.js:Backup", "js/settings/import.js:Activity", "js/settings/import.js:Backups",
+        "js/settings/import.js:Actions", "js/settings/import.js:Download",
+    ];
+
+    #[test]
+    fn no_english_sentence_is_left_in_the_pages() {
+        let mut found = vec![];
+        for (file, js) in interface() {
+            let whole = code(&js);
+            let starts: Vec<usize> = std::iter::once(0).chain(whole.match_indices('\n').map(|(i, _)| i + 1)).collect();
+            for (n, line) in whole.lines().enumerate() {
+                if line.contains("console.") || line.trim_start().starts_with("import ") { continue }
+                for (before, lit) in literals(line) {
+                    let b = before.trim_end();
+                    // FinUI's English beside its key, `say('key', '…'` (the call may run over lines).
+                    let upto = &whole[..starts[n] + before.len()];
+                    let mut from = upto.len().saturating_sub(400);
+                    while !upto.is_char_boundary(from) { from -= 1; }
+                    let tail = upto[from..].trim_end();
+                    if tail.ends_with(',') && tail.rfind("say(").is_some_and(|at| { let call = &tail[at + 4..tail.len() - 1]; let c = call.trim(); c.len() >= 2 && (c.starts_with('\'') || c.starts_with('`')) && c.ends_with(c.chars().next().unwrap()) && !c[1..c.len() - 1].contains(['\'', '`', '(']) }) { continue }
+                    // Words handed to the catalogue (FinUI's English fallback beside its key, a fallback for an id) are its.
+                    if ["t(", "tParts(", "tr(", "say(", "tOr("].iter().any(|c| b.ends_with(c) && !b[..b.len() - c.len()].ends_with(|x: char| x.is_alphanumeric() || x == '.' || x == '_' || x == '$')) { continue }
+                    if b.contains("say(") && b.ends_with(',') && b.matches("say(").count() > b.matches(')').count() { continue }
+                    // Classes, selectors and attributes are not words.
+                    if b.ends_with("class:") || b.ends_with("className =") || b.contains("querySelector") || b.contains("classList") || b.ends_with("closest(") || b.ends_with("matches(") || b.ends_with("rel:") || b.ends_with("noopener") || b.ends_with('?') && b.contains("rel:") || b.ends_with("Error(") { continue }
+                    if IDS.contains(&lit.trim()) { continue }
+                    // Addresses, selectors and CSS values are not words.
+                    if lit.starts_with('/') || (lit.contains('[') && lit.contains(']')) || (lit.ends_with(')') && lit.split('(').next().is_some_and(|f| !f.is_empty() && f.chars().all(|c| c.is_ascii_lowercase() || c == '-'))) { continue }
+                    // What a template says once its ${…} (however nested) are taken out.
+                    let bare: String = {
+                        let (mut out, mut depth, mut chars) = (String::new(), 0, lit.chars().peekable());
+                        while let Some(c) = chars.next() {
+                            if c == '$' && chars.peek() == Some(&'{') { chars.next(); depth += 1; out.push(' '); }
+                            else if depth > 0 && c == '{' { depth += 1 }
+                            else if depth > 0 && c == '}' { depth -= 1 }
+                            else if depth == 0 { out.push(c) }
+                        }
+                        out
+                    };
+                    let words: Vec<&str> = bare.split_whitespace().filter(|w| !IDS.contains(w)).collect();
+                    let worded = |w: &&str| w.chars().all(|c| c.is_alphabetic() || "’'.,:?!…".contains(c)) && w.chars().any(char::is_alphabetic) && !w.trim_end_matches(['.', ',', ':', '?', '!', '…']).contains('.');
+                    let prose = words.len() >= 2 && words.iter().filter(|w| worded(w)).count() >= 2 && words.iter().any(|w| w.len() >= 3 && w.chars().next().is_some_and(char::is_lowercase) && worded(w));
+                    let label = words.len() == 1 && worded(&words[0]) && words[0].len() >= 3 && words[0].chars().next().is_some_and(char::is_uppercase) && words[0].chars().skip(1).all(|c| c.is_lowercase() || "’'.:…".contains(c));
+                    if (prose || label) && !ENGLISH_ON_PURPOSE.contains(&format!("{file}:{lit}").as_str()) {
+                        found.push(format!("{file}:{}: {lit}", n + 1));
+                    }
+                }
+            }
+        }
+        assert!(found.is_empty(), "{} English text(s) outside the catalogue (t(), tParts(), or FinUI's say()):\n  {}", found.len(), found.join("\n  "));
+    }
 }
 
 #[cfg(test)]
@@ -170,6 +353,16 @@ mod say_tests {
     }
 
     #[test]
+    fn work_on_the_database_thread_keeps_the_request_s_language() {
+        let rt = tokio::runtime::Builder::new_multi_thread().worker_threads(1).build().unwrap();
+        let said = rt.block_on(LANG.scope("nn-NO", async {
+            let db = crate::db::Db::open_in_memory().unwrap();
+            db.call(|_| Ok(crate::state::ApiError::not_found("Play").1)).await.unwrap()
+        }));
+        assert_eq!(said, "Fann ikkje avspelinga");
+    }
+
+    #[test]
     fn a_key_with_no_text_is_the_key() {
         assert_eq!(say("en-GB", "no.such.key", &[]), "no.such.key");
         assert_eq!(say("en-GB", "nav.groups", &[]), "nav.groups");
@@ -191,6 +384,22 @@ mod pick_tests {
         assert_eq!(pick("de-DE,nn;q=0.5"), "nn-NO", "a language FinStats does not speak is passed over");
         assert_eq!(pick("en;q=0.2,nb;q=0.9"), "nb-NO", "the weights decide, not the order");
         assert_eq!(pick("NB-no"), "nb-NO");
+    }
+
+    #[test]
+    fn the_language_chosen_in_finstats_beats_the_browser_s() {
+        use axum::http::{HeaderMap, HeaderValue};
+        let h = |accept: &str, cookie: Option<&str>| {
+            let mut m = HeaderMap::new();
+            m.insert(ACCEPT_LANGUAGE, HeaderValue::from_str(accept).unwrap());
+            if let Some(c) = cookie { m.insert(axum::http::header::COOKIE, HeaderValue::from_str(c).unwrap()); }
+            m
+        };
+        // A picture or a download is fetched by the browser itself, with the browser's own languages.
+        assert_eq!(asked(&h("en-US,en;q=0.9", Some("finstats_session=x; finstats_lang=nn-NO"))), "nn-NO");
+        assert_eq!(asked(&h("en-US", None)), "en-US");
+        assert_eq!(asked(&h("nb", Some("finstats_lang=de-DE"))), "nb-NO", "a cookie naming a language FinStats does not speak is ignored");
+        assert_eq!(asked(&HeaderMap::new()), "en-GB");
     }
 
     #[test]

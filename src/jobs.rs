@@ -38,63 +38,73 @@ const TICKS_PER_S: i64 = 10_000_000;
 
 // ---------------------------------------------------------------- what a job actually does
 
-/// The plain-English sentence for a task, by Jellyfin's key first (which does not change with the
-/// server's language) and by its name second. `None` when FinStats has never heard of it.
-pub fn explain(key: &str, name: &str) -> Option<&'static str> {
+/// The plain sentence for a task, in the reader's language (`server.jobs.explain.<which>`). `None` when
+/// FinStats has never heard of it.
+pub fn explain(key: &str, name: &str) -> Option<String> {
+    explain_in(crate::i18n::current(), key, name)
+}
+
+fn explain_in(lang: &str, key: &str, name: &str) -> Option<String> {
+    which(key, name).map(|w| crate::i18n::say(lang, &format!("server.jobs.explain.{w}"), &[]))
+}
+
+/// Which job this is, by Jellyfin's key first (which does not change with the server's language) and by
+/// its name second.
+fn which(key: &str, name: &str) -> Option<&'static str> {
     let k = key.to_ascii_lowercase();
     let n = name.to_ascii_lowercase();
     let is = |needles: &[&str]| needles.iter().any(|needle| k == *needle || n.contains(needle));
 
     if is(&["refreshlibrary", "scan media library"]) {
-        return Some("Looks through your media folders for files that are new, changed or gone and updates Jellyfin's database. This is the job that makes a new film appear. FinStats reads your library right after it finishes, so anything it finds is on your statistics within a minute or two.");
+        return Some("scan_library");
     }
     if is(&["mediasegment", "media segments", "intro skip", "introskipper"]) {
-        return Some("Goes through your episodes looking for the parts a player can offer to skip (the intro, a recap, the closing credits) and writes down where they are. It reads the audio and video of each file to do it, so it is one of the heaviest things Jellyfin ever runs, and it only looks at what it has not analysed before. Leaving it to run overnight is normal; nothing about it touches your library files.");
+        return Some("media_segments");
     }
     if is(&["refreshtrickplay", "trickplay"]) {
-        return Some("Builds the strip of little pictures you see when you drag the progress bar. It decodes every video once and stores the thumbnails next to them, so the first run on a large library takes hours and costs disk space. Later runs only handle what is new.");
+        return Some("trickplay");
     }
     if is(&["refreshchapterimages", "chapter image"]) {
-        return Some("Makes the thumbnail for each chapter of a film, so chapter menus have pictures instead of numbers. It seeks into every file that has chapters; new files only, after the first run.");
+        return Some("chapter_images");
     }
     if is(&["keyframeextraction", "keyframe"]) {
-        return Some("Notes the points in each file a player is allowed to jump to. With them, dragging the progress bar of a video that is being transcoded lands where you let go instead of a few seconds off.");
+        return Some("keyframes");
     }
     if is(&["audionormalization", "audio normalization", "audio normalisation"]) {
-        return Some("Measures how loud each file is, so a player can even out the difference between a quiet film and a loud one. It reads the audio of every file it has not measured yet.");
+        return Some("audio_normalization");
     }
     if is(&["refreshpeople", "refresh people"]) {
-        return Some("Fetches the details and pictures of the actors and directors in your library from the metadata providers you have switched on. It talks to the internet; it does not touch your files.");
+        return Some("refresh_people");
     }
     if is(&["refreshguide", "refresh guide"]) {
-        return Some("Downloads the Live TV programme guide for the next few days from whichever listings provider you have set up. Only does anything if you have Live TV.");
+        return Some("refresh_guide");
     }
     if is(&["optimizedatabase", "optimize database", "optimise database"]) {
-        return Some("Tidies Jellyfin's own database file: reclaims the space deleted rows left behind and rebuilds the indexes. Jellyfin is briefly slower while it runs and quicker afterwards. It has nothing to do with your media.");
+        return Some("optimize_database");
     }
     if is(&["cleanactivitylog", "activity log"]) {
-        return Some("Deletes old entries from Jellyfin's activity log: the sign-ins and errors you see under Dashboard → Activity. FinStats has already copied those into its own history, so nothing on the FinStats Server page disappears with them.");
+        return Some("clean_activity_log");
     }
     if is(&["cleanlogs", "log file", "log files"]) {
-        return Some("Deletes Jellyfin's own log files once they are older than the number of days set in its settings. Housekeeping; it never touches media.");
+        return Some("clean_logs");
     }
     if is(&["cleancache", "cache director", "cache file"]) {
-        return Some("Empties the parts of Jellyfin's cache folder nothing needs any more. Safe, quick, and it only frees disk space.");
+        return Some("clean_cache");
     }
     if is(&["cleantranscode", "deletetranscodefiles", "transcode director", "transcoding temp"]) {
-        return Some("Deletes the temporary files left behind when Jellyfin transcodes something: the pieces of video it made for a player that could not handle the original. They can be many gigabytes on a busy server.");
+        return Some("clean_transcode");
     }
     if is(&["pluginupdate", "plugin update", "check for plugin"]) {
-        return Some("Asks the plugin repositories whether any of your plugins has a newer version, and installs the updates if you asked it to. This one talks to the internet on your server's behalf.");
+        return Some("plugin_updates");
     }
     if is(&["subtitle"]) {
-        return Some("Deals with subtitles: fetching the ones you asked for from the providers you enabled, or pulling the ones already inside a video file out so a player can switch them on without transcoding.");
+        return Some("subtitles");
     }
     if is(&["thumbnail", "image extraction"]) {
-        return Some("Pulls a still out of each video to use as its picture where there is no artwork from a metadata provider.");
+        return Some("thumbnails");
     }
     if is(&["systemupdate", "check for updates", "update task"]) {
-        return Some("Checks whether a newer Jellyfin has been released. It talks to the internet; it installs nothing by itself unless you told it to.");
+        return Some("system_update");
     }
     if is(&["userdata", "people images", "extract"]) {
         return None; // too vague to guess at: Jellyfin's own description is better than a wrong sentence
@@ -105,8 +115,8 @@ pub fn explain(key: &str, name: &str) -> Option<&'static str> {
 /// What FinStats says about a task it does not know: Jellyfin's own description, when there is one.
 fn fallback(description: Option<&str>) -> String {
     match description.map(str::trim).filter(|d| !d.is_empty()) {
-        Some(d) => format!("{d} (Jellyfin's own words: FinStats does not know this job, so it is probably from a plugin.)"),
-        None => "FinStats does not know this job and Jellyfin does not describe it, which usually means a plugin added it.".into(),
+        Some(d) => crate::i18n::t("server.jobs.from_plugin", &[("description", d.into())]),
+        None => crate::i18n::t("server.jobs.unknown", &[]),
     }
 }
 
@@ -143,47 +153,61 @@ fn hhmm(ticks: i64) -> String {
     format!("{:02}:{:02}", total / 3600, (total % 3600) / 60)
 }
 
-fn every(seconds: i64) -> String {
-    match seconds {
-        86_400 => "every day".into(),
-        3_600 => "every hour".into(),
-        s if s % 86_400 == 0 && s >= 86_400 => format!("every {} days", s / 86_400),
-        s if s % 3_600 == 0 && s >= 3_600 => format!("every {} hours", s / 3600),
-        60 => "every minute".into(),
-        s if s >= 60 => format!("every {} minutes", (s as f64 / 60.0).round() as i64),
-        1 => "every second".into(),
-        s => format!("every {s} seconds"),
+fn every(lang: &str, seconds: i64) -> String {
+    let (one, many, count) = match seconds {
+        s if s % 86_400 == 0 && s >= 86_400 => ("day", "days", s / 86_400),
+        s if s % 3_600 == 0 && s >= 3_600 => ("hour", "hours", s / 3600),
+        s if s >= 60 => ("minute", "minutes", (s as f64 / 60.0).round() as i64),
+        s => ("second", "seconds", s),
+    };
+    // "every day", not "every 1 day": one of a thing is said by its own words.
+    match count {
+        1 => crate::i18n::say(lang, &format!("server.jobs.every.{one}"), &[]),
+        n => crate::i18n::say(lang, &format!("server.jobs.every.{many}"), &[("count", n.into())]),
     }
 }
 
-const DAYS: [&str; 7] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+/// Jellyfin's names for the days (it writes the name; an older server wrote its number), Sunday first, and
+/// each one's key in the catalogue.
+const DAYS: [(&str, &str); 7] = [("Sunday", "sun"), ("Monday", "mon"), ("Tuesday", "tue"), ("Wednesday", "wed"), ("Thursday", "thu"), ("Friday", "fri"), ("Saturday", "sat")];
 
 /// When Jellyfin will run this, in the words its own settings page uses. A time of day is the *server's*
 /// local time, which is why it is printed as a time rather than turned into a countdown FinStats cannot
 /// promise; an interval is a real countdown, because it is measured from the last run.
 pub fn schedule(triggers: &[Value], last_run_at: Option<i64>) -> (Vec<String>, Option<i64>) {
+    schedule_in(crate::i18n::current(), triggers, last_run_at)
+}
+
+fn schedule_in(lang: &str, triggers: &[Value], last_run_at: Option<i64>) -> (Vec<String>, Option<i64>) {
     let mut words = vec![];
     let mut next_at: Option<i64> = None;
     for t in triggers {
         let kind = t["Type"].as_str().unwrap_or("");
         let ticks = |key: &str| t[key].as_i64();
         match kind {
-            "DailyTrigger" => words.push(format!("every day at {}", hhmm(ticks("TimeOfDayTicks").unwrap_or(0)))),
+            "DailyTrigger" => words.push(crate::i18n::say(lang, "server.jobs.daily", &[("time", hhmm(ticks("TimeOfDayTicks").unwrap_or(0)).into())])),
             "WeeklyTrigger" => {
-                let day = t["DayOfWeek"].as_str().map(str::to_string).or_else(|| t["DayOfWeek"].as_i64().and_then(|d| DAYS.get(d as usize).map(|s| s.to_string())));
-                words.push(format!("every {} at {}", day.unwrap_or_else(|| "week".into()), hhmm(ticks("TimeOfDayTicks").unwrap_or(0))));
+                let time = hhmm(ticks("TimeOfDayTicks").unwrap_or(0));
+                let day = match &t["DayOfWeek"] {
+                    Value::String(s) => DAYS.iter().find(|(name, _)| name.eq_ignore_ascii_case(s)).map(|(_, key)| *key),
+                    v => v.as_i64().and_then(|d| DAYS.get(d as usize)).map(|(_, key)| *key),
+                };
+                words.push(match day {
+                    Some(key) => crate::i18n::say(lang, &format!("server.jobs.weekly.{key}"), &[("time", time.into())]),
+                    None => crate::i18n::say(lang, "server.jobs.weekly.any", &[("time", time.into())]),
+                });
             }
             "IntervalTrigger" => {
                 let seconds = ticks("IntervalTicks").unwrap_or(0) / TICKS_PER_S;
                 if seconds > 0 {
-                    words.push(every(seconds));
+                    words.push(every(lang, seconds));
                     if let Some(last) = last_run_at {
                         let due = last + seconds;
                         next_at = Some(next_at.map_or(due, |n: i64| n.min(due)));
                     }
                 }
             }
-            "StartupTrigger" => words.push("when Jellyfin starts".into()),
+            "StartupTrigger" => words.push(crate::i18n::say(lang, "server.jobs.at_startup", &[])),
             "" => {}
             other => words.push(other.trim_end_matches("Trigger").to_ascii_lowercase()),
         }
@@ -312,14 +336,14 @@ pub fn observe(app: &App, tasks: &[Value]) {
 
 fn job_json(t: &Value, watch: &mut Watch, now: i64) -> Value {
     let key = t["Key"].as_str().unwrap_or("");
-    let name = t["Name"].as_str().unwrap_or("Unnamed job");
+    let name = t["Name"].as_str().unwrap_or("");
     let id = t["Id"].as_str().unwrap_or(key);
     let state = t["State"].as_str().unwrap_or("Idle");
     let running = state != "Idle";
     let last = &t["LastExecutionResult"];
     let (started, ended) = (last["StartTimeUtc"].as_str().and_then(db::parse_ts), last["EndTimeUtc"].as_str().and_then(db::parse_ts));
     let last_duration_s = started.zip(ended).map(|(s, e)| (e - s).max(0));
-    let (schedule_words, next_at) = schedule(t["Triggers"].as_array().map(Vec::as_slice).unwrap_or_default(), ended.or(started));
+    let (_, next_at) = schedule(t["Triggers"].as_array().map(Vec::as_slice).unwrap_or_default(), ended.or(started));
     let progress = running.then(|| t["CurrentProgressPercentage"].as_f64().unwrap_or(0.0).clamp(0.0, 100.0));
 
     let (eta, watched_since, unchanged_for) = match progress {
@@ -341,10 +365,9 @@ fn job_json(t: &Value, watch: &mut Watch, now: i64) -> Value {
         "watching_since": watched_since,
         // How long the percentage has been standing still. A slow job is not a broken page.
         "unchanged_for_s": unchanged_for,
-        "what": explain(key, name).map(str::to_string).unwrap_or_else(|| fallback(t["Description"].as_str())),
-        "known": explain(key, name).is_some(),
         "description": t["Description"],
-        "schedule": schedule_words,
+        // Said in the reader's words as the answer is served (`worded`), which takes these out again.
+        "triggers": t["Triggers"],
         "next_at": next_at,
         "last_result": last["Status"],
         "last_error": last["ErrorMessage"],
@@ -362,17 +385,34 @@ pub async fn jobs(axum::extract::State(app): axum::extract::State<App>, _viewer:
         if let Some(answer) = &watch.answer
             && now - watch.fetched_at < MIN_GAP_S
         {
-            return Ok(axum::Json(answer.clone()));
+            return Ok(axum::Json(worded(answer.clone())));
         }
     }
-    Ok(axum::Json(refresh(&app, now).await))
+    Ok(axum::Json(worded(refresh(&app, now).await)))
+}
+
+/// The answer in the words of whoever asked. What is kept between reads is shared by every reader (and the
+/// backend's own reads have none), so it holds what Jellyfin said, and the sentences are said here, as it is served.
+fn worded(mut answer: Value) -> Value {
+    for j in answer["jobs"].as_array_mut().into_iter().flatten() {
+        let (key, name) = (j["key"].as_str().unwrap_or("").to_string(), j["name"].as_str().unwrap_or("").to_string());
+        let triggers = j.as_object_mut().and_then(|o| o.remove("triggers")).unwrap_or_default();
+        let what = explain(&key, &name);
+        j["known"] = json!(what.is_some());
+        j["what"] = json!(what.unwrap_or_else(|| fallback(j["description"].as_str())));
+        j["schedule"] = json!(schedule(triggers.as_array().map(Vec::as_slice).unwrap_or_default(), None).0);
+        if name.is_empty() {
+            j["name"] = json!(crate::i18n::t("server.jobs.unnamed", &[]));
+        }
+    }
+    answer
 }
 
 /// One read of Jellyfin's jobs, timed and kept as the answer the page is served. The endpoint and the backend's
 /// own watch (`run`) both go through here, so what a page is told was measured by the same clock either way.
 async fn refresh(app: &App, now: i64) -> Value {
     let Some(jf) = app.jellyfin() else {
-        return json!({ "jobs": [], "running": 0, "fetched_at": now, "error": "Not connected to Jellyfin" });
+        return json!({ "jobs": [], "running": 0, "fetched_at": now, "error": crate::i18n::t("server.jobs.not_connected", &[]) });
     };
     let tasks = match jf.scheduled_tasks_all().await {
         Ok(tasks) => tasks,
@@ -380,7 +420,7 @@ async fn refresh(app: &App, now: i64) -> Value {
             tracing::debug!("could not read Jellyfin's scheduled tasks: {e:#}");
             let stale = app.jf_jobs.lock().unwrap().answer.clone();
             let mut answer = stale.unwrap_or_else(|| json!({ "jobs": [], "running": 0 }));
-            answer["error"] = json!("Jellyfin did not answer");
+            answer["error"] = json!(crate::i18n::t("server.jobs.no_answer", &[]));
             answer["fetched_at"] = json!(now);
             return answer;
         }
@@ -594,5 +634,51 @@ mod tests {
         let (gained, over_s) = slow.runs["b"].measured();
         assert!(gained >= MIN_GAIN && over_s >= MIN_WINDOW_S, "a slow job cannot be measured at all: {gained}% over {over_s}s");
         assert_eq!(eta_s(9.0, gained, over_s), Some(27_300), "about seven and a half hours to go, at a percent every five minutes");
+    }
+
+    /// Every job FinStats knows is explained in every language it speaks, never by its key.
+    #[test]
+    fn every_known_job_is_explained_in_every_language() {
+        let jobs = [
+            "RefreshLibrary", "MediaSegmentDetect", "RefreshTrickplay", "RefreshChapterImages", "KeyframeExtraction", "AudioNormalization",
+            "RefreshPeople", "RefreshGuide", "OptimizeDatabase", "CleanActivityLog", "CleanLogs", "CleanCache", "CleanTranscode",
+            "PluginUpdates", "DownloadSubtitles", "Create thumbnail", "SystemUpdate",
+        ];
+        for lang in crate::i18n::LOCALES {
+            let mut said = std::collections::BTreeSet::new();
+            for key in jobs {
+                let text = explain_in(lang, key, key).unwrap_or_else(|| panic!("{key} is not known"));
+                assert!(!text.starts_with("server.") && text.ends_with('.'), "{lang}: {key}: {text}");
+                said.insert(text);
+            }
+            assert_eq!(said.len(), jobs.len(), "{lang}: two jobs share a sentence");
+        }
+        assert!(explain_in("nb-NO", "MediaSegmentDetect", "Detect and Analyze Media Segments").is_some_and(|s| s.contains("Jellyfin")));
+    }
+
+    #[test]
+    fn a_schedule_is_said_in_the_reader_s_language() {
+        let ticks = |s: i64| s * TICKS_PER_S;
+        let t = |lang: &str, v: Value| schedule_in(lang, &[v], None).0;
+        assert_eq!(t("nb-NO", json!({"Type": "WeeklyTrigger", "DayOfWeek": "Tuesday", "TimeOfDayTicks": ticks(22 * 3600)})), ["hver tirsdag kl. 22:00"]);
+        assert_eq!(t("nn-NO", json!({"Type": "WeeklyTrigger", "DayOfWeek": 0, "TimeOfDayTicks": 0})), ["kvar sundag kl. 00:00"]);
+        assert_eq!(t("nb-NO", json!({"Type": "DailyTrigger", "TimeOfDayTicks": ticks(3 * 3600)})), ["hver dag kl. 03:00"]);
+        assert_eq!(t("nb-NO", json!({"Type": "IntervalTrigger", "IntervalTicks": ticks(3 * 86_400)})), ["hver 3. dag"]);
+        assert_eq!(t("nn-NO", json!({"Type": "IntervalTrigger", "IntervalTicks": ticks(900)})), ["kvart 15. minutt"]);
+        assert_eq!(t("en-US", json!({"Type": "StartupTrigger"})), ["when Jellyfin starts"]);
+    }
+
+    /// What is kept between reads is shared by every reader, so it holds no words: they are said as it is served.
+    #[test]
+    fn the_kept_answer_holds_no_words_and_is_worded_when_served() {
+        let mut w = Watch::default();
+        let raw = job_json(&json!({ "Key": "RefreshLibrary", "Name": "Scan Media Library", "State": "Idle", "Triggers": [{ "Type": "StartupTrigger" }] }), &mut w, 0);
+        assert!(raw.get("what").is_none() && raw.get("schedule").is_none(), "{raw}");
+        let served = worded(json!({ "jobs": [raw] }));
+        let job = &served["jobs"][0];
+        assert_eq!(job["schedule"], json!(["when Jellyfin starts"]));
+        assert_eq!(job["known"], true);
+        assert!(job["what"].as_str().is_some_and(|s| s.contains("FinStats reads your library")), "{job}");
+        assert!(job.get("triggers").is_none(), "Jellyfin's triggers are not part of the answer");
     }
 }

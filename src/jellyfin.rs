@@ -6,6 +6,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use reqwest::{Client, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
+use crate::i18n;
 
 pub const APP_NAME: &str = "finstats";
 /// The kinds of item FinStats keeps from a library: what can be played, and what holds what can be played.
@@ -60,14 +61,19 @@ pub fn http_client() -> Client {
 
 /// Accepts what people actually type: missing scheme, trailing slash, a pasted `/web/` path.
 pub fn normalize_url(input: &str) -> Result<String> {
-    normalize_url_of(input, "your Jellyfin server")
+    normalize(input, || i18n::t("server.jellyfin.enter_address", &[]))
 }
 
 /// The same forgiving reading for any service a person types the address of.
 pub fn normalize_url_of(input: &str, what: &str) -> Result<String> {
+    normalize(input, || i18n::t("server.jellyfin.enter_address_of", &[("what", what.into())]))
+}
+
+/// `input` read forgivingly; `empty` says what to type when nothing was.
+fn normalize(input: &str, empty: impl FnOnce() -> String) -> Result<String> {
     let mut s = input.trim().to_string();
     if s.is_empty() {
-        bail!("Enter the address of {what}");
+        bail!(empty());
     }
     if !s.starts_with("http://") && !s.starts_with("https://") {
         s = format!("http://{s}");
@@ -83,7 +89,7 @@ pub fn normalize_url_of(input: &str, what: &str) -> Result<String> {
     while s.ends_with('/') {
         s.pop();
     }
-    reqwest::Url::parse(&s).map_err(|_| anyhow!("That doesn't look like a valid URL"))?;
+    reqwest::Url::parse(&s).map_err(|_| anyhow!(i18n::t("server.jellyfin.invalid_url", &[])))?;
     Ok(s)
 }
 
@@ -155,7 +161,7 @@ impl Jellyfin {
         let resp = self.get(path).query(query).send().await.with_context(|| format!("GET {path}"))?;
         let status = resp.status();
         if !status.is_success() {
-            bail!("Jellyfin answered {status} for {path}");
+            bail!(i18n::t("server.jellyfin.answered_for", &[("status", status.to_string().into()), ("path", path.into())]));
         }
         resp.json().await.with_context(|| format!("decoding {path}"))
     }
@@ -169,20 +175,20 @@ impl Jellyfin {
             .await
             .map_err(|e| {
                 if e.is_timeout() {
-                    anyhow!("Timed out reaching {}", self.base)
+                    anyhow!(i18n::t("server.jellyfin.timed_out", &[("address", self.base.as_str().into())]))
                 } else if e.is_connect() {
-                    anyhow!("Could not connect to {}", self.base)
+                    anyhow!(i18n::t("server.jellyfin.could_not_connect", &[("address", self.base.as_str().into())]))
                 } else {
-                    anyhow!("Could not reach {}: {e}", self.base)
+                    anyhow!(i18n::t("server.jellyfin.could_not_reach", &[("address", self.base.as_str().into()), ("error", e.to_string().into())]))
                 }
             })?;
         if !resp.status().is_success() {
-            bail!("{} answered {}. Is this a Jellyfin server?", self.base, resp.status());
+            bail!(i18n::t("server.jellyfin.not_jellyfin_status", &[("address", self.base.as_str().into()), ("status", resp.status().to_string().into())]));
         }
         let info: PublicInfo =
-            resp.json().await.map_err(|_| anyhow!("{} did not answer like a Jellyfin server", self.base))?;
+            resp.json().await.map_err(|_| anyhow!(i18n::t("server.jellyfin.not_jellyfin", &[("address", self.base.as_str().into())])))?;
         if info.id.is_none() && info.version.is_none() {
-            bail!("{} did not answer like a Jellyfin server", self.base);
+            bail!(i18n::t("server.jellyfin.not_jellyfin", &[("address", self.base.as_str().into())]));
         }
         Ok(info)
     }
@@ -195,10 +201,10 @@ impl Jellyfin {
             .json(&json!({ "Username": username, "Pw": password }))
             .send()
             .await
-            .map_err(|e| AuthError::Other(anyhow!("Could not reach Jellyfin: {e}")))?;
+            .map_err(|e| AuthError::Other(anyhow!(i18n::t("server.jellyfin.unreachable", &[("error", e.to_string().into())]))))?;
         match resp.status() {
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => return Err(AuthError::InvalidCredentials),
-            s if !s.is_success() => return Err(AuthError::Other(anyhow!("Jellyfin answered {s}"))),
+            s if !s.is_success() => return Err(AuthError::Other(anyhow!(i18n::t("server.jellyfin.answered", &[("status", s.to_string().into())])))),
             _ => {}
         }
         let v: Value = resp.json().await.map_err(|e| AuthError::Other(e.into()))?;
@@ -240,7 +246,7 @@ impl Jellyfin {
                 .send()
                 .await?;
             if !r.status().is_success() {
-                bail!("Jellyfin refused to list API keys ({})", r.status());
+                bail!(i18n::t("server.jellyfin.keys_list_refused", &[("status", r.status().to_string().into())]));
             }
             Ok(r.json::<Value>().await?)
         };
@@ -255,9 +261,9 @@ impl Jellyfin {
             .send()
             .await?;
         if !r.status().is_success() {
-            bail!("Jellyfin refused to create an API key ({})", r.status());
+            bail!(i18n::t("server.jellyfin.key_create_refused", &[("status", r.status().to_string().into())]));
         }
-        find(&list().await?).ok_or_else(|| anyhow!("Created an API key but could not read it back"))
+        find(&list().await?).ok_or_else(|| anyhow!(i18n::t("server.jellyfin.key_unreadable", &[])))
     }
 
     pub async fn system_info(&self) -> Result<Value> {
@@ -272,7 +278,7 @@ impl Jellyfin {
             .send()
             .await?;
         if !resp.status().is_success() {
-            bail!("Jellyfin answered {} for /Sessions", resp.status());
+            bail!(i18n::t("server.jellyfin.answered_for", &[("status", resp.status().to_string().into()), ("path", "/Sessions".into())]));
         }
         Ok(resp.json().await?)
     }
@@ -314,7 +320,7 @@ impl Jellyfin {
         let q = library_query(library_id, start, limit);
         let resp = self.get("/Items").query(&q).timeout(Duration::from_secs(180)).send().await?;
         if !resp.status().is_success() {
-            bail!("Jellyfin answered {} for /Items", resp.status());
+            bail!(i18n::t("server.jellyfin.answered_for", &[("status", resp.status().to_string().into()), ("path", "/Items".into())]));
         }
         let mut v: Value = resp.json().await?;
         let total = v["TotalRecordCount"].as_u64().unwrap_or(0) as usize;
@@ -333,7 +339,7 @@ impl Jellyfin {
         q.push(("Ids", ids.join(",")));
         let resp = self.get("/Items").query(&q).timeout(Duration::from_secs(180)).send().await?;
         if !resp.status().is_success() {
-            bail!("Jellyfin answered {} for /Items", resp.status());
+            bail!(i18n::t("server.jellyfin.answered_for", &[("status", resp.status().to_string().into()), ("path", "/Items".into())]));
         }
         let mut v: Value = resp.json().await?;
         Ok(match v["Items"].take() {
@@ -362,7 +368,7 @@ impl Jellyfin {
         ];
         let resp = self.get("/Items").query(&q).timeout(Duration::from_secs(180)).send().await?;
         if !resp.status().is_success() {
-            bail!("Jellyfin answered {} for /Items", resp.status());
+            bail!(i18n::t("server.jellyfin.answered_for", &[("status", resp.status().to_string().into()), ("path", "/Items".into())]));
         }
         let mut v: Value = resp.json().await?;
         Ok(match v["Items"].take() {
@@ -420,7 +426,7 @@ impl Jellyfin {
         ];
         let resp = self.get("/Items").query(&q).timeout(Duration::from_secs(120)).send().await?;
         if !resp.status().is_success() {
-            bail!("Jellyfin answered {} for a user's items", resp.status());
+            bail!(i18n::t("server.jellyfin.answered_for_user_items", &[("status", resp.status().to_string().into())]));
         }
         let mut v: Value = resp.json().await?;
         Ok(match v["Items"].take() {
