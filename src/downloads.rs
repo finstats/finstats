@@ -414,8 +414,10 @@ impl Wishes {
     }
 }
 
-fn download_json(d: &Download, wishes: &Wishes) -> Value {
+/// `viewer`: whose wish it is is said only of their own, or of anybody's with *see everyone* (`/api/requests`' rule).
+fn download_json(d: &Download, wishes: &Wishes, viewer: &crate::auth::AuthUser) -> Value {
     let (who, item) = wishes.of(d);
+    let who = who.filter(|(id, _)| viewer.perms.see_everyone || id.as_deref() == Some(viewer.id.as_str()));
     let poster = match (item, d.arr) {
         (Some(id), _) => json!({ "item_id": id }),
         (None, Some((service_id, media_id))) => json!({ "service_id": service_id, "media_id": media_id }),
@@ -542,11 +544,11 @@ pub struct LiveQuery {
     live: Option<String>,
 }
 
-pub async fn downloads(State(app): State<App>, DownloadsViewer(_): DownloadsViewer, Query(q): Query<LiveQuery>) -> ApiResult {
+pub async fn downloads(State(app): State<App>, DownloadsViewer(user): DownloadsViewer, Query(q): Query<LiveQuery>) -> ApiResult {
     if q.live.as_deref() == Some("1") {
         watched(&app, crate::db::now());
     }
-    Ok(Json(answer(&app)))
+    Ok(Json(answer(&app, &user)))
 }
 
 /// Somebody is looking at the queue (a page's `?live=1` poll, or a visible tab on the live channel): keep the snapshot
@@ -562,12 +564,12 @@ pub fn watched(app: &App, now: i64) -> bool {
 }
 
 /// `/downloads` as it is answered, by HTTP or by the live channel. The same for everybody who may see it.
-pub fn answer(app: &App) -> Value {
+pub fn answer(app: &App, viewer: &crate::auth::AuthUser) -> Value {
     let snap = app.downloads.read().unwrap().clone();
     let wishes = app.wishes.read().unwrap().clone();
     let t = &snap.totals;
     json!({
-        "rows": snap.rows.iter().map(|d| download_json(d, &wishes)).collect::<Vec<_>>(),
+        "rows": snap.rows.iter().map(|d| download_json(d, &wishes, viewer)).collect::<Vec<_>>(),
         "totals": { "down_bps": t.down_bps, "downloading": t.downloading, "queued": t.queued, "importing": t.importing, "failed": t.failed },
         "at": snap.at, "sources": snap.sources,
         "problems": snap.problems.iter().map(|(name, why)| json!({ "service": name, "error": why })).collect::<Vec<_>>(),
@@ -577,6 +579,23 @@ pub fn answer(app: &App) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Whose wish a download is: one's own always, anybody else's only with *see everyone*, as `/api/requests` has it.
+    /// Seeing the queue was enough to read "maria asked for this" on every row.
+    #[test]
+    fn whose_wish_a_download_is_is_said_only_to_who_may_see_it() {
+        let d = Download { key: "k".into(), title: "Sintel".into(), sub: None, state: "downloading", progress: 0.5, size: 10, left: 5, eta_s: None, down_bps: 0,
+            release: None, client: None, protocol: None, service_name: None, arr: None, media_type: Some("movie"), tmdb_id: Some(45745), tvdb_id: None,
+            seasons: vec![], parts: 1, error: None };
+        let mut w = Wishes::default();
+        w.by_media.insert(("movie:tmdb".into(), 45745), (Some("u1".into()), "maria".into()));
+        let viewer = |id: &str, perms: crate::auth::Perms| crate::auth::AuthUser { id: id.into(), name: id.into(), is_admin: false, perms, credential: crate::auth::Credential::Session, ip: None };
+        let queue_only = crate::auth::Perms { see_downloads: true, ..Default::default() };
+        assert_eq!(download_json(&d, &w, &viewer("u2", queue_only))["requested_by"], Value::Null, "somebody else's wish, without see everyone");
+        assert_eq!(download_json(&d, &w, &viewer("u1", queue_only))["requested_by"]["user_name"], "maria", "one's own");
+        let everyone = crate::auth::Perms { see_downloads: true, see_everyone: true, ..Default::default() };
+        assert_eq!(download_json(&d, &w, &viewer("u2", everyone))["requested_by"]["user_name"], "maria");
+    }
 
     /// Somebody looking at the queue, by a page's poll or by the live channel: the stamp that keeps it on its 5-s
     /// cadence, and a wake only for the first look in a while, so the loop is not woken on every one.
@@ -594,8 +613,9 @@ mod tests {
     fn the_answer_is_the_snapshot_as_the_page_reads_it() {
         let app = crate::state::test_app();
         *app.downloads.write().unwrap() = Arc::new(Snapshot { at: 42, sources: 2, problems: vec![("Radarr".into(), "timed out".into())], ..Default::default() });
+        let viewer = crate::auth::AuthUser { id: "u1".into(), name: "alice".into(), is_admin: true, perms: crate::auth::Perms::ALL, credential: crate::auth::Credential::Session, ip: None };
         assert_eq!(
-            answer(&app),
+            answer(&app, &viewer),
             json!({ "rows": [], "totals": { "down_bps": 0, "downloading": 0, "queued": 0, "importing": 0, "failed": 0 },
                     "at": 42, "sources": 2, "problems": [{ "service": "Radarr", "error": "timed out" }] })
         );

@@ -387,7 +387,7 @@ impl Tab {
     async fn answer(&self, app: &App, topic: &str, marked: &[Value]) -> Option<Value> {
         match topic {
             "now_playing" => Some(crate::stats::now_playing_for(marked, &self.user)),
-            "downloads" => Some(crate::downloads::answer(app)),
+            "downloads" => Some(crate::downloads::answer(app, &self.user)),
             "summary" => crate::stats::summary_for(app, &self.user).await.inspect_err(|e| tracing::debug!("live channel: summary: {e:#}")).ok(),
             _ => None,
         }
