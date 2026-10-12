@@ -1,0 +1,277 @@
+{
+  "$meta": {
+    "tag": "nn-NO",
+    "name": "Norsk nynorsk",
+    "fallback": "en-GB"
+  },
+  "terms": {
+    "play": { "one": "{count} avspeling", "other": "{count} avspelingar" },
+    "title": { "one": "{count} tittel", "other": "{count} titlar" },
+    "film": { "one": "{count} film", "other": "{count} filmar" },
+    "show": { "one": "{count} serie", "other": "{count} seriar" },
+    "season": { "one": "{count} sesong", "other": "{count} sesongar" },
+    "episode": { "one": "{count} episode", "other": "{count} episodar" },
+    "album": { "one": "{count} album", "other": "{count} album" },
+    "track": { "one": "{count} spor", "other": "{count} spor" },
+    "library": { "one": "{count} bibliotek", "other": "{count} bibliotek" },
+    "user": { "one": "{count} brukar", "other": "{count} brukarar" },
+    "person": { "one": "{count} person", "other": "{count} personar" },
+    "device": { "one": "{count} eining", "other": "{count} einingar" },
+    "watch_time": "Visingstid",
+    "watchlist": "Lista mi",
+    "recap": "Tilbakeblikk",
+    "cast_and_crew": "Medverkande",
+    "now_playing": "Spelast no",
+    "watched_together": "Sett saman"
+  },
+  "common": {
+    "save": "Lagre",
+    "cancel": "Avbryt",
+    "close": "Lukk",
+    "back": "Tilbake",
+    "try_again": "Prøv igjen",
+    "trying_again": "Prøver igjen …",
+    "working": "Arbeider …",
+    "loading": "Lastar inn …",
+    "unknown": "Ukjend",
+    "unknown_item": "Ukjend tittel",
+    "other": "Anna",
+    "none": "Ingen",
+    "everyone": "Alle",
+    "couldnt_load": "Kunne ikkje laste inn dette",
+    "page_failed": "Sida kunne ikkje visast. Last inn på nytt for å prøve igjen.",
+    "open_in_jellyfin": "Opne i Jellyfin",
+    "filters": "Filter",
+    "time_range": "Tidsrom"
+  },
+  "errors": {
+    "unreachable": "Får ikkje kontakt med FinStats. Sjekk at serveren køyrer, og prøv igjen.",
+    "request_failed": "Førespurnaden feila ({status})",
+    "upload_failed": "Opplastinga feila ({status})",
+    "upload_interrupted": "Opplastinga vart broten. Sjekk tilkoplinga, og prøv igjen.",
+    "upload_cancelled": "Opplastinga vart avbroten."
+  },
+  "time": {
+    "never": "aldri",
+    "just_now": "akkurat no",
+    "minutes_ago": { "one": "for {count} min sidan", "other": "for {count} min sidan" },
+    "hours_ago": { "one": "for {count} t sidan", "other": "for {count} t sidan" },
+    "days_ago": { "one": "for {count} dag sidan", "other": "for {count} dagar sidan" },
+    "months_ago": { "one": "for {count} månad sidan", "other": "for {count} månader sidan" },
+    "years_ago": { "one": "for {count} år sidan", "other": "for {count} år sidan" },
+    "due_now": "no",
+    "within_minutes": "om eit par minutt",
+    "in_minutes": { "one": "om {count} minutt", "other": "om {count} minutt" },
+    "in_hours": { "one": "om {count} time", "other": "om {count} timar" },
+    "in_days": { "one": "om {count} dag", "other": "om {count} dagar" },
+    "today": "I dag",
+    "tomorrow": "I morgon",
+    "yesterday": "I går"
+  },
+  "units": {
+    "seconds": "{count} s",
+    "minutes": "{count} min",
+    "hours": "{count} t",
+    "days": "{count} d",
+    "exact": "{hours} t {minutes} min {seconds} s"
+  },
+  "range": {
+    "7": { "short": "7 d", "long": "Siste 7 dagar" },
+    "30": { "short": "30 d", "long": "Siste 30 dagar" },
+    "90": { "short": "90 d", "long": "Siste 90 dagar" },
+    "365": { "short": "1 år", "long": "Det siste året" },
+    "0": { "short": "Alt", "long": "All tid" }
+  },
+  "play_method": {
+    "DirectPlay": "Direkteavspeling",
+    "DirectStream": "Direktestrøyming",
+    "Transcode": "Omkoding"
+  },
+  "item_type": {
+    "Movie": "Film",
+    "Series": "Serie",
+    "Season": "Sesong",
+    "Episode": "Episode",
+    "MusicAlbum": "Album",
+    "Audio": "Spor",
+    "TvChannel": "Direkte-TV"
+  },
+  "credit": {
+    "actor": "Skodespelar",
+    "director": "Regissør",
+    "actor_and_director": "Skodespelar og regissør"
+  },
+  "nav": {
+    "dashboard": "Oversikt",
+    "recap": "Tilbakeblikk",
+    "my_profile": "Profilen min",
+    "activity": "Aktivitet",
+    "together": "Saman",
+    "users": "Brukarar",
+    "libraries": "Bibliotek",
+    "playback": "Avspeling",
+    "pipeline": "På veg",
+    "server": "Server",
+    "security": "Tryggleik",
+    "settings": "Innstillingar",
+    "patch_notes": "Endringslogg",
+    "groups": {
+      "you": "Personleg",
+      "watching": "Sjåing",
+      "library": "Bibliotek",
+      "server": "Server"
+    },
+    "pinned": "Festa",
+    "search": "Søk",
+    "role_admin": "Administrator",
+    "role_viewer": "Sjåar"
+  },
+  "theme": {
+    "label": "Tema",
+    "light": "Lyst",
+    "device": "Eining",
+    "dark": "Mørkt",
+    "is_device": "Tema: som eininga",
+    "is_light": "Tema: lyst",
+    "is_dark": "Tema: mørkt"
+  },
+  "statusbar": {
+    "label": "Status for innsamling",
+    "connecting": "koplar til …",
+    "streaming": { "one": "{count} speler no", "other": "{count} speler no" },
+    "collector_offline": "innsamlaren er fråkopla",
+    "offline_title": "FinStats får ikkje kontakt med Jellyfin akkurat no. Avspelingar vert ikkje registrerte.",
+    "pushing_title": "Jellyfin sender det som vert spela · gå til Spelast no",
+    "go_now_playing": "Gå til Spelast no",
+    "plays": { "one": "{count} avspeling", "other": "{count} avspelingar" },
+    "synced": "synkronisert {when}",
+    "not_synced": "ikkje synkronisert enno",
+    "last_sync": "Biblioteket sist synkronisert: {when}",
+    "unreachable": "FinStats svarar ikkje",
+    "repo": "Repo",
+    "repo_title": "FinStats på GitHub"
+  },
+  "search": {
+    "label": "Søk",
+    "placeholder": "Søk etter titlar, personar og sider",
+    "placeholder_simple": "Søk etter titlar og personar",
+    "results": "Søkjeresultat",
+    "pages": "Sider",
+    "users": "Brukarar",
+    "library": "Bibliotek",
+    "cast_and_crew": "Medverkande",
+    "user": "Brukar",
+    "searching": "Søkjer …",
+    "no_match": "Ingen treff for «{query}».",
+    "no_match_short": "Ingen treff.",
+    "unavailable": "Søket er utilgjengeleg akkurat no."
+  },
+  "auth": {
+    "setup": {
+      "page_title": "Oppsett",
+      "title": "Set opp FinStats",
+      "sub": "To steg, så byrjar FinStats å registrere avspeling frå serveren din.",
+      "step_connect": "Kople til Jellyfin",
+      "step_sign_in": "Logg inn som administrator",
+      "address": "Jellyfin-adresse",
+      "address_help": "Adressa FinStats når Jellyfin på. I Docker er dette ofte namnet på containeren.",
+      "address_empty": "Skriv inn adressa til Jellyfin-serveren din, til dømes http://jellyfin:8096.",
+      "address_invalid": "Det ser ikkje ut som ei nettadresse. Prøv noko som http://192.168.1.10:8096.",
+      "test": "Test tilkoplinga",
+      "testing": "Testar …",
+      "connected": "Kopla til {server}",
+      "couldnt_connect": "Kunne ikkje kople til: {reason} Sjekk adressa og at Jellyfin køyrer.",
+      "test_first": "Test tilkoplinga først.",
+      "admin_username": "Brukarnamn for Jellyfin-administrator",
+      "password_note": "FinStats loggar inn éin gong for å lage sin eigen API-nøkkel. Passordet ditt vert aldri lagra.",
+      "finish": "Fullfør oppsettet",
+      "finishing": "Set opp …",
+      "not_admin": "Den kontoen er ikkje administrator i Jellyfin. Oppsettet treng ein administratorkonto."
+    },
+    "login": {
+      "title": "Logg inn",
+      "sub": "Bruk Jellyfin-kontoen din.",
+      "sub_on": "Bruk Jellyfin-kontoen din på {server}.",
+      "username": "Brukarnamn",
+      "password": "Passord",
+      "sign_in": "Logg inn",
+      "signing_in": "Loggar inn …",
+      "username_empty": "Skriv inn Jellyfin-brukarnamnet ditt.",
+      "wrong": "Feil brukarnamn eller passord.",
+      "admins_only": "Berre Jellyfin-administratorar kan logge inn her. Ein administrator kan gje andre brukarar tilgang under Innstillingar → Tilgang.",
+      "too_many": "For mange forsøk. Vent eit minutt, og prøv igjen."
+    },
+    "sign_out": "Logg ut"
+  },
+  "boot": {
+    "not_responding": "FinStats svarar ikkje"
+  },
+  "not_found": {
+    "page_title": "Ikkje funne",
+    "title": "Fann ikkje sida",
+    "nothing_here": "Det finst ingenting på denne adressa.",
+    "removed": "Det kan ha vore ei lenkje til noko som er fjerna.",
+    "simple": "Enkel modus har framsida, biblioteka, brukarane, historikken og grafane; resten av FinStats finst i sitt eige oppsett (Innstillingar → Utsjånad).",
+    "go_dashboard": "Gå til oversikta",
+    "go_home": "Gå til framsida"
+  },
+  "plays_table": {
+    "user": "Brukar",
+    "title": "Tittel",
+    "when": "Når",
+    "watched": "Visingstid",
+    "progress": "Framdrift",
+    "client": "Klient",
+    "method": "Metode",
+    "ip_address": "IP-adresse",
+    "open_details": "Opne detaljar for {title}",
+    "playing_now": "Spelast no",
+    "together_title": { "one": "Sett saman · {count} person", "other": "Sett saman · {count} personar" },
+    "local": "Lokalt nettverk",
+    "remote": "Utanfrå",
+    "stopped_at": "Stoppa ved {position}",
+    "empty": "Ingen avspelingar passar med desse filtera.",
+    "empty_range": "Ingen avspelingar i dette tidsrommet."
+  },
+  "settings": {
+    "find": "Finn ei innstilling …",
+    "find_label": "Finn ei innstilling",
+    "matching": "Innstillingar som passar",
+    "sections_label": "Sider i Innstillingar",
+    "groups": {
+      "account": "Konto",
+      "tracking": "Registrering",
+      "services": "Tenester",
+      "data": "Data"
+    },
+    "sections": {
+      "access": { "label": "Tilgang", "sub": "Kven som kan bruke FinStats, og kva dei kan sjå" },
+      "jellyfin": { "label": "Jellyfin", "sub": "Serveren FinStats les frå" },
+      "account": { "label": "Konto", "sub": "Kven som er logga inn her, og utlogging" },
+      "appearance": { "label": "Utsjånad", "sub": "Korleis FinStats ser ut for deg" },
+      "keys": { "label": "API-nøklar", "sub": "Bruk FinStats utanfrå: skript, og ein kalender å abonnere på" },
+      "public": { "label": "Offentleg profil", "sub": "Del delar av profilen din via ei lenkje, med eit kort du kan leggje ut" },
+      "collection": { "label": "Innsamling", "sub": "Kor tett avspelingar vert følgde" },
+      "network": { "label": "Heimenettverk", "sub": "Kva avspelingar som vert rekna som lokale" },
+      "security": { "label": "Tryggleik", "sub": "Stader, og umoglege reiser" },
+      "connections": { "label": "Tilkoplingar", "sub": "Sonarr, Radarr og Seerr" },
+      "notifications": { "label": "Varsel", "sub": "Kvar det FinStats finn, vert sendt" },
+      "import": { "label": "Import", "sub": "Hent historikken din frå eit anna sporingsverktøy" },
+      "unlinked": { "label": "Ukopla media", "sub": "Importerte avspelingar som ikkje passar med noko i biblioteket ditt" },
+      "backups": { "label": "Tryggingskopiar", "sub": "Ta vare på historikken din, eller flytt han" },
+      "tasks": { "label": "Oppgåver", "sub": "Kva FinStats gjer av seg sjølv, og når" },
+      "system": { "label": "System", "sub": "Utgåande tilkoplingar, databasen, lisensar" }
+    }
+  },
+  "simple": {
+    "nav": {
+      "home": "Heim",
+      "libraries": "Bibliotek",
+      "users": "Brukarar",
+      "history": "Historikk",
+      "graphs": "Grafar"
+    },
+    "menu": "Innstillingar og konto",
+    "sections": "Sider"
+  }
+}

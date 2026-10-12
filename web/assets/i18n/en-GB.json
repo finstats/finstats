@@ -1,0 +1,276 @@
+{
+  "$meta": {
+    "tag": "en-GB",
+    "name": "English (UK)"
+  },
+  "terms": {
+    "play": { "one": "{count} play", "other": "{count} plays" },
+    "title": { "one": "{count} title", "other": "{count} titles" },
+    "film": { "one": "{count} film", "other": "{count} films" },
+    "show": { "one": "{count} show", "other": "{count} shows" },
+    "season": { "one": "{count} season", "other": "{count} seasons" },
+    "episode": { "one": "{count} episode", "other": "{count} episodes" },
+    "album": { "one": "{count} album", "other": "{count} albums" },
+    "track": { "one": "{count} track", "other": "{count} tracks" },
+    "library": { "one": "{count} library", "other": "{count} libraries" },
+    "user": { "one": "{count} user", "other": "{count} users" },
+    "person": { "one": "{count} person", "other": "{count} people" },
+    "device": { "one": "{count} device", "other": "{count} devices" },
+    "watch_time": "Watch time",
+    "watchlist": "Watchlist",
+    "recap": "Recap",
+    "cast_and_crew": "Cast and crew",
+    "now_playing": "Now playing",
+    "watched_together": "Watched together"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "try_again": "Try again",
+    "trying_again": "Trying again…",
+    "working": "Working…",
+    "loading": "Loading…",
+    "unknown": "Unknown",
+    "unknown_item": "Unknown item",
+    "other": "Other",
+    "none": "None",
+    "everyone": "Everyone",
+    "couldnt_load": "Couldn’t load this",
+    "page_failed": "This page failed to render. Reload to try again.",
+    "open_in_jellyfin": "Open in Jellyfin",
+    "filters": "Filters",
+    "time_range": "Time range"
+  },
+  "errors": {
+    "unreachable": "Can’t reach FinStats. Check that the server is running and try again.",
+    "request_failed": "Request failed ({status})",
+    "upload_failed": "Upload failed ({status})",
+    "upload_interrupted": "The upload was interrupted. Check your connection and try again.",
+    "upload_cancelled": "Upload cancelled."
+  },
+  "time": {
+    "never": "never",
+    "just_now": "just now",
+    "minutes_ago": { "one": "{count}m ago", "other": "{count}m ago" },
+    "hours_ago": { "one": "{count}h ago", "other": "{count}h ago" },
+    "days_ago": { "one": "{count}d ago", "other": "{count}d ago" },
+    "months_ago": { "one": "{count}mo ago", "other": "{count}mo ago" },
+    "years_ago": { "one": "{count}y ago", "other": "{count}y ago" },
+    "due_now": "due now",
+    "within_minutes": "within a minute or two",
+    "in_minutes": { "one": "in {count} minute", "other": "in {count} minutes" },
+    "in_hours": { "one": "in {count} hour", "other": "in {count} hours" },
+    "in_days": { "one": "in {count} day", "other": "in {count} days" },
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday"
+  },
+  "units": {
+    "seconds": "{count}s",
+    "minutes": "{count}m",
+    "hours": "{count}h",
+    "days": "{count}d",
+    "exact": "{hours}h {minutes}m {seconds}s"
+  },
+  "range": {
+    "7": { "short": "7d", "long": "Last 7 days" },
+    "30": { "short": "30d", "long": "Last 30 days" },
+    "90": { "short": "90d", "long": "Last 90 days" },
+    "365": { "short": "1y", "long": "Last year" },
+    "0": { "short": "All", "long": "All time" }
+  },
+  "play_method": {
+    "DirectPlay": "Direct play",
+    "DirectStream": "Direct stream",
+    "Transcode": "Transcode"
+  },
+  "item_type": {
+    "Movie": "Film",
+    "Series": "Series",
+    "Season": "Season",
+    "Episode": "Episode",
+    "MusicAlbum": "Album",
+    "Audio": "Track",
+    "TvChannel": "Live TV"
+  },
+  "credit": {
+    "actor": "Actor",
+    "director": "Director",
+    "actor_and_director": "Actor and director"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "recap": "Recap",
+    "my_profile": "My profile",
+    "activity": "Activity",
+    "together": "Together",
+    "users": "Users",
+    "libraries": "Libraries",
+    "playback": "Playback",
+    "pipeline": "Pipeline",
+    "server": "Server",
+    "security": "Security",
+    "settings": "Settings",
+    "patch_notes": "Patch notes",
+    "groups": {
+      "you": "You",
+      "watching": "Watching",
+      "library": "Library",
+      "server": "Server"
+    },
+    "pinned": "Pinned",
+    "search": "Search",
+    "role_admin": "Administrator",
+    "role_viewer": "Viewer"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "device": "Device",
+    "dark": "Dark",
+    "is_device": "Theme: as the device",
+    "is_light": "Theme: light",
+    "is_dark": "Theme: dark"
+  },
+  "statusbar": {
+    "label": "Collector status",
+    "connecting": "connecting…",
+    "streaming": { "one": "{count} streaming", "other": "{count} streaming" },
+    "collector_offline": "collector offline",
+    "offline_title": "FinStats can’t reach Jellyfin right now. Plays are not being recorded.",
+    "pushing_title": "Jellyfin is pushing what is playing · go to now playing",
+    "go_now_playing": "Go to now playing",
+    "plays": { "one": "{count} play", "other": "{count} plays" },
+    "synced": "synced {when}",
+    "not_synced": "not synced yet",
+    "last_sync": "Last library sync: {when}",
+    "unreachable": "FinStats unreachable",
+    "repo": "Repo",
+    "repo_title": "FinStats on GitHub"
+  },
+  "search": {
+    "label": "Search",
+    "placeholder": "Search titles, people and pages",
+    "placeholder_simple": "Search titles and people",
+    "results": "Search results",
+    "pages": "Pages",
+    "users": "Users",
+    "library": "Library",
+    "cast_and_crew": "Cast and crew",
+    "user": "User",
+    "searching": "Searching…",
+    "no_match": "Nothing matches “{query}”.",
+    "no_match_short": "Nothing matches.",
+    "unavailable": "Search is unavailable right now."
+  },
+  "auth": {
+    "setup": {
+      "page_title": "Set up",
+      "title": "Set up FinStats",
+      "sub": "Two steps, then FinStats starts recording playback from your server.",
+      "step_connect": "Connect to Jellyfin",
+      "step_sign_in": "Sign in as an administrator",
+      "address": "Jellyfin address",
+      "address_help": "The address FinStats can reach Jellyfin on. In Docker this is often the container name.",
+      "address_empty": "Enter the address of your Jellyfin server, like http://jellyfin:8096.",
+      "address_invalid": "That doesn’t look like a web address. Try something like http://192.168.1.10:8096.",
+      "test": "Test connection",
+      "testing": "Testing…",
+      "connected": "Connected to {server}",
+      "couldnt_connect": "Couldn’t connect: {reason} Check the address and that Jellyfin is running.",
+      "test_first": "Test the connection first.",
+      "admin_username": "Jellyfin admin username",
+      "password_note": "FinStats signs in once to create its own API key. Your password is never stored.",
+      "finish": "Finish setup",
+      "finishing": "Setting up…",
+      "not_admin": "That account isn’t a Jellyfin administrator. Setup needs an admin account."
+    },
+    "login": {
+      "title": "Sign in",
+      "sub": "Use your Jellyfin account.",
+      "sub_on": "Use your Jellyfin account on {server}.",
+      "username": "Username",
+      "password": "Password",
+      "sign_in": "Sign in",
+      "signing_in": "Signing in…",
+      "username_empty": "Enter your Jellyfin username.",
+      "wrong": "Wrong username or password.",
+      "admins_only": "Only Jellyfin administrators can sign in here. An admin can allow other users under Settings → Access.",
+      "too_many": "Too many attempts. Wait a minute, then try again."
+    },
+    "sign_out": "Sign out"
+  },
+  "boot": {
+    "not_responding": "FinStats isn’t responding"
+  },
+  "not_found": {
+    "page_title": "Not found",
+    "title": "Page not found",
+    "nothing_here": "There’s nothing at this address.",
+    "removed": "It may have been a link to something that was removed.",
+    "simple": "Simple mode has the home, libraries, users, history and graphs; the rest of FinStats is in its own layout (Settings → Appearance).",
+    "go_dashboard": "Go to the dashboard",
+    "go_home": "Go home"
+  },
+  "plays_table": {
+    "user": "User",
+    "title": "Title",
+    "when": "When",
+    "watched": "Watched",
+    "progress": "Progress",
+    "client": "Client",
+    "method": "Method",
+    "ip_address": "IP address",
+    "open_details": "Open details for {title}",
+    "playing_now": "Playing now",
+    "together_title": { "one": "Watched together · {count} person", "other": "Watched together · {count} people" },
+    "local": "Local network",
+    "remote": "Remote",
+    "stopped_at": "Stopped at {position}",
+    "empty": "No plays match these filters.",
+    "empty_range": "No plays in this range."
+  },
+  "settings": {
+    "find": "Find a setting…",
+    "find_label": "Find a setting",
+    "matching": "Matching settings",
+    "sections_label": "Settings sections",
+    "groups": {
+      "account": "Account",
+      "tracking": "Tracking",
+      "services": "Services",
+      "data": "Data"
+    },
+    "sections": {
+      "access": { "label": "Access", "sub": "Who can use FinStats and what they can see" },
+      "jellyfin": { "label": "Jellyfin", "sub": "The server FinStats reads from" },
+      "account": { "label": "Account", "sub": "Who is signed in here, and signing out" },
+      "appearance": { "label": "Appearance", "sub": "How FinStats looks to you" },
+      "keys": { "label": "API keys", "sub": "Use FinStats from outside: scripts, and a calendar to subscribe to" },
+      "public": { "label": "Public profile", "sub": "Share a part of your profile at a link, with a card to post" },
+      "collection": { "label": "Collection", "sub": "How closely plays are followed" },
+      "network": { "label": "Home network", "sub": "Which plays count as local" },
+      "security": { "label": "Security", "sub": "Places, and impossible travel" },
+      "connections": { "label": "Connections", "sub": "Sonarr, Radarr and Seerr" },
+      "notifications": { "label": "Notifications", "sub": "Where what FinStats finds is sent" },
+      "import": { "label": "Import", "sub": "Bring your history from another tracker" },
+      "unlinked": { "label": "Unlinked media", "sub": "Imported plays that match nothing in your library" },
+      "backups": { "label": "Backups", "sub": "Keep your history safe, or move it" },
+      "tasks": { "label": "Tasks", "sub": "What FinStats does by itself, and when" },
+      "system": { "label": "System", "sub": "Outbound connections, the database, licences" }
+    }
+  },
+  "simple": {
+    "nav": {
+      "home": "Home",
+      "libraries": "Libraries",
+      "users": "Users",
+      "history": "History",
+      "graphs": "Graphs"
+    },
+    "menu": "Settings and account",
+    "sections": "Sections"
+  }
+}

@@ -19,6 +19,7 @@ mod finui;
 mod finmotion;
 mod groups;
 mod health;
+mod i18n;
 mod ical;
 mod import;
 mod jellyfin;
