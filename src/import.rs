@@ -143,7 +143,7 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
                 }
                 _ => res.unknown_rows += 1,
             }
-            if line_no % 2000 == 0 {
+            if line_no.is_multiple_of(2000) {
                 report(&phase_label(&current_table), 0.95 * read_bytes as f64 / total_bytes as f64);
             }
             if line_no == 50 && recognised == 0 {
