@@ -3,9 +3,9 @@
 import { h, icon } from './dom.js';
 import { api, setUnauthorizedHandler } from './api.js';
 import { state, resetCaches, applyTheme } from './state.js';
-import { start, navigate } from './router.js';
+import { start, navigate, onRouteChange } from './router.js';
 import { startPrefetching } from './prefetch.js';
-import { setBusy } from './components.js';
+import { setBusy, closeDialogs } from './components.js';
 import { button } from '../finui/components/button/button.js';
 
 /** `top(me)`: the pages this layout's prefetcher warms, in order. */
@@ -34,5 +34,6 @@ export async function boot({ top }) {
     return;
   }
   startPrefetching({ top });
+  onRouteChange(closeDialogs);
   start();
 }

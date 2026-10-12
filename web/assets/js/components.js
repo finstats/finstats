@@ -19,7 +19,19 @@ import { combobox } from '../finui/components/combobox/combobox.js';
 export { inlineError, formField } from '../finui/components/field/field.js';
 export { pagination } from '../finui/components/pagination/pagination.js';
 export { pageHeader } from '../finui/components/page-header/page-header.js';
-export { openModal } from '../finui/components/modal/modal.js';
+import { openModal as openFinModal } from '../finui/components/modal/modal.js';
+
+// Every dialog open now, so a step to another page (a link inside one, the browser's Back) closes them: left open, the
+// last page's dialog stayed over the new one and the page would not scroll until it was shut.
+const openDialogs = new Set();
+/** FinUI's `openModal`, remembered until it closes. */
+export function openModal(opts) {
+  const m = openFinModal({ ...opts, onClose: () => { openDialogs.delete(m); if (opts.onClose) opts.onClose(); } });
+  openDialogs.add(m);
+  return m;
+}
+/** Close every dialog: the page under them is going. */
+export function closeDialogs() { for (const m of [...openDialogs]) m.close(); }
 import { rankList } from '../finui/components/rank-list/rank-list.js';
 export { statTile } from '../finui/components/stat-tile/stat-tile.js';
 export { facts } from '../finui/components/facts/facts.js';
