@@ -386,7 +386,7 @@ mod readme_tests {
     use super::*;
     use std::path::Path;
 
-    const START: &str = "<!-- languages: i18n::readme_tests writes this; FINSTATS_WRITE_README=1 cargo test readme rewrites it -->";
+    const START: &str = "<!-- languages: i18n::readme_tests writes this; I18N_WRITE_README=1 cargo test readme rewrites it -->";
     const END: &str = "<!-- /languages -->";
     const PICTURE: &str = ".github/languages.svg";
 
@@ -517,14 +517,14 @@ mod readme_tests {
         let (want, drawn) = (section(), picture());
         let now = match (readme.find(START), readme.find(END)) { (Some(a), Some(z)) if a < z => &readme[a..z + END.len()], _ => "" };
         let on_disk = std::fs::read_to_string(root.join(PICTURE)).unwrap_or_default();
-        if (now != want || on_disk != drawn) && std::env::var_os("FINSTATS_WRITE_README").is_some() {
+        if (now != want || on_disk != drawn) && std::env::var_os("I18N_WRITE_README").is_some() {
             assert!(!now.is_empty(), "README.md has no Languages section to write into: put {START} and {END} where it goes");
             std::fs::write(&path, readme.replace(now, &want)).unwrap();
             std::fs::write(root.join(PICTURE), drawn).unwrap();
             return;
         }
-        assert_eq!(now, want, "README.md's Languages section is out of date: FINSTATS_WRITE_README=1 cargo test readme");
-        assert!(on_disk == drawn, "{PICTURE} is out of date: FINSTATS_WRITE_README=1 cargo test readme");
+        assert_eq!(now, want, "README.md's Languages section is out of date: I18N_WRITE_README=1 cargo test readme");
+        assert!(on_disk == drawn, "{PICTURE} is out of date: I18N_WRITE_README=1 cargo test readme");
     }
 }
 
