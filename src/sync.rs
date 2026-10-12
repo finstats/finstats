@@ -11,6 +11,8 @@ use crate::media::{Streams, int, ticks_to_s};
 use crate::state::App;
 
 const PAGE: usize = 500;
+/// Titles a library read did not see, asked after by id this many at a time.
+const CONFIRM_BY: usize = 100;
 /// Library kinds that only reference items living in other libraries.
 const SKIPPED_COLLECTIONS: [&str; 2] = ["boxsets", "playlists"];
 
@@ -678,6 +680,36 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             if got < PAGE {
                 break;
             }
+        }
+
+        // What the pages did not bring is asked after by id: Jellyfin pages by position, so a title deleted from
+        // earlier in the order mid-read moves every later one up, and the one at the next page's edge is never sent.
+        // Called removed, it left every page, and as an orphan its plays could be moved onto another copy of it.
+        let lib = lib_id.clone();
+        let unseen: Vec<String> = app
+            .db
+            .call(move |c| {
+                let mut stmt = c.prepare("SELECT id FROM items WHERE library_id = ?1 AND updated_at < ?2 AND removed = 0")?;
+                let ids = stmt.query_map(params![lib, started], |r| r.get(0))?.collect::<Result<_, _>>()?;
+                Ok(ids)
+            })
+            .await?;
+        for ids in unseen.chunks(CONFIRM_BY) {
+            let items = jf.items_by_ids(&lib_id, ids).await?;
+            let lib = lib_id.clone();
+            stored += app
+                .db
+                .call(move |c| {
+                    let now = db::now();
+                    let tx = c.transaction()?;
+                    let mut stored = 0usize;
+                    for it in &items {
+                        stored += usize::from(upsert_item(&tx, &lib, it, now)?);
+                    }
+                    tx.commit()?;
+                    Ok(stored)
+                })
+                .await?;
         }
 
         // Only after a library was read completely is "not seen" proof of removal, and only if the

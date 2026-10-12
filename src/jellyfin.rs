@@ -325,6 +325,23 @@ impl Jellyfin {
         Ok((items, total))
     }
 
+    /// Those of `ids` that are still in a library, read as the library read reads them. Paging by position misses the
+    /// item at a page's edge whenever one before it is deleted mid-read, so what a read did not see is asked after by id
+    /// before it is called removed.
+    pub async fn items_by_ids(&self, library_id: &str, ids: &[String]) -> Result<Vec<Value>> {
+        let mut q: Vec<(&'static str, String)> = library_query(library_id, 0, ids.len()).into_iter().filter(|(k, _)| !matches!(*k, "StartIndex" | "EnableTotalRecordCount")).collect();
+        q.push(("Ids", ids.join(",")));
+        let resp = self.get("/Items").query(&q).timeout(Duration::from_secs(180)).send().await?;
+        if !resp.status().is_success() {
+            bail!("Jellyfin answered {} for /Items", resp.status());
+        }
+        let mut v: Value = resp.json().await?;
+        Ok(match v["Items"].take() {
+            Value::Array(a) => a,
+            _ => vec![],
+        })
+    }
+
     /// One page of a library's films and shows with their cast and crew, and nothing else. Asked
     /// separately from `items_page`: people on every episode would multiply that read for no gain.
     pub async fn people_page(&self, library_id: &str, start: usize, limit: usize) -> Result<Vec<Value>> {
