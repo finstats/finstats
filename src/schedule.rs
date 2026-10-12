@@ -233,6 +233,20 @@ pub async fn within<T>(limit: Option<std::time::Duration>, run: impl std::future
     }
 }
 
+/// A job's work in a task of its own, so a panic in it is a failure the job ends with rather than the end of the task
+/// that would have finished it: a job that panicked stayed "running" for good and no trigger started it again.
+pub async fn caught<T: Send + 'static>(run: impl std::future::Future<Output = Result<T>> + Send + 'static) -> Result<T> {
+    match tokio::spawn(run).await {
+        Ok(outcome) => outcome,
+        Err(e) if e.is_panic() => {
+            let p = e.into_panic();
+            let why = p.downcast_ref::<&str>().map(|s| s.to_string()).or_else(|| p.downcast_ref::<String>().cloned()).unwrap_or_else(|| "no message".into());
+            Err(anyhow::anyhow!("FinStats hit a bug and stopped this run ({why}); it runs again at its next trigger"))
+        }
+        Err(e) => Err(anyhow::anyhow!("the run was cancelled ({e})")),
+    }
+}
+
 /// "2 hours", "90 minutes": a limit as the owner set it.
 fn human(s: i64) -> String {
     match s {
@@ -494,6 +508,16 @@ mod tests {
         let monday = t(When::Weekly { day: 1, at_min: 180 });
         assert!(fires(&tuesday, &look(at(29, 2, 59), at(29, 3, 0)), &oslo()));
         assert!(!fires(&monday, &look(at(29, 2, 59), at(29, 3, 0)), &oslo()));
+    }
+
+    /// A job that panicked was never finished: it stayed "running" for good, so no trigger ever started it again until
+    /// FinStats was restarted. A panic is a failure like any other, said as one.
+    #[tokio::test]
+    async fn a_job_that_panics_ends_as_a_failure() {
+        let failed = caught(async { if true { panic!("index out of bounds") } Ok::<_, anyhow::Error>(1) }).await;
+        let said = format!("{:#}", failed.expect_err("a panic came back as a success"));
+        assert!(said.contains("index out of bounds"), "{said}");
+        assert_eq!(caught(async { Ok::<_, anyhow::Error>(7) }).await.unwrap(), 7);
     }
 
     #[test]

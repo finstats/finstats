@@ -357,12 +357,14 @@ pub fn spawn_within(app: &App, id: &str, limit: Option<std::time::Duration>) -> 
     }
     let app = app.clone();
     tokio::spawn(async move {
-        let outcome = crate::schedule::within(limit, async { match id {
+        let work = app.clone();
+        let outcome = crate::schedule::caught(async move { let app = work; crate::schedule::within(limit, async { match id {
             "sync_upcoming" => crate::arr::sync_upcoming(&app).await,
             "sync_requests" => crate::seerr::sync_requests(&app).await,
             "sync_grabs" => crate::arr::sync_grabs(&app).await,
             other => Err(anyhow!("unknown task {other}")),
         } })
+        .await })
         .await;
         if let Err(e) = &outcome {
             crate::notify::task_failed(&app, id, &format!("{e:#}")).await;

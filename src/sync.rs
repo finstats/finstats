@@ -78,7 +78,8 @@ pub fn spawn_within(app: &App, id: &'static str, limit: Option<Duration>) -> boo
     }
     let app = app.clone();
     tokio::spawn(async move {
-        let outcome = crate::schedule::within(limit, async { match id {
+        let work = app.clone();
+        let outcome = crate::schedule::caught(async move { let app = work; crate::schedule::within(limit, async { match id {
             "sync_users" => sync_users(&app, &jf).await,
             "sync_libraries" => {
                 let done = sync_libraries(&app, &jf).await;
@@ -105,6 +106,7 @@ pub fn spawn_within(app: &App, id: &'static str, limit: Option<Duration>) -> boo
             }
             other => Err(anyhow!("unknown task {other}")),
         } })
+        .await })
         .await;
         if let Err(e) = &outcome {
             crate::notify::task_failed(&app, id, &format!("{e:#}")).await;
@@ -162,12 +164,14 @@ pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
     let automatic = actor.is_none();
     tokio::task::spawn_blocking(move || {
         let dir = crate::backup::dir(&app.data_dir);
-        let outcome = crate::backup::export(&app.db, &dir, Some((&app.tasks, ID))).map(|made| {
+        // A panic is a failed backup, not a job left "running" for good (`schedule::caught`'s reason).
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| crate::backup::export(&app.db, &dir, Some((&app.tasks, ID))).map(|made| {
             let removed = crate::backup::prune(&dir, app.settings().backup_keep.clamp(1, 100) as usize);
             tracing::info!("{} backup written: {} ({} plays){}", if automatic { "automatic" } else { "manual" }, made.name, made.plays,
                 if removed > 0 { format!("; removed {removed} old") } else { String::new() });
             (format!("{} plays, {:.1} MB", made.plays, made.size_bytes as f64 / 1e6), serde_json::to_value(&made).ok())
-        });
+        })))
+        .unwrap_or_else(|_| Err(anyhow!("FinStats hit a bug and stopped writing this backup; it is written again at its next trigger")));
         if let Ok(c) = app.db.conn() {
             let who = actor.unwrap_or_default();
             let entry = match &outcome {

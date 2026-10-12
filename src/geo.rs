@@ -343,7 +343,8 @@ pub fn spawn_download(app: &App) -> bool {
     }
     let app = app.clone();
     tokio::spawn(async move {
-        let outcome = download(&app).await;
+        let work = app.clone();
+        let outcome = crate::schedule::caught(async move { download(&work).await }).await;
         if outcome.is_ok() {
             crate::security::refresh_all(&app).await;
         }
