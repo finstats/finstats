@@ -143,7 +143,9 @@ fn zip_entry(file: &mut std::fs::File) -> Result<ZipEntry> {
             bail!("The zip is damaged. Download the Tautulli backup again.");
         }
         let name_len = u16_at(&dir, at + 28) as usize;
-        let name = String::from_utf8_lossy(&dir[at + 46..at + 46 + name_len]).to_string();
+        let Some(name) = dir.get(at + 46..at + 46 + name_len).map(|n| String::from_utf8_lossy(n).to_string()) else {
+            bail!("The zip is damaged. Download the Tautulli backup again.");
+        };
         let base = name.rsplit('/').next().unwrap_or_default();
         if name.to_lowercase().ends_with(".db") && !name.starts_with("__MACOSX") && !base.starts_with("._") {
             found.push(ZipEntry { method: u16_at(&dir, at + 10), packed: u32_at(&dir, at + 20) as u64, size: u32_at(&dir, at + 24) as u64, local_at: u32_at(&dir, at + 42) as u64 });
@@ -657,6 +659,25 @@ mod tests {
             .unwrap()
             .map(Result::unwrap)
             .collect()
+    }
+
+    /// A directory entry naming more bytes than the directory has panicked on the slice, and the panic skipped the clean-up
+    /// that removes the upload, which holds every Plex user's tokens. Damaged is said as damaged.
+    #[test]
+    fn a_zip_whose_directory_runs_short_is_damaged_not_a_panic() {
+        let mut bytes = vec![0u8; 46];
+        bytes[..4].copy_from_slice(&0x0201_4b50u32.to_le_bytes());
+        bytes[28..30].copy_from_slice(&1000u16.to_le_bytes()); // a name of 1,000 bytes, in a directory of 46
+        let mut end = vec![0u8; 22];
+        end[..4].copy_from_slice(&0x0605_4b50u32.to_le_bytes());
+        end[10..12].copy_from_slice(&1u16.to_le_bytes());
+        end[12..16].copy_from_slice(&46u32.to_le_bytes());
+        bytes.extend(end);
+        let path = std::env::temp_dir().join(format!("finstats-short-zip-{}", std::process::id()));
+        std::fs::write(&path, &bytes).unwrap();
+        let err = zip_entry(&mut std::fs::File::open(&path).unwrap()).err().expect("a damaged zip was read");
+        assert!(err.to_string().contains("damaged"), "{err}");
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
