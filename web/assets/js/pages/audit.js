@@ -15,10 +15,13 @@ const KIND_LABEL = {
   setting_changed: 'Changed settings', permissions_changed: 'Changed permissions',
   service_added: 'Added a connection', service_changed: 'Changed a connection', service_removed: 'Removed a connection',
   target_added: 'Added a notification destination', target_changed: 'Changed a notification destination', target_removed: 'Removed a notification destination',
-  backup_made: 'Backup written', backup_restored: 'Backup restored', backup_deleted: 'Backup deleted', backup_downloaded: 'Backup downloaded',
-  task_run: 'Ran a task', task_schedule_changed: 'Changed a task’s schedule', import_started: 'Import started', import_finished: 'Import finished', play_deleted: 'Deleted a play', title_located: 'Located a missing title',
+  backup_made: 'Backup written', backup_restored: 'Backup restored', backup_deleted: 'Backup deleted', backup_undeleted: 'Brought back a deleted backup', backup_downloaded: 'Backup downloaded',
+  task_run: 'Ran a task', task_schedule_changed: 'Changed a task’s schedule', import_started: 'Import started', import_finished: 'Import finished',
+  play_deleted: 'Deleted a play', play_undeleted: 'Brought back a deleted play', trash_purged: 'Emptied the trash', title_located: 'Located a missing title',
   alert_resolved: 'Resolved an alert', alert_reopened: 'Reopened an alert',
   finding_dismissed: 'Dismissed a library finding', finding_undismissed: 'Brought back a library finding',
+  profile_published: 'Published a public profile', profile_changed: 'Changed a public profile', profile_unpublished: 'Took down a public profile',
+  profile_link_reset: 'Made a new public profile link', appearance_changed: 'Changed their look',
 };
 const OUTCOME = { failed: ['sev-critical', 'alert', 'Failed'], refused: ['sev-warning', 'alert', 'Refused'] };
 
@@ -41,11 +44,15 @@ function detailText(e) {
     case 'target_added': case 'target_changed': case 'target_removed': parts.push(`${d.name} (${d.channel}, ${d.owner === 'own' ? 'personal' : 'server'})`); break;
     case 'backup_made': parts.push(d.trigger === 'schedule' ? 'by the schedule' : 'on request'); if (e.target) parts.push(e.target); if (d.plays != null) parts.push(`${num(d.plays)} plays`); if (d.error) parts.push(d.error); break;
     case 'backup_restored': parts.push(e.target || ''); if (d.plays_imported != null) parts.push(`${num(d.plays_imported)} plays restored, ${num(d.plays_skipped)} already here`); if (d.settings_restored) parts.push('settings too'); if (d.error) parts.push(d.error); break;
-    case 'backup_deleted': case 'backup_downloaded': parts.push(e.target || ''); break;
+    case 'backup_deleted': case 'backup_undeleted': case 'backup_downloaded': parts.push(e.target || ''); break;
     case 'task_run': case 'task_schedule_changed': parts.push(e.target || ''); break;
     case 'import_started': parts.push(e.target || ''); break;
     case 'import_finished': parts.push(e.target || ''); if (d.plays_imported != null) parts.push(`${num(d.plays_imported)} plays, ${num(d.plays_skipped)} already here`); if (d.error) parts.push(d.error); break;
-    case 'play_deleted': parts.push(`${d.title || ''} by ${d.user || ''}`); if (d.started_at) parts.push(dateTime(d.started_at)); break;
+    case 'play_deleted': case 'play_undeleted': parts.push(`${d.title || ''} by ${d.user || ''}`); if (d.started_at) parts.push(dateTime(d.started_at)); break;
+    case 'trash_purged': parts.push(`${num(d.plays || 0)} play${d.plays === 1 ? '' : 's'}, ${num(d.backups || 0)} backup${d.backups === 1 ? '' : 's'} removed for good`); break;
+    case 'profile_published': case 'profile_changed': parts.push(Object.entries(d.sections || {}).filter(([, on]) => on).map(([k]) => k).join(', ') || 'no sections'); break;
+    case 'profile_unpublished': case 'profile_link_reset': parts.push(e.target || ''); break;
+    case 'appearance_changed': parts.push(d.finui_preset ? `preset ${d.finui_preset}` : 'FinStats as it ships'); break;
     case 'title_located': parts.push(`${num(d.plays || 0)} play${d.plays === 1 ? '' : 's'} moved`); break;
     case 'alert_resolved': parts.push(e.target === 'all' ? `${num(d.resolved || 0)} alerts` : `alert ${e.target}`); if (d.muted) parts.push('muted'); break;
     case 'alert_reopened': parts.push(`alert ${e.target}`); break;
