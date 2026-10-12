@@ -32,7 +32,10 @@ const filtersOf = (query) => ({
 });
 const loadSummary = (f, signal) => api.get('/library/health', { library_id: f.library_id }, { signal });
 const loadFindings = (f, signal) => api.get('/library/health/findings', { kind: f.kind, library_id: f.library_id, dismissed: f.dismissed ? 1 : '', sort: f.sort, dir: f.dir, page: f.page > 1 ? f.page : '' }, { signal });
-export const prefetchHealth = ({ query, signal }) => { const f = filtersOf(query); return [() => loadSummary(f, signal), () => loadFindings(f, signal)]; };
+/** Both at once, as the page's one view asks for them: as two jobs each was cached under its own address, and the page,
+ *  whose view is keyed by the two together, found neither. */
+const loadPage = (f, signal) => Promise.all([loadSummary(f, signal), loadFindings(f, signal)]).then(([summary, list]) => ({ summary, list }));
+export const prefetchHealth = ({ query, signal }) => [() => loadPage(filtersOf(query), signal)];
 
 // ---------------------------------------------------------------- words
 
@@ -227,7 +230,7 @@ export function healthView(ctx) {
   const dv = dataView({
     container: view, signal: ctx.signal,
     skeleton: () => [sk.tiles(4), sk.tableRows(6)],
-    fetch: () => Promise.all([loadSummary(f, ctx.signal), loadFindings(f, ctx.signal)]).then(([summary, list]) => ({ summary, list })),
+    fetch: () => loadPage(f, ctx.signal),
     render: ({ summary: s, list }) => {
       if (!s.computed_at) {
         return emptyState('Not worked out yet', 'FinStats looks the library over after its next library read, and again after each look for metadata changes. Nothing is worked out when this page opens.');
