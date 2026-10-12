@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Start every fresh session with CONTEXT.md
+
+**At the start of a new session, read `CONTEXT.md` in the repository root before anything else.** It is the map of
+the codebase: architecture, data flow, the domain model (tables and how they relate), the API surface, the conventions,
+exact commands, environment variables, the testing strategy and the known gaps. This file is the detailed rulebook
+behind it.
+
+**Keep `CONTEXT.md` up to date: whenever something it describes changes, it changes with it, in the same commit.**
+That covers a new or changed subsystem, module, table, migration, route group, permission, environment variable,
+command, test pattern or convention, a moved file, and a known gap that is fixed or newly found. Bump its
+*Last updated* line each time. A change that leaves `CONTEXT.md` describing the old code is not finished, because the
+next session starts from it.
+
 ## What this is
 
 FinStats is a playback-statistics server for Jellyfin: one Rust binary (axum + tokio + bundled SQLite)
