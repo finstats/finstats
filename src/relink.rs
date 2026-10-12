@@ -193,15 +193,16 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
     const ORPHAN: &str = "p.item_id IN (SELECT value FROM json_each(?1))";
 
     // ---- films and other stand-alone titles
-    let orphans: Vec<(String, String, String, Option<i64>)> = conn
+    type Orphan = (String, String, String, Option<i64>, Option<String>, Option<String>);
+    let orphans: Vec<Orphan> = conn
         .prepare(&format!(
-            "SELECT p.item_id, p.item_type, COALESCE(MAX(old.name), MAX(p.item_name)), MAX(old.production_year)
+            "SELECT p.item_id, p.item_type, COALESCE(MAX(old.name), MAX(p.item_name)), MAX(old.production_year), MAX(old.album), MAX(old.album_artist)
              FROM playbacks p LEFT JOIN items old ON old.id = p.item_id
              WHERE p.item_type IN ('Movie', 'Video', 'MusicVideo', 'Audio') AND {ORPHAN} GROUP BY p.item_id"
         ))?
-        .query_map([&orphaned], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+        .query_map([&orphaned], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
         .collect::<Result<_, _>>()?;
-    for (old_id, item_type, name, year) in orphans {
+    for (old_id, item_type, name, year, album, artist) in orphans {
         // The owner said where this one is (`locate`): that, before any rule.
         if let Some(to) = crate::locate::located(conn, &old_id)? {
             let (n, dropped) = crate::locate::move_onto(conn, merge_window_s, &old_id, &to)?;
@@ -209,7 +210,21 @@ pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked
             done.moved_to.push(to);
             continue;
         }
-        if let Some(new_id) = find_current(conn, &mut keys, &item_type, &name, year)? {
+        let found = find_current(conn, &mut keys, &item_type, &name, year)?;
+        // A track is known by a name half the albums there are share ("Intro"): it is the same track only on the same album
+        // by the same artist, where both are known.
+        let found = match found {
+            Some(id) if item_type == "Audio" => {
+                let (to_album, to_artist): (Option<String>, Option<String>) = conn.query_row("SELECT album, album_artist FROM items WHERE id = ?1", [&id], |r| Ok((r.get(0)?, r.get(1)?)))?;
+                let agree = |a: &Option<String>, b: &Option<String>| match (a, b) {
+                    (Some(a), Some(b)) => a.eq_ignore_ascii_case(b),
+                    _ => true,
+                };
+                (agree(&album, &to_album) && agree(&artist, &to_artist)).then_some(id)
+            }
+            other => other,
+        };
+        if let Some(new_id) = found {
             let (n, dropped) = move_plays(conn, merge_window_s, &new_id, || {
                 Ok(conn.execute(
                     "UPDATE playbacks SET item_id = ?1,
@@ -411,6 +426,29 @@ mod tests {
         conn.execute_batch("UPDATE playbacks SET item_id = 'old2' WHERE id = 1").unwrap();
         relink_orphans(&conn, 600).unwrap();
         assert_eq!(conn.query_row("SELECT item_id FROM playbacks WHERE id = 1", [], |r| r.get::<_, String>(0)).unwrap(), "new1");
+    }
+
+    /// A track is known by its name, and a name like "Intro" is on half the albums there are: the plays of a deleted album's
+    /// "Intro" moved onto the one other "Intro" in the library, another artist's, for good. A track needs its artist and
+    /// album to agree where both are known; the same album added again still takes its plays back.
+    #[test]
+    fn a_track_is_only_ever_the_same_track_on_the_same_album() {
+        let c = migrated();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, album, album_artist, removed, updated_at) VALUES
+                ('gone', 'Audio', 'Intro', 'First Light', 'Alpha', 1, 1),
+                ('theirs', 'Audio', 'Intro', 'Second Sun', 'Beta', 0, 1),
+                ('gone2', 'Audio', 'Outro', 'First Light', 'Alpha', 1, 1),
+                ('again', 'Audio', 'Outro', 'First Light', 'Alpha', 0, 1);
+             INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+                (1, 'live', 'u', 'u', 'gone', 'Intro', 'Audio', 0, 60, 60),
+                (2, 'live', 'u', 'u', 'gone2', 'Outro', 'Audio', 100, 160, 60);",
+        )
+        .unwrap();
+        relink_orphans(&c, 600).unwrap();
+        let at = |id: i64| c.query_row("SELECT item_id FROM playbacks WHERE id = ?1", [id], |r| r.get::<_, String>(0)).unwrap();
+        assert_eq!(at(1), "gone", "another artist's track of the same name");
+        assert_eq!(at(2), "again", "the same album, added again");
     }
 
     #[test]
