@@ -771,7 +771,11 @@ hold the pages to it: every literal key a page asks for has an en-GB text, and n
 in `web/assets/js` or FinUI's components outside `t()`/`tParts()`/`say()` (`IDS` and `ENGLISH_ON_PURPOSE` list the exceptions,
 each with its reason). **A new text is a key in all four catalogues in the same change**, written in Bokmål and Nynorsk by the
 glossary the existing catalogues set (play = avspilling/avspeling, watch time = visningstid/visingstid, watchlist = Min liste /
-Lista mi, Recap = Tilbakeblikk, Pipeline = På vei/På veg); the owner reads Norwegian and checks it. The local QA stage `i18n`
+Lista mi, Recap = Tilbakeblikk, Pipeline = På vei/På veg); the owner reads Norwegian and checks it. The README's **Languages** section is a picture drawn
+like a translation platform's status widget (`.github/languages.svg`, a bar per language, in GitHub's light or dark) and
+worked out from the catalogues and the changelogs by `i18n::readme_tests`, which fails when the picture or the README is
+out of date; `FINSTATS_WRITE_README=1 cargo test readme` redraws both. It is the one README picture kept here rather than
+in the docs, because a test draws it from this repository. The local QA stage `i18n`
 runs `i18n.js`'s rules in node; the browser stage pins its pages to en-GB (it overrides `navigator.languages`, since headless Chromium says
 en-US whatever `--lang` says), and sweeps every page in Bokmål and Nynorsk for a missing key.
 

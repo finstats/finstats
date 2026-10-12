@@ -58,6 +58,16 @@ Already using Jellystat or Streamystats, or coming from Plex with Tautulli? [Bri
 
 [Everything it does, with screenshots →](https://docs.finstats.no/finstats/features/)
 
+## Languages
+
+FinStats speaks British and American English, Norwegian Bokmål and Norwegian Nynorsk: every page, the Patch notes and
+what the server says. Each browser picks its own under Settings → Appearance → Language, or follows the browser. How much
+of FinStats each one has:
+
+<!-- languages: i18n::readme_tests writes this; FINSTATS_WRITE_README=1 cargo test readme rewrites it -->
+<p align="center"><img src=".github/languages.svg" width="560" alt="Translation status: English (UK) 100%, English (US) 100%, Norsk bokmål 100%, Norsk nynorsk 100%"></p>
+<!-- /languages -->
+
 ## Get started
 
 You need Docker and a Jellyfin server (10.9 or newer).
