@@ -334,11 +334,11 @@ where
     tokio::fs::create_dir_all(&dir).await.ok();
     match fetched {
         Ok(Some(bytes)) => {
-            tokio::fs::write(&file, &bytes).await.ok();
+            write_whole(&file, &bytes).await;
             Ok(image_response(bytes))
         }
         Ok(None) => {
-            tokio::fs::write(&file, b"").await.ok();
+            write_whole(&file, b"").await;
             Err(ApiError::not_found("Image"))
         }
         Err(e) => {
@@ -1064,6 +1064,18 @@ pub fn sweep_uploads(data_dir: &std::path::Path) -> usize {
     UPLOADS.iter().filter(|name| std::fs::remove_file(data_dir.join(name)).is_ok()).count()
 }
 
+/// A cached picture, written beside its name and renamed into place, so a reader sees the old one or the whole new one.
+/// Written in place, a second request read it half written and served that, and the browser keeps a tagged picture as it
+/// got it. Each write has a name of its own, since two requests may fetch the same picture at once.
+async fn write_whole(file: &std::path::Path, bytes: &[u8]) {
+    static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let part = file.with_file_name(format!("{}.{}-{n}.part", file.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default(), std::process::id()));
+    if tokio::fs::write(&part, bytes).await.is_err() || tokio::fs::rename(&part, file).await.is_err() {
+        let _ = tokio::fs::remove_file(&part).await;
+    }
+}
+
 async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Query(q): Query<RestoreQuery>, req: Request) -> ApiResult<Response> {
     if !app.tasks.try_start_alone("restore", "Receiving backup", &HISTORY_WRITERS) {
         return Err(ApiError::new(StatusCode::CONFLICT, "A restore or an import is already running"));
@@ -1344,6 +1356,28 @@ async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> Api
 
 #[cfg(test)]
 mod tests {
+    /// A cached picture is written beside its name and renamed into place: written in place, a second request read it
+    /// half written and served that, and a tagged picture is then kept by the browser as it got it.
+    #[tokio::test]
+    async fn a_cached_picture_appears_whole_or_not_at_all() {
+        let dir = std::env::temp_dir().join(format!("finstats-imgcache-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("item-abc-300");
+        std::fs::write(&file, b"the old picture").unwrap();
+        let big = vec![7u8; 4_000_000];
+        let reader = {
+            let file = file.clone();
+            tokio::task::spawn_blocking(move || (0..2_000).filter_map(|_| std::fs::read(&file).ok()).all(|b| b == b"the old picture" || b.len() == 4_000_000))
+        };
+        write_whole(&file, &big).await;
+        assert!(reader.await.unwrap(), "a reader saw a picture half written");
+        assert_eq!(std::fs::read(&file).unwrap().len(), 4_000_000);
+        let names: Vec<String> = std::fs::read_dir(&dir).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
+        assert_eq!(names, ["item-abc-300"], "something was left beside it");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     use super::*;
 
     /// FinStats draws both themes itself, so a browser extension that repaints pages dark (Dark Reader) is told to
