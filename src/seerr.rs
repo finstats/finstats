@@ -173,20 +173,31 @@ async fn newest_change(app: &App, svc: &Service) -> Result<Option<i64>> {
     Ok(results.first().and_then(|v| v["updatedAt"].as_str().or_else(|| v["createdAt"].as_str())).and_then(db::parse_ts))
 }
 
+/// One page's requests as FinStats reads them, and whether it read every one: a row it cannot read is still a request
+/// Seerr has, so a listing that held one is not whole and may not say that anything is gone.
+fn read_page(results: &[Value]) -> (Vec<Request>, bool) {
+    let rows: Vec<Request> = results.iter().filter_map(parse).collect();
+    let whole = rows.len() == results.len();
+    (rows, whole)
+}
+
 async fn list(app: &App, svc: &Service, filter: &str, stop_at: Option<i64>, take: usize) -> Result<Listing> {
     let mut rows = vec![];
     let mut total = None;
+    let mut understood = true;
     for page_no in 0..MAX_PAGES {
         let (results, count) = page(app, svc, filter, take, page_no * take).await?;
         total = count.or(total);
         let got = results.len();
         let mut reached = false;
-        for r in results.iter().filter_map(parse) {
+        let (read, whole) = read_page(&results);
+        understood &= whole;
+        for r in read {
             reached |= past_the_cursor(r.updated_at, stop_at);
             rows.push(r);
         }
         if got < take || reached {
-            let complete = !reached && total.is_none_or(|t| t as usize == (page_no * take + got));
+            let complete = understood && !reached && total.is_none_or(|t| t as usize == (page_no * take + got));
             return Ok(Listing { rows, complete });
         }
     }
@@ -531,6 +542,19 @@ mod tests {
         for broken in [json!({}), json!({ "id": 1, "status": 1, "type": "music", "createdAt": "2026-09-01T10:00:00Z" }), json!({ "id": 1, "type": "movie", "status": 1 })] {
             assert!(parse(&broken).is_none(), "{broken}");
         }
+    }
+
+    /// A row FinStats cannot read is still a request Seerr has. A listing that held one was counted whole by its length,
+    /// and the daily full listing then marked every such request removed: a changed field name in a Seerr update would
+    /// have taken every request out of the history.
+    #[test]
+    fn a_page_with_a_row_it_cannot_read_is_not_whole() {
+        let mut odd = sample();
+        odd.as_object_mut().unwrap().remove("createdAt");
+        odd["id"] = json!(42);
+        let (rows, whole) = read_page(&[sample(), odd]);
+        assert_eq!((rows.len(), whole), (1, false));
+        assert_eq!(read_page(&[sample()]).1, true);
     }
 
     #[test]
