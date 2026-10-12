@@ -552,6 +552,10 @@ pub fn wanted_by(t: &Target, kind: Kind, severity: &str, at: i64, about: Option<
     }
     let Some(owner_id) = &t.owner_id else { return true }; // the server's own destination
     let Some(perms) = owner else { return false }; // somebody who may not even sign in
+    // "Be sent notifications" taken away: their destinations go quiet, which they could no longer do themselves.
+    if !perms.notify {
+        return false;
+    }
     let own = about.is_some_and(|u| u == owner_id);
     match kind.need() {
         Need::Anyone => true,
@@ -1567,10 +1571,10 @@ pub(crate) mod tests {
     #[test]
     fn a_personal_destination_carries_exactly_what_its_owner_may_see() {
         let own = Some("ub");
-        let plain = Perms::from_keys(["sign_in"]);
-        let everyone = Perms::from_keys(["sign_in", "see_everyone"]);
-        let network = Perms::from_keys(["sign_in", "see_everyone", "see_network"]);
-        let server = Perms::from_keys(["sign_in", "see_server"]);
+        let plain = Perms::from_keys(["sign_in", "notify"]);
+        let everyone = Perms::from_keys(["sign_in", "notify", "see_everyone"]);
+        let network = Perms::from_keys(["sign_in", "notify", "see_everyone", "see_network"]);
+        let server = Perms::from_keys(["sign_in", "notify", "see_server"]);
         let all = Kind::tickable().collect::<Vec<_>>();
         let t = target(1, own, &all);
         let may = |kind: Kind, about: Option<&str>, perms: Perms| wanted_by(&t, kind, kind.severity(), 10, about, Some(perms));
@@ -1582,12 +1586,14 @@ pub(crate) mod tests {
         assert!(!may(Kind::Travel, Some("uc"), everyone), "somebody else's places need see_network as well");
         assert!(may(Kind::Travel, Some("uc"), network));
         assert!(!may(Kind::FailedSignIns, Some("uc"), network), "somebody else's failed sign-ins need see_server too, as on the Security page");
-        assert!(may(Kind::FailedSignIns, Some("uc"), Perms::from_keys(["sign_in", "see_everyone", "see_network", "see_server"])));
+        assert!(may(Kind::FailedSignIns, Some("uc"), Perms::from_keys(["sign_in", "notify", "see_everyone", "see_network", "see_server"])));
         assert!(may(Kind::FailedSignIns, Some("ub"), plain), "attempts on your own account are yours");
         assert!(!may(Kind::TaskFailed, None, everyone), "the server's business needs see_server");
         assert!(may(Kind::TaskFailed, None, server));
         assert!(may(Kind::NewItems, None, plain), "the library is the same for everyone");
         assert!(!wanted_by(&t, Kind::NewItems, INFO, 10, None, None), "somebody who may not sign in is told nothing");
+        // "Be sent notifications" taken away: their destinations go quiet, which they could no longer do themselves.
+        assert!(!may(Kind::PlayStarted, Some("ub"), Perms::from_keys(["sign_in", "see_everyone"])), "sent notifications without being allowed them");
 
         let server_own = target(2, None, &all);
         assert!(wanted_by(&server_own, Kind::Travel, ALERT, 10, Some("uc"), None), "the server's own destination is not filtered");
@@ -1608,7 +1614,7 @@ pub(crate) mod tests {
         let all = Kind::tickable().collect::<Vec<_>>();
         let k = Kind::WatchlistAvailable;
         let mine = target(1, Some("ub"), &all);
-        assert!(wanted_by(&mine, k, k.severity(), 10, Some("ub"), Some(Perms::from_keys(["sign_in"]))), "their own, with nothing granted");
+        assert!(wanted_by(&mine, k, k.severity(), 10, Some("ub"), Some(Perms::from_keys(["sign_in", "notify"]))), "their own, with nothing granted but being sent notifications");
         assert!(!wanted_by(&mine, k, k.severity(), 10, Some("uc"), Some(Perms::ALL)), "somebody else's, not even to an administrator");
         assert!(!wanted_by(&target(2, None, &all), k, k.severity(), 10, Some("ub"), None), "nor to a destination of the server's");
         assert!(Kind::tickable().any(|x| x == k));
@@ -1666,8 +1672,9 @@ pub(crate) mod tests {
         let mut play = stored(Kind::PlayStarted);
         play.user_id = Some("ua".into());
         let t = target(1, Some("ub"), &[Kind::PlayStarted]);
-        assert_eq!(deliverable(&t, &play, Some(Perms::from_keys(["sign_in", "see_everyone"]))), Some(false));
-        assert_eq!(deliverable(&t, &play, Some(Perms::from_keys(["sign_in"]))), None, "see_everyone taken away");
+        assert_eq!(deliverable(&t, &play, Some(Perms::from_keys(["sign_in", "notify", "see_everyone"]))), Some(false));
+        assert_eq!(deliverable(&t, &play, Some(Perms::from_keys(["sign_in", "notify"]))), None, "see_everyone taken away");
+        assert_eq!(deliverable(&t, &play, Some(Perms::from_keys(["sign_in", "see_everyone"]))), None, "being sent notifications taken away");
         let mut off = target(2, None, &[Kind::PlayStarted]);
         off.enabled = false;
         assert_eq!(deliverable(&off, &play, None), None, "switched off");

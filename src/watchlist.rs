@@ -1058,7 +1058,7 @@ mod tests {
         let now = db::now();
         c.execute_batch(
             r#"INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 0), ('bob', 'bob', 0), ('carol', 'carol', 0);
-               INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('alice', '["sign_in"]', 0), ('bob', '["sign_in"]', 0), ('carol', '["sign_in"]', 0);"#,
+               INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('alice', '["sign_in","notify"]', 0), ('bob', '["sign_in","notify"]', 0), ('carol', '["sign_in","notify"]', 0);"#,
         )
         .unwrap();
         // alice put it on her list a day before it came; bob added it from its page once it was here; carol waited for a
