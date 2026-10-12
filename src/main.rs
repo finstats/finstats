@@ -213,6 +213,9 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
     if tautulli::sweep(&data_dir, std::time::Duration::ZERO) {
         tracing::info!("removed a Tautulli backup left waiting for its wires before this start");
     }
+    if api::sweep_uploads(&data_dir) > 0 {
+        tracing::info!("removed what an import or a restore stopped half way before this start left in the data folder");
+    }
     let (config, settings, device_id) = db
         .call(|c| {
             let device_id = match db::get_setting(c, "device_id")? {

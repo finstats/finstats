@@ -1055,11 +1055,20 @@ async fn restore_stored(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
+/// Where an import's or a restore's file waits while it arrives and is read.
+const UPLOADS: [&str; 3] = ["jellystat-upload.tmp", "streamystats-upload.tmp", "restore-upload.tmp"];
+
+/// Remove what an import or a restore killed half way left: a whole history, addresses and all, kept for good otherwise.
+/// Only at start, when nothing is arriving. Answers how many went.
+pub fn sweep_uploads(data_dir: &std::path::Path) -> usize {
+    UPLOADS.iter().filter(|name| std::fs::remove_file(data_dir.join(name)).is_ok()).count()
+}
+
 async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Query(q): Query<RestoreQuery>, req: Request) -> ApiResult<Response> {
     if !app.tasks.try_start_alone("restore", "Receiving backup", &HISTORY_WRITERS) {
         return Err(ApiError::new(StatusCode::CONFLICT, "A restore or an import is already running"));
     }
-    let path = app.data_dir.join("restore-upload.tmp");
+    let path = app.data_dir.join(UPLOADS[2]);
     let received = async {
         let mut file = tokio::fs::File::create(&path).await?;
         let mut stream = req.into_body().into_data_stream();
@@ -1092,7 +1101,7 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
 const HISTORY_WRITERS: [&str; 4] = ["import", "import_streamystats", "import_tautulli", "restore"];
 
 async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
-    let path = receive(&app, req, "import", "jellystat-upload.tmp").await?;
+    let path = receive(&app, req, "import", UPLOADS[0]).await?;
     let actor = Actor::from(&user);
     audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("jellystat")).await;
     let worker = app.clone();
@@ -1106,7 +1115,7 @@ async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: R
 }
 
 async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
-    let path = receive(&app, req, "import_streamystats", "streamystats-upload.tmp").await?;
+    let path = receive(&app, req, "import_streamystats", UPLOADS[1]).await?;
     let actor = Actor::from(&user);
     audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("streamystats")).await;
     let worker = app.clone();
@@ -1339,6 +1348,23 @@ mod tests {
 
     /// FinStats draws both themes itself, so a browser extension that repaints pages dark (Dark Reader) is told to
     /// leave every page as it is: it inverted the light theme's paper into a muddy grey and fought the dark one.
+    /// An import or a restore killed while its file was arriving left the file in the data folder for good: a whole
+    /// history, addresses and all. Nothing is uploading when FinStats starts, so whatever is there is swept then.
+    #[test]
+    fn what_an_interrupted_upload_left_is_swept_at_start() {
+        let dir = std::env::temp_dir().join(format!("finstats-uploads-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in ["jellystat-upload.tmp", "streamystats-upload.tmp", "restore-upload.tmp", "finstats.db", "notes.tmp"] {
+            std::fs::write(dir.join(name), b"x").unwrap();
+        }
+        assert_eq!(sweep_uploads(&dir), 3);
+        let mut left: Vec<String> = std::fs::read_dir(&dir).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
+        left.sort();
+        assert_eq!(left, ["finstats.db", "notes.tmp"]);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn every_page_tells_dark_reader_to_leave_it_alone() {
         let pages: Vec<String> = WebAssets::iter().filter(|f| f.ends_with(".html")).map(|f| f.to_string()).collect();
