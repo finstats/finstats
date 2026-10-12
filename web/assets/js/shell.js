@@ -1,7 +1,7 @@
 // App chrome: the desktop and the mobile menu (FinUI's, each in the style this browser chose), Obsidian-style status bar,
 // scroll-to-top, and the two layouts the router can ask for.
 
-import { h, icon, num, relTime, dateTime, mount, logo } from './dom.js';
+import { h, icon, relTime, dateTime, mount, logo } from './dom.js';
 import { api, isAbort } from './api.js';
 import { follow } from './live.js';
 import { state, hasUnseenVersion, onVersionSeen, noteRunningVersion, can, themeChoice, setTheme, mobileNavChoice, onMobileNavChange, desktopNavChoice, setDesktopNav, onDesktopNavChange, searchMode } from './state.js';
@@ -17,6 +17,7 @@ import { desktopNav, STYLES as DESKTOP_STYLES, styleOf as desktopStyleOf, sideOf
 import { cornerOf as desktopCornerOf } from '../finui/components/desktop-nav/plan.js';
 import { cornerOf as mobileCornerOf } from '../finui/components/mobile-nav/plan.js';
 import { toTop as toTopButton } from '../finui/components/to-top/to-top.js';
+import { t } from './i18n.js';
 
 let shell = null; // {el, content, setActive, destroy, userId}
 let bare = null;
@@ -28,19 +29,19 @@ const themeSwitch = () => themeSwitchOf({ value: themeChoice(), onChange: setThe
 function navItems() {
   const me = state.user;
   return [
-    { href: '/', label: 'Dashboard', icon: 'home', group: 'You', exact: true, primary: true },
-    { href: '/recap', label: 'Recap', icon: 'recap', group: 'You' },
-    { href: `/users/${me.id}`, label: 'My profile', icon: 'user', group: 'You', primary: true },
-    { href: '/activity', label: 'Activity', icon: 'activity', group: 'Watching', primary: true },
-    { href: '/together', label: 'Together', icon: 'together', group: 'Watching' },
-    can('see_everyone') ? { href: '/users', label: 'Users', icon: 'users', group: 'Library', not: `/users/${me.id}` } : null,
-    { href: '/libraries', label: 'Libraries', icon: 'library', group: 'Library', also: ['/items'], primary: true },
-    { href: '/playback', label: 'Playback', icon: 'sliders', group: 'Watching' },
-    hasPipeline() ? { href: '/pipeline', label: 'Pipeline', icon: 'layers', group: 'Library' } : null,
-    can('see_server') ? { href: '/server', label: 'Server', icon: 'server', group: 'Server' } : null,
-    can('see_network') && can('see_everyone') ? { href: '/security', label: 'Security', icon: 'shield', group: 'Server' } : null,
-    { href: '/settings', label: 'Settings', icon: 'settings', group: 'Server' },
-    { href: '/changelog', label: 'Patch notes', icon: 'tag', group: 'Server', dot: hasUnseenVersion },
+    { href: '/', label: t('nav.dashboard'), icon: 'home', group: t('nav.groups.you'), exact: true, primary: true },
+    { href: '/recap', label: t('nav.recap'), icon: 'recap', group: t('nav.groups.you') },
+    { href: `/users/${me.id}`, label: t('nav.my_profile'), icon: 'user', group: t('nav.groups.you'), primary: true },
+    { href: '/activity', label: t('nav.activity'), icon: 'activity', group: t('nav.groups.watching'), primary: true },
+    { href: '/together', label: t('nav.together'), icon: 'together', group: t('nav.groups.watching') },
+    can('see_everyone') ? { href: '/users', label: t('nav.users'), icon: 'users', group: t('nav.groups.library'), not: `/users/${me.id}` } : null,
+    { href: '/libraries', label: t('nav.libraries'), icon: 'library', group: t('nav.groups.library'), also: ['/items'], primary: true },
+    { href: '/playback', label: t('nav.playback'), icon: 'sliders', group: t('nav.groups.watching') },
+    hasPipeline() ? { href: '/pipeline', label: t('nav.pipeline'), icon: 'layers', group: t('nav.groups.library') } : null,
+    can('see_server') ? { href: '/server', label: t('nav.server'), icon: 'server', group: t('nav.groups.server') } : null,
+    can('see_network') && can('see_everyone') ? { href: '/security', label: t('nav.security'), icon: 'shield', group: t('nav.groups.server') } : null,
+    { href: '/settings', label: t('nav.settings'), icon: 'settings', group: t('nav.groups.server') },
+    { href: '/changelog', label: t('nav.patch_notes'), icon: 'tag', group: t('nav.groups.server'), dot: hasUnseenVersion },
   ].filter(Boolean);
 }
 
@@ -54,7 +55,7 @@ function buildShell() {
   // Who is signed in and the theme, at the foot of the mobile menu.
   const meFoot = () => [
     h('a', { class: 'me', href: `/users/${me.id}` }, avatar(me.id, me.name, { size: 26, hasImage: me.has_image }),
-      h('span', { class: 'me-text' }, h('span', { class: 'me-name' }, me.name), h('span', { class: 'me-role' }, me.is_admin ? 'Administrator' : 'Viewer'))),
+      h('span', { class: 'me-text' }, h('span', { class: 'me-name' }, me.name), h('span', { class: 'me-role' }, me.is_admin ? t('nav.role_admin') : t('nav.role_viewer')))),
     themeSwitch()];
   // ---- the desktop menu: FinUI's desktop-nav in the style and on the side this browser chose (Settings → Appearance, on a
   // wide screen). The app lays its page beside whatever edge the style keeps (STYLES: a side, the bottom or the top), and the
@@ -71,9 +72,9 @@ function buildShell() {
     const bar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--statusbar-h')) || 26;
     desktop = desktopNav({ style, side, current: here, pages: pagesOf(), onSearch: () => openSearch(desktop.searchControl), keys: 'Ctrl Space',
       brand: { href: '/', mark: brandMark(), name: 'FinStats' },
-      me: { href: `/users/${me.id}`, avatar: avatar(me.id, me.name, { size: 26, hasImage: me.has_image }), name: me.name, role: me.is_admin ? 'Administrator' : 'Viewer' },
+      me: { href: `/users/${me.id}`, avatar: avatar(me.id, me.name, { size: 26, hasImage: me.has_image }), name: me.name, role: me.is_admin ? t('nav.role_admin') : t('nav.role_viewer') },
       theme: themeSwitch(), pins: chosen.pins, onPins: (pins) => setDesktopNav({ pins }),
-      insets: edge === 'bottom' ? { top: bar, bottom: 0 } : edge === 'top' ? { top: 0, bottom: bar } : { top: 0, bottom: bar } });
+      insets: edge === 'bottom' ? { top: bar, bottom: 0 } : edge === 'top' ? { top: 0, bottom: bar } : { top: 0, bottom: bar }, label: t('shell.pages_label') });
     mount(desktopSlot, desktop.el);
     for (const c of ['nav-left', 'nav-right', 'nav-dock', 'nav-command']) el.classList.remove(c);
     el.classList.add(side ? `nav-${side}` : edge === 'bottom' ? 'nav-dock' : 'nav-command');
@@ -88,14 +89,14 @@ function buildShell() {
   // that open from a button in the top bar (Peek, Full screen) hand it over; the others bring their own at the bottom.
   const menuSlot = h('span', { class: 'topbar-menu' });
   const topbar = h('header', { class: 'topbar' }, menuSlot, h('a', { class: 'brand', href: '/' }, brandMark(), h('span', { class: 'brand-name' }, 'FinStats')),
-    button({ variant: 'icon', type: 'button', class: 'topbar-search', 'aria-label': 'Search', 'aria-keyshortcuts': 'Control+Space', onClick: (e) => openSearch(e.currentTarget) }, icon('search', 18)));
+    button({ variant: 'icon', type: 'button', class: 'topbar-search', 'aria-label': t('search.label'), 'aria-keyshortcuts': 'Control+Space', onClick: (e) => openSearch(e.currentTarget) }, icon('search', 18)));
   const mobileSlot = h('div', { class: 'mobile-nav' });
   let mobile = null;
   function buildMobile() {
     if (mobile) mobile.destroy();
     const style = styleOf(mobileNavChoice());
     mobile = mobileNav({ style, current: here, onSearch: (from) => openSearch(from), onSearchEnd: () => dropSearch(), foot: h('div', { class: 'mobile-nav-foot' }, meFoot()),
-      pages: pagesOf() });
+      pages: pagesOf(), label: t('shell.menu_label') });
     mount(menuSlot, mobile.trigger);
     mount(mobileSlot, mobile.el);
     const space = STYLES.find((x) => x.key === style).space;
@@ -163,15 +164,15 @@ function buildShell() {
 
   // ---- status bar
   const sbDot = h('span', { class: 'sb-dot' });
-  const sbStream = h('a', { href: '/', class: 'sb-item sb-link' }, sbDot, h('span', null, 'connecting…'));
+  const sbStream = h('a', { href: '/', class: 'sb-item sb-link' }, sbDot, h('span', null, t('statusbar.connecting')));
   const sbPlays = h('span', { class: 'sb-item' });
   const sbSync = h('span', { class: 'sb-item sb-sync' });
-  const sbRepo = h('a', { class: 'sb-item sb-right sb-link', href: 'https://github.com/finstats/finstats', target: '_blank', rel: 'noopener noreferrer', title: 'FinStats on GitHub' }, icon('github', 12), 'Repo');
+  const sbRepo = h('a', { class: 'sb-item sb-right sb-link', href: 'https://github.com/finstats/finstats', target: '_blank', rel: 'noopener noreferrer', title: t('statusbar.repo_title') }, icon('github', 12), t('statusbar.repo'));
   const version = state.status && state.status.version;
   const sbVerText = h('span', null, version ? 'v' + version : '');
-  const sbVer = h('a', { class: 'sb-item sb-link', href: '/changelog', title: 'Patch notes', hidden: !version }, sbVerText);
+  const sbVer = h('a', { class: 'sb-item sb-link', href: '/changelog', title: t('nav.patch_notes'), hidden: !version }, sbVerText);
   const sep = () => h('span', { class: 'sb-sep', 'aria-hidden': 'true' }, '·');
-  const statusbar = h('footer', { class: 'statusbar', role: 'status', 'aria-label': 'Collector status' }, sbStream, sep(), sbPlays, sep(), sbSync, sbRepo, sep(), sbVer);
+  const statusbar = h('footer', { class: 'statusbar', role: 'status', 'aria-label': t('statusbar.label') }, sbStream, sep(), sbPlays, sep(), sbSync, sbRepo, sep(), sbVer);
 
   let sbAbort = null, sbShown = null, sbPushes = 0;
   const sbStop = new AbortController();
@@ -180,12 +181,12 @@ function buildShell() {
     const ok = !!sum.collector_ok;
     sbDot.className = 'sb-dot ' + (ok ? 'ok' : 'bad');
     const n = sum.active_sessions || 0;
-    sbStream.lastChild.textContent = ok ? `${num(n)} streaming` : 'collector offline';
-    sbStream.title = !ok ? 'FinStats can’t reach Jellyfin right now. Plays are not being recorded.'
-      : sum.collector_live ? 'Jellyfin is pushing what is playing · go to now playing' : 'Go to now playing';
-    sbPlays.textContent = `${num(sum.plays_total)} plays`;
-    sbSync.textContent = sum.last_sync_at ? `synced ${relTime(sum.last_sync_at)}` : 'not synced yet';
-    sbSync.title = sum.last_sync_at ? 'Last library sync: ' + dateTime(sum.last_sync_at) : '';
+    sbStream.lastChild.textContent = ok ? t('statusbar.streaming', { count: n }) : t('statusbar.collector_offline');
+    sbStream.title = !ok ? t('statusbar.offline_title')
+      : sum.collector_live ? t('statusbar.pushing_title') : t('statusbar.go_now_playing');
+    sbPlays.textContent = t('statusbar.plays', { count: sum.plays_total || 0 });
+    sbSync.textContent = sum.last_sync_at ? t('statusbar.synced', { when: relTime(sum.last_sync_at) }) : t('statusbar.not_synced');
+    sbSync.title = sum.last_sync_at ? t('statusbar.last_sync', { when: dateTime(sum.last_sync_at) }) : '';
     if (sum.version) { sbVerText.textContent = 'v' + sum.version; sbVer.hidden = false; noteRunningVersion(sum.version); }
   }
   async function loadSummary() {
@@ -200,7 +201,7 @@ function buildShell() {
         // The last good answer is not said again while FinStats cannot be reached: the bar's ageing repainted it.
         sbShown = null;
         sbDot.className = 'sb-dot bad';
-        sbStream.lastChild.textContent = 'FinStats unreachable';
+        sbStream.lastChild.textContent = t('statusbar.unreachable');
       }
     }
   }
@@ -212,7 +213,7 @@ function buildShell() {
 
   // ---- scroll to top: FinUI's to-top, resting clear of whatever keeps the bottom-right corner in this layout (the menus'
   // corners and the status bar, told by buildDesktop and buildMobile), the phone's or the desktop's by the width.
-  const toTop = toTopButton({ onTop: () => main.focus({ preventScroll: true }) });
+  const toTop = toTopButton({ label: t('shell.to_top'), onTop: () => main.focus({ preventScroll: true }) });
   const narrow = matchMedia('(max-width: 820px)');
   const placeToTop = () => toTop.place((narrow.matches ? corners.mobile : corners.desktop) || []);
   narrow.addEventListener('change', placeToTop);

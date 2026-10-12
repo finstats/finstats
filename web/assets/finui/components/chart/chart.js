@@ -6,12 +6,13 @@
 import { h } from '../../core.js';
 import { showTip, hideTip, tipRows } from '../tooltip/tooltip.js';
 import { compact } from './plan.js';
+import { say } from '../../i18n.js';
 
 export { compact };
 /** A series' colour, by its place. A chart shows at most four: the rest are folded into Other before they get here. */
 export const tone = (i) => `var(--series-${(i % 4) + 1})`;
 /** Series folded to four: the fourth and on become Other. */
-export function foldSeries(series, other = 'Other') {
+export function foldSeries(series, other = say('chart.other', 'Other')) {
   if (series.length <= 4) return series;
   const rest = series.slice(3);
   return [...series.slice(0, 3), { name: other, values: rest[0].values.map((_, i) => rest.reduce((n, s) => n + (s.values[i] || 0), 0)) }];

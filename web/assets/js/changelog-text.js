@@ -2,6 +2,7 @@
 // as the browser writes them.
 
 import { h } from './dom.js';
+import { t, lang } from './i18n.js';
 
 /** Notes may use **bold**, *italic* and `code`. Built as DOM nodes; nothing is ever parsed as HTML. */
 export function inline(text) {
@@ -21,6 +22,10 @@ export function inline(text) {
   return out;
 }
 
+const KINDS = ['Added', 'Changed', 'Performance', 'Stability', 'Fixed', 'Removed'];
+/** A group's kind as the changelog names it (Added, Fixed…), in the language in use. */
+export const kindName = (kind) => (KINDS.includes(kind) ? t(`changelog_text.kind.${kind}`) : kind);
+
 const DAY = { year: 'numeric', month: 'long', day: 'numeric' };
 export const day = (iso) => {
   const d = /^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? new Date(iso + 'T12:00:00') : null;
@@ -29,13 +34,13 @@ export const day = (iso) => {
 
 export function longDate(iso) {
   const d = day(iso);
-  return d ? d.toLocaleDateString(undefined, DAY) : iso || '';
+  return d ? d.toLocaleDateString(lang(), DAY) : iso || '';
 }
 
 /** "September 25 – 28, 2026": the locale decides what the two days share; one day reads as one. */
 export function days(first, last) {
   const a = day(first), b = day(last);
   if (!a || !b || first === last) return longDate(last || first);
-  const f = new Intl.DateTimeFormat(undefined, DAY);
+  const f = new Intl.DateTimeFormat(lang(), DAY);
   return typeof f.formatRange === 'function' ? f.formatRange(a, b) : `${f.format(a)} – ${f.format(b)}`;
 }

@@ -7,12 +7,9 @@ import { api, isAbort } from './api.js';
 import { state } from './state.js';
 import { setBusy, inlineError, formField, errorState, sk } from './components.js';
 import { button } from '../finui/components/button/button.js';
+import { t, tParts } from './i18n.js';
 
-const SECRET_HELP = {
-  sonarr: 'Sonarr → Settings → General → Security → API Key.',
-  radarr: 'Radarr → Settings → General → Security → API Key.',
-  seerr: 'Seerr → Settings → General → API Key.',
-};
+const KINDS = new Set(['sonarr', 'radarr', 'seerr']);
 
 /** A self-managing card body. `ctx` is the page context (signal, every). */
 export function connectionsPanel(ctx) {
@@ -40,29 +37,29 @@ export function connectionsPanel(ctx) {
   }
 
   function statusOf(s) {
-    if (!s.enabled) return h('span', { class: 'fui-badge--status fui-badge--info' }, icon('minus', 13), 'Switched off');
-    if (s.last_error) return h('span', { class: 'fui-badge--status fui-badge--critical' }, icon('alert', 13), h('span', null, 'Not answering: ', s.last_error));
+    if (!s.enabled) return h('span', { class: 'fui-badge--status fui-badge--info' }, icon('minus', 13), t('connections.switched_off'));
+    if (s.last_error) return h('span', { class: 'fui-badge--status fui-badge--critical' }, icon('alert', 13), h('span', null, t('connections.not_answering', { error: s.last_error })));
     if (s.last_ok_at) return h('span', { class: 'fui-badge--status fui-badge--good' }, icon('check', 13),
-      h('span', null, 'Connected', s.version ? h('span', { class: 'mono' }, ` · ${s.version}`) : null, ' · checked ', h('span', { title: dateTime(s.last_ok_at) }, relTime(s.last_ok_at))));
-    return h('span', { class: 'fui-badge--status fui-badge--info' }, icon('clock', 13), 'Not checked yet');
+      h('span', null, t('connections.connected'), s.version ? h('span', { class: 'mono' }, ` · ${s.version}`) : null, ' · ', ...tParts('connections.checked', { when: h('span', { title: dateTime(s.last_ok_at) }, relTime(s.last_ok_at)) })));
+    return h('span', { class: 'fui-badge--status fui-badge--info' }, icon('clock', 13), t('connections.not_checked'));
   }
 
   function row(s) {
     const act = async (fn) => { try { data = await fn(); } catch (e) { rowErr = { id: s.id, text: e.message }; } removing = null; lastSig = ''; render(); };
     const actions = removing === s.id
-      ? [h('span', { class: 'muted' }, 'Remove it, and everything FinStats read from it?'),
+      ? [h('span', { class: 'muted' }, t('connections.remove_confirm')),
         button({ size: 'sm', variant: 'danger', type: 'button', onClick: (e) => {
-          setBusy(e.currentTarget, true, 'Removing…');
+          setBusy(e.currentTarget, true, t('connections.removing'));
           act(async () => {
             const left = await api.del(`/services/${s.id}`);
             // Which pages exist depends on what is connected, as after a save.
             try { state.user = (await api.get('/auth/me')).user; } catch { /* the next navigation will */ }
             return left;
           });
-        } }, 'Remove'),
-        button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => { removing = null; render(); } }, 'Cancel')]
-      : [button({ size: 'sm', type: 'button', onClick: () => { editing = s.id; removing = null; render(); } }, 'Edit'),
-        button({ size: 'sm', variant: 'ghost', tone: 'danger', type: 'button', onClick: () => { removing = s.id; render(); } }, 'Remove…')];
+        } }, t('connections.remove')),
+        button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => { removing = null; render(); } }, t('common.cancel'))]
+      : [button({ size: 'sm', type: 'button', onClick: () => { editing = s.id; removing = null; render(); } }, t('connections.edit')),
+        button({ size: 'sm', variant: 'ghost', tone: 'danger', type: 'button', onClick: () => { removing = s.id; render(); } }, t('connections.remove_ask'))];
     return h('li', { class: 'conn-row' },
       h('div', { class: 'conn-main' },
         h('div', { class: 'conn-name' }, h('strong', null, s.name), s.name !== s.label ? h('span', { class: 'fui-chip' }, s.label) : null),
@@ -76,21 +73,21 @@ export function connectionsPanel(ctx) {
     let kind = existing ? kinds.find((k) => k.key === existing.kind) : kinds[0];
     const kindSel = h('select', { class: 'fui-field__input', id: 'conn-kind', 'aria-describedby': 'conn-kind-help' }, kinds.map((k) => h('option', { value: k.key }, k.label)));
     const kindHelp = h('p', { class: 'fui-field__help', id: 'conn-kind-help' });
-    const name = formField({ id: 'conn-name', label: 'Name (optional)', autocomplete: 'off', help: 'Shown in FinStats. Useful with two of a kind: “Radarr 4K”.' });
-    const url = formField({ id: 'conn-url', label: 'Address', autocomplete: 'off', inputMode: 'url' });
-    const secret = formField({ id: 'conn-secret', label: 'API key', type: 'password', autocomplete: 'new-password', help: ' ' });
+    const name = formField({ id: 'conn-name', label: t('connections.name_label'), autocomplete: 'off', help: t('connections.name_help') });
+    const url = formField({ id: 'conn-url', label: t('connections.address'), autocomplete: 'off', inputMode: 'url' });
+    const secret = formField({ id: 'conn-secret', label: t('connections.api_key'), type: 'password', autocomplete: 'new-password', help: ' ' });
     const certs = h('input', { type: 'checkbox', id: 'conn-certs', 'aria-describedby': 'conn-certs-help' });
     const enabled = h('input', { type: 'checkbox', id: 'conn-enabled' });
     const result = h('div', { 'aria-live': 'polite' });
     const formErr = h('div');
-    const testBtn = button({ type: 'button' }, 'Test connection');
-    const saveBtn = button({ variant: 'primary', type: 'submit' }, existing ? 'Save' : 'Test and save');
+    const testBtn = button({ type: 'button' }, t('connections.test'));
+    const saveBtn = button({ variant: 'primary', type: 'submit' }, existing ? t('common.save') : t('connections.test_and_save'));
 
     function paintKind() {
-      kindHelp.textContent = kind.what;
+      kindHelp.textContent = KINDS.has(kind.key) ? t(`connections.kind.${kind.key}`) : kind.what;
       url.input.placeholder = kind.example;
-      secret.el.querySelector('.fui-field__help').textContent = (existing && existing.has_secret ? 'Leave empty to keep the stored one. ' : '') + (SECRET_HELP[kind.key] || '');
-      secret.input.placeholder = existing && existing.has_secret ? 'Unchanged' : '';
+      secret.el.querySelector('.fui-field__help').textContent = [existing && existing.has_secret ? t('connections.keep_secret') : '', KINDS.has(kind.key) ? t(`connections.secret_help.${kind.key}`) : ''].filter(Boolean).join(' ');
+      secret.input.placeholder = existing && existing.has_secret ? t('connections.unchanged') : '';
     }
     if (existing) {
       kindSel.value = existing.kind; kindSel.disabled = true;
@@ -109,15 +106,18 @@ export function connectionsPanel(ctx) {
     };
     function valid() {
       let ok = true;
-      if (!url.input.value.trim()) { url.setError(`Enter the address of ${kind.label}, like ${kind.example}.`); ok = false; }
-      if (!secret.input.value && !(existing && existing.has_secret)) { secret.setError('Enter the API key.'); ok = false; }
+      if (!url.input.value.trim()) { url.setError(t('connections.enter_address', { service: kind.label, example: kind.example })); ok = false; }
+      if (!secret.input.value && !(existing && existing.has_secret)) { secret.setError(t('connections.enter_key')); ok = false; }
       if (!ok) (url.input.getAttribute('aria-invalid') === 'true' ? url.input : secret.input).focus();
       return ok;
     }
     // The server's sentence names what is wrong; put it next to the field it is about.
     function place(err) {
       mount(result, '');
-      const text = err.message || 'Something went wrong.';
+      const text = err.message || t('connections.went_wrong');
+      // The server says which field an error is about; its words are in the reader's language and are not matched.
+      const named = err.field && ({ url, secret })[err.field];
+      if (named) { named.setError(text); named.input.focus(); return; }
       if (/API key/i.test(text)) { secret.setError(text); secret.input.focus(); }
       else if (err.status === 400 || err.status === 502) { url.setError(text); url.input.focus(); }
       else mount(formErr, inlineError('conn-form-err', text));
@@ -125,28 +125,28 @@ export function connectionsPanel(ctx) {
     testBtn.addEventListener('click', async () => {
       mount(formErr, '');
       if (!valid()) return;
-      setBusy(testBtn, true, 'Testing…');
+      setBusy(testBtn, true, t('connections.testing'));
       try {
         const r = await api.post('/services/test', body());
-        mount(result, h('p', { class: 'fui-badge--status fui-badge--good test-ok' }, icon('check', 14), h('span', null, 'Connected to ', h('strong', null, r.app || kind.label), r.version ? h('span', { class: 'mono' }, ` · ${r.version}`) : null)));
+        mount(result, h('p', { class: 'fui-badge--status fui-badge--good test-ok' }, icon('check', 14), h('span', null, ...tParts('connections.connected_to', { app: h('strong', null, r.app || kind.label) }), r.version ? h('span', { class: 'mono' }, ` · ${r.version}`) : null)));
       } catch (e) { place(e); } finally { setBusy(testBtn, false); }
     });
     const el = h('form', { class: 'conn-form', noValidate: true },
-      h('h3', { class: 'conn-form-title' }, existing ? `Edit ${existing.name}` : 'Add a connection'),
+      h('h3', { class: 'conn-form-title' }, existing ? t('connections.edit_title', { name: existing.name }) : t('connections.add')),
       h('div', { class: 'form-grid' },
-        h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', htmlFor: 'conn-kind' }, 'Service'), kindSel, kindHelp),
+        h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', htmlFor: 'conn-kind' }, t('connections.service')), kindSel, kindHelp),
         name.el, url.el, secret.el,
         h('div', { class: 'fui-field' },
-          h('label', { class: 'fui-field__check' }, certs, 'Accept a self-signed certificate'),
-          h('p', { class: 'fui-field__help', id: 'conn-certs-help' }, 'Only for an https:// address whose certificate is your own. FinStats then does not verify who answers at this address. Leave it off otherwise.'),
-          existing ? h('label', { class: 'fui-field__check' }, enabled, 'Switched on') : null)),
+          h('label', { class: 'fui-field__check' }, certs, t('connections.self_signed')),
+          h('p', { class: 'fui-field__help', id: 'conn-certs-help' }, t('connections.self_signed_help')),
+          existing ? h('label', { class: 'fui-field__check' }, enabled, t('connections.switched_on')) : null)),
       result, formErr,
-      h('div', { class: 'form-actions' }, saveBtn, testBtn, button({ variant: 'ghost', type: 'button', onClick: () => { editing = null; render(); } }, 'Cancel')));
+      h('div', { class: 'form-actions' }, saveBtn, testBtn, button({ variant: 'ghost', type: 'button', onClick: () => { editing = null; render(); } }, t('common.cancel'))));
     el.addEventListener('submit', async (e) => {
       e.preventDefault();
       mount(formErr, '');
       if (!valid()) return;
-      setBusy(saveBtn, true, 'Testing…');
+      setBusy(saveBtn, true, t('connections.testing'));
       try {
         data = existing ? await api.put(`/services/${existing.id}`, body()) : await api.post('/services', body());
         editing = null; lastSig = '';
@@ -162,13 +162,13 @@ export function connectionsPanel(ctx) {
     if (!data) return;
     const list = data.services.length
       ? h('ul', { class: 'conn-list' }, data.services.map(row))
-      : h('p', { class: 'fui-field__help' }, 'Nothing connected yet. With Sonarr and Radarr, FinStats knows what is coming and what is downloading; with Seerr, who asked for what.');
+      : h('p', { class: 'fui-field__help' }, t('connections.none_yet'));
     const existing = typeof editing === 'number' ? data.services.find((s) => s.id === editing) : null;
     mount(root,
-      h('p', { class: 'fui-field__help' }, 'FinStats only reads from these services: it never approves a request, starts a search or touches a download. Keys and passwords are stored in FinStats’ own database, are never shown again and are never part of a backup.'),
+      h('p', { class: 'fui-field__help' }, t('connections.intro')),
       list,
       editing === null
-        ? h('div', { class: 'form-actions' }, button({ type: 'button', onClick: () => { editing = 'new'; removing = null; render(); } }, icon('plus', 14), 'Add a connection'))
+        ? h('div', { class: 'form-actions' }, button({ type: 'button', onClick: () => { editing = 'new'; removing = null; render(); } }, icon('plus', 14), t('connections.add')))
         : form(existing));
     if (editing !== null) { const first = root.querySelector(existing ? '#conn-name' : '#conn-kind'); if (first) first.focus(); }
   }

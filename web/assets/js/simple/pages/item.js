@@ -5,12 +5,13 @@
 import { h, icon, num, relTime } from '../../dom.js';
 import { api, imgItem, isAbort } from '../../api.js';
 import { can } from '../../state.js';
+import { t, lang } from '../../i18n.js';
 import { dataView, poster, avatar, sk, emptyState } from '../../components.js';
 import { breadcrumb } from '../../../finui/components/breadcrumb/breadcrumb.js';
 import { mediaCard, mediaGrid } from '../../../finui/components/media-card/media-card.js';
 import { tileStat, tileStats } from '../../../finui/components/tile-stat/tile-stat.js';
-import { statFigure, statFigures, durationMeasure } from '../../../finui/components/stat-figure/stat-figure.js';
-import { box } from '../profile.js';
+import { statFigure, statFigures } from '../../../finui/components/stat-figure/stat-figure.js';
+import { box, duration, playsUnit } from '../profile.js';
 import { historyList } from '../history.js';
 
 export const loadItem = (id, signal) => api.get(`/items/${encodeURIComponent(id)}`, { days: 0 }, { signal });
@@ -20,7 +21,7 @@ export const prefetchItem = ({ params, signal }) => [() => loadItem(params.id, s
 function stars(rating) {
   if (rating == null) return null;
   const halves = Math.round(Math.max(0, Math.min(10, rating)));
-  return h('span', { class: 'simple-stars', role: 'img', 'aria-label': `Rated ${(rating / 2).toFixed(1)} of 5` },
+  return h('span', { class: 'simple-stars', role: 'img', 'aria-label': t('simple.item.rated_aria', { rating: new Intl.NumberFormat(lang(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(rating / 2) }) },
     [0, 1, 2, 3, 4].map((i) => h('span', { class: ['simple-star', halves >= i * 2 + 2 ? 'is-full' : halves === i * 2 + 1 ? 'is-half' : null] }, '★')));
 }
 
@@ -36,18 +37,18 @@ function hero(it, people) {
     h('div', { class: 'simple-hero__text' },
       h('h1', { class: 'simple-hero__title' }, it.name),
       h('div', { class: 'simple-hero__facts' },
-        fact('Studio', (it.studios || [])[0]), fact('Aired', it.year ? String(it.year) : null), fact('Runtime', it.runtime_s ? `${Math.round(it.runtime_s / 60)} mins` : null),
-        fact('Rated', it.official_rating), stars(it.community_rating)),
+        fact(t('simple.item.studio'), (it.studios || [])[0]), fact(t('simple.item.aired'), it.year ? String(it.year) : null), fact(t('simple.item.runtime'), it.runtime_s ? t('simple.platform.mins', { minutes: Math.round(it.runtime_s / 60) }) : null),
+        fact(t('simple.item.rated'), it.official_rating), stars(it.community_rating)),
       it.overview ? h('p', { class: 'simple-hero__overview' }, it.overview) : null,
       h('div', { class: 'simple-hero__lists' },
-        actors.length ? h('div', null, h('h2', null, 'Starring'), h('ul', { class: 'simple-hero__cast' }, actors.map((p) => h('li', null, p.name)))) : null,
-        (it.genres || []).length ? h('div', null, h('h2', null, 'Genres'), h('ul', null, it.genres.map((g) => h('li', null, g)))) : null)));
+        actors.length ? h('div', null, h('h2', null, t('simple.item.starring')), h('ul', { class: 'simple-hero__cast' }, actors.map((p) => h('li', null, p.name)))) : null,
+        (it.genres || []).length ? h('div', null, h('h2', null, t('simple.item.genres')), h('ul', null, it.genres.map((g) => h('li', null, g)))) : null)));
 }
 
 function trail(it) {
   const items = [];
-  if (it.library_id) items.push({ label: it.library_name || 'Library', href: `/libraries/${it.library_id}` });
-  if (it.series_id && it.type !== 'Series') items.push({ label: it.series_name || 'Show', href: `/items/${it.series_id}` });
+  if (it.library_id) items.push({ label: it.library_name || t('simple.item.library'), href: `/libraries/${it.library_id}` });
+  if (it.series_id && it.type !== 'Series') items.push({ label: it.series_name || t('simple.item.show'), href: `/items/${it.series_id}` });
   items.push({ label: it.type === 'Episode' && it.episode_number != null ? `${it.name}` : it.name });
   return breadcrumb({ items });
 }
@@ -56,7 +57,7 @@ function trail(it) {
 function seasons(list) {
   if (!list.length) return [];
   // Each season's card jumps to its episodes on this page. By its place in the list, since a season may have no number.
-  const cards = mediaGrid(list.map((s, i) => mediaCard({ href: `#season-${i}`, poster: poster(s.id, s.name, { w: 240, cls: 'fui-poster--grid' }), name: s.name, sub: `${s.episodes.length} episodes` })));
+  const cards = mediaGrid(list.map((s, i) => mediaCard({ href: `#season-${i}`, poster: poster(s.id, s.name, { w: 240, cls: 'fui-poster--grid' }), name: s.name, sub: t('terms.episode', { count: s.episodes.length }) })));
   cards.addEventListener('click', (e) => {
     const a = e.target.closest('a[href^="#season-"]');
     const target = a && document.getElementById(a.getAttribute('href').slice(1));
@@ -69,9 +70,9 @@ function seasons(list) {
     h('ol', { class: 'simple-season__list' }, s.episodes.map((e) => h('li', { class: 'simple-episode' },
       h('span', { class: 'simple-episode__n' }, e.episode_number != null ? String(e.episode_number) : ''),
       h('a', { href: `/items/${e.id}` }, e.name),
-      h('span', { class: 'simple-episode__plays' }, e.plays ? `${num(e.plays)} ${e.plays === 1 ? 'play' : 'plays'}` : ''),
-      h('span', { class: 'simple-episode__runtime' }, e.runtime_s ? `${Math.round(e.runtime_s / 60)} mins` : '')))))));
-  return [box({ id: 'simple-seasons', title: 'Season List', icon: 'layers', body: cards }), box({ id: 'simple-episode-box', title: 'Episode List', icon: 'tv', body: episodes })];
+      h('span', { class: 'simple-episode__plays' }, e.plays ? t('terms.play', { count: e.plays }) : ''),
+      h('span', { class: 'simple-episode__runtime' }, e.runtime_s ? t('simple.platform.mins', { minutes: Math.round(e.runtime_s / 60) }) : '')))))));
+  return [box({ id: 'simple-seasons', title: t('simple.item.season_list'), icon: 'layers', body: cards }), box({ id: 'simple-episode-box', title: t('simple.item.episode_list'), icon: 'tv', body: episodes })];
 }
 
 export default function itemPage(ctx) {
@@ -86,18 +87,18 @@ export default function itemPage(ctx) {
     drawn = d;
     ctx.title(d.item.name);
     head.replaceChildren(h('div', { class: 'simple-crumbs' }, trail(d.item)), hero(d.item, d.people || []),
-      h('nav', { class: 'simple-tabs simple-tabs--page', 'aria-label': 'Views' },
-        h('a', { href: `/items/${id}`, 'aria-current': history ? null : 'page' }, 'Profile'), h('a', { href: `/items/${id}?tab=history`, 'aria-current': history ? 'page' : null }, 'History')));
+      h('nav', { class: 'simple-tabs simple-tabs--page', 'aria-label': t('simple.profile.views') },
+        h('a', { href: `/items/${id}`, 'aria-current': history ? null : 'page' }, t('simple.profile.tab_profile')), h('a', { href: `/items/${id}?tab=history`, 'aria-current': history ? 'page' : null }, t('simple.nav.history'))));
   };
   if (history) {
     // A show's history is its episodes'; anything else is its own plays. One answer names the page and picks the list.
-    const missing = () => body.replaceChildren(emptyState('No such title', 'It may have been removed from Jellyfin.'));
+    const missing = () => body.replaceChildren(emptyState(t('simple.item.missing_title'), t('simple.item.missing_text')));
     loadItem(id, ctx.signal).then((d) => {
       if (ctx.signal.aborted) return;
       if (!d || !d.item) return missing();
       top(d);
       const list = historyList(ctx, { id: 'simple-item-history', fixed: d.item.type === 'Series' ? { series_id: id } : { item_id: id } });
-      body.append(h('div', { class: 'simple-panel-head' }, h('h2', { class: 'simple-page-title' }, 'History'), h('div', { class: 'simple-head__tools' }, list.tools)), list.el);
+      body.append(h('div', { class: 'simple-panel-head' }, h('h2', { class: 'simple-page-title' }, t('simple.nav.history')), h('div', { class: 'simple-head__tools' }, list.tools)), list.el);
     }).catch((e) => { if (!ctx.signal.aborted && !isAbort(e)) missing(); });
     return;
   }
@@ -106,16 +107,16 @@ export default function itemPage(ctx) {
     // An address of no title is said to be one, as its History tab and the library and person pages say it.
     fetch: () => loadItem(id, ctx.signal).catch((e) => { if (e.status === 404) return null; throw e; }),
     render: (d) => {
-      if (!d || !d.item) return emptyState('No such title', 'It may have been removed from Jellyfin.');
+      if (!d || !d.item) return emptyState(t('simple.item.missing_title'), t('simple.item.missing_text'));
       top(d);
-      const t = d.totals || {};
-      const figures = box({ id: 'simple-global', title: 'Global Stats', icon: 'trendUp', body: statFigures([
-        statFigure({ label: 'All time', measures: [[[num(t.plays || 0), t.plays === 1 ? 'play' : 'plays']], durationMeasure(t.watch_s)] }),
-        can('see_everyone') ? statFigure({ label: 'Watched by', measures: [[[num(t.users || 0), t.users === 1 ? 'person' : 'people']]] }) : null,
-        statFigure({ label: 'Last played', measures: [[[t.last_played_at ? relTime(t.last_played_at) : 'never', null]]] }),
+      const tot = d.totals || {};
+      const figures = box({ id: 'simple-global', title: t('simple.profile.global_stats'), icon: 'trendUp', body: statFigures([
+        statFigure({ label: t('range.0.long'), measures: [[[num(tot.plays || 0), playsUnit(tot.plays)]], duration(tot.watch_s)] }),
+        can('see_everyone') ? statFigure({ label: t('simple.item.watched_by'), measures: [[[num(tot.users || 0), t(tot.users === 1 ? 'simple.item.unit_person' : 'simple.item.unit_people')]]] }) : null,
+        statFigure({ label: t('simple.home.count.last_played'), measures: [[[tot.last_played_at ? relTime(tot.last_played_at) : t('time.never'), null]]] }),
       ].filter(Boolean)) });
-      const watchers = can('see_everyone') && (d.watchers || []).length ? box({ id: 'simple-user-stats', title: 'User Stats', icon: 'users',
-        body: tileStats(d.watchers.map((w) => tileStat({ picture: avatar(w.user_id, w.user_name, { size: 80, hasImage: w.has_image }), name: w.user_name, href: `/users/${w.user_id}`, figure: num(w.plays), unit: w.plays === 1 ? 'play' : 'plays' }))) }) : null;
+      const watchers = can('see_everyone') && (d.watchers || []).length ? box({ id: 'simple-user-stats', title: t('simple.profile.user_stats'), icon: 'users',
+        body: tileStats(d.watchers.map((w) => tileStat({ picture: avatar(w.user_id, w.user_name, { size: 80, hasImage: w.has_image }), name: w.user_name, href: `/users/${w.user_id}`, figure: num(w.plays), unit: playsUnit(w.plays) }))) }) : null;
       return [...seasons(d.seasons || []), figures, watchers].filter(Boolean);
     },
   }).load();

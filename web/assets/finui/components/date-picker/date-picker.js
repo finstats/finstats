@@ -5,9 +5,8 @@ import { h, icon, mount } from '../../core.js';
 import { calendar } from '../calendar/calendar.js';
 import { inlineError } from '../field/field.js';
 import { parseDay } from './plan.js';
+import { say, locale } from '../../i18n.js';
 
-const full = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-const short = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const at = (key) => new Date(`${key}T12:00:00Z`);
 
 /** datePicker({ label, value, onChange(day), min, max, open, id }): days as YYYY-MM-DD; `open` starts with the calendar shown. */
@@ -15,16 +14,22 @@ export function datePicker({ label, value = null, onChange = () => {}, min = nul
   // Named after its label unless given an id, as a field is; two pickers of one label on a page take an id each.
   id = id || `fui-date-${String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
   let current = value;
-  const input = h('input', { class: 'fui-field__input fui-date-picker__input', id, type: 'text', placeholder: 'e.g. 5 Oct 2026', autocomplete: 'off', 'aria-describedby': `${id}-said` });
+  const lang = locale();
+  const full = new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const short = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const months = Array.from({ length: 12 }, (_, i) => ['long', 'short'].map((month) => new Intl.DateTimeFormat(lang, { month, timeZone: 'UTC' }).format(new Date(Date.UTC(2026, i, 15)))));
+  const example = short.format(at('2026-10-05'));
+  const input = h('input', { class: 'fui-field__input fui-date-picker__input', id, type: 'text', placeholder: say('date_picker.placeholder', `e.g. ${example}`, { example }), autocomplete: 'off', 'aria-describedby': `${id}-said` });
   const said = h('p', { class: 'fui-field__help', id: `${id}-said`, 'aria-live': 'polite' });
   const error = h('div');
-  const button = h('button', { type: 'button', class: 'fui-date-picker__button', 'aria-label': `Choose ${label.toLowerCase()} on a calendar`, 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'aria-controls': `${id}-pop` }, icon('calendar', 15));
+  const button = h('button', { type: 'button', class: 'fui-date-picker__button', 'aria-label': say('date_picker.choose', `Choose ${label.toLowerCase()} on a calendar`, { label: label.toLowerCase() }), 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'aria-controls': `${id}-pop` }, icon('calendar', 15));
   const pop = h('div', { class: 'fui-date-picker__pop', id: `${id}-pop`, role: 'dialog', 'aria-label': label, hidden: true });
   const el = h('div', { class: 'fui-field fui-date-picker' }, h('label', { class: 'fui-field__label', htmlFor: id }, label),
     h('div', { class: 'fui-date-picker__row' }, input, button, pop), said, error);
   const show = () => {
     input.value = current ? short.format(at(current)) : '';
-    said.textContent = [current ? full.format(at(current)) : 'No day chosen yet.', min && max ? `Between ${short.format(at(min))} and ${short.format(at(max))}.` : min ? `From ${short.format(at(min))}.` : max ? `Until ${short.format(at(max))}.` : null].filter(Boolean).join(' ');
+    const from = min && short.format(at(min)), to = max && short.format(at(max));
+    said.textContent = [current ? full.format(at(current)) : say('date_picker.none', 'No day chosen yet.'), min && max ? say('date_picker.between', `Between ${from} and ${to}.`, { from, to }) : min ? say('date_picker.from', `From ${from}.`, { from }) : max ? say('date_picker.until', `Until ${to}.`, { to }) : null].filter(Boolean).join(' ');
     input.removeAttribute('aria-invalid'); mount(error);
   };
   const set = (day) => { current = day; show(); onChange(day); };
@@ -40,11 +45,11 @@ export function datePicker({ label, value = null, onChange = () => {}, min = nul
   button.addEventListener('click', () => toggle(pop.hidden));
   pop.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); toggle(false); button.focus(); } });
   input.addEventListener('change', () => {
-    const day = parseDay(input.value);
+    const day = parseDay(input.value, months);
     if (!input.value.trim()) { set(null); return; }
     if (!day || (min && day < min) || (max && day > max)) {
       input.setAttribute('aria-invalid', 'true');
-      mount(error, inlineError(`${id}-err`, day ? 'That day is outside what can be chosen.' : 'That is not a day. Try 5 Oct 2026 or 2026-10-05.'));
+      mount(error, inlineError(`${id}-err`, day ? say('date_picker.outside', 'That day is outside what can be chosen.') : say('date_picker.not_a_day', `That is not a day. Try ${example} or 2026-10-05.`, { example })));
       return;
     }
     set(day);

@@ -4,12 +4,13 @@
 
 import { h, icon } from '../../core.js';
 import { button } from '../button/button.js';
+import { say } from '../../i18n.js';
 
 const modalStack = [];
 /** X button, Esc and click-outside all close it; focus returns to the trigger. */
 export function openModal({ title, body, wide = false, onClose, initialFocus, labelId = 'modal-title', bare = false, cls = '' }) {
   const trigger = document.activeElement;
-  const closeBtn = button({ variant: 'icon', class: 'fui-modal__close', type: 'button', 'aria-label': 'Close' }, icon('x', 16));
+  const closeBtn = button({ variant: 'icon', class: 'fui-modal__close', type: 'button', 'aria-label': say('modal.close', 'Close') }, icon('x', 16));
   const bodyEl = h('div', { class: bare ? '' : 'fui-modal__body' }, body);
   const dialog = h('div', { class: ['fui-modal', wide && 'fui-modal--wide', cls], role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': bare ? null : labelId, 'aria-label': bare ? title : null },
     bare ? null : h('div', { class: 'fui-modal__head' }, h('h2', { class: 'fui-modal__title', id: labelId }, title), closeBtn), bodyEl);

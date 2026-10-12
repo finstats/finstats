@@ -7,6 +7,7 @@ import { start, navigate, onRouteChange } from './router.js';
 import { startPrefetching } from './prefetch.js';
 import { setBusy, closeDialogs } from './components.js';
 import { button } from '../finui/components/button/button.js';
+import { t } from './i18n.js';
 
 /** `top(me)`: the pages this layout's prefetcher warms, in order. */
 export async function boot({ top }) {
@@ -28,9 +29,9 @@ export async function boot({ top }) {
     }
   } catch (e) {
     app.replaceChildren(h('main', { class: 'bare' }, h('div', { class: 'auth-card' },
-      h('h1', { class: 'auth-title' }, 'FinStats isn’t responding'),
+      h('h1', { class: 'auth-title' }, t('boot.not_responding')),
       h('p', { class: 'auth-sub' }, e.message),
-      button({ variant: 'primary', type: 'button', onClick: (e) => { setBusy(e.currentTarget, true, 'Trying again…'); location.reload(); } }, icon('refresh', 14), 'Try again'))));
+      button({ variant: 'primary', type: 'button', onClick: (e) => { setBusy(e.currentTarget, true, t('common.trying_again')); location.reload(); } }, icon('refresh', 14), t('common.try_again')))));
     return;
   }
   startPrefetching({ top });

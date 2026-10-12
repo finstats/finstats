@@ -2,6 +2,7 @@
 // a coloured tile by the kind of client it is, an icon of FinUI's own rather than anybody's logo.
 
 import { tile } from '../../finui/components/tile-stat/tile-stat.js';
+import { t, lang } from '../i18n.js';
 
 /** Hours and minutes, as a classic stats home writes a duration: 41:18. */
 export const hhmm = (sec) => {
@@ -10,7 +11,8 @@ export const hhmm = (sec) => {
 };
 
 /** A bitrate in bits per second, in the larger unit that keeps it readable. */
-export const rate = (bps) => (!bps ? '–' : bps >= 1e6 ? `${(bps / 1e6).toFixed(1)} Mbps` : `${Math.round(bps / 1e3)} kbps`);
+const tenths = (n) => new Intl.NumberFormat(lang(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
+export const rate = (bps) => (!bps ? '–' : bps >= 1e6 ? `${tenths(bps / 1e6)} Mbps` : `${new Intl.NumberFormat(lang()).format(Math.round(bps / 1e3))} kbps`);
 
 /** The kind of client an app is, by its name: a television, a phone of either kind, a browser, a music player. */
 export function platformOf(client = '') {
@@ -23,7 +25,7 @@ export function platformOf(client = '') {
 }
 
 /** An app's tile, `size` pixels square. */
-export const platformTile = (client, size = 48) => tile({ ...platformOf(client), size, label: client || 'Unknown app' });
+export const platformTile = (client, size = 48) => tile({ ...platformOf(client), size, label: client || t('simple.platform.unknown_app') });
 
 /** A library's icon, by what it holds. */
 export const libraryIcon = (type) => ({ movies: 'film', tvshows: 'tv', music: 'music', books: 'book', musicvideos: 'video', homevideos: 'camera' }[type] || 'library');
@@ -32,5 +34,5 @@ export const libraryIcon = (type) => ({ movies: 'film', tvshows: 'tv', music: 'm
 export function longDuration(sec) {
   const m = Math.floor(Math.max(0, Number(sec) || 0) / 60);
   const d = Math.floor(m / 1440), hr = Math.floor((m % 1440) / 60), min = m % 60;
-  return d ? `${d} days ${hr} hrs ${min} mins` : hr ? `${hr} hrs ${min} mins` : `${min} mins`;
+  return d ? t('simple.platform.days_hrs_mins', { days: d, hours: hr, minutes: min }) : hr ? t('simple.platform.hrs_mins', { hours: hr, minutes: min }) : t('simple.platform.mins', { minutes: min });
 }

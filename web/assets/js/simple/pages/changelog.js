@@ -6,7 +6,8 @@ import { h, icon } from '../../dom.js';
 import { api } from '../../api.js';
 import { markVersionSeen } from '../../state.js';
 import { dataView, emptyState, sk } from '../../components.js';
-import { inline, days } from '../../changelog-text.js';
+import { inline, days, kindName } from '../../changelog-text.js';
+import { t } from '../../i18n.js';
 
 const loadChangelog = (signal) => api.get('/changelog', null, { signal });
 export const prefetchChangelog = ({ signal }) => [() => loadChangelog(signal)];
@@ -16,17 +17,17 @@ function release(r, current) {
     h('h2', { class: 'simple-release__head', tabindex: '-1' },
       h('span', { class: 'simple-release__version' }, r.version),
       r.date ? h('time', { class: 'simple-release__day', dateTime: r.date }, days(r.started || r.date, r.date)) : null,
-      r.version === current ? h('span', { class: 'simple-release__now' }, icon('check', 12), 'Running now') : null),
+      r.version === current ? h('span', { class: 'simple-release__now' }, icon('check', 12), t('simple.changelog.running')) : null),
     r.summary ? h('p', { class: 'simple-release__title' }, inline(r.summary)) : null,
     r.groups.filter((g) => g.items.length).map((g) => [
-      h('h3', { class: 'simple-release__kind' }, g.kind),
-      h('ul', { class: 'simple-release__notes' }, g.items.map((t) => h('li', null, inline(t)))),
+      h('h3', { class: 'simple-release__kind' }, kindName(g.kind)),
+      h('ul', { class: 'simple-release__notes' }, g.items.map((note) => h('li', null, inline(note)))),
     ]));
 }
 
 export default function changelogPage(ctx) {
-  ctx.title('Patch notes');
-  const jump = h('select', { class: 'simple-select', id: 'simple-changelog-jump', 'aria-label': 'Jump to a version' }, h('option', { value: '' }, 'Jump to a version'));
+  ctx.title(t('nav.patch_notes'));
+  const jump = h('select', { class: 'simple-select', id: 'simple-changelog-jump', 'aria-label': t('simple.changelog.jump') }, h('option', { value: '' }, t('simple.changelog.jump')));
   jump.addEventListener('change', () => {
     const at = jump.value && document.getElementById(`v${jump.value}`);
     if (at) { at.scrollIntoView({ block: 'start' }); at.querySelector('h2').focus({ preventScroll: true }); }
@@ -34,16 +35,16 @@ export default function changelogPage(ctx) {
   });
   const body = h('div', { class: 'simple-panel simple-changelog__body' });
   ctx.root.append(h('div', { id: 'simple-changelog', class: 'simple-changelog' },
-    h('div', { class: 'simple-panel-head' }, h('h1', { class: 'simple-page-title' }, icon('tag', 22), 'Patch notes'), h('div', { class: 'simple-head__tools' }, jump)),
+    h('div', { class: 'simple-panel-head' }, h('h1', { class: 'simple-page-title' }, icon('tag', 22), t('nav.patch_notes')), h('div', { class: 'simple-head__tools' }, jump)),
     body));
   dataView({
     container: body, signal: ctx.signal, skeleton: () => sk.cardRows(8),
     fetch: () => loadChangelog(ctx.signal),
     render: (d) => {
       const list = (d && d.releases) || [];
-      if (!list.length) return emptyState('No patch notes', 'This build carries none.');
+      if (!list.length) return emptyState(t('simple.changelog.empty_title'), t('simple.changelog.empty_sub'));
       if (d.current) markVersionSeen(d.current);
-      jump.replaceChildren(jump.firstChild, ...list.map((r) => h('option', { value: r.version }, r.version === d.current ? `${r.version} (running now)` : r.version)));
+      jump.replaceChildren(jump.firstChild, ...list.map((r) => h('option', { value: r.version }, r.version === d.current ? t('simple.changelog.running_option', { version: r.version }) : r.version)));
       return list.map((r) => release(r, d.current));
     },
   }).load();

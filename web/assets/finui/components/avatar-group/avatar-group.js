@@ -4,12 +4,13 @@
 import { h } from '../../core.js';
 import { avatar } from '../avatar/avatar.js';
 import { fit } from './plan.js';
+import { say } from '../../i18n.js';
 
 /** avatarGroup({ people: [{ name, src }], max, size }) */
 export function avatarGroup({ people, max = 4, size = 28 }) {
   const { shown, more } = fit(people, max);
   const names = people.map((p) => p.name);
-  const said = names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
+  const said = names.length <= 3 ? names.join(', ') : say('avatar_group.and_more', `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`, { names: names.slice(0, 2).join(', '), count: names.length - 2 });
   return h('span', { class: 'fui-avatar-group', role: 'img', 'aria-label': said, title: names.join(', ') },
     shown.map((p) => avatar(p.src || null, p.name, { size })),
     more ? (() => { const m = h('span', { class: 'fui-avatar-group__more', 'aria-hidden': 'true' }, `+${more}`); Object.assign(m.style, { width: `${size}px`, height: `${size}px`, fontSize: `${Math.max(10, size * 0.36)}px` }); return m; })() : null);

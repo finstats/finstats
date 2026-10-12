@@ -8,6 +8,7 @@
 import { h, icon } from '../../core.js';
 import { STYLES, styleOf, sideOf, groups, pinsOf, toggled, tone, dockShown } from './plan.js';
 import { grow, shrink } from '../search/search.js';
+import { say } from '../../i18n.js';
 
 export { STYLES, styleOf, sideOf } from './plan.js';
 
@@ -23,7 +24,7 @@ const dotOn = (p) => (typeof p.dot === 'function' ? !!p.dot() : !!p.dot);
  * Answers { el, setCurrent, repaint, destroy, openSearch(panel), closeSearch(), searchControl }.
  */
 export function desktopNav({ style, side = 'left', pages, current = null, brand = null, me = null, theme = null, onSearch = null, keys = '',
-  pins = null, onPins = () => {}, insets = {}, label = 'Pages', contained = false }) {
+  pins = null, onPins = () => {}, insets = {}, label = say('desktop_nav.pages', 'Pages'), contained = false }) {
   const kind = styleOf(style);
   const spec = STYLES.find((s) => s.key === kind);
   const at = sideOf(kind, side);
@@ -42,7 +43,7 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
 
   // ---- the pieces
   function link(p, cls = null, { size = 15, tip = tips } = {}) {
-    const dot = p.dot ? h('span', { class: 'fui-desktop-nav__dot' }, h('span', { class: 'sr-only' }, 'New')) : null;
+    const dot = p.dot ? h('span', { class: 'fui-desktop-nav__dot' }, h('span', { class: 'sr-only' }, say('desktop_nav.new', 'New'))) : null;
     const a = h('a', { class: ['fui-desktop-nav__link', cls], href: p.href, 'aria-label': tip ? p.label : null }, icon(p.icon, size),
       h('span', { class: 'fui-desktop-nav__label' }, p.label), dot, tip ? h('span', { class: 'fui-desktop-nav__tip', 'aria-hidden': 'true' }, p.label) : null);
     a.addEventListener('click', () => closeAll());
@@ -52,9 +53,9 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
   const brandEl = () => (brand ? h('a', { class: 'fui-desktop-nav__brand', href: brand.href || '/' }, brand.mark || null, h('span', { class: 'fui-desktop-nav__name' }, brand.name || '')) : null);
   function searchButton(cls = null, big = false) {
     if (!onSearch) return null;
-    const b = h('button', { type: 'button', class: ['fui-desktop-nav__search-btn', cls], 'aria-keyshortcuts': keys ? keys.replace(/\s+/g, '+').replace('Ctrl', 'Control') : null, 'aria-label': tips ? 'Search' : null },
-      icon('search', big ? 18 : kind === 'dock' ? 20 : kind === 'rail' ? 18 : 14), h('span', { class: 'fui-desktop-nav__label' }, big ? 'Search' : 'Search…'), keys && !tips ? h('kbd', { class: 'fui-desktop-nav__keys' }, keys) : null,
-      tips ? h('span', { class: 'fui-desktop-nav__tip', 'aria-hidden': 'true' }, keys ? `Search · ${keys}` : 'Search') : null);
+    const b = h('button', { type: 'button', class: ['fui-desktop-nav__search-btn', cls], 'aria-keyshortcuts': keys ? keys.replace(/\s+/g, '+').replace('Ctrl', 'Control') : null, 'aria-label': tips ? say('desktop_nav.search', 'Search') : null },
+      icon('search', big ? 18 : kind === 'dock' ? 20 : kind === 'rail' ? 18 : 14), h('span', { class: 'fui-desktop-nav__label' }, big ? say('desktop_nav.search', 'Search') : say('desktop_nav.search_more', 'Search…')), keys && !tips ? h('kbd', { class: 'fui-desktop-nav__keys' }, keys) : null,
+      tips ? h('span', { class: 'fui-desktop-nav__tip', 'aria-hidden': 'true' }, keys ? say('desktop_nav.search_keys', `Search · ${keys}`, { keys }) : say('desktop_nav.search', 'Search')) : null);
     b.addEventListener('click', () => onSearch());
     controls.push(b);
     return b;
@@ -77,7 +78,7 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
     if (!me && !theme) return null;
     const themed = theme ? h('span', { class: 'fui-desktop-nav__theme' }, theme) : null;
     if (!compact) return h('div', { class: 'fui-desktop-nav__foot' }, meLink(), themed);
-    const btn = h('button', { type: 'button', class: 'fui-desktop-nav__me-btn', 'aria-label': me ? `${me.name}: you, and the theme` : 'The theme', 'aria-haspopup': 'true' }, me && me.avatar ? me.avatar.cloneNode(true) : icon('user', 18));
+    const btn = h('button', { type: 'button', class: 'fui-desktop-nav__me-btn', 'aria-label': me ? say('desktop_nav.me_theme', `${me.name}: you, and the theme`, { name: me.name }) : say('desktop_nav.theme', 'The theme'), 'aria-haspopup': 'true' }, me && me.avatar ? me.avatar.cloneNode(true) : icon('user', 18));
     const { pop } = popover(btn, h('div', { class: 'fui-desktop-nav__foot' }, meLink(), themed), 'fui-desktop-nav__pop--me');
     return h('div', { class: 'fui-desktop-nav__foot-wrap' }, btn, pop);
   }
@@ -99,20 +100,20 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
     frame.append(...[brandEl(), searchButton('fui-desktop-nav__search-btn--big', true), nav(pages.map((p) => link(p, 'fui-desktop-nav__link--big', { size: 17 })), 'fui-desktop-nav__nav--well'), foot()].filter(Boolean));
   } else if (kind === 'pinned') {
     let pinned = pinsOf(pages, pins);
-    const top = h('div', { class: 'fui-desktop-nav__pins', role: 'group', 'aria-label': 'Pinned' });
+    const top = h('div', { class: 'fui-desktop-nav__pins', role: 'group', 'aria-label': say('desktop_nav.pinned', 'Pinned') });
     const pinButtons = [];
     const drawPins = () => {
       for (const x of links.filter((l) => l.pinned)) x.gone = true;
-      top.replaceChildren(h('div', { class: 'fui-desktop-nav__group-name' }, 'Pinned'), ...(pinned.length
+      top.replaceChildren(h('div', { class: 'fui-desktop-nav__group-name' }, say('desktop_nav.pinned', 'Pinned')), ...(pinned.length
         ? pinned.map((k) => { const l = link(pages.find((p) => p.key === k)); links[links.length - 1].pinned = true; return l; })
-        : [h('p', { class: 'fui-desktop-nav__hint' }, 'Point at a page and press its pin to keep it here.')]));
+        : [h('p', { class: 'fui-desktop-nav__hint' }, say('desktop_nav.pin_hint', 'Point at a page and press its pin to keep it here.'))]));
       links.splice(0, links.length, ...links.filter((x) => !x.gone));
       for (const b of pinButtons) { const on = pinned.includes(b.dataset.key); b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', String(on)); }
       setCurrent(here);
       repaint();
     };
     const line = (p) => {
-      const b = h('button', { type: 'button', class: 'fui-desktop-nav__pin', 'data-key': p.key, 'aria-label': `Pin ${p.label}`, 'aria-pressed': 'false' }, icon('bookmark', 13));
+      const b = h('button', { type: 'button', class: 'fui-desktop-nav__pin', 'data-key': p.key, 'aria-label': say('desktop_nav.pin', `Pin ${p.label}`, { page: p.label }), 'aria-pressed': 'false' }, icon('bookmark', 13));
       b.addEventListener('click', () => { pinned = toggled(pinned, p.key); onPins(pinned); drawPins(); });
       pinButtons.push(b);
       return h('div', { class: 'fui-desktop-nav__line' }, link(p), b);
@@ -132,7 +133,7 @@ export function desktopNav({ style, side = 'left', pages, current = null, brand 
     // The command bar: the open page's name, which turns into the search where it stands.
     const where = h('span', { class: 'fui-desktop-nav__label' });
     const whereIcon = h('span', { class: 'fui-desktop-nav__where' });
-    const trigger = h('button', { type: 'button', class: 'fui-desktop-nav__trigger', 'aria-label': `Search, from ${label}`, 'aria-keyshortcuts': keys ? keys.replace(/\s+/g, '+').replace('Ctrl', 'Control') : null }, whereIcon,
+    const trigger = h('button', { type: 'button', class: 'fui-desktop-nav__trigger', 'aria-label': say('desktop_nav.search_from', `Search, from ${label}`, { label }), 'aria-keyshortcuts': keys ? keys.replace(/\s+/g, '+').replace('Ctrl', 'Control') : null }, whereIcon,
       brand ? h('span', { class: 'fui-desktop-nav__crumb' }, brand.name, h('span', { class: 'fui-desktop-nav__crumb-sep' }, '/')) : null, where, icon('search', 14));
     trigger.addEventListener('click', () => onSearch && onSearch());
     controls.push(trigger);

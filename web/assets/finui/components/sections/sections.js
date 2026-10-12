@@ -2,6 +2,7 @@
 // on a phone) and the open one beside it. Which section is open is the app's to decide (it knows the address).
 
 import { h, icon } from '../../core.js';
+import { say } from '../../i18n.js';
 
 const HIT_MS = 2400;
 
@@ -17,7 +18,7 @@ export function reveal(id, focus = false) {
 }
 
 /** The sticky list: sections in their groups, the open one marked. */
-export function sectionNav(base, visible, current, label = 'Sections') {
+export function sectionNav(base, visible, current, label = say('sections.label', 'Sections')) {
   const groups = [];
   for (const s of visible) {
     const name = s.group || '';

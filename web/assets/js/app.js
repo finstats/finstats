@@ -5,6 +5,7 @@ import { route, setLayout } from './router.js';
 import { layout } from './shell.js';
 import { pageHeader, emptyState } from './components.js';
 import { boot } from './boot.js';
+import { t } from './i18n.js';
 
 import dashboard, { prefetchDashboard } from './pages/dashboard.js';
 import activity, { prefetchActivity } from './pages/activity.js';
@@ -59,9 +60,9 @@ route('/changelog', changelogPage, { prefetch: prefetchChangelog });
 // Anyone signed in may read the licences; the shortcut to them sits in Settings.
 route('/licenses', licensesPage, { prefetch: prefetchLicenses });
 route('*', (ctx) => {
-  ctx.title('Not found');
-  ctx.root.append(pageHeader('Page not found'), emptyState('There’s nothing at this address.', 'It may have been a link to something that was removed.',
-    button({ href: '/' }, icon('home', 14), 'Go to the dashboard')));
+  ctx.title(t('not_found.page_title'));
+  ctx.root.append(pageHeader(t('not_found.title')), emptyState(t('not_found.nothing_here'), t('not_found.removed'),
+    button({ href: '/' }, icon('home', 14), t('not_found.go_dashboard'))));
 });
 
 setLayout(layout);

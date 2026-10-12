@@ -4,6 +4,7 @@
 
 import { h, icon, logo, mount, debounce } from '../dom.js';
 import { api, imgItem, isAbort } from '../api.js';
+import { t } from '../i18n.js';
 import { state, can, resetCaches, themeChoice, setTheme } from '../state.js';
 import { onRouteChange, navigate, canGoBack } from '../router.js';
 import { topBar } from '../../finui/components/top-bar/top-bar.js';
@@ -13,11 +14,11 @@ import { poster } from '../../finui/components/poster/poster.js';
 
 /** The sections the bar names, for this person: Users only for whoever may see everyone. */
 export const sections = () => [
-  { href: '/', key: 'home', label: icon('home', 16), name: 'Home' },
-  { href: '/libraries', key: 'libraries', label: 'Libraries' },
-  can('see_everyone') ? { href: '/users', key: 'users', label: 'Users' } : null,
-  { href: '/history', key: 'history', label: 'History' },
-  { href: '/graphs', key: 'graphs', label: 'Graphs' },
+  { href: '/', key: 'home', label: icon('home', 16), name: t('simple.nav.home') },
+  { href: '/libraries', key: 'libraries', label: t('simple.nav.libraries') },
+  can('see_everyone') ? { href: '/users', key: 'users', label: t('simple.nav.users') } : null,
+  { href: '/history', key: 'history', label: t('simple.nav.history') },
+  { href: '/graphs', key: 'graphs', label: t('simple.nav.graphs') },
 ].filter(Boolean);
 
 /** Which section a page belongs to: a title is part of its library's, a person of Users. */
@@ -35,24 +36,24 @@ async function signOut() {
   navigate('/login');
 }
 
-const THEME_LABEL = { device: 'Theme: as the device', light: 'Theme: light', dark: 'Theme: dark' };
+const THEME_LABEL = { device: t('theme.is_device'), light: t('theme.is_light'), dark: t('theme.is_dark') };
 
 function gear() {
-  const btn = dropdownMenu({ label: 'Settings and account', icon: 'settings', iconOnly: true, items: () => [
-    { label: 'My profile', icon: 'user', href: `/users/${state.user.id}` },
-    { label: 'Settings', icon: 'settings', href: '/settings' },
-    { label: 'Patch notes', icon: 'tag', href: '/changelog' },
+  const btn = dropdownMenu({ label: t('simple.menu'), icon: 'settings', iconOnly: true, items: () => [
+    { label: t('nav.my_profile'), icon: 'user', href: `/users/${state.user.id}` },
+    { label: t('nav.settings'), icon: 'settings', href: '/settings' },
+    { label: t('nav.patch_notes'), icon: 'tag', href: '/changelog' },
     { separator: true },
-    ...['device', 'light', 'dark'].map((t) => ({ label: THEME_LABEL[t], icon: t === 'light' ? 'sun' : t === 'dark' ? 'moon' : 'monitor', hint: themeChoice() === t ? '✓' : null, onSelect: () => setTheme(t) })),
+    ...['device', 'light', 'dark'].map((th) => ({ label: THEME_LABEL[th], icon: th === 'light' ? 'sun' : th === 'dark' ? 'moon' : 'monitor', hint: themeChoice() === th ? '✓' : null, onSelect: () => setTheme(th) })),
     { separator: true },
-    { label: 'Sign out', icon: 'logout', onSelect: signOut },
+    { label: t('auth.sign_out'), icon: 'logout', onSelect: signOut },
   ] });
   btn.classList.add('simple-gear');
   return btn;
 }
 
 function menuButton() {
-  const btn = dropdownMenu({ label: 'Sections', icon: 'menu', iconOnly: true,
+  const btn = dropdownMenu({ label: t('simple.sections'), icon: 'menu', iconOnly: true,
     items: () => sections().map((s) => ({ label: s.name || s.label, href: s.href, icon: s.key === 'home' ? 'home' : null })) });
   btn.classList.add('simple-menu-button');
   return btn;
@@ -61,9 +62,9 @@ function menuButton() {
 /** The search: a magnifier that opens a field in its place, with titles and people as they are typed. */
 function search(signal) {
   const box = h('div', { class: 'simple-search' });
-  const results = h('div', { class: 'simple-search__results', role: 'listbox', 'aria-label': 'Search results' });
-  const field = h('input', { class: 'simple-search__field', type: 'search', placeholder: 'Search titles and people', 'aria-label': 'Search', autocomplete: 'off' });
-  const open = button({ variant: 'icon', 'aria-label': 'Search', title: 'Search', class: 'simple-search__open' }, icon('search', 16));
+  const results = h('div', { class: 'simple-search__results', role: 'listbox', 'aria-label': t('search.results') });
+  const field = h('input', { class: 'simple-search__field', type: 'search', placeholder: t('search.placeholder_simple'), 'aria-label': t('search.label'), autocomplete: 'off' });
+  const open = button({ variant: 'icon', 'aria-label': t('search.label'), title: t('search.label'), class: 'simple-search__open' }, icon('search', 16));
   let asked = null;
   const close = () => { if (asked) asked.abort(); mount(box, open); results.replaceChildren(); field.value = ''; };
   const ask = debounce(async () => {
@@ -77,11 +78,11 @@ function search(signal) {
         ...(d.items || []).map((it) => h('a', { class: 'simple-search__row', href: `/items/${it.id}`, role: 'option' },
           poster(imgItem(it.image_item_id || it.id, 60), it.name), h('span', null, it.name), h('span', { class: 'simple-search__kind' }, it.year || it.type))),
         ...(can('see_everyone') ? d.users || [] : []).map((u) => h('a', { class: 'simple-search__row', href: `/users/${u.id}`, role: 'option' },
-          icon('user', 16), h('span', null, u.name), h('span', { class: 'simple-search__kind' }, 'User'))),
+          icon('user', 16), h('span', null, u.name), h('span', { class: 'simple-search__kind' }, t('search.user')))),
       ];
       // Where the results hang on a phone, where they take the screen's width (simple.css): just under the field.
       results.style.setProperty('--simple-search-top', `${Math.round(field.getBoundingClientRect().bottom) + 8}px`);
-      results.replaceChildren(...(rows.length ? rows : [h('div', { class: 'simple-search__none' }, 'Nothing matches.')]));
+      results.replaceChildren(...(rows.length ? rows : [h('div', { class: 'simple-search__none' }, t('search.no_match_short'))]));
     } catch (e) { if (!isAbort(e)) results.replaceChildren(h('div', { class: 'simple-search__none' }, e.message)); }
   }, 150);
   field.addEventListener('input', ask);

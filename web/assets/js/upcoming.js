@@ -4,9 +4,10 @@ import { h, icon, mount, initials, episodeCode, parseDay } from './dom.js';
 import { api, imgItem } from './api.js';
 import { watchToggle } from './watchlist.js';
 import { typed, notHere } from './menus.js';
+import { t, lang } from './i18n.js';
 
-export const RELEASE_LABEL = { air: 'Airs', cinema: 'In cinemas', digital: 'Digital release', physical: 'Disc release' };
-const FINALE_LABEL = { season: 'Season finale', series: 'Series finale', midseason: 'Mid-season finale' };
+export const RELEASE_LABEL = { air: t('upcoming.release.air'), cinema: t('upcoming.release.cinema'), digital: t('upcoming.release.digital'), physical: t('upcoming.release.physical') };
+const FINALE_LABEL = { season: t('upcoming.finale.season'), series: t('upcoming.finale.series'), midseason: t('upcoming.finale.midseason') };
 
 /** The same loader for the page, the cards and the prefetcher. */
 export const loadUpcoming = ({ days = 14, userId = '', mine = false } = {}, signal) => api.get('/upcoming', { days, user_id: userId, mine: mine ? 'true' : '' }, { signal });
@@ -24,17 +25,17 @@ export function upcomingPoster(e, { w = 160, cls = '' } = {}) {
 }
 
 // An air time is a time of day to the minute; the seconds `timeOfDay` shows belong to a play's timeline.
-const hourMinute = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+const hourMinute = new Intl.DateTimeFormat(lang(), { hour: '2-digit', minute: '2-digit' });
 const timeOfDay = (ts) => hourMinute.format(new Date(ts * 1000));
 const dayMs = 86400e3;
-const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'long' });
-const dayMonth = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+const weekday = new Intl.DateTimeFormat(lang(), { weekday: 'long' });
+const dayMonth = new Intl.DateTimeFormat(lang(), { weekday: 'short', day: 'numeric', month: 'short' });
 /** "Today", "Tomorrow", "Friday", then "Fri 2 Oct". `day` is a local YYYY-MM-DD. */
 export function dayName(day) {
   const d = parseDay(day), today = new Date(); today.setHours(0, 0, 0, 0);
   const diff = Math.round((d - today) / dayMs);
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Tomorrow';
+  if (diff === 0) return t('time.today');
+  if (diff === 1) return t('time.tomorrow');
   if (diff > 1 && diff < 7) return weekday.format(d);
   return dayMonth.format(d);
 }
@@ -42,9 +43,9 @@ export function dayName(day) {
 export const entryName = (e) => e.series_title || e.title;
 /** "S03E10 · Re-entry" for an episode, "Digital release" for a film. */
 export function entryWhat(e) {
-  if (e.kind !== 'episode') return RELEASE_LABEL[e.release] || 'Release';
+  if (e.kind !== 'episode') return RELEASE_LABEL[e.release] || t('upcoming.release.other');
   const code = episodeCode(e.season, e.episode);
-  return [code, e.title && e.title !== 'TBA' ? e.title : null].filter(Boolean).join(' · ') || 'New episode';
+  return [code, e.title && e.title !== 'TBA' ? e.title : null].filter(Boolean).join(' · ') || t('upcoming.new_episode');
 }
 export const entryHref = (e) => (e.item_id ? `/items/${e.item_id}` : null);
 
@@ -66,10 +67,10 @@ export function entryRow(e, { people = false, watch = false } = {}) {
       h('div', { class: 'up-line' }, title, e.kind === 'movie' && e.year ? h('span', { class: 'muted' }, ` (${e.year})`) : null),
       h('div', { class: 'up-what' }, entryWhat(e)),
       h('div', { class: 'up-tags' },
-        e.finale ? h('span', { class: 'fui-chip' }, FINALE_LABEL[e.finale] || 'Finale') : null,
-        e.has_file ? h('span', { class: 'fui-badge--status fui-badge--good' }, icon('check', 13), 'Already here') : null,
-        !href ? h('span', { class: 'fui-chip', title: 'Sonarr or Radarr is waiting for it; it is not in your Jellyfin library yet' }, 'New to the library') : null,
-        e.you_follow ? h('span', { class: 'fui-badge--status up-follow' }, icon('heart', 13), 'You watch this') : null,
+        e.finale ? h('span', { class: 'fui-chip' }, FINALE_LABEL[e.finale] || t('upcoming.finale.other')) : null,
+        e.has_file ? h('span', { class: 'fui-badge--status fui-badge--good' }, icon('check', 13), t('upcoming.already_here')) : null,
+        !href ? h('span', { class: 'fui-chip', title: t('upcoming.new_title') }, t('upcoming.new')) : null,
+        e.you_follow ? h('span', { class: 'fui-badge--status up-follow' }, icon('heart', 13), t('upcoming.you_watch')) : null,
         names ? h('span', { class: 'up-people', title: names.join(', ') }, icon('users', 13), names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} +${names.length - 2}`) : null)),
     watch ? watchToggle(entryTitle(e), { compact: true, name: entryName(e) }) : null,
     h('div', { class: 'up-when mono' }, e.at ? timeOfDay(e.at) : ''));
@@ -93,7 +94,7 @@ export function entryCard(e) {
     h('span', { class: 'shelf-when' }, dayName(e.day), e.at ? ` · ${timeOfDay(e.at)}` : ''),
     h('span', { class: 'shelf-name' }, entryName(e)),
     h('span', { class: 'shelf-sub' }, entryWhat(e)),
-    e.has_file ? h('span', { class: 'shelf-sub' }, 'Already here') : null];
+    e.has_file ? h('span', { class: 'shelf-sub' }, t('upcoming.already_here')) : null];
   const href = entryHref(e);
   return href ? h('a', { class: 'shelf-card', href, dataset: typed(e.kind === 'episode' ? 'Series' : 'Movie') }, inner)
     : h('span', { class: 'shelf-card', tabindex: '0', dataset: notHere(entryTitle(e)) }, inner);

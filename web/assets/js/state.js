@@ -2,6 +2,7 @@
 
 import { store } from './dom.js';
 import { api, clearViewCache } from './api.js';
+import { t, lang } from './i18n.js';
 
 export const state = {
   status: null, // {configured, version, server_name?}
@@ -13,11 +14,11 @@ export const isAdmin = () => !!(state.user && state.user.is_admin);
 export const can = (perm) => !!(state.user && (state.user.is_admin || (state.user.permissions && state.user.permissions[perm])));
 
 export const RANGES = [
-  { value: 7, label: '7d', long: 'Last 7 days' },
-  { value: 30, label: '30d', long: 'Last 30 days' },
-  { value: 90, label: '90d', long: 'Last 90 days' },
-  { value: 365, label: '1y', long: 'Last year' },
-  { value: 0, label: 'All', long: 'All time' },
+  { value: 7, label: t('range.7.short'), long: t('range.7.long') },
+  { value: 30, label: t('range.30.short'), long: t('range.30.long') },
+  { value: 90, label: t('range.90.short'), long: t('range.90.long') },
+  { value: 365, label: t('range.365.short'), long: t('range.365.long') },
+  { value: 0, label: t('range.0.short'), long: t('range.0.long') },
 ];
 
 const validDays = (v) => RANGES.some((r) => r.value === v);
@@ -39,7 +40,7 @@ let usersAt = 0;
 export async function userList(signal) {
   if (usersCache && Date.now() - usersAt < 60000) return usersCache;
   const data = await api.get('/users', null, { signal });
-  usersCache = (data.users || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+  usersCache = (data.users || []).slice().sort((a, b) => a.name.localeCompare(b.name, lang()));
   usersAt = Date.now();
   return usersCache;
 }

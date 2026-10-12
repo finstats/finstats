@@ -3,13 +3,14 @@
 
 import { h } from '../../core.js';
 import { spread } from './plan.js';
+import { say } from '../../i18n.js';
 
 /** otp({ label, length, onComplete(code), letters, grouped }): `letters` takes letters too; `grouped` splits the row in two. */
-export function otp({ label = 'Code', length = 6, onComplete = () => {}, letters = false, grouped = false } = {}) {
+export function otp({ label = say('otp.code', 'Code'), length = 6, onComplete = () => {}, letters = false, grouped = false } = {}) {
   const allowed = letters ? /[0-9a-z]/i : /[0-9]/;
   let boxes = Array.from({ length }, () => '');
   const inputs = boxes.map((_, i) => h('input', { class: 'fui-otp__box', type: 'text', inputMode: letters ? 'text' : 'numeric', maxLength: 1, autocomplete: i ? 'off' : 'one-time-code',
-    'aria-label': `${label}, ${i + 1} of ${length}`, spellcheck: false }));
+    'aria-label': say('otp.box', `${label}, ${i + 1} of ${length}`, { label, n: i + 1, total: length }), spellcheck: false }));
   const el = h('div', { class: 'fui-otp', role: 'group', 'aria-label': label },
     inputs.map((inp, i) => (grouped && i === Math.floor(length / 2) ? [h('span', { class: 'fui-otp__gap', 'aria-hidden': 'true' }, '–'), inp] : inp)));
   const show = () => { inputs.forEach((inp, i) => { inp.value = boxes[i]; }); el.classList.toggle('is-complete', boxes.every(Boolean)); };

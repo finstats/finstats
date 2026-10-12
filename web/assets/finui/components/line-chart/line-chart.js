@@ -5,6 +5,7 @@
 import { h, s } from '../../core.js';
 import { niceTicks, linear, linePath, compact } from '../chart/plan.js';
 import { chartFigure, legend, tableTwin, tone, foldSeries, sized, hoverable } from '../chart/chart.js';
+import { say } from '../../i18n.js';
 
 const r2 = (n) => Math.round(n * 100) / 100;
 /** lineChart({ title, sub, labels, series: [{ name, values }], format, area, height }) */
@@ -13,9 +14,10 @@ export function lineChart({ title = null, sub = null, labels, series, format = c
   const wash = area ?? all.length === 1;
   const box = h('div', { class: 'fui-line-chart__box' });
   const figure = chartFigure({ title, sub, legend: all.length > 1 ? legend(all.map((x) => ({ name: x.name }))) : null, plot: box,
-    table: tableTwin({ caption: title || 'The numbers', head: ['', ...all.map((x) => x.name)], rows: labels.map((l, i) => [l, ...all.map((x) => format(x.values[i] || 0))]) }) });
+    table: tableTwin({ caption: title || say('chart.numbers', 'The numbers'), head: ['', ...all.map((x) => x.name)], rows: labels.map((l, i) => [l, ...all.map((x) => format(x.values[i] || 0))]) }) });
   let spec = null;
-  hoverable(box, () => spec, `${title || 'A line chart'}: ${labels[0]} to ${labels[labels.length - 1]}`);
+  const named = title || say('line_chart.name', 'A line chart');
+  hoverable(box, () => spec, say('line_chart.aria', `${named}: ${labels[0]} to ${labels[labels.length - 1]}`, { title: named, from: labels[0], to: labels[labels.length - 1] }));
   sized(box, (width) => {
     const top = Math.max(0, ...all.flatMap((x) => x.values));
     const ticks = niceTicks(0, top, 4, { whole: all.every((x) => x.values.every((v) => Number.isInteger(v || 0))) });

@@ -17,7 +17,7 @@
     "user": { "one": "{count} brukar", "other": "{count} brukarar" },
     "person": { "one": "{count} person", "other": "{count} personar" },
     "device": { "one": "{count} eining", "other": "{count} einingar" },
-    "watch_time": "Visingstid",
+    "watch_time": "Visings­tid",
     "watchlist": "Lista mi",
     "recap": "Tilbakeblikk",
     "cast_and_crew": "Medverkande",
@@ -83,9 +83,9 @@
     "0": { "short": "Alt", "long": "All tid" }
   },
   "play_method": {
-    "DirectPlay": "Direkteavspeling",
-    "DirectStream": "Direktestrøyming",
-    "Transcode": "Omkoding"
+    "DirectPlay": "Direkte­avspeling",
+    "DirectStream": "Direkte­strøyming",
+    "Transcode": "Om­koding"
   },
   "item_type": {
     "Movie": "Film",
@@ -261,6 +261,803 @@
       "backups": { "label": "Tryggingskopiar", "sub": "Ta vare på historikken din, eller flytt han" },
       "tasks": { "label": "Oppgåver", "sub": "Kva FinStats gjer av seg sjølv, og når" },
       "system": { "label": "System", "sub": "Utgåande tilkoplingar, databasen, lisensar" }
+    },
+    "page": {
+      "title": "{section} · Innstillingar"
+    },
+    "common": {
+      "saved": "Lagra",
+      "couldnt_save": "Kunne ikkje lagre: {reason}",
+      "save_changes": "Lagre endringane",
+      "whole_number": "Skriv inn eit heiltal mellom {min} og {max}.",
+      "between": "Må vere mellom {min} og {max}.",
+      "saving": "Lagrar …"
+    },
+    "appearance": {
+      "language": "Språk",
+      "language_hint": "språk language norsk engelsk english bokmål nynorsk omsetjing translation",
+      "language_help": "Språket FinStats vert vist på i denne nettlesaren.",
+      "language_browser": "Følg nettlesaren",
+      "layout": "Oppsett",
+      "layout_hint": "oppsett enkel modus klassisk tautulli plex topplinje heim utsjånad layout simple mode classic top bar home look",
+      "layout_help": "FinStats, eller Enkel: ei linje øvst og berre statistikken, slik ein klassisk statistikkserver for Plex viser han. Vert lagra berre i denne nettlesaren.",
+      "layout_simple": "Enkel",
+      "menu": "Meny",
+      "menu_hint": "meny sidepanel navigasjon gruppert skjene søk dokk kommandolinje festa fliser menu sidebar navigation grouped rail search dock command bar pinned tiles",
+      "menu_help": "Korleis sidene er lagde opp på denne datamaskina. Vert lagra berre i denne nettlesaren: dei andre einingane dine har sitt eige val.",
+      "menu_right": "Menyen til høgre",
+      "menu_right_hint": "meny sidepanel høgre venstre side menu sidebar right left",
+      "menu_right_help": "Sidepanelet langs høgre kant av vindauget i staden for venstre.",
+      "search_opens": "Søket opnast",
+      "search_opens_hint": "søk finn meny side integrert kvar ctrl mellomrom search find menu page integrated where space",
+      "search_opens_help": "I menyen, som vert gjord om til søket, eller der sida står, ved sida av menyen. Vert lagra berre i denne nettlesaren.",
+      "search_in_menu": "I menyen",
+      "search_in_page": "På sida",
+      "phone_menu": "Meny på denne telefonen",
+      "phone_menu_hint": "mobil telefon meny navigasjon fanelinje kikk fullskjerm tommel boge adresse mobile phone menu navigation tab bar peek full screen thumb arc address",
+      "phone_menu_help": "Korleis menyen vert opna her. Vert lagra berre i denne nettlesaren: kvar telefon og kvart nettbrett har sitt eige val.",
+      "preset": "FinUI-førehandsval",
+      "preset_hint": "utsjånad tema fargar aksentfarge hjørneradius tettleik kantar kort knappar felt tabellar meny rørsle ikon kontrast finui førehandsval kode tilpass appearance look theme colours accent radius density borders cards buttons fields tables menu motion icons contrast preset code customize create",
+      "preset_help": "Ein kode laga i FinUI create: fargar, hjørne, tettleik og meir. Alle sidene brukar han for deg; andre vel sin eigen.",
+      "preset_placeholder": "Ingen: FinUI som standard",
+      "preset_default": "Alle val står på standard: FinUI slik det vert levert.",
+      "preset_change": "Endre det i FinUI create",
+      "preset_make": "Lag eitt i FinUI create",
+      "reset": "Tilbakestill",
+      "card_sub": "Korleis FinStats ser ut for deg: ditt val og ingen andre sitt",
+      "preset_axis": {
+        "base": "Grunnfarge",
+        "accent": "Aksentfarge",
+        "charts": "Diagramfargar",
+        "radius": "Hjørneradius",
+        "density": "Tettleik",
+        "borders": "Kantar",
+        "cards": "Kort",
+        "highlight": "Utheving",
+        "motion": "Rørsle",
+        "icons": "Ikonstrek",
+        "font": "Skrift",
+        "heading": "Overskriftsskrift",
+        "mono": "Fastbreiddskrift",
+        "headings": "Overskrifter",
+        "buttons": "Knappar",
+        "fields": "Felt",
+        "tables": "Tabellar",
+        "menu": "Meny",
+        "icon-ends": "Ikonendar",
+        "page": "Side",
+        "focus": "Fokusring",
+        "contrast": "Kontrast"
+      },
+      "preset_option": {
+        "washi": "Washi og Obsidian",
+        "neutral": "Nøytral",
+        "stone": "Stein",
+        "zinc": "Sink",
+        "slate": "Skifer",
+        "gray": "Grå",
+        "ocean": "Hav",
+        "sage": "Salvie",
+        "blush": "Raudme",
+        "mist": "Dis",
+        "seal": "Segl og fiolett",
+        "violet": "Fiolett",
+        "blue": "Blå",
+        "teal": "Blågrøn",
+        "green": "Grøn",
+        "amber": "Rav",
+        "orange": "Oransje",
+        "rose": "Rosa",
+        "pink": "Rosa",
+        "ink": "Blekk",
+        "indigo": "Indigo",
+        "cyan": "Cyan",
+        "emerald": "Smaragd",
+        "red": "Raud",
+        "fuchsia": "Fuksia",
+        "sky": "Himmel",
+        "lime": "Lime",
+        "gold": "Gull",
+        "indigo-cyan": "Indigo og cyan",
+        "teal-coral": "Blågrøn og korall",
+        "plum-gold": "Plomme og gull",
+        "navy-amber": "Marineblå og rav",
+        "crimson-sky": "Karmosin og himmel",
+        "moss-lilac": "Mose og syrin",
+        "brick-mint": "Tegl og mynte",
+        "ink-lime": "Blekk og lime",
+        "forest-peach": "Skog og fersken",
+        "berry-aqua": "Bær og akva",
+        "sunset-lavender": "Solnedgang og lavendel",
+        "lagoon-rose": "Lagune og rosa",
+        "dyes": "Fargestoff",
+        "signal": "Signal",
+        "ember": "Glør",
+        "lagoon": "Lagune",
+        "meadow": "Eng",
+        "dusk": "Skumring",
+        "pastel": "Pastell",
+        "neon": "Neon",
+        "earth": "Jord",
+        "default": "Standard",
+        "none": "Ingen",
+        "small": "Liten",
+        "large": "Stor",
+        "round": "Rund",
+        "pill": "Pille",
+        "compact": "Kompakt",
+        "comfortable": "Komfortabel",
+        "spacious": "Romsleg",
+        "tight": "Tett",
+        "hairline": "Hårfin",
+        "strong": "Kraftig",
+        "faint": "Svak",
+        "flat": "Flat",
+        "raised": "Heva",
+        "floating": "Svevande",
+        "glow": "Glød",
+        "block": "Blokk",
+        "subtle": "Diskré",
+        "bold": "Feit",
+        "quick": "Rask",
+        "slow": "Langsam",
+        "off": "Av",
+        "springy": "Fjørande",
+        "regular": "Normal",
+        "light": "Lett",
+        "thin": "Tynn",
+        "heavy": "Tung",
+        "text": "Same som teksten",
+        "caps": "Store bokstavar",
+        "solid": "Heildekkande",
+        "soft": "Mjuk",
+        "outline": "Omriss",
+        "outlined": "Med omriss",
+        "filled": "Fylt",
+        "underlined": "Understreka",
+        "lines": "Linjer",
+        "striped": "Stripa",
+        "open": "Open",
+        "wash": "Tone",
+        "bar": "Strek",
+        "square": "Firkanta",
+        "plain": "Enkel",
+        "dots": "Prikkar",
+        "grid": "Rutenett",
+        "high": "Høg"
+      }
+    },
+    "system": {
+      "state": {
+        "always": "Alltid på",
+        "on": "På",
+        "off": "Av"
+      },
+      "outbound": "Utgåande tilkoplingar",
+      "outbound_hint": "personvern kva FinStats når vertar telemetri privacy what reaches hosts telemetry",
+      "outbound_sub": "Alt FinStats kan nå, og om det er slått på",
+      "database": "Database",
+      "database_hint": "storleik disk avspelingar element eldste size on disk plays items oldest",
+      "licences": "Lisensar",
+      "licences_hint": "gpl tredjepart open kjeldekode skrifter kart lisensar third-party open source fonts map licences",
+      "licences_sub": "GNU GPL v3, bygd på Rust-pakkar med open kjeldekode, skrifter med open lisens og kartdata utan opphavsrett",
+      "gallery": "Komponentgalleri",
+      "gallery_hint": "finui komponentar galleri designsystem lag tilpass førehandsval tema components gallery design system create customize preset theme",
+      "third_party": "Tredjepartslisensar",
+      "components": "Komponentar",
+      "components_sub": "FinUI, komponentane dette grensesnittet er bygd av: kvar einaste i begge temaa, og FinUI create for å gjere dei til dine",
+      "size_on_disk": "Storleik på disk",
+      "plays": "Avspelingar",
+      "library_items": "Element i biblioteket",
+      "oldest_play": "Eldste avspeling",
+      "last_answered": "Svara sist {when}",
+      "last_failed": "Siste forsøk gjekk ikkje: {error}",
+      "reach_all": "{on} av {total} slått på.",
+      "reach_some_off": "{on} av {total} slått på, {off} slått av.",
+      "promise": "FinStats sender aldri noko om deg eller serveren din til nokon av desse, og det finst ikkje noko anna: ingen telemetri, ingen oppdateringssjekk, ingen skrifter eller skript frå internett."
+    },
+    "jellyfin": {
+      "connection": "Tilkopling til Jellyfin",
+      "connection_hint": "server adresse versjon innsamlar direkte socket spør fortel address version collector live asked told",
+      "connection_sub": "Berre lesing: FinStats endrar aldri noko der",
+      "public_url": "Jellyfin si adresse for brukarane",
+      "public_url_hint": "opne i jellyfin avspelingsknapp ekstern nettadresse lenkje domene omvendt proxy open play button external url link domain reverse",
+      "public_url_help": "Kvar «Opne i Jellyfin»-knappane fører. La feltet stå tomt for å bruke adressa FinStats koplar til.",
+      "checking": "Sjekkar …",
+      "connected": { "one": "Tilkopla · {count} aktiv økt", "other": "Tilkopla · {count} aktive økter" },
+      "not_connected": "Ikkje tilkopla",
+      "not_connected_because": "Ikkje tilkopla: {error}",
+      "told_live": "Jellyfin seier frå, direkte",
+      "asked_every": "Spør kvart {active}. sekund medan nokon ser på, elles kvart {idle}. sekund",
+      "server": "Server",
+      "address": "Adresse",
+      "version": "Jellyfin-versjon",
+      "collector": "Innsamlar",
+      "how": "Korleis",
+      "last_checked": "Sist sjekka",
+      "asking_now": "Spør akkurat no",
+      "asking_yes": "Ja, noko vert spela",
+      "asking_no": "Nei, ingenting vert spela, eller alt står på pause",
+      "live_note": "Ingenting vert spurt om medan ingenting vert spela eller alt står på pause; medan noko vert spela, spør FinStats kvart {active}. sekund, og det er det som held pausar og hopp nøyaktige.",
+      "socket_error": "Direktetilkoplinga fungerer ikkje: {error}. FinStats held fram med å prøve; ingenting går tapt i mellomtida.",
+      "own_key": "Tilkopla med sin eigen API-nøkkel, laga under oppsettet. For å bruke FinStats mot ein annan server, start FinStats med ei ny datamappe."
+    },
+    "collection": {
+      "seconds": "sekund",
+      "active": {
+        "label": "Medan nokon ser på, sjekk kvart",
+        "help": "Pausar, hopp og byte av spor vert registrerte med denne nøyaktigheita. 1–60."
+      },
+      "idle": {
+        "label": "Medan ingenting vert spela, sjekk kvart",
+        "help": "Berre medan Jellyfin ikkje sender sjølv; tida før ei avspeling vert oppdaga, vert ikkje rekna med. 1–60."
+      },
+      "merge": {
+        "label": "Rekn ein omstart som same avspeling innan",
+        "help": "Same person, same tittel, same eining. 0 slår av samanslåing."
+      },
+      "group": {
+        "label": "Rekn det som å sjå saman innan",
+        "help": "Ulike personar som startar same tittel så tett på kvarandre, i minst eit par minutt. 5–600."
+      },
+      "min_play": {
+        "label": "Sjå bort frå avspelingar kortare enn",
+        "help": "Vert tekne vare på i databasen, men haldne utanfor statistikken. 0 tel med alt."
+      },
+      "field_hint": "intervall spør sekund interval poll seconds",
+      "card_sub": "Kor tett avspelingar vert følgde, og kva som vert rekna som ei",
+      "library_read": "Når biblioteket vert lese",
+      "library_read_help": "Etter Jellyfin si eiga biblioteksskanning, med mindre du endrar det. FinStats startar aldri ei skanning.",
+      "schedule": "Tidsplan"
+    },
+    "unlinked": {
+      "entry": "Kople ein tittel for hand",
+      "entry_hint": "ukopla manglar finn kople tittel tautulli jellystat streamystats import plex unlinked missing unmatched locate match title",
+      "card_sub": "Avspelingar der biblioteket ditt kallar tittelen noko anna, eller ikkje lenger har han",
+      "empty": "Alt i historikken din er kopla til ein tittel i biblioteket ditt."
+    },
+    "missing": {
+      "from": "frå {sources}",
+      "unknown_show": "Ukjend serie",
+      "probably": "truleg {title}",
+      "nothing_like": "ingenting i biblioteket liknar",
+      "locate": "Finn",
+      "intro": { "one": "{count} tittel i historikken din finst ikkje i biblioteket under det namnet, som regel fordi serveren han vart importert frå, kalla han noko anna. Finn ein for å kople til avspelingane; det du let vere, vert liggjande i historikken som før.", "other": "{count} titlar i historikken din finst ikkje i biblioteket under det namnet, som regel fordi serveren han vart importert frå, kalla dei noko anna. Finn ein for å kople til avspelingane; det du let vere, vert liggjande i historikken som før." },
+      "search_placeholder": "Søk etter filmar og episodar",
+      "search_label": "Søk i biblioteket",
+      "video": "Video",
+      "no_match": "Ingenting i biblioteket passar med «{query}».",
+      "no_likely": "Ingenting i biblioteket liknar. Søk etter han med namnet biblioteket ditt brukar.",
+      "where_is": "Kvar er «{name}»?",
+      "will_move": { "one": "{count} avspeling av {what} vert flytt til tittelen du vel, og ein ny import av same historikk finn han av seg sjølv.", "other": "{count} avspelingar av {what} vert flytte til tittelen du vel, og ein ny import av same historikk finn han av seg sjølv." },
+      "will_move_film": { "one": "{count} avspeling av denne filmen vert flytt til tittelen du vel, og ein ny import av same historikk finn han av seg sjølv.", "other": "{count} avspelingar av denne filmen vert flytte til tittelen du vel, og ein ny import av same historikk finn han av seg sjølv." }
+    },
+    "services": {
+      "connections_hint": "tilkoplingar tenester førespurnader nedlastingar kalender api-nøkkel connections services arr requests downloads calendar api key",
+      "connections_sub": "Sonarr, Radarr og Seerr: kva som er førespurt, kva som kjem og kva som vert lasta ned",
+      "destinations": "Mottakarar for varsel",
+      "destinations_hint": "varsel mottakarar e-post send discord slack telegram email ntfy gotify pushover pushbullet webhook send alerts",
+      "public_url": "Adressa til FinStats",
+      "public_url_hint": "offentleg adresse nettadresse lenkje meldingar public url link messages",
+      "notifications_sub": "Discord, Slack, Telegram, e-post, ntfy, Gotify, Pushover, Pushbullet eller din eigen webhook"
+    },
+    "account": {
+      "signing_out": "Loggar ut …",
+      "sign_out_hint": "logg ut avslutt økt log out logout leave session",
+      "card_sub": "Utlogging avsluttar økta i denne nettlesaren; API-nøklar og andre nettlesarar held fram med å verke",
+      "role_admin": "Jellyfin-administrator",
+      "role_user": "Logga inn med Jellyfin"
+    },
+    "access": {
+      "permissions": "Løyve",
+      "permissions_hint": "løyve kven kan sjå alle nettverk server nedlastingar varsle administrere logge inn brukarar who can see everyone network server downloads notify manage sign in users permissions",
+      "saved": "Lagra",
+      "couldnt_save": "Kunne ikkje lagre: {error}",
+      "inherited": "Alle har dette løyvet, så det kan ikkje takast frå éin person",
+      "everyone_sub": "Gjeld alle Jellyfin-brukarar",
+      "disabled": "Deaktivert i Jellyfin",
+      "intro": "Jellyfin-administratorar har alltid full tilgang. Alle andre får det du slår på her; kvar person ser berre sitt eige tilbakeblikk.",
+      "intro_named": "Jellyfin-administratorar ({names}) har alltid full tilgang. Alle andre får det du slår på her; kvar person ser berre sitt eige tilbakeblikk.",
+      "who": "Kven",
+      "status": "Status",
+      "perm": {
+        "sign_in": {
+          "label": "Logge inn",
+          "description": "Kan bruke FinStats og ser sin eigen statistikk og sitt eige tilbakeblikk."
+        },
+        "see_everyone": {
+          "label": "Sjå alle",
+          "description": "Statistikken og historikken til andre, Brukarar-sida og alle straumar som går føre seg."
+        },
+        "see_network": {
+          "label": "Sjå nettverk",
+          "description": "IP-adresser, einings-ID-ar og om ei avspeling var lokal eller utanfrå."
+        },
+        "see_server": {
+          "label": "Sjå server",
+          "description": "Server-sida, serverloggen, mislukka innloggingar og filstigar."
+        },
+        "see_downloads": {
+          "label": "Sjå nedlastingar",
+          "description": "Nedlastingskøen med fart, torrentnamn og kva klient. Utan dette ser folk likevel kor langt deira eigen førespurnad har kome."
+        },
+        "notify": {
+          "label": "Varsle",
+          "description": "Kan leggje til eigne mottakarar (ein webhook, Discord, ntfy eller Gotify) og får det dei alt har lov til å sjå. Mottakarane deira må peike på ei offentleg adresse."
+        },
+        "manage": {
+          "label": "Administrere",
+          "description": "Innstillingar, oppgåver, Jellystat-importen og sletting av avspelingar. Kan ikkje endre løyve."
+        }
+      }
+    },
+    "public": {
+      "section": {
+        "totals": {
+          "label": "Totalar og topptitlar",
+          "help": "Timar, avspelingar og dei mest sette seriane, filmane og musikken din med plakatane."
+        },
+        "habits": {
+          "label": "Rekkjer og når du ser på",
+          "help": "Den lengste rekkja di, rutenettet over vekedagar og timar, sjangrane dine."
+        },
+        "recap": {
+          "label": "Året ditt",
+          "help": "Overskrifta frå tilbakeblikket i år, og eit kort av det du kan leggje ut."
+        },
+        "recent": {
+          "label": "Nyleg sett",
+          "help": "Dei ti siste avspelingane dine, berre med dag, og aldri før ein dag etterpå."
+        }
+      },
+      "yours": "Den offentlege profilen din",
+      "yours_hint": "del publiser lenkje kort bilete profil offentleg share publish link card image profile public",
+      "yours_sub": "Einingar, adresser og filstigar vert aldri publiserte, uansett kva som er kryssa av her",
+      "allow": "Tillat offentlege profilar",
+      "allow_hint": "offentlege profilar server brytar del public profiles server switch share",
+      "allow_help": "Folk kan publisere delar av sin eigen profil via ei lenkje. Av: alle lenkjer sluttar å verke med ein gong.",
+      "server_title": "Offentlege profilar på denne serveren",
+      "server_sub": "Ingenting kan lesast utan konto før du tillèt det her",
+      "col_who": "Kven",
+      "col_shown_as": "Vist som",
+      "col_sections": "Seksjonar",
+      "col_changed": "Endra",
+      "col_actions": "Handlingar",
+      "no_name": "utan namn",
+      "not_published": "Ikkje publisert",
+      "take_down_confirm": "Ta han ned? Lenkja sluttar å verke; personen kan publisere igjen.",
+      "taking_down": "Tek ned …",
+      "take_down": "Ta ned",
+      "take_down_ask": "Ta ned …",
+      "saved": "Lagra",
+      "couldnt_save": "Kunne ikkje lagre: {error}",
+      "profile_card": "Profilkort",
+      "year_card": "Årskort",
+      "card_alt": "{card}: det ein chatteapp viser under lenkja di",
+      "download": "Last ned",
+      "your_link": "Lenkja di",
+      "your_link_unpublished": "Lenkja di (ikkje publisert: ho opnar ingenting)",
+      "copy_link": "Kopier lenkje",
+      "open": "Opne",
+      "reset_confirm": "Tilbakestille lenkja? Alle kopiar av den gamle sluttar å verke.",
+      "resetting": "Tilbakestiller …",
+      "reset": "Tilbakestill",
+      "reset_ask": "Tilbakestill lenkja …",
+      "name_placeholder": "La stå tomt for ikkje å vise noko namn",
+      "publish": "Publiser profilen min",
+      "publish_help": "Alle med lenkja kan lese det som er slått på nedanfor, utan å logge inn.",
+      "name": "Namn som vert vist",
+      "name_help": "Jellyfin-brukarnamnet ditt vert aldri vist med mindre du skriv det her.",
+      "avatar": "Vis biletet mitt",
+      "avatar_help": "Jellyfin-biletet ditt ved sida av namnet.",
+      "allow_above": "Tillat offentlege profilar ovanfor for å publisere din eigen.",
+      "not_allowed": "Ein administrator har ikkje tillate offentlege profilar."
+    },
+    "keys": {
+      "scope": {
+        "full": "Alt du har lov til å sjå",
+        "calendar": "Berre kalenderabonnement"
+      },
+      "scope_help": {
+        "full": "{scope}: det same som når du er logga inn, for skript og andre verktøy.",
+        "calendar": "{scope}: ein nøkkel du trygt kan leggje i ei abonnementsadresse."
+      },
+      "expiry": {
+        "never": "Aldri",
+        "d30": "30 dagar",
+        "d90": "90 dagar",
+        "year": "Eitt år"
+      },
+      "keys_hint": "nøkkel nøklar skript kalender abonnere trekkje tilbake token bearer script curl calendar ics subscribe revoke",
+      "make": "Lag ein nøkkel",
+      "make_hint": "opprett ny nøkkel kalender abonnement create new token calendar feed",
+      "card_sub": "Ein nøkkel kan gjere det du kan gjere, ikkje meir, og sluttar å verke i same augneblink som tilgangen din gjer det",
+      "new_key": "Den nye nøkkelen din «{name}»",
+      "shown_once": "Vert berre vist éin gong. Kopier han no; FinStats tek berre vare på ein hash av han.",
+      "copy_key": "Kopier nøkkel",
+      "subscribe": "Abonner på denne adressa i kalenderen din. Ho gjev tilgang til abonnementet og ingenting anna.",
+      "copy_address": "Kopier adresse",
+      "no_public_url": "FinStats veit ikkje si eiga adresse enno, så denne verkar berre innanfrå. Set ho under Varsel for ei lenkje som verkar frå telefonen din.",
+      "send_as": "Send han som {header} med kvart API-kall.",
+      "done": "Ferdig",
+      "name": "Namn",
+      "name_placeholder": "Skript på laptopen, kalender på mobilen …",
+      "expires": "Går ut",
+      "what_it_opens": "Kva han gjev tilgang til",
+      "everything": "Alt",
+      "calendar_only": "Berre kalender",
+      "calendar": "Kalender",
+      "name_missing": "Gje nøkkelen eit namn.",
+      "making": "Lagar …",
+      "col_opens": "Gjev tilgang til",
+      "col_owner": "Eigar",
+      "col_made": "Laga",
+      "col_last_used": "Sist brukt",
+      "col_actions": "Handlingar",
+      "revoke_confirm": "Trekkje han tilbake? Alt som brukar han, stoppar med ein gong.",
+      "revoking": "Trekkjer tilbake …",
+      "revoke": "Trekk tilbake",
+      "revoke_ask": "Trekk tilbake …",
+      "you": "(deg)",
+      "from_ip": "frå {ip}",
+      "expired": "gått ut",
+      "none_yet": "Ingen nøklar enno.",
+      "foot": "{mine} av dine, høgst {max}. Ein nøkkel vert berre lagra som ein hash, er aldri med i ein tryggingskopi og kan ikkje sjølv lage eller trekkje tilbake nøklar."
+    },
+    "network": {
+      "lookup": "Kjenn att mi eiga offentlege adresse",
+      "lookup_hint": "offentleg ip oppslag kva er ip-en min lokal utanfrå public ip lookup what is my ip local remote",
+      "lookup_help": "Spør ei offentleg «kva er IP-en min»-teneste éin gong, når det først trengst, slik at ei eining heime som når Jellyfin via det offentlege namnet, vert rekna som lokal.",
+      "known": "Kjende heimeadresser",
+      "known_hint": "offentleg ip funnen slå opp no heimeadresse public ip found look up now",
+      "known_help": "Offentlege adresser for dette hushaldet, tidlegare og no.",
+      "other": "Andre adresser som vert rekna som heime",
+      "other_hint": "vpn hytte ip manuell lokal heimeadresse vpn second home ip manual local",
+      "other_help": "Éi per linje: ei tidlegare adresse du har hatt, ein annan heim, ein VPN-utgang. Historikken din vert sortert på nytt når du lagrar.",
+      "card_sub": "Kva avspelingar som vert rekna som lokale, og kva som er utanfrå",
+      "added_by_you": "lagd til av deg",
+      "found": "funnen automatisk · sist sett {when}",
+      "none_yet": "Ingen funne enno; FinStats slår opp éi innan nokre minutt etter oppstart.",
+      "none": "Ingen. Private adresser (192.168.x.x, 10.x.x.x og liknande) vert alltid rekna som lokale.",
+      "look_up": "Slå opp no",
+      "asking": "Spør …",
+      "lookup_failed": "Kunne ikkje slå ho opp: {error}",
+      "save": "Lagre adresser",
+      "saving": "Lagrar …",
+      "couldnt_save": "Kunne ikkje lagre: {error}",
+      "foot": "Oppslaget går til {services} og seier ingenting om deg eller serveren din. Er både dette og nedlastinga av geolokasjonsdata under Tryggleik slått av, vender FinStats seg ikkje til noko utanfor i det heile.",
+      "foot_none": "Oppslaget går ingen stad: inga teneste er sett opp, og det seier ingenting om deg eller serveren din. Er både dette og nedlastinga av geolokasjonsdata under Tryggleik slått av, vender FinStats seg ikkje til noko utanfor i det heile."
+    },
+    "security": {
+      "speed": "Umogleg reise er raskare enn",
+      "speed_help": "To observasjonar av éin person som ville krevje meir enn dette, utløyser eit varsel. 900 er litt over eit passasjerfly. 100–5 000.",
+      "distance": "Berre mellom stader minst",
+      "distance_unit": "km frå kvarandre",
+      "distance_help": "Bydatabasar bommar ofte med nokre hundre kilometer; stader nærare enn dette utløyser aldri eit varsel. 50–5 000.",
+      "database": "Geolokasjonsdatabase",
+      "database_hint": "geolokasjon stader kart last ned by geoip mmdb city db-ip maxmind download places map",
+      "up_to_date": "Hald databasen oppdatert",
+      "up_to_date_hint": "geoip last ned månadleg db-ip tidsplan oppgåve download monthly schedule task",
+      "travel_hint": "umogleg reise varsel fart avstand km impossible travel alert speed distance",
+      "card_sub": "Kvar adresser vert plasserte, og kva som vert rekna som umogleg reise",
+      "built": "{kind}, bygd {date}",
+      "none_yet": "Ingen enno. Tryggleik-sida er tom til det finst ein.",
+      "downloading": "Lastar ned …",
+      "download_newest": "Last ned den nyaste",
+      "download": "Last ned (omtrent 60 MB)",
+      "starting": "Startar …",
+      "download_failed": "Nedlastinga feila.",
+      "from_env": "Sett med FINSTATS_GEOIP_DB; byt ut den fila for å oppdatere ho.",
+      "from_folder": "Adresser vert plasserte ut frå ei fil på denne maskinen, aldri over nettverket: den nyaste .mmdb-fila i {folder}.",
+      "from_default_folder": "Adresser vert plasserte ut frå ei fil på denne maskinen, aldri over nettverket: den nyaste .mmdb-fila i geoip-mappa.",
+      "scheduled": "Planlagd: {triggers}. Ein nyare månad av gratisfila til DB-IP (CC BY 4.0) vert henta; ingenting om deg vert sendt.",
+      "not_scheduled": "Ikkje planlagd. Oppgåva hentar den gratis bydatabasen til DB-IP (omtrent 60 MB, CC BY 4.0) når ein nyare månad er ute.",
+      "schedule": "Tidsplan"
+    },
+    "tasks": {
+      "task": {
+        "sync_users": {
+          "name": "Synkroniser brukarar",
+          "what": "Namn, roller og når dei sist vart sett, frå Jellyfin"
+        },
+        "sync_libraries": {
+          "name": "Les bibliotek og element",
+          "what": "Titlar og fildetaljar frå Jellyfin. Berre lesing: ho startar aldri ei skanning der"
+        },
+        "sync_changes": {
+          "name": "Metadataendringar",
+          "what": "Titlar, medverkande, plakatar, portrett og fildetaljar som er endra i Jellyfin sidan sist"
+        },
+        "sync_userdata": {
+          "name": "Sett og favorittar",
+          "what": "Kvar brukar sine sett-merke og favorittar frå Jellyfin"
+        },
+        "sync_events": {
+          "name": "Synkroniser serverloggen",
+          "what": "Aktivitetsloggen i Jellyfin: innloggingar, mislukka innloggingar, jobbar"
+        },
+        "sync_server": {
+          "name": "Serverdetaljar",
+          "what": "Versjon, lagring, programtillegg, planlagde jobbar og einingar"
+        },
+        "sync_upcoming": {
+          "name": "Les kalendrane i Sonarr og Radarr",
+          "what": "Det som snart vert sendt eller kjem ut. Berre lesing"
+        },
+        "sync_grabs": {
+          "name": "Les nedlastingshistorikken",
+          "what": "Kva Sonarr og Radarr henta, importerte eller ikkje fekk til. Berre lesing"
+        },
+        "sync_requests": {
+          "name": "Les førespurnader frå Seerr",
+          "what": "Kven som bad om kva, og kor langt det har kome. Berre lesing"
+        },
+        "backup": {
+          "name": "Tryggingskopi",
+          "what": "Skriv ein tryggingskopi av FinStats; dei nyaste vert tekne vare på, slik det er sett under Tryggingskopiar"
+        },
+        "geoip": {
+          "name": "Database for geolokasjon",
+          "what": "Lastar ned den gratis byfila frå DB-IP når ein nyare månad er ute (om lag 60 MB). Plasserer adresser på sida Tryggleik"
+        },
+        "import": {
+          "name": "Import frå Jellystat",
+          "what": "Køyrer når du lastar opp ein tryggingskopi frå Jellystat under Import"
+        },
+        "import_streamystats": {
+          "name": "Import frå Streamystats",
+          "what": "Køyrer når du lastar opp ein tryggingskopi frå Streamystats under Import"
+        },
+        "import_tautulli": {
+          "name": "Import frå Tautulli",
+          "what": "Køyrer når leidningane for ein opplasta tryggingskopi frå Tautulli er kopla til under Import"
+        },
+        "restore": {
+          "name": "Gjenoppretting",
+          "what": "Køyrer når du gjenopprettar ein tryggingskopi av FinStats under Tryggingskopiar"
+        }
+      },
+      "group": {
+        "jellyfin": "Jellyfin",
+        "arr": "Sonarr, Radarr og Seerr",
+        "finstats": "FinStats"
+      },
+      "spoken": {
+        "under_minute": "under eit minutt",
+        "minutes": { "one": "{count} minutt", "other": "{count} minutt" },
+        "hours": { "one": "{count} time", "other": "{count} timar" },
+        "days": { "one": "{count} dag", "other": "{count} dagar" }
+      },
+      "ago_under": "for under eit minutt sidan",
+      "ago": "for {time} sidan",
+      "every": {
+        "minute": "Kvart minutt",
+        "minutes": "Kvart {count}. minutt",
+        "hour": "Kvar time",
+        "hours": "Kvar {count}. time",
+        "day": "Kvar dag",
+        "days": "Kvar {count}. dag"
+      },
+      "trigger": {
+        "daily_at": "Kvar dag kl. {time}",
+        "weekly_at": "Kvar {day} kl. {time}",
+        "startup": "Ved oppstart av programmet",
+        "after_scan": "Etter biblioteksskanning i Jellyfin"
+      },
+      "running": "Køyrer …",
+      "not_run": "Har ikkje køyrt enno.",
+      "last_ran": "Køyrde sist {when}.",
+      "last_ran_taking": "Køyrde sist {when} og tok {took}.",
+      "failed": "Feila {when}.",
+      "failed_taking": "Feila {when} etter {took}.",
+      "only_by_hand": "Berre når du køyrer ho",
+      "next_within_minute": "Neste innan eit minutt",
+      "next_in": "Neste om {time}",
+      "run_aria": "Køyr {name}",
+      "run_now": "Køyr no",
+      "list_sub": "Det FinStats gjer av seg sjølv. Opne ei for å endre når ho køyrer.",
+      "progress_aria": "Framdrift for {name}",
+      "couldnt_start": "Kunne ikkje starte: {error}",
+      "zone": "Klokkeslett er i tidssona {zone}.",
+      "zone_unknown": "Klokkeslett er i tidssona til FinStats.",
+      "all_tasks": "Alle oppgåver",
+      "no_such_task": "Den oppgåva finst ikkje.",
+      "needs_file": "Denne har ingen tidsplan: ho treng ei fil. Ho køyrer når du lastar opp ei under {where}.",
+      "add_trigger": "Legg til utløysar",
+      "reset": "Tilbake til standard",
+      "resetting": "Tilbakestiller …",
+      "remove_aria": "Fjern «{trigger}»",
+      "remove": "Fjern",
+      "stops_after": "stoppar etter {time}",
+      "no_triggers": "Ingen utløysarar: ho køyrer berre når du trykkjer Køyr no.",
+      "runs": "Køyrer",
+      "next_run": "Neste køyring: {when}.",
+      "dialog": {
+        "type": "Type utløysar",
+        "daily": "Dagleg",
+        "weekly": "Vekentleg",
+        "interval": "Med fast mellomrom",
+        "day": "Vekedag",
+        "time": "Klokkeslett",
+        "every": "Intervall",
+        "limit": "Tidsgrense (timar)",
+        "limit_help": "Ei køyring som tek lengre tid, vert stoppa. Tomt: inga grense.",
+        "add": "Legg til",
+        "limit_range": "Ei tidsgrense er mellom eit kvarter og 168 timar.",
+        "duplicate": "Den utløysaren finst allereie."
+      },
+      "find_hint": "oppgåve tidsplan utløysar køyr task job schedule trigger run"
+    },
+    "import": {
+      "title": "Importer frå {name}",
+      "jellystat": {
+        "file": ".jsonl-fila",
+        "sub": "Ta med deg avspelingshistorikken din",
+        "note": "Det er trygt å importere den same tryggingskopien på nytt: avspelingar som alt finst her, vert hoppa over. Tryggingskopiar som òg inneheld bibliotek og brukarar, fungerer òg.",
+        "step": {
+          "open": "Opne Jellystat-instansen din.",
+          "settings_backup": "Gå til {a} og vel fana {b}.",
+          "only_activity": "Vel berre {a}. Det vert lilla når det er valt.",
+          "under_settings": "Under innstillingane klikkar du {a}.",
+          "start_backup": "Rull heilt til botnen og start ein tryggingskopi.",
+          "back_to_backups": "Gå tilbake til {a}.",
+          "download": "Når den nye tryggingskopien dukkar opp, opnar du {a}-menyen og klikkar {b}.",
+          "upload": "Last opp fila her."
+        }
+      },
+      "streamystats": {
+        "file": ".json-fila",
+        "sub": "Ta med deg avspelingshistorikken din",
+        "note": "Har du brukt begge sporingsverktøya? Importer begge filene; ein kveld som eitt av dei alt har teke med, vert ikkje talt to gonger. Streamystats tek ikkje vare på bibliotekdata, så titlane kjem frå din eigen Jellyfin.",
+        "step": {
+          "open": "Opne Streamystats-instansen din.",
+          "settings_backup_import": "Gå til {a} og vel {b}.",
+          "scroll_to": "Rull ned til {a}.",
+          "click_download": "Klikk {a}.",
+          "upload": "Last opp fila her."
+        }
+      },
+      "tautulli": {
+        "file": ".db- eller .zip-fila",
+        "sub": "Hent over Plex-historikken din, person for person",
+        "note": "Namn i Plex stemmer sjeldan med namna i Jellyfin, så du koplar kvar Plex-brukar sjølv. Filmar og episodar vert kopla etter namn; ein som ikkje finst på serveren din enno, vert teken vare på og kopla til når han kjem. Tryggingskopien inneheld tilgangsnøklane til Plex: FinStats les dei aldri, og slettar fila så snart du importerer eller byrjar på nytt.",
+        "step": {
+          "open": "Opne Tautulli-instansen din.",
+          "settings_import_backups": "Gå til {a} og vel {b}.",
+          "backup_database": "Under tryggingskopiane av databasen klikkar du {a}. Tautulli lagrar han på sin eigen maskin, så ingenting vert lasta ned.",
+          "find_it": "Finn han i mappa {a} til Tautulli, inne i datamappa (med Docker inne i mappa du monterte som {b}).",
+          "newest": "Ta den nyaste {a}-fila, som sluttar på .db eller .db.zip, ikkje ei {b}-fil, som inneheld innstillingar.",
+          "copy": "Kopier han til denne datamaskina: scp, ei delt mappe eller filhandsamaren på NAS-en din fungerer alle.",
+          "upload_then_wire": "Last han opp her, og kople så kvar Plex-brukar til den dei er i Jellyfin."
+        }
+      },
+      "result": {
+        "plays_imported": "Avspelingar importerte",
+        "plays_skipped": "Fanst alt",
+        "users": "Brukarar",
+        "libraries": "Bibliotek",
+        "items": "Filmar, seriar og spor",
+        "seasons": "Sesongar",
+        "episodes": "Episodar",
+        "item_info": "Fildetaljar",
+        "marked_watched": "Merkt som sett, aldri spela av",
+        "sessions_read": "Økter lesne",
+        "users_wired": "Plex-brukarar kopla til",
+        "not_wired": "Utelatne, utan leidning",
+        "other_media": "Musikk og andre medium, ikkje importert"
+      },
+      "already_running": "Ein import køyrer alt. Vent til han er ferdig, og prøv igjen.",
+      "too_large": "Serveren avviste fila som for stor. Står FinStats bak ein omvendt proxy, må du auke grensa for opplasting der (for nginx: client_max_body_size) og prøve igjen.",
+      "find_hint": "tryggingskopi last opp historikk sporingsverktøy backup upload history tracker",
+      "unlinked": { "one": "{count} tittel i historikken din passar ikkje med noko i biblioteket ditt, som regel på grunn av eit namn den andre serveren brukte. {link}.", "other": "{count} titlar i historikken din passar ikkje med noko i biblioteket ditt, som regel på grunn av eit namn den andre serveren brukte. {link}." },
+      "unlinked_link": "Kople dei under Ukopla media",
+      "wrong_file": "«{file}» er ikkje ein tryggingskopi frå {name}. Vel {what} du lasta ned frå {name}.",
+      "empty_file": "Fila er tom. Last ned tryggingskopien frå {name} på nytt.",
+      "uploading": "Lastar opp {file}",
+      "upload_progress": "Framdrift for opplastinga",
+      "upload_line": "{percent} % · {loaded} av {total}",
+      "cancel_upload": "Avbryt opplastinga",
+      "keep_open": "La denne fana vere open til opplastinga er ferdig. Du kan sjå på andre sider i FinStats medan.",
+      "importing": "Importerer historikken din",
+      "upload_complete": "Opplastinga er ferdig",
+      "import_progress": "Framdrift for importen",
+      "reading": "Les tryggingskopien …",
+      "starting": "Startar importen …",
+      "safe_to_leave": "Dette køyrer på serveren. Det er trygt å forlate denne sida.",
+      "choose_aria": "Vel ein tryggingskopi frå {name}",
+      "another_running": "Ein annan import køyrer",
+      "drop_here": "Slepp tryggingskopien frå {name} her",
+      "one_at_a_time": "Éin om gongen: denne kan starte når den andre er ferdig",
+      "or_click": "eller klikk for å velje {what}. Store tryggingskopiar går fint",
+      "finished": "Importen er ferdig",
+      "see_stats": "Sjå statistikken din",
+      "failed": "Importen feila: {error}",
+      "unknown_error": "ukjend feil",
+      "nothing_half": "Ingenting vart halvvegs importert. Sjekk at fila er ein uendra tryggingskopi frå {name}, og last ho opp igjen.",
+      "upload_failed": "Opplastinga feila: {error}",
+      "connect_wires": "Kople leidningane",
+      "export_from": "Eksporter frå {name}",
+      "upload_backup": "Last opp tryggingskopien"
+    },
+    "wiring": {
+      "plex_users": "Plex-brukarar, frå Tautulli",
+      "no_plays": "Ingen filmar eller episodar",
+      "jellyfin_users": "Jellyfin-brukarar",
+      "board_aria": "Kople Plex-brukarar til Jellyfin-brukarar",
+      "start_over": "Byrj på nytt",
+      "help": "Dra ein leidning frå kvar Plex-brukar til den dei er i Jellyfin, eller klikk på den eine og så den andre. Fleire Plex-brukarar kan gå til éin person. Ein Plex-brukar utan leidning vert ikkje importert.",
+      "said_connected": "{plex} er kopla til {jellyfin}.",
+      "said_unplugged": "{name} er kopla frå.",
+      "said_choose": "Vel kven {name} er i Jellyfin. Escape avbryt.",
+      "plug_connected": { "one": "{name} på Plex, {count} avspeling: kopla til {to}", "other": "{name} på Plex, {count} avspelingar: kopla til {to}" },
+      "plug_free": { "one": "{name} på Plex, {count} avspeling: ikkje kopla til", "other": "{name} på Plex, {count} avspelingar: ikkje kopla til" },
+      "socket_pick": "Kople {plex} til {jellyfin}",
+      "socket": "{name} i Jellyfin",
+      "socket_wired": { "one": "{name} i Jellyfin, {count} Plex-brukar kopla til", "other": "{name} i Jellyfin, {count} Plex-brukarar kopla til" },
+      "summary_users": { "one": "{wired} av {count} Plex-brukar kopla til", "other": "{wired} av {count} Plex-brukarar kopla til" },
+      "summary_plays": { "one": "{count} avspeling vert henta inn", "other": "{count} avspelingar vert henta inn" },
+      "summary_rest": "resten vert att",
+      "import_plays": { "one": "Importer {count} avspeling", "other": "Importer {count} avspelingar" },
+      "import": "Importer"
+    },
+    "backups": {
+      "back_up_now": "Ta tryggingskopi no",
+      "restore_title": "Gjenopprett frå ei fil",
+      "when_written": "Når tryggingskopiar vert skrivne",
+      "keep_newest": "Behald dei nyaste",
+      "recently_deleted": "Nyleg sletta",
+      "hint": {
+        "backups": "tryggingskopiar last ned slett liste backups download delete list",
+        "restore": "gjenopprett last opp flytt ny installasjon flett slå saman restore upload move new install merge",
+        "schedule": "tidsplan automatisk kvar dag vekentleg dagleg oppgåve schedule automatic every days weekly daily task",
+        "keep": "tidsplan behald tal rydd schedule keep count prune",
+        "deleted": "papirkorg angre hent tilbake gjenopprett sletta tryggingskopi trash undo undelete restore deleted backup"
+      },
+      "card_sub": "Historikken, innstillingane og løyva dine i éi fil, til å ta vare på eller flytte til ein annan FinStats",
+      "deleted_toast": "Tryggingskopien frå {date} er sletta. Det kan angrast i 30 dagar.",
+      "undo": "Angre",
+      "when_written_help": "Tidsplanen for oppgåva Tryggingskopi: dagleg, vekentleg, med fast mellomrom eller berre manuelt.",
+      "schedule": "Tidsplan",
+      "keep_help": "Eldre vert fjerna når ein ny vert skriven. 1–100.",
+      "keep_unit": "tryggingskopiar",
+      "keep_invalid": "Talet må vere eit heiltal frå 1 til 100.",
+      "saving": "Lagrar …",
+      "couldnt_save": "Kunne ikkje lagre: {error}",
+      "made": "Laga",
+      "size": "Storleik",
+      "actions": "Handlingar",
+      "delete_ask": "Slette denne tryggingskopien? Det kan angrast i 30 dagar.",
+      "delete": "Slett",
+      "restore_ask_settings": "Flette inn historikken og byte ut innstillingar og løyve?",
+      "restore_ask": "Flette inn historikken?",
+      "restore": "Gjenopprett",
+      "download": "Last ned",
+      "delete_aria": "Slett tryggingskopien frå {date}",
+      "empty_scheduled": "Ingen tryggingskopiar enno. Den første vert skriven av seg sjølv så snart det finst noko å ta kopi av, eller du kan lage ein no.",
+      "empty_unscheduled": "Ingen tryggingskopiar enno, og ingen er planlagde.",
+      "deleted_help": "Ein sletta tryggingskopi ventar her i 30 dagar før han vert fjerna for godt. Han kan ikkje lastast ned eller gjenopprettast frå før han er henta tilbake.",
+      "removed_for_good": "Vert fjerna for godt",
+      "undelete": "Hent tilbake",
+      "restored": { "one": "Gjenoppretta {count} avspeling; {skipped} fanst alt.", "other": "Gjenoppretta {count} avspelingar; {skipped} fanst alt." },
+      "restored_settings": { "one": "Gjenoppretta {count} avspeling; {skipped} fanst alt, og innstillingar og løyve er gjenoppretta.", "other": "Gjenoppretta {count} avspelingar; {skipped} fanst alt, og innstillingar og løyve er gjenoppretta." },
+      "restore_failed": "Gjenopprettinga feila: {error} Ingenting vart endra.",
+      "too_large": "Serveren avviste fila som for stor. Står FinStats bak ein omvendt proxy, må du auke grensa for opplasting der og prøve igjen.",
+      "also_settings": "Gjenopprett òg innstillingar og løyve",
+      "head": "Vert skrivne etter {link}, og dei {count} nyaste vert tekne vare på.",
+      "head_next": "Vert skrivne etter {link}, og dei {count} nyaste vert tekne vare på. Neste {next}.",
+      "head_single": "Vert skrivne etter {link}, og berre den nyaste av dei vert teken vare på.",
+      "head_single_next": "Vert skrivne etter {link}, og berre den nyaste av dei vert teken vare på. Neste {next}.",
+      "head_link": "tidsplanen for oppgåva Tryggingskopi",
+      "head_unscheduled": "Ingen tryggingskopiar er planlagde ({link}).",
+      "head_unscheduled_link": "planlegg dei",
+      "folder": "Dei ligg i mappa {folder} i datamappa di.",
+      "backup_progress": "Framdrift for tryggingskopien",
+      "backup_failed": "Tryggingskopien feila: {error}",
+      "restore_help": "Gjenoppretting flettar inn: avspelingar som alt finst, vert hoppa over, så det er trygt å gjere det to gonger. Ein tryggingskopi inneheld historikken og adressene til alle, aldri API-nøkkelen din til Jellyfin.",
+      "upload_progress": "Framdrift for opplastinga",
+      "uploading": "Lastar opp {file} · {percent} %",
+      "choose_file": "Vel ein tryggingskopi …",
+      "restore_progress": "Framdrift for gjenopprettinga"
     }
   },
   "simple": {
@@ -272,7 +1069,329 @@
       "graphs": "Grafar"
     },
     "menu": "Innstillingar og konto",
-    "sections": "Sider"
+    "sections": "Sider",
+    "graphs": {
+      "concurrent": {
+        "day": "Samtidige straumar per dag etter straumtype",
+        "week": "Samtidige straumar per veke etter straumtype"
+      },
+      "concurrent_help": {
+        "day": "Flest straumar samtidig kvar dag, av kvar type og totalt.",
+        "week": "Flest straumar samtidig kvar veke, av kvar type og totalt."
+      },
+      "hm": "{hours} t {minutes} min",
+      "hour": {
+        "duration": "Avspelingstid etter time på døgnet",
+        "plays": "Tal på avspelingar etter time på døgnet"
+      },
+      "hour_help": "TV, film og musikk samla, etter kva time på døgnet dei vart spela av.",
+      "kind": {
+        "movies": "Filmar",
+        "music": "Musikk",
+        "tv": "TV"
+      },
+      "last_months": "Siste {field} månader",
+      "last_n_days": "Siste {count} dagar",
+      "last_n_months": "Siste {count} månader",
+      "measure": "Vis som",
+      "media_daily": {
+        "day": {
+          "duration": "Avspelingstid per dag etter medietype",
+          "plays": "Tal på avspelingar per dag etter medietype"
+        },
+        "week": {
+          "duration": "Avspelingstid per veke etter medietype",
+          "plays": "Tal på avspelingar per veke etter medietype"
+        }
+      },
+      "media_daily_help": {
+        "day": {
+          "duration": "Samla avspelingstid for TV, film og musikk kvar dag.",
+          "plays": "Samla tal på avspelingar av TV, film og musikk kvar dag."
+        },
+        "week": {
+          "duration": "Samla avspelingstid for TV, film og musikk kvar veke.",
+          "plays": "Samla tal på avspelingar av TV, film og musikk kvar veke."
+        }
+      },
+      "method": {
+        "DirectPlay": "Direkteavspeling",
+        "DirectStream": "Direktestrøyming",
+        "Transcode": "Omkoding"
+      },
+      "monthly": {
+        "duration": "Avspelingstid totalt per månad",
+        "plays": "Tal på avspelingar totalt per månad"
+      },
+      "monthly_help": "TV, film og musikk samla, månad for månad.",
+      "months_aria": "Månader",
+      "most_at_once": "Flest samtidig",
+      "platform_method": {
+        "duration": "Avspelingstid etter plattform og straumtype",
+        "plays": "Tal på avspelingar etter plattform og straumtype"
+      },
+      "platform_method_help": "TV, film og musikk etter app og etter korleis dei vart spela av.",
+      "source_resolution": {
+        "duration": "Avspelingstid etter kjeldeoppløysing",
+        "plays": "Tal på avspelingar etter kjeldeoppløysing"
+      },
+      "source_resolution_help": "TV og film etter oppløysinga til fila, før eventuell omkoding.",
+      "stream_resolution": {
+        "duration": "Avspelingstid etter sendt oppløysing",
+        "plays": "Tal på avspelingar etter sendt oppløysing"
+      },
+      "stream_resolution_help": "TV og film etter oppløysinga som vart send, etter eventuell omkoding.",
+      "streams_daily": {
+        "day": {
+          "duration": "Avspelingstid per dag etter straumtype",
+          "plays": "Tal på avspelingar per dag etter straumtype"
+        },
+        "week": {
+          "duration": "Avspelingstid per veke etter straumtype",
+          "plays": "Tal på avspelingar per veke etter straumtype"
+        }
+      },
+      "streams_daily_help": {
+        "day": {
+          "duration": "Samla avspelingstid for TV, film og musikk kvar dag, etter om det vart spela av som det er eller koda om.",
+          "plays": "Samla tal på avspelingar av TV, film og musikk kvar dag, etter om det vart spela av som det er eller koda om."
+        },
+        "week": {
+          "duration": "Samla avspelingstid for TV, film og musikk kvar veke, etter om det vart spela av som det er eller koda om.",
+          "plays": "Samla tal på avspelingar av TV, film og musikk kvar veke, etter om det vart spela av som det er eller koda om."
+        }
+      },
+      "tab": {
+        "media": "Medietype",
+        "streams": "Straumtype",
+        "totals": "Avspelingar totalt"
+      },
+      "this_month": "Denne månaden",
+      "top_platforms": {
+        "duration": "Avspelingstid på dei 10 mest brukte plattformene",
+        "plays": "Tal på avspelingar på dei 10 mest brukte plattformene"
+      },
+      "top_platforms_help": "TV, film og musikk samla, på dei ti appane som spela av mest.",
+      "top_users": {
+        "duration": "Avspelingstid for dei 10 mest aktive brukarane",
+        "plays": "Tal på avspelingar for dei 10 mest aktive brukarane"
+      },
+      "top_users_help": "TV, film og musikk samla, for dei ti personane som spela av mest.",
+      "user_method": {
+        "duration": "Avspelingstid etter brukar og straumtype",
+        "plays": "Tal på avspelingar etter brukar og straumtype"
+      },
+      "user_method_help": "TV, film og musikk etter person og etter korleis dei vart spela av.",
+      "weekday": {
+        "duration": "Avspelingstid etter vekedag",
+        "plays": "Tal på avspelingar etter vekedag"
+      },
+      "weekday_help": "TV, film og musikk samla, etter kva vekedag dei vart spela av."
+    },
+    "history": {
+      "col": {
+        "date": "Dato",
+        "duration": "Varigheit",
+        "ip": "IP-adresse",
+        "paused": "Pausa",
+        "platform": "Plattform",
+        "player": "Avspelar",
+        "started": "Starta",
+        "stopped": "Stoppa"
+      },
+      "done_aria": "{percent} % sett",
+      "done_title": "{percent} %",
+      "empty": "Ingen avspelingar passar.",
+      "kind": {
+        "all": "Alle",
+        "movies": "Filmar",
+        "music": "Musikk",
+        "shows": "TV-seriar"
+      },
+      "media": "Media",
+      "na": "–",
+      "per_page": "Oppføringar per side",
+      "search_aria": "Søk i historikken",
+      "search_label": "Søk:",
+      "show_entries": "Vis {size} oppføringar per side",
+      "showing": "Viser {from} til {to} av {total} oppføringar"
+    },
+    "home": {
+      "card": {
+        "libraries": "Mest aktive bibliotek",
+        "platforms": "Mest aktive plattformer",
+        "popular_movies": "Mest populære filmar",
+        "popular_music": "Mest populære musikk",
+        "popular_series": "Mest populære TV-seriar",
+        "users": "Mest aktive brukarar",
+        "watched_movies": "Mest sette filmar",
+        "watched_music": "Mest spela musikk",
+        "watched_series": "Mest sette TV-seriar"
+      },
+      "col": {
+        "duration": "Varigheit",
+        "plays": "Avspelingar",
+        "users": "Brukarar"
+      },
+      "count": {
+        "albums": "Album",
+        "artists": "Artistar",
+        "episodes": "Episodar",
+        "items": "Element",
+        "last_played": "Sist spela",
+        "movies": "Filmar",
+        "never": "Aldri",
+        "seasons": "Sesongar",
+        "shows": "Seriar",
+        "tracks": "Spor"
+      },
+      "days_aria": "Dagar",
+      "direct_play_of": "Direkteavspeling ({from})",
+      "episode_n": "Episode {number}",
+      "eta": "ETA: {time}",
+      "fact": {
+        "audio": "Lyd",
+        "bandwidth": "Bandbreidd",
+        "container": "Container",
+        "location": "Nettverk",
+        "player": "Avspelar",
+        "product": "Produkt",
+        "quality": "Kvalitet",
+        "stream": "Straum",
+        "subtitle": "Undertekst",
+        "video": "Video"
+      },
+      "kind": {
+        "audiobook": "Lydbok",
+        "movie": "Film",
+        "music_video": "Musikkvideo",
+        "video": "Video"
+      },
+      "lan": "LAN",
+      "last_days": "Siste {field} dagar",
+      "library_statistics": "Bibliotekstatistikk",
+      "live_unavailable": "Pågåande økter er ikkje tilgjengelege: {reason}",
+      "looking": "Ser etter straumar …",
+      "measure": {
+        "duration": "Avspelingstid",
+        "plays": "Tal på avspelingar"
+      },
+      "nothing_added": "Ingenting er lagt til i det siste.",
+      "nothing_playing": "Ingenting vert spela akkurat no.",
+      "peak": {
+        "direct_plays": "Direkteavspelingar",
+        "direct_streams": "Direktestrøymingar",
+        "streams": "Samtidige straumar",
+        "title": "Flest samtidige straumar",
+        "transcodes": "Omkodingar"
+      },
+      "quality_converted": "Omkoda ({rate})",
+      "quality_original": "Original ({rate})",
+      "rank_by": "Ranger etter",
+      "recently_added": "Nyleg lagt til",
+      "recently_watched": "Nyleg sett",
+      "summary": {
+        "bandwidth_split": "{total} (LAN: {lan}, WAN: {wan})",
+        "direct_plays": { "one": "{count} direkteavspeling", "other": "{count} direkteavspelingar" },
+        "direct_streams": { "one": "{count} direktestrøyming", "other": "{count} direktestrøymingar" },
+        "line": "Straumar: {streams} | Bandbreidd: {bandwidth}",
+        "line_kinds": "Straumar: {streams} ({kinds}) | Bandbreidd: {bandwidth}",
+        "streams": { "one": "{count} straum", "other": "{count} straumar" },
+        "transcodes": { "one": "{count} omkoding", "other": "{count} omkodingar" }
+      },
+      "transcode_from_to": "Omkoding ({from} → {to})",
+      "wan": "WAN",
+      "watch_statistics": "Visingsstatistikk"
+    },
+    "item": {
+      "aired": "Utgjeve",
+      "episode_list": "Episodar",
+      "genres": "Sjangrar",
+      "library": "Bibliotek",
+      "missing_text": "Han kan vere fjerna frå Jellyfin.",
+      "missing_title": "Fann ikkje tittelen",
+      "rated": "Aldersgrense",
+      "rated_aria": "Vurdert til {rating} av 5",
+      "runtime": "Speletid",
+      "season_list": "Sesongar",
+      "show": "Serie",
+      "starring": "Skodespelarar",
+      "studio": "Studio",
+      "unit_people": "personar",
+      "unit_person": "person",
+      "watched_by": "Sett av"
+    },
+    "libraries": {
+      "all": "Alle bibliotek",
+      "col": {
+        "episodes": "Episodar / spor totalt",
+        "last_accessed": "Sist brukt",
+        "name": "Biblioteknamn",
+        "seasons": "Sesongar / album totalt",
+        "titles": "Filmar / TV-seriar / artistar totalt",
+        "type": "Bibliotektype"
+      },
+      "empty": "Ingen bibliotek enno.",
+      "missing_text": "Det kan vere fjerna frå Jellyfin.",
+      "missing_title": "Fann ikkje biblioteket",
+      "showing": "Viser {shown} av {total} bibliotek",
+      "type": {
+        "books": "Bok",
+        "boxsets": "Samling",
+        "homevideos": "Video",
+        "movies": "Film",
+        "music": "Artist",
+        "musicvideos": "Musikkvideo",
+        "tvshows": "Serie"
+      }
+    },
+    "platform": {
+      "days_hrs_mins": "{days} d {hours} t {minutes} min",
+      "hrs_mins": "{hours} t {minutes} min",
+      "mins": "{minutes} min",
+      "unknown_app": "Ukjend app"
+    },
+    "profile": {
+      "global_stats": "Samla statistikk",
+      "recently_watched": "Nyleg sett",
+      "tab_profile": "Profil",
+      "unit": {
+        "days": "d",
+        "hrs": "t",
+        "mins": "min",
+        "play": "avspeling",
+        "plays": "avspelingar"
+      },
+      "user_stats": "Brukarstatistikk",
+      "views": "Visingar"
+    },
+    "users": {
+      "all": "Alle brukarar",
+      "col": {
+        "first_seen": "Først sett",
+        "last_ip": "Siste kjende IP",
+        "last_platform": "Siste plattform",
+        "last_played": "Sist spela",
+        "last_player": "Siste avspelar",
+        "last_seen": "Sist sett",
+        "network": "Nettverk",
+        "total_duration": "Avspelingstid totalt",
+        "total_plays": "Avspelingar totalt"
+      },
+      "ip_addresses": "IP-adresser",
+      "missing_text": "Personen kan vere fjerna frå Jellyfin, eller så har du ikkje tilgang til sida.",
+      "missing_title": "Fann ikkje personen",
+      "no_addresses": "Ingen adresser registrerte.",
+      "player_stats": "Avspelarstatistikk",
+      "showing": "Viser {shown} av {total} brukarar"
+    },
+    "changelog": {
+      "jump": "Gå til ein versjon",
+      "empty_title": "Ingen endringslogg",
+      "empty_sub": "Denne versjonen har ingen.",
+      "running": "Køyrer no",
+      "running_option": "{version} (køyrer no)"
+    }
   },
   "server": {
     "errors": {
@@ -312,6 +1431,2483 @@
       "see_the_server": "Du har ikkje løyve til å sjå serveren. Ein Jellyfin-administrator kan gje det under Innstillingar.",
       "see_what_is_downloading": "Du har ikkje løyve til å sjå kva som vert lasta ned. Ein Jellyfin-administrator kan gje det under Innstillingar.",
       "see_where_people_watch_from": "Du har ikkje løyve til å sjå kvar folk ser frå. Ein Jellyfin-administrator kan gje det under Innstillingar."
+    }
+  },
+  "shell": {
+    "pages_label": "Sider",
+    "menu_label": "Meny",
+    "to_top": "Rull til toppen"
+  },
+  "router": {
+    "page_title": "{page} · FinStats"
+  },
+  "components": {
+    "pct_watched": "{pct} sett",
+    "a_play": "avspeling",
+    "together_aria": { "one": "Sett saman av {count} person", "other": "Sett saman av {count} personar" }
+  },
+  "menus": {
+    "open": "Opne",
+    "timeline": "Tidslinje",
+    "new_tab": "Opne i ny fane",
+    "copy_link": "Kopier lenkje",
+    "open_tmdb": "Opne på TMDB",
+    "open_tvdb": "Opne på TVDB",
+    "in_pipeline": "Vis i På veg",
+    "copy_title": "Kopier tittel",
+    "actions_for": "Handlingar for {name}",
+    "actions": "Handlingar"
+  },
+  "watchlist_toggle": {
+    "add": "Legg til i Lista mi",
+    "remove": "Fjern frå Lista mi",
+    "add_failed": "Kunne ikkje legge han til i Lista mi: {error}",
+    "remove_failed": "Kunne ikkje fjerne han frå Lista mi: {error}",
+    "add_show": "Legg serien til i Lista mi",
+    "show_on": "Serien er på Lista mi",
+    "show_on_title": "Serien er på Lista mi. Klikk for å fjerne han.",
+    "on": "På Lista mi",
+    "on_title": "På Lista mi. Klikk for å fjerne han.",
+    "named": "{words}: {name}"
+  },
+  "pages": {
+    "activity": {
+      "sub": "Alle avspelingar FinStats kjenner til. Nyaste først, eller klikk på ein kolonne for å sortere etter han",
+      "type": {
+        "movies": "Filmar",
+        "episodes": "Episodar",
+        "music": "Musikk"
+      },
+      "play_method": "Avspelingsmetode",
+      "all_methods": "Alle metodar",
+      "media_type": "Medietype",
+      "all_types": "Alle typar",
+      "recorded_by": "Registrert av",
+      "all_trackers": "Alle sporingsverktøy",
+      "search_placeholder": "Søk etter titlar …",
+      "search_label": "Søk etter titlar",
+      "one_series": "Éin serie",
+      "one_title": "Éin tittel",
+      "remove_title_filter": "Fjern tittelfilteret",
+      "empty": "Ingen avspelingar passar med desse filtera. Prøv eit lengre tidsrom, eller tøm søket.",
+      "recently_deleted": "Nyleg sletta ({count})",
+      "trash": {
+        "summary": { "one": "{count} avspeling i papirkorga, som vert fjerna for godt 30 dagar etter at ho vart sletta", "other": "{count} avspelingar i papirkorga, kvar vert fjerna for godt 30 dagar etter at ho vart sletta" },
+        "back": "Tilbake til alle avspelingar",
+        "empty_title": "Papirkorga er tom.",
+        "empty_body": "Ei sletta avspeling ligg her i 30 dagar før ho vert fjerna for godt.",
+        "restore": "Gjenopprett",
+        "restoring": "Gjenopprettar …",
+        "restored": "{title} er gjenoppretta.",
+        "restore_failed": "Kunne ikkje gjenopprette: {reason}",
+        "person": "Person",
+        "played": "Spela av",
+        "deleted": "Sletta",
+        "purge_at": "Vert sletta for godt"
+      }
+    },
+    "playback": {
+      "sub": "Korleis media når fram: avspelingsmetodar, kodekar og klientar",
+      "methods_title": "Avspelingsmetodar",
+      "methods_sub": "Direkteavspeling sender fila urørt; omkoding kostar CPU eller GPU på serveren",
+      "measure": "Mål",
+      "plays": "Avspelingar",
+      "share": "Del",
+      "reasons_title": "Kvifor straumar vert koda om",
+      "reasons_sub": "Årsaker oppgjevne av Jellyfin",
+      "nothing_transcoded": "Ingenting vart koda om i dette tidsrommet.",
+      "hw_title": "Maskinvare for omkoding",
+      "hw_sub": "Akselerasjon som vart brukt",
+      "software": "Programvare",
+      "clients_title": "Klientar",
+      "clients_sub": "Appane folk spelar av med",
+      "video_codecs": "Videokodekar",
+      "source_files": "Kjeldefiler",
+      "resolutions": "Oppløysingar",
+      "dynamic_range": "Dynamikkområde",
+      "audio_codecs": "Lydkodekar",
+      "selected_audio": "Valt lydspor",
+      "audio_channels": "Lydkanalar",
+      "containers": "Containerar",
+      "subtitles": "Undertekstar",
+      "selected_subtitle": "Valt undertekstspråk",
+      "off": "Av",
+      "mono": "Mono",
+      "stereo": "Stereo",
+      "channels": { "one": "{count} kanal", "other": "{count} kanalar" },
+      "channels_short": "{count} kan.",
+      "concurrency_title": "Samtidige straumar",
+      "per_day": "Flest samtidig per dag",
+      "per_week": "Flest samtidig per veke",
+      "peak_day": "Flest samtidig per dag · topp på {peak}",
+      "peak_week": "Flest samtidig per veke · topp på {peak}",
+      "peak_at_day": "Flest samtidig per dag · topp på {peak}, {when}",
+      "peak_at_week": "Flest samtidig per veke · topp på {peak}, {when}",
+      "peak_transcodes": { "one": "opptil {count} omkoding samtidig", "other": "opptil {count} omkodingar samtidig" },
+      "week_of": "Veka som byrjar {date}",
+      "week_of_head": "Veke som byrjar",
+      "date": "Dato",
+      "peak_streams": "Flest straumar",
+      "peak_aria": "Flest samtidige straumar",
+      "unit_stream": "straum",
+      "unit_streams": "straumar",
+      "which_clients": "Kva klientar som kodar om",
+      "which_clients_sub": "Avspelingar per klient, fordelte på avspelingsmetode",
+      "how_far": "Kor langt folk kjem",
+      "how_far_sub": "Filmar og episodar, etter kvar avspelinga stoppa",
+      "no_video_plays": "Ingen avspelingar av filmar eller episodar i dette tidsrommet.",
+      "completion": {
+        "under_10": "Under 10 %",
+        "from_10": "10–50 %",
+        "from_50": "50–90 %",
+        "finished": "Fullført (minst 90 %)"
+      },
+      "network": "Nettverk",
+      "network_sub": "Kvar avspelingane kom frå",
+      "local": "Lokalt",
+      "behaviour_title": "Sjåarvanar",
+      "based_on": { "one": "Basert på {count} avspeling registrert direkte", "other": "Basert på {count} avspelingar registrerte direkte" },
+      "pauses": "Pausar per avspeling",
+      "skips": "Spolingar per avspeling",
+      "picked_up": "Teke opp att midtvegs",
+      "broken_title": "Filer som aldri vert spela av",
+      "broken_sub": "Starta tre gonger eller meir, aldri forbi tretti sekund",
+      "tries": "Forsøk",
+      "people": "Personar",
+      "apps": "Appar",
+      "last_tried": "Sist prøvd",
+      "rewound_title": "Mest tilbakespola",
+      "rewound_sub": "Spolingar bakover per avspeling, frå avspelingar FinStats sjølv har registrert",
+      "rewinds": "Tilbakespolingar",
+      "per_play": "Per avspeling",
+      "hot_spot": "Oftast ved",
+      "subtitled_title": "Undertekstar slått på",
+      "subtitled_sub": "Avspelingar der undertekstar vert slått på i løpet av dei første ti minutta",
+      "switched_on": "Slått på",
+      "typically_at": "Vanlegvis ved",
+      "reason": {
+        "ContainerNotSupported": "Containeren vert ikkje støtta",
+        "VideoCodecNotSupported": "Videokodeken vert ikkje støtta",
+        "AudioCodecNotSupported": "Lydkodeken vert ikkje støtta",
+        "SubtitleCodecNotSupported": "Undertekstformatet vert ikkje støtta",
+        "AudioIsExternal": "Lydsporet er eksternt",
+        "SecondaryAudioNotSupported": "Ekstra lydspor vert ikkje støtta",
+        "VideoProfileNotSupported": "Videoprofilen vert ikkje støtta",
+        "VideoLevelNotSupported": "Videonivået vert ikkje støtta",
+        "VideoResolutionNotSupported": "Videooppløysinga vert ikkje støtta",
+        "VideoBitDepthNotSupported": "Bitdjupna for video vert ikkje støtta",
+        "VideoFramerateNotSupported": "Biletfrekvensen vert ikkje støtta",
+        "RefFramesNotSupported": "Talet på referanserammer vert ikkje støtta",
+        "AnamorphicVideoNotSupported": "Anamorfisk video vert ikkje støtta",
+        "InterlacedVideoNotSupported": "Linjefletta video vert ikkje støtta",
+        "AudioChannelsNotSupported": "Talet på lydkanalar vert ikkje støtta",
+        "AudioProfileNotSupported": "Lydprofilen vert ikkje støtta",
+        "AudioSampleRateNotSupported": "Samplingsfrekvensen for lyd vert ikkje støtta",
+        "AudioBitDepthNotSupported": "Bitdjupna for lyd vert ikkje støtta",
+        "ContainerBitrateExceedsLimit": "Bitraten er over grensa",
+        "VideoBitrateNotSupported": "Bitraten for video vert ikkje støtta",
+        "AudioBitrateNotSupported": "Bitraten for lyd vert ikkje støtta",
+        "UnknownVideoStreamInfo": "Ukjend informasjon om videostraumen",
+        "UnknownAudioStreamInfo": "Ukjend informasjon om lydstraumen",
+        "DirectPlayError": "Feil ved direkteavspeling",
+        "VideoRangeTypeNotSupported": "Typen dynamikkområde vert ikkje støtta",
+        "VideoCodecTagNotSupported": "Kodek-taggen for video vert ikkje støtta",
+        "StreamCountExceedsLimit": "For mange straumar i fila"
+      }
+    },
+    "together": {
+      "sub": "Kven som ser saman med kven, og kor mykje",
+      "empty_title": "Ingen har sett noko saman enno",
+      "empty_body": "Når fleire personar startar det same samtidig, dukkar det opp her.",
+      "vs_previous": { "one": "mot {count} dag før", "other": "mot dei {count} dagane før" },
+      "people": "Personar",
+      "watched_with": "Sett med",
+      "time_together": "Tid saman",
+      "evenings": "Kveldar",
+      "share_of_watch_time": "Del av visingstida",
+      "spent_in_company": "brukt saman med andre",
+      "over_time_title": "Saman over tid",
+      "over_time_sub_day": "Timar saman med andre og timar åleine, per dag",
+      "over_time_sub_week": "Timar saman med andre og timar åleine, per veke",
+      "pairs_title": "Kven ser med kven",
+      "pairs_sub": "Kvart par, etter tid saman; ein kveld med tre tel for kvart av para i han",
+      "pair": "Par",
+      "last": "Sist",
+      "watches_most": "Ser mest",
+      "most_title": "Mest sett saman",
+      "recent_title": "Siste kveldar",
+      "people_title": "Åleine eller saman med andre",
+      "people_sub": "Visingstida til kvar person i dette tidsrommet, og kor mykje av ho som var saman med nokon",
+      "person": "Person",
+      "alone": "Åleine",
+      "share": "Del"
+    },
+    "security": {
+      "severity": {
+        "high": "Høg",
+        "medium": "Middels"
+      },
+      "kind": {
+        "impossible_travel": "Umogleg reise",
+        "new_country": "Nytt land"
+      },
+      "km": "{distance} km",
+      "gap_seconds": "{count} s",
+      "gap_minutes": "{count} min",
+      "travel_overlap": "{distance} frå kvarandre samtidig",
+      "travel_speed": "{distance} på {gap}, altså {speed} km/h",
+      "home_place": "Heime ({place})",
+      "home_tip": "Heime · {place}",
+      "home": "Heime",
+      "note_placeholder": "På ferie, ein VPN, ein telefon på mobildata …",
+      "resolve": "Merk som løyst",
+      "resolve_more": "Merk som løyst …",
+      "resolve_title": "Merk varselet som løyst",
+      "resolving": "Merkar som løyst …",
+      "resolve_all": "Merk alle som løyste",
+      "resolve_help_travel": "{user}: {travel}.",
+      "resolve_help_country": "{user}: sett for første gong i {country}.",
+      "note_label": "Merknad (valfritt)",
+      "mute_pair": "Aldri varsle om {from} og {to} for {user} igjen",
+      "show_on_map": "Vis på kart",
+      "reopen": "Opne igjen",
+      "reopening": "Opnar igjen …",
+      "travel_text": "{from} → {to}: {travel}.",
+      "first_time": "Første gong i {country}.",
+      "first_time_place": "Første gong i {country} ({place}).",
+      "known_before": { "one": "Kjend frå før: {count} land.", "other": "Kjend frå før: {count} land." },
+      "side_before": "Før",
+      "side_then": "Så",
+      "side_seen": "Sett",
+      "resolved_by": "Løyst {when} av {name}",
+      "someone": "nokon",
+      "muted": "dette paret vert ikkje varsla lenger",
+      "which_alerts": "Kva for varsel",
+      "tab_open": "Opne",
+      "tab_open_count": "Opne ({count})",
+      "tab_resolved": "Løyste",
+      "tab_all": "Alle",
+      "alerts_title": "Varsel",
+      "alerts_sub": "Ein grunn til å sjå nærare, aldri eit prov: stadene er i beste fall bysentrum, og ein VPN ser ut som ei reise",
+      "alerts_empty_open": "Ingenting treng ein titt. Umoglege reiser og første besøk i eit nytt land vert viste her.",
+      "alerts_empty": "Ingen varsel her.",
+      "sign_ins": { "one": "{count} innlogging", "other": "{count} innloggingar" },
+      "failed_sign_ins": { "one": "{count} mislukka innlogging", "other": "{count} mislukka innloggingar" },
+      "addresses": { "one": "{count} adresse", "other": "{count} adresser" },
+      "last_seen_tip": "sist sett",
+      "last_attempt": "siste forsøk",
+      "user_in_place": "{user} i {place}",
+      "user_playing_now": "{user} · spelar av no",
+      "close_place": "Lukk detaljane om staden",
+      "failed_summary": { "one": "{count} mislukka innlogging, sist {when}.", "other": "{count} mislukka innloggingar, sist {when}." },
+      "open_server_log": "Opne serverloggen",
+      "live_playing": "{user} spelar av {title}.",
+      "live_playing_on": "{user} spelar av {title} på {device}.",
+      "place_summary": "{plays} ({time}). Sist sett {when}.",
+      "place_summary_sign_ins": "{plays} ({time}), {sign_ins}. Sist sett {when}.",
+      "place_summary_addresses": "{plays} ({time}) frå {addresses}. Sist sett {when}.",
+      "place_summary_sign_ins_addresses": "{plays} ({time}), {sign_ins} frå {addresses}. Sist sett {when}.",
+      "col": {
+        "place": "Stad",
+        "people": "Personar",
+        "plays": "Avspe­lingar",
+        "sign_ins": "Inn­loggingar",
+        "last_seen": "Sist sett",
+        "map": "Kart"
+      },
+      "show_place_on_map": "Vis {place} på kartet",
+      "downloading": "Lastar ned …",
+      "download_failed": "Nedlastinga gjekk ikkje.",
+      "download_database": "Last ned databasen (omtrent 60 MB)",
+      "no_database_title": "Ingen geolokaliseringsdatabase enno",
+      "no_database_text": "Stadene kjem frå ein bydatabase som FinStats les lokalt; ingen adresse vert nokon gong send nokon stad. Last ned den gratis databasen frå DB-IP her, eller legg kva bydatabasefil som helst i MaxMind-format (.mmdb) i geoip-mappa i datamappa. Innstillingar → Tryggleik held han oppdatert.",
+      "tile": {
+        "open_alerts": "Opne varsel",
+        "waiting": "Ventar på ein titt",
+        "all_clear": "Alt i orden",
+        "countries": "Land",
+        "places_away": "Stader borte frå heimen",
+        "failed_outside": "Mislukka innloggingar utanfrå"
+      },
+      "map_title": "Kvar folk ser frå",
+      "map_sub": "Avspelingar, innloggingar og pågåande straumar etter stad; heimenettverket er eitt punkt",
+      "map_sub_no_home": "Avspelingar, innloggingar og pågåande straumar etter stad. Heimen er ikkje på kartet enno: FinStats har ikkje lært den offentlege adressa til dette nettverket",
+      "map_empty": "Ingen har sett på noko frå ei offentleg adresse i dette tidsrommet.",
+      "places_title": "Stader",
+      "nothing_in_range": "Ingenting i dette tidsrommet.",
+      "countries_title": "Land",
+      "countries_sub": "Etter avspelingar",
+      "database_built": "{kind}, laga {date}",
+      "addresses_without_place": { "one": "{count} adresse har ingen kjend stad", "other": "{count} adresser har ingen kjend stad" },
+      "map_outlines": "Kartomriss: Natural Earth",
+      "page_sub": "Kvar folk ser frå, og kva som ikkje stemmer"
+    },
+    "dashboard": {
+      "sub": "Avspeling på {server}",
+      "sub_default": "Avspeling på Jellyfin-serveren din",
+      "recent": {
+        "title": "Nyleg lagt til",
+        "sub": "Det nyaste i biblioteka dine",
+        "aria": "Nyleg lagt til, nyaste først"
+      },
+      "downloads": {
+        "title": "Vert lasta ned no",
+        "sub": "Frå Sonarr, Radarr og torrentklienten din",
+        "all": "Alle nedlastingar"
+      },
+      "coming": {
+        "title": "Kjem snart",
+        "sub": "Dei neste sju dagane i Sonarr og Radarr",
+        "calendar": "Kalender",
+        "aria": "Kjem snart, det første først"
+      },
+      "empty": {
+        "title": "Ingen avspelingar registrerte enno",
+        "manager": "FinStats følgjer no med på Jellyfin-serveren din. Nye avspelingar vert viste her etter kvart som dei skjer. Du kan òg hente inn historikken du allereie har, frå Jellystat eller Streamystats.",
+        "viewer": "Avspelingane dine vert viste her etter kvart som dei skjer.",
+        "import_jellystat": "Importer frå Jellystat",
+        "import_streamystats": "Importer frå Streamystats"
+      },
+      "top": {
+        "series": "Toppseriar",
+        "movies": "Toppfilmar",
+        "users": "Toppbrukarar",
+        "music": "Toppmusikk",
+        "no_music": "Ingen musikk spela av i dette tidsrommet."
+      },
+      "recent_activity": "Nyleg aktivitet",
+      "view_all": "Vis alle",
+      "arrived": {
+        "Movie": "Film",
+        "MusicAlbum": "Album",
+        "MusicVideo": "Musikkvideo",
+        "Video": "Video",
+        "Book": "Bok",
+        "AudioBook": "Lydbok",
+        "episode_number": "Episode {number}"
+      }
+    },
+    "item": {
+      "page_title": "Tittel",
+      "community_rating": "Publikumsvurdering",
+      "runtime": "Speletid",
+      "not_in_library": "Ikkje lenger i biblioteket",
+      "in_library": "I {library}",
+      "in_library_added": "I {library} · lagt til {when}",
+      "library_fallback": "biblioteket",
+      "container": "Container",
+      "size": "Storleik",
+      "bitrate": "Bitrate",
+      "bit_depth": "Bitdjupn",
+      "bits": "{bits} bit",
+      "frame_rate": "Biletfrekvens",
+      "fps": "{fps} fps",
+      "path": "Filbane",
+      "plays": "Avspelingar",
+      "last_when": "sist {when}",
+      "never_played": "Aldri spela av",
+      "watched_by": "Sett av",
+      "plays_over_time": "Avspelingar over tid",
+      "seasons": "Sesongar",
+      "seasons_sub": "Avspelingar per episode i dette tidsrommet",
+      "recent_plays": "Nylege avspelingar",
+      "view_all": "Vis alle",
+      "file": "Fil",
+      "stop_measured": "{measured} målt nøyaktig, {estimated} anslått ut frå visingstid",
+      "stop_skips": "spoling under 20 s vert ikkje registrert",
+      "where_people_stop": "Kvar folk stoppar",
+      "who_keeps_watching": "Kven held fram med å sjå",
+      "who_keeps_watching_sub": "Personar som byrja på kvar episode, i rekkjefølgje",
+      "viewers_n": { "one": "{count} sjåar", "other": "{count} sjåarar" },
+      "viewers_per_episode": "Sjåarar per episode",
+      "episode": "Episode",
+      "viewers_head": "Sjåarar",
+      "next_episodes": "Neste episodar",
+      "coming_releases": "Komande utgjevingar",
+      "from_arr": "Frå Sonarr og Radarr",
+      "of_episodes": { "one": "{seen} av {count} episode", "other": "{seen} av {count} episodar" },
+      "n_more": "+{count} til",
+      "by_episode": "per episode",
+      "audio": "Lyd",
+      "subtitles": "Undertekstar",
+      "in_all_episodes": "I alle dei {total} episodane",
+      "in_some": "I nokre av dei",
+      "in_some_of": "I nokre av dei {total} episodane",
+      "of_total": "{seen} av {total}",
+      "languages": "Språk",
+      "across_episodes": "Fordelt på dei {total} episodane på disken",
+      "tracks_in_file": "Spor i fila",
+      "cast": "Medverkande",
+      "new_tab": "(opnast i ei ny fane)",
+      "marked_played": "Merkt som sett i Jellyfin",
+      "marked_played_sub": "Jellyfin sine eigne markeringar, også historikk frå før FinStats",
+      "last_played": "Sist spela av",
+      "favourite": "Favoritt",
+      "unknown_user": "Ukjend brukar",
+      "nobody_played": "Ingen har spela av dette i det valde tidsrommet.",
+      "season_n": "Sesong {number}",
+      "season_meta": "{episodes} ep. · {plays}",
+      "share": "Del",
+      "finished": "Fullført",
+      "finished_title": { "one": "{finished} av {count} avspeling nådde 90 % av episoden", "other": "{finished} av {count} avspelingar nådde 90 % av episoden" }
+    },
+    "libraries": {
+      "kind": {
+        "movies": "Filmar",
+        "tvshows": "Seriar",
+        "music": "Musikk",
+        "musicvideos": "Musikkvideoar",
+        "homevideos": "Heimevideoar",
+        "books": "Bøker",
+        "boxsets": "Samlingar",
+        "mixed": "Blanda"
+      },
+      "library": "Bibliotek",
+      "series": { "one": "{count} serie", "other": "{count} seriar" },
+      "items": { "one": "{count} element", "other": "{count} element" },
+      "empty_title": "Ingen bibliotek enno",
+      "empty_sub": "Biblioteka dukkar opp etter den første synkroniseringa med Jellyfin. Du kan starte ei frå Innstillingar → Oppgåver.",
+      "removed": "fjerna frå Jellyfin",
+      "plays": "Avspelingar",
+      "last_played": "Sist spela av",
+      "never": "Aldri",
+      "sub": "Kva som ligg på serveren, og kor mykje av det som vert sett",
+      "most_watched": "Mest sett",
+      "by_watch_time": "Etter visingstid",
+      "recently_added": "Nyleg lagt til",
+      "everything_in_it": "Alt i biblioteket",
+      "health": "Bibliotekhelse",
+      "health_line": "{things}: {kinds}.",
+      "things_to_look_at": { "one": "{count} ting å sjå på", "other": "{count} ting å sjå på" },
+      "nothing_added": "Ingenting lagt til enno.",
+      "added": "lagt til {when}",
+      "title_kind": {
+        "Movie": "Filmar",
+        "Series": "Seriar",
+        "MusicAlbum": "Album",
+        "MusicVideo": "Musikkvideoar",
+        "Video": "Videoar",
+        "Book": "Bøker",
+        "AudioBook": "Lydbøker"
+      },
+      "sort": {
+        "name": "Namn",
+        "year": "År",
+        "added": "Lagt til",
+        "size": "Storleik"
+      },
+      "everything_in": "Alt i {name}",
+      "find_title": "Finn ein tittel …",
+      "find_title_aria": "Finn ein tittel i dette biblioteket",
+      "sort_by": "Sorter etter",
+      "kind_label": "Type",
+      "all": "Alle",
+      "no_match_title": "Ingen treff",
+      "no_match_sub": "Ingen tittel i dette biblioteket inneheld alle orda du skreiv.",
+      "nothing_here_title": "Ingenting her enno",
+      "nothing_here_sub": "Titlane dukkar opp her etter at FinStats har lese biblioteket.",
+      "show_more": "Vis fleire",
+      "show_n_more": "Vis {count} til"
+    },
+    "users": {
+      "empty_title": "Ingen brukarar enno",
+      "empty_sub": "Brukarane dukkar opp etter den første synkroniseringa med Jellyfin.",
+      "plays": "Avspelingar",
+      "last_played": "Sist spela av",
+      "last_title": "Siste tittel",
+      "last_client": "Siste klient",
+      "last_seen_jellyfin": "Sist aktiv i Jellyfin",
+      "admin": "Admin",
+      "disabled": "Deaktivert",
+      "removed_chip": "Fjerna frå Jellyfin",
+      "never": "Aldri",
+      "sub": "Alle med ein konto på Jellyfin-serveren din",
+      "tabs_label": "Profildelar",
+      "tab_overview": "Oversikt",
+      "tab_timeline": "Tidslinje",
+      "page_title": "Brukar",
+      "coming_up": "Kjem snart",
+      "coming_up_sub": "Nye episodar av seriane som vert sette her, dei neste 30 dagane",
+      "calendar": "Kalender",
+      "open_recap": "Opne tilbakeblikk",
+      "role_user": "Brukar",
+      "disabled_lower": "deaktivert",
+      "removed": "fjerna frå Jellyfin",
+      "last_seen": "sist aktiv {when}",
+      "different_titles": { "one": "{count} tittel", "other": "{count} ulike titlar" },
+      "movies": "Filmar",
+      "plays_hint": "avspelingar",
+      "episodes": "Episodar",
+      "and_music_plays": { "one": "og {count} musikkavspeling", "other": "og {count} musikkavspelingar" },
+      "top_series": "Mest sette seriar",
+      "top_movies": "Mest sette filmar",
+      "by_watch_time": "Etter visingstid",
+      "when_watches": "Når {name} ser på",
+      "play_methods": "Avspelingsmetodar",
+      "share_of_plays": "Del av avspelingane",
+      "clients": "Klientar",
+      "by_plays": "Etter avspelingar",
+      "devices": "Einingar",
+      "ip_addresses": "IP-adresser",
+      "ip_addresses_sub": "Kvar denne brukaren har spela av frå",
+      "recent_plays": "Nylege avspelingar",
+      "view_all": "Vis alle",
+      "in_jellyfin": "I Jellyfin",
+      "movies_played": "Sette filmar",
+      "episodes_played": "Sette episodar",
+      "favourites": "Favorittar",
+      "jellyfin_note": "Frå Jellyfin sine markeringar av kva som er sett, også historikk frå før FinStats.",
+      "no_devices": "Ingen einingar i dette tidsrommet.",
+      "device": "Eining",
+      "version": "Versjon",
+      "last_used": "Sist brukt",
+      "no_ips": "Ingen IP-adresser registrerte i dette tidsrommet.",
+      "network": "Nettverk",
+      "first_seen": "Først sett",
+      "last_seen_head": "Sist sett",
+      "local": "Lokal",
+      "remote": "Utanfrå"
+    },
+    "person": {
+      "page_title": "Person",
+      "titles_in_library": { "one": "{count} tittel i biblioteket", "other": "{count} titlar i biblioteket" },
+      "watch_time_hint": "for alt personen er med i",
+      "plays": "Avspelingar",
+      "last_when": "sist {when}",
+      "never_played": "Aldri spela av",
+      "titles_watched": "Sette titlar",
+      "of_total": "{seen} av {total}",
+      "watched": "Sett",
+      "watched_sub": "I dette tidsrommet, mest sett først",
+      "nothing_played": "Ingenting med denne personen vart spela av i det valde tidsrommet.",
+      "also_in_library": "Også i biblioteket",
+      "not_played": "Ikkje spela av i dette tidsrommet",
+      "watched_by": "Sett av",
+      "director_as": "Regissør · som {role}",
+      "director_actor": "Regissør · skodespelar",
+      "as_role": "som {role}",
+      "not_in_library": "ikkje lenger i biblioteket",
+      "last_played": "Sist spela av"
+    },
+    "showprogress": {
+      "longest_streak": "Lengste rekkje",
+      "days": { "one": "{count} dag", "other": "{count} dagar" },
+      "no_plays_yet": "Ingen avspelingar enno",
+      "current_streak": "Noverande rekkje",
+      "nothing_today": "Ingenting spela av i dag eller i går",
+      "since": "Sidan {day}",
+      "since_keep": "Sidan {day} · spel av noko i dag for å halde rekkja",
+      "days_with_play": "Dagar med avspeling",
+      "all_time": "totalt",
+      "source": {
+        "played": "sett",
+        "jellyfin": "merkt som sett i Jellyfin",
+        "manual": "merkt av deg"
+      },
+      "seen": "sett",
+      "seen_how": "sett ({how})",
+      "episodes_seen": { "one": "{seen} av {count} episode sett", "other": "{seen} av {count} episodar sette" },
+      "started": "påbyrja, ikkje fullført",
+      "not_seen": "ikkje sett",
+      "click_unmark": "{title}. Klikk for å fjerne merket.",
+      "click_mark": "{title}. Klikk for å merke som sett.",
+      "couldnt_save": "Kunne ikkje lagre: {error}",
+      "not_in_library": "Ikkje lenger i biblioteket",
+      "undo_marks": "Angre merka mine",
+      "season_n": "Sesong {number}",
+      "mark_season": "Merk sesongen som sett",
+      "mark_show": "Merk heile serien som sett",
+      "marks_help": "Klikk på ein episode for å merke han. Merka blir verande i FinStats og endrar aldri noko i Jellyfin.",
+      "no_shows": "Ingen seriar enno.",
+      "no_shows_sub": "Episodane dukkar opp her når noko frå ein serie er spela av.",
+      "no_finished": "Ingen fullførte seriar enno.",
+      "nothing_in_progress": "Ingenting pågår. Alt som er påbyrja, er fullført.",
+      "show_all": "Vis alle {count}",
+      "shows": "Seriar",
+      "shows_sub": "Sette episodar av dei som ligg på serveren. Totalt.",
+      "which_shows": "Kva seriar",
+      "in_progress_n": "Pågår · {count}",
+      "finished_n": "Fullført · {count}",
+      "all": "Alle"
+    },
+    "watchlist": {
+      "group": {
+        "started": "Påbyrja",
+        "on_server": "På serveren",
+        "coming_up": "Kjem snart",
+        "requested": "Førespurd",
+        "not_on_server": "Ikkje på serveren",
+        "left_library": "Fjerna frå biblioteket",
+        "watched": "Sett"
+      },
+      "state": {
+        "all_watched": { "one": "Alle {count} episodane er sette", "other": "Alle {count} episodane er sette" },
+        "progress": { "one": "{seen} av {count} episode", "other": "{seen} av {count} episodar" },
+        "requested_by_you": "Førespurd av deg",
+        "requested_by": "Førespurd av {name}",
+        "coming_today": "Kjem i dag",
+        "coming_tomorrow": "Kjem i morgon",
+        "coming_on": "Kjem {day}"
+      },
+      "empty_title": "Ingenting på Lista mi enno",
+      "empty_sub": "Legg til ein film eller ein serie frå sida til tittelen, frå Kjem, frå Nyleg lagt til eller frå søket.",
+      "page_title": "{name} · Lista mi",
+      "sub": "Filmar og seriar du vil sjå, nyaste først. Berre du kan sjå denne lista.",
+      "remove_aria": "Fjern {title} frå Lista mi",
+      "remove": "Fjern frå Lista mi",
+      "kind_show": "Serie",
+      "kind_film": "Film"
+    },
+    "timeline": {
+      "page_title": "Tidslinje",
+      "empty_title": "Ingenting her enno",
+      "empty_picked": "Ingen avspelingar i biblioteka du valde.",
+      "empty_sub": "Avspelingane dukkar opp her så snart noko er sett.",
+      "title_of": "{name} · Tidslinje",
+      "sub": "Alt som er sett, nyaste først",
+      "show_all": "Vis alle",
+      "show_older": "Vis eldre",
+      "history_starts": "Her byrjar historikken.",
+      "episode_n": "Episode {number}",
+      "episodes_range": "Episode {from}–{to}",
+      "movie": "Film",
+      "movie_sittings": { "one": "Film · sett i {count} omgang", "other": "Film · sett i {count} omgangar" }
+    },
+    "recap": {
+      "this_server": "Denne serveren",
+      "this_user": "Denne brukaren",
+      "unknown_title": "Ukjend tittel",
+      "unknown_show": "Ukjend serie",
+      "bars_aria": "{label}. Bruk piltastane til venstre og høgre for å lese verdiane.",
+      "period": "Periode",
+      "last_12_months": "Siste 12 månader",
+      "this_period": "denne perioden",
+      "twelve_months": "12 månadene",
+      "nothing_played": "Ingenting spela av",
+      "nothing": "Ingenting",
+      "wave_caption": "Éin stolpe per veke. Den travlaste: {week}, med {time}.",
+      "eyebrow_year": "Året som gjekk",
+      "hero_title_year": {
+        "you": "Ditt {year} i reprise",
+        "user": "{year} i reprise for {name}",
+        "server": "{year} i reprise for serveren"
+      },
+      "hero_title_last12": {
+        "you": "Dei siste {months} dine i reprise",
+        "user": "Dei siste {months} i reprise for {name}",
+        "server": "Dei siste {months} på serveren i reprise"
+      },
+      "hours": { "one": "{count} time", "other": "{count} timar" },
+      "hero_line": "{hours} fordelt på {plays} og {titles}.",
+      "rank": { "one": "#{position} av {count} sjåar", "other": "#{position} av {count} sjåarar" },
+      "rank_share": { "one": "#{position} av {count} sjåar · {share} av all visingstid", "other": "#{position} av {count} sjåarar · {share} av all visingstid" },
+      "numbers_eyebrow": "I tal",
+      "numbers_title": {
+        "you": "Året ditt i {numbers}",
+        "user": "Året til {name} i {numbers}",
+        "server": "Året til serveren i {numbers}"
+      },
+      "numbers_word": "tal",
+      "numbers_lead": {
+        "you": "Du trykte på play {times}, fordelt på {titles}",
+        "user": "{name} trykte på play {times}, fordelt på {titles}",
+        "server": "Det vart trykt på play {times} på {name}, fordelt på {titles}"
+      },
+      "times": { "one": "{count} gong", "other": "{count} gonger" },
+      "different_titles": { "one": "{count} tittel", "other": "{count} ulike titlar" },
+      "numbers_days": { "one": ". Det er {count} døgn utan pause.", "other": ". Det er {count} døgn utan pause." },
+      "plays_label": "Avspelingar",
+      "tile_titles": "Ulike titlar",
+      "tile_days": "Dagar med avspeling",
+      "tile_streak": "Lengste rekkje, dagar",
+      "tile_rewatches": "Gjensyn",
+      "rewatch_you": { "one": "{count} økt med noko du hadde sett før", "other": "{count} økter med noko du hadde sett før" },
+      "rewatch_other": { "one": "{count} økt med noko som var sett før", "other": "{count} økter med noko som var sett før" },
+      "episodes_label": "Episodar",
+      "movies_label": "Filmar",
+      "music_label": "Musikk",
+      "made_of": "Kva det bestod av",
+      "genres": "Sjangrar",
+      "genre": "Sjanger",
+      "genres_title": {
+        "you": "Du er fan av {genre}",
+        "user": "{name} er fan av {genre}",
+        "server": "{name} er fan av {genre}"
+      },
+      "genres_title_an": {
+        "you": "Du er fan av {genre}",
+        "user": "{name} er fan av {genre}",
+        "server": "{name} er fan av {genre}"
+      },
+      "genres_lead": "{genre} leia med {time} fordelt på {plays}",
+      "genres_close": ", med {genre} tett bak.",
+      "stat_was": "Var {genre}",
+      "genres_note": "Ein tittel tel med i kvar av sjangrane sine, og ein serie tel episode for episode.",
+      "people": "Mest sette personar",
+      "people_mark": "Rolleliste",
+      "tab_actors": "Skodespelarar",
+      "tab_directors": "Regissørar",
+      "who": "Kven",
+      "actor_title": "{person} var overalt",
+      "director_title": "{person} sat i regissørstolen",
+      "actor_lead": "{time} på skjermen fordelt på {titles}",
+      "director_lead": "{time} med regi fordelt på {titles}",
+      "people_most": ", mest av det i {title}.",
+      "persona_eyebrow": "Sjåarpersonlegdom",
+      "persona_title": {
+        "you": "Du er {persona}",
+        "user": "{name} er {persona}",
+        "server": "{name} er {persona}"
+      },
+      "persona": {
+        "name": {
+          "night_owl": "Nattugle",
+          "early_bird": "Morgonfugl",
+          "music_lover": "Musikkelskar",
+          "weekend_warrior": "Helgekrigar",
+          "binge_watcher": "Maratonsjåar",
+          "movie_buff": "Filmentusiast",
+          "creature_of_habit": "Vanedyr"
+        },
+        "article": {
+          "night_owl": "ei {persona}",
+          "early_bird": "ein {persona}",
+          "music_lover": "ein {persona}",
+          "weekend_warrior": "ein {persona}",
+          "binge_watcher": "ein {persona}",
+          "movie_buff": "ein {persona}",
+          "creature_of_habit": "eit {persona}",
+          "other": "ein {persona}",
+          "other_an": "ein {persona}"
+        }
+      },
+      "rhythm": "Aktivitetsmønster",
+      "rhythm_mark": "Når",
+      "tab_hours": "Timar",
+      "tab_days": "Dagar",
+      "tab_months": "Månader",
+      "rhythm_by": "Vis visingstid etter",
+      "hours_title": {
+        "you": "{hour} er den beste sendetida di",
+        "user": "{hour} er den beste sendetida til {name}",
+        "server": "{hour} er den beste sendetida på serveren"
+      },
+      "hours_lead": "{time} starta mellom {from} og {to}",
+      "hours_share": ". Det er {pct} av alt, i éin time av døgnet.",
+      "hours_aria": "Visingstid per time i døgnet",
+      "head_hour": "Time",
+      "days_title_crown": "Krona gjekk til {weekday}",
+      "days_lead": "{time} vart sett på {weekday}ar",
+      "days_over": ", {pct} meir enn ein gjennomsnittleg dag.",
+      "weekday_aria": "Visingstid per vekedag",
+      "head_weekday": "Vekedag",
+      "month_mostly": "mest {title}",
+      "month_title": "Ingen månad slo {month}",
+      "month_lead": "{time} på éin månad",
+      "month_most": ", mest av det med {title}.",
+      "month_aria": "Visingstid per månad",
+      "head_month": "Månad",
+      "month_caption": "Mest sette tittel per månad",
+      "heat_aria": { "one": "Visingstid for kvar dag: {count} dag med avspelingar. Bruk piltastane for å lese einskilde dagar.", "other": "Visingstid for kvar dag: {count} dagar med avspelingar. Bruk piltastane for å lese einskilde dagar." },
+      "less": "Mindre",
+      "more": "Meir",
+      "heat_live": "{day}: {time}, {plays}",
+      "heat_live_none": "{day}: ingenting spela av",
+      "days_eyebrow": {
+        "you": "Året ditt i dagar",
+        "user": "Året til {name} i dagar",
+        "server": "Året til serveren i dagar"
+      },
+      "days_mark": "Dagar",
+      "days_on": { "one": "{count} dag med noko på skjermen", "other": "{count} dagar med noko på skjermen" },
+      "streak_lead": {
+        "you": "Den lengste rekkja di varte i {days}, {range}",
+        "user": "Den lengste rekkja til {name} varte i {days}, {range}",
+        "server": "Den lengste rekkja på serveren varte i {days}, {range}"
+      },
+      "streak_days": { "one": "{count} dag", "other": "{count} dagar" },
+      "biggest_tail": ". Den største dagen av alle var {day}, med {time}.",
+      "biggest_lead": "Den største dagen var {day}",
+      "biggest_lead_tail": ", med {time} i eitt strekk.",
+      "records": "Rekordar",
+      "records_title_you": "Dagane du kjem til å {word}",
+      "remember": "hugse",
+      "records_title_other": "Dagane som {word}",
+      "stood_out": "skilde seg ut",
+      "biggest_day": "Største dag",
+      "biggest_binge": "Største maraton",
+      "binge_context": "av {show}, {day}",
+      "one_show": "éin serie",
+      "longest_streak": "Lengste rekkje",
+      "in_a_row": { "one": "{count} dag på rad", "other": "{count} dagar på rad" },
+      "longest_play": "Lengste einskildavspeling",
+      "most_rewatched": "Mest gjensett",
+      "first_play_year": "Første avspeling i året",
+      "first_play_period": "Første avspeling i perioden",
+      "first_play_at": "{day} kl. {time}",
+      "oldest_title": "Eldste tittel",
+      "from_year": "Frå {year}",
+      "discovery": "Oppdagingar",
+      "discovery_mark": "Nytt",
+      "discovery_title": {
+        "you": "{shows} du aldri hadde sett før",
+        "user": "{shows} {name} aldri hadde sett før",
+        "server": "{shows} som var nye for {name}"
+      },
+      "seen_end": "Sett til {end}",
+      "end": "slutt",
+      "shows_started": "Seriar starta",
+      "movies_finished": "Filmar fullført",
+      "episodes_finished": "Episodar fullført",
+      "one_and_done": "Éin episode og ferdig",
+      "one_and_done_note": "Seriar som fekk nøyaktig éin episode og aldri ein til.",
+      "together_mark": "Selskap",
+      "together_title": "{evenings} i selskap",
+      "evenings": { "one": "{count} kveld", "other": "{count} kveldar" },
+      "together_lead": "{hours} sett saman med andre",
+      "together_share": {
+        "you": ", {pct} av visingstida di.",
+        "user": ", {pct} av visingstida til {name}.",
+        "server": ", {pct} av visingstida på serveren."
+      },
+      "watched_with": {
+        "you": "Kven du såg saman med",
+        "user": "Kven {name} såg saman med",
+        "server": "Kven som såg saman på {name}"
+      },
+      "together_top": "Det som samla folk mest",
+      "people_in_company": { "one": "{count} person såg saman med andre i år.", "other": "{count} personar såg saman med andre i år." },
+      "finished": "Fullført",
+      "finished_mark": "Ferdig",
+      "finished_title": "{shows} sett til slutt",
+      "left_title": "Spart til {later}",
+      "later": "seinare",
+      "left_for_later": "Spart til seinare",
+      "dropped_note": "Byrja på i år, under halvparten sett, og ingenting av det på to månader.",
+      "seen_of": { "one": "{seen} av {count} episode", "other": "{seen} av {count} episodar" },
+      "asked": "Førespurt",
+      "asked_mark": "Ønske",
+      "asked_title": {
+        "you": "{requests} du sende",
+        "user": "{requests} {name} sende",
+        "server": "{requests} i alt"
+      },
+      "requests": { "one": "{count} førespurnad", "other": "{count} førespurnader" },
+      "arrived": "Kom",
+      "watched_after": "Sett etter at det kom",
+      "versus_eyebrow": "Mot {year}",
+      "versus_mark": "Mot",
+      "versus_more": "{pct} meir",
+      "versus_less": "{pct} mindre",
+      "versus_title": "{change} enn i {year}",
+      "hours_in": "Timar i {year}",
+      "plays_in": "Avspelingar i {year}",
+      "card": {
+        "year": "Året",
+        "numbers": "I tal",
+        "shows": "Toppseriar",
+        "films": "Toppfilmar",
+        "music": "Toppmusikk",
+        "genres": "Sjangrar",
+        "persona": "Personlegdomen",
+        "rhythm": "Timar og dagar",
+        "days": "Kvar dag",
+        "records": "Rekordar",
+        "together": "I selskap",
+        "finished": "Fullførte seriar",
+        "asked": "Førespurnader",
+        "versus": "Mot året før"
+      },
+      "card_alt": "{card}, som kort",
+      "cards_help": "Kvart kapittel som eit bilete, i formatet mobilhistorier brukar. Andre personar vert aldri nemnde med namn på eit kort.",
+      "download": "Last ned",
+      "download_all": "Last ned alle korta",
+      "cards_title": "Året som kort",
+      "clients_eyebrow": {
+        "you": "Slik såg du",
+        "user": "Slik såg {name}",
+        "server": "Slik vart det sett på {name}"
+      },
+      "clients_mark": "Skjermar",
+      "clients_title": "Mest på {app}",
+      "of_plays": "{pct} av avspelingane",
+      "credit": {
+        "starring": "I hovudrollene",
+        "feature": "Hovudfilm",
+        "with": "Med",
+        "directed": "Regi",
+        "soundtrack": "Musikk",
+        "genre": "Sjanger",
+        "screened": "Vist på",
+        "running": "Speletid"
+      },
+      "credits": "Rulletekst",
+      "roll_credits": "Rulletekst",
+      "that_was": "Det var {year}",
+      "that_was_last12": "Det var dei siste {months}",
+      "outro_line": {
+        "you": "Alt du ser frå no av, tel allereie mot det neste.",
+        "user": "Alt {name} ser frå no av, tel allereie mot det neste.",
+        "server": "Alt som vert sett på {name} frå no av, tel allereie mot det neste."
+      },
+      "see_activity": "Sjå all aktivitet",
+      "profile": {
+        "you": "Profilen din",
+        "user": "Profilen til {name}",
+        "server": "Profilen til serveren"
+      },
+      "top_shows": "Toppseriar",
+      "shows_mark": "Seriar",
+      "shows_title": {
+        "you": "{title} prega året ditt",
+        "user": "{title} prega året til {name}",
+        "server": "{title} prega året på serveren"
+      },
+      "shows_lead": "{hours} saman",
+      "shows_lead_episodes": "{hours} saman, over {episodes}",
+      "shows_more": ", meir enn nokon annan serie.",
+      "top_movies": "Toppfilmar",
+      "movies_mark": "Filmar",
+      "movies_title": {
+        "you": "Årets film for deg: {title}",
+        "user": "Årets film for {name}: {title}",
+        "server": "Årets film på serveren: {title}"
+      },
+      "movies_lead": "{time} totalt",
+      "movies_back": {
+        "you": { "one": ". Du kom tilbake til han {count} gong.", "other": ". Du kom tilbake til han {count} gonger." },
+        "user": { "one": ". {name} kom tilbake til han {count} gong.", "other": ". {name} kom tilbake til han {count} gonger." },
+        "server": { "one": ". Han vart sett {count} gong på {name}.", "other": ". Han vart sett {count} gonger på {name}." }
+      },
+      "top_tracks": "Toppspor",
+      "tracks_mark": "Igjen",
+      "tracks_title": "Om og om {repeat}",
+      "repeat": "igjen",
+      "my_recap": "Tilbakeblikket mitt",
+      "whose_recap": "Kven sitt tilbakeblikk",
+      "whose_year": "Kven sitt år",
+      "a_person": "Ein person",
+      "title_period": "Tilbakeblikk {period}",
+      "empty_last12": "Ingenting vart spela av dei siste 12 månadene.",
+      "empty_period": "Ingenting vart spela av i {period}.",
+      "empty_sub": {
+        "you": "Du spelte ikkje av noko i denne perioden. Vel ein annan ovanfor.",
+        "user": "{name} spelte ikkje av noko i denne perioden. Vel ein annan ovanfor.",
+        "server": "Ingenting vart spela av på {name} i denne perioden. Vel ein annan ovanfor."
+      },
+      "share": "Del året som kort",
+      "banner": "Tilbakeblikket ditt for {year} er klart"
+    },
+    "changelog": {
+      "sub": "Kva som er endra i FinStats, nyaste først",
+      "empty_title": "Ingen endringslogg enno.",
+      "empty_sub": "Denne versjonen vart bygd utan endringslogg.",
+      "running": "Køyrer no",
+      "releases": { "one": "{count} versjon", "other": "{count} versjonar" },
+      "versions": "Versjonar"
+    },
+    "health": {
+      "kind": {
+        "gap": {
+          "label": "Hol",
+          "what": "Episodar som manglar mellom to filer i ein sesong"
+        },
+        "season_drift": {
+          "label": "Sesongar som skil seg ut",
+          "what": "Ein sesong med anna oppløysing, anna dynamisk område eller annan kodek"
+        },
+        "episode_drift": {
+          "label": "Avvikande episodar",
+          "what": "Ei fil som ikkje liknar resten av sesongen"
+        },
+        "copies": {
+          "label": "Kopiar",
+          "what": "Det same to gonger, i same oppløysing"
+        },
+        "versions": {
+          "label": "Versjonar",
+          "what": "Éin tittel i meir enn éi oppløysing"
+        },
+        "thin": {
+          "label": "Tynne filer",
+          "what": "Langt færre bitar enn oppløysinga vanlegvis krev"
+        },
+        "dub": {
+          "label": "Dubbing som stoppar",
+          "what": "Eit språk nokre sesongar har og andre manglar"
+        },
+        "unidentified": {
+          "label": "Aldri identifisert",
+          "what": "Kopla utan ID frå TMDB, TVDB eller IMDb"
+        }
+      },
+      "words": {
+        "season": "sesong {list}",
+        "seasons": "sesong {list}",
+        "gap_one": "Sesong {season}: episode {episodes} manglar mellom {from} og {to}",
+        "gap_many": "Sesong {season}: episodane {episodes} manglar mellom {from} og {to}",
+        "season_is": "Sesong {list} er {value}",
+        "seasons_are": "Sesong {list} er {value}",
+        "the_rest": "{odd}, resten {usual}",
+        "episode_drift": "{code} er {value}, resten av sesong {season} {usual}",
+        "copies_files": { "one": "{count} kopi i {resolutions}, {size} lagra to gonger", "other": "{count} kopiar i {resolutions}, {size} lagra to gonger" },
+        "copies_episodes": { "one": "{count} episode finst meir enn éin gong, {size} lagra to gonger", "other": "{count} episodar finst meir enn éin gong, {size} lagra to gonger" },
+        "versions_files": "Finst i {resolutions}",
+        "versions_episodes": { "one": "{count} episode finst i {resolutions}", "other": "{count} episodar finst i {resolutions}" },
+        "thin_file": "{look} med {rate}; slike filer ligg vanlegvis over {usual}",
+        "thin_season": { "one": "Sesong {season}: {files} av {count} episode med {rate}, {look}; slike filer ligg vanlegvis over {usual}", "other": "Sesong {season}: {files} av {count} episodar med {rate}, {look}; slike filer ligg vanlegvis over {usual}" },
+        "dub": "{language} i {full}, ikkje i {none}",
+        "dub_partial": "sesong {season} har det på {episodes} av {of}",
+        "unidentified_show": "Jellyfin kopla denne serien utan nokon katalog, så ingenting som går etter ID-ar frå TMDB, TVDB eller IMDb, kan kjenne han att",
+        "unidentified_film": "Jellyfin kopla denne filmen utan nokon katalog, så ingenting som går etter ID-ar frå TMDB, TVDB eller IMDb, kan kjenne han att"
+      },
+      "facts": {
+        "resolution": "Oppløysing",
+        "size": "Storleik",
+        "library": "Bibliotek",
+        "path": "Sti"
+      },
+      "more_episodes": { "one": "og {count} episode til", "other": "og {count} episodar til" },
+      "dismiss": {
+        "note_placeholder": "Kvifor det er i orden, for den som ser på dette neste gong",
+        "dismiss": "Avvis",
+        "note": "Notat (valfritt)",
+        "comes_back_capacity": "Det kjem tilbake av seg sjølv dersom det det byggjer på, vert endra.",
+        "comes_back": "Det kjem tilbake av seg sjølv dersom filene bak det vert endra.",
+        "title": "Avvis funn",
+        "dismissing": "Avviser …"
+      },
+      "bringing_back": "Hentar tilbake …",
+      "couldnt_bring_back": "Kunne ikkje hente det tilbake: {error}",
+      "show_every_kind": "Vis alle typar",
+      "show_only": "Vis berre {kind}",
+      "kept_twice_size": "{size} lagra to gonger",
+      "all_libraries": "Alle bibliotek",
+      "unlisted_library": "Eit bibliotek Jellyfin ikkje lenger viser",
+      "this_library_empty": "Dette biblioteket (ingenting å sjå på)",
+      "back_to_open": "Tilbake til det som bør sjåast på",
+      "set_aside_count": "Lagt til sides ({count})",
+      "col": {
+        "what": "Kva",
+        "kept_twice": "Lagra to gonger",
+        "found": "Funne"
+      },
+      "removed_library": "eit fjerna bibliotek",
+      "not_in_jellyfin": "ikkje lenger i Jellyfin",
+      "set_aside_when": "Lagt til sides {when}",
+      "set_aside_by": "Lagt til sides {when} av {name}",
+      "bring_back": "Hent tilbake",
+      "dismiss_button": "Avvis …",
+      "empty": {
+        "not_yet_title": "Ikkje rekna ut enno",
+        "not_yet": "FinStats går gjennom biblioteket etter neste lesing av biblioteket, og igjen kvar gong han ser etter metadataendringar. Ingenting vert rekna ut når denne sida vert opna.",
+        "aside_title": "Ingenting er lagt til sides",
+        "aside_filtered": "Ingenting av denne typen er avvist her.",
+        "aside": "Eit avvist funn ventar her til nokon hentar det tilbake eller filene vert endra.",
+        "filtered_title": "Ingenting her",
+        "clean_title": "Ingenting å sjå på",
+        "filtered": "Ingenting av denne typen vart funne i denne delen av biblioteket.",
+        "clean": "Ingen hol, ingen kopiar, ingenting for tynt, og alle sesongar er like."
+      },
+      "count_aside": { "one": "{count} funn lagt til sides", "other": "{count} funn lagt til sides" },
+      "count_open": { "one": "{count} funn å sjå på", "other": "{count} funn å sjå på" },
+      "thin_note": "Jellyfin gjev FinStats berre den første versjonen av eit element, så eit element med fleire versjonar vert vurdert etter den første."
+    },
+    "pipeline": {
+      "tabs": {
+        "requests": { "label": "Førespurnader", "sub": "Kven som bad om kva, kor lang tid det tok, og om det nokon gong vart sett" },
+        "upcoming": { "label": "Kjem", "sub": "Kva Sonarr og Radarr ventar, og kven som ventar på det" },
+        "downloads": { "label": "Nedlastingar", "sub": "Kva som kjem inn akkurat no" }
+      },
+      "days": { "one": "{count} dag", "other": "{count} dagar" },
+      "a_year": "Eitt år",
+      "sections_aria": "Seksjonar i På veg",
+      "state": {
+        "pending": "Ventar på godkjenning",
+        "approved": "Godkjend",
+        "processing": "På veg",
+        "partial": "Delvis på serveren",
+        "available": "På serveren",
+        "declined": "Avslått",
+        "failed": "Mislukka",
+        "removed": "Borte frå Seerr"
+      },
+      "status": {
+        "all": "Alle",
+        "open": "Opne",
+        "arrived": "På serveren",
+        "declined": "Avslått"
+      },
+      "seasons": {
+        "every": "Alle sesongar",
+        "one": "Sesong {season}",
+        "run": "Sesong {first}–{last}"
+      },
+      "unknown_title": "Ukjend tittel",
+      "col": {
+        "title": "Tittel",
+        "asked_by": "Førespurd av",
+        "asked": "Førespurd",
+        "state": "Status",
+        "took": "Tok",
+        "watched": "Sett"
+      },
+      "unlinked_user": "Seerr seier ikkje kva Jellyfin-brukar dette er",
+      "watched": {
+        "by_them": "Av dei",
+        "yes": "Ja",
+        "by_someone_else": "Av nokon andre",
+        "not_yet": "Ikkje enno"
+      },
+      "requests_empty_filtered": "Ingen førespurnader passar til desse filtera",
+      "requests_empty": "Ingen førespurnader enno",
+      "requests_empty_sub": "Førespurnader dukkar opp her nokre minutt etter at nokon ber om noko i Seerr.",
+      "tile": {
+        "titles": "Førespurde titlar",
+        "requests_in_all": { "one": "{count} førespurnad i alt", "other": "{count} førespurnader i alt" },
+        "waiting": "Ventar framleis",
+        "not_here_yet": "Ikkje komme enno",
+        "nothing_outstanding": "Ingenting uteståande",
+        "typical_wait": "Vanleg ventetid",
+        "typical_wait_hint": "Median, frå førespurnad til tilgjengeleg",
+        "watched_after": "Sett etter at dei kom",
+        "watched_after_hint": "{watched} av {arrived} som kom"
+      },
+      "trend": {
+        "title": "Kor lang tid ein førespurnad tek",
+        "sub": "Median tal på timar frå førespurnad til tilgjengeleg, etter månaden førespurnaden kom",
+        "hours": { "one": "{count} time", "other": "{count} timar" },
+        "aria": "Median tal på timar før ankomst per månad",
+        "month": "Månad",
+        "hours_to_arrive": "Timar før ankomst"
+      },
+      "never": {
+        "title": "Komme, aldri spela av",
+        "sub": "Har lege på serveren i over to veker utan at nokon har sett det",
+        "here_since": "På serveren sidan"
+      },
+      "people": {
+        "title": "Kven ber om kva",
+        "sub": "Førespurde titlar, og kor mange som vart sette etterpå",
+        "person": "Person",
+        "asked_for": "Førespurd",
+        "arrived": "Komme"
+      },
+      "search_placeholder": "Søk i titlar …",
+      "search_aria": "Søk i førespurnader",
+      "which_requests": "Kva førespurnader",
+      "export_ics": "Eksporter .ics",
+      "export_help": "Eksporter .ics lagrar denne lista som eit augneblinksbilete du kan importere i ein kalenderapp; ho oppdaterer seg ikkje sjølv. Vil du ha ein kalender som held seg oppdatert, abonnerer du med ein kalendernøkkel frå {link}.",
+      "film_releases": { "one": "{count} filmutgjeving", "other": "{count} filmutgjevingar" },
+      "upcoming_empty_mine": "Ingenting på veg for seriane som vert sette her",
+      "upcoming_empty": "Ingenting i kalenderen",
+      "upcoming_empty_mine_sub": "Ein serie vert rekna som følgd når ein episode av han er spela av dei siste fire månadene.",
+      "upcoming_empty_sub": "Sonarr og Radarr ventar ingenting i denne perioden. Berre overvaka titlar tel.",
+      "which_titles": "Kva titlar",
+      "everything": "Alt",
+      "only_theirs": "Berre det dei ser",
+      "only_mine": "Berre det eg ser",
+      "how_far_ahead": "Kor langt fram",
+      "history": {
+        "arrived": "Komme",
+        "in_the_last_year": "det siste året",
+        "in_the_last_days": { "one": "den siste {count} dagen", "other": "dei siste {count} dagane" },
+        "downloaded": "Lasta ned",
+        "on_average": "{size} i snitt",
+        "failed": "Mislukka",
+        "of_grabbed": "av {grabbed} henta",
+        "per_day_title": "Importert per dag",
+        "per_day_sub": "Gigabyte som vart ferdig nedlasta",
+        "per_day_aria": "Gigabyte importert per dag",
+        "day": "Dag",
+        "indexers": "Indekserarar",
+        "indexers_sub": "Kvar det kom frå",
+        "quality": "Kvalitet",
+        "quality_sub": "Slik Sonarr og Radarr sorterte det",
+        "clients": "Klientar",
+        "clients_sub": "Kva som henta det",
+        "gb": { "one": "{count} GB", "other": "{count} GB" },
+        "failures_title": "Mislukka nedlastingar",
+        "failures_sub": "Henta og så gjeve opp",
+        "when": "Når",
+        "indexer": "Indekserar",
+        "title": "Kva som kom inn",
+        "how_far_back": "Kor langt tilbake"
+      },
+      "downloads_empty": "Ingenting vert lasta ned",
+      "downloads_empty_sub": "Sonarr, Radarr og torrentklienten din har ingenting på gang.",
+      "downloads_empty_connect": "Kople til ein torrentklient, eller Sonarr og Radarr, for å sjå kva som er på veg.",
+      "sub": "Kva som er førespurt, kjem og vert lasta ned",
+      "nothing_connected": "Ingenting er kopla til enno",
+      "nothing_connected_sub": "Kople til Sonarr, Radarr, Seerr eller ein torrentklient, så viser denne sida kva folk har bede om, kva som vert sendt når, og kva som er på veg.",
+      "add_connection": "Legg til ei tilkopling"
+    },
+    "server": {
+      "result": {
+        "Completed": "Fullført",
+        "Failed": "Mislukka",
+        "Aborted": "Stansa",
+        "Cancelled": "Avbroten"
+      },
+      "sections": {
+        "overview": { "label": "Oversikt", "sub": "Versjon, system og lagring" },
+        "jobs": { "label": "Jobbar", "sub": "Kva Jellyfin gjer, direkte" },
+        "devices": { "label": "Einingar", "sub": "Alle einingar som har logga inn" },
+        "plugins": { "label": "Programtillegg", "sub": "Kva som er installert i Jellyfin" },
+        "capacity": { "label": "Kapasitet", "sub": "Dei travlaste augneblinka som er registrerte, kor fort kvar disk vert fylt, og kva det seier om innstillingane til serveren" },
+        "health": { "label": "Bibliotekhelse", "sub": "Hol i sesongar, kopiar, tynne filer og sesongar som skil seg ut, funne ved å samanlikne kvar fil med naboane" },
+        "log": { "label": "Logg", "sub": "Aktivitetsloggen til Jellyfin: innloggingar, mislukka innloggingar, avspeling, oppgåver" },
+        "audit": { "label": "Revisjonslogg", "sub": "Kva som vart endra i FinStats, og kven som gjorde det" }
+      },
+      "sections_aria": "Seksjonar på Server",
+      "update_available": "Oppdatering tilgjengeleg",
+      "restart_pending": "Ventar på omstart",
+      "your_server": "Jellyfin-serveren din",
+      "details_from": "· detaljar henta {when}",
+      "system": {
+        "title": "System",
+        "version": "Versjon",
+        "os": "Operativsystem",
+        "transcoder": "Omkodar",
+        "transcode_folder": "Mappe for omkoding",
+        "cache_folder": "Cache-mappe",
+        "data_folder": "Datamappe",
+        "log_folder": "Loggmappe"
+      },
+      "fetch": {
+        "button": "Hent serverdetaljar",
+        "busy": "Hentar …",
+        "timeout": "Jellyfin har ikkje svara enno. Sjå Innstillingar → Oppgåver for årsaka, og prøv igjen.",
+        "empty": "Ingen serverdetaljar enno",
+        "empty_sub": "FinStats hentar versjon, lagring, programtillegg, planlagde jobbar og einingar frå Jellyfin ved den vanlege synkroniseringa. Du kan òg hente dei no."
+      },
+      "storage": {
+        "title": "Lagring",
+        "unreported": "Denne Jellyfin-versjonen rapporterer ikkje diskbruk (det kom i 10.11).",
+        "sub": "Diskbruk for voluma Jellyfin ligg på. Oppføringar med like tal deler disk.",
+        "volume": "Volum",
+        "library": "Bibliotek",
+        "free_of": "{free} ledig av {total}",
+        "usage_aria": "Diskbruk for {volume}",
+        "almost_full": "Nesten full",
+        "getting_full": "Byrjar å verte full",
+        "used": "{pct} % brukt",
+        "folder": {
+          "program_data": "Programdata",
+          "cache": "Snøggbuffer",
+          "transcodes": "Omkodingar",
+          "metadata": "Metadata",
+          "logs": "Loggar"
+        }
+      },
+      "devices": {
+        "shown_of": "{shown} av {total}",
+        "none": "Ingen kjende einingar enno.",
+        "no_match": "Ingen einingar passar",
+        "no_match_sub": "Prøv eit einings-, app- eller brukarnamn.",
+        "device": "Eining",
+        "app": "App",
+        "last_user": "Siste brukar",
+        "last_seen": "Sist sett",
+        "unknown_device": "Ukjend eining",
+        "unknown_user": "Ukjend brukar",
+        "filter_placeholder": "Filtrer einingar …",
+        "filter_aria": "Filtrer einingar",
+        "title": "Einingar",
+        "sub": "Alle einingar som har logga inn i Jellyfin"
+      },
+      "plugins": {
+        "title": "Programtillegg",
+        "none": "Ingen programtillegg rapportert.",
+        "plugin": "Programtillegg",
+        "version": "Versjon",
+        "status": "Status",
+        "state": {
+          "Active": "Aktiv",
+          "Restart": "Krev omstart",
+          "Deleted": "Sletta",
+          "Superceded": "Erstatta",
+          "Malfunctioned": "Feilar",
+          "NotSupported": "Ikkje støtta",
+          "Disabled": "Deaktivert"
+        }
+      },
+      "jobs": {
+        "title": "Jobbane til Jellyfin",
+        "sub": "Kva serveren din gjer i bakgrunnen, kva kvar jobb er til, og kor langt han har komme",
+        "eta_dots": "omtrent {dots} att",
+        "eta_none": "Arbeider; ikkje noko overslag enno",
+        "finishing": "vert snart ferdig",
+        "eta": "omtrent {time} att",
+        "still": "· {pct} % i {time}",
+        "watched_for": "· følgd i {time}",
+        "stopping": "Stoppar",
+        "running": "Køyrer",
+        "percent": "{pct} %",
+        "progress_aria": "Framdrift for {name}",
+        "last_took": "· sist tok han {time}",
+        "on_demand": "berre når noko ber om det",
+        "hidden": "skjult",
+        "next": "neste {when}",
+        "never_run": "aldri køyrd",
+        "stale": "Jellyfin svara ikkje akkurat no ({error}); dette er det siste han sa.",
+        "nothing_running": "Ingenting køyrer i Jellyfin akkurat no.",
+        "job": "Jobb",
+        "runs": "Køyrer",
+        "last_run": "Sist køyrd",
+        "running_count": { "one": "{count} køyrer", "other": "{count} køyrer" }
+      }
+    },
+    "capacity": {
+      "left": {
+        "under_a_month": "under ein månad",
+        "about_a_month": "omtrent ein månad",
+        "months": { "one": "omtrent {count} månad", "other": "omtrent {count} månader" },
+        "years": { "one": "omtrent {count} år", "other": "omtrent {count} år" }
+      },
+      "describe": {
+        "software_transcodes": {
+          "transcoded": { "one": "Dei siste {days} dagane vart {count} av {plays} avspelingar koda om.", "other": "Dei siste {days} dagane vart {count} av {plays} avspelingar koda om." },
+          "software": "Av dei Jellyfin rapporterte om, gjekk {software} utan maskinvareakselerasjon og ingen med, høgst {most} samstundes.",
+          "software_unsaid": "Av dei Jellyfin rapporterte om, gjekk {software} utan maskinvareakselerasjon og ingen med ({unsaid} sa ikkje noko), høgst {most} samstundes.",
+          "where": "Om Jellyfin skal kode om på eit grafikkort, vert stilt inn under Avspeling i Jellyfin-innstillingane"
+        },
+        "scan_busy": {
+          "always": { "one": "Biblioteksskanninga i Jellyfin er sett til å køyre kvar {interval} og tok sist {last}: lenger enn ho ventar mellom køyringane, så ho skannar heile tida, over {count} fil.", "other": "Biblioteksskanninga i Jellyfin er sett til å køyre kvar {interval} og tok sist {last}: lenger enn ho ventar mellom køyringane, så ho skannar heile tida, over {count} filer." },
+          "share": { "one": "Biblioteksskanninga i Jellyfin er sett til å køyre kvar {interval} og tok sist {last}: {pct} % av tida, over {count} fil.", "other": "Biblioteksskanninga i Jellyfin er sett til å køyre kvar {interval} og tok sist {last}: {pct} % av tida, over {count} filer." },
+          "where": "Kor ofte ho køyrer, vert stilt inn under planlagde oppgåver i Jellyfin"
+        },
+        "runway": { "one": "{free} ledig, og {added} lagt til per månad den siste {count} månaden ({libraries}): i det tempoet er det plass til {left} til", "other": "{free} ledig, og {added} lagt til per månad dei siste {count} månadene ({libraries}): i det tempoet er det plass til {left} til" }
+      },
+      "bringing_back": "Hentar tilbake …",
+      "bring_back_failed": "Kunne ikkje hente det tilbake: {error}",
+      "findings": {
+        "title": "Verdt ein titt",
+        "sub": "Kva dei travlaste augneblinka, diskane og innstillingane til serveren seier",
+        "set_aside": "Lagt til sides {when}",
+        "set_aside_by": "Lagt til sides {when} av {name}",
+        "found": "Funne {when}",
+        "bring_back": "Hent tilbake",
+        "dismiss": "Avvis …"
+      },
+      "busiest": {
+        "streams": { "one": "{count} straum", "other": "{count} straumar" },
+        "transcodes": { "one": "{count} omkoding", "other": "{count} omkodingar" },
+        "hint_transcodes": "{transcodes}, {when}",
+        "title": "Travlaste augneblink",
+        "sub": "Flest samtidige straumar FinStats har sett, og kor mange som vart koda om. FinStats kan ikkje vite kva serveren din kunne ha klart; dette er kva han har gjort.",
+        "on_record": "Travlast nokon gong",
+        "nothing_played": "Ingenting spela av enno",
+        "in_days": { "one": "Travlast den siste {count} dagen", "other": "Travlast dei siste {count} dagane" },
+        "nothing_in_days": { "one": "Ingenting spela av den siste {count} dagen", "other": "Ingenting spela av dei siste {count} dagane" },
+        "when": "Når",
+        "col_streams": "Straumar",
+        "col_transcoded": "Koda om",
+        "hardware_title": "Jellyfin sa at han brukte maskinvareakselerasjon",
+        "hardware": "I maskinvare",
+        "software_title": "Jellyfin sa at han ikkje brukte noko",
+        "software": "I programvare",
+        "unsaid_title": "Ein eldre Jellyfin, eller ei importert avspeling, seier ingen av delane",
+        "unsaid": "Ikkje oppgjeve",
+        "empty_sub": "Dei travlaste augneblinka vert viste når noko er spela av."
+      },
+      "disks": {
+        "title": "Diskplass",
+        "growth_sub": { "one": "Kva som vart lagt til i kvart bibliotek den siste {count} månaden", "other": "Kva som vart lagt til i kvart bibliotek dei siste {count} månadene" },
+        "unreported": "Jellyfin 10.11 og nyare rapporterer kor mykje plass som er ledig; denne serveren gjer ikkje det, så berre kor fort kvart bibliotek veks vert vist, ikkje kor lenge plassen vil vare.",
+        "library": "Bibliotek",
+        "added_in": { "one": "Lagt til på {count} månad", "other": "Lagt til på {count} månader" },
+        "a_month": "Per månad",
+        "young": "{libraries} kom til Jellyfin i løpet av dei siste to månadene; kor fort denne disken vert fylt, vert vist når det har gått ein månad sidan han vart fylt.",
+        "grew": { "one": "{libraries} voks med {added} per månad den siste {count} månaden; i det tempoet er det plass til {left} til.", "other": "{libraries} voks med {added} per månad dei siste {count} månadene; i det tempoet er det plass til {left} til." },
+        "nothing_added": { "one": "Ingenting vart lagt til i {libraries} den siste {count} månaden.", "other": "Ingenting vart lagt til i {libraries} dei siste {count} månadene." },
+        "sub": { "one": "Kvar disk biblioteka ligg på, og kor fort det Jellyfin la til den siste {count} månaden, fyller han", "other": "Kvar disk biblioteka ligg på, og kor fort det Jellyfin la til dei siste {count} månadene, fyller han" },
+        "folders": "Mapper",
+        "free": "Ledig",
+        "added_a_month": "Lagt til per månad",
+        "counted_by": "Veksten vert talt etter datoen Jellyfin la til kvar fil, så ei erstatta fil tel som ny, og ei som er sletta sidan, vert ikkje talt."
+      },
+      "empty": "Ikkje rekna ut enno",
+      "empty_sub": "FinStats reknar ut dette etter neste lesing av serverdetaljane, innan eit kvarter, og etter kvar lesing av biblioteket. Ingenting vert rekna ut når denne sida vert opna."
+    },
+    "events": {
+      "level": {
+        "error": "Feil",
+        "critical": "Kritisk",
+        "fatal": "Fatal",
+        "warning": "Åtvaring",
+        "info": "Info",
+        "debug": "Feilsøking",
+        "trace": "Sporing"
+      },
+      "type_chip": "Type: {type}",
+      "remove_type": "Fjern typefilter",
+      "entries": { "one": "{count} oppføring", "other": "{count} oppføringar" },
+      "empty_filtered": "Ingen loggoppføringar passar til desse filtera.",
+      "empty": "Ingen loggoppføringar enno",
+      "empty_sub": "Oppføringar kjem med neste køyring av oppgåva «Synkroniser serverloggen».",
+      "col": {
+        "when": "Når",
+        "level": "Nivå",
+        "event": "Hending",
+        "user": "Brukar",
+        "type": "Type"
+      },
+      "only_this_type": "Vis berre denne typen",
+      "search_placeholder": "Søk i loggen …",
+      "search_aria": "Søk i loggen"
+    },
+    "audit": {
+      "kind": {
+        "sign_in": "Logga inn",
+        "sign_in_failed": "Innlogging mislukka",
+        "sign_in_refused": "Innlogging avvist",
+        "sign_out": "Logga ut",
+        "setup_completed": "Sette opp FinStats",
+        "key_created": "Laga ein nøkkel",
+        "key_revoked": "Trekte tilbake ein nøkkel",
+        "key_used": "Brukte ein nøkkel for første gong",
+        "setting_changed": "Endra innstillingar",
+        "permissions_changed": "Endra løyve",
+        "service_added": "La til ei tilkopling",
+        "service_changed": "Endra ei tilkopling",
+        "service_removed": "Fjerna ei tilkopling",
+        "target_added": "La til ein varselmottakar",
+        "target_changed": "Endra ein varselmottakar",
+        "target_removed": "Fjerna ein varselmottakar",
+        "backup_made": "Tryggingskopi skriven",
+        "backup_restored": "Tryggingskopi gjenoppretta",
+        "backup_deleted": "Tryggingskopi sletta",
+        "backup_undeleted": "Henta tilbake ein sletta tryggingskopi",
+        "backup_downloaded": "Tryggingskopi lasta ned",
+        "task_run": "Køyrde ei oppgåve",
+        "task_schedule_changed": "Endra tidsplanen for ei oppgåve",
+        "import_started": "Import starta",
+        "import_finished": "Import fullført",
+        "play_deleted": "Sletta ei avspeling",
+        "play_undeleted": "Henta tilbake ei sletta avspeling",
+        "trash_purged": "Tømde papirkorga",
+        "title_located": "Fann ein manglande tittel",
+        "alert_resolved": "Løyste eit varsel",
+        "alert_reopened": "Opna eit varsel igjen",
+        "finding_dismissed": "Avviste eit funn i biblioteket",
+        "finding_undismissed": "Henta tilbake eit funn i biblioteket",
+        "profile_published": "Publiserte ein offentleg profil",
+        "profile_changed": "Endra ein offentleg profil",
+        "profile_unpublished": "Tok ned ein offentleg profil",
+        "profile_link_reset": "Laga ei ny lenkje til ein offentleg profil",
+        "appearance_changed": "Endra utsjånaden sin"
+      },
+      "outcome": {
+        "failed": "Mislukka",
+        "refused": "Avvist"
+      },
+      "detail": {
+        "nothing": "ingenting",
+        "permissions_everyone": "alle: {permissions}",
+        "permissions_user": "brukar {user}: {permissions}",
+        "expires": "går ut {when}",
+        "key": "nøkkel {id}",
+        "moved": "flytta til ein annan instans",
+        "target_personal": "{name} ({channel}, personleg)",
+        "target_server": "{name} ({channel}, server)",
+        "by_schedule": "etter tidsplanen",
+        "on_request": "på førespurnad",
+        "plays_restored": { "one": "{count} avspeling gjenoppretta, {skipped} fanst frå før", "other": "{count} avspelingar gjenoppretta, {skipped} fanst frå før" },
+        "settings_too": "innstillingane òg",
+        "plays_imported": { "one": "{count} avspeling, {skipped} fanst frå før", "other": "{count} avspelingar, {skipped} fanst frå før" },
+        "title_by": "{title} av {user}",
+        "purged": "{plays} og {backups} fjerna for godt",
+        "backups": { "one": "{count} tryggingskopi", "other": "{count} tryggingskopiar" },
+        "no_sections": "ingen seksjonar",
+        "preset": "førehandsval {code}",
+        "as_it_ships": "FinStats slik det vert levert",
+        "plays_moved": { "one": "{count} avspeling flytta", "other": "{count} avspelingar flytta" },
+        "alerts": { "one": "{count} varsel", "other": "{count} varsel" },
+        "alert": "varsel {id}",
+        "muted": "dempa"
+      },
+      "kind_chip": "Type: {kind}",
+      "remove_kind": "Fjern typefilter",
+      "entries": { "one": "{count} oppføring", "other": "{count} oppføringar" },
+      "empty_filtered": "Ingen oppføringar passar til desse filtera.",
+      "empty": "Ingenting registrert enno",
+      "empty_sub": "Innloggingar, endra innstillingar, nøklar og tryggingskopiar vert skrivne ned her frå no av.",
+      "col": {
+        "when": "Når",
+        "who": "Kven",
+        "what": "Kva",
+        "detail": "Detaljar",
+        "from": "Frå"
+      },
+      "user": "Brukar",
+      "as_typed": "slik det vart skrive",
+      "only_this_kind": "Vis berre denne typen",
+      "via_key": "via nøkkelen «{name}»",
+      "search_placeholder": "Søk i revisjonsloggen …",
+      "search_aria": "Søk i revisjonsloggen"
+    },
+    "licenses": {
+      "new_tab": "(vert opna i ei ny fane)",
+      "text_aria": "Lisenstekst",
+      "none_stated": "Ingen lisens oppgjeven",
+      "no_file": "{name} oppgjev lisensen sin, men har ikkje med noka eiga lisensfil.",
+      "shared": { "one": "den same teksten følgjer med {count} annan komponent", "other": "den same teksten følgjer med {count} andre komponentar" },
+      "see_text": "Sjå teksten",
+      "col": {
+        "component": "Komponent",
+        "version": "Versjon",
+        "licence": "Lisens",
+        "source": "Kjelde"
+      },
+      "title": "Lisensar",
+      "sub": "FinStats er fri programvare, bygd på den frie programvaren til andre. Alle lisensane som er involverte, står her i heilskap.",
+      "empty": "Ingen lisensmerknad i denne versjonen.",
+      "empty_sub": "Han vert laga av tools/make-third-party.py og kompilert inn.",
+      "app": {
+        "title": "FinStats sjølv",
+        "body": "FinStats er gjeve ut under GNU General Public License, versjon 3. Du kan bruke, studere, dele og endre programmet; alt du gjev vidare, må framleis vere under den same lisensen og ha med kjeldekoden.",
+        "read": "Les heile lisensen"
+      },
+      "bundled": {
+        "title": "Følgjer med FinStats",
+        "sub": "Skrifter, kartdata og geolokaliseringsdatabasen: ikkje kode, men levert eller lesne likevel"
+      },
+      "crates": {
+        "title": "Rust-crates",
+        "sub": { "one": "{count} crate programfila er bygd av · vel éin for å lese lisensen", "other": "{count} crates programfila er bygd av · vel éin for å lese lisensen" },
+        "find": "Finn ein komponent"
+      }
+    }
+  },
+  "public_profile": {
+    "default_name": "Ein FinStats-profil",
+    "doc_title": "{name} på FinStats",
+    "hero": "Kva denne personen ser på, publisert av personen sjølv. Alt her er minst eitt døgn gammalt.",
+    "download_card": "Last ned som kort",
+    "what_they_watch": "Kva personen ser på",
+    "when_they_watch": "Når personen ser på",
+    "hours_watched": "Timar sett",
+    "plays": "Avspelingar",
+    "films": "Filmar",
+    "episodes": "Episodar",
+    "songs": "Songar",
+    "longest_streak": "Lengste rekkje",
+    "days_with_something_on": "Dagar med noko på",
+    "days": { "one": "{count} dag", "other": "{count} dagar" },
+    "streak": { "one": "{count} dag på rad", "other": "{count} dagar på rad" },
+    "recap_title": "Tilbakeblikk: {label}",
+    "year_line": "{hours} timar, {plays} på {days}.",
+    "year_line_streak": "{hours} timar, {plays} på {days}, {streak}.",
+    "open_card": "Opne kortet: {chapter}",
+    "card_alt": "{chapter}, som kort",
+    "download": "Last ned",
+    "download_all": "Last ned alle korta",
+    "download_wide": "Last ned det breie kortet",
+    "lately": "I det siste",
+    "made_with": "Laga med FinStats, ein statistikkserver for Jellyfin.",
+    "gone_title": "Det finst ingen profil her",
+    "gone_body": "Lenkja kan ha vorte tilbakestilt, eller eigaren har slutta å publisere.",
+    "chapter": {
+      "year": "Året",
+      "numbers": "I tal",
+      "shows": "Mest sette seriar",
+      "films": "Mest sette filmar",
+      "music": "Mest spela musikk",
+      "genres": "Sjangrar",
+      "persona": "Personlegdomen",
+      "rhythm": "Timar og dagar",
+      "days": "Kvar dag",
+      "records": "Rekordar",
+      "together": "Saman med andre",
+      "finished": "Fullførte seriar",
+      "asked": "Førespurnader",
+      "versus": "Mot året før"
+    }
+  },
+  "charts": {
+    "types": {
+      "movies": "Filmar",
+      "episodes": "Episodar",
+      "music": "Musikk"
+    },
+    "together": "Saman",
+    "alone": "Åleine",
+    "arrows_aria": "{label}. Bruk piltastane venstre og høgre for å lese verdiane.",
+    "columns_aria": {
+      "plays": {
+        "day": "Avspelingar per dag. Bruk piltastane venstre og høgre for å lese verdiane.",
+        "week": "Avspelingar per veke. Bruk piltastane venstre og høgre for å lese verdiane.",
+        "month": "Avspelingar per månad. Bruk piltastane venstre og høgre for å lese verdiane."
+      },
+      "watch_s": {
+        "day": "Visingstid per dag. Bruk piltastane venstre og høgre for å lese verdiane.",
+        "week": "Visingstid per veke. Bruk piltastane venstre og høgre for å lese verdiane.",
+        "month": "Visingstid per månad. Bruk piltastane venstre og høgre for å lese verdiane."
+      }
+    },
+    "week_of": "Veka frå {date}",
+    "week_of_head": "Veke frå",
+    "total": "i alt",
+    "date": "Dato",
+    "plays": "Avspelingar",
+    "heat_aria": "Avspelingar etter vekedag og time. Bruk piltastane for å lese verdiane.",
+    "less": "Mindre",
+    "more": "Meir",
+    "watched": "visingstid",
+    "methods_aria": "Del av avspelingane etter avspelingsmetode",
+    "nothing_recorded": "Ingenting registrert i dette tidsrommet.",
+    "nothing_yet": "Ingenting å vise enno.",
+    "name": "Namn",
+    "share": "Del",
+    "files": "Filer",
+    "size": "Storleik",
+    "items": { "one": "{count} element", "other": "{count} element" },
+    "column_chart": "Søylediagram",
+    "period": "Periode",
+    "count": "Tal",
+    "where_people_stop": "Kvar folk stoppar",
+    "not_enough_plays": "Ikkje nok avspelingar enno.",
+    "still_watching_tip": "ser framleis",
+    "rewinds_here": { "one": "{count} tilbakespoling hit", "other": "{count} tilbakespolingar hit" },
+    "subtitles_here": { "one": "{count} slo på undertekstar", "other": "{count} slo på undertekstar" },
+    "still_watching": "Ser framleis",
+    "rewinds": "Tilbakespolingar",
+    "subtitles_switched_on": "Undertekstar slått på",
+    "from": "Frå",
+    "subtitles_on": "Undertekstar på",
+    "split": "Fordeling",
+    "unknown_client": "Ukjend klient",
+    "radar_chart": "Radardiagram",
+    "radar_too_few": "Eit radardiagram treng minst tre sjangrar. Lista viser det som finst.",
+    "of_these": "{share} av desse"
+  },
+  "worldmap": {
+    "kinds": {
+      "home": "Heimenettverk",
+      "remote": "Borte frå heimen",
+      "failed": "Mislukka innloggingar"
+    },
+    "load_failed": "Kartet kunne ikkje lastast inn",
+    "aria": "Verdskart. Dra for å flytte, bruk knappane eller Ctrl og hjulet for å zoome.",
+    "wheel_hint": "Hald inne Ctrl og rull for å zoome",
+    "loading": "Lastar inn kartet …",
+    "zoom_in": "Zoom inn",
+    "zoom_in_key": "Zoom inn (+)",
+    "zoom_out": "Zoom ut",
+    "zoom_out_key": "Zoom ut (−)",
+    "show_all": "Vis alle punkta",
+    "show_all_key": "Vis alle punkta (0)",
+    "places_near": { "one": "{count} stad nær {place}", "other": "{count} stader nær {place}" },
+    "places": { "one": "{count} stad", "other": "{count} stader" },
+    "click_to_zoom": "Klikk for å zoome inn"
+  },
+  "widgets": {
+    "plays": "Avspelingar",
+    "by_watch_time": "Etter visingstid",
+    "activity": {
+      "title": "Aktivitet",
+      "per_week": "Per veke, etter medietype",
+      "per_day": "Per dag, etter medietype",
+      "measure": "Mål"
+    },
+    "heatmap": {
+      "title": "Når folk ser på",
+      "sub": "Avspelingar etter vekedag og time, servertid"
+    },
+    "tiles": {
+      "vs_year": "mot året før",
+      "vs_days": { "one": "mot førre {count} dag", "other": "mot dei {count} dagane før" },
+      "active_users": "Aktive brukarar",
+      "distinct_titles": "Ulike titlar spela av"
+    },
+    "media": {
+      "video": "Video",
+      "audio": "Lyd",
+      "container": "Container",
+      "bitrate": "Bithastigheit",
+      "subtitles": "Undertekstar",
+      "hardware": "Maskinvare",
+      "software": "Programvare",
+      "copied_direct": "Kopiert (direkte)",
+      "transcoded": "Koda om",
+      "reasons": "Årsaker"
+    },
+    "np": {
+      "transcode_details": "Detaljar om omkodinga",
+      "client_on_device": "{client} på {device}",
+      "paused": "På pause",
+      "playing": "Vert spela",
+      "together_title": { "one": "Ser saman · {count} person", "other": "Ser saman · {count} personar" },
+      "with": "Med {names}",
+      "with_more": { "one": "Med {names} og {count} annan", "other": "Med {names} og {count} andre" },
+      "position_aria": "Avspelingsposisjon",
+      "unavailable": "Kan ikkje vise kva som vert spela no: {reason}",
+      "empty": "Ingenting vert spela akkurat no."
+    },
+    "insights": {
+      "peak": "Flest samtidige straumar",
+      "peak_transcodes": { "one": "{count} med omkoding samtidig", "other": "{count} med omkoding samtidig" },
+      "data_streamed": "Data strøymt",
+      "bytes": { "one": "{count} byte", "other": "{count} byte" },
+      "estimated": "anslått ut frå bithastigheita til straumane",
+      "remote_plays": "Avspelingar utanfrå",
+      "remote_of": { "one": "{remote} av {count} avspeling", "other": "{remote} av {count} avspelingar" }
+    },
+    "genres": {
+      "title": "Sjangrar",
+      "aria": "Sjangrar etter visingstid",
+      "empty": "Ingen sjangerinformasjon for desse avspelingane enno.",
+      "view": "Vising av sjangrar",
+      "list": "Liste",
+      "radar": "Radar"
+    },
+    "groups": {
+      "sub": "Personar som starta det same samstundes",
+      "time_together": "tid saman",
+      "evening_word": "kveld",
+      "evenings_word": "kveldar",
+      "evenings": { "one": "{count} kveld", "other": "{count} kveldar" },
+      "people_word": "personar",
+      "share": "av visingstida i lag med andre",
+      "most_often_with": "Oftast saman med",
+      "groups": "Grupper",
+      "sessions": { "one": "{count} økt", "other": "{count} økter" },
+      "titles": "Mest sett saman"
+    },
+    "failed_logins": {
+      "title": "Mislukka innloggingar",
+      "sub": "Dei siste forsøka på Jellyfin-serveren din",
+      "server_log": "Serverlogg",
+      "one": "Mislukka innlogging"
+    },
+    "library": {
+      "added": "lagt til {when}",
+      "title_this": "Kva dette biblioteket består av",
+      "title_yours": "Kva biblioteket ditt består av",
+      "after_sync": "Fildetaljar vert viste etter neste synkronisering av biblioteket.",
+      "about_files": "Om sjølve filene. Tidsrommet over gjeld ikkje her.",
+      "files": "Filer",
+      "count": {
+        "movies": { "one": "{count} film", "other": "{count} filmar" },
+        "series": { "one": "{count} serie", "other": "{count} seriar" },
+        "episodes": { "one": "{count} episode", "other": "{count} episodar" },
+        "tracks": { "one": "{count} spor", "other": "{count} spor" }
+      },
+      "total_size": "Total storleik",
+      "per_file": "{size} per fil i snitt",
+      "total_runtime": "Total speletid",
+      "play_all_once": "for å spele av alt éin gong",
+      "resolutions": "Oppløysingar",
+      "video_files": "Videofiler",
+      "video_codecs": "Videokodekar",
+      "dynamic_range": "Dynamisk område",
+      "containers": "Containerar",
+      "all_files": "Alle filer",
+      "audio_codecs": "Lydkodekar",
+      "first_audio": "Første lydspor",
+      "movies_and_series": "Filmar og seriar",
+      "titles": "Titlar",
+      "audio_languages": "Lydspråk",
+      "audio_languages_sub": "Videofiler med eit spor på språket; ei dubba fil vert talt éin gong for kvart",
+      "subtitle_languages": "Undertekstspråk",
+      "subtitle_languages_sub": "Videofiler med undertekstar på språket",
+      "by_decade": "Etter tiår",
+      "by_decade_sub": "Titlar etter utgjevingsår",
+      "by_decade_aria": "Titlar per tiår",
+      "decade": "Tiår",
+      "added_per_month": "Lagt til per månad",
+      "last_24_months": "Siste 24 månader",
+      "added_aria": "Titlar lagde til per månad",
+      "month": "Månad",
+      "added_head": "Lagt til",
+      "largest": "Størst",
+      "largest_sub": "Seriar tel med alle episodane sine",
+      "no_sizes": "Ingen filstorleikar er kjende enno.",
+      "never_watched": "Aldri sett",
+      "never_watched_sub": { "one": "{count} tittel · {size} som ingen har spela av", "other": "{count} titlar · {size} som ingen har spela av" },
+      "all_played": "Alt er spela av minst éin gong",
+      "nothing_unwatched": "Ingenting usett, eller ingen filstorleikar er kjende enno.",
+      "played_note": "Kombinerer avspelingar registrerte av FinStats med Jellyfin sine eigne markeringar av sett, så historikk frå før FinStats tel òg."
+    },
+    "shelf": {
+      "back": "Rull tilbake",
+      "on": "Rull vidare"
+    }
+  },
+  "playmodal": {
+    "title": "Detaljar om avspelinga",
+    "event": {
+      "start": "Starta",
+      "pause": "Sett på pause",
+      "resume": "Heldt fram",
+      "seek": "Spola",
+      "audio": "Lydspor",
+      "subtitle": "Undertekstar",
+      "transcode": "Omkoding",
+      "stop": "Stoppa",
+      "other": "Hending",
+      "transcode_detail": "{method}: {reasons}"
+    },
+    "network": {
+      "local_title": "Spela av frå det lokale nettverket ditt",
+      "remote_title": "Spela av utanfor nettverket ditt",
+      "local": "Lokal",
+      "remote": "Utanfrå"
+    },
+    "source": {
+      "live": "Registrert av FinStats",
+      "imported_from": "Importert frå {tracker}",
+      "imported": "Importert"
+    },
+    "no_events": {
+      "imported_from": "Importert frå {tracker}, som registrerer éi rad per avspeling og ingenting av det som skjer undervegs.",
+      "imported": "Importert frå eit sporingsverktøy som registrerer éi rad per avspeling og ingenting av det som skjer undervegs.",
+      "live": "Ingenting vart registrert under denne avspelinga."
+    },
+    "position_title": "Posisjon i fila",
+    "at": "ved {time}",
+    "channels": {
+      "mono": "Mono",
+      "stereo": "Stereo",
+      "count": { "one": "{count} kanal", "other": "{count} kanalar" }
+    },
+    "bit_depth": "{bits}-bit",
+    "not_in_library": "Ikkje lenger i biblioteket",
+    "started": "Starta",
+    "ended": "Avslutta",
+    "still_playing": "Vert framleis spela",
+    "paused_for": "Pausa i",
+    "resumed_from": "Heldt fram frå",
+    "pauses": "Pausar",
+    "skips": "Spolingar",
+    "stopped_at": "Stoppa ved",
+    "device": "Eining",
+    "device_id": "Einings-ID",
+    "copy_device_id": "Kopier einings-ID",
+    "watched_with": "Sett saman med",
+    "copy_ip": "Kopier IP-adressa",
+    "off": "Av",
+    "section": {
+      "session": "Økt",
+      "media": "Media",
+      "timeline": "Tidslinje"
+    },
+    "delete": {
+      "start": "Slett denne avspelinga",
+      "confirm": "Slett avspelinga",
+      "deleting": "Slettar …",
+      "aria": "Stadfest sletting",
+      "question": "Slette denne avspelinga frå statistikken din? Det kan angrast i 30 dagar."
+    },
+    "undo": {
+      "deleted_named": "Sletta {title}. Det kan angrast i 30 dagar.",
+      "deleted": "Sletta avspelinga. Det kan angrast i 30 dagar.",
+      "undo": "Angre",
+      "failed": "Kunne ikkje angre: {reason}"
+    }
+  },
+  "upcoming": {
+    "release": {
+      "air": "Vert send",
+      "cinema": "På kino",
+      "digital": "Digital utgjeving",
+      "physical": "Utgjeving på plate",
+      "other": "Utgjeving"
+    },
+    "finale": {
+      "season": "Sesongfinale",
+      "series": "Seriefinale",
+      "midseason": "Midtsesongfinale",
+      "other": "Finale"
+    },
+    "new_episode": "Ny episode",
+    "already_here": "Allereie her",
+    "new": "Ny i biblioteket",
+    "new_title": "Sonarr eller Radarr ventar på han; han er ikkje i Jellyfin-biblioteket ditt enno",
+    "you_watch": "Du ser på denne"
+  },
+  "downloads": {
+    "state": {
+      "downloading": "Lastar ned",
+      "importing": "Importerer",
+      "stalled": "Står fast",
+      "queued": "I kø",
+      "paused": "På pause",
+      "checking": "Kontrollerer",
+      "failed": "Feila"
+    },
+    "done": "{pct} ferdig",
+    "of": "{done} av {size}",
+    "left": "{time} att",
+    "handed": "{service} sende ho vidare til {client}",
+    "speed_title": "Rekna ut frå kor mykje som er overført sidan førre måling",
+    "totals": {
+      "downloading": { "one": "{count} vert lasta ned", "other": "{count} vert lasta ned" },
+      "queued": { "one": "{count} i kø", "other": "{count} i kø" },
+      "importing": { "one": "{count} vert importert", "other": "{count} vert importerte" },
+      "failed": { "one": "{count} feila", "other": "{count} feila" }
+    },
+    "updated": "oppdatert {when}"
+  },
+  "finui": {
+    "avatar_group": {
+      "and_more": "{names} og {count} andre"
+    },
+    "bar_chart": {
+      "name": "Eit søylediagram",
+      "aria": { "one": "{title}: {count} søyle, den høgaste {highest}", "other": "{title}: {count} søyler, den høgaste {highest}" }
+    },
+    "chart": {
+      "numbers": "Tala",
+      "total": "Totalt",
+      "in_all": "i alt",
+      "other": "Anna",
+      "thousands": "{n}k",
+      "millions": "{n} mill.",
+      "billions": "{n} mrd."
+    },
+    "bar_list": {
+      "and_more": "Og {count} andre"
+    },
+    "breadcrumb": {
+      "show_all": "Vis heile stien",
+      "label": "Brødsmulesti"
+    },
+    "calendar": {
+      "label": "Kalender",
+      "previous_month": "Førre månad",
+      "next_month": "Neste månad"
+    },
+    "callout": {
+      "dismiss": "Lukk"
+    },
+    "card": {
+      "table": "Tabell",
+      "chart": "Diagram"
+    },
+    "chip": {
+      "remove": "Fjern"
+    },
+    "code_block": {
+      "copy_command": "Kopier kommandoen",
+      "copy_pane": "Kopier {name}",
+      "label": "Kode"
+    },
+    "combobox": {
+      "all_users": "Alle brukarar",
+      "user": "Brukar",
+      "type_to_filter": "Skriv for å filtrere …",
+      "filter_aria": "Filtrer etter {label}",
+      "no_results": "Ingen treff"
+    },
+    "context_menu": {
+      "label": "Handlingar"
+    },
+    "copy": {
+      "copy": "Kopier",
+      "copied": "Kopiert",
+      "failed": "Kunne ikkje kopiere. Merk teksten i staden"
+    },
+    "data_table": {
+      "sort_by": "Sorter etter {label}",
+      "filter_rows": "Filtrer rader",
+      "none": "Ingen rader passar.",
+      "filter_placeholder": "{label} …"
+    },
+    "date_picker": {
+      "placeholder": "t.d. {example}",
+      "choose": "Vel {label} i ein kalender",
+      "none": "Ingen dag er vald enno.",
+      "between": "Mellom {from} og {to}.",
+      "from": "Frå {from}.",
+      "until": "Til og med {to}.",
+      "outside": "Den dagen kan ikkje veljast.",
+      "not_a_day": "Det er ikkje ein dag. Prøv {example} eller 2026-10-05."
+    },
+    "desktop_nav": {
+      "pages": "Sider",
+      "new": "Nytt",
+      "search": "Søk",
+      "search_more": "Søk …",
+      "search_keys": "Søk · {keys}",
+      "me_theme": "{name}: deg sjølv og temaet",
+      "theme": "Temaet",
+      "pinned": "Festa",
+      "pin_hint": "Peik på ei side og trykk på nåla for å feste ho her.",
+      "pin": "Fest {page}",
+      "search_from": "Søk, frå {label}",
+      "styles": {
+        "sidebar": {
+          "label": "Sidepanel",
+          "line": "Alle sidene i éi roleg liste langs kanten."
+        },
+        "grouped": {
+          "label": "Gruppert",
+          "line": "Den same lista i namngjevne grupper, så ei side finst der ho høyrer heime."
+        },
+        "rail": {
+          "label": "Skjene som opnar seg",
+          "line": "Ikon til peikaren kjem, så heile sidepanelet over sida."
+        },
+        "search": {
+          "label": "Søk først",
+          "line": "Eit stort søkefelt over sidene, og litt større rader."
+        },
+        "dock": {
+          "label": "Dokk",
+          "line": "Sidene i ei dokk nedst; statuslinja flyttar seg til toppen."
+        },
+        "command": {
+          "label": "Kommandolinje",
+          "line": "Inga liste på skjermen: namnet på sida øvst opnar alle sidene."
+        },
+        "pinned": {
+          "label": "Festa",
+          "line": "Sidene du festar øvst, alle sidene under i gruppa si."
+        },
+        "tiles": {
+          "label": "Farga fliser",
+          "line": "Kvart ikon i ei flis farga etter gruppa si."
+        }
+      }
+    },
+    "mobile_nav": {
+      "styles": {
+        "tabs": {
+          "label": "Fanelinje",
+          "line": "Fire sider alltid nedst; Meir hentar fram resten."
+        },
+        "peek": {
+          "label": "Halvt ark",
+          "line": "Eit ark som opnar seg halvvegs med dei mest brukte sidene; dra det opp for å sjå alle."
+        },
+        "full": {
+          "label": "Fullskjerm",
+          "line": "Heile skjermen blir menyen, med stor skrift."
+        },
+        "arc": {
+          "label": "Tommelboge",
+          "line": "Ein knapp i hjørnet spreier alle sidene ut rundt tommelen."
+        },
+        "address": {
+          "label": "Adresselinje",
+          "line": "Ein pille nedst viser kva side du er på, og veks til menyen."
+        }
+      },
+      "menu": "Meny",
+      "new": "Nytt",
+      "search": "Søk",
+      "close_menu": "Lukk menyen",
+      "pages": "Sider",
+      "open_menu": "Opne menyen",
+      "more": "Meir",
+      "more_pages": "Fleire sider",
+      "main": "Hovudmeny",
+      "all_pages": "Alle sider",
+      "most_used": "Mest brukt",
+      "search_or_go": "Søk eller gå til …"
+    },
+    "modal": {
+      "close": "Lukk"
+    },
+    "drawer": {
+      "close": "Lukk"
+    },
+    "number_stepper": {
+      "in_unit": "{label}, i {unit}",
+      "less": "Mindre: {label}",
+      "more": "Meir: {label}"
+    },
+    "otp": {
+      "code": "Kode",
+      "box": "{label}, {n} av {total}"
+    },
+    "pagination": {
+      "label": "Sidenavigering",
+      "range": "{from}–{to} av {total}",
+      "previous": "Førre side",
+      "next": "Neste side"
+    },
+    "picker": {
+      "custom": "Eigendefinert",
+      "lock": "Lås {label}"
+    },
+    "popover": {
+      "held": "Eit snøggvindauge, halde ope"
+    },
+    "progress": {
+      "done": "ferdig",
+      "seconds_left": "nokre sekund att",
+      "under_a_minute": "under eitt minutt att",
+      "a_minute_left": "omtrent eitt minutt att",
+      "minutes_left": { "one": "omtrent {count} minutt att", "other": "omtrent {count} minutt att" },
+      "hours": { "one": "{count} time", "other": "{count} timar" },
+      "minutes": { "one": "{count} minutt", "other": "{count} minutt" },
+      "hours_minutes": "{hours} og {minutes}",
+      "about_left": "omtrent {time} att",
+      "percent": "{pct} %",
+      "working": "Arbeider …",
+      "working_valuetext": "arbeider"
+    },
+    "search": {
+      "search": "Søk",
+      "close": "Lukk søket",
+      "results": "Resultat",
+      "keys_watchlist": "for å leggje til i Lista mi",
+      "keys_move": "for å flytte",
+      "keys_open": "for å opne",
+      "keys_close": "for å lukke",
+      "nothing_found": "Ingenting funne"
+    },
+    "sections": {
+      "label": "Seksjonar"
+    },
+    "shelf": {
+      "back": "Bakover i {label}",
+      "on": "Framover i {label}"
+    },
+    "slider": {
+      "highest": "{label}, høgaste",
+      "lowest": "{label}, lågaste"
+    },
+    "stat_tile": {
+      "no_change": "Inga endring",
+      "new": "Ny",
+      "delta": "{delta} %"
+    },
+    "steps": {
+      "label": "Steg"
+    },
+    "stream_card": {
+      "progress": "Kor langt avspelinga har kome"
+    },
+    "tag_input": {
+      "add": "Legg til …",
+      "remove": "Fjern {tag}"
+    },
+    "file_drop": {
+      "label": "Slepp ei fil her",
+      "choose_files": "eller trykk for å velje filer",
+      "choose_one": "eller trykk for å velje éi",
+      "wrong_kind": "Tek ikkje imot denne typen ({accept})",
+      "too_large": "Større enn {size}",
+      "progress": "{pct} % av {size}",
+      "uploading": "{name} vert lasta opp",
+      "remove": "Fjern {name}"
+    },
+    "heatmap": {
+      "less": "Mindre",
+      "more": "Meir",
+      "caption": "Kor travelt",
+      "name": "Eit varmekart",
+      "aria": "{title}: travlast {busiest}"
+    },
+    "line_chart": {
+      "name": "Eit linjediagram",
+      "aria": "{title}: {from} til {to}",
+      "limit": "Grense"
+    },
+    "donut_chart": {
+      "share": "{pct} %",
+      "name": "Eit smultringdiagram",
+      "caption": "Delane",
+      "value": "Verdi",
+      "share_head": "Andel"
+    },
+    "toast": {
+      "dismiss": "Lukk"
+    },
+    "to_top": {
+      "label": "Til toppen"
+    },
+    "top_bar": {
+      "label": "Seksjonar"
+    },
+    "theme_switch": {
+      "device": "Eining",
+      "light": "Lyst",
+      "dark": "Mørkt",
+      "label": "Tema",
+      "title": "Tema: {name}"
+    },
+    "error": {
+      "title": "Kunne ikkje laste dette",
+      "retry": "Prøv igjen"
+    }
+  },
+  "notifications": {
+    "switched_off": "Slått av",
+    "switched_on": "Slått på",
+    "last_failed": "Den siste meldinga kom ikkje fram: {error}",
+    "last_ok": "Tok imot den siste meldinga {when}",
+    "nothing_sent": "Ingenting sendt enno",
+    "test": "Test",
+    "sending": "Sender …",
+    "test_sent": "Testmeldinga er send.",
+    "remove_confirm": "Fjerne denne mottakaren?",
+    "removing": "Fjernar …",
+    "remove": "Fjern",
+    "remove_ask": "Fjern …",
+    "edit": "Rediger",
+    "events_ticked": "{ticked} av {total} hendingstypar",
+    "addresses_included": "adresser vert tekne med",
+    "severity_above": {
+      "warn": "åtvaringar og alvorlege varsel",
+      "alert": "berre alvorlege varsel"
+    },
+    "yours": "Din",
+    "owners": "Tilhøyrer {name}",
+    "somebodys": "Tilhøyrer nokon andre",
+    "name_label": "Namn (valfritt)",
+    "name_help": "Vert vist i FinStats: «Hushaldskanalen», «Mobilen min».",
+    "address": "Adresse",
+    "topic": "Emne",
+    "token": "Token",
+    "severity": {
+      "info": "Alt",
+      "warn": "Åtvaringar og alvorlege varsel",
+      "alert": "Berre alvorlege varsel"
+    },
+    "add_destination": "Legg til mottakar",
+    "add_title": "Legg til ein mottakar",
+    "edit_title": "Rediger {name}",
+    "unchanged": "Uendra",
+    "address_help_any": "Adressa FinStats sender til, til dømes {example}.",
+    "address_help": {
+      "discord": "Discord → Channel settings → Integrations → Webhooks → Copy Webhook URL. Den URL-en er passordet: FinStats lagrar han og viser han aldri igjen.",
+      "slack": "Slack → appen din → Incoming Webhooks → Add New Webhook to Workspace, og kopier URL-en. Den URL-en er passordet: FinStats lagrar han og viser han aldri igjen.",
+      "email": "E-postserveren din. smtps:// er kryptert frå første byte (port 465); smtp:// byrjar ukryptert og må oppgradere med STARTTLS (587). FinStats sender verken brevet eller passordet ukryptert."
+    },
+    "keep_secret": "La stå tomt for å halde på det som er lagra.",
+    "secret_help": {
+      "webhook": "Vert sendt som «Authorization: Bearer …». La stå tomt dersom mottakaren din ikkje treng nokon header.",
+      "ntfy": "Berre for eit verna emne eller din eigen ntfy med tilgangskontroll.",
+      "gotify": "Gotify → Apps → opprett ein applikasjon → tokenet til applikasjonen.",
+      "telegram": "Snakk med @BotFather i Telegram → /newbot → tokenet du får.",
+      "pushover": "pushover.net → Your Applications → Create an Application → API-tokenet til applikasjonen.",
+      "pushbullet": "pushbullet.com → Settings → Account → Create Access Token.",
+      "email": "La stå tomt for ein vidaresendingsserver som ikkje krev innlogging. Ei e-postteneste vil som regel ha eit app-passord i staden for passordet du loggar inn med."
+    },
+    "enter_address": "Skriv inn adressa, til dømes {example}.",
+    "enter_value": "Skriv inn {what}.",
+    "went_wrong": "Noko gjekk gale.",
+    "kind": "Type",
+    "who_for": "Kven han er for",
+    "scope_server": "Serveren: alt du har kryssa av for, om kven som helst",
+    "scope_me": "Berre meg: berre det eg alt kan sjå",
+    "how_much": "Kor mykje",
+    "what_to_send": "Kva som skal sendast",
+    "with_addresses": "Ta med IP-adresser og stader",
+    "with_addresses_help": "Av: ei melding seier at staden er «Oslo, Noreg», men aldri kva adresse det kom frå. På: adressene vert sende med, noko det er verdt å tenkje over for ein mottakar som nokon andre driftar, som Discord.",
+    "self_signed": "Godta eit sjølvsignert sertifikat",
+    "self_signed_help": "Berre for ei adresse der sertifikatet er ditt eige: ei teneste på ditt eige nettverk, eller din eigen e-postserver.",
+    "saving": "Lagrar …",
+    "history_empty": "Ingenting er sendt enno. Det FinStats legg merke til frå no av, vert vist her, med korleis det gjekk med kvar melding.",
+    "state": {
+      "sent": "Sendt",
+      "queued": "Ventar",
+      "failed": "Gjeve opp"
+    },
+    "historic": "Ikkje sendt: eldre enn nokre timar",
+    "nobody_listening": "Ingen mottakar venta på dette",
+    "col_when": "Når",
+    "col_what": "Kva",
+    "col_sent_to": "Sendt til",
+    "public_url": "Adressa til FinStats",
+    "public_url_help": "Vert berre brukt til å leggje ei lenkje i meldingane FinStats sender, for innanfrå kan ikkje FinStats vite korleis du når det. La feltet stå tomt, så får meldingane inga lenkje.",
+    "intro_admin": "FinStats sender ingenting nokon stad før du legg til ein mottakar her, og då berre dei hendingstypane du kryssar av for. Adresser og token vert lagra i databasen til FinStats, vert aldri viste igjen og er aldri med i ein tryggingskopi.",
+    "intro_own": "Din eigen mottakar får berre det du alt kan sjå i FinStats, og han må peike på ei offentleg adresse.",
+    "none_yet": "Ingen mottakarar enno.",
+    "recently_sent": "Nyleg sendt",
+    "group": {
+      "security": "Tryggleik",
+      "housekeeping": "Vedlikehald",
+      "library": "Bibliotek",
+      "playback": "Avspeling"
+    },
+    "event": {
+      "travel": {
+        "label": "Umogleg reise",
+        "what": "To observasjonar av same konto som inga flyreise kan forklare"
+      },
+      "new_country": {
+        "label": "Eit nytt land",
+        "what": "Første gongen ein konto vert sett i eit land"
+      },
+      "failed_sign_ins": {
+        "label": "Mislukka innloggingar",
+        "what": "Fleire mislukka innloggingar på rad for éin konto, eller frå éi adresse"
+      },
+      "task_failed": {
+        "label": "Ei oppgåve feila",
+        "what": "Ei synkronisering, ein import eller ei lesing frå ei tilkopla teneste enda med ein feil"
+      },
+      "backup_failed": {
+        "label": "Ein tryggingskopi feila",
+        "what": "Ein tryggingskopi kunne ikkje skrivast"
+      },
+      "service_down": {
+        "label": "Noko slutta å svare",
+        "what": "Jellyfin, Sonarr, Radarr eller Seerr slutta å svare"
+      },
+      "service_back": {
+        "label": "Noko svarar igjen",
+        "what": "… og når det svarar igjen"
+      },
+      "new_items": {
+        "label": "Nytt i biblioteket",
+        "what": "Titlar lagde til i biblioteket, samla per serie og dag"
+      },
+      "request_available": {
+        "label": "Ein førespurnad kan sjåast",
+        "what": "Noko nokon bad om i Seerr, kan no sjåast"
+      },
+      "play_started": {
+        "label": "Nokon byrja å sjå",
+        "what": "Ei avspeling byrjar: tittelen, personen og eininga"
+      },
+      "play_stopped": {
+        "label": "Nokon slutta å sjå",
+        "what": "Ei avspeling sluttar, med kor mykje av ho som vart sett"
+      },
+      "recap_ready": {
+        "label": "Tilbakeblikket er klart",
+        "what": "I desember, éin gong: tilbakeblikket på året til ein person er klart til å sjå attende på og dele"
+      },
+      "watchlist_available": {
+        "label": "På Lista mi: no tilgjengeleg",
+        "what": "Ein film eller serie du venta på i Lista mi, er i biblioteket. Vert berre send til dine eigne mottakarar"
+      },
+      "test": {
+        "label": "Testmelding",
+        "what": "Vert send av Test-knappen og ingenting anna"
+      }
+    },
+    "channel": {
+      "discord": {
+        "label": "Discord",
+        "what": "Ein kanal på serveren din, via ein webhook du opprettar der"
+      },
+      "slack": {
+        "label": "Slack",
+        "what": "Ein kanal i arbeidsområdet ditt, via ein innkomande webhook"
+      },
+      "telegram": {
+        "label": "Telegram",
+        "what": "Ein chat med din eigen bot, eller ei gruppe eller ein kanal han er med i",
+        "topic_label": "Chat-ID",
+        "topic_help": "Send boten din ei melding éin gong, opne så https://api.telegram.org/bot<token>/getUpdates og bruk chat-ID-en han oppgjev. Ein kanal kan oppgjevast som @namn.",
+        "topic_missing": "Skriv inn chat-ID-en.",
+        "secret_label": "Bot-token",
+        "secret_missing": "Skriv inn bot-tokenet."
+      },
+      "email": {
+        "label": "E-post",
+        "what": "Kva e-postkasse som helst, via ein SMTP-server du alt har",
+        "topic_label": "Til",
+        "topic_help": "E-postkassa det skal sendast til.",
+        "topic_missing": "Skriv inn mottakaradressa.",
+        "secret_label": "Passord (valfritt)"
+      },
+      "ntfy": {
+        "label": "ntfy",
+        "what": "ntfy.sh eller din eigen ntfy, til eit emne du vel",
+        "topic_label": "Emne",
+        "topic_help": "ntfy-emnet det skal publiserast til. Alle som kjenner det, kan lese varsla dine, så gjer det vanskeleg å gjette.",
+        "topic_missing": "Skriv inn emnet.",
+        "secret_label": "Tilgangstoken (valfritt)"
+      },
+      "gotify": {
+        "label": "Gotify",
+        "what": "Din eigen Gotify-server, med eit applikasjonstoken",
+        "secret_label": "Applikasjonstoken",
+        "secret_missing": "Skriv inn applikasjonstokenet."
+      },
+      "pushover": {
+        "label": "Pushover",
+        "what": "Pushover på telefonen din, med ein eigen applikasjon",
+        "topic_label": "Brukar- eller gruppenøkkel",
+        "topic_help": "Brukarnøkkelen din, på framsida av pushover.net, eller ein gruppenøkkel.",
+        "topic_missing": "Skriv inn brukar- eller gruppenøkkelen.",
+        "secret_label": "Applikasjonstoken",
+        "secret_missing": "Skriv inn applikasjonstokenet."
+      },
+      "pushbullet": {
+        "label": "Pushbullet",
+        "what": "Pushbullet, på alle einingar som er logga inn på kontoen din",
+        "secret_label": "Tilgangstoken",
+        "secret_missing": "Skriv inn tilgangstokenet."
+      },
+      "webhook": {
+        "label": "Webhook",
+        "what": "Ein POST med JSON til kva adresse som helst: ditt eige skript, Home Assistant, n8n",
+        "secret_label": "Authorization-header (valfritt)"
+      }
+    },
+    "extra": {
+      "from": {
+        "label": "Avsendaradresse",
+        "help": "Adressa e-posten vert send frå. Mange serverar godtek berre ei adresse dei kjenner.",
+        "missing": "Skriv inn avsendaradressa."
+      },
+      "username": {
+        "label": "Brukarnamn (valfritt)",
+        "help": "La stå tomt for ein vidaresendingsserver som ikkje krev innlogging. Ofte det same som avsendaradressa."
+      }
+    }
+  },
+  "connections": {
+    "switched_off": "Slått av",
+    "switched_on": "Slått på",
+    "not_answering": "Svarar ikkje: {error}",
+    "connected": "Tilkopla",
+    "checked": "sjekka {when}",
+    "not_checked": "Ikkje sjekka enno",
+    "remove_confirm": "Fjerne tilkoplinga og alt FinStats har lese frå ho?",
+    "removing": "Fjernar …",
+    "remove": "Fjern",
+    "remove_ask": "Fjern …",
+    "edit": "Rediger",
+    "name_label": "Namn (valfritt)",
+    "name_help": "Vert vist i FinStats. Nyttig når du har to av same slag: «Radarr 4K».",
+    "address": "Adresse",
+    "api_key": "API-nøkkel",
+    "test": "Test tilkoplinga",
+    "test_and_save": "Test og lagre",
+    "kind": {
+      "sonarr": "Seriar: kva som vert sendt når, og kva som vert lasta ned",
+      "radarr": "Filmar: kva som kjem ut når, og kva som vert lasta ned",
+      "seerr": "Førespurnader: kven som bad om kva (Seerr, Jellyseerr eller Overseerr)"
+    },
+    "keep_secret": "La stå tomt for å halde på den som er lagra.",
+    "secret_help": {
+      "sonarr": "Sonarr → Settings → General → Security → API Key.",
+      "radarr": "Radarr → Settings → General → Security → API Key.",
+      "seerr": "Seerr → Settings → General → API Key."
+    },
+    "unchanged": "Uendra",
+    "enter_address": "Skriv inn adressa til {service}, til dømes {example}.",
+    "enter_key": "Skriv inn API-nøkkelen.",
+    "went_wrong": "Noko gjekk gale.",
+    "testing": "Testar …",
+    "connected_to": "Tilkopla {app}",
+    "edit_title": "Rediger {name}",
+    "add": "Legg til ei tilkopling",
+    "service": "Teneste",
+    "self_signed": "Godta eit sjølvsignert sertifikat",
+    "self_signed_help": "Berre for ei https://-adresse der sertifikatet er ditt eige. FinStats sjekkar då ikkje kven som svarar på denne adressa. La det vere av elles.",
+    "none_yet": "Ingenting er kopla til enno. Med Sonarr og Radarr veit FinStats kva som kjem og kva som vert lasta ned; med Seerr, kven som bad om kva.",
+    "intro": "FinStats les berre frå desse tenestene: det godkjenner aldri ein førespurnad, startar aldri eit søk og rører aldri ei nedlasting. Nøklar og passord vert lagra i databasen til FinStats, vert aldri viste igjen og er aldri med i ein tryggingskopi."
+  },
+  "changelog_text": {
+    "kind": {
+      "Added": "Nytt",
+      "Changed": "Endra",
+      "Performance": "Yting",
+      "Stability": "Stabilitet",
+      "Fixed": "Retta",
+      "Removed": "Fjerna"
     }
   }
 }

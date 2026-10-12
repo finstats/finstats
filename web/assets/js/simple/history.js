@@ -2,26 +2,27 @@
 // the History tab of a library, a person and a title, each narrowing the same list (`fixed`). Sorted, searched and paged
 // on the server: it is a paginated list, so the browser never sorts it.
 
-import { h, icon, num, debounce, episodeCode, store } from '../dom.js';
+import { h, icon, debounce, episodeCode, store } from '../dom.js';
 import { api } from '../api.js';
 import { can } from '../state.js';
+import { t, tParts } from '../i18n.js';
 import { dataView, segmented, userCombobox, sk } from '../components.js';
 import { dataTable } from '../tables.js';
 import { pagination } from '../../finui/components/pagination/pagination.js';
 
 const SIZES = [25, 50, 100];
 const SIZE_KEY = 'finstats.simplePageSize';
-const KINDS = [{ value: '', label: 'All' }, { value: 'Movie', label: 'Movies' }, { value: 'Episode', label: 'TV Shows' }, { value: 'Audio', label: 'Music' }];
+const KINDS = [{ value: '', label: t('simple.history.kind.all') }, { value: 'Movie', label: t('simple.history.kind.movies') }, { value: 'Episode', label: t('simple.history.kind.shows') }, { value: 'Audio', label: t('simple.history.kind.music') }];
 const KIND_ICON = { Movie: 'film', Episode: 'tv', Audio: 'music' };
 
 const two = (n) => String(n).padStart(2, '0');
 const day = (t) => { const d = new Date(t * 1000); return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`; };
 const time = (t) => { const d = new Date(t * 1000); return `${two(d.getHours())}:${two(d.getMinutes())}`; };
-const mins = (s) => `${Math.round((s || 0) / 60)} mins`;
+const mins = (s) => t('simple.platform.mins', { minutes: Math.round((s || 0) / 60) });
 
 /** How far a play got, drawn as a circle filled that far: empty, a quarter, half, three quarters, whole. */
 function done(c) {
-  const el = h('span', { class: 'simple-done', role: 'img', 'aria-label': c == null ? 'Unknown' : `${Math.round(c * 100)}% watched`, title: c == null ? 'Unknown' : `${Math.round(c * 100)}%` });
+  const el = h('span', { class: 'simple-done', role: 'img', 'aria-label': c == null ? t('common.unknown') : t('simple.history.done_aria', { percent: Math.round(c * 100) }), title: c == null ? t('common.unknown') : t('simple.history.done_title', { percent: Math.round(c * 100) }) });
   el.style.setProperty('--done', `${Math.round(Math.min(1, Math.max(0, c || 0)) * 4) * 25}%`);
   return el;
 }
@@ -29,7 +30,7 @@ function done(c) {
 function title(p) {
   const kind = h('span', { class: 'simple-kind', dataset: { type: p.item_type || '' }, 'aria-hidden': 'true' }, icon(KIND_ICON[p.item_type] || 'play', 14));
   const code = episodeCode(p.season_number, p.episode_number);
-  const words = p.series_name ? `${p.series_name} - ${p.item_name}${code ? ` (${code})` : ''}` : p.item_name || 'Unknown item';
+  const words = p.series_name ? `${p.series_name} - ${p.item_name}${code ? ` (${code})` : ''}` : p.item_name || t('common.unknown_item');
   return h('span', { class: 'simple-title' }, kind, p.item_exists !== false && p.item_id ? h('a', { href: `/items/${p.item_id}` }, words) : h('span', null, words));
 }
 
@@ -38,15 +39,15 @@ function table(rows, sort) {
   const everyone = can('see_everyone'), network = can('see_network');
   const th = (label, key, first = null) => h('th', { 'data-key': key || null, 'data-first': first, 'data-nosort': key ? null : '' }, label);
   return dataTable(h('table', { class: 'fui-data-table fui-data-table--dense fui-data-table--hover simple-table' },
-    h('thead', null, h('tr', null, th('Date', 'when', 'desc'), everyone ? th('User', 'user', 'asc') : null, network ? th('IP Address', 'ip', 'asc') : null,
-      th('Platform', 'client', 'asc'), th('Player'), th('Title', 'title', 'asc'), th('Started'), th('Paused'), th('Stopped'), th('Duration', 'watched', 'desc'), th('', 'progress'))),
+    h('thead', null, h('tr', null, th(t('simple.history.col.date'), 'when', 'desc'), everyone ? th(t('plays_table.user'), 'user', 'asc') : null, network ? th(t('simple.history.col.ip'), 'ip', 'asc') : null,
+      th(t('simple.history.col.platform'), 'client', 'asc'), th(t('simple.history.col.player')), th(t('plays_table.title'), 'title', 'asc'), th(t('simple.history.col.started')), th(t('simple.history.col.paused')), th(t('simple.history.col.stopped')), th(t('simple.history.col.duration'), 'watched', 'desc'), th('', 'progress'))),
     h('tbody', null, rows.map((p) => h('tr', null,
       h('td', { class: 'mono' }, day(p.started_at)),
       everyone ? h('td', null, p.user_id ? h('a', { href: `/users/${p.user_id}` }, p.user_name) : p.user_name) : null,
-      network ? h('td', { class: 'mono' }, p.remote_ip || 'n/a') : null,
+      network ? h('td', { class: 'mono' }, p.remote_ip || t('simple.history.na')) : null,
       h('td', null, p.client || ''), h('td', null, p.device_name || ''),
       h('td', { class: 'simple-table__title' }, title(p)),
-      h('td', { class: 'mono' }, time(p.started_at)), h('td', null, mins(p.paused_s)), h('td', { class: 'mono' }, p.active ? 'n/a' : time(p.ended_at)),
+      h('td', { class: 'mono' }, time(p.started_at)), h('td', null, mins(p.paused_s)), h('td', { class: 'mono' }, p.active ? t('simple.history.na') : time(p.ended_at)),
       h('td', null, mins(p.duration_s)), h('td', null, done(p.completion)))))), { server: sort, filter: false });
 }
 
@@ -64,21 +65,21 @@ export function historyList(ctx, { id, fixed = {} } = {}) {
       const from = d.total ? (f.page - 1) * f.per_page + 1 : 0, to = Math.min(d.total, f.page * f.per_page);
       return [
         d.rows.length ? table(d.rows, { key: f.sort, dir: f.dir, onSort: (key, dir) => { f.sort = key; f.dir = dir; f.page = 1; view.load(); } })
-          : h('p', { class: 'simple-empty' }, 'No plays match.'),
-        h('div', { class: 'simple-table__foot' }, h('span', { class: 'simple-table__count' }, `Showing ${num(from)} to ${num(to)} of ${num(d.total)} entries`),
+          : h('p', { class: 'simple-empty' }, t('simple.history.empty')),
+        h('div', { class: 'simple-table__foot' }, h('span', { class: 'simple-table__count' }, t('simple.history.showing', { from, to, total: d.total })),
           d.total > f.per_page ? pagination({ page: f.page, perPage: f.per_page, total: d.total, onPage: (p) => { f.page = p; view.load(); } }) : null),
       ];
     },
   });
-  const size = h('select', { class: 'fui-field__input simple-table__size', 'aria-label': 'Entries per page' }, SIZES.map((n) => h('option', { value: String(n) }, String(n))));
+  const size = h('select', { class: 'fui-field__input simple-table__size', 'aria-label': t('simple.history.per_page') }, SIZES.map((n) => h('option', { value: String(n) }, String(n))));
   size.value = String(f.per_page);
   size.addEventListener('change', () => { f.per_page = Number(size.value); store.set(SIZE_KEY, size.value); f.page = 1; view.load(); });
-  const search = h('input', { class: 'fui-field__input simple-table__search', id: `${id}-q`, type: 'search', placeholder: 'Search', 'aria-label': 'Search the history', autocomplete: 'off' });
+  const search = h('input', { class: 'fui-field__input simple-table__search', id: `${id}-q`, type: 'search', placeholder: t('search.label'), 'aria-label': t('simple.history.search_aria'), autocomplete: 'off' });
   search.addEventListener('input', debounce(() => { f.q = search.value.trim(); f.page = 1; view.load(); }, 250));
   const who = can('see_everyone') && !fixed.user_id
     ? h('div', { class: 'simple-history__who' }, userCombobox({ value: '', signal: ctx.signal, onChange: (v) => { f.user_id = v; f.page = 1; view.load(); } })) : null;
-  const tools = [who, segmented({ label: 'Media', value: f.type, options: KINDS, onChange: (v) => { f.type = v; f.page = 1; view.load(); } })];
-  const bar = h('div', { class: 'simple-table__bar' }, h('label', { class: 'simple-table__show' }, 'Show', size, 'entries per page'), h('label', { class: 'simple-table__find' }, 'Search:', search));
+  const tools = [who, segmented({ label: t('simple.history.media'), value: f.type, options: KINDS, onChange: (v) => { f.type = v; f.page = 1; view.load(); } })];
+  const bar = h('div', { class: 'simple-table__bar' }, h('label', { class: 'simple-table__show' }, ...tParts('simple.history.show_entries', { size }).map((x) => (typeof x === 'string' ? x.trim() : x)).filter((x) => x !== '')), h('label', { class: 'simple-table__find' }, t('simple.history.search_label'), search));
   view.load();
   return { tools, el: h('div', { class: 'simple-panel' }, bar, body) };
 }

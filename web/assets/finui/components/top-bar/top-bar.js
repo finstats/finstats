@@ -3,12 +3,13 @@
 
 import { h } from '../../core.js';
 import { button } from '../button/button.js';
+import { say } from '../../i18n.js';
 
 /** topBar({ brand: { name, mark, href }, links: [{ href, label, key, name }], current, lead, actions, variant, label }) → the
  *  bar, with .setCurrent(key) to mark another section. On a phone its links scroll sideways rather than wrap. `mark`: a
  *  picture before the name. A link whose `label` is an icon gives its words as `name`. `lead`: a control just before the
  *  links, such as a search. `variant: 'solid'`: an app's own bar, opaque, the links on the right and the open one lifted. */
-export function topBar({ brand = null, links = [], current = null, lead = null, actions = null, variant = null, label = 'Sections' }) {
+export function topBar({ brand = null, links = [], current = null, lead = null, actions = null, variant = null, label = say('top_bar.label', 'Sections') }) {
   const items = links.map((l) => h('a', { class: 'fui-top-bar__link', href: l.href, 'aria-label': l.name || null, title: l.name || null, dataset: l.key ? { key: l.key } : {} }, l.label));
   const el = h('header', { class: ['fui-top-bar', variant === 'solid' && 'fui-top-bar--solid'] },
     brand ? h('a', { class: 'fui-top-bar__brand', href: brand.href || '/' }, brand.mark || null, brand.name) : null,

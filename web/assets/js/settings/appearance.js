@@ -12,7 +12,12 @@ import { button } from '../../finui/components/button/button.js';
 import { STYLES, styleOf } from '../../finui/components/mobile-nav/mobile-nav.js';
 import { STYLES as DESKTOP_STYLES, styleOf as desktopStyleOf, sideOf } from '../../finui/components/desktop-nav/desktop-nav.js';
 import { toggle } from '../../finui/components/toggle/toggle.js';
+import { t, tOr, LANGUAGES, storedLanguage, setLanguage } from '../i18n.js';
 import { mobileNavChoice, setMobileNav, desktopNavChoice, setDesktopNav, searchMode, setSearchMode, layoutChoice, setLayoutChoice } from '../state.js';
+
+// FinUI create's names for a preset's axes and options, in the language in use where the catalogue has them; a palette's or a
+// font's own name (Nord, Inter) is the same in every language.
+const presetWord = (kind, key, label) => tOr(`settings.appearance.preset_${kind}.${key}`, label);
 
 const CREATE = 'https://finui.finstats.no/create/';
 // Where the mobile menu is in use: app.css' own width for it. The choice is offered only there.
@@ -32,47 +37,48 @@ function restyle() {
 const simpleLayout = () => layoutChoice() === 'simple';
 
 export default {
-  key: 'appearance', label: 'Appearance', sub: 'How FinStats looks to you', group: 'Account', icon: 'sliders',
+  key: 'appearance', label: t('settings.sections.appearance.label'), sub: t('settings.sections.appearance.sub'), group: t('settings.groups.account'), icon: 'sliders',
   visible: () => true,
   // The finder offers what render() draws: in Simple mode, the layout alone.
-  entries: [{ id: 'layout', label: 'Layout', hint: 'layout simple mode classic tautulli plex top bar home look' },
-    { id: 'desktop_menu', label: 'Menu', hint: 'menu sidebar navigation grouped rail search dock command bar pinned tiles', visible: () => !simpleLayout() && !matchMedia(PHONE).matches },
-    { id: 'desktop_side', label: 'Menu on the right', hint: 'menu sidebar right left side', visible: () => !simpleLayout() && !matchMedia(PHONE).matches },
-    { id: 'search_mode', label: 'Search opens', hint: 'search find menu page integrated where ctrl space', visible: () => !simpleLayout() },
-    { id: 'mobile_menu', label: 'Menu on this phone', hint: 'mobile phone menu navigation tab bar peek full screen thumb arc address', visible: () => !simpleLayout() && matchMedia(PHONE).matches },
-    { id: 'finui_preset', label: 'FinUI preset', hint: 'appearance look theme colours accent radius density borders cards buttons fields tables menu motion icons contrast finui preset code customize create', visible: () => !simpleLayout() }],
+  entries: [{ id: 'language', label: t('settings.appearance.language'), hint: t('settings.appearance.language_hint') },
+    { id: 'layout', label: t('settings.appearance.layout'), hint: t('settings.appearance.layout_hint') },
+    { id: 'desktop_menu', label: t('settings.appearance.menu'), hint: t('settings.appearance.menu_hint'), visible: () => !simpleLayout() && !matchMedia(PHONE).matches },
+    { id: 'desktop_side', label: t('settings.appearance.menu_right'), hint: t('settings.appearance.menu_right_hint'), visible: () => !simpleLayout() && !matchMedia(PHONE).matches },
+    { id: 'search_mode', label: t('settings.appearance.search_opens'), hint: t('settings.appearance.search_opens_hint'), visible: () => !simpleLayout() },
+    { id: 'mobile_menu', label: t('settings.appearance.phone_menu'), hint: t('settings.appearance.phone_menu_hint'), visible: () => !simpleLayout() && matchMedia(PHONE).matches },
+    { id: 'finui_preset', label: t('settings.appearance.preset'), hint: t('settings.appearance.preset_hint'), visible: () => !simpleLayout() }],
   async render(slot, store) {
     const body = h('div');
-    mount(slot, card({ title: 'Appearance', sub: 'How FinStats looks to you: your choice, nobody else’s', body, id: 'appearance' }));
+    mount(slot, card({ title: t('settings.sections.appearance.label'), sub: t('settings.appearance.card_sub'), body, id: 'appearance' }));
     const [presets, mine] = await Promise.all([fetch('/assets/finui/create/presets.json', { signal: store.signal }).then((r) => r.json()), api.get('/me/appearance', null, { signal: store.signal })]);
     let current = mine.finui_preset || '';
     const input = h('input', { class: 'fui-field__input mono', id: 'f-finui_preset', type: 'text', autocomplete: 'off', spellcheck: false,
-      value: current, placeholder: 'None: FinUI as it ships', 'aria-describedby': 'finui_preset-help' });
+      value: current, placeholder: t('settings.appearance.preset_placeholder'), 'aria-describedby': 'finui_preset-help' });
     const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
     const err = h('div');
     const meaning = h('div', { class: 'fui-setting-row__notes' });
-    const save = button({ size: 'sm' }, 'Save');
-    const reset = button({ size: 'sm', variant: 'ghost' }, 'Reset');
+    const save = button({ size: 'sm' }, t('common.save'));
+    const reset = button({ size: 'sm', variant: 'ghost' }, t('settings.appearance.reset'));
 
     function paint() {
       const code = current;
       reset.hidden = !code;
-      const chosen = presets.axes.map((a, i) => { const o = parseInt(code[i] || '0', 36); return o ? [a.label, a.options[o] && a.options[o].label] : null; }).filter(Boolean);
+      const chosen = presets.axes.map((a, i) => { const o = parseInt(code[i] || '0', 36); return o ? [presetWord('axis', a.key, a.label), a.options[o] && presetWord('option', a.options[o].key, a.options[o].label)] : null; }).filter(Boolean);
       mount(meaning,
-        chosen.length ? facts(chosen) : h('p', { class: 'fui-field__help' }, 'Every choice at its default: FinUI as it ships.'),
+        chosen.length ? facts(chosen) : h('p', { class: 'fui-field__help' }, t('settings.appearance.preset_default')),
         h('p', { class: 'fui-field__help' }, button({ href: code ? `${CREATE}?preset=${code}` : CREATE, target: '_blank', rel: 'noopener noreferrer', size: 'sm' },
-          icon('sliders', 14), code ? 'Change it in FinUI create' : 'Make one in FinUI create', icon('external', 14))));
+          icon('sliders', 14), code ? t('settings.appearance.preset_change') : t('settings.appearance.preset_make'), icon('external', 14))));
     }
     async function store_(code) {
       mount(err, '');
-      setBusy(save, true, 'Saving…');
+      setBusy(save, true, t('settings.common.saving'));
       try {
         current = (await api.put('/me/appearance', { finui_preset: code })).finui_preset;
         input.value = current;
         input.removeAttribute('aria-invalid');
         restyle();
         paint();
-        note.replaceChildren(icon('check', 13), 'Saved');
+        note.replaceChildren(icon('check', 13), t('settings.common.saved'));
         setTimeout(() => note.replaceChildren(), 2000);
       } catch (e) {
         input.setAttribute('aria-invalid', 'true');
@@ -87,42 +93,50 @@ export default {
     const menu = h('select', { class: 'fui-field__input', id: 'f-mobile_menu', 'aria-describedby': 'mobile_menu-help' }, STYLES.map((st) => h('option', { value: st.key }, st.label)));
     menu.value = styleOf(mobileNavChoice());
     const menuNote = h('span', { class: 'saved-note', 'aria-live': 'polite' });
-    const [menuRow] = settingRow({ id: 'mobile_menu', label: 'Menu on this phone', labelFor: 'f-mobile_menu',
-      help: 'How the menu opens here. Kept by this browser alone: every phone and tablet keeps its own.', control: h('div', { class: 'fui-field__row' }, menuNote, menu) });
+    const [menuRow] = settingRow({ id: 'mobile_menu', label: t('settings.appearance.phone_menu'), labelFor: 'f-mobile_menu',
+      help: t('settings.appearance.phone_menu_help'), control: h('div', { class: 'fui-field__row' }, menuNote, menu) });
     menu.addEventListener('change', () => {
       setMobileNav(menu.value);
-      menuNote.replaceChildren(icon('check', 13), 'Saved');
+      menuNote.replaceChildren(icon('check', 13), t('settings.common.saved'));
       setTimeout(() => menuNote.replaceChildren(), 2000);
     });
     // A wide screen's menu, and the side it sits on where it has one (not a dock, not a command bar).
-    const saved = (note) => { note.replaceChildren(icon('check', 13), 'Saved'); setTimeout(() => note.replaceChildren(), 2000); };
+    const saved = (note) => { note.replaceChildren(icon('check', 13), t('settings.common.saved')); setTimeout(() => note.replaceChildren(), 2000); };
     const deskMenu = h('select', { class: 'fui-field__input', id: 'f-desktop_menu', 'aria-describedby': 'desktop_menu-help' }, DESKTOP_STYLES.map((st) => h('option', { value: st.key }, st.label)));
     deskMenu.value = desktopStyleOf(desktopNavChoice().style);
     const deskNote = h('span', { class: 'saved-note', 'aria-live': 'polite' });
     const sideNote = h('span', { class: 'saved-note', 'aria-live': 'polite' });
     const sideSwitch = toggle({ checked: desktopNavChoice().side === 'right', labelledby: 'desktop_side-label', describedby: 'desktop_side-help',
       onChange: (next) => { setDesktopNav({ side: next ? 'right' : 'left' }); saved(sideNote); } });
-    const [deskRow] = settingRow({ id: 'desktop_menu', label: 'Menu', labelFor: 'f-desktop_menu',
-      help: 'How the pages are laid out on this computer. Kept by this browser alone: your other devices keep their own.', control: h('div', { class: 'fui-field__row' }, deskNote, deskMenu) });
-    const [sideRow] = settingRow({ id: 'desktop_side', label: 'Menu on the right', help: 'The sidebar on the right-hand edge of the window instead of the left.', control: [sideNote, sideSwitch] });
+    const [deskRow] = settingRow({ id: 'desktop_menu', label: t('settings.appearance.menu'), labelFor: 'f-desktop_menu',
+      help: t('settings.appearance.menu_help'), control: h('div', { class: 'fui-field__row' }, deskNote, deskMenu) });
+    const [sideRow] = settingRow({ id: 'desktop_side', label: t('settings.appearance.menu_right'), help: t('settings.appearance.menu_right_help'), control: [sideNote, sideSwitch] });
     deskMenu.addEventListener('change', () => { setDesktopNav({ style: deskMenu.value }); saved(deskNote); fit(); });
 
     // Where search opens, on every width: grown into the menu, or in the page's place.
     const modeSel = h('select', { class: 'fui-field__input', id: 'f-search_mode', 'aria-describedby': 'search_mode-help' },
-      h('option', { value: 'menu' }, 'In the menu'), h('option', { value: 'page' }, 'In the page'));
+      h('option', { value: 'menu' }, t('settings.appearance.search_in_menu')), h('option', { value: 'page' }, t('settings.appearance.search_in_page')));
     modeSel.value = searchMode();
     const modeNote = h('span', { class: 'saved-note', 'aria-live': 'polite' });
     modeSel.addEventListener('change', () => { setSearchMode(modeSel.value); saved(modeNote); });
-    const [modeRow] = settingRow({ id: 'search_mode', label: 'Search opens', labelFor: 'f-search_mode',
-      help: 'Inside your menu, which turns into the search, or in place of the page beside it. Kept by this browser alone.', control: h('div', { class: 'fui-field__row' }, modeNote, modeSel) });
+    const [modeRow] = settingRow({ id: 'search_mode', label: t('settings.appearance.search_opens'), labelFor: 'f-search_mode',
+      help: t('settings.appearance.search_opens_help'), control: h('div', { class: 'fui-field__row' }, modeNote, modeSel) });
 
     // Which layout this browser wears, on every width. Switching loads the other layout's own modules, so it reloads here.
     const layoutSel = h('select', { class: 'fui-field__input', id: 'f-layout', 'aria-describedby': 'layout-help' },
-      h('option', { value: 'finstats' }, 'FinStats'), h('option', { value: 'simple' }, 'Simple'));
+      h('option', { value: 'finstats' }, 'FinStats'), h('option', { value: 'simple' }, t('settings.appearance.layout_simple')));
     layoutSel.value = layoutChoice();
     layoutSel.addEventListener('change', () => setLayoutChoice(layoutSel.value));
-    const [layoutRow] = settingRow({ id: 'layout', label: 'Layout', labelFor: 'f-layout',
-      help: 'FinStats, or Simple: a bar across the top and the stats alone, the way a classic Plex stats server lays them out. Kept by this browser alone.', control: layoutSel });
+    const [layoutRow] = settingRow({ id: 'layout', label: t('settings.appearance.layout'), labelFor: 'f-layout',
+      help: t('settings.appearance.layout_help'), control: layoutSel });
+
+    // The language this browser reads FinStats in, on every width and in both layouts. Choosing one reloads the page in it.
+    const langSel = h('select', { class: 'fui-field__input', id: 'f-language', 'aria-describedby': 'language-help' },
+      h('option', { value: '' }, t('settings.appearance.language_browser')), LANGUAGES.map((l) => h('option', { value: l.tag, lang: l.tag }, l.name)));
+    langSel.value = storedLanguage();
+    langSel.addEventListener('change', () => setLanguage(langSel.value));
+    const [languageRow] = settingRow({ id: 'language', label: t('settings.appearance.language'), labelFor: 'f-language',
+      help: t('settings.appearance.language_help'), control: langSel });
 
     const phone = matchMedia(PHONE);
     // Simple mode has no menu, no search of FinStats' kind and a look of its own: only the layout is chosen there.
@@ -137,9 +151,9 @@ export default {
     fit();
 
     mount(body, h('div', { class: 'fui-setting-row__rows' },
-      layoutRow, menuRow, deskRow, sideRow, modeRow,
-      simple ? null : settingRow({ id: 'finui_preset', label: 'FinUI preset', labelFor: 'f-finui_preset',
-        help: 'A code made at FinUI create: colours, corners, density and more. Every page wears it for you; others choose their own.',
+      languageRow, layoutRow, menuRow, deskRow, sideRow, modeRow,
+      simple ? null : settingRow({ id: 'finui_preset', label: t('settings.appearance.preset'), labelFor: 'f-finui_preset',
+        help: t('settings.appearance.preset_help'),
         control: h('div', { class: 'fui-field__row' }, note, input, save, reset), error: err })),
       simple ? null : meaning);
     paint();

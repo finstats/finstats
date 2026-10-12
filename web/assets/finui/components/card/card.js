@@ -3,6 +3,7 @@
 
 import { h, icon, mount } from '../../core.js';
 import { button } from '../button/button.js';
+import { say } from '../../i18n.js';
 
 export function card({ title, sub, actions, body, cls = '', id, href } = {}) {
   // With an href the whole card is the link: an entry of an index, a way into what it names.
@@ -17,12 +18,12 @@ export function card({ title, sub, actions, body, cls = '', id, href } = {}) {
 export function chartCard({ title, sub, controls, chart, table, cls = '' }) {
   let showTable = false;
   const body = h('div');
-  const label = h('span', null, 'Table');
+  const label = h('span', null, say('card.table', 'Table'));
   const toggle = button({ variant: 'ghost', size: 'sm', type: 'button', 'aria-pressed': 'false',
     onClick: () => { showTable = !showTable; render(); } }, icon('table', 14), label);
   function render() {
     toggle.setAttribute('aria-pressed', String(showTable));
-    toggle.replaceChildren(icon(showTable ? 'chart' : 'table', 14), h('span', null, showTable ? 'Chart' : 'Table'));
+    toggle.replaceChildren(icon(showTable ? 'chart' : 'table', 14), h('span', null, showTable ? say('card.chart', 'Chart') : say('card.table', 'Table')));
     mount(body, showTable ? table() : chart());
   }
   render();

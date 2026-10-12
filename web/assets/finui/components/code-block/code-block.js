@@ -4,9 +4,10 @@
 import { h, mount } from '../../core.js';
 import { copyButton } from '../copy/copy.js';
 import { segmented } from '../segmented/segmented.js';
+import { say } from '../../i18n.js';
 
 /** One line (a command to paste) and its copy button. `.set(text)` puts another line in its place. */
-export function codeLine(text, { label = 'Copy the command', class: extra = null } = {}) {
+export function codeLine(text, { label = say('code_block.copy_command', 'Copy the command'), class: extra = null } = {}) {
   const code = h('code', { class: 'fui-code-block__text' });
   const copySlot = h('span', { class: 'fui-code-block__copy' });
   const el = h('div', { class: ['fui-code-block--line', extra] }, code, copySlot);
@@ -20,14 +21,14 @@ export function codeLine(text, { label = 'Copy the command', class: extra = null
  * best), a choice between them when there are several, a way to copy the one shown, and a `note` on how to use it.
  * `fill`: as tall as its container, the pane scrolling inside it.
  */
-export function codeBlock({ panes, note = null, label = 'Code', value = null, fill = false, class: extra = null }) {
+export function codeBlock({ panes, note = null, label = say('code_block.label', 'Code'), value = null, fill = false, class: extra = null }) {
   let shown = value || panes[0].key;
   const copySlot = h('span');
   const el = panes.map((p) => h('pre', { class: ['fui-code-block__pane', p.wrap && 'fui-code-block__pane--wrap'], dataset: { lang: p.key }, tabindex: 0, hidden: p.key !== shown }, p.text));
   const show = () => {
     el.forEach((pre) => { pre.hidden = pre.dataset.lang !== shown; });
     const p = panes.find((x) => x.key === shown);
-    mount(copySlot, copyButton(p.text, `Copy the ${p.label}`));
+    mount(copySlot, copyButton(p.text, say('code_block.copy_pane', `Copy the ${p.label}`, { name: p.label })));
   };
   show();
   return h('section', { class: ['fui-code-block', fill && 'fui-code-block--fill', extra], 'aria-label': label },

@@ -5,29 +5,30 @@ import { can } from '../state.js';
 import { card, sk } from '../components.js';
 import { numberForm, settingRow } from './common.js';
 import { button } from '../../finui/components/button/button.js';
+import { t } from '../i18n.js';
 
 const FIELDS = [
-  { key: 'active_interval_s', label: 'While someone is watching, check every', unit: 'seconds', min: 1, max: 60, help: 'Pauses, skips and track changes are recorded to this precision. 1–60.' },
-  { key: 'idle_interval_s', label: 'While nothing is playing, check every', unit: 'seconds', min: 1, max: 60, help: 'Only while Jellyfin is not pushing; the time before a play is noticed is not counted. 1–60.' },
-  { key: 'merge_window_s', label: 'Treat a restart as the same play within', unit: 'seconds', min: 0, max: 86400, help: 'Same person, same title, same device. 0 turns merging off.' },
-  { key: 'group_window_s', label: 'Count it as watching together within', unit: 'seconds', min: 5, max: 600, help: 'Different people starting the same title this close together, for a couple of minutes at least. 5–600.' },
-  { key: 'min_play_s', label: 'Ignore plays shorter than', unit: 'seconds', min: 0, max: 3600, help: 'Kept in the database, left out of the stats. 0 counts everything.' },
+  { key: 'active_interval_s', label: t('settings.collection.active.label'), unit: t('settings.collection.seconds'), min: 1, max: 60, help: t('settings.collection.active.help') },
+  { key: 'idle_interval_s', label: t('settings.collection.idle.label'), unit: t('settings.collection.seconds'), min: 1, max: 60, help: t('settings.collection.idle.help') },
+  { key: 'merge_window_s', label: t('settings.collection.merge.label'), unit: t('settings.collection.seconds'), min: 0, max: 86400, help: t('settings.collection.merge.help') },
+  { key: 'group_window_s', label: t('settings.collection.group.label'), unit: t('settings.collection.seconds'), min: 5, max: 600, help: t('settings.collection.group.help') },
+  { key: 'min_play_s', label: t('settings.collection.min_play.label'), unit: t('settings.collection.seconds'), min: 0, max: 3600, help: t('settings.collection.min_play.help') },
 ];
 
 export default {
-  key: 'collection', label: 'Collection', sub: 'How closely plays are followed', group: 'Tracking', icon: 'activity',
+  key: 'collection', label: t('settings.sections.collection.label'), sub: t('settings.sections.collection.sub'), group: t('settings.groups.tracking'), icon: 'activity',
   visible: () => can('manage'),
   entries: [
-    ...FIELDS.map((f) => ({ id: f.key, label: f.label, hint: `${f.key.replace(/_/g, ' ')} interval poll ${f.unit}` })),
+    ...FIELDS.map((f) => ({ id: f.key, label: f.label, hint: `${f.key.replace(/_/g, ' ')} ${t('settings.collection.field_hint')}` })),
   ],
   async render(slot, store) {
     const body = h('div', { class: 'fui-setting-row__rows' }, sk.rows(3));
-    mount(slot, card({ title: 'Collection', sub: 'How closely plays are followed, and what counts as one', body, id: 'collection' }));
+    mount(slot, card({ title: t('settings.sections.collection.label'), sub: t('settings.collection.card_sub'), body, id: 'collection' }));
     await store.loadSettings();
     mount(body,
-      settingRow({ id: 'library-read', label: 'When the library is read',
-        help: 'After Jellyfin’s own library scan, unless you change it. FinStats never starts a scan.',
-        control: button({ size: 'sm', href: '/settings/tasks/sync_libraries' }, icon('clock', 13), 'Schedule') }),
+      settingRow({ id: 'library-read', label: t('settings.collection.library_read'),
+        help: t('settings.collection.library_read_help'),
+        control: button({ size: 'sm', href: '/settings/tasks/sync_libraries' }, icon('clock', 13), t('settings.collection.schedule')) }),
       numberForm(store, FIELDS, 'collect-err'));
   },
 };

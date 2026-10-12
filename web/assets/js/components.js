@@ -41,6 +41,7 @@ import { avatar as avatarOf } from '../finui/components/avatar/avatar.js';
 import { statTile } from '../finui/components/stat-tile/stat-tile.js';
 import { facts } from '../finui/components/facts/facts.js';
 import { typed } from './menus.js';
+import { t } from './i18n.js';
 
 /** A title's poster, by its id: FinUI's poster, given the address FinStats serves it at. */
 export function poster(id, name, { w = 120, cls = '', kind = 'primary' } = {}) {
@@ -68,7 +69,7 @@ export function setBusy(btn, busy, busyLabel) {
     btn.disabled = true;
     btn.setAttribute('aria-busy', 'true');
     if (turn) setTurning(animate(turn, { play: 'hover' }), true);
-    btn.replaceChildren(turn || spinner(), h('span', null, busyLabel || 'Working…'));
+    btn.replaceChildren(turn || spinner(), h('span', null, busyLabel || t('common.working')));
   } else if (btn._label) {
     btn.disabled = false;
     btn.removeAttribute('aria-busy');
@@ -167,7 +168,7 @@ export function dataView({ container, skeleton, fetch, render, signal }) {
 // ---------------------------------------------------------------- controls
 /** Visible options instead of a dropdown (2–5 choices). */
 export function rangeControl(days, onChange) {
-  return segmented({ label: 'Time range', value: days, onChange,
+  return segmented({ label: t('common.time_range'), value: days, onChange,
     options: RANGES.map((r) => ({ value: r.value, label: r.label, title: r.long })) });
 }
 
@@ -197,7 +198,7 @@ export function filterBar({ days, onDays, userId, onUser, signal, extra = [] }) 
  *  as the tab was open. */
 export function stickyFilters(controls, signal) {
   if (!signal) throw new Error('stickyFilters needs the page\'s signal');
-  const bar = h('div', { class: 'filters filters-bar', role: 'group', 'aria-label': 'Filters' }, controls);
+  const bar = h('div', { class: 'filters filters-bar', role: 'group', 'aria-label': t('common.filters') }, controls);
   // One look per frame while scrolling.
   let queued = false;
   const look = () => {
@@ -214,8 +215,8 @@ export function stickyFilters(controls, signal) {
  *  `compact` is the icon alone, for a row of a list, named for screen readers and on hover. */
 export function openInJellyfin(link, { compact = false } = {}) {
   if (!link) return null;
-  if (compact) return button({ variant: 'icon', class: 'open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Open in Jellyfin', title: 'Open in Jellyfin' }, icon('external', 15));
-  return button({ variant: 'primary', class: 'open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer' }, icon('play', 14), 'Open in Jellyfin');
+  if (compact) return button({ variant: 'icon', class: 'open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer', 'aria-label': t('common.open_in_jellyfin'), title: t('common.open_in_jellyfin') }, icon('external', 15));
+  return button({ variant: 'primary', class: 'open-in-jellyfin', href: link, target: '_blank', rel: 'noopener noreferrer' }, icon('play', 14), t('common.open_in_jellyfin'));
 }
 
 export function methodBadge(method) {
@@ -226,15 +227,15 @@ export function methodBadge(method) {
 export { chip } from '../finui/components/chip/chip.js';
 
 /** Ranked poster rows for movies/series/music, avatar rows for users. */
-export function topList(rows, { kind = 'items', empty = 'No plays in this range.' } = {}) {
+export function topList(rows, { kind = 'items', empty = t('plays_table.empty_range') } = {}) {
   if (!rows || !rows.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
   return rankList(rows.map((r) => ({
     href: !r.id ? null : kind === 'users' ? `/users/${r.id}` : kind === 'libraries' ? `/libraries/${r.id}` : kind === 'items' ? `/items/${r.id}` : null,
     thumb: kind === 'users' ? avatar(r.id, r.name, { size: 36 }) : kind === 'items' ? poster(r.image_item_id, r.name, { w: 120, cls: 'fui-poster--sm' }) : null,
     name: r.name,
-    sub: [r.sub, r.users != null ? `${num(r.users)} ${r.users === 1 ? 'user' : 'users'}` : null].filter(Boolean).join(' · ') || null,
+    sub: [r.sub, r.users != null ? t('terms.user', { count: r.users }) : null].filter(Boolean).join(' · ') || null,
     value: durEl(r.watch_s, 'mono fui-rank-list__watch'),
-    note: `${num(r.plays)} ${r.plays === 1 ? 'play' : 'plays'}`,
+    note: t('terms.play', { count: r.plays || 0 }),
   })));
 }
 
@@ -242,7 +243,7 @@ export function topList(rows, { kind = 'items', empty = 'No plays in this range.
 export function playTitle(p, { link = true } = {}) {
   const code = episodeCode(p.season_number, p.episode_number);
   const canLink = link && p.item_exists !== false;
-  const main = canLink && p.item_id ? h('a', { href: `/items/${p.item_id}`, dataset: typed(p.item_type), onClick: (e) => e.stopPropagation() }, p.item_name || 'Unknown item') : h('span', null, p.item_name || 'Unknown item');
+  const main = canLink && p.item_id ? h('a', { href: `/items/${p.item_id}`, dataset: typed(p.item_type), onClick: (e) => e.stopPropagation() }, p.item_name || t('common.unknown_item')) : h('span', null, p.item_name || t('common.unknown_item'));
   if (!p.series_name) return h('div', { class: 'play-title' }, h('div', { class: 'play-title-main' }, main));
   const series = canLink && p.series_id ? h('a', { href: `/items/${p.series_id}`, dataset: typed('Series'), onClick: (e) => e.stopPropagation() }, p.series_name) : h('span', null, p.series_name);
   return h('div', { class: 'play-title' }, h('div', { class: 'play-title-main' }, series),
@@ -255,8 +256,8 @@ export function completionEl(p) {
   // Where playback stopped, as a position in the title. Imported plays never recorded one.
   const stoppedAt = p.position_s != null && p.runtime_s ? `${clock(p.position_s)} / ${clock(p.runtime_s)}` : null;
   return h('span', { class: 'completion-cell' },
-    h('span', { class: 'completion', title: stoppedAt ? `Stopped at ${stoppedAt}` : `Stopped at ${pct(c)}` },
-      h('span', { class: 'fui-meter', role: 'img', 'aria-label': `${pct(c)} watched` }, h('span', { class: 'fui-meter__fill', style: { width: c * 100 + '%' } })),
+    h('span', { class: 'completion', title: t('plays_table.stopped_at', { position: stoppedAt || pct(c) }) },
+      h('span', { class: 'fui-meter', role: 'img', 'aria-label': t('components.pct_watched', { pct: pct(c) }) }, h('span', { class: 'fui-meter__fill', style: { width: c * 100 + '%' } })),
       h('span', { class: 'mono' }, pct(c))),
     stoppedAt ? h('span', { class: 'cell-sub mono' }, stoppedAt) : null);
 }
@@ -265,28 +266,28 @@ export function completionEl(p) {
  * rows: Play[]; onOpen(play, rowEl) opens the detail modal. `sort: {key, dir, onSort}` when the list is
  * paginated and the server does the sorting; without it the rows on screen are sorted in the browser.
  */
-export function playsTable(rows, { showUser = true, onOpen, empty = 'No plays match these filters.', sort = null } = {}) {
+export function playsTable(rows, { showUser = true, onOpen, empty = t('plays_table.empty'), sort = null } = {}) {
   if (!rows || !rows.length) return emptyState(empty);
   const admin = can('see_network'); // the IP column
   // data-first: the direction a first click gives, so it matches what the browser-side tables do.
   const th = (key, label, first, cls) => h('th', { class: cls || null, 'data-key': key, 'data-first': first }, label);
   return dataTable(h('table', { class: 'fui-data-table fui-data-table--hover plays' },
     h('thead', null, h('tr', null,
-      showUser ? th('user', 'User', 'asc') : null, th('title', 'Title', 'asc'), th('when', 'When', 'desc'), th('watched', 'Watched', 'desc', 'r'),
-      th('progress', 'Progress', 'desc'), th('client', 'Client', 'asc'), th('method', 'Method', 'asc'), admin ? th('ip', 'IP address', 'asc') : null)),
+      showUser ? th('user', t('plays_table.user'), 'asc') : null, th('title', t('plays_table.title'), 'asc'), th('when', t('plays_table.when'), 'desc'), th('watched', t('plays_table.watched'), 'desc', 'r'),
+      th('progress', t('plays_table.progress'), 'desc'), th('client', t('plays_table.client'), 'asc'), th('method', t('plays_table.method'), 'asc'), admin ? th('ip', t('plays_table.ip_address'), 'asc') : null)),
     h('tbody', null, rows.map((p) => {
-      const tr = h('tr', { tabindex: 0, class: p.active ? 'is-live' : '', 'aria-label': `Open details for ${p.item_name || 'play'}` },
+      const tr = h('tr', { tabindex: 0, class: p.active ? 'is-live' : '', 'aria-label': t('plays_table.open_details', { title: p.item_name || t('components.a_play') }) },
         showUser ? h('td', null, h('a', { class: 'user-cell', href: `/users/${p.user_id}`, onClick: (e) => e.stopPropagation() }, avatar(p.user_id, p.user_name, { size: 22 }), h('span', null, p.user_name))) : null,
         h('td', { class: 'td-title' }, h('div', { class: 'title-cell' }, poster(p.image_item_id, p.series_name || p.item_name, { w: 120, cls: 'fui-poster--xs' }), playTitle(p),
-          p.group_size > 1 ? h('span', { class: 'group-mark', role: 'img', title: `Watched together · ${p.group_size} people`, 'aria-label': `Watched together by ${p.group_size} people` }, icon('together', 13)) : null)),
-        h('td', { 'data-sort': p.active ? String(Date.now()) : null }, p.active ? h('span', { class: 'fui-badge fui-badge--live' }, h('span', { class: 'fui-badge__dot' }), 'Playing now')
+          p.group_size > 1 ? h('span', { class: 'group-mark', role: 'img', title: t('plays_table.together_title', { count: p.group_size }), 'aria-label': t('components.together_aria', { count: p.group_size }) }, icon('together', 13)) : null)),
+        h('td', { 'data-sort': p.active ? String(Date.now()) : null }, p.active ? h('span', { class: 'fui-badge fui-badge--live' }, h('span', { class: 'fui-badge__dot' }), t('plays_table.playing_now'))
           : h('span', { class: 'when-cell' }, relEl(p.ended_at || p.started_at), h('span', { class: 'cell-sub mono' }, shortStamp(p.ended_at || p.started_at)))),
         h('td', { class: 'r' }, durEl(p.duration_s)),
         h('td', null, completionEl(p)),
         h('td', null, h('div', { class: 'client-cell' }, h('span', null, p.client || '–'), h('span', { class: 'muted' }, p.device_name || ''))),
         h('td', null, methodBadge(p.play_method)),
         admin ? h('td', { class: 'mono' }, p.remote_ip ? h('span', { class: 'ip-cell' }, p.remote_ip,
-          p.is_local == null ? null : h('span', { class: 'ip-net', role: 'img', title: p.is_local ? 'Local network' : 'Remote', 'aria-label': p.is_local ? 'Local network' : 'Remote' }, icon(p.is_local ? 'lan' : 'globe', 12))) : '–') : null);
+          p.is_local == null ? null : h('span', { class: 'ip-net', role: 'img', title: p.is_local ? t('plays_table.local') : t('plays_table.remote'), 'aria-label': p.is_local ? t('plays_table.local') : t('plays_table.remote') }, icon(p.is_local ? 'lan' : 'globe', 12))) : '–') : null);
       if (onOpen) {
         tr.addEventListener('click', (e) => { if (!e.target.closest('a,button')) onOpen(p, tr); });
         tr.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === tr) { e.preventDefault(); onOpen(p, tr); } });

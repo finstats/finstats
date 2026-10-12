@@ -4,13 +4,14 @@
 import { h, s } from '../../core.js';
 import { slice, compact } from '../chart/plan.js';
 import { chartFigure, legend, tableTwin, tone, hoverable } from '../chart/chart.js';
+import { say } from '../../i18n.js';
 
 /** donutChart({ title, sub, parts: [{ name, value }], total, format, size }): `total` { value, label } in the middle. */
 export function donutChart({ title = null, sub = null, parts, total = null, format = compact, size = 168 }) {
   const sorted = [...parts].sort((a, b) => b.value - a.value);
-  const kept = sorted.length > 4 ? [...sorted.slice(0, 3), { name: 'Other', value: sorted.slice(3).reduce((n, p) => n + p.value, 0) }] : sorted;
+  const kept = sorted.length > 4 ? [...sorted.slice(0, 3), { name: say('chart.other', 'Other'), value: sorted.slice(3).reduce((n, p) => n + p.value, 0) }] : sorted;
   const sum = kept.reduce((n, p) => n + p.value, 0) || 1;
-  const share = (v) => `${Math.round((v / sum) * 100)}%`;
+  const share = (v) => { const pct = Math.round((v / sum) * 100); return say('donut_chart.share', `${pct}%`, { pct }); };
   const c = size / 2, outer = c - 2, inner = outer - Math.max(12, size * 0.15);
   // A gap of 2 px of ground at the outer edge between slices.
   const gap = kept.length > 1 ? 2 / outer : 0;
@@ -30,9 +31,9 @@ export function donutChart({ title = null, sub = null, parts, total = null, form
       return { rect: { left: px, top: py, width: 1, height: 1, bottom: py }, title: kept[i].name, rows: [{ color: tone(i), value: format(kept[i].value), label: share(kept[i].value) }] }; },
   };
   const ring = h('div', { class: 'fui-donut-chart__ring' }, svg, total ? h('div', { class: 'fui-donut-chart__middle' }, h('span', { class: 'fui-donut-chart__total' }, total.value), h('span', { class: 'fui-donut-chart__label' }, total.label)) : null);
-  hoverable(ring, () => spec, `${title || 'A donut chart'}: ${kept.map((p) => `${p.name} ${share(p.value)}`).join(', ')}`);
+  hoverable(ring, () => spec, `${title || say('donut_chart.name', 'A donut chart')}: ${kept.map((p) => `${p.name} ${share(p.value)}`).join(', ')}`);
   return chartFigure({ title, sub, cls: 'fui-donut-chart', plot: h('div', { class: 'fui-donut-chart__body' }, ring, legend(kept.map((p) => ({ name: p.name, value: `${format(p.value)} · ${share(p.value)}` })))),
-    table: tableTwin({ caption: title || 'The parts', head: ['', 'Value', 'Share'], rows: kept.map((p) => [p.name, format(p.value), share(p.value)]) }) });
+    table: tableTwin({ caption: title || say('donut_chart.caption', 'The parts'), head: ['', say('donut_chart.value', 'Value'), say('donut_chart.share_head', 'Share')], rows: kept.map((p) => [p.name, format(p.value), share(p.value)]) }) });
 }
 
 const TB = (v) => `${(v / 1024).toFixed(1)} TB`;

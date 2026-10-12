@@ -1,18 +1,20 @@
 // FinUI: the desktop menu's rules, apart from any page. Which styles there are and the edge of the window each keeps, which
 // may sit on the right, how pages fall into groups, what is pinned, and a group's colour. Pure, so a test reads it.
 
+import { say } from '../../i18n.js';
+
 /** The styles, today's sidebar first: it is what a menu is before anybody chooses. `edge` and `size` say what each keeps
  *  of the window: a side (px wide), the bottom or the top (px tall), so the app can lay its page beside it. A rail
  *  `opens` that wide under the pointer, over the page rather than pushing it. */
 export const STYLES = [
-  { key: 'sidebar', label: 'Sidebar', line: 'Every page in one quiet list down the side.', edge: 'side', size: 220 },
-  { key: 'grouped', label: 'Grouped', line: 'The same list in named groups, so a page is found by where it lives.', edge: 'side', size: 220 },
-  { key: 'rail', label: 'Rail that opens', line: 'Icons until the pointer comes, then the whole sidebar over the page.', edge: 'side', size: 60, opens: 232 },
-  { key: 'search', label: 'Search first', line: 'A large search above the pages, and rows a little larger.', edge: 'side', size: 240 },
-  { key: 'dock', label: 'Dock', line: 'The pages in a dock at the bottom; the status bar moves to the top.', edge: 'bottom', size: 78 },
-  { key: 'command', label: 'Command bar', line: 'No list on screen: the page’s name at the top opens every page.', edge: 'top', size: 52 },
-  { key: 'pinned', label: 'Pinned', line: 'The pages you pin on top, every page below in its group.', edge: 'side', size: 220 },
-  { key: 'tiles', label: 'Coloured tiles', line: 'Each icon in a tile coloured by its group.', edge: 'side', size: 232 },
+  { key: 'sidebar', label: say('desktop_nav.styles.sidebar.label', 'Sidebar'), line: say('desktop_nav.styles.sidebar.line', 'Every page in one quiet list down the side.'), edge: 'side', size: 220 },
+  { key: 'grouped', label: say('desktop_nav.styles.grouped.label', 'Grouped'), line: say('desktop_nav.styles.grouped.line', 'The same list in named groups, so a page is found by where it lives.'), edge: 'side', size: 220 },
+  { key: 'rail', label: say('desktop_nav.styles.rail.label', 'Rail that opens'), line: say('desktop_nav.styles.rail.line', 'Icons until the pointer comes, then the whole sidebar over the page.'), edge: 'side', size: 60, opens: 232 },
+  { key: 'search', label: say('desktop_nav.styles.search.label', 'Search first'), line: say('desktop_nav.styles.search.line', 'A large search above the pages, and rows a little larger.'), edge: 'side', size: 240 },
+  { key: 'dock', label: say('desktop_nav.styles.dock.label', 'Dock'), line: say('desktop_nav.styles.dock.line', 'The pages in a dock at the bottom; the status bar moves to the top.'), edge: 'bottom', size: 78 },
+  { key: 'command', label: say('desktop_nav.styles.command.label', 'Command bar'), line: say('desktop_nav.styles.command.line', 'No list on screen: the page’s name at the top opens every page.'), edge: 'top', size: 52 },
+  { key: 'pinned', label: say('desktop_nav.styles.pinned.label', 'Pinned'), line: say('desktop_nav.styles.pinned.line', 'The pages you pin on top, every page below in its group.'), edge: 'side', size: 220 },
+  { key: 'tiles', label: say('desktop_nav.styles.tiles.label', 'Coloured tiles'), line: say('desktop_nav.styles.tiles.line', 'Each icon in a tile coloured by its group.'), edge: 'side', size: 232 },
 ];
 
 /** A stored choice as a style: one nobody knows is today's sidebar. */

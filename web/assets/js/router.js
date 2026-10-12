@@ -2,6 +2,7 @@
 // and timer helpers that are torn down on the next navigation.
 
 import { state, can } from './state.js';
+import { t as tr } from './i18n.js';
 
 const routes = [];
 let current = null; // {cleanup: [], abort}
@@ -131,7 +132,7 @@ function render(scroll = true) {
         if (!running && !abort.signal.aborted) { clearTimeout(timer); timer = setTimeout(tick, interval); }
       };
     },
-    title(t) { document.title = t ? `${t} · FinStats` : 'FinStats'; },
+    title(t) { document.title = t ? tr('router.page_title', { page: t }) : 'FinStats'; },
   };
 
   if (scroll) window.scrollTo(0, 0);
@@ -140,7 +141,7 @@ function render(scroll = true) {
     m.route.page(ctx);
   } catch (e) {
     console.error(e);
-    root.textContent = 'This page failed to render. Reload to try again.';
+    root.textContent = tr('common.page_failed');
   }
   if (location.hash) {
     requestAnimationFrame(() => document.getElementById(location.hash.slice(1))?.scrollIntoView());

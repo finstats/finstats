@@ -7,6 +7,7 @@
 import { h, icon } from '../../core.js';
 import { STYLES, styleOf, split, arc } from './plan.js';
 import { grow, shrink } from '../search/search.js';
+import { say } from '../../i18n.js';
 
 export { STYLES, styleOf } from './plan.js';
 
@@ -21,7 +22,7 @@ const dotOn = (p) => (typeof p.dot === 'function' ? !!p.dot() : !!p.dot);
  * Answers { el, trigger, open, close, setCurrent, repaint, destroy, openSearch(panel, from), closeSearch() }: `trigger`
  * is the button an app bar should carry (peek, full); the other styles bring their own and it is null.
  */
-export function mobileNav({ style, pages, current = null, foot = null, onSearch = null, onSearchEnd = () => {}, label = 'Menu', contained = false }) {
+export function mobileNav({ style, pages, current = null, foot = null, onSearch = null, onSearchEnd = () => {}, label = say('mobile_nav.menu', 'Menu'), contained = false }) {
   const kind = styleOf(style);
   const el = h('div', { class: ['fui-mobile-nav', `fui-mobile-nav--${kind}`, contained && 'fui-mobile-nav--contained'] });
   const links = [];        // every link drawn, with the page it opens
@@ -31,14 +32,14 @@ export function mobileNav({ style, pages, current = null, foot = null, onSearch 
 
   // ---- the pieces every style is made of
   function link(p, cls = 'fui-mobile-nav__link', { size = 18 } = {}) {
-    const dot = p.dot ? h('span', { class: 'fui-mobile-nav__dot' }, h('span', { class: 'sr-only' }, 'New')) : null;
+    const dot = p.dot ? h('span', { class: 'fui-mobile-nav__dot' }, h('span', { class: 'sr-only' }, say('mobile_nav.new', 'New'))) : null;
     const a = h('a', { class: ['fui-mobile-nav__link', cls !== 'fui-mobile-nav__link' && cls], href: p.href }, icon(p.icon, size), h('span', { class: 'fui-mobile-nav__label' }, p.label), dot);
     a.addEventListener('click', () => close());
     links.push({ a, p, dot });
     return a;
   }
   /** The menu's search: drawn as a field, and a button; the search itself is the app's, and opens where this was. */
-  function search({ placeholder = 'Search' } = {}) {
+  function search({ placeholder = say('mobile_nav.search', 'Search') } = {}) {
     if (!onSearch) return null;
     const b = h('button', { type: 'button', class: 'fui-mobile-nav__search' }, icon('search', 18), h('span', null, placeholder));
     b.addEventListener('click', () => onSearch(b));
@@ -46,7 +47,7 @@ export function mobileNav({ style, pages, current = null, foot = null, onSearch 
   }
   /** The handle of a sheet: a tap or a drag down closes it, a drag up calls `up`; the sheet follows the finger. */
   function grab(sheet, { up = null, down = () => close(true), tap = () => close(true) } = {}) {
-    const b = h('button', { type: 'button', class: 'fui-mobile-nav__grab', 'aria-label': 'Close menu' }, h('span', { class: 'fui-mobile-nav__grab-bar' }));
+    const b = h('button', { type: 'button', class: 'fui-mobile-nav__grab', 'aria-label': say('mobile_nav.close_menu', 'Close menu') }, h('span', { class: 'fui-mobile-nav__grab-bar' }));
     let y0 = null, dy = 0;
     b.addEventListener('pointerdown', (e) => { y0 = e.clientY; dy = 0; b.setPointerCapture(e.pointerId); sheet.classList.add('is-dragging'); });
     b.addEventListener('pointermove', (e) => { if (y0 == null) return; dy = e.clientY - y0; sheet.style.translate = `0 ${dy < 0 ? (up ? dy : dy / 4) : dy}px`; });
@@ -62,8 +63,8 @@ export function mobileNav({ style, pages, current = null, foot = null, onSearch 
     return b;
   }
   const footer = (cls = null) => (foot ? h('div', { class: ['fui-mobile-nav__foot', cls] }, foot) : null);
-  const list = (ps, cls = null, opts) => h('nav', { class: ['fui-mobile-nav__list', cls], 'aria-label': 'Pages' }, ps.map((p) => link(p, 'fui-mobile-nav__link', opts)));
-  function opener(cls, children, aria = 'Open menu') {
+  const list = (ps, cls = null, opts) => h('nav', { class: ['fui-mobile-nav__list', cls], 'aria-label': say('mobile_nav.pages', 'Pages') }, ps.map((p) => link(p, 'fui-mobile-nav__link', opts)));
+  function opener(cls, children, aria = say('mobile_nav.open_menu', 'Open menu')) {
     const b = h('button', { type: 'button', class: ['fui-mobile-nav__trigger', cls], 'aria-label': aria, 'aria-expanded': 'false', 'aria-haspopup': 'dialog' }, children);
     b.addEventListener('click', () => (isOpen ? close(true) : open()));
     triggers.push(b);
@@ -78,33 +79,33 @@ export function mobileNav({ style, pages, current = null, foot = null, onSearch 
 
   // ---- the five
   if (kind === 'tabs') {
-    const more = opener('fui-mobile-nav__tab fui-mobile-nav__more', [icon('menu', 20), h('span', { class: 'fui-mobile-nav__label' }, 'More')], 'More pages');
+    const more = opener('fui-mobile-nav__tab fui-mobile-nav__more', [icon('menu', 20), h('span', { class: 'fui-mobile-nav__label' }, say('mobile_nav.more', 'More'))], say('mobile_nav.more_pages', 'More pages'));
     hooks.current.push(() => more.classList.toggle('is-current', rest.some((p) => p.key === here)));
-    dock = h('nav', { class: 'fui-mobile-nav__dock fui-mobile-nav__bar', 'aria-label': 'Main' }, bar.map((p) => link(p, 'fui-mobile-nav__tab', { size: 20 })), more);
+    dock = h('nav', { class: 'fui-mobile-nav__dock fui-mobile-nav__bar', 'aria-label': say('mobile_nav.main', 'Main') }, bar.map((p) => link(p, 'fui-mobile-nav__tab', { size: 20 })), more);
     panel.classList.add('fui-mobile-nav__sheet');
     panel.append(grab(panel), search(), list(rest), footer());
   } else if (kind === 'peek') {
     trigger = opener('fui-mobile-nav__menu', icon('menu', 20));
-    const all = h('button', { type: 'button', class: 'fui-mobile-nav__all', 'aria-expanded': 'false' }, h('span', null, 'All pages'), icon('chevronDown', 16));
+    const all = h('button', { type: 'button', class: 'fui-mobile-nav__all', 'aria-expanded': 'false' }, h('span', null, say('mobile_nav.all_pages', 'All pages')), icon('chevronDown', 16));
     const widen = (full) => { el.classList.toggle('is-full', full); all.setAttribute('aria-expanded', String(full)); };
     all.addEventListener('click', () => widen(!el.classList.contains('is-full')));
     hooks.close.push(() => widen(false));
     panel.classList.add('fui-mobile-nav__sheet');
     panel.append(grab(panel, { up: () => widen(true), down: () => (el.classList.contains('is-full') ? widen(false) : close(true)), tap: () => widen(!el.classList.contains('is-full')) }),
       search(),
-      h('nav', { class: 'fui-mobile-nav__bar fui-mobile-nav__quick', 'aria-label': 'Most used' }, bar.map((p) => link(p, 'fui-mobile-nav__q', { size: 22 }))),
+      h('nav', { class: 'fui-mobile-nav__bar fui-mobile-nav__quick', 'aria-label': say('mobile_nav.most_used', 'Most used') }, bar.map((p) => link(p, 'fui-mobile-nav__q', { size: 22 }))),
       all,
       h('div', { class: 'fui-mobile-nav__rest' }, list(rest), footer()));
   } else if (kind === 'full') {
     trigger = opener('fui-mobile-nav__menu', icon('menu', 20));
-    const shut = h('button', { type: 'button', class: 'fui-mobile-nav__close', 'aria-label': 'Close menu' }, icon('x', 20));
+    const shut = h('button', { type: 'button', class: 'fui-mobile-nav__close', 'aria-label': say('mobile_nav.close_menu', 'Close menu') }, icon('x', 20));
     shut.addEventListener('click', () => close(true));
     panel.classList.add('fui-mobile-nav__screen');
     panel.append(h('div', { class: 'fui-mobile-nav__head' }, shut, h('span', { class: 'fui-mobile-nav__title' }, label)), search(), list(pages, 'fui-mobile-nav__list--large', { size: 20 }), footer());
   } else if (kind === 'arc') {
     dock = opener('fui-mobile-nav__dock fui-mobile-nav__fab', [h('span', { class: 'fui-mobile-nav__fab-open' }, icon('menu', 22)), h('span', { class: 'fui-mobile-nav__fab-close' }, icon('x', 22))]);
     const spots = arc(pages.length);
-    const fan = h('nav', { class: 'fui-mobile-nav__arc', 'aria-label': 'Pages' }, pages.map((p, i) => {
+    const fan = h('nav', { class: 'fui-mobile-nav__arc', 'aria-label': say('mobile_nav.pages', 'Pages') }, pages.map((p, i) => {
       const a = link(p, 'fui-mobile-nav__spot', { size: 19 });
       a.style.setProperty('--x', `${spots[i].x}px`);
       a.style.setProperty('--y', `${spots[i].y}px`);
@@ -123,7 +124,7 @@ export function mobileNav({ style, pages, current = null, foot = null, onSearch 
       whereIcon.replaceChildren(icon(p ? p.icon : 'menu', 18));
     });
     panel.classList.add('fui-mobile-nav__sheet');
-    panel.append(grab(panel), footer('fui-mobile-nav__foot--top'), list(pages, 'fui-mobile-nav__list--pairs', { size: 16 }), search({ placeholder: 'Search or go to…' }));
+    panel.append(grab(panel), footer('fui-mobile-nav__foot--top'), list(pages, 'fui-mobile-nav__list--pairs', { size: 16 }), search({ placeholder: say('mobile_nav.search_or_go', 'Search or go to…') }));
   }
 
   // Where search lives: the style's own place: its sheet, its screen, the arc's card.

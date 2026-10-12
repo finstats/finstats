@@ -3,11 +3,12 @@
 
 import { h, icon } from '../../core.js';
 import { byDay } from './plan.js';
+import { locale } from '../../i18n.js';
 
-const dayName = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-const clock = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
+let dayName = null, clock = null, fmtFor = '';
 /** timeline({ events: [{ at, title, detail, icon, tone }], days }): `at` in ms; `tone` 'good', 'warning', 'critical'. */
 export function timeline({ events, days = true }) {
+  if (fmtFor !== locale()) { fmtFor = locale(); dayName = new Intl.DateTimeFormat(fmtFor, { weekday: 'long', day: 'numeric', month: 'long' }); clock = new Intl.DateTimeFormat(fmtFor, { hour: '2-digit', minute: '2-digit' }); }
   const item = (e) => h('li', { class: ['fui-timeline__event', e.tone && `fui-timeline__event--${e.tone}`] },
     h('span', { class: 'fui-timeline__mark', 'aria-hidden': 'true' }, e.icon ? icon(e.icon, 13) : null),
     h('div', { class: 'fui-timeline__words' },

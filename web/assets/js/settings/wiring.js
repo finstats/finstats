@@ -3,9 +3,10 @@
 // or pick a plug (a click, Enter) and then a socket; the arrow keys walk the sockets. A wire pulled out into nothing
 // comes unplugged, and so does Delete on a plug. Several plugs may go into one socket, one plug into one socket only,
 // and a Plex user left without a wire is not imported.
-import { h, s, num, mount, icon } from '../dom.js';
+import { h, s, mount, icon } from '../dom.js';
 import { avatar } from '../components.js';
 import { button } from '../../finui/components/button/button.js';
+import { t } from '../i18n.js';
 
 const COLOURS = 8; // --wire-0 … --wire-7, the panel's wire colours
 
@@ -37,7 +38,7 @@ export function wiringBoard(board, { onImport, onReset }) {
   const layer = s('svg', { class: 'wire-layer', 'aria-hidden': 'true' });
   const plexById = new Map(board.plex_users.map((u) => [u.id, u]));
 
-  const plexCol = h('ul', { class: 'wire-col', 'aria-label': 'Plex users, from Tautulli' }, board.plex_users.map((u, i) => {
+  const plexCol = h('ul', { class: 'wire-col', 'aria-label': t('settings.wiring.plex_users') }, board.plex_users.map((u, i) => {
     colour.set(u.id, `var(--wire-${i % COLOURS})`);
     const plug = h('button', { type: 'button', class: 'wire-plug', 'data-plex': String(u.id), 'aria-pressed': 'false' }, h('span', { class: 'wire-nub' }));
     plug.style.setProperty('--wire', colour.get(u.id));
@@ -50,11 +51,11 @@ export function wiringBoard(board, { onImport, onReset }) {
     });
     return h('li', { class: ['wire-row', !u.plays && 'is-empty'] },
       h('span', { class: 'wire-who' }, h('span', { class: 'wire-name' }, u.name),
-        h('span', { class: 'wire-meta' }, u.plays ? [`${num(u.plays)} play${u.plays === 1 ? '' : 's'}`, span(u) ? ` · ${span(u)}` : ''] : 'No films or episodes')),
+        h('span', { class: 'wire-meta' }, u.plays ? [t('terms.play', { count: u.plays }), span(u) ? ` · ${span(u)}` : ''] : t('settings.wiring.no_plays'))),
       plug);
   }));
 
-  const jfCol = h('ul', { class: 'wire-col', 'aria-label': 'Jellyfin users' }, board.jellyfin_users.map((u) => {
+  const jfCol = h('ul', { class: 'wire-col', 'aria-label': t('settings.wiring.jellyfin_users') }, board.jellyfin_users.map((u) => {
     const socket = h('button', { type: 'button', class: 'wire-socket', 'data-jf': u.id }, h('span', { class: 'wire-hole' }));
     sockets.set(u.id, socket);
     socket.addEventListener('click', () => { if (picking != null) connect(picking, u.id, true); });
@@ -66,15 +67,15 @@ export function wiringBoard(board, { onImport, onReset }) {
     return h('li', { class: 'wire-row' }, socket, avatar(u.id, u.name, { size: 24, hasImage: u.has_image }), h('span', { class: 'wire-name' }, u.name));
   }));
 
-  const el = h('div', { class: 'wire-board', role: 'group', 'aria-label': 'Connect Plex users to Jellyfin users' },
+  const el = h('div', { class: 'wire-board', role: 'group', 'aria-label': t('settings.wiring.board_aria') },
     h('div', { class: 'wire-head' }, h('span', null, icon('play', 13), 'Plex'), h('span', null, 'Jellyfin')),
     h('div', { class: 'wire-panel' }, plexCol, layer, jfCol));
   const summary = h('p', { class: 'wire-summary' });
   const failed = h('p', { class: 'wire-error', role: 'alert' });
   const importBtn = button({ variant: 'primary', class: 'wire-import', type: 'button', onClick: start });
-  const resetBtn = button({ class: 'wire-reset', type: 'button', onClick: () => onReset() }, 'Start over');
+  const resetBtn = button({ class: 'wire-reset', type: 'button', onClick: () => onReset() }, t('settings.wiring.start_over'));
   const root = h('div', { class: 'wire-wrap' },
-    h('p', { class: 'fui-field__help' }, 'Drag a wire from each Plex user to who they are on Jellyfin, or click one, then the other. Several Plex users may go to one person. A Plex user without a wire is not imported.'),
+    h('p', { class: 'fui-field__help' }, t('settings.wiring.help')),
     el, said, summary, failed, h('div', { class: 'wire-actions' }, resetBtn, importBtn));
 
   // ---- wiring
@@ -82,14 +83,14 @@ export function wiringBoard(board, { onImport, onReset }) {
     wires.set(plex, jf);
     const socket = sockets.get(jf);
     socket.classList.remove('is-snapped'); void socket.offsetWidth; socket.classList.add('is-snapped');
-    said.textContent = `${plexById.get(plex).name} connected to ${jfName.get(jf)}.`;
+    said.textContent = t('settings.wiring.said_connected', { plex: plexById.get(plex).name, jellyfin: jfName.get(jf) });
     stopPicking(false);
     if (fromKeys) plugs.get(plex).focus();
     update();
   }
   function unplug(plex) {
     if (!wires.delete(plex)) return;
-    said.textContent = `${plexById.get(plex).name} unplugged.`;
+    said.textContent = t('settings.wiring.said_unplugged', { name: plexById.get(plex).name });
     update();
   }
   function pick(plex) {
@@ -97,7 +98,7 @@ export function wiringBoard(board, { onImport, onReset }) {
     picking = plex;
     for (const [id, p] of plugs) p.classList.toggle('is-picking', id === plex);
     el.classList.add('is-picking');
-    said.textContent = `Choose who ${plexById.get(plex).name} is on Jellyfin. Escape cancels.`;
+    said.textContent = t('settings.wiring.said_choose', { name: plexById.get(plex).name });
     update();
     (sockets.get(wires.get(plex)) || sockets.values().next().value)?.focus();
   }
@@ -175,23 +176,23 @@ export function wiringBoard(board, { onImport, onReset }) {
       const u = plexById.get(id), to = wires.get(id);
       plug.setAttribute('aria-pressed', String(!!to));
       plug.classList.toggle('is-wired', !!to);
-      plug.setAttribute('aria-label', `${u.name} on Plex, ${u.plays} play${u.plays === 1 ? '' : 's'}: ${to ? `connected to ${jfName.get(to)}` : 'not connected'}`);
+      plug.setAttribute('aria-label', to ? t('settings.wiring.plug_connected', { name: u.name, count: u.plays, to: jfName.get(to) }) : t('settings.wiring.plug_free', { name: u.name, count: u.plays }));
     }
     for (const [id, socket] of sockets) {
       const n = into.get(id) || 0;
       socket.classList.toggle('is-wired', n > 0);
-      socket.setAttribute('aria-label', picking != null ? `Connect ${plexById.get(picking).name} to ${jfName.get(id)}`
-        : `${jfName.get(id)} on Jellyfin${n ? `, ${n} Plex user${n === 1 ? '' : 's'} connected` : ''}`);
+      socket.setAttribute('aria-label', picking != null ? t('settings.wiring.socket_pick', { plex: plexById.get(picking).name, jellyfin: jfName.get(id) })
+        : n ? t('settings.wiring.socket_wired', { name: jfName.get(id), count: n }) : t('settings.wiring.socket', { name: jfName.get(id) }));
       // The colour of the wire in it, or the first of them: a socket shows what is plugged in.
       const first = [...wires].find(([, jf]) => jf === id);
       if (first) socket.style.setProperty('--wire', colour.get(first[0])); else socket.style.removeProperty('--wire');
     }
     const plays = [...wires.keys()].reduce((sum, id) => sum + (plexById.get(id).plays || 0), 0);
     const total = board.plex_users.length;
-    summary.textContent = `${wires.size} of ${total} Plex users connected · ${num(plays)} play${plays === 1 ? '' : 's'} will come in`
-      + (wires.size && wires.size < total ? ' · the rest stay behind' : '');
+    summary.textContent = [t('settings.wiring.summary_users', { wired: wires.size, count: total }), t('settings.wiring.summary_plays', { count: plays }),
+      wires.size && wires.size < total ? t('settings.wiring.summary_rest') : null].filter(Boolean).join(' · ');
     importBtn.disabled = !wires.size;
-    importBtn.textContent = wires.size ? `Import ${num(plays)} play${plays === 1 ? '' : 's'}` : 'Import';
+    importBtn.textContent = wires.size ? t('settings.wiring.import_plays', { count: plays }) : t('settings.wiring.import');
     draw();
   }
 

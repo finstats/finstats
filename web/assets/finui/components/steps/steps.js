@@ -3,10 +3,11 @@
 
 import { h, icon } from '../../core.js';
 import { reachable, stateOf } from './plan.js';
+import { say } from '../../i18n.js';
 
 /** steps({ steps: [{ label, detail }], current, done, onGo(i), vertical }) */
 export function steps({ steps: list, current = 0, done = [], onGo = null, vertical = false }) {
-  return h('ol', { class: ['fui-steps', vertical && 'fui-steps--vertical'], 'aria-label': 'Steps' }, list.map((st, i) => {
+  return h('ol', { class: ['fui-steps', vertical && 'fui-steps--vertical'], 'aria-label': say('steps.label', 'Steps') }, list.map((st, i) => {
     const state = stateOf(i, current, done);
     const mark = h('span', { class: 'fui-steps__mark', 'aria-hidden': 'true' }, state === 'done' ? icon('check', 13) : String(i + 1));
     const words = h('span', { class: 'fui-steps__words' }, h('span', { class: 'fui-steps__label' }, st.label), st.detail ? h('span', { class: 'fui-steps__detail' }, st.detail) : null);

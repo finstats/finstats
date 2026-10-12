@@ -10,58 +10,53 @@ import { api, uploadRaw } from '../api.js';
 import { card, spinner, inlineError } from '../components.js';
 import { wiringBoard } from './wiring.js';
 import { button } from '../../finui/components/button/button.js';
+import { t, tParts } from '../i18n.js';
 
 // The trackers FinStats can take history from.
 export const IMPORTERS = [
   {
-    key: 'jellystat', task: 'import', name: 'Jellystat', endpoint: '/import/jellystat', file: 'the .jsonl file', accept: '.jsonl,.json,application/json', pattern: /\.(jsonl|json)$/i,
-    title: 'Import from Jellystat', sub: 'Bring your playback history with you',
+    key: 'jellystat', task: 'import', name: 'Jellystat', endpoint: '/import/jellystat', accept: '.jsonl,.json,application/json', pattern: /\.(jsonl|json)$/i,
     steps: [
-      ['Open your Jellystat instance.'],
-      ['Go to ', 'Settings', ' and select the ', 'Backup', ' tab.'],
-      ['Select only ', 'Activity', '. It turns purple when selected.'],
-      ['Under settings, click ', 'Settings', '.'],
-      ['Scroll all the way to the end and start a backup.'],
-      ['Go back to ', 'Backups', '.'],
-      ['Once the new backup shows up, open its ', 'Actions', ' menu and click ', 'Download', '.'],
-      ['Upload the file here.'],
+      ['open'],
+      ['settings_backup', 'Settings', 'Backup'],
+      ['only_activity', 'Activity'],
+      ['under_settings', 'Settings'],
+      ['start_backup'],
+      ['back_to_backups', 'Backups'],
+      ['download', 'Actions', 'Download'],
+      ['upload'],
     ],
-    rows: [['plays_imported', 'Plays imported'], ['plays_skipped', 'Already here'], ['users', 'Users'], ['libraries', 'Libraries'],
-      ['items', 'Movies, series and tracks'], ['seasons', 'Seasons'], ['episodes', 'Episodes'], ['item_info', 'File details']],
-    note: 'Importing the same backup again is safe: plays that are already here are skipped. Backups that also contain libraries and users work too.',
+    rows: ['plays_imported', 'plays_skipped', 'users', 'libraries', 'items', 'seasons', 'episodes', 'item_info'],
   },
   {
-    key: 'streamystats', task: 'import_streamystats', name: 'Streamystats', endpoint: '/import/streamystats', file: 'the .json file', accept: '.json,application/json', pattern: /\.json$/i,
-    title: 'Import from Streamystats', sub: 'Bring your playback history with you',
+    key: 'streamystats', task: 'import_streamystats', name: 'Streamystats', endpoint: '/import/streamystats', accept: '.json,application/json', pattern: /\.json$/i,
     steps: [
-      ['Open your Streamystats instance.'],
-      ['Go to ', 'Settings', ' and select ', 'Backup & Import', '.'],
-      ['Scroll down to ', 'Backup & Restore', '.'],
-      ['Click ', 'Download Backup', '.'],
-      ['Upload the file here.'],
+      ['open'],
+      ['settings_backup_import', 'Settings', 'Backup & Import'],
+      ['scroll_to', 'Backup & Restore'],
+      ['click_download', 'Download Backup'],
+      ['upload'],
     ],
-    rows: [['plays_imported', 'Plays imported'], ['plays_skipped', 'Already here'], ['marked_watched', 'Marked watched, never played'],
-      ['users', 'Users'], ['sessions_read', 'Sessions read']],
-    note: 'Ran both trackers? Import both files; an evening either one already brought in is not counted twice. Streamystats keeps no library data, so titles come from your own Jellyfin.',
+    rows: ['plays_imported', 'plays_skipped', 'marked_watched', 'users', 'sessions_read'],
   },
   {
-    key: 'tautulli', task: 'import_tautulli', name: 'Tautulli', endpoint: '/import/tautulli', file: 'the .db or .zip file', accept: '.db,.zip,application/zip', pattern: /\.(db|zip)$/i,
+    key: 'tautulli', task: 'import_tautulli', name: 'Tautulli', endpoint: '/import/tautulli', accept: '.db,.zip,application/zip', pattern: /\.(db|zip)$/i,
     board: true,
-    title: 'Import from Tautulli', sub: 'Bring your Plex history over, person by person',
     steps: [
-      ['Open your Tautulli instance.'],
-      ['Go to ', 'Settings', ' and select ', 'Import & Backups', '.'],
-      ['Under the database backups, click ', 'Backup Database', '. Tautulli saves it on its own machine, so nothing downloads.'],
-      ['Find it in Tautulli’s ', 'backups', ' folder, inside its data folder (with Docker, inside the folder you mounted as ', '/config', ').'],
-      ['Take the newest ', 'tautulli.backup-…', ' file, ending in .db or .db.zip, not a ', 'config.backup-…', ' one, which holds settings.'],
-      ['Copy it to this computer: scp, a shared folder or your NAS’s file manager all work.'],
-      ['Upload it here, then connect each Plex user to who they are on Jellyfin.'],
+      ['open'],
+      ['settings_import_backups', 'Settings', 'Import & Backups'],
+      ['backup_database', 'Backup Database'],
+      ['find_it', 'backups', '/config'],
+      ['newest', 'tautulli.backup-…', 'config.backup-…'],
+      ['copy'],
+      ['upload_then_wire'],
     ],
-    rows: [['plays_imported', 'Plays imported'], ['plays_skipped', 'Already here'], ['users_wired', 'Plex users connected'],
-      ['not_wired', 'Left behind, without a wire'], ['other_media', 'Music and other media, not imported']],
-    note: 'Plex names rarely match Jellyfin’s, so you connect each Plex user yourself. Films and episodes are matched by name; one not on your server yet is kept, and attached when it arrives. The backup holds Plex’s access tokens: FinStats never reads them, and removes the file once you import or start over.',
+    rows: ['plays_imported', 'plays_skipped', 'users_wired', 'not_wired', 'other_media'],
   },
-];
+].map((imp) => ({ ...imp,
+  file: t(`settings.import.${imp.key}.file`), title: t('settings.import.title', { name: imp.name }), sub: t(`settings.import.${imp.key}.sub`), note: t(`settings.import.${imp.key}.note`),
+  steps: imp.steps.map(([step, ...names]) => ({ key: `settings.import.${imp.key}.step.${step}`, names })),
+  rows: imp.rows.map((k) => [k, t(`settings.import.result.${k}`)]) }));
 
 // The upload lives outside the page so it keeps going if you navigate away. One at a time, so one
 // object: `source` says which card owns it.
@@ -83,8 +78,8 @@ function startUpload(file, imp) {
   })
     .catch((e) => {
       const msg = e.status === -1 ? null
-        : e.status === 409 ? 'An import is already running. Wait for it to finish, then try again.'
-        : e.status === 413 ? 'The server rejected the file as too large. If FinStats sits behind a reverse proxy, raise its upload limit (for nginx: client_max_body_size) and try again.'
+        : e.status === 409 ? t('settings.import.already_running')
+        : e.status === 413 ? t('settings.import.too_large')
         : e.message;
       Object.assign(upload, { active: false, error: msg, handle: null }); notifyUpload();
     });
@@ -94,22 +89,21 @@ function startUpload(file, imp) {
 export const importing = (store) => IMPORTERS.some((i) => { const t = store.task(i.task); return t && t.state === 'running'; });
 
 export default {
-  key: 'import', label: 'Import', sub: 'Bring your history from another tracker', group: 'Data', icon: 'upload',
+  key: 'import', label: t('settings.sections.import.label'), sub: t('settings.sections.import.sub'), group: t('settings.groups.data'), icon: 'upload',
   visible: () => can('manage'),
-  entries: IMPORTERS.map((i) => ({ id: `import-${i.key}`, label: i.title, hint: `${i.name} backup upload history tracker` })),
+  entries: IMPORTERS.map((i) => ({ id: `import-${i.key}`, label: i.title, hint: `${i.name} ${t('settings.import.find_hint')}` })),
   async render(slot, store) {
     const slots = Object.fromEntries(IMPORTERS.map((i) => [i.key, h('div')]));
     // What an import could not match is linked under Settings → Unlinked media: said here while there is any.
     const pointer = h('div');
-    const pointerBox = card({ title: 'Unlinked media', body: pointer, id: 'import-unlinked' });
+    const pointerBox = card({ title: t('settings.sections.unlinked.label'), body: pointer, id: 'import-unlinked' });
     pointerBox.hidden = true;
     mount(slot, IMPORTERS.map((i) => card({ title: i.title, sub: i.sub, body: slots[i.key], id: `import-${i.key}` })), pointerBox);
     async function unlinked() {
       let n = 0;
       try { n = ((await api.get('/library/missing')).missing || []).length; } catch { /* nothing to point at */ }
       pointerBox.hidden = !n;
-      mount(pointer, n ? h('p', { class: 'fui-field__help' }, `${num(n)} title${n === 1 ? '' : 's'} in your history ${n === 1 ? 'doesn’t' : 'don’t'} match anything in your library, usually because of a name the other server used. `,
-        h('a', { href: '/settings/unlinked' }, 'Link them under Unlinked media'), '.') : null);
+      mount(pointer, n ? h('p', { class: 'fui-field__help' }, ...tParts('settings.import.unlinked', { count: n, link: h('a', { href: '/settings/unlinked' }, t('settings.import.unlinked_link')) })) : null);
     }
     unlinked();
     // An import that finishes may have left titles that did not match, or matched some that had not.
@@ -129,8 +123,8 @@ export default {
 
     function pick(file, imp) {
       localErr[imp.key] = null;
-      if (!imp.pattern.test(file.name)) localErr[imp.key] = `“${file.name}” isn’t a ${imp.name} backup. Choose ${imp.file} you downloaded from ${imp.name}.`;
-      else if (!file.size) localErr[imp.key] = `That file is empty. Download the backup from ${imp.name} again.`;
+      if (!imp.pattern.test(file.name)) localErr[imp.key] = t('settings.import.wrong_file', { file: file.name, name: imp.name, what: imp.file });
+      else if (!file.size) localErr[imp.key] = t('settings.import.empty_file', { name: imp.name });
       if (localErr[imp.key]) { paintAll(); return; }
       sawRunning[imp.key] = false;
       startUpload(file, imp);
@@ -176,26 +170,26 @@ export default {
       let stage;
       if (uploading) {
         stage = h('div', { class: 'import-stage', role: 'status' },
-          h('div', { class: 'import-stage-title' }, `Uploading ${upload.fileName}`),
-          h('div', { class: 'fui-meter fui-meter--wide', role: 'progressbar', 'aria-label': 'Upload progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(upload.progress * 100) },
+          h('div', { class: 'import-stage-title' }, t('settings.import.uploading', { file: upload.fileName })),
+          h('div', { class: 'fui-meter fui-meter--wide', role: 'progressbar', 'aria-label': t('settings.import.upload_progress'), 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(upload.progress * 100) },
             h('span', { class: 'fui-meter__fill', style: { width: upload.progress * 100 + '%' } })),
-          h('div', { class: 'import-stage-row' }, h('span', { class: 'mono' }, `${Math.round(upload.progress * 100)}% · ${bytes(upload.loaded)} of ${bytes(upload.total)}`),
-            button({ size: 'sm', type: 'button', onClick: () => upload.handle && upload.handle.abort() }, 'Cancel upload')),
-          h('p', { class: 'fui-field__help' }, 'Keep this tab open until the upload finishes. You can browse other FinStats pages meanwhile.'));
+          h('div', { class: 'import-stage-row' }, h('span', { class: 'mono' }, t('settings.import.upload_line', { percent: Math.round(upload.progress * 100), loaded: bytes(upload.loaded), total: bytes(upload.total) })),
+            button({ size: 'sm', type: 'button', onClick: () => upload.handle && upload.handle.abort() }, t('settings.import.cancel_upload'))),
+          h('p', { class: 'fui-field__help' }, t('settings.import.keep_open')));
       } else if (waiting) {
         stage = boardView(imp);
       } else if (running || justUploaded) {
         stage = h('div', { class: 'import-stage', role: 'status' },
-          h('div', { class: 'import-stage-title' }, spinner(14), running ? 'Importing your history' : 'Upload complete'),
-          h('div', { class: ['fui-meter fui-meter--wide', !(running && task.progress != null) && 'is-indeterminate'], role: 'progressbar', 'aria-label': 'Import progress', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': running && task.progress != null ? Math.round(task.progress * 100) : null },
+          h('div', { class: 'import-stage-title' }, spinner(14), running ? t('settings.import.importing') : t('settings.import.upload_complete')),
+          h('div', { class: ['fui-meter fui-meter--wide', !(running && task.progress != null) && 'is-indeterminate'], role: 'progressbar', 'aria-label': t('settings.import.import_progress'), 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': running && task.progress != null ? Math.round(task.progress * 100) : null },
             h('span', { class: 'fui-meter__fill', style: { width: (running && task.progress != null ? task.progress * 100 : 30) + '%' } })),
-          h('div', { class: 'mono import-msg', 'aria-live': 'polite' }, running ? task.message || 'Reading the backup…' : 'Starting the import…'),
-          h('p', { class: 'fui-field__help' }, 'This runs on the server. It’s safe to leave this page.'));
+          h('div', { class: 'mono import-msg', 'aria-live': 'polite' }, running ? task.message || t('settings.import.reading') : t('settings.import.starting')),
+          h('p', { class: 'fui-field__help' }, t('settings.import.safe_to_leave')));
       } else {
         const input = fileInputs[imp.key];
-        const drop = h('label', { class: ['dropzone', elsewhere && 'is-disabled'], htmlFor: elsewhere ? null : input.id, tabindex: elsewhere ? -1 : 0, role: 'button', 'aria-disabled': elsewhere ? 'true' : null, 'aria-label': `Choose a ${imp.name} backup file` },
-          icon('upload', 20), h('span', { class: 'dropzone-title' }, elsewhere ? 'Another import is running' : `Drop your ${imp.name} backup here`),
-          h('span', { class: 'dropzone-sub' }, elsewhere ? 'One at a time: this one can start when that one finishes' : `or click to choose ${imp.file}. Large backups are fine`));
+        const drop = h('label', { class: ['dropzone', elsewhere && 'is-disabled'], htmlFor: elsewhere ? null : input.id, tabindex: elsewhere ? -1 : 0, role: 'button', 'aria-disabled': elsewhere ? 'true' : null, 'aria-label': t('settings.import.choose_aria', { name: imp.name }) },
+          icon('upload', 20), h('span', { class: 'dropzone-title' }, elsewhere ? t('settings.import.another_running') : t('settings.import.drop_here', { name: imp.name })),
+          h('span', { class: 'dropzone-sub' }, elsewhere ? t('settings.import.one_at_a_time') : t('settings.import.or_click', { what: imp.file })));
         if (!elsewhere) {
           drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
           drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('is-over'); });
@@ -206,28 +200,28 @@ export default {
         let outcome = null;
         if (task && task.state === 'ok' && task.result) {
           outcome = h('div', { class: 'import-result' },
-            h('div', { class: 'fui-badge--status fui-badge--good' }, icon('check', 14), 'Import finished', task.finished_at ? h('span', { class: 'muted mono', title: dateTime(task.finished_at) }, ' ' + relTime(task.finished_at)) : null),
+            h('div', { class: 'fui-badge--status fui-badge--good' }, icon('check', 14), t('settings.import.finished'), task.finished_at ? h('span', { class: 'muted mono', title: dateTime(task.finished_at) }, ' ' + relTime(task.finished_at)) : null),
             task.message ? h('p', { class: 'fui-field__help' }, task.message) : null,
             h('table', { class: 'fui-data-table fui-data-table--dense result-table' }, h('tbody', null, imp.rows.filter(([k]) => task.result[k] != null).map(([k, label]) =>
               h('tr', null, h('th', { scope: 'row' }, label), h('td', { class: 'mono r' }, num(task.result[k])))))),
-            button({ size: 'sm', href: '/' }, 'See your stats', icon('chevronRight', 14)));
+            button({ size: 'sm', href: '/' }, t('settings.import.see_stats'), icon('chevronRight', 14)));
         } else if (task && task.state === 'error') {
-          outcome = h('div', { class: 'import-result' }, inlineError(`import-task-err-${imp.key}`, `The import failed: ${task.error || task.message || 'unknown error'}`),
-            h('p', { class: 'fui-field__help' }, `Nothing was half-imported. Check that the file is an unmodified ${imp.name} backup, then upload it again.`));
+          outcome = h('div', { class: 'import-result' }, inlineError(`import-task-err-${imp.key}`, t('settings.import.failed', { error: task.error || task.message || t('settings.import.unknown_error') })),
+            h('p', { class: 'fui-field__help' }, t('settings.import.nothing_half', { name: imp.name })));
         }
         stage = [drop,
           localErr[imp.key] ? inlineError(`import-local-err-${imp.key}`, localErr[imp.key]) : null,
-          upload.error && mine ? inlineError(`import-upload-err-${imp.key}`, `Upload failed: ${upload.error}`) : null,
+          upload.error && mine ? inlineError(`import-upload-err-${imp.key}`, t('settings.import.upload_failed', { error: upload.error })) : null,
           outcome];
       }
 
       // The board takes the whole card: the wires need the width, and the export steps are done by now.
-      if (waiting) { mount(slots[imp.key], h('h3', { class: 'section-label' }, 'Connect the wires'), stage); return; }
+      if (waiting) { mount(slots[imp.key], h('h3', { class: 'section-label' }, t('settings.import.connect_wires')), stage); return; }
       mount(slots[imp.key],
         h('div', { class: 'import-cols' },
-          h('div', null, h('h3', { class: 'section-label' }, `Export from ${imp.name}`),
-            h('ol', { class: 'steps' }, imp.steps.map((parts) => h('li', null, parts.map((part, i) => (i % 2 ? h('strong', null, part) : part)))))),
-          h('div', null, h('h3', { class: 'section-label' }, 'Upload the backup'), fileInputs[imp.key], stage,
+          h('div', null, h('h3', { class: 'section-label' }, t('settings.import.export_from', { name: imp.name })),
+            h('ol', { class: 'steps' }, imp.steps.map(({ key, names }) => h('li', null, ...tParts(key, Object.fromEntries(names.map((n, i) => ['abc'[i], h('strong', null, n)]))))))),
+          h('div', null, h('h3', { class: 'section-label' }, t('settings.import.upload_backup')), fileInputs[imp.key], stage,
             h('p', { class: 'fui-field__help import-note' }, icon('info', 13), ' ', imp.note))));
     }
     const paintAll = () => { for (const imp of IMPORTERS) paint(imp); };

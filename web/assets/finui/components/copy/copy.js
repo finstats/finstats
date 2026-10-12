@@ -1,8 +1,9 @@
 // FinUI: copy. A small button beside a value that puts it on the clipboard and says, for two seconds, that it did.
 
 import { h, icon, mount } from '../../core.js';
+import { say } from '../../i18n.js';
 
-export function copyButton(text, label = 'Copy') {
+export function copyButton(text, label = say('copy.copy', 'Copy')) {
   let timer = null;
   const btn = h('button', { type: 'button', class: 'fui-copy__button', 'aria-label': label, title: label }, icon('copy', 13));
   const note = h('span', { class: 'fui-copy__note', 'aria-live': 'polite' });
@@ -12,7 +13,7 @@ export function copyButton(text, label = 'Copy') {
     try { await navigator.clipboard.writeText(text); } catch { ok = false; }
     btn.replaceChildren(icon(ok ? 'check' : 'x', 13));
     btn.classList.toggle('is-ok', ok);
-    note.textContent = ok ? 'Copied' : 'Copy failed. Select the text instead';
+    note.textContent = ok ? say('copy.copied', 'Copied') : say('copy.failed', 'Copy failed. Select the text instead');
     clearTimeout(timer);
     timer = setTimeout(() => { btn.replaceChildren(icon('copy', 13)); btn.classList.remove('is-ok'); note.textContent = ''; }, 2000);
   });

@@ -13,6 +13,7 @@ import { groupsCard } from '../widgets.js';
 import { watchToggle, watchable } from '../watchlist.js';
 import { button } from '../../finui/components/button/button.js';
 import { typed } from '../menus.js';
+import { t } from '../i18n.js';
 
 // Coming up: the same loader for the card and the prefetcher. Nothing is asked when no Sonarr or Radarr is connected.
 const hasComing = () => !!(state.user && state.user.features && state.user.features.upcoming);
@@ -42,7 +43,7 @@ const loadRecent = (signal) => soft(api.get('/library/recent', { limit: 30 }, { 
 export const prefetchDashboard = ({ query, signal }) => [() => loadDashboard(scopeOf(query), signal), () => loadRecent(signal), ...(hasComing() ? [() => loadComing(signal)] : [])];
 
 export default function dashboard(ctx) {
-  ctx.title('Dashboard');
+  ctx.title(t('nav.dashboard'));
   let { days, userId } = scopeOf(ctx.query);
   const admin = can('see_everyone'); // sees the whole server rather than only themselves
 
@@ -53,7 +54,7 @@ export default function dashboard(ctx) {
   // that every render of the filtered view below slots in above the Activity chart. Hides itself on empty libraries.
   const shelfBody = h('div');
   const shelfArrows = h('span', { class: 'shelf-arrows', hidden: true });
-  const shelfCard = card({ title: 'Recently added', sub: 'The newest in your libraries', cls: 'shelf-section', actions: shelfArrows, body: shelfBody });
+  const shelfCard = card({ title: t('pages.dashboard.recent.title'), sub: t('pages.dashboard.recent.sub'), cls: 'shelf-section', actions: shelfArrows, body: shelfBody });
   shelfCard.hidden = true;
   dataView({
     container: shelfBody, signal: ctx.signal,
@@ -68,8 +69,8 @@ export default function dashboard(ctx) {
 
   // ---- downloading now: live, and only for people who may see it. Polled while this page is open.
   const dlBody = h('div');
-  const dlCard = card({ title: 'Downloading now', sub: 'From Sonarr, Radarr and your torrent client', cls: 'dl-card',
-    actions: button({ variant: 'ghost', size: 'sm', href: '/pipeline?tab=downloads' }, 'All downloads'), body: dlBody });
+  const dlCard = card({ title: t('pages.dashboard.downloads.title'), sub: t('pages.dashboard.downloads.sub'), cls: 'dl-card',
+    actions: button({ variant: 'ghost', size: 'sm', href: '/pipeline?tab=downloads' }, t('pages.dashboard.downloads.all')), body: dlBody });
   dlCard.hidden = true;
   if (hasDownloads()) {
     const dlView = dataView({
@@ -88,8 +89,8 @@ export default function dashboard(ctx) {
   // itself when nothing is connected or nothing is due.
   const comingBody = h('div');
   const comingArrows = h('span', { class: 'shelf-arrows', hidden: true });
-  const comingCard = card({ title: 'Coming up', sub: 'The next seven days in Sonarr and Radarr', cls: 'shelf-section', body: comingBody,
-    actions: [comingArrows, button({ variant: 'ghost', size: 'sm', href: '/pipeline?tab=upcoming' }, 'Calendar')] });
+  const comingCard = card({ title: t('pages.dashboard.coming.title'), sub: t('pages.dashboard.coming.sub'), cls: 'shelf-section', body: comingBody,
+    actions: [comingArrows, button({ variant: 'ghost', size: 'sm', href: '/pipeline?tab=upcoming' }, t('pages.dashboard.coming.calendar'))] });
   comingCard.hidden = true;
   if (hasComing()) {
     dataView({
@@ -100,7 +101,7 @@ export default function dashboard(ctx) {
         const list = ((d && d.entries) || []).slice(0, 30);
         comingCard.hidden = !list.length;
         // The toggle beside each card's link, as on Recently added and Pipeline's Upcoming.
-        return list.length ? shelfRow(list.map((e) => [entryCard(e), watchToggle(entryTitle(e), { compact: true, name: entryName(e) })]), comingArrows, 'Coming up, soonest first') : null;
+        return list.length ? shelfRow(list.map((e) => [entryCard(e), watchToggle(entryTitle(e), { compact: true, name: entryName(e) })]), comingArrows, t('pages.dashboard.coming.aria')) : null;
       },
     }).load();
   }
@@ -114,12 +115,12 @@ export default function dashboard(ctx) {
     render: ({ overview, series, movies, users, heat, recent, insights, groups }) => {
       const nothingYet = days === 0 && !userId && !(overview.totals && overview.totals.plays);
       if (nothingYet) {
-        return [emptyState('No plays recorded yet',
-          can('manage') ? 'FinStats is now watching your Jellyfin server. New plays show up here as they happen. You can also bring in the history you already have, from Jellystat or Streamystats.'
-                : 'Your plays show up here as they happen.',
+        return [emptyState(t('pages.dashboard.empty.title'),
+          can('manage') ? t('pages.dashboard.empty.manager')
+                : t('pages.dashboard.empty.viewer'),
           can('manage') ? h('div', { class: 'fui-empty__buttons' },
-            button({ variant: 'primary', href: '/settings/import#import-jellystat' }, icon('upload', 14), 'Import from Jellystat'),
-            button({ href: '/settings/import#import-streamystats' }, icon('upload', 14), 'Import from Streamystats')) : null), dlCard, shelfCard, comingCard];
+            button({ variant: 'primary', href: '/settings/import#import-jellystat' }, icon('upload', 14), t('pages.dashboard.empty.import_jellystat')),
+            button({ href: '/settings/import#import-streamystats' }, icon('upload', 14), t('pages.dashboard.empty.import_streamystats'))) : null), dlCard, shelfCard, comingCard];
       }
       const usersMode = admin && !userId;
       return [
@@ -130,16 +131,16 @@ export default function dashboard(ctx) {
         comingCard,
         activityCard({ daily: overview.daily, bucket: overview.bucket }),
         h('div', { class: 'grid-3' },
-          card({ title: 'Top series', sub: 'By watch time', body: topList(series.rows) }),
-          card({ title: 'Top movies', sub: 'By watch time', body: topList(movies.rows) }),
-          usersMode ? card({ title: 'Top users', sub: 'By watch time', body: topList(users.rows, { kind: 'users' }) })
-                    : card({ title: 'Top music', sub: 'By watch time', body: topList(users.rows, { empty: 'No music played in this range.' }) })),
+          card({ title: t('pages.dashboard.top.series'), sub: t('widgets.by_watch_time'), body: topList(series.rows) }),
+          card({ title: t('pages.dashboard.top.movies'), sub: t('widgets.by_watch_time'), body: topList(movies.rows) }),
+          usersMode ? card({ title: t('pages.dashboard.top.users'), sub: t('widgets.by_watch_time'), body: topList(users.rows, { kind: 'users' }) })
+                    : card({ title: t('pages.dashboard.top.music'), sub: t('widgets.by_watch_time'), body: topList(users.rows, { empty: t('pages.dashboard.top.no_music') }) })),
         insights ? h('div', { class: 'grid-heat' }, heatmapCard({ data: heat }), genresCard(insights.genres)) : heatmapCard({ data: heat }),
         // One person's companions only when one person is picked: several (`a,b`) are a group, not somebody to be with.
         groupsCard(groups, { forUser: (userId && !userId.includes(',') ? userId : null) || (admin ? null : state.user.id) }),
         insights ? failedLoginsCard(insights.failed_logins) : null,
-        card({ title: 'Recent activity', actions: button({ variant: 'ghost', size: 'sm', href: '/activity' }, 'View all', icon('chevronRight', 14)),
-          cls: 'fui-card--flush', body: playsTable(recent.rows, { showUser: admin, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }), empty: 'No plays in this range.' }) }),
+        card({ title: t('pages.dashboard.recent_activity'), actions: button({ variant: 'ghost', size: 'sm', href: '/activity' }, t('pages.dashboard.view_all'), icon('chevronRight', 14)),
+          cls: 'fui-card--flush', body: playsTable(recent.rows, { showUser: admin, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }), empty: t('plays_table.empty_range') }) }),
       ];
     },
   });
@@ -151,7 +152,7 @@ export default function dashboard(ctx) {
 
   // Native append() prints a missing node as the text "null", so absent pieces are filtered out.
   ctx.root.append(...[
-    pageHeader('Dashboard', state.status && state.status.server_name ? `Playback on ${state.status.server_name}` : 'Playback on your Jellyfin server'),
+    pageHeader(t('nav.dashboard'), state.status && state.status.server_name ? t('pages.dashboard.sub', { server: state.status.server_name }) : t('pages.dashboard.sub_default')),
     recapBanner(),
     nowPlaying.el,
     filters, view].filter(Boolean));
@@ -170,12 +171,13 @@ function shelf(items, arrows) {
     h('span', { class: 'shelf-sub' }, whatArrived(it))),
     // Beside the card's link, not inside it: a button in a link is two controls in one. Episodes fold into their show,
     // and the show is what goes on a list.
-    it.kind === 'episodes' || watchable(it.type) ? watchToggle({ item_id: it.id }, { compact: true, name: it.name }) : null]), arrows, 'Recently added, newest first');
+    it.kind === 'episodes' || watchable(it.type) ? watchToggle({ item_id: it.id }, { compact: true, name: it.name }) : null]), arrows, t('pages.dashboard.recent.aria'));
 }
 
+const ARRIVED = ['Movie', 'MusicAlbum', 'MusicVideo', 'Video', 'Book', 'AudioBook'];
 function whatArrived(it) {
-  if (it.kind !== 'episodes') return { Movie: 'Movie', MusicAlbum: 'Album', MusicVideo: 'Music video', Video: 'Video', Book: 'Book', AudioBook: 'Audiobook' }[it.type] || it.type;
-  if (it.episodes === 1) return it.episode_number != null ? `Episode ${it.episode_number}` : '1 episode';
-  return `${it.episodes} episodes`;
+  if (it.kind !== 'episodes') return ARRIVED.includes(it.type) ? t(`pages.dashboard.arrived.${it.type}`) : it.type;
+  if (it.episodes === 1) return it.episode_number != null ? t('pages.dashboard.arrived.episode_number', { number: it.episode_number }) : t('terms.episode', { count: 1 });
+  return t('terms.episode', { count: it.episodes });
 }
 

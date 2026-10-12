@@ -1,9 +1,13 @@
 // Thin fetch wrapper for the FinStats API (see the HTTP API page, docs/finstats/api.md in github.com/finstats/docs).
 
+import { t, lang } from './i18n.js';
+
 export class ApiError extends Error {
-  constructor(status, message) {
+  /** `field`: the form field the server says the error is about, where it says one. */
+  constructor(status, message, field = null) {
     super(message);
     this.status = status;
+    this.field = field;
   }
 }
 
@@ -77,7 +81,8 @@ function request(method, path, { body, signal, params, quiet401 = false } = {}) 
 }
 
 async function send(method, path, { body, signal, params, quiet401 = false } = {}) {
-  const init = { method, signal, credentials: 'same-origin', headers: { Accept: 'application/json' } };
+  // The language this page reads in, so what the server answers in words is in it too.
+  const init = { method, signal, credentials: 'same-origin', headers: { Accept: 'application/json', 'Accept-Language': lang() } };
   if (body !== undefined) {
     init.headers['Content-Type'] = 'application/json';
     init.body = JSON.stringify(body);
@@ -87,13 +92,13 @@ async function send(method, path, { body, signal, params, quiet401 = false } = {
     res = await fetch('/api' + path + qs(params), init);
   } catch (e) {
     if (e.name === 'AbortError') throw e;
-    throw new ApiError(0, 'Can’t reach FinStats. Check that the server is running and try again.');
+    throw new ApiError(0, t('errors.unreachable'));
   }
   let data = null;
   const text = await res.text();
   if (text) { try { data = JSON.parse(text); } catch { data = null; } }
   if (!res.ok) {
-    const err = new ApiError(res.status, (data && data.error) || `Request failed (${res.status})`);
+    const err = new ApiError(res.status, (data && data.error) || t('errors.request_failed', { status: res.status }), (data && data.field) || null);
     if (res.status === 401 && !quiet401) onUnauthorized();
     throw err;
   }
@@ -135,15 +140,16 @@ export function uploadRaw(path, file, onProgress) {
     xhr.open('POST', '/api' + path);
     xhr.setRequestHeader('Content-Type', 'application/octet-stream');
     xhr.setRequestHeader('Accept', 'application/json');
+    xhr.setRequestHeader('Accept-Language', lang());
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total, e.loaded, e.total); };
     xhr.onload = () => {
       let data = null;
       try { data = JSON.parse(xhr.responseText); } catch { /* not json */ }
       if (xhr.status >= 200 && xhr.status < 300) resolve(data);
-      else reject(new ApiError(xhr.status, (data && data.error) || `Upload failed (${xhr.status})`));
+      else reject(new ApiError(xhr.status, (data && data.error) || t('errors.upload_failed', { status: xhr.status })));
     };
-    xhr.onerror = () => reject(new ApiError(0, 'The upload was interrupted. Check your connection and try again.'));
-    xhr.onabort = () => reject(new ApiError(-1, 'Upload cancelled.'));
+    xhr.onerror = () => reject(new ApiError(0, t('errors.upload_interrupted')));
+    xhr.onabort = () => reject(new ApiError(-1, t('errors.upload_cancelled')));
     xhr.send(file);
   });
   return { promise, abort: () => xhr.abort() };

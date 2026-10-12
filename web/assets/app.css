@@ -581,6 +581,8 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
    headers break onto two lines and tighten the gutters instead of scrolling a table that has room. */
 .cm-table th, .cm-table td { padding-left: 8px; padding-right: 8px; }
 .cm-table thead th.r { white-space: normal; line-height: 1.25; vertical-align: bottom; }
+/* Places' column names run long in some languages ("INNLOGGINGER"): they wrap rather than push the table out of its card. */
+.places-table thead th { white-space: normal; line-height: 1.25; vertical-align: bottom; }
 .cm-table thead th.r .fui-data-table__sort { text-align: right; }
 .sbar-sm { display: flex; height: 8px; min-width: 0; }
 

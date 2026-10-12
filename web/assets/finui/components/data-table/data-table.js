@@ -10,17 +10,23 @@
 // to the page, which asks the server.
 
 import { h, icon } from '../../core.js';
+import { say, locale } from '../../i18n.js';
 
-// The separators the app itself prints with (`num()` in FinUI's format.js is en-US), not the browser's: read with a
-// German or Norwegian locale's, "1,204" was 1.204 and "12,345,678" was not a number at all.
-const GROUP_RE = /[,\s\u00a0\u202f]/g;
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+// The separators the app itself prints with (`num()` in FinUI's format.js, in the app's language), not the browser's:
+// read with another language's, "1,204" was 1.204 and "12,345,678" was not a number at all.
+function separators() {
+  const parts = new Intl.NumberFormat(locale()).formatToParts(12345.6);
+  return { group: (parts.find((p) => p.type === 'group') || {}).value || ',', decimal: (parts.find((p) => p.type === 'decimal') || {}).value || '.' };
+}
+let coll = null, collFor = '';
+const collator = () => (collFor === locale() ? coll : (collFor = locale(), coll = new Intl.Collator(collFor, { numeric: true, sensitivity: 'base' })));
 
 const BYTES = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4, PB: 1024 ** 5 };
 const SCALE = { K: 1e3, M: 1e6, B: 1e9 };
 
 function plainNumber(text) {
-  const t = text.replace(GROUP_RE, '');
+  const { group, decimal } = separators();
+  const t = text.split(group).join('').replace(/[\s\u00a0\u202f]/g, '').split(decimal).join('.');
   return /^[-+−]?\d+(\.\d+)?$/.test(t) ? Number(t.replace('−', '-')) : null;
 }
 
@@ -29,13 +35,14 @@ export function textValue(raw) {
   const text = String(raw == null ? '' : raw).trim();
   if (!text || text === '–' || text === '-') return null;
   let m;
-  if ((m = /^(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?$/.exec(text)) && m[0]) return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0);
+  // Durations as each language writes them: "3d 2h", "3 d 2 t", "48m", "48 min".
+  if ((m = /^(?:(\d+)\s?d)?\s*(?:(\d+)\s?[ht])?\s*(?:(\d+)\s?m(?:in)?)?\s*(?:(\d+)\s?s)?$/.exec(text)) && m[0]) return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0);
   if ((m = /^([\d.,\s]+?)\s*%/.exec(text))) return plainNumber(m[1]);
-  if ((m = /^([\d.]+)\s*(B|KB|MB|GB|TB|PB)$/.exec(text))) return Number(m[1]) * BYTES[m[2]];
-  if ((m = /^([\d.]+)\s*(kbps|Mbps)$/.exec(text))) return Number(m[1]) * (m[2] === 'Mbps' ? 1e6 : 1e3);
-  if ((m = /^([\d.]+)(K|M|B)$/.exec(text))) return Number(m[1]) * SCALE[m[2]];
-  if ((m = /^★\s*([\d.]+)$/.exec(text))) return Number(m[1]);
-  if ((m = /^([\d.,\s]+?)\s+of\s+[\d.,\s]+$/.exec(text))) return plainNumber(m[1]);
+  if ((m = /^([\d.,]+)\s*(B|KB|MB|GB|TB|PB)$/.exec(text))) return plainNumber(m[1]) * BYTES[m[2]];
+  if ((m = /^([\d.,]+)\s*(kbps|Mbps)$/.exec(text))) return plainNumber(m[1]) * (m[2] === 'Mbps' ? 1e6 : 1e3);
+  if ((m = /^([\d.,]+)(K|M|B)$/.exec(text))) return plainNumber(m[1]) * SCALE[m[2]];
+  if ((m = /^★\s*([\d.,]+)$/.exec(text))) return plainNumber(m[1]);
+  if ((m = /^([\d.,\s\u00a0\u202f]+?)\s+(?:of|av)\s+[\d.,\s\u00a0\u202f]+$/.exec(text))) return plainNumber(m[1]);
   return plainNumber(text);
 }
 
@@ -92,7 +99,7 @@ export function sortable(table, { server = null } = {}) {
         const [an, at] = vals.get(a), [bn, bt] = vals.get(b);
         const ae = numeric ? an == null : !at, be = numeric ? bn == null : !bt;
         if (ae || be) return ae === be ? 0 : ae ? 1 : -1; // empty last, whichever way
-        return sign * (numeric ? an - bn : collator.compare(at, bt));
+        return sign * (numeric ? an - bn : collator().compare(at, bt));
       });
     }
     body.append(...pinned, ...rows);
@@ -108,7 +115,7 @@ export function sortable(table, { server = null } = {}) {
   headers.forEach((th, i) => {
     if (th.dataset.nosort != null || !th.textContent.trim() || (server && !th.dataset.key)) return;
     const label = th.textContent.trim();
-    const btn = h('button', { type: 'button', class: 'fui-data-table__sort', title: `Sort by ${label.toLowerCase()}` }, [...th.childNodes], arrow());
+    const btn = h('button', { type: 'button', class: 'fui-data-table__sort', title: say('data_table.sort_by', `Sort by ${label.toLowerCase()}`, { label: label.toLowerCase() }) }, [...th.childNodes], arrow());
     th.append(btn);
     btn.addEventListener('click', () => {
       if (server) {
@@ -133,7 +140,7 @@ export function sortable(table, { server = null } = {}) {
  * A table in its scroll box, sortable, with a quick row filter above it once it is long enough to
  * need one. `filter`: 'auto' (10 rows or more), true or false.
  */
-export function dataTable(table, { server = null, filter = 'auto', cls = '', label = 'Filter rows' } = {}) {
+export function dataTable(table, { server = null, filter = 'auto', cls = '', label = say('data_table.filter_rows', 'Filter rows') } = {}) {
   sortable(table, { server });
   const body = table.tBodies[0];
   const rows = body ? [...body.rows] : [];
@@ -141,8 +148,8 @@ export function dataTable(table, { server = null, filter = 'auto', cls = '', lab
   const scroll = h('div', { class: 'fui-data-table__scroll ' + cls }, table);
   if (!wantFilter) return scroll;
 
-  const none = h('p', { class: 'fui-data-table__none', hidden: true }, 'No rows match.');
-  const input = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: label + '…', 'aria-label': label, autocomplete: 'off' });
+  const none = h('p', { class: 'fui-data-table__none', hidden: true }, say('data_table.none', 'No rows match.'));
+  const input = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: say('data_table.filter_placeholder', label + '…', { label }), 'aria-label': label, autocomplete: 'off' });
   const texts = new Map(rows.map((r) => [r, r.textContent.toLowerCase()]));
   input.addEventListener('input', () => {
     const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);

@@ -5,6 +5,7 @@
 import { h, s, icon, num } from './dom.js';
 import { showTip, hideTip, tipShown } from './charts.js';
 import { button } from '../finui/components/button/button.js';
+import { t, lang } from './i18n.js';
 
 const MIN_W = 70;            // the closest zoom, in map units (the whole world is 2000 wide)
 // How it stays smooth. The coastline is 445 kB of path, and drawing it again is what costs: every change of the viewBox
@@ -15,16 +16,24 @@ const MIN_W = 70;            // the closest zoom, in map units (the whole world 
 // above the SVG, animated by transform and opacity, so it never touches the map at all.
 const SETTLE_MS = 160;       // a gesture has settled when nothing has moved for this long
 const KINDS = {
-  home: { label: 'Home network', cls: 'wm-home' },
-  remote: { label: 'Away from home', cls: 'wm-remote' },
-  failed: { label: 'Failed sign-ins', cls: 'wm-failed' },
-  live: { label: 'Playing now', cls: 'wm-live' },
+  home: { label: t('worldmap.kinds.home'), cls: 'wm-home' },
+  remote: { label: t('worldmap.kinds.remote'), cls: 'wm-remote' },
+  failed: { label: t('worldmap.kinds.failed'), cls: 'wm-failed' },
+  live: { label: t('plays_table.playing_now'), cls: 'wm-live' },
 };
+
+let regions;
+/** A country's name in the language in use, by its ISO code; `fallback` (the name as given) when there is no code or no name for it. */
+export function countryName(code, fallback) {
+  if (regions === undefined) { try { regions = new Intl.DisplayNames([lang()], { type: 'region', fallback: 'none' }); } catch { regions = null; } }
+  if (!code || !regions) return fallback || code || '';
+  try { return regions.of(String(code).toUpperCase()) || fallback || code; } catch { return fallback || code; }
+}
 
 let worldPromise = null;
 function loadWorld() {
   if (!worldPromise) {
-    worldPromise = fetch('/assets/geo/world.json').then((r) => { if (!r.ok) throw new Error('The map could not be loaded'); return r.json(); })
+    worldPromise = fetch('/assets/geo/world.json').then((r) => { if (!r.ok) throw new Error(t('worldmap.load_failed')); return r.json(); })
       .catch((e) => { worldPromise = null; throw e; });
   }
   return worldPromise;
@@ -42,14 +51,14 @@ function projector(world) {
  * Returns { el, show(coords, { line }), destroy }.
  */
 export function worldMap({ points, countries = [], onPick, signal }) {
-  const svg = s('svg', { class: 'wm-svg', role: 'group', 'aria-label': 'World map. Drag to move, use the buttons or Ctrl and the wheel to zoom.', tabindex: '0' });
+  const svg = s('svg', { class: 'wm-svg', role: 'group', 'aria-label': t('worldmap.aria'), tabindex: '0' });
   const land = s('g', { class: 'wm-lands' }), routeLayer = s('g', { class: 'wm-routes' }), dotLayer = s('g', { class: 'wm-dots' });
   svg.append(land, routeLayer, dotLayer);
-  const hint = h('div', { class: 'wm-hint', hidden: true }, 'Hold Ctrl and scroll to zoom');
-  const status = h('div', { class: 'wm-status' }, 'Loading the map…');
-  const zoomIn = button({ size: 'sm', class: 'wm-btn', type: 'button', 'aria-label': 'Zoom in', title: 'Zoom in (+)' }, icon('plus', 14));
-  const zoomOut = button({ size: 'sm', class: 'wm-btn', type: 'button', 'aria-label': 'Zoom out', title: 'Zoom out (−)' }, icon('minus', 14));
-  const fitBtn = button({ size: 'sm', class: 'wm-btn', type: 'button', 'aria-label': 'Show every dot', title: 'Show every dot (0)' }, icon('compass', 14));
+  const hint = h('div', { class: 'wm-hint', hidden: true }, t('worldmap.wheel_hint'));
+  const status = h('div', { class: 'wm-status' }, t('worldmap.loading'));
+  const zoomIn = button({ size: 'sm', class: 'wm-btn', type: 'button', 'aria-label': t('worldmap.zoom_in'), title: t('worldmap.zoom_in_key') }, icon('plus', 14));
+  const zoomOut = button({ size: 'sm', class: 'wm-btn', type: 'button', 'aria-label': t('worldmap.zoom_out'), title: t('worldmap.zoom_out_key') }, icon('minus', 14));
+  const fitBtn = button({ size: 'sm', class: 'wm-btn', type: 'button', 'aria-label': t('worldmap.show_all'), title: t('worldmap.show_all_key') }, icon('compass', 14));
   const pulses = h('div', { class: 'wm-pulses', 'aria-hidden': 'true' });
   const stage = h('div', { class: 'wm-stage' }, svg, pulses);
   const frame = h('div', { class: 'wm-frame' }, stage, status, hint, h('div', { class: 'wm-controls' }, zoomIn, zoomOut, fitBtn));
@@ -157,12 +166,12 @@ export function worldMap({ points, countries = [], onPick, signal }) {
     shown = []; hovering = null;
     dotLayer.replaceChildren(...groups.map((g) => {
       const r = radiusPx(g.weight) * k, one = g.members.length === 1 ? g.members[0] : null;
-      const label = one ? one.label : `${g.members.length} places near ${g.members[0].label}`;
+      const label = one ? one.label : t('worldmap.places_near', { count: g.members.length, place: g.members[0].label });
       const node = s('g', { class: 'wm-dot ' + KINDS[g.kind].cls, tabindex: '0', role: 'button', 'aria-label': `${KINDS[g.kind].label}: ${label}` },
         s('circle', { class: 'wm-mark', cx: g.xy[0], cy: g.xy[1], r }),
         one ? null : s('text', { class: 'wm-count', x: g.xy[0], y: g.xy[1], 'font-size': 10.5 * k, dy: '0.35em' }, String(g.members.length)));
-      const tip = () => (one ? one.tip() : h('div', null, h('div', { class: 'fui-tooltip__title' }, `${g.members.length} places`),
-        g.members.slice(0, 6).map((m) => h('div', { class: 'fui-tooltip__row' }, h('span', null, m.label))), h('div', { class: 'fui-tooltip__title' }, 'Click to zoom in')));
+      const tip = () => (one ? one.tip() : h('div', null, h('div', { class: 'fui-tooltip__title' }, t('worldmap.places', { count: g.members.length })),
+        g.members.slice(0, 6).map((m) => h('div', { class: 'fui-tooltip__row' }, h('span', null, m.label))), h('div', { class: 'fui-tooltip__title' }, t('worldmap.click_to_zoom'))));
       const pick = () => { if (one) { if (onPick) onPick(one); } else fit(g.members, { pad: 1.8, minW: MIN_W }); };
       // Anchored on the circle itself: the group's box is the circle and whatever else a group ever holds.
       const mark = node.querySelector('.wm-mark');
@@ -249,12 +258,13 @@ export function worldMap({ points, countries = [], onPick, signal }) {
     if (signal && signal.aborted) return;
     world = w;
     project = projector(w);
-    land.replaceChildren(...w.countries.map((c) => s('path', { class: 'wm-land' + (c.c && hot.has(c.c) ? ' is-hot' : ''), d: c.d }, s('title', null, c.n))));
+    land.replaceChildren(...w.countries.map((c) => s('path', { class: 'wm-land' + (c.c && hot.has(c.c) ? ' is-hot' : ''), d: c.d }, s('title', null, countryName(c.c, c.n)))));
     placed = points.filter((p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude)).map((p) => ({ ...p, xy: project(p.longitude, p.latitude) }));
     status.hidden = true;
     measure();
     fitAll();
-  }).catch((e) => { status.textContent = e.message || 'The map could not be loaded'; });
+  }).catch((e) => { status.textContent = e.message || t('worldmap.load_failed'); });
+
 
   return {
     el,

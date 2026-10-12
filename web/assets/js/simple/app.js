@@ -4,6 +4,7 @@
 // Pages it shares with the other layout (signing in, Settings, licences, patch notes) are fetched when they are opened.
 
 import { icon } from '../dom.js';
+import { t } from '../i18n.js';
 import { route, setLayout } from '../router.js';
 import { pageHeader, emptyState } from '../components.js';
 import { boot } from '../boot.js';
@@ -22,7 +23,7 @@ import graphs, { prefetchGraphs } from './pages/graphs.js';
 const later = (load) => (ctx) => load().then((page) => { if (!ctx.signal.aborted) page(ctx); }).catch((e) => {
   if (ctx.signal.aborted) return;
   console.error(e);
-  ctx.root.textContent = 'This page failed to render. Reload to try again.';
+  ctx.root.textContent = t('common.page_failed');
 });
 const settings = later(() => import('../pages/settings.js').then((m) => m.default));
 
@@ -42,9 +43,9 @@ route('/settings/:section/:task', settings);
 route('/changelog', later(() => import('./pages/changelog.js').then((m) => m.default)));
 route('/licenses', later(() => import('../pages/licenses.js').then((m) => m.default)));
 route('*', (ctx) => {
-  ctx.title('Not found');
-  ctx.root.append(pageHeader('Page not found'), emptyState('There’s nothing at this address.', 'Simple mode has the home, libraries, users, history and graphs; the rest of FinStats is in its own layout (Settings → Appearance).',
-    button({ href: '/' }, icon('home', 14), 'Go home')));
+  ctx.title(t('not_found.page_title'));
+  ctx.root.append(pageHeader(t('not_found.title')), emptyState(t('not_found.nothing_here'), t('not_found.simple'),
+    button({ href: '/' }, icon('home', 14), t('not_found.go_home'))));
 });
 
 setLayout(layout);

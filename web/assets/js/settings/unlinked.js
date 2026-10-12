@@ -5,15 +5,16 @@ import { h } from '../dom.js';
 import { can } from '../state.js';
 import { card } from '../components.js';
 import { missingCard } from './missing.js';
+import { t } from '../i18n.js';
 
 export default {
-  key: 'unlinked', label: 'Unlinked media', sub: 'Imported plays that match nothing in your library', group: 'Data', icon: 'link',
+  key: 'unlinked', label: t('settings.sections.unlinked.label'), sub: t('settings.sections.unlinked.sub'), group: t('settings.groups.data'), icon: 'link',
   visible: () => can('manage'),
-  entries: [{ id: 'unlinked', label: 'Link a title by hand', hint: 'unlinked missing unmatched locate match title tautulli jellystat streamystats import plex' }],
+  entries: [{ id: 'unlinked', label: t('settings.unlinked.entry'), hint: t('settings.unlinked.entry_hint') }],
   async render(slot) {
     const body = h('div');
-    const box = card({ title: 'Unlinked media', sub: 'Plays whose title your library calls something else, or no longer has', body, id: 'unlinked' });
+    const box = card({ title: t('settings.sections.unlinked.label'), sub: t('settings.unlinked.card_sub'), body, id: 'unlinked' });
     slot.append(box);
-    missingCard(body, box, { empty: 'Everything in your history is linked to a title in your library.' });
+    missingCard(body, box, { empty: t('settings.unlinked.empty') });
   },
 };

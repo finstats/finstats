@@ -3,6 +3,7 @@
 
 import { h, mount } from '../../core.js';
 import { snap, fraction, fromPointer, keyed, nearest } from './plan.js';
+import { say } from '../../i18n.js';
 
 /** slider({ label, min, max, step, value, onChange, format, marks, disabled, hideLabel }): `value` a number, or [from, to]
  *  for two thumbs. `format(v)` says a value ("30 min"); `marks`: values to name under the track; `hideLabel` shows only
@@ -13,7 +14,7 @@ export function slider({ label, min = 0, max = 100, step = 1, value = min, onCha
   let values = (two ? value : [value]).map((v) => snap(v, o));
   const out = h('output', { class: 'fui-slider__value' });
   const fill = h('span', { class: 'fui-slider__fill' });
-  const thumbs = values.map((_, i) => h('span', { class: 'fui-slider__thumb', role: 'slider', tabindex: disabled ? '-1' : '0', 'aria-label': two ? `${label}, ${i ? 'highest' : 'lowest'}` : label,
+  const thumbs = values.map((_, i) => h('span', { class: 'fui-slider__thumb', role: 'slider', tabindex: disabled ? '-1' : '0', 'aria-label': two ? (i ? say('slider.highest', `${label}, highest`, { label }) : say('slider.lowest', `${label}, lowest`, { label })) : label,
     'aria-valuemin': String(min), 'aria-valuemax': String(max), 'aria-disabled': disabled ? 'true' : null }));
   const track = h('div', { class: 'fui-slider__track' }, fill, thumbs);
   const el = h('div', { class: ['fui-slider', disabled && 'is-disabled'] },

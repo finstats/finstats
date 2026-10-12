@@ -1,17 +1,18 @@
-import { h, icon, debounce, num, dateTime, relTime } from '../dom.js';
+import { h, icon, debounce, dateTime, relTime } from '../dom.js';
 import { api } from '../api.js';
 import { replaceQuery, navigate } from '../router.js';
 import { card, dataView, sk, pagination, emptyState } from '../components.js';
 import { dataTable } from '../tables.js';
+import { t } from '../i18n.js';
 
 const PER_PAGE = 50;
 // Status colors always ship with an icon + label.
 const SEVERITY = {
-  error: { cls: 'fui-badge--critical', icon: 'alert', label: 'Error' }, critical: { cls: 'fui-badge--critical', icon: 'alert', label: 'Critical' },
-  fatal: { cls: 'fui-badge--critical', icon: 'alert', label: 'Fatal' },
-  warn: { cls: 'fui-badge--warning', icon: 'alert', label: 'Warning' }, warning: { cls: 'fui-badge--warning', icon: 'alert', label: 'Warning' },
-  information: { cls: 'fui-badge--info', icon: 'info', label: 'Info' }, info: { cls: 'fui-badge--info', icon: 'info', label: 'Info' },
-  debug: { cls: 'fui-badge--info', icon: 'info', label: 'Debug' }, trace: { cls: 'fui-badge--info', icon: 'info', label: 'Trace' },
+  error: { cls: 'fui-badge--critical', icon: 'alert', label: t('pages.events.level.error') }, critical: { cls: 'fui-badge--critical', icon: 'alert', label: t('pages.events.level.critical') },
+  fatal: { cls: 'fui-badge--critical', icon: 'alert', label: t('pages.events.level.fatal') },
+  warn: { cls: 'fui-badge--warning', icon: 'alert', label: t('pages.events.level.warning') }, warning: { cls: 'fui-badge--warning', icon: 'alert', label: t('pages.events.level.warning') },
+  information: { cls: 'fui-badge--info', icon: 'info', label: t('pages.events.level.info') }, info: { cls: 'fui-badge--info', icon: 'info', label: t('pages.events.level.info') },
+  debug: { cls: 'fui-badge--info', icon: 'info', label: t('pages.events.level.debug') }, trace: { cls: 'fui-badge--info', icon: 'info', label: t('pages.events.level.trace') },
 };
 
 // Shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
@@ -32,8 +33,8 @@ export function logView(ctx) {
   const typeSlot = h('span');
 
   function paintType() {
-    typeSlot.replaceChildren(f.type ? h('span', { class: 'fui-chip fui-chip--removable' }, 'Type: ' + f.type,
-      h('button', { type: 'button', class: 'fui-chip__x', 'aria-label': 'Remove type filter', onClick: () => { f.type = ''; apply(); } }, icon('x', 12))) : '');
+    typeSlot.replaceChildren(f.type ? h('span', { class: 'fui-chip fui-chip--removable' }, t('pages.events.type_chip', { type: f.type }),
+      h('button', { type: 'button', class: 'fui-chip__x', 'aria-label': t('pages.events.remove_type'), onClick: () => { f.type = ''; apply(); } }, icon('x', 12))) : '');
   }
   function apply(reset = true) {
     if (reset) f.page = 1;
@@ -47,24 +48,24 @@ export function logView(ctx) {
     skeleton: () => sk.tableRows(5),
     fetch: () => loadEvents(f, ctx.signal),
     render: (data) => {
-      summary.textContent = `${num(data.total)} ${data.total === 1 ? 'entry' : 'entries'}`;
-      if (!data.rows.length) return emptyState(f.q || f.type ? 'No log entries match these filters.' : 'No log entries yet', f.q || f.type ? null : 'Entries arrive with the next “Sync server log” task.');
+      summary.textContent = t('pages.events.entries', { count: data.total });
+      if (!data.rows.length) return emptyState(f.q || f.type ? t('pages.events.empty_filtered') : t('pages.events.empty'), f.q || f.type ? null : t('pages.events.empty_sub'));
       return [dataTable(h('table', { class: 'fui-data-table events' },
-        h('thead', null, h('tr', null, h('th', { 'data-key': 'when', 'data-first': 'desc' }, 'When'), h('th', { 'data-nosort': '' }, 'Level'), h('th', { 'data-key': 'event' }, 'Event'), h('th', { 'data-key': 'user' }, 'User'), h('th', { 'data-key': 'type' }, 'Type'))),
+        h('thead', null, h('tr', null, h('th', { 'data-key': 'when', 'data-first': 'desc' }, t('pages.events.col.when')), h('th', { 'data-nosort': '' }, t('pages.events.col.level')), h('th', { 'data-key': 'event' }, t('pages.events.col.event')), h('th', { 'data-key': 'user' }, t('pages.events.col.user')), h('th', { 'data-key': 'type' }, t('pages.events.col.type')))),
         h('tbody', null, data.rows.map((e) => {
           const sev = SEVERITY[String(e.severity || '').toLowerCase()] || SEVERITY.info;
           return h('tr', null,
             h('td', { class: 'mono nowrap', title: dateTime(e.date) }, relTime(e.date)),
             h('td', null, h('span', { class: 'fui-badge--status ' + sev.cls }, icon(sev.icon, 13), sev.label)),
             h('td', null, h('div', { class: 'event-name' }, e.name), e.overview ? h('div', { class: 'event-overview' }, e.overview) : null),
-            h('td', null, e.user_id ? h('a', { href: `/users/${e.user_id}` }, e.user_name || 'User') : h('span', { class: 'muted' }, '–')),
-            h('td', null, e.type ? h('button', { type: 'button', class: 'fui-chip fui-chip--button mono', title: 'Show only this type', onClick: () => { f.type = e.type; apply(); } }, e.type) : null));
+            h('td', null, e.user_id ? h('a', { href: `/users/${e.user_id}` }, e.user_name || t('pages.events.col.user')) : h('span', { class: 'muted' }, '–')),
+            h('td', null, e.type ? h('button', { type: 'button', class: 'fui-chip fui-chip--button mono', title: t('pages.events.only_this_type'), onClick: () => { f.type = e.type; apply(); } }, e.type) : null));
         }))), { server: { key: f.sort, dir: f.dir, onSort: (key, dir) => { f.sort = key; f.dir = dir; apply(); } } }),
         data.total > PER_PAGE ? pagination({ page: data.page || f.page, perPage: data.per_page || PER_PAGE, total: data.total, onPage: (p) => { f.page = p; apply(false); window.scrollTo({ top: 0 }); } }) : null];
     },
   });
 
-  const search = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: 'Search the log…', value: f.q, 'aria-label': 'Search the log', autocomplete: 'off' });
+  const search = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: t('pages.events.search_placeholder'), value: f.q, 'aria-label': t('pages.events.search_aria'), autocomplete: 'off' });
   const onSearch = debounce(() => { f.q = search.value.trim(); apply(); }, 250);
   search.addEventListener('input', onSearch);
   ctx.onCleanup(() => onSearch.cancel());

@@ -3,6 +3,7 @@
 // a second line, and who is watching.
 
 import { h, icon } from '../../core.js';
+import { say } from '../../i18n.js';
 
 const share = (x) => `${Math.max(0, Math.min(1, x || 0)) * 100}%`;
 
@@ -14,7 +15,7 @@ const share = (x) => `${Math.max(0, Math.min(1, x || 0)) * 100}%`;
 export function streamCard({ key = null, poster = null, art = null, tile = null, facts = [], eta = null, time = '', progress = 0, buffer = null, title = {}, sub = null, who = null, paused = false }) {
   const fill = h('span', { class: 'fui-stream-card__fill' });
   fill.style.width = share(progress);
-  const bar = h('div', { class: 'fui-stream-card__bar', role: 'progressbar', 'aria-label': 'How far it has got', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round((progress || 0) * 100)) },
+  const bar = h('div', { class: 'fui-stream-card__bar', role: 'progressbar', 'aria-label': say('stream_card.progress', 'How far it has got'), 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round((progress || 0) * 100)) },
     buffer != null ? h('span', { class: 'fui-stream-card__buffer' }) : null, fill);
   if (buffer != null) bar.firstChild.style.width = share(buffer);
   return h('article', { class: 'fui-stream-card', dataset: key ? { npKey: key } : {} },

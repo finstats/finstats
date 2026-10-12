@@ -1,6 +1,8 @@
 // FinUI: file-drop, the rules that are not drawing: which files a drop takes (an `accept` as <input type=file> reads
 // one: extensions, types, families of types) and a size said as people read it. Pure; tested in FinUI's repository.
 
+import { locale } from '../../i18n.js';
+
 /** Does `file` ({ name, type }) match `accept` (".mkv,.mp4", "image/*", "" for anything)? */
 export function accepts(file, accept) {
   const rules = String(accept || '').split(',').map((r) => r.trim().toLowerCase()).filter(Boolean);
@@ -13,5 +15,5 @@ const UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
 export function fileSize(bytes) {
   let n = Math.max(0, Number(bytes) || 0), u = 0;
   while (n >= 1024 && u < UNITS.length - 1) { n /= 1024; u++; }
-  return `${u && n < 10 ? Number(n.toFixed(1)) : Math.round(n)} ${UNITS[u]}`;
+  return `${new Intl.NumberFormat(locale(), { useGrouping: false }).format(u && n < 10 ? Number(n.toFixed(1)) : Math.round(n))} ${UNITS[u]}`;
 }

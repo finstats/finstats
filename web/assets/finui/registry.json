@@ -6,7 +6,8 @@
     "tokens.css",
     "base.css",
     "core.js",
-    "format.js"
+    "format.js",
+    "i18n.js"
   ],
   "components": [
     {
