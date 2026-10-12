@@ -114,6 +114,11 @@ export default function securityPage(ctx) {
   }
 
   function alertsCard(alerts, manage) {
+    // The last alert of a later page resolved: that page is empty now and has no pager to leave it by. The last page there is.
+    if (!alerts.rows.length && alerts.total > 0 && f.page > 1) {
+      const last = Math.max(1, Math.ceil(alerts.total / alerts.per_page));
+      queueMicrotask(() => { f.page = last; reload(); });
+    }
     const tabs = segmented({ label: 'Which alerts', size: 'sm', value: f.status, options: [{ value: 'open', label: `Open${alerts.open ? ` (${num(alerts.open)})` : ''}` }, { value: 'resolved', label: 'Resolved' }, { value: 'all', label: 'All' }],
       onChange: (v) => { f.status = v; f.page = 1; reload(); } });
     const resolveAll = manage && f.status === 'open' && alerts.open > 1 && !f.userId
