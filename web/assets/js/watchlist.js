@@ -6,6 +6,7 @@ import { h, icon } from './dom.js';
 import { api, isAbort, onViewCacheCleared } from './api.js';
 import { state } from './state.js';
 import { button } from '../finui/components/button/button.js';
+import { toast } from '../finui/components/toast/toast.js';
 
 /** An older server says nothing about watchlists, and then no page offers one. */
 export const hasWatchlist = () => !!(state.user && state.user.features && state.user.features.watchlist);
@@ -48,7 +49,9 @@ export function watchMenuItem(t) {
   if (!hasWatchlist() || !(t.item_id || ((t.tmdb_id != null || t.tvdb_id != null) && watchable(t.kind)))) return null;
   return { label: 'Watchlist', icon: 'bookmark', later: entries().then((list) => {
     const entry = entryFor(list, t);
-    return { label: entry ? 'Remove from watchlist' : 'Add to watchlist', icon: 'bookmark', onSelect: () => flip(t, entry).catch(() => {}) };
+    // The menu has closed by the time an answer comes, so a refusal (a full list, the server away) is said in a notice.
+    return { label: entry ? 'Remove from watchlist' : 'Add to watchlist', icon: 'bookmark',
+      onSelect: () => flip(t, entry).catch((e) => toast({ text: `Couldn’t ${entry ? 'take it off' : 'put it on'} your watchlist: ${e.message}`, tone: 'critical' })) };
   }) };
 }
 
