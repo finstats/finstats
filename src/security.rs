@@ -795,7 +795,8 @@ pub async fn alerts(State(app): State<App>, user: AuthUser, Query(q): Query<Aler
     gate(&user)?;
     let per_page = q.per_page.unwrap_or(25).clamp(1, 100);
     let page = crate::stats::page_number(q.page);
-    let who = q.user_id.as_deref().map(norm_id).filter(|s| !s.is_empty());
+    // The page's person picker sends several (`a,b`), as every filter does; read as one id it matched nobody.
+    let who: Vec<String> = q.user_id.as_deref().unwrap_or_default().split(',').map(norm_id).filter(|s| !s.is_empty()).collect();
     let status = q.status.unwrap_or_else(|| "open".into());
     let body = app
         .db
@@ -807,9 +808,9 @@ pub async fn alerts(State(app): State<App>, user: AuthUser, Query(q): Query<Aler
                 "all" => {}
                 _ => wh.push("a.resolved_at IS NULL".into()),
             }
-            if let Some(u) = who {
-                wh.push("a.user_id = ?".into());
-                args.push(u.into());
+            if !who.is_empty() {
+                wh.push(format!("a.user_id IN ({})", vec!["?"; who.len()].join(", ")));
+                args.extend(who.into_iter().map(SqlValue::from));
             }
             let wh = wh.join(" AND ");
             let total: i64 = c.query_row(&format!("SELECT COUNT(*) FROM security_alerts a WHERE {wh}"), params_from_iter(args.iter()), |r| r.get(0))?;
