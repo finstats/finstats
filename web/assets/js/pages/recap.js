@@ -34,7 +34,7 @@ function dayRange(from, to) {
 }
 const monthDate = (ym) => { const [y, m] = String(ym).split('-').map(Number); return new Date(y, (m || 1) - 1, 1); };
 const hoursOf = (sec) => (Number(sec) || 0) / 3600;
-const hoursText = (sec) => { const x = hoursOf(sec); return x >= 10 ? num(x) : (Math.round(x * 10) / 10).toLocaleString(); };
+const hoursText = (sec) => { const x = hoursOf(sec); return x >= 10 ? num(x) : (Math.round(x * 10) / 10).toLocaleString('en-US'); };
 const plural = (n, one, many) => `${num(n)} ${Number(n) === 1 ? one : many}`;
 const hour2 = (i) => String(i).padStart(2, '0') + ':00';
 
@@ -266,7 +266,7 @@ function heroChapter(d, v, periodLabel, picker, share) {
         h('p', { class: 'rc-eyebrow' }, icon('recap', 15), h('span', null, 'The year in review')),
         h('h2', { class: 'rc-hero-title' }, isYear ? [`${v.your} `, em(periodLabel), ', replayed'] : [`${v.your} last `, em('12 months'), ', replayed']),
         h('p', { class: 'rc-hero-line' },
-          b(countUp(hrs, (x) => (hrs >= 10 ? num(x) : (Math.round(x * 10) / 10).toLocaleString())), hrs === 1 ? ' hour' : ' hours'),
+          b(countUp(hrs, (x) => (hrs >= 10 ? num(x) : (Math.round(x * 10) / 10).toLocaleString('en-US'))), hrs === 1 ? ' hour' : ' hours'),
           ' across ', b(plural(t.plays, 'play', 'plays')), ' and ', b(plural(t.distinct_items, 'title', 'titles')), '.'),
         // The share button and the rank sit in one row with room between them, and wrap on a narrow screen.
         h('div', { class: 'rc-hero-actions' }, share,
@@ -284,7 +284,7 @@ function tile(ico, value, label, title) {
 function numbersChapter(d, v, periodLabel) {
   const t = d.totals || {};
   const hrs = hoursOf(t.watch_s), days = hrs / 24;
-  const daysText = days >= 10 ? num(days) : (Math.round(days * 10) / 10).toLocaleString();
+  const daysText = days >= 10 ? num(days) : (Math.round(days * 10) / 10).toLocaleString('en-US');
   const streak = d.records && d.records.longest_streak;
   const rw = d.rewatch;
   const split = [
@@ -300,7 +300,7 @@ function numbersChapter(d, v, periodLabel) {
     body: [
       h('div', { class: 'rc-tiles' },
         tile('play', countUp(t.plays), 'Plays'),
-        tile('clock', countUp(hrs, (x) => `${hrs >= 10 ? num(x) : (Math.round(x * 10) / 10).toLocaleString()}h`), 'Watch time', durationExact(t.watch_s)),
+        tile('clock', countUp(hrs, (x) => `${hrs >= 10 ? num(x) : (Math.round(x * 10) / 10).toLocaleString('en-US')}h`), 'Watch time', durationExact(t.watch_s)),
         tile('layers', countUp(t.distinct_items), 'Different titles'),
         tile('calendar', countUp(t.active_days), 'Days watched'),
         tile('flame', streak && streak.days > 1 ? countUp(streak.days) : 'None', 'Longest streak, days', streak && streak.days > 1 ? dayRange(streak.from, streak.to) : null),
