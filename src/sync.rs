@@ -196,6 +196,8 @@ pub async fn scheduler(app: App) {
     let mut scan: Option<(bool, Option<i64>)> = None;
     // A library read due while Jellyfin scans waits for the scan to end: read now, it would be half old, half new.
     let mut deferred_library = false;
+    // The scan end each job last ran after, by Jellyfin's own clock (`schedule::Moment::scan_followed`).
+    let mut followed: std::collections::HashMap<&'static str, i64> = std::collections::HashMap::new();
     let newest_backup = crate::backup::newest_at(&crate::backup::dir(&app.data_dir));
     let known = app
         .db
@@ -246,11 +248,18 @@ pub async fn scheduler(app: App) {
         }
         let scanning = matches!(scan, Some((true, _)));
         let look = crate::schedule::Look { from, to: now, startup, scan_done: match scan { Some((false, done)) => done, _ => None } };
-        for (task, limit) in crate::schedule::due(&app.settings(), &app.tasks.snapshot(), &look, &chrono::Local) {
+        for (task, limit) in crate::schedule::due(&app.settings(), &app.tasks.snapshot(), &look, &followed, &chrono::Local) {
             start_scheduled(&app, task, limit, scanning, &mut deferred_library).await;
+            // Whatever set it off, the job now runs after this scan: the scan is not followed a second time.
+            if let Some(done) = look.scan_done {
+                followed.insert(task, done);
+            }
         }
         if deferred_library && !scanning && spawn(&app, "sync_libraries") {
             deferred_library = false;
+            if let Some(done) = look.scan_done {
+                followed.insert("sync_libraries", done);
+            }
             tracing::info!("Jellyfin's library scan is over; reading the library");
         }
         // What each job last did, kept for the next start, written only when something finished since.

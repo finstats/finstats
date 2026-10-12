@@ -130,6 +130,9 @@ pub struct Moment {
     pub last_start: Option<i64>,
     pub last_end: Option<i64>,
     pub scan_done: Option<i64>,
+    /// The scan end this job last ran after, as Jellyfin's clock said it: that clock and FinStats' need not agree, so
+    /// one scan is followed once by its own number rather than by comparing it with when the job started.
+    pub scan_followed: Option<i64>,
 }
 
 /// Whether a trigger sets its job off at this look.
@@ -137,7 +140,7 @@ pub fn fires<Tz: TimeZone>(t: &Trigger, m: &Moment, tz: &Tz) -> bool {
     match t.when {
         When::Interval { every_s } => m.last_end.is_none_or(|end| m.to - end >= every_s),
         When::Startup => m.startup,
-        When::AfterScan => m.scan_done.is_some_and(|done| m.last_start.is_none_or(|start| done > start)),
+        When::AfterScan => m.scan_done.is_some_and(|done| m.last_start.is_none_or(|start| done > start) && m.scan_followed.is_none_or(|f| done > f)),
         When::Daily { .. } | When::Weekly { .. } => occurrences(&t.when, m.from, m.to, tz).next().is_some(),
     }
 }
@@ -191,7 +194,8 @@ pub struct Look {
 }
 
 /// The jobs one look sets off, each with the time limit of the trigger that did. A job already running is not due.
-pub fn due<Tz: TimeZone>(s: &Settings, snapshot: &[crate::state::TaskState], look: &Look, tz: &Tz) -> Vec<(&'static str, Option<i64>)> {
+/// `followed`: the scan end each job last ran after (see `Moment::scan_followed`).
+pub fn due<Tz: TimeZone>(s: &Settings, snapshot: &[crate::state::TaskState], look: &Look, followed: &std::collections::HashMap<&'static str, i64>, tz: &Tz) -> Vec<(&'static str, Option<i64>)> {
     SCHEDULED
         .into_iter()
         .filter_map(|task| {
@@ -199,7 +203,7 @@ pub fn due<Tz: TimeZone>(s: &Settings, snapshot: &[crate::state::TaskState], loo
             if run.is_some_and(|t| t.state == "running") {
                 return None;
             }
-            let m = Moment { from: look.from, to: look.to, startup: look.startup, last_start: run.and_then(|t| t.started_at), last_end: run.and_then(|t| t.finished_at), scan_done: look.scan_done };
+            let m = Moment { from: look.from, to: look.to, startup: look.startup, last_start: run.and_then(|t| t.started_at), last_end: run.and_then(|t| t.finished_at), scan_done: look.scan_done, scan_followed: followed.get(task).copied() };
             effective(task, s).into_iter().find(|t| fires(t, &m, tz)).map(|t| (task, t.limit_s))
         })
         .collect()
@@ -296,7 +300,7 @@ mod tests {
     fn the_first_look_runs_what_never_ran_and_nothing_a_setting_left_off() {
         let now = at(29, 12, 0);
         let look = Look { from: now, to: now, startup: true, scan_done: None };
-        let due: Vec<_> = due(&Settings::default(), &snapshot_with(&[], &[]), &look, &oslo()).into_iter().map(|(t, _)| t).collect();
+        let due: Vec<_> = due(&Settings::default(), &snapshot_with(&[], &[]), &look, &Default::default(), &oslo()).into_iter().map(|(t, _)| t).collect();
         for t in ["sync_users", "sync_events", "sync_server", "sync_changes", "sync_libraries", "sync_userdata", "backup", "sync_upcoming", "sync_requests", "sync_grabs"] {
             assert!(due.contains(&t), "{t} never ran and is not due: {due:?}");
         }
@@ -309,14 +313,14 @@ mod tests {
         let now = at(29, 12, 0);
         let look = Look { from: now - 60, to: now, startup: false, scan_done: Some(now - 30) };
         let recent = [("sync_users", now - 120, now - 100), ("sync_libraries", now - 3600, now - 3000), ("sync_userdata", now - 3600, now - 3000)];
-        let due = due(&Settings::default(), &snapshot_with(&recent, &["sync_events"]), &look, &oslo());
+        let due = due(&Settings::default(), &snapshot_with(&recent, &["sync_events"]), &look, &Default::default(), &oslo());
         let ids: Vec<_> = due.iter().map(|(t, _)| *t).collect();
         assert!(!ids.contains(&"sync_users"), "ran two minutes ago, every 15 minutes");
         assert!(!ids.contains(&"sync_events"), "already running");
         assert!(ids.contains(&"sync_libraries") && ids.contains(&"sync_userdata"), "Jellyfin finished a scan after the last read: {ids:?}");
         let mut s = Settings::default();
         s.schedules.insert("sync_users".into(), vec![Trigger { when: When::Daily { at_min: 12 * 60 }, limit_s: Some(600) }]);
-        let limited = super::due(&s, &snapshot_with(&recent, &[]), &look, &oslo());
+        let limited = super::due(&s, &snapshot_with(&recent, &[]), &look, &Default::default(), &oslo());
         assert!(limited.contains(&("sync_users", Some(600))), "the trigger that fired brings its limit: {limited:?}");
     }
 
@@ -350,7 +354,7 @@ mod tests {
             let tasks = crate::state::Tasks::new();
             tasks.remember(seed(load_runs(c).unwrap(), library_read, None));
             let look = Look { from: now - 60, to: now, startup: true, scan_done: None };
-            due(&Settings::default(), &tasks.snapshot(), &look, &oslo()).into_iter().any(|(t, _)| t == "sync_libraries")
+            due(&Settings::default(), &tasks.snapshot(), &look, &Default::default(), &oslo()).into_iter().any(|(t, _)| t == "sync_libraries")
         };
         assert!(!due_now(&c), "read ten minutes ago");
         c.execute_batch(crate::db::MIGRATIONS[before]).unwrap();
@@ -503,6 +507,11 @@ mod tests {
         assert!(!fires(&scan, &m(Some(300), Some(200)), &oslo()));
         assert!(!fires(&scan, &m(Some(100), None), &oslo()), "no scan finished, or one is running");
         assert!(fires(&scan, &m(None, Some(200)), &oslo()), "never read");
+        // The scan's end is Jellyfin's clock and the read's start FinStats': with Jellyfin's ten minutes ahead, every look
+        // for ten minutes saw a scan ended after the read began and read the whole library again. One scan, one read.
+        let ahead = Moment { last_start: Some(300), scan_done: Some(900), scan_followed: Some(900), ..Moment::default() };
+        assert!(!fires(&scan, &ahead, &oslo()), "the scan this job already ran after");
+        assert!(fires(&scan, &Moment { scan_done: Some(1_500), ..ahead }, &oslo()), "the next scan");
     }
 
     #[test]
