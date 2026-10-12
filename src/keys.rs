@@ -109,24 +109,25 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Cre
     Ok((StatusCode::CREATED, Json(made)).into_response())
 }
 
+/// Revoke `id` if it is `uid`'s, or anyone's for an administrator. The row goes: a revoked key opens nothing either way,
+/// the audit log keeps the record, and kept rows piled up for good when keys were made and revoked in a loop.
+fn revoke_in(c: &Connection, id: i64, uid: &str, admin: bool, actor: Actor) -> anyhow::Result<bool> {
+    let owned: Option<(String, String)> = c
+        .query_row("SELECT user_id, name FROM api_keys WHERE id = ?1 AND revoked_at IS NULL", [id], |r| Ok((r.get(0)?, r.get(1)?)))
+        .optional()?;
+    let Some((owner, name)) = owned.filter(|(owner, _)| admin || owner == uid) else { return Ok(false) };
+    c.execute("DELETE FROM api_keys WHERE id = ?1", [id])?;
+    audit::record_quietly(c, &audit::Entry::new("key_revoked", actor).target(id.to_string()).detail(json!({ "name": name, "owner_id": owner })));
+    Ok(true)
+}
+
 /// `DELETE /api/keys/{id}`: revoke one's own key, or anyone's as an administrator. A key that is not
 /// the caller's to see is not there.
 pub async fn revoke(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -> ApiResult {
     only_a_session(&user)?;
     let actor = Actor::from(&user);
     let (uid, admin) = (user.id.clone(), user.is_admin);
-    let done = app
-        .db
-        .call(move |c| {
-            let owned: Option<(String, String)> = c
-                .query_row("SELECT user_id, name FROM api_keys WHERE id = ?1 AND revoked_at IS NULL", [id], |r| Ok((r.get(0)?, r.get(1)?)))
-                .optional()?;
-            let Some((owner, name)) = owned.filter(|(owner, _)| admin || *owner == uid) else { return Ok(false) };
-            c.execute("UPDATE api_keys SET revoked_at = ?2 WHERE id = ?1", params![id, db::now()])?;
-            audit::record_quietly(c, &audit::Entry::new("key_revoked", actor).target(id.to_string()).detail(json!({ "name": name, "owner_id": owner })));
-            Ok(true)
-        })
-        .await?;
+    let done = app.db.call(move |c| revoke_in(c, id, &uid, admin, actor)).await?;
     if !done {
         return Err(ApiError::not_found("Key"));
     }
@@ -174,6 +175,19 @@ mod tests {
         assert!(!may_mint(live_keys(&c, "u2", 2000).unwrap()));
         c.execute_batch("UPDATE api_keys SET expires_at = 1800 WHERE id = 2").unwrap();
         assert!(may_mint(live_keys(&c, "u2", 2000).unwrap()), "an expired key still counted");
+    }
+
+    /// A revoked key was kept for good, and anybody signed in could make and revoke keys in a loop: a row each time, never
+    /// taken away. A revoked key opens nothing whether its row is there or not, and the audit log keeps its record.
+    #[test]
+    fn a_revoked_key_is_gone() {
+        let c = conn();
+        let (id, _) = mint_key(&c, "u2", "laptop", KeyScope::Full, None, 1000).unwrap();
+        assert!(!revoke_in(&c, id, "u3", false, Actor::default()).unwrap(), "somebody else's key");
+        assert!(revoke_in(&c, id, "u2", false, Actor::default()).unwrap());
+        assert_eq!(c.query_row("SELECT COUNT(*) FROM api_keys", [], |r| r.get::<_, i64>(0)).unwrap(), 0);
+        assert_eq!(c.query_row("SELECT COUNT(*) FROM audit WHERE kind = 'key_revoked'", [], |r| r.get::<_, i64>(0)).unwrap(), 1);
+        assert!(!revoke_in(&c, id, "u2", false, Actor::default()).unwrap(), "revoked already");
     }
 
     #[test]
