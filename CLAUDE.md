@@ -747,13 +747,16 @@ it never undeletes.
 The response compression layer skips `application/gzip`: re-compressing a backup broke the download in browsers. Anything served
 pre-compressed needs the same exemption.
 
-**Languages (`i18n.rs`, `web/assets/js/i18n.js`, `web/assets/i18n/`, 2.3.0): FinStats speaks 23 languages, and every word a
+**Languages (`i18n.rs`, `web/assets/js/i18n.js`, `web/assets/i18n/`, 2.3.0): FinStats speaks 24 languages, and every word a
 person reads comes from a catalogue.** One JSON file per BCP 47 tag (`i18n::LOCALES` and `LANGUAGES` in `i18n.js` are the
-same list, and `theme.js` repeats the tags); **British English is the source**. **Four are checked by the owner, who reads
-them (`i18n::CHECKED`: en-GB, en-US, nb-NO, nn-NO), and are whole in every change**; the other nineteen are translations
+same list, and `theme.js` repeats the tags); **British English is the source**. **Five are checked by the owner, who reads
+them (`i18n::CHECKED`: en-GB, en-US, nb-NO, nn-NO, nn-NO-synnmore), and are whole in every change**; the other nineteen are translations
 nobody here can check, may lag behind, and say what they lack in British English (the page loads en-GB beside them,
 `i18n::say` falls back the same way), the README's picture showing how far each has come and the Settings list and the
-README saying they are unchecked. Every catalogue answers to the source (`i18n::tests`: no key the source lacks, the same
+README saying they are unchecked. **Synnmørsk (`nn-NO-synnmore`) is the owner's own dialect** (Søre Sunnmøre), plain dialect
+with no slang or swearing, written from the Nynorsk by the rules in `internal/dialekt.md` (local, never committed; read it
+before writing a text in it): a word no rule there covers stays as the Nynorsk has it, and no form is guessed. Only its own
+tag asks for it, so a browser asking for `nn` reads Nynorsk; its numbers, plurals and dates are Nynorsk's (`nn`). Every catalogue answers to the source (`i18n::tests`: no key the source lacks, the same
 `{placeholders}`, plural objects of exactly the CLDR forms the language has (`one`/`few`/`many`/`other` for Russian,
 Ukrainian and Polish, `other` alone for Japanese, Korean and Chinese; `i18n::plural` is the server's copy of the rules),
 no em-dash, each English spelled its own way). Cards (Recap, public profile) are drawn in a language their font has
@@ -776,8 +779,8 @@ outside a request and so in en-GB, which is why en-GB keeps the code's English e
 change with the language: the pages translate them by id (``t(`pages.audit.kind.${k}`)``). Two guards in `i18n::pages_tests`
 hold the pages to it: every literal key a page asks for has an en-GB text, and no English sentence or capitalised label is left
 in `web/assets/js` or FinUI's components outside `t()`/`tParts()`/`say()` (`IDS` and `ENGLISH_ON_PURPOSE` list the exceptions,
-each with its reason). **A new text is a key in the four checked catalogues in the same change** (the others may follow, and say
-it in English until they do), written in Bokmål and Nynorsk by the glossary the existing catalogues set (play = avspilling/avspeling, watch time = visningstid/visingstid, watchlist = Min liste /
+each with its reason). **A new text is a key in the five checked catalogues in the same change** (the others may follow, and say
+it in English until they do), written in Bokmål, Nynorsk and Synnmørsk by the glossary the existing catalogues set (play = avspilling/avspeling, watch time = visningstid/visingstid, watchlist = Min liste /
 Lista mi, Recap = Tilbakeblikk, Pipeline = På vei/På veg); the owner reads Norwegian and checks it. The README's **Languages** section is a picture drawn
 like a translation platform's status widget (`.github/languages.svg`, a bar per language, in GitHub's light or dark) and
 worked out from the catalogues and the changelogs by `tools/make-languages.py`, which redraws both; run it whenever a language
@@ -1003,7 +1006,7 @@ run that too before a release, and after work on the database or on anything lon
 ## Releases and patch notes
 
 `CHANGELOG.md` is the source of the in-app **Patch notes** tab (`changelog.rs` parses it), and `changelog/<tag>.md` (embedded) is the
-same file in another language, answered by `Accept-Language`. **A note lands in the four checked languages in the same
+same file in another language, answered by `Accept-Language`. **A note lands in the five checked languages in the same
 commit**; another language may tell a release later in the series, and shows the source's until it does, but **not later than the
 release itself**: the QA stage `i18n` fails while any `changelog/<tag>.md` lacks a release `CHANGELOG.md` has. A test holds every translation to
 the source release by release (the same headings byte for byte, groups, number of bullets, `code` and bold). A test fails if

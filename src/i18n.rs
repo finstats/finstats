@@ -14,14 +14,14 @@ use axum::middleware::Next;
 use axum::response::Response;
 
 /// Every language FinStats speaks; the first is the source.
-pub const LOCALES: [&str; 23] = [
-    "en-GB", "en-US", "nb-NO", "nn-NO", "da-DK", "de-DE", "es-ES", "fi-FI", "fr-FR", "hi-IN", "is-IS", "it-IT", "ja-JP", "ko-KR",
+pub const LOCALES: [&str; 24] = [
+    "en-GB", "en-US", "nb-NO", "nn-NO", "nn-NO-synnmore", "da-DK", "de-DE", "es-ES", "fi-FI", "fr-FR", "hi-IN", "is-IS", "it-IT", "ja-JP", "ko-KR",
     "nl-NL", "pl-PL", "pt-BR", "ru-RU", "sv-SE", "tr-TR", "uk-UA", "zh-CN", "zh-TW",
 ];
 /// The languages the owner reads and has checked: complete in every change. The others are translations nobody here
 /// can check; they may lag behind, and what one lacks is said in British English until it has it.
 #[allow(dead_code)] // read by the tests that hold the catalogues and the changelogs, and by the README's picture
-pub const CHECKED: [&str; 4] = ["en-GB", "en-US", "nb-NO", "nn-NO"];
+pub const CHECKED: [&str; 5] = ["en-GB", "en-US", "nb-NO", "nn-NO", "nn-NO-synnmore"];
 /// What a reader is given when nothing they ask for is a language FinStats speaks, and for English that names no country.
 pub const DEFAULT: &str = "en-US";
 
@@ -323,7 +323,7 @@ mod pages_tests {
     /// What may stay English in the code, each with why: names, and words the code reads rather than shows.
     const ENGLISH_ON_PURPOSE: &[&str] = &[
         // Each language by its own name, in i18n.js's list.
-        "js/i18n.js:Norsk Bokmål", "js/i18n.js:Norsk Nynorsk", "js/i18n.js:Dansk", "js/i18n.js:Deutsch", "js/i18n.js:Español",
+        "js/i18n.js:Norsk Bokmål", "js/i18n.js:Norsk Nynorsk", "js/i18n.js:Synnmørsk", "js/i18n.js:Dansk", "js/i18n.js:Deutsch", "js/i18n.js:Español",
         "js/i18n.js:Suomi", "js/i18n.js:Français", "js/i18n.js:Íslenska", "js/i18n.js:Italiano", "js/i18n.js:Nederlands",
         "js/i18n.js:Polski", "js/i18n.js:Русский", "js/i18n.js:Svenska", "js/i18n.js:Türkçe", "js/i18n.js:Українська",
         "js/i18n.js:Português (Brasil)",
@@ -524,6 +524,17 @@ mod pick_tests {
         assert_eq!(asked(&h("en-US", None)), "en-US");
         assert_eq!(asked(&h("nb", Some("finstats_lang=xx-YY"))), "nb-NO", "a cookie naming a language FinStats does not speak is ignored");
         assert_eq!(asked(&HeaderMap::new()), "en-US");
+    }
+
+    #[test]
+    fn synnmorsk_is_its_own_checked_language_that_only_its_own_tag_asks_for() {
+        assert_eq!(pick("nn-NO-synnmore"), "nn-NO-synnmore");
+        assert_eq!(pick("nn-no-synnmore,nn;q=0.8"), "nn-NO-synnmore");
+        assert_eq!(pick("nn"), "nn-NO", "Nynorsk without saying which is Nynorsk, never the dialect");
+        assert_eq!(pick("nn-NO"), "nn-NO");
+        assert!(CHECKED.contains(&"nn-NO-synnmore"), "the owner reads it, so it is whole in every change");
+        assert_eq!((plural("nn-NO-synnmore", 1), plural("nn-NO-synnmore", 2)), ("one", "other"));
+        assert_eq!(number("nn-NO-synnmore", 12_345), "12\u{a0}345", "numbers as Norwegian writes them");
     }
 
     #[test]

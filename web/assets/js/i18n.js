@@ -18,6 +18,7 @@ export const LANGUAGES = [
   { tag: 'en-US', name: 'English (US)', checked: true },
   { tag: 'nb-NO', name: 'Norsk Bokmål', checked: true },
   { tag: 'nn-NO', name: 'Norsk Nynorsk', checked: true },
+  { tag: 'nn-NO-synnmore', name: 'Synnmørsk', checked: true },
   { tag: 'da-DK', name: 'Dansk' },
   { tag: 'de-DE', name: 'Deutsch' },
   { tag: 'es-ES', name: 'Español' },

@@ -62,7 +62,7 @@ finstats/
 │       │   ├── settings/         One module per Settings section
 │       │   ├── simple/           Simple mode (Tautulli-like layout) and its pages/
 │       │   └── public/           Public profile page script
-│       ├── i18n/                 UI catalogues, one JSON per language (23; en-GB the source)
+│       ├── i18n/                 UI catalogues, one JSON per language (24; en-GB the source)
 │       ├── finui/                FinUI copy: registry.json, tokens.css, base.css, core.js, components/, create/, p/
 │       ├── finmotion/            FinMotion copy: registry.json, core/, parts/, components/
 │       ├── fonts/                Bundled woff2 families + their OFL licences (preset-selectable)
@@ -70,7 +70,7 @@ finstats/
 │       └── logo.svg, mark-*.svg, apple-touch-icon.png
 ├── fonts/card/                   Inter TTFs for server-rendered PNG cards (resvg cannot read woff2)
 ├── CHANGELOG.md                  Patch notes source (en-GB); include_str!'d, parsed by changelog.rs
-├── changelog/                    Translations of CHANGELOG.md: en-US.md, nb-NO.md, nn-NO.md (include_str!'d)
+├── changelog/                    Translations of CHANGELOG.md, one per language (embedded)
 ├── THIRD-PARTY.json              Generated licence notice for every crate in Cargo.lock
 ├── tools/                        make-third-party.py (licence notice), make-world-map.py (world.json), make-languages.py (README's languages picture)
 ├── Dockerfile, docker-entrypoint.sh, docker-compose.yml, .dockerignore
@@ -481,7 +481,7 @@ ETags by image tag), `ical.rs` (hand-written RFC 5545 feed), `keys.rs`, `audit.r
 | `nowplaying.js` | Now-playing view with a 1 s ticker clock (polls only correct, never repaint) |
 | `prefetch.js` | Warm-up and on-intent prefetch, calling the page's own loaders |
 | `shell.js`, `sections.js`, `menus.js`, `search.js` | Layout chrome (FinUI menus, status bar, Esc), section pages, context menus, search |
-| `i18n.js` | `t(key, vars)`, `tParts`, `tOr`, `lang()`, `LANGUAGES` (23, four `checked`), `pickLanguage` (nothing it speaks, or a bare `en`, is en-US), `loadLanguage` (with en-GB beside an unchecked language), `setLanguage` |
+| `i18n.js` | `t(key, vars)`, `tParts`, `tOr`, `lang()`, `LANGUAGES` (24, five `checked`), `pickLanguage` (nothing it speaks, or a bare `en`, is en-US), `loadLanguage` (with en-GB beside an unchecked language), `setLanguage` |
 | Feature helpers | `watchlist.js`, `worldmap.js`, `notifications.js`, `connections.js`, `downloads.js`, `upcoming.js`, `playmodal.js`, `changelog-text.js` |
 | `simple/*` | Simple mode shell, helpers (`platform.js`, `profile.js`, `history.js`) and pages |
 | `public/profile.js` | Public page; no state, api.js, router or prefetch |
@@ -602,8 +602,8 @@ let (a, b) = tokio::try_join!(apart(app.clone(), scope.clone(), |c, s| totals(c,
 7. No inline styles (CSP); `el.style.x` from JS is fine. Every colour is a token, reached as `'var(--x)'`.
 8. Live data uses `follow()`, never a bare `setInterval`.
 9. Overlays stop propagation of their own Esc; `shell.js` handles Esc globally.
-10. Every word a person reads comes from `t('key')`. A new key lands in the four checked catalogues (en-GB, en-US, nb-NO,
-    nn-NO) in the same change; the other nineteen say it in en-GB until translated (see `CLAUDE.md`, Languages).
+10. Every word a person reads comes from `t('key')`. A new key lands in the five checked catalogues (en-GB, en-US, nb-NO,
+    nn-NO, nn-NO-synnmore, the owner's dialect, by `internal/dialekt.md`) in the same change; the other nineteen say it in en-GB until translated (see `CLAUDE.md`, Languages).
 11. Content stays visible: no folds; use navigation and jump lists instead.
 
 ### 9.4 Writing rules (all repositories)
@@ -725,7 +725,7 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 
 - `CHANGELOG.md`: `## [x.y.z] - YYYY-MM-DD` (or `- first to last`), an `x.y.0` opens with a short title line, groups
   `### Added | Changed | Performance | Stability | Fixed | Removed`, one-line bullets (`**bold**`, `*italic*`, `` `code` ``;
-  no links). **Every entry must also be added to `changelog/en-US.md`, `nb-NO.md`, `nn-NO.md`** with the same groups,
+  no links). **Every entry must also be added to `changelog/en-US.md`, `nb-NO.md`, `nn-NO.md`, `nn-NO-synnmore.md`** with the same groups,
   bullet counts and code spans, or `cargo test` fails. The other nineteen `changelog/<tag>.md` may follow within the
   series, but `qa/run.sh i18n` fails until every one tells every release the source does, so none ships behind.
 - History shape: logical commits (backend before UI, `fix(...)` on their own, then `docs:`), then
@@ -752,7 +752,7 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 
 **Open issues found while writing this file (2026-10-12)**
 
-- **Nineteen of the 23 languages are unchecked translations.** Only en-GB, en-US, nb-NO and nn-NO are read by the owner;
+- **Nineteen of the 24 languages are unchecked translations.** Only en-GB, en-US, nb-NO, nn-NO and nn-NO-synnmore are read by the owner;
   the README, the docs and Settings → Appearance → Language say so. Cards (Recap, public profile) draw Japanese, Korean,
   Chinese and Hindi readers' cards in en-GB, because the card font (Inter) has no CJK or Devanagari letters.
 - **A few labels beside a number choose between two keys in code** (`n === 1 ? a : b`: Together's sessions, Recap's genres,

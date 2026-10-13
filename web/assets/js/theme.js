@@ -17,9 +17,9 @@ try {
 // while the rest of the page loads, so main.js finds them already here, with British English beside a language nobody here
 // checks (what it lacks is said in that). <html lang> is set now, for the first paint's hyphenation and screen readers.
 try {
-  const tags = ['en-GB', 'en-US', 'nb-NO', 'nn-NO', 'da-DK', 'de-DE', 'es-ES', 'fi-FI', 'fr-FR', 'hi-IN', 'is-IS', 'it-IT', 'ja-JP', 'ko-KR',
+  const tags = ['en-GB', 'en-US', 'nb-NO', 'nn-NO', 'nn-NO-synnmore', 'da-DK', 'de-DE', 'es-ES', 'fi-FI', 'fr-FR', 'hi-IN', 'is-IS', 'it-IT', 'ja-JP', 'ko-KR',
     'nl-NL', 'pl-PL', 'pt-BR', 'ru-RU', 'sv-SE', 'tr-TR', 'uk-UA', 'zh-CN', 'zh-TW'];
-  const checked = tags.slice(0, 4);
+  const checked = tags.slice(0, 5);
   const of = (raw) => {
     const t = String(raw || '').toLowerCase(), [l, ...rest] = t.split('-');
     const exact = tags.find((x) => x.toLowerCase() === t);
