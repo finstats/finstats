@@ -13,7 +13,7 @@ use axum::http::header::ACCEPT_LANGUAGE;
 use axum::middleware::Next;
 use axum::response::Response;
 
-/// Every language FinStats speaks; the first is the source, and what nothing else matches.
+/// Every language FinStats speaks; the first is the source.
 pub const LOCALES: [&str; 23] = [
     "en-GB", "en-US", "nb-NO", "nn-NO", "da-DK", "de-DE", "es-ES", "fi-FI", "fr-FR", "hi-IN", "is-IS", "it-IT", "ja-JP", "ko-KR",
     "nl-NL", "pl-PL", "pt-BR", "ru-RU", "sv-SE", "tr-TR", "uk-UA", "zh-CN", "zh-TW",
@@ -22,9 +22,12 @@ pub const LOCALES: [&str; 23] = [
 /// can check; they may lag behind, and what one lacks is said in British English until it has it.
 #[allow(dead_code)] // read by the tests that hold the catalogues and the changelogs, and by the README's picture
 pub const CHECKED: [&str; 4] = ["en-GB", "en-US", "nb-NO", "nn-NO"];
+/// What a reader is given when nothing they ask for is a language FinStats speaks, and for English that names no country.
+pub const DEFAULT: &str = "en-US";
 
 /// The catalogue a language tag (lower case) asks for, if FinStats speaks that language: the tag as written, else its
-/// language (`no` is Bokmål, `en` British unless it says America, `pt` Brazilian, Chinese by its script or region).
+/// language (`no` is Bokmål, `en` the default and British where it names another country, `pt` Brazilian, Chinese by its
+/// script or region).
 fn language_of(tag: &str) -> Option<&'static str> {
     if let Some(l) = LOCALES.iter().find(|l| l.eq_ignore_ascii_case(tag)) { return Some(l) }
     let mut parts = tag.split('-');
@@ -32,14 +35,14 @@ fn language_of(tag: &str) -> Option<&'static str> {
     match lang {
         "nb" | "no" => Some("nb-NO"),
         "nn" => Some("nn-NO"),
-        "en" => Some("en-GB"),
+        "en" => Some(if parts.next().is_some() { "en-GB" } else { DEFAULT }),
         "zh" => Some(if parts.any(|p| matches!(p, "hant" | "tw" | "hk" | "mo")) { "zh-TW" } else { "zh-CN" }),
         _ => LOCALES.iter().find(|l| l.split('-').next() == Some(lang)).copied(),
     }
 }
 
 /// The language of `Accept-Language` that FinStats speaks, by weight then order (`language_of`). Nothing usable is the
-/// source.
+/// default.
 pub fn pick(header: &str) -> &'static str {
     let mut asked: Vec<(f32, usize, &'static str)> = vec![];
     for (i, part) in header.split(',').enumerate() {
@@ -50,7 +53,7 @@ pub fn pick(header: &str) -> &'static str {
         if let Some(l) = language_of(&tag) { asked.push((q, i, l)); }
     }
     asked.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)));
-    asked.first().map_or(LOCALES[0], |a| a.2)
+    asked.first().map_or(DEFAULT, |a| a.2)
 }
 
 /// The plural form a whole number takes in `lang` (CLDR's rules for integers; `Intl.PluralRules` says the same).
@@ -591,7 +594,7 @@ mod more_languages_tests {
             ("pt-PT", "pt-BR"), ("it", "it-IT"), ("nl-BE", "nl-NL"), ("sv", "sv-SE"), ("da", "da-DK"), ("fi", "fi-FI"), ("is", "is-IS"),
             ("pl", "pl-PL"), ("ru", "ru-RU"), ("uk", "uk-UA"), ("tr", "tr-TR"), ("ja", "ja-JP"), ("ko", "ko-KR"), ("hi", "hi-IN"),
             ("zh", "zh-CN"), ("zh-CN", "zh-CN"), ("zh-Hans-CN", "zh-CN"), ("zh-SG", "zh-CN"), ("zh-TW", "zh-TW"), ("zh-HK", "zh-TW"),
-            ("zh-Hant", "zh-TW"), ("zh-Hant-HK", "zh-TW"), ("no", "nb-NO"), ("en-US", "en-US"), ("en", "en-GB")] {
+            ("zh-Hant", "zh-TW"), ("zh-Hant-HK", "zh-TW"), ("no", "nb-NO"), ("en-US", "en-US"), ("en", "en-US"), ("en-AU", "en-GB")] {
             assert_eq!(pick(asked), got, "{asked}");
         }
     }
@@ -649,8 +652,8 @@ mod pick_tests {
         assert_eq!(pick("nn"), "nn-NO");
         assert_eq!(pick("no"), "nb-NO", "Norwegian without saying which is Bokmål, as browsers mean it");
         assert_eq!(pick("en-US,en;q=0.9"), "en-US");
-        assert_eq!(pick("en"), "en-GB");
-        assert_eq!(pick("en-AU"), "en-GB", "any English but America's is the source");
+        assert_eq!(pick("en"), "en-US", "English without saying which is the default");
+        assert_eq!(pick("en-AU"), "en-GB", "an English that names a country other than America is British");
         assert_eq!(pick("eo,nn;q=0.5"), "nn-NO", "a language FinStats does not speak is passed over");
         assert_eq!(pick("en;q=0.2,nb;q=0.9"), "nb-NO", "the weights decide, not the order");
         assert_eq!(pick("NB-no"), "nb-NO");
@@ -669,13 +672,13 @@ mod pick_tests {
         assert_eq!(asked(&h("en-US,en;q=0.9", Some("finstats_session=x; finstats_lang=nn-NO"))), "nn-NO");
         assert_eq!(asked(&h("en-US", None)), "en-US");
         assert_eq!(asked(&h("nb", Some("finstats_lang=xx-YY"))), "nb-NO", "a cookie naming a language FinStats does not speak is ignored");
-        assert_eq!(asked(&HeaderMap::new()), "en-GB");
+        assert_eq!(asked(&HeaderMap::new()), "en-US");
     }
 
     #[test]
-    fn nothing_usable_is_british_english() {
+    fn nothing_usable_is_american_english() {
         for header in ["", "*", "eo", "ar-EG;q=1", ";;,", "nb;q=0"] {
-            assert_eq!(pick(header), "en-GB", "{header:?}");
+            assert_eq!(pick(header), "en-US", "{header:?}");
         }
     }
 }

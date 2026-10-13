@@ -26,13 +26,13 @@ try {
     if (exact) return exact;
     if (l === 'nb' || l === 'no') return 'nb-NO';
     if (l === 'nn') return 'nn-NO';
-    if (l === 'en') return 'en-GB';
+    if (l === 'en') return rest.length ? 'en-GB' : 'en-US';
     if (l === 'zh') return rest.some((p) => ['hant', 'tw', 'hk', 'mo'].includes(p)) ? 'zh-TW' : 'zh-CN';
     return tags.find((x) => x.split('-')[0].toLowerCase() === l) || null;
   };
   let tag = localStorage.getItem('finstats.language');
   if (!tags.includes(tag)) {
-    tag = 'en-GB';
+    tag = 'en-US';
     for (const raw of navigator.languages || [navigator.language]) { const hit = of(raw); if (hit) { tag = hit; break; } }
   }
   document.documentElement.lang = tag;

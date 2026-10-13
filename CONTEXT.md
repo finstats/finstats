@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-12, on branch `dev-2.3.0` (crate version 2.3.0, unreleased; schema `user_version` 39; newest tag `v2.2.0`).
+> **Last updated:** 2026-10-13, on branch `dev-2.3.0` (crate version 2.3.0, unreleased; schema `user_version` 39; newest tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `CLAUDE.md` is the detailed rulebook
@@ -303,7 +303,7 @@ ids, never undeletes) then re-derives groups, `is_local`, library links. Separat
 
 `/api/*` is a nested router behind `same_origin`; unknown `/api` paths answer JSON 404. Everything else non-asset falls
 back to `index.html` (SPA). Layers, outermost first: gzip compression (skips `application/gzip`), `i18n::middleware`
-(Accept-Language), `security_headers` (CSP etc.).
+(the `finstats_lang` cookie, else Accept-Language; nothing FinStats speaks is `i18n::DEFAULT`, en-US), `security_headers` (CSP etc.).
 
 The authoritative contract is `../docs/docs/finstats/api.md`; change it with the endpoint (a QA check reads it).
 
@@ -481,7 +481,7 @@ ETags by image tag), `ical.rs` (hand-written RFC 5545 feed), `keys.rs`, `audit.r
 | `nowplaying.js` | Now-playing view with a 1 s ticker clock (polls only correct, never repaint) |
 | `prefetch.js` | Warm-up and on-intent prefetch, calling the page's own loaders |
 | `shell.js`, `sections.js`, `menus.js`, `search.js` | Layout chrome (FinUI menus, status bar, Esc), section pages, context menus, search |
-| `i18n.js` | `t(key, vars)`, `tParts`, `tOr`, `lang()`, `LANGUAGES` (23, four `checked`), `pickLanguage`, `loadLanguage` (with en-GB beside an unchecked language), `setLanguage` |
+| `i18n.js` | `t(key, vars)`, `tParts`, `tOr`, `lang()`, `LANGUAGES` (23, four `checked`), `pickLanguage` (nothing it speaks, or a bare `en`, is en-US), `loadLanguage` (with en-GB beside an unchecked language), `setLanguage` |
 | Feature helpers | `watchlist.js`, `worldmap.js`, `notifications.js`, `connections.js`, `downloads.js`, `upcoming.js`, `playmodal.js`, `changelog-text.js` |
 | `simple/*` | Simple mode shell, helpers (`platform.js`, `profile.js`, `history.js`) and pages |
 | `public/profile.js` | Public page; no state, api.js, router or prefetch |

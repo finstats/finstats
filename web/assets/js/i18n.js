@@ -39,10 +39,13 @@ export const LANGUAGES = [
   { tag: 'zh-TW', name: '繁體中文' },
 ];
 const SOURCE = LANGUAGES[0].tag;
+/** What a reader is given when nothing their browser asks for is a language FinStats speaks (the server's `i18n::DEFAULT`). */
+const DEFAULT = 'en-US';
 const KEY = 'finstats.language';
 
-/** The catalogue a browser language asks for: the tag as written, else its language (no is Bokmål; en is British unless
- *  it says America; pt is Brazilian; Chinese by its script or region). The server's `i18n::language_of` is the same rule. */
+/** The catalogue a browser language asks for: the tag as written, else its language (no is Bokmål; en is the default, and
+ *  British where it names another country; pt is Brazilian; Chinese by its script or region). The server's
+ *  `i18n::language_of` is the same rule. */
 function languageOf(raw) {
   const tag = String(raw || '').trim().toLowerCase();
   const exact = LANGUAGES.find((l) => l.tag.toLowerCase() === tag);
@@ -50,19 +53,19 @@ function languageOf(raw) {
   const [lang, ...rest] = tag.split('-');
   if (lang === 'nb' || lang === 'no') return 'nb-NO';
   if (lang === 'nn') return 'nn-NO';
-  if (lang === 'en') return SOURCE;
+  if (lang === 'en') return rest.length ? 'en-GB' : DEFAULT;
   if (lang === 'zh') return rest.some((p) => ['hant', 'tw', 'hk', 'mo'].includes(p)) ? 'zh-TW' : 'zh-CN';
   const same = LANGUAGES.find((l) => l.tag.split('-')[0].toLowerCase() === lang);
   return same ? same.tag : null;
 }
 
-/** The first of a browser's languages that FinStats speaks; nothing usable is the source. */
+/** The first of a browser's languages that FinStats speaks; nothing usable is the default. */
 export function pickLanguage(list) {
   for (const raw of list || []) {
     const found = languageOf(raw);
     if (found) return found;
   }
-  return SOURCE;
+  return DEFAULT;
 }
 
 /** What this browser chose ('' = follow the browser). */
