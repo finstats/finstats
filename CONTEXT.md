@@ -72,7 +72,7 @@ finstats/
 ├── CHANGELOG.md                  Patch notes source (en-GB); include_str!'d, parsed by changelog.rs
 ├── changelog/                    Translations of CHANGELOG.md: en-US.md, nb-NO.md, nn-NO.md (include_str!'d)
 ├── THIRD-PARTY.json              Generated licence notice for every crate in Cargo.lock
-├── tools/                        make-third-party.py (licence notice), make-world-map.py (world.json)
+├── tools/                        make-third-party.py (licence notice), make-world-map.py (world.json), make-languages.py (README's languages picture)
 ├── Dockerfile, docker-entrypoint.sh, docker-compose.yml, .dockerignore
 ├── .github/                      workflows/docker.yml (test, build, publish, release), issue/discussion/PR templates
 ├── .githooks/pre-commit          Refuses data, DBs, tracker exports, secrets, files > 2 MB
@@ -643,6 +643,7 @@ qa/run.sh <stage>                                       # static, api, browser, 
 
 # Generated files
 cargo fetch && python3 tools/make-third-party.py        # after any dependency change
+python3 tools/make-languages.py                         # after a catalogue, changelog translation or language changes (--check: QA)
 python3 tools/make-world-map.py <ne_50m.geojson> web/assets/geo/world.json
 node ../finui/tools/build-site.mjs <dir>                # then copy p/, create/presets.json, fonts/ into web/assets/finui
 
