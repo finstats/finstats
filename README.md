@@ -64,9 +64,10 @@ FinStats speaks 23 languages: every page, the Patch notes and what the server sa
 Settings → Appearance → Language, or follows the browser.
 
 > **A note on the translations.** English and Norwegian (Bokmål and Nynorsk) are written and checked by the maintainer,
-> who speaks them. The other languages are translations the maintainer cannot read, so nobody here has checked whether
-> they are good or bad: they may hold mistakes. If you speak one of them and something reads wrong, an issue or a pull
-> request is very welcome. A text a language does not have yet is shown in English.
+> who speaks them. The other languages were translated by Claude Opus 5.5 (high effort), an AI model, and the maintainer
+> cannot read them, so nobody here has checked whether they are good or bad: they may hold mistakes. If you speak one of
+> them and something reads wrong, an issue or a pull request is very welcome. A text a language does not have yet is
+> shown in English.
 
 <!-- languages: i18n::readme_tests writes this; I18N_WRITE_README=1 cargo test readme rewrites it -->
 <p align="center"><img src=".github/languages.svg" width="600" alt="Translation status: English (UK) 100%, English (US) 100%, Norsk Bokmål 100%, Norsk Nynorsk 100%, Dansk 100%, Deutsch 100%, Español 100%, Suomi 100%, Français 100%, हिन्दी 100%, Íslenska 100%, Italiano 100%, 日本語 100%, 한국어 100%, Nederlands 100%, Polski 100%, Português (Brasil) 100%, Русский 100%, Svenska 100%, Türkçe 100%, Українська 100%, 简体中文 100%, 繁體中文 100%"></p>

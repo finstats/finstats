@@ -725,7 +725,8 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 - `CHANGELOG.md`: `## [x.y.z] - YYYY-MM-DD` (or `- first to last`), an `x.y.0` opens with a short title line, groups
   `### Added | Changed | Performance | Stability | Fixed | Removed`, one-line bullets (`**bold**`, `*italic*`, `` `code` ``;
   no links). **Every entry must also be added to `changelog/en-US.md`, `nb-NO.md`, `nn-NO.md`** with the same groups,
-  bullet counts and code spans, or `cargo test` fails.
+  bullet counts and code spans, or `cargo test` fails. The other nineteen `changelog/<tag>.md` may follow within the
+  series, but `qa/run.sh i18n` fails until every one tells every release the source does, so none ships behind.
 - History shape: logical commits (backend before UI, `fix(...)` on their own, then `docs:`), then
   `chore(release): x.y.z` bumping `Cargo.toml` + `Cargo.lock`, then an annotated tag `vX.Y.Z`.
 - CI (`.github/workflows/docker.yml`): on push to `main`, tags, PRs. `test` (cargo test, node --check, tag vs version vs

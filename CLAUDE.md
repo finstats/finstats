@@ -1004,7 +1004,8 @@ run that too before a release, and after work on the database or on anything lon
 
 `CHANGELOG.md` is the source of the in-app **Patch notes** tab (`changelog.rs` parses it), and `changelog/<tag>.md` (embedded) is the
 same file in another language, answered by `Accept-Language`. **A note lands in the four checked languages in the same
-commit**; another language may tell a release later, and shows the source's until it does. A test holds every translation to
+commit**; another language may tell a release later in the series, and shows the source's until it does, but **not later than the
+release itself**: the QA stage `i18n` fails while any `changelog/<tag>.md` lacks a release `CHANGELOG.md` has. A test holds every translation to
 the source release by release (the same headings byte for byte, groups, number of bullets, `code` and bold). A test fails if
 the top entry's version differs from `Cargo.toml`, or an entry lacks a date/notes/known group, so a version bump
 and its changelog entry land together. Format: `## [x.y.z] - YYYY-MM-DD`, or `- YYYY-MM-DD to YYYY-MM-DD` for a release
