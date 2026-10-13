@@ -395,6 +395,13 @@ mod say_tests {
     }
 
     #[test]
+    fn norwegian_says_played_as_one_word_after_the_titles() {
+        assert_eq!(say("nb-NO", "widgets.tiles.distinct_titles", &[]), "Ulike titler avspilt");
+        assert_eq!(say("nn-NO", "widgets.tiles.distinct_titles", &[]), "Ulike titlar avspela");
+        assert_eq!(say("nn-NO-synnmore", "widgets.tiles.distinct_titles", &[]), "Ulike titla avspela");
+    }
+
+    #[test]
     fn placeholders_are_filled_and_plurals_follow_the_count() {
         assert_eq!(say("en-GB", "auth.login.sub_on", &[("server", "Jellyfin".into())]), "Use your Jellyfin account on Jellyfin.");
         assert_eq!(say("nn-NO", "time.days_ago", &[("count", 1.into())]), "for 1 dag sidan");

@@ -3827,7 +3827,7 @@
       "vs_year": "mot året før",
       "vs_days": { "one": "mot forrige {count} dag", "other": "mot de {count} dagene før" },
       "active_users": "Aktive brukere",
-      "distinct_titles": "Ulike titler spilt av"
+      "distinct_titles": "Ulike titler avspilt"
     },
     "media": {
       "video": "Video",
