@@ -834,8 +834,9 @@ pub async fn overview(State(app): State<App>, user: AuthUser, Query(q): Query<Fi
                 |r| r.get(0),
             )?;
             let unplaced: i64 = c.query_row(
-                "SELECT COUNT(DISTINCT p.remote_ip) FROM visible_playbacks p JOIN ip_locations l ON l.ip = p.remote_ip WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NULL AND l.country_code IS NULL",
-                [],
+                &format!("SELECT COUNT(DISTINCT p.remote_ip) FROM visible_playbacks p JOIN ip_locations l ON l.ip = p.remote_ip
+                          WHERE COALESCE(p.is_local, 0) = 0 AND l.latitude IS NULL AND l.country_code IS NULL AND p.started_at >= ?1 AND {}", whose("p.user_id")),
+                params_from_iter(with_who(since.into()).iter()),
                 |r| r.get(0),
             )?;
             Ok(json!({ "places": list, "countries": countries, "failed": failed, "now_playing": now_playing, "open_alerts": open_alerts,
