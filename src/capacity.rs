@@ -172,6 +172,29 @@ pub const SETTLE_S: i64 = 30 * 86_400;
 /// ...and told only once it covers this long.
 pub const MIN_WINDOW_S: i64 = 30 * 86_400;
 
+/// How fast some files have been arriving: what came over the window since `since`, from [`SETTLE_S`] after the first
+/// of them, so that the filling is not read as growth. A disk's, and a library's.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Pace {
+    pub added: i64,
+    pub per_month: i64,
+    /// How long the pace was measured over: [`GROWTH_MONTHS`], or less for files that arrived more recently.
+    pub window_months: f64,
+    /// Filled too recently to have a pace yet.
+    pub young: bool,
+}
+
+fn pace(files: &[&File], now: i64) -> Pace {
+    let since = now - GROWTH_MONTHS * MONTH_S;
+    let start = files.iter().map(|f| f.added).min().map_or(since, |first| since.max(first + SETTLE_S));
+    let window = now - start;
+    let young = window < MIN_WINDOW_S;
+    let added: i64 = files.iter().filter(|f| f.added >= start).map(|f| f.bytes.max(0)).sum();
+    let per_month = if young { 0 } else { (added as i128 * MONTH_S as i128 / window as i128) as i64 };
+    let window_months = if young { 0.0 } else { (window as f64 / MONTH_S as f64 * 10.0).round() / 10.0 };
+    Pace { added, per_month, window_months, young }
+}
+
 /// The disks behind the library folders. Folders on the device Jellyfin names (the mount, on Linux; the drive, on Windows)
 /// are one disk, whatever free space was read for each: Jellyfin reads folder by folder, and a disk being written to
 /// reports a little less for the next. Without a device, the same free space is the same disk, since two disks with the
@@ -186,7 +209,6 @@ pub fn disks(folders: &[Folder], files: &[File], now: i64) -> Vec<Disk> {
         };
         by_disk.entry(key).or_default().push(f);
     }
-    let since = now - GROWTH_MONTHS * MONTH_S;
     let sep = |c: char| c == '/' || c == '\\';
     let under = |path: &str, folder: &str| path.strip_prefix(folder.trim_end_matches(sep)).is_some_and(|rest| rest.starts_with(sep));
     by_disk
@@ -199,28 +221,23 @@ pub fn disks(folders: &[Folder], files: &[File], now: i64) -> Vec<Disk> {
             libraries.sort();
             libraries.dedup();
             let here: Vec<&File> = files.iter().filter(|f| paths.iter().any(|p| under(&f.path, p))).collect();
-            let start = here.iter().map(|f| f.added).min().map_or(since, |first| since.max(first + SETTLE_S));
-            let window = now - start;
-            let young = window < MIN_WINDOW_S;
-            let added: i64 = here.iter().filter(|f| f.added >= start).map(|f| f.bytes.max(0)).sum();
-            let per_month = if young { 0 } else { (added as i128 * MONTH_S as i128 / window as i128) as i64 };
+            let Pace { per_month, window_months, young, .. } = pace(&here, now);
             let (free, used) = (on.iter().map(|f| f.free).min().unwrap_or(0), on.iter().map(|f| f.used).max().unwrap_or(0));
-            let window_months = if young { 0.0 } else { (window as f64 / MONTH_S as f64 * 10.0).round() / 10.0 };
             Disk { folders: paths, libraries, free, used, per_month, months_left: (per_month > 0).then(|| free as f64 / per_month as f64), window_months, young }
         })
         .collect()
 }
 
-/// Growth per library over the same window, for when no free space was reported (Jellyfin before 10.11) and beside it.
-pub fn growth_by_library(files: &[File], now: i64) -> BTreeMap<String, i64> {
-    let since = now - GROWTH_MONTHS * MONTH_S;
-    let mut out: BTreeMap<String, i64> = BTreeMap::new();
-    for f in files.iter().filter(|f| f.added >= since) {
+/// Growth per library over the same window, for when no free space was reported (Jellyfin before 10.11) and beside it,
+/// each from its own first month as a disk is.
+pub fn library_paces(files: &[File], now: i64) -> BTreeMap<String, Pace> {
+    let mut by: BTreeMap<String, Vec<&File>> = BTreeMap::new();
+    for f in files {
         if let Some(lib) = &f.library {
-            *out.entry(lib.clone()).or_default() += f.bytes.max(0);
+            by.entry(lib.clone()).or_default().push(f);
         }
     }
-    out
+    by.into_iter().map(|(lib, here)| (lib, pace(&here, now))).collect()
 }
 
 /// Something worth knowing, with the numbers behind it.
@@ -393,7 +410,8 @@ pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
         "disks": disks.iter().map(|d| json!({ "folders": d.folders, "libraries": d.libraries, "free_bytes": d.free, "used_bytes": d.used,
                                                 "added_per_month": d.per_month, "months_left": d.months_left.map(|m| (m * 10.0).round() / 10.0),
                                                 "window_months": d.window_months, "young": d.young })).collect::<Vec<_>>(),
-        "growth": growth_by_library(&files, now).into_iter().map(|(library, added)| json!({ "library": library, "added_bytes": added })).collect::<Vec<_>>(),
+        "growth": library_paces(&files, now).into_iter().map(|(library, p)| json!({ "library": library, "added_bytes": p.added, "added_per_month": p.per_month,
+                                                                                     "window_months": p.window_months, "young": p.young })).collect::<Vec<_>>(),
         "window_months": GROWTH_MONTHS,
     });
 
@@ -596,10 +614,23 @@ mod tests {
     }
 
     #[test]
-    fn growth_by_library_counts_the_window_only() {
-        let g = growth_by_library(&[file("Films", "/f/a", 60, 30), file("Films", "/f/b", 500, 400), file("Shows", "/s/a", 30, 179)], NOW);
+    fn a_library_s_growth_counts_the_window_only() {
+        let g: BTreeMap<String, i64> = library_paces(&[file("Films", "/f/a", 60, 30), file("Films", "/f/b", 500, 400), file("Shows", "/s/a", 30, 179), file("Shows", "/s/old", 5, 300)], NOW).into_iter().map(|(l, p)| (l, p.added)).collect();
         assert_eq!(g.get("Films"), Some(&60_000_000_000));
         assert_eq!(g.get("Shows"), Some(&30_000_000_000));
+    }
+
+    /// A library's first month is its filling, as a disk's is: 12 TB indexed two months ago read as 2 TB a month of growth.
+    #[test]
+    fn a_library_filled_two_months_ago_has_grown_only_by_what_came_after_its_first_month() {
+        let g: BTreeMap<String, i64> = library_paces(&[file("Fresh", "/x/a", 12_000, 60), file("Fresh", "/x/b", 10, 10), file("Films", "/f/a", 60, 30), file("Films", "/f/b", 500, 400)], NOW).into_iter().map(|(l, p)| (l, p.added)).collect();
+        assert_eq!(g.get("Fresh"), Some(&10_000_000_000), "the fill is not growth; what came a month after it is");
+        assert_eq!(g.get("Films"), Some(&60_000_000_000), "a library older than the window is measured over all of it");
+        // Each library's pace is over its own window, as a disk's is, not the six months the page once divided by.
+        let fresh = &library_paces(&[file("Fresh", "/x/a", 12_000, 60), file("Fresh", "/x/b", 10, 10)], NOW)["Fresh"];
+        assert_eq!((fresh.added, fresh.per_month, fresh.window_months, fresh.young), (10_000_000_000, (10_000_000_000i128 * MONTH_S as i128 / (30 * DAY) as i128) as i64, 1.0, false));
+        let filling = &library_paces(&[file("New", "/n/a", 900, 20)], NOW)["New"];
+        assert!(filling.young && filling.per_month == 0, "a library filled twenty days ago has no pace yet");
     }
 
     fn many(n: i64, way: Way, days_ago: i64) -> Vec<Play> {
@@ -751,7 +782,7 @@ mod tests {
         let disk = &a["disks"][0];
         assert_eq!((disk["folders"].clone(), disk["libraries"].clone()), (json!(["/media/films"]), json!(["Films"])), "the cache is not a library disk");
         assert_eq!(disk["added_per_month"], 20_000_000_000i64, "120 GB in six months");
-        assert_eq!(a["growth"], json!([{ "library": "Films", "added_bytes": 120_000_000_000i64 }]));
+        assert_eq!(a["growth"], json!([{ "library": "Films", "added_bytes": 120_000_000_000i64, "added_per_month": 20_000_000_000i64, "window_months": 6.0, "young": false }]));
         let kinds: Vec<&str> = a["findings"].as_array().unwrap().iter().map(|f| f["kind"].as_str().unwrap()).collect();
         assert_eq!(kinds, ["runway", "scan_busy", "software_transcodes"]);
         assert!(a["findings"].as_array().unwrap().iter().all(|f| f["dismissed"] == false && f["found_at"] == NOW));

@@ -87,7 +87,7 @@ export function capacityView(ctx) {
 
   function disks(d) {
     if (!d.free_space_reported) {
-      const rows = (d.growth || []).map((g) => h('tr', null, h('td', null, g.library), h('td', { class: 'mono r' }, bytes(g.added_bytes)), h('td', { class: 'mono r' }, bytes(g.added_bytes / d.window_months))));
+      const rows = (d.growth || []).map((g) => h('tr', null, h('td', null, g.library), h('td', { class: 'mono r' }, bytes(g.added_bytes)), h('td', { class: 'mono r' }, g.young ? '–' : bytes(g.added_per_month))));
       return card({ title: t('pages.capacity.disks.title'), sub: t('pages.capacity.disks.growth_sub', { count: d.window_months }), id: 'capacity-disks',
         body: [h('p', { class: 'fui-field__help' }, t('pages.capacity.disks.unreported')),
           rows.length ? plainTable(h('table', { class: 'fui-data-table' }, h('thead', null, h('tr', null, h('th', null, t('pages.capacity.disks.library')), h('th', { class: 'r' }, t('pages.capacity.disks.added_in', { count: d.window_months })), h('th', { class: 'r' }, t('pages.capacity.disks.a_month')))), h('tbody', null, rows))) : null] });
