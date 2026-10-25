@@ -161,11 +161,25 @@ fn said(chain: &[&serde_json::Value], lang: &str, key: &str, args: &[(&str, Arg)
             v.get(form).or(v.get("other")).and_then(|x| x.as_str()).unwrap_or(key)
         }
     };
-    let mut out = text.to_string();
-    for (name, arg) in args {
-        let value = match arg { Arg::Text(s) => s.clone(), Arg::Number(n) => number(lang, *n) };
-        out = out.replace(&format!("{{{name}}}"), &value);
+    // One pass over the text as written, so a value is never read for placeholders of its own.
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(open) = rest.find('{') {
+        out.push_str(&rest[..open]);
+        let after = &rest[open + 1..];
+        let filled = after.find('}').and_then(|close| args.iter().find(|(n, _)| *n == &after[..close]).map(|(_, arg)| (close, arg)));
+        match filled {
+            Some((close, arg)) => {
+                match arg { Arg::Text(s) => out.push_str(s), Arg::Number(n) => out.push_str(&number(lang, *n)) }
+                rest = &after[close + 1..];
+            }
+            None => {
+                out.push('{');
+                rest = after;
+            }
+        }
     }
+    out.push_str(rest);
     out
 }
 
@@ -413,6 +427,13 @@ mod say_tests {
         assert_eq!(say("nn-NO", "time.days_ago", &[("count", 3.into())]), "for 3 dagar sidan");
         assert_eq!(say("en-GB", "statusbar.plays", &[("count", 1390.into())]), "1,390 plays");
         assert_eq!(say("nb-NO", "statusbar.plays", &[("count", 1390.into())]), "1\u{a0}390 avspillinger");
+    }
+
+    /// Each placeholder is filled once, from the text as written: a title is somebody's words, and one called
+    /// "Big {device} Bunny" was filled again by the next argument.
+    #[test]
+    fn a_value_that_looks_like_a_placeholder_is_left_as_it_is() {
+        assert_eq!(say("en-GB", "server.security.played_on", &[("title", "Big {device} Bunny".into()), ("device", "Firefox".into())]), "Big {device} Bunny on Firefox");
     }
 
     #[test]
