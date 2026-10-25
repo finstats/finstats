@@ -213,11 +213,21 @@ pub fn within<R>(lang: &'static str, f: impl FnOnce() -> R) -> R {
     LANG.sync_scope(lang, f)
 }
 
-/// The language a request asks for: the one chosen in FinStats (the `finstats_lang` cookie the pages keep, which a
-/// picture or a download fetched by the browser itself carries too), else `Accept-Language`.
+/// The language a request asks for: the page's own (`X-FinStats-Language`, which `api.js` sends, since the cookie is
+/// shared by every tab and another may have chosen since), else the one chosen in FinStats (the `finstats_lang` cookie
+/// the pages keep, which a picture or a download fetched by the browser itself carries too), else `Accept-Language`.
+pub const PAGE_HEADER: &str = "x-finstats-language";
+/// `tag` as one of the languages FinStats speaks, written exactly so; `None` for any other.
+pub fn locale(tag: &str) -> Option<&'static str> {
+    LOCALES.iter().copied().find(|l| *l == tag)
+}
 pub fn asked(headers: &axum::http::HeaderMap) -> &'static str {
+    let page = headers.get(PAGE_HEADER).and_then(|v| v.to_str().ok()).and_then(locale);
+    if let Some(page) = page {
+        return page;
+    }
     let chosen = headers.get_all(axum::http::header::COOKIE).iter().filter_map(|v| v.to_str().ok()).flat_map(|v| v.split(';'))
-        .filter_map(|c| c.trim().strip_prefix("finstats_lang=")).find_map(|tag| LOCALES.iter().copied().find(|l| *l == tag));
+        .filter_map(|c| c.trim().strip_prefix("finstats_lang=")).find_map(locale);
     chosen.unwrap_or_else(|| pick(headers.get(ACCEPT_LANGUAGE).and_then(|v| v.to_str().ok()).unwrap_or("")))
 }
 
@@ -564,6 +574,19 @@ mod pick_tests {
         assert_eq!(asked(&h("en-US", None)), "en-US");
         assert_eq!(asked(&h("nb", Some("finstats_lang=xx-YY"))), "nb-NO", "a cookie naming a language FinStats does not speak is ignored");
         assert_eq!(asked(&HeaderMap::new()), "en-US");
+    }
+
+    /// The cookie is shared by every tab, so a tab still open in Bokmål after another chose German would hear the server
+    /// in German. A page says its own language in `X-FinStats-Language`, and that beats the cookie.
+    #[test]
+    fn the_page_s_own_language_beats_the_cookie_another_tab_set() {
+        use axum::http::{HeaderMap, HeaderValue};
+        let mut m = HeaderMap::new();
+        m.insert(axum::http::header::COOKIE, HeaderValue::from_static("finstats_lang=de-DE"));
+        m.insert("x-finstats-language", HeaderValue::from_static("nb-NO"));
+        assert_eq!(asked(&m), "nb-NO");
+        m.insert("x-finstats-language", HeaderValue::from_static("xx-YY"));
+        assert_eq!(asked(&m), "de-DE", "a language FinStats does not speak is ignored");
     }
 
     #[test]

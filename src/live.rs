@@ -345,6 +345,7 @@ fn allowed(user: &AuthUser) -> Vec<&'static str> {
 pub async fn connect(
     State(app): State<App>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    uri: axum::http::Uri,
     headers: HeaderMap,
     ws: Result<WebSocketUpgrade, WebSocketUpgradeRejection>,
 ) -> Response {
@@ -372,7 +373,9 @@ pub async fn connect(
     let seat = Seat { app: app.clone(), user_id: user.id.clone(), id: ticket.id };
     let gone = ticket.gone;
     // The upgrade's task is a new one: it is handed the request's language here, or every frame is in British English.
-    let lang = crate::i18n::current();
+    // A WebSocket cannot carry a header of the page's own, so its tab says its language in the address (`?lang=`); the
+    // cookie is every tab's, and another may have chosen since.
+    let lang = uri.query().into_iter().flat_map(|q| q.split('&')).find_map(|kv| kv.strip_prefix("lang=")).and_then(crate::i18n::locale).unwrap_or_else(crate::i18n::current);
     ws.max_message_size(MESSAGE_MAX).on_upgrade(move |socket| crate::i18n::speaking(lang, serve(app, socket, user, presented, seat, gone, auth)))
 }
 

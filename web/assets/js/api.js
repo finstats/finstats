@@ -82,7 +82,7 @@ function request(method, path, { body, signal, params, quiet401 = false } = {}) 
 
 async function send(method, path, { body, signal, params, quiet401 = false } = {}) {
   // The language this page reads in, so what the server answers in words is in it too.
-  const init = { method, signal, credentials: 'same-origin', headers: { Accept: 'application/json', 'Accept-Language': lang() } };
+  const init = { method, signal, credentials: 'same-origin', headers: { Accept: 'application/json', 'Accept-Language': lang(), 'X-FinStats-Language': lang() } };
   if (body !== undefined) {
     init.headers['Content-Type'] = 'application/json';
     init.body = JSON.stringify(body);
@@ -141,6 +141,7 @@ export function uploadRaw(path, file, onProgress) {
     xhr.setRequestHeader('Content-Type', 'application/octet-stream');
     xhr.setRequestHeader('Accept', 'application/json');
     xhr.setRequestHeader('Accept-Language', lang());
+    xhr.setRequestHeader('X-FinStats-Language', lang());
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total, e.loaded, e.total); };
     xhr.onload = () => {
       let data = null;

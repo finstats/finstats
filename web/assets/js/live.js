@@ -6,6 +6,8 @@
 // server restarting, a network change) that poll runs exactly as before: the same endpoint, the same interval, paused
 // while the tab is hidden. It stops again the moment the socket is back. Nobody is told: the page looks the same either way.
 
+import { lang } from './i18n.js';
+
 const RETRY_FIRST_MS = 1000;
 const RETRY_MAX_MS = 15000;
 // A path that died silently (a laptop woken, a proxy that dropped it) closes nothing here, and on a quiet evening nothing
@@ -25,7 +27,8 @@ let gaveWay = false;                // a newer tab of this person took the seat:
 let pinger = null;                  // the interval that asks whether the socket still carries
 let pongDue = null;                 // the timer that gives it up when no answer came
 
-const address = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/live`;
+// The tab's own language: the cookie is every tab's, and a socket carries no header of the page's.
+const address = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/live?lang=${encodeURIComponent(lang())}`;
 const send = (msg) => { if (live && ws) { try { ws.send(JSON.stringify(msg)); } catch { /* closing */ } } };
 const topics = () => [...new Set([...follows].map((f) => f.topic))];
 
