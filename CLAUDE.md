@@ -766,12 +766,14 @@ from translated pieces, because Norwegian orders words differently. **The browse
 written the language's way), `tParts` when a placeholder is an element, `tOr(key, fallback)` for an id from the server the
 catalogue may not know, `lang()` for every `Intl` call and `localeCompare` (never `undefined`, `'en'` or `'en-US'`). The
 language is the browser's (Settings → Appearance → Language, `finstats.language`, nothing stored follows `navigator.languages`;
-a browser asking only for languages FinStats does not speak, or for an `en` that names no country, gets **American English** (`i18n::DEFAULT`, `DEFAULT` in `i18n.js`, `theme.js`), while British English stays the source, what a catalogue lacks is said in, and what work outside a request (a test, a scheduled run) speaks; `theme.js` decides the same way to preload the file and set `<html lang>`; `i18n.js` also keeps it in the `finstats_lang` cookie, which `i18n::asked` prefers to `Accept-Language`, because a picture or a download the browser fetches by itself carries the browser's own languages), choosing another reloads, and `main.js` puts the
+a browser asking only for languages FinStats does not speak, or for an `en` that names no country, gets **American English** (`i18n::DEFAULT`, `DEFAULT` in `i18n.js`, `theme.js`), while British English stays the source, what a catalogue lacks is said in, and what work outside a request (a test, a scheduled run) speaks; `theme.js` decides the same way to preload the file and set `<html lang>`; `i18n.js` also keeps it in the `finstats_lang` cookie, which `i18n::asked` prefers to `Accept-Language`, because a picture or a download the browser fetches by itself carries the browser's own languages; the cookie is every tab's, so a page's own requests say `X-FinStats-Language` and its socket `?lang=`, which beat it), choosing another reloads, and `main.js` puts the
 catalogue in use **before** importing either layout, so a module may say `t()` at its top level; the public profile does the
 same before its own imports. FinUI's components speak through `finui/i18n.js` (`say(key, english)`, `locale()`), fed the
 catalogue's `finui` section. Numbers follow the language everywhere (FinUI's `num`, `dom.js`'s formatters), and FinUI's table
-reader parses them back with that language's separators and any language's units (`3 d 2 t`, `48 min`, `5 av 26`). **The
-server side**: `api.js` sends the page's language as `Accept-Language`, `i18n::middleware` keeps it for the request
+reader parses them back with that language's separators and its units and "5 of 26", which `useCatalogue` hands FinUI as `units`
+(the catalogue's `units` and `pages.person.of_total`). A word beside a number goes through a plural key, never `n === 1 ? a : b`;
+one that is the word alone beside a number the page draws (`…_word`, `unit…`) may leave `{count}` out. **The
+server side**: `api.js` sends the page's language as `Accept-Language` and `X-FinStats-Language`, `i18n::middleware` keeps it for the request
 (`i18n::current`, a task-local; `i18n::pick` is `pickLanguage`'s rule), `i18n::t` says a catalogue text in it (the same files,
 `include_str!`'d), `i18n::carry` hands it to work spawned from a request, and `i18n::within` to a blocking thread (`Db::call` and `api.rs`'s `blocking` do, so `db.call` and imports keep it). Errors and everything else the server answers in
 words go through it (`server.*` keys); `ApiError::not_found("Thing")` finds `server.not_found.thing` by itself. Tests run

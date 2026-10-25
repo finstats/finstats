@@ -755,9 +755,6 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 - **Nineteen of the 24 languages are unchecked translations.** Only en-GB, en-US, nb-NO, nn-NO and nn-NO-synnmore are read by the owner;
   the README, the docs and Settings → Appearance → Language say so. Cards (Recap, public profile) draw Japanese, Korean,
   Chinese and Hindi readers' cards in en-GB, because the card font (Inter) has no CJK or Devanagari letters.
-- **A few labels beside a number choose between two keys in code** (`n === 1 ? a : b`: Together's sessions, Recap's genres,
-  a task's interval, the concurrent-streams unit) rather than through a plural key, so Russian, Ukrainian and Polish use a
-  form that fits any number there instead of their own few/many.
 - **Notification messages stay English** (they are sent outside any request, to external services), and stored texts
   written by scheduled runs (a task's error) are in en-GB.
 - **CI's `node --check` covers only `web/assets/js/*.js` and `pages/*.js`**, not `settings/`, `simple/`, `public/`,
@@ -770,10 +767,6 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
   two imports" (there are three). The backup module's doc omits several tables in `TABLES`. `checks/capacity.sh` refers
   to a `qa/run.sh capacity` stage that does not exist.
 - Libraries (unlike users) are still marked removed by timestamp rather than by id.
-- The table reader (FinUI `data-table`) knows the duration units of the checked languages only: German, French, Russian,
-  Turkish and the other unchecked languages' durations sort as text.
-- The `finstats_lang` cookie is shared by every tab and preferred to the `Accept-Language` a page sends, so after a
-  language is changed in one tab, another tab still open in the old language gets the server's words in the new one.
 
 ---
 
