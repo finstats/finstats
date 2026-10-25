@@ -317,6 +317,13 @@ mod pages_tests {
                     let Some(call) = call else { continue };
                     if lit.contains(char::is_whitespace) || lit.is_empty() || lit.starts_with("${") { continue }
                     let key = if call == "say(" { format!("finui.{lit}") } else { lit.clone() };
+                    // FinUI's `units` are not a section of its own: `useCatalogue` hands it the catalogue's `units`, and
+                    // `pages.person.of_total` as `of`, so the table reader reads numbers back as the pages wrote them.
+                    let key = match key.strip_prefix("finui.units.") {
+                        Some("of") => "pages.person.of_total".to_string(),
+                        Some(unit) => format!("units.{unit}"),
+                        None => key,
+                    };
                     let ok = match key.split_once("${") {
                         Some((stem, _)) => has_branch(cat, stem) || has_text(cat, stem.trim_end_matches('.')),
                         None => has_text(cat, &key),

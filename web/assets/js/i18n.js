@@ -99,7 +99,10 @@ export function useCatalogue(tag, catalogue, source = null) {
   fallback = source && source !== catalogue ? source : null;
   plurals = new Intl.PluralRules(tag);
   numbers = new Intl.NumberFormat(tag);
-  finuiWords(words.finui, tag);
+  // The table reader reads numbers back as this language writes them: its units, and "5 of 26".
+  const units = { ...((fallback && fallback.units) || {}), ...(words.units || {}) };
+  const of = words.pages?.person?.of_total || fallback?.pages?.person?.of_total;
+  finuiWords({ ...words.finui, units: of ? { ...units, of } : units }, tag);
 }
 
 /** Fetch the chosen language's catalogue and put it in use; the source's words if it cannot be had. */

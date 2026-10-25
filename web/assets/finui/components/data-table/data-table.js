@@ -24,6 +24,47 @@ const collator = () => (collFor === locale() ? coll : (collFor = locale(), coll 
 const BYTES = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4, PB: 1024 ** 5 };
 const SCALE = { K: 1e3, M: 1e6, B: 1e9 };
 
+// Durations and "5 of 26" as the app writes them, from the words it handed FinUI (`units`: `{count}` templates for days,
+// hours, minutes and seconds, and `of`); English and the Nordic letters are always read too. Worked out again only when
+// those words change.
+const SECONDS = { days: 86400, hours: 3600, minutes: 60, seconds: 1 };
+const KNOWN = [['d', 86400], ['h', 3600], ['t', 3600], ['m', 60], ['min', 60], ['s', 1]];
+const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+let reading = null, readingFor = '';
+function reader() {
+  const tpl = Object.fromEntries(Object.keys(SECONDS).map((u) => [u, say(`units.${u}`, '')]));
+  const of = say('units.of', '');
+  const key = JSON.stringify([tpl, of]);
+  if (key === readingFor) return reading;
+  const unit = new Map(KNOWN);
+  for (const [u, t] of Object.entries(tpl)) { const w = t.replace('{count}', '').trim(); if (w) unit.set(w, SECONDS[u]); }
+  const words = [...unit.keys()].sort((a, b) => b.length - a.length).map(esc).join('|');
+  // The value is the placeholder that is not the total: "{seen} of {total}", "{total} में से {seen}".
+  let ofRe = null, ofAt = 1;
+  if (of && /\{total\}/.test(of)) {
+    const names = [...of.matchAll(/\{([a-z_]+)\}/g)].map((m) => m[1]);
+    ofAt = names.findIndex((n) => n !== 'total') + 1;
+    ofRe = new RegExp('^' + of.split(/\{[a-z_]+\}/).map((lit) => esc(lit.trim()).replace(/\s+/g, '\\s*')).join('\\s*([\\d.,\\s]+?)\\s*') + '$');
+  }
+  readingFor = key;
+  reading = { unit, step: new RegExp(`(\\d+)\\s*(${words})(?![\\p{L}])`, 'uy'), ofRe, ofAt };
+  return reading;
+}
+function duration(text, { unit, step }) {
+  let total = 0, i = 0, any = false;
+  while (i < text.length) {
+    while (i < text.length && /\s/.test(text[i])) i++;
+    if (i >= text.length) break;
+    step.lastIndex = i;
+    const m = step.exec(text);
+    if (!m) return null;
+    total += Number(m[1]) * unit.get(m[2]);
+    any = true;
+    i = step.lastIndex;
+  }
+  return any ? total : null;
+}
+
 function plainNumber(text) {
   const { group, decimal } = separators();
   const t = text.split(group).join('').replace(/[\s\u00a0\u202f]/g, '').split(decimal).join('.');
@@ -35,8 +76,11 @@ export function textValue(raw) {
   const text = String(raw == null ? '' : raw).trim();
   if (!text || text === '–' || text === '-') return null;
   let m;
-  // Durations as each language writes them: "3d 2h", "3 d 2 t", "48m", "48 min".
-  if ((m = /^(?:(\d+)\s?d)?\s*(?:(\d+)\s?[ht])?\s*(?:(\d+)\s?m(?:in)?)?\s*(?:(\d+)\s?s)?$/.exec(text)) && m[0]) return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0);
+  const r = reader();
+  // Durations as the language writes them: "3d 2h", "3 d 2 t", "2 T. 4 h", "3時間 12分".
+  const secs = duration(text, r);
+  if (secs != null) return secs;
+  if (r.ofRe && (m = r.ofRe.exec(text))) { const n = plainNumber(m[r.ofAt]); if (n != null) return n; }
   // `\s` is every space a language groups with (no-break, narrow no-break). Turkish writes the sign first: %42.
   if ((m = /^%\s*([\d.,\s]+)$/.exec(text)) || (m = /^([\d.,\s]+?)\s*%/.exec(text))) return plainNumber(m[1]);
   if ((m = /^([\d.,\s]+?)\s*(B|KB|MB|GB|TB|PB)$/.exec(text))) return plainNumber(m[1]) * BYTES[m[2]];
