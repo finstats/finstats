@@ -1835,7 +1835,8 @@
       "server_read": { "one": "{count} device, {plugins} plugins", "other": "{count} devices, {plugins} plugins" },
       "server_read_without_plugins": { "one": "{count} device; the plugins could not be read", "other": "{count} devices; the plugins could not be read" },
       "reading_watched": "Reading what {name} has watched",
-      "userdata_read": { "one": "{count} played or favourite item", "other": "{count} played or favourite items" }
+      "userdata_read": { "one": "{count} played or favourite item", "other": "{count} played or favourite items" },
+      "userdata_refused": { "one": "Jellyfin returned {count} played or favourite item for {name} where FinStats holds {current}. Refusing to clear the missing ones: this looks like a Jellyfin change or a bad read. Nothing was changed.", "other": "Jellyfin returned {count} played or favourite items for {name} where FinStats holds {current}. Refusing to clear the missing ones: this looks like a Jellyfin change or a bad read. Nothing was changed." }
     },
     "import": {
       "reading_libraries": "Reading libraries",

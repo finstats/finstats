@@ -2124,6 +2124,10 @@
       "userdata_read": {
         "one": "{count} avspela elle favorittmerkt element",
         "other": "{count} avspela elle favorittmerkte element"
+      },
+      "userdata_refused": {
+        "one": "Jellyfin gidde {count} avspela elle favorittmerkt element for {name} der FinStats he {current}. Dei som manglar, vert ikkje fjerna: dette ser ut som ei endring i Jellyfin elle ei feillesing. Ingenting vart endra.",
+        "other": "Jellyfin gidde {count} avspela elle favorittmerkte element for {name} der FinStats he {current}. Dei som manglar, vert ikkje fjerna: dette ser ut som ei endring i Jellyfin elle ei feillesing. Ingenting vart endra."
       }
     },
     "import": {

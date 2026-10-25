@@ -1836,7 +1836,8 @@
       "server_read": { "one": "{count} enhet, {plugins} programtillegg", "other": "{count} enheter, {plugins} programtillegg" },
       "server_read_without_plugins": { "one": "{count} enhet; programtilleggene kunne ikke leses", "other": "{count} enheter; programtilleggene kunne ikke leses" },
       "reading_watched": "Leser hva {name} har sett",
-      "userdata_read": { "one": "{count} avspilt eller favorittmerket element", "other": "{count} avspilte eller favorittmerkede elementer" }
+      "userdata_read": { "one": "{count} avspilt eller favorittmerket element", "other": "{count} avspilte eller favorittmerkede elementer" },
+      "userdata_refused": { "one": "Jellyfin ga {count} avspilt eller favorittmerket element for {name} der FinStats har {current}. De som mangler, blir ikke fjernet: dette ser ut som en endring i Jellyfin eller en feillesing. Ingenting ble endret.", "other": "Jellyfin ga {count} avspilte eller favorittmerkede elementer for {name} der FinStats har {current}. De som mangler, blir ikke fjernet: dette ser ut som en endring i Jellyfin eller en feillesing. Ingenting ble endret." }
     },
     "import": {
       "reading_libraries": "Leser biblioteker",

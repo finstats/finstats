@@ -1109,6 +1109,38 @@ async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
 
 /// Jellyfin remembers what each user has finished or favourited, including everything from
 /// before FinStats existed. That is what makes "never watched" trustworthy.
+/// One person's played and favourite flags, replaced by what the read returned, unless the read is no
+/// basis for that (`trustworthy_removal`): then nothing is changed and the count FinStats holds is answered.
+pub(crate) fn store_user_items(c: &mut Connection, uid: &str, rows: &[Value], shrink_ok: bool) -> Result<Option<i64>> {
+    let seen = rows.iter().filter_map(|it| it["Id"].as_str()).map(norm_id).collect::<std::collections::HashSet<_>>().len();
+    let tx = c.transaction()?;
+    let current: i64 = tx.query_row("SELECT COUNT(*) FROM user_items WHERE user_id = ?1", [uid], |r| r.get(0))?;
+    if !shrink_ok && !trustworthy_removal(seen, current) {
+        return Ok(Some(current));
+    }
+    tx.execute("DELETE FROM user_items WHERE user_id = ?1", [uid])?;
+    {
+        let mut stmt = tx.prepare(
+            "INSERT INTO user_items(user_id, item_id, played, is_favorite, play_count, last_played_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(user_id, item_id) DO UPDATE SET played = MAX(played, excluded.played), is_favorite = MAX(is_favorite, excluded.is_favorite)",
+        )?;
+        for it in rows {
+            let Some(id) = it["Id"].as_str() else { continue };
+            let ud = &it["UserData"];
+            stmt.execute(params![
+                uid,
+                norm_id(id),
+                ud["Played"].as_bool().unwrap_or(false),
+                ud["IsFavorite"].as_bool().unwrap_or(false),
+                ud["PlayCount"].as_i64().unwrap_or(0),
+                ud["LastPlayedDate"].as_str().and_then(parse_ts),
+            ])?;
+        }
+    }
+    tx.commit()?;
+    Ok(None)
+}
+
 async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
     const ID: &str = "sync_userdata";
     let users: Vec<(String, String)> = app
@@ -1138,32 +1170,13 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
         }
         total += rows.len();
         let uid = user_id.clone();
-        app.db
-            .call(move |c| {
-                let tx = c.transaction()?;
-                tx.execute("DELETE FROM user_items WHERE user_id = ?1", [&uid])?;
-                {
-                    let mut stmt = tx.prepare(
-                        "INSERT INTO user_items(user_id, item_id, played, is_favorite, play_count, last_played_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                         ON CONFLICT(user_id, item_id) DO UPDATE SET played = MAX(played, excluded.played), is_favorite = MAX(is_favorite, excluded.is_favorite)",
-                    )?;
-                    for it in &rows {
-                        let Some(id) = it["Id"].as_str() else { continue };
-                        let ud = &it["UserData"];
-                        stmt.execute(params![
-                            uid,
-                            norm_id(id),
-                            ud["Played"].as_bool().unwrap_or(false),
-                            ud["IsFavorite"].as_bool().unwrap_or(false),
-                            ud["PlayCount"].as_i64().unwrap_or(0),
-                            ud["LastPlayedDate"].as_str().and_then(parse_ts),
-                        ])?;
-                    }
-                }
-                tx.commit()?;
-                Ok(())
-            })
-            .await?;
+        let seen = rows.iter().filter(|it| it["Id"].is_string()).count();
+        let shrink_ok = allow_shrink();
+        if let Some(current) = app.db.call(move |c| store_user_items(c, &uid, &rows, shrink_ok)).await? {
+            let msg = crate::i18n::t("server.sync.userdata_refused", &[("count", seen.into()), ("name", (&name).into()), ("current", current.into())]);
+            app.request_halt(msg.clone());
+            return Err(anyhow!(msg));
+        }
     }
     Ok(crate::i18n::t("server.sync.userdata_read", &[("count", total.into())]))
 }
@@ -1308,6 +1321,32 @@ mod tests {
         let reshaped = [json!({ "id": "a1", "name": "alice" }), json!({ "id": "b2", "name": "bob" })];
         assert_eq!(store_users(&mut c, &reshaped, false, 103).unwrap(), Some(2), "nobody readable is refused like nobody at all");
         assert_eq!((removed(&c, "a1"), removed(&c, "b2")), (0, 0));
+    }
+
+    /// A person's played and favourite flags are replaced by each read, so an empty or reshaped read
+    /// cleared every one of them until the next read: refused like the library's and the users' guards.
+    #[test]
+    fn a_read_of_somebodys_flags_that_comes_back_empty_keeps_them() {
+        let mut c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let played = |id: String| json!({ "Id": id, "UserData": { "Played": true, "PlayCount": 1 } });
+        let flags = |c: &Connection| c.query_row("SELECT COUNT(*) FROM user_items WHERE user_id = 'a1'", [], |r| r.get::<_, i64>(0)).unwrap();
+        let many: Vec<Value> = (0..300).map(|n| played(format!("m{n}"))).collect();
+        assert_eq!(store_user_items(&mut c, "a1", &many, false).unwrap(), None);
+        assert_eq!(flags(&c), 300);
+        assert_eq!(store_user_items(&mut c, "a1", &[], false).unwrap(), Some(300), "an empty read is refused");
+        let reshaped: Vec<Value> = (0..300).map(|n| json!({ "id": format!("m{n}") })).collect();
+        assert_eq!(store_user_items(&mut c, "a1", &reshaped, false).unwrap(), Some(300), "nothing readable is an empty read");
+        assert_eq!(flags(&c), 300, "the flags are kept");
+        assert_eq!(store_user_items(&mut c, "a1", &many[..10], false).unwrap(), None, "ordinary churn applies");
+        assert_eq!(flags(&c), 10);
+        assert_eq!(store_user_items(&mut c, "a1", &[], false).unwrap(), None, "a handful going is a handful going");
+        assert_eq!(flags(&c), 0);
+        store_user_items(&mut c, "a1", &many, false).unwrap();
+        assert_eq!(store_user_items(&mut c, "a1", &[], true).unwrap(), None, "FINSTATS_ALLOW_LIBRARY_SHRINK waves it through");
+        assert_eq!(flags(&c), 0);
     }
 
     /// The library guard counts what a read stored, and an item without an id stores nothing: a page of
