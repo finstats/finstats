@@ -318,7 +318,7 @@ fn said(kind: &str, e: &Value) -> Option<String> {
         "scan_busy" => t("scan_busy", &[]),
         "runway" => {
             let place = e["folders"].as_array().map(|f| f.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(", ")).unwrap_or_default();
-            let (window, months) = (n("window_months"), e["months_left"].as_f64().unwrap_or(0.0));
+            let (window, months) = (e["window_months"].as_f64().unwrap_or(0.0).round() as i64, e["months_left"].as_f64().unwrap_or(0.0));
             let args = |about: i64| [("place", place.clone().into()), ("window", window.into()), ("count", about.into())];
             match months {
                 m if m < 1.0 => t("runway_under_a_month", &args(0)),
@@ -660,7 +660,7 @@ mod tests {
         assert_ne!(runway(&disk(250, 100)).unwrap().fingerprint, five.fingerprint, "under three: said again");
         assert_ne!(runway(&disk(50, 100)).unwrap().fingerprint, runway(&disk(250, 100)).unwrap().fingerprint, "under one: again");
         assert_eq!(runway(&disk(250, 100)).unwrap().key, five.key, "the same disk, the same finding");
-        assert!(five.title.contains(": about 5 months of space left"), "{}", five.title);
+        assert!(five.title.ends_with(": about 5 months of space left at the pace of the last 6 months"), "{}", five.title);
         assert!(runway(&disk(50, 100)).unwrap().title.contains(": under a month of space left"), "{}", runway(&disk(50, 100)).unwrap().title);
     }
 
