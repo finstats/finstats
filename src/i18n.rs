@@ -189,6 +189,11 @@ pub fn carry<F: std::future::Future>(fut: F) -> impl std::future::Future<Output 
     LANG.scope(current(), fut)
 }
 
+/// `fut` in `lang`, for a future that runs where the request's language is no longer known (a WebSocket's own task).
+pub fn speaking<F: std::future::Future>(lang: &'static str, fut: F) -> impl std::future::Future<Output = F::Output> {
+    LANG.scope(lang, fut)
+}
+
 /// `f` in `lang`, on a thread with no request around it (the database's): the synchronous half of `carry`.
 pub fn within<R>(lang: &'static str, f: impl FnOnce() -> R) -> R {
     LANG.sync_scope(lang, f)

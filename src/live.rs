@@ -354,6 +354,8 @@ pub async fn connect(
         return ApiError::new(StatusCode::FORBIDDEN, "Cross-site request refused").into_response();
     }
     let ip = crate::auth::client_ip(&app, &headers, peer);
+    // Before the credential is read, so a recheck sent while this connection is being made is one it hears.
+    let auth = app.live_feed.auth.subscribe();
     let presented = match crate::auth::pick_credential(&headers) {
         Ok(p) => p,
         Err(e) => return e.into_response(),
@@ -369,7 +371,9 @@ pub async fn connect(
     let ticket = app.live_feed.seats.take(&user.id);
     let seat = Seat { app: app.clone(), user_id: user.id.clone(), id: ticket.id };
     let gone = ticket.gone;
-    ws.max_message_size(MESSAGE_MAX).on_upgrade(move |socket| serve(app, socket, user, presented, seat, gone))
+    // The upgrade's task is a new one: it is handed the request's language here, or every frame is in British English.
+    let lang = crate::i18n::current();
+    ws.max_message_size(MESSAGE_MAX).on_upgrade(move |socket| crate::i18n::speaking(lang, serve(app, socket, user, presented, seat, gone, auth)))
 }
 
 /// What one connection has asked for, and what it was last sent, so nothing is sent twice.
@@ -426,9 +430,9 @@ async fn send(socket: &mut WebSocket, msg: Message) -> bool {
     matches!(tokio::time::timeout(SEND_WITHIN, socket.send(msg)).await, Ok(Ok(())))
 }
 
-async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Presented, _seat: Seat, gone: Arc<tokio::sync::Notify>) {
+async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Presented, _seat: Seat, gone: Arc<tokio::sync::Notify>, mut auth: watch::Receiver<u64>) {
     let feed = &app.live_feed;
-    let (mut np, mut dl, mut sum, mut auth) = (feed.now_playing.subscribe(), feed.downloads.subscribe(), feed.summary.subscribe(), feed.auth.subscribe());
+    let (mut np, mut dl, mut sum) = (feed.now_playing.subscribe(), feed.downloads.subscribe(), feed.summary.subscribe());
     let mut tab = Tab { topics: HashSet::new(), visible: false, sent: HashMap::new(), drawn: Drawn::default(), user };
     let hello = json!({ "type": "hello", "v": FRAME_V, "topics": allowed(&tab.user) }).to_string();
     if !send(&mut socket, Message::Text(hello.into())).await {
