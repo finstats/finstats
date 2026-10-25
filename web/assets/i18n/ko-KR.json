@@ -1406,8 +1406,7 @@
       "show": "시리즈",
       "starring": "출연",
       "studio": "스튜디오",
-      "unit_people": "명",
-      "unit_person": "명",
+      "unit_people": { "other": "명" },
       "watched_by": "시청한 사람"
     },
     "libraries": {
@@ -1448,8 +1447,7 @@
         "days": "일",
         "hrs": "시간",
         "mins": "분",
-        "play": "회",
-        "plays": "회"
+        "plays": { "other": "회" }
       },
       "user_stats": "사용자 통계",
       "views": "보기"
@@ -2438,8 +2436,7 @@
       "date": "날짜",
       "peak_streams": "최대 스트림",
       "peak_aria": "최대 동시 스트림",
-      "unit_stream": "스트림",
-      "unit_streams": "스트림",
+      "unit_streams": { "other": "스트림" },
       "which_clients": "어떤 클라이언트가 트랜스코딩하는지",
       "which_clients_sub": "클라이언트별 재생 횟수, 재생 방식별 구분",
       "how_far": "어디까지 보는지",
@@ -3077,7 +3074,7 @@
       "music_label": "음악",
       "made_of": "무엇으로 채워졌는지",
       "genres": "장르",
-      "genre": "장르",
+      "genres_word": { "other": "장르" },
       "genres_title": {
         "you": "당신은 {genre} 팬",
         "user": "{name} 님은 {genre} 팬",
@@ -4241,8 +4238,7 @@
     "groups": {
       "sub": "같은 작품을 같은 시간에 재생한 사람들",
       "time_together": "함께 본 시간",
-      "evening_word": "저녁",
-      "evenings_word": "저녁",
+      "evenings_word": { "other": "저녁" },
       "evenings": {
         "other": "저녁 {count}번"
       },

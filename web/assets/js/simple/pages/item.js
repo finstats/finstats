@@ -112,7 +112,7 @@ export default function itemPage(ctx) {
       const tot = d.totals || {};
       const figures = box({ id: 'simple-global', title: t('simple.profile.global_stats'), icon: 'trendUp', body: statFigures([
         statFigure({ label: t('range.0.long'), measures: [[[num(tot.plays || 0), playsUnit(tot.plays)]], duration(tot.watch_s)] }),
-        can('see_everyone') ? statFigure({ label: t('simple.item.watched_by'), measures: [[[num(tot.users || 0), t(tot.users === 1 ? 'simple.item.unit_person' : 'simple.item.unit_people')]]] }) : null,
+        can('see_everyone') ? statFigure({ label: t('simple.item.watched_by'), measures: [[[num(tot.users || 0), t('simple.item.unit_people', { count: tot.users || 0 })]]] }) : null,
         statFigure({ label: t('simple.home.count.last_played'), measures: [[[tot.last_played_at ? relTime(tot.last_played_at) : t('time.never'), null]]] }),
       ].filter(Boolean)) });
       const watchers = can('see_everyone') && (d.watchers || []).length ? box({ id: 'simple-user-stats', title: t('simple.profile.user_stats'), icon: 'users',

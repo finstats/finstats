@@ -1320,8 +1320,7 @@
       "show": "Série",
       "starring": "Avec",
       "studio": "Studio",
-      "unit_people": "personnes",
-      "unit_person": "personne",
+      "unit_people": { "one": "personne", "other": "personnes" },
       "watched_by": "Regardé par"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "jours",
         "hrs": "h",
         "mins": "min",
-        "play": "lecture",
-        "plays": "lectures"
+        "plays": { "one": "lecture", "other": "lectures" }
       },
       "user_stats": "Statistiques de l’utilisateur",
       "views": "Vues"
@@ -2256,8 +2254,7 @@
       "date": "Date",
       "peak_streams": "Pic de flux",
       "peak_aria": "Pic de flux simultanés",
-      "unit_stream": "flux",
-      "unit_streams": "flux",
+      "unit_streams": { "one": "flux", "other": "flux" },
       "which_clients": "Quels clients transcodent",
       "which_clients_sub": "Lectures par client, réparties par méthode de lecture",
       "how_far": "Jusqu’où on regarde",
@@ -2835,7 +2832,7 @@
       "music_label": "Musique",
       "made_of": "De quoi elle était faite",
       "genres": "Genres",
-      "genre": "Genre",
+      "genres_word": { "one": "Genre", "other": "Genres" },
       "genres_title": {
         "you": "Vous êtes fan de {genre}",
         "user": "{name} est fan de {genre}",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "Des personnes qui ont lancé la même chose au même moment",
       "time_together": "temps passé ensemble",
-      "evening_word": "soirée",
-      "evenings_word": "soirées",
+      "evenings_word": { "one": "soirée", "other": "soirées" },
       "evenings": { "one": "{count} soirée", "other": "{count} soirées" },
       "people_word": "personnes",
       "share": "de leur temps de visionnage en compagnie",

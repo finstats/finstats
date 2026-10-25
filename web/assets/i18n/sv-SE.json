@@ -1320,8 +1320,7 @@
       "show": "Serie",
       "starring": "I rollerna",
       "studio": "Studio",
-      "unit_people": "personer",
-      "unit_person": "person",
+      "unit_people": { "one": "person", "other": "personer" },
       "watched_by": "Sedd av"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "dagar",
         "hrs": "tim",
         "mins": "min",
-        "play": "uppspelning",
-        "plays": "uppspelningar"
+        "plays": { "one": "uppspelning", "other": "uppspelningar" }
       },
       "user_stats": "Användarstatistik",
       "views": "Visningar"
@@ -2256,8 +2254,7 @@
       "date": "Datum",
       "peak_streams": "Flest strömmar",
       "peak_aria": "Flest samtidiga strömmar",
-      "unit_stream": "ström",
-      "unit_streams": "strömmar",
+      "unit_streams": { "one": "ström", "other": "strömmar" },
       "which_clients": "Vilka klienter som omkodar",
       "which_clients_sub": "Uppspelningar per klient, fördelade på uppspelningsmetod",
       "how_far": "Hur långt folk kommer",
@@ -2835,7 +2832,7 @@
       "music_label": "Musik",
       "made_of": "Vad det bestod av",
       "genres": "Genrer",
-      "genre": "Genre",
+      "genres_word": { "one": "Genre", "other": "Genrer" },
       "genres_title": {
         "you": "Du föll för {genre}",
         "user": "{name} föll för {genre}",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "Personer som tryckte på play på samma sak samtidigt",
       "time_together": "tid tillsammans",
-      "evening_word": "kväll",
-      "evenings_word": "kvällar",
+      "evenings_word": { "one": "kväll", "other": "kvällar" },
       "evenings": { "one": "{count} kväll", "other": "{count} kvällar" },
       "people_word": "personer",
       "share": "av tittartiden i sällskap",

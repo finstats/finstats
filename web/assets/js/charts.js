@@ -377,7 +377,7 @@ export function simpleColumns({ rows, unit = (n) => t('charts.items', { count: n
   const ticks = [...new Set(niceTicks(max).map((t) => Math.ceil(t)))];
   const top = ticks[ticks.length - 1] || 1;
   let active = -1, geom = null, band = null;
-  const fmt = (v) => (typeof unit === 'function' ? unit(v) : `${num(v)} ${v === 1 ? unit[0] : unit[1]}`);
+  const fmt = unit; // the number with its word, in the form its language gives that number
 
   function draw(w) {
     const pw = w - M.l - M.r, ph = H - M.t - M.b;

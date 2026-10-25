@@ -1320,8 +1320,7 @@
       "show": "Serie",
       "starring": "Skuespillere",
       "studio": "Studio",
-      "unit_people": "personer",
-      "unit_person": "person",
+      "unit_people": { "one": "person", "other": "personer" },
       "watched_by": "Sett av"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "d",
         "hrs": "t",
         "mins": "min",
-        "play": "avspilling",
-        "plays": "avspillinger"
+        "plays": { "one": "avspilling", "other": "avspillinger" }
       },
       "user_stats": "Brukerstatistikk",
       "views": "Visninger"
@@ -2257,8 +2255,7 @@
       "date": "Dato",
       "peak_streams": "Flest strømmer",
       "peak_aria": "Flest samtidige strømmer",
-      "unit_stream": "strøm",
-      "unit_streams": "strømmer",
+      "unit_streams": { "one": "strøm", "other": "strømmer" },
       "which_clients": "Hvilke klienter som koder om",
       "which_clients_sub": "Avspillinger per klient, fordelt på avspillingsmetode",
       "how_far": "Hvor langt folk kommer",
@@ -2836,7 +2833,7 @@
       "music_label": "Musikk",
       "made_of": "Hva det besto av",
       "genres": "Sjangre",
-      "genre": "Sjanger",
+      "genres_word": { "one": "Sjanger", "other": "Sjangre" },
       "genres_title": {
         "you": "Du er fan av {genre}",
         "user": "{name} er fan av {genre}",
@@ -3874,8 +3871,7 @@
     "groups": {
       "sub": "Personer som startet det samme samtidig",
       "time_together": "tid sammen",
-      "evening_word": "kveld",
-      "evenings_word": "kvelder",
+      "evenings_word": { "one": "kveld", "other": "kvelder" },
       "evenings": { "one": "{count} kveld", "other": "{count} kvelder" },
       "people_word": "personer",
       "share": "av visningstiden i selskap med andre",

@@ -1320,8 +1320,7 @@
       "show": "Serie",
       "starring": "Mit",
       "studio": "Studio",
-      "unit_people": "Personen",
-      "unit_person": "Person",
+      "unit_people": { "one": "Person", "other": "Personen" },
       "watched_by": "Geschaut von"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "Tage",
         "hrs": "Std.",
         "mins": "Min.",
-        "play": "Wiedergabe",
-        "plays": "Wiedergaben"
+        "plays": { "one": "Wiedergabe", "other": "Wiedergaben" }
       },
       "user_stats": "Benutzerstatistik",
       "views": "Aufrufe"
@@ -2256,8 +2254,7 @@
       "date": "Datum",
       "peak_streams": "Spitze an Streams",
       "peak_aria": "Spitze gleichzeitiger Streams",
-      "unit_stream": "Stream",
-      "unit_streams": "Streams",
+      "unit_streams": { "one": "Stream", "other": "Streams" },
       "which_clients": "Welche Clients transkodieren",
       "which_clients_sub": "Wiedergaben pro Client, aufgeteilt nach Wiedergabemethode",
       "how_far": "Wie weit geschaut wird",
@@ -2835,7 +2832,7 @@
       "music_label": "Musik",
       "made_of": "Woraus es bestand",
       "genres": "Genres",
-      "genre": "Genre",
+      "genres_word": { "one": "Genre", "other": "Genres" },
       "genres_title": {
         "you": "Du bist ein Fan von {genre}",
         "user": "{name} ist ein Fan von {genre}",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "Personen, die gleichzeitig dasselbe gestartet haben",
       "time_together": "gemeinsame Zeit",
-      "evening_word": "Abend",
-      "evenings_word": "Abende",
+      "evenings_word": { "one": "Abend", "other": "Abende" },
       "evenings": { "one": "{count} Abend", "other": "{count} Abende" },
       "people_word": "Personen",
       "share": "ihrer Wiedergabezeit in Gesellschaft",

@@ -96,7 +96,7 @@ function insightCards(ins) {
     title: t('pages.playback.concurrency_title'),
     sub: c.peak ? [c.peak_at ? t(`pages.playback.peak_at_${week ? 'week' : 'day'}`, { peak: c.peak, when: dateTime(c.peak_at) }) : t(`pages.playback.peak_${week ? 'week' : 'day'}`, { peak: c.peak }),
       c.peak_transcodes ? ` · ${t('pages.playback.peak_transcodes', { count: c.peak_transcodes })}` : ''].join('') : t(`pages.playback.per_${week ? 'week' : 'day'}`),
-    chart: () => simpleColumns({ rows: series, unit: [t('pages.playback.unit_stream'), t('pages.playback.unit_streams')], ariaLabel: t('pages.playback.peak_aria'), empty: t('plays_table.empty_range') }),
+    chart: () => simpleColumns({ rows: series, unit: (v) => `${num(v)} ${t('pages.playback.unit_streams', { count: v })}`, ariaLabel: t('pages.playback.peak_aria'), empty: t('plays_table.empty_range') }),
     table: () => simpleColumnsTable({ rows: series, head: [week ? t('pages.playback.week_of_head') : t('pages.playback.date'), t('pages.playback.peak_streams')] }),
   });
   const clients = card({ title: t('pages.playback.which_clients'), sub: t('pages.playback.which_clients_sub'), actions: methodLegend(), cls: 'card-legend', body: clientMethods(ins.client_methods) });

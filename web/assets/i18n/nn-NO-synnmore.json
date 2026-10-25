@@ -1512,8 +1512,10 @@
       "show": "Serie",
       "starring": "Skodespelara",
       "studio": "Studio",
-      "unit_people": "persona",
-      "unit_person": "person",
+      "unit_people": {
+        "one": "person",
+        "other": "persona"
+      },
       "watched_by": "Sett av"
     },
     "libraries": {
@@ -1554,8 +1556,10 @@
         "days": "d",
         "hrs": "t",
         "mins": "min",
-        "play": "avspeling",
-        "plays": "avspelingar"
+        "plays": {
+          "one": "avspeling",
+          "other": "avspelingar"
+        }
       },
       "user_stats": "Brukarstatistikk",
       "views": "Visingar"
@@ -2596,8 +2600,10 @@
       "date": "Dato",
       "peak_streams": "Flest strauma",
       "peak_aria": "Flest samtidige strauma",
-      "unit_stream": "straum",
-      "unit_streams": "strauma",
+      "unit_streams": {
+        "one": "straum",
+        "other": "strauma"
+      },
       "which_clients": "Ka klienta som kodar om",
       "which_clients_sub": "Avspelingar per klient, fordelte på avspelingsmetode",
       "how_far": "Kor langt folk kjøme",
@@ -3265,7 +3271,10 @@
       "music_label": "Musikk",
       "made_of": "Ka d bestod av",
       "genres": "Sjangra",
-      "genre": "Sjanger",
+      "genres_word": {
+        "one": "Sjanger",
+        "other": "Sjangra"
+      },
       "genres_title": {
         "you": "Du e fan av {genre}",
         "user": "{name} e fan av {genre}",
@@ -4525,8 +4534,10 @@
     "groups": {
       "sub": "Persona som starta d samme samstundes",
       "time_together": "tid saman",
-      "evening_word": "kveld",
-      "evenings_word": "kvelda",
+      "evenings_word": {
+        "one": "kveld",
+        "other": "kvelda"
+      },
       "evenings": {
         "one": "{count} kveld",
         "other": "{count} kvelda"

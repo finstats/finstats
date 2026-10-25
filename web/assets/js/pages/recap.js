@@ -342,7 +342,7 @@ function genresChapter(d, v) {
     lead: [tParts('pages.recap.genres_lead', { genre: b(top.name), time: b(duration(top.watch_s)), plays: b(t('terms.play', { count: top.plays || 0 })) }),
       rows[1] ? tail(t('pages.recap.genres_close', { genre: rows[1].name })) : t('pages.recap.full_stop')],
     stats: [
-      g.count ? { value: countUp(g.count), label: g.count === 1 ? t('pages.recap.genre') : t('pages.recap.genres') } : null,
+      g.count ? { value: countUp(g.count), label: t('pages.recap.genres_word', { count: g.count }) } : null,
       share != null ? { value: countUp(share * 100, (x) => pct(Math.round(x) / 100)), label: t('pages.recap.stat_was', { genre: top.name }) } : null,
       { value: countUp(top.plays), label: t('pages.recap.plays_label') },
     ],

@@ -1406,8 +1406,7 @@
       "show": "影集",
       "starring": "主演",
       "studio": "製作公司",
-      "unit_people": "人",
-      "unit_person": "人",
+      "unit_people": { "other": "人" },
       "watched_by": "觀看者"
     },
     "libraries": {
@@ -1448,8 +1447,7 @@
         "days": "天",
         "hrs": "小時",
         "mins": "分",
-        "play": "次播放",
-        "plays": "次播放"
+        "plays": { "other": "次播放" }
       },
       "user_stats": "使用者統計",
       "views": "觀看次數"
@@ -2438,8 +2436,7 @@
       "date": "日期",
       "peak_streams": "串流高峰",
       "peak_aria": "同時串流高峰",
-      "unit_stream": "個串流",
-      "unit_streams": "個串流",
+      "unit_streams": { "other": "個串流" },
       "which_clients": "哪些用戶端會轉碼",
       "which_clients_sub": "各用戶端的播放次數，依播放方式區分",
       "how_far": "大家看到哪裡",
@@ -3077,7 +3074,7 @@
       "music_label": "音樂",
       "made_of": "這一年由什麼組成",
       "genres": "類型",
-      "genre": "類型",
+      "genres_word": { "other": "類型" },
       "genres_title": {
         "you": "你是{genre}迷",
         "user": "{name} 是{genre}迷",
@@ -4241,8 +4238,7 @@
     "groups": {
       "sub": "同時播放同一部作品的人",
       "time_together": "一起看的時間",
-      "evening_word": "個晚上",
-      "evenings_word": "個晚上",
+      "evenings_word": { "other": "個晚上" },
       "evenings": {
         "other": "{count} 個晚上"
       },

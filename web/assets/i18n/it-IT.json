@@ -1320,8 +1320,7 @@
       "show": "Serie",
       "starring": "Con",
       "studio": "Studio",
-      "unit_people": "persone",
-      "unit_person": "persona",
+      "unit_people": { "one": "persona", "other": "persone" },
       "watched_by": "Visto da"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "giorni",
         "hrs": "ore",
         "mins": "min",
-        "play": "riproduzione",
-        "plays": "riproduzioni"
+        "plays": { "one": "riproduzione", "other": "riproduzioni" }
       },
       "user_stats": "Statistiche dell’utente",
       "views": "Visualizzazioni"
@@ -2256,8 +2254,7 @@
       "date": "Data",
       "peak_streams": "Picco di stream",
       "peak_aria": "Picco di stream contemporanei",
-      "unit_stream": "stream",
-      "unit_streams": "stream",
+      "unit_streams": { "one": "stream", "other": "stream" },
       "which_clients": "Quali client transcodificano",
       "which_clients_sub": "Riproduzioni per client, divise per metodo di riproduzione",
       "how_far": "Fin dove arrivano le persone",
@@ -2835,7 +2832,7 @@
       "music_label": "Musica",
       "made_of": "Di cosa era fatto",
       "genres": "Generi",
-      "genre": "Genere",
+      "genres_word": { "one": "Genere", "other": "Generi" },
       "genres_title": {
         "you": "Il tuo genere: {genre}",
         "user": "Il genere di {name}: {genre}",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "Persone che hanno avviato la stessa cosa nello stesso momento",
       "time_together": "tempo insieme",
-      "evening_word": "serata",
-      "evenings_word": "serate",
+      "evenings_word": { "one": "serata", "other": "serate" },
       "evenings": { "one": "{count} serata", "other": "{count} serate" },
       "people_word": "persone",
       "share": "del loro tempo di visione in compagnia",

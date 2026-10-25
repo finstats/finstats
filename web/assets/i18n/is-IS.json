@@ -1320,8 +1320,7 @@
       "show": "Þáttaröð",
       "starring": "Í aðalhlutverkum",
       "studio": "Framleiðandi",
-      "unit_people": "manns",
-      "unit_person": "manneskja",
+      "unit_people": { "one": "manneskja", "other": "manns" },
       "watched_by": "Horft af"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "dagar",
         "hrs": "klst",
         "mins": "mín",
-        "play": "spilun",
-        "plays": "spilanir"
+        "plays": { "one": "spilun", "other": "spilanir" }
       },
       "user_stats": "Tölfræði notanda",
       "views": "Áhorf"
@@ -2256,8 +2254,7 @@
       "date": "Dagsetning",
       "peak_streams": "Flest streymi",
       "peak_aria": "Mesti fjöldi samtímis streyma",
-      "unit_stream": "streymi",
-      "unit_streams": "streymi",
+      "unit_streams": { "one": "streymi", "other": "streymi" },
       "which_clients": "Hvaða forrit umkóða",
       "which_clients_sub": "Spilanir eftir forriti, skipt eftir spilunaraðferð",
       "how_far": "Hve langt fólk kemst",
@@ -2835,7 +2832,7 @@
       "music_label": "Tónlist",
       "made_of": "Úr hverju það var gert",
       "genres": "Tegundir",
-      "genre": "Tegund",
+      "genres_word": { "one": "Tegund", "other": "Tegundir" },
       "genres_title": {
         "you": "Þú ert {genre}-aðdáandi",
         "user": "{name} er {genre}-aðdáandi",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "Fólk sem ýtti á spila á sama efni á sama tíma",
       "time_together": "tími saman",
-      "evening_word": "kvöld",
-      "evenings_word": "kvöld",
+      "evenings_word": { "one": "kvöld", "other": "kvöld" },
       "evenings": { "one": "{count} kvöld", "other": "{count} kvöld" },
       "people_word": "manns",
       "share": "af áhorfstíma þeirra í félagsskap",

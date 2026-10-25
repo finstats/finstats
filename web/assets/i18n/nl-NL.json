@@ -1320,8 +1320,7 @@
       "show": "Serie",
       "starring": "Met",
       "studio": "Studio",
-      "unit_people": "personen",
-      "unit_person": "persoon",
+      "unit_people": { "one": "persoon", "other": "personen" },
       "watched_by": "Gekeken door"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "dagen",
         "hrs": "uur",
         "mins": "min",
-        "play": "weergave",
-        "plays": "weergaven"
+        "plays": { "one": "weergave", "other": "weergaven" }
       },
       "user_stats": "Gebruikersstatistieken",
       "views": "Weergaven"
@@ -2256,8 +2254,7 @@
       "date": "Datum",
       "peak_streams": "Piek aan streams",
       "peak_aria": "Piek aan gelijktijdige streams",
-      "unit_stream": "stream",
-      "unit_streams": "streams",
+      "unit_streams": { "one": "stream", "other": "streams" },
       "which_clients": "Welke clients transcoderen",
       "which_clients_sub": "Weergaven per client, verdeeld naar afspeelmethode",
       "how_far": "Hoe ver mensen komen",
@@ -2835,7 +2832,7 @@
       "music_label": "Muziek",
       "made_of": "Waar het uit bestond",
       "genres": "Genres",
-      "genre": "Genre",
+      "genres_word": { "one": "Genre", "other": "Genres" },
       "genres_title": {
         "you": "Je bent fan van {genre}",
         "user": "{name} is fan van {genre}",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "Mensen die tegelijk op afspelen drukten bij hetzelfde",
       "time_together": "tijd samen",
-      "evening_word": "avond",
-      "evenings_word": "avonden",
+      "evenings_word": { "one": "avond", "other": "avonden" },
       "evenings": { "one": "{count} avond", "other": "{count} avonden" },
       "people_word": "personen",
       "share": "van hun kijktijd in gezelschap",

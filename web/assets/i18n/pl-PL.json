@@ -1535,8 +1535,7 @@
       "show": "Serial",
       "starring": "Występują",
       "studio": "Studio",
-      "unit_people": "os.",
-      "unit_person": "osoba",
+      "unit_people": { "one": "osoba", "few": "osoby", "many": "osób", "other": "osoby" },
       "watched_by": "Obejrzało"
     },
     "libraries": {
@@ -1577,8 +1576,7 @@
         "days": "d.",
         "hrs": "godz.",
         "mins": "min",
-        "play": "odtworzenie",
-        "plays": "odtw."
+        "plays": { "one": "odtworzenie", "few": "odtworzenia", "many": "odtworzeń", "other": "odtworzenia" }
       },
       "user_stats": "Statystyki użytkownika",
       "views": "Wyświetlenia"
@@ -2711,8 +2709,7 @@
       "date": "Data",
       "peak_streams": "Szczyt strumieni",
       "peak_aria": "Szczytowa liczba równoczesnych strumieni",
-      "unit_stream": "strumień",
-      "unit_streams": "strumienie",
+      "unit_streams": { "one": "strumień", "few": "strumienie", "many": "strumieni", "other": "strumienia" },
       "which_clients": "Które klienty transkodują",
       "which_clients_sub": "Odtworzenia według klienta, z podziałem na metodę odtwarzania",
       "how_far": "Jak daleko ludzie docierają",
@@ -3440,7 +3437,7 @@
       "music_label": "Muzyka",
       "made_of": "Z czego się składał",
       "genres": "Gatunki",
-      "genre": "Gatunek",
+      "genres_word": { "one": "Gatunek", "few": "Gatunki", "many": "Gatunków", "other": "Gatunku" },
       "genres_title": {
         "you": "Twój ulubiony gatunek to {genre}",
         "user": "{name}: ulubiony gatunek to {genre}",
@@ -4793,8 +4790,7 @@
     "groups": {
       "sub": "Osoby, które w tym samym czasie włączyły to samo",
       "time_together": "wspólny czas",
-      "evening_word": "wieczór",
-      "evenings_word": "wieczory",
+      "evenings_word": { "one": "wieczór", "few": "wieczory", "many": "wieczorów", "other": "wieczoru" },
       "evenings": {
         "one": "{count} wieczór",
         "few": "{count} wieczory",

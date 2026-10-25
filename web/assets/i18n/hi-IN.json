@@ -1320,8 +1320,7 @@
       "show": "शो",
       "starring": "मुख्य कलाकार",
       "studio": "स्टूडियो",
-      "unit_people": "लोग",
-      "unit_person": "व्यक्ति",
+      "unit_people": { "one": "व्यक्ति", "other": "लोग" },
       "watched_by": "किसने देखा"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "दिन",
         "hrs": "घंटे",
         "mins": "मिनट",
-        "play": "प्ले",
-        "plays": "प्ले"
+        "plays": { "one": "प्ले", "other": "प्ले" }
       },
       "user_stats": "उपयोगकर्ता के आँकड़े",
       "views": "व्यू"
@@ -2256,8 +2254,7 @@
       "date": "तारीख़",
       "peak_streams": "सबसे ज़्यादा स्ट्रीम",
       "peak_aria": "एक साथ सबसे ज़्यादा स्ट्रीम",
-      "unit_stream": "स्ट्रीम",
-      "unit_streams": "स्ट्रीम",
+      "unit_streams": { "one": "स्ट्रीम", "other": "स्ट्रीम" },
       "which_clients": "कौन-से क्लाइंट ट्रांसकोड करवाते हैं",
       "which_clients_sub": "हर क्लाइंट के प्ले, प्ले के तरीके के अनुसार बँटे हुए",
       "how_far": "लोग कहाँ तक देखते हैं",
@@ -2835,7 +2832,7 @@
       "music_label": "संगीत",
       "made_of": "किससे बना",
       "genres": "शैलियाँ",
-      "genre": "शैली",
+      "genres_word": { "one": "शैली", "other": "शैलियाँ" },
       "genres_title": {
         "you": "आप {genre} के शौक़ीन हैं",
         "user": "{name} {genre} के शौक़ीन हैं",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "वे लोग जिन्होंने एक ही चीज़ एक ही समय पर चलाई",
       "time_together": "साथ में बिताया समय",
-      "evening_word": "शाम",
-      "evenings_word": "शामें",
+      "evenings_word": { "one": "शाम", "other": "शामें" },
       "evenings": { "one": "{count} शाम", "other": "{count} शामें" },
       "people_word": "लोग",
       "share": "देखने का समय दूसरों के साथ",

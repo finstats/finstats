@@ -1319,8 +1319,7 @@
       "show": "Show",
       "starring": "Starring",
       "studio": "Studio",
-      "unit_people": "people",
-      "unit_person": "person",
+      "unit_people": { "one": "person", "other": "people" },
       "watched_by": "Watched by"
     },
     "libraries": {
@@ -1361,8 +1360,7 @@
         "days": "days",
         "hrs": "hrs",
         "mins": "mins",
-        "play": "play",
-        "plays": "plays"
+        "plays": { "one": "play", "other": "plays" }
       },
       "user_stats": "User Stats",
       "views": "Views"
@@ -2256,8 +2254,7 @@
       "date": "Date",
       "peak_streams": "Peak streams",
       "peak_aria": "Peak concurrent streams",
-      "unit_stream": "stream",
-      "unit_streams": "streams",
+      "unit_streams": { "one": "stream", "other": "streams" },
       "which_clients": "Which clients transcode",
       "which_clients_sub": "Plays per client, split by play method",
       "how_far": "How far people get",
@@ -2835,7 +2832,7 @@
       "music_label": "Music",
       "made_of": "What it was made of",
       "genres": "Genres",
-      "genre": "Genre",
+      "genres_word": { "one": "Genre", "other": "Genres" },
       "genres_title": {
         "you": "You’re a {genre} fan",
         "user": "{name} is a {genre} fan",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "People who pressed play on the same thing at the same time",
       "time_together": "time together",
-      "evening_word": "evening",
-      "evenings_word": "evenings",
+      "evenings_word": { "one": "evening", "other": "evenings" },
       "evenings": { "one": "{count} evening", "other": "{count} evenings" },
       "people_word": "people",
       "share": "of their watch time in company",

@@ -1406,8 +1406,7 @@
       "show": "番組",
       "starring": "出演",
       "studio": "スタジオ",
-      "unit_people": "人",
-      "unit_person": "人",
+      "unit_people": { "other": "人" },
       "watched_by": "視聴した人"
     },
     "libraries": {
@@ -1448,8 +1447,7 @@
         "days": "日",
         "hrs": "時間",
         "mins": "分",
-        "play": "回再生",
-        "plays": "回再生"
+        "plays": { "other": "回再生" }
       },
       "user_stats": "ユーザーの統計",
       "views": "表示"
@@ -2438,8 +2436,7 @@
       "date": "日付",
       "peak_streams": "最大ストリーム数",
       "peak_aria": "最大同時ストリーム数",
-      "unit_stream": "ストリーム",
-      "unit_streams": "ストリーム",
+      "unit_streams": { "other": "ストリーム" },
       "which_clients": "トランスコードするクライアント",
       "which_clients_sub": "クライアントごとの再生回数を再生方法別に",
       "how_far": "どこまで見られているか",
@@ -3077,7 +3074,7 @@
       "music_label": "音楽",
       "made_of": "内訳",
       "genres": "ジャンル",
-      "genre": "ジャンル",
+      "genres_word": { "other": "ジャンル" },
       "genres_title": {
         "you": "あなたは{genre}ファン",
         "user": "{name}は{genre}ファン",
@@ -4241,8 +4238,7 @@
     "groups": {
       "sub": "同じものを同時に再生した人たち",
       "time_together": "一緒に過ごした時間",
-      "evening_word": "晩",
-      "evenings_word": "晩",
+      "evenings_word": { "other": "晩" },
       "evenings": {
         "other": "{count}晩"
       },

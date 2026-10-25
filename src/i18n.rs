@@ -742,7 +742,11 @@ mod tests {
                 let Value::Object(m) = &v else { continue };
                 let has: BTreeSet<&str> = m.keys().map(String::as_str).collect();
                 assert!(need.is_subset(&has) && has.is_subset(&may), "{tag}: {k} has {has:?}, its language needs {need:?}");
-                assert!(m["other"].as_str().is_some_and(|s| s.contains("{count}")), "{tag}: {k} other says how many");
+                // A word beside a number the page draws itself (a big figure, a chart's value) is the word alone, and its
+                // key says so: `…_word`, `unit…`, or in a `unit` section. Every other plural says how many.
+                let last = k.rsplit('.').next().unwrap_or(&k);
+                let word_beside_a_number = last.ends_with("_word") || last.starts_with("unit") || k.contains(".unit.");
+                assert!(word_beside_a_number || m["other"].as_str().is_some_and(|s| s.contains("{count}")), "{tag}: {k} other says how many");
             }
         }
     }

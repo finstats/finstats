@@ -1320,8 +1320,7 @@
       "show": "Serie",
       "starring": "Reparto",
       "studio": "Estudio",
-      "unit_people": "personas",
-      "unit_person": "persona",
+      "unit_people": { "one": "persona", "other": "personas" },
       "watched_by": "Visto por"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "días",
         "hrs": "h",
         "mins": "min",
-        "play": "reproducción",
-        "plays": "reproducciones"
+        "plays": { "one": "reproducción", "other": "reproducciones" }
       },
       "user_stats": "Estadísticas del usuario",
       "views": "Visualizaciones"
@@ -2256,8 +2254,7 @@
       "date": "Fecha",
       "peak_streams": "Pico de reproducciones",
       "peak_aria": "Pico de reproducciones simultáneas",
-      "unit_stream": "reproducción",
-      "unit_streams": "reproducciones",
+      "unit_streams": { "one": "reproducción", "other": "reproducciones" },
       "which_clients": "Qué clientes transcodifican",
       "which_clients_sub": "Reproducciones por cliente, desglosadas por método de reproducción",
       "how_far": "Hasta dónde llega la gente",
@@ -2835,7 +2832,7 @@
       "music_label": "Música",
       "made_of": "De qué estuvo hecho",
       "genres": "Géneros",
-      "genre": "Género",
+      "genres_word": { "one": "Género", "other": "Géneros" },
       "genres_title": {
         "you": "Eres fan de {genre}",
         "user": "{name} es fan de {genre}",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "Personas que le dieron a reproducir a lo mismo a la vez",
       "time_together": "tiempo en compañía",
-      "evening_word": "noche",
-      "evenings_word": "noches",
+      "evenings_word": { "one": "noche", "other": "noches" },
       "evenings": { "one": "{count} noche", "other": "{count} noches" },
       "people_word": "personas",
       "share": "de su tiempo de visualización en compañía",

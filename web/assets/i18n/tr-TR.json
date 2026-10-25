@@ -1320,8 +1320,7 @@
       "show": "Dizi",
       "starring": "Oyuncular",
       "studio": "Stüdyo",
-      "unit_people": "kişi",
-      "unit_person": "kişi",
+      "unit_people": { "one": "kişi", "other": "kişi" },
       "watched_by": "İzleyenler"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "gün",
         "hrs": "sa",
         "mins": "dk",
-        "play": "oynatma",
-        "plays": "oynatma"
+        "plays": { "one": "oynatma", "other": "oynatma" }
       },
       "user_stats": "Kullanıcı istatistikleri",
       "views": "Görüntülenme"
@@ -2256,8 +2254,7 @@
       "date": "Tarih",
       "peak_streams": "Zirve akış",
       "peak_aria": "Zirve eş zamanlı akış",
-      "unit_stream": "akış",
-      "unit_streams": "akış",
+      "unit_streams": { "one": "akış", "other": "akış" },
       "which_clients": "Hangi istemcilerde kod dönüştürülüyor",
       "which_clients_sub": "İstemci başına oynatmalar, oynatma yöntemine göre ayrılmış",
       "how_far": "Kişiler ne kadar ilerliyor",
@@ -2835,7 +2832,7 @@
       "music_label": "Müzik",
       "made_of": "Nelerden oluştu",
       "genres": "Türler",
-      "genre": "Tür",
+      "genres_word": { "one": "Tür", "other": "Türler" },
       "genres_title": {
         "you": "Bir {genre} hayranısınız",
         "user": "{name} bir {genre} hayranı",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "Aynı şeyi aynı anda oynatan kişiler",
       "time_together": "birlikte geçen süre",
-      "evening_word": "akşam",
-      "evenings_word": "akşam",
+      "evenings_word": { "one": "akşam", "other": "akşam" },
       "evenings": { "one": "{count} akşam", "other": "{count} akşam" },
       "people_word": "kişi",
       "share": "izleme sürelerinin birlikte geçen kısmı",

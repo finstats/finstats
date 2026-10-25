@@ -21,7 +21,7 @@ const UNITS = { days: 'simple.profile.unit.days', hrs: 'simple.profile.unit.hrs'
 /** durationMeasure's days, hrs and mins, in the language in use. */
 export const duration = (sec) => durationMeasure(sec).map(([n, unit]) => [n, UNITS[unit] ? t(UNITS[unit]) : unit]);
 /** "play" or "plays", the small word after a number. */
-export const playsUnit = (n) => t(n === 1 ? 'simple.profile.unit.play' : 'simple.profile.unit.plays');
+export const playsUnit = (n) => t('simple.profile.unit.plays', { count: n });
 
 /** The four figures, from a row per span ({ plays, watch_s }), in SPANS' order. */
 export const globalStats = (rows) => statFigures(SPANS.map(([, label], i) => {

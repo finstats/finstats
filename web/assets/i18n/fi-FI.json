@@ -1320,8 +1320,7 @@
       "show": "Sarja",
       "starring": "Pääosissa",
       "studio": "Studio",
-      "unit_people": "henkilöä",
-      "unit_person": "henkilö",
+      "unit_people": { "one": "henkilö", "other": "henkilöä" },
       "watched_by": "Katsojat"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "pv",
         "hrs": "t",
         "mins": "min",
-        "play": "toisto",
-        "plays": "toistoa"
+        "plays": { "one": "toisto", "other": "toistoa" }
       },
       "user_stats": "Käyttäjän tilastot",
       "views": "Näkymät"
@@ -2256,8 +2254,7 @@
       "date": "Päivämäärä",
       "peak_streams": "Huippu",
       "peak_aria": "Eniten samanaikaisia toistoja",
-      "unit_stream": "toisto",
-      "unit_streams": "toistoa",
+      "unit_streams": { "one": "toisto", "other": "toistoa" },
       "which_clients": "Mitkä sovellukset transkoodaavat",
       "which_clients_sub": "Toistot sovelluksittain, jaoteltuna toistotavan mukaan",
       "how_far": "Kuinka pitkälle katsotaan",
@@ -2835,7 +2832,7 @@
       "music_label": "Musiikki",
       "made_of": "Mistä se koostui",
       "genres": "Lajityypit",
-      "genre": "Lajityyppi",
+      "genres_word": { "one": "Lajityyppi", "other": "Lajityypit" },
       "genres_title": {
         "you": "Suosit lajityyppiä {genre}",
         "user": "{name} suosii lajityyppiä {genre}",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "Ihmiset, jotka aloittivat saman asian samaan aikaan",
       "time_together": "yhteistä aikaa",
-      "evening_word": "ilta",
-      "evenings_word": "iltaa",
+      "evenings_word": { "one": "ilta", "other": "iltaa" },
       "evenings": { "one": "{count} ilta", "other": "{count} iltaa" },
       "people_word": "henkilöä",
       "share": "katseluajastaan seurassa",

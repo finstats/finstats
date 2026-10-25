@@ -199,7 +199,7 @@ export function groupsCard(g, { title = t('terms.watched_together'), forUser = n
     body: [
       h('div', { class: 'group-facts' },
         h('div', null, h('span', { class: 'group-num' }, duration(tot.together_s)), h('span', { class: 'group-label' }, t('widgets.groups.time_together'))),
-        h('div', null, h('span', { class: 'group-num' }, num(tot.sessions)), h('span', { class: 'group-label' }, tot.sessions === 1 ? t('widgets.groups.evening_word') : t('widgets.groups.evenings_word'))),
+        h('div', null, h('span', { class: 'group-num' }, num(tot.sessions)), h('span', { class: 'group-label' }, t('widgets.groups.evenings_word', { count: tot.sessions }))),
         forUser ? null : h('div', null, h('span', { class: 'group-num' }, num(tot.people)), h('span', { class: 'group-label' }, t('widgets.groups.people_word'))),
         me && me.share != null ? h('div', null, h('span', { class: 'group-num' }, pct(me.share)), h('span', { class: 'group-label' }, t('widgets.groups.share'))) : null),
       h('div', { class: 'grid-2 group-lists' },

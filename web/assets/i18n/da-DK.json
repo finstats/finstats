@@ -1320,8 +1320,7 @@
       "show": "Serie",
       "starring": "Medvirkende",
       "studio": "Studie",
-      "unit_people": "personer",
-      "unit_person": "person",
+      "unit_people": { "one": "person", "other": "personer" },
       "watched_by": "Set af"
     },
     "libraries": {
@@ -1362,8 +1361,7 @@
         "days": "d",
         "hrs": "t",
         "mins": "min",
-        "play": "afspilning",
-        "plays": "afspilninger"
+        "plays": { "one": "afspilning", "other": "afspilninger" }
       },
       "user_stats": "Brugerstatistik",
       "views": "Visninger"
@@ -2256,8 +2254,7 @@
       "date": "Dato",
       "peak_streams": "Flest streams",
       "peak_aria": "Flest samtidige streams",
-      "unit_stream": "stream",
-      "unit_streams": "streams",
+      "unit_streams": { "one": "stream", "other": "streams" },
       "which_clients": "Hvilke klienter der omkoder",
       "which_clients_sub": "Afspilninger pr. klient, fordelt på afspilningsmetode",
       "how_far": "Hvor langt folk når",
@@ -2835,7 +2832,7 @@
       "music_label": "Musik",
       "made_of": "Hvad det bestod af",
       "genres": "Genrer",
-      "genre": "Genre",
+      "genres_word": { "one": "Genre", "other": "Genrer" },
       "genres_title": {
         "you": "Du er fan af {genre}",
         "user": "{name} er fan af {genre}",
@@ -3873,8 +3870,7 @@
     "groups": {
       "sub": "Personer, der trykkede afspil på det samme på samme tid",
       "time_together": "tid sammen",
-      "evening_word": "aften",
-      "evenings_word": "aftener",
+      "evenings_word": { "one": "aften", "other": "aftener" },
       "evenings": { "one": "{count} aften", "other": "{count} aftener" },
       "people_word": "personer",
       "share": "af deres visningstid i selskab med andre",
