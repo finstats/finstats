@@ -21,6 +21,7 @@ let retryMs = RETRY_FIRST_MS;
 let retryTimer = null;
 let watchingVisibility = false;
 let away = false;                   // the page was left and may sit in the back/forward cache
+let gaveWay = false;                // a newer tab of this person took the seat: this one polls until it is shown again
 let pinger = null;                  // the interval that asks whether the socket still carries
 let pongDue = null;                 // the timer that gives it up when no answer came
 
@@ -69,7 +70,7 @@ function fallBack(now = false) {
 }
 
 function connect() {
-  if (ws || away || !follows.size) return;
+  if (ws || away || gaveWay || !follows.size) return;
   let sock;
   try { sock = new WebSocket(address()); } catch { fallBack(); reconnectLater(); return; }
   ws = sock;
@@ -98,8 +99,10 @@ function connect() {
     stopPinging();
     if (away) { live = false; return; }
     fallBack();
-    // 4429: this person has more tabs listening than FinStats keeps, and this was the oldest. It asks, as before.
-    if (e.code !== 4429) reconnectLater();
+    // 4429: this person has more tabs listening than FinStats keeps, and this was the oldest. It asks, as before, and
+    // does not take a seat back at its next page, which would only let the next oldest tab go.
+    if (e.code === 4429) gaveWay = true;
+    else reconnectLater();
   };
   sock.onerror = () => {}; // a close always follows
 }
@@ -134,6 +137,7 @@ function watchVisibility() {
   window.addEventListener('pageshow', (e) => {
     if (!away && !e.persisted) return;
     away = false;
+    gaveWay = false;
     retryMs = RETRY_FIRST_MS;
     fallBack();
     connect();
