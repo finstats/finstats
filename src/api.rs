@@ -474,7 +474,7 @@ async fn public_card(State(app): State<App>, Path(token): Path<String>, Query(q)
     let r = Response::builder()
         .header(CONTENT_TYPE, "image/png")
         .header(CACHE_CONTROL, "public, max-age=3600")
-        .header("vary", "Accept-Language")
+        .header("vary", "Accept-Language, Cookie")
         .body(Body::from(png.as_ref().clone()))
         .unwrap();
     Ok(crate::public::noindex(r))
@@ -514,7 +514,7 @@ async fn public_story_card(State(app): State<App>, Path((token, chapter)): Path<
     let r = Response::builder()
         .header(CONTENT_TYPE, "image/png")
         .header(CACHE_CONTROL, "public, max-age=3600")
-        .header("vary", "Accept-Language")
+        .header("vary", "Accept-Language, Cookie")
         .body(Body::from(png.as_ref().clone()))
         .unwrap();
     Ok(crate::public::noindex(r))
@@ -537,7 +537,7 @@ async fn story_card(State(app): State<App>, user: AuthUser, Path(chapter): Path<
     Ok(Response::builder()
         .header(CONTENT_TYPE, "image/png")
         .header(CACHE_CONTROL, "private, max-age=300")
-        .header("vary", "Accept-Language")
+        .header("vary", "Accept-Language, Cookie")
         .body(Body::from(png.as_ref().clone()))
         .unwrap())
 }
@@ -562,7 +562,7 @@ pub(crate) fn zip_response(files: &[(String, Vec<u8>)], label: &str) -> Response
         .header(CONTENT_TYPE, "application/zip")
         .header("content-disposition", format!("attachment; filename=\"finstats-{}.zip\"", slug.trim_matches('-')))
         .header(CACHE_CONTROL, "private, max-age=300")
-        .header("vary", "Accept-Language")
+        .header("vary", "Accept-Language, Cookie")
         .body(Body::from(crate::card::zip(files)))
         .unwrap()
 }
