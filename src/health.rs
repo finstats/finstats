@@ -450,7 +450,9 @@ fn gaps(lib: &Library) -> Vec<Finding> {
         let mut covered = std::collections::BTreeSet::new();
         for e in files {
             if let Some(n) = e.number {
-                covered.extend(n..=e.number_end.unwrap_or(n).max(n));
+                // An end no episode could have (a date, an overflow) says nothing about what the file holds.
+                let end = e.number_end.filter(|&end| end >= n && end - n <= GAP_SPAN_MAX && end <= EPISODE_NUMBER_MAX).unwrap_or(n);
+                covered.extend(n..=end);
             }
         }
         let (Some(&from), Some(&to)) = (covered.first(), covered.last()) else { continue };
@@ -941,6 +943,18 @@ mod tests {
         let mut items = vec![show("lo", "Low Orbit"), episode("e1", "lo", 1, 1), episode("e3", "lo", 1, 3)];
         items[1].number_end = Some(2);
         assert!(of(&findings(&items), "gap").is_empty(), "S01E01-E02 holds episode 2");
+    }
+
+    /// A file's end number is metadata like any other: a date written there (20240315) or an overflow was built into
+    /// a set of every number up to it before anything checked it, which a real end of two billion never finished.
+    #[test]
+    fn an_end_number_no_episode_could_have_is_read_as_the_file_alone() {
+        let mut items = vec![show("lo", "Low Orbit"), episode("e1", "lo", 1, 1), episode("e3", "lo", 1, 3)];
+        items[1].number_end = Some(1_000_000);
+        let found = findings(&items);
+        let gaps = of(&found, "gap");
+        assert_eq!(gaps.len(), 1, "the season is still read");
+        assert_eq!(gaps[0].evidence["missing"], serde_json::json!([[2, 2]]));
     }
 
     #[test]
