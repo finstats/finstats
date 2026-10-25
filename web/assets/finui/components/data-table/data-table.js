@@ -37,9 +37,10 @@ export function textValue(raw) {
   let m;
   // Durations as each language writes them: "3d 2h", "3 d 2 t", "48m", "48 min".
   if ((m = /^(?:(\d+)\s?d)?\s*(?:(\d+)\s?[ht])?\s*(?:(\d+)\s?m(?:in)?)?\s*(?:(\d+)\s?s)?$/.exec(text)) && m[0]) return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0);
-  if ((m = /^([\d.,\s]+?)\s*%/.exec(text))) return plainNumber(m[1]);
-  if ((m = /^([\d.,]+)\s*(B|KB|MB|GB|TB|PB)$/.exec(text))) return plainNumber(m[1]) * BYTES[m[2]];
-  if ((m = /^([\d.,]+)\s*(kbps|Mbps)$/.exec(text))) return plainNumber(m[1]) * (m[2] === 'Mbps' ? 1e6 : 1e3);
+  // `\s` is every space a language groups with (no-break, narrow no-break). Turkish writes the sign first: %42.
+  if ((m = /^%\s*([\d.,\s]+)$/.exec(text)) || (m = /^([\d.,\s]+?)\s*%/.exec(text))) return plainNumber(m[1]);
+  if ((m = /^([\d.,\s]+?)\s*(B|KB|MB|GB|TB|PB)$/.exec(text))) return plainNumber(m[1]) * BYTES[m[2]];
+  if ((m = /^([\d.,\s]+?)\s*(kbps|Mbps)$/.exec(text))) return plainNumber(m[1]) * (m[2] === 'Mbps' ? 1e6 : 1e3);
   if ((m = /^([\d.,]+)(K|M|B)$/.exec(text))) return plainNumber(m[1]) * SCALE[m[2]];
   if ((m = /^★\s*([\d.,]+)$/.exec(text))) return plainNumber(m[1]);
   if ((m = /^([\d.,\s\u00a0\u202f]+?)\s+(?:of|av)\s+[\d.,\s\u00a0\u202f]+$/.exec(text))) return plainNumber(m[1]);
