@@ -830,9 +830,17 @@ pub struct TrashBody {
 pub async fn activity_set_deleted(State(app): State<App>, Manager(user): Manager, Path(id): Path<i64>, Json(body): Json<TrashBody>) -> ApiResult {
     let actor = crate::audit::Actor::from(&user);
     let window = app.settings().group_window_s;
+    // Whose plays may be moved is whose plays may be seen: without `see_everyone`, somebody else's is no play at all.
+    let only = (!user.perms.see_everyone).then(|| user.id.clone());
     let state = app
         .db
         .call(move |c| {
+            if let Some(me) = &only {
+                let theirs: Option<String> = c.query_row("SELECT user_id FROM playbacks WHERE id = ?1", [id], |r| r.get(0)).optional()?;
+                if theirs.as_ref() != Some(me) {
+                    return Ok(None);
+                }
+            }
             let state = crate::trash::set_play_deleted(c, id, body.deleted, db::now(), window)?;
             if let Some(s) = state.as_ref().filter(|s| s.changed) {
                 let kind = if body.deleted { "play_deleted" } else { "play_undeleted" };
