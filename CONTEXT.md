@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-13, on branch `dev-2.3.0` (crate version 2.3.0, unreleased; schema `user_version` 39; newest tag `v2.2.0`).
+> **Last updated:** 2026-10-25, on branch `dev-2.3.0` (crate version 2.3.0, unreleased; schema `user_version` 39; newest tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `CLAUDE.md` is the detailed rulebook
@@ -391,7 +391,7 @@ sources either end within `merge_window_s`. Importers call `insert_imported`, ne
 **Library sync and scheduling (`sync.rs`, `schedule.rs`).** Jobs: `sync_users`, `sync_libraries`, `sync_events`,
 `sync_server`, `sync_userdata`, `sync_changes`, `backup`, `geoip`, Pipeline syncs. Triggers per job (daily, weekly,
 interval, start-up, after Jellyfin's library scan), chosen by the pure `schedule::due`; last runs in `task_runs`.
-**`trustworthy_removal`** refuses a read that comes back empty or catastrophically shrunk: data kept, task failed,
+**`trustworthy_removal`** refuses a read (a library's items, the users, a person's played/favourite flags) that comes back empty or catastrophically shrunk: data kept, task failed,
 process halts (exit 70); `FINSTATS_ALLOW_LIBRARY_SHRINK=1` overrides. After a read, `backfill_playbacks` fills library
 ids / runtimes / S·E numbers, runs `relink`, `pipeline::link` and `watchlist::resolve`; health and capacity recompute
 beside it, never inside it.
@@ -762,8 +762,6 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
   written by scheduled runs (a task's error) are in en-GB.
 - **CI's `node --check` covers only `web/assets/js/*.js` and `pages/*.js`**, not `settings/`, `simple/`, `public/`,
   FinUI or FinMotion (the QA static stage covers everything).
-- **`sync_userdata` has no removal guard**: it deletes a person's `user_items` then inserts what the read returned, so an
-  empty or reshaped read clears played/favourite flags until the next read.
 - **Documentation drift to fix:** `CLAUDE.md` still places theme tokens at the top of `app.css` (they are FinUI's
   `tokens.css`), has no section on `capacity.rs`, `browse.rs` or `upgrade.rs`,
   and states the subscription rule two ways (the code is `playing == 0 && !settling`); it gives the clippy budget as ~12
@@ -771,8 +769,11 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
   comments mention torrent clients (`services.rs`, `state.rs`), "four" notification channels (there are nine), and "the
   two imports" (there are three). The backup module's doc omits several tables in `TABLES`. `checks/capacity.sh` refers
   to a `qa/run.sh capacity` stage that does not exist.
-- `security::overview`'s `addresses_without_place` ignores the person filter; libraries (unlike users) are still marked
-  removed by timestamp rather than by id.
+- Libraries (unlike users) are still marked removed by timestamp rather than by id.
+- The table reader (FinUI `data-table`) knows the duration units of the checked languages only: German, French, Russian,
+  Turkish and the other unchecked languages' durations sort as text.
+- The `finstats_lang` cookie is shared by every tab and preferred to the `Accept-Language` a page sends, so after a
+  language is changed in one tab, another tab still open in the old language gets the server's words in the new one.
 
 ---
 
