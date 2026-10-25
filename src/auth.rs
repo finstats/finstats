@@ -511,6 +511,8 @@ async fn start_session(
             Ok(())
         })
         .await?;
+    // What Jellyfin just said about this person is in their row now, and the oldest session may have given way to this one.
+    app.live_feed.recheck();
     let body = Json(json!({ "user": user_json(app, user_id, user_name, is_admin, perms).await }));
     let mut resp = body.into_response();
     resp.headers_mut().insert(SET_COOKIE, session_cookie(&token, SESSION_TTL_S, is_https(headers)));
