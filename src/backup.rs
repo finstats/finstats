@@ -7,7 +7,8 @@
 //! dropped). It streams both ways: size is bounded by disk, not memory.
 //!
 //! What is in it: plays and their timelines, manual seen-marks, permissions, home addresses, the
-//! server log, known devices, FinStats' own audit log and the settings. What is not, on purpose: the Jellyfin address and API
+//! server log, known devices, security alerts, FinStats' own audit log, watchlists, titles located by hand, dismissed
+//! findings, each person's look and the settings ([`TABLES`]). What is not, on purpose: the Jellyfin address and API
 //! key, sign-in sessions, API keys, and the library itself (items, people, played flags), which the next sync
 //! reads from Jellyfin again. A backup is still a complete viewing history with IP addresses in it:
 //! treat the file accordingly.

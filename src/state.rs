@@ -33,8 +33,8 @@ pub struct AppState {
     pub login_attempts: Mutex<HashMap<IpAddr, (u32, i64)>>,
     /// The geolocation database, when there is one.
     pub geo: crate::geo::Geo,
-    /// Connections to Sonarr, Radarr, Seerr and torrent clients: the list, how each is doing, and the
-    /// torrent clients' sessions. Loops read these, never the database.
+    /// Connections to Sonarr, Radarr and Seerr: the list and how each is doing. Loops read these, never the
+    /// database.
     pub services: RwLock<Arc<Vec<Arc<crate::services::Service>>>>,
     pub service_health: RwLock<HashMap<i64, crate::services::Health>>,
     /// Their own HTTP clients: no redirect is ever followed with a key in hand.

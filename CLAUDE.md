@@ -71,7 +71,7 @@ cargo build --release                      # release binary embeds web/ and CHAN
 cargo test                                 # all unit tests
 cargo test relink                          # tests whose name/module matches "relink"
 cargo test recap::tests::persona_prefers_the_most_distinctive_habit -- --exact
-cargo clippy --all-targets                 # not clean: ~12 style warnings exist; add no new ones
+cargo clippy --all-targets                 # not clean: ~17 style warnings exist (QA's budget is 20); add no new ones
 
 FINSTATS_DATA_DIR=./data FINSTATS_BIND=127.0.0.1:8088 cargo run     # serve
 cargo run -- import-jellystat <backup.jsonl>                         # headless import, then exit
@@ -147,6 +147,13 @@ replaced poster was served from the disk for a week and from the browser for ano
 `ExcludeLocationTypes=Virtual` (missing/unaired placeholders). Anything a read does not return is marked `removed`,
 so a query that silently hides items is a data-loss bug, not a cosmetic one.
 
+**Upgrade steps (`upgrade.rs`, 2.3.0) are what a version needs done once to a database an older FinStats wrote, beside
+its migrations**: a migration changes tables, a step does the rest (a job made due so something new is worked out at the
+first start, a value filled in). `Db::open` runs them after `migrate`, oldest version first, and records each by name
+(`upgrade_steps`) once it has run, like a migration, never judged by the version that last opened the database: a
+development build of that version had already opened it. A brand-new database is recorded as having had every step and
+runs none; a step that fails is not recorded and runs again at the next start. A step's name is never reused.
+
 **Track languages.** `items.audio_languages` / `subtitle_languages` are JSON arrays from `media::track_languages` (every track, each code once,
 `und` for an untagged one), written by both item producers (`sync::upsert_item`, the import's `jf_item_info`). A series or season has none of its
 own: `item_detail` answers `language_coverage` (episodes per language, files only; the count is `media::language_counts`, shared with Library health), which is what shows a dub that stops half way. FinStats never
@@ -174,6 +181,18 @@ lifted out of `item_detail` under a test that pinned the card's answer). Every f
 ids) and a fingerprint of what it read; a dismissal (`health_dismissed`, in `backup::TABLES`, a restore keeps one already
 here) holds while the fingerprint does, so a replaced file is looked at again. Reading needs `see_server`; dismissing needs
 `manage` **and** `see_server` (`may_dismiss`), and is audited. Nothing in an answer is about plays or people.
+
+**Capacity (`capacity.rs`, Server → Capacity, `/server/capacity`, 2.3.0): will this server cope, from what FinStats
+already holds**, never "your server can handle N", which it cannot know. Every rule is a pure function over plain rows,
+recomputed after a library read and after a read of the server's details (`recompute`, stored in `capacity_findings` and
+the `capacity` setting), and a page only reads what was stored. The busiest moments come from the plays (Tautulli's are
+Plex's, another server, and left out); a disk is the library folders on one device Jellyfin names, or at one free space
+without a device, less the folders inside Jellyfin's own (its Collections). **A disk's growth is each library's on it,
+from a month after that library's first file** (its first month is its filling: a library copied over last week is not
+"full within a month"), and **a file that took another's place adds only the difference** (`take_places`: a removed row of
+the same title in the same library, last seen within `REPLACED_WITHIN_S` of the new file's arrival, or at any time when an
+import wrote it): an upgrade from Radarr or Sonarr, and a file Jellyfin gave a new id, read as all new otherwise. Findings
+are dismissed with Library health's `health_dismissed`, and a finding no longer found takes its dismissal along.
 
 **Jellyfin client (`jellyfin.rs`).** Every request asks for `Accept: application/json; profile="PascalCase"` because
 10.x servers answer PascalCase and newer ones camelCase by default. All JSON access in the codebase assumes
@@ -220,7 +239,7 @@ so however rarely a paused play is looked at, none of it becomes watch time. **O
 Jellyfin to look every 1.5 s and send what differs, which is silence on an idle server and a list every 1.5 s during a play, so while
 polling the pushes are the same list a second time, uncompressed. `Handle::listen(false)` sends `SessionsStop` for the duration (the
 connection stays open and answering `KeepAlive`); `listen(true)` on the pass where the last play ends. **The rule is
-`should_subscribe(playing) = playing == 0`, never the collector's own mode**, and that is the whole of it: listening needs the
+`should_subscribe(playing, settling) = playing == 0 && !settling`, never the collector's own mode**, and that is the whole of it: listening needs the
 socket to have proved itself, the proof is the list a subscription brings, and an early attempt unsubscribed before it could arrive,
 so the fallback latched on for good (connected, never subscribed, polling for ever on exactly the idle server the socket is
 for). Anything that gates the subscription on something the subscription itself produces is this bug again.
@@ -528,6 +547,10 @@ and only give out a stop once the play after it has been read, so a stop is neve
 size. In the UI (`pages/timeline.js`) the column count comes from a `ResizeObserver`: rows alternate direction by being `direction: rtl`
 (their cards reset to `ltr`), a bend joins each row to the next, and below 620 px it becomes one straight line (`.is-line`). DOM
 order stays chronological, so keyboard and screen readers follow the trail.
+
+**A library's titles (`browse.rs`, `GET /api/libraries/{id}/titles`, 2.3.0)**: every film, show or album in one library,
+a page at a time, filtered, searched and sorted on the server. The library is the same for everyone, so nothing here is
+scoped to the caller, and nothing here is about plays.
 
 **Recently added (`recent.rs`, the dashboard shelf).** Episodes of one show added on the same local day fold into one entry (pure
 `fold()`), everything else is its own. It must stay cheap because the dashboard loads it: the query walks the partial index
@@ -919,8 +942,8 @@ once), layout with a picture of each (`web/assets/welcome/*.png`, 480×300 from 
 the Tautulli-style home). Skip keeps `DEFAULTS` (en-GB, `dd/mm/yyyy`, `HH:mm`, the device's colours, FinStats). Setup goes on
 into the same steps in the same card once its sign-in succeeds, its two steps shown done. Everything it asks is the
 browser's, so `finstats.welcomed` is too; every QA browser marks itself welcomed but the journeys for the welcome.
-**`finstatsWelcome()` in `boot.js` opens it from the console for trying it by hand, and must be taken out before 2.3.0
-reaches `main`** (the owner's decision).
+`finstatsWelcome()` in `boot.js` opens it again from the browser's console; first added for trying it by hand, it is
+kept in the release (the owner's decision, 2026-10-26).
 
 Tables go through `tables.js`: `dataTable()` / `plainTable()` / `chartTable()` wrap a built `<table>` in its scroll box and make every
 header a sort button (`sortable()` for tables without a scroll box, like the bar lists). Sorting reads cell meaning (durations, sizes, %,
@@ -1010,7 +1033,7 @@ by hand it was never quite centred. It hides with the item after it (`:has`). A 
 path) takes `{ wide: true }` and the whole row, or it runs down a 190 px cell.
 Each screen is held to the UX patterns from <https://uxgoodpatterns.com>. A generated copy, `ux-rules.md`, may sit in the working
 tree for reference; it is someone else's work, is git-ignored and must never be committed. The look is Obsidian's in the dark and washi paper in the light (cream ground, ink text, a vermilion seal for
-the accent, nando for quantities), via the tokens at the top of `app.css`; categorical chart colours follow the entity (Movie/Episode/Audio/Other), never rank.
+the accent, nando for quantities), via FinUI's tokens (`web/assets/finui/tokens.css`); categorical chart colours follow the entity (Movie/Episode/Audio/Other), never rank.
 **Every colour is a token, and every token is `light-dark(light, dark)`**: one declaration, two themes. A colour literal
 anywhere else (a CSS rule, a chart's `fill`, a `style.background` in JS) is right in one theme and wrong in the other; the QA
 light sweep measures text contrast on every page and fails on it. JS reaches a token as the string `'var(--x)'` through `style`

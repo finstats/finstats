@@ -1,4 +1,5 @@
-//! Connections to the services around Jellyfin: Sonarr, Radarr, Seerr and the torrent clients.
+//! Connections to the services around Jellyfin: Sonarr, Radarr and Seerr. Download clients are read through Sonarr's and
+//! Radarr's queues, never connected.
 //!
 //! FinStats only ever *reads* from them. Everything that makes that safe lives here:
 //!

@@ -1121,7 +1121,7 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
 
 /// The trackers FinStats can take history from, each with its own task so each Settings card can
 /// watch its own import. Only one runs at a time whichever it is: they write to the same tables.
-/// The two imports and the restore. Each holds the database in one long transaction: only one of them at a time.
+/// The three imports and the restore. Each holds the database in one long transaction: only one of them at a time.
 const HISTORY_WRITERS: [&str; 4] = ["import", "import_streamystats", "import_tautulli", "restore"];
 
 async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {

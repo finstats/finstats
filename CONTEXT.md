@@ -481,7 +481,7 @@ ETags by image tag), `ical.rs` (hand-written RFC 5545 feed), `keys.rs`, `audit.r
 | `widgets.js` | Larger shared cards (activity, heatmap, now playing, insights, …) |
 | `live.js` | `follow(topic, {poll, every, onData, signal})`: WebSocket with polling fallback |
 | `when.js` | Pure: a date or time in a chosen format (`writeDate`, `writeTime`); `dom.js`'s `clockTime` / `calendarDate` use it |
-| `welcome.js` | The welcome (`/welcome`) and the same card at the end of setup: language, formats, layout; Skip keeps `DEFAULTS` |
+| `welcome.js` | The welcome (`/welcome`) and the same card at the end of setup: language, formats, colours, layout; Skip keeps `DEFAULTS`; `finstatsWelcome()` in the console (`boot.js`) opens it again |
 | `nowplaying.js` | Now-playing view with a 1 s ticker clock (polls only correct, never repaint) |
 | `prefetch.js` | Warm-up and on-intent prefetch, calling the page's own loaders |
 | `shell.js`, `sections.js`, `menus.js`, `search.js` | Layout chrome (FinUI menus, status bar, Esc), section pages, context menus, search |
@@ -763,15 +763,16 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
   written by scheduled runs (a task's error) are in en-GB.
 - **CI's `node --check` covers only `web/assets/js/*.js` and `pages/*.js`**, not `settings/`, `simple/`, `public/`,
   FinUI or FinMotion (the QA static stage covers everything).
-- **Documentation drift to fix:** `CLAUDE.md` still places theme tokens at the top of `app.css` (they are FinUI's
-  `tokens.css`), has no section on `capacity.rs`, `browse.rs` or `upgrade.rs`,
-  and states the subscription rule two ways (the code is `playing == 0 && !settling`); it gives the clippy budget as ~12
-  (baseline is 20). `api.md` says the 21st API key is 409 (code: 400) and describes image caching inconsistently. Stale
-  comments mention torrent clients (`services.rs`, `state.rs`), "four" notification channels (there are nine), and "the
-  two imports" (there are three). The backup module's doc omits several tables in `TABLES`. `checks/capacity.sh` refers
-  to a `qa/run.sh capacity` stage that does not exist.
 - Libraries (unlike users) are still marked removed by timestamp rather than by id.
-- **`window.finstatsWelcome()` (`boot.js`) is for trying the welcome by hand and must be removed before 2.3.0 reaches `main`.**
+
+**Open findings from the 2.3.0 bug hunt, left for 2.3.1 (2026-10-26)**
+
+- `capacity::recompute` reads the whole play history each time it runs (after every read of the server's details), where
+  only the plays since its last run can change the busiest moments.
+- `capacity::busiest_of` joins two evenings into one spell while a play is stuck active between them.
+- The live channel: a topic dropped at a recheck (access taken away) is not subscribed again when access comes back
+  within the page's life, so the page stays still until it is reloaded; a tab's own drift can hide behind a reset of the
+  shared course; and one person creating and revoking API keys in a loop makes every open connection recheck its access.
 
 ---
 

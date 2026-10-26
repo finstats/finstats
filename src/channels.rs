@@ -1,4 +1,4 @@
-//! The four ways a message leaves FinStats, and nothing else about notifications.
+//! The nine ways a message leaves FinStats, and nothing else about notifications.
 //!
 //! A plain **webhook** (JSON, the shape documented in the HTTP API page of github.com/finstats/docs), **Discord** (an embed),
 //! **ntfy** and **Gotify**. Two rules hold for all of them:
