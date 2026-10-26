@@ -1114,7 +1114,12 @@ async fn sync_server(app: &App, jf: &Jellyfin) -> Result<String> {
 pub(crate) fn store_user_items(c: &mut Connection, uid: &str, rows: &[Value], shrink_ok: bool) -> Result<Option<i64>> {
     let seen = rows.iter().filter_map(|it| it["Id"].as_str()).map(norm_id).collect::<std::collections::HashSet<_>>().len();
     let tx = c.transaction()?;
-    let current: i64 = tx.query_row("SELECT COUNT(*) FROM user_items WHERE user_id = ?1", [uid], |r| r.get(0))?;
+    // Flags on titles the library read has marked removed went with their library, so they are not what a read lost.
+    let current: i64 = tx.query_row(
+        "SELECT COUNT(*) FROM user_items ui WHERE ui.user_id = ?1 AND NOT EXISTS (SELECT 1 FROM items i WHERE i.id = ui.item_id AND i.removed = 1)",
+        [uid],
+        |r| r.get(0),
+    )?;
     if !shrink_ok && !trustworthy_removal(seen, current) {
         return Ok(Some(current));
     }
@@ -1152,6 +1157,7 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
         })
         .await?;
     let mut total = 0usize;
+    let mut refused: Vec<String> = vec![];
     let count = users.len().max(1);
     for (n, (user_id, name)) in users.into_iter().enumerate() {
         app.tasks.update(ID, crate::i18n::t("server.sync.reading_watched", &[("name", (&name).into())]), Some(n as f64 / count as f64));
@@ -1172,11 +1178,16 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
         let uid = user_id.clone();
         let seen = rows.iter().filter(|it| it["Id"].is_string()).count();
         let shrink_ok = allow_shrink();
+        // Refused, the flags are kept and the job fails, but FinStats does not stop: they are read again in full next time,
+        // so nothing is lost by waiting, and narrowing somebody's libraries in Jellyfin reads exactly like a broken read.
         if let Some(current) = app.db.call(move |c| store_user_items(c, &uid, &rows, shrink_ok)).await? {
             let msg = crate::i18n::t("server.sync.userdata_refused", &[("count", seen.into()), ("name", (&name).into()), ("current", current.into())]);
-            app.request_halt(msg.clone());
-            return Err(anyhow!(msg));
+            tracing::warn!("{msg}");
+            refused.push(msg);
         }
+    }
+    if !refused.is_empty() {
+        return Err(anyhow!(refused.join(" ")));
     }
     Ok(crate::i18n::t("server.sync.userdata_read", &[("count", total.into())]))
 }
@@ -1347,6 +1358,27 @@ mod tests {
         store_user_items(&mut c, "a1", &many, false).unwrap();
         assert_eq!(store_user_items(&mut c, "a1", &[], true).unwrap(), None, "FINSTATS_ALLOW_LIBRARY_SHRINK waves it through");
         assert_eq!(flags(&c), 0);
+    }
+
+    /// A library deleted in Jellyfin takes a person's flags on it along: 1,500 played episodes going at once is the
+    /// library read's business (it has marked them removed), not a broken read of the flags, which halted FinStats.
+    #[test]
+    fn flags_on_titles_the_library_lost_are_not_a_shrink() {
+        let mut c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let played = |id: String| json!({ "Id": id, "UserData": { "Played": true, "PlayCount": 1 } });
+        let all: Vec<Value> = (0..1550).map(|n| played(format!("e{n}"))).collect();
+        assert_eq!(store_user_items(&mut c, "a1", &all, false).unwrap(), None);
+        // The shows library goes: its 1,500 episodes are marked removed; the 50 films elsewhere stay.
+        c.execute_batch("WITH RECURSIVE n(i) AS (SELECT 0 UNION ALL SELECT i + 1 FROM n WHERE i < 1499)
+                         INSERT INTO items(id, type, name, removed, updated_at) SELECT 'e' || i, 'Episode', 'Pilot', 1, 0 FROM n;").unwrap();
+        assert_eq!(store_user_items(&mut c, "a1", &all[1500..], false).unwrap(), None, "the read was right: those titles are gone");
+        // A read that loses titles still in the library is refused as before.
+        assert_eq!(store_user_items(&mut c, "a1", &all, false).unwrap(), None);
+        c.execute("UPDATE items SET removed = 0", []).unwrap();
+        assert_eq!(store_user_items(&mut c, "a1", &all[1500..], false).unwrap(), Some(1550));
     }
 
     /// The library guard counts what a read stored, and an item without an id stores nothing: a page of
