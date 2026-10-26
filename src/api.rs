@@ -1094,19 +1094,7 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.restore_running", &[])));
     }
     let path = app.data_dir.join(UPLOADS[2]);
-    let received = async {
-        let mut file = tokio::fs::File::create(&path).await?;
-        let mut stream = req.into_body().into_data_stream();
-        let mut total = 0u64;
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk.map_err(|e| anyhow::anyhow!(i18n::t("server.api.upload_interrupted", &[("error", e.to_string().into())])))?;
-            total += chunk.len() as u64;
-            file.write_all(&chunk).await?;
-        }
-        file.flush().await?;
-        anyhow::Ok(total)
-    }
-    .await;
+    let received = store_upload(req, &path, UPLOAD_MAX).await;
     match received {
         Ok(n) if n > 0 => {}
         other => {
@@ -1258,7 +1246,7 @@ async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Reque
     }
     let path = app.data_dir.join(crate::tautulli::UPLOAD);
     let part = path.with_extension("part");
-    let received = store_upload(req, &part).await;
+    let received = store_upload(req, &part, UPLOAD_MAX).await;
     let fail = |msg: String| {
         let _ = std::fs::remove_file(&part);
         Err(ApiError::bad_request(msg))
@@ -1327,18 +1315,32 @@ async fn tautulli_run(State(app): State<App>, Manager(user): Manager, Json(body)
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
-/// Write an upload's body to `path` as it arrives: how many bytes it was.
-async fn store_upload(req: Request, path: &std::path::Path) -> anyhow::Result<u64> {
-    let mut file = tokio::fs::File::create(path).await?;
-    let mut stream = req.into_body().into_data_stream();
-    let mut total = 0u64;
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| anyhow::anyhow!(i18n::t("server.api.upload_interrupted", &[("error", e.to_string().into())])))?;
-        total += chunk.len() as u64;
-        file.write_all(&chunk).await?;
+/// The most an upload may be. A real backup of a million plays is well under it; without one, anybody allowed to import
+/// could fill the disk FinStats' own database lives on.
+const UPLOAD_MAX: u64 = 4 << 30;
+
+/// Write an upload's body to `path` as it arrives: how many bytes it was. One past `max` gives up and removes the file.
+async fn store_upload(req: Request, path: &std::path::Path, max: u64) -> anyhow::Result<u64> {
+    let stored = async {
+        let mut file = tokio::fs::File::create(path).await?;
+        let mut stream = req.into_body().into_data_stream();
+        let mut total = 0u64;
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| anyhow::anyhow!(i18n::t("server.api.upload_interrupted", &[("error", e.to_string().into())])))?;
+            total += chunk.len() as u64;
+            if total > max {
+                anyhow::bail!(i18n::t("server.api.upload_too_large", &[]));
+            }
+            file.write_all(&chunk).await?;
+        }
+        file.flush().await?;
+        Ok(total)
     }
-    file.flush().await?;
-    Ok(total)
+    .await;
+    if stored.is_err() {
+        let _ = tokio::fs::remove_file(path).await;
+    }
+    stored
 }
 
 /// Stream an uploaded export to disk. One import at a time, whichever tracker it came from.
@@ -1347,7 +1349,7 @@ async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> Api
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
     }
     let path = app.data_dir.join(name);
-    let received = store_upload(req, &path).await;
+    let received = store_upload(req, &path, UPLOAD_MAX).await;
 
     match received {
         Ok(0) => {
@@ -1371,6 +1373,21 @@ async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> Api
 
 #[cfg(test)]
 mod tests {
+    /// An upload is written to disk as it arrives and given up on, and its file removed, once it passes the most an upload
+    /// may be: with no limit at all, anybody allowed to import could fill the disk FinStats' own database lives on.
+    #[tokio::test]
+    async fn an_upload_past_the_most_it_may_be_is_given_up_on_and_its_file_removed() {
+        let dir = std::env::temp_dir().join(format!("finstats-upload-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("upload.part");
+        let req = |n: usize| axum::extract::Request::new(axum::body::Body::from(vec![7u8; n]));
+        assert_eq!(super::store_upload(req(10), &path, 10).await.unwrap(), 10);
+        assert_eq!(std::fs::metadata(&path).unwrap().len(), 10);
+        assert!(super::store_upload(req(11), &path, 10).await.is_err());
+        assert!(!path.exists(), "what an upload past the limit left behind");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
     /// A cached picture is written beside its name and renamed into place: written in place, a second request read it
     /// half written and served that, and a tagged picture is then kept by the browser as it got it.
     #[tokio::test]

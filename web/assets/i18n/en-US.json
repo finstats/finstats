@@ -1460,6 +1460,7 @@
       "locate_wrong_kind": "A play is of a movie, a video or an episode, never of a whole show or season",
       "upload_interrupted": "The upload was interrupted: {error}",
       "upload_empty": "The uploaded file was empty",
+      "upload_too_large": "The file is larger than the 4 GB FinStats accepts",
       "reading_backup": "Reading backup",
       "receiving_backup": "Receiving backup",
       "importing": "Importing",

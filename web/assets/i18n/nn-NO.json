@@ -1460,6 +1460,7 @@
       "locate_wrong_kind": "Ei avspeling gjeld ein film, ein video eller ein episode, aldri ein heil serie eller sesong",
       "upload_interrupted": "Opplastinga vart avbroten: {error}",
       "upload_empty": "Den opplasta fila var tom",
+      "upload_too_large": "Fila er større enn dei 4 GB FinStats tek imot",
       "reading_backup": "Les tryggingskopien",
       "receiving_backup": "Tek imot tryggingskopien",
       "importing": "Importerer",
