@@ -89,12 +89,11 @@ pub fn unpack(path: &Path) -> Result<()> {
     let unpacked = path.with_extension("unpacking");
     let written = {
         let mut out = std::fs::File::create(&unpacked).context("unpacking the backup")?;
-        match entry.method {
-            0 => std::io::copy(&mut { packed }, &mut out),
-            8 => std::io::copy(&mut flate2::read::DeflateDecoder::new(packed), &mut out),
-            m => {
+        match inflate(entry.method, packed, entry.size, &mut out) {
+            Some(written) => written,
+            None => {
                 let _ = std::fs::remove_file(&unpacked);
-                bail!(crate::i18n::t("server.tautulli.zip_method", &[("method", m.to_string().into())]));
+                bail!(crate::i18n::t("server.tautulli.zip_method", &[("method", entry.method.to_string().into())]));
             }
         }
     };
@@ -104,6 +103,16 @@ pub fn unpack(path: &Path) -> Result<()> {
             let _ = std::fs::remove_file(&unpacked);
             bail!(crate::i18n::t("server.tautulli.zip_damaged", &[]))
         }
+    }
+}
+
+/// One entry written out, never past the size its directory claims (and one byte more, to see that it lied): a few
+/// megabytes of deflated zeros inflate into everything the disk has. `None` for a method that is not read.
+fn inflate(method: u16, packed: impl Read, size: u64, out: &mut impl std::io::Write) -> Option<std::io::Result<u64>> {
+    match method {
+        0 => Some(std::io::copy(&mut packed.take(size + 1), out)),
+        8 => Some(std::io::copy(&mut flate2::read::DeflateDecoder::new(packed).take(size + 1), out)),
+        _ => None,
     }
 }
 
@@ -134,6 +143,10 @@ fn zip_entry(file: &mut std::fs::File) -> Result<ZipEntry> {
         bail!(crate::i18n::t("server.tautulli.zip_damaged", &[]));
     };
     let (count, dir_len, dir_at) = (u16_at(&tail, end + 10), u32_at(&tail, end + 12), u32_at(&tail, end + 16));
+    // A directory that says it is larger than the file is not read into memory at its word.
+    if dir_at as u64 + dir_len as u64 > len {
+        bail!(crate::i18n::t("server.tautulli.zip_damaged", &[]));
+    }
     file.seek(SeekFrom::Start(dir_at as u64))?;
     let mut dir = vec![0u8; dir_len as usize];
     file.read_exact(&mut dir).context("reading the zip")?;
@@ -927,6 +940,32 @@ mod tests {
         std::fs::write(&not_a_db, crate::card::zip(&[("readme.txt".into(), b"hello".to_vec())])).unwrap();
         assert!(format!("{:#}", unpack(&not_a_db).unwrap_err()).contains("Tautulli"));
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// An entry is written out no further than the size its directory claims (and one byte to see it lied): fifty kilobytes
+    /// of deflated zeros inflate into fifty megabytes, and a few megabytes into everything the disk has.
+    #[test]
+    fn a_zip_entry_is_never_written_past_the_size_it_claims() {
+        use std::io::Write;
+        struct Count(u64);
+        impl Write for Count {
+            fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+                self.0 += b.len() as u64;
+                Ok(b.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+        let mut enc = flate2::write::DeflateEncoder::new(Vec::new(), flate2::Compression::best());
+        enc.write_all(&vec![0u8; 50 << 20]).unwrap();
+        let bomb = enc.finish().unwrap();
+        for (method, packed) in [(8, &bomb[..]), (0, &[0u8; 4096][..])] {
+            let mut out = Count(0);
+            assert_eq!(inflate(method, packed, 10, &mut out).unwrap().unwrap(), 11, "method {method}");
+            assert_eq!(out.0, 11);
+        }
+        assert!(inflate(12, &bomb[..], 10, &mut Count(0)).is_none(), "a method nobody reads");
     }
 
     #[test]
