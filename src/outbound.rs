@@ -48,7 +48,9 @@ impl Dest {
 /// nobody's business on a page about *where* traffic goes.
 pub fn host_of(url: &str) -> String {
     let rest = url.split_once("://").map(|(_, r)| r).unwrap_or(url);
-    rest.split(['/', '?', '#']).next().unwrap_or(rest).to_string()
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or(rest);
+    // Never a login the address carries.
+    authority.rsplit_once('@').map_or(authority, |(_, host)| host).to_string()
 }
 
 /// One connection as this page needs it: id, kind, name, URL, switched on, last good read, last error.
@@ -230,6 +232,8 @@ mod tests {
         assert_eq!(host_of("http://nas:7878"), "nas:7878");
         assert_eq!(host_of("https://media.example:8096/jellyfin"), "media.example:8096");
         assert_eq!(host_of("https://download.db-ip.com/free/dbip-city-lite-2026-09.mmdb.gz"), "download.db-ip.com");
+        // An address the owner wrote may carry a login: the host is shown, never that.
+        assert_eq!(host_of("https://alice:hunter2@ip.example/?token=x"), "ip.example");
     }
 
     #[test]

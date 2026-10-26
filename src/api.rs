@@ -647,7 +647,8 @@ async fn settings_response(app: &App) -> ApiResult {
     let known = app.db.call(|c| crate::network::list(c)).await?;
     if let Some(obj) = v.as_object_mut() {
         obj.insert("known_home_addresses".into(), json!(known));
-        obj.insert("public_ip_services".into(), json!(crate::network::services()));
+        // Hosts only: the address in FINSTATS_PUBLIC_IP_URL is the operator's, and may carry a token.
+        obj.insert("public_ip_services".into(), json!(crate::network::services().iter().map(|u| crate::outbound::host_of(u)).collect::<Vec<_>>()));
         obj.insert("geoip".into(), security::status_json(app));
     }
     Ok(Json(v))
