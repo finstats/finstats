@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-26, on branch `dev-2.3.0` (crate version 2.3.0, unreleased; schema `user_version` 40; newest tag `v2.2.0`).
+> **Last updated:** 2026-10-28, on branch `dev` (crate version 2.3.1, local only; schema `user_version` 40; newest pushed tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `CLAUDE.md` is the detailed rulebook
@@ -295,7 +295,8 @@ home_addresses, server_events, devices, security_alerts, audit, watchlist, locat
 
 Never exported: secrets (Jellyfin URL/key, sessions, api_keys, services, notify_targets), the library (re-readable),
 Pipeline tables, derived tables, public_profiles. Restore **merges** (dedupe through `already_recorded`, remaps event
-ids, never undeletes) then re-derives groups, `is_local`, library links. Separately, `pre-update-backups/` holds full
+ids, never undeletes, narrows grants and never widens them, brings settings only with `settings=true`) then re-derives groups,
+`is_local`, library links. Separately, `pre-update-backups/` holds full
 `VACUUM INTO` copies taken before a newer binary migrates (newest 3 kept, never served).
 
 ---
@@ -311,7 +312,7 @@ The authoritative contract is `../docs/docs/finstats/api.md`; change it with the
 | Group | Methods | Who | Module |
 |---|---|---|---|
 | `/status` | GET | **anyone** (shape only, from memory) | auth |
-| `/setup/test`, `/setup` | POST | anyone, only while unconfigured; needs a Jellyfin admin | auth |
+| `/setup/test`, `/setup` | POST | anyone, only while unconfigured, with the one-time code from the log (428 without it), rate-limited; needs a Jellyfin admin | auth |
 | `/auth/login`, `/auth/logout`, `/auth/me` | POST, POST, GET | anyone / session | auth |
 | `/summary`, `/now-playing`, `/stats/*`, `/library/{insights,recent}`, `/libraries*`, `/items/{id}`, `/people/{id}`, `/search`, `/users*`, `/users/{id}/{shows,timeline}`, `/activity`, `/stats/groups` | GET | AuthUser, narrowed by `Scope` | stats, groups, browse, recent, profile, timeline |
 | `/activity/{id}` | PUT `{deleted}` | Manager | stats + trash |
@@ -319,17 +320,18 @@ The authoritative contract is `../docs/docs/finstats/api.md`; change it with the
 | `/recap`, `/recap/cards/{chapter}`, `/recap/cards.zip` | GET | AuthUser (`whose_year`) | recap, story |
 | `/me/seen`, `/me/watchlist*`, `/me/appearance`, `/me/public-profile*` | various | caller only | profile, watchlist, appearance, public |
 | `/keys*` | GET/POST/DELETE | AuthUser; writes need a session | keys |
-| `/calendar.ics` | GET | CalendarKey (`?key=` or Bearer, never cookie) | ical |
+| `/calendar.ics` | GET | CalendarKey (a calendar key in `?key=`, any key as Bearer, never cookie) | ical |
 | `/upcoming`, `/requests*` | GET | AuthUser, pinned scope | pipeline |
 | `/downloads*` | GET | DownloadsViewer | downloads, pipeline |
 | `/notifications*` | various | AuthUser + `notify`/ownership inside | notify |
 | `/security*` | GET / POST | `see_network`+`see_everyone`; writes Manager | security |
-| `/server`, `/jellyfin/jobs`, `/events`, `/library/health*`, `/server/capacity` | GET | ServerViewer | stats, jobs, health, capacity |
+| `/server`, `/jellyfin/jobs`, `/events`, `/library/health*`, `/server/capacity` | GET | ServerViewer (others' log lines and a device's last user need `see_everyone`, addresses `see_network`) | stats, jobs, health, capacity |
 | `/library/health/{dismiss,undismiss}` | POST | Manager + `see_server` | health |
-| `/settings`, `/settings/public-ip`, `/tasks*` | various | Manager (access keys admin-only) | api |
-| `/import/*`, `/library/missing*`, `/library/locate` | various | Manager | api, tautulli, locate |
+| `/settings`, `/settings/public-ip`, `/tasks*` | various | Manager (access keys, backup count, merge window and the users / activity log / backup schedules admin-only; home addresses and travel rules need the Security page's permissions; a job by hand once a minute) | api |
+| `/import/*` | various | Manager + `see_everyone` (an upload past 4 GB is refused; one Tautulli upload at a time) | api, tautulli |
+| `/library/missing*`, `/library/locate` | various | Manager + `see_everyone` | api, locate |
 | `/permissions*`, `/backups*`, `/services*`, `/audit`, `/outbound`, `/public-profiles*` | various | JellyfinAdmin | api, services, audit, outbound, public |
-| `/img/item/{id}`, `/img/user/{id}`, `/img/arr/{svc}/{media}` | GET | AuthUser (arr: only ids FinStats listed) | api, artwork |
+| `/img/item/{id}`, `/img/user/{id}`, `/img/arr/{svc}/{media}` | GET | AuthUser (item/user: only what FinStats has, `artwork::known`; arr: only ids FinStats listed) | api, artwork |
 | `/public/{token}*`, `/u/{token}*` | GET | **anyone** with the token; every failure is the same 404 | public, card, story |
 
 **Conventions**
@@ -352,8 +354,14 @@ The authoritative contract is `../docs/docs/finstats/api.md`; change it with the
 ## 6. Auth and permissions
 
 - **Sign-in:** `POST /auth/login` forwards to Jellyfin's `AuthenticateByName`, logs that Jellyfin session out at once,
-  and mints FinStats' own session (random token, stored as sha256; cookie `finstats_session`, HttpOnly, SameSite=Lax,
-  30 days). Rate limit 10 attempts / 5 min / IP. Every sign-in rewrites the user row from Jellyfin's answer.
+  and mints FinStats' own session (random token, stored as sha256; cookie `finstats_session`, or `__Host-finstats_session`
+  on https, which wins and which a sibling host cannot set; HttpOnly, SameSite=Lax, 30 days, Secure when `X-Forwarded-Proto`
+  or the sign-in's `Origin` says https). Rate limit 10 attempts / 5 min per address, an IPv6 /64 counting as one, at most
+  10,000 remembered; a sign-in that works gives back only its own attempt. Behind `FINSTATS_TRUST_PROXY` the address is the last
+  entry of the last `X-Forwarded-For` line. Every sign-in rewrites the user row from Jellyfin's answer.
+- **Setup:** until configured, `main.rs` writes a one-time code to the log (`auth::new_setup_code`, kept in
+  `AppState.setup_code`); `/setup/test` and `/setup` refuse without it (428) and count against the sign-in limit, and
+  `SETUP_FINISHING` holds the last check and the write together.
 - **One resolution point:** `auth::resolve`. A `Bearer fs_…` header beats the cookie; a malformed header is 401 and never
   falls back. Sessions and keys are both resolved against the **live** `users` row and live grants (`auth::effective`),
   so a demotion, disable or delete in Jellyfin takes effect immediately.
@@ -366,6 +374,8 @@ The authoritative contract is `../docs/docs/finstats/api.md`; change it with the
   `see_network` for IPs/devices/`is_local`, `see_server` for file paths and failed sign-ins. The recap is the documented
   exception (own year for everyone; any user or the server for Jellyfin admins).
 - **UI** mirrors this with `can('perm')` from `state.js`; it is cosmetic. Every rule is enforced server-side.
+- **A manager is not an administrator** (`api::Changer`): settings whose value changes are judged key by key, so a form may
+  send what it may not change, unchanged.
 - **Audit:** `audit.rs` records FinStats' own write paths (`KINDS`). A new write path gets a kind and one `record`.
 
 ---
@@ -405,13 +415,21 @@ is the owner choosing by hand (fuzzy candidates).
 **Imports.** Jellystat (`import.rs`: `ActivityDateInserted` is the *end*), Streamystats (`streamystats.rs`: one-moment rows
 are ends; `isInferred` rows are not plays), Tautulli (`tautulli.rs`: upload, then a wiring board maps Plex users to
 Jellyfin users; titles get stand-in `plex:` ids that relink attaches later). All: one IMMEDIATE transaction,
-`insert_imported`, `import::finalize`, `groups::detect`; one history writer at a time.
+`insert_imported`, `import::finalize`, `groups::detect`; one history writer at a time, its slot held by `api::Running` (given
+back as "interrupted" if the request is dropped); a row at most `import::ROW_MAX` (8 MB, `RowBudget`); no play before 1990 or
+past tomorrow. Uploads stop at `api::UPLOAD_MAX`
+(4 GB), every line at `import::LINE_MAX` (64 MB), the older Jellystat document is streamed (`legacy_rows`). A Tautulli
+backup is opened defensively (`SQLITE_DBCONFIG_DEFENSIVE`, no trusted schema) and every table it reads must be a plain
+table (`tautulli::READ`) without a generated or hidden column, it is read whole before the write lock is taken, its zip entry
+is inflated no further than its size (`inflate`), and one upload arrives at a time, each in a part of its own, swept by prefix.
 
 **Stats (`stats.rs`).** See the pattern in §9.2. Also playback insights (where viewers stop), concurrency, splits,
 search (`fuzzy.rs`, scored in Rust).
 
-**Groups (`groups.rs`).** Plays of one item by ≥ 2 users starting within `group_window_s`, or ending within it at nearly
-the same measured place (SyncPlay with a late joiner), and overlapping ≥ 2 min share `group_id`. `mark_live` does the same for streams playing now.
+**Groups (`groups.rs`).** Plays of one item by ≥ 2 users starting within `group_window_s` of each other's own start (never
+chained start to start), or ending within it at nearly the same measured place (SyncPlay with a late joiner), and
+overlapping ≥ 2 min share `group_id`; clustered without the write lock, written under it. `mark_live` does the same for
+streams playing now; somebody without `see_everyone` is told only of companions who started with them.
 
 **Recap and story (`recap.rs`, `story.rs`).** One person's year (or the server's); story cards drawn from the typed
 `StoryYear`, which has no field for another person's name, a rank or an app.
@@ -421,7 +439,9 @@ mark), `timeline.rs` (folded stops, `(started_at, id)` cursor), `recent.rs` (epi
 `watchlist.rs` (caller-only, state computed at read time; copies of one title are one).
 
 **Public profiles (`public.rs`, `card.rs`).** `/u/:token` without an account. Built from the owner's id alone, typed
-structs, only plays that ended at least a day ago, uniform 404. PNG cards via resvg, two at a time.
+structs, only plays that ended before the last local midnight a day ago (so a page changes once a day), uniform 404. PNG
+cards via resvg, two at a time, eight waiting at most. An answer is kept a minute per link and language (`public::Answers`),
+keyed by what the owner shows and a fingerprint of the plays it counts.
 
 **Library health and capacity (`health.rs`, `capacity.rs`).** Pure rules over item rows (gaps, drift, thin bitrates,
 dubs, unidentified, copies/versions; disks, runway, transcodes) with named-constant thresholds; findings stored after
@@ -435,11 +455,16 @@ impossible travel and new countries; `bursts()` failed sign-ins.
 
 **Pipeline (`services.rs`, `arr.rs`, `seerr.rs`, `downloads.rs`, `pipeline.rs`).** GET-only clients that follow **no
 redirect** (`X-Api-Key` would follow). `Service` is neither `Debug` nor `Serialize`. Download clients are deliberately
-not connected; queues are read from Sonarr/Radarr.
+not connected; queues are read from Sonarr/Radarr. Every upstream body is read through `services::body_at_most`, capped
+after unpacking (64 MB for a service's JSON, 256 MB for Jellyfin's, 20 MB for a picture, 1 GB / 2 GB for the GeoIP file).
 
 **Notifications (`notify.rs`, `channels.rs`, `mail.rs`).** Events written once (`dedupe`), one delivery per destination
 with backoff (30 s, 2 min, 10 min, 1 h, then given up). `wanted_by` is the whole permission rule, checked at raise and send
-time. `message()` reads the `private` bag (addresses) only with the per-destination switch. Channels: Discord, Telegram,
+time (a job's or a connection's failure needs `manage` too). `message()` reads the `private` bag (addresses) only with the
+per-destination switch. A stored secret goes only to the scheme, host and port it was saved for; destinations are made or
+changed only by a session; deliveries go the most severe first. A personal destination is
+sent through `services::Http::public` (its resolver refuses any non-public answer, no proxy) and mail connects to the
+address that was checked (`mail::Account::connect_to`), so a name cannot be checked at one address and reached at another. Channels: Discord, Telegram,
 Slack, email, ntfy, Gotify, Pushover, Pushbullet, webhook.
 
 **Outbound registry (`outbound.rs`).** Every destination FinStats can reach. A new outbound destination must be added
@@ -729,7 +754,7 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 ## 13. Releases
 
 - `CHANGELOG.md`: `## [x.y.z] - YYYY-MM-DD` (or `- first to last`), an `x.y.0` opens with a short title line, groups
-  `### Added | Changed | Performance | Stability | Fixed | Removed`, one-line bullets (`**bold**`, `*italic*`, `` `code` ``;
+  `### Added | Changed | Security | Performance | Stability | Fixed | Removed`, one-line bullets (`**bold**`, `*italic*`, `` `code` ``;
   no links). **Every entry must also be added to `changelog/en-US.md`, `nb-NO.md`, `nn-NO.md`, `nn-NO-synnmore.md`** with the same groups,
   bullet counts and code spans, or `cargo test` fails. The other nineteen `changelog/<tag>.md` may follow within the
   series, but `qa/run.sh i18n` fails until every one tells every release the source does, so none ships behind.

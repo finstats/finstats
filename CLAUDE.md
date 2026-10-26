@@ -138,6 +138,8 @@ empty file under a snapshot's name is a valid empty database to SQLite that coun
 **Pictures are cached under their image tag (`artwork.rs`).** `/api/img/item|user` looks up the tag FinStats holds
 (`items.image_tag` / `backdrop_tag`, `users.image_tag`), names the disk-cache file after it (`cache_name`; an untagged
 picture keeps the old name) and sends it as the ETag with `private, no-cache`, so a 304 answers before anything is read.
+Which ids may be fetched at all is `known`: what FinStats has, a play's item counting only for a play it recorded itself (an
+imported id is the file's to say, and counts once a library read has it).
 Replacing a poster in Jellyfin saves the item but starts no scan; the tags come from the library read and from
 `sync_changes` (below). Keyed on anything but the tag, a
 replaced poster was served from the disk for a week and from the browser for another.
@@ -306,7 +308,8 @@ tokio-tungstenite 0.29 beside the Jellyfin socket's 0.30.
 not new architecture.
 The collector inserts a row the moment a play is first seen (`active = 1`), refreshes
 it every 30 s, counts only un-paused time, merges a restart within `merge_window_s` into the same row, and diffs
-consecutive sightings into `playback_events` (pause/seek/track/transcode timeline). **An event is a change, so the two
+consecutive sightings into `playback_events` (pause/seek/track/transcode timeline, at most `EVENTS_PER_PLAY` a play, since a
+client may pause and jump every second for as long as it likes). **An event is a change, so the two
 sides of `diff_events` must be the same kind of value.** "Once a transcode, always a transcode" is applied to the new
 reading *before* the diff, never after: applied after, the kept record says `Transcode` while every reading that follows
 says what the client settled back to, and each one is a change: FinStats wrote one `transcode` event per second for the
@@ -336,7 +339,12 @@ in `rawData` (read with `Streams::extract`) while its own flat `transcoding*` co
 so those are read only from `rawData.TranscodingInfo`, and a third of them have none and get no transcode. `positionTicks`
 counts only where the row also keeps the `runtimeTicks` it is a position in. `isActive` is `true` on nearly every row of a
 backup and means nothing. **Nothing is invented to fill a gap**: an item neither the row nor the library can type is left
-`Unknown`, not guessed. The file is walked with a `DeserializeSeed` rather than loaded, one transaction.
+`Unknown`, not guessed. The file is walked with a `DeserializeSeed` rather than loaded, one transaction. **A row is read
+through `import::one_row` over a `RowBudget` reader, at most `ROW_MAX` (8 MB)**, as the older Jellystat document's are and as
+`LINE_MAX` holds a line: `[0,0,…]` is 32 bytes of memory for every two of file, so one row could run the process out of memory
+inside the transaction. An import skips a play from before 1990 or past tomorrow (`insert_imported`), and the four history
+writers hold their slot through `api::Running`, which says "interrupted" when dropped (hyper drops a handler whose connection
+closed, and nothing else gave the slot back).
 
 **Tautulli import (`tautulli.rs`, the docs' `finstats/imports/tautulli.md`, 2.1.2) is Plex's history, so nothing in it shares an id with
 Jellyfin, and nothing is guessed.** It runs in two steps: `POST /api/import/tautulli` only stores the backup (`.db`, or the
@@ -355,7 +363,10 @@ grouping by reference alone counted those episodes as music. `source_id` is the 
 is its reference everywhere else. **Read every value leniently** (`num`, `text`): Tautulli writes `''` where it has no number
 and some numbers as text, and a strict read failed a whole real import on the first film without an episode number. Music,
 clips, photos and Live TV are counted (`other_media`) and not imported. Learned from a real backup: 1,390 rows, 1,031
-viewings, 721 films and episodes, every one of them imported.
+viewings, 721 films and episodes, every one of them imported. **The file is somebody else's**: `open` reads it defensively,
+untrusted, from plain tables only (no view, virtual table, or generated or hidden column, which runs an expression on every
+row read: 200 MB a row from an 8 KB file), `run` reads it whole before taking FinStats' write lock, and one upload arrives and
+is unpacked at a time (`TautulliArriving`).
 
 **One rule for a play the history already has (`playback::already_recorded`), shared by every importer and the backup
 restore.** `source_id` stops a file being imported twice and says nothing about the same evening arriving from another
@@ -489,9 +500,13 @@ the bucket it started in** (`alone_s` = scoped watch time in the bucket minus gr
 pairs must include the caller and `people` is the caller alone: a companion's name is theirs to see, a companion's time alone is not.
 Inferred, because `/Sessions` exposes no SyncPlay groups: plays of one item by ≥ 2
 different users starting within `group_window_s` (default 60; real data shows a third of genuine groups start 6–60 s
-apart), **or ending within it at nearly the same measured place** (`max(window, 30)` s; SyncPlay with a late joiner, who
+apart) **of each other's own start, pair by pair** (`RULE` 3, 2.3.1: chaining a start to the start before it let anybody
+keep a title playing back to back all evening and put everyone who played it into one group), **or ending within it at nearly the same measured place** (`max(window, 30)` s; SyncPlay with a late joiner, who
 starts minutes after the one waiting paused at 0:00), and overlapping ≥ 2 min share `playbacks.group_id` (= lowest play
-id in the group). `groups_detected` also notes the `RULE`, so a new rule regroups the whole history once. `detect()` re-runs per item
+id in the group). `groups_detected` also notes the `RULE`, so a new rule regroups the whole history once. **Any Jellyfin user
+can make a title's history long**, so `cluster` compares a play with at most `PEERS` others, leaves out at once a play too short
+to overlap anybody, and `detect` clusters on a plain read (`plan`) and takes the write lock only to write what changed: in a
+transaction, one person's 40,000 plays in a row held the lock for six seconds at every play's end. `detect()` re-runs per item
 when a play ends and for the titles re-linking moved plays onto, fully after an import or a restore and when the setting
 changes. **A start regroups only what the last run left behind** (`regroup_at_start`): plays it was still recording when it
 stopped were all saved after that run began, so the key `groups_detected` notes version, window and when, and the next
@@ -499,7 +514,9 @@ start regroups titles with a play ended since, and everything only for another v
 history at every start took 24 s on ten million plays. "Time together" is the
 second-longest stay in a session. Running streams are grouped separately by `mark_live` (same title,
 different users, starts within the window *or* positions within `max(window, 30)` s), before `/api/now-playing` narrows
-the list to the caller. **Everything here is measured at crowd scale** (the capacity stage in `qa/`): `mark_live` pairs
+the list to the caller. **A position anybody may seek to proves nothing to somebody who may see only themselves**: for them
+`now_playing_for` answers `group_seen_alone` as `group`, companions who started with them, and none while they have the title
+playing more than once (playing a title from many devices along its length told them who was watching it). **Everything here is measured at crowd scale** (the capacity stage in `qa/`): `mark_live` pairs
 streams of one title only, on plain values read once, and names at most `COMPANIONS_NAMED` companions (the size is exact);
 comparing every stream with every other and listing every companion took 40 s at 10,000 streams and 23.7 GB at 25,000.
 `detect` writes only the plays whose group changed; resetting every group to NULL and writing it back rewrote every grouped
@@ -513,6 +530,8 @@ accents, punctuation, leading article), every typed word must match some word of
 > typo; typos only for words of 4+ letters, with swapped letters as one slip). ~70 ms over 5.5k titles; the search
 (`search.js`) debounces. The same query also scores the ~10k names in `item_people` (`people` in the answer): bare names first, details only for the best
 60, because grouping and counting every person's titles up front took 350 ms. The Activity and Server-log `q` filters stay in SQL but are word-by-word too.
+What a person types goes through `Query::typed`: nothing past `TYPED_CHARS` (200) or `TYPED_WORDS` (12) is answered, since 400 KB
+of one letter cost tens of seconds of a pooled connection per request. `Query::new` is for titles read from the library.
 
 **Profiles (`profile.rs`).** Show progress counts only episodes that exist as files (`path`/`size_bytes` set; the sync
 asks Jellyfin to exclude virtual items, and season 0 is skipped). "Seen" merges three sources in order: a recorded
@@ -582,8 +601,14 @@ resolution point**: `auth::resolve` reads `Authorization: Bearer fs_…` first (
 invalid header never falls back to the cookie: header beats cookie), else the cookie, and both end in the same `AuthUser`,
 which now carries `credential` (`Session` | `Key{id, scope}`) and `ip`. A key (`keys.rs`, `api_keys`, sha256 of `fs_`+64 hex,
 shown once) is resolved against the **live** user row and the live grants through `effective`, never a snapshot, so a lost
-`sign_in` or a demotion reaches every key at once. One person keeps at most `SESSIONS_PER_USER` (30) sessions, the oldest giving
-way at the next sign-in (`store_session`), or a password in a loop fills the table. **A session is resolved the same way** (`resolve_session_in` joins `users`;
+`sign_in` or a demotion reaches every key at once. **Until FinStats is set up, the wizard asks for a one-time code written to the log at start** (`auth::new_setup_code`,
+`AppState.setup_code`; 428 without it, and both setup routes count against the sign-in limit), or whoever reached the port
+first could point it at a Jellyfin of their own and be its administrator. The limiter counts an IPv6 /64 as one address;
+behind a trusted proxy the address is the last entry of the *last* `X-Forwarded-For` line. One person keeps at most `SESSIONS_PER_USER` (30) sessions, the oldest giving
+way at the next sign-in (`store_session`), or a password in a loop fills the table. A sign-in that works gives back its own
+attempt and nothing more (`signed_in`): clearing the count let anybody with an account guess without a limit. **On https the
+session is `__Host-finstats_session`** (only this host may set it, so a sibling name cannot toss in a cookie of its own); the
+plain name is still read on http and for older sessions, but not when two of it arrive (`cookie_token`). **A session is resolved the same way** (`resolve_session_in` joins `users`;
 `sessions.is_admin` is only the fallback before the users read has written the row, which the wizard's own sign-in is): an
 administrator demoted, disabled or deleted in Jellyfin used to keep full access for the session's 30 days. Because the
 session now trusts the row, every sign-in writes Jellyfin's fresh answer into it (`remember_sign_in`), or a row a Jellystat
@@ -602,6 +627,10 @@ of those from that id alone and returns typed structs, never `row_json`, so a co
 a stranger. Devices, clients, play methods, addresses, places, paths, other people and the login name are never produced.
 **Every section counts only plays that ended a day ago or more** (`DELAY_S`; `recap::build` takes `until` for it): the
 first version delayed only the recent list, and the totals, grid and streak then moved the moment somebody pressed play.
+The cut-off is the last local midnight at least `DELAY_S` ago (`counted_until`), so the page changes once a day: moving with
+every request, it told a stranger polling it each play's end to the minute. An answer is kept per link **and language**
+(`Answers`), and a card waits in a queue of at most `CARDS_WAITING` (else 503), or alternating the language asked for
+worked everything out again at each request.
 `lookup` answers `None` for every reason there is nothing (switch off, unknown or reset token, unpublished, owner removed,
 disabled or without `sign_in` via `auth::effective`) and all of them are the same 404. The image routes serve only
 `listed_images`. Cards are SVG built from the `PublicProfile` alone and rasterised with resvg using Inter TTFs in
@@ -614,9 +643,17 @@ state, api.js, router or prefetch, so nothing there can send a stranger to /logi
 request from `user_permissions` ∪ `Settings.default_permissions`; `sign_in` (or `allow_user_login`) gates access at
 all; Jellyfin admins always get `Perms::ALL`. Grants only add, there are no denies. Extractors: `AuthUser` (anyone
 signed in), `ServerViewer`, `Manager`, and `JellyfinAdmin`, the only one allowed to edit permissions, and
-`put_settings` refuses the access keys from anyone else, so a manager cannot self-promote. In `stats.rs` decide by
+`put_settings` refuses the access keys from anyone else, so a manager cannot self-promote. **A manager is not an
+administrator either** (`Changer`, 2.3.1): `ADMIN_SETTINGS` (how many backups are kept, the merge window, at most an hour)
+and the schedules of `ADMIN_SCHEDULES` (the users read, which carries Jellyfin's disables to sessions and keys; the activity
+log; the backup) are an administrator's, judged by whether the value changes, so a form may send them unchanged;
+`SECURITY_SETTINGS` (home addresses, the travel rules) take what reading the alerts takes; the settings name the household's
+addresses only with `see_network`. Importing history and the Tautulli board need `see_everyone` (`may_locate`), since an
+import writes other people's plays. A manager runs a job by hand at most once a minute (`too_soon`), and the public-address
+lookup is asked at most once a minute by anybody. In `stats.rs` decide by
 the specific permission (`scope.perms.see_network` for IPs, `see_server` for paths, `see_everyone` for whose rows),
-never by `is_admin`. The recap ignores permissions: own for everyone, any one user for Jellyfin administrators. The UI mirrors this with
+never by `is_admin`. The recap ignores permissions: own for everyone, any one user for Jellyfin administrators (its `rank`
+alone does not: without `see_everyone` it carries no share of everybody's time, and no rank among two, `rank_for`). The UI mirrors this with
 `can('perm')` from `state.js`; it is cosmetic; every rule is enforced server-side. `api.rs` adds an Origin check on writes and a strict CSP
 (`style-src 'self'`: the UI must not use inline `<style>`/`style=""`; `el.style.x` via JS is fine).
 
@@ -640,7 +677,12 @@ again (`refresh_all`). `server_events.remote_ip` is parsed from the log text by 
 follows the server's language; `''` = none). Plays from the home network are placed where the home's public address is (`home_place`).
 Alerts come from the pure `detect()` over one person's whole history, so a rescan finds the same ones and `dedupe` keeps them single: travel is
 keyed by the later sighting, a pair of places reports once a day, a muted pair never, and anything found more than 30 days late is filed as
-resolved. `scan` runs when a play begins (that user), after the log sync, at start-up and when the rules change. Reads need `see_network` **and**
+resolved. `scan` runs when a play begins (that user, one scan of a person at a time and once more for any asked meanwhile,
+`check_person`), after the log sync, at start-up and when the rules change. **Failed sign-ins**: Jellyfin writes no user id on
+one, only a line ending in the name typed, so an account is a user whose name ends it and its bursts are keyed by that account;
+names that are no account are whatever the one knocking typed, so they are one notice a `BURST_WINDOW_S`, server-wide,
+naming nobody (`scan_sign_ins`). Every read of the activity log reads all that is new (`read_more_events`); only the first is
+capped, since the log answers newest first and a flood left unread hid the sign-in before it for good. Reads need `see_network` **and**
 `see_everyone`, writes also `manage`; failed sign-ins additionally `see_server`. The map (`worldmap.js`) is hand-drawn SVG over
 `web/assets/geo/world.json` (Natural Earth, pre-projected by `tools/make-world-map.py`; Mercator, because an equal-area projection leans the north and the owner read it as a tilted map; the formula there and in `worldmap.js` must
 match). No tiles, no map service. The plain wheel scrolls the page; Ctrl+wheel, the buttons and the keys zoom.
@@ -720,17 +762,25 @@ kind of message without it. The link is `public_url` + the event's path; empty s
 **`wanted_by` is the whole permission rule in one pure place**: a server destination (`owner_id IS NULL`) is not filtered; a
 personal one is checked against its owner's `Perms` (`auth::effective`): own rows always, somebody else's play or request
 needs `see_everyone`, somebody else's *places* need `see_network` too (`security::gate`'s rule), somebody else's failed
-sign-ins `see_server` as well (the Security page's), the server's own business needs `see_server`. The owner is read live
+sign-ins `see_server` as well (the Security page's), a job's or a connection's failure needs `see_server` and `manage` (it
+names a person, or a service's internal address, which the pages show only to who may manage FinStats). The owner is read live
 (disabled or removed in Jellyfin = told nothing), and **asked again at send time** (`deliverable`): a delivery can wait an
 hour between tries, and the switch "include addresses" is the owner's wish, which on a personal destination also takes
 `see_network`. Managing a personal destination needs the grantable `notify`, and its host must not resolve into a private
 range (`must_be_public`, checked on save **and** before every send, because a public name can be re-pointed later); an
-administrator's may point anywhere.
+administrator's may point anywhere. **Somebody else's personal destination is theirs**: an administrator may switch it off,
+choose what it is told or remove it, never change its address, secret, field, options or addresses switch (`describe`); a
+destination is made or changed only by a session, never a key (`keys::only_a_session`), since it outlives the key; and a test
+is sent no more often a minute than anything else (`test_too_soon`).
 **A destination's address is a credential** (a Discord webhook URL carries its token), so `Target` is neither `Serialize` nor
 `Debug`, the API answers `shown` (host, plus the topic, chat or mailbox that says which one it is) and never the URL, editing without a `url` keeps the stored one,
-and `notify_targets` is not in `backup::TABLES`. `channels.rs` holds every payload shape and the POST; it reuses
+and `notify_targets` is not in `backup::TABLES`. **A stored secret goes only to the place it was saved for**
+(`services::same_place`: scheme, host and port): an edit or a test naming another server and no secret is refused at the
+secret's field, for a Sonarr, Radarr or Seerr connection as for a destination. `channels.rs` holds every payload shape and the POST; it reuses
 `services::Http` (no redirect followed while holding a token) and publishes to ntfy and Gotify in their JSON form, never
-through headers, because a title is a film title, the same reason Telegram is sent with no `parse_mode`.
+through headers, because a title is a film title, the same reason Telegram is sent with no `parse_mode`. Part of what a message
+says is a stranger's (a device's name, a name tried at a sign-in), so Slack is sent it escaped (`slack_text`), Discord as escaped
+Markdown with `allowed_mentions` empty (`markdown_text`). Deliveries due go out the most severe first (`due`).
 **Nine kinds of destination, and one model under them**: an address, a token, one field beside them, and `options` for
 what is left (migration 19; only mail has any). A channel may fix its own address (`Channel::fixed_url`: Telegram,
 Pushover, Pushbullet are reached at their own service and nowhere else, so a token can never be posted to a look-alike
@@ -747,7 +797,10 @@ watchable). Adding a kind of event means a `Kind` arm and one `raise`, never a s
 **Backups (`backup.rs`).** gzip JSON Lines, one row per line tagged with its table, matched *by column name* both ways so files move
 between versions; a new table that holds something Jellyfin cannot give back must be added to `backup::TABLES`. Secrets (Jellyfin
 URL/API key, sessions, API keys) and the library are never exported; a test asserts the key is absent. Restore merges (dedupe on `source_id`
-or user+item+start), remaps timeline rows to the new play ids, and re-derives groups, `is_local` and library links. The `backup`
+or user+item+start), remaps timeline rows to the new play ids, and re-derives groups, `is_local` and library links. Settings
+and grants come back only when `settings=true` is asked for, and then a person's grants are only ever narrowed to what both
+here and the backup hold (`narrow_grants`; somebody without any gets the backup's): last month's backup gave back every grant
+taken away since. The `backup`
 task's triggers write one (skipped while there is no play); endpoints are `JellyfinAdmin`-only and names go through `valid_name`.
 A file is written as `<name>.part` and renamed when complete; a `.part` found when the next one starts was a killed backup and is removed.
 
@@ -1062,8 +1115,8 @@ the source release by release (the same headings byte for byte, groups, number o
 the top entry's version differs from `Cargo.toml`, or an entry lacks a date/notes/known group, so a version bump
 and its changelog entry land together. Format: `## [x.y.z] - YYYY-MM-DD`, or `- YYYY-MM-DD to YYYY-MM-DD` for a release
 made over several days (`date` stays the release day, `started` the first; the page shows both), then
-`### Added | Changed | Performance | Stability | Fixed | Removed` with one-line bullets (`**bold**`, `*italic*` and
-`` `code` `` are rendered; a Markdown link is not, so name a doc as `code`). **Performance** is quicker or lighter, **Stability** is something that can no longer crash, halt, leak or lose
+`### Added | Changed | Security | Performance | Stability | Fixed | Removed` with one-line bullets (`**bold**`, `*italic*` and
+`` `code` `` are rendered; a Markdown link is not, so name a doc as `code`). **Security** is something somebody could have misused (its own group since 2.3.1, never a fix that begins "Security:"), **Performance** is quicker or lighter, **Stability** is something that can no longer crash, halt, leak or lose
 data, **Fixed** is something that gave a wrong answer; a speed-up filed as a fix reads as a bug nobody had. The rules live
 in one test function (`changelog::tests::problems`). An `x.y.0` entry opens with a **short title line**
 and nothing else ("Notifications", "WebSocket session tracking"), which the app shows as that whole series' headline
