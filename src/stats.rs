@@ -2365,13 +2365,16 @@ fn make_up_libraries(asked: Option<&str>) -> Vec<String> {
     out
 }
 
-pub async fn library_insights(State(app): State<App>, _user: AuthUser, Query(q): Query<LibraryInsightsQuery>) -> ApiResult {
+pub async fn library_insights(State(app): State<App>, user: AuthUser, Query(q): Query<LibraryInsightsQuery>) -> ApiResult {
     let libraries = make_up_libraries(q.library_id.as_deref());
-    Ok(Json(app.db.call(move |c| library_make_up(c, &libraries)).await?))
+    // Whose viewing "never watched" is about: everybody's with see_everyone, else the reader's own.
+    let viewer = (!user.perms.see_everyone).then(|| user.id.clone());
+    Ok(Json(app.db.call(move |c| library_make_up(c, &libraries, viewer.as_deref())).await?))
 }
 
-/// What the files of the given libraries are made of (all of them when none is named).
-fn library_make_up(c: &Connection, libraries: &[String]) -> Result<Value> {
+/// What the files of the given libraries are made of (all of them when none is named). "Never watched" is by `viewer`
+/// alone when one is named, by anybody otherwise.
+fn library_make_up(c: &Connection, libraries: &[String], viewer: Option<&str>) -> Result<Value> {
     // `AND <alias>.library_id IN (?, …)`: every query below takes the same arguments.
     let in_libraries = |alias: &str| {
         if libraries.is_empty() {
@@ -2431,11 +2434,14 @@ fn library_make_up(c: &Connection, libraries: &[String]) -> Result<Value> {
     );
     let largest = rows_json(c, &format!("{sized} ORDER BY size_bytes DESC LIMIT 15"), &args)?;
     // Nobody has played it here, and nobody has it marked as played in Jellyfin either.
-    let never = "NOT EXISTS (SELECT 1 FROM visible_playbacks p WHERE p.item_id = t.id OR p.series_id = t.id)
-         AND NOT EXISTS (SELECT 1 FROM user_items ui WHERE ui.played = 1 AND (ui.item_id = t.id OR ui.item_id IN (SELECT id FROM items WHERE series_id = t.id)))";
-    let unwatched_items = rows_json(c, &format!("{sized} AND {never} ORDER BY size_bytes DESC LIMIT 25"), &args)?;
+    let whose = if viewer.is_some() { ("AND p.user_id = ?", "AND ui.user_id = ?") } else { ("", "") };
+    let never = format!("NOT EXISTS (SELECT 1 FROM visible_playbacks p WHERE (p.item_id = t.id OR p.series_id = t.id) {})
+         AND NOT EXISTS (SELECT 1 FROM user_items ui WHERE ui.played = 1 {} AND (ui.item_id = t.id OR ui.item_id IN (SELECT id FROM items WHERE series_id = t.id)))", whose.0, whose.1);
+    let mut never_args = args.clone();
+    never_args.extend(viewer.into_iter().flat_map(|v| [SqlValue::from(v.to_string()), SqlValue::from(v.to_string())]));
+    let unwatched_items = rows_json(c, &format!("{sized} AND {never} ORDER BY size_bytes DESC LIMIT 25"), &never_args)?;
     let unwatched_totals =
-        one_json(c, &format!("SELECT COUNT(*) AS count, COALESCE(SUM(size_bytes), 0) AS size_bytes FROM ({sized} AND {never})"), &args)?.unwrap_or_default();
+        one_json(c, &format!("SELECT COUNT(*) AS count, COALESCE(SUM(size_bytes), 0) AS size_bytes FROM ({sized} AND {never})"), &never_args)?.unwrap_or_default();
 
     Ok(json!({
         "totals": totals,
@@ -2522,16 +2528,38 @@ mod tests {
         .unwrap();
         let files = |libs: &[&str]| {
             let libs: Vec<String> = libs.iter().map(|s| s.to_string()).collect();
-            let d = library_make_up(&c, &libs).unwrap();
+            let d = library_make_up(&c, &libs, None).unwrap();
             (d["totals"]["files"].as_i64().unwrap(), d["totals"]["size_bytes"].as_i64().unwrap())
         };
         assert_eq!(files(&[]), (4, 355));
         assert_eq!(files(&["films"]), (2, 300));
         assert_eq!(files(&["films", "shows"]), (3, 350));
         assert_eq!(files(&["nowhere"]), (0, 0));
-        let both = library_make_up(&c, &["films".into(), "music".into()]).unwrap();
+        let both = library_make_up(&c, &["films".into(), "music".into()], None).unwrap();
         assert_eq!(both["containers"], json!([{ "name": "mkv", "count": 2, "size_bytes": 300 }, { "name": "flac", "count": 1, "size_bytes": 5 }]));
         assert_eq!(both["largest"].as_array().unwrap().iter().map(|r| r["id"].as_str().unwrap()).collect::<Vec<_>>(), ["m2", "m1"]);
+    }
+
+    /// "Never watched" is nobody's plays and nobody's played flag, which says who watched what; without see_everyone it is
+    /// the reader's own, as every other count is.
+    #[test]
+    fn never_watched_is_the_reader_s_own_without_see_everyone() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO items(id, library_id, type, name, size_bytes, removed, updated_at) VALUES
+               ('m1', 'films', 'Movie', 'Big Buck Bunny', 100, 0, 0), ('m2', 'films', 'Movie', 'Sintel', 200, 0, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES ('live', 'bob', 'bob', 'm1', 'Big Buck Bunny', 'Movie', 100, 700, 600);
+             INSERT INTO user_items(user_id, item_id, played) VALUES ('bob', 'm2', 1);",
+        )
+        .unwrap();
+        let never = |viewer: Option<&str>| library_make_up(&c, &[], viewer).unwrap()["unwatched"]["count"].as_i64().unwrap();
+        assert_eq!(never(None), 0, "with see_everyone: bob watched both");
+        assert_eq!(never(Some("alice")), 2, "alice has watched neither, and is not told that bob has");
+        assert_eq!(never(Some("bob")), 0);
     }
 
     /// The address names libraries as a comma list, the way every filter here does; one id still means that one.
