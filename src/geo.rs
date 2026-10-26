@@ -28,6 +28,10 @@ const EARTH_RADIUS_KM: f64 = 6371.0;
 const DBIP_URL: &str = "https://download.db-ip.com/free/dbip-city-lite-{}.mmdb.gz";
 /// A downloaded file is replaced once it is this old and a newer month exists.
 const REFRESH_AFTER_S: i64 = 30 * 86_400;
+/// The most the monthly download and the database in it may be. DB-IP's city file is about 130 MB packed; without a
+/// limit, an answer that never ended, or a little gzip that inflates into everything, filled the disk.
+const DOWNLOAD_MAX: u64 = 1 << 30;
+const UNPACKED_MAX: u64 = 2 << 30;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub struct Place {
@@ -310,6 +314,9 @@ async fn fetch(app: &App, url: &str, folder: &Path, target: &Path, task: &'stati
                 let mut got = 0u64;
         while let Some(chunk) = resp.chunk().await? {
             got += chunk.len() as u64;
+            if got > DOWNLOAD_MAX {
+                bail!("the download is larger than {} GB", DOWNLOAD_MAX >> 30);
+            }
             file.write_all(&chunk).await?;
             if total > 0 {
                 let mb = |bytes: u64| ((bytes as f64 / 1e6).round() as i64).into();
@@ -323,7 +330,10 @@ async fn fetch(app: &App, url: &str, folder: &Path, target: &Path, task: &'stati
         tokio::task::spawn_blocking(move || -> Result<()> {
             let mut gz = flate2::read::GzDecoder::new(std::io::BufReader::new(std::fs::File::open(&from)?));
             let mut out = std::io::BufWriter::new(std::fs::File::create(&to)?);
-            std::io::copy(&mut gz, &mut out)?;
+            // Read no further than any city database is: a little gzip can inflate into the whole disk.
+            if std::io::copy(&mut std::io::Read::take(&mut gz, UNPACKED_MAX + 1), &mut out)? > UNPACKED_MAX {
+                bail!("the unpacked database is larger than {} GB", UNPACKED_MAX >> 30);
+            }
             // Only a file that opens as a city database may replace the one in use.
             Database::open(&to, to.parent().unwrap_or(Path::new("."))).map(|_| ())
         })

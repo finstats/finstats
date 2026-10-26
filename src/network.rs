@@ -137,7 +137,9 @@ async fn lookup(http: &reqwest::Client) -> Option<String> {
         if !resp.status().is_success() {
             continue;
         }
-        if let Some(ip) = resp.text().await.ok().as_deref().and_then(parse_public) {
+        // An address is a line; anything longer is not one.
+        let said = crate::services::body_at_most(resp, 1024).await.ok().flatten().and_then(|b| String::from_utf8(b).ok());
+        if let Some(ip) = said.as_deref().and_then(parse_public) {
             return Some(ip);
         }
     }

@@ -342,12 +342,31 @@ pub fn refuse(status: StatusCode, headers: &HeaderMap, svc: &Service) -> anyhow:
 const KEY_REFUSED: &str = "server.services.key_refused";
 
 /// `GET` on Sonarr, Radarr or Seerr. The key is a header; the query never carries it.
+/// The most a service's JSON answer may be, unpacked. The largest real one (a whole Sonarr library) is a few megabytes.
+pub const JSON_MAX: usize = 64 << 20;
+
+/// An answer's body, read no further than `cap` bytes as unpacked: `None` past it. A service that went wrong (or
+/// anybody between, on a connection that takes any certificate) could otherwise answer gigabytes, or a little gzip
+/// that inflates into them, and every byte of it was held in memory.
+pub async fn body_at_most(mut resp: reqwest::Response, cap: usize) -> reqwest::Result<Option<Vec<u8>>> {
+    let mut out = Vec::new();
+    while let Some(chunk) = resp.chunk().await? {
+        if out.len() + chunk.len() > cap {
+            return Ok(None);
+        }
+        out.extend_from_slice(&chunk);
+    }
+    Ok(Some(out))
+}
+
 pub async fn get_json(app: &App, svc: &Service, path: &str, query: &[(&str, String)]) -> Result<Value> {
     let resp = app.services_http.of(svc).get(format!("{}{path}", svc.url)).header("X-Api-Key", svc.secret()).query(query).send().await.map_err(|e| explain(e, svc))?;
     if !resp.status().is_success() {
         return Err(refuse(resp.status(), resp.headers(), svc));
     }
-    resp.json::<Value>().await.map_err(|e| explain(e, svc))
+    let not_it = || words("server.services.decode", vec![("service", svc.kind.label().to_string()), ("url", svc.url.clone())]);
+    let body = body_at_most(resp, JSON_MAX).await.map_err(|e| explain(e, svc))?.ok_or_else(not_it)?;
+    serde_json::from_slice(&body).map_err(|_| not_it())
 }
 
 /// Bytes from Sonarr or Radarr (a poster). `None` for a 404 and for anything larger than `cap`.
@@ -362,8 +381,7 @@ pub async fn get_bytes(app: &App, svc: &Service, path: &str, cap: usize) -> Resu
     if resp.content_length().is_some_and(|n| n as usize > cap) {
         return Ok(None);
     }
-    let bytes = resp.bytes().await.map_err(|e| explain(e, svc))?;
-    Ok((bytes.len() <= cap).then(|| bytes.to_vec()))
+    body_at_most(resp, cap).await.map_err(|e| explain(e, svc))
 }
 
 /// Does the address answer like the service it is meant to be, and does it accept the secret? → (what it is, its version)
@@ -733,6 +751,35 @@ async fn changed(app: &App) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// An answer is read no further than the most it may be, counted after it is unpacked: a few kilobytes of gzip from a
+    /// service that went wrong (or anybody between, on a connection that takes any certificate) inflate into gigabytes.
+    #[tokio::test]
+    async fn an_answer_is_read_no_further_than_the_most_it_may_be() {
+        use std::io::Write;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let mut enc = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::best());
+        enc.write_all(&vec![b' '; 8 << 20]).unwrap();
+        let bomb = enc.finish().unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            while let Ok((mut sock, _)) = listener.accept().await {
+                let bomb = bomb.clone();
+                tokio::spawn(async move {
+                    let mut buf = [0u8; 2048];
+                    let _ = sock.read(&mut buf).await;
+                    let head = format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Encoding: gzip\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", bomb.len());
+                    let _ = sock.write_all(head.as_bytes()).await;
+                    let _ = sock.write_all(&bomb).await;
+                });
+            }
+        });
+        let http = Http::new();
+        let get = || http.client(false).get(format!("http://127.0.0.1:{port}/")).send();
+        assert!(body_at_most(get().await.unwrap(), 1 << 20).await.unwrap().is_none(), "eight megabytes read in full against a limit of one");
+        assert_eq!(body_at_most(get().await.unwrap(), 8 << 20).await.unwrap().map(|b| b.len()), Some(8 << 20));
+    }
 
     /// A personal destination's name is looked up once, and that one answer is both what is checked and what is connected
     /// to: checked by one lookup and connected by another, a name that answers publicly first and inwards second reached the LAN.

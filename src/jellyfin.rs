@@ -116,6 +116,17 @@ fn urlencode(s: &str) -> String {
         .collect()
 }
 
+/// The most one of Jellyfin's JSON answers may be, unpacked: a page of the library is a few megabytes.
+const JSON_MAX: usize = 256 << 20;
+/// The most a picture may be.
+const IMAGE_MAX: usize = 20 << 20;
+
+/// An answer's JSON, read no further than `JSON_MAX` (`services::body_at_most`).
+async fn json_of<T: serde::de::DeserializeOwned>(resp: reqwest::Response) -> Result<T> {
+    let body = crate::services::body_at_most(resp, JSON_MAX).await?.ok_or_else(|| anyhow!("the answer is larger than {} MB", JSON_MAX >> 20))?;
+    Ok(serde_json::from_slice(&body)?)
+}
+
 impl Jellyfin {
     pub fn new(http: Client, base: &str, token: Option<String>, device_id: &str) -> Self {
         Self { http, base: base.trim_end_matches('/').to_string(), token, device_id: device_id.to_string() }
@@ -163,7 +174,7 @@ impl Jellyfin {
         if !status.is_success() {
             bail!(i18n::t("server.jellyfin.answered_for", &[("status", status.to_string().into()), ("path", path.into())]));
         }
-        resp.json().await.with_context(|| format!("decoding {path}"))
+        json_of(resp).await.with_context(|| format!("decoding {path}"))
     }
 
     pub async fn public_info(&self) -> Result<PublicInfo> {
@@ -186,7 +197,7 @@ impl Jellyfin {
             bail!(i18n::t("server.jellyfin.not_jellyfin_status", &[("address", self.base.as_str().into()), ("status", resp.status().to_string().into())]));
         }
         let info: PublicInfo =
-            resp.json().await.map_err(|_| anyhow!(i18n::t("server.jellyfin.not_jellyfin", &[("address", self.base.as_str().into())])))?;
+            json_of(resp).await.map_err(|_| anyhow!(i18n::t("server.jellyfin.not_jellyfin", &[("address", self.base.as_str().into())])))?;
         if info.id.is_none() && info.version.is_none() {
             bail!(i18n::t("server.jellyfin.not_jellyfin", &[("address", self.base.as_str().into())]));
         }
@@ -207,7 +218,7 @@ impl Jellyfin {
             s if !s.is_success() => return Err(AuthError::Other(anyhow!(i18n::t("server.jellyfin.answered", &[("status", s.to_string().into())])))),
             _ => {}
         }
-        let v: Value = resp.json().await.map_err(|e| AuthError::Other(e.into()))?;
+        let v: Value = json_of(resp).await.map_err(AuthError::Other)?;
         let user = &v["User"];
         Ok(AuthResult {
             user_id: crate::db::norm_id(user["Id"].as_str().unwrap_or_default()),
@@ -248,7 +259,7 @@ impl Jellyfin {
             if !r.status().is_success() {
                 bail!(i18n::t("server.jellyfin.keys_list_refused", &[("status", r.status().to_string().into())]));
             }
-            Ok(r.json::<Value>().await?)
+            json_of::<Value>(r).await
         };
         if let Some(k) = find(&list().await?) {
             return Ok(k);
@@ -280,7 +291,7 @@ impl Jellyfin {
         if !resp.status().is_success() {
             bail!(i18n::t("server.jellyfin.answered_for", &[("status", resp.status().to_string().into()), ("path", "/Sessions".into())]));
         }
-        Ok(resp.json().await?)
+        json_of(resp).await
     }
 
     pub async fn users(&self) -> Result<Vec<Value>> {
@@ -322,7 +333,7 @@ impl Jellyfin {
         if !resp.status().is_success() {
             bail!(i18n::t("server.jellyfin.answered_for", &[("status", resp.status().to_string().into()), ("path", "/Items".into())]));
         }
-        let mut v: Value = resp.json().await?;
+        let mut v: Value = json_of(resp).await?;
         let total = v["TotalRecordCount"].as_u64().unwrap_or(0) as usize;
         let items = match v["Items"].take() {
             Value::Array(a) => a,
@@ -341,7 +352,7 @@ impl Jellyfin {
         if !resp.status().is_success() {
             bail!(i18n::t("server.jellyfin.answered_for", &[("status", resp.status().to_string().into()), ("path", "/Items".into())]));
         }
-        let mut v: Value = resp.json().await?;
+        let mut v: Value = json_of(resp).await?;
         Ok(match v["Items"].take() {
             Value::Array(a) => a,
             _ => vec![],
@@ -370,7 +381,7 @@ impl Jellyfin {
         if !resp.status().is_success() {
             bail!(i18n::t("server.jellyfin.answered_for", &[("status", resp.status().to_string().into()), ("path", "/Items".into())]));
         }
-        let mut v: Value = resp.json().await?;
+        let mut v: Value = json_of(resp).await?;
         Ok(match v["Items"].take() {
             Value::Array(a) => a,
             _ => vec![],
@@ -428,7 +439,7 @@ impl Jellyfin {
         if !resp.status().is_success() {
             bail!(i18n::t("server.jellyfin.answered_for_user_items", &[("status", resp.status().to_string().into())]));
         }
-        let mut v: Value = resp.json().await?;
+        let mut v: Value = json_of(resp).await?;
         Ok(match v["Items"].take() {
             Value::Array(a) => a,
             _ => vec![],
@@ -470,7 +481,8 @@ impl Jellyfin {
             .and_then(|v| v.to_str().ok())
             .unwrap_or("image/jpeg")
             .to_string();
-        Ok(Some((resp.bytes().await?.to_vec(), ct)))
+        // A picture larger than any poster is no picture.
+        Ok(crate::services::body_at_most(resp, IMAGE_MAX).await?.map(|b| (b, ct)))
     }
 }
 
