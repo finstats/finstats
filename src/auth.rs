@@ -432,8 +432,11 @@ fn session_cookie(token: &str, max_age: i64, secure: bool) -> HeaderValue {
     HeaderValue::from_str(&c).expect("cookie is ascii")
 }
 
+/// Whether the page that signs in is on https: its proxy says so, or the browser does in the `Origin` every sign-in (a POST)
+/// carries. Either can only ever make a cookie stricter, so neither needs a trusted proxy.
 fn is_https(headers: &HeaderMap) -> bool {
-    headers.get("x-forwarded-proto").and_then(|v| v.to_str().ok()).is_some_and(|v| v.eq_ignore_ascii_case("https"))
+    let said = |name: &str| headers.get(name).and_then(|v| v.to_str().ok()).map(str::to_ascii_lowercase);
+    said("x-forwarded-proto").is_some_and(|v| v == "https") || said("origin").is_some_and(|v| v.starts_with("https://"))
 }
 
 async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms) -> Value {
@@ -815,6 +818,21 @@ mod tests {
             let _ = check_rate_limit(&app, IpAddr::V4(std::net::Ipv4Addr::from(0x0a00_0000 + n)));
         }
         assert_eq!(app.login_attempts.lock().unwrap().len(), ATTEMPTS_REMEMBERED);
+    }
+
+    /// A session cookie is Secure whenever the page signing in is on https. A proxy says so with `X-Forwarded-Proto`, but
+    /// many never send it (nginx does not unless told to), and then a cookie good for thirty days went out without Secure.
+    /// The browser says it too: a sign-in is a POST, which always carries the page's own `Origin`.
+    #[test]
+    fn a_session_cookie_is_secure_whenever_the_page_is_on_https() {
+        let mut h = HeaderMap::new();
+        assert!(!is_https(&h));
+        h.insert("origin", "https://stats.example.com".parse().unwrap());
+        assert!(is_https(&h), "a page on https, behind a proxy that says nothing");
+        h.insert("origin", "http://192.168.1.10:8080".parse().unwrap());
+        assert!(!is_https(&h), "a page on plain http: a Secure cookie would never be kept");
+        h.insert("x-forwarded-proto", "https".parse().unwrap());
+        assert!(is_https(&h));
     }
 
     fn grants(keys: &[&str]) -> Vec<String> {
