@@ -344,8 +344,12 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
     let mut settings_raw: Option<String> = None;
     let mut saw_header = false;
 
-    for (n, line) in reader.lines().enumerate() {
-        let line = line.with_context(|| crate::i18n::t("server.backup.unreadable", &[]))?;
+    let (mut reader, mut line) = (reader, String::new());
+    for n in 0u64.. {
+        line.clear();
+        if crate::import::read_line_at_most(&mut reader, &mut line, crate::import::LINE_MAX).with_context(|| crate::i18n::t("server.backup.unreadable", &[]))? == 0 {
+            break;
+        }
         if line.trim().is_empty() {
             continue;
         }

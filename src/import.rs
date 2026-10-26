@@ -59,6 +59,19 @@ fn phase_label(table: &str) -> String {
     crate::i18n::t(&format!("server.import.{key}"), &[])
 }
 
+/// The longest line a backup's reader takes. A row of the largest export seen is a few hundred kilobytes; a file that is
+/// one endless line (or a little gzip that inflates into one) was otherwise kept whole in memory.
+pub(crate) const LINE_MAX: u64 = 64 << 20;
+
+/// `read_line`, refusing a line longer than `max`.
+pub(crate) fn read_line_at_most(reader: &mut impl BufRead, line: &mut String, max: u64) -> std::io::Result<usize> {
+    let n = reader.by_ref().take(max + 1).read_line(line)?;
+    if n as u64 > max && !line.ends_with('\n') {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, crate::i18n::t("server.import.line_too_long", &[])));
+    }
+    Ok(n)
+}
+
 /// A reader that counts what has been read through it, for how far along an import is.
 struct Counted<'a, R> {
     inner: R,
@@ -233,7 +246,7 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
         let mut current_table = String::new();
         loop {
             line.clear();
-            let n = reader.read_line(&mut line)?;
+            let n = read_line_at_most(&mut reader, &mut line, LINE_MAX)?;
             if n == 0 {
                 break;
             }
@@ -712,6 +725,19 @@ mod tests {
             let rec = record(&c, &play(json!({ "PlaybackDuration": length }))).unwrap().unwrap();
             assert_eq!((rec.duration_s, rec.started_at), (0, rec.ended_at), "{length}");
         }
+    }
+
+    /// A line is read no further than the longest one a backup could hold: a file that is one endless line (or a little gzip
+    /// that inflates into one) was otherwise kept whole in memory.
+    #[test]
+    fn a_line_longer_than_any_backup_holds_is_refused_not_kept() {
+        let mut r = std::io::BufReader::new(&b"short\nmuch too long a line\nlast"[..]);
+        let mut line = String::new();
+        assert_eq!(read_line_at_most(&mut r, &mut line, 10).unwrap(), 6);
+        line.clear();
+        assert!(read_line_at_most(&mut r, &mut line, 10).is_err());
+        let mut r = std::io::BufReader::new(&b"last"[..]);
+        assert_eq!(read_line_at_most(&mut r, &mut line, 10).unwrap(), 4, "a last line with no end");
     }
 
     /// The older format is one document, read as it arrives: a row is handed over as soon as it has been read, never after

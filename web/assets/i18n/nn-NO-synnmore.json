@@ -2143,6 +2143,7 @@
       }
     },
     "import": {
+      "line_too_long": "Ei linje i fila e lengre enn nokon tryggingskopi he",
       "reading_libraries": "Les bibliotek",
       "reading_items": "Les filma, seria og musikk",
       "reading_seasons": "Les sesonga",

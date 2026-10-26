@@ -1845,6 +1845,7 @@
       "userdata_refused": { "one": "Jellyfin returned {count} played or favourite item for {name} where FinStats holds {current}. Refusing to clear the missing ones: this looks like a Jellyfin change or a bad read. Nothing was changed.", "other": "Jellyfin returned {count} played or favourite items for {name} where FinStats holds {current}. Refusing to clear the missing ones: this looks like a Jellyfin change or a bad read. Nothing was changed." }
     },
     "import": {
+      "line_too_long": "A line of the file is longer than any backup holds",
       "reading_libraries": "Reading libraries",
       "reading_items": "Reading movies, shows and music",
       "reading_seasons": "Reading seasons",

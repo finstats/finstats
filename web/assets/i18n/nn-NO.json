@@ -1846,6 +1846,7 @@
       "userdata_refused": { "one": "Jellyfin gav {count} avspela eller favorittmerkt element for {name} der FinStats har {current}. Dei som manglar, vert ikkje fjerna: dette ser ut som ei endring i Jellyfin eller ei feillesing. Ingenting vart endra.", "other": "Jellyfin gav {count} avspela eller favorittmerkte element for {name} der FinStats har {current}. Dei som manglar, vert ikkje fjerna: dette ser ut som ei endring i Jellyfin eller ei feillesing. Ingenting vart endra." }
     },
     "import": {
+      "line_too_long": "Ei linje i fila er lengre enn nokon tryggingskopi har",
       "reading_libraries": "Les bibliotek",
       "reading_items": "Les filmar, seriar og musikk",
       "reading_seasons": "Les sesongar",
