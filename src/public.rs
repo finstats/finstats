@@ -489,14 +489,63 @@ pub fn not_found() -> ApiError {
     ApiError::not_found("Profile")
 }
 
-/// A token to its profile and the answer, on the database thread.
+/// How long a worked-out profile is answered again as it is. Everything in it is a day late on purpose, so a minute
+/// changes nothing anybody could see.
+const ANSWER_TTL_S: i64 = 60;
+/// The most links remembered at once; past it, the oldest go.
+const ANSWERS_KEPT: usize = 1_000;
+
+/// Profiles worked out a moment ago, by link and by what the owner shows (`key`): every picture and card on a page
+/// asked for the whole profile and recap again, as often as a stranger holding the link liked.
+pub struct Answers<T = PublicProfile>(std::sync::Mutex<std::collections::HashMap<String, (i64, String, T)>>);
+
+impl<T> Default for Answers<T> {
+    fn default() -> Self {
+        Answers(Default::default())
+    }
+}
+
+impl<T: Clone> Answers<T> {
+    pub fn get_or<E>(&self, token: &str, key: &str, now: i64, work: impl FnOnce() -> Result<T, E>) -> Result<T, E> {
+        if let Some((at, k, v)) = self.0.lock().unwrap().get(token)
+            && *k == key
+            && now - at < ANSWER_TTL_S
+        {
+            return Ok(v.clone());
+        }
+        let v = work()?;
+        let mut kept = self.0.lock().unwrap();
+        kept.retain(|_, (at, _, _)| now - *at < ANSWER_TTL_S);
+        if kept.len() >= ANSWERS_KEPT {
+            kept.clear();
+        }
+        kept.insert(token.to_string(), (now, key.to_string(), v.clone()));
+        Ok(v)
+    }
+}
+
+fn answers() -> &'static Answers {
+    static ANSWERS: std::sync::OnceLock<Answers> = std::sync::OnceLock::new();
+    ANSWERS.get_or_init(Answers::default)
+}
+
+/// A token to its profile and the answer, on the database thread. Whether the link opens anything is asked every time;
+/// what it shows comes from `answers` when it was worked out a moment ago.
 pub async fn resolve(app: &App, token: String) -> Result<(Published, PublicProfile), ApiError> {
     let settings = app.settings();
     let min_play_s = settings.min_play_s;
     app.db
         .call(move |c| {
             let Some(p) = lookup(c, &settings, &token)? else { return Ok(None) };
-            let a = answer(c, &p, min_play_s, db::now())?;
+            // What the owner shows, and a fingerprint of the plays it counts: one put in the trash, imported or brought
+            // back changes the answer at once, never a minute later.
+            let plays: (i64, i64, f64) = c.query_row(
+                "SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(duration_s) FROM visible_playbacks WHERE user_id = ?1 AND ended_at <= ?2",
+                params![p.user_id, db::now() - DELAY_S],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )?;
+            let shows = format!("{p:?} {min_play_s} {} {plays:?}", crate::i18n::current());
+            let a = answers().get_or(&token, &shows, db::now(), || answer(c, &p, min_play_s, db::now()))?;
             Ok(Some((p, a)))
         })
         .await?
@@ -550,6 +599,20 @@ pub fn noindex(mut r: Response) -> Response {
 
 #[cfg(test)]
 mod tests {
+    /// A published link is answered from what was worked out a moment ago: every picture and card on the page asked for
+    /// the whole profile and recap again, and a stranger holding the link could ask as often as they liked. What the
+    /// owner shows (another key) is worked out at once, and so is everything once the moment has passed.
+    #[test]
+    fn a_profile_worked_out_a_moment_ago_is_not_worked_out_again() {
+        let answers = Answers::default();
+        let mut worked = 0;
+        let mut ask = |key: &str, now: i64| answers.get_or("tok", key, now, || { worked += 1; Ok::<_, ()>(worked) }).unwrap();
+        assert_eq!(ask("a", 100), 1);
+        assert_eq!(ask("a", 100 + ANSWER_TTL_S - 1), 1, "asked again within the moment");
+        assert_eq!(ask("b", 100 + ANSWER_TTL_S - 1), 2, "the owner changed what is shown");
+        assert_eq!(ask("b", 100 + 2 * ANSWER_TTL_S), 3, "the moment passed");
+    }
+
     use super::*;
 
     const DAY: i64 = 86_400;
