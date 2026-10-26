@@ -10,6 +10,87 @@ Stability something that can no longer crash, halt, leak or lose data, Fixed som
 wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Capacity, a live channel, a Tautulli-style layout and languages
+
+### Added
+- **Languages**: FinStats speaks 24 languages. British and American English and Norwegian Bokmål and Nynorsk are written and checked by the maintainer, who also checks Synnmørsk, the maintainer's own dialect from Søre Sunnmøre; Danish, German, Spanish, Finnish, French, Hindi, Icelandic, Italian, Japanese, Korean, Dutch, Polish, Portuguese (Brazil), Russian, Swedish, Turkish, Ukrainian and Chinese (Simplified and Traditional) are translations nobody here has checked, and say in English what they do not have yet. Every page of both layouts, the public profile, the Patch notes and what the server answers in words (an error, the Recap's cards, what a Jellyfin job does) are in the language chosen under Settings → Appearance → Language, per browser; until one is chosen, the browser's own language decides, and a browser FinStats does not speak gets American English. Numbers, dates, units and lists are written the way that language writes them. A script may ask for one with `Accept-Language`.
+- **A Tautulli-style layout**: a second layout for people who come from Plex, laid out the way a classic Plex stats server is. A bar across the top instead of the menu, and the stats pages alone: Home, Libraries, Users, History, Graphs and Settings, with a gear for your profile, Settings, Patch notes, the theme and signing out. Chosen per browser under Settings → Appearance → Layout. It loads only its own half of FinStats, so it starts quicker; Recap, Together, Pipeline, Security and the server pages stay in the FinStats layout. It wears FinStats' own colours, light and dark, and nothing on it moves. Not affiliated with Tautulli.
+- **The Tautulli-style layout's Home**: what is playing, a card per stream (how it plays, from home or away, when it ends), the watch statistics as ranked cards by play count or duration over the last N days, what each library holds and what arrived lately.
+- **The Tautulli-style layout's Graphs**: plays by kind of media (day by day, by weekday and hour, the top ten apps and people), by how they played (day by day, the most streams at once each day, the file's and the sent resolution, apps and people) and month by month, by play count or duration, for everybody or the people chosen.
+- **The Tautulli-style layout's Libraries, Users and titles**: tables of every library and person with what was played last, on what and from where (the address only with *see network*), and a page for each library, person and title with its figures and its own history.
+- For scripts: `/api/stats/split` (plays by app, person, resolution, day or month, split by kind of media or by how they played); top lists by distinct viewers (`sort=users`); activity narrowed to watched plays (`watched=1`); insights for the parts asked (`parts=`); the peak split into transcodes, direct streams and direct plays, each day too; what each library holds and played last; recently added by kind (`kind=`); the heatmap by kind of media; a person's last play; whether a stream plays from home.
+- **A live channel**: the dashboard, Pipeline's downloads and the status bar keep themselves current over one WebSocket per tab (`/api/live`), so what is playing and what is downloading change on screen as they change rather than at the next look. Behind a reverse proxy that does not pass WebSocket upgrades on, or on a connection that dropped without a word, the pages ask every few seconds as before. `/api/now-playing`, `/api/downloads` and `/api/summary` stay as they are, for scripts.
+- **Server → Capacity**: will this server cope, from what FinStats has seen. The busiest moments on record and of the last 90 days: streams at once, and how many had their picture transcoded with hardware, without it, or with nothing said (a history imported from Tautulli is Plex's, and is left out). Each disk the libraries are on and how fast what Jellyfin added over six months fills it (a disk filled more recently is measured from a month after its first file, since its first month is its filling), and, where Jellyfin 10.11 or newer reports free space, how long that lasts at that pace. FinStats never says how many streams the server could take.
+- **Export .ics** on Pipeline → Upcoming: the list as you filtered it, downloaded as a calendar file to import once. It does not update itself; a calendar key from Settings → API keys still gives a calendar that does.
+- **Worth a look**: Capacity notes when every transcode Jellyfin reported on in 90 days ran without hardware acceleration while transcoding is common, when Jellyfin's library scan runs a quarter of the time or more, and when a disk has under six months of space left. Each comes with its numbers, and can be set aside like Library health's findings.
+- **What your library is made of** narrows to one library or several, on Libraries and on each library's own page (`library_id=a,b`).
+- **Date and time formats** in Settings → Appearance: a date as 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 or 2026/01/31, and a time in 24 or 12 hours, with or without a leading zero, or each the language's own way. Kept by this browser.
+- **A welcome**: the first time somebody signs in, on whichever browser, and at the end of setup, FinStats asks for the language, the date and time formats, light or dark, and the layout, with a picture of each layout. Skip keeps British English, 31/01/2026, 13:05, the device's colours and FinStats.
+
+### Changed
+- The logo inside a page is the bare mark beside its name, set in Inter whatever font a preset chooses; where it stands alone (the favicon) it keeps its rounded tile.
+- A play transcoded in software is recorded as such where Jellyfin says so; before, it looked the same as one from a server that does not say. Pages still call both Software.
+- An update now runs, once and oldest version first, what a version needs done to a database an older FinStats wrote, beside its migrations. 2.3.0's reads the server's details at the first start, so Capacity is there at once.
+
+### Performance
+- **A page left open asks for nothing**: the dashboard made 30 requests a minute to stay current and Pipeline's downloads 18; with the live channel both make none. However many tabs are open, FinStats asks Jellyfin, Sonarr and Radarr for nothing more than before, and a hidden tab still lets the download queue slow down.
+- A person's page reads only that person's plays: their totals and last play were worked out over every play on the server and then narrowed to them, about four seconds on a million plays.
+- A library's page reads only that library's titles and plays, where it counted every library's and kept one: a third of the time on a million plays.
+- With Jellyfin's clock ahead of FinStats', *After Jellyfin's library scan* read the whole library again every minute until the difference had passed; each scan is followed once.
+- A GeoIP file that could not be opened was copied again, a hundred megabytes and more, and every address placed again, every quarter of an hour; it is tried again only once it changes.
+- Library health opens at once after a pointer has rested on its link: what was fetched ahead was kept where the page never looked.
+
+### Stability
+- An update that failed after a migration had run, and was restarted by Docker at once, took a new copy of the half-updated database at every start, and three starts pruned away the one copy the previous version could open. The copy from before the update is kept now.
+- A title deleted in Jellyfin while the library was being read (a file replaced by Radarr) could make the read miss another title that was still there and mark it removed, and its plays could then be moved onto another copy of it. What a read did not see is now asked after by id first.
+- Restoring a backup taken before a file was renamed or upgraded restored every play since moved onto the new file a second time, doubled for good.
+- A request in Seerr's answer that FinStats could not read (a field renamed in a Seerr update) was marked removed by the daily full read.
+- A job that hit a bug stayed "running" for good, and no trigger started it again until FinStats was restarted; it now ends as a failure.
+- A damaged Tautulli zip stopped the upload short of removing the file, which holds every Plex user's tokens, until the six-hour sweep.
+- An import or a restore killed while its file arrived left that file in the data folder for good, addresses and all; it is removed at the next start.
+- A picture could be served half written while it was being cached, and the browser then kept it so.
+- Revoked API keys were kept for good, however many were made and revoked.
+- A read of somebody's played and favourite flags that came back empty or unreadable cleared every one of them until the next read; it is refused, as an empty library read is.
+- An episode with an end number no episode could have (a date written there) could keep Library health busy without end after a library read.
+
+### Fixed
+- A patch note with code inside bold (2.0.2's and 2.0.3's) showed its backticks instead of drawing the code.
+- A chart of counts could number its axis 0, 3, 5, 8, 10, or even 0, 0, 1, 1, 1: steps of 2.5 printed rounded. Counts climb in whole steps now.
+- A calendar key made by somebody who is not a manager came with a link on the browser's own address instead of FinStats' public one, so it worked only from inside; the page also asked for settings it was refused.
+- A person's last play could be a few seconds too short to count as a play anywhere else, naming a title their History does not show.
+- A restore from Recently deleted that failed said nothing and kept its button turning; so did a failed *Bring back* in Library health and a failed *Reopen* or *Resolve all* in Security.
+- The calendar feed is called FinStats in a calendar app, not finstats.
+- The download queue named who had asked for each download to anybody allowed to see it; somebody else's request now takes *See everyone's activity*, as on Pipeline.
+- Taking *Be sent notifications* away did not stop what that person's destinations were sent, and they could no longer switch them off.
+- A play paused and resumed within the merge window was told as stopped once, and its resume and real end never.
+- A track's plays could be moved onto another artist's track of the same name ("Intro") when its album left the library.
+- A notification destination written as an IPv4 address inside IPv6 (NAT64, 6to4) passed as public while it reached the local network.
+- A Sonarr or Radarr connection pointed at another server kept showing the old server's posters for a week.
+- Security's alerts said nothing needed a look when two people or more were picked, and a page left empty by resolving its last alert had no way back.
+- Every API key that had not run out said it expired "just now".
+- A dialog stayed over the page after Back, and the page would not scroll until it was closed.
+- The audit log showed eight kinds of entry (a play or a backup brought back, the trash emptied, public profiles, a look changed) by their ids, with nothing in Detail.
+- Putting a title on the watchlist from its context menu failed without a word when the server refused.
+- *Watched together* on the dashboard treated several people picked at once as one person.
+- The recap wrote hours and days under ten with the browser's decimal comma beside its own thousands commas.
+- Capacity said a disk would fill "at the pace of the last 0 months".
+- On the Security page, the addresses without a place counted everybody's plays of all time, whatever person and range the page was narrowed to.
+- Somebody with *Manage FinStats* but not *See everyone's activity* could put anybody's play in the trash.
+- A Recap or public profile card could come back from the browser's cache in the language chosen before.
+- The downloads the live channel pushed were in British English, whatever language the page was in.
+- A sign-in that changed what somebody may see reached their other open tabs only at the next half-minute check.
+- A tab that gave its live connection up to a newer one took one back at its next page, so one person's tabs kept closing each other's.
+- Tables sorted sizes from 1,000 to 1,023 units as text in languages that group digits with a space, and Turkish percentages likewise.
+- A title with a placeholder in its name, such as "Big {device} Bunny", was filled in by the server's messages.
+- Tables sorted durations and counts out of a total (5 of 26) as text in every language but English and the Nordic ones.
+- A tab still open in one language heard the server in another once a different tab had chosen it.
+- A word beside a number took the wrong form in Polish, Russian and Ukrainian ("5 wieczory", "2 потоков").
+- Capacity counted a library's first filling as growth, and divided what each library added by six months whatever it was measured over; a file that took another's place (an upgrade from Radarr or Sonarr, or a file Jellyfin gave a new id) counted as all new, where only the difference was.
+- People watching together with SyncPlay were not a group when one joined minutes after the other had pressed play; plays that end together at the same place are one now, and the history is grouped again once.
+- Somebody without *See everyone's activity* could tell from a library's *Never watched* that another person had played a title; it counts their own viewing now.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Library health and FinUI

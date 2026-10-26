@@ -11,6 +11,87 @@ anhalten, Lecks haben oder Daten verlieren kann, Behoben etwas, das eine falsche
 `x.y.0`-Version trägt unter ihrer Überschrift eine kurze Titelzeile: Diesen Titel nutzt die App als
 Schlagzeile der ganzen Reihe.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Kapazität, ein Live-Kanal, der einfache Modus und Sprachen
+
+### Added
+- **Sprachen**: FinStats spricht 23 Sprachen. Britisches und amerikanisches Englisch sowie Norwegisch (Bokmål) und Norwegisch (Nynorsk) werden vom Maintainer geschrieben und geprüft; Dänisch, Deutsch, Spanisch, Finnisch, Französisch, Hindi, Isländisch, Italienisch, Japanisch, Koreanisch, Niederländisch, Polnisch, Portugiesisch (Brasilien), Russisch, Schwedisch, Türkisch, Ukrainisch und Chinesisch (vereinfacht und traditionell) sind Übersetzungen, die hier niemand geprüft hat, und sagen auf Englisch, was ihnen noch fehlt. Jede Seite beider Layouts, das öffentliche Profil, die Versionshinweise und alles, was der Server in Worten antwortet (eine Fehlermeldung, die Karten des Rückblicks, was eine Jellyfin-Aufgabe tut), erscheinen in der Sprache, die unter Einstellungen → Darstellung → Sprache gewählt ist, pro Browser; solange keine gewählt ist, entscheidet die Sprache des Browsers. Zahlen, Datumsangaben, Einheiten und Aufzählungen werden so geschrieben, wie diese Sprache sie schreibt. Ein Skript kann mit `Accept-Language` eine bestimmte anfordern.
+- **Einfacher Modus**: ein zweites Layout für alle, die von Plex kommen, aufgebaut wie ein klassischer Statistikserver für Plex. Eine Leiste oben statt des Menüs und nur die Statistikseiten: Startseite, Mediatheken, Benutzer, Verlauf, Diagramme und Einstellungen, dazu ein Zahnrad für dein Profil, die Einstellungen, die Versionshinweise, das Design und das Abmelden. Wird pro Browser unter Einstellungen → Darstellung → Layout gewählt. Er lädt nur seine eigene Hälfte von FinStats und startet deshalb schneller; Rückblick, Gemeinsam, Pipeline, Sicherheit und die Serverseiten bleiben im FinStats-Layout. Er trägt die eigenen Farben von FinStats, hell und dunkel, und nichts darin bewegt sich.
+- **Die Startseite im einfachen Modus**: was gerade läuft, eine Karte pro Stream (wie er abgespielt wird, von zu Hause oder unterwegs, wann er endet), die Wiedergabestatistik als Ranglisten-Karten nach Anzahl der Wiedergaben oder Dauer über die letzten N Tage, was jede Mediathek enthält und was zuletzt hinzukam.
+- **Die Diagramme im einfachen Modus**: Wiedergaben nach Medienart (Tag für Tag, nach Wochentag und Stunde, die zehn meistgenutzten Apps und Personen), nach Art der Wiedergabe (Tag für Tag, die meisten gleichzeitigen Streams jedes Tages, die Auflösung der Datei und die gesendete, Apps und Personen) und Monat für Monat, nach Anzahl der Wiedergaben oder Dauer, für alle oder für die gewählten Personen.
+- **Mediatheken, Benutzer und Titel im einfachen Modus**: Tabellen aller Mediatheken und Personen mit dem, was zuletzt abgespielt wurde, worauf und von wo (die Adresse nur mit *Netzwerkdetails sehen*), und eine Seite für jede Mediathek, jede Person und jeden Titel mit ihren Zahlen und ihrem eigenen Verlauf.
+- Für Skripte: `/api/stats/split` (Wiedergaben nach App, Person, Auflösung, Tag oder Monat, aufgeteilt nach Medienart oder Art der Wiedergabe); Toplisten nach Anzahl verschiedener Zuschauer (`sort=users`); Aktivität eingegrenzt auf geschaute Wiedergaben (`watched=1`); Auswertungen nur für die angefragten Teile (`parts=`); die Spitzenlast aufgeteilt in Transkodierung, direktes Streaming und direkte Wiedergabe, auch pro Tag; was jede Mediathek enthält und zuletzt abspielte; kürzlich Hinzugefügtes nach Art (`kind=`); die Heatmap nach Medienart; die letzte Wiedergabe einer Person; ob ein Stream von zu Hause läuft.
+- **Ein Live-Kanal**: Die Übersicht, die Downloads in der Pipeline und die Statusleiste halten sich über eine WebSocket-Verbindung pro Tab (`/api/live`) aktuell, sodass sich das, was läuft und was heruntergeladen wird, auf dem Bildschirm ändert, sobald es sich ändert, und nicht erst beim nächsten Nachsehen. Hinter einem Reverse-Proxy, der WebSocket-Upgrades nicht weiterreicht, oder bei einer Verbindung, die wortlos abgebrochen ist, fragen die Seiten wie bisher alle paar Sekunden nach. `/api/now-playing`, `/api/downloads` und `/api/summary` bleiben, wie sie sind, für Skripte.
+- **Server → Kapazität**: Kommt dieser Server zurecht, gemessen an dem, was FinStats gesehen hat? Die geschäftigsten Momente insgesamt und in den letzten 90 Tagen: gleichzeitige Streams und wie viele davon ihr Bild mit Hardware transkodiert bekamen, ohne Hardware oder ohne Angabe (ein aus Tautulli importierter Verlauf stammt von Plex und bleibt außen vor). Jeder Datenträger, auf dem die Mediatheken liegen, und wie schnell das, was Jellyfin in sechs Monaten hinzugefügt hat, ihn füllt (ein erst kürzlich befüllter Datenträger wird ab einem Monat nach seiner ersten Datei gemessen, denn sein erster Monat ist das Befüllen selbst) und, wo Jellyfin 10.11 oder neuer den freien Platz meldet, wie lange dieser bei diesem Tempo reicht. FinStats sagt nie, wie viele Streams der Server verkraften könnte.
+- **.ics exportieren** unter Pipeline → Demnächst: die Liste so, wie du sie gefiltert hast, heruntergeladen als Kalenderdatei zum einmaligen Importieren. Sie aktualisiert sich nicht selbst; ein Kalenderschlüssel aus Einstellungen → API-Schlüssel liefert weiterhin einen Kalender, der das tut.
+- **Einen Blick wert**: Kapazität weist darauf hin, wenn jede Transkodierung, über die Jellyfin in 90 Tagen berichtet hat, ohne Hardwarebeschleunigung lief, obwohl häufig transkodiert wird, wenn der Mediathek-Scan von Jellyfin ein Viertel der Zeit oder mehr läuft und wenn ein Datenträger für weniger als sechs Monate Platz hat. Jeder Hinweis kommt mit seinen Zahlen und lässt sich beiseitelegen wie die Befunde im Mediathek-Zustand.
+- **Woraus deine Mediathek besteht** lässt sich auf eine oder mehrere Mediatheken eingrenzen, unter Mediatheken und auf der Seite jeder Mediathek (`library_id=a,b`).
+- **Datums- und Zeitformate** unter Einstellungen → Darstellung: ein Datum als 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 oder 2026/01/31 und eine Uhrzeit mit 24 oder 12 Stunden, mit oder ohne führende Null, oder jeweils so, wie die Sprache sie schreibt. Gespeichert in diesem Browser.
+- **Eine Begrüßung**: Wenn sich jemand zum ersten Mal anmeldet, in welchem Browser auch immer, und am Ende der Einrichtung, fragt FinStats nach Sprache, Datums- und Zeitformat und Layout, mit einem Bild von jedem. Überspringen behält britisches Englisch, 31/01/2026, 13:05 und FinStats.
+
+### Changed
+- Das Logo innerhalb einer Seite ist das bloße Zeichen neben dem Namen, gesetzt in Inter, egal welche Schrift eine Voreinstellung wählt; wo es allein steht (das Favicon), behält es seine abgerundete Kachel.
+- Eine in Software transkodierte Wiedergabe wird als solche erfasst, wo Jellyfin das angibt; vorher sah sie genauso aus wie eine von einem Server, der es nicht angibt. Die Seiten nennen beide weiterhin Software.
+- Ein Update führt jetzt neben seinen Migrationen einmalig und älteste Version zuerst aus, was eine Version an einer Datenbank erledigen muss, die ein älteres FinStats geschrieben hat. Für 2.3.0 heißt das: Die Serverdetails werden beim ersten Start gelesen, sodass Kapazität sofort da ist.
+
+### Performance
+- **Eine offene Seite fragt nichts mehr ab**: Die Übersicht stellte 30 Anfragen pro Minute, um aktuell zu bleiben, die Downloads in der Pipeline 18; mit dem Live-Kanal stellen beide keine. Egal wie viele Tabs offen sind, FinStats fragt Jellyfin, Sonarr und Radarr nicht mehr als vorher, und bei einem verborgenen Tab wird die Download-Warteschlange weiterhin seltener gelesen.
+- Die Seite einer Person liest nur die Wiedergaben dieser Person: Summen und letzte Wiedergabe wurden über alle Wiedergaben des Servers berechnet und erst dann auf sie eingegrenzt, etwa vier Sekunden bei einer Million Wiedergaben.
+- Die Seite einer Mediathek liest nur deren Titel und Wiedergaben, wo sie vorher alle Mediatheken zählte und eine davon behielt: ein Drittel der Zeit bei einer Million Wiedergaben.
+- Ging die Uhr von Jellyfin der von FinStats voraus, las *Nach dem Mediathek-Scan von Jellyfin* jede Minute die ganze Mediathek neu, bis der Unterschied verstrichen war; jetzt folgt auf jeden Scan genau ein Lesen.
+- Eine GeoIP-Datei, die sich nicht öffnen ließ, wurde jede Viertelstunde erneut kopiert, hundert Megabyte und mehr, und jede Adresse neu verortet; jetzt wird sie erst wieder versucht, wenn sie sich ändert.
+- Der Mediathek-Zustand öffnet sofort, nachdem der Zeiger auf seinem Link geruht hat: Was vorab geholt wurde, lag dort, wo die Seite nie nachsah.
+
+### Stability
+- Ein Update, das nach einer bereits gelaufenen Migration scheiterte und von Docker sofort neu gestartet wurde, legte bei jedem Start eine neue Kopie der halb aktualisierten Datenbank an, und drei Starts räumten die einzige Kopie weg, die die vorherige Version öffnen konnte. Die Kopie von vor dem Update bleibt jetzt erhalten.
+- Ein Titel, der in Jellyfin gelöscht wurde, während die Mediathek gelesen wurde (eine von Radarr ersetzte Datei), konnte dazu führen, dass das Lesen einen anderen, noch vorhandenen Titel übersah und ihn als entfernt markierte; seine Wiedergaben konnten dann auf eine andere Kopie davon wandern. Was ein Lesevorgang nicht gesehen hat, wird jetzt zuerst per ID nachgefragt.
+- Das Wiederherstellen einer Sicherung von vor dem Umbenennen oder dem Upgrade einer Datei stellte jede seitdem auf die neue Datei verschobene Wiedergabe ein zweites Mal her, dauerhaft verdoppelt.
+- Eine Anfrage in der Antwort von Seerr, die FinStats nicht lesen konnte (ein Feld, das in einem Seerr-Update umbenannt wurde), wurde beim täglichen vollständigen Lesen als entfernt markiert.
+- Eine Aufgabe, die auf einen Fehler stieß, blieb für immer auf „läuft“, und kein Auslöser startete sie erneut, bis FinStats neu gestartet wurde; jetzt endet sie als fehlgeschlagen.
+- Ein beschädigtes Tautulli-ZIP brach das Hochladen ab, ohne die Datei zu entfernen, die die Tokens aller Plex-Benutzer enthält; sie blieb bis zur Bereinigung nach sechs Stunden liegen.
+- Ein Import oder eine Wiederherstellung, die abgebrochen wurde, während ihre Datei ankam, ließ diese Datei für immer im Datenordner zurück, samt Adressen; sie wird jetzt beim nächsten Start entfernt.
+- Ein Bild konnte halb geschrieben ausgeliefert werden, während es zwischengespeichert wurde, und der Browser behielt es dann so.
+- Widerrufene API-Schlüssel blieben für immer gespeichert, egal wie viele erstellt und widerrufen wurden.
+- Ein Lesen der Gesehen- und Favoritenmarken einer Person, das leer oder unlesbar zurückkam, löschte sie alle bis zum nächsten Lesen; es wird nun abgewiesen, wie ein leeres Lesen einer Mediathek.
+- Eine Folge mit einer Endnummer, die keine Folge haben kann (ein dort eingetragenes Datum), konnte den Mediathek-Zustand nach einem Lesen der Mediathek ohne Ende beschäftigen.
+
+### Fixed
+- Ein Versionshinweis mit Code in Fettschrift (die von 2.0.2 und 2.0.3) zeigte seine Backticks, statt den Code darzustellen.
+- Ein Diagramm mit Anzahlen konnte seine Achse mit 0, 3, 5, 8, 10 oder sogar 0, 0, 1, 1, 1 beschriften: Schritte von 2,5, gerundet geschrieben. Anzahlen steigen jetzt in ganzen Schritten.
+- Ein Kalenderschlüssel, den jemand ohne das Recht zum Verwalten erstellte, kam mit einem Link auf die Adresse des Browsers statt auf die öffentliche Adresse von FinStats und funktionierte deshalb nur von innen; die Seite fragte außerdem Einstellungen ab, die ihr verweigert wurden.
+- Die letzte Wiedergabe einer Person konnte ein paar Sekunden zu kurz sein, um anderswo als Wiedergabe zu zählen, und nannte dann einen Titel, den ihr Verlauf nicht zeigt.
+- Eine fehlgeschlagene Wiederherstellung aus „Kürzlich gelöscht“ sagte nichts und ließ ihre Schaltfläche weiterdrehen; ebenso ein fehlgeschlagenes *Zurückholen* im Mediathek-Zustand und ein fehlgeschlagenes *Wieder öffnen* oder *Alle erledigen* unter Sicherheit.
+- Der Kalender-Feed heißt in einer Kalender-App FinStats, nicht finstats.
+- Die Download-Warteschlange verriet jedem, der sie sehen durfte, wer welchen Download angefragt hatte; die Anfrage einer anderen Person erfordert jetzt *Aktivität aller sehen*, wie in der Pipeline.
+- Wurde jemandem *Benachrichtigungen erhalten* entzogen, gingen weiterhin Nachrichten an die Ziele dieser Person, und sie konnte sie nicht mehr abschalten.
+- Eine Wiedergabe, die innerhalb des Zusammenführungsfensters pausiert und fortgesetzt wurde, wurde einmal als beendet gemeldet, ihre Fortsetzung und ihr echtes Ende nie.
+- Die Wiedergaben eines Tracks konnten auf einen gleichnamigen Track eines anderen Künstlers („Intro“) wandern, wenn sein Album die Mediathek verließ.
+- Ein Benachrichtigungsziel, das als IPv4-Adresse innerhalb von IPv6 geschrieben war (NAT64, 6to4), galt als öffentlich, obwohl es das lokale Netzwerk erreichte.
+- Eine Sonarr- oder Radarr-Verbindung, die auf einen anderen Server umgestellt wurde, zeigte eine Woche lang weiter die Poster des alten Servers.
+- Die Warnungen unter Sicherheit meldeten, nichts müsse angesehen werden, wenn zwei oder mehr Personen ausgewählt waren, und eine Seite, die durch das Erledigen ihrer letzten Warnung leer wurde, bot keinen Weg zurück.
+- Jeder API-Schlüssel, der noch nicht abgelaufen war, behauptete, er sei „gerade eben“ abgelaufen.
+- Ein Dialog blieb nach Zurück über der Seite stehen, und die Seite ließ sich nicht scrollen, bis er geschlossen wurde.
+- Das Audit-Protokoll zeigte acht Arten von Einträgen (eine zurückgeholte Wiedergabe oder Sicherung, den geleerten Papierkorb, öffentliche Profile, eine geänderte Darstellung) nur mit ihren IDs und ohne etwas unter Details.
+- Einen Titel über sein Kontextmenü auf die Merkliste zu setzen, scheiterte wortlos, wenn der Server ablehnte.
+- *Gemeinsam geschaut* auf der Übersicht behandelte mehrere gleichzeitig ausgewählte Personen als eine.
+- Der Rückblick schrieb Stunden und Tage unter zehn mit dem Dezimalkomma des Browsers neben seinen eigenen englischen Tausendertrennzeichen.
+- Kapazität sagte, eine Festplatte werde "im Tempo der letzten 0 Monate" voll.
+- Auf der Seite Sicherheit zählten die Adressen ohne Ort die Wiedergaben aller seit jeher, ganz gleich, auf welche Person und welchen Zeitraum die Seite eingeschränkt war.
+- Wer *FinStats verwalten* durfte, aber nicht *Aktivität aller sehen*, konnte die Wiedergabe jedes anderen in den Papierkorb legen.
+- Eine Karte aus dem Rückblick oder einem öffentlichen Profil konnte aus dem Cache des Browsers in der zuvor gewählten Sprache kommen.
+- Die Downloads, die der Live-Kanal schickte, waren auf britischem Englisch, gleich in welcher Sprache die Seite war.
+- Eine Anmeldung, die änderte, was jemand sehen darf, erreichte die anderen offenen Tabs der Person erst bei der nächsten Prüfung nach einer halben Minute.
+- Ein Tab, der seine Live-Verbindung an einen neueren abgab, holte sich auf der nächsten Seite eine zurück, sodass die Tabs einer Person einander immer wieder schlossen.
+- Tabellen sortierten Größen von 1.000 bis 1.023 Einheiten als Text in Sprachen, die Ziffern mit einem Leerzeichen gruppieren, und türkische Prozentangaben ebenso.
+- Ein Titel mit einem Platzhalter im Namen, etwa "Big {device} Bunny", wurde von den Meldungen des Servers ausgefüllt.
+- Tabellen sortierten Dauern und Anteile an einer Gesamtzahl (5 von 26) in jeder Sprache außer Englisch und den nordischen als Text.
+- Ein Tab, der noch in einer Sprache offen war, hörte den Server in einer anderen, sobald ein anderer Tab sie gewählt hatte.
+- Ein Wort neben einer Zahl stand auf Polnisch, Russisch und Ukrainisch in der falschen Form ("5 wieczory", "2 потоков").
+- Kapazität zählte die erste Befüllung einer Mediathek als Wachstum und teilte, was jede Mediathek hinzugefügt hatte, durch sechs Monate, gleich über welchen Zeitraum gemessen; eine Datei, die den Platz einer anderen einnahm (ein Upgrade aus Radarr oder Sonarr oder eine Datei, der Jellyfin eine neue ID gab), zählte als ganz neu, obwohl nur der Unterschied neu war.
+- Wer mit SyncPlay gemeinsam schaute, war keine Gruppe, wenn einer Minuten nach dem anderen dazukam; Wiedergaben, die gleichzeitig an derselben Stelle enden, gehören jetzt zusammen, und der Verlauf wird einmal neu gruppiert.
+- Wer *Aktivität aller sehen* nicht hat, konnte an *Nie geschaut* einer Mediathek ablesen, dass jemand anderes einen Titel abgespielt hatte; jetzt zählt dort nur das eigene Schauen.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Mediathek-Zustand und FinUI

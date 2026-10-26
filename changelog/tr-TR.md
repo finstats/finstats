@@ -9,6 +9,87 @@ ya da `### Removed`. Performans, daha hızlı ya da daha hafif hale gelen bir ş
 durmayan, sızıntı yapmayan ya da veri kaybetmeyen bir şey; Düzeltildi ise yanlış yanıt veren bir şey. Bir `x.y.0`
 sürümü başlığının altında kısa bir başlık satırı taşır: uygulama bu başlığı tüm serinin manşeti olarak kullanır.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Kapasite, canlı kanal, Basit mod ve diller
+
+### Added
+- **Diller**: FinStats 23 dil konuşuyor. İngiliz ve Amerikan İngilizcesi ile Norveççe Bokmål ve Norveççe Nynorsk, projenin bakımcısı tarafından yazılıp denetleniyor; Danca, Almanca, İspanyolca, Fince, Fransızca, Hintçe, İzlandaca, İtalyanca, Japonca, Korece, Felemenkçe, Lehçe, Portekizce (Brezilya), Rusça, İsveççe, Türkçe, Ukraynaca ve Çince (basitleştirilmiş ve geleneksel) burada kimsenin denetlemediği çevirilerdir ve henüz sahip olmadıkları kısımları İngilizce söylerler. İki düzenin her sayfası, herkese açık profil, Sürüm notları ve sunucunun sözle verdiği yanıtlar (bir hata, Yıl özeti kartları, bir Jellyfin görevinin ne yaptığı), tarayıcı başına Ayarlar → Görünüm → Dil altında seçilen dildedir; bir dil seçilene kadar tarayıcının kendi dili belirler. Sayılar, tarihler, birimler ve listeler o dilin yazdığı biçimde yazılır. Bir betik `Accept-Language` ile bir dil isteyebilir.
+- **Basit mod**: Plex’ten gelenler için, klasik bir Plex istatistik sunucusunun düzenine göre kurulmuş ikinci bir düzen. Menü yerine üstte bir çubuk ve yalnızca istatistik sayfaları: Ana sayfa, Kütüphaneler, Kullanıcılar, Geçmiş, Grafikler ve Ayarlar; profiliniz, Ayarlar, Sürüm notları, tema ve oturumu kapatmak için de bir dişli. Tarayıcı başına Ayarlar → Görünüm → Düzen altından seçilir. FinStats’in yalnızca kendi yarısını yüklediği için daha hızlı açılır; Yıl özeti, Birlikte, Yolda, Güvenlik ve sunucu sayfaları FinStats düzeninde kalır. FinStats’in kendi renklerini açık ve koyu temada taşır ve üzerinde hiçbir şey hareket etmez.
+- **Basit modda Ana sayfa**: oynatılanlar, akış başına bir kart (nasıl oynatıldığı, evden mi dışarıdan mı, ne zaman biteceği), son N gündeki oynatma sayısına ya da süresine göre sıralı kartlar halinde izleme istatistikleri, her kütüphanenin içerdikleri ve son gelenler.
+- **Basit modda Grafikler**: medya türüne göre oynatmalar (gün gün, hafta günü ve saate göre, ilk on uygulama ve kişi), nasıl oynatıldıklarına göre (gün gün, her gün aynı anda en çok akış, dosyanın ve gönderilen görüntünün çözünürlüğü, uygulamalar ve kişiler) ve ay ay; oynatma sayısına ya da süresine göre, herkes için ya da seçilen kişiler için.
+- **Basit modda Kütüphaneler, Kullanıcılar ve içerikler**: her kütüphane ve kişi için en son neyin, neyle ve nereden oynatıldığını gösteren tablolar (adres yalnızca *Ağ ayrıntılarını görme* izniyle) ve her kütüphane, kişi ve içerik için rakamlarını ve kendi geçmişini gösteren bir sayfa.
+- Betikler için: `/api/stats/split` (uygulamaya, kişiye, çözünürlüğe, güne ya da aya göre oynatmalar; medya türüne ya da oynatma biçimine göre bölünmüş); farklı izleyici sayısına göre üst listeler (`sort=users`); izlenmiş oynatmalarla sınırlı etkinlik (`watched=1`); yalnızca istenen kısımlar için içgörüler (`parts=`); her gün için de kod dönüştürme, doğrudan akış ve doğrudan oynatma olarak bölünmüş zirve; her kütüphanenin içerdikleri ve en son oynatılanı; türe göre son eklenenler (`kind=`); medya türüne göre ısı haritası; bir kişinin son oynatması; bir akışın evden oynatılıp oynatılmadığı.
+- **Canlı kanal**: pano, Yolda sayfasındaki indirmeler ve durum çubuğu, sekme başına tek bir WebSocket (`/api/live`) üzerinden kendilerini güncel tutar; böylece oynatılanlar ve indirilenler bir sonraki bakışta değil, değiştikleri anda ekranda değişir. WebSocket yükseltmelerini iletmeyen bir ters vekil arkasında ya da sessizce kopan bir bağlantıda sayfalar eskisi gibi birkaç saniyede bir sorar. `/api/now-playing`, `/api/downloads` ve `/api/summary` betikler için olduğu gibi kalır.
+- **Sunucu → Kapasite**: FinStats’in gördüklerine dayanarak bu sunucu yükü kaldırır mı. Kayıtlardaki ve son 90 gündeki en yoğun anlar: aynı anda kaç akış olduğu ve bunlardan kaçının görüntüsünün donanımla, donanımsız ya da hiçbir şey söylenmeden kod dönüştürüldüğü (Tautulli’den içe aktarılan bir geçmiş Plex’e aittir ve dışarıda bırakılır). Kütüphanelerin bulunduğu her disk ve Jellyfin’in altı ayda eklediklerinin onu ne hızla doldurduğu (daha yakın zamanda doldurulmaya başlanmış bir disk, ilk dosyasından bir ay sonrasından itibaren ölçülür, çünkü ilk ayı ilk doldurulduğu aydır) ve Jellyfin 10.11 ya da daha yenisinin boş alan bildirdiği yerlerde bu hızla ne kadar yeteceği. FinStats sunucunun kaç akış kaldırabileceğini asla söylemez.
+- **.ics dışa aktar**, Yolda → Yakında altında: listeyi filtrelediğiniz haliyle, bir kez içe aktarmak üzere bir takvim dosyası olarak indirir. Kendini güncellemez; kendini güncelleyen bir takvim için Ayarlar → API anahtarları bölümünden alınan bir takvim anahtarı hâlâ kullanılabilir.
+- **Bakmaya değer**: Kapasite, kod dönüştürme yaygınken Jellyfin’in 90 gün içinde bildirdiği her kod dönüştürme donanım hızlandırması olmadan çalıştığında, Jellyfin’in kütüphane taraması zamanın dörtte birini ya da daha fazlasını aldığında ve bir diskin altı aydan az yeri kaldığında bunu not eder. Her biri rakamlarıyla gelir ve Kütüphane sağlığı bulguları gibi bir kenara bırakılabilir.
+- **Kütüphaneniz nelerden oluşuyor** bir ya da birkaç kütüphaneyle sınırlanabilir, Kütüphaneler sayfasında ve her kütüphanenin kendi sayfasında (`library_id=a,b`).
+- **Tarih ve saat biçimleri** Ayarlar → Görünüm'de: tarih 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 ya da 2026/01/31 gibi, saat 24 ya da 12 saatlik, başta sıfırla ya da sıfırsız, ya da her biri dilin kendi yazışıyla. Bu tarayıcıda saklanır.
+- **Bir karşılama**: biri hangi tarayıcıda olursa olsun ilk kez oturum açtığında ve kurulumun sonunda FinStats dili, tarih ve saat biçimlerini ve düzeni, her birinin resmiyle sorar. Atla İngiliz İngilizcesi, 31/01/2026, 13:05 ve FinStats'ı tutar.
+
+### Changed
+- Sayfanın içindeki logo, adının yanındaki yalın işarettir ve bir ön ayar hangi yazı tipini seçerse seçsin Inter ile yazılır; tek başına durduğu yerde (favicon) yuvarlatılmış karosunu korur.
+- Yazılımla kodu dönüştürülen bir oynatma, Jellyfin bunu söylediğinde öyle kaydedilir; önceden bunu söylemeyen bir sunucudan gelen oynatmayla aynı görünüyordu. Sayfalar ikisine de hâlâ Yazılım der.
+- Bir güncelleme artık, geçişlerinin yanında, eski bir FinStats’in yazdığı bir veritabanı için bir sürümün yapılmasını gerektirdiği işleri bir kez ve en eski sürümden başlayarak çalıştırır. 2.3.0’ınki ilk başlatmada sunucunun ayrıntılarını okur, böylece Kapasite hemen hazır olur.
+
+### Performance
+- **Açık bırakılan bir sayfa hiçbir şey istemez**: pano güncel kalmak için dakikada 30, Yolda sayfasındaki indirmeler 18 istek yapıyordu; canlı kanalla ikisi de hiç istek yapmaz. Kaç sekme açık olursa olsun FinStats Jellyfin’den, Sonarr’dan ve Radarr’dan öncekinden fazlasını istemez ve gizli bir sekme indirme kuyruğunun yavaşlamasına hâlâ izin verir.
+- Bir kişinin sayfası yalnızca o kişinin oynatmalarını okur: toplamları ve son oynatması sunucudaki her oynatma üzerinden hesaplanıp sonra o kişiye daraltılıyordu; bu, bir milyon oynatmada yaklaşık dört saniye sürüyordu.
+- Bir kütüphanenin sayfası, her kütüphaneninkini sayıp birini tutmak yerine yalnızca o kütüphanenin içeriklerini ve oynatmalarını okur: bir milyon oynatmada sürenin üçte biri.
+- Jellyfin’in saati FinStats’inkinden ilerideyken *Jellyfin’in kütüphane taramasından sonra*, fark kapanana kadar her dakika tüm kütüphaneyi yeniden okuyordu; artık her tarama bir kez izlenir.
+- Açılamayan bir GeoIP dosyası her çeyrek saatte bir yeniden kopyalanıyor (yüz megabayt ve fazlası) ve her adresin konumu yeniden belirleniyordu; artık yalnızca dosya değiştiğinde yeniden denenir.
+- İşaretçi bağlantısının üzerinde bir an durduktan sonra Kütüphane sağlığı anında açılır: önceden getirilen veri, sayfanın hiç bakmadığı bir yerde tutuluyordu.
+
+### Stability
+- Bir geçiş çalıştıktan sonra başarısız olan ve Docker tarafından hemen yeniden başlatılan bir güncelleme, her başlatmada yarı güncellenmiş veritabanının yeni bir kopyasını alıyordu ve üç başlatma, önceki sürümün açabileceği tek kopyayı budayıp siliyordu. Artık güncellemeden önceki kopya korunur.
+- Kütüphane okunurken Jellyfin’de silinen bir içerik (Radarr’ın değiştirdiği bir dosya), okumanın hâlâ orada olan başka bir içeriği kaçırıp onu kaldırılmış olarak işaretlemesine yol açabiliyordu; ardından oynatmaları onun başka bir kopyasına taşınabiliyordu. Bir okumanın görmediği şey artık önce kimliğiyle sorgulanır.
+- Bir dosya yeniden adlandırılmadan ya da yükseltilmeden önce alınmış bir yedeği geri yüklemek, o zamandan beri yeni dosyaya taşınmış her oynatmayı ikinci kez geri yüklüyor ve kalıcı olarak ikiye katlıyordu.
+- Seerr’in yanıtında FinStats’in okuyamadığı bir istek (bir Seerr güncellemesinde adı değişen bir alan) günlük tam okuma tarafından kaldırılmış olarak işaretleniyordu.
+- Bir hataya takılan bir görev kalıcı olarak “çalışıyor” durumunda kalıyor ve FinStats yeniden başlatılana kadar hiçbir tetikleyici onu yeniden başlatmıyordu; artık başarısız olarak sona erer.
+- Hasarlı bir Tautulli zip dosyası yüklemeyi, her Plex kullanıcısının belirteçlerini içeren dosya kaldırılmadan önce durduruyordu; dosya altı saatlik temizliğe kadar kalıyordu.
+- Dosyası gelirken sonlandırılan bir içe aktarma ya da geri yükleme, o dosyayı içindeki adreslerle birlikte veri klasöründe kalıcı olarak bırakıyordu; artık bir sonraki başlatmada kaldırılır.
+- Bir resim önbelleğe alınırken yarı yazılmış haliyle sunulabiliyordu ve tarayıcı onu öyle saklıyordu.
+- İptal edilen API anahtarları, kaç tane oluşturulup iptal edilmiş olursa olsun kalıcı olarak saklanıyordu.
+- Birinin izlendi ve favori işaretlerinin boş ya da okunamaz dönen bir okuması, bir sonraki okumaya kadar hepsini siliyordu; artık bir kütüphanenin boş okuması gibi reddediliyor.
+- Hiçbir bölümün olamayacağı bir bitiş numarasına (oraya yazılmış bir tarih) sahip bir bölüm, kütüphane okumasından sonra Kütüphane sağlığını sonsuza dek meşgul edebiliyordu.
+
+### Fixed
+- Kalın yazının içinde kod bulunan bir sürüm notu (2.0.2 ve 2.0.3’tekiler) kodu çizmek yerine ters tırnakları gösteriyordu.
+- Sayıları gösteren bir grafiğin ekseni 0, 3, 5, 8, 10, hatta 0, 0, 1, 1, 1 diye numaralanabiliyordu: 2,5'lik adımlar yuvarlanarak yazılıyordu. Sayılar artık tam adımlarla artıyor.
+- FinStats’i yönetme izni olmayan birinin oluşturduğu takvim anahtarı, FinStats’in herkese açık adresi yerine tarayıcının kendi adresini taşıyan bir bağlantıyla geliyordu, bu yüzden yalnızca içeriden çalışıyordu; sayfa ayrıca kendisine verilmeyen ayarları istiyordu.
+- Bir kişinin son oynatması, başka hiçbir yerde oynatma sayılmayacak kadar birkaç saniye kısa olabiliyor ve Geçmiş sayfasında görünmeyen bir içeriği gösterebiliyordu.
+- Son silinenler bölümünden başarısız olan bir geri yükleme hiçbir şey söylemiyor ve düğmesi dönmeye devam ediyordu; Kütüphane sağlığındaki başarısız bir *Geri getir* ile Güvenlik’teki başarısız bir *Yeniden aç* ya da *Tümünü çözüldü say* da öyle.
+- Takvim akışı bir takvim uygulamasında finstats değil, FinStats olarak adlandırılır.
+- İndirme kuyruğu, her indirmeyi kimin istediğini kuyruğu görebilen herkese söylüyordu; başka birinin isteği artık, Yolda sayfasında olduğu gibi *Herkesin etkinliğini görme* iznini gerektirir.
+- *Bildirim alma* izninin geri alınması, o kişinin hedeflerine gönderilenleri durdurmuyordu ve kişi bu hedefleri artık kapatamıyordu.
+- Birleştirme süresi içinde duraklatılıp devam ettirilen bir oynatma bir kez durdurulmuş olarak bildiriliyor, devam etmesi ve gerçek sonu ise hiç bildirilmiyordu.
+- Bir parçanın oynatmaları, albümü kütüphaneden ayrıldığında başka bir sanatçının aynı adlı parçasına (“Intro”) taşınabiliyordu.
+- IPv6 içinde IPv4 adresi olarak yazılmış bir bildirim hedefi (NAT64, 6to4), yerel ağa ulaştığı halde herkese açık sayılıyordu.
+- Başka bir sunucuya yönlendirilen bir Sonarr ya da Radarr bağlantısı, eski sunucunun posterlerini bir hafta boyunca göstermeye devam ediyordu.
+- Güvenlik uyarıları, iki ya da daha fazla kişi seçildiğinde bakılacak bir şey olmadığını söylüyordu ve son uyarısı çözülerek boşalan bir sayfadan geri dönüş yolu yoktu.
+- Süresi dolmamış her API anahtarı “az önce” sona erdiğini söylüyordu.
+- Geri’ye basıldıktan sonra bir iletişim kutusu sayfanın üzerinde kalıyordu ve kapatılana kadar sayfa kaydırılamıyordu.
+- Denetim günlüğü sekiz giriş türünü (geri getirilen bir oynatma ya da yedek, boşaltılan çöp kutusu, herkese açık profiller, değiştirilen bir görünüm) kimlikleriyle gösteriyordu ve Ayrıntı sütunu boştu.
+- Bir içeriği bağlam menüsünden izleme listesine eklemek, sunucu reddettiğinde sessizce başarısız oluyordu.
+- Panodaki *Birlikte izlendi*, aynı anda seçilen birkaç kişiyi tek kişi gibi ele alıyordu.
+- Yıl özeti, ondan küçük saat ve gün değerlerini kendi binlik virgüllerinin yanında tarayıcının ondalık virgülüyle yazıyordu.
+- Kapasite, bir diskin "son 0 ayın hızıyla" dolacağını söylüyordu.
+- Güvenlik sayfasında yeri olmayan adresler, sayfa hangi kişiye ve döneme daraltılmış olursa olsun herkesin tüm zamanlardaki oynatmalarını sayıyordu.
+- *FinStats’i yönetme* izni olan ama *Herkesin etkinliğini görme* izni olmayan biri, herkesin oynatmasını çöpe atabiliyordu.
+- Yıl özeti ya da herkese açık profil kartı, tarayıcının önbelleğinden daha önce seçilen dilde gelebiliyordu.
+- Canlı kanalın gönderdiği indirmeler, sayfa hangi dilde olursa olsun İngiliz İngilizcesiydi.
+- Birinin görebileceklerini değiştiren bir oturum açma, o kişinin diğer açık sekmelerine ancak yarım dakikalık bir sonraki denetimde ulaşıyordu.
+- Canlı bağlantısını daha yeni bir sekmeye bırakan sekme, sonraki sayfasında bir tane geri alıyordu; böylece bir kişinin sekmeleri birbirinin bağlantısını kapatıp duruyordu.
+- Tablolar, rakamları boşlukla gruplayan dillerde 1.000 ile 1.023 birim arasındaki boyutları metin gibi sıralıyordu; Türkçe yüzdeler de öyle.
+- Adında yer tutucu olan bir başlık, örneğin "Big {device} Bunny", sunucunun iletilerinde dolduruluyordu.
+- Tablolar, İngilizce ve İskandinav dilleri dışındaki her dilde süreleri ve bir toplamdan sayıları (5 / 26) metin gibi sıralıyordu.
+- Bir dilde açık kalan sekme, başka bir sekme başka bir dili seçer seçmez sunucuyu o dilde duyuyordu.
+- Bir sayının yanındaki sözcük Lehçe, Rusça ve Ukraynacada yanlış biçimdeydi ("5 wieczory", "2 потоков").
+- Kapasite, bir kütüphanenin ilk dolumunu büyüme sayıyor ve her kütüphanenin eklediğini, hangi süre üzerinden ölçülürse ölçülsün altı aya bölüyordu; başka bir dosyanın yerini alan bir dosya (Radarr ya da Sonarr'dan bir yükseltme veya Jellyfin'in yeni kimlik verdiği bir dosya), yalnızca fark yeniyken tamamen yeni sayılıyordu.
+- SyncPlay ile birlikte izleyenler, biri diğerinden dakikalar sonra katıldığında bir grup sayılmıyordu; aynı anda aynı yerde biten oynatmalar artık birliktedir ve geçmiş bir kez yeniden gruplanır.
+- *Herkesin etkinliğini görme* izni olmayan biri, bir kütüphanenin *Hiç izlenmeyenler* listesinden başka birinin bir başlığı oynattığını anlayabiliyordu; artık yalnızca kendi izlediği sayılır.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Kütüphane sağlığı ve FinUI

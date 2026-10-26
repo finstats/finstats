@@ -10,6 +10,87 @@ Rendimiento es algo que ahora va más rápido o pesa menos; Estabilidad, algo qu
 acaparar memoria ni perder datos; Corregido, algo que daba una respuesta equivocada. Una versión `x.y.0` lleva una
 línea de título corta bajo su encabezado: ese título es el que la aplicación usa como titular de toda la serie.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Capacidad, un canal en directo, el modo sencillo e idiomas
+
+### Added
+- **Idiomas**: FinStats habla 23 idiomas. El inglés británico y estadounidense y el noruego bokmål y nynorsk los escribe y revisa el mantenedor; el danés, alemán, español, finés, francés, hindi, islandés, italiano, japonés, coreano, neerlandés, polaco, portugués (Brasil), ruso, sueco, turco, ucraniano y chino (simplificado y tradicional) son traducciones que nadie aquí ha revisado, y dicen en inglés lo que aún no tienen. Todas las páginas de ambos diseños, el perfil público, las Novedades y lo que el servidor responde con palabras (un error, las tarjetas del Resumen anual, lo que hace una tarea de Jellyfin) aparecen en el idioma elegido en Ajustes → Apariencia → Idioma, por navegador; mientras no se elija ninguno, decide el idioma del propio navegador. Los números, las fechas, las unidades y las listas se escriben como los escribe ese idioma. Un script puede pedir uno con `Accept-Language`.
+- **Modo sencillo**: un segundo diseño para quienes vienen de Plex, organizado como un servidor clásico de estadísticas de Plex. Una barra en la parte superior en lugar del menú, y solo las páginas de estadísticas: Inicio, Bibliotecas, Usuarios, Historial, Gráficos y Ajustes, con un engranaje para tu perfil, Ajustes, Novedades, el tema y cerrar sesión. Se elige por navegador en Ajustes → Apariencia → Diseño. Carga solo su propia mitad de FinStats, así que arranca más rápido; Resumen anual, En compañía, En camino, Seguridad y las páginas del servidor siguen en el diseño FinStats. Lleva los colores propios de FinStats, en claro y en oscuro, y nada en él se mueve.
+- **Inicio del modo sencillo**: lo que se está reproduciendo, con una tarjeta por reproducción (cómo se reproduce, desde casa o desde fuera, cuándo termina); las estadísticas de visualización como tarjetas clasificadas por número de reproducciones o por duración en los últimos N días; lo que contiene cada biblioteca y lo que ha llegado últimamente.
+- **Gráficos del modo sencillo**: reproducciones por tipo de contenido (día a día, por día de la semana y hora, las diez aplicaciones y personas principales), por cómo se reprodujeron (día a día, el máximo de reproducciones a la vez de cada día, la resolución del archivo y la enviada, aplicaciones y personas) y mes a mes, por número de reproducciones o por duración, de todo el mundo o de las personas elegidas.
+- **Bibliotecas, Usuarios y títulos en el modo sencillo**: tablas de cada biblioteca y cada persona con lo último que se reprodujo, en qué y desde dónde (la dirección, solo con *Ver detalles de red*), y una página para cada biblioteca, persona y título con sus cifras y su propio historial.
+- Para scripts: `/api/stats/split` (reproducciones por aplicación, persona, resolución, día o mes, desglosadas por tipo de contenido o por cómo se reprodujeron); listas de los más vistos por espectadores distintos (`sort=users`); la actividad limitada a las reproducciones vistas (`watched=1`); solo las estadísticas pedidas (`parts=`); el máximo desglosado en transcodificaciones, transmisiones directas y reproducciones directas, también por día; lo que contiene cada biblioteca y lo último que se reprodujo en ella; lo añadido recientemente por tipo (`kind=`); el mapa de calor por tipo de contenido; la última reproducción de una persona; si una reproducción se hace desde casa.
+- **Un canal en directo**: el panel, las descargas de En camino y la barra de estado se mantienen al día a través de un único WebSocket por pestaña (`/api/live`), así que lo que se reproduce y lo que se descarga cambia en pantalla en el momento en que cambia, y no en la siguiente consulta. Detrás de un proxy inverso que no deja pasar las conexiones WebSocket, o en una conexión que se ha cortado sin avisar, las páginas preguntan cada pocos segundos, como antes. `/api/now-playing`, `/api/downloads` y `/api/summary` siguen igual, para los scripts.
+- **Servidor → Capacidad**: ¿aguantará este servidor?, según lo que FinStats ha visto. Los momentos de más actividad registrados y los de los últimos 90 días: reproducciones a la vez y cuántas transcodificaron la imagen con hardware, sin él o sin que conste cómo (un historial importado de Tautulli es de Plex y queda fuera). Cada disco en el que están las bibliotecas y a qué ritmo lo llena lo que Jellyfin ha añadido en seis meses (un disco que empezó a llenarse hace poco se mide a partir de un mes después de su primer archivo, porque su primer mes es el de llenarlo) y, donde Jellyfin 10.11 o posterior informa del espacio libre, cuánto durará a ese ritmo. FinStats nunca dice cuántas reproducciones podría aguantar el servidor.
+- **Exportar .ics** en En camino → Próximamente: la lista tal como la has filtrado, descargada como archivo de calendario para importarla una vez. No se actualiza sola; una clave de calendario de Ajustes → Claves de API sigue dando un calendario que sí lo hace.
+- **Merece un vistazo**: Capacidad avisa cuando, aun siendo frecuente la transcodificación, todas las transcodificaciones de las que Jellyfin informó en 90 días se hicieron sin aceleración por hardware, cuando el escaneo de biblioteca de Jellyfin está en marcha una cuarta parte del tiempo o más, y cuando a un disco le quedan menos de seis meses de espacio. Cada aviso lleva sus cifras y se puede apartar, como los hallazgos de Estado de la biblioteca.
+- **De qué está hecha tu biblioteca** se puede limitar a una biblioteca o a varias, en Bibliotecas y en la página de cada biblioteca (`library_id=a,b`).
+- **Formatos de fecha y hora** en Ajustes → Apariencia: una fecha como 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 o 2026/01/31, y una hora de 24 o 12 horas, con o sin cero delante, o cada una como la escribe el idioma. Se guarda en este navegador.
+- **Una bienvenida**: la primera vez que alguien inicia sesión, en cualquier navegador, y al final de la configuración, FinStats pregunta el idioma, los formatos de fecha y hora y el diseño, con una imagen de cada uno. Omitir deja inglés británico, 31/01/2026, 13:05 y FinStats.
+
+### Changed
+- El logotipo dentro de una página es la marca sola junto a su nombre, escrito en Inter sea cual sea la fuente que elija un preset; donde aparece solo (el favicon) conserva su mosaico redondeado.
+- Una reproducción transcodificada por software se registra como tal cuando Jellyfin lo indica; antes se veía igual que una de un servidor que no lo dice. Las páginas siguen llamando Software a ambas.
+- Ahora una actualización ejecuta, una sola vez y empezando por la versión más antigua, lo que cada versión necesita hacer en una base de datos escrita por un FinStats anterior, además de sus migraciones. La de 2.3.0 lee los datos del servidor en el primer arranque, así que Capacidad está ahí desde el principio.
+
+### Performance
+- **Una página abierta no pide nada**: el panel hacía 30 peticiones por minuto para mantenerse al día y las descargas de En camino, 18; con el canal en directo, ninguna hace ni una. Haya las pestañas abiertas que haya, FinStats no pide a Jellyfin, Sonarr ni Radarr nada más que antes, y una pestaña oculta sigue permitiendo que la cola de descargas se consulte con menos frecuencia.
+- La página de una persona lee solo las reproducciones de esa persona: sus totales y su última reproducción se calculaban sobre todas las reproducciones del servidor y luego se limitaban a ella, unos cuatro segundos con un millón de reproducciones.
+- La página de una biblioteca lee solo los títulos y reproducciones de esa biblioteca, cuando antes contaba los de todas y se quedaba con una: un tercio del tiempo con un millón de reproducciones.
+- Con el reloj de Jellyfin por delante del de FinStats, *Después del escaneo de biblioteca de Jellyfin* volvía a leer toda la biblioteca cada minuto hasta que pasaba la diferencia; ahora cada escaneo se sigue una sola vez.
+- Un archivo GeoIP que no se podía abrir se volvía a copiar (cien megabytes o más) y se volvían a situar todas las direcciones, cada cuarto de hora; ahora solo se reintenta cuando cambia.
+- Estado de la biblioteca se abre al instante después de dejar el puntero sobre su enlace: lo que se había cargado por adelantado se guardaba donde la página nunca miraba.
+
+### Stability
+- Una actualización que fallaba después de ejecutar una migración, y que Docker reiniciaba enseguida, hacía una nueva copia de la base de datos a medio actualizar en cada arranque, y tres arranques eliminaban la única copia que podía abrir la versión anterior. Ahora se conserva la copia de antes de la actualización.
+- Un título eliminado en Jellyfin mientras se leía la biblioteca (un archivo sustituido por Radarr) podía hacer que la lectura se saltara otro título que seguía ahí y lo marcara como eliminado, y sus reproducciones podían pasar entonces a otra copia de él. Lo que una lectura no ha visto ahora se consulta primero por su ID.
+- Restaurar una copia de seguridad hecha antes de renombrar o mejorar un archivo restauraba por segunda vez todas las reproducciones movidas desde entonces al archivo nuevo, duplicadas para siempre.
+- Una solicitud de la respuesta de Seerr que FinStats no podía leer (un campo renombrado en una actualización de Seerr) quedaba marcada como eliminada en la lectura completa diaria.
+- Una tarea que se topaba con un error interno se quedaba «en marcha» para siempre y ningún disparador volvía a iniciarla hasta reiniciar FinStats; ahora termina como fallida.
+- Un zip de Tautulli dañado detenía la subida antes de eliminar el archivo, que contiene los tokens de todos los usuarios de Plex, hasta la limpieza de las seis horas.
+- Una importación o una restauración interrumpida mientras llegaba su archivo dejaba ese archivo en la carpeta de datos para siempre, direcciones incluidas; ahora se elimina en el siguiente arranque.
+- Una imagen podía servirse a medio escribir mientras se guardaba en caché, y el navegador se quedaba entonces con ella así.
+- Las claves de API revocadas se guardaban para siempre, por muchas que se crearan y revocaran.
+- Una lectura de las marcas de visto y favorito de alguien que volvía vacía o ilegible las borraba todas hasta la siguiente lectura; ahora se rechaza, como una lectura vacía de una biblioteca.
+- Un episodio con un número final que ningún episodio puede tener (una fecha escrita ahí) podía mantener ocupado el Estado de la biblioteca sin fin tras una lectura de la biblioteca.
+
+### Fixed
+- Una nota de versión con código dentro de una negrita (las de 2.0.2 y 2.0.3) mostraba las comillas invertidas en lugar de dar formato al código.
+- Un gráfico de recuentos podía numerar su eje 0, 3, 5, 8, 10, o incluso 0, 0, 1, 1, 1: pasos de 2,5 escritos redondeados. Los recuentos suben ahora en pasos enteros.
+- Una clave de calendario creada por alguien que no es gestor venía con un enlace a la dirección del propio navegador en lugar de a la dirección pública de FinStats, así que solo funcionaba desde dentro; además, la página pedía unos ajustes que se le denegaban.
+- La última reproducción de una persona podía durar unos segundos menos de lo necesario para contar como reproducción en cualquier otro sitio, y nombraba un título que su Historial no muestra.
+- Una restauración desde Eliminadas recientemente que fallaba no decía nada y dejaba su botón girando; lo mismo pasaba con un *Recuperar* fallido en Estado de la biblioteca y con un *Reabrir* o un *Resolver todas* fallidos en Seguridad.
+- El feed de calendario se llama FinStats en una aplicación de calendario, no finstats.
+- La cola de descargas mostraba quién había pedido cada descarga a cualquiera que pudiera verla; ahora la solicitud de otra persona requiere *Ver la actividad de todos*, como en En camino.
+- Quitar *Recibir notificaciones* no detenía lo que se enviaba a los destinos de esa persona, y además ya no podía desactivarlos.
+- Una reproducción pausada y reanudada dentro de la ventana de fusión se notificaba como detenida una vez, y su reanudación y su final real, nunca.
+- Las reproducciones de una pista podían pasar a una pista con el mismo nombre de otro artista («Intro») cuando su álbum salía de la biblioteca.
+- Un destino de notificaciones escrito como una dirección IPv4 dentro de una IPv6 (NAT64, 6to4) pasaba por pública aunque llegaba a la red local.
+- Una conexión de Sonarr o Radarr apuntada a otro servidor seguía mostrando durante una semana los pósteres del servidor anterior.
+- Las alertas de Seguridad decían que no había nada que revisar cuando se elegían dos personas o más, y una página que se quedaba vacía al resolver su última alerta no tenía forma de volver atrás.
+- Todas las claves de API que no habían caducado decían que caducaban «justo ahora».
+- Un cuadro de diálogo seguía sobre la página después de volver atrás, y la página no se desplazaba hasta cerrarlo.
+- El registro de auditoría mostraba ocho tipos de entrada (una reproducción o una copia de seguridad recuperada, la papelera vaciada, los perfiles públicos, un cambio de apariencia) por su ID, sin nada en Detalle.
+- Añadir un título a Mi lista desde su menú contextual fallaba sin decir nada cuando el servidor lo rechazaba.
+- *Visto en compañía* en el panel trataba a varias personas elegidas a la vez como una sola.
+- El resumen anual escribía las horas y los días por debajo de diez con la coma decimal del navegador junto a sus propias comas de millares.
+- Capacidad decía que un disco se llenaría "al ritmo de los últimos 0 meses".
+- En la página Seguridad, las direcciones sin lugar contaban las reproducciones de todos desde siempre, fuera cual fuera la persona y el periodo al que se limitaba la página.
+- Alguien con *Gestionar FinStats* pero sin *Ver la actividad de todos* podía mandar a la papelera la reproducción de cualquiera.
+- Una tarjeta del Resumen anual o de un perfil público podía salir de la caché del navegador en el idioma elegido antes.
+- Las descargas que enviaba el canal en directo estaban en inglés británico, fuera cual fuera el idioma de la página.
+- Un inicio de sesión que cambiaba lo que alguien puede ver llegaba a sus otras pestañas abiertas solo en la siguiente comprobación de medio minuto.
+- Una pestaña que cedía su conexión en directo a otra más nueva recuperaba una en su siguiente página, de modo que las pestañas de una persona se cerraban unas a otras sin parar.
+- Las tablas ordenaban como texto los tamaños de 1000 a 1023 unidades en los idiomas que agrupan cifras con un espacio, y lo mismo los porcentajes en turco.
+- Un título con un marcador en su nombre, como "Big {device} Bunny", se rellenaba en los mensajes del servidor.
+- Las tablas ordenaban como texto las duraciones y las cuentas sobre un total (5 de 26) en todos los idiomas salvo el inglés y los nórdicos.
+- Una pestaña aún abierta en un idioma recibía al servidor en otro en cuanto otra pestaña lo elegía.
+- Una palabra junto a un número tomaba la forma equivocada en polaco, ruso y ucraniano ("5 wieczory", "2 потоков").
+- Capacidad contaba como crecimiento el primer llenado de una biblioteca y dividía lo que añadía cada biblioteca entre seis meses, fuera cual fuera el periodo medido; un archivo que ocupaba el lugar de otro (una mejora de Radarr o Sonarr, o un archivo al que Jellyfin dio un id nuevo) contaba como nuevo entero, cuando solo la diferencia lo era.
+- Quienes veían juntos con SyncPlay no formaban un grupo cuando uno se unía minutos después del otro; las reproducciones que terminan a la vez en el mismo punto van juntas ahora, y el historial se agrupa de nuevo una vez.
+- Alguien sin *Ver la actividad de todos* podía deducir de *Nunca vistos* de una biblioteca que otra persona había reproducido un título; ahora cuenta solo lo que ha visto esa persona.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Estado de la biblioteca y FinUI

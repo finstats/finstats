@@ -10,6 +10,87 @@ Prestanda är något som har blivit snabbare eller lättare, Stabilitet något s
 läcka eller förlora data, och Åtgärdat något som gav fel svar. En `x.y.0`-version har en kort titelrad under
 rubriken: den titeln använder appen som rubrik för hela serien.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Kapacitet, en direktkanal, Enkelt läge och språk
+
+### Added
+- **Språk**: FinStats talar 23 språk. Brittisk och amerikansk engelska samt norskt bokmål och nynorska skrivs och granskas av underhållaren; danska, tyska, spanska, finska, franska, hindi, isländska, italienska, japanska, koreanska, nederländska, polska, portugisiska (Brasilien), ryska, svenska, turkiska, ukrainska och kinesiska (förenklad och traditionell) är översättningar som ingen här har granskat, och säger på engelska det de ännu inte har. Alla sidor i båda layouterna, den offentliga profilen, Ändringslogg och det servern svarar med ord (ett felmeddelande, korten i Återblick, vad ett jobb i Jellyfin gör) visas på det språk som har valts under Inställningar → Utseende → Språk, per webbläsare; tills ett språk har valts avgör webbläsarens eget språk. Tal, datum, enheter och listor skrivs så som det språket skriver dem. Ett skript kan be om ett språk med `Accept-Language`.
+- **Enkelt läge**: en andra layout för dig som kommer från Plex, uppbyggd som en klassisk statistikserver för Plex. Ett toppfält i stället för menyn, och bara statistiksidorna: Hem, Bibliotek, Användare, Historik, Diagram och Inställningar, med ett kugghjul för din profil, Inställningar, Ändringslogg, temat och utloggning. Väljs per webbläsare under Inställningar → Utseende → Layout. Det laddar bara sin egen halva av FinStats och startar därför snabbare; Återblick, Tillsammans, På väg, Säkerhet och serversidorna finns kvar i FinStats-layouten. Det använder FinStats egna färger, ljust och mörkt, och ingenting i det rör sig.
+- **Hem i Enkelt läge**: det som spelas, med ett kort per ström (hur den spelas upp, hemifrån eller utifrån, när den tar slut), tittarstatistiken som rankade kort efter antal uppspelningar eller speltid de senaste N dagarna, vad varje bibliotek innehåller och vad som har kommit på senare tid.
+- **Diagram i Enkelt läge**: uppspelningar efter mediatyp (dag för dag, efter veckodag och timme, de tio vanligaste apparna och personerna), efter hur de spelades upp (dag för dag, flest strömmar samtidigt varje dag, filens och den skickade upplösningen, appar och personer) och månad för månad, efter antal uppspelningar eller speltid, för alla eller för de valda personerna.
+- **Bibliotek, Användare och titlar i Enkelt läge**: tabeller över alla bibliotek och personer med vad som spelades senast, på vad och varifrån (adressen bara med *Se nätverksdetaljer*), och en sida för varje bibliotek, person och titel med dess siffror och dess egen historik.
+- För skript: `/api/stats/split` (uppspelningar efter app, person, upplösning, dag eller månad, uppdelade efter mediatyp eller efter hur de spelades upp); topplistor efter antal olika tittare (`sort=users`); aktivitet begränsad till uppspelningar som räknas som sedda (`watched=1`); insikter bara för de delar som efterfrågas (`parts=`); toppbelastningen uppdelad i omkodningar, direktströmningar och direktuppspelningar, även per dag; vad varje bibliotek innehåller och vad som spelades där senast; nyligen tillagt efter typ (`kind=`); värmekartan efter mediatyp; en persons senaste uppspelning; om en ström spelas upp hemifrån.
+- **En direktkanal**: Översikt, nedladdningarna i På väg och statusfältet håller sig uppdaterade över en WebSocket per flik (`/api/live`), så det som spelas och laddas ner ändras på skärmen i samma stund som det sker i stället för vid nästa koll. Bakom en omvänd proxy som inte släpper igenom WebSocket-uppgraderingar, eller på en anslutning som föll bort utan ett ord, frågar sidorna med några sekunders mellanrum som förut. `/api/now-playing`, `/api/downloads` och `/api/summary` är kvar som de är, för skript.
+- **Server → Kapacitet**: klarar den här servern sig, utifrån det FinStats har sett? De mest belastade ögonblicken som finns registrerade och de senaste 90 dagarnas: strömmar samtidigt, och hur många som fick bilden omkodad med hårdvara, utan, eller utan att något angavs (en historik som importerats från Tautulli kommer från Plex och räknas inte med). Varje disk som biblioteken ligger på och hur snabbt det Jellyfin har lagt till under sex månader fyller den (en disk som har fyllts på senare mäts från en månad efter dess första fil, eftersom den första månaden är själva påfyllningen), och, där Jellyfin 10.11 eller senare anger ledigt utrymme, hur länge det räcker i den takten. FinStats säger aldrig hur många strömmar servern skulle klara.
+- **Exportera .ics** under På väg → Kommande: listan som du har filtrerat den, nedladdad som en kalenderfil att importera en gång. Den uppdaterar sig inte själv; en kalendernyckel från Inställningar → API-nycklar ger fortfarande en kalender som gör det.
+- **Värt en titt**: Kapacitet säger till när varje omkodning som Jellyfin har rapporterat om under 90 dagar har körts utan hårdvaruacceleration trots att omkodning är vanligt, när Jellyfins biblioteksgenomsökning pågår en fjärdedel av tiden eller mer, och när en disk har mindre än sex månaders utrymme kvar. Varje punkt kommer med sina siffror och kan läggas åt sidan, precis som fynden i Bibliotekshälsa.
+- **Vad ditt bibliotek består av** kan avgränsas till ett bibliotek eller flera, under Bibliotek och på varje biblioteks egen sida (`library_id=a,b`).
+- **Datum- och tidsformat** under Inställningar → Utseende: ett datum som 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 eller 2026/01/31, och en tid med 24 eller 12 timmar, med eller utan inledande nolla, eller båda så som språket skriver dem. Sparas i den här webbläsaren.
+- **Ett välkomnande**: första gången någon loggar in, oavsett webbläsare, och i slutet av installationen, frågar FinStats efter språk, datum- och tidsformat och layout, med en bild av varje. Hoppa över behåller brittisk engelska, 31/01/2026, 13:05 och FinStats.
+
+### Changed
+- Logotypen inne på en sida är det rena märket bredvid namnet, satt i Inter oavsett vilket typsnitt en förinställning väljer; där den står ensam (favikonen) behåller den sin rundade ruta.
+- En uppspelning som har omkodats i mjukvara registreras som det där Jellyfin anger det; tidigare såg den likadan ut som en från en server som inte anger det. Sidorna kallar fortfarande båda för Mjukvara.
+- En uppdatering kör nu, en gång och äldsta versionen först, det som en version behöver göra med en databas som en äldre FinStats har skrivit, vid sidan av migreringarna. I 2.3.0 läses serverns uppgifter vid första starten, så Kapacitet finns där direkt.
+
+### Performance
+- **En sida som står öppen frågar inte efter något**: Översikt gjorde 30 förfrågningar i minuten för att hålla sig uppdaterad och nedladdningarna i På väg 18; med direktkanalen gör båda inga alls. Hur många flikar som än är öppna frågar FinStats inte Jellyfin, Sonarr och Radarr om något mer än förut, och en dold flik låter fortfarande nedladdningskön läsas mer sällan.
+- En persons sida läser bara den personens uppspelningar: totalerna och den senaste uppspelningen räknades ut över alla uppspelningar på servern och begränsades sedan till personen, ungefär fyra sekunder på en miljon uppspelningar.
+- Ett biblioteks sida läser bara det bibliotekets titlar och uppspelningar, där den förut räknade alla bibliotekens och behöll ett: en tredjedel av tiden på en miljon uppspelningar.
+- När Jellyfins klocka gick före FinStats läste *Efter Jellyfins biblioteksgenomsökning* hela biblioteket på nytt varje minut tills skillnaden hade passerat; nu följs varje genomsökning en gång.
+- En GeoIP-fil som inte gick att öppna kopierades på nytt, hundra megabyte och mer, och varje adress placerades på nytt, varje kvart; nu provas den igen först när den ändras.
+- Bibliotekshälsa öppnas direkt efter att pekaren har vilat på länken: det som hade hämtats i förväg lades där sidan aldrig letade.
+
+### Stability
+- En uppdatering som misslyckades efter att en migrering hade körts, och som Docker genast startade om, tog en ny kopia av den halvt uppdaterade databasen vid varje start, och tre starter rensade bort den enda kopia som den föregående versionen kunde öppna. Kopian från före uppdateringen behålls nu.
+- En titel som togs bort i Jellyfin medan biblioteket lästes (en fil som Radarr bytte ut) kunde få läsningen att missa en annan titel som fortfarande fanns kvar och markera den som borttagen, och dess uppspelningar kunde sedan flyttas till en annan kopia av den. Det som en läsning inte såg efterfrågas nu först via id.
+- Att återställa en säkerhetskopia som togs innan en fil bytte namn eller uppgraderades återställde en gång till varje uppspelning som sedan hade flyttats till den nya filen, så att den fanns dubbelt för gott.
+- Ett önskemål i Seerrs svar som FinStats inte kunde läsa (ett fält som bytte namn i en uppdatering av Seerr) markerades som borttaget av den dagliga fullständiga läsningen.
+- Ett jobb som stötte på en bugg stod kvar som ”körs” för gott, och ingen utlösare startade det igen förrän FinStats startades om; nu avslutas det som misslyckat.
+- En skadad Tautulli-zip stoppade uppladdningen innan filen togs bort, och den låg kvar, med alla Plex-användares åtkomsttoken, tills rensningen efter sex timmar.
+- En import eller återställning som avbröts medan filen kom in lämnade filen kvar i datamappen för gott, adresser och allt; nu tas den bort vid nästa start.
+- En bild kunde serveras halvskriven medan den lades i cachen, och webbläsaren behöll den sedan så.
+- Återkallade API-nycklar sparades för gott, hur många som än skapades och återkallades.
+- En läsning av någons sedd- och favoritmarkeringar som kom tillbaka tom eller oläslig rensade alla till nästa läsning; den avvisas nu, som en tom läsning av ett bibliotek.
+- Ett avsnitt med ett slutnummer som inget avsnitt kan ha (ett datum skrivet där) kunde hålla Bibliotekshälsa sysselsatt utan slut efter en läsning av biblioteket.
+
+### Fixed
+- En punkt i ändringsloggen med kod inuti fetstil (i 2.0.2 och 2.0.3) visade sina backticks i stället för att visa koden.
+- Ett diagram över antal kunde numrera sin axel 0, 3, 5, 8, 10 eller till och med 0, 0, 1, 1, 1: steg på 2,5 skrivna avrundade. Antal stiger nu i hela steg.
+- En kalendernyckel som skapades av någon som inte får hantera FinStats fick en länk till webbläsarens egen adress i stället för FinStats offentliga, så den fungerade bara inifrån; sidan bad också om inställningar som den nekades.
+- En persons senaste uppspelning kunde vara några sekunder för kort för att räknas som en uppspelning någon annanstans, och nämnde då en titel som personens Historik inte visar.
+- En återställning från Nyligen borttagna som misslyckades sa ingenting och lät knappen fortsätta snurra; detsamma gjorde ett misslyckat *Ta tillbaka* i Bibliotekshälsa och ett misslyckat *Öppna igen* eller *Lös alla* i Säkerhet.
+- Kalenderflödet heter FinStats i en kalenderapp, inte finstats.
+- Nedladdningskön visade vem som hade bett om varje nedladdning för alla som fick se den; någon annans önskemål kräver nu *Se allas aktivitet*, som i På väg.
+- Att ta bort *Få aviseringar* stoppade inte det som skickades till personens mottagare, och hen kunde inte längre stänga av dem.
+- En uppspelning som pausades och återupptogs inom sammanslagningsfönstret aviserades som stoppad en gång, medan återupptagningen och det verkliga slutet aldrig aviserades.
+- Ett spårs uppspelningar kunde flyttas till en annan artists spår med samma namn (”Intro”) när dess album försvann ur biblioteket.
+- En aviseringsmottagare skriven som en IPv4-adress inuti IPv6 (NAT64, 6to4) godtogs som offentlig trots att den nådde det lokala nätverket.
+- En anslutning till Sonarr eller Radarr som riktades mot en annan server fortsatte att visa den gamla serverns affischer i en vecka.
+- Larmen i Säkerhet sa att inget behövde ses över när två eller fler personer var valda, och en sida som blev tom när dess sista larm löstes hade ingen väg tillbaka.
+- Varje API-nyckel som inte hade gått ut sa att den gick ut ”nyss”.
+- En dialogruta låg kvar över sidan efter Tillbaka, och sidan gick inte att rulla förrän den stängdes.
+- Granskningsloggen visade åtta typer av poster (en uppspelning eller säkerhetskopia som tagits tillbaka, papperskorgen tömd, offentliga profiler, ett ändrat utseende) med sina id:n och ingenting under Detalj.
+- Att lägga en titel i Min lista från dess snabbmeny misslyckades utan ett ord när servern sa nej.
+- *Sett tillsammans* på Översikt behandlade flera personer som valts samtidigt som en enda person.
+- Återblicken skrev timmar och dagar under tio med webbläsarens decimalkomma, samtidigt som den själv använde komma som tusentalsavgränsare.
+- Kapacitet sa att en disk skulle bli full "i takten från de senaste 0 månaderna".
+- På sidan Säkerhet räknade adresserna utan plats allas uppspelningar genom alla tider, oavsett vilken person och period sidan var avgränsad till.
+- Någon med *Hantera FinStats* men utan *Se allas aktivitet* kunde lägga vems uppspelning som helst i papperskorgen.
+- Ett kort från Återblick eller en offentlig profil kunde komma från webbläsarens cache på det språk som valts förut.
+- Nedladdningarna som livekanalen skickade var på brittisk engelska, oavsett vilket språk sidan var på.
+- En inloggning som ändrade vad någon får se nådde deras andra öppna flikar först vid nästa kontroll efter en halv minut.
+- En flik som lämnade ifrån sig sin liveanslutning till en nyare tog tillbaka en vid nästa sida, så att en persons flikar hela tiden stängde varandras.
+- Tabeller sorterade storlekar från 1 000 till 1 023 enheter som text på språk som grupperar siffror med mellanslag, och turkiska procent likaså.
+- En titel med en platshållare i namnet, som "Big {device} Bunny", fylldes i av serverns meddelanden.
+- Tabeller sorterade längder och antal av en helhet (5 av 26) som text på alla språk utom engelska och de nordiska.
+- En flik som fortfarande var öppen på ett språk fick serverns svar på ett annat så snart en annan flik hade valt det.
+- Ett ord bredvid ett tal fick fel form på polska, ryska och ukrainska ("5 wieczory", "2 потоков").
+- Kapacitet räknade ett biblioteks första fyllning som tillväxt och delade det varje bibliotek lade till med sex månader, oavsett hur länge det mättes; en fil som tog en annans plats (en uppgradering från Radarr eller Sonarr, eller en fil som Jellyfin gav ett nytt id) räknades som helt ny, när bara skillnaden var ny.
+- De som tittade tillsammans med SyncPlay blev ingen grupp när en anslöt några minuter efter den andra; uppspelningar som slutar samtidigt på samma ställe hör ihop nu, och historiken grupperas om en gång.
+- Någon utan *Se allas aktivitet* kunde se av ett biblioteks *Aldrig sett* att någon annan hade spelat en titel; nu räknas bara den egna tittningen.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Bibliotekshälsa och FinUI

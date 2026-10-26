@@ -10,6 +10,87 @@ vart raskare elle lettare, Stabilitet nåke som ikkje lenger kan krasje, stanse,
 som gidde feil svar. Ei `x.y.0`-utgjeving he ei kort tittellinje under overskrifta si: den tittelen bruka appen
 som overskrift for heile serien.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Kapasitet, direktekanal, Tautulli-stil og språk
+
+### Added
+- **Språk**: FinStats snakkar 24 språk. Britisk og amerikansk engelsk og norsk bokmål og nynorsk e skrivne og kontrollerte av utviklari, som også kontrollerer synnmørsk, den eie dialekta til utviklari ifrå Søre Sunnmøre; dansk, tysk, spansk, finsk, fransk, hindi, islandsk, italiensk, japansk, koreansk, nederlandsk, polsk, portugisisk (Brasil), russisk, svensk, tyrkisk, ukrainsk og kinesisk (forenkla og tradisjonell) e omsetjingar ingen her he kontrollert, og viser på engelsk d dei ikkje he endå. Alle sidene i begge oppsetta, den offentlege profili, Endringslogg og d serveri svarar me ord (ei feilmelding, korta i Tilbakeblikk, ka en jobb i Jellyfin gjær) vert viste på språke som e valt under Innstillingar → Utsjånad → Språk, per nettlesar; til en språk e valt, avgjer språke til nettlesari, og en nettlesar på en språk FinStats ikkje snakkar, får amerikansk engelsk. Tal, datoa, einingar og lister vert skrivne sann d språke skriv dei. En skript kan be om en språk me `Accept-Language`.
+- **Tautulli-stil**: en andre oppsett for dei som kjøme ifrå Plex, lagt opp sann en klassisk statistikkserver for Plex e. Ei linje øvst istade for menyen, og bære statistikksidene: Heim, Bibliotek, Brukarar, Historikk, Grafa og Innstillingar, me en tannhjul for profili din, Innstillingar, Endringslogg, temae og utlogging. Vert valt per nettlesar under Innstillingar → Utsjånad → Oppsett. D lastar bære sin eie halvpart av FinStats, so d starta raskare; Tilbakeblikk, Saman, På veg, Tryggleik og serversidene vert verande i FinStats-oppsette. D he dei samme fargane som FinStats, lyst og mørkt, og ingenting på d rører sej. Ikkje knytt til Tautulli.
+- **Heim i Tautulli-stilen**: d som vert spela, eitt kort per straum (korleis han vert spela, ifrå heimenettverke elle utanfrå, når han sluttar), visingsstatistikki som rangerte kort ette tal på avspelingar elle lengd dei siste N dagane, ka kvart bibliotek he og ka som he kome nyleg.
+- **Grafa i Tautulli-stilen**: avspelingar ette mediatype (dag for dag, ette vekedag og time, dei ti mest brukte appane og personane), ette korleis dei vart spela (dag for dag, flest strauma samstundes kvar dag, oppløysinga til fila og den som vart sendt, appa og persona) og månad for månad, ette tal på avspelingar elle lengd, for alle elle for dei som e valde.
+- **Bibliotek, Brukarar og titla i Tautulli-stilen**: tabella over kvart bibliotek og kvar person me ka som sist vart spela, på ka og ifrå kor (adressa bære me *Sjå nettverk*), og ei side for kvart bibliotek, kvar person og kvar tittel me tala og historikki sin.
+- For skript: `/api/stats/split` (avspelingar ette app, person, oppløysing, dag elle månad, delte ette mediatype elle ette korleis dei vart spela); topplister ette tal på ulike sjåara (`sort=users`); aktivitet avgrensa til avspelingar som tel som sett (`watched=1`); innsikt bære for dei delane ein spør ette (`parts=`); flest samstundes strauma delt i omkodingar, direktestrøymingar og direkteavspelingar, også for kvar dag; ka kvart bibliotek he, og ka som sist vart spela der; nyleg lagt til ette type (`kind=`); varmekarte ette mediatype; den siste avspelinga til en person; om en straum vert spela ifrå heimenettverke.
+- **En direktekanal**: Oversikt, nedlastingane i På veg og statuslinja helde sej oppdaterte over éin WebSocket per fane (`/api/live`), so d som vert spela og d som vert lasta ned, endrar sej på skjermi når d endrar sej, ikkje ved neste kikk. Bak en omvend proxy som ikkje sender WebSocket-oppgraderingar vidare, elle på ei tilkopling som fall bort utan en ord, spør sidene me nokren sekunds mellomrom som før. `/api/now-playing`, `/api/downloads` og `/api/summary` e som før, for skript.
+- **Server → Kapasitet**: om dinna serveri vil klare sej, ut ifrå d FinStats he sett. Dei travlaste augneblinkane som e registrerte, og dei ifrå dei siste 90 dagane: strauma samstundes, og kor monge som fekk bilete koda om me maskinvare, utan, elle utan at nåke vart sagt om d (historikk importert ifrå Tautulli kjøme ifrå Plex og e halden utanfor). Kvar disk biblioteka ligge på, og kor fort d Jellyfin he lagt til over seks månada, fyller han (en disk som vart teken i bruk nyleg, vert målt ifrå en månad ette den første fila, sida han vart fylt opp den første månadi), og, der Jellyfin 10.11 elle nyare melder ledig plass, kor lenge plassi rekk i d tempoe. FinStats seier aldri kor monge strauma serveri kunne ha klart.
+- **Eksporter .ics** i På veg → Kjøme: lista sann du he filtrert ho, lasta ned som ei kalenderfil du importerer eingong. Ho oppdaterer sej ikkje sjølv; en kalendernøkkel ifrå Innstillingar → API-nøkla gir framleis en kalender som gjær d.
+- **Vært en titt**: Kapasitet gjær merksam på d når kvar omkoding Jellyfin he meldt om på 90 daga, gjekk utan maskinvareakselerasjon menst omkoding e vanleg, når biblioteksskanninga i Jellyfin går en fjerdedel av tida elle meir, og når en disk he plass til mindre enn seks månada til. Kvart ponkt kjøme me tala sine og kan leggjast til sides som funna i Bibliotekhelse.
+- **Ka biblioteke ditt består av** kan avgrensast til eitt bibliotek elle fleire, både under Bibliotek og på sida til kvart bibliotek (`library_id=a,b`).
+- **Dato- og tidsformat** under Innstillingar → Utsjånad: en dato som 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 elle 2026/01/31, og en klokkeslett me 24 elle 12 timar, me elle utan 0 framfor, elle begge sann språke skriv dei. Vert lagra i dinna nettlesari.
+- **Ei velkomst**: fyrste gong nokon loggar inn, samme ka nettlesar, og på slutten av oppsette, spør FinStats om språk, dato- og tidsformat, lyst elle mørkt og oppsett, me en bilete av kvart oppsett. Hopp over beheld britisk engelsk, 31/01/2026, 13:05, fargane til eininga og FinStats.
+
+### Changed
+- Logoen inne på ei side e d nakne merke ved sida av namne, sett i Inter samme ka skrift en førehandsval vel; der han står åleine (favikone), helde han på den avrunda flisa si.
+- Ei avspeling som vart koda om i programvare, vert registrert sann der Jellyfin seier d; før såg ho lik ut som ei ifrå en server som ikkje seier nåke. Sidene kallar framleis begge Programvare.
+- Ei oppdatering køyrer no, eingong og den eldste versjoni fyrst, d en versjon treng gjort me en database som en eldre FinStats skreiv, ved sida av migreringane. Arbeide for 2.3.0 les detaljane til serveri ved første oppstart, so Kapasitet e der me eingong.
+
+### Performance
+- **Ei side som står open, spør ikkje ette nåke**: Oversikt sende 30 førespurnada i minutte for å halde sej oppdatert, og nedlastingane i På veg 18; me direktekanali sender ingen av dei nokon. Samme kor monge faner som e opne, spør FinStats ikkje Jellyfin, Sonarr og Radarr om meir enn før, og ei skjult fane lèt framleis lesinga av nedlastingskøa gå seinare.
+- Sida til en person les bære avspelingane til den personi: summane og den siste avspelinga vart rekna ut over alle avspelingar på serveri og so avgrensa til personi, om lag fire sekund på en million avspelingar.
+- Sida til en bibliotek les bære titlane og avspelingane i d biblioteke, der ho før talde opp alle biblioteka og heldt på eitt: en tredjedel av tida på en million avspelingar.
+- Når klokka til Jellyfin gjekk føre klokka til FinStats, las *Ette biblioteksskanning i Jellyfin* heile biblioteke på nytt kvart minutt til skilnadi va gått; kvar skanning vert no følgd eingong.
+- Ei GeoIP-fil som ikkje kunne opnast, vart kopiert på nytt, hundre megabyte og meir, og kvar adresse plassert på nytt, kvart kvarter; no vert ho prøvd igjen bære når ho endrar sej.
+- Bibliotekhelse opnar me eingong ette at peikari he kvilt på lenkja: d som vart henta på førehand, vart lagt der sida aldri såg ette.
+
+### Stability
+- Ei oppdatering som feila ette at ei migrering hadde køyrt, og som Docker starta på nytt me eingong, tok en ny kopi av den halvvegs oppdaterte databasen ved kvar oppstart, og tre oppstarta rydda bort den einaste kopien den førre versjoni kunne opne. Kopien ifrå før oppdateringa vert no teken vare på.
+- En tittel som vart sletta i Jellyfin menst biblioteke vart lese (ei fil bytt ut av Radarr), kunne få lesinga til å gå glipp av en anna tittel som framleis va der og merkje han som fjerna, og avspelingane hans kunne so verte flytta over på en anna kopi av han. No spør FinStats fyrst ette ID for d ei lesing ikkje såg.
+- Å gjenopprette en tryggingskopi som va teken før ei fil vart døypt om elle oppgradert, gjenoppretta kvar avspeling som sida va flytta over på den nye fila, eingong til, og dobla ho for godt.
+- En førespurnad i svare ifrå Seerr som FinStats ikkje kunne lese (en felt som fekk nytt namn i ei Seerr-oppdatering), vart merkt som fjerna av den daglege fullstendige lesinga.
+- En jobb som trefte en feil, vart ståande som «køyrer» for godt, og ingen utløysar starta han igjen før FinStats vart starta på nytt; no endar han som mislukka.
+- Ei skadd zip-fil ifrå Tautulli stoppa opplastinga før fila vart fjerna, og fila, som helde tilgangstokena til alle Plex-brukarane, vart liggjande til opprydjinga ette seks tima.
+- En import elle ei gjenoppretting som vart stansa brått menst fila kom inn, la att fila i datamappa for godt, adresser og alt; no vert ho fjerna ved neste oppstart.
+- En bilete kunne verte sendt halvskrive menst d vart lagt i cache, og nettlesari heldt då på d sann.
+- Tilbakekalla API-nøkla vart aldri sletta, samme kor monge som vart laga og tilbakekalla.
+- Ei lesing av avspela- og favorittmerka til nokon som kom tilbake tom elle ulesleg, fjerna alle saman til neste lesing; ho vert no avvist, slik ei tom lesing av eit bibliotek vert.
+- En episode me eit sluttnummer ingen episode kan ha (en dato skriven der) kunne halde Bibliotekhelse oppteken utan ende ette ei lesing av biblioteke.
+
+### Fixed
+- En endringsmerknad me kode inne i feit skrift (i 2.0.2 og 2.0.3) viste backtick-teikna istade for å teikne koden.
+- Eit diagram over tal kunne nummerere aksen 0, 3, 5, 8, 10, elle tillåme 0, 0, 1, 1, 1: steg på 2,5 skrivne avrunda. Tal stig no i heile steg.
+- En kalendernøkkel laga av nokon utan løyve Administrere kom me ei lenkje på adressa i nettlesari istade for den offentlege adressa til FinStats, so han verka bære innanfrå; sida spurde også ette innstillingar ho vart nekta.
+- Den siste avspelinga til en person kunne være nokren sekund for kort til å telje som avspeling nokon anna stad, og nemnde då en tittel som Historikk for personi ikkje viser.
+- Ei gjenoppretting ifrå Nyleg sletta som feila, sa ingenting og let knappi snurre vidare; d samme gjor ei mislukka *Hent tilbake* i Bibliotekhelse og ei mislukka *Opne på nytt* elle *Løys alle* i Tryggleik.
+- Kalenderabonnemente heiter FinStats i en kalenderapp, ikkje finstats.
+- Nedlastingskøa viste kven som hadde bede om kvar nedlasting til alle som fekk sjå ho; førespurnadi til nokon andre krev no *Sjå alle*, som i På veg.
+- Å ta *Varsle* ifrå en person stoppa ikkje d mottakarane til personi fekk tilsendt, og personi kunne ikkje lenger slå dei av.
+- Ei avspeling som vart sett på pause og teken opp att innanfor samanslåingsvindauge, vart varsla som stoppa eingong, menst gjenopptakinga og den verkelege slutti aldri vart varsla.
+- Avspelingane av en spor kunne verte flytta over på en spor me samme namn av en anna artist («Intro») når albume forsvann ifrå biblioteke.
+- En varselmottakar skriven som ei IPv4-adresse inne i IPv6 (NAT64, 6to4) slapp gjennom som offentleg sjølv om han nådde d lokale nettverke.
+- Ei Sonarr- elle Radarr-tilkopling som vart peika mot en anna server, viste plakatane ifrå den gamle serveri i ei veke til.
+- Varsla i Tryggleik sa at ingenting trong en kikk når to elle fleire persona va valde, og ei side som vart tom då d siste varsele på ho vart løyst, hadde ingen veg tilbake.
+- Kvar API-nøkkel som ikkje hadde gått ut, sa at han gjekk ut «akkurat no».
+- En dialog vart liggjande over sida ette Tilbake, og sida vilde ikkje rulle før han va lukka.
+- Revisjonsloggi viste åtte typa oppføringar (ei avspeling elle en tryggingskopi henta tilbake, papirkorga tømd, offentlege profila, en endra utsjånad) me ID-ane sine og ingenting under Detaljar.
+- Å leggje en tittel til i Lista mi ifrå kontekstmenyen feila utan en ord når serveri nekta.
+- *Sett saman* på Oversikt handsama fleire persona valde samstundes som éin person.
+- Tilbakeblikke skreiv tima og daga under ti me desimalkommae til nettlesari ved sida av sine eigne komma som tusenskiljeteikn.
+- Kapasitet sa at en disk ville bli full "i tempoe ifrå dei siste 0 månadene".
+- På sida Tryggleik talde adressene utan stad avspelingane til alle gjennom all tid, samme ka person og periode sida va avgrensa til.
+- Nokon me *Administrere*, men ikkje *Sjå alle*, kunne leggje avspelinga til kven som helst i papirkorga.
+- Eit kort ifrå Tilbakeblikk elle en offentleg profil kunne kome ifrå snøgglagere i nettlesari på språke som va valt før.
+- Nedlastingane direktekanalen sende, va på britisk engelsk, samme ka språk sida va på.
+- Ei pålogging som endra ka nokon får sjå, nådde dei andre opne fanene deira først ved neste kontroll ette eit halvt minutt.
+- Ei fane som gav ifrå sej direktesambande til ei nyare, tok eit tilbake på neste side, so fanene til ein person heldt fram me å stengje kvarandre sine.
+- Tabellar sorterte storleikar ifrå 1 000 til 1 023 einingar som tekst på språk som grupperer siffer me mellomrom, og prosentar på tyrkisk likeins.
+- En tittel me en plasshaldar i namne, som "Big {device} Bunny", vart fylt ut av meldingane til tenaren.
+- Tabellar sorterte lengder og tal av eit heile (5 av 26) som tekst på alle språk unnateke engelsk og dei nordiske.
+- Ei fane som framleis va open på eitt språk, fekk svar ifrå tenaren på eit anna so snart ei anna fane hadde valt d.
+- Eit ord ved sida av eit tal fekk feil form på polsk, russisk og ukrainsk ("5 wieczory", "2 потоков").
+- Kapasitet rekna den første fyllinga av eit bibliotek som vekst, og delte d kvart bibliotek la til på seks månader, samme kor lenge d va målt over; ei fil som tok plassen til ei anna (ei oppgradering frå Radarr elle Sonarr, elle ei fil Jellyfin gav ny id) talde som heilt ny, når bære skilnaden va ny.
+- Folk som såg saman me SyncPlay vart ikkje ei gruppe når en vart me nokren minutt ette at den andre hadde starta; avspelinga som sluttar samstundes på same stad, høyrer saman no, og historikki vert gruppert på nytt éin gong.
+- Nokon utan *Sjå alle* kunne sjå av *Aldri sett* på biblioteke at en annan hadde spela av en tittel; no tel han bære deira eie vising.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Bibliotekhelse og FinUI

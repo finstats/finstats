@@ -11,6 +11,87 @@ ne peut plus planter, s’arrêter, fuir ou perdre de données, Corrections ce q
 fausse. Une version `x.y.0` porte une courte ligne de titre sous son en-tête : c’est ce titre que
 l’application utilise comme intitulé de toute la série.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Capacité, un canal en direct, le mode simple et les langues
+
+### Added
+- **Langues** : FinStats parle 23 langues. L’anglais britannique et américain ainsi que le norvégien bokmål et nynorsk sont écrits et relus par le mainteneur ; le danois, l’allemand, l’espagnol, le finnois, le français, l’hindi, l’islandais, l’italien, le japonais, le coréen, le néerlandais, le polonais, le portugais (Brésil), le russe, le suédois, le turc, l’ukrainien et le chinois (simplifié et traditionnel) sont des traductions que personne ici n’a relues, et disent en anglais ce qui leur manque encore. Chaque page des deux dispositions, le profil public, les notes de version et ce que le serveur répond en toutes lettres (une erreur, les cartes du bilan, ce que fait une tâche Jellyfin) s’affichent dans la langue choisie sous Paramètres → Apparence → Langue, pour chaque navigateur ; tant qu’aucune n’est choisie, c’est la langue du navigateur qui décide. Les nombres, les dates, les unités et les énumérations s’écrivent comme les écrit cette langue. Un script peut en demander une avec `Accept-Language`.
+- **Mode simple** : une deuxième disposition pour ceux qui viennent de Plex, organisée comme un serveur de statistiques Plex classique. Une barre en haut au lieu du menu, et seulement les pages de statistiques : Accueil, Médiathèques, Utilisateurs, Historique, Graphiques et Paramètres, avec un engrenage pour votre profil, les paramètres, les notes de version, le thème et la déconnexion. Il se choisit pour chaque navigateur sous Paramètres → Apparence → Disposition. Il ne charge que sa propre moitié de FinStats et démarre donc plus vite ; Bilan, Ensemble, Pipeline, Sécurité et les pages du serveur restent dans la disposition FinStats. Il porte les couleurs de FinStats, en clair comme en sombre, et rien n’y bouge.
+- **L’accueil du mode simple** : ce qui est en lecture, une carte par flux (comment il est lu, depuis le domicile ou de l’extérieur, quand il se termine), les statistiques de visionnage en cartes classées par nombre de lectures ou par durée sur les N derniers jours, ce que contient chaque médiathèque et ce qui y est arrivé récemment.
+- **Les graphiques du mode simple** : les lectures par type de média (jour par jour, par jour de la semaine et par heure, les dix premières applications et personnes), par mode de lecture (jour par jour, le maximum de flux simultanés de chaque jour, la résolution du fichier et celle envoyée, applications et personnes) et mois par mois, en nombre de lectures ou en durée, pour tout le monde ou pour les personnes choisies.
+- **Médiathèques, utilisateurs et titres en mode simple** : des tableaux de chaque médiathèque et de chaque personne avec ce qui a été lu en dernier, sur quoi et d’où (l’adresse seulement avec *Voir les détails réseau*), et une page pour chaque médiathèque, personne et titre avec ses chiffres et son propre historique.
+- Pour les scripts : `/api/stats/split` (lectures par application, personne, résolution, jour ou mois, réparties par type de média ou par mode de lecture) ; classements par nombre de spectateurs distincts (`sort=users`) ; activité restreinte aux lectures regardées (`watched=1`) ; analyses des seules parties demandées (`parts=`) ; le pic réparti entre transcodages, streaming direct et lectures directes, jour par jour aussi ; ce que contient chaque médiathèque et ce qu’elle a lu en dernier ; ajouts récents par type (`kind=`) ; la carte de chaleur par type de média ; la dernière lecture d’une personne ; si un flux est lu depuis le domicile.
+- **Un canal en direct** : le tableau de bord, les téléchargements de Pipeline et la barre d’état se tiennent à jour par un seul WebSocket par onglet (`/api/live`), si bien que ce qui est en lecture et ce qui se télécharge change à l’écran au moment même où cela change, et non au prochain coup d’œil. Derrière un proxy inverse qui ne transmet pas les mises à niveau WebSocket, ou sur une connexion coupée sans prévenir, les pages interrogent le serveur toutes les quelques secondes, comme avant. `/api/now-playing`, `/api/downloads` et `/api/summary` restent tels quels, pour les scripts.
+- **Serveur → Capacité** : ce serveur tiendra-t-il le coup, d’après ce que FinStats a vu ? Les moments les plus chargés jamais enregistrés et ceux des 90 derniers jours : les flux simultanés, et combien d’entre eux avaient leur image transcodée avec accélération matérielle, sans, ou sans que rien ne soit indiqué (un historique importé de Tautulli est celui de Plex et n’est pas pris en compte). Chaque disque qui porte les médiathèques, et la vitesse à laquelle ce que Jellyfin a ajouté en six mois le remplit (un disque rempli plus récemment est mesuré à partir d’un mois après son premier fichier, puisque son premier mois est celui de son remplissage), et, là où Jellyfin 10.11 ou plus récent indique l’espace libre, combien de temps celui-ci durera à ce rythme. FinStats ne dit jamais combien de flux le serveur pourrait supporter.
+- **Exporter en .ics** dans Pipeline → À venir : la liste telle que vous l’avez filtrée, téléchargée sous forme de fichier de calendrier à importer une fois. Elle ne se met pas à jour toute seule ; une clé de calendrier créée dans Paramètres → Clés API donne toujours un calendrier qui le fait.
+- **À examiner** : Capacité signale quand chaque transcodage dont Jellyfin a rendu compte en 90 jours s’est fait sans accélération matérielle alors que le transcodage est fréquent, quand l’analyse de la médiathèque par Jellyfin occupe un quart du temps ou plus, et quand il reste moins de six mois d’espace sur un disque. Chaque remarque est accompagnée de ses chiffres et peut être écartée comme les constats de Santé de la médiathèque.
+- **De quoi est faite votre médiathèque** peut se limiter à une médiathèque ou à plusieurs, dans Médiathèques et sur la page de chaque médiathèque (`library_id=a,b`).
+- **Formats de date et d’heure** dans Paramètres → Apparence : une date comme 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 ou 2026/01/31, et une heure sur 24 ou 12 heures, avec ou sans zéro devant, ou chacune comme la langue l’écrit. Gardés par ce navigateur.
+- **Un accueil** : la première fois que quelqu’un se connecte, quel que soit le navigateur, et à la fin de la configuration, FinStats demande la langue, les formats de date et d’heure et la mise en page, avec une image de chacune. Passer garde l’anglais britannique, 31/01/2026, 13:05 et FinStats.
+
+### Changed
+- Le logo à l’intérieur d’une page est le symbole seul à côté du nom, composé en Inter quelle que soit la police choisie par un préréglage ; là où il apparaît seul (le favicon), il garde sa tuile arrondie.
+- Une lecture transcodée de façon logicielle est enregistrée comme telle quand Jellyfin le précise ; auparavant, elle ressemblait à celle d’un serveur qui ne le précise pas. Les pages appellent toujours les deux Logiciel.
+- Une mise à jour exécute désormais, une seule fois et en commençant par la version la plus ancienne, ce dont une version a besoin sur une base de données écrite par un FinStats plus ancien, en plus de ses migrations. Celle de 2.3.0 lit les détails du serveur au premier démarrage, pour que Capacité soit disponible tout de suite.
+
+### Performance
+- **Une page laissée ouverte ne demande plus rien** : le tableau de bord faisait 30 requêtes par minute pour rester à jour, et les téléchargements de Pipeline 18 ; avec le canal en direct, ils n’en font plus aucune. Quel que soit le nombre d’onglets ouverts, FinStats ne demande rien de plus qu’avant à Jellyfin, Sonarr et Radarr, et un onglet masqué laisse toujours la file de téléchargement ralentir.
+- La page d’une personne ne lit plus que les lectures de cette personne : ses totaux et sa dernière lecture étaient calculés sur toutes les lectures du serveur puis restreints à elle, environ quatre secondes sur un million de lectures.
+- La page d’une médiathèque ne lit plus que les titres et les lectures de cette médiathèque, là où elle comptait ceux de toutes les médiathèques pour n’en garder qu’une : un tiers du temps sur un million de lectures.
+- Avec l’horloge de Jellyfin en avance sur celle de FinStats, *Après l’analyse de la médiathèque par Jellyfin* relisait toute la médiathèque chaque minute jusqu’à ce que l’écart soit rattrapé ; chaque analyse n’est désormais suivie qu’une fois.
+- Un fichier GeoIP impossible à ouvrir était recopié (cent mégaoctets et plus) et toutes les adresses relocalisées, tous les quarts d’heure ; il n’est réessayé que lorsqu’il change.
+- Santé de la médiathèque s’ouvre immédiatement après que le pointeur s’est posé sur son lien : ce qui avait été chargé à l’avance était rangé là où la page ne regardait jamais.
+
+### Stability
+- Une mise à jour qui échouait après l’exécution d’une migration, et que Docker redémarrait aussitôt, prenait à chaque démarrage une nouvelle copie de la base à moitié mise à jour, et trois démarrages suffisaient à supprimer la seule copie que la version précédente savait ouvrir. La copie d’avant la mise à jour est désormais conservée.
+- Un titre supprimé dans Jellyfin pendant que FinStats lisait la médiathèque (un fichier remplacé par Radarr) pouvait faire manquer un autre titre, pourtant toujours là, qui était alors marqué comme supprimé ; ses lectures pouvaient ensuite être déplacées vers une autre copie de ce titre. Ce que la lecture de la médiathèque n’a pas vu est désormais d’abord redemandé par son identifiant.
+- Restaurer une sauvegarde faite avant qu’un fichier soit renommé ou remplacé par une meilleure version restaurait une seconde fois, et pour de bon, chaque lecture déplacée depuis vers le nouveau fichier.
+- Une demande que FinStats ne savait pas lire dans la réponse de Seerr (un champ renommé par une mise à jour de Seerr) était marquée comme supprimée par la lecture complète quotidienne.
+- Une tâche qui rencontrait un bogue restait « en cours » pour toujours, et aucun déclencheur ne la relançait avant un redémarrage de FinStats ; elle se termine désormais en échec.
+- Un zip Tautulli endommagé interrompait l’envoi avant la suppression du fichier, qui contient les jetons de chaque utilisateur Plex, jusqu’au nettoyage des six heures.
+- Une importation ou une restauration interrompue pendant l’arrivée de son fichier laissait ce fichier dans le dossier de données pour toujours, adresses comprises ; il est supprimé au démarrage suivant.
+- Une image pouvait être servie à moitié écrite pendant sa mise en cache, et le navigateur la gardait alors ainsi.
+- Les clés API révoquées étaient conservées pour toujours, quel que soit le nombre de clés créées et révoquées.
+- Une lecture des marques vu et favori de quelqu’un revenue vide ou illisible les effaçait toutes jusqu’à la lecture suivante ; elle est désormais refusée, comme une lecture vide d’une médiathèque.
+- Un épisode dont le numéro de fin est impossible pour un épisode (une date écrite là) pouvait occuper sans fin la Santé de la médiathèque après une lecture de la médiathèque.
+
+### Fixed
+- Une note de version avec du code en gras (celles de 2.0.2 et 2.0.3) affichait ses accents graves au lieu de mettre le code en forme.
+- Un graphique de comptes pouvait numéroter son axe 0, 3, 5, 8, 10, voire 0, 0, 1, 1, 1 : des pas de 2,5 écrits arrondis. Les comptes montent désormais par pas entiers.
+- Une clé de calendrier créée par quelqu’un qui n’a pas le droit de gérer FinStats venait avec un lien vers l’adresse vue par le navigateur au lieu de l’adresse publique de FinStats, et ne fonctionnait donc que de l’intérieur ; la page demandait aussi des paramètres qui lui étaient refusés.
+- La dernière lecture d’une personne pouvait être trop courte de quelques secondes pour compter comme une lecture ailleurs, et nommer un titre que son Historique n’affiche pas.
+- Une restauration depuis Supprimées récemment qui échouait ne disait rien et laissait son bouton tourner ; de même pour un *Rétablir* raté dans Santé de la médiathèque et un *Rouvrir* ou un *Tout résoudre* raté dans Sécurité.
+- Le flux de calendrier s’appelle FinStats dans une application de calendrier, et non finstats.
+- La file de téléchargement indiquait qui avait demandé chaque téléchargement à quiconque avait le droit de la voir ; la demande de quelqu’un d’autre exige désormais *Voir l’activité de tous*, comme dans Pipeline.
+- Retirer *Recevoir des notifications* n’arrêtait pas ce qui était envoyé aux destinations de cette personne, qui ne pouvait plus les désactiver.
+- Une lecture mise en pause puis reprise dans le délai de fusion était annoncée une fois comme arrêtée, et sa reprise et sa vraie fin jamais.
+- Les lectures d’une piste pouvaient être déplacées vers la piste homonyme d’un autre artiste (« Intro ») quand son album quittait la médiathèque.
+- Une destination de notification écrite comme une adresse IPv4 dans de l’IPv6 (NAT64, 6to4) passait pour publique alors qu’elle atteignait le réseau local.
+- Une connexion Sonarr ou Radarr redirigée vers un autre serveur continuait d’afficher les affiches de l’ancien serveur pendant une semaine.
+- Les alertes de Sécurité disaient que rien ne demandait d’attention quand deux personnes ou plus étaient choisies, et une page vidée par la résolution de sa dernière alerte n’offrait aucun moyen de revenir.
+- Chaque clé API non expirée disait qu’elle avait expiré « à l’instant ».
+- Une boîte de dialogue restait au-dessus de la page après un retour arrière, et la page ne défilait plus tant qu’elle n’était pas fermée.
+- Le journal d’audit affichait huit types d’entrées (une lecture ou une sauvegarde rétablie, la corbeille vidée, les profils publics, une apparence modifiée) par leurs identifiants, sans rien dans Détail.
+- Ajouter un titre à la liste à voir depuis son menu contextuel échouait sans un mot quand le serveur refusait.
+- *Regardé ensemble* sur le tableau de bord traitait plusieurs personnes choisies à la fois comme une seule.
+- Le bilan écrivait les heures et les jours en dessous de dix avec la virgule décimale du navigateur, à côté de ses propres virgules de milliers.
+- Capacité disait qu’un disque serait plein "au rythme des 0 derniers mois".
+- Sur la page Sécurité, les adresses sans lieu comptaient les lectures de tous depuis toujours, quelle que soit la personne et la période choisies.
+- Quelqu’un ayant *Gérer FinStats* mais pas *Voir l’activité de tous* pouvait mettre la lecture de n’importe qui à la corbeille.
+- Une carte du Bilan ou d’un profil public pouvait sortir du cache du navigateur dans la langue choisie auparavant.
+- Les téléchargements envoyés par le canal en direct étaient en anglais britannique, quelle que soit la langue de la page.
+- Une connexion qui changeait ce que quelqu’un peut voir n’atteignait ses autres onglets ouverts qu’à la vérification suivante, toutes les demi-minutes.
+- Un onglet qui cédait sa connexion en direct à un plus récent en reprenait une à sa page suivante, si bien que les onglets d’une même personne se fermaient sans cesse les uns les autres.
+- Les tableaux triaient comme du texte les tailles de 1 000 à 1 023 unités dans les langues qui groupent les chiffres par un espace, et de même les pourcentages en turc.
+- Un titre contenant un espace réservé dans son nom, comme "Big {device} Bunny", était rempli par les messages du serveur.
+- Les tableaux triaient comme du texte les durées et les nombres sur un total (5 sur 26) dans toutes les langues sauf l’anglais et les langues nordiques.
+- Un onglet encore ouvert dans une langue recevait le serveur dans une autre dès qu’un autre onglet l’avait choisie.
+- Un mot à côté d’un nombre prenait la mauvaise forme en polonais, en russe et en ukrainien ("5 wieczory", "2 потоков").
+- Capacité comptait le premier remplissage d’une médiathèque comme de la croissance et divisait ce que chaque médiathèque ajoutait par six mois, quelle que soit la période mesurée; un fichier qui prenait la place d’un autre (une mise à niveau de Radarr ou Sonarr, ou un fichier auquel Jellyfin donnait un nouvel id) comptait comme entièrement nouveau, alors que seule la différence l’était.
+- Les personnes regardant ensemble avec SyncPlay ne formaient pas un groupe quand l’une rejoignait l’autre quelques minutes après ; les lectures qui finissent en même temps au même endroit vont ensemble désormais, et l’historique est regroupé une fois de plus.
+- Quelqu’un sans *Voir l’activité de tous* pouvait déduire de *Jamais regardés* d’une médiathèque qu’une autre personne avait lu un titre ; seul son propre visionnage compte désormais.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Santé de la médiathèque et FinUI

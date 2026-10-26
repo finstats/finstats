@@ -10,6 +10,87 @@ Prestaties is iets wat sneller of lichter is geworden, Stabiliteit iets wat niet
 lekken of gegevens kwijtraken, en Opgelost iets wat een verkeerd antwoord gaf. Een `x.y.0`-versie heeft onder
 de kop een korte titelregel: die titel gebruikt de app als kop van de hele reeks.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Capaciteit, een livekanaal, eenvoudige modus en talen
+
+### Added
+- **Talen**: FinStats spreekt 23 talen. Brits en Amerikaans Engels en Noors Bokmål en Noors Nynorsk worden door de beheerder geschreven en nagekeken; Deens, Duits, Spaans, Fins, Frans, Hindi, IJslands, Italiaans, Japans, Koreaans, Nederlands, Pools, Portugees (Brazilië), Russisch, Zweeds, Turks, Oekraïens en Chinees (vereenvoudigd en traditioneel) zijn vertalingen die niemand hier heeft nagekeken, en zeggen in het Engels wat ze nog niet hebben. Elke pagina van beide indelingen, het openbare profiel, het Wijzigingslog en wat de server in woorden antwoordt (een foutmelding, de kaarten van de Terugblik, wat een taak van Jellyfin doet) verschijnen in de taal die onder Instellingen → Uiterlijk → Taal is gekozen, per browser; tot er een is gekozen, beslist de eigen taal van de browser. Getallen, datums, eenheden en opsommingen worden geschreven zoals die taal ze schrijft. Een script kan om een taal vragen met `Accept-Language`.
+- **Eenvoudige modus**: een tweede indeling voor wie van Plex komt, opgebouwd zoals een klassieke statistiekserver voor Plex. Een balk bovenaan in plaats van het menu, en alleen de statistiekpagina’s: Start, Bibliotheken, Gebruikers, Geschiedenis, Grafieken en Instellingen, met een tandwiel voor je profiel, Instellingen, het Wijzigingslog, het thema en afmelden. Te kiezen per browser onder Instellingen → Uiterlijk → Indeling. Hij laadt alleen zijn eigen helft van FinStats en start daardoor sneller; Terugblik, Samen, Onderweg, Beveiliging en de serverpagina’s blijven in de FinStats-indeling. Hij draagt de eigen kleuren van FinStats, licht en donker, en niets erin beweegt.
+- **Start in de eenvoudige modus**: wat er speelt, met een kaart per stream (hoe hij afspeelt, thuis of van buitenaf, wanneer hij afloopt), de kijkstatistieken als gerangschikte kaarten naar aantal weergaven of duur over de afgelopen N dagen, wat elke bibliotheek bevat en wat er onlangs is binnengekomen.
+- **Grafieken in de eenvoudige modus**: weergaven per mediatype (per dag, per weekdag en uur, de tien belangrijkste apps en personen), naar hoe ze afspeelden (per dag, de meeste streams tegelijk op elke dag, de resolutie van het bestand en de verzonden resolutie, apps en personen) en per maand, naar aantal weergaven of duur, voor iedereen of voor de gekozen personen.
+- **Bibliotheken, Gebruikers en titels in de eenvoudige modus**: tabellen van elke bibliotheek en persoon met wat er het laatst is afgespeeld, waarop en vanwaar (het adres alleen met *Netwerkdetails zien*), en een pagina voor elke bibliotheek, persoon en titel met de cijfers en een eigen geschiedenis.
+- Voor scripts: `/api/stats/split` (weergaven per app, persoon, resolutie, dag of maand, uitgesplitst naar mediatype of naar hoe ze afspeelden); toplijsten naar aantal verschillende kijkers (`sort=users`); activiteit beperkt tot gekeken weergaven (`watched=1`); inzichten voor de gevraagde onderdelen (`parts=`); de piek uitgesplitst in transcoderingen, direct streamen en direct afspelen, ook per dag; wat elke bibliotheek bevat en het laatst afspeelde; onlangs toegevoegd per soort (`kind=`); de heatmap per mediatype; de laatste weergave van een persoon; of een stream van thuis afspeelt.
+- **Een livekanaal**: het dashboard, de downloads van Onderweg en de statusbalk houden zich actueel over één WebSocket per tabblad (`/api/live`), zodat wat er speelt en wat er downloadt op het scherm verandert op het moment dat het verandert, en niet pas bij de volgende keer kijken. Achter een reverse proxy die WebSocket-upgrades niet doorgeeft, of op een verbinding die zonder melding is weggevallen, vragen de pagina’s zoals voorheen om de paar seconden. `/api/now-playing`, `/api/downloads` en `/api/summary` blijven zoals ze zijn, voor scripts.
+- **Server → Capaciteit**: kan deze server het aan, op basis van wat FinStats heeft gezien. De drukste momenten ooit en van de afgelopen 90 dagen: streams tegelijk, en hoeveel daarvan hun beeld met hardware lieten transcoderen, zonder hardware, of zonder dat Jellyfin het zei (een geschiedenis die uit Tautulli is geïmporteerd, is die van Plex en telt niet mee). Elke schijf waar de bibliotheken op staan en hoe snel wat Jellyfin in zes maanden heeft toegevoegd hem vult (een schijf die pas onlangs is gevuld, wordt gemeten vanaf een maand na zijn eerste bestand, want die eerste maand is het vullen zelf), en, waar Jellyfin 10.11 of nieuwer de vrije ruimte meldt, hoe lang die in dat tempo meegaat. FinStats zegt nooit hoeveel streams de server aan zou kunnen.
+- **.ics exporteren** onder Onderweg → Binnenkort: de lijst zoals je hem hebt gefilterd, gedownload als agendabestand om één keer te importeren. Het werkt zichzelf niet bij; een agendasleutel uit Instellingen → API-sleutels geeft nog steeds een agenda die dat wel doet.
+- **Het bekijken waard**: Capaciteit wijst erop wanneer elke transcodering waarover Jellyfin in 90 dagen rapporteerde zonder hardwareversnelling liep terwijl transcoderen vaak voorkomt, wanneer de bibliotheekscan van Jellyfin een kwart van de tijd of meer loopt, en wanneer een schijf nog minder dan zes maanden ruimte heeft. Elk punt komt met zijn cijfers en kan opzij worden gelegd, net als de bevindingen van Bibliotheekgezondheid.
+- **Waar je bibliotheek uit bestaat** is te beperken tot één bibliotheek of meer, onder Bibliotheken en op de pagina van elke bibliotheek (`library_id=a,b`).
+- **Datum- en tijdnotaties** in Instellingen → Uiterlijk: een datum als 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 of 2026/01/31, en een tijd in 24 of 12 uur, met of zonder voorloopnul, of elk zoals de taal het schrijft. Bewaard door deze browser.
+- **Een welkom**: de eerste keer dat iemand zich aanmeldt, in welke browser ook, en aan het eind van de installatie, vraagt FinStats naar de taal, de datum- en tijdnotaties en de indeling, met van elk een afbeelding. Overslaan houdt Brits Engels, 31/01/2026, 13:05 en FinStats.
+
+### Changed
+- Het logo in een pagina is het kale beeldmerk naast de naam, gezet in Inter welk lettertype een preset ook kiest; waar het alleen staat (het favicon) houdt het zijn afgeronde tegel.
+- Een weergave die in software is getranscodeerd, wordt als zodanig vastgelegd waar Jellyfin dat zegt; voorheen zag die er hetzelfde uit als een van een server die het niet zegt. Pagina’s noemen beide nog steeds Software.
+- Een update voert nu, één keer en de oudste versie eerst, uit wat een versie moet doen aan een database die een oudere FinStats heeft geschreven, naast de migraties. Die van 2.3.0 leest bij de eerste start de gegevens van de server, zodat Capaciteit er meteen is.
+
+### Performance
+- **Een pagina die openstaat, vraagt niets**: het dashboard deed 30 verzoeken per minuut om actueel te blijven en de downloads van Onderweg 18; met het livekanaal doen ze er allebei geen. Hoeveel tabbladen er ook openstaan, FinStats vraagt Jellyfin, Sonarr en Radarr niet meer dan voorheen, en een verborgen tabblad laat de downloadwachtrij nog steeds vertragen.
+- De pagina van een persoon leest alleen de weergaven van die persoon: totalen en laatste weergave werden over elke weergave op de server uitgerekend en daarna tot die persoon beperkt, ongeveer vier seconden bij een miljoen weergaven.
+- De pagina van een bibliotheek leest alleen de titels en weergaven van die bibliotheek, waar hij die van elke bibliotheek telde en er één hield: een derde van de tijd bij een miljoen weergaven.
+- Liep de klok van Jellyfin voor op die van FinStats, dan las *Na de bibliotheekscan van Jellyfin* elke minuut de hele bibliotheek opnieuw tot het verschil voorbij was; elke scan wordt nu één keer gevolgd.
+- Een GeoIP-bestand dat niet kon worden geopend, werd elk kwartier opnieuw gekopieerd, honderd megabyte en meer, en elk adres werd opnieuw geplaatst; het wordt pas opnieuw geprobeerd als het verandert.
+- Bibliotheekgezondheid opent meteen nadat de aanwijzer op de link heeft gerust: wat vooraf was opgehaald, werd bewaard waar de pagina nooit keek.
+
+### Stability
+- Een update die mislukte nadat een migratie was uitgevoerd en die Docker meteen herstartte, maakte bij elke start een nieuwe kopie van de half bijgewerkte database, en na drie starts was de enige kopie die de vorige versie kon openen weggesnoeid. De kopie van vóór de update blijft nu bewaard.
+- Een titel die in Jellyfin werd verwijderd terwijl de bibliotheek werd gelezen (een bestand dat Radarr verving), kon ervoor zorgen dat het lezen een andere titel miste die er nog wel was en die als verwijderd markeerde, waarna de weergaven ervan op een andere kopie konden worden gezet. Wat het lezen niet zag, wordt nu eerst op id nagevraagd.
+- Een back-up terugzetten die was gemaakt voordat een bestand werd hernoemd of geüpgraded, zette elke weergave die sindsdien naar het nieuwe bestand was verplaatst een tweede keer terug, voorgoed verdubbeld.
+- Een aanvraag in het antwoord van Seerr die FinStats niet kon lezen (een veld dat in een update van Seerr was hernoemd), werd door de dagelijkse volledige leesronde als verwijderd gemarkeerd.
+- Een taak die tegen een bug aanliep, bleef voorgoed op ‘bezig’ staan, en geen trigger startte hem opnieuw tot FinStats werd herstart; hij eindigt nu als mislukt.
+- Bij een beschadigde zip van Tautulli stopte het uploaden voordat het bestand, dat de tokens van elke Plex-gebruiker bevat, werd verwijderd; het bleef liggen tot de opruimronde na zes uur.
+- Een import of terugzetting die werd afgebroken terwijl het bestand binnenkwam, liet dat bestand voorgoed in de gegevensmap staan, met adressen en al; het wordt bij de volgende start verwijderd.
+- Een afbeelding kon half geschreven worden geserveerd terwijl ze in de cache werd gezet, en de browser hield haar dan zo.
+- Ingetrokken API-sleutels werden voorgoed bewaard, hoeveel er ook werden gemaakt en ingetrokken.
+- Een lezing van iemands bekeken- en favorietmarkeringen die leeg of onleesbaar terugkwam, wiste ze allemaal tot de volgende lezing; die wordt nu geweigerd, zoals een lege lezing van een bibliotheek.
+- Een aflevering met een eindnummer dat geen aflevering kan hebben (een datum die daar staat) kon Bibliotheekgezondheid na een lezing van de bibliotheek eindeloos bezighouden.
+
+### Fixed
+- Een notitie in het Wijzigingslog met code binnen vette tekst (die van 2.0.2 en 2.0.3) toonde de backticks in plaats van de code.
+- Een grafiek van aantallen kon zijn as nummeren als 0, 3, 5, 8, 10, of zelfs 0, 0, 1, 1, 1: stappen van 2,5 afgerond geschreven. Aantallen stijgen nu in hele stappen.
+- Een agendasleutel die was gemaakt door iemand die geen beheerder is, kwam met een link op het eigen adres van de browser in plaats van het openbare adres van FinStats, zodat hij alleen van binnenuit werkte; de pagina vroeg ook om instellingen die werden geweigerd.
+- De laatste weergave van een persoon kon een paar seconden te kort zijn om ergens anders als weergave te tellen, en noemde dan een titel die niet in de Geschiedenis van die persoon staat.
+- Als terugzetten uit Onlangs verwijderd mislukte, zei de pagina niets en bleef de knop draaien; hetzelfde gold voor een mislukt *Terughalen* in Bibliotheekgezondheid en een mislukt *Heropenen* of *Alles afhandelen* in Beveiliging.
+- De agendafeed heet FinStats in een agenda-app, niet finstats.
+- De downloadwachtrij noemde aan iedereen die hem mocht zien wie om elke download had gevraagd; voor de aanvraag van een ander is nu *Activiteit van iedereen zien* nodig, net als in Onderweg.
+- Als *Meldingen ontvangen* werd ingetrokken, bleven de bestemmingen van die persoon berichten krijgen, en zelf kon diegene ze niet meer uitschakelen.
+- Een weergave die binnen het samenvoegvenster werd gepauzeerd en hervat, werd één keer als gestopt gemeld, en het hervatten en het echte einde nooit.
+- De weergaven van een nummer konden naar een nummer met dezelfde naam (‘Intro’) van een andere artiest worden verplaatst als het album de bibliotheek verliet.
+- Een meldingsbestemming die als IPv4-adres binnen IPv6 was geschreven (NAT64, 6to4), ging door als openbaar terwijl ze het lokale netwerk bereikte.
+- Een koppeling met Sonarr of Radarr die naar een andere server werd gericht, bleef een week lang de posters van de oude server tonen.
+- De waarschuwingen van Beveiliging zeiden dat er niets te bekijken was als er twee personen of meer waren gekozen, en een pagina die leeg was geraakt doordat de laatste waarschuwing was afgehandeld, had geen weg terug.
+- Elke API-sleutel die nog niet was verlopen, zei dat hij ‘zojuist’ was verlopen.
+- Een dialoogvenster bleef na Terug boven de pagina staan, en de pagina scrolde niet tot het was gesloten.
+- Het auditlogboek toonde acht soorten vermeldingen (een teruggehaalde weergave of back-up, een geleegde prullenbak, openbare profielen, een gewijzigd uiterlijk) met hun id’s, en niets onder Details.
+- Een titel via het contextmenu op de kijklijst zetten mislukte zonder melding als de server weigerde.
+- *Samen gekeken* op het dashboard behandelde meerdere tegelijk gekozen personen als één persoon.
+- De Terugblik schreef uren en dagen onder de tien met de decimale komma van de browser, naast de eigen komma’s tussen duizendtallen.
+- Capaciteit zei dat een schijf vol zou raken "in het tempo van de afgelopen 0 maanden".
+- Op de pagina Beveiliging telden de adressen zonder plaats ieders afspelingen van altijd, welke persoon en periode de pagina ook toonde.
+- Iemand met *FinStats beheren* maar zonder *Activiteit van iedereen zien* kon ieders afspeling naar de prullenbak verplaatsen.
+- Een kaart uit de Terugblik of een openbaar profiel kon uit de cache van de browser komen in de taal die eerder was gekozen.
+- De downloads die het livekanaal stuurde, waren in Brits Engels, in welke taal de pagina ook was.
+- Een aanmelding die veranderde wat iemand mag zien, bereikte diens andere open tabbladen pas bij de volgende controle na een halve minuut.
+- Een tabblad dat zijn liveverbinding aan een nieuwer tabblad afstond, nam er bij de volgende pagina een terug, zodat de tabbladen van één persoon elkaars verbinding bleven sluiten.
+- Tabellen sorteerden groottes van 1.000 tot 1.023 eenheden als tekst in talen die cijfers met een spatie groeperen, en Turkse percentages evenzo.
+- Een titel met een plaatshouder in de naam, zoals "Big {device} Bunny", werd ingevuld door de meldingen van de server.
+- Tabellen sorteerden duur en aantallen van een totaal (5 van 26) als tekst in elke taal behalve Engels en de Noordse talen.
+- Een tabblad dat nog in de ene taal openstond, hoorde de server in een andere zodra een ander tabblad die had gekozen.
+- Een woord naast een getal kreeg de verkeerde vorm in het Pools, Russisch en Oekraïens ("5 wieczory", "2 потоков").
+- Capaciteit telde de eerste vulling van een bibliotheek als groei en deelde wat elke bibliotheek toevoegde door zes maanden, over welke periode er ook gemeten was; een bestand dat de plaats van een ander innam (een upgrade uit Radarr of Sonarr, of een bestand dat Jellyfin een nieuwe id gaf) telde als helemaal nieuw, terwijl alleen het verschil nieuw was.
+- Wie samen keek met SyncPlay was geen groep als de een minuten na de ander aanschoof; afspeelbeurten die tegelijk op dezelfde plek eindigen horen nu bij elkaar, en de geschiedenis wordt één keer opnieuw gegroepeerd.
+- Iemand zonder *Activiteit van iedereen zien* kon aan *Nooit gekeken* van een bibliotheek zien dat een ander een titel had afgespeeld; nu telt alleen het eigen kijken.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Bibliotheekgezondheid en FinUI

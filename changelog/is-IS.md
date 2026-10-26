@@ -10,6 +10,87 @@ breytingu. Afköst eru eitthvað sem varð fljótlegra eða léttara, Stöðugle
 hrunið, stöðvast, lekið eða glatað gögnum, og Lagfært eitthvað sem gaf rangt svar. Útgáfa `x.y.0` ber
 stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirsögn allrar raðarinnar.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Afkastageta, rauntímarás, Einfaldur hamur og tungumál
+
+### Added
+- **Tungumál**: FinStats talar 23 tungumál. Breska og bandaríska ensku og norskt bókmál og nýnorsku skrifar umsjónarmaðurinn og fer sjálfur yfir; danska, þýska, spænska, finnska, franska, hindí, íslenska, ítalska, japanska, kóreska, hollenska, pólska, portúgalska (Brasilía), rússneska, sænska, tyrkneska, úkraínska og kínverska (einfölduð og hefðbundin) eru þýðingar sem enginn hér hefur farið yfir, og segja á ensku það sem þær hafa ekki enn. Hver síða í báðum framsetningunum, opinberi prófíllinn, útgáfulýsingarnar og það sem þjónninn svarar í orðum (villuboð, spjöld Uppgjörsins, hvað verkefni í Jellyfin gerir) birtist á tungumálinu sem er valið undir Stillingar → Útlit → Tungumál, fyrir hvern vafra; þar til eitt er valið ræður tungumál vafrans sjálfs. Tölur, dagsetningar, einingar og upptalningar eru skrifaðar eins og það tungumál skrifar þær. Forskrift getur beðið um tungumál með `Accept-Language`.
+- **Einfaldur hamur**: önnur framsetning fyrir þá sem koma frá Plex, sett upp eins og klassískur tölfræðiþjónn fyrir Plex. Stika þvert yfir efst í stað valmyndarinnar, og aðeins tölfræðisíðurnar: Forsíða, Söfn, Notendur, Ferill, Gröf og Stillingar, með tannhjóli fyrir prófílinn þinn, Stillingar, Útgáfulýsingar, þemað og útskráningu. Valinn fyrir hvern vafra undir Stillingar → Útlit → Framsetning. Hann hleður aðeins sínum helmingi af FinStats og ræsist því hraðar; Uppgjör, Saman, Á leiðinni, Öryggi og síður þjónsins eru áfram í framsetningu FinStats. Hann ber eigin liti FinStats, ljósa og dökka, og ekkert í honum hreyfist.
+- **Forsíða í Einföldum ham**: það sem er í spilun, spjald fyrir hvert streymi (hvernig það spilast, heiman frá eða utan heimanets, hvenær því lýkur), áhorfstölfræðin sem röðuð spjöld eftir fjölda spilana eða spilunartíma síðustu N daga, hvað hvert safn geymir og hvað kom nýlega.
+- **Gröf í Einföldum ham**: spilanir eftir tegund efnis (dag frá degi, eftir vikudegi og klukkustund, tíu efstu forritin og notendurnir), eftir því hvernig þær spiluðust (dag frá degi, flest samtímis streymi hvern dag, upplausn skrárinnar og sú sem var send, forrit og fólk) og mánuð fyrir mánuð, eftir fjölda spilana eða spilunartíma, fyrir alla eða þá sem eru valdir.
+- **Söfn, Notendur og titlar í Einföldum ham**: töflur yfir hvert safn og hverja manneskju með því sem síðast var spilað, á hverju og hvaðan (vistfangið aðeins með *Sjá netupplýsingar*), og síða fyrir hvert safn, hverja manneskju og hvern titil með tölum þess og eigin ferli.
+- Fyrir forskriftir: `/api/stats/split` (spilanir eftir forriti, manneskju, upplausn, degi eða mánuði, skipt eftir tegund efnis eða eftir því hvernig þær spiluðust); topplistar eftir fjölda ólíkra áhorfenda (`sort=users`); virkni þrengd að spilunum sem teljast áhorf (`watched=1`); innsýn aðeins í þá hluta sem beðið er um (`parts=`); mesta samtímaálagið skipt í umkóðanir, beint streymi og beina spilun, líka fyrir hvern dag; hvað hvert safn geymir og hvað var síðast spilað þar; nýlega bætt við eftir tegund (`kind=`); hitakortið eftir tegund efnis; síðasta spilun manneskju; hvort streymi spilast heiman frá.
+- **Rauntímarás**: yfirlitið, niðurhalið á síðunni Á leiðinni og stöðustikan halda sér uppfærðum yfir eina WebSocket-tengingu á hvern flipa (`/api/live`), svo það sem er í spilun og það sem verið er að sækja breytist á skjánum um leið og það gerist, ekki við næstu athugun. Á bak við öfugan milliþjón (reverse proxy) sem hleypir WebSocket-uppfærslum ekki í gegn, eða á tengingu sem slitnaði án þess að segja orð, spyrja síðurnar á nokkurra sekúndna fresti eins og áður. `/api/now-playing`, `/api/downloads` og `/api/summary` haldast óbreytt, fyrir forskriftir.
+- **Þjónn → Afkastageta**: ræður þessi þjónn við álagið, miðað við það sem FinStats hefur séð? Annasömustu stundirnar sem skráðar eru, og þær síðustu 90 daga: streymi samtímis, og hve mörg þeirra fengu myndina umkóðaða með vélbúnaði, án hans, eða án þess að nokkuð væri gefið upp (ferill sem er fluttur inn úr Tautulli er ferill Plex og er ekki tekinn með). Hver diskur sem söfnin eru á og hve hratt það sem Jellyfin bætti við á sex mánuðum fyllir hann (diskur sem var fylltur nýlega er mældur frá mánuði eftir fyrstu skrána á honum, því fyrsti mánuðurinn er áfyllingin sjálf), og, þar sem Jellyfin 10.11 eða nýrra gefur upp laust pláss, hve lengi það endist á þeim hraða. FinStats segir aldrei hversu mörg streymi þjónninn gæti ráðið við.
+- **Flytja út .ics** á Á leiðinni → Væntanlegt: listinn eins og þú síaðir hann, sóttur sem dagatalsskrá til að flytja inn einu sinni. Hann uppfærist ekki sjálfur; dagatalslykill úr Stillingar → API-lyklar gefur enn dagatal sem gerir það.
+- **Vert að skoða**: Afkastageta bendir á þegar hver einasta umkóðun sem Jellyfin sagði frá á 90 dögum keyrði án vélbúnaðarhröðunar þótt umkóðun sé algeng, þegar safnskönnun Jellyfin er í gangi fjórðung tímans eða meira, og þegar diskur á minna en sex mánaða pláss eftir. Hverju atriði fylgja tölurnar að baki, og það má leggja til hliðar eins og athugasemdirnar í Heilbrigði safns.
+- **Úr hverju safnið þitt er** má þrengja að einu safni eða fleirum, undir Söfn og á síðu hvers safns (`library_id=a,b`).
+- **Snið dagsetninga og tíma** í Stillingar → Útlit: dagsetning eins og 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 eða 2026/01/31, og tími í 24 eða 12 tímum, með eða án núlls á undan, eða hvort tveggja eins og tungumálið skrifar það. Geymt í þessum vafra.
+- **Móttaka**: í fyrsta sinn sem einhver skráir sig inn, í hvaða vafra sem er, og í lok uppsetningar, spyr FinStats um tungumál, snið dagsetninga og tíma og útlit, með mynd af hverju. Sleppa heldur breskri ensku, 31/01/2026, 13:05 og FinStats.
+
+### Changed
+- Merkið inni á síðu er bert táknið við hlið nafnsins, sett í Inter hvaða letur sem forstilling velur; þar sem það stendur eitt (vefsíðutáknið) heldur það ávala reitnum sínum.
+- Spilun sem var umkóðuð í hugbúnaði er skráð sem slík þar sem Jellyfin segir það; áður leit hún eins út og spilun frá þjóni sem segir það ekki. Síðurnar kalla hvort tveggja enn Hugbúnaður.
+- Uppfærsla keyrir nú, einu sinni og elstu útgáfuna fyrst, það sem útgáfa þarf að gera við gagnagrunn sem eldra FinStats skrifaði, auk skemabreytinga sinna. Sú fyrir 2.3.0 les upplýsingar þjónsins við fyrstu ræsingu, svo Afkastageta er til staðar strax.
+
+### Performance
+- **Síða sem stendur opin biður ekki um neitt**: yfirlitið sendi 30 beiðnir á mínútu til að haldast uppfært og niðurhalið á Á leiðinni 18; með rauntímarásinni sendir hvorugt neina. Hversu margir flipar sem eru opnir biður FinStats Jellyfin, Sonarr og Radarr ekki um neitt umfram það sem áður var, og falinn flipi leyfir niðurhalsröðinni enn að hægja á sér.
+- Síða manneskju les aðeins spilanir þeirrar manneskju: heildartölur hennar og síðasta spilun voru reiknaðar yfir allar spilanir á þjóninum og síðan þrengdar að henni, um fjórar sekúndur á milljón spilunum.
+- Síða safns les aðeins titla og spilanir þess safns, þar sem hún taldi áður öll söfn og hélt einu eftir: þriðjungur tímans á milljón spilunum.
+- Þegar klukka Jellyfin var á undan klukku FinStats las *Á eftir safnskönnun Jellyfin* allt safnið aftur á hverri mínútu þar til munurinn var liðinn; nú er hverri skönnun fylgt einu sinni.
+- GeoIP-skrá sem ekki var hægt að opna var afrituð aftur, hundrað megabæti og meira, og hvert vistfang staðsett aftur, á hverjum fjórðungi klukkustundar; nú er hún aðeins reynd aftur þegar hún breytist.
+- Heilbrigði safns opnast strax eftir að bendillinn hefur hvílt á tenglinum: það sem var sótt fyrir fram var geymt þar sem síðan leit aldrei.
+
+### Stability
+- Uppfærsla sem mistókst eftir að skemabreyting hafði keyrt, og Docker endurræsti strax, tók nýtt afrit af hálfuppfærða gagnagrunninum við hverja ræsingu, og þrjár ræsingar grisjuðu burt eina afritinu sem fyrri útgáfan gat opnað. Afritið frá því fyrir uppfærsluna er nú geymt.
+- Titill sem var eytt í Jellyfin meðan safnið var lesið (skrá sem Radarr skipti út) gat valdið því að lesturinn missti af öðrum titli sem var enn til staðar og merkti hann fjarlægðan, og spilanir hans gátu þá færst yfir á annað eintak af honum. Nú er fyrst spurt eftir auðkenni um það sem lestur sá ekki.
+- Endurheimt öryggisafrits sem var tekið áður en skrá var endurnefnd eða uppfærð endurheimti aftur hverja spilun sem síðan hafði færst yfir á nýju skrána, svo hún var tvítalin fyrir fullt og allt.
+- Beiðni í svari Seerr sem FinStats gat ekki lesið (reitur sem var endurnefndur í uppfærslu á Seerr) var merkt fjarlægð við daglega heildarlesturinn.
+- Verkefni sem lenti á villu var „í gangi“ fyrir fullt og allt, og engin kveikja ræsti það aftur fyrr en FinStats var endurræst; nú lýkur því með villu.
+- Skemmd zip-skrá frá Tautulli stöðvaði upphleðsluna áður en skránni var eytt, en hún geymir tóka allra Plex-notenda, og þar lá hún fram að sex klukkustunda hreinsuninni.
+- Innflutningur eða endurheimt sem var stöðvuð meðan skráin var að berast skildi þá skrá eftir í gagnamöppunni fyrir fullt og allt, vistföng og allt; henni er nú eytt við næstu ræsingu.
+- Mynd gat verið afgreidd hálfskrifuð meðan verið var að setja hana í skyndiminni, og vafrinn hélt henni þá þannig.
+- Afturkölluðum API-lyklum var haldið að eilífu, hversu margir sem voru búnir til og afturkallaðir.
+- Lestur á merkjum einhvers um spilað og eftirlæti sem kom tóm eða ólæsileg til baka hreinsaði þau öll fram að næsta lestri; henni er nú hafnað, eins og tómum lestri safns.
+- Þáttur með lokanúmer sem enginn þáttur getur haft (dagsetning skrifuð þar) gat haldið Heilbrigði safns uppteknu endalaust eftir lestur safnsins.
+
+### Fixed
+- Útgáfulýsing með kóða inni í feitletrun (í 2.0.2 og 2.0.3) sýndi bakkommurnar í stað þess að birta kóðann.
+- Graf yfir fjölda gat merkt ásinn sinn 0, 3, 5, 8, 10 eða jafnvel 0, 0, 1, 1, 1: þrep upp á 2,5 skrifuð námunduð. Fjöldi hækkar nú í heilum þrepum.
+- Dagatalslykli sem einhver bjó til sem má ekki stjórna FinStats fylgdi tengill á eigið vistfang vafrans í stað opinbers vistfangs FinStats, svo hann virkaði aðeins innan heimanetsins; síðan bað líka um stillingar sem henni var neitað um.
+- Síðasta spilun manneskju gat verið nokkrum sekúndum of stutt til að teljast spilun annars staðar, og nefndi þá titil sem Ferill hennar sýnir ekki.
+- Endurheimt úr Nýlega eytt sem mistókst sagði ekkert og lét hnappinn sinn halda áfram að snúast; sama gerði misheppnað *Sækja aftur* í Heilbrigði safns og misheppnað *Opna aftur* eða *Leysa allar* í Öryggi.
+- Dagatalsstraumurinn heitir FinStats í dagatalsforriti, ekki finstats.
+- Niðurhalsröðin sagði hverjum þeim sem mátti sjá hana hver hefði beðið um hvert niðurhal; beiðni einhvers annars krefst nú *Sjá virkni allra*, eins og á Á leiðinni.
+- Þegar *Fá tilkynningar* var tekið af manneskju var ekki hætt að senda til viðtakenda hennar, og hún gat ekki lengur slökkt á þeim.
+- Spilun sem gert var hlé á og haldið áfram innan samrunabilsins var tilkynnt stöðvuð einu sinni, en framhald hennar og raunveruleg lok aldrei.
+- Spilanir lags gátu færst yfir á lag annars flytjanda með sama nafni („Intro“) þegar plata þess hvarf úr safninu.
+- Viðtakandi tilkynninga sem var skrifaður sem IPv4-vistfang inni í IPv6 (NAT64, 6to4) taldist opinber þótt hann næði inn á staðarnetið.
+- Sonarr- eða Radarr-tenging sem var beint að öðrum þjóni hélt áfram að sýna veggspjöld gamla þjónsins í viku.
+- Viðvaranirnar á síðunni Öryggi sögðu að ekkert þyrfti að skoða þegar tvær manneskjur eða fleiri voru valdar, og síða sem tæmdist við að leysa síðustu viðvörunina á henni átti enga leið til baka.
+- Hver API-lykill sem var ekki útrunninn sagðist hafa runnið út „rétt í þessu“.
+- Svargluggi stóð áfram yfir síðunni eftir að farið var til baka, og ekki var hægt að fletta síðunni fyrr en honum var lokað.
+- Endurskoðunarskráin sýndi átta tegundir færslna (spilun eða afrit sótt aftur, ruslið tæmt, opinberir prófílar, útliti breytt) með auðkennum sínum, og ekkert í Nánar.
+- Þegar titill var settur á áhorfslistann úr samhengisvalmynd hans mistókst það án orðs ef þjónninn neitaði.
+- *Horft saman* á yfirlitinu fór með nokkrar manneskjur sem voru valdar í einu eins og eina manneskju.
+- Uppgjörið skrifaði klukkustundir og daga undir tíu með tugakommu vafrans, við hliðina á eigin þúsundaskilum sem voru líka kommur.
+- Afkastageta sagði að diskur fylltist "á hraða síðustu 0 mánaða".
+- Á síðunni Öryggi töldu vistföng án staðar spilanir allra frá upphafi, sama hvaða manneskju og tímabil síðan var þrengd að.
+- Einhver með *Stjórna FinStats* en ekki *Sjá virkni allra* gat sett spilun hvers sem er í ruslið.
+- Spjald úr Uppgjöri eða opinberum prófíl gat komið úr skyndiminni vafrans á tungumálinu sem valið var áður.
+- Niðurhölin sem beina rásin sendi voru á breskri ensku, sama á hvaða tungumáli síðan var.
+- Innskráning sem breytti því hvað einhver má sjá náði til hinna opnu flipa viðkomandi aðeins við næstu athugun eftir hálfa mínútu.
+- Flipi sem lét beina tengingu sína eftir nýrri flipa tók eina aftur á næstu síðu, svo flipar sömu manneskju lokuðu sífellt hver á annan.
+- Töflur röðuðu stærðum frá 1.000 til 1.023 einingum sem texta í tungumálum sem flokka tölustafi með bili, og tyrkneskum prósentum líka.
+- Titill með staðgengli í nafninu, svo sem "Big {device} Bunny", var fylltur út í skilaboðum þjónsins.
+- Töflur röðuðu tímalengdum og fjölda af heild (5 af 26) sem texta á öllum tungumálum nema ensku og þeim norrænu.
+- Flipi sem var enn opinn á einu tungumáli fékk svör þjónsins á öðru um leið og annar flipi hafði valið það.
+- Orð við hlið tölu fékk ranga mynd á pólsku, rússnesku og úkraínsku ("5 wieczory", "2 потоков").
+- Afkastageta taldi fyrstu fyllingu safns sem vöxt og deildi því sem hvert safn bætti við með sex mánuðum, sama yfir hve langan tíma var mælt; skrá sem tók stað annarrar (uppfærsla úr Radarr eða Sonarr, eða skrá sem Jellyfin gaf nýtt auðkenni) taldist öll ný, þegar aðeins mismunurinn var nýr.
+- Þau sem horfðu saman með SyncPlay voru ekki hópur þegar annað bættist við nokkrum mínútum á eftir hinu; spilanir sem enda samtímis á sama stað eru saman núna, og ferillinn er flokkaður aftur einu sinni.
+- Einhver án *Sjá virkni allra* gat lesið úr *Aldrei horft á* í safni að einhver annar hefði spilað titil; nú telur það aðeins eigið áhorf.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Heilbrigði safns og FinUI

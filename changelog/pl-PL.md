@@ -10,6 +10,87 @@ Wydajność to coś, co działa szybciej lub lżej, Stabilność to coś, co nie
 wyciekać ani tracić danych, a Naprawiono to coś, co dawało błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem
 krótki wiersz tytułowy: aplikacja używa go jako nagłówka całej serii.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Wydajność, kanał na żywo, Tryb prosty i języki
+
+### Added
+- **Języki**: FinStats mówi w 23 językach. Angielski w odmianie brytyjskiej i amerykańskiej oraz norweski w odmianach bokmål i nynorsk pisze i sprawdza opiekun projektu; duński, niemiecki, hiszpański, fiński, francuski, hindi, islandzki, włoski, japoński, koreański, niderlandzki, polski, portugalski (Brazylia), rosyjski, szwedzki, turecki, ukraiński i chiński (uproszczony i tradycyjny) to tłumaczenia, których nikt tutaj nie sprawdził, a to, czego jeszcze w nich brakuje, mówią po angielsku. Każda strona obu układów, profil publiczny, Lista zmian i to, co serwer odpowiada słowami (komunikat o błędzie, karty Podsumowania, opis tego, co robi zadanie Jellyfin), są w języku wybranym w Ustawieniach → Wygląd → Język, osobno w każdej przeglądarce; dopóki żaden nie zostanie wybrany, decyduje język przeglądarki. Liczby, daty, jednostki i wyliczenia są zapisywane tak, jak zapisuje je dany język. Skrypt może poprosić o konkretny język nagłówkiem `Accept-Language`.
+- **Tryb prosty**: drugi układ dla osób przesiadających się z Plex, zbudowany tak jak klasyczny serwer statystyk dla Plex. Pasek u góry zamiast menu i same strony ze statystykami: Start, Biblioteki, Użytkownicy, Historia, Wykresy i Ustawienia, a do tego koło zębate z profilem, Ustawieniami, Listą zmian, motywem i wylogowaniem. Wybiera się go osobno w każdej przeglądarce w Ustawieniach → Wygląd → Układ. Wczytuje tylko swoją połowę FinStats, więc uruchamia się szybciej; Podsumowanie, „Razem”, „W drodze”, Bezpieczeństwo i strony serwera zostają w układzie FinStats. Używa kolorów samego FinStats, jasnych i ciemnych, i nic się w nim nie porusza.
+- **Start w Trybie prostym**: to, co jest odtwarzane, z kartą dla każdego strumienia (jak jest odtwarzany, z domu czy spoza niego, kiedy się skończy), statystyki oglądania jako karty rankingowe według liczby odtworzeń lub czasu trwania z ostatnich N dni, zawartość każdej biblioteki i to, co ostatnio dotarło.
+- **Wykresy w Trybie prostym**: odtworzenia według rodzaju multimediów (dzień po dniu, według dnia tygodnia i godziny, dziesięć najczęściej używanych aplikacji i osób), według sposobu odtwarzania (dzień po dniu, największa liczba jednoczesnych strumieni każdego dnia, rozdzielczość pliku i rozdzielczość wysyłana, aplikacje i osoby) oraz miesiąc po miesiącu, według liczby odtworzeń lub czasu trwania, dla wszystkich albo dla wybranych osób.
+- **Biblioteki, Użytkownicy i tytuły w Trybie prostym**: tabele wszystkich bibliotek i osób z tym, co odtworzono ostatnio, na czym i skąd (adres tylko z uprawnieniem *Widzi szczegóły sieci*), oraz strona każdej biblioteki, osoby i tytułu z jej liczbami i własną historią.
+- Dla skryptów: `/api/stats/split` (odtworzenia według aplikacji, osoby, rozdzielczości, dnia lub miesiąca, z podziałem na rodzaj multimediów lub sposób odtwarzania); rankingi według liczby różnych widzów (`sort=users`); aktywność zawężona do obejrzanych odtworzeń (`watched=1`); analizy tylko dla wskazanych części (`parts=`); szczyt rozbity na transkodowania, strumieniowania bezpośrednie i odtwarzania bezpośrednie, także dla każdego dnia; zawartość każdej biblioteki i ostatnie odtworzenie w niej; ostatnio dodane według rodzaju (`kind=`); mapa cieplna według rodzaju multimediów; ostatnie odtworzenie danej osoby; informacja, czy strumień jest odtwarzany z domu.
+- **Kanał na żywo**: Pulpit, pobieranie na stronie „W drodze” i pasek stanu same pozostają aktualne dzięki jednemu połączeniu WebSocket na kartę (`/api/live`), więc to, co jest odtwarzane i pobierane, zmienia się na ekranie w chwili, gdy się zmienia, a nie przy następnym sprawdzeniu. Za odwrotnym proxy, które nie przepuszcza przejścia na WebSocket, albo na połączeniu, które zerwało się bez słowa, strony jak dotąd pytają co kilka sekund. `/api/now-playing`, `/api/downloads` i `/api/summary` pozostają bez zmian, dla skryptów.
+- **Serwer → Wydajność**: czy ten serwer da sobie radę, na podstawie tego, co widział FinStats. Najbardziej obciążone chwile w całej historii i w ostatnich 90 dniach: liczba jednoczesnych strumieni oraz ile z nich miało obraz transkodowany sprzętowo, ile bez akceleracji sprzętowej, a ile bez żadnej informacji (historia zaimportowana z Tautulli pochodzi z Plex i jest pomijana). Każdy dysk, na którym leżą biblioteki, i jak szybko zapełnia go to, co Jellyfin dodał w ciągu sześciu miesięcy (dysk zapełniony niedawno jest mierzony od miesiąca po pierwszym pliku, bo pierwszy miesiąc to samo zapełnianie), a tam, gdzie Jellyfin 10.11 lub nowszy podaje wolne miejsce, na jak długo go wystarczy w tym tempie. FinStats nigdy nie mówi, ile strumieni serwer mógłby obsłużyć.
+- **Eksportuj .ics** w zakładce „W drodze” → Nadchodzące: lista z nałożonymi filtrami, pobrana jako plik kalendarza do jednorazowego zaimportowania. Nie aktualizuje się sama; klucz kalendarza z Ustawień → Klucze API nadal daje kalendarz, który to robi.
+- **Warto sprawdzić**: Wydajność zwraca uwagę, gdy każde transkodowanie zgłoszone przez Jellyfin w ciągu 90 dni odbyło się bez akceleracji sprzętowej, choć transkodowanie jest częste, gdy skanowanie biblioteki w Jellyfin zajmuje jedną czwartą czasu lub więcej oraz gdy na dysku zostało miejsca na mniej niż sześć miesięcy. Każda uwaga ma swoje liczby i można ją odłożyć na bok, tak jak wyniki Stanu biblioteki.
+- **Z czego składa się twoja biblioteka** można zawęzić do jednej biblioteki lub kilku, w Bibliotekach i na stronie każdej biblioteki (`library_id=a,b`).
+- **Formaty daty i godziny** w Ustawienia → Wygląd: data jako 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 lub 2026/01/31, a godzina w systemie 24- lub 12-godzinnym, z zerem na początku lub bez, albo każda tak, jak pisze ją język. Zapamiętywane w tej przeglądarce.
+- **Powitanie**: gdy ktoś pierwszy raz się loguje, w dowolnej przeglądarce, i na końcu konfiguracji, FinStats pyta o język, formaty daty i godziny oraz układ, z obrazkiem każdego. Pomiń zostawia brytyjski angielski, 31/01/2026, 13:05 i FinStats.
+
+### Changed
+- Logo wewnątrz strony to sam znak obok nazwy, złożonej krojem Inter bez względu na czcionkę wybraną w presecie; tam, gdzie stoi samodzielnie (favicon), zachowuje zaokrąglony kafelek.
+- Odtworzenie transkodowane programowo jest zapisywane jako takie, jeśli Jellyfin to podaje; wcześniej wyglądało tak samo jak odtworzenie z serwera, który tego nie podaje. Strony nadal nazywają oba przypadki „Programowe”.
+- Aktualizacja wykonuje teraz, jednorazowo i od najstarszej wersji, to, co dana wersja musi zrobić z bazą danych zapisaną przez starszy FinStats, obok swoich migracji. W wersji 2.3.0 jest to odczyt szczegółów serwera przy pierwszym uruchomieniu, więc Wydajność jest dostępna od razu.
+
+### Performance
+- **Otwarta strona o nic nie pyta**: Pulpit wysyłał 30 żądań na minutę, by pozostać aktualnym, a pobieranie na stronie „W drodze” 18; z kanałem na żywo oba nie wysyłają żadnych. Bez względu na liczbę otwartych kart FinStats nie pyta Jellyfin, Sonarr ani Radarr o nic więcej niż wcześniej, a ukryta karta nadal pozwala kolejce pobierania zwolnić.
+- Strona osoby odczytuje tylko odtworzenia tej osoby: jej sumy i ostatnie odtworzenie były wyliczane ze wszystkich odtworzeń na serwerze, a dopiero potem zawężane do niej, co przy milionie odtworzeń trwało około czterech sekund.
+- Strona biblioteki odczytuje tylko tytuły i odtworzenia tej biblioteki, zamiast liczyć wszystkie biblioteki i zostawiać jedną: przy milionie odtworzeń to jedna trzecia czasu.
+- Gdy zegar Jellyfin spieszył się względem zegara FinStats, wyzwalacz *Po skanowaniu biblioteki przez Jellyfin* odczytywał całą bibliotekę ponownie co minutę, dopóki różnica nie minęła; teraz każde skanowanie jest obsługiwane raz.
+- Plik GeoIP, którego nie dało się otworzyć, był co kwadrans kopiowany od nowa (sto megabajtów i więcej), a każdy adres był ponownie lokalizowany; teraz kolejna próba następuje dopiero po zmianie pliku.
+- Stan biblioteki otwiera się natychmiast, gdy wskaźnik zatrzymał się wcześniej na łączu: to, co pobrano z wyprzedzeniem, trafiało tam, gdzie strona nigdy nie zaglądała.
+
+### Stability
+- Aktualizacja, która nie powiodła się po wykonaniu migracji i była od razu restartowana przez Docker, przy każdym starcie tworzyła nową kopię częściowo zaktualizowanej bazy, a trzy starty usuwały jedyną kopię, którą mogła otworzyć poprzednia wersja. Teraz kopia sprzed aktualizacji jest zachowywana.
+- Tytuł usunięty w Jellyfin podczas odczytu biblioteki (plik podmieniony przez Radarr) mógł sprawić, że odczyt pominął inny, wciąż istniejący tytuł i oznaczył go jako usunięty, a jego odtworzenia mogły potem zostać przeniesione na inną jego kopię. To, czego odczyt nie zobaczył, jest teraz najpierw sprawdzane po identyfikatorze.
+- Przywrócenie kopii zapasowej wykonanej przed zmianą nazwy pliku lub jego wymianą na lepszy przywracało po raz drugi każde odtworzenie przeniesione później na nowy plik, podwajając je na stałe.
+- Prośba w odpowiedzi Seerr, której FinStats nie umiał odczytać (pole przemianowane w aktualizacji Seerr), była oznaczana jako usunięta przez codzienny pełny odczyt.
+- Zadanie, które natrafiło na błąd, na zawsze pozostawało „uruchomione” i żaden wyzwalacz nie uruchamiał go ponownie aż do restartu FinStats; teraz kończy się niepowodzeniem.
+- Uszkodzony plik zip z Tautulli przerywał przesyłanie, zanim plik został usunięty, a zawiera on tokeny wszystkich użytkowników Plex; zostawał tak aż do sześciogodzinnego sprzątania.
+- Import lub przywracanie przerwane w trakcie przesyłania pliku zostawiały ten plik w folderze danych na zawsze, razem z adresami; teraz jest usuwany przy następnym starcie.
+- Obraz mógł zostać wysłany w połowie zapisany, gdy właśnie trafiał do pamięci podręcznej, a przeglądarka zachowywała go w takim stanie.
+- Unieważnione klucze API były przechowywane na zawsze, bez względu na to, ile ich utworzono i unieważniono.
+- Odczyt czyichś znaczników obejrzanych i ulubionych, który wrócił pusty lub nieczytelny, czyścił je wszystkie do następnego odczytu; teraz jest odrzucany, tak jak pusty odczyt biblioteki.
+- Odcinek z numerem końcowym, jakiego żaden odcinek nie może mieć (wpisana tam data), mógł bez końca zajmować Stan biblioteki po odczycie biblioteki.
+
+### Fixed
+- Pozycja listy zmian z kodem wewnątrz pogrubienia (w wersjach 2.0.2 i 2.0.3) pokazywała grawisy zamiast sformatowanego kodu.
+- Wykres liczebności mógł opisywać oś 0, 3, 5, 8, 10, a nawet 0, 0, 1, 1, 1: kroki co 2,5 zapisane po zaokrągleniu. Liczebności rosną teraz o całe kroki.
+- Klucz kalendarza utworzony przez osobę, która nie jest menedżerem, dostawał link z adresem z przeglądarki zamiast publicznego adresu FinStats, więc działał tylko z wewnątrz sieci; strona pytała też o ustawienia, do których odmawiano jej dostępu.
+- Ostatnie odtworzenie osoby mogło być o kilka sekund za krótkie, by gdziekolwiek indziej liczyć się jako odtworzenie, i wskazywać tytuł, którego nie pokazuje jej Historia.
+- Nieudane przywrócenie z listy Ostatnio usunięte nic nie mówiło, a jego przycisk dalej się kręcił; to samo dotyczyło nieudanego *Przywróć* w Stanie biblioteki oraz nieudanego *Otwórz ponownie* lub *Rozwiąż wszystkie* w Bezpieczeństwie.
+- Kanał kalendarza nazywa się w aplikacji kalendarza FinStats, a nie finstats.
+- Kolejka pobierania pokazywała, kto poprosił o każde pobranie, każdemu, kto mógł ją oglądać; cudza prośba wymaga teraz uprawnienia *Widzi aktywność wszystkich*, tak jak na stronie „W drodze”.
+- Odebranie uprawnienia *Otrzymuje powiadomienia* nie zatrzymywało tego, co trafiało do miejsc docelowych tej osoby, a ona nie mogła ich już wyłączyć.
+- Odtworzenie wstrzymane i wznowione w obrębie okna scalania było raz zgłaszane jako zakończone, a jego wznowienie i faktyczny koniec nigdy.
+- Odtworzenia utworu mogły zostać przeniesione na utwór innego wykonawcy o tej samej nazwie („Intro”), gdy jego album zniknął z biblioteki.
+- Miejsce docelowe powiadomień zapisane jako adres IPv4 wewnątrz IPv6 (NAT64, 6to4) uchodziło za publiczne, choć prowadziło do sieci lokalnej.
+- Połączenie z Sonarr lub Radarr przestawione na inny serwer jeszcze przez tydzień pokazywało plakaty starego serwera.
+- Alerty w Bezpieczeństwie twierdziły, że nic nie wymaga uwagi, gdy wybrano co najmniej dwie osoby, a strona opróżniona przez rozwiązanie ostatniego alertu nie miała drogi powrotu.
+- Każdy klucz API, który jeszcze nie wygasł, twierdził, że wygasł „przed chwilą”.
+- Okno dialogowe zostawało nad stroną po cofnięciu się, a strony nie dało się przewijać, dopóki go nie zamknięto.
+- Dziennik audytu pokazywał osiem rodzajów wpisów (przywrócone odtworzenie lub kopia zapasowa, opróżnienie kosza, profile publiczne, zmiana wyglądu) przez ich identyfikatory, bez niczego w kolumnie Szczegóły.
+- Dodanie tytułu do listy do obejrzenia z menu kontekstowego kończyło się bez słowa niepowodzeniem, gdy serwer odmówił.
+- Karta *Oglądane razem* na Pulpicie traktowała kilka osób wybranych naraz jak jedną.
+- Podsumowanie zapisywało godziny i dni poniżej dziesięciu z przecinkiem dziesiętnym przeglądarki obok własnych przecinków oddzielających tysiące.
+- Wydajność podawała, że dysk zapełni się "w tempie ostatnich 0 miesięcy".
+- Na stronie Bezpieczeństwo adresy bez miejsca liczyły odtworzenia wszystkich z całego czasu, niezależnie od osoby i okresu, do których zawężono stronę.
+- Ktoś, kto *Zarządza FinStats*, ale nie *Widzi aktywność wszystkich*, mógł przenieść do kosza czyjekolwiek odtworzenie.
+- Karta z Podsumowania lub profilu publicznego mogła przyjść z pamięci podręcznej przeglądarki w wcześniej wybranym języku.
+- Pobierania wysyłane przez kanał na żywo były po brytyjsku angielsku, niezależnie od języka strony.
+- Logowanie, które zmieniało to, co ktoś może widzieć, docierało do innych otwartych kart tej osoby dopiero przy następnym sprawdzeniu po pół minucie.
+- Karta, która oddała połączenie na żywo nowszej, przy następnej stronie brała je z powrotem, więc karty jednej osoby bez końca zamykały sobie nawzajem połączenia.
+- Tabele sortowały rozmiary od 1000 do 1023 jednostek jak tekst w językach grupujących cyfry spacją, a tak samo procenty po turecku.
+- Tytuł z symbolem zastępczym w nazwie, jak "Big {device} Bunny", był wypełniany w komunikatach serwera.
+- Tabele sortowały czasy trwania i liczby z całości (5 z 26) jak tekst we wszystkich językach poza angielskim i nordyckimi.
+- Karta wciąż otwarta w jednym języku słyszała serwer w innym, gdy tylko inna karta go wybrała.
+- Słowo obok liczby miało złą formę po polsku, rosyjsku i ukraińsku ("5 wieczory", "2 потоков").
+- Wydajność liczyła pierwsze zapełnienie biblioteki jako wzrost i dzieliła to, co dodała każda biblioteka, przez sześć miesięcy, niezależnie od okresu pomiaru; plik, który zajął miejsce innego (ulepszenie z Radarr lub Sonarr albo plik, któremu Jellyfin nadał nowy identyfikator), liczył się jako całkiem nowy, choć nowa była tylko różnica.
+- Osoby oglądające razem przez SyncPlay nie były grupą, gdy jedna dołączyła kilka minut po drugiej; odtworzenia, które kończą się w tej samej chwili w tym samym miejscu, są teraz razem, a historia zostaje raz pogrupowana od nowa.
+- Ktoś bez uprawnienia *Widzi aktywność wszystkich* mógł wyczytać z *Nigdy nieoglądane* biblioteki, że inna osoba odtworzyła tytuł; teraz liczy się tylko jego własne oglądanie.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Stan biblioteki i FinUI

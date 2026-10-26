@@ -10,6 +10,87 @@ Vakaus, että jokin ei enää voi kaatua, pysähtyä, vuotaa tai hukata tietoja,
 väärän vastauksen. `x.y.0`-julkaisun otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää
 koko sarjan pääotsikkona.
 
+## [2.3.0] - 2026-10-07 to 2026-10-26
+
+Kapasiteetti, reaaliaikainen kanava, yksinkertainen tila ja kielet
+
+### Added
+- **Kielet**: FinStats puhuu 23 kieltä. Brittienglannin, amerikanenglannin sekä norjan bokmålin ja nynorskin kirjoittaa ja tarkistaa ylläpitäjä; tanska, saksa, espanja, suomi, ranska, hindi, islanti, italia, japani, korea, hollanti, puola, portugali (Brasilia), venäjä, ruotsi, turkki, ukraina ja kiina (yksinkertaistettu ja perinteinen) ovat käännöksiä, joita kukaan täällä ei ole tarkistanut, ja ne sanovat englanniksi sen, mitä niistä vielä puuttuu. Kummankin asettelun jokainen sivu, julkinen profiili, Muutosloki ja kaikki, minkä palvelin vastaa sanoin (virheilmoitus, Vuosikatsauksen kortit, mitä Jellyfinin tehtävä tekee), ovat kohdassa Asetukset → Ulkoasu → Kieli valitulla kielellä, selainkohtaisesti; kunnes kieli valitaan, ratkaisee selaimen oma kieli. Luvut, päivämäärät, yksiköt ja luettelot kirjoitetaan niin kuin kyseinen kieli ne kirjoittaa. Skripti voi pyytää kieltä `Accept-Language`-otsakkeella.
+- **Yksinkertainen tila**: toinen asettelu Plexistä tuleville, aseteltu klassisen Plexin tilastopalvelimen tapaan. Valikon sijaan palkki ylhäällä, ja pelkät tilastosivut: Etusivu, Kirjastot, Käyttäjät, Historia, Kaaviot ja Asetukset sekä rataskuvake, josta pääsee omaan profiiliin, Asetuksiin, Muutoslokiin, teemaan ja uloskirjautumiseen. Valitaan selainkohtaisesti kohdassa Asetukset → Ulkoasu → Asettelu. Se lataa vain oman puoliskonsa FinStatsista, joten se käynnistyy nopeammin; Vuosikatsaus, Yhdessä, Tulossa, Tietoturva ja palvelinsivut jäävät FinStats-asetteluun. Se käyttää FinStatsin omia värejä, vaaleana ja tummana, eikä siinä liiku mikään.
+- **Yksinkertaisen tilan Etusivu**: mitä toistetaan, kortti kutakin toistoa kohden (miten se toistuu, kotoa vai muualta, milloin se päättyy), katselutilastot järjestettyinä kortteina toistomäärän tai keston mukaan viimeisten N päivän ajalta, mitä kukin kirjasto sisältää ja mitä on äskettäin saapunut.
+- **Yksinkertaisen tilan Kaaviot**: toistot mediatyypin mukaan (päivä päivältä, viikonpäivän ja tunnin mukaan, kymmenen suosituinta sovellusta ja henkilöä), toistotavan mukaan (päivä päivältä, kunkin päivän eniten samanaikaisia toistoja, tiedoston ja lähetetty resoluutio, sovellukset ja henkilöt) sekä kuukausittain, toistomäärän tai keston mukaan, kaikille tai valituille henkilöille.
+- **Yksinkertaisen tilan Kirjastot, Käyttäjät ja nimikkeet**: taulukot jokaisesta kirjastosta ja henkilöstä sekä siitä, mitä toistettiin viimeksi, millä ja mistä (osoite vain oikeudella *Näe verkkotiedot*), ja sivu jokaiselle kirjastolle, henkilölle ja nimikkeelle lukuineen ja omine historioineen.
+- Skripteille: `/api/stats/split` (toistot sovelluksen, henkilön, resoluution, päivän tai kuukauden mukaan, jaoteltuna mediatyypin tai toistotavan mukaan); kärkilistat eri katsojien määrän mukaan (`sort=users`); toiminta rajattuna katsottuihin toistoihin (`watched=1`); oivallukset vain pyydetyistä osista (`parts=`); huippu jaettuna transkoodauksiin, suoratoistoihin ja suoriin toistoihin, myös päivittäin; mitä kukin kirjasto sisältää ja mitä siinä toistettiin viimeksi; viimeksi lisätyt lajeittain (`kind=`); lämpökartta mediatyypin mukaan; henkilön viimeisin toisto; toistetaanko toistoa kotoa.
+- **Reaaliaikainen kanava**: yleiskatsaus, Tulossa-sivun lataukset ja tilapalkki pysyvät ajan tasalla yhden WebSocket-yhteyden kautta välilehteä kohden (`/api/live`), joten se, mitä toistetaan ja ladataan, muuttuu näytöllä sitä mukaa kuin se muuttuu eikä vasta seuraavalla tarkistuksella. Käänteisen välityspalvelimen takana, joka ei välitä WebSocket-päivityksiä, tai yhteydellä, joka katkesi sanaakaan sanomatta, sivut kysyvät muutaman sekunnin välein kuten ennenkin. `/api/now-playing`, `/api/downloads` ja `/api/summary` pysyvät ennallaan skriptejä varten.
+- **Palvelin → Kapasiteetti**: pärjääkö tämä palvelin, sen perusteella mitä FinStats on nähnyt. Kiireisimmät hetket koskaan ja viimeisten 90 päivän ajalta: samanaikaiset toistot ja kuinka monen kuva transkoodattiin laitteistokiihdytyksellä, ilman sitä tai ilman tietoa (Tautullista tuotu historia on Plexin, ja se jätetään pois). Jokainen levy, jolla kirjastot ovat, ja kuinka nopeasti Jellyfinin kuuden kuukauden aikana lisäämä sisältö sen täyttää (äskettäin täytetty levy mitataan kuukauden päästä sen ensimmäisestä tiedostosta, koska ensimmäinen kuukausi on sen täyttämistä), ja, jos Jellyfin 10.11 tai uudempi ilmoittaa vapaan tilan, kuinka kauan se riittää sillä tahdilla. FinStats ei koskaan väitä, montako toistoa palvelin kestäisi.
+- **Vie .ics** Tulossa-sivun Tulevat-osiossa: luettelo suodatettuna, ladattuna kalenteritiedostoksi kertatuontia varten. Se ei päivity itsestään; kohdan Asetukset → API-avaimet kalenteriavain antaa edelleen kalenterin, joka päivittyy.
+- **Katsomisen arvoista**: Kapasiteetti huomauttaa, kun jokainen Jellyfinin 90 päivän aikana raportoima transkoodaus tehtiin ilman laitteistokiihdytystä, vaikka transkoodaus on yleistä, kun Jellyfinin kirjastoskannaus on käynnissä neljänneksen ajasta tai enemmän, ja kun levyllä on tilaa alle kuudeksi kuukaudeksi. Jokaisen mukana tulevat sen luvut, ja sen voi sivuuttaa samoin kuin Kirjaston kunnon havainnot.
+- **Mistä kirjastosi koostuu** voidaan rajata yhteen tai useampaan kirjastoon, Kirjastot-sivulla ja kunkin kirjaston omalla sivulla (`library_id=a,b`).
+- **Päivämäärä- ja aikamuodot** kohdassa Asetukset → Ulkoasu: päivämäärä muodossa 31.01.2026, 31/01/2026, 31-01-2026, 01/31/2026, 2026-01-31, 2026.01.31 tai 2026/01/31 ja kellonaika 24 tai 12 tunnin muodossa, etunollalla tai ilman, tai kumpikin kielen omalla tavalla. Tallennetaan tähän selaimeen.
+- **Tervetuloa**: kun joku kirjautuu ensimmäistä kertaa, millä selaimella tahansa, ja käyttöönoton lopussa, FinStats kysyy kielen, päivämäärä- ja aikamuodot ja asettelun, ja kustakin näytetään kuva. Ohita pitää brittienglannin, 31/01/2026, 13:05 ja FinStatsin.
+
+### Changed
+- Sivun sisällä logo on pelkkä tunnus nimen vieressä, Inter-fontilla ladottuna, valitsipa esiasetus minkä fontin tahansa; yksinään (sivuston kuvake) se säilyttää pyöristetyn ruutunsa.
+- Ohjelmistolla transkoodattu toisto tallennetaan sellaisena, kun Jellyfin niin kertoo; aiemmin se näytti samalta kuin toisto palvelimelta, joka ei kerro. Sivuilla molemmat näkyvät edelleen nimellä Ohjelmisto.
+- Päivitys ajaa nyt kerran ja vanhimmasta versiosta alkaen sen, mitä versio vaatii vanhemman FinStatsin kirjoittamalle tietokannalle, migraatioidensa ohella. Version 2.3.0 vaihe lukee palvelimen tiedot ensimmäisellä käynnistyksellä, joten Kapasiteetti on heti valmis.
+
+### Performance
+- **Auki jätetty sivu ei kysy mitään**: yleiskatsaus teki 30 pyyntöä minuutissa pysyäkseen ajan tasalla ja Tulossa-sivun lataukset 18; reaaliaikaisen kanavan kanssa kumpikaan ei tee yhtään. Avoimien välilehtien määrästä riippumatta FinStats ei kysy Jellyfiniltä, Sonarrilta tai Radarrilta mitään enempää kuin ennen, ja piilotettu välilehti antaa yhä latausjonon hidastua.
+- Henkilön sivu lukee vain kyseisen henkilön toistot: hänen kokonaismääränsä ja viimeisin toistonsa laskettiin palvelimen jokaisesta toistosta ja rajattiin vasta sitten häneen, noin neljä sekuntia miljoonalla toistolla.
+- Kirjaston sivu lukee vain kyseisen kirjaston nimikkeet ja toistot, kun se ennen laski kaikkien kirjastojen ja piti yhden: kolmannes ajasta miljoonalla toistolla.
+- Kun Jellyfinin kello oli FinStatsin kelloa edellä, *Jellyfinin kirjastoskannauksen jälkeen* luki koko kirjaston uudelleen joka minuutti, kunnes kellojen eron verran aikaa oli kulunut; kutakin skannausta seurataan nyt kerran.
+- GeoIP-tiedosto, jota ei voitu avata, kopioitiin uudelleen, sata megatavua ja enemmän, ja jokainen osoite paikannettiin uudelleen joka vartti; sitä yritetään uudelleen vasta, kun se muuttuu.
+- Kirjaston kunto avautuu heti, kun osoitin on levännyt sen linkin päällä: etukäteen haettu tieto säilytettiin paikassa, jota sivu ei koskaan katsonut.
+
+### Stability
+- Päivitys, joka epäonnistui migraation jo ajettua ja jonka Docker käynnisti heti uudelleen, otti jokaisella käynnistyksellä uuden kopion puoliksi päivitetystä tietokannasta, ja kolme käynnistystä karsi pois ainoan kopion, jonka edellinen versio pystyi avaamaan. Päivitystä edeltävä kopio säilytetään nyt.
+- Jellyfinissä kirjaston luennan aikana poistettu nimike (Radarrin korvaama tiedosto) saattoi saada luennan ohittamaan toisen, yhä olemassa olevan nimikkeen ja merkitsemään sen poistetuksi, ja sen toistot saatettiin sitten siirtää sen toiselle kopiolle. Sitä, mitä luenta ei nähnyt, kysytään nyt ensin tunnisteella.
+- Varmuuskopion palauttaminen ajalta ennen tiedoston uudelleennimeämistä tai päivittämistä palautti toiseen kertaan jokaisen uudelle tiedostolle sittemmin siirretyn toiston, pysyvästi kahdennettuna.
+- Pyyntö Seerrin vastauksessa, jota FinStats ei pystynyt lukemaan (Seerrin päivityksessä uudelleennimetty kenttä), merkittiin poistetuksi päivittäisessä täydessä luennassa.
+- Ohjelmavirheeseen törmännyt tehtävä jäi pysyvästi tilaan ”käynnissä”, eikä mikään ajastin käynnistänyt sitä uudelleen ennen kuin FinStats käynnistettiin uudelleen; nyt se päättyy epäonnistuneena.
+- Vaurioitunut Tautulli-zip keskeytti latauksen poistamatta tiedostoa, joka sisältää jokaisen Plex-käyttäjän tunnukset; tiedosto jäi paikalleen kuuden tunnin siivoukseen asti.
+- Tuonti tai palautus, joka keskeytettiin tiedoston saapuessa, jätti tiedoston datakansioon pysyvästi osoitteineen kaikkineen; se poistetaan seuraavalla käynnistyksellä.
+- Kuva saatettiin tarjoilla puoliksi kirjoitettuna sen ollessa välimuistiin tallentumassa, ja selain säilytti sen sitten sellaisena.
+- Peruutetut API-avaimet säilytettiin pysyvästi, vaikka niitä olisi luotu ja peruutettu kuinka monta tahansa.
+- Jonkun katsottu- ja suosikkimerkintöjen luku, joka palasi tyhjänä tai lukukelvottomana, tyhjensi ne kaikki seuraavaan lukuun asti; se hylätään nyt, kuten kirjaston tyhjä luku.
+- Jakso, jonka loppunumero ei voi olla minkään jakson (siihen kirjoitettu päivämäärä), saattoi pitää Kirjaston kunnon työssä loputtomiin kirjaston luvun jälkeen.
+
+### Fixed
+- Muutoslokin merkintä, jossa koodia oli lihavoinnin sisällä (2.0.2:n ja 2.0.3:n), näytti takahipsunsa koodin sijaan.
+- Määriä näyttävän kaavion akseli saattoi olla 0, 3, 5, 8, 10 tai jopa 0, 0, 1, 1, 1: 2,5:n askelia pyöristettyinä. Määrät nousevat nyt kokonaisin askelin.
+- Muun kuin hallinnoijan luoma kalenteriavain sai linkin selaimen omaan osoitteeseen FinStatsin julkisen osoitteen sijaan, joten se toimi vain sisäverkosta; sivu myös pyysi asetuksia, joita siltä evättiin.
+- Henkilön viimeisin toisto saattoi olla muutaman sekunnin liian lyhyt laskettavaksi toistoksi missään muualla, jolloin se nimesi nimikkeen, jota hänen Historiansa ei näytä.
+- Epäonnistunut palautus kohdasta Äskettäin poistetut ei sanonut mitään, ja sen painike jäi pyörimään; samoin epäonnistunut *Palauta* Kirjaston kunnossa sekä epäonnistunut *Avaa uudelleen* tai *Ratkaise kaikki* Tietoturvassa.
+- Kalenterisyötteen nimi kalenterisovelluksessa on FinStats, ei finstats.
+- Latausjono kertoi jokaiselle, joka sai nähdä sen, kuka oli pyytänyt kunkin latauksen; jonkun toisen pyyntö vaatii nyt oikeuden *Näe kaikkien toiminta*, kuten Tulossa-sivulla.
+- Oikeuden *Vastaanota ilmoituksia* poistaminen ei lopettanut sitä, mitä henkilön kohteisiin lähetettiin, eikä hän voinut enää kytkeä niitä pois.
+- Yhdistämisikkunan sisällä tauotettu ja jatkettu toisto kerrottiin kerran pysähtyneeksi, eikä sen jatkumisesta ja todellisesta päättymisestä kerrottu koskaan.
+- Kappaleen toistot saatettiin siirtää toisen esittäjän samannimiselle kappaleelle (”Intro”), kun sen albumi poistui kirjastosta.
+- Ilmoituskohde, joka oli kirjoitettu IPv6-osoitteen sisään upotettuna IPv4-osoitteena (NAT64, 6to4), hyväksyttiin julkiseksi, vaikka se tavoitti lähiverkon.
+- Toiseen palvelimeen osoitettu Sonarr- tai Radarr-yhteys näytti vanhan palvelimen julisteita vielä viikon ajan.
+- Tietoturvan hälytykset kertoivat, ettei mikään vaatinut huomiota, kun valittuna oli kaksi henkilöä tai enemmän, eikä sivulta, jonka viimeisen hälytyksen ratkaiseminen jätti tyhjäksi, päässyt takaisin.
+- Jokainen API-avain, joka ei ollut vanhentunut, väitti vanhentuneensa ”juuri nyt”.
+- Valintaikkuna jäi sivun päälle Takaisin-painalluksen jälkeen, eikä sivua voinut vierittää ennen kuin ikkuna suljettiin.
+- Tarkastusloki näytti kahdeksan merkintälajia (palautettu toisto tai varmuuskopio, tyhjennetty roskakori, julkiset profiilit, muutettu ulkoasu) tunnisteillaan, eikä Tiedot-sarakkeessa ollut mitään.
+- Nimikkeen lisääminen katselulistalle sen pikavalikosta epäonnistui sanaakaan sanomatta, kun palvelin kieltäytyi.
+- *Katsottu yhdessä* yleiskatsauksessa käsitteli kerralla valitut useat henkilöt yhtenä henkilönä.
+- Vuosikatsaus kirjoitti alle kymmenen tunnin ja päivän määrät selaimen desimaalipilkulla omien tuhaterotinpilkkujensa vieressä.
+- Kapasiteetti sanoi levyn täyttyvän "viimeisten 0 kuukauden tahtia".
+- Tietoturva-sivulla paikattomat osoitteet laskivat kaikkien toistot kaikilta ajoilta, rajattiinpa sivu mihin henkilöön ja jaksoon tahansa.
+- Joku, jolla oli *Hallinnoi FinStatsia* mutta ei *Näe kaikkien toiminta*, pystyi siirtämään kenen tahansa toiston roskakoriin.
+- Vuosikatsauksen tai julkisen profiilin kortti saattoi tulla selaimen välimuistista aiemmin valitulla kielellä.
+- Live-kanavan lähettämät lataukset olivat brittienglanniksi, oli sivu millä kielellä tahansa.
+- Kirjautuminen, joka muutti sitä, mitä joku saa nähdä, tavoitti hänen muut avoimet välilehtensä vasta seuraavassa puolen minuutin tarkistuksessa.
+- Välilehti, joka luovutti live-yhteytensä uudemmalle, otti seuraavalla sivullaan yhden takaisin, joten saman henkilön välilehdet sulkivat jatkuvasti toistensa yhteyksiä.
+- Taulukot lajittelivat koot 1 000–1 023 yksikköä tekstinä kielillä, jotka ryhmittelevät numerot välilyönnillä, ja turkinkieliset prosentit samoin.
+- Nimike, jonka nimessä oli paikkamerkki, kuten "Big {device} Bunny", täyttyi palvelimen viesteissä.
+- Taulukot lajittelivat kestot ja osuudet kokonaismäärästä (5/26) tekstinä kaikilla kielillä paitsi englanniksi ja Pohjoismaiden kielillä.
+- Yhdellä kielellä yhä avoinna ollut välilehti sai palvelimen vastaukset toisella kielellä heti, kun toinen välilehti oli valinnut sen.
+- Luvun vieressä oleva sana sai väärän muodon puolaksi, venäjäksi ja ukrainaksi ("5 wieczory", "2 потоков").
+- Kapasiteetti laski kirjaston ensimmäisen täytön kasvuksi ja jakoi kunkin kirjaston lisäykset kuudella kuukaudella, mitattiinpa niitä kuinka pitkältä ajalta tahansa; toisen tilalle tullut tiedosto (Radarrin tai Sonarrin päivitys tai tiedosto, jolle Jellyfin antoi uuden tunnisteen) laskettiin kokonaan uudeksi, vaikka vain erotus oli uutta.
+- SyncPlayllä yhdessä katsoneet eivät olleet ryhmä, jos toinen liittyi minuutteja toisen jälkeen; samaan aikaan samassa kohdassa päättyvät toistot kuuluvat nyt yhteen, ja historia ryhmitellään kerran uudelleen.
+- Käyttäjä ilman oikeutta *Näe kaikkien toiminta* saattoi päätellä kirjaston kohdasta *Ei koskaan katsottu*, että joku muu oli toistanut nimikkeen; nyt se laskee vain hänen omat katselunsa.
+
 ## [2.2.0] - 2026-10-01 to 2026-10-07
 
 Kirjaston kunto ja FinUI
