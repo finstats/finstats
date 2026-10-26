@@ -424,7 +424,9 @@ structs, only plays that ended at least a day ago, uniform 404. PNG cards via re
 
 **Library health and capacity (`health.rs`, `capacity.rs`).** Pure rules over item rows (gaps, drift, thin bitrates,
 dubs, unidentified, copies/versions; disks, runway, transcodes) with named-constant thresholds; findings stored after
-library reads; dismissals hold while the fingerprint matches.
+library reads; dismissals hold while the fingerprint matches. A disk's growth counts a file that took a removed one's place
+(same title and library, `take_places`, within `REPLACED_WITHIN_S` of the removed row's last `updated_at`, or any time
+when an import wrote it with 0) as the difference only.
 
 **Network, geo, security (`network.rs`, `geo.rs`, `security.rs`).** Local = private range or a home address; always via
 `network::classify`. GeoIP maps a private copy of a MaxMind-format city DB (opt-in DB-IP download). Pure `detect()` finds

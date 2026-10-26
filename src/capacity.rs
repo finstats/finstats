@@ -142,6 +142,54 @@ pub struct File {
     pub path: String,
     pub bytes: i64,
     pub added: i64,
+    /// What it is, the same for every file of one film or episode ([`TITLE_SQL`]): how a file that took another's place is
+    /// found.
+    pub title: Option<String>,
+    /// The bytes of the files it took the place of ([`take_places`]), which it did not add to the disk.
+    pub replaced: i64,
+}
+
+/// A file the library no longer has: when the library last saw it (`None` when it never did itself, as with a title
+/// Jellystat remembered), what it was and how big.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Gone {
+    pub library: Option<String>,
+    pub title: String,
+    pub bytes: i64,
+    pub last_seen: Option<i64>,
+}
+
+/// A film by its name and year, an episode by its show, season and number, a track by its album and name.
+const TITLE_SQL: &str = "CASE i.type WHEN 'Movie' THEN 'm|' || i.name || '|' || COALESCE(i.production_year, '')
+                                     WHEN 'Episode' THEN 'e|' || i.series_id || '|' || i.parent_index_number || '|' || i.index_number
+                                     WHEN 'Audio' THEN 'a|' || COALESCE(i.album, '') || '|' || i.name END";
+
+/// How far apart a file's leaving and its replacement's arrival may be: Radarr and Sonarr replace a file at once, and the
+/// library reads that see it may be a few days apart. Further apart, the title was deleted and fetched again, and the new
+/// file is all growth.
+pub const REPLACED_WITHIN_S: i64 = 30 * 86_400;
+
+/// Gives each file that took a gone one's place that one's bytes: the first file of the same title in the same library to
+/// arrive within [`REPLACED_WITHIN_S`] of its leaving, or, when it was never seen leaving, the first at all. Each gone
+/// file is one place, taken once.
+pub fn take_places(files: &mut [File], gone: &[Gone]) {
+    let mut order: Vec<usize> = (0..files.len()).filter(|&i| files[i].title.is_some()).collect();
+    order.sort_by_key(|&i| files[i].added);
+    let mut by: HashMap<(Option<&str>, &str), Vec<usize>> = HashMap::new();
+    for &i in &order {
+        by.entry((files[i].library.as_deref(), files[i].title.as_deref().unwrap_or_default())).or_default().push(i);
+    }
+    let mut taken: Vec<(usize, i64)> = vec![];
+    for g in gone {
+        let Some(here) = by.get(&(g.library.as_deref(), g.title.as_str())) else { continue };
+        let near = |i: &&usize| g.last_seen.is_none_or(|seen| (files[**i].added - seen).abs() <= REPLACED_WITHIN_S);
+        if let Some(&i) = here.iter().find(near) {
+            taken.push((i, g.bytes.max(0)));
+        }
+    }
+    for (i, bytes) in taken {
+        files[i].replaced += bytes;
+    }
 }
 
 /// How far back growth is measured, and the month it is told in.
@@ -195,7 +243,8 @@ fn pace_after(files: &[&File], first: Option<i64>, now: i64) -> Pace {
     let start = first.map_or(since, |first| since.max(first + SETTLE_S));
     let window = now - start;
     let young = window < MIN_WINDOW_S;
-    let added: i64 = files.iter().filter(|f| f.added >= start).map(|f| f.bytes.max(0)).sum();
+    // A file in another's place adds the difference, which a smaller one makes negative: the disk freed that.
+    let added: i64 = files.iter().filter(|f| f.added >= start).map(|f| f.bytes.max(0) - f.replaced).sum::<i64>().max(0);
     let per_month = if young { 0 } else { (added as i128 * MONTH_S as i128 / window as i128) as i64 };
     let window_months = if young { 0.0 } else { (window as f64 / MONTH_S as f64 * 10.0).round() / 10.0 };
     Pace { added, per_month, window_months, young }
@@ -427,11 +476,18 @@ pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
         .prepare(&format!("{PLAY} AND ended_at >= ?1 AND started_at >= ?1"))?
         .query_map([recent_since], |r| Ok(Play { start: r.get(0)?, end: r.get(1)?, way: way(r)? }))?
         .collect::<Result<_, _>>()?;
-    let files: Vec<File> = conn
-        .prepare("SELECT l.name, i.path, i.size_bytes, i.date_created FROM items i LEFT JOIN libraries l ON l.id = i.library_id
-                  WHERE i.removed = 0 AND i.path IS NOT NULL AND i.size_bytes > 0 AND i.date_created IS NOT NULL")?
-        .query_map([], |r| Ok(File { library: r.get(0)?, path: r.get(1)?, bytes: r.get(2)?, added: r.get(3)? }))?
+    let mut files: Vec<File> = conn
+        .prepare(&format!("SELECT l.name, i.path, i.size_bytes, i.date_created, {TITLE_SQL} FROM items i LEFT JOIN libraries l ON l.id = i.library_id
+                           WHERE i.removed = 0 AND i.path IS NOT NULL AND i.size_bytes > 0 AND i.date_created IS NOT NULL"))?
+        .query_map([], |r| Ok(File { library: r.get(0)?, path: r.get(1)?, bytes: r.get(2)?, added: r.get(3)?, title: r.get(4)?, replaced: 0 }))?
         .collect::<Result<_, _>>()?;
+    // A removed row keeps the `updated_at` of the last read that saw it; an import writes 0, for "never seen here".
+    let gone: Vec<Gone> = conn
+        .prepare(&format!("SELECT * FROM (SELECT l.name, {TITLE_SQL} AS title, i.size_bytes, NULLIF(i.updated_at, 0) FROM items i LEFT JOIN libraries l ON l.id = i.library_id
+                                             WHERE i.removed = 1 AND i.path IS NOT NULL AND i.size_bytes > 0) WHERE title IS NOT NULL"))?
+        .query_map([], |r| Ok(Gone { library: r.get(0)?, title: r.get(1)?, bytes: r.get(2)?, last_seen: r.get(3)? }))?
+        .collect::<Result<_, _>>()?;
+    take_places(&mut files, &gone);
     let info: Value = crate::db::get_setting(conn, "server_info")?.and_then(|raw| serde_json::from_str(&raw).ok()).unwrap_or(Value::Null);
     let folders = media_folders(info["storage"].as_array().map(Vec::as_slice).unwrap_or_default());
     let scan = info["scheduled_tasks"].as_array().map(Vec::as_slice).unwrap_or_default().iter().find(|t| t["key"] == "RefreshLibrary").cloned().unwrap_or(Value::Null);
@@ -581,7 +637,57 @@ mod tests {
         Folder { library: library.into(), path: path.into(), free, used: 1_000, device: device.map(str::to_string) }
     }
     fn file(library: &str, path: &str, gb: i64, days_ago: i64) -> File {
-        File { library: Some(library.into()), path: path.into(), bytes: gb * 1_000_000_000, added: NOW - days_ago * DAY }
+        File { library: Some(library.into()), path: path.into(), bytes: gb * 1_000_000_000, added: NOW - days_ago * DAY, title: None, replaced: 0 }
+    }
+    fn titled(mut f: File, title: &str) -> File {
+        f.title = Some(title.into());
+        f
+    }
+    fn gone(library: &str, title: &str, gb: i64, seen_days_ago: Option<i64>) -> Gone {
+        Gone { library: Some(library.into()), title: title.into(), bytes: gb * 1_000_000_000, last_seen: seen_days_ago.map(|d| NOW - d * DAY) }
+    }
+
+    /// Radarr and Sonarr replace a file with a better one, and Jellyfin reads the new file as a new item: a 5 GB film
+    /// upgraded to 40 GB grew the disk by 35, not 40. Jellyfin also gives a file it already had a new id now and then (the
+    /// same path, the same size), which grows nothing at all; on a real library that was 92 of the 248 GB of films "added".
+    #[test]
+    fn a_file_that_takes_another_s_place_grows_the_disk_by_the_difference() {
+        let folders = [folder("Films", "/media/films", 3_000_000_000_000, Some("sda1"))];
+        let mut files = [
+            file("Films", "/media/films/Sintel (2010)/sintel.mkv", 500, 400),
+            titled(file("Films", "/media/films/Big Buck Bunny (2008)/bbb-2160p.mkv", 40, 20), "Big Buck Bunny (2008)"),
+            titled(file("Films", "/media/films/Elephants Dream (2006)/ed.mkv", 8, 30), "Elephants Dream (2006)"),
+            titled(file("Films", "/media/films/Cosmos Laundromat (2015)/cl.mkv", 10, 20), "Cosmos Laundromat (2015)"),
+            titled(file("Films", "/media/films/Spring (2019)/spring.mkv", 3, 20), "Spring (2019)"),
+        ];
+        let gone = [
+            gone("Films", "Big Buck Bunny (2008)", 5, Some(21)),     // upgraded: 35 GB of growth
+            gone("Films", "Elephants Dream (2006)", 8, None),        // the same file under a new id, its leaving never seen
+            gone("Films", "Cosmos Laundromat (2015)", 10, Some(300)), // deleted long ago, fetched again: all of it is growth
+            gone("Shows", "Spring (2019)", 3, Some(20)),             // another library's: not this one's place
+        ];
+        take_places(&mut files, &gone);
+        let d = &disks(&folders, &files, NOW)[0];
+        assert_eq!(d.per_month, (35 + 10 + 3) * 1_000_000_000 / GROWTH_MONTHS, "{d:?}");
+        assert_eq!(library_paces(&files, NOW)["Films"].added, 48_000_000_000);
+    }
+
+    /// One copy left takes one place: an HD copy replaced by an HD and a 4K one grew the disk by both new files less it.
+    #[test]
+    fn a_copy_that_left_is_taken_the_place_of_once() {
+        let mut files = [file("Films", "/f/old.mkv", 1, 400), titled(file("Films", "/f/a/hd.mkv", 6, 20), "A (2001)"), titled(file("Films", "/f/a/uhd.mkv", 40, 19), "A (2001)")];
+        take_places(&mut files, &[gone("Films", "A (2001)", 5, Some(21))]);
+        assert_eq!(files.iter().map(|f| f.replaced).collect::<Vec<_>>(), [0, 5_000_000_000, 0]);
+        assert_eq!(library_paces(&files, NOW)["Films"].added, 41_000_000_000);
+    }
+
+    /// A smaller file in a bigger one's place frees space; a disk that only shrank is not said to fill backwards.
+    #[test]
+    fn a_smaller_file_in_a_bigger_one_s_place_grows_nothing() {
+        let mut files = [file("Films", "/f/old.mkv", 1, 400), titled(file("Films", "/f/a/x265.mkv", 4, 20), "A (2001)")];
+        take_places(&mut files, &[gone("Films", "A (2001)", 30, Some(20))]);
+        let p = &library_paces(&files, NOW)["Films"];
+        assert_eq!((p.added, p.per_month), (0, 0));
     }
 
     #[test]
@@ -867,6 +973,24 @@ mod tests {
         // A finding that stops being true goes.
         c.execute("UPDATE playbacks SET transcode = '{\"hw_accel\":\"vaapi\"}' WHERE id = (SELECT MIN(id) FROM playbacks)", []).unwrap();
         assert_eq!(recompute(&mut c, NOW + DAY).unwrap(), 2);
+    }
+
+    /// The library keeps what it removed, so a recompute finds what each new file took the place of: a film by its name
+    /// and year, an episode by its show, season and number, in the same library.
+    #[test]
+    fn a_recompute_counts_an_upgrade_as_the_difference() {
+        let mut c = db();
+        c.execute_batch(&format!(
+            "INSERT INTO items(id, type, name, library_id, path, size_bytes, date_created, removed, updated_at) VALUES
+                 ('old1', 'Movie', 'Big Buck Bunny 1', 'lf', '/media/films/bbb1-720p.mkv', 50000000000, {old}, 1, {seen}),
+                 ('elsewhere', 'Movie', 'Big Buck Bunny 2', 'lx', '/media/other/bbb2.mkv', 60000000000, {old}, 1, {seen});
+             INSERT INTO items(id, type, name, library_id, series_id, parent_index_number, index_number, path, size_bytes, date_created, removed, updated_at) VALUES
+                 ('e1', 'Episode', 'Pilot', 'lf', 's1', 1, 1, '/media/films/show/S01E01-1080p.mkv', 3000000000, {new}, 0, {new}),
+                 ('e1old', 'Episode', 'Pilot', 'lf', 's1', 1, 1, '/media/films/show/S01E01-720p.mkv', 1000000000, {old}, 1, {seen}),
+                 ('e2old', 'Episode', 'Second', 'lf', 's1', 1, 2, '/media/films/show/S01E02.mkv', 1000000000, {old}, 1, {seen});",
+            old = NOW - 400 * DAY, seen = NOW - 21 * DAY, new = NOW - 20 * DAY)).unwrap();
+        recompute(&mut c, NOW).unwrap();
+        assert_eq!(answer(&c).unwrap()["growth"][0]["added_bytes"], (120 - 50 + 3 - 1) * 1_000_000_000i64);
     }
 
     #[test]
