@@ -59,6 +59,125 @@ fn phase_label(table: &str) -> String {
     crate::i18n::t(&format!("server.import.{key}"), &[])
 }
 
+/// A reader that counts what has been read through it, for how far along an import is.
+struct Counted<'a, R> {
+    inner: R,
+    read: &'a std::cell::Cell<u64>,
+}
+
+impl<R: Read> Read for Counted<'_, R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let n = self.inner.read(buf)?;
+        self.read.set(self.read.get() + n as u64);
+        Ok(n)
+    }
+}
+
+/// The older Jellystat format, `[{"<table>": [rows…]}, …]`, read as it arrives: each row is handed to `each` with its
+/// table as soon as it has been read. Read whole into memory first, it took several times the file's size.
+fn legacy_rows<R: Read>(reader: R, mut each: impl FnMut(&str, Value) -> Result<()>) -> Result<()> {
+    let mut de = serde_json::Deserializer::from_reader(reader);
+    serde::de::DeserializeSeed::deserialize(legacy::Sections(&mut each), &mut de)?;
+    de.end()?;
+    Ok(())
+}
+
+mod legacy {
+    use anyhow::Result;
+    use serde::de::{DeserializeSeed, Error, IgnoredAny, MapAccess, SeqAccess, Visitor};
+    use serde_json::Value;
+    use std::fmt::Formatter;
+
+    /// Anything where a section or its rows should be is stepped over, as the whole-document reader did.
+    macro_rules! step_over {
+        () => {
+            fn visit_bool<E: Error>(self, _: bool) -> Result<(), E> { Ok(()) }
+            fn visit_i64<E: Error>(self, _: i64) -> Result<(), E> { Ok(()) }
+            fn visit_u64<E: Error>(self, _: u64) -> Result<(), E> { Ok(()) }
+            fn visit_f64<E: Error>(self, _: f64) -> Result<(), E> { Ok(()) }
+            fn visit_str<E: Error>(self, _: &str) -> Result<(), E> { Ok(()) }
+            fn visit_unit<E: Error>(self) -> Result<(), E> { Ok(()) }
+        };
+    }
+
+    pub struct Sections<'a, F>(pub &'a mut F);
+
+    impl<'de, F: FnMut(&str, Value) -> Result<()>> DeserializeSeed<'de> for Sections<'_, F> {
+        type Value = ();
+        fn deserialize<D: serde::Deserializer<'de>>(self, de: D) -> Result<(), D::Error> {
+            de.deserialize_seq(self)
+        }
+    }
+
+    impl<'de, F: FnMut(&str, Value) -> Result<()>> Visitor<'de> for Sections<'_, F> {
+        type Value = ();
+        fn expecting(&self, f: &mut Formatter) -> std::fmt::Result {
+            f.write_str("a list of tables")
+        }
+        fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<(), A::Error> {
+            while seq.next_element_seed(Section(&mut *self.0))?.is_some() {}
+            Ok(())
+        }
+    }
+
+    struct Section<'a, F>(&'a mut F);
+
+    impl<'de, F: FnMut(&str, Value) -> Result<()>> DeserializeSeed<'de> for Section<'_, F> {
+        type Value = ();
+        fn deserialize<D: serde::Deserializer<'de>>(self, de: D) -> Result<(), D::Error> {
+            de.deserialize_any(self)
+        }
+    }
+
+    impl<'de, F: FnMut(&str, Value) -> Result<()>> Visitor<'de> for Section<'_, F> {
+        type Value = ();
+        fn expecting(&self, f: &mut Formatter) -> std::fmt::Result {
+            f.write_str("a table and its rows")
+        }
+        fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<(), A::Error> {
+            while let Some(table) = map.next_key::<String>()? {
+                map.next_value_seed(Rows { table: &table, each: &mut *self.0 })?;
+            }
+            Ok(())
+        }
+        fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<(), A::Error> {
+            while seq.next_element::<IgnoredAny>()?.is_some() {}
+            Ok(())
+        }
+        step_over!();
+    }
+
+    struct Rows<'a, F> {
+        table: &'a str,
+        each: &'a mut F,
+    }
+
+    impl<'de, F: FnMut(&str, Value) -> Result<()>> DeserializeSeed<'de> for Rows<'_, F> {
+        type Value = ();
+        fn deserialize<D: serde::Deserializer<'de>>(self, de: D) -> Result<(), D::Error> {
+            de.deserialize_any(self)
+        }
+    }
+
+    impl<'de, F: FnMut(&str, Value) -> Result<()>> Visitor<'de> for Rows<'_, F> {
+        type Value = ();
+        fn expecting(&self, f: &mut Formatter) -> std::fmt::Result {
+            f.write_str("a list of rows")
+        }
+        fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<(), A::Error> {
+            while let Some(row) = seq.next_element::<Value>()? {
+                (self.each)(self.table, row).map_err(|e| A::Error::custom(format!("{e:#}")))?;
+            }
+            Ok(())
+        }
+        fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<(), A::Error> {
+            while map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {}
+            Ok(())
+        }
+        step_over!();
+    }
+}
+
 /// Blocking. Parses the backup at `path` and writes it in a single transaction, so a
 /// failed import leaves the database exactly as it was.
 pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> {
@@ -91,19 +210,20 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
 
     if legacy {
         report(&crate::i18n::t("server.import.reading_legacy", &[]), 0.05);
-        let doc: Value = serde_json::from_reader(BufReader::with_capacity(1 << 20, file))
-            .context(crate::i18n::t("server.import.not_json", &[]))?;
-        let sections = doc.as_array().context(crate::i18n::t("server.import.not_jellystat", &[]))?;
-        let count = sections.len().max(1);
-        for (i, section) in sections.iter().enumerate() {
-            let Some(obj) = section.as_object() else { continue };
-            for (table, rows) in obj {
-                report(&phase_label(table), 0.1 + 0.8 * i as f64 / count as f64);
-                for row in rows.as_array().map(Vec::as_slice).unwrap_or_default() {
-                    import_row(&tx, table, row, &mut res, settings.merge_window_s)?;
-                }
+        let read = std::cell::Cell::new(0u64);
+        let (mut current, mut failed) = (String::new(), None);
+        let parsed = legacy_rows(Counted { inner: BufReader::with_capacity(1 << 20, file), read: &read }, |table, row| {
+            if table != current {
+                current = table.to_string();
+                report(&phase_label(table), 0.1 + 0.8 * read.get() as f64 / total_bytes as f64);
             }
+            // A row that could not be written is that error, not a file that is not JSON.
+            import_row(&tx, table, &row, &mut res, settings.merge_window_s).inspect_err(|e| failed = Some(anyhow::anyhow!("{e:#}")))
+        });
+        if let Some(e) = failed {
+            return Err(e);
         }
+        parsed.context(crate::i18n::t("server.import.not_json", &[]))?;
     } else {
         let mut reader = BufReader::with_capacity(1 << 20, file);
         let mut line = String::new();
@@ -592,6 +712,20 @@ mod tests {
             let rec = record(&c, &play(json!({ "PlaybackDuration": length }))).unwrap().unwrap();
             assert_eq!((rec.duration_s, rec.started_at), (0, rec.ended_at), "{length}");
         }
+    }
+
+    /// The older format is one document, read as it arrives: a row is handed over as soon as it has been read, never after
+    /// the whole file is in memory (several times its size, for a file up to the largest an upload may be).
+    #[test]
+    fn the_older_format_is_read_a_row_at_a_time() {
+        let cut = r#"[{"jf_users":[{"Id":"A"},{"Id":"B"}]},{"jf_playback_activity":[{"Id":"p1"},{"Id":"p2"#;
+        let mut seen = vec![];
+        let r = legacy_rows(cut.as_bytes(), |table, row| {
+            seen.push(format!("{table}/{}", row["Id"].as_str().unwrap_or_default()));
+            Ok(())
+        });
+        assert!(r.is_err(), "a document that stops half way");
+        assert_eq!(seen, ["jf_users/A", "jf_users/B", "jf_playback_activity/p1"]);
     }
 
     #[test]
