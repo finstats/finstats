@@ -66,7 +66,21 @@ pub struct Queued {
 }
 
 /// Parameter names whose value is somebody's credential, as indexers, trackers and download clients spell them.
-const SECRET_PARAMS: [&str; 14] = ["apikey", "api_key", "api-key", "key", "passkey", "token", "access_token", "auth", "password", "pass", "pwd", "secret", "sig", "signature"];
+const SECRET_PARAMS: [&str; 18] = [
+    "apikey", "api_key", "api-key", "apitoken", "key", "passkey", "authkey", "torrent_pass", "rsskey", "token", "access_token", "auth", "password", "pass", "pwd", "secret",
+    "sig", "signature",
+];
+
+/// A part of an address's path this long and all letters and digits is a key, not a name: private trackers put the
+/// passkey there (`/0123…cdef/announce`). Where it is a hash instead, more is blanked than needed, never less.
+const PATH_KEY_LEN: usize = 20;
+
+/// The address after its login: the host as it is, and every part of its path that is a key blanked.
+fn blank_path_keys(addr: &str) -> String {
+    let (host, path) = addr.split_at(addr.find('/').unwrap_or(addr.len()));
+    let path: Vec<&str> = path.split('/').map(|part| if part.len() >= PATH_KEY_LEN && part.bytes().all(|b| b.is_ascii_alphanumeric()) { "***" } else { part }).collect();
+    format!("{host}{}", path.join("/"))
+}
 
 /// A service's own words with the credentials in them blanked: the login in an address (`http://user:pass@host`)
 /// and the value of any query parameter named like a key or a password. Sonarr and Radarr quote the download
@@ -85,10 +99,10 @@ pub fn redact(s: &str) -> String {
         let end = tail.find(stop).unwrap_or(tail.len());
         match tail[..end].rfind('@') {
             Some(at) => {
-                out.push_str("***");
-                out.push_str(&tail[at..end]);
+                out.push_str("***@");
+                out.push_str(&blank_path_keys(&tail[at + 1..end]));
             }
-            None => out.push_str(&tail[..end]),
+            None => out.push_str(&blank_path_keys(&tail[..end])),
         }
         rest = &tail[end..];
     }
@@ -662,6 +676,16 @@ mod tests {
         assert_eq!(redact("at http://admin:pa/ss@10.0.0.5:8080/api/v2?x=1 failed"), "at http://***@10.0.0.5:8080/api/v2?x=1 failed");
         assert_eq!(redact("at http://admin:p@ss@10.0.0.5/ failed"), "at http://***@10.0.0.5/ failed");
         assert_eq!(redact("?apikey="), "?apikey=***");
+        // Private trackers: Gazelle's authkey and torrent_pass, an RSS key, and a passkey that is a part of the path.
+        assert_eq!(
+            redact("GET https://tracker.example/torrents.php?action=download&id=1&authkey=a1b2&torrent_pass=c3d4&rsskey=e5 failed"),
+            "GET https://tracker.example/torrents.php?action=download&id=1&authkey=***&torrent_pass=***&rsskey=*** failed"
+        );
+        assert_eq!(
+            redact("Announce to https://tracker.example/0123456789abcdef0123456789abcdef/announce failed"),
+            "Announce to https://tracker.example/***/announce failed"
+        );
+        assert_eq!(redact("http://10.0.0.5:8080/api/v2/torrents/info"), "http://10.0.0.5:8080/api/v2/torrents/info", "an ordinary path is left as it is");
     }
 
     #[test]
