@@ -101,6 +101,9 @@ pub struct Account<'a> {
     pub password: &'a str,
     /// The administrator-only switch: a relay with a certificate of its own making.
     pub lax: bool,
+    /// For a personal destination, the address its name was checked at, connected to instead of a second lookup.
+    /// The certificate is still checked against the name.
+    pub connect_to: Option<std::net::IpAddr>,
 }
 
 /// Send one letter. Like every other destination, what comes back from here names a host and a kind of
@@ -122,7 +125,7 @@ pub async fn deliver(acct: Account<'_>, m: &Message) -> std::result::Result<(), 
         .dangerous_accept_invalid_hostnames(acct.lax)
         .build()
         .map_err(|_| SendError::of(t("server.mail.no_tls_setup", &[("host", server.host.as_str().into())])))?;
-    let mut builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&server.host)
+    let mut builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(acct.connect_to.map_or_else(|| server.host.clone(), |ip| ip.to_string()))
         .port(server.port)
         .timeout(Some(Duration::from_secs(TIMEOUT_S)))
         .tls(if server.starttls { Tls::Required(tls) } else { Tls::Wrapper(tls) });
@@ -152,6 +155,21 @@ fn explain(e: &lettre::transport::smtp::Error, host: &str) -> String {
 mod tests {
     use super::*;
     use crate::notify::{INFO, Message};
+
+    /// A personal destination's letter goes to the address that was checked, never to a second lookup of its name.
+    #[tokio::test]
+    async fn a_letter_goes_to_the_address_that_was_checked() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let url = format!("smtp://mail.invalid:{port}");
+        let acct = Account { url: &url, from: "finstats@example.com", to: "alice@example.com", username: "", password: "", lax: false, connect_to: Some("127.0.0.1".parse().unwrap()) };
+        let m = msg();
+        tokio::select! {
+            r = deliver(acct, &m) => panic!("gave up without connecting to the address given: {:?}", r.err().map(|e| e.message)),
+            r = listener.accept() => assert!(r.is_ok()),
+            _ = tokio::time::sleep(Duration::from_secs(5)) => panic!("nothing connected to the address given"),
+        }
+    }
 
     fn msg() -> Message {
         Message {

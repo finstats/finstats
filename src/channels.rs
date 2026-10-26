@@ -377,11 +377,10 @@ pub fn payload(channel: Channel, base_url: &str, topic: Option<&str>, secret: &s
 pub async fn send(app: &App, t: &Target, m: &Message) -> Result<(), SendError> {
     // A personal destination may only ever point at a public host, and a name that answered publicly
     // yesterday can be pointed inwards today, so this is checked again on every send, not only on save.
-    if t.owner_id.is_some()
-        && let Err(e) = crate::notify::must_be_public(t.url()).await
-    {
-        return Err(SendError::of(format!("{e}")));
-    }
+    let checked = match t.owner_id {
+        Some(_) => Some(crate::notify::public_addresses(t.url()).await.map_err(|e| SendError::of(format!("{e}")))?),
+        None => None,
+    };
     let Some((url, body)) = payload(t.channel, t.url(), t.topic.as_deref(), t.secret(), m) else {
         // Email: a different transport, and the only one that is not a POST of JSON.
         return crate::mail::deliver(
@@ -392,12 +391,13 @@ pub async fn send(app: &App, t: &Target, m: &Message) -> Result<(), SendError> {
                 username: t.option("username"),
                 password: t.secret(),
                 lax: t.accept_invalid_certs,
+                connect_to: checked.as_ref().and_then(|a| a.first().copied()),
             },
             m,
         )
         .await;
     };
-    let client = app.services_http.client(t.accept_invalid_certs);
+    let client = if checked.is_some() { app.services_http.public(t.accept_invalid_certs) } else { app.services_http.client(t.accept_invalid_certs) };
     let mut req = client.post(&url).json(&body);
     // Where each service wants its token. Telegram's is the path and Pushover's is in the body, both
     // built above; these are the ones that go in a header.

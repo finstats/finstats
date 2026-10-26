@@ -912,6 +912,11 @@ pub async fn run(app: App) {
 /// inside the network. Checked when it is saved *and* before every send, because a name that answered
 /// publicly yesterday can be pointed at the router today.
 pub async fn must_be_public(url: &str) -> Result<()> {
+    public_addresses(url).await.map(|_| ())
+}
+
+/// The addresses `url`'s host answers, every one of them public, or why not.
+pub async fn public_addresses(url: &str) -> Result<Vec<std::net::IpAddr>> {
     let parsed = reqwest::Url::parse(url).map_err(|_| anyhow!(t("server.notify.bad_url", &[])))?;
     let host = parsed.host_str().ok_or_else(|| anyhow!(t("server.notify.needs_host", &[])))?;
     let port = parsed.port_or_known_default().unwrap_or(443);
@@ -923,7 +928,7 @@ pub async fn must_be_public(url: &str) -> Result<()> {
     if addresses.iter().any(|a| db::is_local_ip(&a.to_string()).unwrap_or(true)) {
         bail!(t("server.notify.not_public", &[("host", host.into())]));
     }
-    Ok(())
+    Ok(addresses)
 }
 
 // ---------------------------------------------------------------- the address somebody typed

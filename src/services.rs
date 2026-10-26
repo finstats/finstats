@@ -198,25 +198,39 @@ pub struct Http {
     strict: reqwest::Client,
     /// For connections whose owner switched certificate checks off: a self-signed service on the LAN.
     lax: reqwest::Client,
+    /// The same two for a personal notification destination, which may only ever reach a public host (`PublicOnly`).
+    public_strict: reqwest::Client,
+    public_lax: reqwest::Client,
 }
 
 impl Http {
     pub fn new() -> Self {
-        let build = |lax: bool| {
+        let build = |lax: bool, public: bool| {
             let mut headers = HeaderMap::new();
             headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
-            reqwest::Client::builder()
+            let mut b = reqwest::Client::builder()
                 .default_headers(headers)
                 .redirect(reqwest::redirect::Policy::none())
                 .connect_timeout(Duration::from_secs(8))
                 .timeout(Duration::from_secs(15))
                 .pool_max_idle_per_host(2)
                 .user_agent(concat!("finstats/", env!("CARGO_PKG_VERSION")))
-                .danger_accept_invalid_certs(lax)
-                .build()
-                .expect("building http client")
+                .danger_accept_invalid_certs(lax);
+            if public {
+                // A proxy would do its own lookup, and connect wherever that one says.
+                b = b.dns_resolver(Arc::new(PublicOnly)).no_proxy();
+            }
+            b.build().expect("building http client")
         };
-        Http { strict: build(false), lax: build(true) }
+        Http { strict: build(false, false), lax: build(true, false), public_strict: build(false, true), public_lax: build(true, true) }
+    }
+
+    /// For a personal destination: a name is looked up once, refused when any address it answers is not public, and
+    /// connected to at exactly what was checked. A check by one lookup and a connection by another is what a name that
+    /// answers publicly first and inwards second gets past. An address written as digits is never looked up at all, so
+    /// `notify::must_be_public` still holds those.
+    pub fn public(&self, accept_invalid_certs: bool) -> &reqwest::Client {
+        if accept_invalid_certs { &self.public_lax } else { &self.public_strict }
     }
 
     pub fn of(&self, svc: &Service) -> &reqwest::Client {
@@ -227,6 +241,22 @@ impl Http {
     /// a notification destination, say.
     pub fn client(&self, accept_invalid_certs: bool) -> &reqwest::Client {
         if accept_invalid_certs { &self.lax } else { &self.strict }
+    }
+}
+
+/// The resolver of `Http::public`.
+struct PublicOnly;
+
+impl reqwest::dns::Resolve for PublicOnly {
+    fn resolve(&self, name: reqwest::dns::Name) -> reqwest::dns::Resolving {
+        let host = name.as_str().to_string();
+        Box::pin(async move {
+            let found: Vec<std::net::SocketAddr> = tokio::net::lookup_host((host.as_str(), 0)).await?.collect();
+            if found.is_empty() || found.iter().any(|a| crate::db::is_local_ip(&a.ip().to_string()).unwrap_or(true)) {
+                return Err(crate::i18n::t("server.notify.not_public", &[("host", host.as_str().into())]).into());
+            }
+            Ok(Box::new(found.into_iter()) as reqwest::dns::Addrs)
+        })
     }
 }
 
@@ -703,6 +733,23 @@ async fn changed(app: &App) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A personal destination's name is looked up once, and that one answer is both what is checked and what is connected
+    /// to: checked by one lookup and connected by another, a name that answers publicly first and inwards second reached the LAN.
+    #[tokio::test]
+    async fn a_personal_destination_never_connects_to_a_name_that_answers_inwards() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let reached = tokio::spawn(async move { tokio::time::timeout(Duration::from_secs(2), listener.accept()).await.is_ok() });
+        let http = Http::new();
+        assert!(http.public(false).post(format!("http://localhost:{port}/")).send().await.is_err());
+        assert!(!reached.await.unwrap(), "the request reached a loopback address");
+        // The ordinary client, an administrator's, still may.
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let _ = http.client(false).post(format!("http://localhost:{port}/")).timeout(Duration::from_millis(300)).send().await;
+        assert!(tokio::time::timeout(Duration::from_secs(1), listener.accept()).await.is_ok());
+    }
 
     fn service(kind: Kind, url: &str) -> Service {
         Service { id: 1, kind, name: kind.label().into(), url: url.into(), username: None, secret: "hunter2-secret-key".into(), accept_invalid_certs: false, enabled: true }
