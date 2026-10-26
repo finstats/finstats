@@ -2354,94 +2354,110 @@ fn lib_buckets(conn: &Connection, expr: &str, from: &str, wh: &str, args: &[SqlV
     Ok(out)
 }
 
+/// The libraries `library_id=a,b` names, as stored ids; none named is all of them.
+fn make_up_libraries(asked: Option<&str>) -> Vec<String> {
+    let mut out: Vec<String> = vec![];
+    for id in many(asked).iter().map(|s| db::norm_id(s)).filter(|s| !s.is_empty()) {
+        if !out.contains(&id) {
+            out.push(id);
+        }
+    }
+    out
+}
+
 pub async fn library_insights(State(app): State<App>, _user: AuthUser, Query(q): Query<LibraryInsightsQuery>) -> ApiResult {
-    let library = q.library_id.as_deref().map(db::norm_id).filter(|s| !s.is_empty());
-    let out = app
-        .db
-        .call(move |c| {
-            let (lib_sql, args): (&str, Vec<SqlValue>) = match &library {
-                Some(l) => ("AND i.library_id = ?1", vec![l.clone().into()]),
-                None => ("", vec![]),
-            };
-            let files = format!("WHERE i.removed = 0 AND i.size_bytes IS NOT NULL {lib_sql}");
-            let video = format!("{files} AND i.video_codec IS NOT NULL");
-            let titles = format!("WHERE i.removed = 0 AND i.type IN ('Movie', 'Series') {lib_sql}");
-            let by_count = "count DESC, size_bytes DESC";
-            let res_sql = RESOLUTION_SQL.replace("p.", "i.");
+    let libraries = make_up_libraries(q.library_id.as_deref());
+    Ok(Json(app.db.call(move |c| library_make_up(c, &libraries)).await?))
+}
 
-            let totals = one_json(
-                c,
-                &format!(
-                    "SELECT COALESCE(SUM(i.size_bytes IS NOT NULL), 0) AS files, COALESCE(SUM(i.size_bytes), 0) AS size_bytes,
-                            COALESCE(SUM(CASE WHEN i.size_bytes IS NOT NULL THEN i.runtime_s END), 0) AS runtime_s,
-                            COALESCE(SUM(i.type = 'Movie'), 0) AS movies, COALESCE(SUM(i.type = 'Series'), 0) AS series,
-                            COALESCE(SUM(i.type = 'Episode'), 0) AS episodes, COALESCE(SUM(i.type = 'Audio'), 0) AS tracks
-                     FROM items i WHERE i.removed = 0 {lib_sql}"
-                ),
-                &args,
-            )?;
+/// What the files of the given libraries are made of (all of them when none is named).
+fn library_make_up(c: &Connection, libraries: &[String]) -> Result<Value> {
+    // `AND <alias>.library_id IN (?, …)`: every query below takes the same arguments.
+    let in_libraries = |alias: &str| {
+        if libraries.is_empty() {
+            String::new()
+        } else {
+            format!("AND {alias}.library_id IN ({})", std::iter::repeat_n("?", libraries.len()).collect::<Vec<_>>().join(", "))
+        }
+    };
+    let args: Vec<SqlValue> = libraries.iter().map(|l| l.clone().into()).collect();
+    let lib_sql = in_libraries("i");
+    let files = format!("WHERE i.removed = 0 AND i.size_bytes IS NOT NULL {lib_sql}");
+    let video = format!("{files} AND i.video_codec IS NOT NULL");
+    let titles = format!("WHERE i.removed = 0 AND i.type IN ('Movie', 'Series') {lib_sql}");
+    let by_count = "count DESC, size_bytes DESC";
+    let res_sql = RESOLUTION_SQL.replace("p.", "i.");
 
-            // Month buckets for the last two years, gap-free.
-            let added_rows = rows_json(
-                c,
-                &format!(
-                    "SELECT strftime('%Y-%m', i.date_created, 'unixepoch', 'localtime') AS month, COUNT(*) AS count
-                     FROM items i WHERE i.removed = 0 AND i.type IN ('Movie', 'Episode', 'Audio', 'Video', 'MusicVideo')
-                       AND i.date_created >= CAST(strftime('%s', 'now', 'start of month', '-23 months') AS INTEGER) {lib_sql} GROUP BY 1"
-                ),
-                &args,
-            )?;
-            let found: std::collections::HashMap<String, i64> =
-                added_rows.iter().filter_map(|r| Some((r["month"].as_str()?.to_string(), r["count"].as_i64()?))).collect();
-            let today: String = c.query_row("SELECT date('now', 'localtime', 'start of month')", [], |r| r.get(0))?;
-            let mut cursor = NaiveDate::parse_from_str(&today, "%Y-%m-%d")?;
-            let mut added = vec![];
-            for _ in 0..24 {
-                let key = cursor.format("%Y-%m").to_string();
-                added.push(json!({ "month": key, "count": found.get(&key).copied().unwrap_or(0) }));
-                cursor = (cursor - chrono::Duration::days(1)).with_day(1).unwrap_or(cursor);
-            }
-            added.reverse();
+    let totals = one_json(
+        c,
+        &format!(
+            "SELECT COALESCE(SUM(i.size_bytes IS NOT NULL), 0) AS files, COALESCE(SUM(i.size_bytes), 0) AS size_bytes,
+                    COALESCE(SUM(CASE WHEN i.size_bytes IS NOT NULL THEN i.runtime_s END), 0) AS runtime_s,
+                    COALESCE(SUM(i.type = 'Movie'), 0) AS movies, COALESCE(SUM(i.type = 'Series'), 0) AS series,
+                    COALESCE(SUM(i.type = 'Episode'), 0) AS episodes, COALESCE(SUM(i.type = 'Audio'), 0) AS tracks
+             FROM items i WHERE i.removed = 0 {lib_sql}"
+        ),
+        &args,
+    )?;
 
-            // A series weighs what its episodes weigh.
-            let sized = format!(
-                "SELECT t.id, t.name, t.type, t.production_year AS year, t.date_created, t.id AS image_item_id,
-                        COALESCE(t.size_bytes, (SELECT SUM(e.size_bytes) FROM items e WHERE e.series_id = t.id AND e.removed = 0), 0) AS size_bytes
-                 FROM items t WHERE t.removed = 0 AND t.type IN ('Movie', 'Series') {}",
-                lib_sql.replace("i.", "t.")
-            );
-            let largest = rows_json(c, &format!("{sized} ORDER BY size_bytes DESC LIMIT 15"), &args)?;
-            // Nobody has played it here, and nobody has it marked as played in Jellyfin either.
-            let never = "NOT EXISTS (SELECT 1 FROM visible_playbacks p WHERE p.item_id = t.id OR p.series_id = t.id)
-                 AND NOT EXISTS (SELECT 1 FROM user_items ui WHERE ui.played = 1 AND (ui.item_id = t.id OR ui.item_id IN (SELECT id FROM items WHERE series_id = t.id)))";
-            let unwatched_items = rows_json(c, &format!("{sized} AND {never} ORDER BY size_bytes DESC LIMIT 25"), &args)?;
-            let unwatched_totals =
-                one_json(c, &format!("SELECT COUNT(*) AS count, COALESCE(SUM(size_bytes), 0) AS size_bytes FROM ({sized} AND {never})"), &args)?.unwrap_or_default();
+    // Month buckets for the last two years, gap-free.
+    let added_rows = rows_json(
+        c,
+        &format!(
+            "SELECT strftime('%Y-%m', i.date_created, 'unixepoch', 'localtime') AS month, COUNT(*) AS count
+             FROM items i WHERE i.removed = 0 AND i.type IN ('Movie', 'Episode', 'Audio', 'Video', 'MusicVideo')
+               AND i.date_created >= CAST(strftime('%s', 'now', 'start of month', '-23 months') AS INTEGER) {lib_sql} GROUP BY 1"
+        ),
+        &args,
+    )?;
+    let found: std::collections::HashMap<String, i64> =
+        added_rows.iter().filter_map(|r| Some((r["month"].as_str()?.to_string(), r["count"].as_i64()?))).collect();
+    let today: String = c.query_row("SELECT date('now', 'localtime', 'start of month')", [], |r| r.get(0))?;
+    let mut cursor = NaiveDate::parse_from_str(&today, "%Y-%m-%d")?;
+    let mut added = vec![];
+    for _ in 0..24 {
+        let key = cursor.format("%Y-%m").to_string();
+        added.push(json!({ "month": key, "count": found.get(&key).copied().unwrap_or(0) }));
+        cursor = (cursor - chrono::Duration::days(1)).with_day(1).unwrap_or(cursor);
+    }
+    added.reverse();
 
-            Ok(json!({
-                "totals": totals,
-                "resolutions": lib_buckets(c, &res_sql, "", &video, &args, by_count, 12)?,
-                "video_codecs": lib_buckets(c, "UPPER(i.video_codec)", "", &video, &args, by_count, 12)?,
-                "video_ranges": lib_buckets(c, "i.video_range", "", &video, &args, by_count, 12)?,
-                "containers": lib_buckets(c, "LOWER(i.container)", "", &files, &args, by_count, 12)?,
-                "audio_codecs": lib_buckets(c, "UPPER(i.audio_codec)", "", &files, &args, by_count, 12)?,
-                "audio_languages": lib_buckets(c, "al.value", ", json_each(i.audio_languages) al", &video, &args, by_count, 12)?,
-                "subtitle_languages": lib_buckets(c, "sl.value", ", json_each(i.subtitle_languages) sl", &video, &args, by_count, 12)?,
-                // A series row has no size of its own, so a per-genre size would only count the films.
-                "genres": lib_buckets(c, "g.value", ", json_each(i.genres) g", &titles, &args, by_count, 12)?
-                    .into_iter()
-                    .map(|mut g| {
-                        g["size_bytes"] = json!(0);
-                        g
-                    })
-                    .collect::<Vec<_>>(),
-                "decades": lib_buckets(c, "(i.production_year / 10 * 10) || 's'", "", &format!("{titles} AND i.production_year > 1800"), &args, "name", 30)?,
-                "added": added, "largest": largest,
-                "unwatched": { "count": unwatched_totals.get("count"), "size_bytes": unwatched_totals.get("size_bytes"), "items": unwatched_items },
-            }))
-        })
-        .await?;
-    Ok(Json(out))
+    // A series weighs what its episodes weigh.
+    let sized = format!(
+        "SELECT t.id, t.name, t.type, t.production_year AS year, t.date_created, t.id AS image_item_id,
+                COALESCE(t.size_bytes, (SELECT SUM(e.size_bytes) FROM items e WHERE e.series_id = t.id AND e.removed = 0), 0) AS size_bytes
+         FROM items t WHERE t.removed = 0 AND t.type IN ('Movie', 'Series') {}",
+        in_libraries("t")
+    );
+    let largest = rows_json(c, &format!("{sized} ORDER BY size_bytes DESC LIMIT 15"), &args)?;
+    // Nobody has played it here, and nobody has it marked as played in Jellyfin either.
+    let never = "NOT EXISTS (SELECT 1 FROM visible_playbacks p WHERE p.item_id = t.id OR p.series_id = t.id)
+         AND NOT EXISTS (SELECT 1 FROM user_items ui WHERE ui.played = 1 AND (ui.item_id = t.id OR ui.item_id IN (SELECT id FROM items WHERE series_id = t.id)))";
+    let unwatched_items = rows_json(c, &format!("{sized} AND {never} ORDER BY size_bytes DESC LIMIT 25"), &args)?;
+    let unwatched_totals =
+        one_json(c, &format!("SELECT COUNT(*) AS count, COALESCE(SUM(size_bytes), 0) AS size_bytes FROM ({sized} AND {never})"), &args)?.unwrap_or_default();
+
+    Ok(json!({
+        "totals": totals,
+        "resolutions": lib_buckets(c, &res_sql, "", &video, &args, by_count, 12)?,
+        "video_codecs": lib_buckets(c, "UPPER(i.video_codec)", "", &video, &args, by_count, 12)?,
+        "video_ranges": lib_buckets(c, "i.video_range", "", &video, &args, by_count, 12)?,
+        "containers": lib_buckets(c, "LOWER(i.container)", "", &files, &args, by_count, 12)?,
+        "audio_codecs": lib_buckets(c, "UPPER(i.audio_codec)", "", &files, &args, by_count, 12)?,
+        "audio_languages": lib_buckets(c, "al.value", ", json_each(i.audio_languages) al", &video, &args, by_count, 12)?,
+        "subtitle_languages": lib_buckets(c, "sl.value", ", json_each(i.subtitle_languages) sl", &video, &args, by_count, 12)?,
+        // A series row has no size of its own, so a per-genre size would only count the films.
+        "genres": lib_buckets(c, "g.value", ", json_each(i.genres) g", &titles, &args, by_count, 12)?
+            .into_iter()
+            .map(|mut g| {
+                g["size_bytes"] = json!(0);
+                g
+            })
+            .collect::<Vec<_>>(),
+        "decades": lib_buckets(c, "(i.production_year / 10 * 10) || 's'", "", &format!("{titles} AND i.production_year > 1800"), &args, "name", 30)?,
+        "added": added, "largest": largest,
+        "unwatched": { "count": unwatched_totals.get("count"), "size_bytes": unwatched_totals.get("size_bytes"), "items": unwatched_items },
+    }))
 }
 
 // ---------------------------------------------------------------- v0.2: the Jellyfin server
@@ -2486,6 +2502,44 @@ mod tests {
         )
         .unwrap();
         c
+    }
+
+    /// "What your library is made of" for the libraries a person picked: one, several or (naming none) all of them, and a
+    /// library nobody has is nothing, never everything.
+    #[test]
+    fn the_make_up_counts_only_the_libraries_picked() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO items(id, library_id, type, name, size_bytes, runtime_s, video_codec, container, removed, updated_at) VALUES
+               ('m1', 'films', 'Movie',   'Big Buck Bunny', 100, 600, 'h264', 'mkv', 0, 0),
+               ('m2', 'films', 'Movie',   'Sintel',         200, 900, 'hevc', 'mkv', 0, 0),
+               ('e1', 'shows', 'Episode', 'Pilot',           50, 1500, 'h264', 'mp4', 0, 0),
+               ('a1', 'music', 'Audio',   'Intro',            5, 120, NULL, 'flac', 0, 0);",
+        )
+        .unwrap();
+        let files = |libs: &[&str]| {
+            let libs: Vec<String> = libs.iter().map(|s| s.to_string()).collect();
+            let d = library_make_up(&c, &libs).unwrap();
+            (d["totals"]["files"].as_i64().unwrap(), d["totals"]["size_bytes"].as_i64().unwrap())
+        };
+        assert_eq!(files(&[]), (4, 355));
+        assert_eq!(files(&["films"]), (2, 300));
+        assert_eq!(files(&["films", "shows"]), (3, 350));
+        assert_eq!(files(&["nowhere"]), (0, 0));
+        let both = library_make_up(&c, &["films".into(), "music".into()]).unwrap();
+        assert_eq!(both["containers"], json!([{ "name": "mkv", "count": 2, "size_bytes": 300 }, { "name": "flac", "count": 1, "size_bytes": 5 }]));
+        assert_eq!(both["largest"].as_array().unwrap().iter().map(|r| r["id"].as_str().unwrap()).collect::<Vec<_>>(), ["m2", "m1"]);
+    }
+
+    /// The address names libraries as a comma list, the way every filter here does; one id still means that one.
+    #[test]
+    fn the_make_up_reads_libraries_from_a_comma_list() {
+        assert_eq!(make_up_libraries(Some("A-1, b2,a-1")), vec!["a1".to_string(), "b2".to_string()]);
+        assert!(make_up_libraries(Some("")).is_empty());
+        assert!(make_up_libraries(None).is_empty());
     }
 
     /// The Languages card of a show and of a season, as it read before the rule became one function: files only (a size),
