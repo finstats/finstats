@@ -114,6 +114,21 @@ pub struct Habits {
 pub struct Persona {
     pub title: String,
     pub line: String,
+    /// What it is and its number, so a card can say it in the language it is drawn in; never in an answer.
+    #[serde(default, skip_serializing)]
+    pub key: Option<String>,
+    #[serde(default, skip_serializing)]
+    pub n: Option<f64>,
+}
+
+impl Persona {
+    /// Its name and line in `lang`, or the words it came with when it has no key.
+    pub fn words(&self, lang: &str) -> (String, String) {
+        match (&self.key, self.n) {
+            (Some(key), Some(n)) => crate::recap::persona_words(lang, key, n),
+            _ => (self.title.clone(), self.line.clone()),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]

@@ -339,8 +339,9 @@ fn recap(lang: &str, c: &mut Canvas, a: &PublicProfile, posters: &Posters) {
     }
     c.text_fit(64.0, 414.0, Style(22.0, 400, MUTED), &facts.join(" · "), Some(620.0));
     if let Some(p) = &r.persona {
-        c.text_fit(64.0, 480.0, Style(30.0, 700, ACCENT_HI), &p.title, Some(620.0));
-        c.text_fit(64.0, 514.0, Style(20.0, 400, MUTED), &p.line, Some(620.0));
+        let (title, line) = p.words(lang);
+        c.text_fit(64.0, 480.0, Style(30.0, 700, ACCENT_HI), &title, Some(620.0));
+        c.text_fit(64.0, 514.0, Style(20.0, 400, MUTED), &line, Some(620.0));
     } else if let Some(g) = r.genres.first() {
         c.text_fit(64.0, 480.0, Style(30.0, 700, ACCENT_HI), &say("server.story.mostly", &[("genre", g.name.as_str().into())]), Some(620.0));
     }
@@ -406,16 +407,7 @@ pub(crate) fn thousands(n: i64) -> String {
 
 /// A whole number as `lang` writes it, as the pages do: 1,203 in English, 1 203 (a no-break space) in Norwegian.
 pub(crate) fn number(lang: &str, n: i64) -> String {
-    let sep = if lang.starts_with("en") { ',' } else { '\u{a0}' };
-    let digits = n.unsigned_abs().to_string();
-    let mut out = String::new();
-    for (i, ch) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i).is_multiple_of(3) {
-            out.push(sep);
-        }
-        out.push(ch);
-    }
-    if n < 0 { format!("-{out}") } else { out }
+    crate::i18n::number(lang, n)
 }
 
 fn fonts() -> Arc<usvg::fontdb::Database> {
@@ -588,6 +580,8 @@ mod tests {
         assert_eq!(thousands(1203), "1,203");
         assert_eq!(thousands(999), "999");
         assert_eq!(thousands(1_234_567), "1,234,567");
+        // As each language's page writes them: a German card said 1 203 where the page says 1.203.
+        assert_eq!([number("de-DE", 1203), number("es-ES", 1203), number("es-ES", 12_030), number("nb-NO", 1203)], ["1.203", "1203", "12.030", "1\u{a0}203"]);
         assert!(svg(Kind::Profile, &profile(), &Posters::new()).contains("412"));
     }
 

@@ -71,6 +71,11 @@ pub fn plural(lang: &str, n: i64) -> &'static str {
     }
 }
 
+/// Whether `lang` writes a decimal with a point (2.5) rather than a comma (2,5).
+pub fn decimal_point(lang: &str) -> bool {
+    matches!(lang.split('-').next().unwrap_or(""), "en" | "ja" | "ko" | "zh" | "hi")
+}
+
 /// The language a card is drawn in: `lang`, unless its letters are not in the card's font (Inter: Latin, Greek and
 /// Cyrillic), when the card is drawn in the source rather than in boxes.
 pub fn drawable(lang: &str) -> &'static str {
@@ -109,13 +114,13 @@ fn catalogue(lang: &str) -> &'static serde_json::Value {
 }
 
 /// A whole number as `lang` writes it, as `Intl` does: 1,390 in English, 1.390 in German, 1 390 in Norwegian (a no-break
-/// space; French a narrow one), Spanish and Polish grouping only from five digits, Hindi in lakhs and crores.
-fn number(lang: &str, n: i64) -> String {
+/// space; French a narrow one), Spanish, Italian and Polish grouping only from five digits, Hindi in lakhs and crores.
+pub(crate) fn number(lang: &str, n: i64) -> String {
     let digits = n.unsigned_abs().to_string();
     let code = lang.split('-').next().unwrap_or("");
     let (sep, from) = match code {
-        "de" | "it" | "pt" | "nl" | "da" | "tr" | "is" => ('.', 4),
-        "es" => ('.', 5),
+        "de" | "pt" | "nl" | "da" | "tr" | "is" => ('.', 4),
+        "es" | "it" => ('.', 5),
         "fr" => ('\u{202f}', 4),
         "nb" | "nn" | "sv" | "fi" | "ru" | "uk" => ('\u{a0}', 4),
         "pl" => ('\u{a0}', 5),
@@ -530,6 +535,8 @@ mod more_languages_tests {
         assert_eq!(number("fr-FR", 1_390), "1\u{202f}390");
         assert_eq!(number("es-ES", 1_390), "1390", "Spanish groups from five digits");
         assert_eq!(number("es-ES", 12_390), "12.390");
+        assert_eq!(number("it-IT", 1_234), "1234", "Italian groups from five digits too, as Intl does");
+        assert_eq!(number("it-IT", 12_345), "12.345");
         assert_eq!(number("pl-PL", 1_390), "1390");
         assert_eq!(number("ru-RU", 1_390), "1\u{a0}390");
         assert_eq!(number("ja-JP", 1_390), "1,390");

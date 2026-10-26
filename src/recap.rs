@@ -656,17 +656,23 @@ fn persona(totals: &Value, hours: &[i64], weekdays: &[i64]) -> Value {
 /// keeps the words it has.
 pub fn say_persona(p: &mut Value) {
     let (Some(key), Some(n)) = (p["key"].as_str().map(str::to_string), p["n"].as_f64()) else { return };
-    let value = match key.as_str() {
+    let (title, line) = persona_words(crate::i18n::current(), &key, n);
+    p["title"] = json!(title);
+    p["line"] = json!(line);
+}
+
+/// A persona's name and line in `lang`: a card says them in the language it is drawn in, which is not always the page's.
+pub fn persona_words(lang: &str, key: &str, n: f64) -> (String, String) {
+    let value = match key {
         // Episodes a day keep their tenth, with the decimal mark of the language.
         "binge_watcher" => {
             let one = format!("{n:.1}");
-            if crate::i18n::current().starts_with("en") { one } else { one.replace('.', ",") }
+            if crate::i18n::decimal_point(lang) { one } else { one.replace('.', ",") }
         }
         "creature_of_habit" => format!("{:02}:00", n as i64),
         _ => (n as i64).to_string(),
     };
-    p["title"] = json!(crate::i18n::t(&format!("server.recap.persona.{key}.title"), &[]));
-    p["line"] = json!(crate::i18n::t(&format!("server.recap.persona.{key}.line"), &[("n", value.into())]));
+    (crate::i18n::say(lang, &format!("server.recap.persona.{key}.title"), &[]), crate::i18n::say(lang, &format!("server.recap.persona.{key}.line"), &[("n", value.into())]))
 }
 
 fn records(c: &Connection, w: &Window) -> Result<Value> {
@@ -1167,6 +1173,14 @@ mod tests {
     }
 
     /// Every persona there is, each from a year that has its habit and none of the ones before it in the order.
+    #[test]
+    fn a_persona_s_tenth_is_written_with_the_language_s_decimal_mark() {
+        assert!(persona_words("nb-NO", "binge_watcher", 2.5).1.contains("2,5"));
+        for lang in ["en-GB", "ja-JP", "zh-CN", "hi-IN"] {
+            assert!(persona_words(lang, "binge_watcher", 2.5).1.contains("2.5"), "{lang} writes 2.5, where 2,5 reads as 25");
+        }
+    }
+
     #[test]
     fn every_persona_is_reached_and_says_its_number() {
         let at = |pairs: &[(usize, i64)]| {

@@ -199,7 +199,8 @@ impl StoryYear {
             top_movies: titles(&r["top_movies"]),
             top_tracks: titles(&r["top_tracks"]),
             genres: r["top_genres"].as_array().map(|a| a.iter().filter_map(|g| Some(Named { name: text(&g["name"])?, watch_s: int(&g["watch_s"]) })).take(6).collect()).unwrap_or_default(),
-            persona: r["persona"].as_object().and_then(|p| Some(Persona { title: text(p.get("title")?)?, line: text(p.get("line")?).unwrap_or_default() })),
+            persona: r["persona"].as_object().and_then(|p| Some(Persona { title: text(p.get("title")?)?, line: text(p.get("line")?).unwrap_or_default(),
+                key: p.get("key").and_then(Value::as_str).map(str::to_string), n: p.get("n").and_then(Value::as_f64) })),
             hours: r["hours"].as_array().map(|a| a.iter().map(int).collect()).unwrap_or_default(),
             weekdays: r["weekdays"].as_array().map(|a| a.iter().map(int).collect()).unwrap_or_default(),
             days: r["days"].as_array().map(|a| a.iter().filter_map(|d| Some((text(&d["date"])?, int(&d["watch_s"])))).collect()).unwrap_or_default(),
@@ -441,8 +442,9 @@ fn svg_in(lang: &str, ch: Chapter, y: &StoryYear, posters: &Posters) -> String {
         Chapter::Persona => {
             if let Some(p) = &y.persona {
                 c.text(X, 760.0, Style(44.0, 500, MUTED), &say(lang, "server.story.you_were", &[]));
-                c.wrap(X, 900.0, Style(120.0, 800, ACCENT_HI), &p.title, WIDE, 3);
-                c.wrap(X, 1300.0, Style(46.0, 400, TEXT), &p.line, WIDE, 4);
+                let (title, line) = p.words(lang);
+                c.wrap(X, 900.0, Style(120.0, 800, ACCENT_HI), &title, WIDE, 3);
+                c.wrap(X, 1300.0, Style(46.0, 400, TEXT), &line, WIDE, 4);
             }
         }
         Chapter::Rhythm => {
@@ -737,6 +739,18 @@ mod tests {
         asked.made = 1;
         s.asked = Some(asked);
         assert!(drawn(&s, "en-GB", Chapter::Asked).contains(">request<"), "en-GB, 1 request");
+    }
+
+    /// A card is drawn in a language its font has letters for, and the persona with it: a Japanese reader's Persona card
+    /// drew 夜型 in Inter, which has no Japanese, as empty boxes beside an English heading.
+    #[test]
+    fn the_persona_is_drawn_in_the_card_s_language() {
+        let mut r = recap();
+        r["persona"] = json!({ "key": "night_owl", "n": 41.0, "title": "夜型", "line": "大半が22時以降" });
+        let s = StoryYear::from_recap(&r, "Alice").unwrap();
+        let drawn = svg_in(crate::i18n::drawable("ja-JP"), Chapter::Persona, &s, &Posters::new());
+        assert!(!drawn.contains("夜型") && drawn.contains("Night owl"), "the persona was not drawn in the card's language");
+        assert!(svg_in("nb-NO", Chapter::Persona, &s, &Posters::new()).contains("Nattugle"), "nor in Bokmål");
     }
 
     /// The card cache is keyed by what a card says, and the language is part of what it says.
