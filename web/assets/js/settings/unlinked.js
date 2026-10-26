@@ -9,7 +9,7 @@ import { t } from '../i18n.js';
 
 export default {
   key: 'unlinked', label: t('settings.sections.unlinked.label'), sub: t('settings.sections.unlinked.sub'), group: t('settings.groups.data'), icon: 'link',
-  visible: () => can('manage'),
+  visible: () => can('manage') && can('see_everyone'),
   entries: [{ id: 'unlinked', label: t('settings.unlinked.entry'), hint: t('settings.unlinked.entry_hint') }],
   async render(slot) {
     const body = h('div');

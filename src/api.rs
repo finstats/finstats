@@ -1158,7 +1158,14 @@ async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req
 
 /// `GET /api/library/missing`: every film, video and episode plays point at that the library does not have, each with
 /// the three titles it most likely is.
-async fn library_missing(State(app): State<App>, Manager(_): Manager) -> ApiResult {
+/// Titles the library lost are listed from everybody's plays of them: somebody else's viewing is see_everyone's, on top
+/// of the manage that locating them takes.
+fn may_locate(user: &AuthUser) -> Result<(), ApiError> {
+    if user.perms.see_everyone { Ok(()) } else { Err(ApiError::not_permitted("see other people's statistics")) }
+}
+
+async fn library_missing(State(app): State<App>, Manager(user): Manager) -> ApiResult {
+    may_locate(&user)?;
     let missing = app
         .db
         .call(|c| {
@@ -1183,7 +1190,8 @@ struct CandidatesQuery {
 }
 
 /// `GET /api/library/missing/{id}/candidates?q=`: up to eight titles a missing one might be: by its names, or by `q`.
-async fn missing_candidates(State(app): State<App>, Manager(_): Manager, Path(id): Path<String>, Query(q): Query<CandidatesQuery>) -> ApiResult {
+async fn missing_candidates(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>, Query(q): Query<CandidatesQuery>) -> ApiResult {
+    may_locate(&user)?;
     let found = app
         .db
         .call(move |c| {
@@ -1204,6 +1212,7 @@ struct LocateBody {
 /// `POST /api/library/locate` with `{"from", "to"}`: the plays of a missing title are of `to`. They move, the choice
 /// is kept for a re-import, and the title's groups are worked out again.
 async fn locate_title(State(app): State<App>, Manager(user): Manager, Json(body): Json<LocateBody>) -> ApiResult {
+    may_locate(&user)?;
     let (window, group_window) = { let s = app.settings(); (s.merge_window_s, s.group_window_s) };
     let (from, to, by) = (body.from.clone(), body.to.clone(), user.id.clone());
     let done = app
