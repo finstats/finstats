@@ -769,7 +769,7 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
   two imports" (there are three). The backup module's doc omits several tables in `TABLES`. `checks/capacity.sh` refers
   to a `qa/run.sh capacity` stage that does not exist.
 - Libraries (unlike users) are still marked removed by timestamp rather than by id.
-- **`window.finstatsWelcome()` (`boot.js`) is a debugging aid for the welcome and must be removed before 2.3.0 reaches `main`.**
+- **`window.finstatsWelcome()` (`boot.js`) is for trying the welcome by hand and must be removed before 2.3.0 reaches `main`.**
 
 ---
 
