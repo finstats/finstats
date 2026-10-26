@@ -8,6 +8,7 @@ import { navigate } from '../router.js';
 import { setBusy, inlineError, formField as field } from '../components.js';
 import { button } from '../../finui/components/button/button.js';
 import { t, tParts } from '../i18n.js';
+import { welcomeCard } from '../welcome.js';
 
 function brand() {
   return h('div', { class: 'auth-brand' }, logo(34), h('span', { class: 'brand-name' }, 'FinStats'));
@@ -85,7 +86,10 @@ export function setupPage(ctx) {
       const res = await api.post('/setup', { url: tested.url, username: u, password: p }, { quiet401: true });
       state.user = res.user;
       try { state.status = await api.get('/status'); } catch { state.status = { ...state.status, configured: true, server_name: tested.server_name }; }
-      navigate('/', { replace: true });
+      // The same card goes on with the welcome's questions, setup's two steps shown done above them.
+      history.replaceState(history.state, '', '/welcome');
+      ctx.root.replaceChildren(welcomeCard({ setup: true }));
+      ctx.root.querySelector('#w-language')?.focus();
     } catch (err) {
       setBusy(finishBtn, false);
       if (err.status === 401) { pass.setError(t('auth.login.wrong')); pass.input.select(); pass.input.focus(); }

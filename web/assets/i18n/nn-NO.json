@@ -4624,5 +4624,20 @@
       "Fixed": "Retta",
       "Removed": "Fjerna"
     }
+  },
+  "welcome": {
+    "title": "Velkomen til FinStats",
+    "sub": "Nokre val for denne nettlesaren. Du kan endre dei når som helst under Innstillingar → Utsjånad.",
+    "step_language": "Språk",
+    "step_formats": "Dato og klokkeslett",
+    "step_layout": "Oppsett",
+    "unchecked": "ikkje kontrollert",
+    "layout_finstats": "Alle sidene, med menyen langs kanten.",
+    "layout_simple": "Ei linje øvst og berre statistikken, slik ein klassisk statistikkserver for Plex viser han.",
+    "back": "Tilbake",
+    "next": "Neste",
+    "done": "Ferdig",
+    "skip": "Hopp over",
+    "skip_note": "Britisk engelsk, 31/01/2026, 13:05 og FinStats."
   }
 }

@@ -111,6 +111,11 @@ export function setLayoutChoice(layout, to = location.pathname + location.search
   location.assign(to);
 }
 
+// ---- the welcome: shown once to whoever signs in, in each browser, since everything it asks is this browser's choice.
+const WELCOMED_KEY = 'finstats.welcomed';
+export const welcomed = () => store.get(WELCOMED_KEY) === '1';
+export const markWelcomed = () => store.set(WELCOMED_KEY, '1');
+
 // ---- theme: 'device' (nothing stored, app.css follows the device), 'light' or 'dark', this browser's
 // choice. theme.js applies the stored one before the first paint; this changes it afterwards.
 const THEME_KEY = 'finstats.theme';

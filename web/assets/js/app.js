@@ -26,6 +26,7 @@ import togetherPage, { prefetchTogether } from './pages/together.js';
 import changelogPage, { prefetchChangelog } from './pages/changelog.js';
 import licensesPage, { prefetchLicenses } from './pages/licenses.js';
 import { setupPage, loginPage } from './pages/auth.js';
+import { welcomePage } from './welcome.js';
 import { button } from '../finui/components/button/button.js';
 import { animateWithin } from '../finui/components/animated-icon/animated-icon.js';
 import { motion } from '../finmotion/core/finmotion.js';
@@ -33,6 +34,7 @@ import { installMenus } from './menus.js';
 
 route('/setup', setupPage, { bare: true });
 route('/login', loginPage, { bare: true });
+route('/welcome', welcomePage, { bare: true });
 // `prefetch` hands the prefetcher the page's own loader, so what it fetches is found again by the page.
 route('/', dashboard, { prefetch: prefetchDashboard });
 route('/recap', recapPage, { prefetch: prefetchRecap });

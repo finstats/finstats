@@ -77,9 +77,13 @@ export function storedLanguage() {
 export function chosenLanguage() {
   return storedLanguage() || pickLanguage(typeof navigator !== 'undefined' ? navigator.languages || [navigator.language] : []);
 }
+/** Keep a choice ('' follows the browser), without reading the page again. */
+export function keepLanguage(tag) {
+  try { if (tag) localStorage.setItem(KEY, tag); else localStorage.removeItem(KEY); } catch { /* storage blocked: this visit only */ }
+}
 /** Keep a choice ('' follows the browser) and read the page again in it. */
 export function setLanguage(tag) {
-  try { if (tag) localStorage.setItem(KEY, tag); else localStorage.removeItem(KEY); } catch { /* storage blocked: this visit only */ }
+  keepLanguage(tag);
   location.reload();
 }
 

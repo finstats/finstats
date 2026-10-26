@@ -552,6 +552,22 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .wizard-step.is-locked .wizard-title::before { background: var(--hover); color: var(--text-faint); }
 .wizard-step:not(.is-locked) .wizard-locked-note { display: none; }
 .test-ok { white-space: normal; }
+/* The welcome: setup's card, a little wider for the two layouts side by side. */
+.welcome { width: min(600px, 100%); }
+.wizard-step.is-done .wizard-title { color: var(--text-muted); }
+.wizard-step.is-done .wizard-title .icon { color: var(--good); }
+.welcome-layouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.welcome-layout { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 8px 8px 10px; border: 1px solid var(--border-soft); border-radius: var(--radius); cursor: pointer; }
+.welcome-layout:hover { border-color: var(--border-strong); }
+.welcome-layout.is-chosen { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.welcome-layout:has(input:focus-visible) { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
+.welcome-layout input { position: absolute; opacity: 0; pointer-events: none; }
+.welcome-layout img { width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: cover; object-position: top left; border-radius: var(--radius-sm); background: var(--bg-sunken); }
+.welcome-layout__name { font-weight: 600; color: var(--text-strong); margin-top: 4px; }
+.welcome-layout__line { font-size: 12.5px; color: var(--text-muted); }
+.welcome-actions { justify-content: flex-end; }
+.welcome-skip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+@media (max-width: 520px) { .welcome-layouts { grid-template-columns: 1fr; } }
 
 .grid-heat { display: grid; gap: 20px; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 .grid-heat > * { min-width: 0; }

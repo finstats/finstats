@@ -1,7 +1,7 @@
 // History-API router with a per-page lifecycle: every page gets an AbortSignal
 // and timer helpers that are torn down on the next navigation.
 
-import { state, can } from './state.js';
+import { state, can, welcomed } from './state.js';
 import { t as tr } from './i18n.js';
 
 const routes = [];
@@ -53,6 +53,11 @@ function guard(url) {
     return '/login' + (next && next !== '/' ? '?next=' + encodeURIComponent(next) : '');
   }
   if (path === '/login') return '/';
+  // Somebody signed in who has not been welcomed in this browser is asked its few questions first, then sent on.
+  if (!welcomed() && path !== '/welcome') {
+    const next = path + url.search;
+    return '/welcome' + (next && next !== '/' ? '?next=' + encodeURIComponent(next) : '');
+  }
   return null;
 }
 

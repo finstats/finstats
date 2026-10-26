@@ -29,6 +29,7 @@ const settings = later(() => import('../pages/settings.js').then((m) => m.defaul
 
 route('/setup', later(() => import('../pages/auth.js').then((m) => m.setupPage)), { bare: true });
 route('/login', later(() => import('../pages/auth.js').then((m) => m.loginPage)), { bare: true });
+route('/welcome', later(() => import('../welcome.js').then((m) => m.welcomePage)), { bare: true });
 route('/', home, { prefetch: prefetchHome });
 route('/history', history);
 route('/libraries', librariesPage, { prefetch: prefetchLibraries });

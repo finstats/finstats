@@ -34,6 +34,8 @@ export async function boot({ top }) {
       button({ variant: 'primary', type: 'button', onClick: (e) => { setBusy(e.currentTarget, true, t('common.trying_again')); location.reload(); } }, icon('refresh', 14), t('common.try_again')))));
     return;
   }
+  // To try it by hand only, and taken out before 2.3.0 reaches main: finstatsWelcome() in the console opens the welcome.
+  window.finstatsWelcome = () => navigate('/welcome?next=' + encodeURIComponent(location.pathname + location.search));
   startPrefetching({ top });
   onRouteChange(closeDialogs);
   start();
