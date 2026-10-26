@@ -522,11 +522,35 @@ async fn start_session(
     Ok(resp)
 }
 
+/// The most addresses the limiter remembers at once; past it the oldest are let go, so a flood of new addresses
+/// cannot grow it without end.
+const ATTEMPTS_REMEMBERED: usize = 10_000;
+
+/// Whose attempts an address counts as: an IPv4 address, or a whole IPv6 /64, which one machine holds and may
+/// take any address in. An IPv4 address written inside IPv6 is that address.
+fn attempt_bucket(ip: IpAddr) -> IpAddr {
+    match ip {
+        IpAddr::V6(v6) => match v6.to_ipv4_mapped() {
+            Some(v4) => IpAddr::V4(v4),
+            None => IpAddr::V6(std::net::Ipv6Addr::from(u128::from(v6) & !((1u128 << 64) - 1))),
+        },
+        v4 => v4,
+    }
+}
+
 /// Sliding-window limiter against password guessing through FinStats.
 fn check_rate_limit(app: &App, ip: IpAddr) -> Result<(), ApiError> {
     let now = db::now();
+    let ip = attempt_bucket(ip);
     let mut map = app.login_attempts.lock().unwrap();
     map.retain(|_, (_, start)| now - *start < ATTEMPT_WINDOW_S);
+    if map.len() >= ATTEMPTS_REMEMBERED && !map.contains_key(&ip) {
+        let mut oldest: Vec<(IpAddr, i64)> = map.iter().map(|(k, (_, start))| (*k, *start)).collect();
+        oldest.sort_by_key(|(_, start)| *start);
+        for (k, _) in oldest.into_iter().take(map.len() + 1 - ATTEMPTS_REMEMBERED) {
+            map.remove(&k);
+        }
+    }
     let entry = map.entry(ip).or_insert((0, now));
     if entry.0 >= MAX_ATTEMPTS {
         let wait = (ATTEMPT_WINDOW_S - (now - entry.1)).max(1);
@@ -540,7 +564,7 @@ fn check_rate_limit(app: &App, ip: IpAddr) -> Result<(), ApiError> {
 }
 
 fn clear_rate_limit(app: &App, ip: IpAddr) {
-    app.login_attempts.lock().unwrap().remove(&ip);
+    app.login_attempts.lock().unwrap().remove(&attempt_bucket(ip));
 }
 
 #[derive(Deserialize)]
@@ -769,6 +793,28 @@ mod tests {
         headers.append("x-forwarded-for", "198.51.100.1".parse().unwrap());
         headers.append("x-forwarded-for", "203.0.113.9".parse().unwrap());
         assert_eq!(client_ip(&app, &headers, peer).to_string(), "203.0.113.9", "the client's own line was believed");
+    }
+
+    /// One machine on IPv6 holds a whole /64 and may sign in from any address in it, so the limit is the /64's; an IPv4
+    /// address written inside IPv6 is that address.
+    #[test]
+    fn the_sign_in_limit_counts_an_ipv6_network_as_one_address() {
+        let app = crate::state::test_app();
+        let ip = |s: &str| s.parse::<IpAddr>().unwrap();
+        for n in 0..MAX_ATTEMPTS {
+            assert!(check_rate_limit(&app, ip(&format!("2001:db8::{:x}", n + 1))).is_ok());
+        }
+        assert!(check_rate_limit(&app, ip("2001:db8::ffff")).is_err(), "a new address in the same /64 began again");
+        assert!(check_rate_limit(&app, ip("2001:db8:0:1::1")).is_ok(), "the next /64 is somebody else");
+        for _ in 0..MAX_ATTEMPTS {
+            let _ = check_rate_limit(&app, ip("192.0.2.7"));
+        }
+        assert!(check_rate_limit(&app, ip("::ffff:192.0.2.7")).is_err());
+        // A flood of new addresses lets the oldest go rather than grow without end.
+        for n in 0..ATTEMPTS_REMEMBERED as u32 + 50 {
+            let _ = check_rate_limit(&app, IpAddr::V4(std::net::Ipv4Addr::from(0x0a00_0000 + n)));
+        }
+        assert_eq!(app.login_attempts.lock().unwrap().len(), ATTEMPTS_REMEMBERED);
     }
 
     fn grants(keys: &[&str]) -> Vec<String> {
