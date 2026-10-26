@@ -2,9 +2,10 @@
 //!
 //! Jellyfin does not expose SyncPlay groups through its sessions, so a group is inferred:
 //! plays of one item by at least two different users that start within `group_window_s` of
-//! each other and overlap long enough to have been watched together. Real history shows why
-//! the window cannot be a few seconds: polling jitter and "you press play, I'm a moment late"
-//! spread genuine group starts over up to a minute.
+//! each other, or end within it at nearly the same measured place, and overlap long enough to
+//! have been watched together. Real history shows why the window cannot be a few seconds: polling
+//! jitter and "you press play, I'm a moment late" spread genuine group starts over up to a minute.
+//! The end rule is SyncPlay with a late joiner, whose start can be minutes after the first.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
@@ -27,11 +28,31 @@ struct Row {
     user: String,
     start: i64,
     end: i64,
+    /// Where the play stopped, when that was measured (FinStats' own plays, Streamystats' with a runtime).
+    stop: Option<i64>,
 }
 
-/// Given one item's plays in start order, the plays that belong to a group: (play id, group id).
+/// Given one item's plays in start order, the plays that belong to a group: (play id, group id). Two ways to be
+/// together, and a group is everything either joins: starts within the window of one another, or ends within it at
+/// nearly the same measured place (`max(window, 30)` s, as for live streams). The second is SyncPlay with a late
+/// joiner: the first waits paused at the start for minutes, so the starts prove nothing, and from then on every pause
+/// lands on both.
 fn cluster(rows: &[Row], window_s: i64) -> Vec<(i64, i64)> {
-    let mut out = vec![];
+    fn root(of: &mut [usize], i: usize) -> usize {
+        let mut r = i;
+        while of[r] != r {
+            r = of[r];
+        }
+        of[i] = r;
+        r
+    }
+    let overlap = |a: &Row, b: &Row| a.end.min(b.end) - a.start.max(b.start) >= MIN_OVERLAP_S;
+    let mut of: Vec<usize> = (0..rows.len()).collect();
+    let mut grouped = vec![false; rows.len()];
+    let join = |of: &mut Vec<usize>, a: usize, b: usize| {
+        let (ra, rb) = (root(of, a), root(of, b));
+        of[ra.max(rb)] = ra.min(rb);
+    };
     let mut i = 0;
     while i < rows.len() {
         // A chain of starts, each within the window of the one before it.
@@ -39,19 +60,37 @@ fn cluster(rows: &[Row], window_s: i64) -> Vec<(i64, i64)> {
         while j < rows.len() && rows[j].start - rows[j - 1].start <= window_s {
             j += 1;
         }
-        let chain = &rows[i..j];
         // Keep the plays that really ran alongside someone else's.
-        let together: Vec<&Row> = chain
-            .iter()
-            .filter(|a| chain.iter().any(|b| b.user != a.user && a.end.min(b.end) - a.start.max(b.start) >= MIN_OVERLAP_S))
-            .collect();
-        if together.iter().map(|r| r.user.as_str()).collect::<BTreeSet<_>>().len() >= 2 {
-            let group_id = together.iter().map(|r| r.id).min().expect("not empty");
-            out.extend(together.iter().map(|r| (r.id, group_id)));
+        let together: Vec<usize> = (i..j).filter(|&a| (i..j).any(|b| rows[b].user != rows[a].user && overlap(&rows[a], &rows[b]))).collect();
+        if together.iter().map(|&k| rows[k].user.as_str()).collect::<BTreeSet<_>>().len() >= 2 {
+            for &k in &together {
+                grouped[k] = true;
+                join(&mut of, together[0], k);
+            }
         }
         i = j;
     }
-    out
+    // Ends: only plays whose stop was measured, compared with those ending within the window after them.
+    let near = window_s.max(30);
+    let mut by_end: Vec<usize> = (0..rows.len()).filter(|&k| rows[k].stop.is_some()).collect();
+    by_end.sort_by_key(|&k| rows[k].end);
+    for (x, &a) in by_end.iter().enumerate() {
+        for &b in by_end[x + 1..].iter().take_while(|&&b| rows[b].end - rows[a].end <= window_s) {
+            let (ra, rb) = (&rows[a], &rows[b]);
+            if ra.user != rb.user && (ra.stop.unwrap_or(0) - rb.stop.unwrap_or(0)).abs() <= near && overlap(ra, rb) {
+                grouped[a] = true;
+                grouped[b] = true;
+                join(&mut of, a, b);
+            }
+        }
+    }
+    let mut lowest: HashMap<usize, i64> = HashMap::new();
+    for k in (0..rows.len()).filter(|&k| grouped[k]) {
+        let r = root(&mut of, k);
+        let id = lowest.entry(r).or_insert(rows[k].id);
+        *id = (*id).min(rows[k].id);
+    }
+    (0..rows.len()).filter(|&k| grouped[k]).map(|k| (rows[k].id, lowest[&root(&mut of, k)])).collect()
 }
 
 /// The same idea for streams that are running right now: same title, different people, and either
@@ -116,7 +155,7 @@ pub fn detect(conn: &mut Connection, window_s: i64, only_item: Option<&str>) -> 
     {
         let filter = if only_item.is_some() { "AND item_id = ?1" } else { "" };
         let args: Vec<SqlValue> = only_item.map(|i| vec![i.to_string().into()]).unwrap_or_default();
-        let mut stmt = tx.prepare(&format!("SELECT item_id, id, user_id, started_at, ended_at, group_id FROM visible_playbacks WHERE 1 = 1 {filter} ORDER BY item_id, started_at, id"))?;
+        let mut stmt = tx.prepare(&format!("SELECT item_id, id, user_id, started_at, ended_at, group_id, position_s FROM visible_playbacks WHERE 1 = 1 {filter} ORDER BY item_id, started_at, id"))?;
         let mut rows = stmt.query(params_from_iter(args.iter()))?;
         // Each title's plays with the group they have now; what the clustering says is compared with it, and only the
         // plays whose group actually changes are written. (Resetting every group to NULL and writing them all back
@@ -144,7 +183,7 @@ pub fn detect(conn: &mut Connection, window_s: i64, only_item: Option<&str>) -> 
                 flush(&mut batch, &mut had);
                 current = Some(item);
             }
-            batch.push(Row { id: r.get(1)?, user: r.get(2)?, start: r.get(3)?, end: r.get(4)? });
+            batch.push(Row { id: r.get(1)?, user: r.get(2)?, start: r.get(3)?, end: r.get(4)?, stop: r.get(6)? });
             had.push(r.get(5)?);
         }
         flush(&mut batch, &mut had);
@@ -172,6 +211,10 @@ pub enum Regrouped {
 /// key is), so a restore never brings another install's record along.
 const REGROUPED_KEY: &str = "groups_detected";
 
+/// Which rule `cluster` groups by. A new rule regroups the whole history once, even under the same version and window:
+/// 2 is "or ended together at the same place" (2.3.0), which found SyncPlay evenings with a late joiner.
+const RULE: i64 = 2;
+
 /// The start-up pass. A play that ends regroups its title at once, and an import, a restore or a new window regroup
 /// everything themselves, so a start has only to catch what the last run left behind: plays it was still recording
 /// when it stopped, and every one of those was saved after that run's start, with `ended_at` at or past `now` as it was
@@ -181,7 +224,7 @@ const REGROUPED_KEY: &str = "groups_detected";
 pub fn regroup_at_start(conn: &mut Connection, window_s: i64, now: i64) -> Result<Regrouped> {
     let version = env!("CARGO_PKG_VERSION");
     let last: Option<Value> = crate::db::get_setting(conn, REGROUPED_KEY)?.and_then(|s| serde_json::from_str(&s).ok());
-    let since = last.filter(|l| l["version"] == version && l["window_s"] == window_s).and_then(|l| l["at"].as_i64());
+    let since = last.filter(|l| l["version"] == version && l["window_s"] == window_s && l["rule"] == RULE).and_then(|l| l["at"].as_i64());
     let done = match since {
         None => {
             detect(conn, window_s, None)?;
@@ -198,7 +241,7 @@ pub fn regroup_at_start(conn: &mut Connection, window_s: i64, now: i64) -> Resul
             Regrouped::Titles(titles.len())
         }
     };
-    crate::db::set_setting(conn, REGROUPED_KEY, &json!({ "version": version, "window_s": window_s, "at": now }).to_string())?;
+    crate::db::set_setting(conn, REGROUPED_KEY, &json!({ "version": version, "window_s": window_s, "rule": RULE, "at": now }).to_string())?;
     Ok(done)
 }
 
@@ -601,7 +644,7 @@ mod tests {
     use super::*;
 
     fn r(id: i64, user: &str, start: i64, len: i64) -> Row {
-        Row { id, user: user.into(), start, end: start + len }
+        Row { id, user: user.into(), start, end: start + len, stop: None }
     }
 
     // ---- the fold and what is read off it (2.0)
@@ -866,6 +909,11 @@ mod tests {
         c.execute("UPDATE playbacks SET group_id = NULL", []).unwrap();
         assert_eq!(regroup_at_start(&mut c, 90, 9500).unwrap(), Regrouped::Everything);
         assert_eq!(group_of(&c, 2), Some(1));
+        // Grouped by an older rule (a record that names none, as every one before the rule counted did): everything,
+        // or a history grouped the old way keeps its old groups under the same version and window.
+        c.execute("UPDATE settings SET value = json_remove(value, '$.rule') WHERE key = 'groups_detected'", []).unwrap();
+        assert_eq!(regroup_at_start(&mut c, 90, 9800).unwrap(), Regrouped::Everything);
+        assert_eq!(regroup_at_start(&mut c, 90, 9900).unwrap(), Regrouped::Titles(0));
     }
 
     #[test]
@@ -891,6 +939,43 @@ mod tests {
         detect(&mut c, 60, None).unwrap();
         let groups: Vec<(i64, Option<i64>)> = c.prepare("SELECT id, group_id FROM playbacks ORDER BY id").unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
         assert_eq!(groups, vec![(1, None), (2, None), (3, Some(3)), (4, Some(3))]);
+    }
+
+    fn ends(id: i64, user: &str, start: i64, end: i64, stop: Option<i64>) -> Row {
+        Row { id, user: user.into(), start, end, stop }
+    }
+
+    #[test]
+    fn people_ending_together_at_the_same_place_form_a_group() {
+        // SyncPlay: one presses play and waits paused at the start while the other joins four minutes later; from then
+        // on every pause and seek lands on both. The starts are past any window, but the two end in the same second at
+        // the same spot, which two people watching apart never do. A third ends then too, half an hour behind: not them.
+        let rows = vec![ends(1, "a", 0, 16_000, Some(8700)), ends(2, "b", 232, 15_999, Some(8699)), ends(3, "c", 300, 16_000, Some(6900))];
+        assert_eq!(cluster(&rows, 60), vec![(1, 1), (2, 1)]);
+    }
+
+    #[test]
+    fn an_end_without_a_known_place_proves_nothing() {
+        // An imported play keeps no position: ending at the same moment alone is a coincidence a busy evening makes.
+        let rows = vec![ends(1, "a", 0, 16_000, Some(8700)), ends(2, "b", 900, 16_000, None)];
+        assert!(cluster(&rows, 60).is_empty());
+        // Ending at the same place but an hour apart is two evenings.
+        let rows = vec![ends(1, "a", 0, 9_000, Some(8700)), ends(2, "b", 3600, 12_600, Some(8700))];
+        assert!(cluster(&rows, 60).is_empty());
+    }
+
+    #[test]
+    fn a_title_watched_in_sync_after_a_late_start_is_grouped_in_the_history() {
+        let mut c = conn();
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, position_s)
+               VALUES (1, 'live', 'a', 'a', 'film', 'Big Buck Bunny', 'Movie', 1000, 17000, 8700, 8700),
+                      (2, 'live', 'b', 'b', 'film', 'Big Buck Bunny', 'Movie', 1232, 16999, 8650, 8699);",
+        )
+        .unwrap();
+        assert_eq!(detect(&mut c, 60, Some("film")).unwrap(), 1);
+        let groups: Vec<Option<i64>> = c.prepare("SELECT group_id FROM playbacks ORDER BY id").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(groups, vec![Some(1), Some(1)]);
     }
 
     #[test]

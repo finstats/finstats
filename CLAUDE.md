@@ -470,7 +470,9 @@ the bucket it started in** (`alone_s` = scoped watch time in the bucket minus gr
 pairs must include the caller and `people` is the caller alone: a companion's name is theirs to see, a companion's time alone is not.
 Inferred, because `/Sessions` exposes no SyncPlay groups: plays of one item by ≥ 2
 different users starting within `group_window_s` (default 60; real data shows a third of genuine groups start 6–60 s
-apart) and overlapping ≥ 2 min share `playbacks.group_id` (= lowest play id in the group). `detect()` re-runs per item
+apart), **or ending within it at nearly the same measured place** (`max(window, 30)` s; SyncPlay with a late joiner, who
+starts minutes after the one waiting paused at 0:00), and overlapping ≥ 2 min share `playbacks.group_id` (= lowest play
+id in the group). `groups_detected` also notes the `RULE`, so a new rule regroups the whole history once. `detect()` re-runs per item
 when a play ends and for the titles re-linking moved plays onto, fully after an import or a restore and when the setting
 changes. **A start regroups only what the last run left behind** (`regroup_at_start`): plays it was still recording when it
 stopped were all saved after that run began, so the key `groups_detected` notes version, window and when, and the next

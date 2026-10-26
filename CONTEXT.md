@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-25, on branch `dev-2.3.0` (crate version 2.3.0, unreleased; schema `user_version` 39; newest tag `v2.2.0`).
+> **Last updated:** 2026-10-26, on branch `dev-2.3.0` (crate version 2.3.0, unreleased; schema `user_version` 39; newest tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `CLAUDE.md` is the detailed rulebook
@@ -409,8 +409,8 @@ Jellyfin users; titles get stand-in `plex:` ids that relink attaches later). All
 **Stats (`stats.rs`).** See the pattern in §9.2. Also playback insights (where viewers stop), concurrency, splits,
 search (`fuzzy.rs`, scored in Rust).
 
-**Groups (`groups.rs`).** Plays of one item by ≥ 2 users starting within `group_window_s` and overlapping ≥ 2 min share
-`group_id`. `mark_live` does the same for streams playing now.
+**Groups (`groups.rs`).** Plays of one item by ≥ 2 users starting within `group_window_s`, or ending within it at nearly
+the same measured place (SyncPlay with a late joiner), and overlapping ≥ 2 min share `group_id`. `mark_live` does the same for streams playing now.
 
 **Recap and story (`recap.rs`, `story.rs`).** One person's year (or the server's); story cards drawn from the typed
 `StoryYear`, which has no field for another person's name, a rank or an app.
