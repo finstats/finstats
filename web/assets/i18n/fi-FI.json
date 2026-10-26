@@ -284,7 +284,7 @@
       "layout": "Asettelu",
       "layout_hint": "asettelu yksinkertainen tila klassinen yläpalkki etusivu ulkoasu layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats tai Yksinkertainen: palkki ylhäällä ja pelkät tilastot, kuten klassinen Plexin tilastopalvelin ne asettelee. Tallennetaan vain tähän selaimeen.",
-      "layout_simple": "Yksinkertainen",
+      "layout_simple": "Tautulli-tyyli",
       "menu": "Valikko",
       "menu_hint": "valikko sivupalkki navigointi ryhmitelty kisko haku telakka komentopalkki kiinnitetyt ruudut menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "Miten sivut asetellaan tällä tietokoneella. Tallennetaan vain tähän selaimeen: muut laitteesi pitävät omansa.",

@@ -330,7 +330,7 @@
       "layout": "布局",
       "layout_hint": "布局 简洁模式 经典 顶栏 首页 外观 layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats 布局，或简洁布局：顶部一条导航栏，只显示统计数据，就像经典的 Plex 统计服务器那样。仅保存在此浏览器中。",
-      "layout_simple": "简洁",
+      "layout_simple": "Tautulli 风格",
       "menu": "菜单",
       "menu_hint": "菜单 侧边栏 导航 分组 图标栏 搜索 程序坞 命令栏 固定 磁贴 menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "此电脑上页面的排布方式。仅保存在此浏览器中：你的其他设备各自保留自己的设置。",

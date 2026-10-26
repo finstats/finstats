@@ -330,7 +330,7 @@
       "layout": "版面",
       "layout_hint": "版面 簡易模式 經典 頂端列 首頁 外觀 layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats，或簡易：頂端一列選單，只顯示統計，就像經典的 Plex 統計伺服器那樣排版。只保存在這個瀏覽器。",
-      "layout_simple": "簡易",
+      "layout_simple": "Tautulli 風格",
       "menu": "選單",
       "menu_hint": "選單 側邊欄 導覽 分組 搜尋 停駐列 命令列 釘選 磚塊 menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "這部電腦上頁面的排列方式。只保存在這個瀏覽器：你的其他裝置各自保有自己的設定。",

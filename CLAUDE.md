@@ -899,8 +899,10 @@ how it played, the day's rule shared with `overview.daily` through `periods`; th
 of each way of playing. Now playing
 runs on `nowplaying.js`, the clock and loader both layouts share, with its own stream cards. Its components are FinUI's
 (`stat-card`, `stream-card`, `tile-stat`, `stat-figure`, the solid `top-bar`), developed here and copied to `../finui`.
-History, a library's, a person's and a title's History tab are one server-sorted table (`simple/history.js`). No
-Tautulli name, logo or code: the layout is the familiar part, the name and the mark are FinStats'.
+History, a library's, a person's and a title's History tab are one server-sorted table (`simple/history.js`). Its
+label is **Tautulli-style** (the owner's decision, 2026-10-26: a comparison, never the bare name, which would read as
+Tautulli built in or endorsed) and its help line says it is not affiliated with Tautulli; no Tautulli logo, colours or
+code, and the mark is FinStats'. In the code it stays Simple mode (`simple/`, `finstats.layout=simple`).
 
 **Date and time formats (`when.js`, Settings → Appearance, 2.3.0)** are this browser's (`finstats.dateFormat`,
 `finstats.timeFormat`, nothing stored is the language's own way, which writes every date and time exactly as before a

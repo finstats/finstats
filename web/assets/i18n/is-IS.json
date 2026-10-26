@@ -284,7 +284,7 @@
       "layout": "Framsetning",
       "layout_hint": "framsetning einfaldur hamur klassískt stika efst forsíða útlit layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats, eða Einfalt: stika efst og tölfræðin ein og sér, eins og klassískur tölfræðiþjónn fyrir Plex raðar henni. Aðeins geymt í þessum vafra.",
-      "layout_simple": "Einfalt",
+      "layout_simple": "Tautulli-stíll",
       "menu": "Valmynd",
       "menu_hint": "valmynd hliðarstika leiðsögn flokkað leit tákn skipanastika fest flísar menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "Hvernig síðunum er raðað á þessari tölvu. Aðeins geymt í þessum vafra: hin tækin þín halda sínu.",

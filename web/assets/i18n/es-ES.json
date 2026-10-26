@@ -284,7 +284,7 @@
       "layout": "Diseño",
       "layout_hint": "diseño modo sencillo clásico barra superior inicio aspecto layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats o Sencillo: una barra arriba y solo las estadísticas, como las presenta un servidor de estadísticas clásico de Plex. Solo lo guarda este navegador.",
-      "layout_simple": "Sencillo",
+      "layout_simple": "Estilo Tautulli",
       "menu": "Menú",
       "menu_hint": "menú barra lateral navegación agrupado riel búsqueda dock barra de comandos fijadas mosaicos menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "Cómo se organizan las páginas en este equipo. Solo lo guarda este navegador: tus otros dispositivos conservan el suyo.",

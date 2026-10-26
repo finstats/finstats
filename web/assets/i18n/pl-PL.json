@@ -399,7 +399,7 @@
       "layout": "Układ",
       "layout_hint": "układ tryb prosty klasyczny górny pasek strona główna wygląd layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats albo Prosty: pasek u góry i same statystyki, ułożone jak w klasycznym serwerze statystyk Plex. Zapamiętywany tylko w tej przeglądarce.",
-      "layout_simple": "Prosty",
+      "layout_simple": "W stylu Tautulli",
       "menu": "Menu",
       "menu_hint": "menu pasek boczny nawigacja grupy szyna wyszukiwanie dok pasek poleceń przypięte kafelki sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "Jak rozmieszczone są strony na tym komputerze. Zapamiętywane tylko w tej przeglądarce: inne urządzenia mają własne ustawienie.",

@@ -284,7 +284,7 @@
       "layout": "Layout",
       "layout_hint": "layout enkel tilstand klassisk tautulli plex topbjælke hjem udseende simple mode classic top bar home look",
       "layout_help": "FinStats eller Enkel: en bjælke øverst og kun statistikken, sådan som en klassisk statistikserver til Plex viser den. Gemmes kun i denne browser.",
-      "layout_simple": "Enkel",
+      "layout_simple": "Tautulli-stil",
       "menu": "Menu",
       "menu_hint": "menu sidepanel navigation grupperet skinne søg dock kommandolinje fastgjort fliser sidebar grouped rail search command bar pinned tiles",
       "menu_help": "Hvordan siderne er lagt ud på denne computer. Gemmes kun i denne browser: dine andre enheder har hver deres eget valg.",

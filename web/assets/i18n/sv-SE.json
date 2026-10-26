@@ -284,7 +284,7 @@
       "layout": "Layout",
       "layout_hint": "layout enkelt läge klassisk tautulli plex toppfält startsida utseende simple mode classic top bar home look",
       "layout_help": "FinStats, eller Enkel: ett fält överst och bara statistiken, så som en klassisk statistikserver för Plex visar den. Sparas bara i den här webbläsaren.",
-      "layout_simple": "Enkel",
+      "layout_simple": "Tautulli-stil",
       "menu": "Meny",
       "menu_hint": "meny sidopanel navigering grupperad list sök docka kommandofält fästa rutor menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "Hur sidorna är ordnade på den här datorn. Sparas bara i den här webbläsaren: dina andra enheter har sitt eget val.",

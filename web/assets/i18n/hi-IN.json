@@ -284,7 +284,7 @@
       "layout": "लेआउट",
       "layout_hint": "लेआउट सरल मोड क्लासिक टॉप बार होम रूप layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats, या सरल: ऊपर एक पट्टी और सिर्फ़ आँकड़े, जैसे कोई क्लासिक Plex आँकड़ा सर्वर उन्हें दिखाता है। सिर्फ़ यही ब्राउज़र इसे याद रखता है।",
-      "layout_simple": "सरल",
+      "layout_simple": "Tautulli शैली",
       "menu": "मेनू",
       "menu_hint": "मेनू साइडबार नेविगेशन समूह रेल खोज डॉक कमांड बार पिन टाइल menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "इस कंप्यूटर पर पेज कैसे सजे हों। सिर्फ़ यही ब्राउज़र इसे याद रखता है: आपके दूसरे डिवाइस अपनी पसंद रखते हैं।",

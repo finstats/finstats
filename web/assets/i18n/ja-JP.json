@@ -330,7 +330,7 @@
       "layout": "レイアウト",
       "layout_hint": "レイアウト シンプルモード クラシック トップバー ホーム 見た目 layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats、またはシンプル：上部にバーを置き、統計だけを並べます。Plexの定番の統計サーバーと同じ配置です。このブラウザーにのみ保存されます。",
-      "layout_simple": "シンプル",
+      "layout_simple": "Tautulli風",
       "menu": "メニュー",
       "menu_hint": "メニュー サイドバー ナビゲーション グループ レール 検索 ドック コマンドバー ピン留め タイル menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "このコンピューターでのページの並べ方です。このブラウザーにのみ保存され、他のデバイスはそれぞれの設定を保ちます。",

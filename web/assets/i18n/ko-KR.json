@@ -330,7 +330,7 @@
       "layout": "레이아웃",
       "layout_hint": "레이아웃 간편 모드 클래식 상단 바 홈 모양 layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats 또는 간편 모드: 위쪽에 막대가 있고 통계만 보여 주는, 전통적인 Plex 통계 서버 방식의 배치입니다. 이 브라우저에만 저장됩니다.",
-      "layout_simple": "간편",
+      "layout_simple": "Tautulli 스타일",
       "menu": "메뉴",
       "menu_hint": "메뉴 사이드바 탐색 그룹 레일 검색 독 명령 표시줄 고정 타일 menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "이 컴퓨터에서 페이지를 배치하는 방식입니다. 이 브라우저에만 저장되며, 다른 기기는 각자의 설정을 유지합니다.",

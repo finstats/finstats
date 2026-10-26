@@ -399,7 +399,7 @@
       "layout": "Макет",
       "layout_hint": "макет простий режим класичний верхня панель головна вигляд layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats або Простий: панель угорі і сама статистика, як у класичному сервері статистики Plex. Зберігається лише в цьому браузері.",
-      "layout_simple": "Простий",
+      "layout_simple": "У стилі Tautulli",
       "menu": "Меню",
       "menu_hint": "меню бічна панель навігація групи смуга пошук док командний рядок закріплені плитки menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "Як розміщено сторінки на цьому комп’ютері. Зберігається лише в цьому браузері: інші ваші пристрої мають власні налаштування.",

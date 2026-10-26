@@ -284,7 +284,7 @@
       "layout": "Indeling",
       "layout_hint": "indeling eenvoudig eenvoudige modus klassiek bovenbalk startpagina uiterlijk layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats, of Eenvoudig: een balk bovenaan en alleen de statistieken, zoals een klassieke Plex-statistiekenserver ze indeelt. Alleen in deze browser bewaard.",
-      "layout_simple": "Eenvoudig",
+      "layout_simple": "Tautulli-stijl",
       "menu": "Menu",
       "menu_hint": "menu zijbalk navigatie gegroepeerd rail zoeken dock opdrachtbalk vastgezet tegels sidebar navigation grouped search command bar pinned tiles",
       "menu_help": "Hoe de pagina’s op deze computer zijn ingedeeld. Alleen in deze browser bewaard: je andere apparaten houden hun eigen keuze.",

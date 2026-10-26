@@ -284,7 +284,7 @@
       "layout": "Düzen",
       "layout_hint": "düzen basit mod klasik üst çubuk ana sayfa görünüm layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats ya da Basit: üstte bir çubuk ve yalnızca istatistikler, klasik bir Plex istatistik sunucusundaki gibi. Yalnızca bu tarayıcıda saklanır.",
-      "layout_simple": "Basit",
+      "layout_simple": "Tautulli tarzı",
       "menu": "Menü",
       "menu_hint": "menü kenar çubuğu gezinme gruplu arama sabitlenmiş kutucuklar menu sidebar navigation grouped rail search dock command bar pinned tiles",
       "menu_help": "Sayfaların bu bilgisayarda nasıl yerleştiği. Yalnızca bu tarayıcıda saklanır: diğer cihazlarınız kendi ayarlarını korur.",
