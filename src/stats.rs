@@ -1764,7 +1764,7 @@ pub async fn summary_for(app: &App, user: &AuthUser) -> Result<Value> {
 
 // ---------------------------------------------------------------- server log
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct EventsQuery {
     page: Option<i64>,
     per_page: Option<i64>,
@@ -1778,40 +1778,49 @@ pub struct EventsQuery {
 const EVENT_SORTS: [(&str, &str); 4] =
     [("when", "e.date"), ("event", "e.name COLLATE NOCASE"), ("type", "e.type COLLATE NOCASE"), ("user", "u.name COLLATE NOCASE")];
 
-pub async fn events(State(app): State<App>, ServerViewer(_): ServerViewer, Query(q): Query<EventsQuery>) -> ApiResult {
+pub async fn events(State(app): State<App>, ServerViewer(user): ServerViewer, Query(q): Query<EventsQuery>) -> ApiResult {
+    let out = app.db.call(move |c| events_page(c, &q, &user.id, user.perms)).await?;
+    Ok(Json(out))
+}
+
+/// Jellyfin's activity log names who did what and from which address. Somebody else's lines are see_everyone's and an
+/// address is see_network's, here as on every other page; see_server opens the log itself.
+const SIGN_IN_EVENTS: &str = "e.type LIKE '%Authentication%' OR e.type = 'SessionStarted'";
+
+fn events_page(c: &Connection, q: &EventsQuery, viewer: &str, perms: crate::auth::Perms) -> Result<Value> {
     let page = page_number(q.page);
     let per_page = q.per_page.unwrap_or(50).clamp(1, 200);
-    let out = app
-        .db
-        .call(move |c| {
-            let mut clauses: Vec<String> = vec![];
-            let mut args: Vec<SqlValue> = vec![];
-            if let Some(t) = q.kind.filter(|t| !t.is_empty()) {
-                clauses.push("e.type = ?".into());
-                args.push(t.into());
-            }
-            for like in like_words(q.q.as_deref()) {
-                clauses.push("(e.name LIKE ? ESCAPE '\\' OR e.short_overview LIKE ? ESCAPE '\\' OR e.overview LIKE ? ESCAPE '\\')".into());
-                args.extend([like.clone().into(), like.clone().into(), like.into()]);
-            }
-            let wh = if clauses.is_empty() { String::new() } else { format!("WHERE {}", clauses.join(" AND ")) };
-            let total: i64 = c.query_row(&format!("SELECT COUNT(*) FROM server_events e {wh}"), params_from_iter(args.iter()), |r| r.get(0))?;
-            let rows = rows_json(
-                c,
-                &format!(
-                    "SELECT e.id, e.date, e.name, COALESCE(e.overview, e.short_overview) AS overview, e.type, e.severity,
-                            e.user_id, u.name AS user_name, e.item_id
-                     FROM server_events e LEFT JOIN users u ON u.id = e.user_id {wh}
-                     ORDER BY {} LIMIT {per_page} OFFSET {}",
-                    order_by(&EVENT_SORTS, q.sort.as_deref(), q.dir.as_deref(), "e.date DESC, e.id DESC"),
-                    (page - 1) * per_page
-                ),
-                &args,
-            )?;
-            Ok(json!({ "total": total, "page": page, "per_page": per_page, "rows": rows }))
-        })
-        .await?;
-    Ok(Json(out))
+    let mut clauses: Vec<String> = vec![];
+    let mut args: Vec<SqlValue> = vec![];
+    if !perms.see_everyone {
+        clauses.push(format!("(e.user_id = ? OR (e.user_id IS NULL AND NOT ({SIGN_IN_EVENTS})))"));
+        args.push(viewer.to_string().into());
+    }
+    if let Some(t) = q.kind.as_ref().filter(|t| !t.is_empty()) {
+        clauses.push("e.type = ?".into());
+        args.push(t.clone().into());
+    }
+    // Where the text may carry an address, it is neither shown nor searched without see_network.
+    let told = if perms.see_network { "1".to_string() } else { format!("(COALESCE(e.remote_ip, '') = '' AND NOT ({SIGN_IN_EVENTS}))") };
+    for like in like_words(q.q.as_deref()) {
+        clauses.push(format!("(e.name LIKE ? ESCAPE '\\' OR ({told} AND (e.short_overview LIKE ? ESCAPE '\\' OR e.overview LIKE ? ESCAPE '\\')))"));
+        args.extend([like.clone().into(), like.clone().into(), like.into()]);
+    }
+    let wh = if clauses.is_empty() { String::new() } else { format!("WHERE {}", clauses.join(" AND ")) };
+    let total: i64 = c.query_row(&format!("SELECT COUNT(*) FROM server_events e {wh}"), params_from_iter(args.iter()), |r| r.get(0))?;
+    let rows = rows_json(
+        c,
+        &format!(
+            "SELECT e.id, e.date, e.name, CASE WHEN {told} THEN COALESCE(e.overview, e.short_overview) END AS overview, e.type, e.severity,
+                    e.user_id, u.name AS user_name, e.item_id
+             FROM server_events e LEFT JOIN users u ON u.id = e.user_id {wh}
+             ORDER BY {} LIMIT {per_page} OFFSET {}",
+            order_by(&EVENT_SORTS, q.sort.as_deref(), q.dir.as_deref(), "e.date DESC, e.id DESC"),
+            (page - 1) * per_page
+        ),
+        &args,
+    )?;
+    Ok(json!({ "total": total, "page": page, "per_page": per_page, "rows": rows }))
 }
 
 // ---------------------------------------------------------------- v0.2: insights
@@ -2053,9 +2062,11 @@ fn insight_behaviour(c: &Connection, scope: &Scope) -> Result<Option<Map<String,
 }
 
 fn insight_failed_logins(c: &Connection, scope: &Scope) -> Result<Vec<Map<String, Value>>> {
-    if !scope.perms.see_server {
+    // Whoever was tried is somebody else (`notify::wanted_by`'s rule for failed sign-ins), and where from is see_network's.
+    if !(scope.perms.see_server && scope.perms.see_everyone) {
         return Ok(vec![]);
     }
+    let said = if scope.perms.see_network { "COALESCE(' · ' || COALESCE(e.short_overview, e.overview), '')" } else { "''" };
     let mut args: Vec<SqlValue> = vec![];
     let mut wh = "WHERE (e.type LIKE '%AuthenticationFail%' OR e.name LIKE '%failed%login%' OR e.name LIKE '%Failed login%')".to_string();
     if let Some(s) = scope.since {
@@ -2065,7 +2076,7 @@ fn insight_failed_logins(c: &Connection, scope: &Scope) -> Result<Vec<Map<String
     rows_json(
         c,
         &format!(
-            "SELECT e.date, e.name || COALESCE(' · ' || COALESCE(e.short_overview, e.overview), '') AS overview, u.name AS user_name
+            "SELECT e.date, e.name || {said} AS overview, u.name AS user_name
              FROM server_events e LEFT JOIN users u ON u.id = e.user_id {wh} ORDER BY e.date DESC LIMIT 10"
         ),
         &args,
@@ -2508,6 +2519,65 @@ mod tests {
         )
         .unwrap();
         c
+    }
+
+    fn server_log() -> Connection {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO server_events(id, date, name, overview, short_overview, type, severity, user_id, item_id, remote_ip) VALUES
+               (1, 100, 'alice is playing Big Buck Bunny', NULL, NULL, 'VideoPlayback', 'Information', 'u1', NULL, ''),
+               (2, 200, 'bob is playing Sintel', NULL, NULL, 'VideoPlayback', 'Information', 'u2', NULL, ''),
+               (3, 300, 'Plugin installed', NULL, NULL, 'PluginInstalled', 'Information', NULL, NULL, ''),
+               (4, 400, 'Failed login try from carol', NULL, 'IP address: 203.0.113.7', 'AuthenticationFailed', 'Error', NULL, NULL, '203.0.113.7'),
+               (5, 500, 'alice signed in', NULL, 'IP address: 203.0.113.9', 'AuthenticationSucceeded', 'Information', 'u1', NULL, '203.0.113.9');",
+        )
+        .unwrap();
+        c
+    }
+
+    fn log_as(c: &Connection, q: &str, perms: crate::auth::Perms) -> Vec<(i64, Option<String>)> {
+        let q = EventsQuery { q: Some(q.into()).filter(|s: &String| !s.is_empty()), ..Default::default() };
+        events_page(c, &q, "u1", perms).unwrap()["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| (r["id"].as_i64().unwrap(), r["overview"].as_str().map(str::to_string)))
+            .collect()
+    }
+
+    /// The server log is see_server's, but somebody else's activity in it is see_everyone's and an address is see_network's,
+    /// as everywhere else: before, see_server alone read every sign-in address there was.
+    #[test]
+    fn the_server_log_keeps_other_people_and_addresses_to_their_own_permissions() {
+        use crate::auth::Perms;
+        let c = server_log();
+        let server = Perms { see_server: true, ..Default::default() };
+        assert_eq!(log_as(&c, "", server), vec![(5, None), (3, None), (1, None)], "the caller's own and the server's, no address");
+        assert!(log_as(&c, "203.0", server).is_empty(), "an address found by searching for it");
+        let network = Perms { see_network: true, ..server };
+        assert_eq!(log_as(&c, "", network)[0], (5, Some("IP address: 203.0.113.9".into())));
+        let everyone = Perms { see_everyone: true, ..network };
+        assert_eq!(log_as(&c, "", everyone).iter().map(|r| r.0).collect::<Vec<_>>(), [5, 4, 3, 2, 1]);
+        assert_eq!(log_as(&c, "203.0", everyone).len(), 2);
+        assert_eq!(log_as(&c, "", Perms { see_network: false, ..everyone })[1], (4, None), "a failed sign-in's address without see_network");
+    }
+
+    /// Failed sign-ins name whoever was tried and where from: somebody else's, so see_everyone, and the address see_network's.
+    #[test]
+    fn failed_sign_ins_in_the_insights_need_see_everyone_and_their_addresses_see_network() {
+        use crate::auth::Perms;
+        let c = server_log();
+        let scope = |perms| Scope { days: 0, since: None, user_ids: vec![], library_id: None, min_play_s: 0, perms };
+        let server = Perms { see_server: true, ..Default::default() };
+        assert!(insight_failed_logins(&c, &scope(server)).unwrap().is_empty());
+        assert!(insight_failed_logins(&c, &scope(Perms { see_network: true, ..server })).unwrap().is_empty());
+        let without_address = insight_failed_logins(&c, &scope(Perms { see_everyone: true, ..server })).unwrap();
+        assert_eq!(without_address[0]["overview"], json!("Failed login try from carol"));
+        let all = insight_failed_logins(&c, &scope(Perms { see_everyone: true, see_network: true, ..server })).unwrap();
+        assert_eq!(all[0]["overview"], json!("Failed login try from carol · IP address: 203.0.113.7"));
     }
 
     /// "What your library is made of" for the libraries a person picked: one, several or (naming none) all of them, and a
