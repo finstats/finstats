@@ -719,6 +719,14 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     r#"
     CREATE INDEX idx_items_type_added ON items(type, date_created DESC) WHERE removed = 0 AND date_created IS NOT NULL;
     "#,
+    // user_version 40: The welcome (2.3.0): who has been through it, once a person whatever browser they sign in on.
+    //      Theirs to keep, so it travels in a backup.
+    r#"
+    CREATE TABLE welcomed (
+        user_id TEXT PRIMARY KEY,
+        at      INTEGER NOT NULL
+    ) WITHOUT ROWID;
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole

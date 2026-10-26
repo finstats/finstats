@@ -935,13 +935,15 @@ with a clock of its own go through `clockTime(d, fallback)` / `calendarDate(d, f
 own `Intl` formatter. A new place that writes a time of day or a day with its year goes through them too; a date written
 with a month's name ("28 February", "Oct 2026") stays the language's. The server writes no dates a person reads.
 
-**The welcome (`welcome.js`, `/welcome?next=`, 2.3.0).** The first time somebody signs in on a browser, the router's
+**The welcome (`welcome.js`, `welcome.rs`, `/welcome?next=`, 2.3.0).** The first time somebody signs in, on whichever browser, the router's
 guard sends them to a card in setup's own look (`ol.wizard`): language (spoken at once through `loadLanguage`, in place),
 date and time formats, colours (FinUI's `choiceGroup`: Light, Device, Dark, each with a line saying what it does, worn at
 once), layout with a picture of each (`web/assets/welcome/*.png`, 480×300 from the screenshots of the dashboard and of
 the Tautulli-style home). Skip keeps `DEFAULTS` (en-GB, `dd/mm/yyyy`, `HH:mm`, the device's colours, FinStats). Setup goes on
 into the same steps in the same card once its sign-in succeeds, its two steps shown done. Everything it asks is the
-browser's, so `finstats.welcomed` is too; every QA browser marks itself welcomed but the journeys for the welcome.
+browser's, but being welcomed is the person's (the owner's decision, 2026-10-26): the table `welcomed` (migration 40, in
+`backup::TABLES`), `user.welcomed` on `/auth/me`, and `PUT /api/me/welcomed`, which the card awaits before it reloads. QA's
+instances start with everybody welcomed; the welcome's journeys sign in somebody new.
 `finstatsWelcome()` in `boot.js` opens it again from the browser's console; first added for trying it by hand, it is
 kept in the release (the owner's decision, 2026-10-26).
 

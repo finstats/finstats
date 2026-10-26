@@ -435,22 +435,22 @@ fn is_https(headers: &HeaderMap) -> bool {
 
 async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms) -> Value {
     let uid = id.to_string();
-    let has_image = app
+    // `welcomed`: whether they have been through the welcome, on any browser.
+    let (has_image, welcomed) = app
         .db
         .call(move |c| {
-            Ok(c.query_row("SELECT image_tag IS NOT NULL FROM users WHERE id = ?1", [uid], |r| r.get::<_, bool>(0))
-                .optional()?
-                .unwrap_or(false))
+            let image = c.query_row("SELECT image_tag IS NOT NULL FROM users WHERE id = ?1", [&uid], |r| r.get::<_, bool>(0)).optional()?.unwrap_or(false);
+            Ok((image, crate::welcome::welcomed(c, &uid)?))
         })
         .await
-        .unwrap_or(false);
+        .unwrap_or((false, false));
     // `features`: which optional pages have something behind them (a connected Sonarr, a Seerr, …). `jellyfin_details`:
     // a title's page in Jellyfin is this followed by its id, for a link offered where the answer had none to give (a menu).
     let jellyfin_details = crate::stats::jellyfin_base(app).map(|b| crate::jellyfin::web_link(&b, ""));
     // `public_url`: the address FinStats is reached at, for a link made in the page (a calendar feed's); the settings
     // that hold it are a manager's to read.
     let public_url = Some(app.settings().public_url.trim_end_matches('/').to_string()).filter(|u| !u.is_empty());
-    json!({ "id": id, "name": name, "is_admin": is_admin, "has_image": has_image, "permissions": perms, "features": crate::services::features(app),
+    json!({ "id": id, "name": name, "is_admin": is_admin, "has_image": has_image, "welcomed": welcomed, "permissions": perms, "features": crate::services::features(app),
             "jellyfin_details": jellyfin_details, "public_url": public_url })
 }
 

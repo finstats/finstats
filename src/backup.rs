@@ -39,7 +39,7 @@ const SUFFIX: &str = ".jsonl.gz";
 
 /// In the order they are written, which is also the order they must be read in: a timeline row
 /// needs its play to exist.
-const TABLES: [&str; 13] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit", "watchlist", "located", "health_dismissed", "appearance"];
+const TABLES: [&str; 14] = ["playbacks", "playback_events", "manual_seen", "user_permissions", "home_addresses", "server_events", "devices", "security_alerts", "audit", "watchlist", "located", "health_dismissed", "appearance", "welcomed"];
 
 pub fn dir(data_dir: &Path) -> PathBuf {
     data_dir.join("backups")
@@ -407,8 +407,9 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                 }
             }
             // `located`: where the owner said a title is; `health_dismissed`: a finding set aside; `appearance`: how FinStats
-            // looks to a person. A choice this database already has for the same id, finding or person stands.
-            "manual_seen" | "home_addresses" | "server_events" | "devices" | "located" | "health_dismissed" | "appearance" => {
+            // looks to a person; `welcomed`: who has had the welcome. A choice this database already has for the same id,
+            // finding or person stands.
+            "manual_seen" | "home_addresses" | "server_events" | "devices" | "located" | "health_dismissed" | "appearance" | "welcomed" => {
                 let t = TABLES.iter().find(|t| **t == table).copied().unwrap_or("devices");
                 if insert_row(&tx, t, &known[t], row, &[], "INSERT OR IGNORE")? {
                     res.other_rows += 1;
@@ -797,6 +798,25 @@ mod tests {
         let c = target.conn().unwrap();
         let rows: Vec<(String, String)> = c.prepare("SELECT user_id, finui_preset FROM appearance ORDER BY user_id").unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
         assert_eq!(rows, [("alice".into(), "0101".into()), ("bob".into(), "0001".into())]);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// Being welcomed is a person's, once, and Jellyfin cannot give it back: a restored install does not ask everybody
+    /// again. A welcome this database already has stands.
+    #[test]
+    fn a_welcome_travels_and_one_already_here_stands() {
+        let tmp = std::env::temp_dir().join(format!("finstats-welcomed-backup-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let source = Db::open(&tmp.join("source.db")).unwrap();
+        source.conn().unwrap().execute_batch("INSERT INTO welcomed(user_id, at) VALUES ('alice', 100), ('bob', 100);").unwrap();
+        let made = export(&source, &dir(&tmp), None).unwrap();
+        let target = Db::open(&tmp.join("target.db")).unwrap();
+        target.conn().unwrap().execute_batch("INSERT INTO welcomed(user_id, at) VALUES ('bob', 50)").unwrap();
+        restore(&target, &dir(&tmp).join(&made.name), false, None).unwrap();
+        let c = target.conn().unwrap();
+        let rows: Vec<(String, i64)> = c.prepare("SELECT user_id, at FROM welcomed ORDER BY user_id").unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(rows, [("alice".into(), 100), ("bob".into(), 50)]);
         let _ = std::fs::remove_dir_all(&tmp);
     }
 

@@ -3609,7 +3609,8 @@
         "profile_changed": "Endret en offentlig profil",
         "profile_unpublished": "Tok ned en offentlig profil",
         "profile_link_reset": "Lagde en ny lenke til en offentlig profil",
-        "appearance_changed": "Endret utseendet sitt"
+        "appearance_changed": "Endret utseendet sitt",
+        "welcomed": "Fikk velkomsten"
       },
       "outcome": {
         "failed": "Mislyktes",

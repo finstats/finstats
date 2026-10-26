@@ -3608,7 +3608,8 @@
         "profile_changed": "Changed a public profile",
         "profile_unpublished": "Took down a public profile",
         "profile_link_reset": "Made a new public profile link",
-        "appearance_changed": "Changed their look"
+        "appearance_changed": "Changed their look",
+        "welcomed": "Was welcomed"
       },
       "outcome": {
         "failed": "Failed",

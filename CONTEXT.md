@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-26, on branch `dev-2.3.0` (crate version 2.3.0, unreleased; schema `user_version` 39; newest tag `v2.2.0`).
+> **Last updated:** 2026-10-26, on branch `dev-2.3.0` (crate version 2.3.0, unreleased; schema `user_version` 40; newest tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `CLAUDE.md` is the detailed rulebook
@@ -245,6 +245,7 @@ MISC
 | **user_permissions** | user_id | permissions (JSON) | Grants only add |
 | **public_profiles** | user_id | token, published, display_name, sections | |
 | **appearance** | user_id | finui_preset | No row = FinUI defaults |
+| **welcomed** | user_id | at | Who has had the welcome, once a person; in backups. New in 2.3.0 |
 | **watchlist** | id | user_id, kind, item_id?, tmdb/tvdb/imdb, title, year, added_at, missing, arrived_at | Max 1,000 per person |
 | **audit** | id | at, kind, user_id, key_id, target, detail, outcome | |
 | **services** | id | kind (sonarr/radarr/seerr), url, secret, accept_invalid_certs, enabled | Ids never reused; holds secrets |
@@ -290,7 +291,7 @@ Other `settings` keys: `app_version` (downgrade guard), `upgrade_steps`, `update
 
 gzip JSON Lines (`finstats-backup-YYYYMMDD-HHMMSS.jsonl.gz`): header, the settings blob, then rows tagged by table and
 matched **by column name** both ways. `backup::TABLES`: playbacks, playback_events, manual_seen, user_permissions,
-home_addresses, server_events, devices, security_alerts, audit, watchlist, located, health_dismissed, appearance.
+home_addresses, server_events, devices, security_alerts, audit, watchlist, located, health_dismissed, appearance, welcomed.
 
 Never exported: secrets (Jellyfin URL/key, sessions, api_keys, services, notify_targets), the library (re-readable),
 Pipeline tables, derived tables, public_profiles. Restore **merges** (dedupe through `already_recorded`, remaps event
@@ -453,7 +454,7 @@ built by the same function its GET uses, per person, pushed only on change. Perm
 **Smaller modules.** `upgrade.rs` (one-off data steps beyond migrations, recorded in `upgrade_steps`), `changelog.rs`
 (Patch notes, per language), `licenses.rs` (shipped licence notice), `finui.rs` / `finmotion.rs` / `appearance.rs`
 (assembled stylesheets, per-person preset), `browse.rs` (a library's titles grid), `artwork.rs` (image cache names and
-ETags by image tag), `ical.rs` (hand-written RFC 5545 feed), `keys.rs`, `audit.rs`, `i18n.rs`.
+ETags by image tag), `ical.rs` (hand-written RFC 5545 feed), `welcome.rs` (who has had the welcome), `keys.rs`, `audit.rs`, `i18n.rs`.
 
 ---
 
@@ -474,7 +475,7 @@ ETags by image tag), `ical.rs` (hand-written RFC 5545 feed), `keys.rs`, `audit.r
 | `dom.js` | `h()` element builder (from FinUI), icons, all formatters (durations, bytes, dates via `Intl`), `safeHttps`, `store` |
 | `api.js` | `api.get/post/put/del` (prefix `/api`, throw `ApiError`), `soft()`, view cache (cleared by any non-GET), `Accept-Language` |
 | `router.js` | History-API router; guard (setup / login / perm); `ctx = {params, query, signal, root, onCleanup, every, title}` |
-| `state.js` | `state.user`, `can(perm)`, ranges, all `finstats.*` localStorage keys (theme, layout, language, menus, welcomed, …; the date and time formats are `dom.js`'s) |
+| `state.js` | `state.user`, `can(perm)`, ranges, all `finstats.*` localStorage keys (theme, layout, language, menus, …; `welcomed()` is the server's `user.welcomed`; the date and time formats are `dom.js`'s) |
 | `components.js` | `dataView()` (stale-while-revalidate page loader), `setBusy`, `openModal`, filters, plays table, FinUI re-exports |
 | `tables.js` | Re-export of FinUI data-table (`dataTable`, `plainTable`, `chartTable`, `sortable`) |
 | `charts.js` | Hand-rolled SVG charts; colours by entity (`TYPES`), as `'var(--series-n)'` |

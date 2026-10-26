@@ -9,7 +9,7 @@ use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE, HOST, ORIGIN};
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, post, put};
 use axum::{Json, Router};
 use futures_util::StreamExt;
 use rust_embed::RustEmbed;
@@ -80,6 +80,7 @@ pub fn router(app: App) -> Router {
         .route("/audit", get(crate::audit::audit))
         .route("/me/public-profile", get(crate::public::get_mine).put(crate::public::put_mine))
         .route("/me/appearance", get(crate::appearance::get_mine).put(crate::appearance::put_mine))
+        .route("/me/welcomed", put(crate::welcome::put_mine))
         .route("/me/public-profile/reset", post(crate::public::reset_mine))
         .route("/public-profiles", get(crate::public::list))
         .route("/public-profiles/{id}", delete(crate::public::take_down))

@@ -4209,7 +4209,8 @@
         "profile_changed": "Endra en offentleg profil",
         "profile_unpublished": "Tok ned en offentleg profil",
         "profile_link_reset": "Laga ei ny lenkje til en offentleg profil",
-        "appearance_changed": "Endra utsjånadi sin"
+        "appearance_changed": "Endra utsjånadi sin",
+        "welcomed": "Fekk velkomsten"
       },
       "outcome": {
         "failed": "Mislukka",

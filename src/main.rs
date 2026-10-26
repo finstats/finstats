@@ -55,6 +55,7 @@ mod timeline;
 mod trash;
 mod upgrade;
 mod watchlist;
+mod welcome;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
