@@ -1222,15 +1222,7 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
         // Deleted before FinStats ever saw it, but it still has history: describe it from its plays.
         let item = match item {
             Some(i) => Some(i),
-            None => one_json(
-                c,
-                "SELECT ?1 AS id, name, type, 1 AS removed, 0 AS has_backdrop FROM (
-                    SELECT item_name AS name, item_type AS type, ended_at FROM visible_playbacks WHERE item_id = ?1
-                    UNION ALL
-                    SELECT series_name, 'Series', ended_at FROM visible_playbacks WHERE series_id = ?1
-                 ) ORDER BY ended_at DESC LIMIT 1",
-                &[id.clone().into()],
-            )?,
+            None => removed_title(c, &id, (!scope.perms.see_everyone).then_some(caller.as_str()))?,
         };
         let Some(mut item) = item else { return Ok(None) };
         let text = |m: &Map<String, Value>, k: &str| m.get(k).and_then(Value::as_str).map(str::to_string);
@@ -2493,6 +2485,20 @@ pub async fn server(State(app): State<App>, ServerViewer(user): ServerViewer) ->
     Ok(Json(out))
 }
 
+/// A title the library no longer has, described from its plays: only `whose` when given, since a page about a title
+/// somebody else played says that they did.
+fn removed_title(c: &Connection, id: &str, whose: Option<&str>) -> Result<Option<Map<String, Value>>> {
+    one_json(
+        c,
+        "SELECT ?1 AS id, name, type, 1 AS removed, 0 AS has_backdrop FROM (
+            SELECT item_name AS name, item_type AS type, ended_at FROM visible_playbacks WHERE item_id = ?1 AND (?2 IS NULL OR user_id = ?2)
+            UNION ALL
+            SELECT series_name, 'Series', ended_at FROM visible_playbacks WHERE series_id = ?1 AND (?2 IS NULL OR user_id = ?2)
+         ) ORDER BY ended_at DESC LIMIT 1",
+        &[id.to_string().into(), whose.map(str::to_string).into()],
+    )
+}
+
 /// A device id is see_network's, here as in every play; who used it last, and when, is see_everyone's unless it was the reader.
 fn server_devices(c: &Connection, viewer: &str, perms: crate::auth::Perms) -> Result<Vec<Map<String, Value>>> {
     rows_json(
@@ -2567,6 +2573,17 @@ mod tests {
         assert_eq!(log_as(&c, "", everyone).iter().map(|r| r.0).collect::<Vec<_>>(), [5, 4, 3, 2, 1]);
         assert_eq!(log_as(&c, "203.0", everyone).len(), 2);
         assert_eq!(log_as(&c, "", Perms { see_network: false, ..everyone })[1], (4, None), "a failed sign-in's address without see_network");
+    }
+
+    /// A title the library no longer has is described from its plays: the reader's own without see_everyone, or the page
+    /// told them that somebody else had played it.
+    #[test]
+    fn a_title_the_library_lost_is_described_from_plays_the_reader_may_see() {
+        let c = conn();
+        c.execute("INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES ('live', 'u2', 'bob', 'gone', 'Sintel', 'Movie', 1, 2, 1)", []).unwrap();
+        assert_eq!(removed_title(&c, "gone", None).unwrap().and_then(|t| t.get("name").cloned()), Some(json!("Sintel")));
+        assert!(removed_title(&c, "gone", Some("u1")).unwrap().is_none(), "bob's play, read by alice");
+        assert!(removed_title(&c, "gone", Some("u2")).unwrap().is_some());
     }
 
     /// Who used a device last, and when, is somebody's activity: see_everyone's, unless it was the reader.
