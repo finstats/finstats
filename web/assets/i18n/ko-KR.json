@@ -1793,8 +1793,7 @@
         "nov": "11월",
         "dec": "12월"
       },
-      "evening_in_company": "함께한 저녁",
-      "evenings_in_company": "함께한 저녁",
+      "evenings_word": {"other": "함께한 저녁"},
       "together_line": "함께 {hours}시간 · 내 시청의 {percent}%",
       "together_top": "사람들을 가장 많이 모은 작품",
       "evenings": {
@@ -1806,8 +1805,7 @@
       "left_for_later": {
         "other": "그리고 나중으로 미룬 시리즈 {count}편"
       },
-      "request": "요청",
-      "requests": "요청",
+      "requests_word": {"other": "요청"},
       "arrived": "{count}건 도착",
       "watched": "{count}건 시청",
       "more_than": "{year}년보다 {percent}% 증가",

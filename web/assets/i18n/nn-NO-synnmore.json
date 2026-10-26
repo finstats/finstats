@@ -1918,8 +1918,7 @@
         "nov": "november",
         "dec": "desember"
       },
-      "evening_in_company": "kveld i selskap",
-      "evenings_in_company": "kvelda i selskap",
+      "evenings_word": {"one": "kveld i selskap", "other": "kvelda i selskap"},
       "together_line": "{hours} t saman · {percent} % av d du såg",
       "together_top": "D som samla folk mest",
       "evenings": {
@@ -1934,8 +1933,7 @@
         "one": "og {count} serie lagt til sides",
         "other": "og {count} seria lagt til sides"
       },
-      "request": "førespurnad",
-      "requests": "førespurnada",
+      "requests_word": {"one": "førespurnad", "other": "førespurnada"},
       "arrived": "{count} kom på serveri",
       "watched": "{count} sett",
       "more_than": "{percent} % meir enn i {year}",

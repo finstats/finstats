@@ -482,7 +482,7 @@ fn svg_in(lang: &str, ch: Chapter, y: &StoryYear, posters: &Posters) -> String {
         }
         Chapter::Together => {
             if let Some(g) = &y.together {
-                let unit = say(lang, if g.evenings == 1 { "server.story.evening_in_company" } else { "server.story.evenings_in_company" }, &[]);
+                let unit = count(lang, "server.story.evenings_word", g.evenings);
                 let next = big_number(&mut c, 780.0, &number(lang, g.evenings), &unit);
                 let line = say(lang, "server.story.together_line", &[("hours", (g.together_s / 3600).into()), ("percent", ((g.share * 100.0).round() as i64).into())]);
                 c.text_fit(X, next + 60.0, Style(40.0, 400, MUTED), &line, Some(WIDE));
@@ -509,7 +509,7 @@ fn svg_in(lang: &str, ch: Chapter, y: &StoryYear, posters: &Posters) -> String {
         }
         Chapter::Asked => {
             if let Some(q) = &y.asked {
-                let next = big_number(&mut c, 780.0, &number(lang, q.made), &say(lang, if q.made == 1 { "server.story.request" } else { "server.story.requests" }, &[]));
+                let next = big_number(&mut c, 780.0, &number(lang, q.made), &count(lang, "server.story.requests_word", q.made));
                 c.text_fit(X, next + 80.0, Style(50.0, 600, TEXT), &count(lang, "server.story.arrived", q.available), Some(WIDE));
                 c.text_fit(X, next + 160.0, Style(50.0, 600, TEXT), &count(lang, "server.story.watched", q.watched), Some(WIDE));
             }
@@ -716,6 +716,27 @@ mod tests {
         for (lang, text) in [("en-GB", &gb), ("en-US", &us), ("nb-NO", &nb), ("nn-NO", &nn)] {
             assert!(!text.contains("server."), "{lang}: a key was drawn instead of its words");
         }
+    }
+
+    /// The word beside a big number takes the form the language gives that number: Russian says 3 запроса and 5 запросов,
+    /// Polish 5 próśb, where "one or not one" drew 3 запросов and 5 prośby.
+    #[test]
+    fn the_word_beside_a_number_follows_the_language_s_plural() {
+        let mut s = story();
+        let drawn = |s: &StoryYear, lang: &str, ch: Chapter| svg_in(lang, ch, s, &Posters::new());
+        let (mut asked, mut together) = (s.asked.clone().expect("the sample asks"), s.together.clone().expect("the sample watched together"));
+        asked.made = 3;
+        together.evenings = 3;
+        (s.asked, s.together) = (Some(asked.clone()), Some(together.clone()));
+        assert!(drawn(&s, "ru-RU", Chapter::Asked).contains("запроса<"), "ru-RU, 3 requests");
+        assert!(drawn(&s, "ru-RU", Chapter::Together).contains("вечера в компании"), "ru-RU, 3 evenings");
+        asked.made = 5;
+        s.asked = Some(asked.clone());
+        assert!(drawn(&s, "ru-RU", Chapter::Asked).contains("запросов<"), "ru-RU, 5 requests");
+        assert!(drawn(&s, "pl-PL", Chapter::Asked).contains("próśb<"), "pl-PL, 5 requests");
+        asked.made = 1;
+        s.asked = Some(asked);
+        assert!(drawn(&s, "en-GB", Chapter::Asked).contains(">request<"), "en-GB, 1 request");
     }
 
     /// The card cache is keyed by what a card says, and the language is part of what it says.

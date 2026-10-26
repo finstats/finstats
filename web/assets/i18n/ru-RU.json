@@ -1961,8 +1961,7 @@
         "nov": "ноября",
         "dec": "декабря"
       },
-      "evening_in_company": "вечер в компании",
-      "evenings_in_company": "вечеров в компании",
+      "evenings_word": {"one": "вечер в компании", "few": "вечера в компании", "many": "вечеров в компании", "other": "вечера в компании"},
       "together_line": "{hours} ч вместе · {percent}% вашего просмотра",
       "together_top": "Что чаще всего собирало людей вместе",
       "evenings": {
@@ -1983,8 +1982,7 @@
         "many": "и {count} сериалов отложено на потом",
         "other": "и {count} сериала отложено на потом"
       },
-      "request": "запрос",
-      "requests": "запросов",
+      "requests_word": {"one": "запрос", "few": "запроса", "many": "запросов", "other": "запроса"},
       "arrived": "Поступило: {count}",
       "watched": "Просмотрено: {count}",
       "more_than": "На {percent}% больше, чем в {year} г.",

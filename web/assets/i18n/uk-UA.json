@@ -1961,8 +1961,7 @@
         "nov": "листопада",
         "dec": "грудня"
       },
-      "evening_in_company": "вечір у компанії",
-      "evenings_in_company": "вечорів у компанії",
+      "evenings_word": {"one": "вечір у компанії", "few": "вечори у компанії", "many": "вечорів у компанії", "other": "вечора у компанії"},
       "together_line": "{hours} год разом · {percent}% вашого перегляду",
       "together_top": "Що найбільше об’єднувало людей",
       "evenings": {
@@ -1983,8 +1982,7 @@
         "many": "і {count} серіалів відкладено на потім",
         "other": "і {count} серіалу відкладено на потім"
       },
-      "request": "запит",
-      "requests": "запитів",
+      "requests_word": {"one": "запит", "few": "запити", "many": "запитів", "other": "запиту"},
       "arrived": "надійшло: {count}",
       "watched": "переглянуто: {count}",
       "more_than": "на {percent}% більше, ніж у {year} році",

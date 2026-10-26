@@ -1793,8 +1793,7 @@
         "nov": "11 月",
         "dec": "12 月"
       },
-      "evening_in_company": "个结伴观看的夜晚",
-      "evenings_in_company": "个结伴观看的夜晚",
+      "evenings_word": {"other": "个结伴观看的夜晚"},
       "together_line": "一起观看 {hours} 小时 · 占你观看时长的 {percent}%",
       "together_top": "最常让大家聚在一起的作品",
       "evenings": {
@@ -1806,8 +1805,7 @@
       "left_for_later": {
         "other": "还有 {count} 部留待以后"
       },
-      "request": "个请求",
-      "requests": "个请求",
+      "requests_word": {"other": "个请求"},
       "arrived": "{count} 个已上线",
       "watched": "{count} 个已观看",
       "more_than": "比 {year} 年多 {percent}%",

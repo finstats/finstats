@@ -1793,8 +1793,7 @@
         "nov": "11月",
         "dec": "12月"
       },
-      "evening_in_company": "誰かと過ごした夜",
-      "evenings_in_company": "誰かと過ごした夜",
+      "evenings_word": {"other": "誰かと過ごした夜"},
       "together_line": "一緒に{hours}時間 · 視聴全体の{percent}%",
       "together_top": "いちばん人を集めた作品",
       "evenings": {
@@ -1806,8 +1805,7 @@
       "left_for_later": {
         "other": "後回しにした番組：{count}本"
       },
-      "request": "件のリクエスト",
-      "requests": "件のリクエスト",
+      "requests_word": {"other": "件のリクエスト"},
       "arrived": "{count}件が追加",
       "watched": "{count}件を視聴",
       "more_than": "{year}年より{percent}%増",

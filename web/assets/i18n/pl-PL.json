@@ -1961,8 +1961,7 @@
         "nov": "listopada",
         "dec": "grudnia"
       },
-      "evening_in_company": "wieczór w towarzystwie",
-      "evenings_in_company": "wieczory w towarzystwie",
+      "evenings_word": {"one": "wieczór w towarzystwie", "few": "wieczory w towarzystwie", "many": "wieczorów w towarzystwie", "other": "wieczoru w towarzystwie"},
       "together_line": "{hours} godz. razem · {percent}% twojego oglądania",
       "together_top": "Co najczęściej łączyło ludzi",
       "evenings": {
@@ -1983,8 +1982,7 @@
         "many": "i {count} seriali odłożonych na później",
         "other": "i {count} serialu odłożonego na później"
       },
-      "request": "prośba",
-      "requests": "prośby",
+      "requests_word": {"one": "prośba", "few": "prośby", "many": "próśb", "other": "prośby"},
       "arrived": "Dostępne: {count}",
       "watched": "Obejrzane: {count}",
       "more_than": "{percent}% więcej niż w {year}",
