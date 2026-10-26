@@ -111,10 +111,13 @@ export function setLayoutChoice(layout, to = location.pathname + location.search
   location.assign(to);
 }
 
-// ---- the welcome: shown once to whoever signs in, in each browser, since everything it asks is this browser's choice.
-const WELCOMED_KEY = 'finstats.welcomed';
-export const welcomed = () => store.get(WELCOMED_KEY) === '1';
-export const markWelcomed = () => store.set(WELCOMED_KEY, '1');
+// ---- the welcome: shown once to each person, on whichever browser they first sign in, so the server keeps it
+// (`user.welcomed`); what it asks stays this browser's choice.
+export const welcomed = () => !!(state.user && state.user.welcomed);
+export async function markWelcomed() {
+  await api.put('/me/welcomed', {});
+  if (state.user) state.user.welcomed = true;
+}
 
 // ---- theme: 'device' (nothing stored, app.css follows the device), 'light' or 'dark', this browser's
 // choice. theme.js applies the stored one before the first paint; this changes it afterwards.

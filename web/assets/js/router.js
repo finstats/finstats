@@ -53,7 +53,7 @@ function guard(url) {
     return '/login' + (next && next !== '/' ? '?next=' + encodeURIComponent(next) : '');
   }
   if (path === '/login') return '/';
-  // Somebody signed in who has not been welcomed in this browser is asked its few questions first, then sent on.
+  // Somebody signed in who has never been welcomed, on any browser, is asked its few questions first, then sent on.
   if (!welcomed() && path !== '/welcome') {
     const next = path + url.search;
     return '/welcome' + (next && next !== '/' ? '?next=' + encodeURIComponent(next) : '');

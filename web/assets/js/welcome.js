@@ -1,6 +1,6 @@
 // The welcome: the first time somebody signs in on a browser, and at the end of setup, the same card asks what this
-// browser reads FinStats in: the language, how dates and times are written, and which layout. Everything it asks is the
-// browser's own choice (Settings → Appearance), so it is asked once a browser. Skip keeps British English, 31/01/2026,
+// browser reads FinStats in: the language, how dates and times are written, and which layout. It is asked once a person
+// (the server keeps that), and what it asks is the browser's own choice (Settings → Appearance). Skip keeps British English, 31/01/2026,
 // 13:05, the device's colours and FinStats. Choosing a language speaks it at once, in place, so setup's steps above are not lost to a reload.
 
 import { h, icon, mount, logo, dateExample, timeExample, setFormats } from './dom.js';
@@ -23,11 +23,12 @@ export function welcomeCard({ next = '/', setup = false } = {}) {
   let step = 0;
   const card = h('div', { class: 'auth-card auth-card-wide welcome' });
 
-  const finish = (chosen) => {
+  const finish = async (chosen) => {
     keepLanguage(chosen.language);
     setFormats({ date: chosen.date, time: chosen.time }, false);
     setTheme(chosen.theme);
-    markWelcomed();
+    // Before the page loads again, or the request goes with it. Should it fail, the next visit asks again.
+    try { await markWelcomed(); } catch (e) { console.error(e); }
     setLayoutChoice(chosen.layout, safeNext(next)); // loads the page again, in the layout chosen
   };
   const go = (to) => { step = to; draw(); card.querySelector('.wizard-step.is-current select, .wizard-step.is-current input')?.focus(); };
