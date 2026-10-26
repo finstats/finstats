@@ -113,7 +113,8 @@ function page(a) {
 
 async function load() {
   try {
-    const r = await fetch(base, { headers: { Accept: 'application/json' }, credentials: 'omit' });
+    // The language the page reads in, as the app's own requests say it: the persona comes back in it, not the browser's.
+    const r = await fetch(base, { headers: { Accept: 'application/json', 'Accept-Language': lang(), 'X-FinStats-Language': lang() }, credentials: 'omit' });
     if (!r.ok) throw new Error(String(r.status));
     mount(root, ...page(await r.json()));
   } catch {
