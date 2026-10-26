@@ -22,7 +22,7 @@ export function inline(text) {
   return out;
 }
 
-const KINDS = ['Added', 'Changed', 'Performance', 'Stability', 'Fixed', 'Removed'];
+const KINDS = ['Added', 'Changed', 'Security', 'Performance', 'Stability', 'Fixed', 'Removed'];
 /** A group's kind as the changelog names it (Added, Fixed…), in the language in use. */
 export const kindName = (kind) => (KINDS.includes(kind) ? t(`changelog_text.kind.${kind}`) : kind);
 

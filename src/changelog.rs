@@ -115,7 +115,7 @@ mod tests {
     use super::*;
 
     /// The groups a release may use; the Patch notes page gives each its own icon.
-    const KINDS: [&str; 6] = ["Added", "Changed", "Performance", "Stability", "Fixed", "Removed"];
+    const KINDS: [&str; 7] = ["Added", "Changed", "Security", "Performance", "Stability", "Fixed", "Removed"];
 
     fn is_day(d: &str) -> bool {
         d.len() == 10 && d.char_indices().all(|(i, c)| if i == 4 || i == 7 { c == '-' } else { c.is_ascii_digit() })
@@ -177,6 +177,12 @@ mod tests {
         assert_eq!(problems(&parse("## [2.0.1] - 2026-09-28 to 2026-09-25\n### Fixed\n- one\n")), vec!["release 2.0.1 ends before it starts"]);
         assert_eq!(problems(&parse("## [2.0.1] - 2026-9-25 to 2026-09-28\n### Fixed\n- one\n")), vec!["release 2.0.1 needs a YYYY-MM-DD date, or two joined by \" to \""]);
         assert_eq!(problems(&parse("## [2.0.1] - 2026-09-28\n### Speed\n- one\n")), vec!["unknown group \"Speed\" in 2.0.1"]);
+    }
+
+    /// Something somebody could have misused is a group of its own, not a fix that starts with "Security:".
+    #[test]
+    fn security_is_a_group_of_its_own() {
+        assert_eq!(problems(&parse("## [2.3.1] - 2026-10-26\n### Security\n- closed\n")), Vec::<String>::new());
     }
 
     /// The shipped file must be well-formed and must describe the version being built,

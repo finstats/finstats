@@ -355,7 +355,7 @@ mod pages_tests {
     const IDS: &[&str] = &[
         "Movie", "Series", "Season", "Episode", "Audio", "Video", "Book", "MusicAlbum", "MusicArtist", "TvChannel", "Trailer", "BoxSet", "Folder", "Playlist", "Photo",
         "Actor", "Director", "Writer", "Producer", "Composer", "GuestStar",
-        "Added", "Changed", "Performance", "Stability", "Fixed", "Removed",
+        "Added", "Changed", "Security", "Performance", "Stability", "Fixed", "Removed",
         "Transcode", "DirectPlay", "DirectStream", "Software", "Hardware", "None", "Other", "Unknown", "Remote", "Local",
         "Escape", "Enter", "Tab", "Home", "End", "Space", "Backspace", "Delete", "PageUp", "PageDown", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Control", "Shift", "Meta", "Alt",
         "Active", "Restart", "Deleted", "Superceded", "Malfunctioned", "NotSupported", "Disabled", "Cancelling", "Running", "Idle", "Off",

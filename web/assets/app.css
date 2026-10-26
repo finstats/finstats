@@ -964,6 +964,7 @@ a.chip-link:hover { border-color: var(--accent); color: var(--text); text-decora
 .cl-group + .cl-group { margin-top: 22px; }
 .cl-added { --cl-hue: var(--good); }
 .cl-changed { --cl-hue: var(--series-4); }
+.cl-security { --cl-hue: var(--series-3); }
 .cl-performance { --cl-hue: var(--series-1); }
 .cl-stability { --cl-hue: var(--series-2); }
 .cl-fixed { --cl-hue: var(--warning); }

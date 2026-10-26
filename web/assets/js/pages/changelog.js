@@ -10,6 +10,7 @@ import { t } from '../i18n.js';
 const KINDS = {
   Added: { icon: 'plus', cls: 'cl-added' },
   Changed: { icon: 'sliders', cls: 'cl-changed' },
+  Security: { icon: 'shield', cls: 'cl-security' },
   Performance: { icon: 'gauge', cls: 'cl-performance' },
   Stability: { icon: 'anchor', cls: 'cl-stability' },
   Fixed: { icon: 'check', cls: 'cl-fixed' },
