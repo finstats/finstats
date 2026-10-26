@@ -489,6 +489,9 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                             if visible && !tab.visible {
                                 if tab.topics.contains("now_playing") {
                                     tab.resend("now_playing");
+                                    // From a fresh reading: the value last pushed to everybody keeps the positions the
+                                    // plays had when something last changed, and a steady play is never pushed again.
+                                    fresh = true;
                                 }
                                 due.extend(["now_playing", "summary"]);
                             }
