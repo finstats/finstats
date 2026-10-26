@@ -4,6 +4,7 @@
 import { h, s, clear, mount, icon } from '../finui/core.js';
 import { num, initials } from '../finui/format.js';
 import { t, lang } from './i18n.js';
+import { DATE_FORMATS, TIME_FORMATS, writeDate, writeTime } from './when.js';
 
 // Every formatter writes in the language this page reads in (i18n.js has put it in use before any module runs), the
 // way num() prints numbers and tables read them back.
@@ -84,9 +85,41 @@ const dayf = new Intl.DateTimeFormat(lang(), { month: 'short', day: 'numeric' })
 const dayfy = new Intl.DateTimeFormat(lang(), { month: 'short', day: 'numeric', year: 'numeric' });
 const weekdayf = new Intl.DateTimeFormat(lang(), { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
-export const dateTime = (ts) => (ts ? dtf.format(new Date(ts * 1000)) : '–');
+// ---- the date and time formats this browser chose (Settings → Appearance), read once a visit; nothing stored is the
+// language's own way, which is what every formatter here writes then, exactly as before a format could be chosen.
+const DATE_KEY = 'finstats.dateFormat', TIME_KEY = 'finstats.timeFormat';
+let formats = null;
+const chosen = () => formats || (formats = { date: DATE_FORMATS.includes(store.get(DATE_KEY)) ? store.get(DATE_KEY) : null,
+  time: TIME_FORMATS.includes(store.get(TIME_KEY)) ? store.get(TIME_KEY) : null });
+export const dateFormatChoice = () => chosen().date || '';
+export const timeFormatChoice = () => chosen().time || '';
+/** Keep a format ('' is the language's own way); the page is read again in it. */
+export function setFormats({ date = dateFormatChoice(), time = timeFormatChoice() } = {}, reload = true) {
+  if (date) store.set(DATE_KEY, date); else store.remove(DATE_KEY);
+  if (time) store.set(TIME_KEY, time); else store.remove(TIME_KEY);
+  formats = null;
+  if (reload) location.reload();
+}
+const ampm = () => ({ am: t('time.am'), pm: t('time.pm') });
+const hm = new Intl.DateTimeFormat(lang(), { hour: '2-digit', minute: '2-digit', hour12: false });
+/** A time of day in the chosen format, or as `fallback` (the place's own Intl formatter) writes it. */
+export const clockTime = (d, fallback = hm, { seconds = false } = {}) => writeTime(d, chosen().time, ampm(), { seconds }) ?? fallback.format(d);
+/** A day with its year in the chosen format, or as `fallback` writes it ("Sep 1, 2026"). */
+export const calendarDate = (d, fallback = dayfy) => writeDate(d, chosen().date) ?? fallback.format(d);
+/** What a format reads like, for the choices in Settings and the welcome. */
+export const dateExample = (format) => writeDate(new Date(2026, 0, 31), format) ?? dayfy.format(new Date(2026, 0, 31));
+export const timeExample = (format) => {
+  const at = (hh, mm) => new Date(2026, 0, 31, hh, mm);
+  return format ? `${writeTime(at(1, 1), format, ampm())} – ${writeTime(at(23, 59), format, ampm())}` : `${hm.format(at(1, 1))} – ${hm.format(at(23, 59))}`;
+};
+
+export const dateTime = (ts) => {
+  if (!ts) return '–';
+  const d = new Date(ts * 1000);
+  return chosen().date || chosen().time ? `${calendarDate(d)} ${clockTime(d)}` : dtf.format(d);
+};
 /** The day of a moment, with its year: "Sep 1, 2026". */
-export const dateOnly = (ts) => (ts ? dayfy.format(new Date(ts * 1000)) : '–');
+export const dateOnly = (ts) => (ts ? calendarDate(new Date(ts * 1000)) : '–');
 
 export function relTime(ts) {
   if (!ts) return t('time.never');
@@ -115,6 +148,10 @@ export function shortStamp(ts) {
   if (!ts) return '';
   const d = new Date(ts * 1000);
   const sameYear = d.getFullYear() === new Date().getFullYear();
+  if (chosen().date || chosen().time) {
+    const day = chosen().date ? calendarDate(d) : d.toLocaleDateString(lang(), { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) });
+    return `${day} ${clockTime(d)}`;
+  }
   return d.toLocaleString(lang(), { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }), hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
@@ -129,7 +166,7 @@ export function parseDay(str) {
 }
 export const dayLabel = (str) => dayf.format(parseDay(str));
 export const dayLabelLong = (str) => weekdayf.format(parseDay(str));
-export const dayLabelYear = (str) => dayfy.format(parseDay(str));
+export const dayLabelYear = (str) => calendarDate(parseDay(str));
 
 const pctf = [0, 1, 2].map((d) => new Intl.NumberFormat(lang(), { style: 'percent', minimumFractionDigits: d, maximumFractionDigits: d }));
 export const pct = (x, digits = 0) => (x == null ? '–' : (pctf[digits] || new Intl.NumberFormat(lang(), { style: 'percent', minimumFractionDigits: digits, maximumFractionDigits: digits })).format(x));
@@ -178,7 +215,7 @@ export function safeHttps(url) {
 
 /** Time of day, for timelines: 21:04:12 */
 const timef = new Intl.DateTimeFormat(lang(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-export const timeOfDay = (ts) => (ts ? timef.format(new Date(ts * 1000)) : '–');
+export const timeOfDay = (ts) => (ts ? clockTime(new Date(ts * 1000), timef, { seconds: true }) : '–');
 
 export function debounce(fn, ms) {
   let t;

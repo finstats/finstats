@@ -1,6 +1,6 @@
 // /users/:id/timeline: one person's watching as a trail, newest first. Wide screens lay it out as a
 // snake (left to right, then back), a phone gets one straight line.
-import { h, icon, duration, durationExact, dateTime } from '../dom.js';
+import { h, icon, duration, durationExact, dateTime, clockTime } from '../dom.js';
 import { api } from '../api.js';
 import { replaceQuery } from '../router.js';
 import { dataView, sk, avatar, poster, emptyState, errorState } from '../components.js';
@@ -192,6 +192,6 @@ function when(s) {
   const a = new Date(s.from * 1000), b = new Date(s.to * 1000);
   const f = b.getFullYear() === new Date().getFullYear() ? dayf : dayfy;
   const sameDay = a.toDateString() === b.toDateString();
-  const text = sameDay ? `${f.format(a)}, ${timef.format(a)}` : `${(a.getFullYear() === b.getFullYear() ? dayf : dayfy).format(a)} – ${f.format(b)}`;
+  const text = sameDay ? `${f.format(a)}, ${clockTime(a, timef)}` : `${(a.getFullYear() === b.getFullYear() ? dayf : dayfy).format(a)} – ${f.format(b)}`;
   return h('time', { dateTime: b.toISOString(), title: `${dateTime(s.from)} – ${dateTime(s.to)}` }, text);
 }

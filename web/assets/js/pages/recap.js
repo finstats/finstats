@@ -3,7 +3,7 @@
 // chapter (a headline with a single accented word, a sentence that carries the figures, the
 // chapter's word standing faint behind it), and it ends the way films do: with the credits.
 
-import { h, icon, mount, num, duration, durationExact, pct, parseDay } from '../dom.js';
+import { h, icon, mount, num, duration, durationExact, pct, parseDay, clockTime } from '../dom.js';
 import { api, imgItem } from '../api.js';
 import { state, isAdmin, userList } from '../state.js';
 import { replaceQuery } from '../router.js';
@@ -549,7 +549,7 @@ function recordsChapter(d, v, isYear) {
     context: [r.longest_play.name, r.longest_play.date ? longDay(r.longest_play.date) : null].filter(Boolean).join(' · '), image: r.longest_play.image_item_id || null, name: r.longest_play.name }));
   if (r.most_rewatched) cards.push(recordCard({ label: t('pages.recap.most_rewatched'), value: t('pages.recap.times', { count: r.most_rewatched.plays || 0 }), context: r.most_rewatched.name, image: r.most_rewatched.image_item_id || null, name: r.most_rewatched.name }));
   if (r.first_play) cards.push(recordCard({ label: isYear ? t('pages.recap.first_play_year') : t('pages.recap.first_play_period'), value: r.first_play.name || unknownTitle(),
-    context: r.first_play.at ? t('pages.recap.first_play_at', { day: longDate(new Date(r.first_play.at * 1000)), time: hmF.format(new Date(r.first_play.at * 1000)) }) : null,
+    context: r.first_play.at ? t('pages.recap.first_play_at', { day: longDate(new Date(r.first_play.at * 1000)), time: clockTime(new Date(r.first_play.at * 1000), hmF) }) : null,
     image: r.first_play.image_item_id || null, name: r.first_play.name }));
   if (r.oldest_title) cards.push(recordCard({ label: t('pages.recap.oldest_title'), value: r.oldest_title.year ? t('pages.recap.from_year', { year: String(r.oldest_title.year) }) : r.oldest_title.name, context: r.oldest_title.name, image: r.oldest_title.image_item_id || null, name: r.oldest_title.name }));
   if (!cards.length) return null;

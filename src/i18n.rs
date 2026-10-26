@@ -369,6 +369,8 @@ mod pages_tests {
         "js/i18n.js:Polski", "js/i18n.js:Русский", "js/i18n.js:Svenska", "js/i18n.js:Türkçe", "js/i18n.js:Українська",
         "js/i18n.js:Português (Brasil)",
         "js/state.js:not all", // a media query
+        // The time formats by their patterns, which the code reads; a person sees each written out.
+        "js/when.js:HH:mm", "js/when.js:H:mm", "js/when.js:hh:mm a", "js/when.js:h:mm a",
         // The buttons and menus of Jellystat's, Streamystats' and Tautulli's own (English) pages, named in the import steps.
         "js/settings/import.js:Settings", "js/settings/import.js:Backup", "js/settings/import.js:Activity", "js/settings/import.js:Backups",
         "js/settings/import.js:Actions", "js/settings/import.js:Download",

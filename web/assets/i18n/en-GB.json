@@ -65,7 +65,9 @@
     "in_days": { "one": "in {count} day", "other": "in {count} days" },
     "today": "Today",
     "tomorrow": "Tomorrow",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count}s",
@@ -280,6 +282,13 @@
       "language_checked": "Checked by the maintainer",
       "language_unchecked": "Not checked by a native speaker",
       "language_unchecked_note": "This translation has not been checked by a native speaker: corrections are welcome on GitHub.",
+      "date_format": "Date format",
+      "date_format_hint": "date format day month year 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "How dates are written in this browser.",
+      "time_format": "Time format",
+      "time_format_hint": "time format clock 24-hour 12-hour am pm",
+      "time_format_help": "How times of day are written in this browser.",
+      "format_language": "As the language writes it",
       "layout": "Layout",
       "layout_hint": "layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats, or Simple: a bar across the top and the stats alone, the way a classic Plex stats server lays them out. Kept by this browser alone.",

@@ -3,7 +3,7 @@
 // "Add trigger" dialog. `/settings/tasks` is the list, `/settings/tasks/:task` one job. The server holds every
 // rule (`schedule.rs`); this page only says it in words and sends the whole list back when it changes.
 
-import { h, icon, mount, dateTime } from '../dom.js';
+import { h, icon, mount, dateTime, clockTime, timeFormatChoice } from '../dom.js';
 import { api } from '../api.js';
 import { can, state } from '../state.js';
 import { card, sk, spinner, inlineError, errorState, openModal, setBusy } from '../components.js';
@@ -48,7 +48,7 @@ export function every(sec) {
 }
 const timef = new Intl.DateTimeFormat(lang(), { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' });
 /** A minute of the day as the reader's clock writes it: "3:00 AM", "03:00". */
-export const timeWords = (min) => timef.format(new Date(Date.UTC(2000, 0, 1, 0, min)));
+export const timeWords = (min) => (timeFormatChoice() ? clockTime(new Date(2000, 0, 1, 0, min)) : timef.format(new Date(Date.UTC(2000, 0, 1, 0, min))));
 /** One trigger in words, the way Jellyfin lists them. */
 export function triggerWords(t) {
   switch (t.type) {

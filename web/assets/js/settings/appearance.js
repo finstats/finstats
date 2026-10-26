@@ -4,7 +4,8 @@
 // Which menu this browser has: on a phone one of FinUI mobile-nav's styles, on a wider screen one of desktop-nav's and the side
 // it sits on. Kept by this browser (state.js) and nowhere else; each is offered only at the width where it is in use.
 
-import { h, icon, mount } from '../dom.js';
+import { h, icon, mount, dateFormatChoice, timeFormatChoice, setFormats, dateExample, timeExample } from '../dom.js';
+import { DATE_FORMATS, TIME_FORMATS } from '../when.js';
 import { api } from '../api.js';
 import { card, setBusy, inlineError, facts } from '../components.js';
 import { settingRow } from './common.js';
@@ -41,6 +42,8 @@ export default {
   visible: () => true,
   // The finder offers what render() draws: in Simple mode, the layout alone.
   entries: [{ id: 'language', label: t('settings.appearance.language'), hint: t('settings.appearance.language_hint') },
+    { id: 'date_format', label: t('settings.appearance.date_format'), hint: t('settings.appearance.date_format_hint') },
+    { id: 'time_format', label: t('settings.appearance.time_format'), hint: t('settings.appearance.time_format_hint') },
     { id: 'layout', label: t('settings.appearance.layout'), hint: t('settings.appearance.layout_hint') },
     { id: 'desktop_menu', label: t('settings.appearance.menu'), hint: t('settings.appearance.menu_hint'), visible: () => !simpleLayout() && !matchMedia(PHONE).matches },
     { id: 'desktop_side', label: t('settings.appearance.menu_right'), hint: t('settings.appearance.menu_right_hint'), visible: () => !simpleLayout() && !matchMedia(PHONE).matches },
@@ -144,6 +147,17 @@ export default {
     const [languageRow] = settingRow({ id: 'language', label: t('settings.appearance.language'), labelFor: 'f-language',
       help: unchecked ? `${t('settings.appearance.language_help')} ${t('settings.appearance.language_unchecked_note')}` : t('settings.appearance.language_help'), control: langSel });
 
+    // How this browser writes dates and times, in both layouts; each option reads as it would be written. Choosing reloads.
+    const formatRow = (id, all, example, value, pick) => {
+      const sel = h('select', { class: 'fui-field__input', id: `f-${id}`, 'aria-describedby': `${id}-help` },
+        h('option', { value: '' }, t('settings.appearance.format_language')), all.map((f) => h('option', { value: f }, example(f))));
+      sel.value = value;
+      sel.addEventListener('change', () => pick(sel.value));
+      return settingRow({ id, label: t(`settings.appearance.${id}`), labelFor: `f-${id}`, help: t(`settings.appearance.${id}_help`), control: sel })[0];
+    };
+    const dateRow = formatRow('date_format', DATE_FORMATS, dateExample, dateFormatChoice(), (date) => setFormats({ date }));
+    const timeRow = formatRow('time_format', TIME_FORMATS, timeExample, timeFormatChoice(), (time) => setFormats({ time }));
+
     const phone = matchMedia(PHONE);
     // Simple mode has no menu, no search of FinStats' kind and a look of its own: only the layout is chosen there.
     const simple = simpleLayout();
@@ -157,7 +171,7 @@ export default {
     fit();
 
     mount(body, h('div', { class: 'fui-setting-row__rows' },
-      languageRow, layoutRow, menuRow, deskRow, sideRow, modeRow,
+      languageRow, dateRow, timeRow, layoutRow, menuRow, deskRow, sideRow, modeRow,
       simple ? null : settingRow({ id: 'finui_preset', label: t('settings.appearance.preset'), labelFor: 'f-finui_preset',
         help: t('settings.appearance.preset_help'),
         control: h('div', { class: 'fui-field__row' }, note, input, save, reset), error: err })),

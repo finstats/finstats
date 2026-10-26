@@ -2,7 +2,7 @@
 // statistics as ranked cards over the last N days by play count or duration, what each library holds, and what arrived
 // lately. Every card reads an endpoint another page reads, through the same scoping, and hides itself when it is empty.
 
-import { h, num, clock, relTime, store, episodeCode, mount, METHOD_LABEL } from '../../dom.js';
+import { h, num, clock, relTime, store, episodeCode, mount, METHOD_LABEL, clockTime } from '../../dom.js';
 import { api, soft, imgItem } from '../../api.js';
 import { can } from '../../state.js';
 import { t, tParts, lang } from '../../i18n.js';
@@ -15,6 +15,7 @@ import { tile } from '../../../finui/components/tile-stat/tile-stat.js';
 import { shelf } from '../../../finui/components/shelf/shelf.js';
 import { mediaCard } from '../../../finui/components/media-card/media-card.js';
 import { hhmm, rate, platformTile, libraryIcon } from '../platform.js';
+const etaF = new Intl.DateTimeFormat(lang(), { hour: '2-digit', minute: '2-digit' });
 
 const ROWS = 5;
 const DAYS_KEY = 'finstats.simpleDays', BY_KEY = 'finstats.simpleBy';
@@ -175,7 +176,7 @@ function streams(sessions) {
 function etaOf(s, pos) {
   if (!s.runtime_s || s.is_paused) return null;
   const left = Math.max(0, s.runtime_s - pos);
-  return t('simple.home.eta', { time: new Date(Date.now() + left * 1000).toLocaleTimeString(lang(), { hour: '2-digit', minute: '2-digit' }) });
+  return t('simple.home.eta', { time: clockTime(new Date(Date.now() + left * 1000), etaF) });
 }
 
 /** What a stream is, under its title: an episode's code, and a name for every other kind Jellyfin plays. */

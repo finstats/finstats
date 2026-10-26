@@ -66,7 +66,9 @@
     "in_days": { "one": "om {count} dag", "other": "om {count} dager" },
     "today": "I dag",
     "tomorrow": "I morgen",
-    "yesterday": "I går"
+    "yesterday": "I går",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count} s",
@@ -281,6 +283,13 @@
       "language_checked": "Kontrollert av utvikleren",
       "language_unchecked": "Ikke kontrollert av en morsmålsbruker",
       "language_unchecked_note": "Denne oversettelsen er ikke kontrollert av en morsmålsbruker: rettelser tas gjerne imot på GitHub.",
+      "date_format": "Datoformat",
+      "date_format_hint": "datoformat dato dag måned år 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "Hvordan datoer skrives i denne nettleseren.",
+      "time_format": "Tidsformat",
+      "time_format_hint": "tidsformat klokkeslett klokke 24 timer 12 timer am pm",
+      "time_format_help": "Hvordan klokkeslett skrives i denne nettleseren.",
+      "format_language": "Slik språket skriver det",
       "layout": "Oppsett",
       "layout_hint": "oppsett enkel modus klassisk tautulli plex topplinje hjem utseende layout simple mode classic top bar home look",
       "layout_help": "FinStats, eller Enkel: en linje øverst og bare statistikken, slik en klassisk statistikkserver for Plex viser den. Lagres bare i denne nettleseren.",

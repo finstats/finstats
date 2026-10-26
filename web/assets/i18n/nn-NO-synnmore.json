@@ -126,7 +126,9 @@
     },
     "today": "Idag",
     "tomorrow": "Imårgå",
-    "yesterday": "Igår"
+    "yesterday": "Igår",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count} s",
@@ -413,6 +415,13 @@
       "language_checked": "Kontrollert av utviklari",
       "language_unchecked": "Ikkje kontrollert av en morsmålsbrukar",
       "language_unchecked_note": "Dinna omsetjinga ekje kontrollert av en morsmålsbrukar: rettingar vert gjerne tekne imot på GitHub.",
+      "date_format": "Datoformat",
+      "date_format_hint": "datoformat dato dag månad år 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "Korleis datoa vert skrivne i dinna nettlesari.",
+      "time_format": "Tidsformat",
+      "time_format_hint": "tidsformat klokkeslett klokke 24 timar 12 timar am pm",
+      "time_format_help": "Korleis klokkeslett vert skrivne i dinna nettlesari.",
+      "format_language": "Sann språke skriv d",
       "layout": "Oppsett",
       "layout_hint": "oppsett enkel modus klassisk tautulli plex topplinje heim utsjånad layout simple mode classic top bar home look",
       "layout_help": "FinStats, elle Enkel: ei linje øvst og bære statistikki, sann en klassisk statistikkserver for Plex viser han. Vert lagra bære i dinna nettlesari.",

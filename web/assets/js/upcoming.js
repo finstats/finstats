@@ -1,6 +1,6 @@
 // What Sonarr and Radarr expect: shared by the Pipeline page, the dashboard row, the profile and the title page.
 
-import { h, icon, mount, initials, episodeCode, parseDay } from './dom.js';
+import { h, icon, mount, initials, episodeCode, parseDay, clockTime } from './dom.js';
 import { api, imgItem } from './api.js';
 import { watchToggle } from './watchlist.js';
 import { typed, notHere } from './menus.js';
@@ -26,7 +26,7 @@ export function upcomingPoster(e, { w = 160, cls = '' } = {}) {
 
 // An air time is a time of day to the minute; the seconds `timeOfDay` shows belong to a play's timeline.
 const hourMinute = new Intl.DateTimeFormat(lang(), { hour: '2-digit', minute: '2-digit' });
-const timeOfDay = (ts) => hourMinute.format(new Date(ts * 1000));
+const timeOfDay = (ts) => clockTime(new Date(ts * 1000), hourMinute);
 const dayMs = 86400e3;
 const weekday = new Intl.DateTimeFormat(lang(), { weekday: 'long' });
 const dayMonth = new Intl.DateTimeFormat(lang(), { weekday: 'short', day: 'numeric', month: 'short' });
