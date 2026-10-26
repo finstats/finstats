@@ -472,12 +472,14 @@ ETags by image tag), `ical.rs` (hand-written RFC 5545 feed), `keys.rs`, `audit.r
 | `dom.js` | `h()` element builder (from FinUI), icons, all formatters (durations, bytes, dates via `Intl`), `safeHttps`, `store` |
 | `api.js` | `api.get/post/put/del` (prefix `/api`, throw `ApiError`), `soft()`, view cache (cleared by any non-GET), `Accept-Language` |
 | `router.js` | History-API router; guard (setup / login / perm); `ctx = {params, query, signal, root, onCleanup, every, title}` |
-| `state.js` | `state.user`, `can(perm)`, ranges, all `finstats.*` localStorage keys (theme, layout, language, menus, …) |
+| `state.js` | `state.user`, `can(perm)`, ranges, all `finstats.*` localStorage keys (theme, layout, language, menus, welcomed, …; the date and time formats are `dom.js`'s) |
 | `components.js` | `dataView()` (stale-while-revalidate page loader), `setBusy`, `openModal`, filters, plays table, FinUI re-exports |
 | `tables.js` | Re-export of FinUI data-table (`dataTable`, `plainTable`, `chartTable`, `sortable`) |
 | `charts.js` | Hand-rolled SVG charts; colours by entity (`TYPES`), as `'var(--series-n)'` |
 | `widgets.js` | Larger shared cards (activity, heatmap, now playing, insights, …) |
 | `live.js` | `follow(topic, {poll, every, onData, signal})`: WebSocket with polling fallback |
+| `when.js` | Pure: a date or time in a chosen format (`writeDate`, `writeTime`); `dom.js`'s `clockTime` / `calendarDate` use it |
+| `welcome.js` | The welcome (`/welcome`) and the same card at the end of setup: language, formats, layout; Skip keeps `DEFAULTS` |
 | `nowplaying.js` | Now-playing view with a 1 s ticker clock (polls only correct, never repaint) |
 | `prefetch.js` | Warm-up and on-intent prefetch, calling the page's own loaders |
 | `shell.js`, `sections.js`, `menus.js`, `search.js` | Layout chrome (FinUI menus, status bar, Esc), section pages, context menus, search |
@@ -492,7 +494,7 @@ FinStats layout: `/` dashboard, `/recap`, `/activity`, `/together`, `/users` (`s
 `/timeline`, `/watchlist`), `/libraries` (+ `/:id`, `/:id/titles`), `/items/:id`, `/people/:id`, `/playback`,
 `/pipeline`, `/server/:section` (`see_server`: overview, jobs, devices, plugins, capacity, health, log, audit),
 `/security` (`see_network`), `/settings/:section` (+ `/settings/tasks/:task`), `/changelog`, `/licenses`, `/setup`,
-`/login`. Settings sections live in `settings/*.js` and export
+`/login`, `/welcome`. Settings sections live in `settings/*.js` and export
 `{ key, label, sub, group, icon, visible, entries, render(slot, store) }`.
 
 Simple mode: `/`, `/history`, `/libraries(/:id)`, `/users(/:id)`, `/items/:id`, `/graphs`, plus shared settings, sign-in,
@@ -767,6 +769,7 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
   two imports" (there are three). The backup module's doc omits several tables in `TABLES`. `checks/capacity.sh` refers
   to a `qa/run.sh capacity` stage that does not exist.
 - Libraries (unlike users) are still marked removed by timestamp rather than by id.
+- **`window.finstatsWelcome()` (`boot.js`) is a debugging aid for the welcome and must be removed before 2.3.0 reaches `main`.**
 
 ---
 

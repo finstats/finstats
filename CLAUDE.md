@@ -902,6 +902,23 @@ runs on `nowplaying.js`, the clock and loader both layouts share, with its own s
 History, a library's, a person's and a title's History tab are one server-sorted table (`simple/history.js`). No
 Tautulli name, logo or code: the layout is the familiar part, the name and the mark are FinStats'.
 
+**Date and time formats (`when.js`, Settings → Appearance, 2.3.0)** are this browser's (`finstats.dateFormat`,
+`finstats.timeFormat`, nothing stored is the language's own way, which writes every date and time exactly as before a
+format could be chosen). `when.js` is pure (`writeDate`, `writeTime`, the seven date and four time patterns, tested in the
+QA stage `i18n`); `dom.js`'s formatters (`dateTime`, `dateOnly`, `shortStamp`, `timeOfDay`, `dayLabelYear`) and every page
+with a clock of its own go through `clockTime(d, fallback)` / `calendarDate(d, fallback)`, the fallback being the page's
+own `Intl` formatter. A new place that writes a time of day or a day with its year goes through them too; a date written
+with a month's name ("28 February", "Oct 2026") stays the language's. The server writes no dates a person reads.
+
+**The welcome (`welcome.js`, `/welcome?next=`, 2.3.0).** The first time somebody signs in on a browser, the router's
+guard sends them to a card in setup's own look (`ol.wizard`): language (spoken at once through `loadLanguage`, in place),
+date and time formats, layout with a picture of each (`web/assets/welcome/*.png`, made from the screenshots stage's
+`dashboard` and `simple` shots at 480×300). Skip keeps `DEFAULTS` (en-GB, `dd/mm/yyyy`, `HH:mm`, FinStats). Setup goes on
+into the same steps in the same card once its sign-in succeeds, its two steps shown done. Everything it asks is the
+browser's, so `finstats.welcomed` is too; every QA browser marks itself welcomed but the journeys for the welcome.
+**`finstatsWelcome()` in `boot.js` opens it from the console for trying it by hand, and must be taken out before 2.3.0
+reaches `main`** (the owner's decision).
+
 Tables go through `tables.js`: `dataTable()` / `plainTable()` / `chartTable()` wrap a built `<table>` in its scroll box and make every
 header a sort button (`sortable()` for tables without a scroll box, like the bar lists). Sorting reads cell meaning (durations, sizes, %,
 `<time>`, switches; `data-sort` overrides, `data-nosort` opts a header out, `data-pin` keeps a row on top). Paginated lists must not be
