@@ -31,6 +31,9 @@ pub struct AppState {
     pub live: RwLock<Vec<Value>>,
     pub collector: RwLock<CollectorStatus>,
     pub login_attempts: Mutex<HashMap<IpAddr, (u32, i64)>>,
+    /// A fresh install's one-time setup code (`auth::new_setup_code`): written to the log at start, asked for by the
+    /// wizard. `None` once FinStats knows its Jellyfin.
+    pub setup_code: Option<String>,
     /// The geolocation database, when there is one.
     pub geo: crate::geo::Geo,
     /// Connections to Sonarr, Radarr and Seerr: the list and how each is doing. Loops read these, never the
@@ -410,6 +413,7 @@ pub fn test_app() -> App {
         live: RwLock::new(vec![]),
         collector: RwLock::new(CollectorStatus::default()),
         login_attempts: Mutex::new(Default::default()),
+        setup_code: None,
         geo: Default::default(),
         services: Default::default(),
         service_health: Default::default(),

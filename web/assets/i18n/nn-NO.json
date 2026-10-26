@@ -175,6 +175,10 @@
       "sub": "To steg, så byrjar FinStats å registrere avspeling frå serveren din.",
       "step_connect": "Kople til Jellyfin",
       "step_sign_in": "Logg inn som administrator",
+      "code": "Oppsettskode",
+      "code_help": "FinStats skriv han i loggen sin når han startar, til dømes: docker logs finstats",
+      "code_empty": "Skriv inn oppsettskoden frå loggen til FinStats.",
+      "code_wrong": "Det er ikkje oppsettskoden i loggen til FinStats.",
       "address": "Jellyfin-adresse",
       "address_help": "Adressa FinStats når Jellyfin på. I Docker er dette ofte namnet på containeren.",
       "address_empty": "Skriv inn adressa til Jellyfin-serveren din, til dømes http://jellyfin:8096.",
@@ -1491,6 +1495,7 @@
       "wrong_password": "Feil brukarnamn eller passord",
       "unreachable": "Fekk ikkje kontakt med Jellyfin for å sjekke innlogginga di",
       "no_access": "Du har ikkje fått tilgang til FinStats. Ein Jellyfin-administrator kan sleppe deg inn under Innstillingar.",
+      "setup_code": "Det er ikkje oppsettskoden i loggen til FinStats",
       "already_set_up": "FinStats er alt sett opp",
       "not_admin": "Den kontoen er ikkje Jellyfin-administrator. Set opp FinStats med ein administratorkonto."
     },

@@ -175,6 +175,10 @@
       "sub": "Two steps, then FinStats starts recording playback from your server.",
       "step_connect": "Connect to Jellyfin",
       "step_sign_in": "Sign in as an administrator",
+      "code": "Setup code",
+      "code_help": "FinStats writes it to its log when it starts, for example: docker logs finstats",
+      "code_empty": "Enter the setup code from FinStats’ log.",
+      "code_wrong": "That isn’t the setup code in FinStats’ log.",
       "address": "Jellyfin address",
       "address_help": "The address FinStats can reach Jellyfin on. In Docker this is often the container name.",
       "address_empty": "Enter the address of your Jellyfin server, like http://jellyfin:8096.",
@@ -1491,6 +1495,7 @@
       "wrong_password": "Wrong username or password",
       "unreachable": "Could not reach Jellyfin to check your sign-in",
       "no_access": "You haven't been given access to FinStats. A Jellyfin administrator can allow you in Settings.",
+      "setup_code": "That isn’t the setup code in FinStats’ log",
       "already_set_up": "FinStats is already set up",
       "not_admin": "That account is not a Jellyfin administrator. Set FinStats up with an administrator account."
     },

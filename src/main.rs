@@ -268,6 +268,7 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
         _ => config,
     };
 
+    let setup_code = config.is_none().then(auth::new_setup_code);
     let app = Arc::new(AppState {
         db,
         data_dir,
@@ -281,6 +282,7 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
         live: RwLock::new(vec![]),
         collector: RwLock::new(CollectorStatus::default()),
         login_attempts: Mutex::new(Default::default()),
+        setup_code: setup_code.clone(),
         geo: Default::default(),
         services: Default::default(),
         service_health: Default::default(),
@@ -327,7 +329,11 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
     let listener = tokio::net::TcpListener::bind(&bind).await.with_context(|| format!("listening on {bind}"))?;
     match app.config.read().unwrap().as_ref() {
         Some(c) => tracing::info!("FinStats {} on http://{bind}, connected to {}", env!("CARGO_PKG_VERSION"), c.url),
-        None => tracing::info!("FinStats {} on http://{bind}; open it in a browser to finish setup", env!("CARGO_PKG_VERSION")),
+        None => tracing::info!(
+            "FinStats {} on http://{bind}; open it in a browser to finish setup. Setup code: {}",
+            env!("CARGO_PKG_VERSION"),
+            setup_code.as_deref().unwrap_or_default()
+        ),
     }
 
     let serve_app = app.clone();

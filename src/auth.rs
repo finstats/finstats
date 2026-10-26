@@ -685,14 +685,51 @@ fn ensure_unconfigured(app: &App) -> Result<(), ApiError> {
     Ok(())
 }
 
+/// Letters and digits nobody misreads: no 0/O, 1/I/L.
+const SETUP_ALPHABET: &[u8] = b"ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+/// A fresh install's one-time setup code, `XXXX-XXXX`, written to the log at start. Until setup is finished the wizard is
+/// open to whoever reaches the port, who could otherwise point FinStats at a Jellyfin of their own and be its
+/// administrator, or use the test to look around the network; the log is the owner's alone.
+pub fn new_setup_code() -> String {
+    let mut rng = rand::rng();
+    let pick = |rng: &mut rand::rngs::ThreadRng| SETUP_ALPHABET[rand::Rng::random_range(rng, 0..SETUP_ALPHABET.len())] as char;
+    let half = |rng: &mut rand::rngs::ThreadRng| (0..4).map(|_| pick(rng)).collect::<String>();
+    format!("{}-{}", half(&mut rng), half(&mut rng))
+}
+
+/// Whether `given` is the setup code, however it was typed (case, dash, spaces), compared in constant time.
+fn setup_code_matches(expected: Option<&str>, given: &str) -> bool {
+    let plain = |s: &str| s.chars().filter(char::is_ascii_alphanumeric).map(|c| c.to_ascii_uppercase()).collect::<String>();
+    let Some(expected) = expected.map(plain).filter(|e| !e.is_empty()) else { return false };
+    let given = plain(given);
+    expected.len() == given.len() && expected.bytes().zip(given.bytes()).fold(0u8, |acc, (a, b)| acc | (a ^ b)) == 0
+}
+
+fn ensure_setup_code(app: &App, given: &str) -> Result<(), ApiError> {
+    if setup_code_matches(app.setup_code.as_deref(), given) {
+        return Ok(());
+    }
+    Err(ApiError::new(StatusCode::PRECONDITION_REQUIRED, crate::i18n::t("server.auth.setup_code", &[])))
+}
+
 #[derive(Deserialize)]
 pub struct SetupTestBody {
     #[serde(default)]
     url: String,
+    #[serde(default)]
+    code: String,
 }
 
-pub async fn setup_test(State(app): State<App>, Json(body): Json<SetupTestBody>) -> ApiResult {
+pub async fn setup_test(
+    State(app): State<App>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Json(body): Json<SetupTestBody>,
+) -> ApiResult {
     ensure_unconfigured(&app)?;
+    check_rate_limit(&app, client_ip(&app, &headers, peer))?;
+    ensure_setup_code(&app, &body.code)?;
     let url = jellyfin::normalize_url(&body.url).map_err(|e| ApiError::bad_request(e.to_string()))?;
     let info = app
         .jellyfin_anonymous(&url)
@@ -710,7 +747,13 @@ pub struct SetupBody {
     username: String,
     #[serde(default)]
     password: String,
+    #[serde(default)]
+    code: String,
 }
+
+/// Held from the last look at whether FinStats is set up to the config being written: two people finishing the wizard
+/// at once both found it not set up, and the second overwrote the first's Jellyfin.
+static SETUP_FINISHING: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 pub async fn setup(
     State(app): State<App>,
@@ -721,6 +764,7 @@ pub async fn setup(
     ensure_unconfigured(&app)?;
     let ip = client_ip(&app, &headers, peer);
     check_rate_limit(&app, ip)?;
+    ensure_setup_code(&app, &body.code)?;
     let url = jellyfin::normalize_url(&body.url).map_err(|e| ApiError::bad_request(e.to_string()))?;
     let jf = app.jellyfin_anonymous(&url);
     let info = jf.public_info().await.map_err(|e| ApiError::new(StatusCode::BAD_GATEWAY, e.to_string()))?;
@@ -743,7 +787,8 @@ pub async fn setup(
     jf.logout(&auth.access_token).await;
     let api_key = key.map_err(|e| ApiError::new(StatusCode::BAD_GATEWAY, e.to_string()))?;
 
-    // Re-check under the lock-free flag: two people finishing the wizard at once.
+    // Two people finishing the wizard at once: the second finds it set up.
+    let _finishing = SETUP_FINISHING.lock().await;
     ensure_unconfigured(&app)?;
     let cfg = JfConfig {
         url,
@@ -833,6 +878,24 @@ mod tests {
         assert!(!is_https(&h), "a page on plain http: a Secure cookie would never be kept");
         h.insert("x-forwarded-proto", "https".parse().unwrap());
         assert!(is_https(&h));
+    }
+
+    /// The setup code is eight letters and digits nobody misreads, and is taken however it is typed.
+    #[test]
+    fn the_setup_code_is_taken_however_it_is_typed_and_nothing_else_is() {
+        let code = new_setup_code();
+        assert_eq!(code.len(), 9);
+        assert_eq!(&code[4..5], "-");
+        assert!(code.bytes().filter(|b| *b != b'-').all(|b| SETUP_ALPHABET.contains(&b)), "{code}");
+        assert_ne!(new_setup_code(), new_setup_code());
+        let right = Some("7KQ2-M9XD");
+        for typed in ["7KQ2-M9XD", "7kq2m9xd", " 7KQ2 M9XD "] {
+            assert!(setup_code_matches(right, typed), "{typed:?}");
+        }
+        for typed in ["", "7KQ2-M9XE", "7KQ2", "7KQ2-M9XD-7KQ2"] {
+            assert!(!setup_code_matches(right, typed), "{typed:?}");
+        }
+        assert!(!setup_code_matches(None, ""), "no code at all opens nothing");
     }
 
     fn grants(keys: &[&str]) -> Vec<String> {

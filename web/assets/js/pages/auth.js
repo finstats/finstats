@@ -28,11 +28,14 @@ export function setupPage(ctx) {
   ctx.title(t('auth.setup.page_title'));
   let tested = null; // {url, server_name, version}
 
+  // The one-time code FinStats wrote to its log: until setup is done, whoever reaches the port could otherwise run it.
+  const code = field({ id: 'setup-code', label: t('auth.setup.code'), placeholder: 'XXXX-XXXX', autocomplete: 'off', help: t('auth.setup.code_help') });
+  code.input.spellcheck = false;
   const url = field({ id: 'jf-url', label: t('auth.setup.address'), placeholder: 'http://jellyfin:8096', inputMode: 'url', autocomplete: 'url',
     help: t('auth.setup.address_help') });
   const testBtn = button({ variant: 'primary', type: 'submit' }, t('auth.setup.test'));
   const testResult = h('div', { 'aria-live': 'polite' });
-  const step1 = h('form', { class: 'auth-form', noValidate: true }, url.el, h('div', { class: 'form-actions' }, testBtn), testResult);
+  const step1 = h('form', { class: 'auth-form', noValidate: true }, code.el, url.el, h('div', { class: 'form-actions' }, testBtn), testResult);
 
   const user = field({ id: 'username', label: t('auth.setup.admin_username'), autocomplete: 'username' });
   const pass = field({ id: 'password', label: t('auth.login.password'), type: 'password', autocomplete: 'current-password' });
@@ -53,13 +56,16 @@ export function setupPage(ctx) {
 
   step1.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const said = code.input.value.trim();
+    code.setError(said ? null : t('auth.setup.code_empty'));
+    if (!said) { code.input.focus(); return; }
     const n = normalizeUrl(url.input.value);
     url.setError(n.error || null);
     if (n.error) { url.input.focus(); return; }
     url.input.value = n.url;
     setBusy(testBtn, true, t('auth.setup.testing'));
     try {
-      const info = await api.post('/setup/test', { url: n.url }, { quiet401: true });
+      const info = await api.post('/setup/test', { url: n.url, code: said }, { quiet401: true });
       tested = { url: n.url, ...info };
       mount(testResult, h('p', { class: 'fui-badge--status fui-badge--good test-ok' }, icon('check', 14), h('span', null, ...tParts('auth.setup.connected', { server: h('strong', null, info.server_name || 'Jellyfin') }), info.version ? h('span', { class: 'mono' }, ` · Jellyfin ${info.version}`) : null)));
       step2.hidden = false; s2.classList.remove('is-locked'); s1.classList.remove('is-current');
@@ -67,6 +73,7 @@ export function setupPage(ctx) {
     } catch (err) {
       tested = null;
       if (err.status === 409) { state.status = await api.get('/status'); navigate('/login', { replace: true }); return; }
+      if (err.status === 428) { code.setError(t('auth.setup.code_wrong')); code.input.select(); code.input.focus(); return; }
       // A refusal of the address itself is not a failed connection; and the server's own words are one sentence, finished.
       const said = /[.!?]$/.test(err.message) ? err.message : `${err.message}.`;
       url.setError(err.status === 400 ? said : t('auth.setup.couldnt_connect', { reason: said }));
@@ -83,7 +90,7 @@ export function setupPage(ctx) {
     if (!tested) { url.setError(t('auth.setup.test_first')); url.input.focus(); return; }
     setBusy(finishBtn, true, t('auth.setup.finishing'));
     try {
-      const res = await api.post('/setup', { url: tested.url, username: u, password: p }, { quiet401: true });
+      const res = await api.post('/setup', { url: tested.url, username: u, password: p, code: code.input.value.trim() }, { quiet401: true });
       state.user = res.user;
       try { state.status = await api.get('/status'); } catch { state.status = { ...state.status, configured: true, server_name: tested.server_name }; }
       // The same card goes on with the welcome's questions, setup's two steps shown done above them.
@@ -92,7 +99,8 @@ export function setupPage(ctx) {
       ctx.root.querySelector('#w-language')?.focus();
     } catch (err) {
       setBusy(finishBtn, false);
-      if (err.status === 401) { pass.setError(t('auth.login.wrong')); pass.input.select(); pass.input.focus(); }
+      if (err.status === 428) { code.setError(t('auth.setup.code_wrong')); code.input.select(); code.input.focus(); }
+      else if (err.status === 401) { pass.setError(t('auth.login.wrong')); pass.input.select(); pass.input.focus(); }
       else if (err.status === 403) { user.setError(t('auth.setup.not_admin')); user.input.focus(); }
       else mount(finishErr, inlineError('setup-err', err.message));
     }
@@ -102,7 +110,7 @@ export function setupPage(ctx) {
     h('h1', { class: 'auth-title' }, t('auth.setup.title')),
     h('p', { class: 'auth-sub' }, t('auth.setup.sub')),
     h('ol', { class: 'wizard' }, s1, s2)));
-  requestAnimationFrame(() => url.input.focus());
+  requestAnimationFrame(() => code.input.focus());
 }
 
 // ---------------------------------------------------------------- /login
@@ -131,7 +139,8 @@ export function loginPage(ctx) {
       navigate(next && next.startsWith('/') && !next.startsWith('//') ? next : '/', { replace: true });
     } catch (err) {
       setBusy(btn, false);
-      if (err.status === 401) { pass.setError(t('auth.login.wrong')); pass.input.select(); pass.input.focus(); }
+      if (err.status === 428) { code.setError(t('auth.setup.code_wrong')); code.input.select(); code.input.focus(); }
+      else if (err.status === 401) { pass.setError(t('auth.login.wrong')); pass.input.select(); pass.input.focus(); }
       else if (err.status === 403) mount(formErr, inlineError('login-err', t('auth.login.admins_only')));
       else if (err.status === 429) mount(formErr, inlineError('login-err', t('auth.login.too_many')));
       else mount(formErr, inlineError('login-err', err.message));
