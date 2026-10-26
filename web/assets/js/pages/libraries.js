@@ -90,22 +90,27 @@ function makeupSlot(ctx, ownLibrary = '') {
     container: body, signal: ctx.signal,
     skeleton: () => [sk.tiles(3), h('div', { class: 'grid-3' }, sk.cardRows(4), sk.cardRows(4), sk.cardRows(4))],
     fetch: () => loadMakeup(picked, ctx.signal),
-    render: (d) => libraryInsights(d),
+    // An older server, or an answer that failed: the whole section goes, heading and picker with it.
+    render: (d) => { section.hidden = !d; return libraryInsights(d); },
   });
   const picker = combobox({ value: picked, multiple: true, iconName: 'library', label: t('widgets.library.pick_label'),
     allLabel: t('widgets.library.all_libraries'), placeholder: t('widgets.library.all_libraries'),
-    load: () => api.get('/libraries', { days: 0 }, { signal: ctx.signal }).then((d) => (d.libraries || []).filter((l) => !l.removed)
-      .map((l) => ({ value: l.id, label: l.name })).sort((a, b) => a.label.localeCompare(b.label, lang()))),
+    // A library Jellyfin no longer lists is still a page of its own, so it stays here, said to be removed, or the button
+    // named it "All libraries".
+    load: () => api.get('/libraries', { days: 0 }, { signal: ctx.signal }).then((d) => (d.libraries || [])
+      .map((l) => ({ value: l.id, label: l.removed ? `${l.name} · ${t('pages.libraries.removed')}` : l.name, removed: l.removed }))
+      .sort((a, b) => (a.removed - b.removed) || a.label.localeCompare(b.label, lang()))),
     onChange: (v) => {
       picked = v;
       changeQuery({ libraries: librariesInAddress(v, ownLibrary) });
       title.textContent = libraryInsightsTitle(count());
       dv.load();
     } });
-  dv.load();
-  return h('section', { class: 'subsection stack' },
+  const section = h('section', { class: 'subsection stack' },
     h('div', { class: 'makeup-head' }, h('div', null, title, h('p', { class: 'subsection-sub' }, t('widgets.library.about_files'))), picker),
     body);
+  dv.load();
+  return section;
 }
 
 // ---------------------------------------------------------------- /libraries/:id
