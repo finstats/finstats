@@ -1245,7 +1245,9 @@ async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Reque
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
     }
     let path = app.data_dir.join(crate::tautulli::UPLOAD);
-    let part = path.with_extension("part");
+    // A part of its own per upload: two at once wrote into one file, each over the other.
+    static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let part = path.with_extension(format!("{}.part", N.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
     let received = store_upload(req, &part, UPLOAD_MAX).await;
     let fail = |msg: String| {
         let _ = std::fs::remove_file(&part);
@@ -1256,10 +1258,14 @@ async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Reque
         Err(e) => return fail(format!("{e:#}")),
         Ok(total) => tracing::info!("received a Tautulli backup ({:.1} MB)", total as f64 / 1e6),
     }
-    let (db, checked) = (app.db.clone(), part.clone());
+    let (db, checked, gate) = (app.db.clone(), part.clone(), app.clone());
     let board = blocking(move || {
         crate::tautulli::unpack(&checked)?;
         crate::tautulli::open(&checked)?;
+        // An import that began while this was arriving reads the backup that is there, and removes it when done.
+        if history_being_written(&gate) {
+            anyhow::bail!(i18n::t("server.api.import_running", &[]));
+        }
         std::fs::rename(&checked, &path)?;
         crate::tautulli::board(&db, &path)
     })

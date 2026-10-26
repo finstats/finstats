@@ -175,9 +175,12 @@ fn zip_entry(file: &mut std::fs::File) -> Result<ZipEntry> {
 /// Remove an uploaded backup (and what an interrupted upload or unpacking left) once it is older than `older_than`:
 /// it holds every Plex user's access tokens, so it is kept only while it waits for its wires. `true` when anything went.
 pub fn sweep(data_dir: &Path, older_than: std::time::Duration) -> bool {
-    let stem = UPLOAD.trim_end_matches(".db");
+    let stem = format!("{}.", UPLOAD.trim_end_matches(".db"));
+    // Each upload arrives in a part of its own (`tautulli-upload.<n>.part`) and is unpacked beside it.
+    let left = |name: &str| name == UPLOAD || (name.starts_with(&stem) && (name.ends_with(".part") || name.ends_with(".unpacking")));
+    let names: Vec<String> = std::fs::read_dir(data_dir).map(|d| d.filter_map(|e| e.ok()?.file_name().into_string().ok()).filter(|n| left(n)).collect()).unwrap_or_default();
     let mut swept = false;
-    for name in [UPLOAD.to_string(), format!("{stem}.part"), format!("{stem}.unpacking")] {
+    for name in names {
         let path = data_dir.join(name);
         let old = std::fs::metadata(&path).and_then(|m| m.modified()).is_ok_and(|at| at.elapsed().unwrap_or_default() >= older_than);
         if old && std::fs::remove_file(&path).is_ok() {
@@ -971,7 +974,7 @@ mod tests {
     #[test]
     fn an_upload_left_waiting_is_swept_away_and_nothing_else_is() {
         let dir = temp("sweep");
-        for name in [UPLOAD, "tautulli-upload.part", "tautulli-upload.unpacking", "finstats.db", "jellystat-upload.tmp"] {
+        for name in [UPLOAD, "tautulli-upload.part", "tautulli-upload.unpacking", "tautulli-upload.7.part", "tautulli-upload.7.unpacking", "finstats.db", "jellystat-upload.tmp"] {
             std::fs::write(dir.join(name), b"x").unwrap();
         }
         assert!(!sweep(&dir, std::time::Duration::from_secs(3600)), "younger than the limit: kept");
