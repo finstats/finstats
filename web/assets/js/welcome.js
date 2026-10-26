@@ -1,30 +1,32 @@
 // The welcome: the first time somebody signs in on a browser, and at the end of setup, the same card asks what this
 // browser reads FinStats in: the language, how dates and times are written, and which layout. Everything it asks is the
 // browser's own choice (Settings → Appearance), so it is asked once a browser. Skip keeps British English, 31/01/2026,
-// 13:05 and FinStats. Choosing a language speaks it at once, in place, so setup's steps above are not lost to a reload.
+// 13:05, the device's colours and FinStats. Choosing a language speaks it at once, in place, so setup's steps above are not lost to a reload.
 
 import { h, icon, mount, logo, dateExample, timeExample, setFormats } from './dom.js';
-import { setLayoutChoice, markWelcomed } from './state.js';
+import { setLayoutChoice, markWelcomed, themeChoice, setTheme } from './state.js';
 import { t, lang, LANGUAGES, keepLanguage, loadLanguage } from './i18n.js';
 import { DATE_FORMATS, TIME_FORMATS } from './when.js';
 import { button } from '../finui/components/button/button.js';
+import { choiceGroup } from '../finui/components/choice/choice.js';
 
 /** What Skip keeps, and where the choices start: the United Kingdom's way, and FinStats. */
-export const DEFAULTS = { language: 'en-GB', date: 'dd/mm/yyyy', time: 'HH:mm', layout: 'finstats' };
-const STEPS = ['language', 'formats', 'layout'];
+export const DEFAULTS = { language: 'en-GB', date: 'dd/mm/yyyy', time: 'HH:mm', theme: 'device', layout: 'finstats' };
+const STEPS = ['language', 'formats', 'theme', 'layout'];
 
 /** Where to go once done: `next` if it is one of FinStats' own pages, else home. */
 const safeNext = (next) => (next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/welcome') ? next : '/');
 
 /** The card. `setup` draws setup's two steps above, done. */
 export function welcomeCard({ next = '/', setup = false } = {}) {
-  const pick = { ...DEFAULTS, language: LANGUAGES.some((l) => l.tag === lang()) ? lang() : DEFAULTS.language };
+  const pick = { ...DEFAULTS, language: LANGUAGES.some((l) => l.tag === lang()) ? lang() : DEFAULTS.language, theme: themeChoice() };
   let step = 0;
   const card = h('div', { class: 'auth-card auth-card-wide welcome' });
 
   const finish = (chosen) => {
     keepLanguage(chosen.language);
     setFormats({ date: chosen.date, time: chosen.time }, false);
+    setTheme(chosen.theme);
     markWelcomed();
     setLayoutChoice(chosen.layout, safeNext(next)); // loads the page again, in the layout chosen
   };
@@ -43,6 +45,12 @@ export function welcomeCard({ next = '/', setup = false } = {}) {
     formats: () => h('div', { class: 'auth-form' },
       select('date', t('settings.appearance.date_format'), DATE_FORMATS.map((f) => [f, dateExample(f)]), pick.date, (v) => { pick.date = v; }),
       select('time', t('settings.appearance.time_format'), TIME_FORMATS.map((f) => [f, timeExample(f)]), pick.time, (v) => { pick.time = v; })),
+    // Shown at once: the choice is the page's colours, so the card itself is the preview.
+    theme: () => choiceGroup({ label: t('welcome.theme_label'), kind: 'radio', name: 'w-theme', value: pick.theme,
+      options: [{ value: 'light', label: t('theme.light'), help: t('welcome.theme_light') },
+        { value: 'device', label: t('theme.device'), help: t('welcome.theme_device') },
+        { value: 'dark', label: t('theme.dark'), help: t('welcome.theme_dark') }],
+      onChange: (v) => { pick.theme = v; setTheme(v); } }),
     layout: () => h('div', { class: 'welcome-layouts', role: 'radiogroup', 'aria-label': t('settings.appearance.layout') },
       [['finstats', 'FinStats', t('welcome.layout_finstats')], ['simple', t('settings.appearance.layout_simple'), t('welcome.layout_simple')]].map(([value, name, line]) =>
         h('label', { class: ['welcome-layout', pick.layout === value && 'is-chosen'] },
@@ -53,7 +61,7 @@ export function welcomeCard({ next = '/', setup = false } = {}) {
 
   function draw() {
     const done = (title) => h('li', { class: 'wizard-step is-done' }, h('h2', { class: 'wizard-title' }, title, icon('check', 14)));
-    const title = { language: t('welcome.step_language'), formats: t('welcome.step_formats'), layout: t('welcome.step_layout') };
+    const title = { language: t('welcome.step_language'), formats: t('welcome.step_formats'), theme: t('welcome.step_theme'), layout: t('welcome.step_layout') };
     const steps = STEPS.map((key, i) => {
       const cls = i === step ? 'is-current' : i < step ? 'is-done' : 'is-locked';
       const last = i === STEPS.length - 1;

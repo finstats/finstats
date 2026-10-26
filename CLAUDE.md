@@ -914,8 +914,9 @@ with a month's name ("28 February", "Oct 2026") stays the language's. The server
 
 **The welcome (`welcome.js`, `/welcome?next=`, 2.3.0).** The first time somebody signs in on a browser, the router's
 guard sends them to a card in setup's own look (`ol.wizard`): language (spoken at once through `loadLanguage`, in place),
-date and time formats, layout with a picture of each (`web/assets/welcome/*.png`, made from the screenshots stage's
-`dashboard` and `simple` shots at 480×300). Skip keeps `DEFAULTS` (en-GB, `dd/mm/yyyy`, `HH:mm`, FinStats). Setup goes on
+date and time formats, colours (FinUI's `choiceGroup`: Light, Device, Dark, each with a line saying what it does, worn at
+once), layout with a picture of each (`web/assets/welcome/*.png`, 480×300 from the screenshots of the dashboard and of
+the Tautulli-style home). Skip keeps `DEFAULTS` (en-GB, `dd/mm/yyyy`, `HH:mm`, the device's colours, FinStats). Setup goes on
 into the same steps in the same card once its sign-in succeeds, its two steps shown done. Everything it asks is the
 browser's, so `finstats.welcomed` is too; every QA browser marks itself welcomed but the journeys for the welcome.
 **`finstatsWelcome()` in `boot.js` opens it from the console for trying it by hand, and must be taken out before 2.3.0

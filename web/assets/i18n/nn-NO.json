@@ -4630,6 +4630,11 @@
     "sub": "Nokre val for denne nettlesaren. Du kan endre dei når som helst under Innstillingar → Utsjånad.",
     "step_language": "Språk",
     "step_formats": "Dato og klokkeslett",
+    "step_theme": "Fargar",
+    "theme_label": "Lyst eller mørkt",
+    "theme_light": "Alltid lyst, same kva eininga er sett til.",
+    "theme_device": "Følgjer innstillinga på eininga, lyst eller mørkt, også når ho vert endra.",
+    "theme_dark": "Alltid mørkt, same kva eininga er sett til.",
     "step_layout": "Oppsett",
     "unchecked": "ikkje kontrollert",
     "layout_finstats": "Alle sidene, med menyen langs kanten.",
@@ -4638,6 +4643,6 @@
     "next": "Neste",
     "done": "Ferdig",
     "skip": "Hopp over",
-    "skip_note": "Britisk engelsk, 31/01/2026, 13:05 og FinStats."
+    "skip_note": "Britisk engelsk, 31/01/2026, 13:05, fargane til eininga og FinStats."
   }
 }

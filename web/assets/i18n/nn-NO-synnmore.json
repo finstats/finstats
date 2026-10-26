@@ -5344,6 +5344,11 @@
     "sub": "Nokren val for dinna nettlesari. Du kan endre dei når som helst under Innstillingar → Utsjånad.",
     "step_language": "Språk",
     "step_formats": "Dato og klokkeslett",
+    "step_theme": "Farga",
+    "theme_label": "Lyst elle mørkt",
+    "theme_light": "Alltid lyst, same ka eininga e sett til.",
+    "theme_device": "Følgjer innstillinga på eininga, lyst elle mørkt, også når ho vert endra.",
+    "theme_dark": "Alltid mørkt, same ka eininga e sett til.",
     "step_layout": "Oppsett",
     "unchecked": "ikkje kontrollert",
     "layout_finstats": "Alle sidene, me menyen langs kanten.",
@@ -5352,6 +5357,6 @@
     "next": "Neste",
     "done": "Ferdig",
     "skip": "Hopp over",
-    "skip_note": "Britisk engelsk, 31/01/2026, 13:05 og FinStats."
+    "skip_note": "Britisk engelsk, 31/01/2026, 13:05, fargane til eininga og FinStats."
   }
 }

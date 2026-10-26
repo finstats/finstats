@@ -4630,6 +4630,11 @@
     "sub": "A few choices for this browser. You can change them at any time in Settings → Appearance.",
     "step_language": "Language",
     "step_formats": "Date and time",
+    "step_theme": "Colors",
+    "theme_label": "Light or dark",
+    "theme_light": "Always light, whatever the device is set to.",
+    "theme_device": "Takes the device's own setting, light or dark, and follows it when it changes.",
+    "theme_dark": "Always dark, whatever the device is set to.",
     "step_layout": "Layout",
     "unchecked": "not checked",
     "layout_finstats": "Every page, with the menu along the side.",
@@ -4638,6 +4643,6 @@
     "next": "Next",
     "done": "Done",
     "skip": "Skip",
-    "skip_note": "British English, 31/01/2026, 13:05 and FinStats."
+    "skip_note": "British English, 31/01/2026, 13:05, the device's colors and FinStats."
   }
 }
