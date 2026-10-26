@@ -54,6 +54,22 @@ pub fn tag_of(c: &Connection, pic: Picture, id: &str) -> Result<Option<String>> 
     Ok(c.prepare_cached(sql)?.query_row([id], |r| r.get::<_, Option<String>>(0)).optional()?.flatten())
 }
 
+/// Whether FinStats has what `id` names, and so may fetch its picture: a title, a person, a library, or a play's item or
+/// show (a channel, or a title the library has not been read for yet) for the primary picture and the backdrop; a person
+/// who signs in for theirs. Any other id would be fetched from Jellyfin with the administrator's key, which reaches
+/// every library, those FinStats never reads included.
+pub fn known(c: &Connection, pic: Picture, id: &str) -> Result<bool> {
+    let sql = match pic {
+        Picture::Primary | Picture::Backdrop => {
+            "SELECT EXISTS(SELECT 1 FROM items WHERE id = ?1) OR EXISTS(SELECT 1 FROM item_people WHERE person_id = ?1)
+                 OR EXISTS(SELECT 1 FROM libraries WHERE id = ?1) OR EXISTS(SELECT 1 FROM visible_playbacks WHERE item_id = ?1)
+                 OR EXISTS(SELECT 1 FROM visible_playbacks WHERE series_id = ?1)"
+        }
+        Picture::User => "SELECT EXISTS(SELECT 1 FROM users WHERE id = ?1)",
+    };
+    Ok(c.prepare_cached(sql)?.query_row([id], |r| r.get(0))?)
+}
+
 /// The ETag a picture under this tag is sent with.
 pub fn etag(tag: &str) -> String {
     format!("\"{}\"", safe_tag(tag))
@@ -111,6 +127,33 @@ mod tests {
         // A person is no title: their portrait's tag is kept with the cast they are in.
         c.execute("INSERT INTO item_people(item_id, person_id, kind, name, sort, has_image, image_tag) VALUES ('m1', 'p1', 'Actor', 'alice', 0, 1, 'face-1')", []).unwrap();
         assert_eq!(tag_of(&c, Picture::Primary, "p1").unwrap().as_deref(), Some("face-1"));
+    }
+
+    /// A picture is fetched only for something FinStats has: a title, a person, a library, a play (its item or its show) or
+    /// somebody. Any 32 hex digits were fetched with the administrator's key, a photo in a library FinStats never reads
+    /// included, and each unknown one left a file in the cache.
+    #[test]
+    fn a_picture_is_fetched_only_for_what_finstats_has() {
+        let c = db();
+        c.execute_batch(
+            "INSERT INTO items(id, type, name, updated_at) VALUES ('film', 'Movie', 'Big Buck Bunny', 1);
+             INSERT INTO item_people(item_id, person_id, kind, name, sort, has_image) VALUES ('film', 'actor', 'Actor', 'Alice', 0, 1);
+             INSERT INTO libraries(id, name, updated_at) VALUES ('films', 'Films', 1);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, series_id, started_at, ended_at, duration_s)
+               VALUES ('live', 'alice', 'alice', 'channel', 'News', 'TvChannel', 'show', 1, 2, 1);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, deleted_at)
+               VALUES ('live', 'alice', 'alice', 'binned', 'Sintel', 'Movie', 1, 2, 1, 3);
+             INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 1);",
+        )
+        .unwrap();
+        for id in ["film", "actor", "films", "channel", "show"] {
+            assert!(known(&c, Picture::Primary, id).unwrap(), "{id}");
+        }
+        assert!(known(&c, Picture::Backdrop, "film").unwrap());
+        assert!(known(&c, Picture::User, "alice").unwrap());
+        for (pic, id) in [(Picture::Primary, "photo"), (Picture::Primary, "binned"), (Picture::User, "film"), (Picture::Primary, "alice")] {
+            assert!(!known(&c, pic, id).unwrap(), "{id}");
+        }
     }
 
     #[test]

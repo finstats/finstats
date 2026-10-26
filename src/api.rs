@@ -386,6 +386,10 @@ async fn user_image(State(app): State<App>, _user: AuthUser, Path(id): Path<Stri
 /// Jellyfin has a new tag and so a new file. With a tag the browser is handed it as the ETag and asks again
 /// every time (a 304, before anything is read, when nothing changed) instead of keeping whatever it had for a week.
 async fn current_picture(app: &App, pic: Picture, id: String, width: u32, headers: &axum::http::HeaderMap) -> ApiResult<Response> {
+    let asked = id.clone();
+    if !app.db.call(move |c| artwork::known(c, pic, &asked)).await? {
+        return Err(ApiError::not_found("Image"));
+    }
     let tag = tag_of(app, pic, &id).await?;
     let Some(etag) = tag.as_deref().map(artwork::etag) else { return fetch_picture(app, pic, &id, width, None).await };
     let fresh = artwork::not_modified(headers.get(axum::http::header::IF_NONE_MATCH).and_then(|v| v.to_str().ok()), &etag);
