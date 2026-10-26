@@ -2480,26 +2480,30 @@ fn library_make_up(c: &Connection, libraries: &[String], viewer: Option<&str>) -
 // ---------------------------------------------------------------- v0.2: the Jellyfin server
 
 pub async fn server(State(app): State<App>, ServerViewer(user): ServerViewer) -> ApiResult {
-    let see_network = user.perms.see_network;
     let out = app
         .db
         .call(move |c| {
             let mut snapshot: Value = db::get_setting(c, "server_info")?.and_then(|raw| serde_json::from_str(&raw).ok()).unwrap_or_else(|| {
                 json!({ "fetched_at": null, "info": null, "storage": [], "plugins": [], "scheduled_tasks": [] })
             });
-            // A device id is see_network's, here as in every play.
-            let devices = rows_json(
-                c,
-                "SELECT CASE WHEN ?1 THEN d.device_id END AS device_id, d.device_name AS name, d.client AS app, d.app_version, d.user_id AS last_user_id,
-                        COALESCE(u.name, d.last_user_name) AS last_user_name, d.last_seen
-                 FROM devices d LEFT JOIN users u ON u.id = d.user_id ORDER BY d.last_seen DESC LIMIT 500",
-                &[see_network.into()],
-            )?;
-            snapshot["devices"] = json!(devices);
+            snapshot["devices"] = json!(server_devices(c, &user.id, user.perms)?);
             Ok(snapshot)
         })
         .await?;
     Ok(Json(out))
+}
+
+/// A device id is see_network's, here as in every play; who used it last, and when, is see_everyone's unless it was the reader.
+fn server_devices(c: &Connection, viewer: &str, perms: crate::auth::Perms) -> Result<Vec<Map<String, Value>>> {
+    rows_json(
+        c,
+        "SELECT CASE WHEN ?1 THEN d.device_id END AS device_id, d.device_name AS name, d.client AS app, d.app_version,
+                CASE WHEN ?2 OR d.user_id = ?3 THEN d.user_id END AS last_user_id,
+                CASE WHEN ?2 OR d.user_id = ?3 THEN COALESCE(u.name, d.last_user_name) END AS last_user_name,
+                CASE WHEN ?2 OR d.user_id = ?3 THEN d.last_seen END AS last_seen
+         FROM devices d LEFT JOIN users u ON u.id = d.user_id ORDER BY d.last_seen DESC LIMIT 500",
+        &[perms.see_network.into(), perms.see_everyone.into(), viewer.to_string().into()],
+    )
 }
 
 #[cfg(test)]
@@ -2563,6 +2567,24 @@ mod tests {
         assert_eq!(log_as(&c, "", everyone).iter().map(|r| r.0).collect::<Vec<_>>(), [5, 4, 3, 2, 1]);
         assert_eq!(log_as(&c, "203.0", everyone).len(), 2);
         assert_eq!(log_as(&c, "", Perms { see_network: false, ..everyone })[1], (4, None), "a failed sign-in's address without see_network");
+    }
+
+    /// Who used a device last, and when, is somebody's activity: see_everyone's, unless it was the reader.
+    #[test]
+    fn the_server_page_names_a_device_s_last_user_only_with_see_everyone() {
+        use crate::auth::Perms;
+        let c = server_log();
+        c.execute_batch(
+            "INSERT INTO devices(device_id, device_name, client, user_id, last_user_name, first_seen, last_seen) VALUES
+               ('d1', 'Living room', 'Jellyfin Web', 'u1', 'alice', 0, 100), ('d2', 'Phone', 'Findroid', 'u2', 'bob', 0, 200);",
+        )
+        .unwrap();
+        let named = |perms| -> Vec<(Option<String>, bool)> {
+            server_devices(&c, "u1", perms).unwrap().iter().map(|d| (d["last_user_name"].as_str().map(str::to_string), d["last_seen"].is_null())).collect()
+        };
+        let server = Perms { see_server: true, ..Default::default() };
+        assert_eq!(named(server), vec![(None, true), (Some("alice".into()), false)]);
+        assert_eq!(named(Perms { see_everyone: true, ..server }), vec![(Some("bob".into()), false), (Some("alice".into()), false)]);
     }
 
     /// Failed sign-ins name whoever was tried and where from: somebody else's, so see_everyone, and the address see_network's.
