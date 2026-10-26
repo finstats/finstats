@@ -14,8 +14,13 @@ import { choiceGroup } from '../finui/components/choice/choice.js';
 export const DEFAULTS = { language: 'en-GB', date: 'dd/mm/yyyy', time: 'HH:mm', theme: 'device', layout: 'finstats' };
 const STEPS = ['language', 'formats', 'theme', 'layout'];
 
-/** Where to go once done: `next` if it is one of FinStats' own pages, else home. */
-const safeNext = (next) => (next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/welcome') ? next : '/');
+/** Where to go once done: `next` if it is one of FinStats' own pages, else home. Read the way the browser will read it,
+ *  never by its first characters: a browser takes `/\host` and `/<tab>/host` for `//host`, another site. */
+const safeNext = (next) => {
+  let to;
+  try { to = new URL(next || '/', location.origin); } catch { return '/'; }
+  return to.origin === location.origin && !to.pathname.startsWith('/welcome') ? to.pathname + to.search + to.hash : '/';
+};
 
 /** The card. `setup` draws setup's two steps above, done. */
 export function welcomeCard({ next = '/', setup = false } = {}) {
