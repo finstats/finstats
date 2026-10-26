@@ -51,7 +51,7 @@ fn filter(b: &Browse, with_kind: bool) -> (String, Vec<SqlValue>) {
 fn titles_sql(b: &Browse, order: &str) -> (String, Vec<SqlValue>) {
     let (wh, mut args) = filter(b, true);
     args.push(PAGE_SIZE.into());
-    args.push(((b.page.max(1) - 1) * PAGE_SIZE).into());
+    args.push(((crate::stats::page_number(Some(b.page)) - 1) * PAGE_SIZE).into());
     let sql = format!(
         "SELECT t.id, t.name, t.type, t.production_year, t.date_created, t.image_tag IS NOT NULL, t.runtime_s, t.album_artist, {SIZE},
                 CASE WHEN t.type = 'Series' THEN (SELECT COUNT(*) FROM items e WHERE e.series_id = t.id AND e.type = 'Episode' AND e.removed = 0
@@ -84,7 +84,7 @@ pub fn titles(conn: &Connection, b: &Browse) -> Result<Value> {
             }))
         })?
         .collect::<Result<_, _>>()?;
-    Ok(json!({ "total": total, "page": b.page.max(1), "page_size": PAGE_SIZE, "types": types, "items": items }))
+    Ok(json!({ "total": total, "page": crate::stats::page_number(Some(b.page)), "page_size": PAGE_SIZE, "types": types, "items": items }))
 }
 
 #[derive(Deserialize)]
@@ -105,6 +105,15 @@ pub async fn get_titles(State(app): State<App>, _user: AuthUser, Path(id): Path<
 
 #[cfg(test)]
 mod tests {
+    /// A page number from the address is held to what `stats::page_number` allows: multiplied out as it came, a large
+    /// one overflowed (a panic in a debug build, and in a release build a negative offset SQLite reads as the first page).
+    #[test]
+    fn a_page_far_past_the_end_is_an_empty_page_never_a_panic() {
+        let b = super::Browse { page: i64::MAX, ..Default::default() };
+        let (_, args) = super::titles_sql(&b, "t.name");
+        assert!(matches!(args.last(), Some(crate::db::rusqlite::types::Value::Integer(n)) if *n > 0));
+    }
+
     use super::*;
     use serde_json::json;
 

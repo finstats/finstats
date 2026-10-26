@@ -275,7 +275,7 @@ const FINDINGS_FROM: &str = "FROM health_findings f LEFT JOIN health_dismissed d
 fn listing_sql(l: &Listing, order: &str) -> (String, Vec<SqlValue>) {
     let (wh, mut args) = listing_where(l);
     args.push(PAGE_SIZE.into());
-    args.push(((l.page.max(1) - 1) * PAGE_SIZE).into());
+    args.push(((crate::stats::page_number(Some(l.page)) - 1) * PAGE_SIZE).into());
     let sql = format!(
         "SELECT f.key, f.kind, f.item_id, f.title, f.evidence, f.wasted_bytes, f.found_at, i.production_year, COALESCE(i.series_id, f.item_id), COALESCE(i.removed, 1),
                 d.note, d.at, d.by, d.key IS NOT NULL,
@@ -309,7 +309,7 @@ pub fn list(conn: &Connection, l: &Listing, jellyfin: Option<&str>) -> Result<Va
             }))
         })?
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(json!({ "total": total, "page": l.page.max(1), "page_size": PAGE_SIZE, "items": items }))
+    Ok(json!({ "total": total, "page": crate::stats::page_number(Some(l.page)), "page_size": PAGE_SIZE, "items": items }))
 }
 
 /// How many findings of each kind there are to look at, how many are set aside, and the space copies spend twice.
@@ -905,6 +905,14 @@ pub fn codec(raw: Option<&str>) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    /// As a library's titles: a page number held to `stats::page_number`, never multiplied out as it came.
+    #[test]
+    fn a_page_of_findings_far_past_the_end_is_an_empty_page_never_a_panic() {
+        let l = super::Listing { page: i64::MAX, ..Default::default() };
+        let (_, args) = super::listing_sql(&l, "f.key");
+        assert!(matches!(args.last(), Some(crate::db::rusqlite::types::Value::Integer(n)) if *n > 0));
+    }
+
     use super::*;
 
     pub(super) fn episode(id: &str, series: &str, season: i64, number: i64) -> Item {
