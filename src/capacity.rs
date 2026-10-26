@@ -185,8 +185,14 @@ pub struct Pace {
 }
 
 fn pace(files: &[&File], now: i64) -> Pace {
+    pace_after(files, files.iter().map(|f| f.added).min(), now)
+}
+
+/// The same, measured from [`SETTLE_S`] after `first`, which may be earlier than any of `files` (a library's first file on
+/// another disk).
+fn pace_after(files: &[&File], first: Option<i64>, now: i64) -> Pace {
     let since = now - GROWTH_MONTHS * MONTH_S;
-    let start = files.iter().map(|f| f.added).min().map_or(since, |first| since.max(first + SETTLE_S));
+    let start = first.map_or(since, |first| since.max(first + SETTLE_S));
     let window = now - start;
     let young = window < MIN_WINDOW_S;
     let added: i64 = files.iter().filter(|f| f.added >= start).map(|f| f.bytes.max(0)).sum();
@@ -201,6 +207,12 @@ fn pace(files: &[&File], now: i64) -> Pace {
 /// very same number of free bytes do not happen. A file counts towards the disk whose folder its path is under, with
 /// either separator a Jellyfin may use.
 pub fn disks(folders: &[Folder], files: &[File], now: i64) -> Vec<Disk> {
+    // When each library got its first file, anywhere: a disk's growth is what its libraries added after their own filling.
+    let mut firsts: HashMap<Option<&str>, i64> = HashMap::new();
+    for f in files {
+        let first = firsts.entry(f.library.as_deref()).or_insert(f.added);
+        *first = (*first).min(f.added);
+    }
     let mut by_disk: BTreeMap<(Option<String>, i64), Vec<&Folder>> = BTreeMap::new();
     for f in folders {
         let key = match &f.device {
@@ -221,11 +233,45 @@ pub fn disks(folders: &[Folder], files: &[File], now: i64) -> Vec<Disk> {
             libraries.sort();
             libraries.dedup();
             let here: Vec<&File> = files.iter().filter(|f| paths.iter().any(|p| under(&f.path, p))).collect();
-            let Pace { per_month, window_months, young, .. } = pace(&here, now);
+            let Pace { per_month, window_months, young, .. } = disk_pace(&here, &firsts, now);
             let (free, used) = (on.iter().map(|f| f.free).min().unwrap_or(0), on.iter().map(|f| f.used).max().unwrap_or(0));
             Disk { folders: paths, libraries, free, used, per_month, months_left: (per_month > 0).then(|| free as f64 / per_month as f64), window_months, young }
         })
         .collect()
+}
+
+/// The libraries' folders as the server read them, less any inside one of Jellyfin's own (its Collections and Playlists
+/// live in its data folder): those hold Jellyfin's records, not media, and are no library's disk.
+fn media_folders(storage: &[Value]) -> Vec<Folder> {
+    let sep = |c: char| c == '/' || c == '\\';
+    let own: Vec<&str> = storage.iter().filter(|f| f["kind"] == "system").filter_map(|f| f["path"].as_str()).map(|p| p.trim_end_matches(sep)).filter(|p| !p.is_empty()).collect();
+    let inside = |path: &str| own.iter().any(|o| path.strip_prefix(o).is_some_and(|rest| rest.is_empty() || rest.starts_with(sep)));
+    storage.iter()
+        .filter(|f| f["kind"] == "library")
+        .filter_map(|f| Some(Folder { library: f["label"].as_str()?.to_string(), path: f["path"].as_str()?.to_string(), free: f["free_bytes"].as_i64()?,
+                                      used: f["used_bytes"].as_i64().unwrap_or(0), device: f["device"].as_str().map(str::to_string) }))
+        .filter(|f| !inside(&f.path))
+        .collect()
+}
+
+/// A disk's pace: each library's on it, from that library's own filling, added up. A library still filling (a new one on an
+/// old disk) adds nothing yet; the disk is young only while all of them are.
+fn disk_pace(here: &[&File], firsts: &HashMap<Option<&str>, i64>, now: i64) -> Pace {
+    let mut by: BTreeMap<Option<&str>, Vec<&File>> = BTreeMap::new();
+    for f in here {
+        by.entry(f.library.as_deref()).or_default().push(f);
+    }
+    let paces: Vec<Pace> = by.iter().map(|(lib, fs)| pace_after(fs, firsts.get(lib).copied(), now)).collect();
+    if paces.is_empty() {
+        return pace(&[], now);
+    }
+    let grown: Vec<&Pace> = paces.iter().filter(|p| !p.young).collect();
+    Pace {
+        added: grown.iter().map(|p| p.added).sum(),
+        per_month: grown.iter().map(|p| p.per_month).sum(),
+        window_months: grown.iter().map(|p| p.window_months).fold(0.0, f64::max),
+        young: grown.is_empty(),
+    }
 }
 
 /// Growth per library over the same window, for when no free space was reported (Jellyfin before 10.11) and beside it,
@@ -387,11 +433,7 @@ pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
         .query_map([], |r| Ok(File { library: r.get(0)?, path: r.get(1)?, bytes: r.get(2)?, added: r.get(3)? }))?
         .collect::<Result<_, _>>()?;
     let info: Value = crate::db::get_setting(conn, "server_info")?.and_then(|raw| serde_json::from_str(&raw).ok()).unwrap_or(Value::Null);
-    let folders: Vec<Folder> = info["storage"].as_array().map(Vec::as_slice).unwrap_or_default().iter()
-        .filter(|f| f["kind"] == "library")
-        .filter_map(|f| Some(Folder { library: f["label"].as_str()?.to_string(), path: f["path"].as_str()?.to_string(), free: f["free_bytes"].as_i64()?,
-                                      used: f["used_bytes"].as_i64().unwrap_or(0), device: f["device"].as_str().map(str::to_string) }))
-        .collect();
+    let folders = media_folders(info["storage"].as_array().map(Vec::as_slice).unwrap_or_default());
     let scan = info["scheduled_tasks"].as_array().map(Vec::as_slice).unwrap_or_default().iter().find(|t| t["key"] == "RefreshLibrary").cloned().unwrap_or(Value::Null);
 
     let disks = disks(&folders, &files, now);
@@ -424,6 +466,9 @@ pub fn recompute(conn: &mut Connection, now: i64) -> Result<usize> {
             row.execute(params![f.key, f.kind, f.title, f.evidence.to_string(), f.fingerprint, first.get(&f.key).copied().unwrap_or(now)])?;
         }
     }
+    // A dismissal holds while what it was about lasts; a finding no longer found takes its dismissal along, so the next
+    // time it happens is looked at again (its fingerprint may well be the same).
+    tx.execute("DELETE FROM health_dismissed WHERE key LIKE 'capacity:%' AND key NOT IN (SELECT key FROM capacity_findings)", [])?;
     crate::db::set_setting(&tx, "capacity", &facts.to_string())?;
     tx.commit()?;
     Ok(found.len())
@@ -569,6 +614,23 @@ mod tests {
         assert_eq!((quiet.per_month, quiet.months_left), (0, None), "nothing added: no pace to tell");
     }
 
+    /// A library added to a disk that has been filling for years brings its first filling with it, and that is no more the
+    /// disk's growth than a new install's is: 4 TB of Anime copied over last week read as 667 GB a month, "about 4 months
+    /// left", where the disk grows by the films' 10 GB.
+    #[test]
+    fn a_new_library_on_an_old_disk_is_its_own_filling_not_the_disk_s_growth() {
+        let folders = [folder("Films", "/media/films", 3_000_000_000_000, Some("sda1")), folder("Anime", "/media/anime", 3_000_000_000_000, Some("sda1"))];
+        let files = [
+            file("Films", "/media/films/Sintel (2010)/sintel.mkv", 500, 400),
+            file("Films", "/media/films/Big Buck Bunny (2008)/bbb.mkv", 60, 30),
+            file("Anime", "/media/anime/Low Orbit/S01E01.mkv", 4_000, 7),
+        ];
+        let d = &disks(&folders, &files, NOW)[0];
+        assert_eq!(d.per_month, 60_000_000_000 / GROWTH_MONTHS, "{d:?}");
+        assert!(!d.young, "the films have a pace");
+        assert!(runway(d).is_none(), "a finding for a disk that is not filling");
+    }
+
     /// A library's first weeks are its filling, not its growth: a Jellyfin set up three months ago dates every file in the
     /// last three months, and read as growth that is "a month of space left" for a disk that is barely filling. The pace
     /// is measured from a month after the disk's first file, and not at all until a month after that.
@@ -591,6 +653,18 @@ mod tests {
 
     /// Jellyfin reads each folder's free space on its own, so a disk being written to reports a little less for the next
     /// folder: where it names the device (the mount, on Linux), that alone says it is one disk, at the freest reading.
+    #[test]
+    fn jellyfin_s_own_folders_are_not_a_library_s_disk() {
+        // Jellyfin lists its Collections (and Playlists) among the libraries' folders, inside its own data folder: a disk
+        // that said "nothing added in 6 months" beside the media's.
+        let storage = vec![
+            json!({ "label": "Films", "kind": "library", "path": "/media/films", "free_bytes": 100, "used_bytes": 10 }),
+            json!({ "label": "Collections", "kind": "library", "path": "/var/lib/jellyfin/data/collections", "free_bytes": 900, "used_bytes": 1 }),
+            json!({ "label": "Program data", "kind": "system", "path": "/var/lib/jellyfin", "free_bytes": 900, "used_bytes": 1 }),
+        ];
+        assert_eq!(media_folders(&storage).iter().map(|f| f.library.as_str()).collect::<Vec<_>>(), ["Films"]);
+    }
+
     #[test]
     fn folders_on_one_named_device_are_one_disk_whatever_the_free_space_read_for_each() {
         let d = disks(&[folder("Films", "/mnt/media/films", 500_000, Some("/mnt/media")), folder("Shows", "/mnt/media/shows", 499_000, Some("/mnt/media"))], &[], NOW);
@@ -808,6 +882,23 @@ mod tests {
         recompute(&mut c, NOW).unwrap();
         assert_eq!(scan(&c)["dismissed"], false);
         assert!(crate::health::undismiss(&c, "capacity:scan_busy").unwrap());
+    }
+
+    /// A dismissal holds while the situation does. Once it is over, the next time it happens is a new one: a software-only
+    /// transcode dismissed, then fixed for months, then broken again by an update came back already dismissed.
+    #[test]
+    fn a_finding_that_lapsed_comes_back_looked_at_again() {
+        let mut c = db();
+        recompute(&mut c, NOW).unwrap();
+        assert!(crate::health::dismiss(&c, "capacity:scan_busy", None, "alice", NOW).unwrap());
+        let info = crate::db::get_setting(&c, "server_info").unwrap().unwrap();
+        crate::db::set_setting(&c, "server_info", &info.replace("\"interval_s\":3600", "\"interval_s\":360000")).unwrap();
+        recompute(&mut c, NOW).unwrap();
+        let busy = |c: &crate::db::rusqlite::Connection| answer(c).unwrap()["findings"].as_array().unwrap().iter().find(|f| f["kind"] == "scan_busy").cloned();
+        assert!(busy(&c).is_none(), "the scan is not busy at that interval");
+        crate::db::set_setting(&c, "server_info", &info).unwrap();
+        recompute(&mut c, NOW).unwrap();
+        assert_eq!(busy(&c).expect("busy again")["dismissed"], false, "a finding that lapsed came back dismissed");
     }
 
     #[test]
