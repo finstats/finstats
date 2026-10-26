@@ -2,12 +2,12 @@ import { h, icon, num, bytes, durEl, relEl, relTime, dateTime, duration, debounc
 import { api, soft, imgItem } from '../api.js';
 import { readDays, saveDays, can } from '../state.js';
 import { replaceQuery } from '../router.js';
-import { pageHeader, card, filterBar, dataView, sk, emptyState, topList, poster, segmented, setBusy, errorState } from '../components.js';
-import { activityCard, libraryInsights } from '../widgets.js';
+import { pageHeader, card, filterBar, dataView, sk, emptyState, topList, poster, segmented, setBusy, errorState, combobox } from '../components.js';
+import { activityCard, libraryInsights, libraryInsightsTitle } from '../widgets.js';
 import { KINDS as HEALTH_KINDS } from './health.js';
 import { button } from '../../finui/components/button/button.js';
 import { mediaCard, mediaGrid } from '../../finui/components/media-card/media-card.js';
-import { t, tParts } from '../i18n.js';
+import { t, tParts, lang } from '../i18n.js';
 
 const KINDS = ['movies', 'tvshows', 'music', 'musicvideos', 'homevideos', 'books', 'boxsets', 'mixed'];
 const kindLabel = (type) => (KINDS.includes(type) ? t(`pages.libraries.kind.${type}`) : t('pages.libraries.library'));
@@ -33,11 +33,24 @@ function libraryArt(l, w, cls, fallback = null) {
 // Loaders are shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
 const loadLibraries = (days, signal) => api.get('/libraries', { days }, { signal });
 const loadLibrary = (id, days, signal) => api.get(`/libraries/${id}`, { days }, { signal });
-const loadMakeup = (libraryId, signal) => soft(api.get('/library/insights', libraryId ? { library_id: libraryId } : null, { signal }));
-export const prefetchLibraries = ({ query, signal }) => [() => loadLibraries(readDays(query), signal), () => loadMakeup(null, signal)];
+// `libraries` is the comma list the make-up's picker holds; empty is every library.
+const loadMakeup = (libraries, signal) => soft(api.get('/library/insights', libraries ? { library_id: libraries } : null, { signal }));
+// The make-up picker's choice is in the address (`?libraries=a,b`); a library's own page starts on that library, so there
+// every library at once is spelt `all`, and the page's own library is no `libraries` at all.
+const pickedLibraries = (query, own = '') => {
+  const asked = query && query.get('libraries');
+  const v = asked != null ? asked : own;
+  return v === 'all' ? '' : v;
+};
+const librariesInAddress = (v, own) => (v === own ? null : v === '' ? 'all' : v);
+/** The range and the picker each change their own part of the address and keep the other's. */
+function changeQuery(changes) {
+  replaceQuery({ ...Object.fromEntries(new URLSearchParams(location.search)), ...changes });
+}
+export const prefetchLibraries = ({ query, signal }) => [() => loadLibraries(readDays(query), signal), () => loadMakeup(pickedLibraries(query), signal)];
 // Library health is for those who may see the server; for anyone else the page asks nothing about it.
 const loadHealth = (libraryId, signal) => soft(api.get('/library/health', { library_id: libraryId }, { signal }));
-export const prefetchLibrary = ({ params, query, signal }) => [() => loadLibrary(params.id, readDays(query), signal), () => loadMakeup(params.id, signal),
+export const prefetchLibrary = ({ params, query, signal }) => [() => loadLibrary(params.id, readDays(query), signal), () => loadMakeup(pickedLibraries(query, params.id), signal),
   ...(can('see_server') ? [() => loadHealth(params.id, signal)] : [])];
 
 export function librariesPage(ctx) {
@@ -62,20 +75,37 @@ export function librariesPage(ctx) {
     },
   });
   ctx.root.append(pageHeader(t('nav.libraries'), t('pages.libraries.sub')),
-    filterBar({ days, signal: ctx.signal, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view, makeupSlot(ctx));
+    filterBar({ days, signal: ctx.signal, onDays: (v) => { days = v; saveDays(v); changeQuery({ days }); dv.load(); } }), view, makeupSlot(ctx));
   dv.load();
 }
 
-/** Library make-up loads once per page: it has no time range, so range changes never refetch it. */
-function makeupSlot(ctx, libraryId) {
-  const slot = h('div', { class: 'makeup' });
-  dataView({
-    container: slot, signal: ctx.signal,
-    skeleton: () => [sk.line('240px', 18), sk.tiles(3), h('div', { class: 'grid-3' }, sk.cardRows(4), sk.cardRows(4), sk.cardRows(4))],
-    fetch: () => loadMakeup(libraryId, ctx.signal),
-    render: (d) => libraryInsights(d, { scoped: !!libraryId }),
-  }).load();
-  return slot;
+/** Library make-up: it has no time range, so range changes never refetch it; its own picker of libraries does. The
+ *  heading and the picker stay put while the cards below reload, so ticking several libraries keeps the list open. */
+function makeupSlot(ctx, ownLibrary = '') {
+  let picked = pickedLibraries(ctx.query, ownLibrary);
+  const count = () => picked.split(',').filter(Boolean).length;
+  const title = h('h2', { class: 'subsection-title' }, libraryInsightsTitle(count()));
+  const body = h('div', { class: 'makeup' });
+  const dv = dataView({
+    container: body, signal: ctx.signal,
+    skeleton: () => [sk.tiles(3), h('div', { class: 'grid-3' }, sk.cardRows(4), sk.cardRows(4), sk.cardRows(4))],
+    fetch: () => loadMakeup(picked, ctx.signal),
+    render: (d) => libraryInsights(d),
+  });
+  const picker = combobox({ value: picked, multiple: true, iconName: 'library', label: t('widgets.library.pick_label'),
+    allLabel: t('widgets.library.all_libraries'), placeholder: t('widgets.library.all_libraries'),
+    load: () => api.get('/libraries', { days: 0 }, { signal: ctx.signal }).then((d) => (d.libraries || []).filter((l) => !l.removed)
+      .map((l) => ({ value: l.id, label: l.name })).sort((a, b) => a.label.localeCompare(b.label, lang()))),
+    onChange: (v) => {
+      picked = v;
+      changeQuery({ libraries: librariesInAddress(v, ownLibrary) });
+      title.textContent = libraryInsightsTitle(count());
+      dv.load();
+    } });
+  dv.load();
+  return h('section', { class: 'subsection stack' },
+    h('div', { class: 'makeup-head' }, h('div', null, title, h('p', { class: 'subsection-sub' }, t('widgets.library.about_files'))), picker),
+    body);
 }
 
 // ---------------------------------------------------------------- /libraries/:id
@@ -106,7 +136,7 @@ export function libraryPage(ctx) {
     },
   });
   ctx.root.append(h('a', { class: 'back-link', href: '/libraries' }, icon('chevronLeft', 14), t('nav.libraries')), headerSlot,
-    filterBar({ days, signal: ctx.signal, onDays: (v) => { days = v; saveDays(v); replaceQuery({ days }); dv.load(); } }), view, healthSlot(ctx, id), makeupSlot(ctx, id));
+    filterBar({ days, signal: ctx.signal, onDays: (v) => { days = v; saveDays(v); changeQuery({ days }); dv.load(); } }), view, healthSlot(ctx, id), makeupSlot(ctx, id));
   dv.load();
 }
 

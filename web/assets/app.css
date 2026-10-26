@@ -560,7 +560,8 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .subsection { margin-top: 44px; padding-top: 28px; border-top: 1px solid var(--border-soft); }
 .subsection-title { font-size: 18px; font-weight: 650; letter-spacing: -.012em; color: var(--text-strong); }
 .subsection-sub { margin-top: 3px; color: var(--text-faint); font-size: 12.5px; }
-.makeup:empty { display: none; }
+.makeup:empty, .subsection:has(> .makeup:empty) { display: none; }
+.makeup-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; }
 
 .mini-list { display: flex; flex-direction: column; }
 .mini-row { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); font-size: 13px; }

@@ -237,25 +237,25 @@ function libItemRows(items, { empty, showAdded = false }) {
     h('div', { class: 'fui-rank-list__nums' }, h('span', { class: 'mono fui-rank-list__watch' }, it.size_bytes ? bytes(it.size_bytes) : '–')))));
 }
 
+/** The heading of "What your library is made of" for how many libraries it is about (none named = all of them). */
+export function libraryInsightsTitle(picked) {
+  return picked === 0 ? t('widgets.library.title_yours') : picked === 1 ? t('widgets.library.title_this') : t('widgets.library.title_these');
+}
+
 /**
- * "What your library is made of". Not scoped by the time range: it describes the files,
- * so it renders under its own heading, away from the range-filtered cards.
+ * The cards of "What your library is made of". Not scoped by the time range: it describes the files, so the page
+ * puts it under its own heading (`libraryInsightsTitle`), away from the range-filtered cards.
  */
-export function libraryInsights(d, { scoped = false } = {}) {
+export function libraryInsights(d) {
   if (!d) return null;
   const tot = d.totals || {};
-  if (!(tot.files > 0) && !(d.resolutions || []).length && !(d.largest || []).length) {
-    return h('section', { class: 'subsection' }, h('h2', { class: 'subsection-title' }, scoped ? t('widgets.library.title_this') : t('widgets.library.title_yours')),
-      h('p', { class: 'np-empty' }, t('widgets.library.after_sync')));
-  }
+  if (!(tot.files > 0) && !(d.resolutions || []).length && !(d.largest || []).length) return h('p', { class: 'np-empty' }, t('widgets.library.after_sync'));
   const b = (title, sub, rows, labelFn, unit) => card({ title, sub, body: libBucketList(rows, { labelFn, unit }) });
   const decades = (d.decades || []).map((x) => ({ label: x.name, title: x.name, value: x.count }));
   const added = (d.added || []).map((x) => ({ label: monthf.format(monthDate(x.month)), title: monthLong.format(monthDate(x.month)), value: x.count }));
   const un = d.unwatched || null;
   const counts = [['movies', tot.movies], ['series', tot.series], ['episodes', tot.episodes], ['tracks', tot.tracks]].filter(([, v]) => v > 0);
-  return h('section', { class: 'subsection stack' },
-    h('div', null, h('h2', { class: 'subsection-title' }, scoped ? t('widgets.library.title_this') : t('widgets.library.title_yours')),
-      h('p', { class: 'subsection-sub' }, t('widgets.library.about_files'))),
+  return h('div', { class: 'stack' },
     h('div', { class: 'fui-stat-tile__grid fui-stat-tile__grid--three' },
       h('div', { class: 'fui-stat-tile' }, h('div', { class: 'fui-stat-tile__label' }, t('widgets.library.files')), h('div', { class: 'fui-stat-tile__value' }, compact(tot.files)),
         h('div', { class: 'fui-stat-tile__foot' }, h('span', { class: 'fui-stat-tile__vs' }, counts.map(([k, v]) => t(`widgets.library.count.${k}`, { count: v })).join(' · ') || ' '))),
