@@ -330,11 +330,14 @@ fn touch_key(c: &Connection, u: &AuthUser, ip: Option<IpAddr>, now: i64) -> anyh
 }
 
 /// Behind a proxy, the last `X-Forwarded-For` entry: the one the proxy wrote. Everything before it came
-/// from the client, which may put anything there.
+/// from the client, which may put anything there, a header line of its own included (some proxies add a
+/// line rather than extend the client's, so the last line is the proxy's).
 pub fn client_ip(app: &App, headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
     if app.trust_proxy {
         if let Some(ip) = headers
-            .get("x-forwarded-for")
+            .get_all("x-forwarded-for")
+            .iter()
+            .next_back()
             .and_then(|v| v.to_str().ok())
             .and_then(|v| v.rsplit(',').next())
             .and_then(|v| v.trim().parse().ok())
@@ -761,6 +764,11 @@ mod tests {
         assert_eq!(client_ip(&app, &headers, peer).to_string(), "203.0.113.9");
         headers.insert("x-forwarded-for", "203.0.113.9, not-an-address".parse().unwrap());
         assert_eq!(client_ip(&app, &headers, peer).to_string(), "127.0.0.1", "a last entry that is not an address is not trusted");
+        // Some proxies add a line of their own rather than extending the client's, and the client's then comes first.
+        let mut headers = HeaderMap::new();
+        headers.append("x-forwarded-for", "198.51.100.1".parse().unwrap());
+        headers.append("x-forwarded-for", "203.0.113.9".parse().unwrap());
+        assert_eq!(client_ip(&app, &headers, peer).to_string(), "203.0.113.9", "the client's own line was believed");
     }
 
     fn grants(keys: &[&str]) -> Vec<String> {
