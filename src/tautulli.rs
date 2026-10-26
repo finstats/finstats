@@ -174,15 +174,30 @@ pub fn sweep(data_dir: &Path, older_than: std::time::Duration) -> bool {
     swept
 }
 
+/// Every table the import reads from a backup.
+const READ: [&str; 4] = ["session_history", "session_history_metadata", "session_history_media_info", "users"];
+
 /// The backup, read-only, once it is plainly a Tautulli database.
+///
+/// It is somebody else's file, read while the import holds FinStats' write lock, so SQLite reads it defensively and
+/// trusts nothing its schema says, and every name the import reads must be a plain table: a view could be a recursive
+/// query that never ends, and a virtual table runs code of its own.
 pub fn open(path: &Path) -> Result<Connection> {
     let not_one = || anyhow::anyhow!(crate::i18n::t("server.tautulli.not_tautulli", &[]));
     let t = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX).map_err(|_| not_one())?;
-    let tables: HashSet<String> = t
-        .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
-        .and_then(|mut s| s.query_map([], |r| r.get(0))?.collect())
+    t.set_db_config(rusqlite::config::DbConfig::SQLITE_DBCONFIG_DEFENSIVE, true).map_err(|_| not_one())?;
+    t.set_db_config(rusqlite::config::DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA, false).map_err(|_| not_one())?;
+    t.execute_batch("PRAGMA cell_size_check = ON;").map_err(|_| not_one())?;
+    let named: Vec<(String, bool)> = t
+        .prepare(&format!(
+            "SELECT name, type = 'table' AND sql LIKE 'CREATE TABLE%' FROM sqlite_master WHERE name IN ({})",
+            READ.iter().map(|n| format!("'{n}'")).collect::<Vec<_>>().join(", ")
+        ))
+        .and_then(|mut s| s.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect())
         .map_err(|_| not_one())?;
-    if !["session_history", "session_history_metadata", "users"].iter().all(|n| tables.contains(*n)) {
+    let plain = |n: &str| named.iter().any(|(name, plain)| name == n && *plain);
+    // The media info is read where the backup has it; whatever has that name must be a table.
+    if named.iter().any(|(_, plain)| !plain) || !["session_history", "session_history_metadata", "users"].iter().all(|n| plain(n)) {
         return Err(not_one());
     }
     Ok(t)
@@ -624,6 +639,29 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    /// The backup is somebody else's file, and the import reads it while it holds FinStats' write lock: a table the import
+    /// reads may only be a table, never a view (a recursive one never ends) or a virtual table, and SQLite reads the file
+    /// defensively, trusting nothing in its schema.
+    #[test]
+    fn a_backup_whose_tables_are_not_plain_tables_is_refused() {
+        let dir = temp("not-plain");
+        let path = backup(&dir);
+        let t = open(&path).unwrap();
+        let on: i64 = t.query_row("PRAGMA trusted_schema", [], |r| r.get(0)).unwrap();
+        assert_eq!(on, 0, "the schema is trusted");
+        assert!(t.db_config(rusqlite::config::DbConfig::SQLITE_DBCONFIG_DEFENSIVE).unwrap(), "not defensive");
+        drop(t);
+        let c = Connection::open(&path).unwrap();
+        c.execute_batch(
+            "DROP TABLE session_history_media_info;
+             CREATE VIEW session_history_media_info AS WITH RECURSIVE r(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM r) SELECT x AS id FROM r;",
+        )
+        .unwrap();
+        drop(c);
+        assert!(open(&path).is_err(), "a view stood in for a table");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// FinStats with two Jellyfin users and a little library.
