@@ -1695,6 +1695,7 @@
       "bearer_form": "Bruk `Authorization: Bearer <key>`",
       "sign_in_to_continue": "Logg inn for å helde fram",
       "calendar_key_only": "Dinna nøkkeli opnar bære kalenderabonnemente",
+      "feed_key_in_address": "Bære en kalendernøkkel kan stå i adressa til abonnemente. Send andre nøkla i Authorization-headeren",
       "feed_needs_key": "Dette abonnemente treng en nøkkel: legg til ?key=… i adressa",
       "too_many_attempts": {
         "one": "For monge innloggingsforsøk. Prøv igjen om {count} minutt.",

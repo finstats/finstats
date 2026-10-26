@@ -1488,6 +1488,7 @@
       "bearer_form": "Use `Authorization: Bearer <key>`",
       "sign_in_to_continue": "Sign in to continue",
       "calendar_key_only": "This key only opens the calendar feed",
+      "feed_key_in_address": "Only a calendar key may be put in the feed’s address. Send any other key in the Authorization header",
       "feed_needs_key": "This feed needs a key: add ?key=… to its address",
       "too_many_attempts": { "one": "Too many sign-in attempts. Try again in {count} minute.", "other": "Too many sign-in attempts. Try again in {count} minutes." },
       "not_connected": "FinStats is not connected to Jellyfin yet",

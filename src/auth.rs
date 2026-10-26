@@ -137,8 +137,8 @@ pub enum Presented {
     Cookie(String),
 }
 
-/// The feed's own extractor: a key in the query string or the header, of any scope, and never the
-/// cookie: a subscribed calendar cannot send one, and a browser must not open a feed by accident.
+/// The feed's own extractor: a calendar key in the query string, or a key of any scope in the header, and never
+/// the cookie: a subscribed calendar cannot send one, and a browser must not open a feed by accident.
 pub struct CalendarKey(pub AuthUser);
 
 /// May change settings, run tasks, import and delete plays.
@@ -365,6 +365,7 @@ impl FromRequestParts<App> for CalendarKey {
 
     async fn from_request_parts(parts: &mut Parts, app: &App) -> Result<Self, Self::Rejection> {
         let in_query = parts.uri.query().and_then(|q| q.split('&').find_map(|kv| kv.strip_prefix("key=")).map(|v| v.trim().to_string())).filter(|v| !v.is_empty());
+        let in_address = in_query.is_some();
         let presented = match in_query {
             Some(token) => Presented::Bearer(token),
             None => match bearer_token(&parts.headers) {
@@ -372,7 +373,13 @@ impl FromRequestParts<App> for CalendarKey {
                 None => return Err(ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.feed_needs_key", &[]))),
             },
         };
-        Ok(CalendarKey(resolve(presented, request_ip(parts, app), app).await?))
+        let user = resolve(presented, request_ip(parts, app), app).await?;
+        // An address is kept by whatever syncs the calendar and by every log on the way, so only a key that opens the
+        // feed alone may be put in one; any other key is sent in the header, as everywhere else.
+        if in_address && !matches!(user.credential, Credential::Key { scope: KeyScope::Calendar, .. }) {
+            return Err(ApiError::new(StatusCode::FORBIDDEN, crate::i18n::t("server.auth.feed_key_in_address", &[])));
+        }
+        Ok(CalendarKey(user))
     }
 }
 

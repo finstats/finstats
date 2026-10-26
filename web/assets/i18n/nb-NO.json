@@ -1488,6 +1488,7 @@
       "bearer_form": "Bruk `Authorization: Bearer <key>`",
       "sign_in_to_continue": "Logg inn for å fortsette",
       "calendar_key_only": "Denne nøkkelen åpner bare kalenderabonnementet",
+      "feed_key_in_address": "Bare en kalendernøkkel kan stå i adressen til abonnementet. Send andre nøkler i Authorization-headeren",
       "feed_needs_key": "Dette abonnementet trenger en nøkkel: legg til ?key=… i adressen",
       "too_many_attempts": { "one": "For mange innloggingsforsøk. Prøv igjen om {count} minutt.", "other": "For mange innloggingsforsøk. Prøv igjen om {count} minutter." },
       "not_connected": "FinStats er ikke koblet til Jellyfin ennå",
