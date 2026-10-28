@@ -185,7 +185,8 @@ async fn same_origin(State(app): State<App>, req: Request, next: Next) -> Respon
     let host = h.get(HOST).and_then(|v| v.to_str().ok());
     let forwarded = h.get("x-forwarded-host").and_then(|v| v.to_str().ok());
     let from_proxy = req.extensions().get::<axum::extract::ConnectInfo<std::net::SocketAddr>>().is_some_and(|c| app.trust_proxy.trusts(c.0.ip()));
-    if write && cross_site(origin, host, forwarded, from_proxy) {
+    let proto = h.get("x-forwarded-proto").and_then(|v| v.to_str().ok());
+    if write && cross_site(origin, host, forwarded, proto, from_proxy, &app.settings().public_url) {
         return ApiError::new(StatusCode::FORBIDDEN, i18n::t("server.api.cross_site", &[])).into_response();
     }
     next.run(req).await
@@ -198,13 +199,22 @@ async fn same_origin(State(app): State<App>, req: Request, next: Next) -> Respon
 /// browser attaches to a cross-site navigation only and never to a cross-site `fetch`, or a `Bearer` key,
 /// which no browser adds on its own: a cross-site page cannot set `Authorization` without a CORS
 /// preflight, and FinStats answers none.
-pub(crate) fn cross_site(origin: Option<&str>, host: Option<&str>, forwarded: Option<&str>, trust_proxy: bool) -> bool {
+///
+/// Where the scheme FinStats is reached by is known, it must match too: a believed proxy's `X-Forwarded-Proto`, or the
+/// public address in Settings for a page on that address's own host. A page on plain http on the same host as FinStats
+/// on https is another site.
+pub(crate) fn cross_site(origin: Option<&str>, host: Option<&str>, forwarded: Option<&str>, forwarded_proto: Option<&str>, trust_proxy: bool, public_url: &str) -> bool {
     let (Some(origin), Some(host)) = (origin, host) else { return false };
-    let origin_host = origin.split_once("://").map(|(_, h)| h).unwrap_or(origin);
+    let (scheme, origin_host) = origin.split_once("://").unwrap_or(("", origin));
     // A client can set X-Forwarded-Host itself; only a trusted proxy's copy may vouch for the origin,
     // or `Origin: https://evil` + `X-Forwarded-Host: evil` would defeat the whole check.
     let forwarded = trust_proxy.then_some(forwarded).flatten();
-    origin_host != host && Some(origin_host) != forwarded
+    if origin_host != host && Some(origin_host) != forwarded {
+        return true;
+    }
+    let proxied = trust_proxy.then_some(forwarded_proto).flatten().and_then(|p| p.split(',').next()).map(str::trim).filter(|p| !p.is_empty());
+    let public = public_url.trim().split_once("://").filter(|(_, rest)| rest.split('/').next().is_some_and(|h| h.eq_ignore_ascii_case(origin_host))).map(|(s, _)| s);
+    proxied.or(public).is_some_and(|expected| !expected.eq_ignore_ascii_case(scheme))
 }
 
 async fn security_headers(req: Request, next: Next) -> Response {
@@ -1894,13 +1904,13 @@ mod tests {
     fn a_write_is_cross_site_only_when_its_origin_is_not_us() {
         let us = "finstats.example";
         // Same origin: allowed. (`Host` carries no scheme; `Origin` does.)
-        assert!(!cross_site(Some("https://finstats.example"), Some(us), None, false));
-        assert!(!cross_site(Some("http://finstats.example"), Some(us), None, false));
+        assert!(!cross_site(Some("https://finstats.example"), Some(us), None, None, false, ""));
+        assert!(!cross_site(Some("http://finstats.example"), Some(us), None, None, false, ""));
         // No Origin at all (a native client): not judged here: a cookie a browser only attaches to a
         // navigation, or a Bearer key no browser adds on its own.
-        assert!(!cross_site(None, Some(us), None, false));
+        assert!(!cross_site(None, Some(us), None, None, false, ""));
         // A foreign origin is refused.
-        assert!(cross_site(Some("https://evil.example"), Some(us), None, false));
+        assert!(cross_site(Some("https://evil.example"), Some(us), None, None, false, ""));
     }
 
     #[test]
@@ -1908,11 +1918,28 @@ mod tests {
         let us = "finstats.example";
         // The bug: without a trusted proxy, `Origin: evil` + `X-Forwarded-Host: evil` must still be
         // refused, because a client sets that header itself, so honouring it lets any origin vouch for itself.
-        assert!(cross_site(Some("https://evil.example"), Some(us), Some("evil.example"), false));
+        assert!(cross_site(Some("https://evil.example"), Some(us), Some("evil.example"), None, false, ""));
         // Behind a trusted proxy the browser's Origin is the public name and Host is the internal one,
         // so the proxy's X-Forwarded-Host is exactly what the origin should match: allowed.
-        assert!(!cross_site(Some("https://finstats.example"), Some("127.0.0.1:8080"), Some("finstats.example"), true));
+        assert!(!cross_site(Some("https://finstats.example"), Some("127.0.0.1:8080"), Some("finstats.example"), None, true, ""));
         // …but even trusted, the forwarded host must actually match the origin.
-        assert!(cross_site(Some("https://evil.example"), Some("127.0.0.1:8080"), Some("finstats.example"), true));
+        assert!(cross_site(Some("https://evil.example"), Some("127.0.0.1:8080"), Some("finstats.example"), None, true, ""));
+    }
+
+    /// Where the scheme FinStats is reached by is known, a page on the same host by another scheme is another site: a
+    /// page served on plain http beside FinStats on https passed with every write that carries no body.
+    #[test]
+    fn where_the_scheme_is_known_another_scheme_is_another_site() {
+        let us = "finstats.example";
+        // Known from the public address set in Settings.
+        assert!(cross_site(Some("http://finstats.example"), Some(us), None, None, false, "https://finstats.example/"));
+        assert!(!cross_site(Some("https://finstats.example"), Some(us), None, None, false, "https://finstats.example/"));
+        // …and only for that name: at home, by its address on plain http, FinStats is still itself.
+        assert!(!cross_site(Some("http://192.168.1.10:8080"), Some("192.168.1.10:8080"), None, None, false, "https://finstats.example"));
+        // Known from a believed proxy's X-Forwarded-Proto.
+        assert!(cross_site(Some("http://finstats.example"), Some("127.0.0.1:8080"), Some(us), Some("https"), true, ""));
+        assert!(!cross_site(Some("https://finstats.example"), Some("127.0.0.1:8080"), Some(us), Some("https"), true, ""));
+        // A client's own X-Forwarded-Proto says nothing.
+        assert!(!cross_site(Some("http://finstats.example"), Some(us), None, Some("https"), false, ""));
     }
 }

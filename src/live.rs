@@ -390,7 +390,7 @@ pub async fn connect(
     ws: Result<WebSocketUpgrade, WebSocketUpgradeRejection>,
 ) -> Response {
     let header = |name: &str| headers.get(name).and_then(|v| v.to_str().ok());
-    if crate::api::cross_site(header(ORIGIN.as_str()), header(HOST.as_str()), header("x-forwarded-host"), app.trust_proxy.trusts(peer.ip())) {
+    if crate::api::cross_site(header(ORIGIN.as_str()), header(HOST.as_str()), header("x-forwarded-host"), header("x-forwarded-proto"), app.trust_proxy.trusts(peer.ip()), &app.settings().public_url) {
         app.live_feed.refused("another site's page");
         return ApiError::new(StatusCode::FORBIDDEN, "Cross-site request refused").into_response();
     }
