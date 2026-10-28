@@ -839,8 +839,54 @@ fn over_the_minute(used: &mut HashMap<i64, (i64, usize)>, target_id: i64, now: i
     false
 }
 
-/// Everything queued that is due, sent once each. Returns when there is nothing left to do now.
-async fn drain(app: &App, used: &mut HashMap<i64, (i64, usize)>) {
+/// How long one message may take to go out, end to end: a destination that takes the connection and never answers is
+/// given up on in seconds, not in reqwest's fifteen. A letter is several exchanges with a mail server.
+pub(crate) const SEND_TIMEOUT: Duration = Duration::from_secs(5);
+const MAIL_TIMEOUT: Duration = Duration::from_secs(30);
+/// How many destinations are sent to at once.
+const SENDING_AT_ONCE: usize = 4;
+/// A destination that timed out this many times in a row is not tried for a while, and costs nobody anything meanwhile.
+const TIMEOUTS_TO_PAUSE: u32 = 3;
+const PAUSE_S: i64 = 600;
+
+/// What the sender remembers between batches: each destination's minute, and how many times in a row it timed out.
+#[derive(Default)]
+pub struct Sending {
+    used: HashMap<i64, (i64, usize)>,
+    /// Timeouts in a row, and until when the destination is left alone.
+    timeouts: HashMap<i64, (u32, i64)>,
+}
+
+impl Sending {
+    /// Note how a send went; true when this destination is now to be left alone for a while.
+    fn timed_out(&mut self, target_id: i64, timed_out: bool, now: i64) -> bool {
+        if !timed_out {
+            self.timeouts.remove(&target_id);
+            return false;
+        }
+        let slot = self.timeouts.entry(target_id).or_insert((0, 0));
+        slot.0 += 1;
+        if slot.0 >= TIMEOUTS_TO_PAUSE {
+            *slot = (0, now + PAUSE_S);
+            return true;
+        }
+        false
+    }
+
+    fn paused_until(&self, target_id: i64, now: i64) -> Option<i64> {
+        self.timeouts.get(&target_id).map(|t| t.1).filter(|until| *until > now)
+    }
+}
+
+/// Everything queued that is due, sent once each. Returns when there is nothing left to do now. Destinations are sent
+/// to side by side and each one's in order: one that never answers holds up only itself.
+async fn drain(app: &App, sending: &mut Sending) {
+    let shared = std::sync::Mutex::new(std::mem::take(sending));
+    drain_side_by_side(app, &shared).await;
+    *sending = shared.into_inner().unwrap_or_else(std::sync::PoisonError::into_inner);
+}
+
+async fn drain_side_by_side(app: &App, sending: &std::sync::Mutex<Sending>) {
     loop {
         let now = db::now();
         let batch = match app.db.call(move |c| due(c, now, BATCH)).await {
@@ -865,37 +911,77 @@ async fn drain(app: &App, used: &mut HashMap<i64, (i64, usize)>) {
                 return;
             }
         };
+        // Each destination's deliveries in the order they came, the destinations side by side.
+        let mut groups: Vec<(i64, Vec<Due>)> = vec![];
         for item in batch {
-            let Some(target) = targets.iter().find(|t| t.id == item.target_id).cloned() else {
-                // The destination was deleted while this was queued; the row goes with it on the next write.
-                let _ = app.db.call(move |c| Ok(c.execute("DELETE FROM notify_deliveries WHERE target_id = ?1", [item.target_id])?)).await;
-                continue;
-            };
-            let owner = target.owner_id.as_ref().and_then(|o| fanout.perms.get(o).copied());
-            let Some(with_addresses) = deliverable(&target, &item.event, owner) else {
-                let (event_id, target_id) = (item.event.id, target.id);
-                let _ = app.db.call(move |c| Ok(c.execute("DELETE FROM notify_deliveries WHERE event_id = ?1 AND target_id = ?2", params![event_id, target_id])?)).await;
-                continue;
-            };
-            if over_the_minute(used, target.id, db::now()) {
-                let (event_id, target_id, next) = (item.event.id, target.id, (db::now() / 60 + 1) * 60);
-                let _ = app.db.call(move |c| Ok(c.execute("UPDATE notify_deliveries SET next_at = ?3 WHERE event_id = ?1 AND target_id = ?2", params![event_id, target_id, next])?)).await;
-                continue;
+            match groups.iter_mut().find(|(id, _)| *id == item.target_id) {
+                Some((_, list)) => list.push(item),
+                None => groups.push((item.target_id, vec![item])),
             }
-            let public_url = app.settings().public_url.clone();
-            let msg = message(&item.event, with_addresses, Some(&public_url));
-            let outcome = channels::send(app, &target, &msg).await;
-            let (event_id, target_id, attempts) = (item.event.id, target.id, item.attempts + 1);
-            let outcome = match outcome {
-                Ok(()) => Ok(()),
-                Err(e) => {
-                    tracing::warn!("{} did not take a notification: {}", target.name, e.message);
-                    Err((e.message, e.retry_after))
-                }
-            };
-            if let Err(e) = app.db.call(move |c| record(c, event_id, target_id, attempts, outcome)).await {
-                tracing::warn!("could not note how a notification went: {e:#}");
+        }
+        let permits = tokio::sync::Semaphore::new(SENDING_AT_ONCE);
+        futures_util::future::join_all(groups.into_iter().map(|(target_id, items)| {
+            let (targets, fanout, permits) = (&targets, &fanout, &permits);
+            async move {
+                let Ok(_permit) = permits.acquire().await else { return };
+                let Some(target) = targets.iter().find(|t| t.id == target_id).cloned() else {
+                    // The destination was deleted while this was queued; the row goes with it on the next write.
+                    let _ = app.db.call(move |c| Ok(c.execute("DELETE FROM notify_deliveries WHERE target_id = ?1", [target_id])?)).await;
+                    return;
+                };
+                send_to(app, &target, items, fanout, sending).await;
             }
+        }))
+        .await;
+    }
+}
+
+/// One destination's share of a batch, in order. A timeout leaves the rest of it queued for the next batch, so a
+/// destination that never answers costs one timeout a batch, and after a few in a row it is left alone for a while.
+async fn send_to(app: &App, target: &Target, items: Vec<Due>, fanout: &Fanout, sending: &std::sync::Mutex<Sending>) {
+    for item in items {
+        let (event_id, target_id) = (item.event.id, target.id);
+        let owner = target.owner_id.as_ref().and_then(|o| fanout.perms.get(o).copied());
+        let Some(with_addresses) = deliverable(target, &item.event, owner) else {
+            let _ = app.db.call(move |c| Ok(c.execute("DELETE FROM notify_deliveries WHERE event_id = ?1 AND target_id = ?2", params![event_id, target_id])?)).await;
+            continue;
+        };
+        let later = {
+            let mut s = sending.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+            let now = db::now();
+            match s.paused_until(target_id, now) {
+                Some(until) => Some(until),
+                None => over_the_minute(&mut s.used, target_id, now).then_some((now / 60 + 1) * 60),
+            }
+        };
+        if let Some(next) = later {
+            let _ = app.db.call(move |c| Ok(c.execute("UPDATE notify_deliveries SET next_at = ?3 WHERE event_id = ?1 AND target_id = ?2", params![event_id, target_id, next])?)).await;
+            continue;
+        }
+        let public_url = app.settings().public_url.clone();
+        let msg = message(&item.event, with_addresses, Some(&public_url));
+        let limit = if target.channel.is_mail() { MAIL_TIMEOUT } else { SEND_TIMEOUT };
+        let outcome = tokio::time::timeout(limit, channels::send(app, target, &msg))
+            .await
+            .unwrap_or_else(|_| Err(channels::SendError::timed_out(target)));
+        let timed_out = outcome.as_ref().err().is_some_and(|e| e.timed_out);
+        let paused = sending.lock().unwrap_or_else(std::sync::PoisonError::into_inner).timed_out(target_id, timed_out, db::now());
+        let attempts = item.attempts + 1;
+        let outcome = match outcome {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                tracing::warn!("{} did not take a notification: {}", target.name, e.message);
+                Err((e.message, e.retry_after))
+            }
+        };
+        if let Err(e) = app.db.call(move |c| record(c, event_id, target_id, attempts, outcome)).await {
+            tracing::warn!("could not note how a notification went: {e:#}");
+        }
+        if paused {
+            tracing::warn!("{} timed out {TIMEOUTS_TO_PAUSE} times in a row: not sent to for {} minutes", target.name, PAUSE_S / 60);
+        }
+        if timed_out {
+            return; // the rest wait for the next batch, behind nobody
         }
     }
 }
@@ -903,10 +989,10 @@ async fn drain(app: &App, used: &mut HashMap<i64, (i64, usize)>) {
 /// The loop that empties the queue: woken when something is raised, and otherwise asleep until the next
 /// retry is due. An install with no destinations never wakes at all.
 pub async fn run(app: App) {
-    let mut used: HashMap<i64, (i64, usize)> = HashMap::new();
+    let mut sending = Sending::default();
     let mut pruned_at = 0i64;
     loop {
-        drain(&app, &mut used).await;
+        drain(&app, &mut sending).await;
         if db::now() - pruned_at >= 3_600 {
             pruned_at = db::now();
             let cutoff = pruned_at - KEEP_S;
@@ -1937,6 +2023,78 @@ pub(crate) mod tests {
         record(&c, event_id, 1, 5, Err(("503".into(), Some(60)))).unwrap();
         let state: String = c.query_row("SELECT state FROM notify_deliveries", [], |r| r.get(0)).unwrap();
         assert_eq!(state, "failed");
+    }
+
+    /// A destination that takes a connection and never answers held the one sender for its whole timeout, five tries
+    /// each, and everybody else's notifications waited behind it. Destinations are sent to side by side, so a quick one
+    /// is not held up by a dead one.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn a_destination_that_never_answers_holds_up_nobody_else() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let tarpit = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let quick = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let (slow_at, quick_at) = (tarpit.local_addr().unwrap(), quick.local_addr().unwrap());
+        tokio::spawn(async move {
+            let mut held = vec![];
+            while let Ok((s, _)) = tarpit.accept().await {
+                held.push(s); // taken, and never answered
+            }
+        });
+        tokio::spawn(async move {
+            while let Ok((mut s, _)) = quick.accept().await {
+                let mut buf = vec![0; 65_536];
+                let _ = s.read(&mut buf).await;
+                let _ = s.write_all(b"HTTP/1.1 200 OK\r\ncontent-length: 0\r\nconnection: close\r\n\r\n").await;
+            }
+        });
+        let app = crate::state::test_app();
+        app.db
+            .call(move |c| {
+                for (id, at) in [(1, slow_at), (2, quick_at)] {
+                    c.execute(
+                        "INSERT INTO notify_targets(id, kind, name, url, secret, events, min_severity, created_at) VALUES (?1, 'webhook', ?2, ?3, '', '[\"new_items\"]', 'info', 0)",
+                        params![id, format!("Destination {id}"), format!("http://{at}/hook")],
+                    )?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        reload(&app).await.unwrap();
+        let bus_app = app.clone();
+        app.db
+            .call(move |c| {
+                let bus = Fanout::of(c, &bus_app)?;
+                for n in 0..3 {
+                    raise_in(c, &bus, &Event::new(Kind::NewItems, format!("new:{n}"), "Sintel", "Added to the library."))?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let started = std::time::Instant::now();
+        let sender = app.clone();
+        tokio::spawn(async move { drain(&sender, &mut Default::default()).await });
+        loop {
+            let sent: i64 = app.db.call(|c| Ok(c.query_row("SELECT COUNT(*) FROM notify_deliveries WHERE target_id = 2 AND state = 'sent'", [], |r| r.get(0))?)).await.unwrap();
+            if sent == 3 {
+                break;
+            }
+            assert!(started.elapsed() < Duration::from_secs(2), "the quick destination waited behind the one that never answers ({sent} of 3 sent)");
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    }
+
+    #[test]
+    fn a_destination_that_times_out_again_and_again_is_left_alone_for_a_while() {
+        let mut s = Sending::default();
+        assert!(!s.timed_out(1, true, 100) && !s.timed_out(1, true, 100));
+        assert!(!s.timed_out(1, false, 100), "an answer in between starts the count again");
+        assert!(!s.timed_out(1, true, 100) && !s.timed_out(1, true, 100));
+        assert!(s.timed_out(1, true, 100), "the third in a row");
+        assert_eq!(s.paused_until(1, 101), Some(100 + PAUSE_S));
+        assert_eq!(s.paused_until(2, 101), None, "another destination is not touched");
+        assert_eq!(s.paused_until(1, 100 + PAUSE_S), None, "and then it is tried again");
     }
 
     #[test]

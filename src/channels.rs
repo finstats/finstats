@@ -210,11 +210,19 @@ impl Channel {
 pub struct SendError {
     pub message: String,
     pub retry_after: Option<i64>,
+    /// Nothing came back in time: what pauses a destination after a few in a row.
+    pub timed_out: bool,
 }
 
 impl SendError {
     pub fn of(message: impl Into<String>) -> SendError {
-        SendError { message: message.into(), retry_after: None }
+        SendError { message: message.into(), retry_after: None, timed_out: false }
+    }
+
+    /// The other side took the connection and did not answer in time.
+    pub fn timed_out(target: &Target) -> SendError {
+        let words = t("server.channels.timeout", &[("channel", target.channel.title().into()), ("host", crate::outbound::host_of(target.url()).into())]);
+        SendError { message: words, retry_after: None, timed_out: true }
     }
 }
 
@@ -479,13 +487,13 @@ pub async fn send(app: &App, t: &Target, m: &Message) -> Result<(), SendError> {
         Channel::Webhook | Channel::Ntfy if !t.secret().is_empty() => req = req.header("Authorization", format!("Bearer {}", t.secret())),
         _ => {}
     }
-    let resp = req.send().await.map_err(|e| SendError::of(explain(e, t)))?;
+    let resp = req.timeout(crate::notify::SEND_TIMEOUT).send().await.map_err(|e| SendError { timed_out: e.is_timeout(), ..SendError::of(explain(e, t)) })?;
     let status = resp.status();
     if status.is_success() {
         return Ok(());
     }
     let retry_after = resp.headers().get(RETRY_AFTER).and_then(|v| v.to_str().ok()).and_then(|v| v.trim().parse::<i64>().ok());
-    Err(SendError { message: refuse(status, t), retry_after })
+    Err(SendError { message: refuse(status, t), retry_after, timed_out: false })
 }
 
 /// Why a request never got an answer, in words, and without the URL reqwest would print: that URL is the

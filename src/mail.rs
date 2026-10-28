@@ -25,9 +25,9 @@ use crate::channels::SendError;
 use crate::i18n::t;
 use crate::notify::Message;
 
-/// How long one letter may take, end to end. A mail server is slower than a webhook, and a queue that
-/// is waiting on one is a queue nothing else moves through.
-const TIMEOUT_S: u64 = 25;
+/// How long one exchange with a mail server may take. A mail server is slower than a webhook, and a destination that
+/// is waiting on one holds up its own letters (`notify::MAIL_TIMEOUT` is the whole of one).
+const TIMEOUT_S: u64 = 10;
 /// A subject is one line in a header; a body may be long, but not unbounded.
 const SUBJECT_MAX: usize = 200;
 const BODY_MAX: usize = 8_000;
@@ -132,7 +132,7 @@ pub async fn deliver(acct: Account<'_>, m: &Message) -> std::result::Result<(), 
     if !acct.username.is_empty() {
         builder = builder.credentials(Credentials::new(acct.username.to_string(), acct.password.to_string()));
     }
-    builder.build().send(built).await.map(|_| ()).map_err(|e| SendError::of(explain(&e, &server.host)))
+    builder.build().send(built).await.map(|_| ()).map_err(|e| SendError { timed_out: e.is_timeout(), ..SendError::of(explain(&e, &server.host)) })
 }
 
 /// Why a letter did not go, in words, and without anything the server said back.
