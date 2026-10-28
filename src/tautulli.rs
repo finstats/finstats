@@ -197,7 +197,7 @@ const READ: [&str; 4] = ["session_history", "session_history_metadata", "session
 ///
 /// It is somebody else's file, read while the import holds FinStats' write lock, so SQLite reads it defensively and
 /// trusts nothing its schema says, and every name the import reads must be a plain table: a view could be a recursive
-/// query that never ends, and a virtual table runs code of its own.
+/// query that never ends, a virtual table runs code of its own, and a generated column an expression on every row.
 pub fn open(path: &Path) -> Result<Connection> {
     let not_one = || anyhow::anyhow!(crate::i18n::t("server.tautulli.not_tautulli", &[]));
     let t = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX).map_err(|_| not_one())?;
@@ -215,6 +215,13 @@ pub fn open(path: &Path) -> Result<Connection> {
     // The media info is read where the backup has it; whatever has that name must be a table.
     if named.iter().any(|(_, plain)| !plain) || !["session_history", "session_history_metadata", "users"].iter().all(|n| plain(n)) {
         return Err(not_one());
+    }
+    // Nor may such a table compute anything as it is read: a generated column runs its expression on every row.
+    for (name, _) in &named {
+        let hidden: i64 = t.query_row("SELECT COUNT(*) FROM pragma_table_xinfo(?1) WHERE hidden <> 0", [name], |r| r.get(0)).map_err(|_| not_one())?;
+        if hidden > 0 {
+            return Err(not_one());
+        }
     }
     Ok(t)
 }
@@ -528,18 +535,31 @@ pub fn run(db: &Db, path: &Path, wires: &[Wire], tasks: Option<&Tasks>) -> Resul
 
     let mut conn = db.conn()?;
     let settings = crate::state::Settings::load(&conn)?;
+    let (map, names) = wired(&conn, &t, wires)?.map_err(|e| anyhow::anyhow!(e))?;
+    let mut res = ImportResult { users_wired: map.len() as u64, ..Default::default() };
+
+    // The backup is read whole before the write lock is taken: it is somebody else's file, and however long reading it
+    // takes, nobody else's write should wait on it. One viewing is one reference and one title: Plex plays a show's
+    // theme while the show is open, and Tautulli chains the episode that follows onto it.
+    let mut viewings: Vec<Vec<Session>> = vec![];
+    {
+        let mut stmt = t.prepare(&sessions_sql(&t)?)?;
+        let mut rows = stmt.query([])?;
+        while let Some(r) = rows.next()? {
+            let s = session_of(r)?;
+            match viewings.last_mut() {
+                Some(v) if (v[0].reference_id, &v[0].media_type, v[0].rating_key) == (s.reference_id, &s.media_type, s.rating_key) => v.push(s),
+                _ => viewings.push(vec![s]),
+            }
+        }
+    }
+    drop(t);
+
     // Immediate: the import will write, so it takes the write lock before its first read rather than failing to
     // upgrade later when another connection (the collector, an audit row) commits meanwhile.
     let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-    let (map, names) = wired(&tx, &t, wires)?.map_err(|e| anyhow::anyhow!(e))?;
-    let mut res = ImportResult { users_wired: map.len() as u64, ..Default::default() };
-
-    let mut stmt = t.prepare(&sessions_sql(&t)?)?;
-    let mut rows = stmt.query([])?;
-    let (mut viewing, mut seen): (Vec<Session>, u64) = (vec![], 0);
-    let mut take = |viewing: &mut Vec<Session>, res: &mut ImportResult| -> Result<()> {
-        let Some(head) = viewing.first() else { return Ok(()) };
-        seen += 1;
+    for (seen, viewing) in viewings.iter().enumerate() {
+        let head = &viewing[0];
         match map.get(&head.user_id) {
             None => res.not_wired += 1,
             Some(_) if !matches!(head.media_type.as_str(), "movie" | "episode") || head.live => res.other_media += 1,
@@ -548,23 +568,10 @@ pub fn run(db: &Db, path: &Path, wires: &[Wire], tasks: Option<&Tasks>) -> Resul
                 None => res.plays_skipped += 1,
             },
         }
-        viewing.clear();
-        if seen % 200 == 0 {
-            report(&crate::i18n::t("server.import.importing_history", &[]), Some(0.05 + 0.9 * seen as f64 / total.max(1) as f64));
+        if (seen + 1) % 200 == 0 {
+            report(&crate::i18n::t("server.import.importing_history", &[]), Some(0.05 + 0.9 * (seen + 1) as f64 / total.max(1) as f64));
         }
-        Ok(())
-    };
-    while let Some(r) = rows.next()? {
-        let s = session_of(r)?;
-        // One viewing is one reference and one title: Plex plays a show's theme while the show is open, and Tautulli
-        // chains the episode that follows onto it.
-        if viewing.first().is_some_and(|v| (v.reference_id, &v.media_type, v.rating_key) != (s.reference_id, &s.media_type, s.rating_key)) {
-            take(&mut viewing, &mut res)?;
-        }
-        viewing.push(s);
     }
-    take(&mut viewing, &mut res)?;
-    drop(rows);
 
     report(&crate::i18n::t("server.import.linking", &[]), Some(0.96));
     crate::import::finalize(&tx)?;
@@ -677,6 +684,20 @@ mod tests {
         .unwrap();
         drop(c);
         assert!(open(&path).is_err(), "a view stood in for a table");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A generated column runs an expression on every row read, and with the schema untrusted SQLite still allows the
+    /// innocuous built-ins in one: `printf('%.*c', 200000000, 'x')` made 200 MB a row from an 8 KB file. A table the
+    /// import reads may have no generated or hidden column.
+    #[test]
+    fn a_backup_with_a_generated_column_is_refused() {
+        let dir = temp("generated");
+        let path = backup(&dir);
+        let c = Connection::open(&path).unwrap();
+        c.execute_batch("ALTER TABLE session_history_metadata ADD COLUMN heavy INTEGER GENERATED ALWAYS AS (length(printf('%.*c', 200000000, 'x'))) VIRTUAL;").unwrap();
+        drop(c);
+        assert!(open(&path).is_err(), "a generated column was read");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
