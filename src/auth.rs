@@ -573,8 +573,12 @@ fn check_rate_limit(app: &App, ip: IpAddr) -> Result<(), ApiError> {
     Ok(())
 }
 
-fn clear_rate_limit(app: &App, ip: IpAddr) {
-    app.login_attempts.lock().unwrap().remove(&attempt_bucket(ip));
+/// A sign-in that worked is not a guess: it gives back its own attempt and nothing more. Clearing the address's count
+/// here let anybody allowed in guess at any account without a limit, a sign-in of their own between every nine.
+fn signed_in(app: &App, ip: IpAddr) {
+    if let Some(entry) = app.login_attempts.lock().unwrap().get_mut(&attempt_bucket(ip)) {
+        entry.0 = entry.0.saturating_sub(1);
+    }
 }
 
 #[derive(Deserialize)]
@@ -627,7 +631,7 @@ pub async fn login(
             crate::i18n::t("server.auth.no_access", &[]),
         ));
     };
-    clear_rate_limit(&app, ip);
+    signed_in(&app, ip);
     tracing::info!("{} signed in from {ip}", auth.user_name);
     audit::record(&app, audit::Entry::new("sign_in", actor));
     start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, auth.is_admin, perms).await
@@ -815,7 +819,7 @@ pub async fn setup(
         })
         .await?;
     *app.config.write().unwrap() = Some(cfg);
-    clear_rate_limit(&app, ip);
+    signed_in(&app, ip);
     tracing::info!("setup completed by {}", auth.user_name);
     audit::record(&app, audit::Entry::new("setup_completed", Actor { user_id: Some(auth.user_id.clone()), user_name: Some(auth.user_name.clone()), ip: Some(ip), key_id: None }));
     app.wake.notify_waiters();
@@ -848,6 +852,21 @@ mod tests {
         headers.append("x-forwarded-for", "198.51.100.1".parse().unwrap());
         headers.append("x-forwarded-for", "203.0.113.9".parse().unwrap());
         assert_eq!(client_ip(&app, &headers, peer).to_string(), "203.0.113.9", "the client's own line was believed");
+    }
+
+    /// A sign-in of one's own takes back that attempt alone. Clearing the address's count let anybody with an account
+    /// guess nine passwords, sign in as themselves, and guess nine more, for ever, at any account.
+    #[test]
+    fn a_sign_in_of_ones_own_does_not_forgive_the_guesses_before_it() {
+        let app = crate::state::test_app();
+        let ip: IpAddr = "192.0.2.7".parse().unwrap();
+        for _ in 0..MAX_ATTEMPTS - 1 {
+            check_rate_limit(&app, ip).unwrap();
+        }
+        check_rate_limit(&app, ip).unwrap();
+        signed_in(&app, ip);
+        check_rate_limit(&app, ip).unwrap();
+        assert!(check_rate_limit(&app, ip).is_err(), "the guesses before a sign-in were forgotten");
     }
 
     /// One machine on IPv6 holds a whole /64 and may sign in from any address in it, so the limit is the /64's; an IPv4
