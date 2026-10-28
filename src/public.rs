@@ -181,7 +181,7 @@ fn new_token() -> String {
 /// ago or more: a figure that moved the moment somebody pressed play would tell a stranger polling the
 /// page that they are at home watching now.
 pub fn answer(c: &Connection, p: &Published, min_play_s: i64, now: i64) -> Result<PublicProfile> {
-    let until = now - DELAY_S;
+    let until = counted_until(c, now)?;
     let mut cond = Cond::default();
     cond.add("p.user_id = ?", p.user_id.clone());
     if min_play_s > 0 {
@@ -278,6 +278,13 @@ fn recap(c: &Connection, p: &Published, min_play_s: i64, until: i64) -> Result<O
 /// Before this long has passed since a play ended, a stranger is not told about it: "watching now" or
 /// "an hour ago" tells them when somebody is at home.
 const DELAY_S: i64 = 86_400;
+
+/// What a published profile counts: plays that ended before the last local midnight at least `DELAY_S` ago. A cut-off
+/// that moved with every request let a stranger asking every minute see each play's end to the minute, a day late; this
+/// one moves once a day.
+fn counted_until(c: &Connection, now: i64) -> Result<i64> {
+    Ok(c.query_row("SELECT CAST(strftime('%s', ?1, 'unixepoch', 'localtime', 'start of day', 'utc') AS INTEGER)", [now - DELAY_S], |r| r.get(0))?)
+}
 
 fn recent(c: &Connection, cond: &Cond) -> Result<Vec<RecentPlay>> {
     let sql = format!(
@@ -547,7 +554,7 @@ pub async fn resolve(app: &App, token: String) -> Result<(Published, PublicProfi
             // back changes the answer at once, never a minute later.
             let plays: (i64, i64, f64) = c.query_row(
                 "SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(duration_s) FROM visible_playbacks WHERE user_id = ?1 AND ended_at <= ?2",
-                params![p.user_id, db::now() - DELAY_S],
+                params![p.user_id, counted_until(c, db::now())?],
                 |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
             )?;
             let shows = format!("{p:?} {min_play_s} {plays:?}");
@@ -636,6 +643,21 @@ mod tests {
     use super::*;
 
     const DAY: i64 = 86_400;
+
+    /// The cut-off moved with every request, so a stranger asking every minute saw each play's end, to the minute, a day
+    /// late, and when a quiet stretch began. It moves once a day: what ended before the last local midnight a day ago.
+    #[test]
+    fn a_published_profile_changes_once_a_day() {
+        let c = conn();
+        let morning = counted_until(&c, NOW).unwrap();
+        assert!(morning <= NOW - DELAY_S);
+        let later = (1..=60).map(|m| counted_until(&c, NOW + m * 60).unwrap()).filter(|u| *u != morning).count();
+        let next_day = counted_until(&c, NOW + DAY).unwrap();
+        assert!(later <= 1, "the cut-off moved {later} times in an hour");
+        assert!(next_day > morning && next_day - morning <= DAY + 3600, "a day later it moves by a day");
+        let local: String = c.query_row("SELECT time(?1, 'unixepoch', 'localtime')", [morning], |r| r.get(0)).unwrap();
+        assert_eq!(local, "00:00:00");
+    }
     const NOW: i64 = 1_790_000_000;
 
     fn conn() -> Connection {
@@ -774,8 +796,8 @@ mod tests {
         ))
         .unwrap();
         assert_eq!(serde_json::to_string(&answer(&c, &p, 0, NOW).unwrap()).unwrap(), before);
-        // A day later the evening is history and may be told.
-        assert_ne!(serde_json::to_string(&answer(&c, &p, 0, NOW + DAY).unwrap()).unwrap(), before);
+        // Once the cut-off has passed it (it moves at local midnight, a day behind), the evening is history and may be told.
+        assert_ne!(serde_json::to_string(&answer(&c, &p, 0, NOW + 2 * DAY).unwrap()).unwrap(), before);
     }
 
     #[test]
