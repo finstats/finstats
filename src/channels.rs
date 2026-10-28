@@ -226,30 +226,76 @@ fn cut(text: &str, max: usize) -> String {
     format!("{kept}…")
 }
 
-fn fields_json(m: &Message, inline: bool) -> Vec<Value> {
-    m.fields
-        .iter()
-        .take(FIELDS_MAX)
-        .map(|(label, value)| json!({ "name": cut(label, 100), "value": markdown_text(&cut(value, FIELD_MAX)), "inline": inline }))
-        .collect()
-}
+/// Discord refuses a whole message when its embed holds more than this, every text in it counted.
+const EMBED_MAX: usize = 6_000;
+/// What the fields of one embed may take of that, so the description always keeps room.
+const EMBED_FIELDS_MAX: usize = 3_500;
+const EMBED_FOOTER: &str = "FinStats";
 
-/// Text as Slack shows text: it reads `<!channel>` and `<url|label>` in a message, and part of what one says was typed
-/// by somebody else (a device's name, a name tried at a sign-in).
-fn slack_text(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
-}
-
-/// Text as Discord shows text: an embed's description and fields are Markdown, a masked link `[label](url)` included.
-fn markdown_text(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for ch in s.chars() {
-        if matches!(ch, '\\' | '*' | '_' | '~' | '`' | '|' | '>' | '<' | '[' | ']' | '(' | ')' | '#' | '@') {
-            out.push('\\');
+/// The fields of a Discord embed: each escaped, then cut, and all of them together within [`EMBED_FIELDS_MAX`].
+fn fields_json(m: &Message, inline: bool) -> (Vec<Value>, usize) {
+    let mut left = EMBED_FIELDS_MAX;
+    let mut out = vec![];
+    for (label, value) in m.fields.iter().take(FIELDS_MAX) {
+        let name = escaped_within(label, 100, markdown_char);
+        let name_len = name.chars().count();
+        if left < name_len + 2 {
+            break;
         }
-        out.push(ch);
+        let value = escaped_within(value, FIELD_MAX.min(left - name_len), markdown_char);
+        left -= name_len + value.chars().count();
+        out.push(json!({ "name": name, "value": value, "inline": inline }));
     }
+    (out, EMBED_FIELDS_MAX - left)
+}
+
+/// `text` escaped a character at a time and cut to at most `max` characters, an ellipsis included: the cut comes after
+/// the escaping, because escaping makes a text longer, and never between an escape and what it escapes.
+fn escaped_within(text: &str, max: usize, escape: fn(char, &mut String)) -> String {
+    let mut whole = String::with_capacity(text.len());
+    for ch in text.chars() {
+        escape(ch, &mut whole);
+    }
+    if whole.chars().count() <= max {
+        return whole;
+    }
+    let (mut out, mut used, mut piece) = (String::new(), 0, String::new());
+    for ch in text.chars() {
+        piece.clear();
+        escape(ch, &mut piece);
+        let n = piece.chars().count();
+        if used + n + 1 > max {
+            break;
+        }
+        out.push_str(&piece);
+        used += n;
+    }
+    out.push('…');
     out
+}
+
+/// One character as Slack shows text: it reads `<!channel>` and `<url|label>` in a message, and part of what one says
+/// was typed by somebody else (a device's name, a name tried at a sign-in).
+fn slack_char(ch: char, out: &mut String) {
+    match ch {
+        '&' => out.push_str("&amp;"),
+        '<' => out.push_str("&lt;"),
+        '>' => out.push_str("&gt;"),
+        _ => out.push(ch),
+    }
+}
+
+fn slack_text(s: &str, max: usize) -> String {
+    escaped_within(s, max, slack_char)
+}
+
+/// One character as Discord shows text: an embed's title, description and fields are Markdown, a masked link
+/// `[label](url)` included.
+fn markdown_char(ch: char, out: &mut String) {
+    if matches!(ch, '\\' | '*' | '_' | '~' | '`' | '|' | '>' | '<' | '[' | ']' | '(' | ')' | '#' | '@') {
+        out.push('\\');
+    }
+    out.push(ch);
 }
 
 /// Discord's colour bar, and ntfy's and Gotify's priorities: the one place severity turns into a number.
@@ -321,28 +367,34 @@ pub fn payload(channel: Channel, base_url: &str, topic: Option<&str>, secret: &s
                 "source": concat!("finstats/", env!("CARGO_PKG_VERSION")),
             }),
         ),
-        Channel::Discord => (
-            base_url.to_string(),
-            json!({
-                "username": "FinStats",
-                // Nobody is pinged by what a message says, whoever wrote part of it.
-                "allowed_mentions": { "parse": [] },
-                "embeds": [{
-                    "title": title, "description": markdown_text(&body), "url": m.link, "color": colour(&m.severity),
-                    "timestamp": chrono::DateTime::from_timestamp(at, 0).map(|t| t.to_rfc3339()),
-                    "fields": fields_json(m, true), "footer": { "text": "FinStats" },
-                }],
-            }),
-        ),
+        // Escaped first and cut after, all of it within what Discord takes: one text too long and it refuses the message.
+        Channel::Discord => {
+            let title = escaped_within(&m.title, TITLE_MAX, markdown_char);
+            let (fields, fields_len) = fields_json(m, true);
+            let room = EMBED_MAX - title.chars().count() - EMBED_FOOTER.len() - fields_len;
+            (
+                base_url.to_string(),
+                json!({
+                    "username": "FinStats",
+                    // Nobody is pinged by what a message says, whoever wrote part of it.
+                    "allowed_mentions": { "parse": [] },
+                    "embeds": [{
+                        "title": title, "description": escaped_within(&m.body, BODY_MAX.min(room), markdown_char), "url": m.link, "color": colour(&m.severity),
+                        "timestamp": chrono::DateTime::from_timestamp(at, 0).map(|t| t.to_rfc3339()),
+                        "fields": fields, "footer": { "text": EMBED_FOOTER },
+                    }],
+                }),
+            )
+        }
         // Slack shows `text` in the list of conversations and the attachment when the message is opened,
         // so the title is said twice on purpose: the coloured card alone would be a blank line in the list.
         Channel::Slack => (
             base_url.to_string(),
             json!({
-                "text": slack_text(&title),
+                "text": slack_text(&m.title, TITLE_MAX),
                 "attachments": [{
-                    "color": hex(&m.severity), "title": slack_text(&title), "title_link": m.link, "text": slack_text(&body),
-                    "fields": m.fields.iter().take(FIELDS_MAX).map(|(l, v)| json!({ "title": slack_text(&cut(l, 100)), "value": slack_text(&cut(v, FIELD_MAX)), "short": true })).collect::<Vec<_>>(),
+                    "color": hex(&m.severity), "title": slack_text(&m.title, TITLE_MAX), "title_link": m.link, "text": slack_text(&m.body, body_max(channel)),
+                    "fields": m.fields.iter().take(FIELDS_MAX).map(|(l, v)| json!({ "title": slack_text(l, 100), "value": slack_text(v, FIELD_MAX), "short": true })).collect::<Vec<_>>(),
                     "footer": "FinStats", "ts": at,
                 }],
             }),
@@ -635,6 +687,38 @@ mod tests {
         let embed = &discord["embeds"][0];
         for text in [embed["description"].as_str().unwrap(), embed["fields"][0]["value"].as_str().unwrap()] {
             assert!(!text.contains("[here](") && text.contains(r"\[here\]\(https://evil.example\)"), "{text}");
+        }
+    }
+
+    /// Escaping doubles every `*`, and Discord refuses the whole message when a field is over 1,024 characters, the
+    /// description over 4,096 or the embed over 6,000: a device named with 600 of them silenced every alert that named it.
+    /// What is sent is escaped first and cut after, never through the middle of an escape.
+    #[test]
+    fn what_is_escaped_still_fits_discord_and_slack() {
+        for n in [600, 900, 3_500, 9_000] {
+            let stars = "*".repeat(n);
+            let m = Message { title: stars.clone(), body: stars.clone(), fields: (0..20).map(|i| (format!("Device {i}"), stars.clone())).collect(), ..msg() };
+            let (_, discord) = post(Channel::Discord, "https://discord.com/api/webhooks/1/t", None, &m);
+            let embed = &discord["embeds"][0];
+            let len = |v: &Value| v.as_str().map_or(0, |s| s.chars().count());
+            let fields = embed["fields"].as_array().unwrap();
+            assert!(len(&embed["title"]) <= 256 && len(&embed["description"]) <= 4_096, "{n}: {} {}", len(&embed["title"]), len(&embed["description"]));
+            assert!(fields.iter().all(|f| len(&f["value"]) <= 1_024 && len(&f["name"]) <= 256), "{n}: a field is too long");
+            let total = len(&embed["title"]) + len(&embed["description"]) + len(&embed["footer"]["text"]) + fields.iter().map(|f| len(&f["name"]) + len(&f["value"])).sum::<usize>();
+            assert!(total <= 6_000, "{n}: the embed holds {total} characters");
+            for text in [&embed["title"], &embed["description"], &fields[0]["value"]] {
+                let text = text.as_str().unwrap().trim_end_matches('…');
+                assert!(text.len() % 2 == 0 && text.as_bytes().chunks(2).all(|p| p == br"\*"), "{n}: an escape was cut in two: {text:.40}");
+            }
+            let amps = "&".repeat(n);
+            let m = Message { title: amps.clone(), body: amps.clone(), fields: vec![("Device".into(), amps.clone())], ..msg() };
+            let (_, slack) = post(Channel::Slack, "https://hooks.slack.com/services/T0/B0/tok", None, &m);
+            let attachment = &slack["attachments"][0];
+            for (text, max) in [(&attachment["text"], 3_000), (&attachment["title"], TITLE_MAX), (&attachment["fields"][0]["value"], FIELD_MAX)] {
+                let text = text.as_str().unwrap();
+                assert!(text.chars().count() <= max, "{n}: {} past {max}", text.chars().count());
+                assert!(text.trim_end_matches('…').split("&amp;").all(str::is_empty), "{n}: an escape was cut in two");
+            }
         }
     }
 
