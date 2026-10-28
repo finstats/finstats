@@ -11,10 +11,24 @@ function append(el, children) {
   }
 }
 
+// Attributes a browser follows as an address. Only http(s) or an address relative to the page is set there, so a value
+// from an API can never be a `javascript:` link, whatever else guards the page; and markup is never set as a frame's
+// document. The browser drops controls and spaces from a scheme before reading it, so they are dropped here too.
+// A picture (`src`, `poster`) may also be a data: image, which runs no script; a link, a form or a frame never is.
+const ADDRESS = new Set(['href', 'src', 'action', 'formaction', 'poster', 'xlink:href']);
+const PICTURE = new Set(['src', 'poster']);
+const safeAddress = (v, name) => {
+  const plain = String(v).replace(/[\u0000- \u007f]/g, '');
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(plain);
+  return !scheme || /^https?$/i.test(scheme[1]) || (PICTURE.has(name) && /^data:image\//i.test(plain));
+};
+
 function apply(el, props, isSvg) {
   for (const [k, v] of Object.entries(props || {})) {
     if (k === 'spellcheck') { el.setAttribute('spellcheck', String(!!v)); continue; }
     if (v == null || v === false) continue;
+    const name = k.toLowerCase();
+    if (name === 'srcdoc' || (ADDRESS.has(name) && !safeAddress(v, name))) continue;
     if (k === 'class') el.setAttribute('class', Array.isArray(v) ? v.filter(Boolean).join(' ') : v);
     else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
     else if (k === 'dataset') Object.assign(el.dataset, v);
