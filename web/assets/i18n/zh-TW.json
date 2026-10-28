@@ -2099,8 +2099,6 @@
       },
       "bad_url": "這看起來不是有效的網址",
       "needs_host": "位址需要主機名稱",
-      "lookup_failed": "無法查詢 {host}",
-      "not_public": "{host} 是這個網路上的位址。你自己的目的地必須指向公開的服務。請管理員改為替伺服器新增它",
       "enter_address": "請輸入要傳送的位址",
       "http_only": "位址必須以 http:// 或 https:// 開頭",
       "no_login": "請不要在位址中包含使用者名稱和密碼",

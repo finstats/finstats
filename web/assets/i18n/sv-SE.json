@@ -1947,8 +1947,6 @@
       },
       "bad_url": "Det ser inte ut som en giltig URL",
       "needs_host": "Adressen behöver ett värdnamn",
-      "lookup_failed": "{host} kunde inte slås upp",
-      "not_public": "{host} är en adress i det här nätverket. Dina egna mottagare måste peka på en offentlig tjänst. Be en administratör att lägga till den för servern i stället",
       "enter_address": "Ange adressen att skicka till",
       "http_only": "Adressen måste börja med http:// eller https://",
       "no_login": "Ta inte med användarnamn och lösenord i adressen",

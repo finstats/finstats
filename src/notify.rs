@@ -936,18 +936,25 @@ pub async fn must_be_public(url: &str) -> Result<()> {
     public_addresses(url).await.map(|_| ())
 }
 
-/// The addresses `url`'s host answers, every one of them public, or why not.
+/// The addresses `url`'s host answers, every one of them public, or why not. Public means outside this network's
+/// ranges and none of the household's own public addresses (`services::refused`).
 pub async fn public_addresses(url: &str) -> Result<Vec<std::net::IpAddr>> {
+    public_addresses_outside(url, &crate::services::home()).await
+}
+
+async fn public_addresses_outside(url: &str, home: &[std::net::IpAddr]) -> Result<Vec<std::net::IpAddr>> {
     let parsed = reqwest::Url::parse(url).map_err(|_| anyhow!(t("server.notify.bad_url", &[])))?;
     let host = parsed.host_str().ok_or_else(|| anyhow!(t("server.notify.needs_host", &[])))?;
     let port = parsed.port_or_known_default().unwrap_or(443);
-    let not_found = || anyhow!(t("server.notify.lookup_failed", &[("host", host.into())]));
-    let addresses: Vec<std::net::IpAddr> = tokio::net::lookup_host((host, port)).await.map_err(|_| not_found())?.map(|a| a.ip()).collect();
-    if addresses.is_empty() {
-        return Err(not_found());
-    }
-    if addresses.iter().any(|a| db::is_local_ip(&a.to_string()).unwrap_or(true)) {
-        bail!(t("server.notify.not_public", &[("host", host.into())]));
+    // One answer for a name that is not found and an address that is inside: two would tell which names exist here.
+    let refuse = || anyhow!(t("server.notify.not_public_or_unknown", &[("host", host.into())]));
+    // Written as an address, it is that address; an IPv6 one looked up with its brackets was never found at all.
+    let addresses: Vec<std::net::IpAddr> = match host.strip_prefix('[').and_then(|h| h.strip_suffix(']')).unwrap_or(host).parse::<std::net::IpAddr>() {
+        Ok(a) => vec![a],
+        Err(_) => tokio::net::lookup_host((host, port)).await.map_err(|_| refuse())?.map(|a| a.ip()).collect(),
+    };
+    if addresses.is_empty() || addresses.iter().any(|a| crate::services::refused(a, home)) {
+        return Err(refuse());
     }
     Ok(addresses)
 }
@@ -2122,6 +2129,24 @@ pub(crate) mod tests {
         t.url = "https://api.pushover.net".into();
         t.topic = Some("uQiRzpo4DXghDmr9QzzfQu27cmVRsG".into());
         assert_eq!(t.shown(), "api.pushover.net/…", "a Pushover user key is half of what it takes to send");
+    }
+
+    /// The household's own public address is home by FinStats' own rule, and from inside it loops back to the router and
+    /// whatever it forwards. An address written in IPv6 is looked at as the address it is, public or not, and a name that
+    /// cannot be looked up is refused in the same words as one inside, so a refusal does not say which names exist here.
+    #[tokio::test]
+    async fn a_personal_destination_may_not_point_at_the_household_s_own_address() {
+        let home: [std::net::IpAddr; 1] = ["203.0.113.7".parse().unwrap()];
+        assert!(public_addresses_outside("https://203.0.113.7/", &home).await.is_err(), "the household's own public address");
+        assert!(public_addresses_outside("https://203.0.113.8/", &home).await.is_ok());
+        assert!(crate::services::refused(&"203.0.113.7".parse().unwrap(), &home), "a name answering with it, as the resolver sees it");
+        assert!(!crate::services::refused(&"203.0.113.8".parse().unwrap(), &home));
+        assert_eq!(public_addresses_outside("https://[2001:4860:4860::8888]/hook", &[]).await.ok(), Some(vec!["2001:4860:4860::8888".parse().unwrap()]), "a public IPv6 address");
+        assert!(public_addresses_outside("https://[fd00::1]/hook", &[]).await.is_err(), "a private IPv6 address");
+        let said = |e: anyhow::Error, host: &str| e.to_string().replace(host, "HOST");
+        let unknown = said(public_addresses_outside("https://no-such-host.invalid/", &[]).await.unwrap_err(), "no-such-host.invalid");
+        let inside = said(public_addresses_outside("https://192.168.1.10/", &[]).await.unwrap_err(), "192.168.1.10");
+        assert_eq!(unknown, inside, "a refusal tells which names exist on this network");
     }
 
     #[test]

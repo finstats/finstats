@@ -1947,8 +1947,6 @@
       },
       "bad_url": "Dat lijkt geen geldige URL",
       "needs_host": "Het adres heeft een hostnaam nodig",
-      "lookup_failed": "{host} kon niet worden opgezocht",
-      "not_public": "{host} is een adres op dit netwerk. Je eigen bestemmingen moeten naar een openbare dienst wijzen. Vraag een beheerder om hem in plaats daarvan voor de server toe te voegen",
       "enter_address": "Vul het adres in waarnaar moet worden verstuurd",
       "http_only": "Het adres moet beginnen met http:// of https://",
       "no_login": "Laat de gebruikersnaam en het wachtwoord uit het adres weg",

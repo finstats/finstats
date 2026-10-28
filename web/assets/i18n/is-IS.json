@@ -1947,8 +1947,6 @@
       },
       "bad_url": "Þetta lítur ekki út eins og gild slóð",
       "needs_host": "Vistfangið þarf hýsilheiti",
-      "lookup_failed": "Ekki tókst að fletta upp {host}",
-      "not_public": "{host} er vistfang á þessu neti. Þínir eigin viðtakendur verða að vísa á opinbera þjónustu. Biddu stjórnanda að bæta því við fyrir þjóninn í staðinn",
       "enter_address": "Sláðu inn vistfangið sem á að senda til",
       "http_only": "Vistfangið verður að byrja á http:// eða https://",
       "no_login": "Slepptu notandanafni og lykilorði úr vistfanginu",

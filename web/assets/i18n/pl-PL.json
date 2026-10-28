@@ -2327,8 +2327,6 @@
       },
       "bad_url": "To nie wygląda na prawidłowy adres URL",
       "needs_host": "Adres musi zawierać nazwę hosta",
-      "lookup_failed": "Nie udało się odnaleźć hosta {host}",
-      "not_public": "{host} to adres w tej sieci. Twoje własne miejsca docelowe muszą wskazywać publiczną usługę. Poproś administratora, aby dodał je dla całego serwera",
       "enter_address": "Wpisz adres, na który mają być wysyłane wiadomości",
       "http_only": "Adres musi zaczynać się od http:// lub https://",
       "no_login": "Nie umieszczaj nazwy użytkownika ani hasła w adresie",

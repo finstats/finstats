@@ -69,6 +69,7 @@ pub fn reclassify(conn: &Connection) -> Result<usize> {
         let local = classify(conn, &ip)?;
         changed += conn.execute("UPDATE playbacks SET is_local = ?1 WHERE remote_ip = ?2 AND is_local IS NOT ?1", params![local, ip])?;
     }
+    crate::services::remember_home(conn)?; // a restore brings addresses in this way too
     db::set_setting(conn, CLASSIFIED_KEY, &classified_against(conn)?.to_string())?;
     Ok(changed)
 }
@@ -104,6 +105,7 @@ pub fn remember(conn: &Connection, ip: &str) -> Result<bool> {
          ON CONFLICT(ip) DO UPDATE SET source = 'lookup', last_seen = excluded.last_seen",
         params![ip, now],
     )?;
+    crate::services::remember_home(conn)?;
     Ok(!known)
 }
 
@@ -115,7 +117,8 @@ pub fn set_manual(conn: &Connection, list: &[String]) -> Result<()> {
     for ip in wanted {
         conn.execute("INSERT OR IGNORE INTO home_addresses(ip, source, first_seen, last_seen) VALUES (?1, 'manual', ?2, ?2)", params![ip, now])?;
     }
-    Ok(())
+    // A personal notification destination may not point at any of them (`services::refused`).
+    crate::services::remember_home(conn)
 }
 
 pub fn list(conn: &Connection) -> Result<Vec<Value>> {

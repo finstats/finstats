@@ -1947,8 +1947,6 @@
       },
       "bad_url": "Bu geçerli bir URL’ye benzemiyor",
       "needs_host": "Adreste bir sunucu adı olmalı",
-      "lookup_failed": "{host} adresi çözümlenemedi",
-      "not_public": "{host} bu ağdaki bir adres. Kendi hedefleriniz herkese açık bir hizmeti göstermelidir. Bunun yerine bir yöneticiden sunucu için eklemesini isteyin",
       "enter_address": "Gönderilecek adresi girin",
       "http_only": "Adres http:// ya da https:// ile başlamalı",
       "no_login": "Kullanıcı adını ve parolayı adrese yazmayın",

@@ -1947,8 +1947,6 @@
       },
       "bad_url": "Det ligner ikke en gyldig webadresse",
       "needs_host": "Adressen skal have et værtsnavn",
-      "lookup_failed": "{host} kunne ikke slås op",
-      "not_public": "{host} er en adresse på dette netværk. Dine egne modtagere skal pege på en offentlig tjeneste. Bed i stedet en administrator om at tilføje den for serveren",
       "enter_address": "Indtast den adresse, der skal sendes til",
       "http_only": "Adressen skal begynde med http:// eller https://",
       "no_login": "Udelad brugernavn og adgangskode fra adressen",

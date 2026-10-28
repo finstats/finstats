@@ -1947,8 +1947,6 @@
       },
       "bad_url": "Das sieht nicht nach einer gültigen URL aus",
       "needs_host": "Die Adresse braucht einen Hostnamen",
-      "lookup_failed": "{host} konnte nicht aufgelöst werden",
-      "not_public": "{host} ist eine Adresse in diesem Netzwerk. Deine eigenen Ziele müssen auf einen öffentlichen Dienst zeigen. Bitte stattdessen einen Administrator, es für den Server hinzuzufügen",
       "enter_address": "Gib die Adresse ein, an die gesendet wird",
       "http_only": "Die Adresse muss mit http:// oder https:// beginnen",
       "no_login": "Lass Benutzername und Passwort aus der Adresse heraus",

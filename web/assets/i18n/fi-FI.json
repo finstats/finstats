@@ -1947,8 +1947,6 @@
       },
       "bad_url": "Tämä ei näytä kelvolliselta osoitteelta",
       "needs_host": "Osoitteessa on oltava palvelimen nimi",
-      "lookup_failed": "Nimeä {host} ei voitu selvittää",
-      "not_public": "{host} on tämän verkon osoite. Omien kohteidesi on osoitettava julkiseen palveluun. Pyydä ylläpitäjää lisäämään se sen sijaan palvelimelle",
       "enter_address": "Anna osoite, johon lähetetään",
       "http_only": "Osoitteen on alettava http:// tai https://",
       "no_login": "Jätä käyttäjänimi ja salasana pois osoitteesta",

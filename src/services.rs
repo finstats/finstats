@@ -244,6 +244,28 @@ impl Http {
     }
 }
 
+/// May a personal destination not be reached at `ip`? Inside this network, or one of the household's own public
+/// addresses (`home`): FinStats counts those as home too, and from inside they loop back to the router and to whatever
+/// it forwards.
+pub fn refused(ip: &std::net::IpAddr, home: &[std::net::IpAddr]) -> bool {
+    crate::db::is_local_ip(&ip.to_string()).unwrap_or(true) || home.contains(ip)
+}
+
+/// The household's own public addresses (`home_addresses`), kept in memory for the checks above, which run where no
+/// database is at hand: a name is resolved inside reqwest.
+static HOME: std::sync::RwLock<Vec<std::net::IpAddr>> = std::sync::RwLock::new(Vec::new());
+
+pub fn home() -> Vec<std::net::IpAddr> {
+    HOME.read().unwrap().clone()
+}
+
+/// Read the household's addresses again. Called wherever `home_addresses` is written (`network`).
+pub fn remember_home(conn: &Connection) -> Result<()> {
+    let list: Vec<String> = conn.prepare_cached("SELECT ip FROM home_addresses")?.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?;
+    *HOME.write().unwrap() = list.iter().filter_map(|ip| ip.parse().ok()).collect();
+    Ok(())
+}
+
 /// The resolver of `Http::public`.
 struct PublicOnly;
 
@@ -252,8 +274,9 @@ impl reqwest::dns::Resolve for PublicOnly {
         let host = name.as_str().to_string();
         Box::pin(async move {
             let found: Vec<std::net::SocketAddr> = tokio::net::lookup_host((host.as_str(), 0)).await?.collect();
-            if found.is_empty() || found.iter().any(|a| crate::db::is_local_ip(&a.ip().to_string()).unwrap_or(true)) {
-                return Err(crate::i18n::t("server.notify.not_public", &[("host", host.as_str().into())]).into());
+            let home = home();
+            if found.is_empty() || found.iter().any(|a| refused(&a.ip(), &home)) {
+                return Err(crate::i18n::t("server.notify.not_public_or_unknown", &[("host", host.as_str().into())]).into());
             }
             Ok(Box::new(found.into_iter()) as reqwest::dns::Addrs)
         })

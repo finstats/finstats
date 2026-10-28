@@ -1947,8 +1947,6 @@
       },
       "bad_url": "Isso não parece uma URL válida",
       "needs_host": "O endereço precisa de um nome de host",
-      "lookup_failed": "Não foi possível resolver {host}",
-      "not_public": "{host} é um endereço desta rede. Seus próprios destinos devem apontar para um serviço público. Peça a um administrador para adicioná-lo para o servidor",
       "enter_address": "Digite o endereço de destino",
       "http_only": "O endereço deve começar com http:// ou https://",
       "no_login": "Deixe o usuário e a senha fora do endereço",
