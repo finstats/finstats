@@ -618,9 +618,9 @@ async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms
         .unwrap_or((false, false));
     // `features`: which optional pages have something behind them (a connected Sonarr, a Seerr, …). `jellyfin_details`:
     // a title's page in Jellyfin is this followed by its id, for a link offered where the answer had none to give (a menu).
-    // Only the address an administrator gave for people to open Jellyfin at: the one FinStats reads it at is often inside
-    // the house, and only administrators are shown that.
-    let jellyfin_details = Some(app.settings().jellyfin_public_url.trim().to_string()).filter(|u| !u.is_empty()).map(|b| crate::jellyfin::web_link(&b, ""));
+    // The address an administrator gave for people to open Jellyfin at; the one FinStats reads it at, often inside the
+    // house, only to administrators (`stats::jellyfin_base`, as a title's own link).
+    let jellyfin_details = crate::stats::jellyfin_base(app, is_admin).map(|b| crate::jellyfin::web_link(&b, ""));
     // `public_url`: the address FinStats is reached at, for a link made in the page (a calendar feed's); the settings
     // that hold it are a manager's to read.
     let public_url = Some(app.settings().public_url.trim_end_matches('/').to_string()).filter(|u| !u.is_empty());
@@ -1785,6 +1785,8 @@ mod me_tests {
         // link is offered once Settings names the address people open Jellyfin at.
         *app.config.write().unwrap() = Some(JfConfig { url: "http://192.168.1.10:8096".into(), api_key: "k".into(), server_name: "Jellyfin".into(), server_version: String::new(), from_env: false });
         assert_eq!(me().await["jellyfin_details"], Value::Null, "the internal address was told to everyone signed in");
+        // An administrator is shown that address anyway (the outbound list does), so their menu still opens Jellyfin.
+        assert_eq!(user_json(&app, "u0", "olivia", true, Perms::ALL).await["jellyfin_details"], json!("http://192.168.1.10:8096/web/#/details?id="));
         app.update_settings(|s| {
             s.jellyfin_public_url = "https://jellyfin.example.com/".into();
             Ok(())
