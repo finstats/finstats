@@ -254,7 +254,9 @@ pub fn download_url(month: &str) -> String {
 }
 
 /// Fetch DB-IP's current city file into the geoip folder and switch to it. The task registry shows progress.
-pub async fn download(app: &App) -> Result<String> {
+/// Fetch this month's file, or last month's, unless one is here already. Answers what to say of it, and whether a
+/// file was loaded that was not before: only then are the places worked out again.
+pub async fn download(app: &App) -> Result<(String, bool)> {
     const ID: &str = "geoip";
     let folder = dir(&app.data_dir);
     tokio::fs::create_dir_all(&folder).await?;
@@ -262,8 +264,8 @@ pub async fn download(app: &App) -> Result<String> {
     for month in candidate_months(chrono::Utc::now().date_naive()) {
         let target = folder.join(format!("dbip-city-lite-{month}.mmdb"));
         if target.is_file() {
-            load(app);
-            return Ok(crate::i18n::t("server.geo.already_have", &[("month", month.into())]));
+            let loaded = load(app);
+            return Ok((crate::i18n::t("server.geo.already_have", &[("month", month.into())]), loaded));
         }
         match fetch(app, &download_url(&month), &folder, &target, ID).await {
             Ok(()) => {
@@ -276,8 +278,8 @@ pub async fn download(app: &App) -> Result<String> {
                         }
                     }
                 }
-                load(app);
-                return Ok(crate::i18n::t("server.geo.downloaded", &[("month", month.into())]));
+                let loaded = load(app);
+                return Ok((crate::i18n::t("server.geo.downloaded", &[("month", month.into())]), loaded));
             }
             Err(e) => {
                 tracing::debug!("geolocation database for {month}: {e:#}");
@@ -357,10 +359,10 @@ pub fn spawn_download(app: &App) -> bool {
     tokio::spawn(crate::i18n::carry(async move {
         let work = app.clone();
         let outcome = crate::schedule::caught(async move { download(&work).await }).await;
-        if outcome.is_ok() {
+        if outcome.as_ref().is_ok_and(|(_, loaded)| *loaded) {
             crate::security::refresh_all(&app).await;
         }
-        app.tasks.finish("geoip", outcome.map(|m| (m, None)));
+        app.tasks.finish("geoip", outcome.map(|(m, _)| (m, None)));
     }));
     true
 }
@@ -388,6 +390,24 @@ pub fn download_if_stale(app: &App) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A download that found this month's file already there loaded nothing new, yet every place was worked out again
+    /// over the whole history under the write lock. Whether a new file was loaded is said, and only then is it done.
+    #[tokio::test]
+    async fn a_month_already_here_says_nothing_new_was_loaded() {
+        let dir = std::env::temp_dir().join(format!("finstats-geo-have-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut app = crate::state::test_app();
+        std::sync::Arc::get_mut(&mut app).unwrap().data_dir = dir.clone();
+        std::fs::create_dir_all(super::dir(&dir)).unwrap();
+        let month = candidate_months(chrono::Utc::now().date_naive())[0].clone();
+        std::fs::write(super::dir(&dir).join(format!("dbip-city-lite-{month}.mmdb")), b"not a database").unwrap();
+        let (_, loaded) = download(&app).await.unwrap();
+        assert!(loaded, "the first look opens what is there");
+        let (_, again) = download(&app).await.unwrap();
+        assert!(!again, "nothing new: no places worked out again");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn a_database_that_is_not_one_is_refused_rather_than_trusted() {

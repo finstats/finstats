@@ -959,7 +959,7 @@ fn too_soon_error() -> ApiError {
 
 /// The one gate for work started by hand (a job, the public-address lookup, a regroup): a manager starts each at most
 /// once a minute, however it is asked for; an administrator is not held, so a manager cannot keep them from it.
-fn by_hand(user: &AuthUser, what: &'static str) -> Result<(), ApiError> {
+pub(crate) fn by_hand(user: &AuthUser, what: &'static str) -> Result<(), ApiError> {
     static RAN: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<&'static str, i64>>> = std::sync::OnceLock::new();
     if !user.is_admin && too_soon(RAN.get_or_init(Default::default), what, crate::db::now(), MANUAL_GAP_S) {
         return Err(too_soon_error());

@@ -1103,11 +1103,13 @@ pub async fn resolve_all(State(app): State<App>, Manager(user): Manager) -> ApiR
     Ok(Json(json!({ "ok": true, "resolved": n })))
 }
 
-/// Fetch the database now. Managers only; the monthly refresh is the `geoip_download` setting.
+/// Fetch the database now: the `geoip` job by hand, for a manager who may read this page, waiting the job's minute.
 pub async fn download_database(State(app): State<App>, Manager(user): Manager) -> ApiResult<Response> {
+    gate(&user)?;
     if std::env::var("FINSTATS_GEOIP_DB").is_ok_and(|p| !p.trim().is_empty()) {
         return Err(ApiError::bad_request(crate::i18n::t("server.security.database_from_env", &[])));
     }
+    crate::api::by_hand(&user, "geoip")?;
     if !geo::spawn_download(&app) {
         return Err(ApiError::new(StatusCode::CONFLICT, crate::i18n::t("server.security.already_downloading", &[])));
     }
@@ -1118,6 +1120,22 @@ pub async fn download_database(State(app): State<App>, Manager(user): Manager) -
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The button that fetches the database took `manage` alone, skipped the minute every job by hand waits, and worked
+    /// every place out again over the whole history at each press, for somebody not allowed to read the Security page.
+    #[tokio::test]
+    async fn fetching_the_database_needs_the_security_page_and_waits_the_jobs_minute() {
+        let app = crate::state::test_app();
+        let manager = AuthUser {
+            id: "m-geo".into(), name: "mallory".into(), is_admin: false, credential: crate::auth::Credential::Session, ip: None,
+            perms: crate::auth::Perms { manage: true, ..Default::default() },
+        };
+        let refused = |r: ApiResult<Response>| r.err().map(|e| e.0);
+        assert_eq!(refused(download_database(State(app.clone()), Manager(manager.clone())).await), Some(StatusCode::FORBIDDEN));
+        let reader = AuthUser { perms: crate::auth::Perms { see_network: true, see_everyone: true, ..manager.perms }, ..manager };
+        crate::api::by_hand(&reader, "geoip").unwrap();
+        assert_eq!(refused(download_database(State(app.clone()), Manager(reader)).await), Some(StatusCode::TOO_MANY_REQUESTS), "the job was run a moment ago");
+    }
 
     #[test]
     fn an_alert_is_filed_in_the_source_and_read_in_the_readers_language() {
