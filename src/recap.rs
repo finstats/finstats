@@ -466,20 +466,11 @@ fn totals_in(c: &Connection, wh: &str, args: &[SqlValue]) -> Result<Map<String, 
     .unwrap_or_default())
 }
 
-/// The rank as somebody is told it. Without see_everyone, the share of everybody's time is left out (with the caller's
-/// own total it is everybody else's), and so is a rank among two, which says how the other's year compares.
+/// The rank as somebody is told it: only with see_everyone. The share of everybody's time is, with the caller's own
+/// total, everybody else's; a rank among two says how the other's year compares; and a position watched while one's
+/// own total grows tells each other person's year to within the step.
 fn rank_for(rank: Value, sees_everyone: bool) -> Value {
-    if sees_everyone || rank.is_null() {
-        return rank;
-    }
-    if rank["of"].as_i64().unwrap_or(0) <= 2 {
-        return Value::Null;
-    }
-    let mut rank = rank;
-    if let Some(o) = rank.as_object_mut() {
-        o.remove("share");
-    }
-    rank
+    if sees_everyone { rank } else { Value::Null }
 }
 
 fn rank(c: &Connection, w: &Window, user: Option<&str>, min_play_s: i64) -> Result<Value> {
@@ -1107,12 +1098,13 @@ mod tests {
     }
 
     /// The share of everybody's time is the caller's own total over everybody's: everybody else's year to the minute,
-    /// and on a server of two, the other person's, which is the time alone the Together page withholds.
+    /// and on a server of two, the other person's, which is the time alone the Together page withholds. The position
+    /// alone, watched while one's own total grows an hour at a time, tells each other person's year to within the hour.
     #[test]
     fn the_rank_says_nobody_elses_time_to_who_may_see_only_themselves() {
         let rank = json!({ "position": 2, "of": 5, "share": 0.25 });
         assert_eq!(rank_for(rank.clone(), true), rank, "see_everyone sees it all");
-        assert_eq!(rank_for(rank, false), json!({ "position": 2, "of": 5 }));
+        assert_eq!(rank_for(rank, false), Value::Null, "a position moves as one's own total passes somebody else's");
         assert_eq!(rank_for(json!({ "position": 2, "of": 2, "share": 0.4 }), false), Value::Null, "second of two says the other watched more");
         assert_eq!(rank_for(Value::Null, false), Value::Null);
     }
