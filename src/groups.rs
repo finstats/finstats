@@ -109,7 +109,7 @@ pub fn mark_live(sessions: &mut [Value], window_s: i64) {
     // Read what the comparison needs once, as plain values: looking fields up in JSON for every pair of streams is
     // what made 10,000 streams take 40 s. People become small numbers, so "already counted" is one array lookup.
     let mut people: HashMap<String, usize> = HashMap::new();
-    let facts: Vec<(usize, Option<i64>, Option<i64>)> = sessions
+    let facts: Vec<Fact> = sessions
         .iter()
         .map(|s| {
             let n = people.len();
@@ -121,35 +121,79 @@ pub fn mark_live(sessions: &mut [Value], window_s: i64) {
     for (i, s) in sessions.iter().enumerate() {
         titles.entry(s["item_id"].to_string()).or_default().push(i);
     }
+    // For whoever may see only themselves (`alone`): a position anybody may seek to proves nothing about who is there,
+    // and somebody with the title playing more than once is looking, not watching.
+    let (everyone, alone) = live_groups(&facts, people.len(), &titles, window_s, near);
+    let named = |sessions: &[Value], group: Option<(usize, Vec<usize>)>| {
+        group.map(|(size, named)| {
+            let with: Vec<Value> = named.into_iter().map(|o| json!({ "user_id": sessions[o]["user_id"], "user_name": sessions[o]["user_name"] })).collect();
+            json!({ "size": size + 1, "with": with })
+        })
+    };
+    for (i, (all, own)) in everyone.into_iter().zip(alone).enumerate() {
+        if let Some(g) = named(sessions, all) {
+            sessions[i]["group"] = g;
+        }
+        if let Some(g) = named(sessions, own) {
+            sessions[i]["group_seen_alone"] = g;
+        }
+    }
+}
+
+/// A live stream as grouping reads it: its person (as a small number), position and start.
+type Fact = (usize, Option<i64>, Option<i64>);
+
+/// Each stream's companions: how many, and the first `COMPANIONS_NAMED`.
+type Live = Vec<Option<(usize, Vec<usize>)>>;
+
+/// Each stream's companions on the same title (how many, and the first `COMPANIONS_NAMED`), read two ways in one pass:
+/// people whose stream started within the window of its own or sits within `near` of its position, and, for whoever may
+/// see only themselves, people who started with it, unless its own person has the title playing more than once.
+fn live_groups(facts: &[Fact], people: usize, titles: &HashMap<String, Vec<usize>>, window_s: i64, near: i64) -> (Live, Live) {
     let close = |a: Option<i64>, b: Option<i64>, within: i64| matches!((a, b), (Some(p), Some(q)) if (p - q).abs() <= within);
-    let mut counted = vec![usize::MAX; people.len()];
-    let mut groups: Vec<Option<(usize, Vec<usize>)>> = vec![None; sessions.len()];
+    let (mut counted, mut counted_alone) = (vec![usize::MAX; people], vec![usize::MAX; people]);
+    let mut streams_of = vec![0usize; people];
+    let (mut all, mut alone): (Live, Live) = (vec![None; facts.len()], vec![None; facts.len()]);
     for streams in titles.values() {
         for &a in streams {
+            streams_of[facts[a].0] = 0;
+        }
+        for &a in streams {
+            streams_of[facts[a].0] += 1;
+        }
+        for &a in streams {
             let (me, pos, started) = facts[a];
+            let single = streams_of[me] == 1;
             counted[me] = a;
-            let (mut size, mut named) = (0usize, Vec::new());
+            counted_alone[me] = a;
+            let (mut size, mut named, mut size_alone, mut named_alone) = (0usize, Vec::new(), 0usize, Vec::new());
             for &b in streams {
                 let (who, p, s) = facts[b];
-                if counted[who] == a || !(close(pos, p, near) || close(started, s, window_s)) {
-                    continue;
+                let started_with = close(started, s, window_s);
+                if counted[who] != a && (started_with || close(pos, p, near)) {
+                    counted[who] = a;
+                    size += 1;
+                    if named.len() < COMPANIONS_NAMED {
+                        named.push(b);
+                    }
                 }
-                counted[who] = a;
-                size += 1;
-                if named.len() < COMPANIONS_NAMED {
-                    named.push(b);
+                if single && counted_alone[who] != a && started_with {
+                    counted_alone[who] = a;
+                    size_alone += 1;
+                    if named_alone.len() < COMPANIONS_NAMED {
+                        named_alone.push(b);
+                    }
                 }
             }
             if size > 0 {
-                groups[a] = Some((size, named));
+                all[a] = Some((size, named));
+            }
+            if size_alone > 0 {
+                alone[a] = Some((size_alone, named_alone));
             }
         }
     }
-    for (i, group) in groups.into_iter().enumerate() {
-        let Some((size, named)) = group else { continue };
-        let with: Vec<Value> = named.into_iter().map(|o| json!({ "user_id": sessions[o]["user_id"], "user_name": sessions[o]["user_name"] })).collect();
-        sessions[i]["group"] = json!({ "size": size + 1, "with": with });
-    }
+    (all, alone)
 }
 
 /// What the clustering says should change: (play, its new group), and how many groups there are. It only reads, and
@@ -857,6 +901,23 @@ mod tests {
         let rows = vec![r(1, "a", 0, 1500), r(2, "b", 4, 1500), r(3, "c", 44, 1400), r(4, "d", 3600, 1500)];
         assert_eq!(cluster(&rows, 60), vec![(1, 1), (2, 1), (3, 1)]);
         assert_eq!(cluster(&rows, 5), vec![(1, 1), (2, 1)], "a tight window loses the late joiner");
+    }
+
+    /// A position anybody may seek to and a title anybody may play: matching by position alone told someone who may only
+    /// see themselves who was watching any title right now, and about where, by playing it from many devices or seeking
+    /// along it. For them (`group_seen_alone`) a companion is somebody who started with them, and nobody when they have
+    /// the title playing more than once.
+    #[test]
+    fn who_may_see_only_themselves_is_told_of_companions_who_started_with_them() {
+        let s = |user: &str, pos: i64, started: i64| json!({ "user_id": user, "user_name": user, "item_id": "ep", "position_s": pos, "started_at": started });
+        let mut live = vec![s("mallory", 902, 9000), s("bob", 905, 5400), s("carol", 10, 9010)];
+        mark_live(&mut live, 60);
+        assert_eq!(live[0]["group"]["size"], 3, "everyone's view is as before");
+        assert_eq!(live[0]["group_seen_alone"]["with"], json!([{ "user_id": "carol", "user_name": "carol" }]));
+        let mut probing = vec![s("mallory", 902, 9000), s("mallory", 1200, 9005), s("carol", 10, 9010)];
+        mark_live(&mut probing, 60);
+        assert!(probing[0]["group_seen_alone"].is_null() && probing[1]["group_seen_alone"].is_null(), "two streams of the title named a companion");
+        assert_eq!(probing[2]["group_seen_alone"]["size"], 2, "carol started with mallory, and is told of one person");
     }
 
     #[test]

@@ -1710,6 +1710,17 @@ pub fn marked_live(app: &App) -> Vec<Value> {
 /// `/now-playing` as one person is answered it, by HTTP or by the live channel: the one place its narrowing is written.
 pub fn now_playing_for(marked: &[Value], user: &AuthUser) -> Value {
     let mut sessions: Vec<Value> = marked.iter().filter(|s| user.perms.see_everyone || s["user_id"].as_str() == Some(user.id.as_str())).cloned().collect();
+    for s in &mut sessions {
+        // Companions by position too for everybody's view; only those who started with them for one's own, since a
+        // position anybody may seek to told who was playing any title right now.
+        let alone = s.as_object_mut().and_then(|o| o.remove("group_seen_alone"));
+        if !user.perms.see_everyone {
+            match alone {
+                Some(g) => s["group"] = g,
+                None => _ = s.as_object_mut().and_then(|o| o.remove("group")),
+            }
+        }
+    }
     if !user.perms.see_network {
         // Whether somebody plays from home says where they are, as their address does.
         for s in &mut sessions {
@@ -2741,6 +2752,13 @@ mod tests {
         assert_eq!(everyone["sessions"].as_array().unwrap().len(), 2);
         assert_eq!(everyone["sessions"][0]["remote_ip"], "192.168.1.10");
         assert_eq!(everyone["sessions"][0]["is_local"], true);
+        assert!(everyone["sessions"][0].get("group_seen_alone").is_none(), "the narrower reading is never answered");
+
+        // A position anybody may seek to names nobody for whoever may see only themselves.
+        let mut seeking = vec![stream("u1", "alice"), json!({ "key": "k-u2", "user_id": "u2", "user_name": "bob", "item_id": "i1", "position_s": 100, "started_at": 9000 })];
+        crate::groups::mark_live(&mut seeking, 60);
+        let bob = now_playing_for(&seeking, &caller("u2", false));
+        assert!(bob["sessions"][0].get("group").is_none() && bob["sessions"][0].get("group_seen_alone").is_none(), "{bob}");
     }
 
     /// The status bar's numbers, scoped as `/summary` scopes them: one's own plays and streams without see_everyone.
