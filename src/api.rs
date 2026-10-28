@@ -207,19 +207,41 @@ pub(crate) fn cross_site(origin: Option<&str>, host: Option<&str>, forwarded: Op
 }
 
 async fn security_headers(req: Request, next: Next) -> Response {
+    let path = req.uri().path().to_string();
     let mut resp = next.run(req).await;
-    let h = resp.headers_mut();
+    harden(&path, resp.headers_mut());
+    resp
+}
+
+/// The headers every answer carries. `same-origin` opener policy: a page that opened FinStats in a new tab cannot later
+/// send that tab somewhere else, a sign-in page of its own included. The API is read by FinStats' own pages alone, so
+/// another site may not load it (`Cross-Origin-Resource-Policy`), and an API answer that says nothing about caching is
+/// kept by no cache: most are somebody's own viewing, and a public profile's must not outlive its link being reset.
+fn harden(path: &str, h: &mut HeaderMap) {
     h.insert("x-content-type-options", HeaderValue::from_static("nosniff"));
     h.insert("x-frame-options", HeaderValue::from_static("DENY"));
     h.insert("referrer-policy", HeaderValue::from_static("same-origin"));
+    h.insert("cross-origin-opener-policy", HeaderValue::from_static("same-origin"));
+    h.insert(
+        "permissions-policy",
+        HeaderValue::from_static(
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), bluetooth=(), midi=(), \
+             display-capture=(), screen-wake-lock=(), accelerometer=(), gyroscope=(), magnetometer=(), browsing-topics=()",
+        ),
+    );
     h.insert(
         "content-security-policy",
         HeaderValue::from_static(
-            "default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; \
+            "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; \
              object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
         ),
     );
-    resp
+    if path.starts_with("/api/") {
+        h.insert("cross-origin-resource-policy", HeaderValue::from_static("same-origin"));
+        if !h.contains_key(CACHE_CONTROL) {
+            h.insert(CACHE_CONTROL, HeaderValue::from_static("no-store"));
+        }
+    }
 }
 
 // ---------------------------------------------------------------- web UI
@@ -1600,6 +1622,33 @@ mod tests {
     }
 
     use super::*;
+
+    /// Every answer keeps its tab to itself (a page that opened FinStats could later turn that tab into a sign-in page of
+    /// its own), asks for no camera, microphone or place, and loads pictures from nowhere but itself and `data:`. An API
+    /// answer is read by FinStats' own pages only, and none of them is kept by a cache unless it says so itself.
+    #[test]
+    fn every_answer_carries_the_headers_that_keep_it_to_itself() {
+        let mut page = HeaderMap::new();
+        harden("/u/abc", &mut page);
+        assert_eq!(page["cross-origin-opener-policy"], "same-origin");
+        let perms = page["permissions-policy"].to_str().unwrap();
+        for denied in ["camera=()", "microphone=()", "geolocation=()"] {
+            assert!(perms.contains(denied), "{perms}");
+        }
+        let csp = page["content-security-policy"].to_str().unwrap();
+        assert!(csp.contains("img-src 'self' data:;") && !csp.contains("blob:"), "{csp}");
+        assert!(page.get("cross-origin-resource-policy").is_none(), "a public card is shared to other sites");
+        assert!(page.get(CACHE_CONTROL).is_none(), "a page says its own");
+
+        let mut api = HeaderMap::new();
+        harden("/api/public/abc", &mut api);
+        assert_eq!(api["cross-origin-resource-policy"], "same-origin");
+        assert_eq!(api[CACHE_CONTROL], "no-store", "an answer that says nothing of caching is kept by nobody");
+        let mut picture = HeaderMap::new();
+        picture.insert(CACHE_CONTROL, HeaderValue::from_static("private, no-cache"));
+        harden("/api/img/item/abc", &mut picture);
+        assert_eq!(picture[CACHE_CONTROL], "private, no-cache", "an answer's own word on caching stands");
+    }
 
     /// FinStats draws both themes itself, so a browser extension that repaints pages dark (Dark Reader) is told to
     /// leave every page as it is: it inverted the light theme's paper into a muddy grey and fought the dark one.
