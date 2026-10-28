@@ -75,6 +75,9 @@ async fn year_for(app: &App, user: &AuthUser, q: &RecapQuery) -> Result<(Value, 
     let name = server_name.clone();
     let out = app.db.call(move |c| build(c, scope_user, min_play_s, &name, &requested, None)).await?;
     let mut out = if server { server_edition(out) } else { out };
+    if !server {
+        out["rank"] = rank_for(out["rank"].take(), user.perms.see_everyone);
+    }
     // The year was read on a thread of the database's, where no request's language is: the persona says itself here.
     say_persona(&mut out["persona"]);
     // Which cards the year has: said here, so the page never works it out again and drifts.
@@ -461,6 +464,22 @@ fn totals_in(c: &Connection, wh: &str, args: &[SqlValue]) -> Result<Map<String, 
         args,
     )?
     .unwrap_or_default())
+}
+
+/// The rank as somebody is told it. Without see_everyone, the share of everybody's time is left out (with the caller's
+/// own total it is everybody else's), and so is a rank among two, which says how the other's year compares.
+fn rank_for(rank: Value, sees_everyone: bool) -> Value {
+    if sees_everyone || rank.is_null() {
+        return rank;
+    }
+    if rank["of"].as_i64().unwrap_or(0) <= 2 {
+        return Value::Null;
+    }
+    let mut rank = rank;
+    if let Some(o) = rank.as_object_mut() {
+        o.remove("share");
+    }
+    rank
 }
 
 fn rank(c: &Connection, w: &Window, user: Option<&str>, min_play_s: i64) -> Result<Value> {
@@ -1085,6 +1104,17 @@ mod tests {
         play(&c, "ua", "m1", "Movie", "2025-05-01", 600, None);
         assert!(year_of(&c, Some("ua"), "2025")["together"].is_null(), "a channel is the only company she had");
         assert!(year_of(&c, None, "2025")["together"].is_null());
+    }
+
+    /// The share of everybody's time is the caller's own total over everybody's: everybody else's year to the minute,
+    /// and on a server of two, the other person's, which is the time alone the Together page withholds.
+    #[test]
+    fn the_rank_says_nobody_elses_time_to_who_may_see_only_themselves() {
+        let rank = json!({ "position": 2, "of": 5, "share": 0.25 });
+        assert_eq!(rank_for(rank.clone(), true), rank, "see_everyone sees it all");
+        assert_eq!(rank_for(rank, false), json!({ "position": 2, "of": 5 }));
+        assert_eq!(rank_for(json!({ "position": 2, "of": 2, "share": 0.4 }), false), Value::Null, "second of two says the other watched more");
+        assert_eq!(rank_for(Value::Null, false), Value::Null);
     }
 
     #[test]
