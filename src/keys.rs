@@ -140,8 +140,8 @@ pub async fn revoke(State(app): State<App>, user: AuthUser, Path(id): Path<i64>)
     if !done {
         return Err(ApiError::not_found("Key"));
     }
-    // A live connection opened with this key closes now rather than at its next look.
-    app.live_feed.recheck();
+    // A live connection opened with this key closes now rather than at its next look; nobody else's is asked.
+    app.live_feed.recheck_key(id);
     Ok(Json(json!({ "ok": true })))
 }
 

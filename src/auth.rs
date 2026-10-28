@@ -498,35 +498,37 @@ async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms
 /// row live, so it must never be older than the sign-in it serves. Without this, a row the users read has
 /// not reached yet (written by a Jellystat import from the file's own word for who administers Jellyfin)
 /// would make a session an administrator's that Jellyfin never did.
-pub(crate) fn remember_sign_in(c: &Connection, user_id: &str, user_name: &str, is_admin: bool, policy: &crate::access::Policy, now: i64) -> anyhow::Result<()> {
-    c.execute(
+/// Answers whether the row changed (or was new), which is when that person's open connections must look again.
+pub(crate) fn remember_sign_in(c: &Connection, user_id: &str, user_name: &str, is_admin: bool, policy: &crate::access::Policy, now: i64) -> anyhow::Result<bool> {
+    let changed = c.execute(
         "INSERT INTO users(id, name, is_admin, is_disabled, removed, updated_at) VALUES (?1, ?2, ?3, 0, 0, ?4)
-         ON CONFLICT(id) DO UPDATE SET name = excluded.name, is_admin = excluded.is_admin, is_disabled = 0, removed = 0",
+         ON CONFLICT(id) DO UPDATE SET name = excluded.name, is_admin = excluded.is_admin, is_disabled = 0, removed = 0
+         WHERE users.name IS NOT excluded.name OR users.is_admin IS NOT excluded.is_admin OR users.is_disabled <> 0 OR users.removed <> 0",
         params![user_id, user_name, is_admin, now],
     )?;
-    // What of the library Jellyfin lets them see, from the same answer.
-    crate::access::store(c, user_id, policy)?;
-    Ok(())
+    // What of the library Jellyfin lets them see, from the same answer: a change there is a change for their connections too.
+    let access = crate::access::store(c, user_id, policy)?;
+    Ok(changed > 0 || access)
 }
 
 /// The most sign-ins one person keeps open at once: every device they use, many times over. A session is a row kept
 /// for thirty days, and somebody with a password could otherwise sign in in a loop and fill the table and the disk.
 pub(crate) const SESSIONS_PER_USER: usize = 30;
 
-/// A new session, written, and that person's oldest beyond [`SESSIONS_PER_USER`] let go, never the new one.
+/// A new session, written, and that person's oldest beyond [`SESSIONS_PER_USER`] let go, never the new one. Answers how
+/// many were let go.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn store_session(c: &Connection, hash: &str, user_id: &str, user_name: &str, is_admin: bool, now: i64, ip: Option<&str>, ua: Option<&str>) -> anyhow::Result<()> {
+pub(crate) fn store_session(c: &Connection, hash: &str, user_id: &str, user_name: &str, is_admin: bool, now: i64, ip: Option<&str>, ua: Option<&str>) -> anyhow::Result<usize> {
     c.execute(
         "INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at, ip, user_agent, seq)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, (SELECT COALESCE(MAX(seq), 0) + 1 FROM sessions WHERE user_id = ?2))",
         params![hash, user_id, user_name, is_admin, now, now + SESSION_TTL_S, ip, ua],
     )?;
-    c.execute(
+    Ok(c.execute(
         "DELETE FROM sessions WHERE user_id = ?1 AND token_hash <> ?2 AND token_hash NOT IN (
            SELECT token_hash FROM sessions WHERE user_id = ?1 AND token_hash <> ?2 ORDER BY created_at DESC, seq DESC LIMIT ?3)",
         params![user_id, hash, SESSIONS_PER_USER as i64 - 1],
-    )?;
-    Ok(())
+    )?)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -546,17 +548,21 @@ async fn start_session(
     let hash = hash_token(&token);
     let ua = headers.get("user-agent").and_then(|v| v.to_str().ok()).map(|s| s.chars().take(200).collect::<String>());
     let (uid, uname, ip_s) = (user_id.to_string(), user_name.to_string(), ip.to_string());
-    app.db
+    let changed = app
+        .db
         .call(move |c| {
             let now = db::now();
             c.execute("DELETE FROM sessions WHERE expires_at <= ?1", [now])?;
-            remember_sign_in(c, &uid, &uname, is_admin, &policy, now)?;
-            store_session(c, &hash, &uid, &uname, is_admin, now, Some(&ip_s), ua.as_deref())?;
-            Ok(())
+            let row = remember_sign_in(c, &uid, &uname, is_admin, &policy, now)?;
+            let let_go = store_session(c, &hash, &uid, &uname, is_admin, now, Some(&ip_s), ua.as_deref())?;
+            Ok(row || let_go > 0)
         })
         .await?;
-    // What Jellyfin just said about this person is in their row now, and the oldest session may have given way to this one.
-    app.live_feed.recheck();
+    // What Jellyfin just said about this person may have changed their row, and their oldest session may have given way to
+    // this one: then their own connections look again, and nobody else's. A sign-in that changed nothing asks nothing.
+    if changed {
+        app.live_feed.recheck_person(user_id);
+    }
     let body = Json(json!({ "user": user_json(app, user_id, user_name, is_admin, perms).await }));
     let mut resp = body.into_response();
     set_session(&mut resp, &token, SESSION_TTL_S, is_https(headers));
@@ -678,17 +684,17 @@ pub async fn logout(State(app): State<App>, ConnectInfo(peer): ConnectInfo<Socke
                 let who: Option<(String, String)> = c
                     .query_row("DELETE FROM sessions WHERE token_hash = ?1 RETURNING user_id, user_name", [hash], |r| Ok((r.get(0)?, r.get(1)?)))
                     .optional()?;
-                let ended = who.is_some();
+                let ended = who.as_ref().map(|(id, _)| id.clone());
                 if let Some((id, name)) = who {
                     audit::record_quietly(c, &audit::Entry::new("sign_out", Actor { user_id: Some(id), user_name: Some(name), ip: Some(ip), key_id: None }));
                 }
                 Ok(ended)
             })
             .await?;
-        // The tab signing out is not the only one this session opened: every live connection of it closes now. Only
-        // when a session ended, or anybody could make every open connection read its access again, in a loop.
-        if ended {
-            app.live_feed.recheck();
+        // The tab signing out is not the only one this session opened: every live connection of it closes now. Only that
+        // person's, and only when a session ended, or anybody could make every open connection read its access again.
+        if let Some(user_id) = ended {
+            app.live_feed.recheck_person(&user_id);
         }
     }
     let mut resp = Json(json!({ "ok": true })).into_response();
@@ -901,13 +907,45 @@ mod tests {
             h.insert(axum::http::header::COOKIE, format!("{COOKIE_NAME}={token}").parse().unwrap());
             h
         };
+        let (alice, bob) = (app.live_feed.seats.take("ua", None), app.live_feed.seats.take("ub", None));
         let before = app.live_feed.rechecks();
         logout(State(app.clone()), ConnectInfo(peer), with("not-a-session")).await.unwrap();
-        assert_eq!(app.live_feed.rechecks(), before);
+        assert!(!asked(&alice).await && !asked(&bob).await);
         let hash = hash_token("a-real-one");
         app.db.call(move |c| Ok(c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'ua', 'alice', 0, 1, 9999999999)", [hash])?)).await.unwrap();
         logout(State(app.clone()), ConnectInfo(peer), with("a-real-one")).await.unwrap();
-        assert_eq!(app.live_feed.rechecks(), before + 1);
+        assert!(asked(&alice).await, "the connections of the session that ended look");
+        assert!(!asked(&bob).await, "and nobody else's");
+        assert_eq!(app.live_feed.rechecks(), before, "not everybody's");
+    }
+
+    /// Whether a connection was asked to read its access again.
+    async fn asked(t: &crate::live::Ticket) -> bool {
+        tokio::time::timeout(std::time::Duration::from_millis(20), t.recheck.notified()).await.is_ok()
+    }
+
+    /// A sign-in asks that person's own connections to look again only when it changed something they hold: their row
+    /// (what Jellyfin just said about them), or an older session that gave way. Every sign-in asked every connection on
+    /// the server, so somebody signing in in a loop with their own password made every open tab ask the database again.
+    #[tokio::test]
+    async fn a_sign_in_asks_its_own_connections_to_look_again_only_when_it_changed_something() {
+        let app = crate::state::test_app();
+        let (headers, ip): (HeaderMap, IpAddr) = (HeaderMap::new(), "192.0.2.7".parse().unwrap());
+        let (alice, bob) = (app.live_feed.seats.take("u1", None), app.live_feed.seats.take("u2", None));
+        let everybody = app.live_feed.rechecks();
+        let sign_in = || start_session(&app, &headers, ip, "u1", "alice", false, crate::access::policy(&json!({ "Policy": { "EnableAllFolders": true } })), Perms::default());
+        sign_in().await.unwrap();
+        assert!(asked(&alice).await, "a row written for the first time");
+        sign_in().await.unwrap();
+        assert!(!asked(&alice).await, "nothing changed");
+        for _ in 2..SESSIONS_PER_USER {
+            sign_in().await.unwrap();
+        }
+        assert!(!asked(&alice).await, "thirty sessions, none given way");
+        sign_in().await.unwrap();
+        assert!(asked(&alice).await, "the oldest session gave way to the thirty-first");
+        assert!(!asked(&bob).await);
+        assert_eq!(app.live_feed.rechecks(), everybody, "nobody else was asked");
     }
 
     /// A sign-in of one's own takes back that attempt alone. Clearing the address's count let anybody with an account

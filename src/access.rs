@@ -48,13 +48,15 @@ pub fn policy(user: &Value) -> Policy {
 }
 
 /// Keep what Jellyfin just said about one user. A changed `hides` leaves the list read under the old one counting for
-/// nothing until it is read again (`visible_for`).
-pub fn store(c: &Connection, user_id: &str, p: &Policy) -> Result<()> {
-    c.execute(
-        "UPDATE users SET access_all = ?2, access_libraries = ?3, access_hides = ?4 WHERE id = ?1",
+/// nothing until it is read again (`visible_for`). Answers whether anything changed, which is when that person's open
+/// connections must look again.
+pub fn store(c: &Connection, user_id: &str, p: &Policy) -> Result<bool> {
+    let changed = c.execute(
+        "UPDATE users SET access_all = ?2, access_libraries = ?3, access_hides = ?4
+         WHERE id = ?1 AND (access_all IS NOT ?2 OR access_libraries IS NOT ?3 OR access_hides IS NOT ?4)",
         params![user_id, p.all, serde_json::to_string(&p.libraries)?, p.hides],
     )?;
-    Ok(())
+    Ok(changed > 0)
 }
 
 /// One person whose list of titles is to be read: their id, the policy it is read under, and their libraries (`None`: all).
@@ -257,6 +259,16 @@ mod tests {
         assert!(bob.may_see_item(&c, "only-in-plays").unwrap(), "a title the library does not hold has nothing of it to hide");
         store(&c, "bob", &Policy { all: true, libraries: vec![], hides: None }).unwrap();
         assert!(Access::of(&c, "bob", false).unwrap().is_everything());
+    }
+
+    #[test]
+    fn storing_a_policy_says_whether_it_changed_anything() {
+        // A sign-in asks the person's open connections to look again only when something changed, this included.
+        let c = conn();
+        let films = Policy { all: false, libraries: vec!["films".into()], hides: None };
+        assert!(store(&c, "bob", &films).unwrap(), "a first policy is a change");
+        assert!(!store(&c, "bob", &films).unwrap(), "the same one again is not");
+        assert!(store(&c, "bob", &Policy { hides: Some("rating<=10".into()), ..films }).unwrap(), "a rating cap is");
     }
 
     #[test]

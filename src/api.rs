@@ -1054,8 +1054,8 @@ async fn put_user_permissions(State(app): State<App>, JellyfinAdmin(user): Jelly
         None => Err(ApiError::not_found("User")),
         Some(false) => Err(ApiError::bad_request(i18n::t("server.api.admins_have_all", &[]))),
         Some(true) => {
+            app.live_feed.recheck_person(&target);
             audit::record(&app, audit::Entry::new("permissions_changed", actor).target(target).detail(json!({ "permissions": granted })));
-            app.live_feed.recheck();
             Ok(Json(json!({ "permissions": keys })))
         }
     }

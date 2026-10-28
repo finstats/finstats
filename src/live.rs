@@ -137,14 +137,24 @@ pub fn stamps(subscribed: bool, visible: bool) -> bool {
 /// that died somewhere on the way without a word, would otherwise hold a seat that nobody is using.
 pub const PER_PERSON: usize = 20;
 
-/// One connection's seat: its number, and how it is told that a newer connection of the same person took its place.
+/// One connection's seat: its number, how it is told that a newer connection of the same person took its place, and
+/// how it is told that its own access may have changed.
 pub struct Ticket {
     pub id: u64,
     pub gone: Arc<tokio::sync::Notify>,
+    pub recheck: Arc<tokio::sync::Notify>,
 }
 
-/// One person's connections, oldest first: each one's number and how it is told to go.
-type Held = std::collections::VecDeque<(u64, Arc<tokio::sync::Notify>)>;
+/// One connection as its seat keeps it: the key it came with, if it came with one.
+struct Occupant {
+    id: u64,
+    gone: Arc<tokio::sync::Notify>,
+    recheck: Arc<tokio::sync::Notify>,
+    key: Option<i64>,
+}
+
+/// One person's connections, oldest first.
+type Held = std::collections::VecDeque<Occupant>;
 
 /// Who holds which connections.
 #[derive(Default)]
@@ -154,26 +164,34 @@ pub struct Seats {
 }
 
 impl Seats {
-    /// A seat for this person. One who already holds [`PER_PERSON`] has their oldest told to go.
-    pub fn take(&self, user_id: &str) -> Ticket {
+    /// A seat for this person, on a connection that came with this key (or a session). One who already holds
+    /// [`PER_PERSON`] has their oldest told to go.
+    pub fn take(&self, user_id: &str, key: Option<i64>) -> Ticket {
         let id = self.next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let gone = Arc::new(tokio::sync::Notify::new());
+        let (gone, recheck) = (Arc::new(tokio::sync::Notify::new()), Arc::new(tokio::sync::Notify::new()));
         let mut held = self.held.lock().unwrap();
         let mine = held.entry(user_id.to_string()).or_default();
         if mine.len() >= PER_PERSON
-            && let Some((_, oldest)) = mine.pop_front()
+            && let Some(oldest) = mine.pop_front()
         {
-            oldest.notify_one(); // kept as a permit if that connection is not listening at this instant
+            oldest.gone.notify_one(); // kept as a permit if that connection is not listening at this instant
         }
-        mine.push_back((id, gone.clone()));
-        Ticket { id, gone }
+        mine.push_back(Occupant { id, gone: gone.clone(), recheck: recheck.clone(), key });
+        Ticket { id, gone, recheck }
+    }
+
+    /// Ask every connection `which` picks to read its access again (a permit each, kept until it listens).
+    fn ask(&self, which: impl Fn(&str, &Occupant) -> bool) {
+        for (user_id, mine) in self.held.lock().unwrap().iter() {
+            mine.iter().filter(|o| which(user_id, o)).for_each(|o| o.recheck.notify_one());
+        }
     }
 
     /// The connection has ended. A seat already given up to a newer one changes nothing.
     pub fn leave(&self, user_id: &str, id: u64) {
         let mut held = self.held.lock().unwrap();
         if let Some(mine) = held.get_mut(user_id) {
-            mine.retain(|(n, _)| *n != id);
+            mine.retain(|o| o.id != id);
             if mine.is_empty() {
                 held.remove(user_id);
             }
@@ -222,6 +240,9 @@ pub struct Feed {
     summary: watch::Sender<u64>,
     /// Somebody's access may have changed (a permission, a sign-out, a key, a users read): re-read yours now.
     auth: watch::Sender<u64>,
+    /// How many times one person's or one key's connections were asked to look again, so a connection being made while
+    /// its own were asked, before it held a seat to be told through, looks once it does.
+    asked: std::sync::atomic::AtomicU64,
     pub seats: Seats,
     /// When a refusal was last logged, so a reconnecting script cannot flood the log.
     refused_logged: Mutex<Option<Instant>>,
@@ -236,6 +257,7 @@ impl Default for Feed {
             downloads: watch::Sender::new(0),
             summary: watch::Sender::new(0),
             auth: watch::Sender::new(0),
+            asked: Default::default(),
             seats: Seats::default(),
             refused_logged: Mutex::new(None),
             replaced_logged: Mutex::new(None),
@@ -247,6 +269,18 @@ impl Feed {
     /// Somebody's access may have changed: every open connection re-reads its own before it says anything more.
     pub fn recheck(&self) {
         self.auth.send_modify(|n| *n += 1);
+    }
+
+    /// One person's access may have changed (they signed in or out, their grants changed): their connections alone look.
+    pub fn recheck_person(&self, user_id: &str) {
+        self.asked.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.seats.ask(|holder, _| holder == user_id);
+    }
+
+    /// A key was revoked: the connections that came with it look, and nobody else.
+    pub fn recheck_key(&self, key_id: i64) {
+        self.asked.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.seats.ask(|_, o| o.key == Some(key_id));
     }
 
     /// How many times access has been asked to be re-read, for the tests of who asks.
@@ -363,6 +397,7 @@ pub async fn connect(
     let ip = crate::auth::client_ip(&app, &headers, peer);
     // Before the credential is read, so a recheck sent while this connection is being made is one it hears.
     let auth = app.live_feed.auth.subscribe();
+    let asked_before = app.live_feed.asked.load(std::sync::atomic::Ordering::SeqCst);
     let presented = match crate::auth::pick_credential(&headers) {
         Ok(p) => p,
         Err(e) => return e.into_response(),
@@ -375,14 +410,18 @@ pub async fn connect(
         Ok(ws) => ws,
         Err(_) => return ApiError::new(StatusCode::UPGRADE_REQUIRED, "This address is a WebSocket").into_response(),
     };
-    let ticket = app.live_feed.seats.take(&user.id);
+    let ticket = app.live_feed.seats.take(&user.id, user.key_id());
     let seat = Seat { app: app.clone(), user_id: user.id.clone(), id: ticket.id };
-    let gone = ticket.gone;
+    let (gone, asked) = (ticket.gone, ticket.recheck);
+    // Somebody's connections were asked to look again while this one had no seat to hear it through: it looks once.
+    if app.live_feed.asked.load(std::sync::atomic::Ordering::SeqCst) != asked_before {
+        asked.notify_one();
+    }
     // The upgrade's task is a new one: it is handed the request's language here, or every frame is in British English.
     // A WebSocket cannot carry a header of the page's own, so its tab says its language in the address (`?lang=`); the
     // cookie is every tab's, and another may have chosen since.
     let lang = uri.query().into_iter().flat_map(|q| q.split('&')).find_map(|kv| kv.strip_prefix("lang=")).and_then(crate::i18n::locale).unwrap_or_else(crate::i18n::current);
-    bounded(ws).on_upgrade(move |socket| crate::i18n::speaking(lang, serve(app, socket, user, presented, seat, gone, auth)))
+    bounded(ws).on_upgrade(move |socket| crate::i18n::speaking(lang, serve(app, socket, user, presented, seat, (gone, asked), auth)))
 }
 
 /// A page's messages held to [`MESSAGE_MAX`], and each frame too: a frame is read whole before its message is measured.
@@ -444,7 +483,7 @@ async fn send(socket: &mut WebSocket, msg: Message) -> bool {
     matches!(tokio::time::timeout(SEND_WITHIN, socket.send(msg)).await, Ok(Ok(())))
 }
 
-async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Presented, _seat: Seat, gone: Arc<tokio::sync::Notify>, mut auth: watch::Receiver<u64>) {
+async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Presented, _seat: Seat, (gone, asked): (Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>), mut auth: watch::Receiver<u64>) {
     let feed = &app.live_feed;
     let (mut np, mut dl, mut sum) = (feed.now_playing.subscribe(), feed.downloads.subscribe(), feed.summary.subscribe());
     let mut tab = Tab { topics: HashSet::new(), visible: false, sent: HashMap::new(), drawn: Drawn::default(), user };
@@ -520,6 +559,7 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
             Ok(()) = dl.changed() => due.push("downloads"),
             Ok(()) = sum.changed() => due.push("summary"),
             Ok(()) = auth.changed() => recheck = true,
+            _ = asked.notified() => recheck = true,
             _ = resolve.tick() => recheck = true,
             // A hidden tab shows no status bar: it is asked again when it is shown.
             _ = backstop.tick() => if tab.visible { due.push("summary") },
@@ -709,6 +749,27 @@ mod tests {
         assert_eq!(f, json!({ "type": "summary", "v": 1, "data": { "plays_total": 3 } }));
     }
 
+    /// Whose access changed is known where it changed: one person signing out or in, one key revoked. Only their
+    /// connections read their access again; everybody's did, each time, and a loop of one's own sign-ins or of keys made
+    /// and revoked made every open tab on the server ask the database again.
+    #[tokio::test]
+    async fn only_the_connections_a_change_concerns_look_again() {
+        let feed = Feed::default();
+        let asked = |t: &Ticket| {
+            let t = t.recheck.clone();
+            async move { tokio::time::timeout(std::time::Duration::from_millis(20), t.notified()).await.is_ok() }
+        };
+        let (alice, alice_key, bob) = (feed.seats.take("u1", None), feed.seats.take("u1", Some(7)), feed.seats.take("u2", Some(8)));
+        let everybody = feed.rechecks();
+        feed.recheck_person("u1");
+        assert!(asked(&alice).await && asked(&alice_key).await, "every one of alice's connections, her key's too");
+        assert!(!asked(&bob).await, "bob's access did not change");
+        feed.recheck_key(8);
+        assert!(asked(&bob).await, "the connection that came with the key");
+        assert!(!asked(&alice).await && !asked(&alice_key).await, "another key");
+        assert_eq!(feed.rechecks(), everybody, "nobody else was asked");
+    }
+
     #[tokio::test]
     async fn the_oldest_connection_gives_way_to_the_twenty_first_and_a_closed_one_frees_its_seat() {
         let seats = Seats::default();
@@ -716,13 +777,13 @@ mod tests {
             let t = t.gone.clone();
             async move { tokio::time::timeout(std::time::Duration::from_millis(20), t.notified()).await.is_ok() }
         };
-        let tickets: Vec<Ticket> = (0..PER_PERSON).map(|_| seats.take("u1")).collect();
+        let tickets: Vec<Ticket> = (0..PER_PERSON).map(|_| seats.take("u1", None)).collect();
         assert_eq!(seats.open(), PER_PERSON);
-        let newest = seats.take("u1");
+        let newest = seats.take("u1", None);
         assert!(gone(&tickets[0]).await, "the oldest is told to go");
         assert!(!gone(&tickets[1]).await && !gone(&newest).await, "and nobody else");
         assert_eq!(seats.open(), PER_PERSON, "still twenty");
-        let other = seats.take("u2");
+        let other = seats.take("u2", None);
         assert!(!gone(&tickets[1]).await, "somebody else's connection costs alice nothing");
         seats.leave("u1", tickets[0].id); // the one told to go, closing: already given up, nothing changes
         assert_eq!(seats.open(), PER_PERSON + 1);
