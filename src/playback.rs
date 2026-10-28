@@ -267,27 +267,48 @@ pub fn drop_relinked_duplicates(conn: &Connection, window: i64, item_id: &str) -
 const RELINKED_DUPLICATES_SQL: &str = crate::relinked_duplicates_sql!("?1", " AND (k.deleted_at IS NULL OR playbacks.deleted_at IS NOT NULL)");
 
 /// The statement behind [`RELINKED_DUPLICATES_SQL`], for a window given as SQL: a parameter here, and in the migration
-/// that swept every install once, the merge window read from the settings. One text, so the two cannot drift.
+/// that swept every install once, the merge window read from the settings.
+///
+/// A row FinStats saw itself (from the collector, with no import id; a restored one carries [`restored_id`]) is never
+/// dropped and is kept over any other. Migration 26's text is kept as it was released, from before restored rows were told apart.
 #[macro_export]
 macro_rules! relinked_duplicates_sql {
     // Migration 26's form, which must expand exactly as it did when it was released.
     ($window:literal) => {
-        $crate::relinked_duplicates_sql!($window, "")
-    };
-    // `$keeper` narrows which rows may stand for a duplicate, `k` being the one kept and `playbacks` the one dropped.
-    ($window:literal, $keeper:literal) => {
         concat!(
             "DELETE FROM playbacks WHERE source <> 'live' AND (
     EXISTS (SELECT 1 FROM playbacks k
              WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
                AND k.started_at BETWEEN playbacks.started_at - ", $window, " AND playbacks.started_at + ", $window, "
-               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id)", $keeper, ")
+               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id)", "", ")
     OR EXISTS (SELECT 1 FROM playbacks k
              WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
                AND k.ended_at BETWEEN playbacks.ended_at - ", $window, " AND playbacks.ended_at + ", $window, "
-               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id)", $keeper, "))"
+               AND k.source <> playbacks.source AND (k.source = 'live' OR k.id < playbacks.id)", "", "))"
         )
     };
+    // `$keeper` narrows which rows may stand for a duplicate, `k` being the one kept and `playbacks` the one dropped.
+    ($window:literal, $keeper:literal) => {
+        concat!(
+            "DELETE FROM playbacks WHERE (source <> 'live' OR source_id IS NOT NULL) AND (
+    EXISTS (SELECT 1 FROM playbacks k
+             WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
+               AND k.started_at BETWEEN playbacks.started_at - ", $window, " AND playbacks.started_at + ", $window, "
+               AND k.source <> playbacks.source AND ((k.source = 'live' AND k.source_id IS NULL) OR k.id < playbacks.id)", $keeper, ")
+    OR EXISTS (SELECT 1 FROM playbacks k
+             WHERE k.user_id = playbacks.user_id AND k.item_id = playbacks.item_id
+               AND k.ended_at BETWEEN playbacks.ended_at - ", $window, " AND playbacks.ended_at + ", $window, "
+               AND k.source <> playbacks.source AND ((k.source = 'live' AND k.source_id IS NULL) OR k.id < playbacks.id)", $keeper, "))"
+        )
+    };
+}
+
+/// The import id a restored play FinStats' own collector once recorded is given: the same person's same two seconds,
+/// which is what the history already matches such a play by. A play FinStats saw itself is the collector's source with
+/// no import id (`source = 'live' AND source_id IS NULL`), and only that opens its item's picture or stands for a
+/// duplicate. A restored one says it was seen, and the file could say anything: with this id it counts as imported.
+pub fn restored_id(user_id: &str, started_at: i64, ended_at: i64) -> String {
+    format!("restored:{user_id}:{started_at}:{ended_at}")
 }
 
 /// One thing that happened during a play (pause, skip, track switch…).

@@ -1161,7 +1161,7 @@ mod tests {
 
     /// The reads of `playbacks` that are about identity, not history, and so see the trash. Each is the table on
     /// purpose; everything else reads `visible_playbacks`, or says `deleted_at` itself. (file, a phrase of the SQL, why)
-    const IDENTITY_READS: [(&str, &str, &str); 14] = [
+    const IDENTITY_READS: [(&str, &str, &str); 15] = [
         ("playback.rs", "SELECT 1 FROM playbacks WHERE source_id = ?1", "a file imported again is recognised by its id, trash included, or it comes back"),
         ("playback.rs", "SELECT 1 FROM playbacks WHERE user_id = ?1 AND item_id = ?2 AND started_at = ?3", "the same play from another tracker is that play, trash included"),
         ("relink.rs", "WITH RECURSIVE t(id)", "plays in the trash move with their title, so an undo lands on the right item"),
@@ -1175,6 +1175,7 @@ mod tests {
         ("sync.rs", "SELECT EXISTS(SELECT 1 FROM playbacks)", "a backup holds the trash too, so the trash alone is something to back up"),
         ("playback.rs", "DELETE FROM playbacks WHERE source <> 'live' AND ( EXISTS (SELECT 1 FROM playbacks k", "duplicates are found across the trash; the caller says which rows may stand for one"),
         ("playback.rs", ") OR EXISTS (SELECT 1 FROM playbacks k WHERE k.user_id = playbacks.user_id", "the same rule's other end"),
+        ("playback.rs", "DELETE FROM playbacks WHERE (source <> 'live' OR source_id IS NOT NULL) AND ( EXISTS (SELECT 1 FROM playbacks k", "the same rule, which tells a restored play from one seen here"),
         ("stats.rs", "SELECT user_id FROM playbacks WHERE id = ?1", "whose play is moved to the trash or back out of it, and one in the trash is still theirs"),
     ];
 

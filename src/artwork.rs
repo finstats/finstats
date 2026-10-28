@@ -58,13 +58,14 @@ pub fn tag_of(c: &Connection, pic: Picture, id: &str) -> Result<Option<String>> 
 /// show (a channel, or a title the library has not been read for yet) for the primary picture and the backdrop; a person
 /// who signs in for theirs. Any other id would be fetched from Jellyfin with the administrator's key, which reaches
 /// every library, those FinStats never reads included. A play counts only when FinStats saw it: an imported one's id is
-/// whatever the file said, and counts once a library read has seen it.
+/// whatever the file said, and counts once a library read has seen it. A restored one is imported too, whatever it says
+/// (`playback::restored_id`).
 pub fn known(c: &Connection, pic: Picture, id: &str) -> Result<bool> {
     let sql = match pic {
         Picture::Primary | Picture::Backdrop => {
             "SELECT EXISTS(SELECT 1 FROM items WHERE id = ?1) OR EXISTS(SELECT 1 FROM item_people WHERE person_id = ?1)
-                 OR EXISTS(SELECT 1 FROM libraries WHERE id = ?1) OR EXISTS(SELECT 1 FROM visible_playbacks WHERE item_id = ?1 AND source = 'live')
-                 OR EXISTS(SELECT 1 FROM visible_playbacks WHERE series_id = ?1 AND source = 'live')"
+                 OR EXISTS(SELECT 1 FROM libraries WHERE id = ?1) OR EXISTS(SELECT 1 FROM visible_playbacks WHERE item_id = ?1 AND source = 'live' AND source_id IS NULL)
+                 OR EXISTS(SELECT 1 FROM visible_playbacks WHERE series_id = ?1 AND source = 'live' AND source_id IS NULL)"
         }
         Picture::User => "SELECT EXISTS(SELECT 1 FROM users WHERE id = ?1)",
     };

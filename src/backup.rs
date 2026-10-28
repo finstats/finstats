@@ -452,10 +452,23 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
             // A play from no time a server ran at, or one that ends before it starts, is no play: the bound an import keeps.
             "playbacks" if !at_a_real_time(row, &["started_at", "ended_at"]) || row.get("started_at").and_then(Value::as_i64) > row.get("ended_at").and_then(Value::as_i64) => {}
             "playbacks" => {
+                let mut row = row.clone();
+                // A play FinStats saw itself keeps its source, and an id that says it was restored: only a play this
+                // install saw opens its item's picture or stands for a duplicate (`playback::restored_id`).
+                let source = row.get("source").and_then(Value::as_str).unwrap_or(crate::collector::SOURCE).to_string();
+                if source == crate::collector::SOURCE {
+                    let restored = crate::playback::restored_id(
+                        row.get("user_id").and_then(Value::as_str).unwrap_or_default(),
+                        row.get("started_at").and_then(Value::as_i64).unwrap_or_default(),
+                        row.get("ended_at").and_then(Value::as_i64).unwrap_or_default(),
+                    );
+                    row.insert("source".into(), json!(source));
+                    row.insert("source_id".into(), json!(restored));
+                }
                 let exists = crate::playback::already_recorded(
                     &tx,
                     crate::playback::Play {
-                        source: row.get("source").and_then(Value::as_str).unwrap_or("live"),
+                        source: &source,
                         source_id: row.get("source_id").and_then(Value::as_str),
                         user_id: row.get("user_id").and_then(Value::as_str).unwrap_or_default(),
                         item_id: row.get("item_id").and_then(Value::as_str).unwrap_or_default(),
@@ -469,7 +482,6 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     continue;
                 }
                 // Nothing restored is still playing, and who watched together is worked out again afterwards.
-                let mut row = row.clone();
                 row.insert("active".into(), json!(0));
                 if insert_row(&tx, "playbacks", &known["playbacks"], &row, &["id", "group_id"], "INSERT")? {
                     if let Some(old) = row.get("id").and_then(Value::as_i64) {
@@ -1078,6 +1090,35 @@ mod tests {
         assert_eq!(n("SELECT COUNT(*) FROM located WHERE to_id = 'empire'"), 1);
         assert_eq!(n("SELECT COUNT(*) FROM playbacks"), 1, "a play from no real time came back");
         assert_eq!(n("SELECT COUNT(*) FROM playback_events"), crate::playback::EVENTS_PER_PLAY as i64);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// A play FinStats saw itself counts for more than an imported one: its item's picture may be fetched, and it is
+    /// never the one taken out as a duplicate. A restored play only says it was seen; it counts as imported, so a file
+    /// cannot name an item of a library FinStats never reads, or put a title in somebody's history for good.
+    #[test]
+    fn a_restored_play_counts_as_imported_however_it_says_it_was_seen() {
+        let now = db::now();
+        let unknown = "0badc0de0badc0de0badc0de0badc0de";
+        let (tmp, target, file) = restoring("backup-restored-live", &[
+            json!({ "finstats_backup": FORMAT, "app_version": "2.3.1" }),
+            json!({ "t": "playbacks", "r": { "id": 1, "source": "live", "user_id": "u1", "user_name": "alice", "item_id": unknown, "item_name": "Anything",
+                "item_type": "Movie", "started_at": now - 7200, "ended_at": now - 6600, "duration_s": 600 } }),
+            json!({ "t": "playbacks", "r": { "id": 2, "source": "live", "user_id": "u1", "user_name": "alice", "item_id": "i1", "item_name": "Big Buck Bunny",
+                "item_type": "Movie", "started_at": now - 3600, "ended_at": now - 3000, "duration_s": 600 } }),
+        ]);
+        let c = target.conn().unwrap();
+        // An import that holds the second play already, under the title it was renamed to.
+        c.execute("INSERT INTO playbacks(source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES ('jellystat', 'jellystat:1', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', ?1, ?2, 600)",
+            [now - 3590, now - 3000]).unwrap();
+        c.execute("UPDATE playbacks SET item_id = 'i0' WHERE source_id = 'jellystat:1'", []).unwrap();
+        assert_eq!(restore(&target, &file, false, None).unwrap().plays_imported, 2);
+        assert!(!crate::artwork::known(&c, crate::artwork::Picture::Primary, unknown).unwrap(), "a restored play opened the picture proxy");
+        c.execute("UPDATE playbacks SET item_id = 'i1' WHERE source_id = 'jellystat:1'", []).unwrap();
+        assert_eq!(crate::playback::drop_relinked_duplicates(&c, 600, "i1").unwrap(), 1);
+        let left: String = c.query_row("SELECT COALESCE(source_id, 'live') FROM playbacks WHERE item_id = 'i1'", [], |r| r.get(0)).unwrap();
+        assert_eq!(left, "jellystat:1", "the older import stands for the evening, not the restored row");
+        assert_eq!(restore(&target, &file, false, None).unwrap().plays_imported, 0, "restoring again doubled a play");
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
