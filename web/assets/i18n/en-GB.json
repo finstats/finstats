@@ -2140,6 +2140,7 @@
     },
     "downloads": {
       "no_answer": "{name} did not answer in time",
+      "problem": { "timeout": "did not answer in time", "refused": "refused the API key", "failed": "could not be read" },
       "season": "Season {season}",
       "episodes": { "one": "{count} episode", "other": "{count} episodes" },
       "season_episodes": { "one": "Season {season} · {count} episode", "other": "Season {season} · {count} episodes" },

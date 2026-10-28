@@ -356,7 +356,7 @@ pub fn refuse(status: StatusCode, headers: &HeaderMap, svc: &Service) -> anyhow:
     if status.is_redirection() {
         let to: Option<String> = headers.get(LOCATION).and_then(|v| v.to_str().ok()).map(|to| to.chars().filter(|c| !c.is_control()).take(200).collect());
         return match to {
-            Some(to) => words("server.services.redirect", vec![("url", url), ("to", to)]),
+            Some(to) => words("server.services.redirect", vec![("url", url), ("to", crate::downloads::redact(&to))]),
             None => words("server.services.redirect_elsewhere", vec![("url", url)]),
         };
     }
@@ -780,7 +780,7 @@ async fn changed(app: &App) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     /// An answer is read no further than the most it may be, counted after it is unpacked: a few kilobytes of gzip from a
@@ -829,7 +829,7 @@ mod tests {
         assert!(tokio::time::timeout(Duration::from_secs(1), listener.accept()).await.is_ok());
     }
 
-    fn service(kind: Kind, url: &str) -> Service {
+    pub(crate) fn service(kind: Kind, url: &str) -> Service {
         Service { id: 1, kind, name: kind.label().into(), url: url.into(), username: None, secret: "hunter2-secret-key".into(), accept_invalid_certs: false, enabled: true }
     }
 

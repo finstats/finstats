@@ -635,6 +635,21 @@ pub fn watched(app: &App, now: i64) -> bool {
     wake
 }
 
+/// Why a service's queue could not be read, as `viewer` may be told it. The service's own words name its address, and a
+/// redirect where it points: those are an administrator's, as the connection list is. Anybody else who may see the queue
+/// is told what kind of failure it was.
+fn problem_for(why: &services::Said, viewer: &crate::auth::AuthUser) -> String {
+    if viewer.is_admin {
+        return why.now();
+    }
+    let key = match why {
+        services::Said::Words(w) if matches!(w.key(), "server.services.timeout" | "server.downloads.no_answer") => "server.downloads.problem.timeout",
+        services::Said::Words(w) if w.key() == "server.services.key_refused" => "server.downloads.problem.refused",
+        _ => "server.downloads.problem.failed",
+    };
+    crate::i18n::t(key, &[])
+}
+
 /// `/downloads` as it is answered, by HTTP or by the live channel. The same for everybody who may see it.
 pub fn answer(app: &App, viewer: &crate::auth::AuthUser) -> Value {
     let snap = app.downloads.read().unwrap().clone();
@@ -644,7 +659,7 @@ pub fn answer(app: &App, viewer: &crate::auth::AuthUser) -> Value {
         "rows": snap.rows.iter().map(|d| download_json(d, &wishes, viewer)).collect::<Vec<_>>(),
         "totals": { "down_bps": t.down_bps, "downloading": t.downloading, "queued": t.queued, "importing": t.importing, "failed": t.failed },
         "at": snap.at, "sources": snap.sources,
-        "problems": snap.problems.iter().map(|(name, why)| json!({ "service": name, "error": why.now() })).collect::<Vec<_>>(),
+        "problems": snap.problems.iter().map(|(name, why)| json!({ "service": name, "error": problem_for(why, viewer) })).collect::<Vec<_>>(),
     })
 }
 
@@ -691,6 +706,26 @@ mod tests {
             json!({ "rows": [], "totals": { "down_bps": 0, "downloading": 0, "queued": 0, "importing": 0, "failed": 0 },
                     "at": 42, "sources": 2, "problems": [{ "service": "Radarr", "error": "timed out" }] })
         );
+    }
+
+    /// A connection's address and where it redirects are an administrator's to read: seeing the queue is seeing what is
+    /// downloading. Anybody else is told which service and what kind of failure; the redirect is blanked for everybody.
+    #[test]
+    fn a_queue_problem_names_the_service_and_never_its_address_to_who_is_not_an_administrator() {
+        let svc = crate::services::tests::service(Kind::Sonarr, "http://127.0.0.1:9332/sonarr");
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(axum::http::header::LOCATION, "https://sso.lan.example/oauth/authorize?state=1&apikey=leaked".parse().unwrap());
+        let redirect = services::Said::of(&services::refuse(axum::http::StatusCode::FOUND, &headers, &svc));
+        let down = services::Said::of(&services::words("server.services.timeout", vec![("service", "Radarr".into()), ("url", "http://127.0.0.1:7878".into())]));
+        let app = crate::state::test_app();
+        *app.downloads.write().unwrap() = Arc::new(Snapshot { problems: vec![("Sonarr".into(), redirect), ("Radarr".into(), down)], ..Default::default() });
+        let viewer = |is_admin: bool| crate::auth::AuthUser { id: "u1".into(), name: "alice".into(), is_admin, perms: crate::auth::Perms { see_downloads: true, ..Default::default() }, credential: crate::auth::Credential::Session, ip: None };
+        let said = answer(&app, &viewer(false))["problems"].to_string();
+        assert!(!said.contains("127.0.0.1") && !said.contains("sso.lan.example") && !said.contains("leaked"), "{said}");
+        assert!(said.contains("Sonarr") && said.contains("Radarr"), "{said}");
+        let admin = answer(&app, &viewer(true))["problems"].to_string();
+        assert!(admin.contains("127.0.0.1"), "an administrator reads the address they set: {admin}");
+        assert!(!admin.contains("leaked"), "the redirect's key, even to an administrator: {admin}");
     }
 
     #[test]

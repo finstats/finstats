@@ -2141,6 +2141,7 @@
     },
     "downloads": {
       "no_answer": "{name} svarte ikkje i tide",
+      "problem": { "timeout": "svarte ikkje i tide", "refused": "avviste API-nøkkelen", "failed": "kunne ikkje lesast" },
       "season": "Sesong {season}",
       "episodes": { "one": "{count} episode", "other": "{count} episodar" },
       "season_episodes": { "one": "Sesong {season} · {count} episode", "other": "Sesong {season} · {count} episodar" },
