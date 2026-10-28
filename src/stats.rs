@@ -1132,21 +1132,29 @@ fn library_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<
     let (libraries, libraries_args) = scope.access.libraries_sql("l");
     let (titles, titles_args) = scope.access.items_sql("items");
     // In the order the statement reads them: its titles, its plays (the scope's own first), the library.
+    // A removed library is listed by its history: for whoever may see only themselves, their own.
+    let whose = if scope.perms.see_everyone { None } else { scope.user_ids.first() };
     let mut args: Vec<SqlValue> = only.map(|id| id.to_string().into()).into_iter().collect();
     args.extend(titles_args);
     args.extend(cond.args.iter().cloned());
-    if let Some(id) = only {
-        args.extend([id.to_string().into(), id.to_string().into()]);
+    match only {
+        Some(id) => args.extend([id.to_string().into(), id.to_string().into()]),
+        None => args.extend(whose.map(|u| u.clone().into())),
     }
     args.extend(libraries_args);
-    let sql = library_rows_sql(&cond.sql(), only.is_some()).replace("{SEEN_TITLES}", &titles).replace("{SEEN_LIBRARIES}", &libraries);
+    let sql = library_rows_sql(&cond.sql(), only.is_some(), whose.is_some()).replace("{SEEN_TITLES}", &titles).replace("{SEEN_LIBRARIES}", &libraries);
     Ok(rows_json(conn, &sql, &args)?.into_iter().map(Value::Object).collect())
 }
 
-fn library_rows_sql(cond: &str, one: bool) -> String {
+fn library_rows_sql(cond: &str, one: bool, own_history: bool) -> String {
     // A library that was deleted in Jellyfin and never had a single play is just noise in the list.
-    // (It stays reachable by id, and one with history stays listed, marked as removed.)
-    let filter = if one { "WHERE l.id = ?" } else { "WHERE (l.removed = 0 OR EXISTS (SELECT 1 FROM visible_playbacks x WHERE x.library_id = l.id))" };
+    // (It stays reachable by id, and one with history stays listed, marked as removed.) With `own_history`, the history
+    // is one person's, the last argument.
+    let filter = match (one, own_history) {
+        (true, _) => "WHERE l.id = ?",
+        (false, false) => "WHERE (l.removed = 0 OR EXISTS (SELECT 1 FROM visible_playbacks x WHERE x.library_id = l.id))",
+        (false, true) => "WHERE (l.removed = 0 OR EXISTS (SELECT 1 FROM visible_playbacks x WHERE x.library_id = l.id AND x.user_id = ?))",
+    };
     // One library's page reads its own titles and plays: a subquery is not narrowed by the WHERE outside it.
     let (its_items, its_plays) = match (one, cond.is_empty()) {
         (false, _) => ("", ""),
@@ -3169,6 +3177,23 @@ mod tests {
         }
     }
 
+    /// A library removed from Jellyfin stays listed while it has history; that it had any was read from everybody's
+    /// plays, so somebody who may see only themselves was told of a library only other people had played from.
+    #[test]
+    fn a_removed_library_is_listed_to_who_sees_only_themselves_by_their_own_plays() {
+        let c = conn();
+        c.execute_batch(
+            "INSERT INTO libraries(id, name, collection_type, removed, updated_at) VALUES ('l1', 'Films', 'movies', 1, 0), ('l2', 'Home videos', 'homevideos', 1, 0);
+             INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, library_id, started_at, ended_at, duration_s) VALUES
+               ('live', 'u1', 'alice', 'f1', 'Big Buck Bunny', 'Movie', 'l1', 100, 700, 600), ('live', 'u2', 'bob', 'v1', 'Holiday', 'Video', 'l2', 800, 1100, 300);",
+        )
+        .unwrap();
+        let names = |scope: &Scope| -> Vec<String> { library_rows(&c, scope, None).unwrap().iter().map(|r| r["name"].as_str().unwrap().to_string()).collect() };
+        let alice = Scope { user_ids: vec!["u1".into()], perms: crate::auth::Perms { see_everyone: false, ..Default::default() }, ..everyone() };
+        assert_eq!(names(&alice), ["Films"], "bob's plays told alice of a library she never played from");
+        assert_eq!(names(&everyone()).len(), 2);
+    }
+
     /// One library's row reads only that library's titles and plays: its page counted every library's and kept one.
     #[test]
     fn one_librarys_row_reads_only_its_own() {
@@ -3176,7 +3201,7 @@ mod tests {
         // Whoever asks: somebody kept to some libraries, with titles hidden from them, reads by the same index.
         c.execute_batch("INSERT INTO users(id, name, is_admin, updated_at, access_all, access_libraries, access_hides, visible_for) VALUES ('kid', 'kid', 0, 0, 0, '[\"l1\"]', 'r', 'r');").unwrap();
         for access in [crate::access::Access::everything(), crate::access::Access::of(&c, "kid", false).unwrap()] {
-            let sql = library_rows_sql("", true).replace("{SEEN_TITLES}", &access.items_sql("items").0).replace("{SEEN_LIBRARIES}", &access.libraries_sql("l").0);
+            let sql = library_rows_sql("", true, false).replace("{SEEN_TITLES}", &access.items_sql("items").0).replace("{SEEN_LIBRARIES}", &access.libraries_sql("l").0);
             let mut stmt = c.prepare(&format!("EXPLAIN QUERY PLAN {sql}")).unwrap();
             let unbound = vec![crate::db::rusqlite::types::Value::Null; stmt.parameter_count()];
             let plan: Vec<String> = stmt.query_map(params_from_iter(unbound), |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
