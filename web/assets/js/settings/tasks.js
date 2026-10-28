@@ -153,7 +153,7 @@ function taskView(slot, store, id) {
 
   async function save(triggers) {
     err = null;
-    try { await api.put(`/tasks/${id}/triggers`, { triggers }); }
+    try { await api.put(`/tasks/${encodeURIComponent(id)}/triggers`, { triggers }); }
     catch (e) { err = e.message; }
     await store.poke(2000);
     paint(true);
@@ -184,7 +184,7 @@ function taskView(slot, store, id) {
     const reset = mine && t.custom ? button({ variant: 'ghost', type: 'button' }, tr('settings.tasks.reset')) : null;
     if (reset) reset.addEventListener('click', async () => {
       setBusy(reset, true, tr('settings.tasks.resetting')); err = null;
-      try { await api.del(`/tasks/${id}/triggers`); } catch (e) { err = e.message; }
+      try { await api.del(`/tasks/${encodeURIComponent(id)}/triggers`); } catch (e) { err = e.message; }
       await store.poke(2000); paint(true);
     });
     const list = t.triggers.length

@@ -11,7 +11,7 @@ import { t, tParts } from '../i18n.js';
 const typeLabel = (type) => (type === 'Movie' || type === 'Series' ? t(`item_type.${type}`) : type);
 
 // Shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
-const loadPerson = (id, days, signal) => api.get(`/people/${id}`, { days }, { signal });
+const loadPerson = (id, days, signal) => api.get(`/people/${encodeURIComponent(id)}`, { days }, { signal });
 export const prefetchPerson = ({ params, query, signal }) => [() => loadPerson(params.id, readDays(query), signal)];
 
 export default function personPage(ctx) {

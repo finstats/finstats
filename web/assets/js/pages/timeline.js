@@ -24,7 +24,7 @@ function pickedOf(query) {
   return picked.size ? picked : null;
 }
 const pageParams = (picked, extra = {}) => ({ ...(picked ? { libraries: [...picked].join(',') } : {}), ...extra });
-const loadTimeline = (id, picked, signal) => api.get(`/users/${id}/timeline`, pageParams(picked), { signal });
+const loadTimeline = (id, picked, signal) => api.get(`/users/${encodeURIComponent(id)}/timeline`, pageParams(picked), { signal });
 export const prefetchTimeline = ({ params, query, signal }) => [() => loadTimeline(params.id, pickedOf(query), signal)];
 
 export function timelinePage(ctx) {
@@ -97,7 +97,7 @@ export function timelinePage(ctx) {
       busy = true;
       more.setAttribute('aria-busy', 'true');
       try {
-        const d = await api.get(`/users/${id}/timeline`, params({ before: next }), { signal: ctx.signal });
+        const d = await api.get(`/users/${encodeURIComponent(id)}/timeline`, params({ before: next }), { signal: ctx.signal });
         next = d.next;
         trail.add(d.stops, !next);
         paintFoot();

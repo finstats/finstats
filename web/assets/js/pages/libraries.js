@@ -32,7 +32,7 @@ function libraryArt(l, w, cls, fallback = null) {
 
 // Loaders are shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
 const loadLibraries = (days, signal) => api.get('/libraries', { days }, { signal });
-const loadLibrary = (id, days, signal) => api.get(`/libraries/${id}`, { days }, { signal });
+const loadLibrary = (id, days, signal) => api.get(`/libraries/${encodeURIComponent(id)}`, { days }, { signal });
 // `libraries` is the comma list the make-up's picker holds; empty is every library.
 const loadMakeup = (libraries, signal) => soft(api.get('/library/insights', libraries ? { library_id: libraries } : null, { signal }));
 // The make-up picker's choice is in the address (`?libraries=a,b`); a library's own page starts on that library, so there

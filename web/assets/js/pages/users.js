@@ -18,7 +18,7 @@ const loadUsers = (days, signal) => api.get('/users', { days }, { signal });
 async function loadUser(id, days, signal) {
   const o = { signal };
   const [detail, recent, groups] = await Promise.all([
-    api.get(`/users/${id}`, { days }, o),
+    api.get(`/users/${encodeURIComponent(id)}`, { days }, o),
     api.get('/activity', { days, user_id: id, page: 1, per_page: 10 }, o),
     soft(api.get('/stats/groups', { days, user_id: id }, o)),
   ]);

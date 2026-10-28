@@ -19,7 +19,7 @@ const typeLabel = (type) => (TYPED.has(type) ? t(`item_type.${type}`) : type);
 // Shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
 async function loadItem(id, days, signal) {
   const o = { signal };
-  const d = await api.get(`/items/${id}`, { days }, o);
+  const d = await api.get(`/items/${encodeURIComponent(id)}`, { days }, o);
   const key = d.item.type === 'Series' ? 'series_id' : 'item_id';
   const recent = await api.get('/activity', { days, [key]: id, page: 1, per_page: 10 }, o);
   return { d, recent, key };

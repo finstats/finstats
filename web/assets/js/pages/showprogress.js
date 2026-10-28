@@ -58,7 +58,7 @@ export function profileAllTime({ userId, signal }) {
 
   async function load(first) {
     if (first) { mount(tiles, sk.tiles(3)); mount(showsEl, sk.cardRows(4)); }
-    try { data = await api.get(`/users/${userId}/shows`, null, { signal }); paint(); }
+    try { data = await api.get(`/users/${encodeURIComponent(userId)}/shows`, null, { signal }); paint(); }
     catch (e) { if (isAbort(e) || e.status === 401) return; if (first) { mount(tiles, ''); mount(showsEl, errorState(e, () => load(true))); } }
   }
 

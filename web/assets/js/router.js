@@ -19,6 +19,10 @@ export function route(pattern, page, opts = {}) {
 export function setLayout(fn) { layoutFn = fn; }
 export function onRouteChange(fn) { listeners.add(fn); }
 
+// A parameter is one segment of an address, and pages put it into an API path: decoded to a separator, a `.` or `..`, or
+// the start of a query or a fragment, it would reach another endpoint than the page's own ("/items/..%2Fbackups").
+const PATHLIKE = /[/\\?#]|^\.\.?$/;
+
 function match(pathname) {
   for (const r of routes) {
     const m = r.re.exec(pathname);
@@ -26,6 +30,7 @@ function match(pathname) {
       const params = {};
       // A broken %-escape ("/items/%ZZ") is an address nothing lives at, not a reason to stop drawing pages.
       try { r.keys.forEach((k, i) => { params[k] = decodeURIComponent(m[i + 1]); }); } catch { continue; }
+      if (Object.values(params).some((v) => PATHLIKE.test(v))) continue;
       return { route: r, params };
     }
   }
