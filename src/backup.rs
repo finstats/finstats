@@ -303,6 +303,23 @@ fn sql_value(v: &Value) -> SqlValue {
 }
 
 /// Insert one row by column name. Columns this database does not have are dropped; returns whether a row went in.
+/// A restored person's grants: the backup's where there are none here, else those that both here and the backup hold.
+fn narrow_grants(conn: &Connection, known: &HashSet<String>, row: &Map<String, Value>) -> Result<bool> {
+    use crate::db::rusqlite::OptionalExtension;
+    let Some(user) = row.get("user_id").and_then(Value::as_str) else { return Ok(false) };
+    let here: Option<String> = conn.query_row("SELECT permissions FROM user_permissions WHERE user_id = ?1", [user], |r| r.get(0)).optional()?;
+    let Some(here) = here else { return insert_row(conn, "user_permissions", known, row, &[], "INSERT") };
+    let list = |s: &str| serde_json::from_str::<Vec<String>>(s).unwrap_or_default();
+    let theirs = list(row.get("permissions").and_then(Value::as_str).unwrap_or("[]"));
+    let mine = list(&here);
+    let both: Vec<&String> = mine.iter().filter(|p| theirs.contains(p)).collect();
+    if both.len() == mine.len() {
+        return Ok(false);
+    }
+    conn.execute("UPDATE user_permissions SET permissions = ?2 WHERE user_id = ?1", crate::db::rusqlite::params![user, serde_json::to_string(&both)?])?;
+    Ok(true)
+}
+
 fn insert_row(conn: &Connection, table: &str, known: &HashSet<String>, row: &Map<String, Value>, skip: &[&str], verb: &str) -> Result<bool> {
     let cols: Vec<&String> = row.keys().filter(|k| known.contains(*k) && !skip.contains(&k.as_str())).collect();
     if cols.is_empty() {
@@ -405,8 +422,11 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     res.events += 1;
                 }
             }
+            // A restore may take a grant away and never gives one back: somebody with grants here keeps those the backup
+            // also has; what was taken away since the backup was made stays taken away. Somebody without any gets the
+            // backup's.
             "user_permissions" => {
-                if with_settings && insert_row(&tx, table, &known["user_permissions"], row, &[], "INSERT OR REPLACE")? {
+                if with_settings && narrow_grants(&tx, &known["user_permissions"], row)? {
                     res.other_rows += 1;
                 }
             }
@@ -697,6 +717,16 @@ mod tests {
         assert_eq!(n("SELECT COUNT(*) FROM api_keys"), 0, "a key never arrives with a backup");
         assert_eq!(n("SELECT COUNT(*) FROM user_permissions"), 1);
         assert_eq!(Settings::load(&c).unwrap().min_play_s, 42);
+        // A grant taken away since the backup was made stays taken away: last month's backup gave every one back.
+        c.execute("UPDATE user_permissions SET permissions = '[]' WHERE user_id = 'u2'", []).unwrap();
+        restore(&target, &file, true, None).unwrap();
+        let grants: String = c.query_row("SELECT permissions FROM user_permissions WHERE user_id = 'u2'", [], |r| r.get(0)).unwrap();
+        assert_eq!(grants, "[]", "a restore gave back a grant taken away");
+        // It may still take one away, as a change in Settings would: a grant given since is not in the backup.
+        c.execute("UPDATE user_permissions SET permissions = '[\"see_everyone\",\"manage\"]' WHERE user_id = 'u2'", []).unwrap();
+        restore(&target, &file, true, None).unwrap();
+        let grants: String = c.query_row("SELECT permissions FROM user_permissions WHERE user_id = 'u2'", [], |r| r.get(0)).unwrap();
+        assert_eq!(grants, "[\"see_everyone\"]", "a restore narrows to what both say");
 
         // Without settings: history only.
         let plain = Db::open(&tmp.join("plain.db")).unwrap();

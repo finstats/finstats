@@ -1033,7 +1033,7 @@ async fn put_user_permissions(State(app): State<App>, JellyfinAdmin(user): Jelly
 
 #[derive(Deserialize)]
 struct RestoreQuery {
-    /// Also restore settings and permissions (default: yes).
+    /// Also restore settings and permissions (default: no, so a restore never brings a setting or a grant back unasked).
     settings: Option<bool>,
 }
 
@@ -1164,7 +1164,7 @@ async fn restore_stored(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
     let Some(held) = Running::start(&app, "restore", &i18n::t("server.api.reading_backup", &[])) else {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.restore_running", &[])));
     };
-    spawn_restore(&app, held, path, q.settings.unwrap_or(true), false, Actor::from(&user), name);
+    spawn_restore(&app, held, path, q.settings.unwrap_or(false), false, Actor::from(&user), name);
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
@@ -1204,7 +1204,7 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
             return Err(ApiError::bad_request(msg));
         }
     }
-    spawn_restore(&app, held, path, q.settings.unwrap_or(true), true, Actor::from(&user), "upload".into());
+    spawn_restore(&app, held, path, q.settings.unwrap_or(false), true, Actor::from(&user), "upload".into());
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
