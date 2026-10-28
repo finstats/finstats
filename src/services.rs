@@ -372,7 +372,7 @@ const KEY_REFUSED: &str = "server.services.key_refused";
 
 /// `GET` on Sonarr, Radarr or Seerr. The key is a header; the query never carries it.
 /// The most a service's JSON answer may be, unpacked. The largest real one (a whole Sonarr library) is a few megabytes.
-pub const JSON_MAX: usize = 64 << 20;
+pub const JSON_MAX: usize = 16 << 20;
 
 /// An answer's body, read no further than `cap` bytes as unpacked: `None` past it. A service that went wrong (or
 /// anybody between, on a connection that takes any certificate) could otherwise answer gigabytes, or a little gzip
@@ -388,14 +388,137 @@ pub async fn body_at_most(mut resp: reqwest::Response, cap: usize) -> reqwest::R
     Ok(Some(out))
 }
 
+/// How much of an answer is read, and how much is built from it. Bytes alone bound nothing: `{}` is two bytes and a value
+/// of its own, so a few kilobytes of gzip under the byte cap were millions of records and gigabytes of memory.
+#[derive(Clone, Copy)]
+pub struct Limits {
+    /// The body, unpacked.
+    pub bytes: usize,
+    /// The most of any one list that is kept; the rest is read past without being built.
+    pub items: usize,
+    /// The most values the whole answer may hold, or it is refused.
+    pub nodes: usize,
+}
+
+impl Limits {
+    /// Calendars, histories, requests and a title looked up. An old Sonarr answers a title's look-up with its whole
+    /// library, a few thousand series of a few hundred values each.
+    pub const READ: Limits = Limits { bytes: JSON_MAX, items: 20_000, nodes: 2_000_000 };
+}
+
+/// JSON read within `limits` (`bytes` aside, which is the reader's). Every list keeps its first `items` and skips the
+/// rest without building them, and more than `nodes` values in all is an error.
+pub fn parse_within(bytes: &[u8], limits: Limits) -> serde_json::Result<Value> {
+    use serde::de::DeserializeSeed;
+    let budget = Budget { items: limits.items, nodes: std::cell::Cell::new(limits.nodes) };
+    let mut de = serde_json::Deserializer::from_slice(bytes);
+    let value = Node(&budget).deserialize(&mut de)?;
+    de.end()?;
+    Ok(value)
+}
+
+struct Budget {
+    items: usize,
+    nodes: std::cell::Cell<usize>,
+}
+
+/// One value of an answer being read, paid for out of the budget before it is built.
+struct Node<'a>(&'a Budget);
+
+impl Node<'_> {
+    fn pay<E: serde::de::Error>(&self) -> std::result::Result<(), E> {
+        let left = self.0.nodes.get();
+        if left == 0 {
+            return Err(E::custom("the answer holds more than FinStats reads"));
+        }
+        self.0.nodes.set(left - 1);
+        Ok(())
+    }
+}
+
+impl<'de> serde::de::DeserializeSeed<'de> for Node<'_> {
+    type Value = Value;
+    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> std::result::Result<Value, D::Error> {
+        d.deserialize_any(self)
+    }
+}
+
+impl<'de> serde::de::Visitor<'de> for Node<'_> {
+    type Value = Value;
+    fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_str("JSON")
+    }
+    fn visit_bool<E: serde::de::Error>(self, v: bool) -> std::result::Result<Value, E> {
+        self.pay()?;
+        Ok(Value::Bool(v))
+    }
+    fn visit_i64<E: serde::de::Error>(self, v: i64) -> std::result::Result<Value, E> {
+        self.pay()?;
+        Ok(Value::from(v))
+    }
+    fn visit_u64<E: serde::de::Error>(self, v: u64) -> std::result::Result<Value, E> {
+        self.pay()?;
+        Ok(Value::from(v))
+    }
+    fn visit_f64<E: serde::de::Error>(self, v: f64) -> std::result::Result<Value, E> {
+        self.pay()?;
+        Ok(serde_json::Number::from_f64(v).map_or(Value::Null, Value::Number))
+    }
+    fn visit_str<E: serde::de::Error>(self, v: &str) -> std::result::Result<Value, E> {
+        self.pay()?;
+        Ok(Value::String(v.to_string()))
+    }
+    fn visit_string<E: serde::de::Error>(self, v: String) -> std::result::Result<Value, E> {
+        self.pay()?;
+        Ok(Value::String(v))
+    }
+    fn visit_unit<E: serde::de::Error>(self) -> std::result::Result<Value, E> {
+        self.pay()?;
+        Ok(Value::Null)
+    }
+    fn visit_none<E: serde::de::Error>(self) -> std::result::Result<Value, E> {
+        self.visit_unit()
+    }
+    fn visit_seq<A: serde::de::SeqAccess<'de>>(self, mut seq: A) -> std::result::Result<Value, A::Error> {
+        self.pay()?;
+        let mut kept = vec![];
+        while kept.len() < self.0.items {
+            match seq.next_element_seed(Node(self.0))? {
+                Some(v) => kept.push(v),
+                None => return Ok(Value::Array(kept)),
+            }
+        }
+        // Past the most that is kept: read, never built.
+        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+        Ok(Value::Array(kept))
+    }
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> std::result::Result<Value, A::Error> {
+        self.pay()?;
+        let mut kept = serde_json::Map::new();
+        while let Some(key) = map.next_key::<String>()? {
+            self.pay()?;
+            let value = map.next_value_seed(Node(self.0))?;
+            kept.insert(key, value);
+        }
+        Ok(Value::Object(kept))
+    }
+}
+
 pub async fn get_json(app: &App, svc: &Service, path: &str, query: &[(&str, String)]) -> Result<Value> {
+    get_json_within(app, svc, path, query, Limits::READ).await
+}
+
+/// `GET` and JSON, read no further than `limits` allow, and parsed off the threads that serve requests: a large answer
+/// is seconds of work that no timeout of the caller's can interrupt.
+pub async fn get_json_within(app: &App, svc: &Service, path: &str, query: &[(&str, String)], limits: Limits) -> Result<Value> {
     let resp = app.services_http.of(svc).get(format!("{}{path}", svc.url)).header("X-Api-Key", svc.secret()).query(query).send().await.map_err(|e| explain(e, svc))?;
     if !resp.status().is_success() {
         return Err(refuse(resp.status(), resp.headers(), svc));
     }
     let not_it = || words("server.services.decode", vec![("service", svc.kind.label().to_string()), ("url", svc.url.clone())]);
-    let body = body_at_most(resp, JSON_MAX).await.map_err(|e| explain(e, svc))?.ok_or_else(not_it)?;
-    serde_json::from_slice(&body).map_err(|_| not_it())
+    let body = body_at_most(resp, limits.bytes.min(JSON_MAX)).await.map_err(|e| explain(e, svc))?.ok_or_else(not_it)?;
+    let parsed = tokio::task::spawn_blocking(move || parse_within(&body, limits)).await.map_err(|_| not_it())?;
+    parsed.map_err(|_| not_it())
 }
 
 /// Bytes from Sonarr or Radarr (a poster). `None` for a 404 and for anything larger than `cap`.
@@ -782,6 +905,24 @@ async fn changed(app: &App) -> Result<()> {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    /// Bytes are not what memory is spent on: `{}` is two bytes and a value of its own, so a few kilobytes of gzip under
+    /// the byte cap were millions of records and gigabytes. What is read keeps at most `items` of any list, skipping the
+    /// rest without building it, and refuses an answer of more than `nodes` values in all.
+    #[test]
+    fn an_answer_is_built_no_larger_than_the_most_it_may_hold() {
+        let mut million = b"{\"records\":[".to_vec();
+        million.extend(std::iter::repeat_n(&b"{},"[..], 1_000_000).flatten());
+        million.extend_from_slice(b"{}],\"page\":1}");
+        let read = parse_within(&million, Limits { bytes: 16 << 20, items: 1_000, nodes: 100_000 }).expect("a long list is cut, not refused");
+        assert_eq!(read["records"].as_array().map(Vec::len), Some(1_000));
+        assert_eq!(read["page"], 1, "what follows the list is still read");
+
+        let wide = format!("[{}]", vec!["[1,2,3,4,5,6,7,8,9,10]"; 500].join(","));
+        assert!(parse_within(wide.as_bytes(), Limits { bytes: 16 << 20, items: 1_000, nodes: 1_000 }).is_err(), "more values than it may hold");
+        assert_eq!(parse_within(wide.as_bytes(), Limits { bytes: 16 << 20, items: 1_000, nodes: 10_000 }).unwrap(), serde_json::from_str::<Value>(&wide).unwrap());
+        assert!(parse_within(b"{\"a\": [1, 2", Limits::READ).is_err(), "and nothing that is not JSON");
+    }
 
     /// An answer is read no further than the most it may be, counted after it is unpacked: a few kilobytes of gzip from a
     /// service that went wrong (or anybody between, on a connection that takes any certificate) inflate into gigabytes.

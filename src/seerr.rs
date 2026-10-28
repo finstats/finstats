@@ -36,6 +36,8 @@ const PAGE: usize = 50;
 const SMALL_PAGE: usize = 10;
 /// A first read or a full listing stops here: 10,000 requests.
 const MAX_PAGES: usize = 200;
+/// One page of requests is a few hundred kilobytes; a page is read within this, not within what a whole library may be.
+const PAGE_LIMITS: services::Limits = services::Limits { bytes: 8 << 20, items: 1_000, nodes: 500_000 };
 const OVERLAP_S: i64 = 600;
 const FULL_EVERY_S: i64 = 86_400;
 /// How often the requests that are still on their way are looked at again.
@@ -160,7 +162,7 @@ struct Listing {
 /// One page of `/api/v1/request`, newest-modified first.
 async fn page(app: &App, svc: &Service, filter: &str, take: usize, skip: usize) -> Result<(Vec<Value>, Option<u64>)> {
     let query = [("take", take.to_string()), ("skip", skip.to_string()), ("filter", filter.to_string()), ("sort", "modified".to_string()), ("sortDirection", "desc".to_string())];
-    let mut body = services::get_json(app, svc, "/api/v1/request", &query).await?;
+    let mut body = services::get_json_within(app, svc, "/api/v1/request", &query, PAGE_LIMITS).await?;
     let total = body["pageInfo"]["results"].as_u64();
     let Some(results) = body.get_mut("results").and_then(Value::as_array_mut) else { return Err(services::words("server.seerr.not_requests", vec![("url", svc.url.clone())])) };
     Ok((std::mem::take(results), total))

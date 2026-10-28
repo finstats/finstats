@@ -229,6 +229,8 @@ pub async fn find(app: &App, media_type: &str, tmdb: Option<i64>, tvdb: Option<i
 const HISTORY_DAYS: i64 = 365;
 const HISTORY_PAGES: usize = 40;
 const HISTORY_PAGE: usize = 250;
+/// One page of history, its series or film included, is well under a megabyte.
+const PAGE_LIMITS: services::Limits = services::Limits { bytes: 8 << 20, items: 1_000, nodes: 500_000 };
 /// Written in pieces, so a long history never holds the write lock while the collector wants it.
 const HISTORY_CHUNK: usize = 500;
 
@@ -313,7 +315,7 @@ async fn read_history(app: &App, svc: &Service, since: Option<i64>) -> Result<Ve
                     ("sortDirection", "descending".to_string()),
                     (if svc.kind == Kind::Sonarr { "includeSeries" } else { "includeMovie" }, "true".to_string()),
                 ];
-                let body = services::get_json(app, svc, "/api/v3/history", &query).await?;
+                let body = services::get_json_within(app, svc, "/api/v3/history", &query, PAGE_LIMITS).await?;
                 let Some(records) = body["records"].as_array() else { break };
                 let got = records.len();
                 let mut old = false;

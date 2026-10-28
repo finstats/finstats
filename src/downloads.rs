@@ -250,9 +250,16 @@ async fn read_queue(app: &App, svc: &services::Service) -> Result<Vec<Queued>> {
         query.push(("includeMovie", "true".into()));
         query.push(("includeUnknownMovieItems", "true".into()));
     }
-    let body = services::get_json(app, svc, "/api/v3/queue", &query).await?;
-    let records = body["records"].as_array().cloned().unwrap_or_default();
-    Ok(records.iter().filter_map(|r| queue_row(svc.id, &svc.name, svc.kind, r)).collect())
+    let body = services::get_json_within(app, svc, "/api/v3/queue", &query, QUEUE_LIMITS).await?;
+    Ok(queue_records(svc.id, &svc.name, svc.kind, &body))
+}
+
+/// A queue page of 200 is well under a megabyte; nothing a queue says is needed past what is ever listed.
+const QUEUE_LIMITS: services::Limits = services::Limits { bytes: 8 << 20, items: 1_000, nodes: 500_000 };
+
+/// A queue page's records as rows, no more of them than are ever listed, read where they lie.
+fn queue_records(svc_id: i64, svc_name: &str, kind: Kind, body: &Value) -> Vec<Queued> {
+    body["records"].as_array().map(|a| a.iter().filter_map(|r| queue_row(svc_id, svc_name, kind, r)).take(MAX_ROWS).collect()).unwrap_or_default()
 }
 // ---------------------------------------------------------------- one download out of its records
 
@@ -706,6 +713,19 @@ mod tests {
             json!({ "rows": [], "totals": { "down_bps": 0, "downloading": 0, "queued": 0, "importing": 0, "failed": 0 },
                     "at": 42, "sources": 2, "problems": [{ "service": "Radarr", "error": "timed out" }] })
         );
+    }
+
+    /// A few kilobytes of gzip were a million queue records, each built twice before the list was cut to 500. A queue is
+    /// read within its own limits and no more of it is made into rows than is ever listed.
+    #[test]
+    fn a_queue_of_a_million_records_is_read_as_no_more_than_is_listed() {
+        let mut million = b"{\"records\":[".to_vec();
+        million.extend(std::iter::repeat_n(&b"{},"[..], 1_000_000).flatten());
+        million.extend_from_slice(b"{}]}");
+        assert!(million.len() <= QUEUE_LIMITS.bytes, "the byte cap alone lets it through");
+        let body = services::parse_within(&million, QUEUE_LIMITS).unwrap();
+        assert!(body["records"].as_array().unwrap().len() <= QUEUE_LIMITS.items);
+        assert_eq!(queue_records(1, "Sonarr", Kind::Sonarr, &body).len(), MAX_ROWS);
     }
 
     /// A connection's address and where it redirects are an administrator's to read: seeing the queue is seeing what is
