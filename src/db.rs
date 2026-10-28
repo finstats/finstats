@@ -987,7 +987,7 @@ fn back_up_before_update(conn: &Connection, path: &Path, running: &str) -> Resul
         return Ok(());
     }
     let dir = path.parent().unwrap_or_else(|| Path::new(".")).join(PRE_UPDATE_DIR);
-    let tag = stored.as_deref().unwrap_or("pre-1.0.5");
+    let tag = snapshot_tag(stored.as_deref());
     // The version is recorded only once an update is done, so one that failed after a migration is an update again at
     // the next start, which a supervisor makes at once. A copy of that half-updated database is no use to the version
     // before, and three of them pruned the one that was. The copy this update took is noted in the database itself: a
@@ -1024,6 +1024,14 @@ fn back_up_before_update(conn: &Connection, path: &Path, running: &str) -> Resul
     }
 }
 
+/// What a pre-update copy's name says of the version it was taken from: the digits and dots of the stored version and
+/// nothing else, since a hand edit can make it anything, a path included.
+fn snapshot_tag(stored: Option<&str>) -> String {
+    let Some(stored) = stored else { return "pre-1.0.5".into() };
+    let tag: String = stored.chars().filter(|c| c.is_ascii_digit() || *c == '.').collect();
+    if tag.chars().any(|c| c.is_ascii_digit()) { tag } else { "unknown".into() }
+}
+
 /// A consistent copy of the whole database to `dst` (which must not already exist). `VACUUM INTO`
 /// writes a compact, fully-committed snapshot without needing the file closed or a special build feature.
 ///
@@ -1056,10 +1064,12 @@ fn snapshot_into(conn: &Connection, dir: &Path, dst: &Path) -> Result<()> {
 }
 
 /// Keep only the newest `keep` snapshots; a full copy is large, and the point is recovery from the last
-/// upgrade or two, not a museum.
+/// upgrade or two, not a museum. Only FinStats' own copies (`finstats-<version>-<stamp>.db`) are counted or removed: a
+/// database the owner put beside them is theirs.
 fn prune_snapshots(dir: &Path, keep: usize) {
     let Ok(entries) = std::fs::read_dir(dir) else { return };
-    let mut snaps: Vec<_> = entries.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "db")).collect();
+    let ours = |p: &Path| p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("finstats-") && n.ends_with(".db"));
+    let mut snaps: Vec<_> = entries.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| ours(p)).collect();
     if snaps.len() <= keep {
         return;
     }
@@ -1630,6 +1640,27 @@ mod tests {
         assert!(names.contains(&"finstats-0.0.2-b.db".to_string()) && names.contains(&"finstats-0.0.3-c.db".to_string()), "{names:?}");
         assert!(names.iter().any(|n| n.starts_with("finstats-0.1.0-")), "this upgrade's snapshot is missing: {names:?}");
         assert!(names.contains(&"README.txt".to_string()), "a file that is not a snapshot was removed: {names:?}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Only FinStats' own copies are pruned: a database the owner put in the folder is theirs, however old. And a copy's
+    /// name takes only the digits and dots of the version it records, which a hand edit could make a path.
+    #[test]
+    fn only_finstats_own_copies_are_pruned_and_named_from_a_version_alone() {
+        let dir = std::env::temp_dir().join(format!("finstats-snapnames-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let old = std::time::SystemTime::now() - std::time::Duration::from_secs(10 * 86_400);
+        for name in ["kept-by-hand.db", "finstats-0.0.1-a.db", "finstats-0.0.2-b.db"] {
+            std::fs::File::create(dir.join(name)).unwrap().set_modified(old).unwrap();
+        }
+        prune_snapshots(&dir, 1);
+        assert!(dir.join("kept-by-hand.db").exists(), "the owner's own database was pruned");
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 2);
+        assert_eq!(snapshot_tag(Some("2.3.1")), "2.3.1");
+        assert_eq!(snapshot_tag(Some("2.3.1-rc.1/../../x")), "2.3.1.1....");
+        assert_eq!(snapshot_tag(Some("/")), "unknown");
+        assert_eq!(snapshot_tag(None), "pre-1.0.5");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

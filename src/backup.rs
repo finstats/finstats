@@ -45,8 +45,24 @@ pub fn dir(data_dir: &Path) -> PathBuf {
     data_dir.join("backups")
 }
 
+/// The moment in UTC: in local time, the hour the clocks go back named two backups the same.
 pub fn new_name() -> String {
-    format!("{PREFIX}{}{SUFFIX}", chrono::Local::now().format("%Y%m%d-%H%M%S"))
+    format!("{PREFIX}{}{SUFFIX}", chrono::Utc::now().format("%Y%m%d-%H%M%S"))
+}
+
+/// A `.part` nobody has written to for this long is a backup that was killed; one written to since may be another
+/// process's backup on its way (`finstats backup` beside the server), and is left to finish.
+const STALE_PART: std::time::Duration = std::time::Duration::from_secs(15 * 60);
+
+/// Give a finished `.part` its name, never over a file that has it already. The part is gone either way.
+fn put_in_place(part: &Path, path: &Path) -> std::io::Result<()> {
+    let placed = match std::fs::hard_link(part, path) {
+        // A folder that takes no hard links (some network shares): a rename, once nothing has the name.
+        Err(e) if e.kind() != std::io::ErrorKind::AlreadyExists && !path.exists() => std::fs::rename(part, path),
+        other => other,
+    };
+    let _ = std::fs::remove_file(part);
+    placed
 }
 
 /// Only names FinStats itself would give a backup. This is what stands between a download or
@@ -93,12 +109,13 @@ fn raw_row(row: &crate::db::rusqlite::Row) -> Map<String, Value> {
 /// Write a backup into `dir`. The file only gets its real name once it is complete.
 pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Result<ExportResult> {
     db::private_dir(dir).context("creating the backups folder")?;
-    // Only one backup is written at a time, so a partial file already here was a backup that was killed. Only files
-    // with a backup's own name are touched.
+    // A partial file nobody has written to for a while was a backup that was killed. Only files with a backup's own name
+    // are touched, and none that may still be on its way.
     if let Ok(entries) = std::fs::read_dir(dir) {
         for e in entries.flatten() {
             let file = e.file_name();
-            if file.to_str().and_then(|n| n.strip_suffix(".part")).is_some_and(valid_name) {
+            let idle = e.metadata().and_then(|m| m.modified()).is_ok_and(|at| at.elapsed().unwrap_or_default() >= STALE_PART);
+            if idle && file.to_str().and_then(|n| n.strip_suffix(".part")).is_some_and(valid_name) {
                 let _ = std::fs::remove_file(e.path());
             }
         }
@@ -148,7 +165,7 @@ pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Res
             }
         }
         out.finish()?.into_inner().map_err(|e| anyhow::anyhow!("{e}"))?.sync_all()?;
-        std::fs::rename(&part, &path)?;
+        put_in_place(&part, &path).with_context(|| format!("naming {}", path.display()))?;
         Ok(ExportResult { name: name.clone(), size_bytes: std::fs::metadata(&path)?.len(), plays: counts["playbacks"].as_i64().unwrap_or(0), rows: written })
     })();
     if result.is_err() {
@@ -749,6 +766,29 @@ impl Read for Counted {
 mod tests {
     use super::*;
 
+    /// A backup's name is the moment in UTC, so the hour the clocks go back does not name two the same, and a backup is
+    /// never written over another of the same name.
+    #[test]
+    fn a_backup_is_named_in_utc_and_never_written_over_another() {
+        let before = chrono::Utc::now().format("%Y%m%d-%H%M").to_string();
+        let name = new_name();
+        let after = chrono::Utc::now().format("%Y%m%d-%H%M").to_string();
+        assert!(name.contains(&before) || name.contains(&after), "{name} is not the time in UTC ({before})");
+        let tmp = std::env::temp_dir().join(format!("finstats-backup-taken-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let (part, path) = (tmp.join("x.part"), tmp.join("x"));
+        std::fs::write(&path, b"an older backup").unwrap();
+        std::fs::write(&part, b"a new one").unwrap();
+        assert!(put_in_place(&part, &path).is_err(), "a backup was written over another");
+        assert_eq!(std::fs::read(&path).unwrap(), b"an older backup");
+        assert!(!part.exists());
+        std::fs::write(&part, b"a new one").unwrap();
+        put_in_place(&part, &tmp.join("y")).unwrap();
+        assert_eq!((std::fs::read(tmp.join("y")).unwrap(), part.exists()), (b"a new one".to_vec(), false));
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
     #[test]
     fn only_finstats_own_backup_names_are_accepted() {
         assert!(valid_name("finstats-backup-20260920-031500.jsonl.gz"));
@@ -847,11 +887,16 @@ mod tests {
         std::fs::create_dir_all(tmp.join("backups")).unwrap();
         let stale = tmp.join("backups").join("finstats-backup-20200101-000000.jsonl.gz.part");
         std::fs::write(&stale, b"half a backup").unwrap();
+        std::fs::File::options().write(true).open(&stale).unwrap().set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(3600)).unwrap();
+        // One still being written (`finstats backup` beside the server, or the other way round) is left to finish.
+        let writing = tmp.join("backups").join("finstats-backup-20200101-000001.jsonl.gz.part");
+        std::fs::write(&writing, b"half a backup, growing").unwrap();
         let unrelated = tmp.join("backups").join("notes.part");
         std::fs::write(&unrelated, b"somebody else's").unwrap();
         let db = Db::open(&tmp.join("finstats.db")).unwrap();
         export(&db, &tmp.join("backups"), None).unwrap();
         assert!(!stale.exists(), "the killed backup's partial file is still there");
+        assert!(writing.exists(), "a backup still being written lost its file");
         assert!(unrelated.exists(), "a file FinStats did not name was removed");
         drop(db);
         let _ = std::fs::remove_dir_all(&tmp);
