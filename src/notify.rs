@@ -826,9 +826,9 @@ fn record(conn: &Connection, event_id: i64, target_id: i64, attempts: i64, outco
 
 /// How many of this minute a destination has already used. A busy evening must not get a webhook
 /// rate-limited into silence, so the rest simply wait for the next minute.
-fn over_the_minute(used: &mut HashMap<i64, (i64, usize)>, target_id: i64, now: i64) -> bool {
+fn over_the_minute<K: std::hash::Hash + Eq>(used: &mut HashMap<K, (i64, usize)>, key: K, now: i64) -> bool {
     let minute = now / 60;
-    let slot = used.entry(target_id).or_insert((minute, 0));
+    let slot = used.entry(key).or_insert((minute, 0));
     if slot.0 != minute {
         *slot = (minute, 0);
     }
@@ -1537,11 +1537,12 @@ pub async fn remove(State(app): State<App>, user: AuthUser, Path(id): Path<i64>)
 
 /// The Test button: one message to one destination, now, and the answer is what the other side said.
 /// It goes down the same path as everything else, so a test that arrives proves the real thing works.
-/// Whether a destination has had all the tests a minute may send it. A test goes out at once, outside the queue, so it
-/// keeps to a minute of its own, as long as everything else's.
-fn test_too_soon(target_id: i64, now: i64) -> bool {
-    static SENT: std::sync::OnceLock<std::sync::Mutex<HashMap<i64, (i64, usize)>>> = std::sync::OnceLock::new();
-    over_the_minute(&mut SENT.get_or_init(Default::default).lock().unwrap(), target_id, now)
+/// Whether a person has sent all the tests a minute may send one destination. A test goes out at once, outside the queue,
+/// so it keeps to a minute of its own, as long as everything else's; kept by who sends it, since a destination removed
+/// and added again is another id.
+fn test_too_soon(user_id: &str, now: i64) -> bool {
+    static SENT: std::sync::OnceLock<std::sync::Mutex<HashMap<String, (i64, usize)>>> = std::sync::OnceLock::new();
+    over_the_minute(&mut SENT.get_or_init(Default::default).lock().unwrap(), user_id.to_string(), now)
 }
 
 pub async fn test(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -> ApiResult {
@@ -1550,7 +1551,7 @@ pub async fn test(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -
     if !may_touch(&user, &stored) {
         return Err(ApiError::forbidden());
     }
-    if test_too_soon(id, db::now()) {
+    if test_too_soon(&user.id, db::now()) {
         return Err(ApiError::new(axum::http::StatusCode::TOO_MANY_REQUESTS, t("server.api.too_soon", &[])));
     }
     let event = test_event(&user.name, &stored.name);
@@ -2205,15 +2206,15 @@ pub(crate) mod tests {
     }
 
     /// A test is sent at once, outside the queue, so it skipped the per-minute limit every other message keeps to: a
-    /// loop of presses was a loop of messages to somebody's webhook. A destination is sent as many tests a minute as it
-    /// may be sent anything.
+    /// loop of presses was a loop of messages to somebody's webhook. A person sends as many tests a minute as one
+    /// destination may be sent anything: keyed by the destination, removing it and adding it again was a fresh minute.
     #[test]
-    fn tests_of_one_destination_keep_to_its_minute() {
+    fn tests_sent_by_one_person_keep_to_one_minute() {
         for n in 0..PER_MINUTE {
-            assert!(!test_too_soon(77, 6_000), "test {n} of the minute goes out");
+            assert!(!test_too_soon("u-test-77", 6_000), "test {n} of the minute goes out");
         }
-        assert!(test_too_soon(77, 6_000));
-        assert!(!test_too_soon(78, 6_000), "another destination has its own minute");
+        assert!(test_too_soon("u-test-77", 6_000), "a destination made again is the same person's minute");
+        assert!(!test_too_soon("u-test-78", 6_000), "another person has their own minute");
     }
 
     #[test]

@@ -778,10 +778,7 @@ async fn lookup_public_ip(State(app): State<App>, Manager(user): Manager) -> Api
         return Err(ApiError::bad_request(i18n::t("server.api.lookup_off", &[])));
     }
     // Each press is a request to a service elsewhere; once a minute is as often as an address changes for anybody.
-    static ASKED: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<(), i64>>> = std::sync::OnceLock::new();
-    if too_soon(ASKED.get_or_init(Default::default), (), crate::db::now(), MANUAL_GAP_S) {
-        return Err(too_soon_error());
-    }
+    by_hand(&user, "public_ip")?;
     crate::network::refresh(&app).await;
     settings_response(&app, &user).await
 }
@@ -797,6 +794,15 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
         }
         // And only from a signed-in browser: opening sign-in or a public address outlives a key, which may be revoked.
         crate::keys::needs_a_session(&user)?;
+    }
+    // Switching the lookup on asks the service at once, and a new group window regroups the whole history: work started
+    // by hand, which waits its minute like the button and the jobs.
+    let now = app.settings();
+    if patch.get("public_ip_lookup") == Some(&json!(true)) && !now.public_ip_lookup {
+        by_hand(&user, "public_ip")?;
+    }
+    if patch.get("group_window_s").is_some_and(|w| *w != json!(now.group_window_s)) {
+        by_hand(&user, "regroup")?;
     }
     let (before, next) = app
         .update_settings(|s| {
@@ -951,12 +957,19 @@ fn too_soon_error() -> ApiError {
     ApiError::new(StatusCode::TOO_MANY_REQUESTS, i18n::t("server.api.too_soon", &[]))
 }
 
-async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>) -> ApiResult<Response> {
-    let Some(id) = RUNNABLE.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
+/// The one gate for work started by hand (a job, the public-address lookup, a regroup): a manager starts each at most
+/// once a minute, however it is asked for; an administrator is not held, so a manager cannot keep them from it.
+fn by_hand(user: &AuthUser, what: &'static str) -> Result<(), ApiError> {
     static RAN: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<&'static str, i64>>> = std::sync::OnceLock::new();
-    if !user.is_admin && too_soon(RAN.get_or_init(Default::default), id, crate::db::now(), MANUAL_GAP_S) {
+    if !user.is_admin && too_soon(RAN.get_or_init(Default::default), what, crate::db::now(), MANUAL_GAP_S) {
         return Err(too_soon_error());
     }
+    Ok(())
+}
+
+async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>) -> ApiResult<Response> {
+    let Some(id) = RUNNABLE.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
+    by_hand(&user, id)?;
     let started = match id {
         // An administrator's backup counts toward what is kept; a manager's is kept apart and never pushes one out.
         "backup" => sync::run_backup(&app, Some(Actor::from(&user)), !user.is_admin),
@@ -2010,6 +2023,32 @@ mod tests {
         let _ = run_task(State(app.clone()), Manager(manager.clone()), Path("sync_users".into())).await;
         let again = run_task(State(app), Manager(manager), Path("sync_users".into())).await;
         assert_eq!(again.err().map(|e| e.0), Some(StatusCode::TOO_MANY_REQUESTS));
+    }
+
+    /// The waits for work started by hand could be stepped round: switching the public-address lookup off and on again
+    /// asked the service each time, a manager pressing the button every minute kept the administrator from it, and a new
+    /// group window regrouped the whole history at every save. Each is one minute's work for a manager, through one
+    /// gate the administrator is not held by.
+    #[tokio::test]
+    async fn switching_work_on_by_hand_waits_its_minute_as_pressing_it_does() {
+        let app = crate::state::test_app();
+        let manager = AuthUser {
+            id: "m".into(), name: "mallory".into(), is_admin: false, credential: crate::auth::Credential::Session, ip: None,
+            perms: crate::auth::Perms { manage: true, ..Default::default() },
+        };
+        let admin = AuthUser { is_admin: true, ..manager.clone() };
+        let put = |who: &AuthUser, patch: Value| put_settings(State(app.clone()), Manager(who.clone()), Json(patch));
+        assert!(put(&manager, json!({ "group_window_s": 90 })).await.is_ok());
+        assert_eq!(put(&manager, json!({ "group_window_s": 60 })).await.err().map(|e| e.0), Some(StatusCode::TOO_MANY_REQUESTS));
+        assert_eq!(app.settings().group_window_s, 90, "a refused change is not saved");
+        assert!(put(&manager, json!({ "group_window_s": 90, "min_play_s": 5 })).await.is_ok(), "the same window is no regroup");
+        assert!(put(&admin, json!({ "group_window_s": 60 })).await.is_ok());
+
+        app.settings.write().unwrap().public_ip_lookup = false;
+        assert!(by_hand(&manager, "public_ip").is_ok(), "the button, pressed");
+        assert_eq!(put(&manager, json!({ "public_ip_lookup": true })).await.err().map(|e| e.0), Some(StatusCode::TOO_MANY_REQUESTS));
+        assert!(!app.settings().public_ip_lookup);
+        assert!(by_hand(&admin, "public_ip").is_ok(), "the administrator is not kept waiting by a manager");
     }
 
     #[test]
