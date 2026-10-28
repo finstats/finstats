@@ -319,7 +319,7 @@ pub fn summary(conn: &Connection, library_id: Option<&str>) -> Result<Value> {
     wh = wh.replacen("d.key IS NULL", "1", 1);
     let mut counts: BTreeMap<String, (i64, i64, i64)> = BTreeMap::new();
     let sql = format!(
-        "SELECT f.kind, COALESCE(SUM(d.key IS NULL), 0), COALESCE(SUM(d.key IS NOT NULL), 0), COALESCE(SUM(CASE WHEN d.key IS NULL THEN f.wasted_bytes END), 0)
+        "SELECT f.kind, COALESCE(SUM(d.key IS NULL), 0), COALESCE(SUM(d.key IS NOT NULL), 0), CAST(MIN(TOTAL(CASE WHEN d.key IS NULL THEN f.wasted_bytes END), 9223372036854775807) AS INTEGER)
          {FINDINGS_FROM} WHERE {wh} GROUP BY f.kind"
     );
     let mut stmt = conn.prepare(&sql)?;
@@ -348,7 +348,8 @@ pub fn summary(conn: &Connection, library_id: Option<&str>) -> Result<Value> {
         "computed_at": computed_at,
         "libraries": libraries,
         "total": counts.values().map(|c| c.0).sum::<i64>(),
-        "wasted_bytes": counts.values().map(|c| c.2).sum::<i64>(),
+        // Sizes are the server's to say: a sum too large to hold is the most a number holds.
+        "wasted_bytes": counts.values().fold(0i64, |a, c| a.saturating_add(c.2)),
         "kinds": kinds,
     }))
 }
@@ -1370,6 +1371,22 @@ mod tests {
         )
         .unwrap();
         c
+    }
+
+    /// What copies spend twice is added up across findings too, and a sum past what a number holds is the most it holds,
+    /// never an error that takes the whole page with it.
+    #[test]
+    fn the_space_spent_twice_is_summed_without_overflowing() {
+        let mut c = stocked();
+        c.execute_batch(
+            r#"INSERT INTO items(id, library_id, type, name, production_year, provider_ids, path, size_bytes, runtime_s, width, height, video_codec, removed, updated_at) VALUES
+                 ('ed-a', 'films', 'Movie', 'Elephants Dream', 2006, '{"Tmdb":"9761"}', '/films/ed-a.mkv', 9223372036854775807, 5400, 1920, 1080, 'h264', 0, 0),
+                 ('ed-b', 'films', 'Movie', 'Elephants Dream', 2006, '{"Tmdb":"9761"}', '/films/ed-b.mkv', 9223372036854775807, 5400, 1920, 1080, 'h264', 0, 0);"#,
+        )
+        .unwrap();
+        recompute(&mut c, 100).unwrap();
+        let s = summary(&c, None).unwrap();
+        assert_eq!(s["wasted_bytes"].as_i64(), Some(i64::MAX), "{s}");
     }
 
     fn stored(c: &crate::db::rusqlite::Connection) -> Vec<(String, i64)> {

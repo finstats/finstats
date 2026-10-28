@@ -66,7 +66,7 @@ impl Streams {
             out.subtitle_codec = s(&sub["Codec"]).map(|c| c.to_lowercase());
             out.subtitle_language = s(&sub["Language"]).or(Some("und".into()));
         }
-        let total: i64 = streams.iter().filter_map(|x| int(&x["BitRate"])).sum();
+        let total = streams.iter().filter_map(|x| int(&x["BitRate"])).fold(0i64, |a, b| a.saturating_add(b.max(0)));
         out.bitrate = (total > 0).then_some(total);
         out
     }
@@ -224,6 +224,14 @@ pub fn subtitle_label(codec: Option<&str>, language: Option<&str>) -> Option<Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A stream's bitrate is the server's or an import file's to say: two claiming the most there can be are added up
+    /// without a wrap or a panic, and a negative one adds nothing.
+    #[test]
+    fn bitrates_no_file_could_have_are_added_up_without_overflowing() {
+        let streams = serde_json::json!([{ "Type": "Video", "BitRate": i64::MAX }, { "Type": "Audio", "BitRate": i64::MAX }, { "Type": "Audio", "BitRate": i64::MIN }]);
+        assert_eq!(Streams::extract(&streams, &Value::Null).bitrate, Some(i64::MAX));
+    }
 
     #[test]
     fn a_resolution_is_named_by_its_width_or_its_height() {
