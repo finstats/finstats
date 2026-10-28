@@ -176,26 +176,34 @@ fn hash_token(token: &str) -> String {
     hex::encode(Sha256::digest(token.as_bytes()))
 }
 
+/// What a session token begins with: begun on https, or on plain http. Tokens from before have neither (they are hex).
+const BEGUN_ON_HTTPS: &str = "h";
+const BEGUN_ON_HTTP: &str = "p";
+
+/// Every value a cookie of this name was sent with.
+fn cookies_named(headers: &HeaderMap, name: &str) -> Vec<String> {
+    headers
+        .get_all(COOKIE)
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .flat_map(|v| v.split(';'))
+        .filter_map(|kv| {
+            let (k, v) = kv.trim().split_once('=')?;
+            (k == name && !v.is_empty()).then(|| v.to_string())
+        })
+        .collect()
+}
+
 /// The session a browser presents: the `__Host-` cookie when there is one; else the plain one, unless there are two of
-/// those, which only another host's cookie for the whole domain beside ours could make, and then neither.
+/// those, which only another host's cookie for the whole domain beside ours could make, and then neither. A session
+/// begun on https is never taken under the plain name, which any host of the domain may set: before the browser held
+/// a `__Host-` cookie, or once it had signed out, a sibling's tossed cookie was the only one sent, and won.
 pub(crate) fn cookie_token(headers: &HeaderMap) -> Option<String> {
-    let named = |name: &str| -> Vec<String> {
-        headers
-            .get_all(COOKIE)
-            .iter()
-            .filter_map(|v| v.to_str().ok())
-            .flat_map(|v| v.split(';'))
-            .filter_map(|kv| {
-                let (k, v) = kv.trim().split_once('=')?;
-                (k == name && !v.is_empty()).then(|| v.to_string())
-            })
-            .collect()
-    };
-    if let Some(own) = named(HOST_COOKIE_NAME).into_iter().next() {
+    if let Some(own) = cookies_named(headers, HOST_COOKIE_NAME).into_iter().next() {
         return Some(own);
     }
-    let plain = named(COOKIE_NAME);
-    (plain.len() == 1).then(|| plain.into_iter().next()).flatten()
+    let plain = cookies_named(headers, COOKIE_NAME);
+    (plain.len() == 1).then(|| plain.into_iter().next()).flatten().filter(|t| !t.starts_with(BEGUN_ON_HTTPS))
 }
 
 /// `Authorization: Bearer <key>`: `None` when there is no such header at all (the cookie may be there),
@@ -670,9 +678,10 @@ async fn start_session(
 ) -> ApiResult<Response> {
     let mut raw = [0u8; 32];
     rand::rng().fill_bytes(&mut raw);
-    let token = hex::encode(raw);
+    let secure = is_https(headers);
+    let token = format!("{}{}", if secure { BEGUN_ON_HTTPS } else { BEGUN_ON_HTTP }, hex::encode(raw));
     let hash = hash_token(&token);
-    let ua = headers.get("user-agent").and_then(|v| v.to_str().ok()).map(|s| s.chars().take(200).collect::<String>());
+    let ua =headers.get("user-agent").and_then(|v| v.to_str().ok()).map(|s| s.chars().take(200).collect::<String>());
     let (uid, uname, ip_s) = (user_id.to_string(), user_name.to_string(), ip.to_string());
     let changed = app
         .db
@@ -691,7 +700,7 @@ async fn start_session(
     }
     let body = Json(json!({ "user": user_json(app, user_id, user_name, is_admin, perms).await }));
     let mut resp = body.into_response();
-    set_session(&mut resp, &token, SESSION_TTL_S, is_https(headers));
+    set_session(&mut resp, &token, SESSION_TTL_S, secure);
     Ok(resp)
 }
 
@@ -882,26 +891,33 @@ pub async fn login(
     start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, auth.is_admin, auth.policy, perms).await
 }
 
+/// `POST /api/auth/logout`: ends every session the browser sent, the `__Host-` cookie and each plain one. With two plain
+/// cookies (one tossed in beside ours) `cookie_token` takes neither, and a sign-out that ended nothing answered `ok`.
 pub async fn logout(State(app): State<App>, ConnectInfo(peer): ConnectInfo<SocketAddr>, headers: HeaderMap) -> ApiResult<Response> {
-    if let Some(token) = cookie_token(&headers) {
-        let hash = hash_token(&token);
+    let mut hashes: Vec<String> = [HOST_COOKIE_NAME, COOKIE_NAME].iter().flat_map(|n| cookies_named(&headers, n)).map(|t| hash_token(&t)).collect();
+    hashes.dedup();
+    hashes.truncate(4);
+    if !hashes.is_empty() {
         let ip = client_ip(&app, &headers, peer);
         let ended = app
             .db
             .call(move |c| {
-                let who: Option<(String, String)> = c
-                    .query_row("DELETE FROM sessions WHERE token_hash = ?1 RETURNING user_id, user_name", [hash], |r| Ok((r.get(0)?, r.get(1)?)))
-                    .optional()?;
-                let ended = who.as_ref().map(|(id, _)| id.clone());
-                if let Some((id, name)) = who {
-                    audit::record_quietly(c, &audit::Entry::new("sign_out", Actor { user_id: Some(id), user_name: Some(name), ip: Some(ip), key_id: None }));
+                let mut ended = vec![];
+                for hash in hashes {
+                    let who: Option<(String, String)> = c
+                        .query_row("DELETE FROM sessions WHERE token_hash = ?1 RETURNING user_id, user_name", [hash], |r| Ok((r.get(0)?, r.get(1)?)))
+                        .optional()?;
+                    if let Some((id, name)) = who {
+                        audit::record_quietly(c, &audit::Entry::new("sign_out", Actor { user_id: Some(id.clone()), user_name: Some(name), ip: Some(ip), key_id: None }));
+                        ended.push(id);
+                    }
                 }
                 Ok(ended)
             })
             .await?;
         // The tab signing out is not the only one this session opened: every live connection of it closes now. Only that
         // person's, and only when a session ended, or anybody could make every open connection read its access again.
-        if let Some(user_id) = ended {
+        for user_id in ended {
             app.live_feed.recheck_person(&user_id);
         }
     }
@@ -1154,6 +1170,36 @@ mod tests {
         assert!(asked(&alice).await, "the connections of the session that ended look");
         assert!(!asked(&bob).await, "and nobody else's");
         assert_eq!(app.live_feed.rechecks(), before, "not everybody's");
+    }
+
+    /// A session begun on https is marked so in its token, and one begun on http too, so the plain cookie name can refuse
+    /// the first.
+    #[tokio::test]
+    async fn a_session_token_says_whether_it_was_begun_on_https() {
+        let app = crate::state::test_app();
+        let ip: IpAddr = "192.0.2.7".parse().unwrap();
+        let token = |resp: Response| resp.headers().get(SET_COOKIE).unwrap().to_str().unwrap().split(';').next().unwrap().to_string();
+        let mut https = HeaderMap::new();
+        https.insert("origin", "https://stats.example.com".parse().unwrap());
+        assert!(token(start_session(&app, &https, ip, "u1", "alice", false, crate::access::policy(&json!({ "Policy": { "EnableAllFolders": true } })), Perms::default()).await.unwrap()).starts_with("__Host-finstats_session=h"));
+        assert!(token(start_session(&app, &HeaderMap::new(), ip, "u1", "alice", false, crate::access::policy(&json!({ "Policy": { "EnableAllFolders": true } })), Perms::default()).await.unwrap()).starts_with("finstats_session=p"));
+    }
+
+    /// A sign-out ends every session it was sent, two plain cookies included: answering `ok` while ending none left the
+    /// browser signed in to whichever one won next.
+    #[tokio::test]
+    async fn a_sign_out_ends_every_session_it_was_sent() {
+        let app = crate::state::test_app();
+        let peer: SocketAddr = "192.0.2.7:4000".parse().unwrap();
+        for t in ["p-one", "p-two"] {
+            let hash = hash_token(t);
+            app.db.call(move |c| Ok(c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'ua', 'alice', 0, 1, 9999999999)", [hash])?)).await.unwrap();
+        }
+        let mut h = HeaderMap::new();
+        h.insert(COOKIE, HeaderValue::from_static("finstats_session=p-one; finstats_session=p-two"));
+        logout(State(app.clone()), ConnectInfo(peer), h).await.unwrap();
+        let left: i64 = app.db.call(|c| Ok(c.query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get(0))?)).await.unwrap();
+        assert_eq!(left, 0);
     }
 
     /// Whether a connection was asked to read its access again.
@@ -1512,6 +1558,11 @@ mod key_tests {
         assert_eq!(with("finstats_session=tossed; __Host-finstats_session=mine").as_deref(), Some("mine"));
         assert_eq!(with("finstats_session=tossed; finstats_session=mine"), None);
         assert_eq!(with("finstats_session=mine").as_deref(), Some("mine"), "plain http, and sessions from before");
+        // A session begun on https says so in its token, and is never taken under the plain name: before the browser holds
+        // a `__Host-` cookie (or once it signed out), a sibling's tossed cookie was the only one sent, and won.
+        assert_eq!(with("finstats_session=h0123abcd"), None, "an https session under the plain name");
+        assert_eq!(with("__Host-finstats_session=h0123abcd").as_deref(), Some("h0123abcd"));
+        assert_eq!(with("finstats_session=p0123abcd").as_deref(), Some("p0123abcd"), "a session begun on http");
         let set = session_cookie("t", 60, true);
         assert!(set.to_str().unwrap().starts_with("__Host-finstats_session=t; Path=/;") && set.to_str().unwrap().contains("Secure"));
         assert!(session_cookie("t", 60, false).to_str().unwrap().starts_with("finstats_session=t;"));
