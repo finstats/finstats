@@ -174,7 +174,7 @@ fn blocking<R: Send + 'static>(f: impl FnOnce() -> R + Send + 'static) -> tokio:
 ///
 /// Behind a reverse proxy the browser's `Origin` is the public name while `Host` has been rewritten to
 /// the internal one, so a proxy's `X-Forwarded-Host` is what the origin should match. But that header
-/// is trusted **only** when `FINSTATS_TRUST_PROXY` is set, the same gate `client_ip` uses. Without a
+/// is trusted **only** from a peer `FINSTATS_TRUST_PROXY` names, the same gate `client_ip` uses. Without a
 /// trusted proxy a client sets `X-Forwarded-Host` itself, and honouring it would let any client vouch
 /// for its own foreign `Origin` (`Origin: https://evil` + `X-Forwarded-Host: evil` sailed straight
 /// through), which is the whole lock undone by one header.
@@ -184,7 +184,8 @@ async fn same_origin(State(app): State<App>, req: Request, next: Next) -> Respon
     let origin = h.get(ORIGIN).and_then(|v| v.to_str().ok());
     let host = h.get(HOST).and_then(|v| v.to_str().ok());
     let forwarded = h.get("x-forwarded-host").and_then(|v| v.to_str().ok());
-    if write && cross_site(origin, host, forwarded, app.trust_proxy) {
+    let from_proxy = req.extensions().get::<axum::extract::ConnectInfo<std::net::SocketAddr>>().is_some_and(|c| app.trust_proxy.trusts(c.0.ip()));
+    if write && cross_site(origin, host, forwarded, from_proxy) {
         return ApiError::new(StatusCode::FORBIDDEN, i18n::t("server.api.cross_site", &[])).into_response();
     }
     next.run(req).await

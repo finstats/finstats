@@ -82,7 +82,8 @@ USAGE:
 ENVIRONMENT:
     FINSTATS_DATA_DIR      Where the database and caches live   (default: ./data)
     FINSTATS_BIND          Address to listen on                  (default: 0.0.0.0:8080)
-    FINSTATS_TRUST_PROXY   Set to 1 behind a reverse proxy to read X-Forwarded-For
+    FINSTATS_TRUST_PROXY   The reverse proxy's address or range (10.0.0.2, 172.18.0.0/16, …) whose X-Forwarded-For
+                           is believed; 1 believes any peer on this machine or a private network, one hop
     FINSTATS_GEOIP_DB      A city database (.mmdb) to place addresses with (default: newest in <data dir>/geoip)
     FINSTATS_PUBLIC_IP_URL Where to look up this network's public address (a service answering it as plain text)
     FINSTATS_ALLOW_LIBRARY_SHRINK  Set to 1 to accept a library read that empties or nearly empties a library
@@ -270,12 +271,16 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
     };
 
     let setup_code = config.is_none().then(auth::new_setup_code);
+    let trust_proxy = auth::Proxies::parse(&env("FINSTATS_TRUST_PROXY").unwrap_or_default())?;
+    if let Some(said) = trust_proxy.describe() {
+        tracing::info!("{said}");
+    }
     let app = Arc::new(AppState {
         db,
         data_dir,
         http: jellyfin::http_client(),
         device_id,
-        trust_proxy: env("FINSTATS_TRUST_PROXY").is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true")),
+        trust_proxy,
         config: RwLock::new(config),
         settings: RwLock::new(settings),
         settings_write: tokio::sync::Mutex::new(()),

@@ -21,7 +21,7 @@ pub struct AppState {
     pub data_dir: PathBuf,
     pub http: reqwest::Client,
     pub device_id: String,
-    pub trust_proxy: bool,
+    pub trust_proxy: crate::auth::Proxies,
     pub config: RwLock<Option<JfConfig>>,
     pub settings: RwLock<Settings>,
     /// Held by whoever is changing the settings, from reading them to publishing the result (`update_settings`).
@@ -405,7 +405,7 @@ pub fn test_app() -> App {
         data_dir: std::env::temp_dir(),
         http: crate::jellyfin::http_client(),
         device_id: "test".into(),
-        trust_proxy: false,
+        trust_proxy: Default::default(),
         config: RwLock::new(None),
         settings: RwLock::new(Settings::default()),
         settings_write: tokio::sync::Mutex::new(()),

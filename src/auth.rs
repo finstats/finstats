@@ -348,23 +348,136 @@ fn touch_key(c: &Connection, u: &AuthUser, ip: Option<IpAddr>, now: i64) -> anyh
     Ok(())
 }
 
-/// Behind a proxy, the last `X-Forwarded-For` entry: the one the proxy wrote. Everything before it came
-/// from the client, which may put anything there, a header line of its own included (some proxies add a
-/// line rather than extend the client's, so the last line is the proxy's).
-pub fn client_ip(app: &App, headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
-    if app.trust_proxy {
-        if let Some(ip) = headers
-            .get_all("x-forwarded-for")
-            .iter()
-            .next_back()
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.rsplit(',').next())
-            .and_then(|v| v.trim().parse().ok())
-        {
-            return ip;
+/// Which peers' `X-Forwarded-For` (and `X-Forwarded-Host`, `X-Forwarded-Proto`) is believed: `FINSTATS_TRUST_PROXY`.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub enum Proxies {
+    /// Nobody's (unset, `0`, `false`): every request is the address it came from.
+    #[default]
+    Off,
+    /// `1` or `true`, as it always was: a peer on this machine or a private network is a proxy, and only the last entry,
+    /// the one it wrote, is believed. A peer from outside is itself, so a port reachable beside the proxy picks nothing.
+    Local,
+    /// A list of addresses and ranges (`172.18.0.0/16, 10.0.0.2`): those peers are proxies, and the header is walked
+    /// from the right past every hop that is one of them.
+    Named(Vec<(IpAddr, u8)>),
+}
+
+impl Proxies {
+    pub fn parse(raw: &str) -> anyhow::Result<Proxies> {
+        let raw = raw.trim();
+        if raw.is_empty() || raw == "0" || raw.eq_ignore_ascii_case("false") {
+            return Ok(Proxies::Off);
+        }
+        if raw == "1" || raw.eq_ignore_ascii_case("true") {
+            return Ok(Proxies::Local);
+        }
+        let mut nets = vec![];
+        for entry in raw.split([',', ' ']).map(str::trim).filter(|e| !e.is_empty()) {
+            let (addr, bits) = entry.split_once('/').map_or((entry, None), |(a, b)| (a, Some(b)));
+            let addr: IpAddr = canonical(addr.parse().map_err(|_| anyhow::anyhow!("FINSTATS_TRUST_PROXY: `{entry}` is not an address or a range of addresses"))?);
+            let max = if addr.is_ipv4() { 32 } else { 128 };
+            let bits = match bits {
+                None => max,
+                Some(b) => b.parse::<u8>().ok().filter(|b| *b <= max).ok_or_else(|| anyhow::anyhow!("FINSTATS_TRUST_PROXY: `{entry}` has no valid prefix length"))?,
+            };
+            nets.push((addr, bits));
+        }
+        Ok(Proxies::Named(nets))
+    }
+
+    /// Whether any peer is believed at all.
+    pub fn any(&self) -> bool {
+        *self != Proxies::Off
+    }
+
+    /// Whether this peer is a proxy whose forwarded headers are believed.
+    pub fn trusts(&self, peer: IpAddr) -> bool {
+        let peer = canonical(peer);
+        match self {
+            Proxies::Off => false,
+            Proxies::Local => db::is_local_ip(&peer.to_string()).unwrap_or(false),
+            Proxies::Named(nets) => nets.iter().any(|(net, bits)| within(peer, *net, *bits)),
         }
     }
-    peer.ip()
+
+    /// What the start-up log says about it.
+    pub fn describe(&self) -> Option<String> {
+        match self {
+            Proxies::Off => None,
+            Proxies::Local => Some("FINSTATS_TRUST_PROXY=1: X-Forwarded-For is believed only from a peer on this machine or a private network, one hop; name the proxy's address (or range) instead to be exact".into()),
+            Proxies::Named(nets) => Some(format!(
+                "X-Forwarded-For is believed from {}",
+                nets.iter().map(|(a, b)| format!("{a}/{b}")).collect::<Vec<_>>().join(", ")
+            )),
+        }
+    }
+}
+
+/// An IPv4 address written inside IPv6 is that address.
+fn canonical(ip: IpAddr) -> IpAddr {
+    match ip {
+        IpAddr::V6(v6) => v6.to_ipv4_mapped().map_or(ip, IpAddr::V4),
+        v4 => v4,
+    }
+}
+
+fn within(ip: IpAddr, net: IpAddr, bits: u8) -> bool {
+    let mask = |width: u32| if bits == 0 { 0 } else { u128::MAX << (width - u32::from(bits)) };
+    match (ip, net) {
+        (IpAddr::V4(a), IpAddr::V4(n)) => (u128::from(u32::from(a)) ^ u128::from(u32::from(n))) & mask(32) & u128::from(u32::MAX) == 0,
+        (IpAddr::V6(a), IpAddr::V6(n)) => (u128::from(a) ^ u128::from(n)) & mask(128) == 0,
+        _ => false,
+    }
+}
+
+/// One `X-Forwarded-For` entry: an address, with or without a port (`203.0.113.9:51234`, `[2001:db8::7]:443`).
+fn forwarded_entry(raw: &str) -> Option<IpAddr> {
+    let raw = raw.trim().trim_matches('"');
+    if let Ok(ip) = raw.parse::<IpAddr>() {
+        return Some(canonical(ip));
+    }
+    raw.parse::<SocketAddr>().ok().map(|s| canonical(s.ip()))
+}
+
+/// The address a request came from. Without a believed proxy, the peer. Behind one, `X-Forwarded-For` read from the
+/// right: every entry before the proxy's own came from the client, which may put anything there, a header line of its own
+/// included (some proxies add a line rather than extend the client's, so the last line is the proxy's).
+pub fn client_ip(app: &App, headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
+    let peer_ip = canonical(peer.ip());
+    let proxies = &app.trust_proxy;
+    if !proxies.trusts(peer_ip) {
+        warn_unbelieved(proxies, headers, peer_ip);
+        return peer_ip;
+    }
+    let lines: Vec<&str> = headers.get_all("x-forwarded-for").iter().filter_map(|v| v.to_str().ok()).collect();
+    let mut entries = lines.iter().flat_map(|l| l.split(',')).collect::<Vec<_>>().into_iter().rev();
+    if *proxies == Proxies::Local {
+        return entries.next().and_then(forwarded_entry).unwrap_or(peer_ip);
+    }
+    let mut hop = peer_ip;
+    for entry in entries {
+        let Some(ip) = forwarded_entry(entry) else { return hop };
+        hop = ip;
+        if !proxies.trusts(hop) {
+            break;
+        }
+    }
+    hop
+}
+
+/// Once per run: with no proxy believed, a peer on this network sent `X-Forwarded-For`, which is a reverse proxy in front
+/// of FinStats, and every request through it then counts as the proxy's (one sign-in limit for the whole internet).
+fn warn_unbelieved(proxies: &Proxies, headers: &HeaderMap, peer: IpAddr) {
+    static WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if *proxies == Proxies::Off
+        && headers.contains_key("x-forwarded-for")
+        && db::is_local_ip(&peer.to_string()).unwrap_or(false)
+        && !WARNED.swap(true, std::sync::atomic::Ordering::Relaxed)
+    {
+        tracing::warn!(
+            "a request from {peer} carried X-Forwarded-For, but FINSTATS_TRUST_PROXY is not set: every request through that proxy counts as the proxy's own address, sign-in limit included. Set FINSTATS_TRUST_PROXY to the proxy's address"
+        );
+    }
 }
 
 impl FromRequestParts<App> for AuthUser {
@@ -963,7 +1076,7 @@ mod tests {
     #[test]
     fn behind_a_proxy_the_address_is_the_one_the_proxy_saw() {
         let mut app = crate::state::test_app();
-        std::sync::Arc::get_mut(&mut app).unwrap().trust_proxy = true;
+        std::sync::Arc::get_mut(&mut app).unwrap().trust_proxy = Proxies::parse("1").unwrap();
         let mut headers = HeaderMap::new();
         headers.insert("x-forwarded-for", "10.0.0.7, 203.0.113.9".parse().unwrap());
         let peer: SocketAddr = "127.0.0.1:40000".parse().unwrap();
@@ -977,6 +1090,35 @@ mod tests {
         headers.append("x-forwarded-for", "198.51.100.1".parse().unwrap());
         headers.append("x-forwarded-for", "203.0.113.9".parse().unwrap());
         assert_eq!(client_ip(&app, &headers, peer).to_string(), "203.0.113.9", "the client's own line was believed");
+        // `1` believes a peer on this machine or this network, never one from outside: with the port open as well as the
+        // proxy, anybody else picked their own address with the header.
+        let outside: SocketAddr = "198.51.100.20:40000".parse().unwrap();
+        assert_eq!(client_ip(&app, &headers, outside).to_string(), "198.51.100.20");
+        // An entry with a port is the address before it.
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "203.0.113.9:51234".parse().unwrap());
+        assert_eq!(client_ip(&app, &headers, peer).to_string(), "203.0.113.9");
+        headers.insert("x-forwarded-for", "[2001:db8::7]:443".parse().unwrap());
+        assert_eq!(client_ip(&app, &headers, peer).to_string(), "2001:db8::7");
+    }
+
+    /// Named proxies are believed and nobody else: the header is read from the right, past every hop that is a proxy
+    /// named, and the first that is not is the client. Anything before it is whatever the client wrote.
+    #[test]
+    fn only_a_named_proxy_is_believed_and_its_hops_are_walked_from_the_right() {
+        let mut app = crate::state::test_app();
+        std::sync::Arc::get_mut(&mut app).unwrap().trust_proxy = Proxies::parse("172.18.0.0/16, 10.0.0.2").unwrap();
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "198.51.100.1, 203.0.113.9, 10.0.0.2".parse().unwrap());
+        let proxy: SocketAddr = "172.18.0.5:40000".parse().unwrap();
+        assert_eq!(client_ip(&app, &headers, proxy).to_string(), "203.0.113.9", "two proxies, then the client");
+        let other: SocketAddr = "192.168.1.10:40000".parse().unwrap();
+        assert_eq!(client_ip(&app, &headers, other).to_string(), "192.168.1.10", "a peer outside the list is itself, whatever it says");
+        headers.insert("x-forwarded-for", "10.0.0.2".parse().unwrap());
+        assert_eq!(client_ip(&app, &headers, proxy).to_string(), "10.0.0.2", "nothing but proxies: the last one");
+        assert!(Proxies::parse("10.0.0.0/33").is_err() && Proxies::parse("proxy.lan").is_err(), "a list FinStats cannot read is refused at start");
+        assert!(!Proxies::parse("").unwrap().any() && !Proxies::parse("0").unwrap().any() && !Proxies::parse("false").unwrap().any());
+        assert!(Proxies::parse("true").unwrap().any());
     }
 
     /// Signing out with a cookie that opens nothing asks no open connection to re-read its access: anybody could do it
