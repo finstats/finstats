@@ -350,34 +350,66 @@ pub struct Burst {
     pub ip: String,
     pub first_at: i64,
     pub at: i64,
-    /// The activity-log row that completed it: what makes the same burst the same burst on a rescan.
-    pub id: i64,
+    /// Which window of `within_s` it fell in: what makes the same burst the same burst on a rescan.
+    pub window: i64,
     pub count: usize,
 }
 
-/// Every run of `min` failures inside `within_s`, per account or address. Pure and re-derivable: a
-/// rescan finds exactly the same bursts, so `dedupe` keeps them single.
+/// Every account's failures in one window of `within_s`, once there are at least `min` of them, all of them counted.
+/// Pure and re-derivable: a rescan finds exactly the same bursts, so `dedupe` keeps them single. Counted in runs of
+/// `min`, ten thousand tries were two thousand notices and none of them could ever be an alert.
 pub fn bursts(rows: &[(i64, i64, String, Option<String>, String)], within_s: i64, min: usize) -> Vec<Burst> {
-    let mut window: HashMap<String, Vec<(i64, i64)>> = HashMap::new();
-    let mut out = vec![];
-    for (id, at, who, user_id, ip) in rows {
-        let seen = window.entry(who.clone()).or_default();
-        seen.retain(|(_, t)| at - t <= within_s);
-        seen.push((*id, *at));
-        if seen.len() >= min {
-            out.push(Burst {
-                who: who.clone(),
-                user_id: user_id.clone(),
-                ip: ip.clone(),
-                first_at: seen[0].1,
-                at: *at,
-                id: *id,
-                count: seen.len(),
-            });
-            seen.clear(); // the next `min` failures are the next burst, not the same one going on
+    let mut found: BTreeMap<(String, i64), Burst> = BTreeMap::new();
+    for (_, at, who, user_id, ip) in rows {
+        let window = at.div_euclid(within_s);
+        let b = found.entry((who.clone(), window)).or_insert_with(|| Burst { who: who.clone(), user_id: None, ip: String::new(), first_at: *at, at: *at, window, count: 0 });
+        b.count += 1;
+        b.first_at = b.first_at.min(*at);
+        if *at >= b.at || b.count == 1 {
+            (b.at, b.user_id, b.ip) = (*at, user_id.clone(), ip.clone());
         }
     }
-    out
+    found.into_values().filter(|b| b.count >= min).collect()
+}
+
+/// How loud a burst of `count` failures is.
+fn sign_in_severity(count: usize) -> &'static str {
+    if count >= BURST_MIN * 4 { notify::ALERT } else { notify::WARN }
+}
+
+/// A burst's notice: one while it is a warning, and one more should it grow into an alert, so a window says at most two
+/// things about one account, or about the names that are none (`who` None), however long it goes on.
+fn burst_dedupe(who: Option<&str>, window: i64, severity: &str) -> String {
+    let who = who.map_or_else(|| "nobody".to_string(), |w| format!("user:{w}"));
+    match severity {
+        notify::ALERT => format!("notify:signins:{who}:{window}:alert"),
+        _ => format!("notify:signins:{who}:{window}"),
+    }
+}
+
+/// Jellyfin's own words before the name on a failed sign-in, in English: "Failed login try from alice" in older
+/// versions, "Failed login attempt from alice" in newer ones.
+const SIGN_IN_TEMPLATES: [&str; 2] = ["Failed login try from ", "Failed login attempt from "];
+
+/// The server's own words before the name, in a language FinStats does not know them in: what every failed sign-in's
+/// line begins with, up to a space. Only from two different lines or more: one alone does not say where its name starts.
+fn template_prefix<'a>(lines: impl Iterator<Item = &'a str>) -> Option<String> {
+    let distinct: std::collections::BTreeSet<&str> = lines.filter(|l| !SIGN_IN_TEMPLATES.iter().any(|t| l.starts_with(t))).collect();
+    if distinct.len() < 2 {
+        return None;
+    }
+    let first = *distinct.first()?;
+    let mut shared = first.len();
+    for line in &distinct {
+        shared = first.char_indices().zip(line.chars()).take_while(|((_, a), b)| a == b).last().map_or(0, |((i, a), _)| i + a.len_utf8()).min(shared);
+    }
+    let prefix = &first[..shared];
+    Some(prefix[..prefix.rfind(' ')? + 1].to_string()).filter(|p| !p.trim().is_empty())
+}
+
+/// The name as it was typed on a failed sign-in: the whole of what follows the server's own words, never just its end.
+fn typed_name<'a>(line: &'a str, learned: Option<&str>) -> Option<&'a str> {
+    SIGN_IN_TEMPLATES.iter().copied().chain(learned).find_map(|p| line.strip_prefix(p)).map(str::trim).filter(|n| !n.is_empty())
 }
 
 /// Read the failures out of the activity log and file what is new. Needs no geolocation database, so it
@@ -387,18 +419,31 @@ type Failure = (i64, i64, Option<String>, Option<String>, String);
 
 pub fn scan_sign_ins(conn: &Connection, bus: &Fanout) -> Result<usize> {
     let since = db::now() - BURST_LOOKBACK_S;
-    let rows: Vec<Failure> = conn
+    // Jellyfin writes no user id on a failed sign-in, only a line ending in the name typed, in the server's language: an
+    // account is a user whose name is the whole of what was typed.
+    let read: Vec<(i64, i64, String, Option<String>, Option<String>, String)> = conn
         .prepare_cached(
-            // Jellyfin writes no user id on a failed sign-in, only a line ending in the name typed, in the server's
-            // language: an account is a user whose name ends that line.
-            "SELECT e.id, e.date,
-                    COALESCE(u.name, (SELECT k.name FROM users k WHERE lower(substr(e.name, -length(k.name) - 1)) = ' ' || lower(k.name) ORDER BY length(k.name) DESC LIMIT 1)),
-                    e.user_id, COALESCE(e.remote_ip, '')
+            "SELECT e.id, e.date, COALESCE(e.name, ''), u.name, e.user_id, COALESCE(e.remote_ip, '')
              FROM server_events e LEFT JOIN users u ON u.id = e.user_id
              WHERE e.type = 'AuthenticationFailed' AND e.date >= ?1 ORDER BY e.date, e.id",
         )?
-        .query_map([since], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))?
+        .query_map([since], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
         .collect::<Result<_, _>>()?;
+    let accounts_named: HashMap<String, String> = conn
+        .prepare_cached("SELECT name FROM users ORDER BY length(name)")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .map(|n| (n.to_lowercase(), n))
+        .collect();
+    let learned = template_prefix(read.iter().map(|r| r.2.as_str()));
+    let rows: Vec<Failure> = read
+        .into_iter()
+        .map(|(id, at, line, by_id, user_id, ip)| {
+            let account = by_id.or_else(|| typed_name(&line, learned.as_deref()).and_then(|n| accounts_named.get(&n.to_lowercase()).cloned()));
+            (id, at, account, user_id, ip)
+        })
+        .collect();
     let mut added = 0;
     // An account's failures are its own bursts. A name that is no account is whatever the one knocking typed, as many
     // as they like: keyed by it, a thousand invented names were a thousand notifications carrying their text, and a
@@ -406,14 +451,15 @@ pub fn scan_sign_ins(conn: &Connection, bus: &Fanout) -> Result<usize> {
     let (accounts, nobody): (Vec<_>, Vec<_>) = rows.into_iter().partition(|r| r.2.is_some());
     let accounts: Vec<(i64, i64, String, Option<String>, String)> = accounts.into_iter().map(|(id, at, name, user, ip)| (id, at, name.unwrap_or_default(), user, ip)).collect();
     for b in bursts(&accounts, BURST_WINDOW_S, BURST_MIN) {
+        let severity = sign_in_severity(b.count);
         let mut event = notify::Event::new(
             Kind::FailedSignIns,
-            format!("notify:signins:{}:{}", b.who, b.id),
+            burst_dedupe(Some(&b.who), b.window, severity),
             format!("{} failed sign-ins for {}", b.count, b.who),
             format!("{} attempts in {}.", b.count, human_span(b.at - b.first_at)),
         )
         .at(b.at)
-        .severity(if b.count >= BURST_MIN * 4 { notify::ALERT } else { notify::WARN })
+        .severity(severity)
         .field("Account", b.who.clone())
         .field("Attempts", b.count.to_string())
         .link("/server");
@@ -434,12 +480,12 @@ pub fn scan_sign_ins(conn: &Connection, bus: &Fanout) -> Result<usize> {
         let addresses = tries.iter().map(|r| r.4.as_str()).collect::<std::collections::BTreeSet<_>>().len();
         let event = notify::Event::new(
             Kind::FailedSignIns,
-            format!("notify:signins:nobody:{window}"),
+            burst_dedupe(None, window, sign_in_severity(tries.len())),
             format!("{} failed sign-ins for names that are not accounts", tries.len()),
             format!("{} attempts in {}, from {addresses} address{}.", tries.len(), human_span(last - first), if addresses == 1 { "" } else { "es" }),
         )
         .at(last)
-        .severity(if tries.len() >= BURST_MIN * 4 { notify::ALERT } else { notify::WARN })
+        .severity(sign_in_severity(tries.len()))
         .field("Attempts", tries.len().to_string())
         .link("/server");
         added += usize::from(notify::raise_in(conn, bus, &event)?);
@@ -1121,14 +1167,14 @@ mod tests {
         let c = conn();
         c.execute("INSERT INTO users(id, name, updated_at) VALUES ('ua', 'alice', 1)", []).unwrap();
         let f = bus(&c, vec![target(1, None, &[Kind::FailedSignIns])]);
-        let now = db::now();
+        let now = (db::now() - 3_600).div_euclid(BURST_WINDOW_S) * BURST_WINDOW_S; // the start of a window, so none of it falls in the next
         let mut id = 0;
         for name in 0..200 {
             for n in 0..5 {
                 id += 1;
                 c.execute(
                     "INSERT INTO server_events(id, date, name, type, severity, user_id, remote_ip) VALUES (?1, ?2, ?3, 'AuthenticationFailed', 'Error', NULL, '203.0.113.9')",
-                    params![id, now - 600 + n, format!("Failed login try from <!channel> name {name}")],
+                    params![id, now + n, format!("Failed login try from <!channel> name {name}")],
                 )
                 .unwrap();
             }
@@ -1136,7 +1182,7 @@ mod tests {
         for n in 0..5 {
             id += 1;
             // As Jellyfin writes it: no user id, the name at the end of the line.
-            c.execute("INSERT INTO server_events(id, date, name, type, severity, user_id, remote_ip) VALUES (?1, ?2, 'Failed login try from Alice', 'AuthenticationFailed', 'Error', NULL, '203.0.113.9')", params![id, now - 300 + n]).unwrap();
+            c.execute("INSERT INTO server_events(id, date, name, type, severity, user_id, remote_ip) VALUES (?1, ?2, 'Failed login try from Alice', 'AuthenticationFailed', 'Error', NULL, '203.0.113.9')", params![id, now + 100 + n]).unwrap();
         }
         assert_eq!(scan_sign_ins(&c, &f).unwrap(), 2, "one notice for the invented names, one for alice");
         let titles: Vec<String> = c.prepare("SELECT data FROM notify_events").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
@@ -1159,7 +1205,7 @@ mod tests {
     }
 
     #[test]
-    fn several_failed_sign_ins_in_a_row_are_one_burst_and_the_next_five_are_the_next() {
+    fn several_failed_sign_ins_in_a_window_are_one_burst_however_many_there_are() {
         let row = |id: i64, at: i64, who: &str| (id, at, who.to_string(), Some(format!("u-{who}")), "203.0.113.9".to_string());
         // Four for alice is nothing; the fifth completes a burst. Bob's two in between are his own count.
         let mut rows: Vec<_> = (0..4).map(|n| row(n, 1_000 + n * 60, "alice")).collect();
@@ -1168,16 +1214,67 @@ mod tests {
         rows.push(row(12, 1_300, "alice"));
         let found = bursts(&rows, 900, 5);
         assert_eq!(found.len(), 1, "one burst, for the account that reached five");
-        assert_eq!((found[0].who.as_str(), found[0].id, found[0].count), ("alice", 12, 5));
+        assert_eq!((found[0].who.as_str(), found[0].window, found[0].count), ("alice", 1, 5));
 
         // Spread beyond the window, five failures are somebody who keeps mistyping, not a burst.
         let slow: Vec<_> = (0..5).map(|n| row(n, 1_000 + n * 1_000, "alice")).collect();
         assert!(bursts(&slow, 900, 5).is_empty());
 
-        // Ten in a row are two bursts, each keyed by the attempt that completed it, so a rescan finds the same two.
-        let many: Vec<_> = (0..10).map(|n| row(n, 1_000 + n * 10, "alice")).collect();
+        // Ten thousand in a row are one burst a window, counting all of them: each run of five was a notice of its own,
+        // and none could ever reach an alert.
+        let many: Vec<_> = (0..10_000).map(|n| row(n, 1_000 + n / 20, "alice")).collect();
         let found = bursts(&many, 900, 5);
-        assert_eq!(found.iter().map(|b| b.id).collect::<Vec<_>>(), vec![4, 9]);
+        assert_eq!(found.iter().map(|b| (b.window, b.count)).collect::<Vec<_>>(), vec![(1, 10_000)]);
+        assert_eq!(sign_in_severity(found[0].count), notify::ALERT);
+        assert_eq!(sign_in_severity(5), notify::WARN);
+    }
+
+    /// A burst on an account is said once as a warning and, should it grow to an alert, once more as one: never once for
+    /// every five tries, and an alert is reachable however the reads of the activity log fall.
+    #[test]
+    fn a_long_run_of_failed_sign_ins_is_a_warning_and_then_an_alert_and_nothing_more() {
+        use crate::notify::tests::{bus, target};
+        let c = conn();
+        c.execute("INSERT INTO users(id, name, updated_at) VALUES ('ua', 'alice', 1)", []).unwrap();
+        let f = bus(&c, vec![target(1, None, &[Kind::FailedSignIns])]);
+        let start = (db::now() - 3_600).div_euclid(BURST_WINDOW_S) * BURST_WINDOW_S;
+        let fail = |from: i64, to: i64| {
+            for id in from..to {
+                c.execute("INSERT INTO server_events(id, date, name, type, severity, user_id, remote_ip) VALUES (?1, ?2, 'Failed login try from alice', 'AuthenticationFailed', 'Error', NULL, '203.0.113.9')", params![id, start + id]).unwrap();
+            }
+        };
+        fail(0, 5);
+        assert_eq!(scan_sign_ins(&c, &f).unwrap(), 1, "five: a warning");
+        fail(5, 400);
+        assert_eq!(scan_sign_ins(&c, &f).unwrap(), 1, "four hundred: an alert");
+        assert_eq!(scan_sign_ins(&c, &f).unwrap(), 0, "a rescan found them again");
+        let severities: Vec<String> = c.prepare("SELECT severity FROM notify_events ORDER BY id").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(severities, vec![notify::WARN, notify::ALERT]);
+    }
+
+    /// Jellyfin writes the name as it was typed after its own words, so a name is an account's only when the whole of it
+    /// is: `x alice` is somebody typing a name that is no account, not twenty tries on alice's.
+    #[test]
+    fn a_failed_sign_in_is_an_account_s_only_when_the_whole_name_typed_is_its_name() {
+        assert_eq!(typed_name("Failed login try from alice", None), Some("alice"));
+        assert_eq!(typed_name("Failed login attempt from x alice", None), Some("x alice"));
+        let lines = ["Échec de connexion de alice", "Échec de connexion de bob", "Échec de connexion de x alice"];
+        let learned = template_prefix(lines.iter().copied());
+        assert_eq!(learned.as_deref(), Some("Échec de connexion de "), "the server's own words, from what its lines share");
+        assert_eq!(typed_name(lines[2], learned.as_deref()), Some("x alice"));
+        assert_eq!(template_prefix(["Échec de connexion de x alice"].into_iter()), None, "one line alone says nothing about where the name starts");
+
+        use crate::notify::tests::{bus, target};
+        let c = conn();
+        c.execute("INSERT INTO users(id, name, updated_at) VALUES ('ua', 'alice', 1)", []).unwrap();
+        let f = bus(&c, vec![target(1, None, &[Kind::FailedSignIns])]);
+        let start = (db::now() - 3_600).div_euclid(BURST_WINDOW_S) * BURST_WINDOW_S;
+        for id in 0..20 {
+            c.execute("INSERT INTO server_events(id, date, name, type, severity, user_id, remote_ip) VALUES (?1, ?2, 'Failed login try from x alice', 'AuthenticationFailed', 'Error', NULL, '203.0.113.9')", params![id, start + id]).unwrap();
+        }
+        assert_eq!(scan_sign_ins(&c, &f).unwrap(), 1);
+        let said: String = c.query_row("SELECT title FROM notify_events", [], |r| r.get(0)).unwrap();
+        assert!(!said.contains("alice"), "a name typed after another was filed as alice's: {said}");
     }
 
 
