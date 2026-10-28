@@ -24,13 +24,14 @@ import appearance from '../settings/appearance.js';
 import keys from '../settings/keys.js';
 import publicProfile from '../settings/public.js';
 import account from '../settings/account.js';
+import { t } from '../i18n.js';
 
 const SECTIONS = [jellyfin, access, collection, network, security, ...services, backups, importSection, unlinked, tasks, system, keys, appearance, publicProfile, account];
 // Where the one-page anchors went, so links and bookmarks from before still land.
 const LEGACY = { connections: 'connections', security: 'security', notifications: 'notifications', outbound: 'system', tasks: 'tasks', backups: 'backups', 'import-jellystat': 'import', 'import-streamystats': 'import', 'import-missing': 'unlinked' };
 // ---------------------------------------------------------------- the finder
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, '');
-const words = (s) => norm(s).split(/[^a-z0-9]+/).filter(Boolean);
+const words = (s) => norm(s).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 
 /** Every typed word must begin some word of the entry; a match on the label counts for more than one on a hint. */
 function score(q, e) {
@@ -50,9 +51,9 @@ function finder(visible, current, ctx) {
     { section: s, id: null, label: s.label, where: s.sub, labelWords: words(s.label), hintWords: words(s.sub) },
     ...(s.entries || []).filter((e) => !e.visible || e.visible()).map((e) => ({ section: s, id: e.id, label: e.label, where: s.label, labelWords: words(e.label), hintWords: words(`${e.hint || ''} ${s.label}`) })),
   ]);
-  const input = h('input', { class: 'fui-field__input fui-field__input--search settings-find', type: 'search', placeholder: 'Find a setting…', 'aria-label': 'Find a setting', autocomplete: 'off',
+  const input = h('input', { class: 'fui-field__input fui-field__input--search settings-find', type: 'search', placeholder: t('settings.find'), 'aria-label': t('settings.find_label'), autocomplete: 'off',
     role: 'combobox', 'aria-expanded': 'false', 'aria-controls': 'settings-hits', 'aria-autocomplete': 'list', 'aria-keyshortcuts': '/' });
-  const list = h('ul', { class: 'settings-hits', id: 'settings-hits', role: 'listbox', 'aria-label': 'Matching settings', hidden: true });
+  const list = h('ul', { class: 'settings-hits', id: 'settings-hits', role: 'listbox', 'aria-label': t('settings.matching'), hidden: true });
   const wrap = h('div', { class: 'fui-field__search settings-finder' }, icon('search', 14), input, h('kbd', { class: 'settings-find-key', 'aria-hidden': 'true' }, '/'), list);
   let hits = [], sel = -1;
 
@@ -106,11 +107,11 @@ export default function settings(ctx) {
   const visible = SECTIONS.filter((s) => s.visible());
   const section = pickSection(ctx, '/settings', visible, LEGACY);
   if (!section) return;
-  ctx.title(`${section.label} · Settings`);
+  ctx.title(t('settings.page.title', { section: section.label }));
   const store = createStore(ctx);
   const slot = h('div', { class: 'fui-sections__body stack' });
-  ctx.root.append(pageHeader('Settings', section.sub, finder(visible, section.key, ctx)),
-    sectionLayout(sectionNav('/settings', visible, section.key, 'Settings sections'), slot));
+  ctx.root.append(pageHeader(t('nav.settings'), section.sub, finder(visible, section.key, ctx)),
+    sectionLayout(sectionNav('/settings', visible, section.key, t('settings.sections_label')), slot));
   section.render(slot, store)
     .then(() => { const id = location.hash.slice(1); if (id && !ctx.signal.aborted) reveal(id); })
     .catch((e) => { if (!ctx.signal.aborted && e.name !== 'AbortError' && e.status !== 401) mount(slot, errorState(e, () => section.render(slot, store))); });

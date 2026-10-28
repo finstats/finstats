@@ -18,6 +18,14 @@
 .fui-chart__line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .fui-chart__area { fill-opacity: .1; stroke: none; }
 .fui-chart__dot { stroke: var(--bg-2); stroke-width: 2; }
+/* A limit: dashed in the critical colour, named at its right end; a line past it is drawn in that colour above it. */
+.fui-chart__limit { stroke: var(--critical); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.fui-chart__limit-label { fill: var(--critical-text); font: 600 10.5px var(--mono); }
+.fui-chart__line.fui-chart__over { stroke: var(--critical); }
+/* A mark: the moments it happened, shaded the plot's height in its status colour. */
+.fui-chart__band { fill-opacity: .16; }
+.fui-chart__band--critical { fill: var(--critical); }
+.fui-chart__band--warning { fill: var(--warning); }
 .fui-chart__hit { fill: transparent; }
 .fui-chart__bar { transition: opacity .12s ease; }
 .fui-chart__plot.is-pointing .fui-chart__bar:not(.is-on) { opacity: .45; }

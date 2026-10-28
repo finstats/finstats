@@ -7,6 +7,7 @@
 
 import { h, icon } from '../../core.js';
 import { place, step, edge, typeahead, held } from './plan.js';
+import { say } from '../../i18n.js';
 
 let current = null;   // the menu on screen: { el, rows, items, from, close }
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -40,7 +41,7 @@ function row(it, i) {
  * away). `at`: the point it opens at, in the window's coordinates. `from`: the element it was opened from, which gets
  * the focus back. `label`: what a screen reader calls the menu. `onClose()`: it has gone, however it went.
  */
-export function openMenu({ items, at, from = null, label = 'Actions', onClose = null }) {
+export function openMenu({ items, at, from = null, label = say('context_menu.label', 'Actions'), onClose = null }) {
   closeMenu({ instant: true });
   // An item a caller left out can leave two separators together, or one at an end: a line divides two things or none.
   const list = items.filter(Boolean).filter((it, i, all) => !(it.separator && (i === 0 || i === all.length - 1 || all[i - 1].separator)));

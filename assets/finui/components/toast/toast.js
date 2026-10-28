@@ -5,6 +5,7 @@
 import { h, icon } from '../../core.js';
 import { button } from '../button/button.js';
 import { lifetime, shown } from './plan.js';
+import { say } from '../../i18n.js';
 
 const TONE_ICON = { info: 'info', good: 'check', warning: 'alert', critical: 'alert' };
 let region = null, queue = [], seq = 0;
@@ -14,7 +15,7 @@ export function toastCard({ text, tone = 'info', action = null, onAction = null,
   return h('div', { class: ['fui-toast', `fui-toast--${tone}`], role: tone === 'critical' ? 'alert' : 'status' },
     icon(TONE_ICON[tone] || 'info', 16, 'fui-toast__icon'), h('span', { class: 'fui-toast__text' }, text),
     action ? button({ size: 'sm', variant: 'ghost', class: 'fui-toast__action', onClick: onAction }, action) : null,
-    button({ variant: 'icon', class: 'fui-toast__close', 'aria-label': 'Dismiss', onClick: onClose }, icon('x', 14)));
+    button({ variant: 'icon', class: 'fui-toast__close', 'aria-label': say('toast.dismiss', 'Dismiss'), onClick: onClose }, icon('x', 14)));
 }
 
 function paint() {

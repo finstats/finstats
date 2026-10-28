@@ -1,20 +1,21 @@
 // /users/:id/timeline: one person's watching as a trail, newest first. Wide screens lay it out as a
 // snake (left to right, then back), a phone gets one straight line.
-import { h, icon, duration, durationExact, dateTime } from '../dom.js';
+import { h, icon, duration, durationExact, dateTime, clockTime } from '../dom.js';
 import { api } from '../api.js';
 import { replaceQuery } from '../router.js';
 import { dataView, sk, avatar, poster, emptyState, errorState } from '../components.js';
 import { userTabs } from './users.js';
 import { button } from '../../finui/components/button/button.js';
+import { t, lang } from '../i18n.js';
 
 const COL_MIN = 330;   // a stop is never narrower than this in the snake
 const LINE_BELOW = 620; // below this width the trail is a straight line
 const MAX_COLS = 4;
 
-const monthf = new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' });
-const dayf = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
-const dayfy = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-const timef = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+const monthf = new Intl.DateTimeFormat(lang(), { month: 'short', year: 'numeric' });
+const dayf = new Intl.DateTimeFormat(lang(), { day: 'numeric', month: 'short' });
+const dayfy = new Intl.DateTimeFormat(lang(), { day: 'numeric', month: 'short', year: 'numeric' });
+const timef = new Intl.DateTimeFormat(lang(), { hour: '2-digit', minute: '2-digit', hour12: false });
 const TYPE_CLASS = { Movie: 'is-movie', Episode: 'is-episode', Audio: 'is-audio' };
 
 /** null = every library; otherwise exactly these (never none: switching the last one off shows all again). */
@@ -28,7 +29,7 @@ export const prefetchTimeline = ({ params, query, signal }) => [() => loadTimeli
 
 export function timelinePage(ctx) {
   const id = ctx.params.id;
-  ctx.title('Timeline');
+  ctx.title(t('pages.timeline.page_title'));
   let picked = pickedOf(ctx.query);
   const headerSlot = h('div');
   const filterSlot = h('div');
@@ -42,16 +43,16 @@ export function timelinePage(ctx) {
     render: (d) => {
       paintHeader(d.user);
       paintFilter(d.libraries || []);
-      if (!d.stops.length) return emptyState('Nothing here yet', picked ? 'No plays in the libraries you picked.' : 'Plays show up here as soon as something has been watched.');
+      if (!d.stops.length) return emptyState(t('pages.timeline.empty_title'), picked ? t('pages.timeline.empty_picked') : t('pages.timeline.empty_sub'));
       return trailView(d);
     },
   });
 
   function paintHeader(u) {
-    ctx.title(`${u.name} · Timeline`);
+    ctx.title(t('pages.timeline.title_of', { name: u.name }));
     headerSlot.replaceChildren(h('header', { class: 'fui-page-header entity-header' },
       avatar(u.id, u.name, { size: 56, hasImage: u.has_image }),
-      h('div', null, h('h1', { class: 'fui-page-header__title' }, u.name), h('p', { class: 'fui-page-header__sub' }, 'Everything watched, newest first'))));
+      h('div', null, h('h1', { class: 'fui-page-header__title' }, u.name), h('p', { class: 'fui-page-header__sub' }, t('pages.timeline.sub')))));
   }
 
   function paintFilter(libraries) {
@@ -64,12 +65,12 @@ export function timelinePage(ctx) {
       paintFilter(libraries);
       dv.load();
     };
-    filterSlot.replaceChildren(h('div', { class: 'filters trail-filter', role: 'group', 'aria-label': 'Libraries' },
-      h('span', { class: 'trail-filter-label' }, 'Libraries'),
+    filterSlot.replaceChildren(h('div', { class: 'filters trail-filter', role: 'group', 'aria-label': t('nav.libraries') },
+      h('span', { class: 'trail-filter-label' }, t('nav.libraries')),
       libraries.map((l) => h('button', { type: 'button', class: 'fui-chip fui-chip--button fui-chip--toggle', 'aria-pressed': String(isOn(l.id)),
         onClick: () => { const next = new Set(all.filter(isOn)); if (next.has(l.id)) next.delete(l.id); else next.add(l.id); set(next); } },
       isOn(l.id) ? icon('check', 12) : null, l.name)),
-      picked ? button({ variant: 'ghost', size: 'sm', type: 'button', onClick: () => set(new Set(all)) }, 'Show all') : null));
+      picked ? button({ variant: 'ghost', size: 'sm', type: 'button', onClick: () => set(new Set(all)) }, t('pages.timeline.show_all')) : null));
   }
 
   /** The trail plus its "older" control; further pages are appended in place. */
@@ -79,14 +80,14 @@ export function timelinePage(ctx) {
     const box = h('div', null, trail.el, foot);
     let next = first.next, busy = false;
 
-    const more = button({ type: 'button', onClick: () => loadMore() }, 'Show older');
+    const more = button({ type: 'button', onClick: () => loadMore() }, t('pages.timeline.show_older'));
     const watcher = 'IntersectionObserver' in window ? new IntersectionObserver((e) => { if (e.some((x) => x.isIntersecting)) loadMore(); }, { rootMargin: '600px' }) : null;
     ctx.signal.addEventListener('abort', () => watcher && watcher.disconnect());
 
     function paintFoot(err) {
       if (watcher) watcher.disconnect();
       if (err) { foot.replaceChildren(errorState(err, () => loadMore())); return; }
-      if (!next) { foot.replaceChildren(h('p', { class: 'trail-end' }, 'This is where the history starts.')); return; }
+      if (!next) { foot.replaceChildren(h('p', { class: 'trail-end' }, t('pages.timeline.history_starts'))); return; }
       foot.replaceChildren(more);
       if (watcher) watcher.observe(more);
     }
@@ -171,19 +172,19 @@ function stopCell(s, month) {
         s.sub ? h('span', { class: 'stop-sub' }, s.sub) : null,
         h('span', { class: 'stop-what' }, what(s)),
         h('span', { class: 'stop-when' }, when(s),
-          s.active ? h('span', { class: 'stop-now' }, 'Playing now') : h('span', { class: 'stop-dur', title: durationExact(s.watch_s) }, duration(s.watch_s))))));
+          s.active ? h('span', { class: 'stop-now' }, t('plays_table.playing_now')) : h('span', { class: 'stop-dur', title: durationExact(s.watch_s) }, duration(s.watch_s))))));
 }
 
 /** "Episodes 3–6", "4 episodes", "7 tracks", "Watched in 2 sittings". */
 function what(s) {
-  const again = s.plays > s.titles ? ` · ${s.plays} plays` : '';
+  const again = s.plays > s.titles ? ' · ' + t('terms.play', { count: s.plays }) : '';
   if (s.kind === 'season') {
-    if (s.episode_from != null) return (s.episode_from === s.episode_to ? `Episode ${s.episode_from}` : `Episodes ${s.episode_from}–${s.episode_to}`) + again;
-    return (s.titles === 1 ? '1 episode' : `${s.titles} episodes`) + again;
+    if (s.episode_from != null) return (s.episode_from === s.episode_to ? t('pages.timeline.episode_n', { number: String(s.episode_from) }) : t('pages.timeline.episodes_range', { from: String(s.episode_from), to: String(s.episode_to) })) + again;
+    return t('terms.episode', { count: s.titles }) + again;
   }
-  if (s.kind === 'album') return (s.titles === 1 ? '1 track' : `${s.titles} tracks`) + again;
-  if (s.type === 'Movie') return s.plays > 1 ? `Movie · watched in ${s.plays} sittings` : 'Movie';
-  return s.plays > 1 ? `${s.plays} plays` : null;
+  if (s.kind === 'album') return t('terms.track', { count: s.titles }) + again;
+  if (s.type === 'Movie') return s.plays > 1 ? t('pages.timeline.movie_sittings', { count: s.plays }) : t('pages.timeline.movie');
+  return s.plays > 1 ? t('terms.play', { count: s.plays }) : null;
 }
 
 /** One day: "19 Sep, 21:04". Several: "17 – 19 Sep". The year appears once it is not this one. */
@@ -191,6 +192,6 @@ function when(s) {
   const a = new Date(s.from * 1000), b = new Date(s.to * 1000);
   const f = b.getFullYear() === new Date().getFullYear() ? dayf : dayfy;
   const sameDay = a.toDateString() === b.toDateString();
-  const text = sameDay ? `${f.format(a)}, ${timef.format(a)}` : `${(a.getFullYear() === b.getFullYear() ? dayf : dayfy).format(a)} – ${f.format(b)}`;
+  const text = sameDay ? `${f.format(a)}, ${clockTime(a, timef)}` : `${(a.getFullYear() === b.getFullYear() ? dayf : dayfy).format(a)} – ${f.format(b)}`;
   return h('time', { dateTime: b.toISOString(), title: `${dateTime(s.from)} – ${dateTime(s.to)}` }, text);
 }

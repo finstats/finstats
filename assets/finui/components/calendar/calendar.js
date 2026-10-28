@@ -4,6 +4,7 @@
 
 import { h, icon } from '../../core.js';
 import { weeks, addMonths, monthOf, move, pick, picked, inRange, allowed, today } from './dates.js';
+import { say, locale as appLocale } from '../../i18n.js';
 
 const date = (key) => new Date(`${key}T12:00:00Z`);
 
@@ -13,20 +14,21 @@ const date = (key) => new Date(`${key}T12:00:00Z`);
  * marks: { key: 'what is on it' }. el.setValue(v) changes it quietly; el.value is what is picked.
  */
 export function calendar({ mode = 'single', value = null, onChange = () => {}, month = null, marks = {}, min = null, max = null, limit = Infinity,
-  weekStart = 1, locale = undefined, label = 'Calendar' } = {}) {
+  weekStart = 1, locale = undefined, label = say('calendar.label', 'Calendar') } = {}) {
   let current = mode === 'multiple' ? [...(value || [])] : mode === 'range' ? { from: null, to: null, ...(value || {}) } : value;
   const first = mode === 'multiple' ? current[0] : mode === 'range' ? current.from : current;
   let shown = monthOf(month || first || today());
   let focus = first || shown;
   const now = today();
-  const caption = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
-  const long = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-  const short = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
-  const longDay = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
+  const lang = locale || appLocale();
+  const caption = new Intl.DateTimeFormat(lang, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const long = new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const short = new Intl.DateTimeFormat(lang, { weekday: 'short', timeZone: 'UTC' });
+  const longDay = new Intl.DateTimeFormat(lang, { weekday: 'long', timeZone: 'UTC' });
 
   const title = h('span', { class: 'fui-calendar__caption', 'aria-live': 'polite' });
-  const prev = h('button', { type: 'button', class: 'fui-calendar__nav', 'aria-label': 'Previous month', onClick: () => turn(-1) }, icon('chevronLeft', 16));
-  const next = h('button', { type: 'button', class: 'fui-calendar__nav', 'aria-label': 'Next month', onClick: () => turn(1) }, icon('chevronRight', 16));
+  const prev = h('button', { type: 'button', class: 'fui-calendar__nav', 'aria-label': say('calendar.previous_month', 'Previous month'), onClick: () => turn(-1) }, icon('chevronLeft', 16));
+  const next = h('button', { type: 'button', class: 'fui-calendar__nav', 'aria-label': say('calendar.next_month', 'Next month'), onClick: () => turn(1) }, icon('chevronRight', 16));
   const grid = h('table', { class: 'fui-calendar__grid', role: 'grid' });
   const el = h('div', { class: ['fui-calendar', `fui-calendar--${mode}`], role: 'group', 'aria-label': label },
     h('div', { class: 'fui-calendar__head' }, prev, title, next), grid);

@@ -3,22 +3,23 @@
 
 import { h, icon } from '../../core.js';
 import { accepts, fileSize } from './plan.js';
+import { say } from '../../i18n.js';
 
 let seq = 0;
 /** fileDrop({ label, help, accept, multiple, maxSize, onFiles(files) }) → the drop, with .show(rows) to list files:
  *  rows [{ name, size, progress (0–1, or null), error, onRemove }]. */
-export function fileDrop({ label = 'Drop a file here', help = null, accept = '', multiple = false, maxSize = Infinity, onFiles = () => {} } = {}) {
+export function fileDrop({ label = say('file_drop.label', 'Drop a file here'), help = null, accept = '', multiple = false, maxSize = Infinity, onFiles = () => {} } = {}) {
   const id = `fui-file-drop-${++seq}`;
   const input = h('input', { class: 'fui-file-drop__input', type: 'file', id, accept: accept || null, multiple, 'aria-describedby': help ? `${id}-help` : null });
   const list = h('ul', { class: 'fui-file-drop__list' });
   // The input is inside its label, so the label needs no for: the same drop drawn again is the same markup.
   const zone = h('label', { class: 'fui-file-drop__zone' }, input, icon('upload', 22),
-    h('span', { class: 'fui-file-drop__label' }, label), h('span', { class: 'fui-file-drop__or' }, multiple ? 'or press to choose files' : 'or press to choose one'),
+    h('span', { class: 'fui-file-drop__label' }, label), h('span', { class: 'fui-file-drop__or' }, multiple ? say('file_drop.choose_files', 'or press to choose files') : say('file_drop.choose_one', 'or press to choose one')),
     help ? h('span', { class: 'fui-file-drop__help', id: `${id}-help` }, help) : null);
   const el = h('div', { class: 'fui-file-drop' }, zone, list);
   const take = (files) => {
     const all = [...files].slice(0, multiple ? Infinity : 1);
-    const why = (f) => (!accepts(f, accept) ? `Not a kind it takes (${accept})` : f.size > maxSize ? `Larger than ${fileSize(maxSize)}` : null);
+    const why = (f) => (!accepts(f, accept) ? say('file_drop.wrong_kind', `Not a kind it takes (${accept})`, { accept }) : f.size > maxSize ? say('file_drop.too_large', `Larger than ${fileSize(maxSize)}`, { size: fileSize(maxSize) }) : null);
     onFiles(all.filter((f) => !why(f)), all.filter(why).map((f) => ({ file: f, reason: why(f) })));
   };
   input.addEventListener('change', () => { take(input.files || []); input.value = ''; });
@@ -28,9 +29,9 @@ export function fileDrop({ label = 'Drop a file here', help = null, accept = '',
   el.show = (rows) => list.replaceChildren(...rows.map((r) => h('li', { class: ['fui-file-drop__file', r.error && 'is-error'] },
     icon(r.error ? 'alert' : r.progress === 1 ? 'check' : 'database', 15),
     h('span', { class: 'fui-file-drop__name trunc' }, r.name),
-    h('span', { class: 'fui-file-drop__size' }, r.error || (r.progress != null && r.progress < 1 ? `${Math.round(r.progress * 100)}% of ${fileSize(r.size)}` : fileSize(r.size))),
-    r.progress != null && r.progress < 1 && !r.error ? h('span', { class: 'fui-file-drop__bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(r.progress * 100)), 'aria-label': `${r.name} uploading` }, (() => { const f = h('span'); f.style.width = `${r.progress * 100}%`; return f; })()) : null,
-    r.onRemove ? h('button', { type: 'button', class: 'fui-file-drop__remove', 'aria-label': `Remove ${r.name}`, onClick: r.onRemove }, icon('x', 13)) : null)));
+    h('span', { class: 'fui-file-drop__size' }, r.error || (r.progress != null && r.progress < 1 ? say('file_drop.progress', `${Math.round(r.progress * 100)}% of ${fileSize(r.size)}`, { pct: Math.round(r.progress * 100), size: fileSize(r.size) }) : fileSize(r.size))),
+    r.progress != null && r.progress < 1 && !r.error ? h('span', { class: 'fui-file-drop__bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(r.progress * 100)), 'aria-label': say('file_drop.uploading', `${r.name} uploading`, { name: r.name }) }, (() => { const f = h('span'); f.style.width = `${r.progress * 100}%`; return f; })()) : null,
+    r.onRemove ? h('button', { type: 'button', class: 'fui-file-drop__remove', 'aria-label': say('file_drop.remove', `Remove ${r.name}`, { name: r.name }), onClick: r.onRemove }, icon('x', 13)) : null)));
   return el;
 }
 

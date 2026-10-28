@@ -1,0 +1,121 @@
+// Simple mode's Libraries and a library's page. The list is every library in a table: what it holds, what was played last
+// and how much. A library's page has its global figures, the people who watch it most, what was watched in it lately,
+// and its own history.
+
+import { h, icon, num, relTime } from '../../dom.js';
+import { api } from '../../api.js';
+import { can } from '../../state.js';
+import { t } from '../../i18n.js';
+import { dataView, poster, avatar, sk, emptyState } from '../../components.js';
+import { dataTable } from '../../tables.js';
+import { tile, tileStat, tileStats } from '../../../finui/components/tile-stat/tile-stat.js';
+import { shelf } from '../../../finui/components/shelf/shelf.js';
+import { mediaCard } from '../../../finui/components/media-card/media-card.js';
+import { libraryIcon, longDuration } from '../platform.js';
+import { profileHead, box, globalStats, playsUnit } from '../profile.js';
+import { historyList } from '../history.js';
+
+const TYPE = { movies: t('simple.libraries.type.movies'), tvshows: t('simple.libraries.type.tvshows'), music: t('simple.libraries.type.music'), musicvideos: t('simple.libraries.type.musicvideos'), books: t('simple.libraries.type.books'), homevideos: t('simple.libraries.type.homevideos'), boxsets: t('simple.libraries.type.boxsets') };
+const KIND_ICON = { Movie: 'film', Episode: 'tv', Audio: 'music' };
+
+export const loadLibraries = (signal) => api.get('/libraries', { days: 0 }, { signal });
+export const prefetchLibraries = ({ signal }) => [() => loadLibraries(signal)];
+
+/** What a library holds, in the three columns a classic stats server gives it: titles, then seasons or albums, then episodes or tracks. */
+function holds(l) {
+  if (l.collection_type === 'tvshows' || l.series_count) return [l.series_count, l.season_count, l.episode_count];
+  if (l.collection_type === 'music' || l.track_count) return [l.artist_count, l.album_count, l.track_count];
+  return [l.movie_count || l.item_count, null, null];
+}
+
+function lastPlayed(l) {
+  if (!l.last_item_id) return h('span', { class: 'muted' }, t('simple.history.na'));
+  const words = l.last_series_name ? `${l.last_series_name} - ${l.last_item_name}` : l.last_item_name;
+  return h('span', { class: 'simple-title' }, h('span', { class: 'simple-kind', 'aria-hidden': 'true' }, icon(KIND_ICON[l.last_item_type] || 'play', 14)), l.last_item_exists !== false ? h('a', { href: `/items/${l.last_item_id}` }, words) : h('span', null, words));
+}
+
+function table(libs) {
+  const th = (label, opts = {}) => h('th', opts, label);
+  const cell = (n) => h('td', { dataset: { sort: String(n || 0) } }, n ? num(n) : '');
+  return dataTable(h('table', { class: 'fui-data-table fui-data-table--hover simple-table' },
+    h('thead', null, h('tr', null, th('', { 'data-nosort': '' }), th(t('simple.libraries.col.name')), th(t('simple.libraries.col.type')), th(t('simple.libraries.col.titles')), th(t('simple.libraries.col.seasons')),
+      th(t('simple.libraries.col.episodes')), th(t('simple.libraries.col.last_accessed')), th(t('simple.users.col.last_played')), th(t('simple.users.col.total_plays')), th(t('simple.users.col.total_duration')))),
+    h('tbody', null, libs.map((l) => {
+      const [a, b, c] = holds(l);
+      return h('tr', null,
+        h('td', { class: 'simple-table__icon' }, icon(libraryIcon(l.collection_type), 22)),
+        h('td', null, h('a', { href: `/libraries/${l.id}` }, l.name)),
+        h('td', null, TYPE[l.collection_type] || l.collection_type || ''),
+        cell(a), cell(b), cell(c),
+        h('td', { dataset: { sort: String(l.last_played_at || 0) } }, l.last_played_at ? relTime(l.last_played_at) : t('time.never')),
+        h('td', null, lastPlayed(l)),
+        cell(l.plays),
+        h('td', { dataset: { sort: String(l.watch_s || 0) } }, longDuration(l.watch_s)));
+    }))));
+}
+
+export function librariesPage(ctx) {
+  ctx.title(t('simple.nav.libraries'));
+  const body = h('div', { id: 'simple-libraries-table' });
+  dataView({
+    container: body, signal: ctx.signal, skeleton: () => sk.cardRows(5),
+    fetch: () => loadLibraries(ctx.signal),
+    render: (d) => {
+      const libs = (d.libraries || []).filter((l) => !l.removed);
+      return libs.length ? [table(libs), h('div', { class: 'simple-table__foot' }, h('span', { class: 'simple-table__count' }, t('simple.libraries.showing', { shown: libs.length, total: libs.length })))]
+        : h('p', { class: 'simple-empty' }, t('simple.libraries.empty'));
+    },
+  }).load();
+  ctx.root.append(h('div', { class: 'simple-panel-head' }, h('h1', { class: 'simple-page-title' }, icon('library', 22), t('simple.libraries.all'))), h('div', { class: 'simple-panel' }, body));
+}
+
+/** A library, its four figures and which it is in one answer (it was the whole list once per span). */
+const loadSpans = (id, signal) => api.get('/stats/spans', { library_id: id }, { signal });
+
+/** A library's page, in one go: which it is and its figures, who watches it (with see_everyone), and what was watched in it. */
+export function loadLibrary(id, signal) {
+  const o = { signal };
+  return Promise.all([
+    loadSpans(id, signal),
+    can('see_everyone') ? api.get('/stats/top', { days: 0, kind: 'users', library_id: id, limit: 24, sort: 'plays' }, o) : null,
+    api.get('/activity', { days: 0, library_id: id, page: 1, per_page: 30 }, o),
+  ]).then(([p, users, recent]) => ({ library: p.library, spans: p.spans, users, recent }));
+}
+export const prefetchLibrary = ({ params, signal }) => [() => loadLibrary(params.id, signal)];
+
+export function libraryPage(ctx) {
+  const id = ctx.params.id;
+  const history = ctx.query.get('tab') === 'history';
+  const head = h('div');
+  const body = h('div');
+  const tabs = (name) => profileHead({ picture: tile({ icon: libraryIcon(name.type), tone: 'neutral', size: 80 }), name: name.text,
+    tabs: [{ label: t('simple.profile.tab_profile'), href: `/libraries/${id}`, current: !history }, { label: t('simple.nav.history'), href: `/libraries/${id}?tab=history`, current: history }] });
+  ctx.root.append(head, body);
+  if (history) {
+    // The header needs only the library's name; the list asks for its own plays.
+    loadSpans(id, ctx.signal).then((d) => {
+      const l = d.library;
+      if (l) { ctx.title(l.name); head.replaceChildren(tabs({ text: l.name, type: l.collection_type })); }
+    }).catch(() => {});
+    const list = historyList(ctx, { id: 'simple-library-history', fixed: { library_id: id } });
+    body.append(h('div', { class: 'simple-panel-head' }, h('h2', { class: 'simple-page-title' }, t('simple.nav.history')), h('div', { class: 'simple-head__tools' }, list.tools)), list.el);
+    return;
+  }
+  dataView({
+    container: body, signal: ctx.signal, skeleton: () => sk.cardRows(6),
+    fetch: () => loadLibrary(id, ctx.signal),
+    render: (d) => {
+      if (!d.library) return emptyState(t('simple.libraries.missing_title'), t('simple.libraries.missing_text'));
+      ctx.title(d.library.name);
+      head.replaceChildren(tabs({ text: d.library.name, type: d.library.collection_type }));
+      const people = d.users && d.users.rows.length ? box({ id: 'simple-user-stats', title: t('simple.profile.user_stats'), icon: 'users',
+        body: tileStats(d.users.rows.map((u) => tileStat({ picture: avatar(u.id, u.name, { size: 80, hasImage: u.has_image }), name: u.name, href: `/users/${u.id}`, figure: num(u.plays), unit: playsUnit(u.plays) }))) }) : null;
+      const seen = new Set();
+      const watched = ((d.recent && d.recent.rows) || []).filter((p) => { const k = p.series_id || p.item_id; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 18);
+      const recent = watched.length ? box({ id: 'simple-library-recent', title: t('simple.profile.recently_watched'), icon: 'repeat',
+        body: shelf({ label: t('simple.home.recently_watched'), items: watched.map((p) => mediaCard({ href: p.item_exists !== false ? `/items/${p.series_id || p.item_id}` : null, poster: poster(p.image_item_id, p.series_name || p.item_name, { w: 240, cls: 'fui-poster--grid' }),
+          name: p.series_name || p.item_name, sub: relTime(p.ended_at) })) }) }) : null;
+      return [box({ id: 'simple-global', title: t('simple.profile.global_stats'), icon: 'trendUp', body: globalStats(d.spans) }), people, recent].filter(Boolean);
+    },
+  }).load();
+}

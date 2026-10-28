@@ -1,0 +1,25 @@
+/* FinUI: stat-card. A card on the panel ground, its leader's picture on the left and its art dimmed behind; the first row
+   large and its value in the accent. */
+.fui-stat-card__grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
+.fui-stat-card { position: relative; display: flex; gap: 14px; min-width: 0; min-height: 158px; padding: 4px 16px 12px 4px; overflow: hidden; background: var(--bg-2); border-radius: var(--radius); }
+.fui-stat-card__art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .14; pointer-events: none; }
+.fui-stat-card__picture { position: relative; display: flex; justify-content: center; flex: none; width: 100px; padding-top: 4px; }
+.fui-stat-card__picture .fui-poster { width: 100px; }
+.fui-stat-card__body { position: relative; flex: 1; min-width: 0; padding-top: 12px; }
+.fui-stat-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.fui-stat-card__title { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 500; letter-spacing: .01em; text-transform: uppercase; color: var(--text-strong); }
+.fui-stat-card__column { flex: none; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); }
+.fui-stat-card__rows { margin: 0; padding: 0; list-style: none; }
+.fui-stat-card__row { display: flex; align-items: baseline; gap: 9px; padding: 2px 0; font-size: 13px; line-height: 1.45; color: var(--text); }
+/* A ranking's leader is large; a list of facts (ranked: false) keeps its rows alike. */
+ol.fui-stat-card__rows > .fui-stat-card__row:first-child { padding-bottom: 5px; font-size: 18px; }
+.fui-stat-card__rank { flex: none; width: 12px; text-align: right; font-size: 11px; color: var(--text-faint); }
+.fui-stat-card__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-stat-card__name a { color: inherit; }
+.fui-stat-card__name a:hover { color: var(--text-strong); }
+.fui-stat-card__sub { margin-left: 7px; font-size: 12px; color: var(--text-faint); }
+.fui-stat-card__value { flex: none; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+ol.fui-stat-card__rows > .fui-stat-card__row:first-child .fui-stat-card__value { color: var(--accent); }
+ul.fui-stat-card__rows .fui-stat-card__value { color: var(--text-strong); }
+/* The gallery's stand-in for a poster. */
+.fui-stat-card__demo-poster { display: block; width: 100px; aspect-ratio: 2 / 3; border-radius: var(--radius-control); background: var(--placeholder); }

@@ -3,6 +3,7 @@
 
 import { h, icon } from '../../core.js';
 import { collapse } from './plan.js';
+import { say } from '../../i18n.js';
 
 /** breadcrumb({ items: [{ label, href }], max }): the last item is the page itself. */
 export function breadcrumb({ items, max = 4 }) {
@@ -10,11 +11,11 @@ export function breadcrumb({ items, max = 4 }) {
   const draw = (all) => list.replaceChildren(...(all ? items : collapse(items, max)).map((it, i, shown) => {
     const last = i === shown.length - 1;
     const sep = last ? null : icon('chevronRight', 12, 'fui-breadcrumb__sep');
-    if (it === null) return h('li', { class: 'fui-breadcrumb__item' }, h('button', { type: 'button', class: 'fui-breadcrumb__more', 'aria-label': 'Show every place', onClick: () => draw(true) }, '…'), sep);
+    if (it === null) return h('li', { class: 'fui-breadcrumb__item' }, h('button', { type: 'button', class: 'fui-breadcrumb__more', 'aria-label': say('breadcrumb.show_all', 'Show every place'), onClick: () => draw(true) }, '…'), sep);
     return h('li', { class: 'fui-breadcrumb__item' }, last || !it.href ? h('span', { class: 'fui-breadcrumb__here', 'aria-current': last ? 'page' : null }, it.label) : h('a', { class: 'fui-breadcrumb__link', href: it.href }, it.label), sep);
   }));
   draw(false);
-  return h('nav', { class: 'fui-breadcrumb', 'aria-label': 'Breadcrumb' }, list);
+  return h('nav', { class: 'fui-breadcrumb', 'aria-label': say('breadcrumb.label', 'Breadcrumb') }, list);
 }
 
 const TRAIL = [{ label: 'Home', href: '#' }, { label: 'Libraries', href: '#' }, { label: 'Shows', href: '#' }, { label: 'Low Orbit', href: '#' }, { label: 'Season 2', href: '#' }, { label: 'Episode 5' }];

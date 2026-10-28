@@ -1,16 +1,18 @@
 // FinUI: stat-tile. One number that matters, with its label and, beside it, how it moved since the period before.
 
 import { h, icon } from '../../core.js';
+import { say, locale } from '../../i18n.js';
 
 function deltaEl(cur, prev) {
   if (prev == null) return null;
-  if (!prev && !cur) return h('span', { class: 'fui-stat-tile__delta fui-stat-tile__delta--flat' }, icon('minus', 13), 'No change');
-  if (!prev) return h('span', { class: 'fui-stat-tile__delta fui-stat-tile__delta--up' }, icon('trendUp', 13), 'New');
+  if (!prev && !cur) return h('span', { class: 'fui-stat-tile__delta fui-stat-tile__delta--flat' }, icon('minus', 13), say('stat_tile.no_change', 'No change'));
+  if (!prev) return h('span', { class: 'fui-stat-tile__delta fui-stat-tile__delta--up' }, icon('trendUp', 13), say('stat_tile.new', 'New'));
   const d = (cur - prev) / prev;
-  if (Math.abs(d) < 0.005) return h('span', { class: 'fui-stat-tile__delta fui-stat-tile__delta--flat' }, icon('minus', 13), 'No change');
-  const up = d > 0;
+  if (Math.abs(d) < 0.005) return h('span', { class: 'fui-stat-tile__delta fui-stat-tile__delta--flat' }, icon('minus', 13), say('stat_tile.no_change', 'No change'));
+  const up = d > 0, k = Math.abs(d) < 0.1 ? 1 : 0;
+  const delta = `${up ? '+' : '−'}${new Intl.NumberFormat(locale(), { minimumFractionDigits: k, maximumFractionDigits: k, useGrouping: false }).format(Math.abs(d) * 100)}`;
   return h('span', { class: 'fui-stat-tile__delta ' + (up ? 'fui-stat-tile__delta--up' : 'fui-stat-tile__delta--down') }, icon(up ? 'trendUp' : 'trendDown', 13),
-    `${up ? '+' : '−'}${Math.abs(d) >= 10 ? Math.round(Math.abs(d) * 100) : (Math.abs(d) * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`);
+    say('stat_tile.delta', `${delta}%`, { delta }));
 }
 
 export function statTile({ label, value, title, current, previous, vsLabel, spark, hint }) {

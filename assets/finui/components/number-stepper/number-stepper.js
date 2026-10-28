@@ -3,14 +3,15 @@
 
 import { h, icon } from '../../core.js';
 import { clamp, parseNumber, stepBy } from './plan.js';
+import { say } from '../../i18n.js';
 
 /** numberStepper({ label, value, min, max, step, unit, onChange }): `unit` is said after the number ("GB"). */
 export function numberStepper({ label, value = 0, min = -Infinity, max = Infinity, step = 1, unit = null, onChange = () => {} }) {
   const o = { min, max, step };
   let current = clamp(value, o);
-  const input = h('input', { class: 'fui-number-stepper__input', type: 'text', inputMode: step % 1 ? 'decimal' : 'numeric', 'aria-label': unit ? `${label}, in ${unit}` : label, autocomplete: 'off' });
-  const less = h('button', { type: 'button', class: 'fui-number-stepper__button', 'aria-label': `Less: ${label}` }, icon('minus', 14));
-  const more = h('button', { type: 'button', class: 'fui-number-stepper__button', 'aria-label': `More: ${label}` }, icon('plus', 14));
+  const input = h('input', { class: 'fui-number-stepper__input', type: 'text', inputMode: step % 1 ? 'decimal' : 'numeric', 'aria-label': unit ? say('number_stepper.in_unit', `${label}, in ${unit}`, { label, unit }) : label, autocomplete: 'off' });
+  const less = h('button', { type: 'button', class: 'fui-number-stepper__button', 'aria-label': say('number_stepper.less', `Less: ${label}`, { label }) }, icon('minus', 14));
+  const more = h('button', { type: 'button', class: 'fui-number-stepper__button', 'aria-label': say('number_stepper.more', `More: ${label}`, { label }) }, icon('plus', 14));
   const show = () => { input.value = String(current); less.disabled = current <= min; more.disabled = current >= max; };
   const set = (v) => { const next = clamp(v, o); const changed = next !== current; current = next; show(); if (changed) onChange(current); };
   less.addEventListener('click', () => set(stepBy(current, -1, o)));

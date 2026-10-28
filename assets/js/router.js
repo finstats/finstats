@@ -1,7 +1,8 @@
 // History-API router with a per-page lifecycle: every page gets an AbortSignal
 // and timer helpers that are torn down on the next navigation.
 
-import { state, can } from './state.js';
+import { state, can, welcomed } from './state.js';
+import { t as tr } from './i18n.js';
 
 // The demo lives under a path of its own (see demo.js): the router works in the app's paths.
 const { app } = window.finstatsDemo;
@@ -55,6 +56,11 @@ function guard(url) {
     return '/login' + (next && next !== '/' ? '?next=' + encodeURIComponent(next) : '');
   }
   if (path === '/login') return '/';
+  // Somebody signed in who has never been welcomed, on any browser, is asked its few questions first, then sent on.
+  if (!welcomed() && path !== '/welcome') {
+    const next = path + url.search;
+    return '/welcome' + (next && next !== '/' ? '?next=' + encodeURIComponent(next) : '');
+  }
   return null;
 }
 
@@ -135,7 +141,7 @@ function render(scroll = true) {
         if (!running && !abort.signal.aborted) { clearTimeout(timer); timer = setTimeout(tick, interval); }
       };
     },
-    title(t) { document.title = t ? `${t} · FinStats` : 'FinStats'; },
+    title(t) { document.title = t ? tr('router.page_title', { page: t }) : 'FinStats'; },
   };
 
   if (scroll) window.scrollTo(0, 0);
@@ -144,7 +150,7 @@ function render(scroll = true) {
     m.route.page(ctx);
   } catch (e) {
     console.error(e);
-    root.textContent = 'This page failed to render. Reload to try again.';
+    root.textContent = tr('common.page_failed');
   }
   if (location.hash) {
     requestAnimationFrame(() => document.getElementById(location.hash.slice(1))?.scrollIntoView());

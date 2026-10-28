@@ -1,0 +1,162 @@
+/* Simple mode: FinStats laid out the way a classic Plex stats server is, for people who come from one. theme.js writes this
+   sheet after the others, and only for a browser that chose the layout (Settings → Appearance); its colours, font and
+   stillness are tokens in simple-tokens.css. Everything here is under the layout's own classes. */
+
+[data-layout="simple"] body { background: var(--bg); font-family: var(--sans); }
+
+/* ---- the shell: a bar across the top, the page under it */
+.simple-app { min-height: 100vh; display: flex; flex-direction: column; }
+.simple-main { flex: 1; width: 100%; max-width: 1720px; margin: 0 auto; padding: 18px 20px 48px; min-width: 0; position: relative; overflow-x: clip; }
+/* relative and clip: a chart's table for screen readers (.sr-only) is placed absolutely and cannot be narrower than its words;
+   held here, it no longer widens the page. */
+.simple-app .fui-top-bar__brand { font-size: 17px; letter-spacing: 0; font-weight: 650; }
+.simple-app .fui-top-bar__brand .brand-logo { display: block; }
+.simple-menu-button { display: none; }
+.simple-search { position: relative; display: flex; align-items: center; }
+.simple-search__field { width: min(280px, 60vw); height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+.simple-search__results { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; width: min(380px, 92vw); max-height: 70vh; overflow: auto; padding: 6px 0;
+  background: var(--bg-lift); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 24px var(--shadow); }
+.simple-search__results:empty { display: none; }
+/* On a phone the field leaves the bar room, and the results take the screen's width under the bar, its gutters kept:
+   anchored to the field they ran off the right edge. The bar's own bottom is measured (shell.js, --simple-search-top). */
+@media (max-width: 600px) {
+  .simple-search__field { width: min(280px, 44vw); }
+  .simple-search__results { position: fixed; top: var(--simple-search-top, 60px); left: 16px; right: 16px; width: auto; }
+}
+.simple-search__row { display: flex; align-items: center; gap: 10px; padding: 6px 12px; color: var(--text); text-decoration: none; font-size: 14px; }
+.simple-search__row:hover, .simple-search__row:focus-visible { background: var(--hover); text-decoration: none; }
+.simple-search__row .fui-poster { width: 28px; flex: none; }
+.simple-search__kind { margin-left: auto; color: var(--text-faint); font-size: 12px; }
+.simple-search__none { padding: 8px 12px; color: var(--text-faint); font-size: 13px; }
+@media (max-width: 820px) {
+  .simple-app .fui-top-bar__nav { display: none; }
+  .simple-menu-button { display: inline-flex; }
+  .simple-main { padding: 12px 12px 40px; }
+  .simple-app .fui-top-bar__brand span { display: none; }
+}
+
+/* ---- a page's header row: its name on the left, its controls on the right (every page of the layout has one) */
+.simple-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin: 6px 0 14px; }
+.simple-head__title { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .02em; text-transform: uppercase; color: var(--text-strong); }
+.simple-head__note { font-size: 14px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--text-muted); }
+.simple-head__tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.simple-section + .simple-section { margin-top: 34px; }
+
+/* ---- home */
+.simple-empty { margin: 0; padding: 14px 16px; background: var(--bg-2); border-radius: var(--radius); color: var(--text-faint); font-size: 14px; }
+.simple-who { display: flex; align-items: center; gap: 9px; }
+.simple-days { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; background: var(--bg-2); border-radius: var(--radius-control); font-size: 14px; color: var(--text-muted); }
+.simple-days__field { width: 58px; height: 26px; padding: 0 6px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg); color: var(--text-strong); font: inherit; text-align: center; }
+.simple-app .fui-shelf__item { width: 150px; }
+/* A shelf's section names it; its own heading stays for a screen reader, and its arrows on the right. */
+.simple-app .fui-shelf__head { justify-content: flex-end; }
+.simple-app .fui-shelf__title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.simple-app .fui-media-card__sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- a page of its own: a title with its icon and the page's controls, on a panel; tables on the panel under it */
+.simple-panel-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 18px; padding: 16px 16px 14px; background: var(--bg-2); border-bottom: 1px solid var(--border-soft); border-radius: var(--radius) var(--radius) 0 0; }
+.simple-page-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 24px; font-weight: 600; color: var(--text-strong); }
+.simple-panel { padding: 16px; background: var(--bg-2); border-radius: 0 0 var(--radius) var(--radius); }
+.simple-table__bar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px 20px; margin-bottom: 14px; }
+.simple-table__show, .simple-table__find { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
+.simple-table__size { width: 76px; }
+.simple-table__search { width: min(220px, 60vw); }
+.simple-table__foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 14px; font-size: 14px; color: var(--text); }
+.simple-table .simple-title { display: inline-flex; align-items: center; gap: 7px; }
+.simple-table td a { color: var(--text); }
+.simple-table td a:hover { color: var(--accent); }
+.simple-kind { display: inline-flex; color: var(--text-muted); }
+.simple-done { display: inline-block; width: 15px; height: 15px; border: 2px solid var(--text); border-radius: 50%; background: conic-gradient(var(--text) var(--done, 0%), transparent 0); vertical-align: middle; }
+.simple-history__who { min-width: 180px; }
+
+/* ---- a library's or a person's page: a header with its tabs, then boxed sections with a title bar */
+.simple-profile { display: flex; align-items: center; gap: 24px; margin-bottom: 26px; padding: 24px 18px; background: var(--bg-2); border-radius: var(--radius); }
+.simple-profile__picture { flex: none; }
+.simple-profile__name { margin: 0 0 8px; font-size: 26px; font-weight: 500; color: var(--text-strong); }
+.simple-tabs { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 15px; }
+.simple-tabs a { color: var(--text); }
+.simple-tabs a:hover { color: var(--text-strong); }
+.simple-tabs a[aria-current="page"] { color: var(--accent); }
+.simple-box { margin-bottom: 26px; background: var(--bg-2); border-radius: var(--radius); }
+.simple-box__title { display: flex; align-items: center; gap: 10px; margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--border-soft); font-size: 22px; font-weight: 500; color: var(--text-strong); }
+.simple-box__body { padding: 18px 16px 20px; }
+.simple-table__icon { width: 40px; color: var(--text); }
+@media (max-width: 520px) { .simple-profile { gap: 14px; padding: 16px 12px; } .simple-profile__name { font-size: 21px; } }
+/* A wide table's long headings wrap rather than push it past its panel. */
+.simple-table thead th { white-space: normal; vertical-align: bottom; }
+
+/* ---- a title: where it sits, then the title over its art with its poster, its facts, overview, cast and genres */
+.simple-crumbs { margin: -4px 0 0; padding: 10px 16px; background: var(--bg-2); border-radius: var(--radius) var(--radius) 0 0; }
+.simple-hero { position: relative; display: flex; gap: 34px; min-height: 380px; padding: 30px 24px; overflow: hidden; margin-bottom: 18px; border-radius: 0 0 var(--radius) var(--radius); background: var(--bg-2); }
+.simple-hero__art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .18; pointer-events: none; }
+.simple-hero__poster { position: relative; flex: none; width: 250px; }
+.simple-hero__poster .fui-poster { width: 100%; }
+.simple-hero__text { position: relative; flex: 1; min-width: 0; padding-top: 40px; }
+.simple-hero__title { margin: 0 0 16px; font-size: 32px; font-weight: 400; line-height: 1.2; color: var(--accent); }
+.simple-hero__facts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; margin-bottom: 18px; font-size: 14.5px; color: var(--text-muted); }
+.simple-hero__fact strong { color: var(--text-strong); font-weight: 600; }
+.simple-stars { display: inline-flex; gap: 2px; font-size: 17px; color: var(--text-faint); }
+.simple-star.is-full { color: var(--accent); }
+.simple-star.is-half { background: linear-gradient(90deg, var(--accent) 50%, var(--text-faint) 50%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.simple-hero__overview { max-width: 900px; margin: 0 0 22px; font-size: 15.5px; line-height: 1.55; color: var(--text); }
+.simple-hero__lists { display: flex; flex-wrap: wrap; gap: 14px 48px; }
+.simple-hero__lists h2 { margin: 0 0 4px; font-size: 13.5px; font-weight: 500; color: var(--text-muted); }
+.simple-hero__lists ul { margin: 0; padding: 0 0 0 18px; list-style: none; font-size: 13.5px; line-height: 1.5; color: var(--text); }
+.simple-tabs--page { margin: 0 0 18px; padding: 0 4px; }
+.simple-season + .simple-season { margin-top: 18px; }
+.simple-season h3 { margin: 0 0 8px; font-size: 16px; font-weight: 500; color: var(--text-strong); scroll-margin-top: 70px; }
+.simple-season__list { margin: 0; padding: 0; list-style: none; }
+.simple-episode { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto 80px; gap: 12px; padding: 6px 4px; border-bottom: 1px solid var(--border-soft); font-size: 14px; }
+.simple-episode a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.simple-episode a:hover { color: var(--accent); }
+.simple-episode__n, .simple-episode__plays, .simple-episode__runtime { color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.simple-episode__runtime { text-align: right; }
+@media (max-width: 720px) {
+  .simple-hero { flex-direction: column; gap: 18px; padding: 18px 14px; }
+  .simple-hero__poster { width: 150px; }
+  .simple-hero__text { padding-top: 0; }
+  .simple-hero__title { font-size: 25px; }
+  .simple-episode { grid-template-columns: 26px minmax(0, 1fr) auto; }
+  .simple-episode__runtime { display: none; }
+}
+
+/* ---- graphs: tabs as buttons, a line of what the charts show, the charts in pairs */
+.simple-tabs--boxed { gap: 4px; margin-bottom: 16px; }
+.simple-tabs--boxed a { padding: 6px 12px; border-radius: var(--radius-control); }
+.simple-tabs--boxed a[aria-current="page"] { background: var(--accent); color: var(--on-accent); }
+.simple-graph { min-width: 0; }
+.simple-graph__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; font-size: 17px; font-weight: 600; }
+.simple-graph__title .icon { align-self: center; color: var(--text-muted); }
+.simple-graph__title small { font-size: 13px; font-weight: 400; color: var(--text-muted); }
+.simple-graph__help { margin: 4px 0 12px; font-size: 13px; color: var(--text-muted); }
+.simple-graphs__body > * + * { margin-top: 22px; }
+.simple-graphs__pair { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+
+/* ---- settings: FinStats' own page, the section list a panel of rows with the open one in the accent's words */
+.simple-app .fui-page-header { margin-bottom: 18px; padding: 16px; background: var(--bg-2); border-radius: var(--radius); }
+@media (min-width: 821px) { .simple-app .fui-sections { grid-template-columns: 250px minmax(0, 1fr); } }
+.simple-app .fui-sections__nav { top: 66px; gap: 0; padding: 4px 0; background: var(--bg-2); border-radius: var(--radius); }
+.simple-app .fui-sections__group { gap: 0; }
+.simple-app .fui-sections__group-title { margin: 0; padding: 12px 16px 6px; }
+.simple-app .fui-sections__link { padding: 12px 16px; border-radius: 0; border-top: 1px solid var(--border-soft); font-size: 14.5px; color: var(--text); }
+.simple-app .fui-sections__link.is-active { background: var(--hover); box-shadow: none; color: var(--accent); }
+.simple-app .fui-sections__link.is-active .icon { color: var(--accent); }
+@media (max-width: 820px) { .simple-app .fui-sections__nav { padding: 0; background: none; } .simple-app .fui-sections__link { border-top: 0; } }
+
+/* Patch notes: a release a block, its kinds named once over plain lists, in one column in the middle that a line can be
+   read across, its head over its notes. */
+.simple-changelog { max-width: 920px; margin-inline: auto; }
+.simple-changelog__body { padding: 8px 16px 24px; }
+.simple-release { padding: 22px 0; border-top: 1px solid var(--border-soft); scroll-margin-top: 68px; }
+.simple-release:first-child { border-top: 0; }
+.simple-release__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 0; font-size: 20px; font-weight: 650; color: var(--text-strong); }
+.simple-release__head:focus { outline: none; }
+.simple-release__day { font-size: 14px; font-weight: 400; color: var(--text-muted); }
+.simple-release__now { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--accent-wash); color: var(--accent); font-size: 12px; font-weight: 600; }
+.simple-release__title { margin: 6px 0 0; font-size: 15px; color: var(--text); }
+.simple-release__kind { margin: 16px 0 6px; font-size: 13px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.simple-release__notes { margin: 0; padding-left: 20px; list-style: disc; font-size: 14px; line-height: 1.55; color: var(--text); }
+.simple-release__notes li + li { margin-top: 6px; }
+.simple-release__notes code { padding: 0 4px; border-radius: var(--radius-sm); background: var(--bg-sunken); font-size: .9em; }
+.simple-select { height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-field); background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+@media (max-width: 560px) { .simple-changelog__body { padding-top: 4px; } .simple-release__head { font-size: 18px; } }

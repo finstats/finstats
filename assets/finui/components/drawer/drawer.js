@@ -4,6 +4,7 @@
 import { h, icon } from '../../core.js';
 import { button } from '../button/button.js';
 import { openModal } from '../modal/modal.js';
+import { say } from '../../i18n.js';
 
 let seq = 0;
 /** openDrawer({ title, body, side, foot, onClose }) → the modal's { close, body, dialog }. `side`: 'right', 'left' or
@@ -16,7 +17,7 @@ export function openDrawer({ title, body, side = 'right', foot = null, onClose }
 /** The panel as it looks open, held in a page (the gallery shows it this way). */
 export function drawerPanel({ title, side = 'right', foot = null }, ...children) {
   return h('div', { class: ['fui-drawer', 'fui-drawer--held', `fui-drawer--${side}`], role: 'group', 'aria-label': title },
-    h('div', { class: 'fui-drawer__head' }, h('h2', { class: 'fui-drawer__title' }, title), button({ variant: 'icon', 'aria-label': 'Close' }, icon('x', 16))),
+    h('div', { class: 'fui-drawer__head' }, h('h2', { class: 'fui-drawer__title' }, title), button({ variant: 'icon', 'aria-label': say('drawer.close', 'Close') }, icon('x', 16))),
     h('div', { class: 'fui-drawer__body' }, children), foot ? h('div', { class: 'fui-drawer__foot' }, foot) : null);
 }
 

@@ -4,6 +4,7 @@
 import { h, icon } from '../../core.js';
 import { button } from '../button/button.js';
 import { beside } from './plan.js';
+import { say } from '../../i18n.js';
 
 let seq = 0;
 /** popover({ trigger, content, label, side, align }) → { el, open(), close() }. `trigger` is the button it hangs from;
@@ -44,7 +45,7 @@ export function popover({ trigger, content, label, side = 'bottom', align = 'sta
 
 /** The box as it looks open, held in place in a page (the gallery shows it this way). */
 export const popoverCard = ({ side = 'bottom', title = null, arrow = true }, ...children) =>
-  h('div', { class: ['fui-popover', 'fui-popover--held', arrow && 'fui-popover--arrow'], dataset: { side }, role: 'group', 'aria-label': title || 'A popover, held open' },
+  h('div', { class: ['fui-popover', 'fui-popover--held', arrow && 'fui-popover--arrow'], dataset: { side }, role: 'group', 'aria-label': title || say('popover.held', 'A popover, held open') },
     title ? h('p', { class: 'fui-popover__title' }, title) : null, children);
 
 export const meta = {

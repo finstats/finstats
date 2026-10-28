@@ -1,0 +1,5018 @@
+{
+  "$meta": {
+    "tag": "ja-JP",
+    "name": "日本語",
+    "fallback": "en-GB"
+  },
+  "terms": {
+    "play": {
+      "other": "{count}回再生"
+    },
+    "title": {
+      "other": "{count}作品"
+    },
+    "film": {
+      "other": "{count}本の映画"
+    },
+    "show": {
+      "other": "{count}番組"
+    },
+    "season": {
+      "other": "{count}シーズン"
+    },
+    "episode": {
+      "other": "{count}エピソード"
+    },
+    "album": {
+      "other": "{count}枚のアルバム"
+    },
+    "track": {
+      "other": "{count}曲"
+    },
+    "library": {
+      "other": "{count}個のライブラリ"
+    },
+    "user": {
+      "other": "{count}人のユーザー"
+    },
+    "person": {
+      "other": "{count}人"
+    },
+    "device": {
+      "other": "{count}台のデバイス"
+    },
+    "watch_time": "視聴時間",
+    "watchlist": "ウォッチリスト",
+    "recap": "年間まとめ",
+    "cast_and_crew": "キャストとスタッフ",
+    "now_playing": "再生中",
+    "watched_together": "一緒に視聴"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "back": "戻る",
+    "try_again": "再試行",
+    "trying_again": "再試行中…",
+    "working": "処理中…",
+    "loading": "読み込み中…",
+    "unknown": "不明",
+    "unknown_item": "不明なアイテム",
+    "other": "その他",
+    "none": "なし",
+    "everyone": "全員",
+    "couldnt_load": "読み込めませんでした",
+    "page_failed": "このページを表示できませんでした。再読み込みしてもう一度お試しください。",
+    "open_in_jellyfin": "Jellyfinで開く",
+    "filters": "フィルター",
+    "time_range": "期間"
+  },
+  "errors": {
+    "unreachable": "FinStatsに接続できません。サーバーが動作しているか確認して、もう一度お試しください。",
+    "request_failed": "リクエストに失敗しました（{status}）",
+    "upload_failed": "アップロードに失敗しました（{status}）",
+    "upload_interrupted": "アップロードが中断されました。接続を確認して、もう一度お試しください。",
+    "upload_cancelled": "アップロードをキャンセルしました。"
+  },
+  "time": {
+    "never": "なし",
+    "just_now": "たった今",
+    "minutes_ago": {
+      "other": "{count}分前"
+    },
+    "hours_ago": {
+      "other": "{count}時間前"
+    },
+    "days_ago": {
+      "other": "{count}日前"
+    },
+    "months_ago": {
+      "other": "{count}か月前"
+    },
+    "years_ago": {
+      "other": "{count}年前"
+    },
+    "due_now": "まもなく実行",
+    "within_minutes": "1〜2分以内",
+    "in_minutes": {
+      "other": "{count}分後"
+    },
+    "in_hours": {
+      "other": "{count}時間後"
+    },
+    "in_days": {
+      "other": "{count}日後"
+    },
+    "today": "今日",
+    "tomorrow": "明日",
+    "yesterday": "昨日"
+  },
+  "units": {
+    "seconds": "{count}秒",
+    "minutes": "{count}分",
+    "hours": "{count}時間",
+    "days": "{count}日",
+    "exact": "{hours}時間{minutes}分{seconds}秒"
+  },
+  "range": {
+    "7": { "short": "7日", "long": "過去7日間" },
+    "30": { "short": "30日", "long": "過去30日間" },
+    "90": { "short": "90日", "long": "過去90日間" },
+    "365": { "short": "1年", "long": "過去1年間" },
+    "0": { "short": "全期間", "long": "全期間" }
+  },
+  "play_method": {
+    "DirectPlay": "ダイレクト再生",
+    "DirectStream": "ダイレクトストリーム",
+    "Transcode": "トランスコード"
+  },
+  "item_type": {
+    "Movie": "映画",
+    "Series": "シリーズ",
+    "Season": "シーズン",
+    "Episode": "エピソード",
+    "MusicAlbum": "アルバム",
+    "Audio": "トラック",
+    "TvChannel": "ライブTV"
+  },
+  "credit": {
+    "actor": "出演",
+    "director": "監督",
+    "actor_and_director": "出演・監督"
+  },
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "recap": "年間まとめ",
+    "my_profile": "マイプロフィール",
+    "activity": "アクティビティ",
+    "together": "一緒に視聴",
+    "users": "ユーザー",
+    "libraries": "ライブラリ",
+    "playback": "再生",
+    "pipeline": "追加予定",
+    "server": "サーバー",
+    "security": "セキュリティ",
+    "settings": "設定",
+    "patch_notes": "更新履歴",
+    "groups": {
+      "you": "あなた",
+      "watching": "視聴",
+      "library": "ライブラリ",
+      "server": "サーバー"
+    },
+    "pinned": "ピン留め",
+    "search": "検索",
+    "role_admin": "管理者",
+    "role_viewer": "閲覧者"
+  },
+  "theme": {
+    "label": "テーマ",
+    "light": "ライト",
+    "device": "デバイス",
+    "dark": "ダーク",
+    "is_device": "テーマ：デバイスに合わせる",
+    "is_light": "テーマ：ライト",
+    "is_dark": "テーマ：ダーク"
+  },
+  "statusbar": {
+    "label": "記録の状態",
+    "connecting": "接続中…",
+    "streaming": {
+      "other": "{count}件再生中"
+    },
+    "collector_offline": "記録停止中",
+    "offline_title": "FinStatsは現在Jellyfinに接続できません。再生は記録されていません。",
+    "pushing_title": "Jellyfinが再生状況をプッシュしています · 再生中へ移動",
+    "go_now_playing": "再生中へ移動",
+    "plays": {
+      "other": "{count}回再生"
+    },
+    "synced": "{when}に同期",
+    "not_synced": "未同期",
+    "last_sync": "前回のライブラリ同期：{when}",
+    "unreachable": "FinStatsに接続できません",
+    "repo": "リポジトリ",
+    "repo_title": "GitHubのFinStats"
+  },
+  "search": {
+    "label": "検索",
+    "placeholder": "作品、人物、ページを検索",
+    "placeholder_simple": "作品と人物を検索",
+    "results": "検索結果",
+    "pages": "ページ",
+    "users": "ユーザー",
+    "library": "ライブラリ",
+    "cast_and_crew": "キャストとスタッフ",
+    "user": "ユーザー",
+    "searching": "検索中…",
+    "no_match": "「{query}」に一致するものはありません。",
+    "no_match_short": "一致するものはありません。",
+    "unavailable": "現在、検索は利用できません。"
+  },
+  "auth": {
+    "setup": {
+      "page_title": "セットアップ",
+      "title": "FinStatsのセットアップ",
+      "sub": "2つの手順が終わると、FinStatsがサーバーの再生の記録を始めます。",
+      "step_connect": "Jellyfinに接続",
+      "step_sign_in": "管理者としてサインイン",
+      "address": "Jellyfinのアドレス",
+      "address_help": "FinStatsからJellyfinに届くアドレスです。Dockerではコンテナ名であることがよくあります。",
+      "address_empty": "Jellyfinサーバーのアドレスを入力してください（例：http://jellyfin:8096）。",
+      "address_invalid": "Webアドレスの形式ではないようです。http://192.168.1.10:8096 のように入力してください。",
+      "test": "接続をテスト",
+      "testing": "テスト中…",
+      "connected": "{server}に接続しました",
+      "couldnt_connect": "接続できませんでした：{reason} アドレスと、Jellyfinが動作しているかを確認してください。",
+      "test_first": "先に接続をテストしてください。",
+      "admin_username": "Jellyfin管理者のユーザー名",
+      "password_note": "FinStatsは自身のAPIキーを作成するために一度だけサインインします。パスワードは保存されません。",
+      "finish": "セットアップを完了",
+      "finishing": "セットアップ中…",
+      "not_admin": "このアカウントはJellyfinの管理者ではありません。セットアップには管理者アカウントが必要です。"
+    },
+    "login": {
+      "title": "サインイン",
+      "sub": "Jellyfinのアカウントを使用します。",
+      "sub_on": "{server}のJellyfinアカウントを使用します。",
+      "username": "ユーザー名",
+      "password": "パスワード",
+      "sign_in": "サインイン",
+      "signing_in": "サインイン中…",
+      "username_empty": "Jellyfinのユーザー名を入力してください。",
+      "wrong": "ユーザー名またはパスワードが正しくありません。",
+      "admins_only": "ここにサインインできるのはJellyfinの管理者だけです。管理者は「設定 → アクセス」で他のユーザーを許可できます。",
+      "too_many": "試行回数が多すぎます。1分待ってから、もう一度お試しください。"
+    },
+    "sign_out": "サインアウト"
+  },
+  "boot": {
+    "not_responding": "FinStatsが応答しません"
+  },
+  "not_found": {
+    "page_title": "見つかりません",
+    "title": "ページが見つかりません",
+    "nothing_here": "このアドレスには何もありません。",
+    "removed": "削除されたものへのリンクだった可能性があります。",
+    "simple": "シンプルモードにはホーム、ライブラリ、ユーザー、履歴、グラフがあります。FinStatsのその他の機能は通常のレイアウトにあります（設定 → 外観）。",
+    "go_dashboard": "ダッシュボードへ移動",
+    "go_home": "ホームへ移動"
+  },
+  "plays_table": {
+    "user": "ユーザー",
+    "title": "タイトル",
+    "when": "日時",
+    "watched": "視聴時間",
+    "progress": "進捗",
+    "client": "クライアント",
+    "method": "方法",
+    "ip_address": "IPアドレス",
+    "open_details": "{title}の詳細を開く",
+    "playing_now": "再生中",
+    "together_title": {
+      "other": "一緒に視聴 · {count}人"
+    },
+    "local": "ローカルネットワーク",
+    "remote": "リモート",
+    "stopped_at": "{position}で停止",
+    "empty": "このフィルターに一致する再生はありません。",
+    "empty_range": "この期間の再生はありません。"
+  },
+  "settings": {
+    "find": "設定を検索…",
+    "find_label": "設定を検索",
+    "matching": "一致する設定",
+    "sections_label": "設定のセクション",
+    "groups": {
+      "account": "アカウント",
+      "tracking": "記録",
+      "services": "サービス",
+      "data": "データ"
+    },
+    "sections": {
+      "access": { "label": "アクセス", "sub": "FinStatsを使える人と、見られる内容" },
+      "jellyfin": { "label": "Jellyfin", "sub": "FinStatsが読み取るサーバー" },
+      "account": { "label": "アカウント", "sub": "ここでサインインしている人とサインアウト" },
+      "appearance": { "label": "外観", "sub": "あなたに見えるFinStatsの見た目" },
+      "keys": { "label": "APIキー", "sub": "外部からFinStatsを使う：スクリプトや購読用のカレンダー" },
+      "public": { "label": "公開プロフィール", "sub": "プロフィールの一部をリンクで共有し、投稿用のカードも作れます" },
+      "collection": { "label": "収集", "sub": "再生をどれだけ細かく追うか" },
+      "network": { "label": "ホームネットワーク", "sub": "ローカルとして数える再生" },
+      "security": { "label": "セキュリティ", "sub": "場所と、あり得ない移動" },
+      "connections": { "label": "接続", "sub": "Sonarr、Radarr、Seerr" },
+      "notifications": { "label": "通知", "sub": "FinStatsが見つけたことの送り先" },
+      "import": { "label": "インポート", "sub": "他のトラッカーから履歴を取り込む" },
+      "unlinked": { "label": "未リンクのメディア", "sub": "ライブラリのどれにも一致しないインポートした再生" },
+      "backups": { "label": "バックアップ", "sub": "履歴を安全に保管、または移行" },
+      "tasks": { "label": "タスク", "sub": "FinStatsが自動で行うことと、そのタイミング" },
+      "system": { "label": "システム", "sub": "外部への接続、データベース、ライセンス" }
+    },
+    "page": {
+      "title": "{section} · 設定"
+    },
+    "common": {
+      "saved": "保存しました",
+      "couldnt_save": "保存できませんでした：{reason}",
+      "save_changes": "変更を保存",
+      "whole_number": "{min}から{max}までの整数を入力してください。",
+      "between": "{min}から{max}の範囲で指定してください。",
+      "saving": "保存中…"
+    },
+    "appearance": {
+      "language": "言語",
+      "language_hint": "言語 げんご 日本語 英語 翻訳 language språk norsk english bokmål nynorsk translation japanese",
+      "language_help": "このブラウザーでFinStatsを表示する言語です。",
+      "language_browser": "ブラウザーに合わせる",
+      "language_checked": "メンテナーが確認済み",
+      "language_unchecked": "ネイティブスピーカー未確認",
+      "language_unchecked_note": "この翻訳はネイティブスピーカーによる確認を受けていません。修正はGitHubで歓迎しています。",
+      "layout": "レイアウト",
+      "layout_hint": "レイアウト シンプルモード クラシック トップバー ホーム 見た目 layout simple mode classic tautulli plex top bar home look",
+      "layout_help": "FinStats、またはシンプル：上部にバーを置き、統計だけを並べます。Plexの定番の統計サーバーと同じ配置です。このブラウザーにのみ保存されます。",
+      "layout_simple": "Tautulli風",
+      "menu": "メニュー",
+      "menu_hint": "メニュー サイドバー ナビゲーション グループ レール 検索 ドック コマンドバー ピン留め タイル menu sidebar navigation grouped rail search dock command bar pinned tiles",
+      "menu_help": "このコンピューターでのページの並べ方です。このブラウザーにのみ保存され、他のデバイスはそれぞれの設定を保ちます。",
+      "menu_right": "メニューを右側に",
+      "menu_right_hint": "メニュー サイドバー 右 左 menu sidebar right left side",
+      "menu_right_help": "サイドバーをウィンドウの左端ではなく右端に置きます。",
+      "search_opens": "検索の開き方",
+      "search_opens_hint": "検索 メニュー ページ 統合 場所 search find menu page integrated where ctrl space",
+      "search_opens_help": "メニューの中（メニューが検索に変わります）か、隣のページの代わりに開きます。このブラウザーにのみ保存されます。",
+      "search_in_menu": "メニュー内",
+      "search_in_page": "ページ内",
+      "phone_menu": "このスマートフォンのメニュー",
+      "phone_menu_hint": "モバイル スマートフォン スマホ メニュー ナビゲーション タブバー 全画面 親指 アドレス mobile phone menu navigation tab bar peek full screen thumb arc address",
+      "phone_menu_help": "この端末でのメニューの開き方です。このブラウザーにのみ保存され、スマートフォンやタブレットごとに設定を保ちます。",
+      "preset": "FinUIプリセット",
+      "preset_hint": "外観 見た目 テーマ 色 アクセント 角丸 密度 枠線 カード ボタン 入力欄 テーブル メニュー モーション アイコン コントラスト プリセット コード カスタマイズ appearance look theme colours colors accent radius density borders cards buttons fields tables menu motion icons contrast finui preset code customize create",
+      "preset_help": "FinUI createで作ったコードです。色、角、密度などを決めます。すべてのページがあなたにはこの見た目で表示され、他の人はそれぞれ自分で選びます。",
+      "preset_placeholder": "なし：標準のFinUI",
+      "preset_default": "すべての項目が既定値です：標準のFinUI。",
+      "preset_change": "FinUI createで変更",
+      "preset_make": "FinUI createで作成",
+      "reset": "リセット",
+      "card_sub": "あなたに見えるFinStatsの見た目です。あなただけの設定で、他の人には影響しません",
+      "preset_axis": {
+        "base": "ベースカラー",
+        "accent": "アクセント",
+        "charts": "グラフの色",
+        "radius": "角丸",
+        "density": "密度",
+        "borders": "枠線",
+        "cards": "カード",
+        "highlight": "ハイライト",
+        "motion": "モーション",
+        "icons": "アイコンの線",
+        "font": "フォント",
+        "heading": "見出しフォント",
+        "mono": "等幅フォント",
+        "headings": "見出し",
+        "buttons": "ボタン",
+        "fields": "入力欄",
+        "tables": "テーブル",
+        "menu": "メニュー",
+        "icon-ends": "アイコンの線端",
+        "page": "ページ",
+        "focus": "フォーカスリング",
+        "contrast": "コントラスト"
+      },
+      "preset_option": {
+        "washi": "和紙とオブシディアン",
+        "neutral": "ニュートラル",
+        "stone": "ストーン",
+        "zinc": "ジンク",
+        "slate": "スレート",
+        "gray": "グレー",
+        "ocean": "オーシャン",
+        "sage": "セージ",
+        "blush": "ブラッシュ",
+        "mist": "ミスト",
+        "seal": "朱印とバイオレット",
+        "violet": "バイオレット",
+        "blue": "ブルー",
+        "teal": "ティール",
+        "green": "グリーン",
+        "amber": "アンバー",
+        "orange": "オレンジ",
+        "rose": "ローズ",
+        "pink": "ピンク",
+        "ink": "インク",
+        "indigo": "インディゴ",
+        "cyan": "シアン",
+        "emerald": "エメラルド",
+        "red": "レッド",
+        "fuchsia": "フューシャ",
+        "sky": "スカイ",
+        "lime": "ライム",
+        "gold": "ゴールド",
+        "indigo-cyan": "インディゴとシアン",
+        "teal-coral": "ティールとコーラル",
+        "plum-gold": "プラムとゴールド",
+        "navy-amber": "ネイビーとアンバー",
+        "crimson-sky": "クリムゾンとスカイ",
+        "moss-lilac": "モスとライラック",
+        "brick-mint": "ブリックとミント",
+        "ink-lime": "インクとライム",
+        "forest-peach": "フォレストとピーチ",
+        "berry-aqua": "ベリーとアクア",
+        "sunset-lavender": "サンセットとラベンダー",
+        "lagoon-rose": "ラグーンとローズ",
+        "dyes": "染料",
+        "signal": "シグナル",
+        "ember": "残り火",
+        "lagoon": "ラグーン",
+        "meadow": "草原",
+        "dusk": "夕暮れ",
+        "pastel": "パステル",
+        "neon": "ネオン",
+        "earth": "アース",
+        "default": "既定",
+        "none": "なし",
+        "small": "小",
+        "large": "大",
+        "round": "丸",
+        "pill": "ピル型",
+        "compact": "コンパクト",
+        "comfortable": "標準",
+        "spacious": "ゆったり",
+        "tight": "詰める",
+        "hairline": "極細",
+        "strong": "強",
+        "faint": "淡",
+        "flat": "フラット",
+        "raised": "浮き出し",
+        "floating": "フローティング",
+        "glow": "グロー",
+        "block": "ブロック",
+        "subtle": "控えめ",
+        "bold": "太字",
+        "quick": "速い",
+        "slow": "遅い",
+        "off": "オフ",
+        "springy": "弾む",
+        "regular": "標準",
+        "light": "細字",
+        "thin": "極細",
+        "heavy": "極太",
+        "text": "本文と同じ",
+        "caps": "大文字",
+        "solid": "ソリッド",
+        "soft": "ソフト",
+        "outline": "アウトライン",
+        "outlined": "枠線",
+        "filled": "塗りつぶし",
+        "underlined": "下線",
+        "lines": "罫線",
+        "striped": "縞模様",
+        "open": "枠なし",
+        "wash": "淡い塗り",
+        "bar": "バー",
+        "square": "角",
+        "plain": "プレーン",
+        "dots": "ドット",
+        "grid": "グリッド",
+        "high": "高"
+      }
+    },
+    "system": {
+      "state": {
+        "always": "常にオン",
+        "on": "オン",
+        "off": "オフ"
+      },
+      "outbound": "外部への接続",
+      "outbound_hint": "プライバシー 接続先 ホスト テレメトリ 外部 privacy what FinStats reaches hosts telemetry outbound",
+      "outbound_sub": "FinStatsが接続しうるすべての宛先と、それぞれがオンかどうか",
+      "database": "データベース",
+      "database_hint": "サイズ ディスク 再生 アイテム 最古 size on disk plays items oldest database",
+      "licences": "ライセンス",
+      "licences_hint": "ライセンス GPL サードパーティ オープンソース フォント 地図 gpl third-party open source fonts map licences licenses",
+      "licences_sub": "GNU GPL v3。オープンソースのRustクレート、オープンライセンスのフォント、パブリックドメインの地図データを使用しています",
+      "gallery": "コンポーネントギャラリー",
+      "gallery_hint": "FinUI コンポーネント ギャラリー デザインシステム カスタマイズ プリセット テーマ finui components gallery design system create customize preset theme",
+      "third_party": "サードパーティのライセンス",
+      "components": "コンポーネント",
+      "components_sub": "このインターフェースを構成するFinUIのコンポーネント。すべてを両方のテーマで確認でき、FinUI createで自分好みにできます",
+      "size_on_disk": "ディスク上のサイズ",
+      "plays": "再生回数",
+      "library_items": "ライブラリのアイテム",
+      "oldest_play": "最も古い再生",
+      "last_answered": "最終応答：{when}",
+      "last_failed": "前回の試行に失敗しました：{error}",
+      "reach_all": "{total}件中{on}件がオンです。",
+      "reach_some_off": "{total}件中{on}件がオン、{off}件がオフです。",
+      "promise": "FinStatsがあなたやサーバーについての情報をこれらの宛先に送ることはありません。また、これ以外の接続はありません。テレメトリ、更新の確認、インターネットからのフォントやスクリプトの読み込みも一切ありません。"
+    },
+    "jellyfin": {
+      "connection": "Jellyfinへの接続",
+      "connection_hint": "サーバー アドレス バージョン 記録 ライブ ソケット server address version collector live socket asked told",
+      "connection_sub": "読み取り専用：FinStatsがサーバー上の何かを変更することはありません",
+      "public_url": "利用者向けのJellyfinのアドレス",
+      "public_url_hint": "Jellyfinで開く 再生ボタン 外部URL リンク ドメイン リバースプロキシ open in jellyfin play button external url link domain reverse proxy",
+      "public_url_help": "「Jellyfinで開く」ボタンのリンク先です。空欄にすると、FinStatsが接続しているアドレスを使います。",
+      "checking": "確認中…",
+      "connected": {
+        "other": "接続済み · アクティブなセッション{count}件"
+      },
+      "not_connected": "未接続",
+      "not_connected_because": "未接続：{error}",
+      "told_live": "Jellyfinからライブで通知",
+      "asked_every": "視聴中は{active}秒ごと、それ以外は{idle}秒ごとに問い合わせ",
+      "server": "サーバー",
+      "address": "アドレス",
+      "version": "Jellyfinのバージョン",
+      "collector": "記録",
+      "how": "方法",
+      "last_checked": "最終確認",
+      "asking_now": "現在の問い合わせ",
+      "asking_yes": "はい、何かが再生中です",
+      "asking_no": "いいえ、再生中のものがないか、すべて一時停止中です",
+      "live_note": "何も再生されていないか、すべて一時停止中のあいだは問い合わせません。何かが再生されているあいだは{active}秒ごとに問い合わせ、一時停止やスキップを正確に記録します。",
+      "socket_error": "ライブ接続でデータが届いていません：{error}。FinStatsは接続を試み続けます。その間も記録の漏れはありません。",
+      "own_key": "セットアップ時に作成した専用のAPIキーで接続しています。別のサーバーに向けるには、新しいデータディレクトリでFinStatsを起動してください。"
+    },
+    "collection": {
+      "seconds": "秒",
+      "active": {
+        "label": "視聴中の確認間隔",
+        "help": "一時停止、スキップ、トラックの変更をこの精度で記録します。1〜60。"
+      },
+      "idle": {
+        "label": "何も再生していないときの確認間隔",
+        "help": "Jellyfinがプッシュしていないときだけ使います。再生に気づくまでの時間は数えません。1〜60。"
+      },
+      "merge": {
+        "label": "再開を同じ再生とみなす時間",
+        "help": "同じ人、同じタイトル、同じデバイスの場合です。0でまとめません。"
+      },
+      "group": {
+        "label": "一緒に視聴とみなす時間",
+        "help": "別々の人が同じタイトルをこの間隔内に再生し始め、少なくとも数分続いた場合です。5〜600。"
+      },
+      "min_play": {
+        "label": "これより短い再生を無視",
+        "help": "データベースには残し、統計からは除きます。0ですべて数えます。"
+      },
+      "field_hint": "間隔 ポーリング 秒 interval poll seconds",
+      "card_sub": "再生をどれだけ細かく追うか、何を1回の再生と数えるか",
+      "library_read": "ライブラリを読み込むタイミング",
+      "library_read_help": "変更しない限り、Jellyfin自身のライブラリスキャンの後です。FinStatsがスキャンを開始することはありません。",
+      "schedule": "スケジュール"
+    },
+    "unlinked": {
+      "entry": "タイトルを手動でリンク",
+      "entry_hint": "未リンク 見つからない 不一致 場所 一致 タイトル インポート unlinked missing unmatched locate match title tautulli jellystat streamystats import plex",
+      "card_sub": "ライブラリで別の名前になっているか、もう存在しないタイトルの再生",
+      "empty": "履歴のすべてがライブラリのタイトルにリンクされています。"
+    },
+    "missing": {
+      "from": "{sources}から",
+      "unknown_show": "不明な番組",
+      "probably": "おそらく{title}",
+      "nothing_like": "ライブラリに該当しそうなものはありません",
+      "locate": "探す",
+      "intro": {
+        "other": "履歴にある{count}作品が、その名前ではライブラリに見つかりません。たいていはインポート元のサーバーで別の名前だったためです。タイトルを探して再生を紐づけてください。そのままにしたものも、履歴には今のまま残ります。"
+      },
+      "search_placeholder": "映画とエピソードを検索",
+      "search_label": "ライブラリを検索",
+      "video": "ビデオ",
+      "no_match": "ライブラリに「{query}」に一致するものはありません。",
+      "no_likely": "ライブラリに該当しそうなものはありません。ライブラリでの名前で検索してください。",
+      "where_is": "「{name}」はどこですか？",
+      "will_move": {
+        "other": "{what}の{count}回の再生が選んだタイトルに移ります。同じ履歴を再インポートしても、自動でそのタイトルに紐づきます。"
+      },
+      "will_move_film": {
+        "other": "この映画の{count}回の再生が選んだタイトルに移ります。同じ履歴を再インポートしても、自動でそのタイトルに紐づきます。"
+      }
+    },
+    "services": {
+      "connections_hint": "接続 サービス リクエスト ダウンロード カレンダー APIキー connections services arr requests downloads calendar api key",
+      "connections_sub": "Sonarr、Radarr、Seerr：リクエスト、近日公開、ダウンロード中のもの",
+      "destinations": "通知先",
+      "destinations_hint": "通知 送信 アラート メール discord slack telegram email ntfy gotify pushover pushbullet webhook send alerts",
+      "public_url": "FinStatsのアドレス",
+      "public_url_hint": "公開URL リンク メッセージ public url link messages",
+      "notifications_sub": "Discord、Slack、Telegram、メール、ntfy、Gotify、Pushover、Pushbullet、または独自のWebhook"
+    },
+    "account": {
+      "signing_out": "サインアウト中…",
+      "sign_out_hint": "サインアウト ログアウト セッション log out logout leave session sign out",
+      "card_sub": "サインアウトするとこのブラウザーのセッションが終了します。APIキーや他のブラウザーは引き続き使えます",
+      "role_admin": "Jellyfin管理者",
+      "role_user": "Jellyfinでサインイン中"
+    },
+    "access": {
+      "permissions": "権限",
+      "permissions_hint": "権限 誰 全員 ネットワーク サーバー ダウンロード 通知 管理 サインイン ユーザー who can see everyone network server downloads notify manage sign in users permissions",
+      "saved": "保存しました",
+      "couldnt_save": "保存できませんでした：{error}",
+      "inherited": "全員に付与されているため、一人だけ外すことはできません",
+      "everyone_sub": "すべてのJellyfinユーザーに適用",
+      "disabled": "Jellyfinで無効",
+      "intro": "Jellyfinの管理者は常にすべての権限を持ちます。それ以外の人は、ここでオンにしたものが使えます。年間まとめはそれぞれ本人のものです。",
+      "intro_named": "Jellyfinの管理者（{names}）は常にすべての権限を持ちます。それ以外の人は、ここでオンにしたものが使えます。年間まとめはそれぞれ本人のものです。",
+      "who": "対象",
+      "status": "状態",
+      "perm": {
+        "sign_in": {
+          "label": "サインイン",
+          "description": "FinStatsを使え、自分の統計と年間まとめを見られます。"
+        },
+        "see_everyone": {
+          "label": "全員のアクティビティを見る",
+          "description": "他の人の統計と履歴、ユーザーページ、すべてのライブストリーム。"
+        },
+        "see_network": {
+          "label": "ネットワークの詳細を見る",
+          "description": "IPアドレス、デバイスID、再生がローカルかリモートか。"
+        },
+        "see_server": {
+          "label": "サーバーを見る",
+          "description": "サーバーページ、サーバーログ、サインインの失敗、ファイルパス。"
+        },
+        "see_downloads": {
+          "label": "ダウンロード中のものを見る",
+          "description": "速度、トレント名、クライアントを含むダウンロードキュー。この権限がなくても、自分のリクエストの進み具合は見られます。"
+        },
+        "notify": {
+          "label": "通知を受け取る",
+          "description": "自分の通知先（Webhook、Discord、ntfy、Gotify）を追加でき、すでに見る権限のある内容が送られます。通知先は公開アドレスでなければなりません。"
+        },
+        "manage": {
+          "label": "FinStatsを管理",
+          "description": "設定、タスク、Jellystatのインポート、再生の削除。権限は変更できません。"
+        }
+      }
+    },
+    "public": {
+      "section": {
+        "totals": {
+          "label": "合計とトップ作品",
+          "help": "視聴時間、再生回数、よく見た番組・映画・音楽をポスター付きで。"
+        },
+        "habits": {
+          "label": "連続記録と視聴する時間帯",
+          "help": "最長の連続記録、曜日と時間帯のグリッド、よく見るジャンル。"
+        },
+        "recap": {
+          "label": "あなたの1年",
+          "help": "今年の年間まとめの見出しと、投稿用のカード。"
+        },
+        "recent": {
+          "label": "最近視聴したもの",
+          "help": "直近10回の再生。日付単位で表示し、1日たつまでは表示しません。"
+        }
+      },
+      "yours": "あなたの公開プロフィール",
+      "yours_hint": "共有 公開 リンク カード 画像 プロフィール share publish link card image profile public",
+      "yours_sub": "ここで何を選んでも、デバイス、アドレス、ファイルパスが公開されることはありません",
+      "allow": "公開プロフィールを許可",
+      "allow_hint": "公開プロフィール サーバー スイッチ 共有 public profiles server switch share",
+      "allow_help": "各自が自分のプロフィールの一部をリンクで公開できます。オフにすると、すべてのリンクが即座に無効になります。",
+      "server_title": "このサーバーの公開プロフィール",
+      "server_sub": "ここで許可するまで、アカウントなしで読めるものはありません",
+      "col_who": "ユーザー",
+      "col_shown_as": "表示名",
+      "col_sections": "セクション",
+      "col_changed": "変更日",
+      "col_actions": "操作",
+      "no_name": "名前なし",
+      "not_published": "非公開",
+      "take_down_confirm": "公開を停止しますか？リンクは無効になります。本人は再度公開できます。",
+      "taking_down": "停止中…",
+      "take_down": "公開停止",
+      "take_down_ask": "公開停止…",
+      "saved": "保存しました",
+      "couldnt_save": "保存できませんでした：{error}",
+      "profile_card": "プロフィールカード",
+      "year_card": "1年のカード",
+      "card_alt": "{card}：チャットアプリでリンクの下に表示されるもの",
+      "download": "ダウンロード",
+      "your_link": "あなたのリンク",
+      "your_link_unpublished": "あなたのリンク（非公開：開いても何も表示されません）",
+      "copy_link": "リンクをコピー",
+      "open": "開く",
+      "reset_confirm": "リセットしますか？古いリンクはすべて無効になります。",
+      "resetting": "リセット中…",
+      "reset": "リセット",
+      "reset_ask": "リンクをリセット…",
+      "name_placeholder": "空欄にすると名前を表示しません",
+      "publish": "プロフィールを公開",
+      "publish_help": "リンクを知っている人は、サインインせずに下でオンにした内容を見られます。",
+      "name": "表示する名前",
+      "name_help": "ここに入力しない限り、Jellyfinのユーザー名は表示されません。",
+      "avatar": "自分の画像を表示",
+      "avatar_help": "名前の横にJellyfinのプロフィール画像を表示します。",
+      "allow_above": "自分のプロフィールを公開するには、上で公開プロフィールを許可してください。",
+      "not_allowed": "管理者が公開プロフィールを許可していません。"
+    },
+    "keys": {
+      "scope": {
+        "full": "あなたが見られるものすべて",
+        "calendar": "カレンダーフィードのみ"
+      },
+      "scope_help": {
+        "full": "{scope}：サインインしたときと同じ範囲です。スクリプトや他のツール向け。",
+        "calendar": "{scope}：購読用のアドレスに入れても安全なキーです。"
+      },
+      "expiry": {
+        "never": "無期限",
+        "d30": "30日",
+        "d90": "90日",
+        "year": "1年"
+      },
+      "keys_hint": "APIキー トークン スクリプト カレンダー 購読 取り消し token bearer script curl calendar ics subscribe revoke api keys",
+      "make": "キーを作成",
+      "make_hint": "作成 新規 トークン カレンダー フィード create new token calendar feed make key",
+      "card_sub": "キーにできるのはあなたにできることだけで、あなたのアクセスがなくなった時点で使えなくなります",
+      "new_key": "新しいキー「{name}」",
+      "shown_once": "表示は一度だけです。今すぐコピーしてください。FinStatsはハッシュしか保存しません。",
+      "copy_key": "キーをコピー",
+      "subscribe": "カレンダーでこのアドレスを購読してください。開けるのはフィードだけです。",
+      "copy_address": "アドレスをコピー",
+      "no_public_url": "FinStatsはまだ自身のアドレスを知らないため、このアドレスは内部からしか使えません。スマートフォンからも使えるリンクにするには、「通知」で設定してください。",
+      "send_as": "リクエストごとに{header}として送信してください。",
+      "done": "完了",
+      "name": "名前",
+      "name_placeholder": "ノートPCのスクリプト、スマホのカレンダー…",
+      "expires": "有効期限",
+      "what_it_opens": "開ける範囲",
+      "everything": "すべて",
+      "calendar_only": "カレンダーのみ",
+      "calendar": "カレンダー",
+      "name_missing": "キーに名前を付けてください。",
+      "making": "作成中…",
+      "col_opens": "範囲",
+      "col_owner": "所有者",
+      "col_made": "作成日",
+      "col_last_used": "最終使用",
+      "col_actions": "操作",
+      "revoke_confirm": "取り消しますか？このキーを使っているものはすぐに使えなくなります。",
+      "revoking": "取り消し中…",
+      "revoke": "取り消す",
+      "revoke_ask": "取り消す…",
+      "you": "（あなた）",
+      "from_ip": "{ip}から",
+      "expired": "期限切れ",
+      "none_yet": "まだキーはありません。",
+      "foot": "あなたのキーは{mine}個で、上限は{max}個です。キーはハッシュとしてのみ保存され、バックアップには含まれず、キー自身でキーを作成・取り消しすることはできません。"
+    },
+    "network": {
+      "lookup": "自宅のパブリックアドレスを認識",
+      "lookup_hint": "パブリックIP 照会 ローカル リモート 自宅 public ip lookup what is my ip local remote",
+      "lookup_help": "最初に必要になったとき、公開の「IPアドレス確認」サービスに一度だけ問い合わせます。自宅のデバイスがJellyfinに公開名でアクセスしても、ローカルとして数えられます。",
+      "known": "既知の自宅アドレス",
+      "known_hint": "パブリックIP 検出 今すぐ照会 public ip found look up now",
+      "known_help": "この家庭の過去と現在のパブリックアドレス。",
+      "other": "自宅とみなすその他のアドレス",
+      "other_hint": "VPN 別宅 IP 手動 ローカル vpn second home ip manual local",
+      "other_help": "1行に1つ：以前のアドレス、別宅、VPNの出口など。保存すると履歴が分類し直されます。",
+      "card_sub": "どの再生をローカル、どの再生をリモートと数えるか",
+      "added_by_you": "あなたが追加",
+      "found": "自動で検出 · 最終確認{when}",
+      "none_yet": "まだ認識されていません。FinStatsは起動後数分以内に照会します。",
+      "none": "なし。プライベートアドレス（192.168.x.x、10.x.x.xなど）は常にローカルとみなされます。",
+      "look_up": "今すぐ照会",
+      "asking": "照会中…",
+      "lookup_failed": "照会できませんでした：{error}",
+      "save": "アドレスを保存",
+      "saving": "保存中…",
+      "couldnt_save": "保存できませんでした：{error}",
+      "foot": "このリクエストは{services}に送られ、あなたやサーバーについては何も伝えません。これと「セキュリティ」の位置情報ダウンロードを両方オフにすると、FinStatsは外部へのリクエストを一切行いません。",
+      "foot_none": "このリクエストの送信先はありません。サービスが設定されておらず、あなたやサーバーについては何も伝えません。これと「セキュリティ」の位置情報ダウンロードを両方オフにすると、FinStatsは外部へのリクエストを一切行いません。"
+    },
+    "security": {
+      "speed": "あり得ない移動とみなす速度",
+      "speed_help": "同じ人の2回の検出の間にこれより速い移動が必要な場合、アラートを出します。900は旅客機より少し速い程度です。100〜5,000。",
+      "distance": "対象とする場所間の最小距離",
+      "distance_unit": "km以上",
+      "distance_help": "都市データベースは数百キロずれることがよくあります。これより近い場所どうしではアラートを出しません。50〜5,000。",
+      "database": "位置情報データベース",
+      "database_hint": "位置情報 都市 ダウンロード 場所 地図 geoip mmdb city db-ip maxmind download places map",
+      "up_to_date": "データベースを最新に保つ",
+      "up_to_date_hint": "位置情報 ダウンロード 毎月 スケジュール タスク geoip download monthly db-ip schedule task",
+      "travel_hint": "あり得ない移動 アラート 速度 距離 impossible travel alert speed distance km",
+      "card_sub": "アドレスの位置の特定と、あり得ない移動とみなす条件",
+      "built": "{kind}、{date}作成",
+      "none_yet": "まだありません。データベースが入るまで、セキュリティページは空のままです。",
+      "downloading": "ダウンロード中…",
+      "download_newest": "最新版をダウンロード",
+      "download": "ダウンロード（約60 MB）",
+      "starting": "開始中…",
+      "download_failed": "ダウンロードに失敗しました。",
+      "from_env": "FINSTATS_GEOIP_DBで指定されています。更新するにはそのファイルを置き換えてください。",
+      "from_folder": "アドレスの位置は、ネットワーク経由ではなく、このマシン上のファイルから特定します：{folder}内の最新の.mmdb。",
+      "from_default_folder": "アドレスの位置は、ネットワーク経由ではなく、このマシン上のファイルから特定します：geoipフォルダー内の最新の.mmdb。",
+      "scheduled": "スケジュール：{triggers}。DB-IPの無料ファイル（CC BY 4.0）の新しい月の版を取得します。あなたについての情報は何も送りません。",
+      "not_scheduled": "スケジュールなし。このタスクは、新しい月の版が出たときにDB-IPの無料の都市ファイル（約60 MB、CC BY 4.0）を取得します。",
+      "schedule": "スケジュール"
+    },
+    "tasks": {
+      "task": {
+        "sync_users": {
+          "name": "ユーザーの同期",
+          "what": "Jellyfinから名前、役割、最終アクセス日時を取得"
+        },
+        "sync_libraries": {
+          "name": "ライブラリとアイテムの読み込み",
+          "what": "Jellyfinからタイトルとファイルの詳細を取得。読み取り専用で、Jellyfinでスキャンを開始することはありません"
+        },
+        "sync_changes": {
+          "name": "メタデータの変更",
+          "what": "前回の確認以降にJellyfinで変更されたタイトル、キャストとスタッフ、ポスター、人物の写真、ファイルの詳細"
+        },
+        "sync_userdata": {
+          "name": "視聴済みとお気に入り",
+          "what": "Jellyfinからユーザーごとの再生済みフラグとお気に入りを取得"
+        },
+        "sync_events": {
+          "name": "サーバーログの同期",
+          "what": "Jellyfinのアクティビティログ：サインイン、ログインの失敗、タスク"
+        },
+        "sync_server": {
+          "name": "サーバーの詳細",
+          "what": "バージョン、ストレージ、プラグイン、スケジュールされたタスク、デバイス"
+        },
+        "sync_upcoming": {
+          "name": "SonarrとRadarrのカレンダーの読み込み",
+          "what": "まもなく放送・公開されるもの。読み取り専用"
+        },
+        "sync_grabs": {
+          "name": "ダウンロード履歴の読み込み",
+          "what": "SonarrとRadarrが取得、インポート、または失敗したもの。読み取り専用"
+        },
+        "sync_requests": {
+          "name": "Seerrからリクエストを読み込み",
+          "what": "誰が何をリクエストし、どこまで進んでいるか。読み取り専用"
+        },
+        "backup": {
+          "name": "バックアップ",
+          "what": "FinStatsのバックアップを書き出します。「バックアップ」の設定どおり、新しいものから保持します"
+        },
+        "geoip": {
+          "name": "位置情報データベース",
+          "what": "新しい月の版が出たとき、DB-IPの無料の都市ファイル（約60 MB）をダウンロードします。セキュリティページでアドレスの位置を特定します"
+        },
+        "import": {
+          "name": "Jellystatのインポート",
+          "what": "「インポート」でJellystatのバックアップをアップロードしたときに実行"
+        },
+        "import_streamystats": {
+          "name": "Streamystatsのインポート",
+          "what": "「インポート」でStreamystatsのバックアップをアップロードしたときに実行"
+        },
+        "import_tautulli": {
+          "name": "Tautulliのインポート",
+          "what": "「インポート」でアップロードしたTautulliのバックアップの配線をつないだときに実行"
+        },
+        "restore": {
+          "name": "復元",
+          "what": "「バックアップ」でFinStatsのバックアップを復元したときに実行"
+        }
+      },
+      "group": {
+        "jellyfin": "Jellyfin",
+        "arr": "Sonarr、Radarr、Seerr",
+        "finstats": "FinStats"
+      },
+      "spoken": {
+        "under_minute": "1分未満",
+        "minutes": {
+          "other": "{count}分"
+        },
+        "hours": {
+          "other": "{count}時間"
+        },
+        "days": {
+          "other": "{count}日"
+        }
+      },
+      "ago_under": "1分以内",
+      "ago": "{time}前",
+      "every": {
+        "minute": "1分ごと",
+        "minutes": "{count}分ごと",
+        "hour": "1時間ごと",
+        "hours": "{count}時間ごと",
+        "day": "毎日",
+        "days": "{count}日ごと"
+      },
+      "trigger": {
+        "daily_at": "毎日{time}",
+        "weekly_at": "毎週{day}の{time}",
+        "startup": "アプリケーションの起動時",
+        "after_scan": "Jellyfinのライブラリスキャンの後"
+      },
+      "running": "実行中…",
+      "not_run": "まだ実行されていません。",
+      "last_ran": "前回の実行：{when}。",
+      "last_ran_taking": "前回の実行：{when}（所要時間{took}）。",
+      "failed": "{when}に失敗しました。",
+      "failed_taking": "{when}に失敗しました（所要時間{took}）。",
+      "only_by_hand": "手動で実行したときのみ",
+      "next_within_minute": "次回は1分以内",
+      "next_in": "次回は{time}後",
+      "run_aria": "{name}を実行",
+      "run_now": "今すぐ実行",
+      "list_sub": "FinStatsが自動で行うことです。開くと実行タイミングを変更できます。",
+      "progress_aria": "{name}の進捗",
+      "couldnt_start": "開始できませんでした：{error}",
+      "zone": "時刻は{zone}です。",
+      "zone_unknown": "時刻はFinStatsのタイムゾーンです。",
+      "all_tasks": "すべてのタスク",
+      "no_such_task": "そのようなタスクはありません。",
+      "needs_file": "このタスクにはスケジュールがありません。ファイルが必要で、{where}でアップロードしたときに実行されます。",
+      "add_trigger": "トリガーを追加",
+      "reset": "既定に戻す",
+      "resetting": "リセット中…",
+      "remove_aria": "「{trigger}」を削除",
+      "remove": "削除",
+      "stops_after": "{time}で停止",
+      "no_triggers": "トリガーがありません。「今すぐ実行」を押したときだけ実行されます。",
+      "runs": "実行",
+      "next_run": "次回の実行：{when}。",
+      "dialog": {
+        "type": "トリガーの種類",
+        "daily": "毎日",
+        "weekly": "毎週",
+        "interval": "一定間隔",
+        "day": "曜日",
+        "time": "時刻",
+        "every": "間隔",
+        "limit": "制限時間（時間）",
+        "limit_help": "これより長くかかる実行は停止されます。空欄：制限なし。",
+        "add": "追加",
+        "limit_range": "制限時間は15分から168時間の範囲です。",
+        "duplicate": "そのトリガーはすでにあります。"
+      },
+      "find_hint": "タスク ジョブ スケジュール トリガー 実行 task job schedule trigger run"
+    },
+    "import": {
+      "title": "{name}からインポート",
+      "jellystat": {
+        "file": ".jsonlファイル",
+        "sub": "再生履歴を引き継ぎます",
+        "note": "同じバックアップを再度インポートしても安全です。すでにある再生はスキップされます。ライブラリとユーザーを含むバックアップにも対応しています。",
+        "step": {
+          "open": "Jellystatを開きます。",
+          "settings_backup": "{a}に移動し、{b}タブを選択します。",
+          "only_activity": "{a}だけを選択します。選択すると紫色になります。",
+          "under_settings": "設定の下にある{a}をクリックします。",
+          "start_backup": "一番下までスクロールし、バックアップを開始します。",
+          "back_to_backups": "{a}に戻ります。",
+          "download": "新しいバックアップが表示されたら、その{a}メニューを開いて{b}をクリックします。",
+          "upload": "ここでファイルをアップロードします。"
+        }
+      },
+      "streamystats": {
+        "file": ".jsonファイル",
+        "sub": "再生履歴を引き継ぎます",
+        "note": "両方のトラッカーを使っていましたか？両方のファイルをインポートしてください。どちらかですでに取り込まれた再生は二重に数えません。Streamystatsはライブラリのデータを持たないため、タイトルはあなたのJellyfinから取得します。",
+        "step": {
+          "open": "Streamystatsを開きます。",
+          "settings_backup_import": "{a}に移動し、{b}を選択します。",
+          "scroll_to": "{a}までスクロールします。",
+          "click_download": "{a}をクリックします。",
+          "upload": "ここでファイルをアップロードします。"
+        }
+      },
+      "tautulli": {
+        "file": ".dbまたは.zipファイル",
+        "sub": "Plexの履歴をユーザーごとに引き継ぎます",
+        "note": "Plexの名前がJellyfinの名前と一致することはまれなので、Plexの各ユーザーを自分で接続します。映画とエピソードは名前で照合し、まだサーバーにないものは保持して、追加されたときに紐づけます。バックアップにはPlexのアクセストークンが含まれますが、FinStatsがそれを読むことはなく、インポートするかやり直すとファイルを削除します。",
+        "step": {
+          "open": "Tautulliを開きます。",
+          "settings_import_backups": "{a}に移動し、{b}を選択します。",
+          "backup_database": "データベースのバックアップの下にある{a}をクリックします。Tautulliは自身のマシンに保存するため、ダウンロードは始まりません。",
+          "find_it": "Tautulliのデータフォルダー内の{a}フォルダーにあります（Dockerの場合は、{b}としてマウントしたフォルダー内）。",
+          "newest": "最新の{a}ファイル（末尾が.dbまたは.db.zip）を使います。{b}ファイルは設定を保存したものなので使いません。",
+          "copy": "このコンピューターにコピーします。scp、共有フォルダー、NASのファイルマネージャーのどれでも使えます。",
+          "upload_then_wire": "ここでアップロードし、Plexの各ユーザーをJellyfinでの本人に接続します。"
+        }
+      },
+      "result": {
+        "plays_imported": "インポートした再生",
+        "plays_skipped": "既存",
+        "users": "ユーザー",
+        "libraries": "ライブラリ",
+        "items": "映画、シリーズ、トラック",
+        "seasons": "シーズン",
+        "episodes": "エピソード",
+        "item_info": "ファイルの詳細",
+        "marked_watched": "視聴済みの印のみ（再生なし）",
+        "sessions_read": "読み込んだセッション",
+        "users_wired": "接続したPlexユーザー",
+        "not_wired": "未接続のため除外",
+        "other_media": "音楽などのメディア（インポート対象外）"
+      },
+      "already_running": "インポートがすでに実行中です。終わるのを待ってから、もう一度お試しください。",
+      "too_large": "ファイルが大きすぎるとしてサーバーに拒否されました。FinStatsがリバースプロキシの背後にある場合は、アップロードの上限（nginxではclient_max_body_size）を上げて、もう一度お試しください。",
+      "find_hint": "バックアップ アップロード 履歴 トラッカー インポート backup upload history tracker import",
+      "unlinked": {
+        "other": "履歴にある{count}作品がライブラリのどれにも一致しません。たいていは他のサーバーで使われていた名前のためです。{link}。"
+      },
+      "unlinked_link": "「未リンクのメディア」で紐づける",
+      "wrong_file": "「{file}」は{name}のバックアップではありません。{name}からダウンロードした{what}を選んでください。",
+      "empty_file": "このファイルは空です。{name}からバックアップをもう一度ダウンロードしてください。",
+      "uploading": "{file}をアップロード中",
+      "upload_progress": "アップロードの進捗",
+      "upload_line": "{percent}% · {loaded} / {total}",
+      "cancel_upload": "アップロードをキャンセル",
+      "keep_open": "アップロードが終わるまでこのタブを開いたままにしてください。その間、FinStatsの他のページを見ることはできます。",
+      "importing": "履歴をインポート中",
+      "upload_complete": "アップロード完了",
+      "import_progress": "インポートの進捗",
+      "reading": "バックアップを読み込み中…",
+      "starting": "インポートを開始中…",
+      "safe_to_leave": "これはサーバー上で実行されます。このページを離れても問題ありません。",
+      "choose_aria": "{name}のバックアップファイルを選択",
+      "another_running": "別のインポートが実行中です",
+      "drop_here": "{name}のバックアップをここにドロップ",
+      "one_at_a_time": "一度に1つずつ：実行中のものが終わると開始できます",
+      "or_click": "またはクリックして{what}を選択。大きなバックアップでも大丈夫です",
+      "finished": "インポート完了",
+      "see_stats": "統計を見る",
+      "failed": "インポートに失敗しました：{error}",
+      "unknown_error": "不明なエラー",
+      "nothing_half": "途中までインポートされたものはありません。ファイルが手を加えていない{name}のバックアップか確認して、もう一度アップロードしてください。",
+      "upload_failed": "アップロードに失敗しました：{error}",
+      "connect_wires": "配線をつなぐ",
+      "export_from": "{name}からエクスポート",
+      "upload_backup": "バックアップをアップロード"
+    },
+    "wiring": {
+      "plex_users": "Plexユーザー（Tautulliから）",
+      "no_plays": "映画・エピソードなし",
+      "jellyfin_users": "Jellyfinユーザー",
+      "board_aria": "PlexユーザーをJellyfinユーザーに接続",
+      "start_over": "やり直す",
+      "help": "Plexの各ユーザーから、Jellyfinでの本人へ配線をドラッグします。または片方をクリックしてから、もう片方をクリックします。複数のPlexユーザーを一人につなぐこともできます。配線のないPlexユーザーはインポートされません。",
+      "said_connected": "{plex}を{jellyfin}に接続しました。",
+      "said_unplugged": "{name}の接続を外しました。",
+      "said_choose": "{name}がJellyfinで誰にあたるか選んでください。Escでキャンセルします。",
+      "plug_connected": {
+        "other": "Plexの{name}、{count}回再生：{to}に接続済み"
+      },
+      "plug_free": {
+        "other": "Plexの{name}、{count}回再生：未接続"
+      },
+      "socket_pick": "{plex}を{jellyfin}に接続",
+      "socket": "Jellyfinの{name}",
+      "socket_wired": {
+        "other": "Jellyfinの{name}、{count}人のPlexユーザーを接続済み"
+      },
+      "summary_users": {
+        "other": "{count}人中{wired}人のPlexユーザーを接続済み"
+      },
+      "summary_plays": {
+        "other": "{count}回の再生を取り込みます"
+      },
+      "summary_rest": "残りは取り込みません",
+      "import_plays": {
+        "other": "{count}回の再生をインポート"
+      },
+      "import": "インポート"
+    },
+    "backups": {
+      "back_up_now": "今すぐバックアップ",
+      "restore_title": "ファイルから復元",
+      "when_written": "バックアップのタイミング",
+      "keep_newest": "保持する数",
+      "recently_deleted": "最近削除したもの",
+      "hint": {
+        "backups": "バックアップ ダウンロード 削除 一覧 backups download delete list",
+        "restore": "復元 アップロード 移行 新規インストール 統合 restore upload move new install merge",
+        "schedule": "スケジュール 自動 毎日 毎週 タスク schedule automatic every days weekly daily task",
+        "keep": "スケジュール 保持 数 削除 schedule keep count prune",
+        "deleted": "ゴミ箱 元に戻す 削除の取り消し 復元 削除済み バックアップ trash undo undelete restore deleted backup"
+      },
+      "card_sub": "履歴、設定、権限を1つのファイルに。安全に保管したり、別のFinStatsへ移したりできます",
+      "deleted_toast": "{date}のバックアップを削除しました。30日間は元に戻せます。",
+      "undo": "元に戻す",
+      "when_written_help": "バックアップタスクのスケジュール：毎日、毎週、一定間隔、または手動のみ。",
+      "schedule": "スケジュール",
+      "keep_help": "新しいバックアップを書き出すと、古いものは削除されます。1〜100。",
+      "keep_unit": "個",
+      "keep_invalid": "保持する数は1から100までの整数にしてください。",
+      "saving": "保存中…",
+      "couldnt_save": "保存できませんでした：{error}",
+      "made": "作成日時",
+      "size": "サイズ",
+      "actions": "操作",
+      "delete_ask": "このバックアップを削除しますか？30日間は元に戻せます。",
+      "delete": "削除",
+      "restore_ask_settings": "履歴を統合し、設定と権限を置き換えますか？",
+      "restore_ask": "履歴を統合しますか？",
+      "restore": "復元",
+      "download": "ダウンロード",
+      "delete_aria": "{date}のバックアップを削除",
+      "empty_scheduled": "まだバックアップはありません。バックアップするものができると最初の1つが自動で書き出されます。今すぐ作成することもできます。",
+      "empty_unscheduled": "まだバックアップはなく、スケジュールもありません。",
+      "deleted_help": "削除したバックアップは30日間ここに残り、その後完全に削除されます。元に戻すまでは、ダウンロードも復元もできません。",
+      "removed_for_good": "完全に削除",
+      "undelete": "元に戻す",
+      "restored": {
+        "other": "{count}回の再生を復元しました。{skipped}回はすでにありました。"
+      },
+      "restored_settings": {
+        "other": "{count}回の再生を復元しました。{skipped}回はすでにありました。設定と権限も復元しました。"
+      },
+      "restore_failed": "復元に失敗しました：{error} 何も変更されていません。",
+      "too_large": "ファイルが大きすぎるとしてサーバーに拒否されました。リバースプロキシの背後にある場合は、アップロードの上限を上げて、もう一度お試しください。",
+      "also_settings": "設定と権限も復元する",
+      "head": "{link}に従って書き出し、新しいものから{count}個を保持します。",
+      "head_next": "{link}に従って書き出し、新しいものから{count}個を保持します。次回は{next}。",
+      "head_single": "{link}に従って書き出し、最新の1個を保持します。",
+      "head_single_next": "{link}に従って書き出し、最新の1個を保持します。次回は{next}。",
+      "head_link": "バックアップタスクのスケジュール",
+      "head_unscheduled": "バックアップのスケジュールはありません（{link}）。",
+      "head_unscheduled_link": "スケジュールを設定",
+      "folder": "データディレクトリの{folder}フォルダーに保存されます。",
+      "backup_progress": "バックアップの進捗",
+      "backup_failed": "バックアップに失敗しました：{error}",
+      "restore_help": "復元は統合です。すでにある再生はスキップされるので、2回行っても安全です。バックアップには全員の履歴とアドレスが含まれますが、JellyfinのAPIキーは含まれません。",
+      "upload_progress": "アップロードの進捗",
+      "uploading": "{file}をアップロード中 · {percent}%",
+      "choose_file": "バックアップファイルを選択…",
+      "restore_progress": "復元の進捗"
+    }
+  },
+  "simple": {
+    "nav": {
+      "home": "ホーム",
+      "libraries": "ライブラリ",
+      "users": "ユーザー",
+      "history": "履歴",
+      "graphs": "グラフ"
+    },
+    "menu": "設定とアカウント",
+    "sections": "セクション",
+    "graphs": {
+      "concurrent": {
+        "day": "ストリームの種類別の1日ごとの同時ストリーム数",
+        "week": "ストリームの種類別の1週間ごとの同時ストリーム数"
+      },
+      "concurrent_help": {
+        "day": "1日ごとの最大同時ストリーム数。種類別と合計。",
+        "week": "1週間ごとの最大同時ストリーム数。種類別と合計。"
+      },
+      "hm": "{hours}時間{minutes}分",
+      "hour": {
+        "duration": "時間帯別の再生時間",
+        "plays": "時間帯別の再生回数"
+      },
+      "hour_help": "TV、映画、音楽の合計を、再生した時間帯別に表示します。",
+      "kind": {
+        "movies": "映画",
+        "music": "音楽",
+        "tv": "TV"
+      },
+      "last_months": "過去{field}か月",
+      "last_n_days": "過去{count}日間",
+      "last_n_months": "過去{count}か月",
+      "measure": "指標",
+      "media_daily": {
+        "day": {
+          "duration": "メディアの種類別の1日ごとの再生時間",
+          "plays": "メディアの種類別の1日ごとの再生回数"
+        },
+        "week": {
+          "duration": "メディアの種類別の1週間ごとの再生時間",
+          "plays": "メディアの種類別の1週間ごとの再生回数"
+        }
+      },
+      "media_daily_help": {
+        "day": {
+          "duration": "1日ごとに再生されたTV、映画、音楽の合計再生時間。",
+          "plays": "1日ごとに再生されたTV、映画、音楽の合計再生回数。"
+        },
+        "week": {
+          "duration": "1週間ごとに再生されたTV、映画、音楽の合計再生時間。",
+          "plays": "1週間ごとに再生されたTV、映画、音楽の合計再生回数。"
+        }
+      },
+      "method": {
+        "DirectPlay": "ダイレクト再生",
+        "DirectStream": "ダイレクトストリーム",
+        "Transcode": "トランスコード"
+      },
+      "monthly": {
+        "duration": "月ごとの合計再生時間",
+        "plays": "月ごとの合計再生回数"
+      },
+      "monthly_help": "TV、映画、音楽の合計を月ごとに表示します。",
+      "months_aria": "月",
+      "most_at_once": "最大同時数",
+      "platform_method": {
+        "duration": "プラットフォームとストリームの種類別の再生時間",
+        "plays": "プラットフォームとストリームの種類別の再生回数"
+      },
+      "platform_method_help": "TV、映画、音楽をアプリ別、再生方法別に表示します。",
+      "source_resolution": {
+        "duration": "元の解像度別の再生時間",
+        "plays": "元の解像度別の再生回数"
+      },
+      "source_resolution_help": "TVと映画を、変換前のファイルの解像度別に表示します。",
+      "stream_resolution": {
+        "duration": "ストリームの解像度別の再生時間",
+        "plays": "ストリームの解像度別の再生回数"
+      },
+      "stream_resolution_help": "TVと映画を、変換後に送られた解像度別に表示します。",
+      "streams_daily": {
+        "day": {
+          "duration": "ストリームの種類別の1日ごとの再生時間",
+          "plays": "ストリームの種類別の1日ごとの再生回数"
+        },
+        "week": {
+          "duration": "ストリームの種類別の1週間ごとの再生時間",
+          "plays": "ストリームの種類別の1週間ごとの再生回数"
+        }
+      },
+      "streams_daily_help": {
+        "day": {
+          "duration": "1日ごとのTV、映画、音楽の合計再生時間を、そのまま再生されたか変換されたか別に表示します。",
+          "plays": "1日ごとのTV、映画、音楽の合計再生回数を、そのまま再生されたか変換されたか別に表示します。"
+        },
+        "week": {
+          "duration": "1週間ごとのTV、映画、音楽の合計再生時間を、そのまま再生されたか変換されたか別に表示します。",
+          "plays": "1週間ごとのTV、映画、音楽の合計再生回数を、そのまま再生されたか変換されたか別に表示します。"
+        }
+      },
+      "tab": {
+        "media": "メディアの種類",
+        "streams": "ストリームの種類",
+        "totals": "再生の合計"
+      },
+      "this_month": "今月",
+      "top_platforms": {
+        "duration": "上位10プラットフォームの再生時間",
+        "plays": "上位10プラットフォームの再生回数"
+      },
+      "top_platforms_help": "TV、映画、音楽の合計を、最も多く再生した10のアプリについて表示します。",
+      "top_users": {
+        "duration": "上位10ユーザーの再生時間",
+        "plays": "上位10ユーザーの再生回数"
+      },
+      "top_users_help": "TV、映画、音楽の合計を、最も多く再生した10人について表示します。",
+      "user_method": {
+        "duration": "ユーザーとストリームの種類別の再生時間",
+        "plays": "ユーザーとストリームの種類別の再生回数"
+      },
+      "user_method_help": "TV、映画、音楽を人別、再生方法別に表示します。",
+      "weekday": {
+        "duration": "曜日別の再生時間",
+        "plays": "曜日別の再生回数"
+      },
+      "weekday_help": "TV、映画、音楽の合計を、再生した曜日別に表示します。"
+    },
+    "history": {
+      "col": {
+        "date": "日付",
+        "duration": "再生時間",
+        "ip": "IPアドレス",
+        "paused": "一時停止",
+        "platform": "プラットフォーム",
+        "player": "プレーヤー",
+        "started": "開始",
+        "stopped": "停止"
+      },
+      "done_aria": "{percent}%視聴",
+      "done_title": "{percent}%",
+      "empty": "一致する再生はありません。",
+      "kind": {
+        "all": "すべて",
+        "movies": "映画",
+        "music": "音楽",
+        "shows": "TV番組"
+      },
+      "media": "メディア",
+      "na": "なし",
+      "per_page": "1ページあたりの件数",
+      "search_aria": "履歴を検索",
+      "search_label": "検索：",
+      "show_entries": "1ページに{size}件表示",
+      "showing": "{total}件中{from}〜{to}件を表示"
+    },
+    "home": {
+      "card": {
+        "libraries": "最もアクティブなライブラリ",
+        "platforms": "最もアクティブなプラットフォーム",
+        "popular_movies": "人気の映画",
+        "popular_music": "人気の音楽",
+        "popular_series": "人気のTV番組",
+        "users": "最もアクティブなユーザー",
+        "watched_movies": "最も視聴された映画",
+        "watched_music": "最も再生された音楽",
+        "watched_series": "最も視聴されたTV番組"
+      },
+      "col": {
+        "duration": "再生時間",
+        "plays": "再生回数",
+        "users": "ユーザー"
+      },
+      "count": {
+        "albums": "アルバム",
+        "artists": "アーティスト",
+        "episodes": "エピソード",
+        "items": "アイテム",
+        "last_played": "最終再生",
+        "movies": "映画",
+        "never": "なし",
+        "seasons": "シーズン",
+        "shows": "番組",
+        "tracks": "トラック"
+      },
+      "days_aria": "日数",
+      "direct_play_of": "ダイレクト再生（{from}）",
+      "episode_n": "エピソード{number}",
+      "eta": "残り時間：{time}",
+      "fact": {
+        "audio": "音声",
+        "bandwidth": "帯域幅",
+        "container": "コンテナ",
+        "location": "場所",
+        "player": "プレーヤー",
+        "product": "製品",
+        "quality": "品質",
+        "stream": "ストリーム",
+        "subtitle": "字幕",
+        "video": "映像"
+      },
+      "kind": {
+        "audiobook": "オーディオブック",
+        "movie": "映画",
+        "music_video": "ミュージックビデオ",
+        "video": "ビデオ"
+      },
+      "lan": "LAN",
+      "last_days": "過去{field}日間",
+      "library_statistics": "ライブラリの統計",
+      "live_unavailable": "ライブセッションを利用できません：{reason}",
+      "looking": "ストリームを探しています…",
+      "measure": {
+        "duration": "再生時間",
+        "plays": "再生回数"
+      },
+      "nothing_added": "最近追加されたものはありません。",
+      "nothing_playing": "現在再生中のものはありません。",
+      "peak": {
+        "direct_plays": "ダイレクト再生",
+        "direct_streams": "ダイレクトストリーム",
+        "streams": "同時ストリーム",
+        "title": "最大同時ストリーム数",
+        "transcodes": "トランスコード"
+      },
+      "quality_converted": "変換（{rate}）",
+      "quality_original": "オリジナル（{rate}）",
+      "rank_by": "順位の基準",
+      "recently_added": "最近追加",
+      "recently_watched": "最近視聴",
+      "summary": {
+        "bandwidth_split": "{total}（LAN：{lan}、WAN：{wan}）",
+        "direct_plays": {
+          "other": "ダイレクト再生{count}件"
+        },
+        "direct_streams": {
+          "other": "ダイレクトストリーム{count}件"
+        },
+        "line": "ストリーム：{streams} | 帯域幅：{bandwidth}",
+        "line_kinds": "ストリーム：{streams}（{kinds}） | 帯域幅：{bandwidth}",
+        "streams": {
+          "other": "{count}件"
+        },
+        "transcodes": {
+          "other": "トランスコード{count}件"
+        }
+      },
+      "transcode_from_to": "トランスコード（{from} → {to}）",
+      "wan": "WAN",
+      "watch_statistics": "視聴の統計"
+    },
+    "item": {
+      "aired": "放送日",
+      "episode_list": "エピソード一覧",
+      "genres": "ジャンル",
+      "library": "ライブラリ",
+      "missing_text": "Jellyfinから削除された可能性があります。",
+      "missing_title": "そのタイトルはありません",
+      "rated": "評価",
+      "rated_aria": "5段階中{rating}の評価",
+      "runtime": "再生時間",
+      "season_list": "シーズン一覧",
+      "show": "番組",
+      "starring": "出演",
+      "studio": "スタジオ",
+      "unit_people": { "other": "人" },
+      "watched_by": "視聴した人"
+    },
+    "libraries": {
+      "all": "すべてのライブラリ",
+      "col": {
+        "episodes": "エピソード / トラック数",
+        "last_accessed": "最終アクセス",
+        "name": "ライブラリ名",
+        "seasons": "シーズン / アルバム数",
+        "titles": "映画 / TV番組 / アーティスト数",
+        "type": "ライブラリの種類"
+      },
+      "empty": "まだライブラリはありません。",
+      "missing_text": "Jellyfinから削除された可能性があります。",
+      "missing_title": "そのライブラリはありません",
+      "showing": "{total}個中{shown}個のライブラリを表示",
+      "type": {
+        "books": "本",
+        "boxsets": "コレクション",
+        "homevideos": "ビデオ",
+        "movies": "映画",
+        "music": "アーティスト",
+        "musicvideos": "ミュージックビデオ",
+        "tvshows": "番組"
+      }
+    },
+    "platform": {
+      "days_hrs_mins": "{days}日{hours}時間{minutes}分",
+      "hrs_mins": "{hours}時間{minutes}分",
+      "mins": "{minutes}分",
+      "unknown_app": "不明なアプリ"
+    },
+    "profile": {
+      "global_stats": "全体の統計",
+      "recently_watched": "最近視聴",
+      "tab_profile": "プロフィール",
+      "unit": {
+        "days": "日",
+        "hrs": "時間",
+        "mins": "分",
+        "plays": { "other": "回再生" }
+      },
+      "user_stats": "ユーザーの統計",
+      "views": "表示"
+    },
+    "users": {
+      "all": "すべてのユーザー",
+      "col": {
+        "first_seen": "初回検出",
+        "last_ip": "最後のIP",
+        "last_platform": "最後のプラットフォーム",
+        "last_played": "最終再生",
+        "last_player": "最後のプレーヤー",
+        "last_seen": "最終アクセス",
+        "network": "ネットワーク",
+        "total_duration": "合計再生時間",
+        "total_plays": "合計再生回数"
+      },
+      "ip_addresses": "IPアドレス",
+      "missing_text": "Jellyfinから削除されたか、あなたには見る権限のないページの可能性があります。",
+      "missing_title": "その人はいません",
+      "no_addresses": "記録されたアドレスはありません。",
+      "player_stats": "プレーヤーの統計",
+      "showing": "{total}人中{shown}人のユーザーを表示"
+    },
+    "changelog": {
+      "jump": "バージョンへ移動",
+      "empty_title": "更新履歴はありません",
+      "empty_sub": "このビルドには含まれていません。",
+      "running": "実行中のバージョン",
+      "running_option": "{version}（実行中）"
+    }
+  },
+  "server": {
+    "errors": {
+      "not_found": "{what}が見つかりません",
+      "not_permitted": "この操作（{what}）を行う権限がありません。Jellyfinの管理者が設定で付与できます。",
+      "admins_only": "この操作はJellyfinの管理者のみが行えます",
+      "internal": "サーバーで問題が発生しました。FinStatsのログを確認してください。"
+    },
+    "not_found": {
+      "alert": "アラートが見つかりません",
+      "backup": "バックアップが見つかりません",
+      "chapter": "章が見つかりません",
+      "connection": "接続が見つかりません",
+      "destination": "通知先が見つかりません",
+      "dismissed_finding": "非表示にした検出項目が見つかりません",
+      "endpoint": "エンドポイントが見つかりません",
+      "film_or_show": "映画または番組が見つかりません",
+      "finding": "検出項目が見つかりません",
+      "image": "画像が見つかりません",
+      "item": "アイテムが見つかりません",
+      "key": "キーが見つかりません",
+      "library": "ライブラリが見つかりません",
+      "missing_title": "見つからないタイトルの項目がありません",
+      "person": "人物が見つかりません",
+      "play": "再生が見つかりません",
+      "profile": "プロフィールが見つかりません",
+      "task": "タスクが見つかりません",
+      "title": "タイトルが見つかりません",
+      "user": "ユーザーが見つかりません",
+      "watchlist_entry": "ウォッチリストの項目が見つかりません",
+      "year": "その年が見つかりません"
+    },
+    "not_permitted": {
+      "be_sent_notifications": "通知を受け取る権限がありません。Jellyfinの管理者が設定で付与できます。",
+      "manage_finstats": "FinStatsを管理する権限がありません。Jellyfinの管理者が設定で付与できます。",
+      "see_other_people_s_statistics": "他の人の統計を見る権限がありません。Jellyfinの管理者が設定で付与できます。",
+      "see_the_server": "サーバーを見る権限がありません。Jellyfinの管理者が設定で付与できます。",
+      "see_what_is_downloading": "ダウンロード中のものを見る権限がありません。Jellyfinの管理者が設定で付与できます。",
+      "see_where_people_watch_from": "どこから視聴しているかを見る権限がありません。Jellyfinの管理者が設定で付与できます。"
+    },
+    "api": {
+      "cross_site": "クロスサイトリクエストを拒否しました",
+      "lookup_off": "先に「自宅のパブリックアドレスを認識」をオンにしてください",
+      "expected_object": "JSONオブジェクトが必要です",
+      "invalid_settings": "設定が無効です：{error}",
+      "invalid_triggers": "トリガーが無効です：{error}",
+      "geoip_from_env": "データベースはFINSTATS_GEOIP_DBで指定されています。そのファイルを置き換えてください",
+      "task_running": "そのタスクはすでに実行中です",
+      "unknown_permission": "不明な権限`{name}`",
+      "admins_have_all": "Jellyfinの管理者はすでにすべての権限を持っています",
+      "backup_running": "バックアップをすでに書き出し中です",
+      "backup_name_taken": "同じ名前のバックアップがすでにあります。先に削除するか名前を変更してください",
+      "restore_running": "復元またはインポートがすでに実行中です",
+      "import_running": "インポートまたは復元がすでに実行中です",
+      "no_tautulli_backup": "待機中のTautulliのバックアップはありません。先にアップロードしてください。",
+      "locate_wrong_kind": "再生の対象は映画、ビデオ、エピソードのいずれかで、番組全体やシーズン全体にはなりません",
+      "upload_interrupted": "アップロードが中断されました：{error}",
+      "upload_empty": "アップロードされたファイルは空でした",
+      "reading_backup": "バックアップを読み込み中",
+      "receiving_backup": "バックアップを受信中",
+      "importing": "インポート中",
+      "restored": {
+        "other": "{count}回の再生を復元しました（{skipped}回は既存）"
+      },
+      "imported": {
+        "other": "{count}回の再生をインポートしました（{skipped}回は既存）"
+      },
+      "imported_marked": {
+        "other": "{count}回の再生をインポートしました（{skipped}回は既存）。{marked}件は視聴済みの印のみで、再生はありません"
+      },
+      "no_profile_title": "見つかりません",
+      "no_profile": "ここにプロフィールはありません。"
+    },
+    "state": {
+      "between": "{name}は{lo}から{hi}の範囲で指定してください",
+      "unknown_permission": "不明な権限`{name}`",
+      "not_an_ip": "`{address}`はIPアドレスではありません",
+      "too_many_homes": "自宅アドレスは最大{max}個です",
+      "public_url": "FinStatsのアドレスはhttp://またはhttps://で始まる必要があります",
+      "address_too_long": "アドレスが長すぎます",
+      "jellyfin_public_url": "Jellyfinのアドレスはhttp://またはhttps://で始まり、ホスト名を含む必要があります",
+      "failed": "失敗"
+    },
+    "auth": {
+      "bearer_form": "`Authorization: Bearer <key>`の形式を使ってください",
+      "sign_in_to_continue": "続けるにはサインインしてください",
+      "calendar_key_only": "このキーで開けるのはカレンダーフィードだけです",
+      "feed_needs_key": "このフィードにはキーが必要です。アドレスに?key=…を追加してください",
+      "too_many_attempts": {
+        "other": "サインインの試行回数が多すぎます。{count}分後にもう一度お試しください。"
+      },
+      "not_connected": "FinStatsはまだJellyfinに接続されていません",
+      "enter_username": "Jellyfinのユーザー名を入力してください",
+      "wrong_password": "ユーザー名またはパスワードが正しくありません",
+      "unreachable": "サインインの確認のためにJellyfinに接続できませんでした",
+      "no_access": "FinStatsへのアクセスが許可されていません。Jellyfinの管理者が設定で許可できます。",
+      "already_set_up": "FinStatsはすでにセットアップ済みです",
+      "not_admin": "このアカウントはJellyfinの管理者ではありません。管理者アカウントでFinStatsをセットアップしてください。"
+    },
+    "keys": {
+      "session_only": "キーを管理するにはサインインしてください。キーでキーを作成・取り消しすることはできません",
+      "name": "キーに60文字以内の名前を付けてください",
+      "expiry": "有効期限は1〜3650日です",
+      "scope": "範囲は`full`または`calendar`です",
+      "too_many": "すでに{max}個のキーを持っています。先に1つ取り消してください"
+    },
+    "appearance": {
+      "unknown_preset": "`{preset}`に該当するFinUIプリセットはありません。コードは項目ごとに1文字の英字または数字です（例：0101）"
+    },
+    "public": {
+      "session_only": "プロフィールを公開するにはサインインしてください。キーで何かを公開することはできません",
+      "not_allowed": "このサーバーでは管理者が公開プロフィールを許可していません",
+      "page_title": "FinStatsのプロフィール",
+      "page_title_named": "FinStatsの{name}",
+      "page_description": "視聴時間{hours}時間、{plays}回再生。",
+      "page_description_none": "本人が公開した視聴記録。"
+    },
+    "jellyfin": {
+      "enter_address": "Jellyfinサーバーのアドレスを入力してください",
+      "enter_address_of": "{what}のアドレスを入力してください",
+      "invalid_url": "有効なURLではないようです",
+      "timed_out": "{address}への接続がタイムアウトしました",
+      "could_not_connect": "{address}に接続できませんでした",
+      "could_not_reach": "{address}に接続できませんでした：{error}",
+      "not_jellyfin_status": "{address}が{status}を返しました。Jellyfinサーバーですか？",
+      "not_jellyfin": "{address}の応答はJellyfinサーバーのものではありませんでした",
+      "unreachable": "Jellyfinに接続できませんでした：{error}",
+      "answered": "Jellyfinが{status}を返しました",
+      "answered_for": "Jellyfinが{path}に対して{status}を返しました",
+      "answered_for_user_items": "Jellyfinがユーザーのアイテムに対して{status}を返しました",
+      "keys_list_refused": "JellyfinがAPIキーの一覧取得を拒否しました（{status}）",
+      "key_create_refused": "JellyfinがAPIキーの作成を拒否しました（{status}）",
+      "key_unreadable": "APIキーを作成しましたが、読み取れませんでした"
+    },
+    "jobs": {
+      "explain": {
+        "scan_library": "メディアフォルダーを調べて、新しいファイル、変更されたファイル、なくなったファイルを見つけ、Jellyfinのデータベースを更新します。新しい映画が表示されるのはこのタスクのおかげです。終わるとすぐにFinStatsがライブラリを読み込むので、見つかったものは1〜2分で統計に反映されます。",
+        "media_segments": "エピソードを調べて、プレーヤーがスキップを提案できる部分（オープニング、前回のあらすじ、エンディングクレジット）の位置を記録します。そのために各ファイルの音声と映像を読むので、Jellyfinが実行するタスクの中でも特に重い処理です。まだ解析していないものだけを対象にします。夜通し実行されるのは普通のことで、ライブラリのファイルには一切手を加えません。",
+        "trickplay": "シークバーをドラッグしたときに表示される小さな画像の列を作ります。すべての動画を一度デコードしてサムネイルを隣に保存するため、大きなライブラリでの初回は何時間もかかり、ディスク容量も使います。2回目以降は新しいものだけを処理します。",
+        "chapter_images": "映画のチャプターごとのサムネイルを作り、チャプターメニューに番号ではなく画像を表示できるようにします。チャプターのあるファイルをすべてシークします。初回以降は新しいファイルだけです。",
+        "keyframes": "各ファイルでプレーヤーがジャンプできる位置を記録します。これがあると、トランスコード中の動画でシークバーをドラッグしたとき、数秒ずれずに指を離した位置から再生されます。",
+        "audio_normalization": "各ファイルの音量を測定し、静かな映画と大きな音の映画の差をプレーヤーがならせるようにします。まだ測定していないファイルの音声をすべて読みます。",
+        "refresh_people": "オンにしているメタデータプロバイダーから、ライブラリの俳優や監督の詳細と写真を取得します。インターネットと通信しますが、ファイルには触れません。",
+        "refresh_guide": "設定した番組表プロバイダーから、今後数日分のライブTVの番組表をダウンロードします。ライブTVを使っている場合のみ動作します。",
+        "optimize_database": "Jellyfin自身のデータベースファイルを整理します。削除された行が残した領域を回収し、インデックスを再構築します。実行中はJellyfinが少し遅くなり、終わると速くなります。メディアとは関係ありません。",
+        "clean_activity_log": "Jellyfinのアクティビティログ（ダッシュボード → アクティビティで見られるサインインやエラー）から古い項目を削除します。FinStatsはそれらを自身の履歴にすでにコピーしているため、FinStatsのサーバーページから消えるものはありません。",
+        "clean_logs": "Jellyfinの設定で指定した日数より古いJellyfin自身のログファイルを削除します。後片付けの処理で、メディアには一切触れません。",
+        "clean_cache": "Jellyfinのキャッシュフォルダーのうち、もう不要な部分を空にします。安全で速く、ディスク容量を空けるだけです。",
+        "clean_transcode": "Jellyfinがトランスコードしたときに残る一時ファイル（元のファイルを扱えないプレーヤー向けに作った映像の断片）を削除します。利用の多いサーバーでは数十GBになることもあります。",
+        "plugin_updates": "プラグインリポジトリに、プラグインの新しいバージョンがあるか問い合わせ、指定していれば更新をインストールします。このタスクはサーバーに代わってインターネットと通信します。",
+        "subtitles": "字幕を処理します。有効にしたプロバイダーから指定した字幕を取得したり、動画ファイルに含まれている字幕を取り出して、トランスコードなしでプレーヤーが表示できるようにしたりします。",
+        "thumbnails": "メタデータプロバイダーのアートワークがない動画について、映像から静止画を1枚取り出して画像として使います。",
+        "system_update": "新しいJellyfinがリリースされていないか確認します。インターネットと通信しますが、指定しない限り自分で何かをインストールすることはありません。"
+      },
+      "from_plugin": "{description}（Jellyfin自身の説明です。FinStatsはこのタスクを知らないため、おそらくプラグインのものです。）",
+      "unknown": "FinStatsはこのタスクを知らず、Jellyfinにも説明がありません。たいていはプラグインが追加したものです。",
+      "unnamed": "名前のないタスク",
+      "not_connected": "Jellyfinに接続されていません",
+      "no_answer": "Jellyfinから応答がありませんでした",
+      "daily": "毎日{time}",
+      "weekly": {
+        "mon": "毎週月曜日{time}",
+        "tue": "毎週火曜日{time}",
+        "wed": "毎週水曜日{time}",
+        "thu": "毎週木曜日{time}",
+        "fri": "毎週金曜日{time}",
+        "sat": "毎週土曜日{time}",
+        "sun": "毎週日曜日{time}",
+        "any": "毎週{time}"
+      },
+      "at_startup": "Jellyfinの起動時",
+      "every": {
+        "day": "毎日",
+        "days": "{count}日ごと",
+        "hour": "1時間ごと",
+        "hours": "{count}時間ごと",
+        "minute": "1分ごと",
+        "minutes": "{count}分ごと",
+        "second": "1秒ごと",
+        "seconds": "{count}秒ごと"
+      }
+    },
+    "socket": {
+      "closed": "Jellyfinが接続を閉じました",
+      "failed": "接続に失敗しました（{detail}）",
+      "mismatch": "Jellyfinがプッシュする内容が/Sessionsの応答と一致しません（{detail}）",
+      "collector_gone": "記録の処理が受信を停止しました",
+      "unreadable": "Jellyfinから読み取れないセッション一覧が送られてきました",
+      "no_answer": "{seconds}秒以内に何の応答もありませんでした",
+      "silent": "Jellyfinから{seconds}秒間何も届きませんでした",
+      "no_handshake": "{url}が{seconds}秒以内にハンドシェイクに応答しませんでした",
+      "refused": "{url}が接続を拒否しました（{detail}）"
+    },
+    "card": {
+      "a_profile": "FinStatsのプロフィール",
+      "hours_watched": {
+        "other": "視聴時間{count}時間"
+      },
+      "when_they_watch": "視聴する時間帯",
+      "longest_streak": {
+        "other": "最長連続記録{count}日"
+      },
+      "a_year": "FinStatsの1年",
+      "whose_year": "{name}の1年",
+      "hours_watched_unit": "時間の視聴",
+      "streak": "{count}日連続",
+      "top_show": "トップ番組",
+      "top_film": "トップ映画",
+      "weekday": {
+        "mon": "月",
+        "tue": "火",
+        "wed": "水",
+        "thu": "木",
+        "fri": "金",
+        "sat": "土",
+        "sun": "日"
+      }
+    },
+    "story": {
+      "last_12_months": "過去12か月",
+      "in_review": "{label}の振り返り",
+      "whose": "{whose}の{label}",
+      "word": {
+        "year": "1年",
+        "numbers": "数字",
+        "shows": "番組",
+        "films": "映画",
+        "music": "音楽",
+        "genres": "ジャンル",
+        "persona": "あなた",
+        "rhythm": "リズム",
+        "days": "日々",
+        "records": "記録",
+        "together": "一緒に",
+        "finished": "完走",
+        "asked": "リクエスト",
+        "versus": "比較"
+      },
+      "hours_of_watching": "時間の視聴",
+      "plays": {
+        "other": "{count}回再生"
+      },
+      "titles": {
+        "other": "{count}作品"
+      },
+      "days": {
+        "other": "{count}日"
+      },
+      "in_numbers": "数字で見る1年",
+      "tile": {
+        "plays": "再生",
+        "hours": "時間",
+        "titles": "作品",
+        "days": "日",
+        "episodes": "エピソード",
+        "films": "映画",
+        "songs": "曲"
+      },
+      "top": {
+        "shows": "トップ番組",
+        "films": "トップ映画",
+        "songs": "トップソング"
+      },
+      "hours_short": "{count}時間",
+      "minutes_short": "{count}分",
+      "mostly": "主に{genre}",
+      "you_were": "今年のあなたは",
+      "around": "多くは{time}ごろ",
+      "busiest": "いちばん多かったのは{days}",
+      "weekdays": {
+        "mon": "月曜日",
+        "tue": "火曜日",
+        "wed": "水曜日",
+        "thu": "木曜日",
+        "fri": "金曜日",
+        "sat": "土曜日",
+        "sun": "日曜日"
+      },
+      "with_something_on": {
+        "other": "何かを見た日：{count}日"
+      },
+      "longest_streak": {
+        "other": "最長連続記録：{count}日"
+      },
+      "records": "自慢したくなる記録",
+      "record": {
+        "streak": "最長連続記録",
+        "day": "最も見た日",
+        "binge": "最大の一気見",
+        "rewatched": "最も見返した作品",
+        "oldest": "最も古い作品"
+      },
+      "day_hours": "{day}に{hours}時間",
+      "binge": {
+        "other": "{show}を{count}話"
+      },
+      "rewatched": {
+        "other": "{name}、{count}日"
+      },
+      "day_month": "{month}{day}日",
+      "months": {
+        "jan": "1月",
+        "feb": "2月",
+        "mar": "3月",
+        "apr": "4月",
+        "may": "5月",
+        "jun": "6月",
+        "jul": "7月",
+        "aug": "8月",
+        "sep": "9月",
+        "oct": "10月",
+        "nov": "11月",
+        "dec": "12月"
+      },
+      "evenings_word": {"other": "誰かと過ごした夜"},
+      "together_line": "一緒に{hours}時間 · 視聴全体の{percent}%",
+      "together_top": "いちばん人を集めた作品",
+      "evenings": {
+        "other": "{count}晩"
+      },
+      "finished": {
+        "other": "最後まで見た番組：{count}本"
+      },
+      "left_for_later": {
+        "other": "後回しにした番組：{count}本"
+      },
+      "requests_word": {"other": "件のリクエスト"},
+      "arrived": "{count}件が追加",
+      "watched": "{count}件を視聴",
+      "more_than": "{year}年より{percent}%増",
+      "less_than": "{year}年より{percent}%減"
+    },
+    "stats": {
+      "unknown_kind": "不明な種類",
+      "unknown_group": "不明なグループ",
+      "completion": {
+        "under_10": "10%未満",
+        "from_10_to_50": "10〜50%",
+        "from_50_to_90": "50〜90%",
+        "finished": "視聴完了（90%以上）"
+      }
+    },
+    "health": {
+      "note_too_long": "メモは{max}文字までです"
+    },
+    "timeline": {
+      "bad_cursor": "タイムラインのカーソルではありません",
+      "bad_libraries": "ライブラリIDの一覧ではないようです",
+      "specials": "特典",
+      "season": "シーズン{n}"
+    },
+    "profile": {
+      "how_many_ids": "アイテムIDを1〜5000個送ってください",
+      "bad_ids": "アイテムIDの一覧ではないようです"
+    },
+    "watchlist": {
+      "only_films_and_shows": "ウォッチリストに追加できるのは映画と番組だけです",
+      "needs_an_id": "ライブラリにないタイトルには、TMDB、TVDB、IMDbのいずれかのIDが必要です",
+      "bad_id": "TMDB、TVDB、IMDbのIDではないようです",
+      "bad_name": "タイトルには300文字以内の名前が必要です",
+      "bad_year": "映画や番組の年としてあり得ない年です",
+      "full": "ウォッチリストは上限の{max}作品に達しています。先に1つ削除してください。"
+    },
+    "capacity": {
+      "software_transcodes": "過去{days}日間にJellyfinが報告したトランスコードは、すべてハードウェアアクセラレーションなしで実行されました",
+      "scan_busy": "Jellyfinのライブラリスキャンが大半の時間実行されています",
+      "runway_under_a_month": "{place}：過去{window}か月のペースでは、空き容量は1か月もちません",
+      "runway_about_a_month": "{place}：過去{window}か月のペースでは、空き容量は約1か月分です",
+      "runway_about": "{place}：過去{window}か月のペースでは、空き容量は約{count}か月分です"
+    },
+    "recap": {
+      "bad_scope": "範囲は`user`または`server`です",
+      "persona": {
+        "night_owl": {
+          "title": "夜型",
+          "line": "視聴の{n}%が22:00から4:00の間でした"
+        },
+        "early_bird": {
+          "title": "朝型",
+          "line": "視聴の{n}%が朝10時前でした"
+        },
+        "music_lover": {
+          "title": "音楽好き",
+          "line": "再生したものの{n}%が音楽でした"
+        },
+        "weekend_warrior": {
+          "title": "週末派",
+          "line": "視聴の{n}%が土曜日と日曜日でした"
+        },
+        "binge_watcher": {
+          "title": "一気見派",
+          "line": "視聴した日には平均{n}話"
+        },
+        "movie_buff": {
+          "title": "映画通",
+          "line": "再生の{n}%が映画でした"
+        },
+        "creature_of_habit": {
+          "title": "習慣派",
+          "line": "毎週ほとんどの視聴が{n}ごろに始まりました"
+        }
+      }
+    },
+    "security": {
+      "unknown_place": "不明な場所",
+      "home_place": "自宅（{place}）",
+      "played_on": "{device}で{title}",
+      "found_in_older_history": "過去の履歴で検出",
+      "same_two_places": "同じ2か所",
+      "database_from_env": "データベースはFINSTATS_GEOIP_DBで指定されています。そのファイルを置き換えてください",
+      "already_downloading": "データベースはすでにダウンロード中です"
+    },
+    "geo": {
+      "not_a_city_database": "{file}は`{kind}`データベースです。FinStatsには都市データベースが必要です",
+      "already_have": "{month}版はすでにあります",
+      "downloaded": "DB-IP City Lite {month}版をダウンロードしました",
+      "download_failed": "位置情報データベースのダウンロード",
+      "downloading": "ダウンロード中",
+      "answered": "{url}が{status}を返しました",
+      "downloading_part": "ダウンロード中（{got} / {total} MB）",
+      "unpacking": "展開中"
+    },
+    "schedule": {
+      "cannot_be_scheduled": "「{task}」はスケジュールできません",
+      "too_many_triggers": "トリガーは1つのタスクにつき最大{max}個です",
+      "same_trigger_twice": "同じトリガーが2つあります",
+      "time_of_day": "時刻は00:00から23:59の間です",
+      "day_of_week": "曜日は0（日曜日）から6（土曜日）です",
+      "interval": "間隔は5分から30日の間です",
+      "after_scan": "Jellyfinのスキャンの後に実行できるのは、ライブラリを読み込むタスクだけです",
+      "no_time_limit": "このタスクは途中で止められないため、制限時間を設定できません",
+      "time_limit": "制限時間は1分から168時間の間です",
+      "past_time_limit": "停止：制限時間の{limit}を超えました",
+      "no_message": "メッセージなし",
+      "panicked": "FinStatsの不具合によりこの実行を停止しました（{why}）。次のトリガーで再度実行されます",
+      "cancelled": "実行はキャンセルされました（{error}）",
+      "hours": {
+        "other": "{count}時間"
+      },
+      "minutes": {
+        "other": "{count}分"
+      }
+    },
+    "sync": {
+      "starting": "開始中…",
+      "writing_backup": "バックアップを書き出し中",
+      "backup_panicked": "FinStatsの不具合によりこのバックアップの書き出しを停止しました。次のトリガーで再度書き出されます",
+      "backup_written": {
+        "other": "{count}回の再生、{size} MB"
+      },
+      "fetching_users": "ユーザーを取得中",
+      "users_refused": {
+        "other": "FinStatsは{current}人のユーザーを把握していますが、Jellyfinが返したのは{count}人でした。Jellyfinの変更か読み込みの失敗と思われるため、見つからないユーザーを削除済みにはしません。何も変更していません。"
+      },
+      "users_read": {
+        "other": "{count}人のユーザー"
+      },
+      "fetching_libraries": "ライブラリを取得中",
+      "libraries_refused": {
+        "other": "FinStatsは{current}個のライブラリを把握していますが、Jellyfinが示したのは{count}個でした。サーバーが空になったのではなく、Jellyfinの変更か読み込みの失敗と思われるため、見つからないライブラリを削除済みにはしません。何も変更していません。"
+      },
+      "items_read": "{library}：{total}件中{done}件のアイテム",
+      "cast_and_crew": "{library}：キャストとスタッフ",
+      "items_refused": {
+        "other": "ライブラリ「{library}」についてFinStatsは{current}件を保持していますが、Jellyfinが返した読み取り可能なアイテムは{count}件でした。削除ではなく、Jellyfinの変更か読み込みの失敗と思われるため、{missing}件のアイテムを削除済みにはしません。ライブラリはそのまま残しています。"
+      },
+      "linking": "再生をライブラリに紐づけ中",
+      "libraries_read": {
+        "other": "{count}個のライブラリに{items}件のアイテム"
+      },
+      "waiting_for_library_read": "最初のライブラリの読み込みを待機中",
+      "changed_items": "{library}：{count}件のアイテムが変更",
+      "people_looked_at": "人物：{count}人を確認",
+      "nothing_changed": "変更なし",
+      "titles_changed": {
+        "other": "{count}作品が変更"
+      },
+      "portraits_changed": {
+        "other": "{count}枚の人物写真が変更"
+      },
+      "titles": {
+        "other": "{count}作品"
+      },
+      "portraits": {
+        "other": "{count}枚の人物写真"
+      },
+      "titles_and_portraits_changed": "{titles}と{portraits}が変更",
+      "fetching_activity": "サーバーのアクティビティを取得中",
+      "entries_read": "{total}件中{done}件の項目",
+      "new_entries": {
+        "other": "{count}件の新しい項目"
+      },
+      "reading_server": "サーバーの詳細を読み込み中",
+      "reading_devices": "デバイスを読み込み中",
+      "server_read": {
+        "other": "{count}台のデバイス、{plugins}個のプラグイン"
+      },
+      "server_read_without_plugins": {
+        "other": "{count}台のデバイス。プラグインは読み込めませんでした"
+      },
+      "reading_watched": "{name}の視聴済みを読み込み中",
+      "userdata_read": {
+        "other": "再生済みまたはお気に入りのアイテム{count}件"
+      }
+    },
+    "import": {
+      "reading_libraries": "ライブラリを読み込み中",
+      "reading_items": "映画、番組、音楽を読み込み中",
+      "reading_seasons": "シーズンを読み込み中",
+      "reading_episodes": "エピソードを読み込み中",
+      "reading_users": "ユーザーを読み込み中",
+      "importing_history": "再生履歴をインポート中",
+      "reading_file_details": "ファイルの詳細を読み込み中",
+      "reading_backup": "バックアップを読み込み中",
+      "empty_file": "ファイルが空です",
+      "reading_legacy": "バックアップを読み込み中（古い単一ファイル形式のため、より多くのメモリが必要です）",
+      "not_json": "このファイルは有効なJellystatのバックアップではありません（JSONを解析できませんでした）",
+      "not_jellystat": "このファイルはJellystatのバックアップではありません",
+      "not_jellystat_at": "Jellystatのバックアップではないようです（{line}行目：{error}）",
+      "damaged_at": "バックアップの{line}行目が壊れています：{error}",
+      "no_records_at_first": "Jellystatのバックアップではないようです：最初の数行にバックアップのレコードがありません",
+      "no_records": "Jellystatのバックアップではないようです：バックアップのレコードが見つかりません",
+      "linking": "再生をライブラリに紐づけ中",
+      "saving": "保存中"
+    },
+    "streamystats": {
+      "is_jellystat": "これはJellystatのバックアップです。「Jellystatからインポート」でアップロードしてください。",
+      "not_streamystats": "Streamystatsのバックアップではないようです（{error}）。",
+      "no_sessions": "Streamystatsのバックアップではないようです：セッションの一覧がありません。"
+    },
+    "tautulli": {
+      "zip_method": "このzipはFinStatsが開けない方式で圧縮されています（方式{method}）。展開して、中の.dbファイルをアップロードしてください。",
+      "zip_damaged": "zipが壊れています。Tautulliのバックアップをもう一度ダウンロードしてください。",
+      "zip_without_database": "このzipにはTautulliのデータベースがありません。.dbファイルか、Tautulliのバックアップのダウンロードで得られるzipをアップロードしてください。",
+      "zip_with_databases": "このzipには複数のデータベースが含まれています。展開して、Tautulliのものをアップロードしてください。",
+      "not_tautulli": "Tautulliのバックアップではないようです。Tautulliのバックアップから.dbファイル（またはそのzip）をアップロードしてください。",
+      "no_wires": "少なくとも1人のPlexユーザーをJellyfinユーザーに接続してください",
+      "no_such_plex_user": "バックアップにPlexユーザー{id}はありません",
+      "no_such_jellyfin_user": "配線の1つが、このサーバーにいない人につながっています",
+      "wired_twice": "1人のPlexユーザーは1人のJellyfinユーザーにしか接続できません",
+      "reading_backup": "バックアップを読み込み中"
+    },
+    "backup": {
+      "writing": "{table}を書き出し中：{total}行中{done}行",
+      "unreadable": "ファイルが壊れているか、FinStatsのバックアップではありません（読み込めませんでした）",
+      "not_json": "このファイルはFinStatsのバックアップではありません（{line}行目がJSONではありません）",
+      "not_finstats": "これはFinStatsのバックアップではありません。Jellystatのバックアップは「Jellystatからインポート」でアップロードしてください。",
+      "newer_format": "このバックアップは新しいFinStatsで作成されています（形式{format}）。FinStatsを更新してから復元してください。",
+      "restoring": {
+        "other": "復元中：これまでに{count}回の再生"
+      },
+      "linking": "再生をライブラリに紐づけ中"
+    },
+    "notify": {
+      "group": {
+        "security": "セキュリティ",
+        "housekeeping": "メンテナンス",
+        "library": "ライブラリ",
+        "playback": "再生"
+      },
+      "kind": {
+        "travel": {
+          "label": "あり得ない移動",
+          "what": "どの飛行機でも移動できない、同じアカウントの2回の検出"
+        },
+        "new_country": {
+          "label": "新しい国",
+          "what": "あるアカウントがその国で初めて検出されたとき"
+        },
+        "failed_sign_ins": {
+          "label": "サインインの失敗",
+          "what": "1つのアカウント、または1つのアドレスからの連続したサインインの失敗"
+        },
+        "task_failed": {
+          "label": "タスクの失敗",
+          "what": "同期、インポート、接続したサービスの読み込みがエラーで終了したとき"
+        },
+        "backup_failed": {
+          "label": "バックアップの失敗",
+          "what": "バックアップを書き出せなかったとき"
+        },
+        "service_down": {
+          "label": "応答の停止",
+          "what": "Jellyfin、Sonarr、Radarr、Seerrが応答しなくなったとき"
+        },
+        "service_back": {
+          "label": "応答の再開",
+          "what": "…再び応答するようになったとき"
+        },
+        "new_items": {
+          "label": "ライブラリの新着",
+          "what": "ライブラリに追加されたタイトル。番組と日ごとにまとめます"
+        },
+        "request_available": {
+          "label": "リクエストが視聴可能に",
+          "what": "誰かがSeerrでリクエストしたものが視聴できるようになったとき"
+        },
+        "play_started": {
+          "label": "視聴の開始",
+          "what": "再生の開始：タイトル、人、デバイス"
+        },
+        "play_stopped": {
+          "label": "視聴の終了",
+          "what": "再生の終了と、どれだけ視聴したか"
+        },
+        "recap_ready": {
+          "label": "年間まとめの準備完了",
+          "what": "12月に一度：その人の1年の振り返りが見られる、共有できる状態になったとき"
+        },
+        "watchlist_available": {
+          "label": "ウォッチリスト：視聴可能に",
+          "what": "ウォッチリストで待っていた映画や番組がライブラリに追加されたとき。あなた自身の通知先にのみ送られます"
+        },
+        "test": {
+          "label": "テストメッセージ",
+          "what": "「テスト」ボタンでのみ送信されます"
+        }
+      },
+      "bad_url": "有効なURLではないようです",
+      "needs_host": "アドレスにはホスト名が必要です",
+      "lookup_failed": "{host}の名前解決ができませんでした",
+      "not_public": "{host}はこのネットワーク内のアドレスです。自分の通知先は公開サービスを指す必要があります。サーバーの通知先として追加するよう管理者に依頼してください",
+      "enter_address": "送信先のアドレスを入力してください",
+      "http_only": "アドレスはhttp://またはhttps://で始まる必要があります",
+      "no_login": "アドレスにユーザー名とパスワードを含めないでください",
+      "no_fragment": "アドレスに#を含めることはできません",
+      "no_query": "アドレスに?を含めることはできません",
+      "fixed_url": "{channel}の送信先は常に{url}なので、入力するアドレスはありません",
+      "not_discord": "DiscordのWebhookアドレスではありません。Discordで：Channel settings → Integrations → Webhooks → Copy Webhook URL",
+      "discord_no_token": "このDiscordのWebhookアドレスにはトークンがありません。URL全体をコピーしてください",
+      "not_slack": "SlackのWebhookアドレスではありません。Slackで：your app → Incoming Webhooks → Add New Webhook to Workspace を開き、URLをコピーしてください",
+      "slack_no_token": "このSlackのWebhookアドレスにはトークンがありません。URL全体をコピーしてください",
+      "mail_scheme": "メールサーバーのアドレスはsmtps://またはsmtp://で始まります",
+      "not_mail_url": "メールサーバーのアドレスではないようです",
+      "mail_no_login": "アドレスにユーザー名とパスワードを含めないでください。それぞれ専用の入力欄があります",
+      "mail_host_port": "メールサーバーのアドレスはホストとポートだけで、その後には何も付けません",
+      "enter": "{what}を入力してください",
+      "value": "値",
+      "token": "トークン",
+      "ntfy_topic": "ntfyのトピックに使えるのは英字、数字、-、_だけです",
+      "telegram_chat": "チャットIDは-1001234567890のような数字、または公開チャンネルの@nameです",
+      "pushover_key": "Pushoverのユーザーキーまたはグループキーは、英字と数字30文字で、pushover.netのトップページにあります",
+      "nothing_to_enter": "{channel}ではここに入力するものはありません",
+      "unknown_kind": "不明な通知先の種類`{kind}`",
+      "say_kind": "通知先の種類を指定してください",
+      "enter_address_of": "{channel}のアドレスを入力してください",
+      "not_a_token": "トークンではないようです",
+      "too_long": "{what}が長すぎるか、送信できない文字が含まれています",
+      "unknown_event": "不明なイベント`{event}`",
+      "unknown_severity": "不明な重要度`{severity}`",
+      "max_targets": {
+        "other": "通知先は最大{count}件です"
+      },
+      "max_own": {
+        "other": "自分の通知先は最大{count}件です"
+      }
+    },
+    "channels": {
+      "webhook": "Webhook",
+      "email": "メール",
+      "what": {
+        "webhook": "任意のアドレスへのJSONのPOST：自作スクリプト、Home Assistant、n8nなど",
+        "discord": "Discordサーバーのチャンネルへ。そこで作成したWebhook経由",
+        "slack": "ワークスペースのチャンネルへ。Incoming Webhook経由",
+        "telegram": "自分のボットとのチャット、またはボットが参加しているグループやチャンネルへ",
+        "email": "任意のメールボックスへ。お使いのSMTPサーバー経由",
+        "ntfy": "ntfy.shまたは自分のntfyの、任意のトピックへ",
+        "gotify": "自分のGotifyサーバーへ。アプリケーショントークンを使用",
+        "pushover": "スマートフォンのPushoverへ。自分のアプリケーションを使用",
+        "pushbullet": "Pushbulletへ。アカウントでサインインしているすべてのデバイスに届きます"
+      },
+      "topic": {
+        "ntfy": {
+          "label": "トピック",
+          "help": "公開先のntfyトピックです。知っている人は誰でも通知を読めるので、推測しにくいものにしてください。"
+        },
+        "telegram": {
+          "label": "チャットID",
+          "help": "ボットに一度メッセージを送ってから https://api.telegram.org/bot<token>/getUpdates を開き、表示されるチャットIDを使ってください。チャンネルは@nameでも指定できます。"
+        },
+        "pushover": {
+          "label": "ユーザーキーまたはグループキー",
+          "help": "pushover.netのトップページにあるユーザーキー、またはグループキーです。"
+        },
+        "email": {
+          "label": "宛先",
+          "help": "送信先のメールボックスです。"
+        }
+      },
+      "secret": {
+        "webhook": "Authorizationヘッダー（任意）",
+        "telegram": "ボットトークン",
+        "email": "パスワード（任意）",
+        "ntfy": "アクセストークン（任意）",
+        "gotify": "アプリケーショントークン",
+        "pushover": "アプリケーショントークン",
+        "pushbullet": "アクセストークン"
+      },
+      "extra": {
+        "from": {
+          "label": "差出人アドレス",
+          "help": "メールの送信元として使うアドレスです。多くのサーバーは既知のアドレスしか受け付けません。"
+        },
+        "username": {
+          "label": "ユーザー名（任意）",
+          "help": "サインイン不要のリレーなら空欄にします。差出人アドレスと同じであることがよくあります。"
+        }
+      },
+      "timeout": "{host}の{channel}が時間内に応答しませんでした",
+      "connect": "{host}に接続できませんでした。FinStatsが動作している場所から到達できますか？",
+      "decode": "{host}の応答は{channel}のものではありませんでした",
+      "unreachable": "{host}に接続できませんでした",
+      "redirect": "{host}はリダイレクトを返します。トークンが別の場所に渡ることがないよう、FinStatsはリダイレクトに従いません。リダイレクト先のアドレスを入力してください",
+      "telegram_chat": "{channel}はそのチャットを認識していません。先にボットへメッセージを送り、表示されるチャットIDを使ってください",
+      "pushover_key": "{channel}がユーザーキーまたはアプリケーショントークンを受け付けませんでした",
+      "not_understood": "{channel}がメッセージを解釈できませんでした",
+      "discord_refused": "{channel}がWebhookを拒否しました。削除されていませんか？",
+      "telegram_refused": "{channel}がボットトークンを拒否しました",
+      "pushbullet_refused": "{channel}がアクセストークンを拒否しました",
+      "token_refused": "{channel}がトークンを拒否しました",
+      "slack_gone": "{channel}はそのWebhookをもう認識していません。アプリまたはチャンネルが削除されていませんか？",
+      "not_found": "{host}が404 Not Foundを返しました。トピックやベースパスを含め、アドレスは正しいですか？",
+      "too_large": "{channel}にとってメッセージが大きすぎました",
+      "rate_limited": "{channel}がFinStatsにレート制限をかけています",
+      "answered": "{channel}が{status}を返しました"
+    },
+    "mail": {
+      "bad_url": "メールサーバーのアドレスではないようです",
+      "scheme": "メールサーバーのアドレスはsmtps://またはsmtp://で始まります",
+      "needs_host": "アドレスにはホスト名が必要です",
+      "not_an_address": "{address}はメールアドレスではありません",
+      "no_domain": "{address}はメールアドレスではありません：@の後にドメインが必要です",
+      "not_a_letter": "このメッセージをメールにできませんでした",
+      "no_tls_setup": "{host}との暗号化接続を準備できませんでした",
+      "timeout": "{host}が時間内に応答しませんでした",
+      "tls": "{host}が暗号化接続を開始しませんでした。FinStatsは平文でメールを送りません。smtps://を使うか、STARTTLSに対応したサーバーを使ってください",
+      "refused": "{host}がメールを拒否しました。ユーザー名、パスワード、差出人アドレスを確認してください",
+      "busy": "{host}は現在メールを受け付けられませんでした",
+      "connect": "{host}に接続できませんでした。FinStatsが動作している場所から到達できますか？"
+    },
+    "services": {
+      "what": {
+        "sonarr": "シリーズ：いつ放送されるか、何をダウンロード中か",
+        "radarr": "映画：いつ公開されるか、何をダウンロード中か",
+        "seerr": "リクエスト：誰が何をリクエストしたか（Seerr、Jellyseerr、Overseerr）"
+      },
+      "like": "{service}（例：{example}）",
+      "http_only": "アドレスはhttp://またはhttps://で始まる必要があります",
+      "bad_url": "有効なURLではないようです",
+      "no_login": "アドレスにユーザー名とパスワードを含めないでください。それぞれ専用の入力欄があります",
+      "no_query": "アドレスに?や#を含めることはできません",
+      "certificate": "{url}が提示した証明書をFinStatsは信頼していません（自己署名、または独自の認証局のもの）。http://のアドレスを使うか、この接続で「自己署名証明書を受け入れる」をオンにしてください",
+      "timeout": "{url}の{service}が時間内に応答しませんでした",
+      "connect": "{url}に接続できませんでした。{service}は動作していて、FinStatsが動作している場所から到達できますか？",
+      "decode": "{url}の応答は{service}のものではありませんでした",
+      "unreachable": "{url}に接続できませんでした：{error}",
+      "redirect": "{url}は{to}へのリダイレクトを返します。キーが別の場所に渡ることがないよう、FinStatsはリダイレクトに従いません。ベースパスを含め、最終的なアドレスを入力してください",
+      "redirect_elsewhere": "{url}は別のアドレスへのリダイレクトを返します。キーが別の場所に渡ることがないよう、FinStatsはリダイレクトに従いません。ベースパスを含め、最終的なアドレスを入力してください",
+      "key_refused": "{service}がAPIキーを拒否しました",
+      "not_found": "{url}が404 Not Foundを返しました。/{path}のようなベースパスを含め、アドレスは正しいですか？",
+      "answered": "{service}が{status}を返しました",
+      "answers_as": "{url}は応答しますが、{service}ではなく{app}として応答しています",
+      "answers_as_other": "{url}は応答しますが、{service}ではなく別のものとして応答しています",
+      "not_seerr": "{url}の応答はSeerrのものではありませんでした",
+      "unknown_kind": "不明なサービスの種類`{kind}`",
+      "say_kind": "サービスの種類を指定してください",
+      "enter_address": "{service}のアドレスを入力してください",
+      "enter_key": "APIキーを入力してください",
+      "not_a_key": "キーやパスワードではないようです",
+      "max": {
+        "other": "接続は最大{count}件です"
+      },
+      "starting": "開始中…"
+    },
+    "arr": {
+      "not_calendar": "{url}のカレンダーの応答は{service}のものではありませんでした",
+      "none": "SonarrもRadarrも接続されていません",
+      "reading": "{name}を読み込み中",
+      "reading_history": "{name}の履歴を読み込み中",
+      "no_answer": "{names}が応答しませんでした",
+      "ahead": {
+        "other": "今後の公開{count}件"
+      },
+      "ahead_partly": {
+        "other": "今後の公開{count}件。{names}は応答しませんでした"
+      },
+      "events": {
+        "other": "{count}件のイベント"
+      }
+    },
+    "seerr": {
+      "not_requests": "{url}のリクエストの応答はSeerrのものではありませんでした",
+      "none": "Seerrが接続されていません",
+      "reading": "{name}を読み込み中",
+      "looking_up": "タイトルを照会中",
+      "no_answer": "{names}が応答しませんでした",
+      "nothing_new": "新しいものはありません",
+      "read": {
+        "other": "{count}件のリクエストを読み込みました"
+      },
+      "read_gone": {
+        "other": "{count}件のリクエストを読み込みました。{gone}件はSeerrにもうありません"
+      }
+    },
+    "downloads": {
+      "no_answer": "{name}が時間内に応答しませんでした",
+      "season": "シーズン{season}",
+      "episodes": {
+        "other": "{count}エピソード"
+      },
+      "season_episodes": {
+        "other": "シーズン{season} · {count}エピソード"
+      },
+      "seasons_episodes": {
+        "other": "{seasons}シーズン · {count}エピソード"
+      }
+    },
+    "outbound": {
+      "jellyfin": "あなたのJellyfinサーバー",
+      "jellyfin_why": "FinStatsが表示するものはすべてここから来ます：再生中のもの、ライブラリ、ユーザー",
+      "jellyfin_off": "まだ接続されていません",
+      "public_ip": "「IPアドレス確認」サービス",
+      "public_ip_why": "自宅からパブリックアドレス経由で視聴している人がリモートと数えられないようにするためです。最初に一度だけ問い合わせ、その後はボタンを押したときだけです",
+      "geoip": "DB-IPの無料の都市データベース",
+      "geoip_env": "未使用：データベースはFINSTATS_GEOIP_DBで指定したファイルです",
+      "geoip_why": "セキュリティページでアドレスの位置を特定する月次ファイルのダウンロードです（タスクがスケジュールされている場合）。アドレスの照会がこのマシンの外に出ることはありません",
+      "service_why": "「設定 → 接続」で追加した接続です。読み取り専用で、別の場所を指定しない限り自分のネットワーク内です",
+      "target_why_theirs": "{owner}が「設定 → 通知」で追加した自分用の通知先です。本人が選んだイベントのうち、本人が見る権限のある内容だけが送られます",
+      "target_why": "「設定 → 通知」で追加した通知先です。そこで選んだイベントだけが送られ、それ以外は何も送られません"
+    }
+  },
+  "shell": {
+    "pages_label": "ページ",
+    "menu_label": "メニュー",
+    "to_top": "ページの先頭へ"
+  },
+  "router": {
+    "page_title": "{page} · FinStats"
+  },
+  "components": {
+    "pct_watched": "{pct}視聴",
+    "a_play": "再生",
+    "together_aria": {
+      "other": "{count}人で一緒に視聴"
+    }
+  },
+  "menus": {
+    "open": "開く",
+    "timeline": "タイムライン",
+    "new_tab": "新しいタブで開く",
+    "copy_link": "リンクをコピー",
+    "open_tmdb": "TMDBで開く",
+    "open_tvdb": "TVDBで開く",
+    "in_pipeline": "追加予定で見る",
+    "copy_title": "タイトルをコピー",
+    "actions_for": "{name}の操作",
+    "actions": "操作"
+  },
+  "watchlist_toggle": {
+    "add": "ウォッチリストに追加",
+    "remove": "ウォッチリストから削除",
+    "add_failed": "ウォッチリストに追加できませんでした：{error}",
+    "remove_failed": "ウォッチリストから削除できませんでした：{error}",
+    "add_show": "番組をウォッチリストに追加",
+    "show_on": "番組はウォッチリストにあります",
+    "show_on_title": "番組はウォッチリストにあります。クリックで削除します。",
+    "on": "ウォッチリストにあります",
+    "on_title": "ウォッチリストにあります。クリックで削除します。",
+    "named": "{words}：{name}"
+  },
+  "pages": {
+    "activity": {
+      "sub": "FinStatsが把握しているすべての再生。新しい順で、列をクリックすると並べ替えられます",
+      "type": {
+        "movies": "映画",
+        "episodes": "エピソード",
+        "music": "音楽"
+      },
+      "play_method": "再生方法",
+      "all_methods": "すべての方法",
+      "media_type": "メディアの種類",
+      "all_types": "すべての種類",
+      "recorded_by": "記録元",
+      "all_trackers": "すべてのトラッカー",
+      "search_placeholder": "タイトルを検索…",
+      "search_label": "タイトルを検索",
+      "one_series": "1つのシリーズ",
+      "one_title": "1つのタイトル",
+      "remove_title_filter": "タイトルのフィルターを解除",
+      "empty": "このフィルターに一致する再生はありません。期間を長くするか、検索をクリアしてください。",
+      "recently_deleted": "最近削除したもの（{count}）",
+      "trash": {
+        "summary": {
+          "other": "ゴミ箱に{count}回の再生があります。それぞれ削除から30日後に完全に削除されます"
+        },
+        "back": "すべての再生に戻る",
+        "empty_title": "ゴミ箱は空です。",
+        "empty_body": "削除した再生は、完全に削除されるまで30日間ここに残ります。",
+        "restore": "元に戻す",
+        "restoring": "元に戻しています…",
+        "restored": "{title}を元に戻しました。",
+        "restore_failed": "元に戻せませんでした：{reason}",
+        "person": "ユーザー",
+        "played": "再生日時",
+        "deleted": "削除日時",
+        "purge_at": "完全に削除"
+      }
+    },
+    "playback": {
+      "sub": "メディアがどう届いているか：再生方法、コーデック、クライアント",
+      "methods_title": "再生方法",
+      "methods_sub": "ダイレクト再生はファイルをそのまま送ります。トランスコードはサーバーのCPUやGPUを使います",
+      "measure": "指標",
+      "plays": "再生回数",
+      "share": "割合",
+      "reasons_title": "トランスコードの理由",
+      "reasons_sub": "Jellyfinが報告した理由",
+      "nothing_transcoded": "この期間にトランスコードされたものはありません。",
+      "hw_title": "トランスコードのハードウェア",
+      "hw_sub": "使用されたアクセラレーション",
+      "software": "ソフトウェア",
+      "clients_title": "クライアント",
+      "clients_sub": "再生に使われているアプリ",
+      "video_codecs": "映像コーデック",
+      "source_files": "元のファイル",
+      "resolutions": "解像度",
+      "dynamic_range": "ダイナミックレンジ",
+      "audio_codecs": "音声コーデック",
+      "selected_audio": "選択された音声トラック",
+      "audio_channels": "音声チャンネル",
+      "containers": "コンテナ",
+      "subtitles": "字幕",
+      "selected_subtitle": "選択された字幕の言語",
+      "off": "オフ",
+      "mono": "モノラル",
+      "stereo": "ステレオ",
+      "channels": {
+        "other": "{count}チャンネル"
+      },
+      "channels_short": "{count}ch",
+      "concurrency_title": "同時ストリーム",
+      "per_day": "1日ごとの最大同時数",
+      "per_week": "1週間ごとの最大同時数",
+      "peak_day": "1日ごとの最大同時数 · ピーク{peak}",
+      "peak_week": "1週間ごとの最大同時数 · ピーク{peak}",
+      "peak_at_day": "1日ごとの最大同時数 · {when}にピーク{peak}",
+      "peak_at_week": "1週間ごとの最大同時数 · {when}にピーク{peak}",
+      "peak_transcodes": {
+        "other": "同時トランスコードは最大{count}件"
+      },
+      "week_of": "{date}の週",
+      "week_of_head": "週",
+      "date": "日付",
+      "peak_streams": "最大ストリーム数",
+      "peak_aria": "最大同時ストリーム数",
+      "unit_streams": { "other": "ストリーム" },
+      "which_clients": "トランスコードするクライアント",
+      "which_clients_sub": "クライアントごとの再生回数を再生方法別に",
+      "how_far": "どこまで見られているか",
+      "how_far_sub": "映画とエピソード。再生が止まった位置別",
+      "no_video_plays": "この期間に映画やエピソードの再生はありません。",
+      "completion": {
+        "under_10": "10%未満",
+        "from_10": "10〜50%",
+        "from_50": "50〜90%",
+        "finished": "視聴完了（90%以上）"
+      },
+      "network": "ネットワーク",
+      "network_sub": "再生の接続元",
+      "local": "ローカル",
+      "behaviour_title": "視聴の傾向",
+      "based_on": {
+        "other": "ライブで記録した{count}回の再生に基づく"
+      },
+      "pauses": "再生あたりの一時停止",
+      "skips": "再生あたりのスキップ",
+      "picked_up": "途中から再生",
+      "broken_title": "再生できないファイル",
+      "broken_sub": "3回以上再生が始まり、一度も30秒を超えなかったもの",
+      "tries": "試行",
+      "people": "人数",
+      "apps": "アプリ",
+      "last_tried": "最終試行",
+      "rewound_title": "よく巻き戻される作品",
+      "rewound_sub": "再生あたりの巻き戻し回数。FinStats自身が記録した再生から",
+      "rewinds": "巻き戻し",
+      "per_play": "再生あたり",
+      "hot_spot": "多い位置",
+      "subtitled_title": "字幕がオンにされた作品",
+      "subtitled_sub": "最初の10分以内に字幕がオンになった再生",
+      "switched_on": "オンにした回数",
+      "typically_at": "主な位置",
+      "reason": {
+        "ContainerNotSupported": "コンテナがサポートされていません",
+        "VideoCodecNotSupported": "映像コーデックがサポートされていません",
+        "AudioCodecNotSupported": "音声コーデックがサポートされていません",
+        "SubtitleCodecNotSupported": "字幕コーデックがサポートされていません",
+        "AudioIsExternal": "音声が外部ファイルです",
+        "SecondaryAudioNotSupported": "副音声がサポートされていません",
+        "VideoProfileNotSupported": "映像プロファイルがサポートされていません",
+        "VideoLevelNotSupported": "映像レベルがサポートされていません",
+        "VideoResolutionNotSupported": "映像の解像度がサポートされていません",
+        "VideoBitDepthNotSupported": "映像のビット深度がサポートされていません",
+        "VideoFramerateNotSupported": "映像のフレームレートがサポートされていません",
+        "RefFramesNotSupported": "参照フレーム数がサポートされていません",
+        "AnamorphicVideoNotSupported": "アナモルフィック映像がサポートされていません",
+        "InterlacedVideoNotSupported": "インターレース映像がサポートされていません",
+        "AudioChannelsNotSupported": "音声チャンネル数がサポートされていません",
+        "AudioProfileNotSupported": "音声プロファイルがサポートされていません",
+        "AudioSampleRateNotSupported": "音声のサンプルレートがサポートされていません",
+        "AudioBitDepthNotSupported": "音声のビット深度がサポートされていません",
+        "ContainerBitrateExceedsLimit": "コンテナのビットレートが上限を超えています",
+        "VideoBitrateNotSupported": "映像のビットレートがサポートされていません",
+        "AudioBitrateNotSupported": "音声のビットレートがサポートされていません",
+        "UnknownVideoStreamInfo": "映像ストリームの情報が不明です",
+        "UnknownAudioStreamInfo": "音声ストリームの情報が不明です",
+        "DirectPlayError": "ダイレクト再生エラー",
+        "VideoRangeTypeNotSupported": "映像のレンジタイプがサポートされていません",
+        "VideoCodecTagNotSupported": "映像コーデックのタグがサポートされていません",
+        "StreamCountExceedsLimit": "ストリーム数が上限を超えています"
+      }
+    },
+    "together": {
+      "sub": "誰が誰と、どれくらい一緒に見ているか",
+      "empty_title": "まだ誰も一緒に視聴していません",
+      "empty_body": "別々の人が同じものを同時に再生すると、ここに表示されます。",
+      "vs_previous": {
+        "other": "前の{count}日間との比較"
+      },
+      "people": "人数",
+      "watched_with": "一緒に見た人",
+      "time_together": "一緒に過ごした時間",
+      "evenings": "回数",
+      "share_of_watch_time": "視聴時間に占める割合",
+      "spent_in_company": "誰かと一緒に視聴",
+      "over_time_title": "一緒に視聴の推移",
+      "over_time_sub_day": "誰かと見た時間と一人で見た時間（1日ごと）",
+      "over_time_sub_week": "誰かと見た時間と一人で見た時間（1週間ごと）",
+      "pairs_title": "誰が誰と見ているか",
+      "pairs_sub": "すべての組み合わせを一緒に過ごした時間順に。3人で見た夜は、それぞれの組み合わせに数えます",
+      "pair": "組み合わせ",
+      "last": "最終",
+      "watches_most": "よく見る作品",
+      "most_title": "一緒に最も見た作品",
+      "recent_title": "最近の視聴",
+      "people_title": "一人か、誰かと一緒か",
+      "people_sub": "この期間の各自の視聴時間と、そのうち誰かと一緒だった割合",
+      "person": "ユーザー",
+      "alone": "一人",
+      "share": "割合"
+    },
+    "security": {
+      "severity": {
+        "high": "高",
+        "medium": "中"
+      },
+      "kind": {
+        "impossible_travel": "あり得ない移動",
+        "new_country": "新しい国"
+      },
+      "km": "{distance} km",
+      "gap_seconds": "{count}秒",
+      "gap_minutes": "{count}分",
+      "travel_overlap": "同時に{distance}離れた場所",
+      "travel_speed": "{gap}で{distance}、時速{speed} km",
+      "home_place": "自宅（{place}）",
+      "home_tip": "自宅 · {place}",
+      "home": "自宅",
+      "note_placeholder": "旅行中、VPN、モバイルデータ通信のスマートフォンなど…",
+      "resolve": "解決",
+      "resolve_more": "解決…",
+      "resolve_title": "アラートを解決",
+      "resolving": "解決中…",
+      "resolve_all": "すべて解決",
+      "resolve_help_travel": "{user}：{travel}。",
+      "resolve_help_country": "{user}：{country}で初めて検出。",
+      "note_label": "メモ（任意）",
+      "mute_pair": "{user}の{from}と{to}の組み合わせを今後報告しない",
+      "show_on_map": "地図で表示",
+      "reopen": "再び開く",
+      "reopening": "再び開いています…",
+      "travel_text": "{from} → {to}：{travel}。",
+      "first_time": "{country}で初めて検出。",
+      "first_time_place": "{country}で初めて検出（{place}）。",
+      "known_before": {
+        "other": "これまでに検出された国：{count}か国。"
+      },
+      "side_before": "前",
+      "side_then": "後",
+      "side_seen": "検出",
+      "resolved_by": "{when}に{name}が解決",
+      "someone": "誰か",
+      "muted": "この組み合わせは今後報告されません",
+      "which_alerts": "表示するアラート",
+      "tab_open": "未解決",
+      "tab_open_count": "未解決（{count}）",
+      "tab_resolved": "解決済み",
+      "tab_all": "すべて",
+      "alerts_title": "アラート",
+      "alerts_sub": "確認のきっかけであり、証拠ではありません。場所はせいぜい都市の中心で、VPNは移動のように見えます",
+      "alerts_empty_open": "確認が必要なものはありません。あり得ない移動や、新しい国からの初めての利用がここに表示されます。",
+      "alerts_empty": "アラートはありません。",
+      "sign_ins": {
+        "other": "{count}回のサインイン"
+      },
+      "failed_sign_ins": {
+        "other": "{count}回のサインインの失敗"
+      },
+      "addresses": {
+        "other": "{count}個のアドレス"
+      },
+      "last_seen_tip": "最終検出",
+      "last_attempt": "最終試行",
+      "user_in_place": "{place}の{user}",
+      "user_playing_now": "{user} · 再生中",
+      "close_place": "場所の詳細を閉じる",
+      "failed_summary": {
+        "other": "{count}回のサインインの失敗、最終{when}。"
+      },
+      "open_server_log": "サーバーログを開く",
+      "live_playing": "{user}が{title}を再生中です。",
+      "live_playing_on": "{user}が{device}で{title}を再生中です。",
+      "place_summary": "{plays}（{time}）。最終検出{when}。",
+      "place_summary_sign_ins": "{plays}（{time}）、{sign_ins}。最終検出{when}。",
+      "place_summary_addresses": "{addresses}から{plays}（{time}）。最終検出{when}。",
+      "place_summary_sign_ins_addresses": "{addresses}から{plays}（{time}）、{sign_ins}。最終検出{when}。",
+      "col": {
+        "place": "場所",
+        "people": "人数",
+        "plays": "再生回数",
+        "sign_ins": "サインイン",
+        "last_seen": "最終検出",
+        "map": "地図"
+      },
+      "show_place_on_map": "{place}を地図で表示",
+      "downloading": "ダウンロード中…",
+      "download_failed": "ダウンロードに失敗しました。",
+      "download_database": "データベースをダウンロード（約60 MB）",
+      "no_database_title": "位置情報データベースがまだありません",
+      "no_database_text": "場所は、FinStatsがローカルで読み込む都市データベースから求めます。アドレスがどこかへ送られることはありません。ここでDB-IPの無料データベースをダウンロードするか、MaxMind形式の都市ファイル（.mmdb）をデータディレクトリのgeoipフォルダーに置いてください。「設定 → セキュリティ」で最新に保てます。",
+      "tile": {
+        "open_alerts": "未解決のアラート",
+        "waiting": "確認待ち",
+        "all_clear": "問題なし",
+        "countries": "国",
+        "places_away": "自宅以外の場所",
+        "failed_outside": "外部からのサインインの失敗"
+      },
+      "map_title": "視聴している場所",
+      "map_sub": "場所ごとの再生、サインイン、ライブストリーム。ホームネットワークは1つの点です",
+      "map_sub_no_home": "場所ごとの再生、サインイン、ライブストリーム。FinStatsがこのネットワークのパブリックアドレスをまだ把握していないため、自宅は地図にありません",
+      "map_empty": "この期間にパブリックアドレスから視聴した人はいません。",
+      "places_title": "場所",
+      "nothing_in_range": "この期間には何もありません。",
+      "countries_title": "国",
+      "countries_sub": "再生回数順",
+      "database_built": "{kind}、{date}作成",
+      "addresses_without_place": {
+        "other": "{count}個のアドレスは場所が不明です"
+      },
+      "map_outlines": "地図の輪郭：Natural Earth",
+      "page_sub": "視聴している場所と、つじつまの合わないこと"
+    },
+    "dashboard": {
+      "sub": "{server}での再生",
+      "sub_default": "Jellyfinサーバーでの再生",
+      "recent": {
+        "title": "最近追加",
+        "sub": "ライブラリの新着",
+        "aria": "最近追加（新しい順）"
+      },
+      "downloads": {
+        "title": "ダウンロード中",
+        "sub": "Sonarr、Radarr、トレントクライアントから",
+        "all": "すべてのダウンロード"
+      },
+      "coming": {
+        "title": "近日公開",
+        "sub": "SonarrとRadarrの今後7日間",
+        "calendar": "カレンダー",
+        "aria": "近日公開（近い順）"
+      },
+      "empty": {
+        "title": "まだ再生は記録されていません",
+        "manager": "FinStatsはJellyfinサーバーの見守りを始めました。新しい再生は発生するとここに表示されます。JellystatやStreamystatsにある既存の履歴を取り込むこともできます。",
+        "viewer": "あなたの再生は発生するとここに表示されます。",
+        "import_jellystat": "Jellystatからインポート",
+        "import_streamystats": "Streamystatsからインポート"
+      },
+      "top": {
+        "series": "トップシリーズ",
+        "movies": "トップ映画",
+        "users": "トップユーザー",
+        "music": "トップ音楽",
+        "no_music": "この期間に再生された音楽はありません。"
+      },
+      "recent_activity": "最近のアクティビティ",
+      "view_all": "すべて表示",
+      "arrived": {
+        "Movie": "映画",
+        "MusicAlbum": "アルバム",
+        "MusicVideo": "ミュージックビデオ",
+        "Video": "ビデオ",
+        "Book": "本",
+        "AudioBook": "オーディオブック",
+        "episode_number": "エピソード{number}"
+      }
+    },
+    "item": {
+      "page_title": "タイトル",
+      "community_rating": "コミュニティ評価",
+      "runtime": "再生時間",
+      "not_in_library": "ライブラリにありません",
+      "in_library": "{library}に収録",
+      "in_library_added": "{library}に収録 · {when}に追加",
+      "library_fallback": "ライブラリ",
+      "container": "コンテナ",
+      "size": "サイズ",
+      "bitrate": "ビットレート",
+      "bit_depth": "ビット深度",
+      "bits": "{bits}ビット",
+      "frame_rate": "フレームレート",
+      "fps": "{fps} fps",
+      "path": "パス",
+      "plays": "再生回数",
+      "last_when": "最終{when}",
+      "never_played": "未再生",
+      "watched_by": "視聴した人",
+      "plays_over_time": "再生回数の推移",
+      "seasons": "シーズン",
+      "seasons_sub": "この期間のエピソードごとの再生回数",
+      "recent_plays": "最近の再生",
+      "view_all": "すべて表示",
+      "file": "ファイル",
+      "stop_measured": "{measured}は正確な測定、{estimated}は視聴時間からの推定",
+      "stop_skips": "20秒未満のスキップは記録されません",
+      "where_people_stop": "視聴をやめる位置",
+      "who_keeps_watching": "見続けている人",
+      "who_keeps_watching_sub": "各エピソードを見始めた人（順番に）",
+      "viewers_n": {
+        "other": "{count}人の視聴者"
+      },
+      "viewers_per_episode": "エピソードごとの視聴者",
+      "episode": "エピソード",
+      "viewers_head": "視聴者",
+      "next_episodes": "次のエピソード",
+      "coming_releases": "今後の公開",
+      "from_arr": "SonarrとRadarrから",
+      "of_episodes": {
+        "other": "{count}話中{seen}話"
+      },
+      "n_more": "他{count}件",
+      "by_episode": "エピソード別",
+      "audio": "音声",
+      "subtitles": "字幕",
+      "in_all_episodes": "全{total}話にあり",
+      "in_some": "一部のエピソードにあり",
+      "in_some_of": "全{total}話のうち一部にあり",
+      "of_total": "{total}中{seen}",
+      "languages": "言語",
+      "across_episodes": "ディスク上の全{total}話について",
+      "tracks_in_file": "ファイル内のトラック",
+      "cast": "キャストとスタッフ",
+      "new_tab": "（新しいタブで開きます）",
+      "marked_played": "Jellyfinで再生済み",
+      "marked_played_sub": "Jellyfin自身のフラグ。FinStats導入前の履歴も含みます",
+      "last_played": "最終再生",
+      "favourite": "お気に入り",
+      "unknown_user": "不明なユーザー",
+      "nobody_played": "選択した期間にこれを再生した人はいません。",
+      "season_n": "シーズン{number}",
+      "season_meta": "{episodes}話 · {plays}",
+      "share": "割合",
+      "finished": "視聴完了",
+      "finished_title": {
+        "other": "{count}回の再生のうち{finished}回がエピソードの90%に到達"
+      }
+    },
+    "libraries": {
+      "kind": {
+        "movies": "映画",
+        "tvshows": "番組",
+        "music": "音楽",
+        "musicvideos": "ミュージックビデオ",
+        "homevideos": "ホームビデオ",
+        "books": "本",
+        "boxsets": "コレクション",
+        "mixed": "混在"
+      },
+      "library": "ライブラリ",
+      "series": {
+        "other": "{count}シリーズ"
+      },
+      "items": {
+        "other": "{count}件のアイテム"
+      },
+      "empty_title": "まだライブラリはありません",
+      "empty_sub": "ライブラリはJellyfinとの最初の同期の後に表示されます。「設定 → タスク」から開始できます。",
+      "removed": "Jellyfinから削除済み",
+      "plays": "再生回数",
+      "last_played": "最終再生",
+      "never": "なし",
+      "sub": "サーバーにあるものと、そのうちどれだけ視聴されているか",
+      "most_watched": "最も視聴された作品",
+      "by_watch_time": "視聴時間順",
+      "recently_added": "最近追加",
+      "everything_in_it": "収録されているすべて",
+      "health": "ライブラリ診断",
+      "health_line": "{things}：{kinds}。",
+      "things_to_look_at": {
+        "other": "確認したい項目が{count}件"
+      },
+      "nothing_added": "まだ何も追加されていません。",
+      "added": "{when}に追加",
+      "title_kind": {
+        "Movie": "映画",
+        "Series": "番組",
+        "MusicAlbum": "アルバム",
+        "MusicVideo": "ミュージックビデオ",
+        "Video": "ビデオ",
+        "Book": "本",
+        "AudioBook": "オーディオブック"
+      },
+      "sort": {
+        "name": "名前",
+        "year": "年",
+        "added": "追加日",
+        "size": "サイズ"
+      },
+      "everything_in": "{name}のすべて",
+      "find_title": "タイトルを検索…",
+      "find_title_aria": "このライブラリのタイトルを検索",
+      "sort_by": "並べ替え",
+      "kind_label": "種類",
+      "all": "すべて",
+      "no_match_title": "一致するものはありません",
+      "no_match_sub": "入力した語をすべて含むタイトルは、このライブラリにはありません。",
+      "nothing_here_title": "まだ何もありません",
+      "nothing_here_sub": "FinStatsがライブラリを読み込むと、ここにタイトルが表示されます。",
+      "show_more": "さらに表示",
+      "show_n_more": "さらに{count}件表示"
+    },
+    "users": {
+      "empty_title": "まだユーザーはいません",
+      "empty_sub": "ユーザーはJellyfinとの最初の同期の後に表示されます。",
+      "plays": "再生回数",
+      "last_played": "最終再生",
+      "last_title": "最後のタイトル",
+      "last_client": "最後のクライアント",
+      "last_seen_jellyfin": "Jellyfinでの最終アクセス",
+      "admin": "管理者",
+      "disabled": "無効",
+      "removed_chip": "Jellyfinから削除済み",
+      "never": "なし",
+      "sub": "Jellyfinサーバーにアカウントを持つすべての人",
+      "tabs_label": "プロフィールのセクション",
+      "tab_overview": "概要",
+      "tab_timeline": "タイムライン",
+      "page_title": "ユーザー",
+      "coming_up": "近日公開",
+      "coming_up_sub": "ここで見られている番組の、今後30日間の新しいエピソード",
+      "calendar": "カレンダー",
+      "open_recap": "年間まとめを開く",
+      "role_user": "ユーザー",
+      "disabled_lower": "無効",
+      "removed": "Jellyfinから削除済み",
+      "last_seen": "最終アクセス{when}",
+      "different_titles": {
+        "other": "{count}作品"
+      },
+      "movies": "映画",
+      "plays_hint": "再生回数",
+      "episodes": "エピソード",
+      "and_music_plays": {
+        "other": "ほかに音楽の再生{count}回"
+      },
+      "top_series": "トップシリーズ",
+      "top_movies": "トップ映画",
+      "by_watch_time": "視聴時間順",
+      "when_watches": "{name}が視聴する時間帯",
+      "play_methods": "再生方法",
+      "share_of_plays": "再生回数の割合",
+      "clients": "クライアント",
+      "by_plays": "再生回数順",
+      "devices": "デバイス",
+      "ip_addresses": "IPアドレス",
+      "ip_addresses_sub": "このユーザーが再生した接続元",
+      "recent_plays": "最近の再生",
+      "view_all": "すべて表示",
+      "in_jellyfin": "Jellyfin上",
+      "movies_played": "再生済みの映画",
+      "episodes_played": "再生済みのエピソード",
+      "favourites": "お気に入り",
+      "jellyfin_note": "Jellyfinの再生済みフラグから。FinStats導入前の履歴も含みます。",
+      "no_devices": "この期間のデバイスはありません。",
+      "device": "デバイス",
+      "version": "バージョン",
+      "last_used": "最終使用",
+      "no_ips": "この期間に記録されたIPアドレスはありません。",
+      "network": "ネットワーク",
+      "first_seen": "初回検出",
+      "last_seen_head": "最終検出",
+      "local": "ローカル",
+      "remote": "リモート"
+    },
+    "person": {
+      "page_title": "人物",
+      "titles_in_library": {
+        "other": "ライブラリに{count}作品"
+      },
+      "watch_time_hint": "出演・参加したすべての作品の合計",
+      "plays": "再生回数",
+      "last_when": "最終{when}",
+      "never_played": "未再生",
+      "titles_watched": "視聴した作品",
+      "of_total": "{total}中{seen}",
+      "watched": "視聴した作品",
+      "watched_sub": "この期間で、よく視聴された順",
+      "nothing_played": "選択した期間にこの人物の作品は再生されていません。",
+      "also_in_library": "ライブラリにある他の作品",
+      "not_played": "この期間は未再生",
+      "watched_by": "視聴した人",
+      "director_as": "監督 · {role}役",
+      "director_actor": "監督 · 出演",
+      "as_role": "{role}役",
+      "not_in_library": "ライブラリにありません",
+      "last_played": "最終再生"
+    },
+    "showprogress": {
+      "longest_streak": "最長連続日数",
+      "days": {
+        "other": "{count}日"
+      },
+      "no_plays_yet": "まだ再生はありません",
+      "current_streak": "現在の連続日数",
+      "nothing_today": "今日も昨日も再生はありません",
+      "since": "{day}から",
+      "since_keep": "{day}から · 今日何か再生すると記録が続きます",
+      "days_with_play": "再生のあった日",
+      "all_time": "全期間",
+      "source": {
+        "played": "視聴済み",
+        "jellyfin": "Jellyfinで再生済み",
+        "manual": "自分で印を付けた"
+      },
+      "seen": "視聴済み",
+      "seen_how": "視聴済み（{how}）",
+      "episodes_seen": {
+        "other": "{count}話中{seen}話を視聴済み"
+      },
+      "started": "視聴途中",
+      "not_seen": "未視聴",
+      "click_unmark": "{title}。クリックで印を外します。",
+      "click_mark": "{title}。クリックで視聴済みにします。",
+      "couldnt_save": "保存できませんでした：{error}",
+      "not_in_library": "ライブラリにありません",
+      "undo_marks": "自分の印を取り消す",
+      "season_n": "シーズン{number}",
+      "mark_season": "シーズンを視聴済みにする",
+      "mark_show": "番組全体を視聴済みにする",
+      "marks_help": "エピソードをクリックすると印を付けられます。印はFinStatsの中だけに残り、Jellyfinでは何も変更しません。",
+      "no_shows": "まだ番組はありません。",
+      "no_shows_sub": "シリーズの何かを再生すると、ここにエピソードが表示されます。",
+      "no_finished": "まだ見終わった番組はありません。",
+      "nothing_in_progress": "視聴途中のものはありません。見始めたものはすべて見終わっています。",
+      "show_all": "{count}件すべて表示",
+      "shows": "番組",
+      "shows_sub": "サーバーにあるエピソードのうち視聴済みのもの。全期間。",
+      "which_shows": "表示する番組",
+      "in_progress_n": "視聴途中 · {count}",
+      "finished_n": "見終わった · {count}",
+      "all": "すべて"
+    },
+    "watchlist": {
+      "group": {
+        "started": "視聴途中",
+        "on_server": "サーバーにあり",
+        "coming_up": "近日公開",
+        "requested": "リクエスト済み",
+        "not_on_server": "サーバーになし",
+        "left_library": "ライブラリから削除",
+        "watched": "視聴済み"
+      },
+      "state": {
+        "all_watched": {
+          "other": "全{count}話を視聴済み"
+        },
+        "progress": {
+          "other": "{count}話中{seen}話"
+        },
+        "requested_by_you": "あなたがリクエスト",
+        "requested_by": "{name}がリクエスト",
+        "coming_today": "今日公開",
+        "coming_tomorrow": "明日公開",
+        "coming_on": "{day}公開"
+      },
+      "empty_title": "ウォッチリストはまだ空です",
+      "empty_sub": "映画や番組のページ、近日公開、最近追加、検索から追加できます。",
+      "page_title": "{name} · ウォッチリスト",
+      "sub": "見たい映画と番組。新しい順。このリストはあなただけが見られます。",
+      "remove_aria": "{title}をウォッチリストから削除",
+      "remove": "ウォッチリストから削除",
+      "kind_show": "番組",
+      "kind_film": "映画"
+    },
+    "timeline": {
+      "page_title": "タイムライン",
+      "empty_title": "まだ何もありません",
+      "empty_picked": "選んだライブラリに再生はありません。",
+      "empty_sub": "何かを視聴すると、すぐにここに再生が表示されます。",
+      "title_of": "{name} · タイムライン",
+      "sub": "視聴したものすべて。新しい順",
+      "show_all": "すべて表示",
+      "show_older": "さらに古いものを表示",
+      "history_starts": "履歴はここから始まります。",
+      "episode_n": "エピソード{number}",
+      "episodes_range": "エピソード{from}〜{to}",
+      "movie": "映画",
+      "movie_sittings": {
+        "other": "映画 · {count}回に分けて視聴"
+      }
+    },
+    "recap": {
+      "this_server": "このサーバー",
+      "this_user": "このユーザー",
+      "unknown_title": "不明なタイトル",
+      "unknown_show": "不明な番組",
+      "bars_aria": "{label}。左右の矢印キーで値を読み上げます。",
+      "period": "期間",
+      "last_12_months": "過去12か月",
+      "this_period": "この期間",
+      "twelve_months": "12か月",
+      "nothing_played": "再生なし",
+      "nothing": "なし",
+      "wave_caption": "バー1本が1週間です。最も多かったのは{week}で、{time}でした。",
+      "eyebrow_year": "1年の振り返り",
+      "hero_title_year": {
+        "you": "あなたの{year}年をもう一度",
+        "user": "{name}の{year}年をもう一度",
+        "server": "このサーバーの{year}年をもう一度"
+      },
+      "hero_title_last12": {
+        "you": "あなたの過去{months}をもう一度",
+        "user": "{name}の過去{months}をもう一度",
+        "server": "このサーバーの過去{months}をもう一度"
+      },
+      "hours": {
+        "other": "{count}時間"
+      },
+      "hero_line": "{titles}、{plays}で{hours}。",
+      "rank": {
+        "other": "{count}人中{position}位"
+      },
+      "rank_share": {
+        "other": "{count}人中{position}位 · 全視聴の{share}"
+      },
+      "numbers_eyebrow": "数字で見る",
+      "numbers_title": {
+        "you": "{numbers}で見るあなたの1年",
+        "user": "{numbers}で見る{name}の1年",
+        "server": "{numbers}で見るこのサーバーの1年"
+      },
+      "numbers_word": "数字",
+      "numbers_lead": {
+        "you": "あなたは{titles}を{times}再生しました",
+        "user": "{name}は{titles}を{times}再生しました",
+        "server": "{name}では{titles}が{times}再生されました"
+      },
+      "times": {
+        "other": "{count}回"
+      },
+      "different_titles": {
+        "other": "{count}作品"
+      },
+      "numbers_days": {
+        "other": "。休まず見続けると{count}日分です。"
+      },
+      "plays_label": "再生回数",
+      "tile_titles": "作品数",
+      "tile_days": "視聴した日数",
+      "tile_streak": "最長連続日数",
+      "tile_rewatches": "見返し",
+      "rewatch_you": {
+        "other": "見たことのある作品を再び見た回数：{count}回"
+      },
+      "rewatch_other": {
+        "other": "見たことのある作品を再び見た回数：{count}回"
+      },
+      "episodes_label": "エピソード",
+      "movies_label": "映画",
+      "music_label": "音楽",
+      "made_of": "内訳",
+      "genres": "ジャンル",
+      "genres_word": { "other": "ジャンル" },
+      "genres_title": {
+        "you": "あなたは{genre}ファン",
+        "user": "{name}は{genre}ファン",
+        "server": "{name}は{genre}ファン"
+      },
+      "genres_title_an": {
+        "you": "あなたは{genre}ファン",
+        "user": "{name}は{genre}ファン",
+        "server": "{name}は{genre}ファン"
+      },
+      "genres_lead": "トップは{genre}で、{plays}、{time}",
+      "genres_close": "。僅差で{genre}が続きます。",
+      "stat_was": "{genre}の割合",
+      "genres_note": "作品はそれぞれのジャンルに数え、番組はエピソードごとに数えます。",
+      "people": "よく見た人物",
+      "people_mark": "キャスト",
+      "tab_actors": "俳優",
+      "tab_directors": "監督",
+      "who": "人物",
+      "actor_title": "{person}が大活躍",
+      "director_title": "{person}がメガホンを取った",
+      "actor_lead": "{titles}で、出演シーンを{time}",
+      "director_lead": "{titles}で、監督作品を{time}",
+      "people_most": "。その多くは{title}です。",
+      "persona_eyebrow": "視聴タイプ",
+      "persona_title": {
+        "you": "あなたは{persona}",
+        "user": "{name}は{persona}",
+        "server": "{name}は{persona}"
+      },
+      "persona": {
+        "name": {
+          "night_owl": "夜型",
+          "early_bird": "朝型",
+          "music_lover": "音楽好き",
+          "weekend_warrior": "週末派",
+          "binge_watcher": "一気見派",
+          "movie_buff": "映画通",
+          "creature_of_habit": "習慣派"
+        },
+        "article": {
+          "night_owl": "{persona}",
+          "early_bird": "{persona}",
+          "music_lover": "{persona}",
+          "weekend_warrior": "{persona}",
+          "binge_watcher": "{persona}",
+          "movie_buff": "{persona}",
+          "creature_of_habit": "{persona}",
+          "other": "{persona}",
+          "other_an": "{persona}"
+        }
+      },
+      "rhythm": "視聴のリズム",
+      "rhythm_mark": "時間帯",
+      "tab_hours": "時間",
+      "tab_days": "曜日",
+      "tab_months": "月",
+      "rhythm_by": "視聴時間の単位",
+      "hours_title": {
+        "you": "{hour}はあなたのゴールデンタイム",
+        "user": "{hour}は{name}のゴールデンタイム",
+        "server": "{hour}はこのサーバーのゴールデンタイム"
+      },
+      "hours_lead": "{from}から{to}の間に始まった視聴は{time}",
+      "hours_share": "。1日のうちこの1時間に、全体の{pct}が集まっています。",
+      "hours_aria": "時間帯別の視聴時間",
+      "head_hour": "時間帯",
+      "days_title_crown": "{weekday}が首位",
+      "days_lead": "{weekday}の視聴は{time}",
+      "days_over": "。平均的な曜日より{pct}多くなりました。",
+      "weekday_aria": "曜日別の視聴時間",
+      "head_weekday": "曜日",
+      "month_mostly": "主に{title}",
+      "month_title": "{month}がいちばんの月",
+      "month_lead": "1か月で{time}",
+      "month_most": "。その多くは{title}でした。",
+      "month_aria": "月別の視聴時間",
+      "head_month": "月",
+      "month_caption": "月ごとに最も視聴された作品",
+      "heat_aria": {
+        "other": "毎日の視聴時間：再生のあった日は{count}日。矢印キーで1日ずつ読み上げます。"
+      },
+      "less": "少ない",
+      "more": "多い",
+      "heat_live": "{day}：{time}、{plays}",
+      "heat_live_none": "{day}：再生なし",
+      "days_eyebrow": {
+        "you": "日々で見るあなたの1年",
+        "user": "日々で見る{name}の1年",
+        "server": "日々で見るこのサーバーの1年"
+      },
+      "days_mark": "日々",
+      "days_on": {
+        "other": "何かを見た日：{count}日"
+      },
+      "streak_lead": {
+        "you": "最長の連続記録は{days}（{range}）",
+        "user": "{name}の最長の連続記録は{days}（{range}）",
+        "server": "このサーバーの最長の連続記録は{days}（{range}）"
+      },
+      "streak_days": {
+        "other": "{count}日"
+      },
+      "biggest_tail": "。最も多かった日は{day}で、{time}でした。",
+      "biggest_lead": "最も多かった日は{day}",
+      "biggest_lead_tail": "で、1日に{time}でした。",
+      "records": "記録",
+      "records_title_you": "{word}に残る日々",
+      "remember": "記憶",
+      "records_title_other": "{word}日々",
+      "stood_out": "際立った",
+      "biggest_day": "最も見た日",
+      "biggest_binge": "最大の一気見",
+      "binge_context": "{day}、{show}",
+      "one_show": "1つの番組",
+      "longest_streak": "最長連続記録",
+      "in_a_row": {
+        "other": "{count}日連続"
+      },
+      "longest_play": "最長の1回の再生",
+      "most_rewatched": "最も見返した作品",
+      "first_play_year": "今年最初の再生",
+      "first_play_period": "期間中最初の再生",
+      "first_play_at": "{day}の{time}",
+      "oldest_title": "最も古い作品",
+      "from_year": "{year}年の作品",
+      "discovery": "新しい出会い",
+      "discovery_mark": "初めて",
+      "discovery_title": {
+        "you": "初めて見た{shows}",
+        "user": "{name}が初めて見た{shows}",
+        "server": "{name}で初めて見られた{shows}"
+      },
+      "seen_end": "{end}まで見た",
+      "end": "最後",
+      "shows_started": "見始めた番組",
+      "movies_finished": "見終えた映画",
+      "episodes_finished": "見終えたエピソード",
+      "one_and_done": "1話だけ",
+      "one_and_done_note": "ちょうど1話だけ見て、2話目を見なかった番組。",
+      "together_mark": "一緒に",
+      "together_title": "誰かと過ごした{evenings}",
+      "evenings": {
+        "other": "{count}晩"
+      },
+      "together_lead": "誰かと一緒に{hours}視聴",
+      "together_share": {
+        "you": "。あなたの視聴全体の{pct}です。",
+        "user": "。{name}の視聴全体の{pct}です。",
+        "server": "。このサーバーの視聴全体の{pct}です。"
+      },
+      "watched_with": {
+        "you": "一緒に見た人",
+        "user": "{name}が一緒に見た人",
+        "server": "{name}で一緒に見た人"
+      },
+      "together_top": "いちばん人を集めた作品",
+      "people_in_company": {
+        "other": "今年は{count}人が誰かと一緒に視聴しました。"
+      },
+      "finished": "完走",
+      "finished_mark": "完了",
+      "finished_title": "最後まで見た{shows}",
+      "left_title": "{later}回しにした番組",
+      "later": "後",
+      "left_for_later": "後回し",
+      "dropped_note": "今年見始め、半分も見ておらず、2か月間まったく見ていないもの。",
+      "seen_of": {
+        "other": "{count}話中{seen}話"
+      },
+      "asked": "リクエスト",
+      "asked_mark": "願い",
+      "asked_title": {
+        "you": "あなたがした{requests}",
+        "user": "{name}がした{requests}",
+        "server": "{requests}"
+      },
+      "requests": {
+        "other": "{count}件のリクエスト"
+      },
+      "arrived": "追加された",
+      "watched_after": "追加後に視聴",
+      "versus_eyebrow": "{year}年との比較",
+      "versus_mark": "比較",
+      "versus_more": "{pct}増",
+      "versus_less": "{pct}減",
+      "versus_title": "{year}年より{change}",
+      "hours_in": "{year}年の視聴時間",
+      "plays_in": "{year}年の再生回数",
+      "card": {
+        "year": "1年",
+        "numbers": "数字",
+        "shows": "トップ番組",
+        "films": "トップ映画",
+        "music": "トップ音楽",
+        "genres": "ジャンル",
+        "persona": "視聴タイプ",
+        "rhythm": "時間帯と曜日",
+        "days": "毎日",
+        "records": "記録",
+        "together": "一緒に",
+        "finished": "完走した番組",
+        "asked": "リクエスト",
+        "versus": "前年との比較"
+      },
+      "card_alt": "{card}のカード",
+      "cards_help": "各章を、スマートフォンのストーリーと同じ形の画像にします。カードに他の人の名前が載ることはありません。",
+      "download": "ダウンロード",
+      "download_all": "すべてのカードをダウンロード",
+      "cards_title": "カードで見る1年",
+      "clients_eyebrow": {
+        "you": "あなたの視聴方法",
+        "user": "{name}の視聴方法",
+        "server": "{name}の視聴方法"
+      },
+      "clients_mark": "画面",
+      "clients_title": "主に{app}で",
+      "of_plays": "再生の{pct}",
+      "credit": {
+        "starring": "主演",
+        "feature": "本編",
+        "with": "共演",
+        "directed": "監督",
+        "soundtrack": "サウンドトラック",
+        "genre": "ジャンル",
+        "screened": "上映",
+        "running": "上映時間"
+      },
+      "credits": "クレジット",
+      "roll_credits": "エンドロール",
+      "that_was": "{year}年はこんな1年でした",
+      "that_was_last12": "過去{months}はこんな日々でした",
+      "outro_line": {
+        "you": "これから見るものはすべて、もう次の年間まとめに数えられています。",
+        "user": "{name}がこれから見るものはすべて、もう次の年間まとめに数えられています。",
+        "server": "{name}でこれから見られるものはすべて、もう次の年間まとめに数えられています。"
+      },
+      "see_activity": "すべてのアクティビティを見る",
+      "profile": {
+        "you": "あなたのプロフィール",
+        "user": "{name}のプロフィール",
+        "server": "このサーバーのプロフィール"
+      },
+      "top_shows": "トップ番組",
+      "shows_mark": "番組",
+      "shows_title": {
+        "you": "あなたの1年の主役は{title}",
+        "user": "{name}の1年の主役は{title}",
+        "server": "このサーバーの1年の主役は{title}"
+      },
+      "shows_lead": "{hours}をともに過ごし",
+      "shows_lead_episodes": "{episodes}で{hours}をともに過ごし",
+      "shows_more": "、他のどの番組よりも長くなりました。",
+      "top_movies": "トップ映画",
+      "movies_mark": "映画",
+      "movies_title": {
+        "you": "あなたの今年の映画：{title}",
+        "user": "{name}の今年の映画：{title}",
+        "server": "このサーバーの今年の映画：{title}"
+      },
+      "movies_lead": "合計{time}",
+      "movies_back": {
+        "you": {
+          "other": "。{count}回再生しました。"
+        },
+        "user": {
+          "other": "。{name}は{count}回再生しました。"
+        },
+        "server": {
+          "other": "。{name}では{count}回再生されました。"
+        }
+      },
+      "top_tracks": "トップトラック",
+      "tracks_mark": "リピート",
+      "tracks_title": "{repeat}再生",
+      "repeat": "リピート",
+      "my_recap": "自分の年間まとめ",
+      "whose_recap": "誰の年間まとめ",
+      "whose_year": "誰の1年",
+      "a_person": "ユーザー",
+      "title_period": "年間まとめ（{period}）",
+      "empty_last12": "過去12か月に再生されたものはありません。",
+      "empty_period": "期間（{period}）に再生されたものはありません。",
+      "empty_sub": {
+        "you": "この期間に再生したものはありません。上で別の期間を選んでください。",
+        "user": "{name}はこの期間に何も再生していません。上で別の期間を選んでください。",
+        "server": "{name}ではこの期間に何も再生されていません。上で別の期間を選んでください。"
+      },
+      "share": "1年をカードで共有",
+      "banner": "{year}年の年間まとめができました",
+      "full_stop": "。"
+    },
+    "changelog": {
+      "sub": "FinStatsの変更点。新しい順",
+      "empty_title": "まだ更新履歴はありません。",
+      "empty_sub": "このビルドは更新履歴なしで作成されています。",
+      "running": "実行中のバージョン",
+      "releases": {
+        "other": "{count}件のリリース"
+      },
+      "versions": "バージョン"
+    },
+    "health": {
+      "kind": {
+        "gap": {
+          "label": "欠落",
+          "what": "シーズン内の2つのファイルの間で抜けているエピソード"
+        },
+        "season_drift": {
+          "label": "異なるシーズン",
+          "what": "解像度、ダイナミックレンジ、コーデックが他と異なるシーズン"
+        },
+        "episode_drift": {
+          "label": "異質なエピソード",
+          "what": "同じシーズンの他のファイルと異なるファイル"
+        },
+        "copies": {
+          "label": "重複",
+          "what": "同じ解像度で同じものが2つ"
+        },
+        "versions": {
+          "label": "バージョン",
+          "what": "1つのタイトルを複数の解像度で保持"
+        },
+        "thin": {
+          "label": "低ビットレートのファイル",
+          "what": "その解像度で通常必要なビット数よりはるかに少ないもの"
+        },
+        "dub": {
+          "label": "途切れる吹き替え",
+          "what": "一部のシーズンにだけある言語"
+        },
+        "unidentified": {
+          "label": "未識別",
+          "what": "TMDB、TVDB、IMDbのどのIDとも照合されていないもの"
+        }
+      },
+      "words": {
+        "season": "シーズン{list}",
+        "seasons": "シーズン{list}",
+        "gap_one": "シーズン{season}：{from}と{to}の間のエピソード{episodes}がありません",
+        "gap_many": "シーズン{season}：{from}と{to}の間のエピソード{episodes}がありません",
+        "season_is": "シーズン{list}は{value}",
+        "seasons_are": "シーズン{list}は{value}",
+        "the_rest": "{odd}、残りは{usual}",
+        "episode_drift": "{code}は{value}、シーズン{season}の残りは{usual}",
+        "copies_files": {
+          "other": "{resolutions}のコピーが{count}件、{size}が重複"
+        },
+        "copies_episodes": {
+          "other": "複数あるエピソードが{count}話、{size}が重複"
+        },
+        "versions_files": "{resolutions}で保持",
+        "versions_episodes": {
+          "other": "{count}話を{resolutions}で保持"
+        },
+        "thin_file": "{look}で{rate}。同様のファイルは通常{usual}を超えます",
+        "thin_season": {
+          "other": "シーズン{season}：{count}話中{files}話が{rate}、{look}。同様のファイルは通常{usual}を超えます"
+        },
+        "dub": "{language}は{full}にあり、{none}にはありません",
+        "dub_partial": "シーズン{season}は{of}話中{episodes}話にあり",
+        "unidentified_show": "Jellyfinはこの番組をどのカタログとも照合していないため、TMDB、TVDB、IMDbのIDで判断するものからは認識できません",
+        "unidentified_film": "Jellyfinはこの映画をどのカタログとも照合していないため、TMDB、TVDB、IMDbのIDで判断するものからは認識できません"
+      },
+      "facts": {
+        "resolution": "解像度",
+        "size": "サイズ",
+        "library": "ライブラリ",
+        "path": "パス"
+      },
+      "more_episodes": {
+        "other": "ほか{count}話"
+      },
+      "dismiss": {
+        "note_placeholder": "次に確認する人のために、問題ない理由を",
+        "dismiss": "非表示にする",
+        "note": "メモ（任意）",
+        "comes_back_capacity": "根拠となる状況が変わると、自動で再表示されます。",
+        "comes_back": "対象のファイルが変わると、自動で再表示されます。",
+        "title": "検出項目を非表示にする",
+        "dismissing": "非表示にしています…"
+      },
+      "bringing_back": "再表示しています…",
+      "couldnt_bring_back": "再表示できませんでした：{error}",
+      "show_every_kind": "すべての種類を表示",
+      "show_only": "{kind}だけを表示",
+      "kept_twice_size": "{size}が重複",
+      "all_libraries": "すべてのライブラリ",
+      "unlisted_library": "Jellyfinに表示されなくなったライブラリ",
+      "this_library_empty": "このライブラリ（確認する項目なし）",
+      "back_to_open": "確認する項目に戻る",
+      "set_aside_count": "非表示（{count}）",
+      "col": {
+        "what": "内容",
+        "kept_twice": "重複",
+        "found": "検出日時"
+      },
+      "removed_library": "削除されたライブラリ",
+      "not_in_jellyfin": "Jellyfinにもうありません",
+      "set_aside_when": "{when}に非表示",
+      "set_aside_by": "{when}に{name}が非表示",
+      "bring_back": "再表示",
+      "dismiss_button": "非表示にする…",
+      "empty": {
+        "not_yet_title": "まだ診断されていません",
+        "not_yet": "FinStatsは次のライブラリの読み込みの後と、メタデータの変更を確認するたびにライブラリを診断します。このページを開いたときに診断することはありません。",
+        "aside_title": "非表示の項目はありません",
+        "aside_filtered": "この種類で非表示にしたものはありません。",
+        "aside": "非表示にした検出項目は、誰かが再表示するか、ファイルが変わるまでここに残ります。",
+        "filtered_title": "何もありません",
+        "clean_title": "確認する項目はありません",
+        "filtered": "ライブラリのこの範囲で、この種類のものは見つかりませんでした。",
+        "clean": "欠落も重複もなく、低ビットレートのファイルもなく、どのシーズンもそろっています。"
+      },
+      "count_aside": {
+        "other": "非表示の検出項目{count}件"
+      },
+      "count_open": {
+        "other": "確認する検出項目{count}件"
+      },
+      "thin_note": "JellyfinはFinStatsが読むためにアイテムの最初のバージョンを保持しているため、複数のバージョンがあるアイテムは最初のバージョンで判断されます。"
+    },
+    "pipeline": {
+      "tabs": {
+        "requests": { "label": "リクエスト", "sub": "誰が何をリクエストし、どれだけかかり、実際に視聴されたか" },
+        "upcoming": { "label": "近日公開", "sub": "SonarrとRadarrが予定しているものと、それを待っている人" },
+        "downloads": { "label": "ダウンロード", "sub": "今まさに届きつつあるもの" }
+      },
+      "days": {
+        "other": "{count}日"
+      },
+      "a_year": "1年",
+      "sections_aria": "追加予定のセクション",
+      "state": {
+        "pending": "承認待ち",
+        "approved": "承認済み",
+        "processing": "処理中",
+        "partial": "一部あり",
+        "available": "視聴可能",
+        "declined": "却下",
+        "failed": "失敗",
+        "removed": "Seerrから削除"
+      },
+      "status": {
+        "all": "すべて",
+        "open": "未完了",
+        "arrived": "視聴可能",
+        "declined": "却下"
+      },
+      "seasons": {
+        "every": "全シーズン",
+        "one": "シーズン{season}",
+        "run": "シーズン{first}〜{last}"
+      },
+      "unknown_title": "不明なタイトル",
+      "col": {
+        "title": "タイトル",
+        "asked_by": "リクエストした人",
+        "asked": "リクエスト日",
+        "state": "状態",
+        "took": "所要時間",
+        "watched": "視聴"
+      },
+      "unlinked_user": "SeerrにはこれがどのJellyfinユーザーかの情報がありません",
+      "watched": {
+        "by_them": "本人が視聴",
+        "yes": "はい",
+        "by_someone_else": "他の人が視聴",
+        "not_yet": "まだ"
+      },
+      "requests_empty_filtered": "このフィルターに一致するリクエストはありません",
+      "requests_empty": "まだリクエストはありません",
+      "requests_empty_sub": "誰かがSeerrで何かをリクエストすると、数分後にここに表示されます。",
+      "tile": {
+        "titles": "リクエストされた作品",
+        "requests_in_all": {
+          "other": "リクエストは合計{count}件"
+        },
+        "waiting": "待機中",
+        "not_here_yet": "まだ届いていないもの",
+        "nothing_outstanding": "待っているものはありません",
+        "typical_wait": "標準的な待ち時間",
+        "typical_wait_hint": "リクエストから視聴可能までの中央値",
+        "watched_after": "届いた後に視聴",
+        "watched_after_hint": "届いた{arrived}件中{watched}件"
+      },
+      "trend": {
+        "title": "リクエストにかかる時間",
+        "sub": "リクエストから視聴可能までの時間の中央値（リクエストした月別）",
+        "hours": {
+          "other": "{count}時間"
+        },
+        "aria": "月ごとの、届くまでの時間の中央値",
+        "month": "月",
+        "hours_to_arrive": "届くまでの時間"
+      },
+      "never": {
+        "title": "届いたが未再生",
+        "sub": "2週間以上前に届き、まだ誰も視聴していないもの",
+        "here_since": "追加日"
+      },
+      "people": {
+        "title": "誰が何をリクエストしているか",
+        "sub": "リクエストした作品と、そのうち後で視聴された数",
+        "person": "ユーザー",
+        "asked_for": "リクエスト",
+        "arrived": "届いた"
+      },
+      "search_placeholder": "タイトルを検索…",
+      "search_aria": "リクエストを検索",
+      "which_requests": "表示するリクエスト",
+      "export_ics": ".icsをエクスポート",
+      "export_help": "「.icsをエクスポート」は、カレンダーアプリに読み込むためにこの一覧をその時点のスナップショットとして保存します。自動では更新されません。常に最新のカレンダーにするには、{link}のカレンダーキーで購読してください。",
+      "film_releases": {
+        "other": "映画の公開{count}件"
+      },
+      "upcoming_empty_mine": "ここで見られている番組に近日公開の予定はありません",
+      "upcoming_empty": "カレンダーに予定はありません",
+      "upcoming_empty_mine_sub": "過去4か月にエピソードが再生された番組を、フォロー中とみなします。",
+      "upcoming_empty_sub": "この期間にSonarrとRadarrの予定はありません。監視対象のタイトルだけが対象です。",
+      "which_titles": "表示するタイトル",
+      "everything": "すべて",
+      "only_theirs": "その人が見ているものだけ",
+      "only_mine": "自分が見ているものだけ",
+      "how_far_ahead": "表示する期間",
+      "history": {
+        "arrived": "届いた数",
+        "in_the_last_year": "過去1年間",
+        "in_the_last_days": {
+          "other": "過去{count}日間"
+        },
+        "downloaded": "ダウンロード量",
+        "on_average": "平均{size}",
+        "failed": "失敗",
+        "of_grabbed": "取得{grabbed}件中",
+        "per_day_title": "1日ごとのインポート",
+        "per_day_sub": "ダウンロードが完了したギガバイト数",
+        "per_day_aria": "1日ごとにインポートされたギガバイト数",
+        "day": "日",
+        "indexers": "インデクサー",
+        "indexers_sub": "取得元",
+        "quality": "品質",
+        "quality_sub": "SonarrとRadarrの分類による",
+        "clients": "クライアント",
+        "clients_sub": "取得に使われたもの",
+        "gb": {
+          "other": "{count} GB"
+        },
+        "failures_title": "失敗したダウンロード",
+        "failures_sub": "取得した後に断念したもの",
+        "when": "日時",
+        "indexer": "インデクサー",
+        "title": "届いたもの",
+        "how_far_back": "表示する期間"
+      },
+      "downloads_empty": "ダウンロード中のものはありません",
+      "downloads_empty_sub": "Sonarr、Radarr、トレントクライアントに進行中のものはありません。",
+      "downloads_empty_connect": "届きつつあるものを見るには、トレントクライアント、またはSonarrとRadarrを接続してください。",
+      "sub": "リクエスト、近日公開、ダウンロード中のもの",
+      "nothing_connected": "まだ何も接続されていません",
+      "nothing_connected_sub": "Sonarr、Radarr、Seerr、トレントクライアントを接続すると、このページに誰が何をリクエストしたか、いつ何が放送されるか、何が届きつつあるかが表示されます。",
+      "add_connection": "接続を追加"
+    },
+    "server": {
+      "result": {
+        "Completed": "完了",
+        "Failed": "失敗",
+        "Aborted": "中止",
+        "Cancelled": "キャンセル"
+      },
+      "sections": {
+        "overview": { "label": "概要", "sub": "バージョン、システム、ストレージ" },
+        "jobs": { "label": "タスク", "sub": "Jellyfinが今行っていること（ライブ）" },
+        "devices": { "label": "デバイス", "sub": "サインインしたことのあるすべてのデバイス" },
+        "plugins": { "label": "プラグイン", "sub": "Jellyfinにインストールされているもの" },
+        "capacity": { "label": "容量", "sub": "記録上最も忙しかった時間、各ディスクが埋まるペース、そこから分かるサーバーの設定" },
+        "health": { "label": "ライブラリ診断", "sub": "シーズンの欠落、重複、低ビットレートのファイル、異なるシーズン。各ファイルを隣のファイルと比べて見つけます" },
+        "log": { "label": "ログ", "sub": "Jellyfin自身のアクティビティログ：サインイン、ログインの失敗、再生、タスク" },
+        "audit": { "label": "監査", "sub": "FinStatsで何が変更され、誰が行ったか" }
+      },
+      "sections_aria": "サーバーのセクション",
+      "update_available": "アップデートあり",
+      "restart_pending": "再起動待ち",
+      "your_server": "あなたのJellyfinサーバー",
+      "details_from": "· {when}時点の詳細",
+      "system": {
+        "title": "システム",
+        "version": "バージョン",
+        "os": "オペレーティングシステム",
+        "transcoder": "トランスコーダー",
+        "transcode_folder": "トランスコードフォルダー",
+        "cache_folder": "キャッシュフォルダー",
+        "data_folder": "データフォルダー",
+        "log_folder": "ログフォルダー"
+      },
+      "fetch": {
+        "button": "サーバーの詳細を取得",
+        "busy": "取得中…",
+        "timeout": "Jellyfinからまだ応答がありません。「設定 → タスク」で理由を確認して、もう一度お試しください。",
+        "empty": "まだサーバーの詳細はありません",
+        "empty_sub": "FinStatsは定期的な同期で、バージョン、ストレージ、プラグイン、スケジュールされたタスク、デバイスをJellyfinから取得します。今すぐ取得することもできます。"
+      },
+      "storage": {
+        "title": "ストレージ",
+        "unreported": "このバージョンのJellyfinはディスク使用量を報告しません（10.11で追加）。",
+        "sub": "Jellyfinがあるボリュームのディスク使用量。数値がまったく同じ項目は同じディスクです。",
+        "volume": "ボリューム",
+        "library": "ライブラリ",
+        "free_of": "{total}中{free}空き",
+        "usage_aria": "{volume}のディスク使用量",
+        "almost_full": "ほぼ満杯",
+        "getting_full": "残りわずか",
+        "used": "{pct}%使用",
+        "folder": {
+          "program_data": "プログラムデータ",
+          "cache": "キャッシュ",
+          "transcodes": "トランスコード",
+          "metadata": "メタデータ",
+          "logs": "ログ"
+        }
+      },
+      "devices": {
+        "shown_of": "{total}件中{shown}件",
+        "none": "まだ既知のデバイスはありません。",
+        "no_match": "一致するデバイスはありません",
+        "no_match_sub": "デバイス名、アプリ名、ユーザー名で試してください。",
+        "device": "デバイス",
+        "app": "アプリ",
+        "last_user": "最終ユーザー",
+        "last_seen": "最終アクセス",
+        "unknown_device": "不明なデバイス",
+        "unknown_user": "不明なユーザー",
+        "filter_placeholder": "デバイスを絞り込む…",
+        "filter_aria": "デバイスを絞り込む",
+        "title": "デバイス",
+        "sub": "Jellyfinにサインインしたことのあるすべてのデバイス"
+      },
+      "plugins": {
+        "title": "プラグイン",
+        "none": "報告されたプラグインはありません。",
+        "plugin": "プラグイン",
+        "version": "バージョン",
+        "status": "状態",
+        "state": {
+          "Active": "有効",
+          "Restart": "再起動が必要",
+          "Deleted": "削除済み",
+          "Superceded": "置き換え済み",
+          "Malfunctioned": "不具合",
+          "NotSupported": "未サポート",
+          "Disabled": "無効"
+        }
+      },
+      "jobs": {
+        "title": "Jellyfinのタスク",
+        "sub": "サーバーがバックグラウンドで行っていること、それぞれの目的、進み具合",
+        "eta_dots": "残り約{dots}",
+        "eta_none": "処理中。まだ見積もりはありません",
+        "finishing": "まもなく完了",
+        "eta": "残り約{time}",
+        "still": "· {time}間{pct}%のまま",
+        "watched_for": "· {time}間監視中",
+        "stopping": "停止中",
+        "running": "実行中",
+        "percent": "{pct}%",
+        "progress_aria": "{name}の進捗",
+        "last_took": "· 前回の所要時間{time}",
+        "on_demand": "必要なときのみ",
+        "hidden": "非表示",
+        "next": "次回{when}",
+        "never_run": "未実行",
+        "stale": "Jellyfinが今は応答しませんでした（{error}）。これは最後に受け取った情報です。",
+        "nothing_running": "現在Jellyfinで実行中のものはありません。",
+        "job": "タスク",
+        "runs": "実行",
+        "last_run": "前回の実行",
+        "running_count": {
+          "other": "{count}件実行中"
+        }
+      }
+    },
+    "capacity": {
+      "left": {
+        "under_a_month": "1か月未満",
+        "about_a_month": "約1か月",
+        "months": {
+          "other": "約{count}か月"
+        },
+        "years": {
+          "other": "約{count}年"
+        }
+      },
+      "describe": {
+        "software_transcodes": {
+          "transcoded": {
+            "other": "過去{days}日間に、{plays}のうち{count}回がトランスコードされました。"
+          },
+          "software": "Jellyfinが報告したもののうち、{software}がハードウェアアクセラレーションなしで実行され、ハードウェアを使ったものはありませんでした。同時実行は最大{most}件です。",
+          "software_unsaid": "Jellyfinが報告したもののうち、{software}がハードウェアアクセラレーションなしで実行され、ハードウェアを使ったものはありませんでした（{unsaid}は報告なし）。同時実行は最大{most}件です。",
+          "where": "Jellyfinがグラフィックカードでトランスコードするかどうかは、Jellyfinの再生設定で指定します"
+        },
+        "scan_busy": {
+          "always": {
+            "other": "Jellyfinのライブラリスキャンは{interval}ごとに実行する設定で、前回は{last}かかりました。実行間隔より長いため、{count}個のファイルを常にスキャンし続けている状態です。"
+          },
+          "share": {
+            "other": "Jellyfinのライブラリスキャンは{interval}ごとに実行する設定で、前回は{last}かかりました。{count}個のファイルを対象に、時間の{pct}%をスキャンに使っています。"
+          },
+          "where": "実行頻度はJellyfinのスケジュールされたタスクで設定します"
+        },
+        "runway": {
+          "other": "空き{free}、過去{count}か月は毎月{added}が追加されました（{libraries}）。このペースでは、空き容量は残り{left}です"
+        }
+      },
+      "bringing_back": "再表示しています…",
+      "bring_back_failed": "再表示できませんでした：{error}",
+      "findings": {
+        "title": "確認したい項目",
+        "sub": "最も忙しかった時間、ディスク、サーバーの設定から分かること",
+        "set_aside": "{when}に非表示",
+        "set_aside_by": "{when}に{name}が非表示",
+        "found": "{when}に検出",
+        "bring_back": "再表示",
+        "dismiss": "非表示にする…"
+      },
+      "busiest": {
+        "streams": {
+          "other": "{count}ストリーム"
+        },
+        "transcodes": {
+          "other": "{count}件のトランスコード"
+        },
+        "hint_transcodes": "{transcodes}、{when}",
+        "title": "最も忙しかった時間",
+        "sub": "FinStatsが見た同時ストリーム数の最大値と、そのうちトランスコードされた数。サーバーの能力の上限は分かりません。これは実際にこなした量です。",
+        "on_record": "記録上の最大",
+        "nothing_played": "まだ再生はありません",
+        "in_days": {
+          "other": "過去{count}日間の最大"
+        },
+        "nothing_in_days": {
+          "other": "過去{count}日間に再生はありません"
+        },
+        "when": "日時",
+        "col_streams": "ストリーム",
+        "col_transcoded": "トランスコード",
+        "hardware_title": "Jellyfinがハードウェアアクセラレーションを使ったと報告",
+        "hardware": "ハードウェア",
+        "software_title": "Jellyfinが使わなかったと報告",
+        "software": "ソフトウェア",
+        "unsaid_title": "古いJellyfinやインポートした再生では、どちらとも報告されません",
+        "unsaid": "報告なし",
+        "empty_sub": "何かが再生されると、最も忙しかった時間が表示されます。"
+      },
+      "disks": {
+        "title": "ディスク容量",
+        "growth_sub": {
+          "other": "過去{count}か月に各ライブラリに追加された量"
+        },
+        "unreported": "Jellyfin 10.11以降は空き容量を報告しますが、このサーバーは報告しないため、各ライブラリの増加ペースだけを表示し、容量がいつまでもつかは表示しません。",
+        "library": "ライブラリ",
+        "added_in": {
+          "other": "{count}か月の追加量"
+        },
+        "a_month": "1か月あたり",
+        "young": "{libraries}は過去2か月以内にJellyfinに追加されました。このディスクが埋まるペースは、追加から1か月たつと表示されます。",
+        "grew": {
+          "other": "{libraries}は過去{count}か月に毎月{added}増えました。このペースでは、空き容量は残り{left}です。"
+        },
+        "nothing_added": {
+          "other": "過去{count}か月に{libraries}に追加されたものはありません。"
+        },
+        "sub": {
+          "other": "ライブラリがある各ディスクと、過去{count}か月にJellyfinが追加した量でどれだけ速く埋まるか"
+        },
+        "folders": "フォルダー",
+        "free": "空き",
+        "added_a_month": "1か月の追加量",
+        "counted_by": "増加量はJellyfinが各ファイルを追加した日付で数えるため、置き換えたファイルは新規として数え、その後削除したファイルは数えません。"
+      },
+      "empty": "まだ算出されていません",
+      "empty_sub": "FinStatsは次にサーバーの詳細を読み込んだ後（15分以内）と、ライブラリを読み込むたびに算出します。このページを開いたときに算出することはありません。"
+    },
+    "events": {
+      "level": {
+        "error": "エラー",
+        "critical": "重大",
+        "fatal": "致命的",
+        "warning": "警告",
+        "info": "情報",
+        "debug": "デバッグ",
+        "trace": "トレース"
+      },
+      "type_chip": "種類：{type}",
+      "remove_type": "種類のフィルターを解除",
+      "entries": {
+        "other": "{count}件"
+      },
+      "empty_filtered": "このフィルターに一致するログはありません。",
+      "empty": "まだログはありません",
+      "empty_sub": "次の「サーバーログの同期」タスクで項目が届きます。",
+      "col": {
+        "when": "日時",
+        "level": "レベル",
+        "event": "イベント",
+        "user": "ユーザー",
+        "type": "種類"
+      },
+      "only_this_type": "この種類だけを表示",
+      "search_placeholder": "ログを検索…",
+      "search_aria": "ログを検索"
+    },
+    "audit": {
+      "kind": {
+        "sign_in": "サインイン",
+        "sign_in_failed": "サインインに失敗",
+        "sign_in_refused": "サインインを拒否",
+        "sign_out": "サインアウト",
+        "setup_completed": "FinStatsをセットアップ",
+        "key_created": "キーを作成",
+        "key_revoked": "キーを取り消し",
+        "key_used": "キーを初めて使用",
+        "setting_changed": "設定を変更",
+        "permissions_changed": "権限を変更",
+        "service_added": "接続を追加",
+        "service_changed": "接続を変更",
+        "service_removed": "接続を削除",
+        "target_added": "通知先を追加",
+        "target_changed": "通知先を変更",
+        "target_removed": "通知先を削除",
+        "backup_made": "バックアップを書き出し",
+        "backup_restored": "バックアップを復元",
+        "backup_deleted": "バックアップを削除",
+        "backup_undeleted": "削除したバックアップを元に戻す",
+        "backup_downloaded": "バックアップをダウンロード",
+        "task_run": "タスクを実行",
+        "task_schedule_changed": "タスクのスケジュールを変更",
+        "import_started": "インポートを開始",
+        "import_finished": "インポートが完了",
+        "play_deleted": "再生を削除",
+        "play_undeleted": "削除した再生を元に戻す",
+        "trash_purged": "ゴミ箱を空に",
+        "title_located": "見つからないタイトルを特定",
+        "alert_resolved": "アラートを解決",
+        "alert_reopened": "アラートを再び開く",
+        "finding_dismissed": "ライブラリの検出項目を非表示",
+        "finding_undismissed": "ライブラリの検出項目を再表示",
+        "profile_published": "公開プロフィールを公開",
+        "profile_changed": "公開プロフィールを変更",
+        "profile_unpublished": "公開プロフィールを停止",
+        "profile_link_reset": "公開プロフィールのリンクを再作成",
+        "appearance_changed": "外観を変更"
+      },
+      "outcome": {
+        "failed": "失敗",
+        "refused": "拒否"
+      },
+      "detail": {
+        "nothing": "なし",
+        "permissions_everyone": "全員：{permissions}",
+        "permissions_user": "ユーザー{user}：{permissions}",
+        "expires": "有効期限{when}",
+        "key": "キー{id}",
+        "moved": "別のインスタンスへ移行",
+        "target_personal": "{name}（{channel}、個人用）",
+        "target_server": "{name}（{channel}、サーバー用）",
+        "by_schedule": "スケジュールによる",
+        "on_request": "手動",
+        "plays_restored": {
+          "other": "{count}回の再生を復元、{skipped}回は既存"
+        },
+        "settings_too": "設定も含む",
+        "plays_imported": {
+          "other": "{count}回の再生、{skipped}回は既存"
+        },
+        "title_by": "{user}の{title}",
+        "purged": "{plays}、{backups}を完全に削除",
+        "backups": {
+          "other": "{count}個のバックアップ"
+        },
+        "no_sections": "セクションなし",
+        "preset": "プリセット{code}",
+        "as_it_ships": "標準のFinStats",
+        "plays_moved": {
+          "other": "{count}回の再生を移動"
+        },
+        "alerts": {
+          "other": "{count}件のアラート"
+        },
+        "alert": "アラート{id}",
+        "muted": "ミュート"
+      },
+      "kind_chip": "種類：{kind}",
+      "remove_kind": "種類のフィルターを解除",
+      "entries": {
+        "other": "{count}件"
+      },
+      "empty_filtered": "このフィルターに一致する項目はありません。",
+      "empty": "まだ記録はありません",
+      "empty_sub": "今後、サインイン、設定の変更、キー、バックアップがここに記録されます。",
+      "col": {
+        "when": "日時",
+        "who": "ユーザー",
+        "what": "内容",
+        "detail": "詳細",
+        "from": "接続元"
+      },
+      "user": "ユーザー",
+      "as_typed": "入力どおり",
+      "only_this_kind": "この種類だけを表示",
+      "via_key": "キー「{name}」経由",
+      "search_placeholder": "監査ログを検索…",
+      "search_aria": "監査ログを検索"
+    },
+    "licenses": {
+      "new_tab": "（新しいタブで開きます）",
+      "text_aria": "ライセンス本文",
+      "none_stated": "ライセンスの記載なし",
+      "no_file": "{name}はライセンスを記載していますが、独自のライセンスファイルを含んでいません。",
+      "shared": {
+        "other": "同じ本文を他の{count}個のコンポーネントも使用"
+      },
+      "see_text": "本文を見る",
+      "col": {
+        "component": "コンポーネント",
+        "version": "バージョン",
+        "licence": "ライセンス",
+        "source": "ソース"
+      },
+      "title": "ライセンス",
+      "sub": "FinStatsは、他の人々が作った自由ソフトウェアの上に作られた自由ソフトウェアです。関係するすべてのライセンスを、全文でここに掲載しています。",
+      "empty": "このビルドにはライセンス表示がありません。",
+      "empty_sub": "tools/make-third-party.pyで生成され、ビルド時に組み込まれます。",
+      "app": {
+        "title": "FinStats本体",
+        "body": "FinStatsはGNU General Public License バージョン3のもとで公開されています。使用、研究、共有、改変が自由にでき、再配布するものは同じライセンスのもとでソースコードとともに配布する必要があります。",
+        "read": "ライセンスの全文を読む"
+      },
+      "bundled": {
+        "title": "FinStatsに同梱",
+        "sub": "フォント、地図データ、位置情報データベース。コードではありませんが、同梱または読み込まれるものです"
+      },
+      "crates": {
+        "title": "Rustクレート",
+        "sub": {
+          "other": "バイナリを構成する{count}個のクレート · 選ぶとライセンスを読めます"
+        },
+        "find": "コンポーネントを検索"
+      }
+    }
+  },
+  "public_profile": {
+    "default_name": "FinStatsのプロフィール",
+    "doc_title": "FinStatsの{name}",
+    "hero": "本人が公開している視聴記録です。ここにあるものはすべて1日以上前のものです。",
+    "download_card": "カードとしてダウンロード",
+    "what_they_watch": "視聴しているもの",
+    "when_they_watch": "視聴する時間帯",
+    "hours_watched": "視聴時間",
+    "plays": "再生回数",
+    "films": "映画",
+    "episodes": "エピソード",
+    "songs": "曲",
+    "longest_streak": "最長連続記録",
+    "days_with_something_on": "何かを見た日",
+    "days": {
+      "other": "{count}日"
+    },
+    "streak": {
+      "other": "{count}日連続"
+    },
+    "recap_title": "{label}の振り返り",
+    "year_line": "{days}で{hours}時間、{plays}。",
+    "year_line_streak": "{days}で{hours}時間、{plays}、{streak}。",
+    "open_card": "カードを開く：{chapter}",
+    "card_alt": "{chapter}のカード",
+    "download": "ダウンロード",
+    "download_all": "すべてのカードをダウンロード",
+    "download_wide": "横長のカードをダウンロード",
+    "lately": "最近",
+    "made_with": "Jellyfin向けの統計サーバー、FinStatsで作成。",
+    "gone_title": "ここにプロフィールはありません",
+    "gone_body": "リンクがリセットされたか、所有者が公開をやめた可能性があります。",
+    "chapter": {
+      "year": "1年",
+      "numbers": "数字",
+      "shows": "トップ番組",
+      "films": "トップ映画",
+      "music": "トップ音楽",
+      "genres": "ジャンル",
+      "persona": "視聴タイプ",
+      "rhythm": "時間帯と曜日",
+      "days": "毎日",
+      "records": "記録",
+      "together": "一緒に",
+      "finished": "完走した番組",
+      "asked": "リクエスト",
+      "versus": "前年との比較"
+    }
+  },
+  "charts": {
+    "types": {
+      "movies": "映画",
+      "episodes": "エピソード",
+      "music": "音楽"
+    },
+    "together": "一緒に",
+    "alone": "一人",
+    "arrows_aria": "{label}。左右の矢印キーで値を読み上げます。",
+    "columns_aria": {
+      "plays": {
+        "day": "1日ごとの再生回数。左右の矢印キーで値を読み上げます。",
+        "week": "1週間ごとの再生回数。左右の矢印キーで値を読み上げます。",
+        "month": "1か月ごとの再生回数。左右の矢印キーで値を読み上げます。"
+      },
+      "watch_s": {
+        "day": "1日ごとの視聴時間。左右の矢印キーで値を読み上げます。",
+        "week": "1週間ごとの視聴時間。左右の矢印キーで値を読み上げます。",
+        "month": "1か月ごとの視聴時間。左右の矢印キーで値を読み上げます。"
+      }
+    },
+    "week_of": "{date}の週",
+    "week_of_head": "週",
+    "total": "合計",
+    "date": "日付",
+    "plays": "再生回数",
+    "heat_aria": "曜日と時間帯ごとの再生回数。矢印キーで値を読み上げます。",
+    "less": "少ない",
+    "more": "多い",
+    "watched": "視聴",
+    "methods_aria": "再生方法別の再生回数の割合",
+    "nothing_recorded": "この期間の記録はありません。",
+    "nothing_yet": "まだ表示するものはありません。",
+    "name": "名前",
+    "share": "割合",
+    "files": "ファイル",
+    "size": "サイズ",
+    "items": {
+      "other": "{count}件"
+    },
+    "column_chart": "縦棒グラフ",
+    "period": "期間",
+    "count": "件数",
+    "where_people_stop": "視聴をやめる位置",
+    "not_enough_plays": "まだ再生が足りません。",
+    "still_watching_tip": "視聴継続中",
+    "rewinds_here": {
+      "other": "ここへの巻き戻し{count}回"
+    },
+    "subtitles_here": {
+      "other": "{count}回字幕をオン"
+    },
+    "still_watching": "視聴継続",
+    "rewinds": "巻き戻し",
+    "subtitles_switched_on": "字幕をオン",
+    "from": "から",
+    "subtitles_on": "字幕オン",
+    "split": "内訳",
+    "unknown_client": "不明なクライアント",
+    "radar_chart": "レーダーチャート",
+    "radar_too_few": "レーダーチャートには3つ以上のジャンルが必要です。一覧に現在のものを表示しています。",
+    "of_these": "このうち{share}"
+  },
+  "worldmap": {
+    "kinds": {
+      "home": "ホームネットワーク",
+      "remote": "自宅以外",
+      "failed": "サインインの失敗"
+    },
+    "load_failed": "地図を読み込めませんでした",
+    "aria": "世界地図。ドラッグで移動、ボタンまたはCtrlとホイールでズームします。",
+    "wheel_hint": "Ctrlを押しながらスクロールでズーム",
+    "loading": "地図を読み込み中…",
+    "zoom_in": "拡大",
+    "zoom_in_key": "拡大（+）",
+    "zoom_out": "縮小",
+    "zoom_out_key": "縮小（−）",
+    "show_all": "すべての点を表示",
+    "show_all_key": "すべての点を表示（0）",
+    "places_near": {
+      "other": "{place}付近の{count}か所"
+    },
+    "places": {
+      "other": "{count}か所"
+    },
+    "click_to_zoom": "クリックで拡大"
+  },
+  "widgets": {
+    "plays": "再生回数",
+    "by_watch_time": "視聴時間順",
+    "activity": {
+      "title": "アクティビティ",
+      "per_week": "1週間ごと、メディアの種類別",
+      "per_day": "1日ごと、メディアの種類別",
+      "measure": "指標"
+    },
+    "heatmap": {
+      "title": "視聴する時間帯",
+      "sub": "曜日と時間帯ごとの再生回数（サーバーの時刻）"
+    },
+    "tiles": {
+      "vs_year": "前年比",
+      "vs_days": {
+        "other": "前の{count}日間との比較"
+      },
+      "active_users": "アクティブユーザー",
+      "distinct_titles": "再生された作品数"
+    },
+    "media": {
+      "video": "映像",
+      "audio": "音声",
+      "container": "コンテナ",
+      "bitrate": "ビットレート",
+      "subtitles": "字幕",
+      "hardware": "ハードウェア",
+      "software": "ソフトウェア",
+      "copied_direct": "コピー（ダイレクト）",
+      "transcoded": "トランスコード",
+      "reasons": "理由"
+    },
+    "np": {
+      "transcode_details": "トランスコードの詳細",
+      "client_on_device": "{device}の{client}",
+      "paused": "一時停止中",
+      "playing": "再生中",
+      "together_title": {
+        "other": "一緒に視聴中 · {count}人"
+      },
+      "with": "{names}と一緒",
+      "with_more": {
+        "other": "{names}とほか{count}人と一緒"
+      },
+      "position_aria": "再生位置",
+      "unavailable": "ライブセッションを利用できません：{reason}",
+      "empty": "現在再生中のものはありません。"
+    },
+    "insights": {
+      "peak": "最大同時ストリーム数",
+      "peak_transcodes": {
+        "other": "同時トランスコード{count}件"
+      },
+      "data_streamed": "配信データ量",
+      "bytes": {
+        "other": "{count}バイト"
+      },
+      "estimated": "ストリームのビットレートからの推定",
+      "remote_plays": "リモート再生",
+      "remote_of": {
+        "other": "{count}回中{remote}回"
+      }
+    },
+    "genres": {
+      "title": "ジャンル",
+      "aria": "視聴時間順のジャンル",
+      "empty": "これらの再生にはまだジャンル情報がありません。",
+      "view": "ジャンルの表示",
+      "list": "リスト",
+      "radar": "レーダー"
+    },
+    "groups": {
+      "sub": "同じものを同時に再生した人たち",
+      "time_together": "一緒に過ごした時間",
+      "evenings_word": { "other": "晩" },
+      "evenings": {
+        "other": "{count}晩"
+      },
+      "people_word": "人",
+      "share": "誰かと一緒だった視聴時間の割合",
+      "most_often_with": "最もよく一緒に見る人",
+      "groups": "グループ",
+      "sessions": {
+        "other": "{count}回のセッション"
+      },
+      "titles": "一緒に最も見た作品"
+    },
+    "failed_logins": {
+      "title": "サインインの失敗",
+      "sub": "Jellyfinサーバーへの最近の試行",
+      "server_log": "サーバーログ",
+      "one": "サインインの失敗"
+    },
+    "library": {
+      "added": "{when}に追加",
+      "title_this": "このライブラリの構成",
+      "title_yours": "ライブラリの構成",
+      "title_these": "これらのライブラリの構成",
+      "pick_label": "ライブラリ",
+      "all_libraries": "すべてのライブラリ",
+      "after_sync": "ファイルの詳細は次のライブラリ同期の後に表示されます。",
+      "about_files": "ファイルそのものについての情報です。上の期間はここには適用されません。",
+      "files": "ファイル",
+      "count": {
+        "movies": {
+          "other": "{count}本の映画"
+        },
+        "series": {
+          "other": "{count}シリーズ"
+        },
+        "episodes": {
+          "other": "{count}エピソード"
+        },
+        "tracks": {
+          "other": "{count}曲"
+        }
+      },
+      "total_size": "合計サイズ",
+      "per_file": "1ファイルあたり平均{size}",
+      "total_runtime": "合計再生時間",
+      "play_all_once": "すべてを一度ずつ再生するのにかかる時間",
+      "resolutions": "解像度",
+      "video_files": "動画ファイル",
+      "video_codecs": "映像コーデック",
+      "dynamic_range": "ダイナミックレンジ",
+      "containers": "コンテナ",
+      "all_files": "すべてのファイル",
+      "audio_codecs": "音声コーデック",
+      "first_audio": "最初の音声トラック",
+      "movies_and_series": "映画とシリーズ",
+      "titles": "作品",
+      "audio_languages": "音声の言語",
+      "audio_languages_sub": "その言語のトラックを持つ動画ファイル。吹き替えのあるファイルは言語ごとに1回数えます",
+      "subtitle_languages": "字幕の言語",
+      "subtitle_languages_sub": "その言語の字幕を持つ動画ファイル",
+      "by_decade": "年代別",
+      "by_decade_sub": "公開年ごとの作品数",
+      "by_decade_aria": "年代ごとの作品数",
+      "decade": "年代",
+      "added_per_month": "月ごとの追加数",
+      "last_24_months": "過去24か月",
+      "added_aria": "月ごとに追加された作品数",
+      "month": "月",
+      "added_head": "追加数",
+      "largest": "サイズの大きい作品",
+      "largest_sub": "シリーズは全エピソードの合計",
+      "no_sizes": "まだファイルサイズが分かりません。",
+      "never_watched": "未視聴",
+      "never_watched_sub": {
+        "other": "{count}作品 · 誰も再生していない{size}"
+      },
+      "all_played": "すべて一度は再生されています",
+      "nothing_unwatched": "未視聴のものはないか、まだファイルサイズが分かりません。",
+      "played_note": "FinStatsが記録した再生とJellyfin自身の再生済みフラグを合わせているため、FinStats導入前の履歴も数えます。"
+    },
+    "shelf": {
+      "back": "前へスクロール",
+      "on": "次へスクロール"
+    }
+  },
+  "playmodal": {
+    "title": "再生の詳細",
+    "event": {
+      "start": "開始",
+      "pause": "一時停止",
+      "resume": "再開",
+      "seek": "スキップ",
+      "audio": "音声トラック",
+      "subtitle": "字幕",
+      "transcode": "トランスコード",
+      "stop": "停止",
+      "other": "イベント",
+      "transcode_detail": "{method}：{reasons}"
+    },
+    "network": {
+      "local_title": "ローカルネットワークから再生",
+      "remote_title": "ネットワークの外から再生",
+      "local": "ローカル",
+      "remote": "リモート"
+    },
+    "source": {
+      "live": "FinStatsが記録",
+      "imported_from": "{tracker}からインポート",
+      "imported": "インポート"
+    },
+    "no_events": {
+      "imported_from": "{tracker}からインポートしました。{tracker}は再生ごとに1行だけを記録し、再生中に起きたことは記録しません。",
+      "imported": "インポートした再生です。インポート元は再生ごとに1行だけを記録し、再生中に起きたことは記録しません。",
+      "live": "この再生中に記録されたことはありません。"
+    },
+    "position_title": "ファイル内の位置",
+    "at": "{time}の位置",
+    "channels": {
+      "mono": "モノラル",
+      "stereo": "ステレオ",
+      "count": {
+        "other": "{count}ch"
+      }
+    },
+    "bit_depth": "{bits}ビット",
+    "not_in_library": "ライブラリにありません",
+    "started": "開始",
+    "ended": "終了",
+    "still_playing": "再生中",
+    "paused_for": "一時停止の時間",
+    "resumed_from": "再開した位置",
+    "pauses": "一時停止",
+    "skips": "スキップ",
+    "stopped_at": "停止した位置",
+    "device": "デバイス",
+    "device_id": "デバイスID",
+    "copy_device_id": "デバイスIDをコピー",
+    "watched_with": "一緒に見た人",
+    "copy_ip": "IPアドレスをコピー",
+    "off": "オフ",
+    "section": {
+      "session": "セッション",
+      "media": "メディア",
+      "timeline": "タイムライン"
+    },
+    "delete": {
+      "start": "この再生を削除",
+      "confirm": "再生を削除",
+      "deleting": "削除中…",
+      "aria": "削除の確認",
+      "question": "この再生を統計から削除しますか？30日間は元に戻せます。"
+    },
+    "undo": {
+      "deleted_named": "{title}を削除しました。30日間は元に戻せます。",
+      "deleted": "再生を削除しました。30日間は元に戻せます。",
+      "undo": "元に戻す",
+      "failed": "元に戻せませんでした：{reason}"
+    }
+  },
+  "upcoming": {
+    "release": {
+      "air": "放送",
+      "cinema": "劇場公開",
+      "digital": "デジタル配信",
+      "physical": "ディスク発売",
+      "other": "公開"
+    },
+    "finale": {
+      "season": "シーズンフィナーレ",
+      "series": "シリーズフィナーレ",
+      "midseason": "シーズン中盤のフィナーレ",
+      "other": "フィナーレ"
+    },
+    "new_episode": "新エピソード",
+    "already_here": "追加済み",
+    "new": "ライブラリに新規",
+    "new_title": "SonarrまたはRadarrが待機中で、まだJellyfinのライブラリにはありません",
+    "you_watch": "視聴中の作品"
+  },
+  "downloads": {
+    "state": {
+      "downloading": "ダウンロード中",
+      "importing": "インポート中",
+      "stalled": "停止",
+      "queued": "待機中",
+      "paused": "一時停止",
+      "checking": "確認中",
+      "failed": "失敗"
+    },
+    "done": "{pct}完了",
+    "of": "{size}中{done}",
+    "left": "残り{time}",
+    "handed": "{service}から{client}へ",
+    "speed_title": "前回の読み取りから進んだ量で算出",
+    "totals": {
+      "downloading": {
+        "other": "{count}件ダウンロード中"
+      },
+      "queued": {
+        "other": "{count}件待機中"
+      },
+      "importing": {
+        "other": "{count}件インポート中"
+      },
+      "failed": {
+        "other": "{count}件失敗"
+      }
+    },
+    "updated": "{when}に更新"
+  },
+  "finui": {
+    "avatar_group": {
+      "and_more": "{names}ほか{count}人"
+    },
+    "bar_chart": {
+      "name": "棒グラフ",
+      "aria": {
+        "other": "{title}：{count}本の棒、最大{highest}"
+      }
+    },
+    "chart": {
+      "numbers": "数値",
+      "total": "合計",
+      "in_all": "合計",
+      "other": "その他",
+      "thousands": "{n}K",
+      "millions": "{n}M",
+      "billions": "{n}B"
+    },
+    "bar_list": {
+      "and_more": "ほか{count}件"
+    },
+    "breadcrumb": {
+      "show_all": "すべての階層を表示",
+      "label": "パンくずリスト"
+    },
+    "calendar": {
+      "label": "カレンダー",
+      "previous_month": "前の月",
+      "next_month": "次の月"
+    },
+    "callout": {
+      "dismiss": "閉じる"
+    },
+    "card": {
+      "table": "表",
+      "chart": "グラフ"
+    },
+    "chip": {
+      "remove": "削除"
+    },
+    "code_block": {
+      "copy_command": "コマンドをコピー",
+      "copy_pane": "{name}をコピー",
+      "label": "コード"
+    },
+    "combobox": {
+      "all_users": "すべてのユーザー",
+      "user": "ユーザー",
+      "type_to_filter": "入力して絞り込む…",
+      "filter_aria": "{label}を絞り込む",
+      "no_results": "結果なし"
+    },
+    "context_menu": {
+      "label": "操作"
+    },
+    "copy": {
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "failed": "コピーできませんでした。テキストを選択してください"
+    },
+    "data_table": {
+      "sort_by": "{label}で並べ替え",
+      "filter_rows": "行を絞り込む",
+      "none": "一致する行はありません。",
+      "filter_placeholder": "{label}…"
+    },
+    "date_picker": {
+      "placeholder": "例：{example}",
+      "choose": "カレンダーで{label}を選択",
+      "none": "まだ日付が選ばれていません。",
+      "between": "{from}から{to}まで。",
+      "from": "{from}から。",
+      "until": "{to}まで。",
+      "outside": "その日は選択できる範囲の外です。",
+      "not_a_day": "日付ではありません。{example}や2026-10-05のように入力してください。"
+    },
+    "desktop_nav": {
+      "pages": "ページ",
+      "new": "新規",
+      "search": "検索",
+      "search_more": "検索…",
+      "search_keys": "検索 · {keys}",
+      "me_theme": "{name}：あなたとテーマ",
+      "theme": "テーマ",
+      "pinned": "ピン留め",
+      "pin_hint": "ページにポインターを合わせ、ピンを押すとここに残せます。",
+      "pin": "{page}をピン留め",
+      "search_from": "{label}から検索",
+      "styles": {
+        "sidebar": {
+          "label": "サイドバー",
+          "line": "すべてのページを横に1列の控えめなリストで。"
+        },
+        "grouped": {
+          "label": "グループ",
+          "line": "同じリストを名前付きのグループに分け、ページを場所で探せます。"
+        },
+        "rail": {
+          "label": "開くレール",
+          "line": "ポインターが来るまではアイコンだけ、来るとページの上にサイドバー全体を表示。"
+        },
+        "search": {
+          "label": "検索優先",
+          "line": "ページ一覧の上に大きな検索欄、行は少し大きめ。"
+        },
+        "dock": {
+          "label": "ドック",
+          "line": "ページを下部のドックに。ステータスバーは上部に移動します。"
+        },
+        "command": {
+          "label": "コマンドバー",
+          "line": "画面に一覧はなく、上部のページ名からすべてのページを開けます。"
+        },
+        "pinned": {
+          "label": "ピン留め",
+          "line": "ピン留めしたページを上に、その下にすべてのページをグループごとに。"
+        },
+        "tiles": {
+          "label": "カラータイル",
+          "line": "各アイコンをグループの色のタイルに。"
+        }
+      }
+    },
+    "mobile_nav": {
+      "styles": {
+        "tabs": {
+          "label": "タブバー",
+          "line": "4つのページを常に下部に。「その他」で残りを表示。"
+        },
+        "peek": {
+          "label": "ピーク",
+          "line": "よく使うページでシートが半分まで開き、上にドラッグするとすべて表示。"
+        },
+        "full": {
+          "label": "全画面",
+          "line": "画面全体が大きな文字のメニューになります。"
+        },
+        "arc": {
+          "label": "親指アーク",
+          "line": "隅のボタンから、親指の周りにすべてのページが扇状に広がります。"
+        },
+        "address": {
+          "label": "アドレスバー",
+          "line": "下部の丸いバーに今のページ名を表示し、広がってメニューになります。"
+        }
+      },
+      "menu": "メニュー",
+      "new": "新規",
+      "search": "検索",
+      "close_menu": "メニューを閉じる",
+      "pages": "ページ",
+      "open_menu": "メニューを開く",
+      "more": "その他",
+      "more_pages": "その他のページ",
+      "main": "メイン",
+      "all_pages": "すべてのページ",
+      "most_used": "よく使うページ",
+      "search_or_go": "検索または移動…"
+    },
+    "modal": {
+      "close": "閉じる"
+    },
+    "drawer": {
+      "close": "閉じる"
+    },
+    "number_stepper": {
+      "in_unit": "{label}（単位：{unit}）",
+      "less": "減らす：{label}",
+      "more": "増やす：{label}"
+    },
+    "otp": {
+      "code": "コード",
+      "box": "{label}、{total}桁中{n}桁目"
+    },
+    "pagination": {
+      "label": "ページ送り",
+      "range": "{total}件中{from}〜{to}件",
+      "previous": "前のページ",
+      "next": "次のページ"
+    },
+    "picker": {
+      "custom": "カスタム",
+      "lock": "{label}を固定"
+    },
+    "popover": {
+      "held": "固定表示中のポップオーバー"
+    },
+    "progress": {
+      "done": "完了",
+      "seconds_left": "残り数秒",
+      "under_a_minute": "残り1分未満",
+      "a_minute_left": "残り約1分",
+      "minutes_left": {
+        "other": "残り約{count}分"
+      },
+      "hours": {
+        "other": "{count}時間"
+      },
+      "minutes": {
+        "other": "{count}分"
+      },
+      "hours_minutes": "{hours}{minutes}",
+      "about_left": "残り約{time}",
+      "percent": "{pct}%",
+      "working": "処理中…",
+      "working_valuetext": "処理中"
+    },
+    "search": {
+      "search": "検索",
+      "close": "検索を閉じる",
+      "results": "結果",
+      "keys_watchlist": "ウォッチリストに追加",
+      "keys_move": "移動",
+      "keys_open": "開く",
+      "keys_close": "閉じる",
+      "nothing_found": "見つかりませんでした"
+    },
+    "sections": {
+      "label": "セクション"
+    },
+    "shelf": {
+      "back": "{label}を前へ",
+      "on": "{label}を次へ"
+    },
+    "slider": {
+      "highest": "{label}、最大",
+      "lowest": "{label}、最小"
+    },
+    "stat_tile": {
+      "no_change": "変化なし",
+      "new": "新規",
+      "delta": "{delta}%"
+    },
+    "steps": {
+      "label": "手順"
+    },
+    "stream_card": {
+      "progress": "進み具合"
+    },
+    "tag_input": {
+      "add": "追加…",
+      "remove": "{tag}を削除"
+    },
+    "file_drop": {
+      "label": "ここにファイルをドロップ",
+      "choose_files": "または押してファイルを選択",
+      "choose_one": "または押して1つ選択",
+      "wrong_kind": "対応していない種類です（{accept}）",
+      "too_large": "{size}を超えています",
+      "progress": "{size}中{pct}%",
+      "uploading": "{name}をアップロード中",
+      "remove": "{name}を削除"
+    },
+    "heatmap": {
+      "less": "少ない",
+      "more": "多い",
+      "caption": "混み具合",
+      "name": "ヒートマップ",
+      "aria": "{title}：最も多いのは{busiest}"
+    },
+    "line_chart": {
+      "name": "折れ線グラフ",
+      "aria": "{title}：{from}から{to}",
+      "limit": "上限"
+    },
+    "donut_chart": {
+      "share": "{pct}%",
+      "name": "ドーナツグラフ",
+      "caption": "内訳",
+      "value": "値",
+      "share_head": "割合"
+    },
+    "toast": {
+      "dismiss": "閉じる"
+    },
+    "to_top": {
+      "label": "ページの先頭へ"
+    },
+    "top_bar": {
+      "label": "セクション"
+    },
+    "theme_switch": {
+      "device": "デバイス",
+      "light": "ライト",
+      "dark": "ダーク",
+      "label": "テーマ",
+      "title": "テーマ：{name}"
+    },
+    "error": {
+      "title": "読み込めませんでした",
+      "retry": "再試行"
+    }
+  },
+  "notifications": {
+    "switched_off": "オフ",
+    "switched_on": "オン",
+    "last_failed": "前回のメッセージは届きませんでした：{error}",
+    "last_ok": "{when}に前回のメッセージを受信",
+    "nothing_sent": "まだ何も送信していません",
+    "test": "テスト",
+    "sending": "送信中…",
+    "test_sent": "テストメッセージを送信しました。",
+    "remove_confirm": "この通知先を削除しますか？",
+    "removing": "削除中…",
+    "remove": "削除",
+    "remove_ask": "削除…",
+    "edit": "編集",
+    "events_ticked": "{total}種類中{ticked}種類のイベント",
+    "addresses_included": "アドレスを含む",
+    "severity_above": {
+      "warn": "警告以上",
+      "alert": "アラート以上"
+    },
+    "yours": "あなたの通知先",
+    "owners": "{name}の通知先",
+    "somebodys": "誰かの通知先",
+    "name_label": "名前（任意）",
+    "name_help": "FinStats内で表示されます（例：「家族のチャンネル」「自分のスマホ」）。",
+    "address": "アドレス",
+    "topic": "トピック",
+    "token": "トークン",
+    "severity": {
+      "info": "すべて",
+      "warn": "警告とアラート",
+      "alert": "アラートのみ"
+    },
+    "add_destination": "通知先を追加",
+    "add_title": "通知先を追加",
+    "edit_title": "{name}を編集",
+    "unchanged": "変更なし",
+    "address_help_any": "FinStatsが送信するアドレスです（例：{example}）。",
+    "address_help": {
+      "discord": "Discord → Channel settings → Integrations → Webhooks → Copy Webhook URL。このURLはパスワードと同じです。FinStatsが保存し、二度と表示しません。",
+      "slack": "Slack → your app → Incoming Webhooks → Add New Webhook to Workspace を開き、URLをコピーします。このURLはパスワードと同じです。FinStatsが保存し、二度と表示しません。",
+      "email": "お使いのメールサーバーです。smtps://は最初から暗号化されます（ポート465）。smtp://は平文で始まり、STARTTLSで暗号化に切り替える必要があります（587）。FinStatsはメールもパスワードも平文では送りません。"
+    },
+    "keep_secret": "空欄にすると保存済みのものを使い続けます。",
+    "secret_help": {
+      "webhook": "「Authorization: Bearer …」として送信します。受信側でヘッダーが不要なら空欄にしてください。",
+      "ntfy": "保護されたトピックか、アクセス制御のある自分のntfyの場合だけ必要です。",
+      "gotify": "Gotify → Apps → アプリケーションを作成 → そのトークン。",
+      "telegram": "Telegramで@BotFatherに話しかけ → /newbot → 表示されるトークン。",
+      "pushover": "pushover.net → Your Applications → Create an Application → そのAPIトークン。",
+      "pushbullet": "pushbullet.com → Settings → Account → Create Access Token。",
+      "email": "サインイン不要のリレーなら空欄にします。メールプロバイダーでは通常、サインイン用のパスワードではなくアプリパスワードが必要です。"
+    },
+    "enter_address": "アドレスを入力してください（例：{example}）。",
+    "enter_value": "{what}を入力してください。",
+    "went_wrong": "問題が発生しました。",
+    "kind": "種類",
+    "who_for": "対象",
+    "scope_server": "サーバー：選んだものすべて、誰についても",
+    "scope_me": "自分だけ：すでに見る権限のあるものだけ",
+    "how_much": "送る量",
+    "what_to_send": "送る内容",
+    "with_addresses": "IPアドレスと場所を含める",
+    "with_addresses_help": "オフ：メッセージには「ノルウェー、オスロ」のような場所だけが入り、接続元のアドレスは入りません。オン：アドレスも送られます。Discordのように他者が運営する通知先では、よく考えてください。",
+    "self_signed": "自己署名証明書を受け入れる",
+    "self_signed_help": "証明書が自分で発行したものであるアドレスの場合だけ使います（自分のネットワーク上のサービスや、自分のメールサーバーなど）。",
+    "saving": "保存中…",
+    "history_empty": "まだ何も送信していません。今後FinStatsが検知したことは、各メッセージの送信結果とともにここに表示されます。",
+    "state": {
+      "sent": "送信済み",
+      "queued": "待機中",
+      "failed": "断念"
+    },
+    "historic": "未送信：数時間以上前のもの",
+    "nobody_listening": "受け取る通知先がありませんでした",
+    "col_when": "日時",
+    "col_what": "内容",
+    "col_sent_to": "送信先",
+    "public_url": "FinStatsのアドレス",
+    "public_url_help": "FinStatsが送るメッセージにリンクを入れるためだけに使います。FinStatsは内部からは、あなたがどうアクセスしているかを知ることができません。空欄の場合、メッセージにリンクは入りません。",
+    "intro_admin": "ここで通知先を追加するまで、FinStatsはどこにも何も送りません。追加した後も、その通知先で選んだ種類のイベントだけを送ります。アドレスとトークンはFinStats自身のデータベースに保存され、二度と表示されず、バックアップにも含まれません。",
+    "intro_own": "自分の通知先には、FinStatsですでに見られるものだけが送られます。また、公開アドレスを指す必要があります。",
+    "none_yet": "まだ通知先はありません。",
+    "recently_sent": "最近送信したもの",
+    "group": {
+      "security": "セキュリティ",
+      "housekeeping": "メンテナンス",
+      "library": "ライブラリ",
+      "playback": "再生"
+    },
+    "event": {
+      "travel": {
+        "label": "あり得ない移動",
+        "what": "どの飛行機でも移動できない、同じアカウントの2回の検出"
+      },
+      "new_country": {
+        "label": "新しい国",
+        "what": "あるアカウントがその国で初めて検出されたとき"
+      },
+      "failed_sign_ins": {
+        "label": "サインインの失敗",
+        "what": "1つのアカウント、または1つのアドレスからの連続したサインインの失敗"
+      },
+      "task_failed": {
+        "label": "タスクの失敗",
+        "what": "同期、インポート、接続したサービスの読み込みがエラーで終了したとき"
+      },
+      "backup_failed": {
+        "label": "バックアップの失敗",
+        "what": "バックアップを書き出せなかったとき"
+      },
+      "service_down": {
+        "label": "応答の停止",
+        "what": "Jellyfin、Sonarr、Radarr、Seerrが応答しなくなったとき"
+      },
+      "service_back": {
+        "label": "応答の再開",
+        "what": "…再び応答するようになったとき"
+      },
+      "new_items": {
+        "label": "ライブラリの新着",
+        "what": "ライブラリに追加されたタイトル。番組と日ごとにまとめます"
+      },
+      "request_available": {
+        "label": "リクエストが視聴可能に",
+        "what": "誰かがSeerrでリクエストしたものが視聴できるようになったとき"
+      },
+      "play_started": {
+        "label": "視聴の開始",
+        "what": "再生の開始：タイトル、人、デバイス"
+      },
+      "play_stopped": {
+        "label": "視聴の終了",
+        "what": "再生の終了と、どれだけ視聴したか"
+      },
+      "recap_ready": {
+        "label": "年間まとめの準備完了",
+        "what": "12月に一度：その人の1年の振り返りが見られる、共有できる状態になったとき"
+      },
+      "watchlist_available": {
+        "label": "ウォッチリスト：視聴可能に",
+        "what": "ウォッチリストで待っていた映画や番組がライブラリに追加されたとき。あなた自身の通知先にのみ送られます"
+      },
+      "test": {
+        "label": "テストメッセージ",
+        "what": "「テスト」ボタンでのみ送信されます"
+      }
+    },
+    "channel": {
+      "discord": {
+        "label": "Discord",
+        "what": "Discordサーバーのチャンネルへ。そこで作成したWebhook経由"
+      },
+      "slack": {
+        "label": "Slack",
+        "what": "ワークスペースのチャンネルへ。Incoming Webhook経由"
+      },
+      "telegram": {
+        "label": "Telegram",
+        "what": "自分のボットとのチャット、またはボットが参加しているグループやチャンネルへ",
+        "topic_label": "チャットID",
+        "topic_help": "ボットに一度メッセージを送ってから https://api.telegram.org/bot<token>/getUpdates を開き、表示されるチャットIDを使ってください。チャンネルは@nameでも指定できます。",
+        "topic_missing": "チャットIDを入力してください。",
+        "secret_label": "ボットトークン",
+        "secret_missing": "ボットトークンを入力してください。"
+      },
+      "email": {
+        "label": "メール",
+        "what": "任意のメールボックスへ。お使いのSMTPサーバー経由",
+        "topic_label": "宛先",
+        "topic_help": "送信先のメールボックスです。",
+        "topic_missing": "送信先のアドレスを入力してください。",
+        "secret_label": "パスワード（任意）"
+      },
+      "ntfy": {
+        "label": "ntfy",
+        "what": "ntfy.shまたは自分のntfyの、任意のトピックへ",
+        "topic_label": "トピック",
+        "topic_help": "公開先のntfyトピックです。知っている人は誰でも通知を読めるので、推測しにくいものにしてください。",
+        "topic_missing": "トピックを入力してください。",
+        "secret_label": "アクセストークン（任意）"
+      },
+      "gotify": {
+        "label": "Gotify",
+        "what": "自分のGotifyサーバーへ。アプリケーショントークンを使用",
+        "secret_label": "アプリケーショントークン",
+        "secret_missing": "アプリケーショントークンを入力してください。"
+      },
+      "pushover": {
+        "label": "Pushover",
+        "what": "スマートフォンのPushoverへ。自分のアプリケーションを使用",
+        "topic_label": "ユーザーキーまたはグループキー",
+        "topic_help": "pushover.netのトップページにあるユーザーキー、またはグループキーです。",
+        "topic_missing": "ユーザーキーまたはグループキーを入力してください。",
+        "secret_label": "アプリケーショントークン",
+        "secret_missing": "アプリケーショントークンを入力してください。"
+      },
+      "pushbullet": {
+        "label": "Pushbullet",
+        "what": "Pushbulletへ。アカウントでサインインしているすべてのデバイスに届きます",
+        "secret_label": "アクセストークン",
+        "secret_missing": "アクセストークンを入力してください。"
+      },
+      "webhook": {
+        "label": "Webhook",
+        "what": "任意のアドレスへのJSONのPOST：自作スクリプト、Home Assistant、n8nなど",
+        "secret_label": "Authorizationヘッダー（任意）"
+      }
+    },
+    "extra": {
+      "from": {
+        "label": "差出人アドレス",
+        "help": "メールの送信元として使うアドレスです。多くのサーバーは既知のアドレスしか受け付けません。",
+        "missing": "差出人アドレスを入力してください。"
+      },
+      "username": {
+        "label": "ユーザー名（任意）",
+        "help": "サインイン不要のリレーなら空欄にします。差出人アドレスと同じであることがよくあります。"
+      }
+    }
+  },
+  "connections": {
+    "switched_off": "オフ",
+    "switched_on": "オン",
+    "not_answering": "応答なし：{error}",
+    "connected": "接続済み",
+    "checked": "{when}に確認",
+    "not_checked": "未確認",
+    "remove_confirm": "削除しますか？FinStatsがここから読み込んだものもすべて削除されます。",
+    "removing": "削除中…",
+    "remove": "削除",
+    "remove_ask": "削除…",
+    "edit": "編集",
+    "name_label": "名前（任意）",
+    "name_help": "FinStats内で表示されます。同じ種類が2つあるときに便利です（例：「Radarr 4K」）。",
+    "address": "アドレス",
+    "api_key": "APIキー",
+    "test": "接続をテスト",
+    "test_and_save": "テストして保存",
+    "kind": {
+      "sonarr": "シリーズ：いつ放送されるか、何をダウンロード中か",
+      "radarr": "映画：いつ公開されるか、何をダウンロード中か",
+      "seerr": "リクエスト：誰が何をリクエストしたか（Seerr、Jellyseerr、Overseerr）"
+    },
+    "keep_secret": "空欄にすると保存済みのものを使い続けます。",
+    "secret_help": {
+      "sonarr": "Sonarr → Settings → General → Security → API Key。",
+      "radarr": "Radarr → Settings → General → Security → API Key。",
+      "seerr": "Seerr → Settings → General → API Key。"
+    },
+    "unchanged": "変更なし",
+    "enter_address": "{service}のアドレスを入力してください（例：{example}）。",
+    "enter_key": "APIキーを入力してください。",
+    "went_wrong": "問題が発生しました。",
+    "testing": "テスト中…",
+    "connected_to": "{app}に接続しました",
+    "edit_title": "{name}を編集",
+    "add": "接続を追加",
+    "service": "サービス",
+    "self_signed": "自己署名証明書を受け入れる",
+    "self_signed_help": "証明書が自分で発行したものであるhttps://のアドレスの場合だけ使います。オンにすると、FinStatsはこのアドレスで応答する相手を検証しません。それ以外はオフのままにしてください。",
+    "none_yet": "まだ何も接続されていません。SonarrとRadarrを接続すると近日公開とダウンロード中のものが、Seerrを接続すると誰が何をリクエストしたかが分かります。",
+    "intro": "FinStatsはこれらのサービスから読み取るだけです。リクエストの承認、検索の開始、ダウンロードの操作は一切行いません。キーとパスワードはFinStats自身のデータベースに保存され、二度と表示されず、バックアップにも含まれません。"
+  },
+  "changelog_text": {
+    "kind": {
+      "Added": "追加",
+      "Changed": "変更",
+      "Performance": "パフォーマンス",
+      "Stability": "安定性",
+      "Fixed": "修正",
+      "Removed": "削除"
+    }
+  }
+}

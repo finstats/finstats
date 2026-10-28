@@ -2,8 +2,9 @@
 // that opens under it, filtered as you type. multiSelect is the short kind, ticked rather than searched.
 
 import { h, icon, mount } from '../../core.js';
+import { say } from '../../i18n.js';
 
-export function combobox({ value = '', onChange, placeholder = 'All users', allLabel = 'All users', load, label = 'User',
+export function combobox({ value = '', onChange, placeholder = say('combobox.all_users', 'All users'), allLabel = say('combobox.all_users', 'All users'), load, label = say('combobox.user', 'User'),
                            multiple = false, searchable = true, iconName = 'user' }) {
   let options = [];
   let open = false, activeIdx = 0, filtered = [];
@@ -14,8 +15,8 @@ export function combobox({ value = '', onChange, placeholder = 'All users', allL
   const btnLabel = h('span', { class: 'fui-combobox__label' }, placeholder);
   const btn = h('button', { type: 'button', class: 'fui-combobox__button', 'aria-haspopup': 'listbox', 'aria-expanded': 'false', 'aria-label': label },
     iconName ? icon(iconName, 14) : null, btnLabel, icon('chevronDown', 14, 'fui-combobox__caret'));
-  const input = h('input', { class: 'fui-combobox__input', type: 'text', placeholder: 'Type to filter…', autocomplete: 'off', spellcheck: false,
-    role: 'combobox', 'aria-controls': uid, 'aria-expanded': 'true', 'aria-autocomplete': 'list', 'aria-label': 'Filter ' + label.toLowerCase() + 's' });
+  const input = h('input', { class: 'fui-combobox__input', type: 'text', placeholder: say('combobox.type_to_filter', 'Type to filter…'), autocomplete: 'off', spellcheck: false,
+    role: 'combobox', 'aria-controls': uid, 'aria-expanded': 'true', 'aria-autocomplete': 'list', 'aria-label': say('combobox.filter_aria', 'Filter ' + label.toLowerCase() + 's', { label: label.toLowerCase() }) });
   const list = h('ul', { class: 'fui-combobox__list', role: 'listbox', id: uid, tabindex: -1, 'aria-multiselectable': multiple ? 'true' : null });
   const search = searchable ? h('div', { class: 'fui-combobox__search' }, icon('search', 14), input) : null;
   const pop = h('div', { class: 'fui-combobox__pop', hidden: true }, search, list);
@@ -37,7 +38,7 @@ export function combobox({ value = '', onChange, placeholder = 'All users', allL
     const all = [{ value: '', label: allLabel }, ...options];
     filtered = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : all;
     activeIdx = Math.min(activeIdx, Math.max(0, filtered.length - 1));
-    if (!filtered.length) { mount(list, h('li', { class: 'fui-combobox__empty' }, 'No results')); input.removeAttribute('aria-activedescendant'); return; }
+    if (!filtered.length) { mount(list, h('li', { class: 'fui-combobox__empty' }, say('combobox.no_results', 'No results'))); input.removeAttribute('aria-activedescendant'); return; }
     mount(list, filtered.map((o, i) => h('li', { id: `${uid}-${i}`, role: 'option', class: ['fui-combobox__option', i === activeIdx && 'is-active'],
       'aria-selected': String(isOn(o.value)),
       onPointerdown: (e) => { e.preventDefault(); choose(o); },

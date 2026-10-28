@@ -6,6 +6,8 @@ import { h, icon } from './dom.js';
 import { api, isAbort, onViewCacheCleared } from './api.js';
 import { state } from './state.js';
 import { button } from '../finui/components/button/button.js';
+import { toast } from '../finui/components/toast/toast.js';
+import { t as tr } from './i18n.js';
 
 /** An older server says nothing about watchlists, and then no page offers one. */
 export const hasWatchlist = () => !!(state.user && state.user.features && state.user.features.watchlist);
@@ -46,9 +48,11 @@ async function flip(t, entry) {
  *  and goes. Null on a server without watchlists, or for a title that cannot be named. */
 export function watchMenuItem(t) {
   if (!hasWatchlist() || !(t.item_id || ((t.tmdb_id != null || t.tvdb_id != null) && watchable(t.kind)))) return null;
-  return { label: 'Watchlist', icon: 'bookmark', later: entries().then((list) => {
+  return { label: tr('terms.watchlist'), icon: 'bookmark', later: entries().then((list) => {
     const entry = entryFor(list, t);
-    return { label: entry ? 'Remove from watchlist' : 'Add to watchlist', icon: 'bookmark', onSelect: () => flip(t, entry).catch(() => {}) };
+    // The menu has closed by the time an answer comes, so a refusal (a full list, the server away) is said in a notice.
+    return { label: entry ? tr('watchlist_toggle.remove') : tr('watchlist_toggle.add'), icon: 'bookmark',
+      onSelect: () => flip(t, entry).catch((e) => toast({ text: tr(entry ? 'watchlist_toggle.remove_failed' : 'watchlist_toggle.add_failed', { error: e.message }), tone: 'critical' })) };
   }) };
 }
 
@@ -61,7 +65,7 @@ export function watchMenuItem(t) {
  */
 export function watchToggle(t, { compact = false, name = '', keepFocus = false, ofShow = false } = {}) {
   if (!hasWatchlist() || !(t.item_id || ((t.tmdb_id != null || t.tvdb_id != null) && watchable(t.kind)))) return null;
-  const [addWords, onWords] = ofShow ? ['Add show to watchlist', 'Show is on your watchlist'] : ['Add to watchlist', 'On your watchlist'];
+  const [addWords, onWords, offTitle] = ofShow ? [tr('watchlist_toggle.add_show'), tr('watchlist_toggle.show_on'), tr('watchlist_toggle.show_on_title')] : [tr('watchlist_toggle.add'), tr('watchlist_toggle.on'), tr('watchlist_toggle.on_title')];
   const label = compact ? null : h('span', null, addWords);
   const note = h('span', { class: 'wl-error', role: 'status' });
   const btn = button({ variant: compact ? 'icon' : 'default', class: ['wl-toggle', compact && 'wl-compact'], hidden: true, 'aria-pressed': 'false',
@@ -74,7 +78,7 @@ export function watchToggle(t, { compact = false, name = '', keepFocus = false, 
       btn.setAttribute('aria-pressed', String(!!entry));
       btn.classList.toggle('is-on', !!entry);
       if (label) label.textContent = words;
-      else { btn.setAttribute('aria-label', name ? `${words}: ${name}` : words); btn.title = entry ? `${onWords}. Click to take it off.` : addWords; }
+      else { btn.setAttribute('aria-label', name ? tr('watchlist_toggle.named', { words, name }) : words); btn.title = entry ? offTitle : addWords; }
       btn.hidden = false;
     },
   };

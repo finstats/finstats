@@ -4,6 +4,8 @@ import { h, icon } from '../dom.js';
 import { api } from '../api.js';
 import { pageHeader, dataView, emptyState, sk } from '../components.js';
 import { markVersionSeen } from '../state.js';
+import { inline, longDate, days, kindName } from '../changelog-text.js';
+import { t } from '../i18n.js';
 
 const KINDS = {
   Added: { icon: 'plus', cls: 'cl-added' },
@@ -16,42 +18,6 @@ const KINDS = {
 
 const calm = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Notes may use **bold**, *italic* and `code`. Built as DOM nodes; nothing is ever parsed as HTML. */
-function inline(text) {
-  const out = [];
-  // Bold before italic, so ** is never read as two empty emphases; an italic opens on a letter,
-  // so a lone asterisk in running text stays an asterisk.
-  const re = /\*\*([^*]+)\*\*|\*([^*\s][^*]*?)\*|`([^`]+)`/g;
-  let last = 0;
-  let m;
-  while ((m = re.exec(text))) {
-    if (m.index > last) out.push(text.slice(last, m.index));
-    out.push(m[1] != null ? h('strong', null, m[1]) : m[2] != null ? h('em', null, m[2]) : h('code', { class: 'mono cl-code' }, m[3]));
-    last = re.lastIndex;
-  }
-  if (last < text.length) out.push(text.slice(last));
-  return out;
-}
-
-const DAY = { year: 'numeric', month: 'long', day: 'numeric' };
-const day = (iso) => {
-  const d = /^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? new Date(iso + 'T12:00:00') : null;
-  return d && !isNaN(d) ? d : null;
-};
-
-function longDate(iso) {
-  const d = day(iso);
-  return d ? d.toLocaleDateString(undefined, DAY) : iso || '';
-}
-
-/** "September 25 – 28, 2026": the locale decides what the two days share; one day reads as one. */
-function days(first, last) {
-  const a = day(first), b = day(last);
-  if (!a || !b || first === last) return longDate(last || first);
-  const f = new Intl.DateTimeFormat(undefined, DAY);
-  return typeof f.formatRange === 'function' ? f.formatRange(a, b) : `${f.format(a)} – ${f.format(b)}`;
-}
-
 // Every note is a row of its own with its kind named before it, as Zen's release notes do it: no bullets,
 // one column of kinds down the left, so a reader looking for what was fixed reads straight down it.
 // The heading names the group for a screen reader (each row's own name is hidden from it, or every line
@@ -59,9 +25,9 @@ function days(first, last) {
 function notes(g) {
   const k = KINDS[g.kind] || KINDS.Changed;
   return h('section', { class: 'cl-group' },
-    h('h3', { class: ['cl-kind', k.cls] }, icon(k.icon, 14), g.kind),
+    h('h3', { class: ['cl-kind', k.cls] }, icon(k.icon, 14), kindName(g.kind)),
     h('ul', { class: 'cl-items' }, g.items.map((it) => h('li', null,
-      h('span', { class: ['cl-tag', k.cls], 'aria-hidden': 'true' }, icon(k.icon, 14), h('span', { class: 'cl-tag-word' }, g.kind)),
+      h('span', { class: ['cl-tag', k.cls], 'aria-hidden': 'true' }, icon(k.icon, 14), h('span', { class: 'cl-tag-word' }, kindName(g.kind))),
       h('span', { class: 'cl-text' }, inline(it))))));
 }
 
@@ -72,7 +38,7 @@ function release(r, current, about) {
   return h('article', { class: ['cl-release', running && 'is-current'], 'aria-labelledby': `cl-${r.version}`, dataset: { version: r.version } },
     h('header', { class: 'cl-head' },
       h('h2', { class: 'cl-version mono', id: `cl-${r.version}` }, 'v' + r.version),
-      running ? h('span', { class: 'fui-chip cl-running' }, icon('check', 12), 'Running now') : null,
+      running ? h('span', { class: 'fui-chip cl-running' }, icon('check', 12), t('pages.changelog.running')) : null,
       r.date ? h('time', { class: 'cl-date', dateTime: r.date }, days(r.started || r.date, r.date)) : null),
     summary ? h('p', { class: 'cl-summary' }, inline(summary)) : null,
     (r.groups || []).filter((g) => g.items && g.items.length).map(notes));
@@ -108,7 +74,7 @@ function group(g, current, anchors) {
       h('span', { class: 'cl-series-name mono' }, `v${g.key}`),
       h('span', { class: 'cl-series-range mono' }, n > 1 ? `${oldest.version} – ${newest.version}` : newest.version),
       headline ? h('span', { class: 'cl-series-about' }, inline(headline)) : null,
-      h('span', { class: 'cl-series-meta' }, `${n} ${n === 1 ? 'release' : 'releases'}`, dates ? ` · ${dates}` : '')),
+      h('span', { class: 'cl-series-meta' }, t('pages.changelog.releases', { count: n }), dates ? ` · ${dates}` : '')),
     h('div', { class: 'cl-series-body' }, articles));
   // The newest release of a series sits directly under its own heading, so going to it means
   // going to the series; anything older is scrolled to on its own.
@@ -120,8 +86,8 @@ function group(g, current, anchors) {
 function contents(groups, current, go) {
   const rows = new Map();
   const heads = new Map();
-  const node = h('nav', { class: 'cl-toc', 'aria-label': 'Versions' },
-    h('p', { class: 'cl-toc-title' }, 'Versions'),
+  const node = h('nav', { class: 'cl-toc', 'aria-label': t('pages.changelog.versions') },
+    h('p', { class: 'cl-toc-title' }, t('pages.changelog.versions')),
     h('ul', { class: 'cl-toc-list' }, groups.map((g) => {
       const head = h('button', { type: 'button', class: 'cl-toc-head', onClick: () => go(g.key, g.releases[0].version) },
         h('span', { class: 'cl-toc-key mono' }, `v${g.key}`),
@@ -143,9 +109,9 @@ const loadChangelog = (signal) => api.get('/changelog', null, { signal });
 export const prefetchChangelog = ({ signal }) => [() => loadChangelog(signal)];
 
 export default function changelogPage(ctx) {
-  ctx.title('Patch notes');
+  ctx.title(t('nav.patch_notes'));
   const view = h('div', { class: 'cl-page' });
-  ctx.root.append(pageHeader('Patch notes', 'What changed in FinStats, newest first'), view);
+  ctx.root.append(pageHeader(t('nav.patch_notes'), t('pages.changelog.sub')), view);
   let spy = null;
   ctx.onCleanup(() => spy?.disconnect());
   dataView({
@@ -155,7 +121,7 @@ export default function changelogPage(ctx) {
     render: (d) => {
       markVersionSeen(d.current);
       const releases = d.releases || [];
-      if (!releases.length) return emptyState('No patch notes yet.', 'This build was made without a changelog.');
+      if (!releases.length) return emptyState(t('pages.changelog.empty_title'), t('pages.changelog.empty_sub'));
 
       const anchors = new Map();
       const groups = series(releases);

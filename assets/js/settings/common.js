@@ -8,6 +8,7 @@ import { h, icon, num, mount } from '../dom.js';
 import { api, isAbort } from '../api.js';
 import { toggle, spinner, inlineError, setBusy } from '../components.js';
 import { button } from '../../finui/components/button/button.js';
+import { t as tr } from '../i18n.js';
 
 /** One place for the answers several sections read, fetched once per visit and polled only if asked. */
 export function createStore(ctx) {
@@ -71,12 +72,12 @@ export function toggleRow(store, { key, label, help, onSaved }) {
       mount(err, ''); note.replaceChildren(spinner(12));
       try {
         await store.put({ [key]: next });
-        note.replaceChildren(icon('check', 13), 'Saved');
+        note.replaceChildren(icon('check', 13), tr('settings.common.saved'));
         if (onSaved) onSaved();
         clearTimeout(noteTimer); noteTimer = setTimeout(() => note.replaceChildren(), 2000);
       } catch (e) {
         revert(!next); note.replaceChildren();
-        mount(err, inlineError(`${key}-err`, `Couldn’t save: ${e.message}`));
+        mount(err, inlineError(`${key}-err`, tr('settings.common.couldnt_save', { reason: e.message })));
       }
     } });
   return settingRow({ id: key, label, help, control: [note, sw], error: err });
@@ -96,7 +97,7 @@ export function numberForm(store, FIELDS, errId) {
   });
   const note = h('span', { class: 'saved-note', 'aria-live': 'polite' });
   const formErr = h('div');
-  const save = button({ variant: 'primary', type: 'submit' }, 'Save changes');
+  const save = button({ variant: 'primary', type: 'submit' }, tr('settings.common.save_changes'));
   let noteTimer;
   const form = h('form', { class: 'fui-setting-row__rows', noValidate: true }, rows, h('div', { class: 'form-actions fui-setting-row__actions' }, save, note), formErr);
   form.addEventListener('submit', async (e) => {
@@ -107,8 +108,8 @@ export function numberForm(store, FIELDS, errId) {
     for (const f of FIELDS) {
       const raw = inputs[f.key].value.trim();
       const n = Number(raw);
-      const bad = raw === '' || !/^\d+$/.test(raw) ? `Enter a whole number between ${f.min} and ${num(f.max)}.`
-        : n < f.min || n > f.max ? `Must be between ${f.min} and ${num(f.max)}.` : null;
+      const bad = raw === '' || !/^\d+$/.test(raw) ? tr('settings.common.whole_number', { min: f.min, max: f.max })
+        : n < f.min || n > f.max ? tr('settings.common.between', { min: f.min, max: f.max }) : null;
       inputs[f.key].setAttribute('aria-invalid', bad ? 'true' : 'false');
       inputs[f.key].setAttribute('aria-describedby', bad ? `e-${f.key} ${f.key}-help` : `${f.key}-help`);
       mount(errs[f.key], bad ? inlineError(`e-${f.key}`, bad) : '');
@@ -116,14 +117,14 @@ export function numberForm(store, FIELDS, errId) {
       body[f.key] = n;
     }
     if (firstBad) { firstBad.focus(); return; }
-    setBusy(save, true, 'Saving…');
+    setBusy(save, true, tr('settings.common.saving'));
     try {
       await store.put(body);
       for (const f of FIELDS) inputs[f.key].value = String(store.settings[f.key]);
-      note.replaceChildren(icon('check', 13), 'Saved');
+      note.replaceChildren(icon('check', 13), tr('settings.common.saved'));
       clearTimeout(noteTimer); noteTimer = setTimeout(() => note.replaceChildren(), 2000);
     } catch (err) {
-      mount(formErr, inlineError(errId, `Couldn’t save: ${err.message}`));
+      mount(formErr, inlineError(errId, tr('settings.common.couldnt_save', { reason: err.message })));
     } finally { setBusy(save, false); }
   });
   return form;
@@ -135,5 +136,5 @@ export function progressOf(t, label) {
   return h('div', { class: 'task-progress' },
     h('div', { class: ['fui-meter fui-meter--wide', t.progress == null && 'is-indeterminate'], role: 'progressbar', 'aria-label': label, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': t.progress == null ? null : Math.round(t.progress * 100) },
       h('span', { class: 'fui-meter__fill', style: { width: (t.progress == null ? 30 : t.progress * 100) + '%' } })),
-    h('span', { class: 'mono task-msg' }, t.message || 'Working…'));
+    h('span', { class: 'mono task-msg' }, t.message || tr('common.working')));
 }

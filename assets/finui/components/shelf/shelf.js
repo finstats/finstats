@@ -3,12 +3,13 @@
 
 import { h, icon } from '../../core.js';
 import { target, ends } from './plan.js';
+import { say } from '../../i18n.js';
 
 /** shelf({ label, items, arrows }) → the row: `items` the cards (nodes); `arrows` adds the two buttons beside its name. */
 export function shelf({ label, items, arrows = true }) {
   const row = h('ul', { class: 'fui-shelf__row', tabindex: '0', 'aria-label': label }, items.map((it) => h('li', { class: 'fui-shelf__item' }, it)));
-  const back = h('button', { type: 'button', class: 'fui-shelf__arrow', 'aria-label': `Back along ${label.toLowerCase()}` }, icon('chevronLeft', 15));
-  const on = h('button', { type: 'button', class: 'fui-shelf__arrow', 'aria-label': `On along ${label.toLowerCase()}` }, icon('chevronRight', 15));
+  const back = h('button', { type: 'button', class: 'fui-shelf__arrow', 'aria-label': say('shelf.back', `Back along ${label.toLowerCase()}`, { label: label.toLowerCase() }) }, icon('chevronLeft', 15));
+  const on = h('button', { type: 'button', class: 'fui-shelf__arrow', 'aria-label': say('shelf.on', `On along ${label.toLowerCase()}`, { label: label.toLowerCase() }) }, icon('chevronRight', 15));
   const box = () => { const first = row.firstElementChild, second = first && first.nextElementSibling; return { width: row.clientWidth, scrollWidth: row.scrollWidth, card: second ? second.offsetLeft - first.offsetLeft : (first ? first.offsetWidth : 200) }; };
   const smooth = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
   const glide = (dir) => row.scrollTo({ left: target(row.scrollLeft, dir, box()), behavior: smooth() });

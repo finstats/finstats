@@ -6,25 +6,26 @@ import { isAdmin } from '../state.js';
 import { card } from '../components.js';
 import { connectionsPanel } from '../connections.js';
 import { notificationsPanel, mayNotify } from '../notifications.js';
+import { t } from '../i18n.js';
 
 export const connections = {
-  key: 'connections', label: 'Connections', sub: 'Sonarr, Radarr and Seerr', group: 'Services', icon: 'plug',
+  key: 'connections', label: t('settings.sections.connections.label'), sub: t('settings.sections.connections.sub'), group: t('settings.groups.services'), icon: 'plug',
   visible: () => isAdmin(),
-  entries: [{ id: 'connections', label: 'Sonarr, Radarr and Seerr', hint: 'connections services arr requests downloads calendar api key' }],
+  entries: [{ id: 'connections', label: t('settings.sections.connections.sub'), hint: t('settings.services.connections_hint') }],
   async render(slot, store) {
-    mount(slot, card({ title: 'Connections', sub: 'Sonarr, Radarr and Seerr: what is requested, coming and downloading', body: connectionsPanel(store.ctx), id: 'connections' }));
+    mount(slot, card({ title: t('settings.sections.connections.label'), sub: t('settings.services.connections_sub'), body: connectionsPanel(store.ctx), id: 'connections' }));
   },
 };
 
 export const notifications = {
-  key: 'notifications', label: 'Notifications', sub: 'Where what FinStats finds is sent', group: 'Services', icon: 'inbox',
+  key: 'notifications', label: t('settings.sections.notifications.label'), sub: t('settings.sections.notifications.sub'), group: t('settings.groups.services'), icon: 'inbox',
   visible: () => mayNotify(),
   entries: [
-    { id: 'notifications', label: 'Notification destinations', hint: 'discord slack telegram email ntfy gotify pushover pushbullet webhook send alerts' },
-    { id: 'notify-public-url', label: 'The address of FinStats', hint: 'public url link messages' },
+    { id: 'notifications', label: t('settings.services.destinations'), hint: t('settings.services.destinations_hint') },
+    { id: 'notify-public-url', label: t('settings.services.public_url'), hint: t('settings.services.public_url_hint') },
   ],
   async render(slot, store) {
-    mount(slot, card({ title: 'Notifications', sub: 'Discord, Slack, Telegram, e-mail, ntfy, Gotify, Pushover, Pushbullet or a webhook of your own', body: notificationsPanel(store.ctx), id: 'notifications' }));
+    mount(slot, card({ title: t('settings.sections.notifications.label'), sub: t('settings.services.notifications_sub'), body: notificationsPanel(store.ctx), id: 'notifications' }));
   },
 };
 

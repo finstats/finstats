@@ -2,6 +2,7 @@
 // Unlike a badge it can be pressed: to filter by it, to switch it, or to take it away.
 
 import { h, icon } from '../../core.js';
+import { say } from '../../i18n.js';
 
 /** chip(text, title): a value. The plain form stays as it was in components.js. */
 export function chip(text, title) { return h('span', { class: 'fui-chip', title }, text); }
@@ -39,7 +40,7 @@ export function chipChoice({ label, options, value, onChange = () => {} }) {
 }
 
 /** removableChip({ label, onRemove, removeLabel }): a filter in force, with its own way out. */
-export function removableChip({ label, onRemove, removeLabel = 'Remove' }) {
+export function removableChip({ label, onRemove, removeLabel = say('chip.remove', 'Remove') }) {
   return h('span', { class: 'fui-chip fui-chip--removable' }, label, h('button', { type: 'button', class: 'fui-chip__x', 'aria-label': removeLabel, onClick: onRemove }, icon('x', 12)));
 }
 

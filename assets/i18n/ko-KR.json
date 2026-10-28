@@ -1,0 +1,5018 @@
+{
+  "$meta": {
+    "tag": "ko-KR",
+    "name": "한국어",
+    "fallback": "en-GB"
+  },
+  "terms": {
+    "play": {
+      "other": "재생 {count}회"
+    },
+    "title": {
+      "other": "작품 {count}개"
+    },
+    "film": {
+      "other": "영화 {count}편"
+    },
+    "show": {
+      "other": "시리즈 {count}편"
+    },
+    "season": {
+      "other": "시즌 {count}개"
+    },
+    "episode": {
+      "other": "에피소드 {count}개"
+    },
+    "album": {
+      "other": "앨범 {count}개"
+    },
+    "track": {
+      "other": "트랙 {count}개"
+    },
+    "library": {
+      "other": "라이브러리 {count}개"
+    },
+    "user": {
+      "other": "사용자 {count}명"
+    },
+    "person": {
+      "other": "{count}명"
+    },
+    "device": {
+      "other": "기기 {count}대"
+    },
+    "watch_time": "시청 시간",
+    "watchlist": "찜 목록",
+    "recap": "연간 결산",
+    "cast_and_crew": "출연진 및 제작진",
+    "now_playing": "지금 재생 중",
+    "watched_together": "함께 시청"
+  },
+  "common": {
+    "save": "저장",
+    "cancel": "취소",
+    "close": "닫기",
+    "back": "뒤로",
+    "try_again": "다시 시도",
+    "trying_again": "다시 시도하는 중…",
+    "working": "처리 중…",
+    "loading": "불러오는 중…",
+    "unknown": "알 수 없음",
+    "unknown_item": "알 수 없는 항목",
+    "other": "기타",
+    "none": "없음",
+    "everyone": "모두",
+    "couldnt_load": "불러오지 못했습니다",
+    "page_failed": "이 페이지를 표시하지 못했습니다. 새로 고침하여 다시 시도하세요.",
+    "open_in_jellyfin": "Jellyfin에서 열기",
+    "filters": "필터",
+    "time_range": "기간"
+  },
+  "errors": {
+    "unreachable": "FinStats에 연결할 수 없습니다. 서버가 실행 중인지 확인한 뒤 다시 시도하세요.",
+    "request_failed": "요청 실패 ({status})",
+    "upload_failed": "업로드 실패 ({status})",
+    "upload_interrupted": "업로드가 중단되었습니다. 연결을 확인한 뒤 다시 시도하세요.",
+    "upload_cancelled": "업로드를 취소했습니다."
+  },
+  "time": {
+    "never": "없음",
+    "just_now": "방금",
+    "minutes_ago": {
+      "other": "{count}분 전"
+    },
+    "hours_ago": {
+      "other": "{count}시간 전"
+    },
+    "days_ago": {
+      "other": "{count}일 전"
+    },
+    "months_ago": {
+      "other": "{count}개월 전"
+    },
+    "years_ago": {
+      "other": "{count}년 전"
+    },
+    "due_now": "지금 예정",
+    "within_minutes": "1~2분 안에",
+    "in_minutes": {
+      "other": "{count}분 후"
+    },
+    "in_hours": {
+      "other": "{count}시간 후"
+    },
+    "in_days": {
+      "other": "{count}일 후"
+    },
+    "today": "오늘",
+    "tomorrow": "내일",
+    "yesterday": "어제"
+  },
+  "units": {
+    "seconds": "{count}초",
+    "minutes": "{count}분",
+    "hours": "{count}시간",
+    "days": "{count}일",
+    "exact": "{hours}시간 {minutes}분 {seconds}초"
+  },
+  "range": {
+    "7": { "short": "7일", "long": "최근 7일" },
+    "30": { "short": "30일", "long": "최근 30일" },
+    "90": { "short": "90일", "long": "최근 90일" },
+    "365": { "short": "1년", "long": "최근 1년" },
+    "0": { "short": "전체", "long": "전체 기간" }
+  },
+  "play_method": {
+    "DirectPlay": "직접 재생",
+    "DirectStream": "직접 스트리밍",
+    "Transcode": "트랜스코딩"
+  },
+  "item_type": {
+    "Movie": "영화",
+    "Series": "시리즈",
+    "Season": "시즌",
+    "Episode": "에피소드",
+    "MusicAlbum": "앨범",
+    "Audio": "트랙",
+    "TvChannel": "실시간 TV"
+  },
+  "credit": {
+    "actor": "배우",
+    "director": "감독",
+    "actor_and_director": "배우 겸 감독"
+  },
+  "nav": {
+    "dashboard": "대시보드",
+    "recap": "연간 결산",
+    "my_profile": "내 프로필",
+    "activity": "활동",
+    "together": "함께 보기",
+    "users": "사용자",
+    "libraries": "라이브러리",
+    "playback": "재생",
+    "pipeline": "파이프라인",
+    "server": "서버",
+    "security": "보안",
+    "settings": "설정",
+    "patch_notes": "패치 노트",
+    "groups": {
+      "you": "나",
+      "watching": "시청",
+      "library": "라이브러리",
+      "server": "서버"
+    },
+    "pinned": "고정됨",
+    "search": "검색",
+    "role_admin": "관리자",
+    "role_viewer": "시청자"
+  },
+  "theme": {
+    "label": "테마",
+    "light": "라이트",
+    "device": "기기",
+    "dark": "다크",
+    "is_device": "테마: 기기 설정 따름",
+    "is_light": "테마: 라이트",
+    "is_dark": "테마: 다크"
+  },
+  "statusbar": {
+    "label": "수집기 상태",
+    "connecting": "연결 중…",
+    "streaming": {
+      "other": "{count}개 스트리밍 중"
+    },
+    "collector_offline": "수집기 오프라인",
+    "offline_title": "지금은 FinStats가 Jellyfin에 연결할 수 없습니다. 재생이 기록되지 않고 있습니다.",
+    "pushing_title": "Jellyfin이 재생 중인 항목을 보내 주고 있습니다 · 지금 재생 중으로 이동",
+    "go_now_playing": "지금 재생 중으로 이동",
+    "plays": {
+      "other": "재생 {count}회"
+    },
+    "synced": "{when} 동기화됨",
+    "not_synced": "아직 동기화 안 됨",
+    "last_sync": "마지막 라이브러리 동기화: {when}",
+    "unreachable": "FinStats 연결 불가",
+    "repo": "저장소",
+    "repo_title": "GitHub의 FinStats"
+  },
+  "search": {
+    "label": "검색",
+    "placeholder": "작품, 인물, 페이지 검색",
+    "placeholder_simple": "작품 및 인물 검색",
+    "results": "검색 결과",
+    "pages": "페이지",
+    "users": "사용자",
+    "library": "라이브러리",
+    "cast_and_crew": "출연진 및 제작진",
+    "user": "사용자",
+    "searching": "검색 중…",
+    "no_match": "“{query}” 검색 결과가 없습니다.",
+    "no_match_short": "결과가 없습니다.",
+    "unavailable": "지금은 검색을 사용할 수 없습니다."
+  },
+  "auth": {
+    "setup": {
+      "page_title": "설정",
+      "title": "FinStats 설정",
+      "sub": "두 단계만 거치면 FinStats가 서버의 재생 기록을 시작합니다.",
+      "step_connect": "Jellyfin에 연결",
+      "step_sign_in": "관리자로 로그인",
+      "address": "Jellyfin 주소",
+      "address_help": "FinStats가 Jellyfin에 접속할 주소입니다. Docker에서는 보통 컨테이너 이름입니다.",
+      "address_empty": "Jellyfin 서버 주소를 입력하세요. 예: http://jellyfin:8096",
+      "address_invalid": "웹 주소 형식이 아닌 것 같습니다. 예: http://192.168.1.10:8096",
+      "test": "연결 테스트",
+      "testing": "테스트 중…",
+      "connected": "연결됨: {server}",
+      "couldnt_connect": "연결하지 못했습니다: {reason} 주소가 맞는지, Jellyfin이 실행 중인지 확인하세요.",
+      "test_first": "먼저 연결을 테스트하세요.",
+      "admin_username": "Jellyfin 관리자 사용자 이름",
+      "password_note": "FinStats는 자체 API 키를 만들기 위해 한 번만 로그인합니다. 비밀번호는 저장되지 않습니다.",
+      "finish": "설정 완료",
+      "finishing": "설정하는 중…",
+      "not_admin": "이 계정은 Jellyfin 관리자가 아닙니다. 설정하려면 관리자 계정이 필요합니다."
+    },
+    "login": {
+      "title": "로그인",
+      "sub": "Jellyfin 계정을 사용하세요.",
+      "sub_on": "{server}의 Jellyfin 계정을 사용하세요.",
+      "username": "사용자 이름",
+      "password": "비밀번호",
+      "sign_in": "로그인",
+      "signing_in": "로그인하는 중…",
+      "username_empty": "Jellyfin 사용자 이름을 입력하세요.",
+      "wrong": "사용자 이름 또는 비밀번호가 잘못되었습니다.",
+      "admins_only": "Jellyfin 관리자만 여기에 로그인할 수 있습니다. 관리자가 설정 → 접근 권한에서 다른 사용자를 허용할 수 있습니다.",
+      "too_many": "시도 횟수가 너무 많습니다. 1분 뒤에 다시 시도하세요."
+    },
+    "sign_out": "로그아웃"
+  },
+  "boot": {
+    "not_responding": "FinStats가 응답하지 않습니다"
+  },
+  "not_found": {
+    "page_title": "찾을 수 없음",
+    "title": "페이지를 찾을 수 없습니다",
+    "nothing_here": "이 주소에는 아무것도 없습니다.",
+    "removed": "삭제된 항목의 링크였을 수 있습니다.",
+    "simple": "간편 모드에는 홈, 라이브러리, 사용자, 기록, 그래프가 있습니다. FinStats의 나머지 기능은 기본 레이아웃에 있습니다(설정 → 모양).",
+    "go_dashboard": "대시보드로 이동",
+    "go_home": "홈으로 이동"
+  },
+  "plays_table": {
+    "user": "사용자",
+    "title": "제목",
+    "when": "시각",
+    "watched": "시청",
+    "progress": "진행률",
+    "client": "클라이언트",
+    "method": "방식",
+    "ip_address": "IP 주소",
+    "open_details": "{title} 상세 정보 열기",
+    "playing_now": "지금 재생 중",
+    "together_title": {
+      "other": "함께 시청 · {count}명"
+    },
+    "local": "로컬 네트워크",
+    "remote": "원격",
+    "stopped_at": "{position}에서 정지",
+    "empty": "이 필터에 맞는 재생 기록이 없습니다.",
+    "empty_range": "이 기간에는 재생 기록이 없습니다."
+  },
+  "settings": {
+    "find": "설정 찾기…",
+    "find_label": "설정 찾기",
+    "matching": "일치하는 설정",
+    "sections_label": "설정 섹션",
+    "groups": {
+      "account": "계정",
+      "tracking": "기록",
+      "services": "서비스",
+      "data": "데이터"
+    },
+    "sections": {
+      "access": { "label": "접근 권한", "sub": "누가 FinStats를 쓸 수 있고 무엇을 볼 수 있는지" },
+      "jellyfin": { "label": "Jellyfin", "sub": "FinStats가 읽어 오는 서버" },
+      "account": { "label": "계정", "sub": "여기에 로그인한 사람과 로그아웃" },
+      "appearance": { "label": "모양", "sub": "내게 보이는 FinStats의 모습" },
+      "keys": { "label": "API 키", "sub": "외부에서 FinStats 사용: 스크립트, 구독할 캘린더" },
+      "public": { "label": "공개 프로필", "sub": "프로필 일부를 링크로 공유하고, 게시할 카드도 만들기" },
+      "collection": { "label": "수집", "sub": "재생을 얼마나 자세히 추적할지" },
+      "network": { "label": "홈 네트워크", "sub": "어떤 재생을 로컬로 셀지" },
+      "security": { "label": "보안", "sub": "위치와 불가능한 이동" },
+      "connections": { "label": "연결", "sub": "Sonarr, Radarr, Seerr" },
+      "notifications": { "label": "알림", "sub": "FinStats가 발견한 것을 보낼 곳" },
+      "import": { "label": "가져오기", "sub": "다른 추적 도구의 기록 가져오기" },
+      "unlinked": { "label": "연결되지 않은 미디어", "sub": "라이브러리의 어떤 항목과도 맞지 않는 가져온 재생 기록" },
+      "backups": { "label": "백업", "sub": "기록을 안전하게 보관하거나 옮기기" },
+      "tasks": { "label": "작업", "sub": "FinStats가 스스로 하는 일과 그 시기" },
+      "system": { "label": "시스템", "sub": "외부 연결, 데이터베이스, 라이선스" }
+    },
+    "page": {
+      "title": "{section} · 설정"
+    },
+    "common": {
+      "saved": "저장됨",
+      "couldnt_save": "저장하지 못했습니다: {reason}",
+      "save_changes": "변경 사항 저장",
+      "whole_number": "{min}에서 {max} 사이의 정수를 입력하세요.",
+      "between": "{min}에서 {max} 사이여야 합니다.",
+      "saving": "저장하는 중…"
+    },
+    "appearance": {
+      "language": "언어",
+      "language_hint": "언어 한국어 번역 language språk norsk english bokmål nynorsk translation korean",
+      "language_help": "이 브라우저에서 FinStats를 표시할 언어입니다.",
+      "language_browser": "브라우저 설정 따름",
+      "language_checked": "관리자가 검토함",
+      "language_unchecked": "원어민 검토 전",
+      "language_unchecked_note": "이 번역은 원어민의 검토를 거치지 않았습니다. GitHub에서 수정 제안을 환영합니다.",
+      "layout": "레이아웃",
+      "layout_hint": "레이아웃 간편 모드 클래식 상단 바 홈 모양 layout simple mode classic tautulli plex top bar home look",
+      "layout_help": "FinStats 또는 간편 모드: 위쪽에 막대가 있고 통계만 보여 주는, 전통적인 Plex 통계 서버 방식의 배치입니다. 이 브라우저에만 저장됩니다.",
+      "layout_simple": "Tautulli 스타일",
+      "menu": "메뉴",
+      "menu_hint": "메뉴 사이드바 탐색 그룹 레일 검색 독 명령 표시줄 고정 타일 menu sidebar navigation grouped rail search dock command bar pinned tiles",
+      "menu_help": "이 컴퓨터에서 페이지를 배치하는 방식입니다. 이 브라우저에만 저장되며, 다른 기기는 각자의 설정을 유지합니다.",
+      "menu_right": "오른쪽 메뉴",
+      "menu_right_hint": "메뉴 사이드바 오른쪽 왼쪽 menu sidebar right left side",
+      "menu_right_help": "사이드바를 창의 왼쪽 대신 오른쪽 가장자리에 둡니다.",
+      "search_opens": "검색 열리는 곳",
+      "search_opens_hint": "검색 찾기 메뉴 페이지 통합 위치 search find menu page integrated where ctrl space",
+      "search_opens_help": "메뉴 안에서 메뉴가 검색창으로 바뀌거나, 옆의 페이지 자리에 열립니다. 이 브라우저에만 저장됩니다.",
+      "search_in_menu": "메뉴 안",
+      "search_in_page": "페이지 안",
+      "phone_menu": "이 휴대폰의 메뉴",
+      "phone_menu_hint": "모바일 휴대폰 메뉴 탐색 탭 바 살짝 보기 전체 화면 엄지 부채꼴 주소 mobile phone menu navigation tab bar peek full screen thumb arc address",
+      "phone_menu_help": "여기서 메뉴가 열리는 방식입니다. 이 브라우저에만 저장되며, 휴대폰과 태블릿마다 각자의 설정을 유지합니다.",
+      "preset": "FinUI 프리셋",
+      "preset_hint": "모양 테마 색상 강조색 모서리 밀도 테두리 카드 버튼 입력란 표 메뉴 모션 아이콘 대비 프리셋 코드 사용자 지정 appearance look theme colours accent radius density borders cards buttons fields tables menu motion icons contrast finui preset code customize create",
+      "preset_help": "FinUI create에서 만든 코드입니다: 색상, 모서리, 밀도 등. 모든 페이지가 나에게 이 모양으로 보이며, 다른 사람은 각자 고릅니다.",
+      "preset_placeholder": "없음: FinUI 기본 모양",
+      "preset_default": "모든 선택이 기본값입니다: FinUI 기본 모양.",
+      "preset_change": "FinUI create에서 변경",
+      "preset_make": "FinUI create에서 만들기",
+      "reset": "초기화",
+      "card_sub": "내게 보이는 FinStats의 모습: 다른 누구도 아닌 나의 선택",
+      "preset_axis": {
+        "base": "기본 색",
+        "accent": "강조색",
+        "charts": "차트 색",
+        "radius": "모서리",
+        "density": "밀도",
+        "borders": "테두리",
+        "cards": "카드",
+        "highlight": "강조 표시",
+        "motion": "모션",
+        "icons": "아이콘 선 굵기",
+        "font": "글꼴",
+        "heading": "제목 글꼴",
+        "mono": "고정폭 글꼴",
+        "headings": "제목",
+        "buttons": "버튼",
+        "fields": "입력란",
+        "tables": "표",
+        "menu": "메뉴",
+        "icon-ends": "아이콘 선 끝",
+        "page": "페이지",
+        "focus": "포커스 링",
+        "contrast": "대비"
+      },
+      "preset_option": {
+        "washi": "와시와 흑요석",
+        "neutral": "뉴트럴",
+        "stone": "스톤",
+        "zinc": "징크",
+        "slate": "슬레이트",
+        "gray": "회색",
+        "ocean": "바다",
+        "sage": "세이지",
+        "blush": "블러시",
+        "mist": "안개",
+        "seal": "인주와 보라",
+        "violet": "보라",
+        "blue": "파랑",
+        "teal": "청록",
+        "green": "초록",
+        "amber": "호박색",
+        "orange": "주황",
+        "rose": "장미",
+        "pink": "분홍",
+        "ink": "먹",
+        "indigo": "남색",
+        "cyan": "시안",
+        "emerald": "에메랄드",
+        "red": "빨강",
+        "fuchsia": "자홍",
+        "sky": "하늘",
+        "lime": "라임",
+        "gold": "금색",
+        "indigo-cyan": "남색과 시안",
+        "teal-coral": "청록과 코랄",
+        "plum-gold": "자두색과 금색",
+        "navy-amber": "네이비와 호박색",
+        "crimson-sky": "진홍과 하늘",
+        "moss-lilac": "이끼색과 라일락",
+        "brick-mint": "벽돌색과 민트",
+        "ink-lime": "먹과 라임",
+        "forest-peach": "숲과 복숭아",
+        "berry-aqua": "베리와 아쿠아",
+        "sunset-lavender": "노을과 라벤더",
+        "lagoon-rose": "석호와 장미",
+        "dyes": "염료",
+        "signal": "신호",
+        "ember": "불씨",
+        "lagoon": "석호",
+        "meadow": "초원",
+        "dusk": "황혼",
+        "pastel": "파스텔",
+        "neon": "네온",
+        "earth": "흙",
+        "default": "기본",
+        "none": "없음",
+        "small": "작게",
+        "large": "크게",
+        "round": "둥글게",
+        "pill": "알약형",
+        "compact": "촘촘하게",
+        "comfortable": "편안하게",
+        "spacious": "넉넉하게",
+        "tight": "빽빽하게",
+        "hairline": "아주 가늘게",
+        "strong": "진하게",
+        "faint": "흐리게",
+        "flat": "평면",
+        "raised": "돌출",
+        "floating": "떠 있음",
+        "glow": "빛남",
+        "block": "블록",
+        "subtle": "은은하게",
+        "bold": "굵게",
+        "quick": "빠르게",
+        "slow": "느리게",
+        "off": "끔",
+        "springy": "탄력 있게",
+        "regular": "보통",
+        "light": "가늘게",
+        "thin": "얇게",
+        "heavy": "두껍게",
+        "text": "본문과 같게",
+        "caps": "대문자",
+        "solid": "채움",
+        "soft": "부드럽게",
+        "outline": "윤곽선",
+        "outlined": "윤곽선 있음",
+        "filled": "채워짐",
+        "underlined": "밑줄",
+        "lines": "선",
+        "striped": "줄무늬",
+        "open": "트임",
+        "wash": "옅은 색",
+        "bar": "막대",
+        "square": "사각",
+        "plain": "단순하게",
+        "dots": "점",
+        "grid": "격자",
+        "high": "높게"
+      }
+    },
+    "system": {
+      "state": {
+        "always": "항상 켜짐",
+        "on": "켜짐",
+        "off": "꺼짐"
+      },
+      "outbound": "외부 연결",
+      "outbound_hint": "개인정보 외부 연결 호스트 원격 측정 privacy what FinStats reaches hosts telemetry",
+      "outbound_sub": "FinStats가 접속할 수 있는 모든 곳과 각각 켜져 있는지 여부",
+      "database": "데이터베이스",
+      "database_hint": "디스크 크기 재생 항목 가장 오래된 size on disk plays items oldest",
+      "licences": "라이선스",
+      "licences_hint": "라이선스 오픈 소스 글꼴 지도 gpl third-party open source fonts map",
+      "licences_sub": "GNU GPL v3, 오픈 소스 Rust 크레이트, 오픈 라이선스 글꼴, 퍼블릭 도메인 지도 데이터 기반",
+      "gallery": "컴포넌트 갤러리",
+      "gallery_hint": "컴포넌트 갤러리 디자인 시스템 테마 프리셋 FinUI finui components gallery design system create customize preset theme",
+      "third_party": "서드파티 라이선스",
+      "components": "컴포넌트",
+      "components_sub": "이 인터페이스를 이루는 컴포넌트 FinUI: 모든 컴포넌트를 두 테마로 보고, FinUI create로 내 것으로 만들기",
+      "size_on_disk": "디스크 크기",
+      "plays": "재생",
+      "library_items": "라이브러리 항목",
+      "oldest_play": "가장 오래된 재생",
+      "last_answered": "마지막 응답 {when}",
+      "last_failed": "마지막 시도 실패: {error}",
+      "reach_all": "{total}개 중 {on}개 켜짐.",
+      "reach_some_off": "{total}개 중 {on}개 켜짐, {off}개 꺼짐.",
+      "promise": "FinStats는 나나 서버에 관한 어떤 정보도 이들 중 어디에도 보내지 않으며, 그 밖의 연결도 없습니다. 원격 측정도, 업데이트 확인도, 인터넷에서 가져오는 글꼴이나 스크립트도 없습니다."
+    },
+    "jellyfin": {
+      "connection": "Jellyfin 연결",
+      "connection_hint": "서버 주소 버전 수집기 실시간 소켓 server address version collector live socket asked told",
+      "connection_sub": "읽기 전용: FinStats는 Jellyfin에서 아무것도 바꾸지 않습니다",
+      "public_url": "사용자가 접속하는 Jellyfin 주소",
+      "public_url_hint": "Jellyfin에서 열기 재생 버튼 외부 주소 링크 도메인 리버스 프록시 open in jellyfin play button external url link domain reverse proxy",
+      "public_url_help": "“Jellyfin에서 열기” 버튼이 이동할 주소입니다. 비워 두면 FinStats가 접속하는 주소를 사용합니다.",
+      "checking": "확인 중…",
+      "connected": {
+        "other": "연결됨 · 활성 세션 {count}개"
+      },
+      "not_connected": "연결되지 않음",
+      "not_connected_because": "연결되지 않음: {error}",
+      "told_live": "Jellyfin이 실시간으로 알려 줌",
+      "asked_every": "시청 중에는 {active}초마다, 그 외에는 {idle}초마다 질의",
+      "server": "서버",
+      "address": "주소",
+      "version": "Jellyfin 버전",
+      "collector": "수집기",
+      "how": "방식",
+      "last_checked": "마지막 확인",
+      "asking_now": "지금 질의 중",
+      "asking_yes": "예, 재생 중인 것이 있습니다",
+      "asking_no": "아니요, 재생 중인 것이 없거나 모두 일시 정지 상태입니다",
+      "live_note": "재생 중인 것이 없거나 모두 일시 정지 상태일 때는 아무것도 묻지 않습니다. 재생 중일 때는 FinStats가 {active}초마다 질의하며, 덕분에 일시 정지와 건너뛰기가 정확하게 기록됩니다.",
+      "socket_error": "실시간 연결이 작동하지 않습니다: {error}. FinStats가 계속 다시 시도하며, 그동안 놓치는 것은 없습니다.",
+      "own_key": "설정할 때 만든 자체 API 키로 연결되어 있습니다. FinStats를 다른 서버에 연결하려면 새 데이터 디렉터리로 시작하세요."
+    },
+    "collection": {
+      "seconds": "초",
+      "active": {
+        "label": "누군가 시청 중일 때 확인 간격",
+        "help": "일시 정지, 건너뛰기, 트랙 변경이 이 정밀도로 기록됩니다. 1–60."
+      },
+      "idle": {
+        "label": "재생 중인 것이 없을 때 확인 간격",
+        "help": "Jellyfin이 알려 주지 않을 때만 사용합니다. 재생을 알아차리기 전의 시간은 집계되지 않습니다. 1–60."
+      },
+      "merge": {
+        "label": "다시 시작해도 같은 재생으로 보는 시간",
+        "help": "같은 사람, 같은 작품, 같은 기기일 때. 0이면 합치지 않습니다."
+      },
+      "group": {
+        "label": "함께 시청으로 보는 시간",
+        "help": "서로 다른 사람이 이 간격 안에 같은 작품을 시작하고 최소 몇 분 동안 함께 볼 때. 5–600."
+      },
+      "min_play": {
+        "label": "이보다 짧은 재생은 무시",
+        "help": "데이터베이스에는 남지만 통계에서는 빠집니다. 0이면 모두 셉니다."
+      },
+      "field_hint": "간격 폴링 초 interval poll seconds",
+      "card_sub": "재생을 얼마나 자세히 추적하고, 무엇을 재생 한 번으로 셀지",
+      "library_read": "라이브러리를 읽는 시기",
+      "library_read_help": "바꾸지 않으면 Jellyfin의 라이브러리 스캔이 끝난 뒤입니다. FinStats는 스캔을 시작하지 않습니다.",
+      "schedule": "일정"
+    },
+    "unlinked": {
+      "entry": "작품 직접 연결",
+      "entry_hint": "연결되지 않음 누락 일치 안 함 찾기 작품 가져오기 unlinked missing unmatched locate match title tautulli jellystat streamystats import plex",
+      "card_sub": "라이브러리에서 다른 이름으로 부르거나 더 이상 없는 작품의 재생 기록",
+      "empty": "기록에 있는 모든 재생이 라이브러리의 작품과 연결되어 있습니다."
+    },
+    "missing": {
+      "from": "출처: {sources}",
+      "unknown_show": "알 수 없는 시리즈",
+      "probably": "아마도 {title}",
+      "nothing_like": "라이브러리에 비슷한 것이 없음",
+      "locate": "찾아 연결",
+      "intro": {
+        "other": "기록에 있는 작품 {count}개가 그 이름으로는 라이브러리에 없습니다. 보통 가져온 원래 서버에서 다른 이름으로 불렀기 때문입니다. 하나를 찾아 연결하면 그 재생 기록이 붙고, 그대로 둔 것은 기록에 지금 모습대로 남습니다."
+      },
+      "search_placeholder": "영화와 에피소드 검색",
+      "search_label": "라이브러리 검색",
+      "video": "비디오",
+      "no_match": "라이브러리에서 “{query}” 검색 결과가 없습니다.",
+      "no_likely": "라이브러리에 비슷한 것이 없습니다. 라이브러리에서 쓰는 이름으로 검색해 보세요.",
+      "where_is": "“{name}”의 위치는?",
+      "will_move": {
+        "other": "{what}의 재생 기록 {count}개가 선택한 작품으로 옮겨지며, 같은 기록을 다시 가져오면 자동으로 찾아 연결됩니다."
+      },
+      "will_move_film": {
+        "other": "이 영화의 재생 기록 {count}개가 선택한 작품으로 옮겨지며, 같은 기록을 다시 가져오면 자동으로 찾아 연결됩니다."
+      }
+    },
+    "services": {
+      "connections_hint": "연결 서비스 요청 다운로드 캘린더 API 키 connections services arr requests downloads calendar api key",
+      "connections_sub": "Sonarr, Radarr, Seerr: 요청된 것, 공개 예정인 것, 다운로드 중인 것",
+      "destinations": "알림 대상",
+      "destinations_hint": "알림 보내기 경고 이메일 웹후크 discord slack telegram email ntfy gotify pushover pushbullet webhook send alerts",
+      "public_url": "FinStats 주소",
+      "public_url_hint": "공개 주소 링크 메시지 public url link messages",
+      "notifications_sub": "Discord, Slack, Telegram, 이메일, ntfy, Gotify, Pushover, Pushbullet 또는 직접 만든 웹후크"
+    },
+    "account": {
+      "signing_out": "로그아웃하는 중…",
+      "sign_out_hint": "로그아웃 나가기 세션 log out logout leave session",
+      "card_sub": "로그아웃하면 이 브라우저의 세션만 끝나며, API 키와 다른 브라우저는 계속 작동합니다",
+      "role_admin": "Jellyfin 관리자",
+      "role_user": "Jellyfin으로 로그인함"
+    },
+    "access": {
+      "permissions": "권한",
+      "permissions_hint": "권한 누가 모두 네트워크 서버 다운로드 알림 관리 로그인 사용자 who can see everyone network server downloads notify manage sign in users permissions",
+      "saved": "저장됨",
+      "couldnt_save": "저장하지 못했습니다: {error}",
+      "inherited": "모든 사람에게 있는 권한이라 한 사람에게서만 뺄 수 없습니다",
+      "everyone_sub": "모든 Jellyfin 사용자에게 적용",
+      "disabled": "Jellyfin에서 비활성화됨",
+      "intro": "Jellyfin 관리자는 항상 모든 권한을 갖습니다. 그 밖의 사람은 여기서 켠 권한만 받으며, 연간 결산은 늘 각자의 것입니다.",
+      "intro_named": "Jellyfin 관리자({names})는 항상 모든 권한을 갖습니다. 그 밖의 사람은 여기서 켠 권한만 받으며, 연간 결산은 늘 각자의 것입니다.",
+      "who": "대상",
+      "status": "상태",
+      "perm": {
+        "sign_in": {
+          "label": "로그인",
+          "description": "FinStats를 사용할 수 있으며, 자신의 통계와 연간 결산을 봅니다."
+        },
+        "see_everyone": {
+          "label": "모든 사람의 활동 보기",
+          "description": "다른 사람의 통계와 기록, 사용자 페이지, 모든 실시간 스트림."
+        },
+        "see_network": {
+          "label": "네트워크 정보 보기",
+          "description": "IP 주소, 기기 ID, 재생이 로컬인지 원격인지 여부."
+        },
+        "see_server": {
+          "label": "서버 정보 보기",
+          "description": "서버 페이지, 서버 로그, 로그인 실패, 파일 경로."
+        },
+        "see_downloads": {
+          "label": "다운로드 중인 항목 보기",
+          "description": "속도, 토렌트 이름, 클라이언트가 나오는 다운로드 대기열. 이 권한이 없어도 자신이 요청한 것의 진행 상황은 볼 수 있습니다."
+        },
+        "notify": {
+          "label": "알림 받기",
+          "description": "자신의 알림 대상(웹후크, Discord, ntfy, Gotify)을 추가할 수 있고, 이미 볼 수 있는 것에 관한 알림을 받습니다. 알림 대상은 공개 주소를 가리켜야 합니다."
+        },
+        "manage": {
+          "label": "FinStats 관리",
+          "description": "설정, 작업, Jellystat 가져오기, 재생 기록 삭제. 권한은 바꿀 수 없습니다."
+        }
+      }
+    },
+    "public": {
+      "section": {
+        "totals": {
+          "label": "합계와 인기 작품",
+          "help": "시청 시간, 재생 횟수, 포스터가 붙은 인기 시리즈, 영화, 음악."
+        },
+        "habits": {
+          "label": "연속 시청과 시청 시간대",
+          "help": "최장 연속 시청, 요일과 시간대 표, 장르."
+        },
+        "recap": {
+          "label": "나의 한 해",
+          "help": "올해 결산의 요약 문구와 게시할 수 있는 카드."
+        },
+        "recent": {
+          "label": "최근 시청",
+          "help": "최근 재생 10개. 날짜만 표시되며, 하루가 지나야 나타납니다."
+        }
+      },
+      "yours": "내 공개 프로필",
+      "yours_hint": "공유 공개 게시 링크 카드 이미지 프로필 share publish link card image profile public",
+      "yours_sub": "무엇을 체크하든 기기, 주소, 파일 경로는 절대 공개되지 않습니다",
+      "allow": "공개 프로필 허용",
+      "allow_hint": "공개 프로필 서버 스위치 공유 public profiles server switch share",
+      "allow_help": "사람들이 자기 프로필 일부를 링크로 공개할 수 있습니다. 끄면 모든 링크가 즉시 작동을 멈춥니다.",
+      "server_title": "이 서버의 공개 프로필",
+      "server_sub": "여기서 허용하기 전에는 계정 없이 아무것도 볼 수 없습니다",
+      "col_who": "누구",
+      "col_shown_as": "표시 이름",
+      "col_sections": "섹션",
+      "col_changed": "변경일",
+      "col_actions": "작업",
+      "no_name": "이름 없음",
+      "not_published": "공개 안 함",
+      "take_down_confirm": "내릴까요? 링크가 작동을 멈추며, 본인이 다시 공개할 수 있습니다.",
+      "taking_down": "내리는 중…",
+      "take_down": "내리기",
+      "take_down_ask": "내리기…",
+      "saved": "저장됨",
+      "couldnt_save": "저장하지 못했습니다: {error}",
+      "profile_card": "프로필 카드",
+      "year_card": "연간 카드",
+      "card_alt": "{card}: 채팅 앱에서 링크 아래에 표시되는 모습",
+      "download": "다운로드",
+      "your_link": "내 링크",
+      "your_link_unpublished": "내 링크 (공개 안 함: 열어도 아무것도 없음)",
+      "copy_link": "링크 복사",
+      "open": "열기",
+      "reset_confirm": "재설정할까요? 이전 링크는 어디에 복사되어 있든 모두 작동을 멈춥니다.",
+      "resetting": "재설정하는 중…",
+      "reset": "재설정",
+      "reset_ask": "링크 재설정…",
+      "name_placeholder": "비워 두면 이름을 표시하지 않습니다",
+      "publish": "내 프로필 공개",
+      "publish_help": "링크가 있는 사람은 누구나 로그인 없이 아래에서 켠 항목을 볼 수 있습니다.",
+      "name": "표시 이름",
+      "name_help": "여기에 직접 입력하지 않는 한 Jellyfin 사용자 이름은 표시되지 않습니다.",
+      "avatar": "내 사진 표시",
+      "avatar_help": "이름 옆에 Jellyfin 사진을 표시합니다.",
+      "allow_above": "내 프로필을 공개하려면 위에서 공개 프로필을 허용하세요.",
+      "not_allowed": "관리자가 공개 프로필을 허용하지 않았습니다."
+    },
+    "keys": {
+      "scope": {
+        "full": "내가 볼 수 있는 모든 것",
+        "calendar": "캘린더 피드만"
+      },
+      "scope_help": {
+        "full": "{scope}: 로그인한 나와 같은 권한으로, 스크립트와 다른 도구에서 사용합니다.",
+        "calendar": "{scope}: 구독 주소에 안심하고 넣을 수 있는 키입니다."
+      },
+      "expiry": {
+        "never": "만료 없음",
+        "d30": "30일",
+        "d90": "90일",
+        "year": "1년"
+      },
+      "keys_hint": "토큰 스크립트 캘린더 구독 폐기 token bearer script curl calendar ics subscribe revoke",
+      "make": "키 만들기",
+      "make_hint": "만들기 새 토큰 캘린더 피드 create new token calendar feed",
+      "card_sub": "키는 내가 할 수 있는 일만 할 수 있으며, 내 접근 권한이 사라지는 즉시 작동을 멈춥니다",
+      "new_key": "새 키 “{name}”",
+      "shown_once": "한 번만 표시됩니다. 지금 복사하세요. FinStats는 해시만 보관합니다.",
+      "copy_key": "키 복사",
+      "subscribe": "캘린더에서 이 주소를 구독하세요. 이 주소로는 피드만 열 수 있습니다.",
+      "copy_address": "주소 복사",
+      "no_public_url": "FinStats가 아직 자신의 주소를 모르기 때문에 이 주소는 내부에서만 작동합니다. 휴대폰에서도 작동하는 링크를 원하면 알림에서 주소를 설정하세요.",
+      "send_as": "모든 요청에 {header} 형식으로 보내세요.",
+      "done": "완료",
+      "name": "이름",
+      "name_placeholder": "노트북 스크립트, 휴대폰 캘린더…",
+      "expires": "만료",
+      "what_it_opens": "열 수 있는 것",
+      "everything": "전체",
+      "calendar_only": "캘린더만",
+      "calendar": "캘린더",
+      "name_missing": "키 이름을 입력하세요.",
+      "making": "만드는 중…",
+      "col_opens": "범위",
+      "col_owner": "소유자",
+      "col_made": "생성일",
+      "col_last_used": "마지막 사용",
+      "col_actions": "작업",
+      "revoke_confirm": "폐기할까요? 이 키를 쓰는 모든 것이 즉시 멈춥니다.",
+      "revoking": "폐기하는 중…",
+      "revoke": "폐기",
+      "revoke_ask": "폐기…",
+      "you": "(나)",
+      "from_ip": "{ip}에서",
+      "expired": "만료됨",
+      "none_yet": "아직 키가 없습니다.",
+      "foot": "내 키 {mine}개, 최대 {max}개. 키는 해시로만 저장되고 백업에 포함되지 않으며, 키로는 키를 만들거나 폐기할 수 없습니다."
+    },
+    "network": {
+      "lookup": "내 공인 주소 인식",
+      "lookup_hint": "공인 IP 조회 내 IP 로컬 원격 public ip lookup what is my ip local remote",
+      "lookup_help": "처음 필요할 때 공개 “내 IP 확인” 서비스에 한 번 물어봐서, 집에 있는 기기가 공개 이름으로 Jellyfin에 접속해도 로컬로 셉니다.",
+      "known": "알려진 집 주소",
+      "known_hint": "공인 IP 찾기 지금 조회 public ip found look up now",
+      "known_help": "이 집의 과거와 현재 공인 주소입니다.",
+      "other": "집으로 간주할 다른 주소",
+      "other_hint": "VPN 두 번째 집 IP 수동 로컬 vpn second home ip manual local",
+      "other_help": "한 줄에 하나씩: 예전에 쓰던 주소, 두 번째 집, VPN 출구 주소. 저장하면 기록이 다시 분류됩니다.",
+      "card_sub": "어떤 재생을 로컬로, 어떤 재생을 원격으로 셀지",
+      "added_by_you": "직접 추가함",
+      "found": "자동으로 찾음 · 마지막 확인 {when}",
+      "none_yet": "아직 알아낸 주소가 없습니다. FinStats가 시작하고 몇 분 안에 조회합니다.",
+      "none": "없음. 사설 주소(192.168.x.x, 10.x.x.x 등)는 항상 로컬로 셉니다.",
+      "look_up": "지금 조회",
+      "asking": "조회하는 중…",
+      "lookup_failed": "조회하지 못했습니다: {error}",
+      "save": "주소 저장",
+      "saving": "저장하는 중…",
+      "couldnt_save": "저장하지 못했습니다: {error}",
+      "foot": "이 요청은 {services}에 보내지며, 나나 서버에 관해서는 아무것도 알리지 않습니다. 이 기능과 보안의 위치 데이터베이스 다운로드를 모두 끄면 FinStats는 외부로 어떤 요청도 보내지 않습니다.",
+      "foot_none": "이 요청은 어디에도 보내지지 않습니다. 설정된 서비스가 없으며, 나나 서버에 관해서는 아무것도 알리지 않습니다. 이 기능과 보안의 위치 데이터베이스 다운로드를 모두 끄면 FinStats는 외부로 어떤 요청도 보내지 않습니다."
+    },
+    "security": {
+      "speed": "불가능한 이동으로 볼 속도",
+      "speed_help": "한 사람이 두 번 확인된 위치 사이를 이보다 빨리 이동해야 한다면 경고를 냅니다. 900은 여객기보다 조금 빠른 속도입니다. 100–5,000.",
+      "distance": "다음 거리 이상 떨어진 위치 사이에서만",
+      "distance_unit": "km",
+      "distance_help": "도시 데이터베이스는 종종 수백 km씩 틀립니다. 이보다 가까운 위치 사이에서는 경고를 내지 않습니다. 50–5,000.",
+      "database": "위치 데이터베이스",
+      "database_hint": "위치 데이터베이스 도시 다운로드 지도 geoip mmdb city db-ip maxmind download places map",
+      "up_to_date": "데이터베이스를 최신 상태로 유지",
+      "up_to_date_hint": "위치 데이터베이스 다운로드 매월 일정 작업 geoip download monthly db-ip schedule task",
+      "travel_hint": "불가능한 이동 경고 속도 거리 impossible travel alert speed distance km",
+      "card_sub": "주소의 위치를 정하는 방법과 불가능한 이동으로 볼 기준",
+      "built": "{kind}, {date} 생성",
+      "none_yet": "아직 없습니다. 데이터베이스가 생기기 전까지 보안 페이지는 비어 있습니다.",
+      "downloading": "다운로드하는 중…",
+      "download_newest": "최신 버전 다운로드",
+      "download": "다운로드 (약 60 MB)",
+      "starting": "시작하는 중…",
+      "download_failed": "다운로드하지 못했습니다.",
+      "from_env": "FINSTATS_GEOIP_DB로 지정되어 있습니다. 업데이트하려면 그 파일을 교체하세요.",
+      "from_folder": "주소의 위치는 네트워크를 거치지 않고 이 컴퓨터에 있는 파일에서 찾습니다: {folder}에 있는 가장 최신 .mmdb.",
+      "from_default_folder": "주소의 위치는 네트워크를 거치지 않고 이 컴퓨터에 있는 파일에서 찾습니다: geoip 폴더에 있는 가장 최신 .mmdb.",
+      "scheduled": "예약됨: {triggers}. DB-IP 무료 파일(CC BY 4.0)의 새 월간 버전을 가져오며, 나에 관한 정보는 아무것도 보내지 않습니다.",
+      "not_scheduled": "예약되지 않음. 이 작업은 새 월간 버전이 나오면 DB-IP 무료 도시 파일(약 60 MB, CC BY 4.0)을 가져옵니다.",
+      "schedule": "일정"
+    },
+    "tasks": {
+      "task": {
+        "sync_users": {
+          "name": "사용자 동기화",
+          "what": "Jellyfin의 이름, 역할, 마지막 접속 시각"
+        },
+        "sync_libraries": {
+          "name": "라이브러리와 항목 읽기",
+          "what": "Jellyfin의 작품과 파일 정보. 읽기 전용이며 Jellyfin에서 스캔을 시작하지 않습니다"
+        },
+        "sync_changes": {
+          "name": "메타데이터 변경",
+          "what": "마지막 확인 이후 Jellyfin에서 바뀐 작품, 출연진 및 제작진, 포스터, 인물 사진, 파일 정보"
+        },
+        "sync_userdata": {
+          "name": "시청함 및 즐겨찾기",
+          "what": "Jellyfin의 사용자별 재생됨 표시와 즐겨찾기"
+        },
+        "sync_events": {
+          "name": "서버 로그 동기화",
+          "what": "Jellyfin 활동 로그: 로그인, 로그인 실패, 작업"
+        },
+        "sync_server": {
+          "name": "서버 정보",
+          "what": "버전, 저장 공간, 플러그인, 예약 작업, 기기"
+        },
+        "sync_upcoming": {
+          "name": "Sonarr 및 Radarr 캘린더 읽기",
+          "what": "곧 방영되거나 출시될 것. 읽기 전용"
+        },
+        "sync_grabs": {
+          "name": "다운로드 기록 읽기",
+          "what": "Sonarr와 Radarr가 받기 시작했거나, 가져왔거나, 실패한 것. 읽기 전용"
+        },
+        "sync_requests": {
+          "name": "Seerr 요청 읽기",
+          "what": "누가 무엇을 요청했고 얼마나 진행되었는지. 읽기 전용"
+        },
+        "backup": {
+          "name": "백업",
+          "what": "FinStats 백업을 기록합니다. 백업에서 설정한 만큼 최신 백업을 보관합니다"
+        },
+        "geoip": {
+          "name": "위치 데이터베이스",
+          "what": "새 월간 버전이 나오면 DB-IP 무료 도시 파일(약 60 MB)을 다운로드합니다. 보안 페이지에서 주소의 위치를 찾는 데 씁니다"
+        },
+        "import": {
+          "name": "Jellystat 가져오기",
+          "what": "가져오기에서 Jellystat 백업을 업로드하면 실행됩니다"
+        },
+        "import_streamystats": {
+          "name": "Streamystats 가져오기",
+          "what": "가져오기에서 Streamystats 백업을 업로드하면 실행됩니다"
+        },
+        "import_tautulli": {
+          "name": "Tautulli 가져오기",
+          "what": "가져오기에서 업로드한 Tautulli 백업의 연결선을 이으면 실행됩니다"
+        },
+        "restore": {
+          "name": "복원",
+          "what": "백업에서 FinStats 백업을 복원하면 실행됩니다"
+        }
+      },
+      "group": {
+        "jellyfin": "Jellyfin",
+        "arr": "Sonarr, Radarr, Seerr",
+        "finstats": "FinStats"
+      },
+      "spoken": {
+        "under_minute": "1분 미만",
+        "minutes": {
+          "other": "{count}분"
+        },
+        "hours": {
+          "other": "{count}시간"
+        },
+        "days": {
+          "other": "{count}일"
+        }
+      },
+      "ago_under": "1분 이내 전",
+      "ago": "{time} 전",
+      "every": {
+        "minute": "매분",
+        "minutes": "{count}분마다",
+        "hour": "매시간",
+        "hours": "{count}시간마다",
+        "day": "매일",
+        "days": "{count}일마다"
+      },
+      "trigger": {
+        "daily_at": "매일 {time}",
+        "weekly_at": "매주 {day} {time}",
+        "startup": "애플리케이션 시작 시",
+        "after_scan": "Jellyfin 라이브러리 스캔 후"
+      },
+      "running": "실행 중…",
+      "not_run": "아직 실행된 적 없습니다.",
+      "last_ran": "마지막 실행: {when}.",
+      "last_ran_taking": "마지막 실행: {when}, 소요 시간 {took}.",
+      "failed": "실패: {when}.",
+      "failed_taking": "실패: {when}, 소요 시간 {took}.",
+      "only_by_hand": "직접 실행할 때만",
+      "next_within_minute": "1분 안에 다음 실행",
+      "next_in": "{time} 후 다음 실행",
+      "run_aria": "{name} 실행",
+      "run_now": "지금 실행",
+      "list_sub": "FinStats가 스스로 하는 일입니다. 하나를 열어 실행 시기를 바꿀 수 있습니다.",
+      "progress_aria": "{name} 진행률",
+      "couldnt_start": "시작하지 못했습니다: {error}",
+      "zone": "시각은 {zone} 기준입니다.",
+      "zone_unknown": "시각은 FinStats의 시간대 기준입니다.",
+      "all_tasks": "모든 작업",
+      "no_such_task": "해당 작업이 없습니다.",
+      "needs_file": "이 작업에는 일정이 없습니다. 파일이 필요하며, {where}에서 파일을 업로드하면 실행됩니다.",
+      "add_trigger": "트리거 추가",
+      "reset": "기본값으로 되돌리기",
+      "resetting": "되돌리는 중…",
+      "remove_aria": "“{trigger}” 제거",
+      "remove": "제거",
+      "stops_after": "{time} 후 중지",
+      "no_triggers": "트리거 없음: 지금 실행을 누를 때만 실행됩니다.",
+      "runs": "실행",
+      "next_run": "다음 실행: {when}.",
+      "dialog": {
+        "type": "트리거 유형",
+        "daily": "매일",
+        "weekly": "매주",
+        "interval": "일정 간격",
+        "day": "요일",
+        "time": "시각",
+        "every": "간격",
+        "limit": "시간 제한 (시간)",
+        "limit_help": "이보다 오래 걸리면 실행을 중지합니다. 비워 두면 제한이 없습니다.",
+        "add": "추가",
+        "limit_range": "시간 제한은 15분에서 168시간 사이입니다.",
+        "duplicate": "이미 있는 트리거입니다."
+      },
+      "find_hint": "작업 일정 트리거 실행 예약 task job schedule trigger run"
+    },
+    "import": {
+      "title": "{name}에서 가져오기",
+      "jellystat": {
+        "file": ".jsonl 파일",
+        "sub": "재생 기록을 그대로 가져오세요",
+        "note": "같은 백업을 다시 가져와도 안전합니다. 이미 있는 재생 기록은 건너뜁니다. 라이브러리와 사용자가 함께 들어 있는 백업도 사용할 수 있습니다.",
+        "step": {
+          "open": "Jellystat을 엽니다.",
+          "settings_backup": "{a}에 들어가 {b} 탭을 선택합니다.",
+          "only_activity": "{a}만 선택합니다. 선택하면 보라색으로 바뀝니다.",
+          "under_settings": "설정 아래에서 {a} 버튼을 클릭합니다.",
+          "start_backup": "맨 아래까지 스크롤한 뒤 백업을 시작합니다.",
+          "back_to_backups": "다시 {a}에 들어갑니다.",
+          "download": "새 백업이 나타나면 {a} 메뉴를 열고 {b} 항목을 클릭합니다.",
+          "upload": "파일을 여기에 업로드합니다."
+        }
+      },
+      "streamystats": {
+        "file": ".json 파일",
+        "sub": "재생 기록을 그대로 가져오세요",
+        "note": "두 추적 도구를 모두 썼나요? 두 파일을 모두 가져오세요. 둘 중 하나가 이미 가져온 저녁은 두 번 세지 않습니다. Streamystats에는 라이브러리 데이터가 없으므로 작품 정보는 내 Jellyfin에서 가져옵니다.",
+        "step": {
+          "open": "Streamystats를 엽니다.",
+          "settings_backup_import": "{a}에 들어가 {b} 항목을 선택합니다.",
+          "scroll_to": "{a} 항목까지 아래로 스크롤합니다.",
+          "click_download": "{a} 버튼을 클릭합니다.",
+          "upload": "파일을 여기에 업로드합니다."
+        }
+      },
+      "tautulli": {
+        "file": ".db 또는 .zip 파일",
+        "sub": "Plex 기록을 사람별로 가져오세요",
+        "note": "Plex의 이름은 Jellyfin의 이름과 거의 맞지 않으므로 Plex 사용자를 하나씩 직접 연결합니다. 영화와 에피소드는 이름으로 맞추며, 아직 서버에 없는 작품은 보관해 두었다가 들어오면 연결합니다. 백업에는 Plex 액세스 토큰이 들어 있지만 FinStats는 이를 읽지 않으며, 가져오기를 하거나 처음부터 다시 시작하면 파일을 삭제합니다.",
+        "step": {
+          "open": "Tautulli를 엽니다.",
+          "settings_import_backups": "{a}에 들어가 {b} 항목을 선택합니다.",
+          "backup_database": "데이터베이스 백업 아래에서 {a} 버튼을 클릭합니다. Tautulli는 백업을 자기 컴퓨터에 저장하므로 다운로드되는 것은 없습니다.",
+          "find_it": "Tautulli 데이터 폴더 안의 {a} 폴더에서 찾습니다(Docker라면 {b} 경로로 마운트한 폴더 안).",
+          "newest": "가장 최신 {a} 파일(.db 또는 .db.zip으로 끝남)을 고릅니다. 설정이 들어 있는 {b} 파일이 아닙니다.",
+          "copy": "이 컴퓨터로 복사합니다. scp, 공유 폴더, NAS 파일 관리자 모두 괜찮습니다.",
+          "upload_then_wire": "여기에 업로드한 뒤, 각 Plex 사용자를 Jellyfin의 해당 사용자에게 연결합니다."
+        }
+      },
+      "result": {
+        "plays_imported": "가져온 재생 기록",
+        "plays_skipped": "이미 있음",
+        "users": "사용자",
+        "libraries": "라이브러리",
+        "items": "영화, 시리즈, 트랙",
+        "seasons": "시즌",
+        "episodes": "에피소드",
+        "item_info": "파일 정보",
+        "marked_watched": "시청함으로 표시되었지만 재생된 적 없음",
+        "sessions_read": "읽은 세션",
+        "users_wired": "연결된 Plex 사용자",
+        "not_wired": "연결선이 없어 제외됨",
+        "other_media": "음악 및 기타 미디어, 가져오지 않음"
+      },
+      "already_running": "이미 가져오기가 실행 중입니다. 끝날 때까지 기다린 뒤 다시 시도하세요.",
+      "too_large": "서버가 파일이 너무 크다며 거부했습니다. FinStats가 리버스 프록시 뒤에 있다면 업로드 한도를 늘린 뒤(nginx는 client_max_body_size) 다시 시도하세요.",
+      "find_hint": "가져오기 백업 업로드 기록 추적 backup upload history tracker import",
+      "unlinked": {
+        "other": "기록에 있는 작품 {count}개가 라이브러리의 어떤 항목과도 맞지 않습니다. 보통 다른 서버에서 쓰던 이름 때문입니다. {link}."
+      },
+      "unlinked_link": "연결되지 않은 미디어에서 연결하기",
+      "wrong_file": "“{file}”: {name} 백업이 아닙니다. {name}에서 다운로드한 {what}을 선택하세요.",
+      "empty_file": "파일이 비어 있습니다. {name}에서 백업을 다시 다운로드하세요.",
+      "uploading": "{file} 업로드 중",
+      "upload_progress": "업로드 진행률",
+      "upload_line": "{percent}% · {total} 중 {loaded}",
+      "cancel_upload": "업로드 취소",
+      "keep_open": "업로드가 끝날 때까지 이 탭을 열어 두세요. 그동안 FinStats의 다른 페이지를 둘러봐도 됩니다.",
+      "importing": "기록을 가져오는 중",
+      "upload_complete": "업로드 완료",
+      "import_progress": "가져오기 진행률",
+      "reading": "백업 읽는 중…",
+      "starting": "가져오기 시작하는 중…",
+      "safe_to_leave": "서버에서 실행되므로 이 페이지를 떠나도 괜찮습니다.",
+      "choose_aria": "{name} 백업 파일 선택",
+      "another_running": "다른 가져오기가 실행 중입니다",
+      "drop_here": "{name} 백업을 여기에 놓으세요",
+      "one_at_a_time": "한 번에 하나씩: 진행 중인 것이 끝나면 시작할 수 있습니다",
+      "or_click": "또는 클릭해서 {what}을 선택하세요. 큰 백업도 괜찮습니다",
+      "finished": "가져오기 완료",
+      "see_stats": "통계 보기",
+      "failed": "가져오기 실패: {error}",
+      "unknown_error": "알 수 없는 오류",
+      "nothing_half": "어중간하게 가져온 것은 없습니다. 파일이 수정되지 않은 {name} 백업인지 확인한 뒤 다시 업로드하세요.",
+      "upload_failed": "업로드 실패: {error}",
+      "connect_wires": "연결선 잇기",
+      "export_from": "{name}에서 내보내기",
+      "upload_backup": "백업 업로드"
+    },
+    "wiring": {
+      "plex_users": "Tautulli의 Plex 사용자",
+      "no_plays": "영화나 에피소드 없음",
+      "jellyfin_users": "Jellyfin 사용자",
+      "board_aria": "Plex 사용자를 Jellyfin 사용자에 연결",
+      "start_over": "처음부터 다시",
+      "help": "각 Plex 사용자에서 Jellyfin의 해당 사용자로 연결선을 끌어 놓거나, 한쪽을 클릭한 뒤 다른 쪽을 클릭하세요. 여러 Plex 사용자를 한 사람에게 연결할 수 있습니다. 연결선이 없는 Plex 사용자는 가져오지 않습니다.",
+      "said_connected": "{plex} → {jellyfin} 연결됨.",
+      "said_unplugged": "{name} 연결 해제됨.",
+      "said_choose": "Jellyfin에서 {name} 님에 해당하는 사용자를 선택하세요. Esc를 누르면 취소됩니다.",
+      "plug_connected": {
+        "other": "Plex의 {name}, 재생 {count}회: {to}에 연결됨"
+      },
+      "plug_free": {
+        "other": "Plex의 {name}, 재생 {count}회: 연결 안 됨"
+      },
+      "socket_pick": "{plex} → {jellyfin} 연결",
+      "socket": "Jellyfin의 {name}",
+      "socket_wired": {
+        "other": "Jellyfin의 {name}, 연결된 Plex 사용자 {count}명"
+      },
+      "summary_users": {
+        "other": "Plex 사용자 {count}명 중 {wired}명 연결됨"
+      },
+      "summary_plays": {
+        "other": "재생 기록 {count}개를 가져옵니다"
+      },
+      "summary_rest": "나머지는 제외됩니다",
+      "import_plays": {
+        "other": "재생 기록 {count}개 가져오기"
+      },
+      "import": "가져오기"
+    },
+    "backups": {
+      "back_up_now": "지금 백업",
+      "restore_title": "파일에서 복원",
+      "when_written": "백업을 기록하는 시기",
+      "keep_newest": "보관할 최신 백업 수",
+      "recently_deleted": "최근 삭제됨",
+      "hint": {
+        "backups": "백업 다운로드 삭제 목록 backups download delete list",
+        "restore": "복원 업로드 이동 새 설치 병합 restore upload move new install merge",
+        "schedule": "일정 자동 매일 매주 작업 schedule automatic every days weekly daily task",
+        "keep": "보관 개수 정리 schedule keep count prune",
+        "deleted": "휴지통 되돌리기 삭제 취소 복원 삭제된 백업 trash undo undelete restore deleted backup"
+      },
+      "card_sub": "기록, 설정, 권한을 파일 하나에 담아 안전하게 보관하거나 다른 FinStats로 옮기세요",
+      "deleted_toast": "{date} 백업을 삭제했습니다. 30일 동안 되돌릴 수 있습니다.",
+      "undo": "되돌리기",
+      "when_written_help": "백업 작업의 일정: 매일, 매주, 일정 간격, 또는 직접 실행할 때만.",
+      "schedule": "일정",
+      "keep_help": "새 백업을 기록하면 오래된 것은 삭제됩니다. 1–100.",
+      "keep_unit": "개",
+      "keep_invalid": "보관 개수는 1에서 100 사이의 정수여야 합니다.",
+      "saving": "저장하는 중…",
+      "couldnt_save": "저장하지 못했습니다: {error}",
+      "made": "생성일",
+      "size": "크기",
+      "actions": "작업",
+      "delete_ask": "이 백업을 삭제할까요? 30일 동안 되돌릴 수 있습니다.",
+      "delete": "삭제",
+      "restore_ask_settings": "이 백업의 기록을 병합하고 설정과 권한을 교체할까요?",
+      "restore_ask": "이 백업의 기록을 병합할까요?",
+      "restore": "복원",
+      "download": "다운로드",
+      "delete_aria": "{date} 백업 삭제",
+      "empty_scheduled": "아직 백업이 없습니다. 백업할 것이 생기면 첫 백업이 자동으로 기록되며, 지금 바로 만들 수도 있습니다.",
+      "empty_unscheduled": "아직 백업이 없고, 예약된 백업도 없습니다.",
+      "deleted_help": "삭제한 백업은 30일 동안 여기에 있다가 영구 삭제됩니다. 되돌리기 전에는 다운로드하거나 복원할 수 없습니다.",
+      "removed_for_good": "영구 삭제",
+      "undelete": "되살리기",
+      "restored": {
+        "other": "재생 기록 {count}개를 복원했고, {skipped}개는 이미 있었습니다."
+      },
+      "restored_settings": {
+        "other": "재생 기록 {count}개를 복원했고, {skipped}개는 이미 있었습니다. 설정과 권한도 복원했습니다."
+      },
+      "restore_failed": "복원 실패: {error} 아무것도 바뀌지 않았습니다.",
+      "too_large": "서버가 파일이 너무 크다며 거부했습니다. 리버스 프록시 뒤에 있다면 업로드 한도를 늘린 뒤 다시 시도하세요.",
+      "also_settings": "설정과 권한도 복원",
+      "head": "{link}에 따라 기록되며, 최신 {count}개를 보관합니다.",
+      "head_next": "{link}에 따라 기록되며, 최신 {count}개를 보관합니다. 다음 백업: {next}.",
+      "head_single": "{link}에 따라 기록되며, 최신 1개를 보관합니다.",
+      "head_single_next": "{link}에 따라 기록되며, 최신 1개를 보관합니다. 다음 백업: {next}.",
+      "head_link": "백업 작업 일정",
+      "head_unscheduled": "예약된 백업이 없습니다 ({link}).",
+      "head_unscheduled_link": "일정 만들기",
+      "folder": "백업은 데이터 디렉터리의 {folder} 폴더에 있습니다.",
+      "backup_progress": "백업 진행률",
+      "backup_failed": "백업 실패: {error}",
+      "restore_help": "복원은 병합 방식입니다. 이미 있는 재생 기록은 건너뛰므로 두 번 해도 안전합니다. 백업에는 모든 사람의 기록과 주소가 들어 있지만, Jellyfin API 키는 절대 들어 있지 않습니다.",
+      "upload_progress": "업로드 진행률",
+      "uploading": "{file} 업로드 중 · {percent}%",
+      "choose_file": "백업 파일 선택…",
+      "restore_progress": "복원 진행률"
+    }
+  },
+  "simple": {
+    "nav": {
+      "home": "홈",
+      "libraries": "라이브러리",
+      "users": "사용자",
+      "history": "기록",
+      "graphs": "그래프"
+    },
+    "menu": "설정 및 계정",
+    "sections": "섹션",
+    "graphs": {
+      "concurrent": {
+        "day": "스트림 유형별 일일 최대 동시 스트림 수",
+        "week": "스트림 유형별 주간 최대 동시 스트림 수"
+      },
+      "concurrent_help": {
+        "day": "하루 중 동시에 재생된 스트림의 최대 수. 유형별 및 전체.",
+        "week": "한 주 중 동시에 재생된 스트림의 최대 수. 유형별 및 전체."
+      },
+      "hm": "{hours}시간 {minutes}분",
+      "hour": {
+        "duration": "시간대별 재생 시간",
+        "plays": "시간대별 재생 횟수"
+      },
+      "hour_help": "TV, 영화, 음악을 합쳐 재생된 시간대별로 보여 줍니다.",
+      "kind": {
+        "movies": "영화",
+        "music": "음악",
+        "tv": "TV"
+      },
+      "last_months": "최근 {field}개월",
+      "last_n_days": "최근 {count}일",
+      "last_n_months": "최근 {count}개월",
+      "measure": "기준",
+      "media_daily": {
+        "day": {
+          "duration": "미디어 유형별 일일 재생 시간",
+          "plays": "미디어 유형별 일일 재생 횟수"
+        },
+        "week": {
+          "duration": "미디어 유형별 주간 재생 시간",
+          "plays": "미디어 유형별 주간 재생 횟수"
+        }
+      },
+      "media_daily_help": {
+        "day": {
+          "duration": "날마다 재생된 TV, 영화, 음악의 총 재생 시간입니다.",
+          "plays": "날마다 재생된 TV, 영화, 음악의 총 재생 횟수입니다."
+        },
+        "week": {
+          "duration": "주마다 재생된 TV, 영화, 음악의 총 재생 시간입니다.",
+          "plays": "주마다 재생된 TV, 영화, 음악의 총 재생 횟수입니다."
+        }
+      },
+      "method": {
+        "DirectPlay": "직접 재생",
+        "DirectStream": "직접 스트리밍",
+        "Transcode": "트랜스코딩"
+      },
+      "monthly": {
+        "duration": "월별 총 재생 시간",
+        "plays": "월별 총 재생 횟수"
+      },
+      "monthly_help": "TV, 영화, 음악을 합쳐 월별로 보여 줍니다.",
+      "months_aria": "개월 수",
+      "most_at_once": "최대 동시",
+      "platform_method": {
+        "duration": "플랫폼 및 스트림 유형별 재생 시간",
+        "plays": "플랫폼 및 스트림 유형별 재생 횟수"
+      },
+      "platform_method_help": "TV, 영화, 음악을 앱별, 재생 방식별로 보여 줍니다.",
+      "source_resolution": {
+        "duration": "원본 해상도별 재생 시간",
+        "plays": "원본 해상도별 재생 횟수"
+      },
+      "source_resolution_help": "TV와 영화를 변환 전 파일의 해상도별로 보여 줍니다.",
+      "stream_resolution": {
+        "duration": "스트림 해상도별 재생 시간",
+        "plays": "스트림 해상도별 재생 횟수"
+      },
+      "stream_resolution_help": "TV와 영화를 변환 후 실제로 전송된 해상도별로 보여 줍니다.",
+      "streams_daily": {
+        "day": {
+          "duration": "스트림 유형별 일일 재생 시간",
+          "plays": "스트림 유형별 일일 재생 횟수"
+        },
+        "week": {
+          "duration": "스트림 유형별 주간 재생 시간",
+          "plays": "스트림 유형별 주간 재생 횟수"
+        }
+      },
+      "streams_daily_help": {
+        "day": {
+          "duration": "날마다 TV, 영화, 음악의 총 재생 시간을 원본 그대로 재생했는지 변환했는지로 나눠 보여 줍니다.",
+          "plays": "날마다 TV, 영화, 음악의 총 재생 횟수를 원본 그대로 재생했는지 변환했는지로 나눠 보여 줍니다."
+        },
+        "week": {
+          "duration": "주마다 TV, 영화, 음악의 총 재생 시간을 원본 그대로 재생했는지 변환했는지로 나눠 보여 줍니다.",
+          "plays": "주마다 TV, 영화, 음악의 총 재생 횟수를 원본 그대로 재생했는지 변환했는지로 나눠 보여 줍니다."
+        }
+      },
+      "tab": {
+        "media": "미디어 유형",
+        "streams": "스트림 유형",
+        "totals": "재생 합계"
+      },
+      "this_month": "이번 달",
+      "top_platforms": {
+        "duration": "상위 10개 플랫폼별 재생 시간",
+        "plays": "상위 10개 플랫폼별 재생 횟수"
+      },
+      "top_platforms_help": "TV, 영화, 음악을 합쳐 가장 많이 재생한 앱 10개를 보여 줍니다.",
+      "top_users": {
+        "duration": "상위 10명 사용자별 재생 시간",
+        "plays": "상위 10명 사용자별 재생 횟수"
+      },
+      "top_users_help": "TV, 영화, 음악을 합쳐 가장 많이 재생한 사람 10명을 보여 줍니다.",
+      "user_method": {
+        "duration": "사용자 및 스트림 유형별 재생 시간",
+        "plays": "사용자 및 스트림 유형별 재생 횟수"
+      },
+      "user_method_help": "TV, 영화, 음악을 사람별, 재생 방식별로 보여 줍니다.",
+      "weekday": {
+        "duration": "요일별 재생 시간",
+        "plays": "요일별 재생 횟수"
+      },
+      "weekday_help": "TV, 영화, 음악을 합쳐 재생된 요일별로 보여 줍니다."
+    },
+    "history": {
+      "col": {
+        "date": "날짜",
+        "duration": "재생 시간",
+        "ip": "IP 주소",
+        "paused": "일시 정지",
+        "platform": "플랫폼",
+        "player": "플레이어",
+        "started": "시작",
+        "stopped": "정지"
+      },
+      "done_aria": "{percent}% 시청",
+      "done_title": "{percent}%",
+      "empty": "일치하는 재생 기록이 없습니다.",
+      "kind": {
+        "all": "전체",
+        "movies": "영화",
+        "music": "음악",
+        "shows": "TV 프로그램"
+      },
+      "media": "미디어",
+      "na": "없음",
+      "per_page": "페이지당 항목 수",
+      "search_aria": "기록 검색",
+      "search_label": "검색:",
+      "show_entries": "페이지당 {size}개 표시",
+      "showing": "전체 {total}개 중 {from}–{to}번째 항목"
+    },
+    "home": {
+      "card": {
+        "libraries": "가장 활발한 라이브러리",
+        "platforms": "가장 활발한 플랫폼",
+        "popular_movies": "가장 인기 있는 영화",
+        "popular_music": "가장 인기 있는 음악",
+        "popular_series": "가장 인기 있는 TV 프로그램",
+        "users": "가장 활발한 사용자",
+        "watched_movies": "가장 많이 본 영화",
+        "watched_music": "가장 많이 들은 음악",
+        "watched_series": "가장 많이 본 TV 프로그램"
+      },
+      "col": {
+        "duration": "재생 시간",
+        "plays": "재생",
+        "users": "사용자"
+      },
+      "count": {
+        "albums": "앨범",
+        "artists": "아티스트",
+        "episodes": "에피소드",
+        "items": "항목",
+        "last_played": "마지막 재생",
+        "movies": "영화",
+        "never": "없음",
+        "seasons": "시즌",
+        "shows": "TV 프로그램",
+        "tracks": "트랙"
+      },
+      "days_aria": "일수",
+      "direct_play_of": "직접 재생 ({from})",
+      "episode_n": "{number}화",
+      "eta": "예상 완료: {time}",
+      "fact": {
+        "audio": "오디오",
+        "bandwidth": "대역폭",
+        "container": "컨테이너",
+        "location": "위치",
+        "player": "플레이어",
+        "product": "제품",
+        "quality": "화질",
+        "stream": "스트림",
+        "subtitle": "자막",
+        "video": "비디오"
+      },
+      "kind": {
+        "audiobook": "오디오북",
+        "movie": "영화",
+        "music_video": "뮤직비디오",
+        "video": "비디오"
+      },
+      "lan": "LAN",
+      "last_days": "최근 {field}일",
+      "library_statistics": "라이브러리 통계",
+      "live_unavailable": "실시간 세션을 사용할 수 없습니다: {reason}",
+      "looking": "스트림을 찾는 중…",
+      "measure": {
+        "duration": "재생 시간",
+        "plays": "재생 횟수"
+      },
+      "nothing_added": "최근에 추가된 것이 없습니다.",
+      "nothing_playing": "지금 재생 중인 항목이 없습니다.",
+      "peak": {
+        "direct_plays": "직접 재생",
+        "direct_streams": "직접 스트리밍",
+        "streams": "동시 스트림",
+        "title": "최대 동시 스트림",
+        "transcodes": "트랜스코딩"
+      },
+      "quality_converted": "변환됨 ({rate})",
+      "quality_original": "원본 ({rate})",
+      "rank_by": "순위 기준",
+      "recently_added": "최근 추가됨",
+      "recently_watched": "최근 시청",
+      "summary": {
+        "bandwidth_split": "{total} (LAN: {lan}, WAN: {wan})",
+        "direct_plays": {
+          "other": "직접 재생 {count}개"
+        },
+        "direct_streams": {
+          "other": "직접 스트리밍 {count}개"
+        },
+        "line": "스트림: {streams} | 대역폭: {bandwidth}",
+        "line_kinds": "스트림: {streams} ({kinds}) | 대역폭: {bandwidth}",
+        "streams": {
+          "other": "스트림 {count}개"
+        },
+        "transcodes": {
+          "other": "트랜스코딩 {count}개"
+        }
+      },
+      "transcode_from_to": "트랜스코딩 ({from} → {to})",
+      "wan": "WAN",
+      "watch_statistics": "시청 통계"
+    },
+    "item": {
+      "aired": "방영일",
+      "episode_list": "에피소드 목록",
+      "genres": "장르",
+      "library": "라이브러리",
+      "missing_text": "Jellyfin에서 삭제되었을 수 있습니다.",
+      "missing_title": "해당 작품이 없습니다",
+      "rated": "등급",
+      "rated_aria": "5점 만점에 {rating}점",
+      "runtime": "재생 시간",
+      "season_list": "시즌 목록",
+      "show": "시리즈",
+      "starring": "출연",
+      "studio": "스튜디오",
+      "unit_people": { "other": "명" },
+      "watched_by": "시청한 사람"
+    },
+    "libraries": {
+      "all": "모든 라이브러리",
+      "col": {
+        "episodes": "총 에피소드 / 트랙",
+        "last_accessed": "마지막 사용",
+        "name": "라이브러리 이름",
+        "seasons": "총 시즌 / 앨범",
+        "titles": "총 영화 / TV 프로그램 / 아티스트",
+        "type": "라이브러리 유형"
+      },
+      "empty": "아직 라이브러리가 없습니다.",
+      "missing_text": "Jellyfin에서 삭제되었을 수 있습니다.",
+      "missing_title": "해당 라이브러리가 없습니다",
+      "showing": "라이브러리 {total}개 중 {shown}개 표시",
+      "type": {
+        "books": "도서",
+        "boxsets": "컬렉션",
+        "homevideos": "비디오",
+        "movies": "영화",
+        "music": "아티스트",
+        "musicvideos": "뮤직비디오",
+        "tvshows": "TV 프로그램"
+      }
+    },
+    "platform": {
+      "days_hrs_mins": "{days}일 {hours}시간 {minutes}분",
+      "hrs_mins": "{hours}시간 {minutes}분",
+      "mins": "{minutes}분",
+      "unknown_app": "알 수 없는 앱"
+    },
+    "profile": {
+      "global_stats": "전체 통계",
+      "recently_watched": "최근 시청",
+      "tab_profile": "프로필",
+      "unit": {
+        "days": "일",
+        "hrs": "시간",
+        "mins": "분",
+        "plays": { "other": "회" }
+      },
+      "user_stats": "사용자 통계",
+      "views": "보기"
+    },
+    "users": {
+      "all": "모든 사용자",
+      "col": {
+        "first_seen": "처음 확인",
+        "last_ip": "마지막 IP",
+        "last_platform": "마지막 플랫폼",
+        "last_played": "마지막 재생",
+        "last_player": "마지막 플레이어",
+        "last_seen": "마지막 확인",
+        "network": "네트워크",
+        "total_duration": "총 재생 시간",
+        "total_plays": "총 재생 횟수"
+      },
+      "ip_addresses": "IP 주소",
+      "missing_text": "Jellyfin에서 삭제되었거나, 내가 볼 수 없는 페이지일 수 있습니다.",
+      "missing_title": "해당 사용자가 없습니다",
+      "no_addresses": "기록된 주소가 없습니다.",
+      "player_stats": "플레이어 통계",
+      "showing": "사용자 {total}명 중 {shown}명 표시"
+    },
+    "changelog": {
+      "jump": "버전으로 이동",
+      "empty_title": "패치 노트 없음",
+      "empty_sub": "이 빌드에는 패치 노트가 없습니다.",
+      "running": "현재 실행 중",
+      "running_option": "{version} (현재 실행 중)"
+    }
+  },
+  "server": {
+    "errors": {
+      "not_found": "찾을 수 없음: {what}",
+      "not_permitted": "다음 권한이 없습니다: {what}. Jellyfin 관리자가 설정에서 부여할 수 있습니다.",
+      "admins_only": "Jellyfin 관리자만 할 수 있습니다",
+      "internal": "서버에서 문제가 발생했습니다. FinStats 로그를 확인하세요."
+    },
+    "not_found": {
+      "alert": "경고를 찾을 수 없습니다",
+      "backup": "백업을 찾을 수 없습니다",
+      "chapter": "장을 찾을 수 없습니다",
+      "connection": "연결을 찾을 수 없습니다",
+      "destination": "알림 대상을 찾을 수 없습니다",
+      "dismissed_finding": "무시한 발견 사항을 찾을 수 없습니다",
+      "endpoint": "엔드포인트를 찾을 수 없습니다",
+      "film_or_show": "영화나 시리즈를 찾을 수 없습니다",
+      "finding": "발견 사항을 찾을 수 없습니다",
+      "image": "이미지를 찾을 수 없습니다",
+      "item": "항목을 찾을 수 없습니다",
+      "key": "키를 찾을 수 없습니다",
+      "library": "라이브러리를 찾을 수 없습니다",
+      "missing_title": "누락된 작품을 찾을 수 없습니다",
+      "person": "인물을 찾을 수 없습니다",
+      "play": "재생 기록을 찾을 수 없습니다",
+      "profile": "프로필을 찾을 수 없습니다",
+      "task": "작업을 찾을 수 없습니다",
+      "title": "작품을 찾을 수 없습니다",
+      "user": "사용자를 찾을 수 없습니다",
+      "watchlist_entry": "찜 목록 항목을 찾을 수 없습니다",
+      "year": "해당 연도를 찾을 수 없습니다"
+    },
+    "not_permitted": {
+      "be_sent_notifications": "알림을 받을 권한이 없습니다. Jellyfin 관리자가 설정에서 부여할 수 있습니다.",
+      "manage_finstats": "FinStats를 관리할 권한이 없습니다. Jellyfin 관리자가 설정에서 부여할 수 있습니다.",
+      "see_other_people_s_statistics": "다른 사람의 통계를 볼 권한이 없습니다. Jellyfin 관리자가 설정에서 부여할 수 있습니다.",
+      "see_the_server": "서버 정보를 볼 권한이 없습니다. Jellyfin 관리자가 설정에서 부여할 수 있습니다.",
+      "see_what_is_downloading": "다운로드 중인 항목을 볼 권한이 없습니다. Jellyfin 관리자가 설정에서 부여할 수 있습니다.",
+      "see_where_people_watch_from": "사람들이 어디에서 시청하는지 볼 권한이 없습니다. Jellyfin 관리자가 설정에서 부여할 수 있습니다."
+    },
+    "api": {
+      "cross_site": "교차 사이트 요청이 거부되었습니다",
+      "lookup_off": "먼저 “내 공인 주소 인식”을 켜세요",
+      "expected_object": "JSON 객체가 필요합니다",
+      "invalid_settings": "잘못된 설정: {error}",
+      "invalid_triggers": "잘못된 트리거: {error}",
+      "geoip_from_env": "데이터베이스가 FINSTATS_GEOIP_DB로 지정되어 있습니다. 대신 그 파일을 교체하세요",
+      "task_running": "이 작업은 이미 실행 중입니다",
+      "unknown_permission": "알 수 없는 권한 `{name}`",
+      "admins_have_all": "Jellyfin 관리자는 이미 모든 권한을 갖고 있습니다",
+      "backup_running": "이미 백업을 기록하는 중입니다",
+      "backup_name_taken": "같은 이름의 백업이 이미 있습니다. 먼저 삭제하거나 이름을 바꾸세요",
+      "restore_running": "이미 복원이나 가져오기가 실행 중입니다",
+      "import_running": "이미 가져오기나 복원이 실행 중입니다",
+      "no_tautulli_backup": "대기 중인 Tautulli 백업이 없습니다. 먼저 업로드하세요.",
+      "locate_wrong_kind": "재생 기록은 영화, 비디오 또는 에피소드의 것이며, 시리즈나 시즌 전체의 것일 수 없습니다",
+      "upload_interrupted": "업로드가 중단되었습니다: {error}",
+      "upload_empty": "업로드한 파일이 비어 있습니다",
+      "reading_backup": "백업 읽는 중",
+      "receiving_backup": "백업 받는 중",
+      "importing": "가져오는 중",
+      "restored": {
+        "other": "재생 기록 {count}개 복원됨 ({skipped}개는 이미 있음)"
+      },
+      "imported": {
+        "other": "재생 기록 {count}개 가져옴 ({skipped}개는 이미 있음)"
+      },
+      "imported_marked": {
+        "other": "재생 기록 {count}개 가져옴 ({skipped}개는 이미 있음), {marked}개는 시청함으로 표시되었지만 재생된 적 없음"
+      },
+      "no_profile_title": "찾을 수 없음",
+      "no_profile": "여기에는 프로필이 없습니다."
+    },
+    "state": {
+      "between": "{name} 값은 {lo}에서 {hi} 사이여야 합니다",
+      "unknown_permission": "알 수 없는 권한 `{name}`",
+      "not_an_ip": "`{address}`: IP 주소가 아닙니다",
+      "too_many_homes": "집 주소는 최대 {max}개까지입니다",
+      "public_url": "FinStats 주소는 http:// 또는 https://로 시작해야 합니다",
+      "address_too_long": "주소가 너무 깁니다",
+      "jellyfin_public_url": "Jellyfin 주소는 http:// 또는 https://로 시작하고 호스트 이름이 있어야 합니다",
+      "failed": "실패"
+    },
+    "auth": {
+      "bearer_form": "`Authorization: Bearer <key>` 형식을 사용하세요",
+      "sign_in_to_continue": "계속하려면 로그인하세요",
+      "calendar_key_only": "이 키로는 캘린더 피드만 열 수 있습니다",
+      "feed_needs_key": "이 피드에는 키가 필요합니다. 주소에 ?key=…를 붙이세요",
+      "too_many_attempts": {
+        "other": "로그인 시도가 너무 많습니다. {count}분 뒤에 다시 시도하세요."
+      },
+      "not_connected": "FinStats가 아직 Jellyfin에 연결되지 않았습니다",
+      "enter_username": "Jellyfin 사용자 이름을 입력하세요",
+      "wrong_password": "사용자 이름 또는 비밀번호가 잘못되었습니다",
+      "unreachable": "로그인을 확인하기 위해 Jellyfin에 연결하지 못했습니다",
+      "no_access": "FinStats 접근 권한이 없습니다. Jellyfin 관리자가 설정에서 허용할 수 있습니다.",
+      "already_set_up": "FinStats는 이미 설정되었습니다",
+      "not_admin": "이 계정은 Jellyfin 관리자가 아닙니다. 관리자 계정으로 FinStats를 설정하세요."
+    },
+    "keys": {
+      "session_only": "키를 관리하려면 로그인하세요. 키로는 키를 만들거나 폐기할 수 없습니다",
+      "name": "키 이름을 60자 이내로 입력하세요",
+      "expiry": "만료 기간은 1일에서 3650일 사이입니다",
+      "scope": "범위는 `full` 또는 `calendar`입니다",
+      "too_many": "이미 키가 {max}개 있습니다. 먼저 하나를 폐기하세요"
+    },
+    "appearance": {
+      "unknown_preset": "`{preset}`에 해당하는 FinUI 프리셋이 없습니다. 코드는 선택마다 문자나 숫자 하나로 이루어집니다(예: 0101)"
+    },
+    "public": {
+      "session_only": "프로필을 공개하려면 로그인하세요. 키로는 아무것도 공개할 수 없습니다",
+      "not_allowed": "관리자가 이 서버에서 공개 프로필을 허용하지 않았습니다",
+      "page_title": "FinStats 프로필",
+      "page_title_named": "FinStats의 {name}",
+      "page_description": "{hours}시간 시청, 재생 {plays}회.",
+      "page_description_none": "본인이 직접 공개한 시청 기록입니다."
+    },
+    "jellyfin": {
+      "enter_address": "Jellyfin 서버 주소를 입력하세요",
+      "enter_address_of": "{what} 주소를 입력하세요",
+      "invalid_url": "올바른 URL이 아닌 것 같습니다",
+      "timed_out": "{address}에 연결하는 중 시간이 초과되었습니다",
+      "could_not_connect": "{address}에 연결하지 못했습니다",
+      "could_not_reach": "{address}에 연결하지 못했습니다: {error}",
+      "not_jellyfin_status": "{address}의 응답: {status}. Jellyfin 서버가 맞나요?",
+      "not_jellyfin": "{address}의 응답이 Jellyfin 서버 같지 않습니다",
+      "unreachable": "Jellyfin에 연결하지 못했습니다: {error}",
+      "answered": "Jellyfin 응답: {status}",
+      "answered_for": "{path}에 대한 Jellyfin 응답: {status}",
+      "answered_for_user_items": "사용자 항목에 대한 Jellyfin 응답: {status}",
+      "keys_list_refused": "Jellyfin이 API 키 목록 조회를 거부했습니다 ({status})",
+      "key_create_refused": "Jellyfin이 API 키 생성을 거부했습니다 ({status})",
+      "key_unreadable": "API 키를 만들었지만 다시 읽어 오지 못했습니다"
+    },
+    "jobs": {
+      "explain": {
+        "scan_library": "미디어 폴더에서 새로 생기거나 바뀌거나 사라진 파일을 찾아 Jellyfin 데이터베이스를 업데이트합니다. 새 영화가 나타나게 하는 작업이 바로 이것입니다. FinStats는 이 작업이 끝나자마자 라이브러리를 읽으므로, 새로 찾은 것은 1~2분 안에 통계에 반영됩니다.",
+        "media_segments": "에피소드를 살펴 플레이어가 건너뛰기를 제안할 수 있는 부분(오프닝, 지난 줄거리, 엔딩 크레딧)을 찾고 그 위치를 기록합니다. 이를 위해 각 파일의 오디오와 비디오를 읽기 때문에 Jellyfin이 실행하는 작업 중 가장 무거운 편이며, 이전에 분석하지 않은 것만 살펴봅니다. 밤새 실행되는 것은 정상이며, 라이브러리 파일은 전혀 건드리지 않습니다.",
+        "trickplay": "진행 막대를 끌 때 보이는 작은 미리보기 그림 띠를 만듭니다. 모든 비디오를 한 번씩 디코딩해 그 옆에 썸네일을 저장하므로, 큰 라이브러리에서는 첫 실행에 몇 시간이 걸리고 디스크 공간을 차지합니다. 이후에는 새로운 것만 처리합니다.",
+        "chapter_images": "영화의 각 챕터마다 썸네일을 만들어 챕터 메뉴에 숫자 대신 그림이 나오게 합니다. 챕터가 있는 모든 파일을 탐색하며, 첫 실행 이후에는 새 파일만 처리합니다.",
+        "keyframes": "각 파일에서 플레이어가 건너뛸 수 있는 지점을 기록합니다. 이 정보가 있으면 트랜스코딩 중인 비디오의 진행 막대를 끌었을 때 몇 초 어긋나지 않고 손을 뗀 곳으로 정확히 이동합니다.",
+        "audio_normalization": "각 파일의 음량을 측정해서 플레이어가 조용한 영화와 시끄러운 영화의 차이를 고르게 맞출 수 있게 합니다. 아직 측정하지 않은 모든 파일의 오디오를 읽습니다.",
+        "refresh_people": "켜 둔 메타데이터 제공자에서 라이브러리에 있는 배우와 감독의 정보와 사진을 가져옵니다. 인터넷에 접속하지만 파일은 건드리지 않습니다.",
+        "refresh_guide": "설정한 편성표 제공자에서 앞으로 며칠간의 실시간 TV 편성표를 다운로드합니다. 실시간 TV를 쓰는 경우에만 작동합니다.",
+        "optimize_database": "Jellyfin 자체 데이터베이스 파일을 정리합니다. 삭제된 행이 남긴 공간을 되찾고 인덱스를 다시 만듭니다. 실행 중에는 Jellyfin이 잠시 느려지고 끝나면 빨라집니다. 미디어와는 관계가 없습니다.",
+        "clean_activity_log": "Jellyfin 활동 로그의 오래된 항목을 삭제합니다. 대시보드 → 활동에서 보이는 로그인과 오류 기록입니다. FinStats는 이미 이를 자체 기록에 복사해 두었으므로, FinStats 서버 페이지에서는 아무것도 사라지지 않습니다.",
+        "clean_logs": "설정에서 정한 일수보다 오래된 Jellyfin 자체 로그 파일을 삭제합니다. 관리 작업이며 미디어는 건드리지 않습니다.",
+        "clean_cache": "Jellyfin 캐시 폴더에서 더 이상 필요 없는 부분을 비웁니다. 안전하고 빠르며 디스크 공간만 확보합니다.",
+        "clean_transcode": "Jellyfin이 트랜스코딩할 때 남긴 임시 파일을 삭제합니다. 원본을 재생할 수 없는 플레이어를 위해 만든 비디오 조각들입니다. 사용량이 많은 서버에서는 수 기가바이트가 될 수 있습니다.",
+        "plugin_updates": "플러그인 저장소에 새 버전이 있는지 확인하고, 설정해 두었다면 업데이트를 설치합니다. 이 작업은 서버를 대신해 인터넷에 접속합니다.",
+        "subtitles": "자막을 처리합니다. 켜 둔 제공자에서 요청한 자막을 가져오거나, 비디오 파일 안에 있는 자막을 꺼내 플레이어가 트랜스코딩 없이 자막을 켤 수 있게 합니다.",
+        "thumbnails": "메타데이터 제공자의 아트워크가 없는 비디오에서 정지 화면을 하나 뽑아 대표 이미지로 씁니다.",
+        "system_update": "새 버전의 Jellyfin이 나왔는지 확인합니다. 인터넷에 접속하지만, 따로 설정하지 않았다면 아무것도 스스로 설치하지 않습니다."
+      },
+      "from_plugin": "{description} (Jellyfin의 설명입니다. FinStats가 모르는 작업이므로 아마 플러그인에서 추가했을 것입니다.)",
+      "unknown": "FinStats가 모르는 작업이고 Jellyfin도 설명하지 않습니다. 보통 플러그인이 추가한 작업입니다.",
+      "unnamed": "이름 없는 작업",
+      "not_connected": "Jellyfin에 연결되지 않음",
+      "no_answer": "Jellyfin이 응답하지 않음",
+      "daily": "매일 {time}",
+      "weekly": {
+        "mon": "매주 월요일 {time}",
+        "tue": "매주 화요일 {time}",
+        "wed": "매주 수요일 {time}",
+        "thu": "매주 목요일 {time}",
+        "fri": "매주 금요일 {time}",
+        "sat": "매주 토요일 {time}",
+        "sun": "매주 일요일 {time}",
+        "any": "매주 {time}"
+      },
+      "at_startup": "Jellyfin 시작 시",
+      "every": {
+        "day": "매일",
+        "days": "{count}일마다",
+        "hour": "매시간",
+        "hours": "{count}시간마다",
+        "minute": "매분",
+        "minutes": "{count}분마다",
+        "second": "매초",
+        "seconds": "{count}초마다"
+      }
+    },
+    "socket": {
+      "closed": "Jellyfin이 연결을 닫았습니다",
+      "failed": "연결 실패 ({detail})",
+      "mismatch": "Jellyfin이 보내 주는 내용이 /Sessions 응답과 일치하지 않습니다 ({detail})",
+      "collector_gone": "수집기가 수신을 멈췄습니다",
+      "unreadable": "Jellyfin이 읽을 수 없는 세션 목록을 보냈습니다",
+      "no_answer": "{seconds}초 동안 아무런 응답이 없습니다",
+      "silent": "Jellyfin이 {seconds}초 동안 아무것도 보내지 않았습니다",
+      "no_handshake": "{url}: {seconds}초 안에 핸드셰이크 응답이 없습니다",
+      "refused": "{url}: 연결이 거부되었습니다 ({detail})"
+    },
+    "card": {
+      "a_profile": "FinStats 프로필",
+      "hours_watched": {
+        "other": "{count}시간 시청"
+      },
+      "when_they_watch": "언제 보는지",
+      "longest_streak": {
+        "other": "최장 연속 {count}일"
+      },
+      "a_year": "FinStats로 본 한 해",
+      "whose_year": "{name} 님의 한 해",
+      "hours_watched_unit": "시간 시청",
+      "streak": "{count}일 연속",
+      "top_show": "인기 시리즈",
+      "top_film": "인기 영화",
+      "weekday": {
+        "mon": "월",
+        "tue": "화",
+        "wed": "수",
+        "thu": "목",
+        "fri": "금",
+        "sat": "토",
+        "sun": "일"
+      }
+    },
+    "story": {
+      "last_12_months": "최근 12개월",
+      "in_review": "{label} 돌아보기",
+      "whose": "{whose}의 {label}",
+      "word": {
+        "year": "한 해",
+        "numbers": "숫자",
+        "shows": "시리즈",
+        "films": "영화",
+        "music": "음악",
+        "genres": "장르",
+        "persona": "당신",
+        "rhythm": "리듬",
+        "days": "날들",
+        "records": "기록",
+        "together": "함께",
+        "finished": "완주",
+        "asked": "요청",
+        "versus": "비교"
+      },
+      "hours_of_watching": "시간 시청",
+      "plays": {
+        "other": "재생 {count}회"
+      },
+      "titles": {
+        "other": "작품 {count}개"
+      },
+      "days": {
+        "other": "{count}일"
+      },
+      "in_numbers": "숫자로 보는 한 해",
+      "tile": {
+        "plays": "재생",
+        "hours": "시간",
+        "titles": "작품",
+        "days": "일",
+        "episodes": "에피소드",
+        "films": "영화",
+        "songs": "노래"
+      },
+      "top": {
+        "shows": "내 인기 시리즈",
+        "films": "내 인기 영화",
+        "songs": "내 인기 노래"
+      },
+      "hours_short": "{count}시간",
+      "minutes_short": "{count}분",
+      "mostly": "주로 {genre}",
+      "you_were": "올해 당신은",
+      "around": "대부분 {time} 무렵",
+      "busiest": "가장 많이 본 요일: {days}",
+      "weekdays": {
+        "mon": "월요일",
+        "tue": "화요일",
+        "wed": "수요일",
+        "thu": "목요일",
+        "fri": "금요일",
+        "sat": "토요일",
+        "sun": "일요일"
+      },
+      "with_something_on": {
+        "other": "무언가를 본 날 {count}일"
+      },
+      "longest_streak": {
+        "other": "최장 연속 시청: {count}일"
+      },
+      "records": "자랑할 만한 기록",
+      "record": {
+        "streak": "최장 연속 시청",
+        "day": "가장 많이 본 날",
+        "binge": "최대 몰아보기",
+        "rewatched": "가장 많이 다시 본 작품",
+        "oldest": "가장 오래된 작품"
+      },
+      "day_hours": "{day} {hours}시간",
+      "binge": {
+        "other": "{show} 에피소드 {count}개"
+      },
+      "rewatched": {
+        "other": "{name}, {count}일에 걸쳐"
+      },
+      "day_month": "{month} {day}일",
+      "months": {
+        "jan": "1월",
+        "feb": "2월",
+        "mar": "3월",
+        "apr": "4월",
+        "may": "5월",
+        "jun": "6월",
+        "jul": "7월",
+        "aug": "8월",
+        "sep": "9월",
+        "oct": "10월",
+        "nov": "11월",
+        "dec": "12월"
+      },
+      "evenings_word": {"other": "함께한 저녁"},
+      "together_line": "함께 {hours}시간 · 내 시청의 {percent}%",
+      "together_top": "사람들을 가장 많이 모은 작품",
+      "evenings": {
+        "other": "저녁 {count}번"
+      },
+      "finished": {
+        "other": "끝까지 본 시리즈 {count}편"
+      },
+      "left_for_later": {
+        "other": "그리고 나중으로 미룬 시리즈 {count}편"
+      },
+      "requests_word": {"other": "요청"},
+      "arrived": "{count}건 도착",
+      "watched": "{count}건 시청",
+      "more_than": "{year}년보다 {percent}% 증가",
+      "less_than": "{year}년보다 {percent}% 감소"
+    },
+    "stats": {
+      "unknown_kind": "알 수 없는 종류",
+      "unknown_group": "알 수 없는 그룹",
+      "completion": {
+        "under_10": "10% 미만",
+        "from_10_to_50": "10–50%",
+        "from_50_to_90": "50–90%",
+        "finished": "완료 (90% 이상)"
+      }
+    },
+    "health": {
+      "note_too_long": "메모는 최대 {max}자입니다"
+    },
+    "timeline": {
+      "bad_cursor": "올바른 타임라인 커서가 아닙니다",
+      "bad_libraries": "라이브러리 ID 목록이 아닌 것 같습니다",
+      "specials": "스페셜",
+      "season": "시즌 {n}"
+    },
+    "profile": {
+      "how_many_ids": "항목 ID를 1개에서 5000개 사이로 보내세요",
+      "bad_ids": "항목 ID 목록이 아닌 것 같습니다"
+    },
+    "watchlist": {
+      "only_films_and_shows": "찜 목록에는 영화와 시리즈만 넣을 수 있습니다",
+      "needs_an_id": "라이브러리에 없는 작품에는 TMDB, TVDB 또는 IMDb ID가 필요합니다",
+      "bad_id": "TMDB, TVDB 또는 IMDb ID가 아닌 것 같습니다",
+      "bad_name": "작품 이름은 300자 이내여야 합니다",
+      "bad_year": "영화나 시리즈가 가질 수 없는 연도입니다",
+      "full": "찜 목록에는 작품을 최대 {max}개까지 넣을 수 있습니다. 먼저 하나를 제거하세요."
+    },
+    "capacity": {
+      "software_transcodes": "최근 {days}일 동안 Jellyfin이 보고한 모든 트랜스코딩이 하드웨어 가속 없이 실행되었습니다",
+      "scan_busy": "Jellyfin의 라이브러리 스캔이 상당히 많은 시간 동안 실행되고 있습니다",
+      "runway_under_a_month": "{place}: 최근 {window}개월의 속도라면 남은 공간이 한 달도 버티지 못합니다",
+      "runway_about_a_month": "{place}: 최근 {window}개월의 속도라면 남은 공간이 약 한 달 버팁니다",
+      "runway_about": "{place}: 최근 {window}개월의 속도라면 남은 공간이 약 {count}개월 버팁니다"
+    },
+    "recap": {
+      "bad_scope": "범위는 `user` 또는 `server`입니다",
+      "persona": {
+        "night_owl": {
+          "title": "올빼미형",
+          "line": "시청의 {n}%가 22:00에서 04:00 사이에 이루어졌습니다"
+        },
+        "early_bird": {
+          "title": "아침형",
+          "line": "시청의 {n}%가 오전 10시 이전에 이루어졌습니다"
+        },
+        "music_lover": {
+          "title": "음악 애호가",
+          "line": "재생한 것의 {n}%가 음악이었습니다"
+        },
+        "weekend_warrior": {
+          "title": "주말 전사",
+          "line": "시청의 {n}%가 토요일과 일요일에 이루어졌습니다"
+        },
+        "binge_watcher": {
+          "title": "몰아보기 마니아",
+          "line": "시청한 날 평균 에피소드 {n}개"
+        },
+        "movie_buff": {
+          "title": "영화광",
+          "line": "재생의 {n}%가 영화였습니다"
+        },
+        "creature_of_habit": {
+          "title": "습관의 동물",
+          "line": "매주 거의 언제나 {n} 무렵에 시청을 시작했습니다"
+        }
+      }
+    },
+    "security": {
+      "unknown_place": "알 수 없는 위치",
+      "home_place": "집 ({place})",
+      "played_on": "{device}에서 {title}",
+      "found_in_older_history": "이전 기록에서 발견됨",
+      "same_two_places": "같은 두 위치",
+      "database_from_env": "데이터베이스가 FINSTATS_GEOIP_DB로 지정되어 있습니다. 대신 그 파일을 교체하세요",
+      "already_downloading": "이미 데이터베이스를 다운로드하는 중입니다"
+    },
+    "geo": {
+      "not_a_city_database": "{file}: `{kind}` 데이터베이스입니다. FinStats에는 도시 데이터베이스가 필요합니다",
+      "already_have": "{month} 버전이 이미 있습니다",
+      "downloaded": "DB-IP City Lite {month} 다운로드 완료",
+      "download_failed": "위치 데이터베이스 다운로드",
+      "downloading": "다운로드 중",
+      "answered": "{url}의 응답: {status}",
+      "downloading_part": "다운로드 중 ({total} MB 중 {got} MB)",
+      "unpacking": "압축 푸는 중"
+    },
+    "schedule": {
+      "cannot_be_scheduled": "“{task}” 작업은 예약할 수 없습니다",
+      "too_many_triggers": "작업당 트리거는 최대 {max}개입니다",
+      "same_trigger_twice": "같은 트리거가 두 번 있습니다",
+      "time_of_day": "시각은 00:00에서 23:59 사이입니다",
+      "day_of_week": "요일은 0(일요일)에서 6(토요일) 사이입니다",
+      "interval": "간격은 5분에서 30일 사이입니다",
+      "after_scan": "라이브러리를 읽는 작업만 Jellyfin의 스캔 뒤에 실행할 수 있습니다",
+      "no_time_limit": "이 작업은 중간에 멈출 수 없으므로 시간 제한을 둘 수 없습니다",
+      "time_limit": "시간 제한은 1분에서 168시간 사이입니다",
+      "past_time_limit": "중지됨: 시간 제한 {limit}을 넘겼습니다",
+      "no_message": "메시지 없음",
+      "panicked": "FinStats에 버그가 발생해 이번 실행을 중지했습니다({why}). 다음 트리거 때 다시 실행됩니다",
+      "cancelled": "실행이 취소되었습니다 ({error})",
+      "hours": {
+        "other": "{count}시간"
+      },
+      "minutes": {
+        "other": "{count}분"
+      }
+    },
+    "sync": {
+      "starting": "시작하는 중…",
+      "writing_backup": "백업 기록 중",
+      "backup_panicked": "FinStats에 버그가 발생해 이 백업 기록을 중지했습니다. 다음 트리거 때 다시 기록됩니다",
+      "backup_written": {
+        "other": "재생 기록 {count}개, {size} MB"
+      },
+      "fetching_users": "사용자 가져오는 중",
+      "users_refused": {
+        "other": "FinStats는 사용자 {current}명을 알고 있는데 Jellyfin은 {count}명만 반환했습니다. Jellyfin 변경이나 잘못된 읽기로 보이므로 빠진 사용자를 삭제됨으로 표시하지 않습니다. 아무것도 바뀌지 않았습니다."
+      },
+      "users_read": {
+        "other": "사용자 {count}명"
+      },
+      "fetching_libraries": "라이브러리 가져오는 중",
+      "libraries_refused": {
+        "other": "FinStats는 라이브러리 {current}개를 알고 있는데 Jellyfin은 {count}개만 나열했습니다. 서버가 비워진 것이 아니라 Jellyfin 변경이나 잘못된 읽기로 보이므로 빠진 라이브러리를 삭제됨으로 표시하지 않습니다. 아무것도 바뀌지 않았습니다."
+      },
+      "items_read": "{library}: 항목 {total}개 중 {done}개",
+      "cast_and_crew": "{library}: 출연진 및 제작진",
+      "items_refused": {
+        "other": "라이브러리 “{library}”에 대해 FinStats는 {current}개를 갖고 있는데 Jellyfin은 읽을 수 있는 항목을 {count}개만 반환했습니다. 삭제가 아니라 Jellyfin 변경이나 잘못된 읽기로 보이므로 항목 {missing}개를 삭제됨으로 표시하지 않습니다. 라이브러리는 그대로 두었습니다."
+      },
+      "linking": "재생 기록을 라이브러리에 연결하는 중",
+      "libraries_read": {
+        "other": "라이브러리 {count}개, 항목 {items}개"
+      },
+      "waiting_for_library_read": "첫 라이브러리 읽기를 기다리는 중",
+      "changed_items": "{library}: 변경된 항목 {count}개",
+      "people_looked_at": "인물: {count}명 확인",
+      "nothing_changed": "변경 사항 없음",
+      "titles_changed": {
+        "other": "작품 {count}개 변경됨"
+      },
+      "portraits_changed": {
+        "other": "인물 사진 {count}개 변경됨"
+      },
+      "titles": {
+        "other": "작품 {count}개"
+      },
+      "portraits": {
+        "other": "인물 사진 {count}개"
+      },
+      "titles_and_portraits_changed": "{titles}, {portraits} 변경됨",
+      "fetching_activity": "서버 활동 가져오는 중",
+      "entries_read": "항목 {total}개 중 {done}개",
+      "new_entries": {
+        "other": "새 항목 {count}개"
+      },
+      "reading_server": "서버 정보 읽는 중",
+      "reading_devices": "기기 읽는 중",
+      "server_read": {
+        "other": "기기 {count}대, 플러그인 {plugins}개"
+      },
+      "server_read_without_plugins": {
+        "other": "기기 {count}대. 플러그인은 읽지 못했습니다"
+      },
+      "reading_watched": "{name} 님이 본 항목 읽는 중",
+      "userdata_read": {
+        "other": "재생했거나 즐겨찾기한 항목 {count}개"
+      }
+    },
+    "import": {
+      "reading_libraries": "라이브러리 읽는 중",
+      "reading_items": "영화, 시리즈, 음악 읽는 중",
+      "reading_seasons": "시즌 읽는 중",
+      "reading_episodes": "에피소드 읽는 중",
+      "reading_users": "사용자 읽는 중",
+      "importing_history": "재생 기록 가져오는 중",
+      "reading_file_details": "파일 정보 읽는 중",
+      "reading_backup": "백업 읽는 중",
+      "empty_file": "파일이 비어 있습니다",
+      "reading_legacy": "백업 읽는 중 (이전 단일 파일 형식이라 메모리가 더 필요합니다)",
+      "not_json": "올바른 Jellystat 백업이 아닙니다 (JSON을 해석할 수 없습니다)",
+      "not_jellystat": "Jellystat 백업 파일이 아닙니다",
+      "not_jellystat_at": "Jellystat 백업이 아닌 것 같습니다 ({line}번째 줄: {error})",
+      "damaged_at": "백업의 {line}번째 줄이 손상되었습니다: {error}",
+      "no_records_at_first": "Jellystat 백업이 아닌 것 같습니다. 처음 몇 줄에 백업 레코드가 없습니다",
+      "no_records": "Jellystat 백업이 아닌 것 같습니다. 백업 레코드를 찾지 못했습니다",
+      "linking": "재생 기록을 라이브러리에 연결하는 중",
+      "saving": "저장하는 중"
+    },
+    "streamystats": {
+      "is_jellystat": "Jellystat 백업입니다. “Jellystat에서 가져오기”를 사용하세요.",
+      "not_streamystats": "Streamystats 백업이 아닌 것 같습니다 ({error}).",
+      "no_sessions": "Streamystats 백업이 아닌 것 같습니다. 세션 목록이 들어 있지 않습니다."
+    },
+    "tautulli": {
+      "zip_method": "FinStats가 열 수 없는 방식으로 압축된 zip입니다(방식 {method}). 압축을 풀고 안에 있는 .db 파일을 업로드하세요.",
+      "zip_damaged": "zip 파일이 손상되었습니다. Tautulli 백업을 다시 다운로드하세요.",
+      "zip_without_database": "이 zip에는 Tautulli 데이터베이스가 없습니다. .db 파일이나 Tautulli 백업 다운로드로 받은 zip을 업로드하세요.",
+      "zip_with_databases": "이 zip에는 데이터베이스가 여러 개 있습니다. 압축을 풀고 Tautulli 데이터베이스를 업로드하세요.",
+      "not_tautulli": "Tautulli 백업이 아닌 것 같습니다. Tautulli 백업의 .db 파일(또는 그 zip)을 업로드하세요.",
+      "no_wires": "Plex 사용자를 하나 이상 Jellyfin 사용자에 연결하세요",
+      "no_such_plex_user": "백업에 없는 Plex 사용자입니다: {id}",
+      "no_such_jellyfin_user": "연결선 하나가 이 서버에 없는 사용자에게 이어져 있습니다",
+      "wired_twice": "Plex 사용자 한 명은 Jellyfin 사용자 한 명에게만 연결할 수 있습니다",
+      "reading_backup": "백업 읽는 중"
+    },
+    "backup": {
+      "writing": "{table} 기록 중: 행 {total}개 중 {done}개",
+      "unreadable": "파일이 손상되었거나 FinStats 백업이 아닙니다 (읽을 수 없음)",
+      "not_json": "FinStats 백업이 아닙니다 ({line}번째 줄이 JSON이 아님)",
+      "not_finstats": "FinStats 백업이 아닙니다. Jellystat 백업은 “Jellystat에서 가져오기”를 사용하세요.",
+      "newer_format": "더 새로운 FinStats로 만든 백업입니다(형식 {format}). FinStats를 업데이트한 뒤 복원하세요.",
+      "restoring": {
+        "other": "복원 중: 지금까지 재생 기록 {count}개"
+      },
+      "linking": "재생 기록을 라이브러리에 연결하는 중"
+    },
+    "notify": {
+      "group": {
+        "security": "보안",
+        "housekeeping": "관리 작업",
+        "library": "라이브러리",
+        "playback": "재생"
+      },
+      "kind": {
+        "travel": {
+          "label": "불가능한 이동",
+          "what": "어떤 비행기로도 이동할 수 없는 거리에서 한 계정이 연달아 확인됨"
+        },
+        "new_country": {
+          "label": "새로운 국가",
+          "what": "어떤 계정이 한 국가에서 처음 확인됨"
+        },
+        "failed_sign_ins": {
+          "label": "로그인 실패",
+          "what": "한 계정 또는 한 주소에서 로그인이 여러 번 연속으로 실패함"
+        },
+        "task_failed": {
+          "label": "작업 실패",
+          "what": "동기화, 가져오기 또는 연결된 서비스 읽기가 오류로 끝남"
+        },
+        "backup_failed": {
+          "label": "백업 실패",
+          "what": "백업을 기록하지 못함"
+        },
+        "service_down": {
+          "label": "응답 중단",
+          "what": "Jellyfin, Sonarr, Radarr 또는 Seerr가 응답하지 않음"
+        },
+        "service_back": {
+          "label": "응답 재개",
+          "what": "…그리고 다시 응답하기 시작했을 때"
+        },
+        "new_items": {
+          "label": "라이브러리에 새로 추가됨",
+          "what": "라이브러리에 추가된 작품. 시리즈와 날짜별로 묶음"
+        },
+        "request_available": {
+          "label": "요청한 작품 시청 가능",
+          "what": "누군가 Seerr에서 요청한 작품을 이제 볼 수 있음"
+        },
+        "play_started": {
+          "label": "시청 시작",
+          "what": "재생이 시작됨: 작품, 사람, 기기"
+        },
+        "play_stopped": {
+          "label": "시청 종료",
+          "what": "재생이 끝남. 얼마나 시청했는지 포함"
+        },
+        "recap_ready": {
+          "label": "연간 결산 준비 완료",
+          "what": "12월에 한 번: 한 사람의 연간 결산을 돌아보고 공유할 준비가 됨"
+        },
+        "watchlist_available": {
+          "label": "찜한 작품을 이제 볼 수 있음",
+          "what": "찜 목록에서 기다리던 영화나 시리즈가 라이브러리에 들어옴. 내 알림 대상에만 보냄"
+        },
+        "test": {
+          "label": "테스트 메시지",
+          "what": "테스트 버튼을 눌렀을 때만 보냄"
+        }
+      },
+      "bad_url": "올바른 URL이 아닌 것 같습니다",
+      "needs_host": "주소에 호스트 이름이 있어야 합니다",
+      "lookup_failed": "{host}의 주소를 조회하지 못했습니다",
+      "not_public": "{host}: 이 네트워크 안의 주소입니다. 내 알림 대상은 공개 서비스를 가리켜야 합니다. 대신 관리자에게 서버용으로 추가해 달라고 요청하세요",
+      "enter_address": "보낼 주소를 입력하세요",
+      "http_only": "주소는 http:// 또는 https://로 시작해야 합니다",
+      "no_login": "주소에서 사용자 이름과 비밀번호를 빼세요",
+      "no_fragment": "주소에 #이 들어가면 안 됩니다",
+      "no_query": "주소에 ?가 들어가면 안 됩니다",
+      "fixed_url": "{channel} 서비스는 항상 {url} 주소로 접속하므로 입력할 주소가 없습니다",
+      "not_discord": "Discord 웹후크 주소가 아닙니다. Discord에서: 채널 설정 → 연동 → 웹후크 → 웹후크 URL 복사",
+      "discord_no_token": "Discord 웹후크 주소에 토큰이 빠져 있습니다. URL 전체를 복사하세요",
+      "not_slack": "Slack 웹후크 주소가 아닙니다. Slack에서: 내 앱 → Incoming Webhooks → Add New Webhook to Workspace를 누른 뒤 URL을 복사하세요",
+      "slack_no_token": "Slack 웹후크 주소에 토큰이 빠져 있습니다. URL 전체를 복사하세요",
+      "mail_scheme": "메일 서버 주소는 smtps:// 또는 smtp://로 시작합니다",
+      "not_mail_url": "메일 서버 주소가 아닌 것 같습니다",
+      "mail_no_login": "주소에서 사용자 이름과 비밀번호를 빼세요. 각각 따로 입력하는 칸이 있습니다",
+      "mail_host_port": "메일 서버 주소는 호스트와 포트로만 이루어지며 그 뒤에는 아무것도 없어야 합니다",
+      "enter": "{what} 입력이 필요합니다",
+      "value": "값",
+      "token": "토큰",
+      "ntfy_topic": "ntfy 토픽에는 문자, 숫자, -, _만 쓸 수 있습니다",
+      "telegram_chat": "채팅 ID는 -1001234567890 같은 숫자이거나, 공개 채널이라면 @이름 형식입니다",
+      "pushover_key": "Pushover 사용자 키나 그룹 키는 문자와 숫자 30자이며, pushover.net 첫 화면에 있습니다",
+      "nothing_to_enter": "{channel} 서비스는 여기에 입력할 것이 없습니다",
+      "unknown_kind": "알 수 없는 알림 대상 종류 `{kind}`",
+      "say_kind": "어떤 종류의 알림 대상인지 지정하세요",
+      "enter_address_of": "{channel} 주소를 입력하세요",
+      "not_a_token": "토큰이 아닌 것 같습니다",
+      "too_long": "{what} 길이가 너무 길거나, 보낼 수 없는 문자가 들어 있습니다",
+      "unknown_event": "알 수 없는 이벤트 `{event}`",
+      "unknown_severity": "알 수 없는 심각도 `{severity}`",
+      "max_targets": {
+        "other": "알림 대상은 최대 {count}개입니다"
+      },
+      "max_own": {
+        "other": "내 알림 대상은 최대 {count}개입니다"
+      }
+    },
+    "channels": {
+      "webhook": "웹후크",
+      "email": "이메일",
+      "what": {
+        "webhook": "아무 주소로 JSON을 POST: 직접 만든 스크립트, Home Assistant, n8n",
+        "discord": "서버에서 만든 웹후크를 통해 서버의 채널로",
+        "slack": "Incoming Webhook을 통해 워크스페이스의 채널로",
+        "telegram": "직접 만든 봇과의 대화, 또는 그 봇이 들어 있는 그룹이나 채널로",
+        "email": "이미 사용 중인 SMTP 서버를 통해 아무 메일함으로",
+        "ntfy": "ntfy.sh 또는 자체 ntfy의 원하는 토픽으로",
+        "gotify": "애플리케이션 토큰으로 자체 Gotify 서버에",
+        "pushover": "직접 만든 애플리케이션으로 휴대폰의 Pushover에",
+        "pushbullet": "계정에 로그인된 모든 기기의 Pushbullet에"
+      },
+      "topic": {
+        "ntfy": {
+          "label": "토픽",
+          "help": "게시할 ntfy 토픽입니다. 토픽을 아는 사람은 누구나 알림을 읽을 수 있으니 추측하기 어렵게 만드세요."
+        },
+        "telegram": {
+          "label": "채팅 ID",
+          "help": "봇에게 메시지를 한 번 보낸 뒤 https://api.telegram.org/bot<token>/getUpdates 를 열어 표시되는 chat id를 사용하세요. 채널은 @이름 형식으로 입력해도 됩니다."
+        },
+        "pushover": {
+          "label": "사용자 또는 그룹 키",
+          "help": "pushover.net 첫 화면에 있는 사용자 키, 또는 그룹 키입니다."
+        },
+        "email": {
+          "label": "받는 사람",
+          "help": "메일을 받을 주소입니다."
+        }
+      },
+      "secret": {
+        "webhook": "Authorization 헤더 (선택)",
+        "telegram": "봇 토큰",
+        "email": "비밀번호 (선택)",
+        "ntfy": "액세스 토큰 (선택)",
+        "gotify": "애플리케이션 토큰",
+        "pushover": "애플리케이션 토큰",
+        "pushbullet": "액세스 토큰"
+      },
+      "extra": {
+        "from": {
+          "label": "보내는 주소",
+          "help": "메일을 보내는 사람으로 표시될 주소입니다. 많은 서버가 자신이 아는 주소만 받습니다."
+        },
+        "username": {
+          "label": "사용자 이름 (선택)",
+          "help": "로그인이 필요 없는 릴레이라면 비워 두세요. 보통 보내는 주소와 같습니다."
+        }
+      },
+      "timeout": "{host}의 {channel} 서비스가 제시간에 응답하지 않았습니다",
+      "connect": "{host}에 연결하지 못했습니다. FinStats가 실행되는 곳에서 접근할 수 있나요?",
+      "decode": "{host}의 응답이 {channel} 형식이 아닙니다",
+      "unreachable": "{host}에 연결하지 못했습니다",
+      "redirect": "{host}에서 리디렉션으로 응답합니다. FinStats는 토큰이 다른 곳으로 새지 않도록 리디렉션을 따르지 않습니다. 리디렉션되는 주소를 입력하세요",
+      "telegram_chat": "{channel}에서 해당 채팅을 찾지 못했습니다. 먼저 봇에게 메시지를 보낸 뒤 표시되는 chat id를 사용하세요",
+      "pushover_key": "{channel}에서 사용자 키 또는 애플리케이션 토큰을 받아들이지 않았습니다",
+      "not_understood": "{channel}에서 메시지를 이해하지 못했습니다",
+      "discord_refused": "{channel}에서 웹후크를 거부했습니다. 웹후크가 삭제되었나요?",
+      "telegram_refused": "{channel}에서 봇 토큰을 거부했습니다",
+      "pushbullet_refused": "{channel}에서 액세스 토큰을 거부했습니다",
+      "token_refused": "{channel}에서 토큰을 거부했습니다",
+      "slack_gone": "{channel}에서 더 이상 그 웹후크를 알지 못합니다. 앱이나 채널이 삭제되었나요?",
+      "not_found": "{host}의 응답: 404 Not Found. 토픽과 기본 경로를 포함해 주소가 맞나요?",
+      "too_large": "{channel}에서 메시지가 너무 크다고 합니다",
+      "rate_limited": "{channel}에서 FinStats의 요청 속도를 제한하고 있습니다",
+      "answered": "{channel} 응답: {status}"
+    },
+    "mail": {
+      "bad_url": "메일 서버 주소가 아닌 것 같습니다",
+      "scheme": "메일 서버 주소는 smtps:// 또는 smtp://로 시작합니다",
+      "needs_host": "주소에 호스트 이름이 있어야 합니다",
+      "not_an_address": "{address}: 이메일 주소가 아닙니다",
+      "no_domain": "{address}: 이메일 주소가 아닙니다. @ 뒤에 도메인이 있어야 합니다",
+      "not_a_letter": "이 메시지로 이메일을 만들 수 없었습니다",
+      "no_tls_setup": "{host}에 대한 암호화된 연결을 설정하지 못했습니다",
+      "timeout": "{host}에서 제시간에 응답하지 않았습니다",
+      "tls": "{host}에서 암호화된 연결을 시작하지 않았습니다. FinStats는 메일을 평문으로 보내지 않습니다. smtps://를 쓰거나 STARTTLS를 지원하는 서버를 사용하세요",
+      "refused": "{host}에서 메일을 거부했습니다. 사용자 이름, 비밀번호, 보내는 주소를 확인하세요",
+      "busy": "{host}에서 지금은 메일을 받을 수 없습니다",
+      "connect": "{host}에 연결하지 못했습니다. FinStats가 실행되는 곳에서 접근할 수 있나요?"
+    },
+    "services": {
+      "what": {
+        "sonarr": "시리즈: 언제 무엇이 방영되는지, 무엇을 다운로드 중인지",
+        "radarr": "영화: 언제 무엇이 출시되는지, 무엇을 다운로드 중인지",
+        "seerr": "요청: 누가 무엇을 요청했는지 (Seerr, Jellyseerr, Overseerr)"
+      },
+      "like": "{service}, 예: {example}",
+      "http_only": "주소는 http:// 또는 https://로 시작해야 합니다",
+      "bad_url": "올바른 URL이 아닌 것 같습니다",
+      "no_login": "주소에서 사용자 이름과 비밀번호를 빼세요. 각각 따로 입력하는 칸이 있습니다",
+      "no_query": "주소에 ?나 #이 들어가면 안 됩니다",
+      "certificate": "{url}에서 FinStats가 신뢰하지 않는 인증서(자체 서명 또는 자체 인증 기관 발급)를 제시했습니다. http:// 주소를 사용하거나, 이 연결에 “자체 서명 인증서 허용”을 켜세요",
+      "timeout": "{url}의 {service} 서비스가 제시간에 응답하지 않았습니다",
+      "connect": "{url}에 연결하지 못했습니다. {service} 서비스가 실행 중이며 FinStats가 실행되는 곳에서 접근할 수 있나요?",
+      "decode": "{url}의 응답이 {service} 형식이 아닙니다",
+      "unreachable": "{url}에 연결하지 못했습니다: {error}",
+      "redirect": "{url}에서 {to} 주소로 리디렉션합니다. FinStats는 키가 다른 곳으로 새지 않도록 리디렉션을 따르지 않습니다. 기본 경로를 포함한 최종 주소를 입력하세요",
+      "redirect_elsewhere": "{url}에서 다른 주소로 리디렉션합니다. FinStats는 키가 다른 곳으로 새지 않도록 리디렉션을 따르지 않습니다. 기본 경로를 포함한 최종 주소를 입력하세요",
+      "key_refused": "{service}에서 API 키를 거부했습니다",
+      "not_found": "{url}의 응답: 404 Not Found. /{path} 같은 기본 경로를 포함해 주소가 맞나요?",
+      "answered": "{service} 응답: {status}",
+      "answers_as": "{url}에서 응답은 오지만 {service} 대신 {app}입니다",
+      "answers_as_other": "{url}에서 응답은 오지만 {service} 서비스가 아닙니다",
+      "not_seerr": "{url}의 응답이 Seerr 형식이 아닙니다",
+      "unknown_kind": "알 수 없는 서비스 종류 `{kind}`",
+      "say_kind": "어떤 종류의 서비스인지 지정하세요",
+      "enter_address": "{service} 주소를 입력하세요",
+      "enter_key": "API 키를 입력하세요",
+      "not_a_key": "키나 비밀번호가 아닌 것 같습니다",
+      "max": {
+        "other": "연결은 최대 {count}개입니다"
+      },
+      "starting": "시작하는 중…"
+    },
+    "arr": {
+      "not_calendar": "{url}의 캘린더 응답이 {service} 형식이 아닙니다",
+      "none": "연결된 Sonarr나 Radarr가 없습니다",
+      "reading": "{name} 읽는 중",
+      "reading_history": "{name} 기록 읽는 중",
+      "no_answer": "응답 없음: {names}",
+      "ahead": {
+        "other": "출시 예정 {count}건"
+      },
+      "ahead_partly": {
+        "other": "출시 예정 {count}건. 응답 없음: {names}"
+      },
+      "events": {
+        "other": "이벤트 {count}건"
+      }
+    },
+    "seerr": {
+      "not_requests": "{url}의 요청 응답이 Seerr 형식이 아닙니다",
+      "none": "연결된 Seerr가 없습니다",
+      "reading": "{name} 읽는 중",
+      "looking_up": "작품 조회 중",
+      "no_answer": "응답 없음: {names}",
+      "nothing_new": "새로운 것 없음",
+      "read": {
+        "other": "요청 {count}건 읽음"
+      },
+      "read_gone": {
+        "other": "요청 {count}건 읽음, {gone}건은 Seerr에 더 이상 없음"
+      }
+    },
+    "downloads": {
+      "no_answer": "{name}에서 제시간에 응답하지 않았습니다",
+      "season": "시즌 {season}",
+      "episodes": {
+        "other": "에피소드 {count}개"
+      },
+      "season_episodes": {
+        "other": "시즌 {season} · 에피소드 {count}개"
+      },
+      "seasons_episodes": {
+        "other": "시즌 {seasons}개 · 에피소드 {count}개"
+      }
+    },
+    "outbound": {
+      "jellyfin": "Jellyfin 서버",
+      "jellyfin_why": "FinStats가 보여 주는 모든 것은 여기서 옵니다: 재생 중인 항목, 라이브러리, 사용자",
+      "jellyfin_off": "아직 연결되지 않음",
+      "public_ip": "“내 IP 확인” 서비스",
+      "public_ip_why": "공인 주소를 통해 집에서 시청하는 사람이 원격으로 집계되지 않도록 합니다. 한 번만 묻고, 그 뒤로는 버튼을 누를 때만 묻습니다",
+      "geoip": "DB-IP 무료 도시 데이터베이스",
+      "geoip_env": "사용 안 함: FINSTATS_GEOIP_DB가 가리키는 파일을 데이터베이스로 사용합니다",
+      "geoip_why": "보안 페이지에서 주소의 위치를 찾는 월간 파일의 다운로드로, 해당 작업이 예약되어 있을 때만 실행됩니다. 주소 조회 자체는 이 컴퓨터를 벗어나지 않습니다",
+      "service_why": "설정 → 연결에서 추가한 연결입니다. 읽기 전용이며, 다른 곳을 가리키지 않았다면 내 네트워크 안에 있습니다",
+      "target_why_theirs": "{owner} 님이 설정 → 알림에서 추가한 개인 알림 대상입니다. 그 사람이 체크한 이벤트 중 이미 볼 수 있는 것에 관한 것만 보냅니다",
+      "target_why": "설정 → 알림에서 추가한 알림 대상입니다. 거기서 체크한 이벤트만 보내고 그 외에는 아무것도 보내지 않습니다"
+    }
+  },
+  "shell": {
+    "pages_label": "페이지",
+    "menu_label": "메뉴",
+    "to_top": "맨 위로"
+  },
+  "router": {
+    "page_title": "{page} · FinStats"
+  },
+  "components": {
+    "pct_watched": "{pct} 시청",
+    "a_play": "재생",
+    "together_aria": {
+      "other": "{count}명이 함께 시청"
+    }
+  },
+  "menus": {
+    "open": "열기",
+    "timeline": "타임라인",
+    "new_tab": "새 탭에서 열기",
+    "copy_link": "링크 복사",
+    "open_tmdb": "TMDB에서 열기",
+    "open_tvdb": "TVDB에서 열기",
+    "in_pipeline": "파이프라인에서 보기",
+    "copy_title": "제목 복사",
+    "actions_for": "{name} 작업",
+    "actions": "작업"
+  },
+  "watchlist_toggle": {
+    "add": "찜 목록에 추가",
+    "remove": "찜 목록에서 제거",
+    "add_failed": "찜 목록에 추가하지 못했습니다: {error}",
+    "remove_failed": "찜 목록에서 제거하지 못했습니다: {error}",
+    "add_show": "시리즈를 찜 목록에 추가",
+    "show_on": "찜 목록에 있는 시리즈",
+    "show_on_title": "찜 목록에 있는 시리즈입니다. 클릭하면 제거됩니다.",
+    "on": "찜 목록에 있음",
+    "on_title": "찜 목록에 있습니다. 클릭하면 제거됩니다.",
+    "named": "{words}: {name}"
+  },
+  "pages": {
+    "activity": {
+      "sub": "FinStats가 아는 모든 재생 기록입니다. 최신순이며, 열을 클릭하면 그 기준으로 정렬됩니다",
+      "type": {
+        "movies": "영화",
+        "episodes": "에피소드",
+        "music": "음악"
+      },
+      "play_method": "재생 방식",
+      "all_methods": "모든 방식",
+      "media_type": "미디어 유형",
+      "all_types": "모든 유형",
+      "recorded_by": "기록한 도구",
+      "all_trackers": "모든 도구",
+      "search_placeholder": "작품 검색…",
+      "search_label": "작품 검색",
+      "one_series": "시리즈 하나",
+      "one_title": "작품 하나",
+      "remove_title_filter": "작품 필터 해제",
+      "empty": "이 필터에 맞는 재생 기록이 없습니다. 기간을 늘리거나 검색어를 지워 보세요.",
+      "recently_deleted": "최근 삭제됨 ({count})",
+      "trash": {
+        "summary": {
+          "other": "휴지통에 재생 기록 {count}개가 있으며, 각각 삭제 후 30일이 지나면 영구 삭제됩니다"
+        },
+        "back": "모든 재생 기록으로 돌아가기",
+        "empty_title": "휴지통이 비어 있습니다.",
+        "empty_body": "삭제한 재생 기록은 영구 삭제되기 전 30일 동안 여기에 보관됩니다.",
+        "restore": "복원",
+        "restoring": "복원하는 중…",
+        "restored": "{title} 복원됨.",
+        "restore_failed": "복원하지 못했습니다: {reason}",
+        "person": "사람",
+        "played": "재생",
+        "deleted": "삭제",
+        "purge_at": "영구 삭제"
+      }
+    },
+    "playback": {
+      "sub": "미디어가 사람들에게 전달되는 방식: 재생 방식, 코덱, 클라이언트",
+      "methods_title": "재생 방식",
+      "methods_sub": "직접 재생은 파일을 그대로 스트리밍하고, 트랜스코딩은 서버의 CPU나 GPU를 사용합니다",
+      "measure": "기준",
+      "plays": "재생",
+      "share": "비율",
+      "reasons_title": "트랜스코딩 사유",
+      "reasons_sub": "Jellyfin이 보고한 사유",
+      "nothing_transcoded": "이 기간에는 트랜스코딩된 것이 없습니다.",
+      "hw_title": "트랜스코딩 하드웨어",
+      "hw_sub": "사용된 가속",
+      "software": "소프트웨어",
+      "clients_title": "클라이언트",
+      "clients_sub": "재생에 사용한 앱",
+      "video_codecs": "비디오 코덱",
+      "source_files": "원본 파일",
+      "resolutions": "해상도",
+      "dynamic_range": "다이내믹 레인지",
+      "audio_codecs": "오디오 코덱",
+      "selected_audio": "선택한 오디오 트랙",
+      "audio_channels": "오디오 채널",
+      "containers": "컨테이너",
+      "subtitles": "자막",
+      "selected_subtitle": "선택한 자막 언어",
+      "off": "끔",
+      "mono": "모노",
+      "stereo": "스테레오",
+      "channels": {
+        "other": "{count}채널"
+      },
+      "channels_short": "{count}ch",
+      "concurrency_title": "동시 스트림",
+      "per_day": "일별 최대 동시 스트림",
+      "per_week": "주별 최대 동시 스트림",
+      "peak_day": "일별 최대 동시 스트림 · 최고 {peak}",
+      "peak_week": "주별 최대 동시 스트림 · 최고 {peak}",
+      "peak_at_day": "일별 최대 동시 스트림 · {when} 최고 {peak}",
+      "peak_at_week": "주별 최대 동시 스트림 · {when} 최고 {peak}",
+      "peak_transcodes": {
+        "other": "동시 트랜스코딩 최대 {count}개"
+      },
+      "week_of": "{date} 주",
+      "week_of_head": "주 시작일",
+      "date": "날짜",
+      "peak_streams": "최대 스트림",
+      "peak_aria": "최대 동시 스트림",
+      "unit_streams": { "other": "스트림" },
+      "which_clients": "어떤 클라이언트가 트랜스코딩하는지",
+      "which_clients_sub": "클라이언트별 재생 횟수, 재생 방식별 구분",
+      "how_far": "어디까지 보는지",
+      "how_far_sub": "영화와 에피소드, 재생이 멈춘 지점별",
+      "no_video_plays": "이 기간에는 영화나 에피소드 재생 기록이 없습니다.",
+      "completion": {
+        "under_10": "10% 미만",
+        "from_10": "10–50%",
+        "from_50": "50–90%",
+        "finished": "완료 (90% 이상)"
+      },
+      "network": "네트워크",
+      "network_sub": "재생이 이루어진 곳",
+      "local": "로컬",
+      "behaviour_title": "시청 습관",
+      "based_on": {
+        "other": "실시간 재생 {count}회 기준"
+      },
+      "pauses": "재생당 일시 정지",
+      "skips": "재생당 건너뛰기",
+      "picked_up": "중간부터 시청",
+      "broken_title": "재생되지 않는 파일",
+      "broken_sub": "세 번 이상 시작했지만 한 번도 30초를 넘기지 못함",
+      "tries": "시도",
+      "people": "사람",
+      "apps": "앱",
+      "last_tried": "마지막 시도",
+      "rewound_title": "가장 많이 되감은 작품",
+      "rewound_sub": "재생당 뒤로 건너뛴 횟수. FinStats가 직접 기록한 재생 기준",
+      "rewinds": "되감기",
+      "per_play": "재생당",
+      "hot_spot": "집중 구간",
+      "subtitled_title": "자막을 켠 작품",
+      "subtitled_sub": "처음 10분 안에 자막을 켠 재생",
+      "switched_on": "켠 횟수",
+      "typically_at": "주로 켠 시점",
+      "reason": {
+        "ContainerNotSupported": "지원되지 않는 컨테이너",
+        "VideoCodecNotSupported": "지원되지 않는 비디오 코덱",
+        "AudioCodecNotSupported": "지원되지 않는 오디오 코덱",
+        "SubtitleCodecNotSupported": "지원되지 않는 자막 코덱",
+        "AudioIsExternal": "외부 오디오",
+        "SecondaryAudioNotSupported": "보조 오디오 미지원",
+        "VideoProfileNotSupported": "지원되지 않는 비디오 프로필",
+        "VideoLevelNotSupported": "지원되지 않는 비디오 레벨",
+        "VideoResolutionNotSupported": "지원되지 않는 비디오 해상도",
+        "VideoBitDepthNotSupported": "지원되지 않는 비디오 비트 심도",
+        "VideoFramerateNotSupported": "지원되지 않는 비디오 프레임 레이트",
+        "RefFramesNotSupported": "지원되지 않는 참조 프레임",
+        "AnamorphicVideoNotSupported": "애너모픽 비디오 미지원",
+        "InterlacedVideoNotSupported": "인터레이스 비디오 미지원",
+        "AudioChannelsNotSupported": "지원되지 않는 오디오 채널",
+        "AudioProfileNotSupported": "지원되지 않는 오디오 프로필",
+        "AudioSampleRateNotSupported": "지원되지 않는 오디오 샘플 레이트",
+        "AudioBitDepthNotSupported": "지원되지 않는 오디오 비트 심도",
+        "ContainerBitrateExceedsLimit": "컨테이너 비트레이트 한도 초과",
+        "VideoBitrateNotSupported": "지원되지 않는 비디오 비트레이트",
+        "AudioBitrateNotSupported": "지원되지 않는 오디오 비트레이트",
+        "UnknownVideoStreamInfo": "알 수 없는 비디오 스트림 정보",
+        "UnknownAudioStreamInfo": "알 수 없는 오디오 스트림 정보",
+        "DirectPlayError": "직접 재생 오류",
+        "VideoRangeTypeNotSupported": "지원되지 않는 비디오 레인지 유형",
+        "VideoCodecTagNotSupported": "지원되지 않는 비디오 코덱 태그",
+        "StreamCountExceedsLimit": "스트림 수 한도 초과"
+      }
+    },
+    "together": {
+      "sub": "누가 누구와 얼마나 함께 보는지",
+      "empty_title": "아직 함께 본 사람이 없습니다",
+      "empty_body": "서로 다른 사람이 같은 작품을 같은 시간에 재생하면 여기에 표시됩니다.",
+      "vs_previous": {
+        "other": "직전 {count}일 대비"
+      },
+      "people": "사람",
+      "watched_with": "함께 본 사람",
+      "time_together": "함께 본 시간",
+      "evenings": "저녁",
+      "share_of_watch_time": "시청 시간 중 비율",
+      "spent_in_company": "함께 보낸 시간",
+      "over_time_title": "시간에 따른 함께 보기",
+      "over_time_sub_day": "일별, 함께 본 시간과 혼자 본 시간",
+      "over_time_sub_week": "주별, 함께 본 시간과 혼자 본 시간",
+      "pairs_title": "누가 누구와 보는지",
+      "pairs_sub": "함께 본 시간순의 모든 짝. 세 명이 함께 본 저녁은 각 짝마다 한 번씩 셉니다",
+      "pair": "짝",
+      "last": "최근",
+      "watches_most": "가장 많이 본 작품",
+      "most_title": "가장 많이 함께 본 작품",
+      "recent_title": "최근의 저녁",
+      "people_title": "혼자 또는 함께",
+      "people_sub": "이 기간 동안 각 사람의 시청 시간과 그중 누군가와 함께 본 비율",
+      "person": "사람",
+      "alone": "혼자",
+      "share": "비율"
+    },
+    "security": {
+      "severity": {
+        "high": "높음",
+        "medium": "보통"
+      },
+      "kind": {
+        "impossible_travel": "불가능한 이동",
+        "new_country": "새로운 국가"
+      },
+      "km": "{distance} km",
+      "gap_seconds": "{count}초",
+      "gap_minutes": "{count}분",
+      "travel_overlap": "같은 시각에 {distance} 떨어진 곳",
+      "travel_speed": "{gap} 만에 {distance} 이동 (속도 {speed} km/h)",
+      "home_place": "집 ({place})",
+      "home_tip": "집 · {place}",
+      "home": "집",
+      "note_placeholder": "휴가 중, VPN, 모바일 데이터를 쓰는 휴대폰…",
+      "resolve": "해결",
+      "resolve_more": "해결…",
+      "resolve_title": "경고 해결",
+      "resolving": "해결하는 중…",
+      "resolve_all": "모두 해결",
+      "resolve_help_travel": "{user}: {travel}.",
+      "resolve_help_country": "{user}: {country}에서 처음 확인됨.",
+      "note_label": "메모 (선택)",
+      "mute_pair": "{user}의 {from} ↔ {to} 조합은 다시 알리지 않기",
+      "show_on_map": "지도에서 보기",
+      "reopen": "다시 열기",
+      "reopening": "다시 여는 중…",
+      "travel_text": "{from} → {to}: {travel}.",
+      "first_time": "{country}에서 처음 확인됨.",
+      "first_time_place": "{country}에서 처음 확인됨 ({place}).",
+      "known_before": {
+        "other": "이전에 확인된 국가: {count}개."
+      },
+      "side_before": "이전",
+      "side_then": "이후",
+      "side_seen": "확인",
+      "resolved_by": "{when} {name} 님이 해결함",
+      "someone": "누군가",
+      "muted": "이 조합은 더 이상 알리지 않음",
+      "which_alerts": "표시할 경고",
+      "tab_open": "미해결",
+      "tab_open_count": "미해결 ({count})",
+      "tab_resolved": "해결됨",
+      "tab_all": "전체",
+      "alerts_title": "경고",
+      "alerts_sub": "살펴볼 이유일 뿐 증거는 아닙니다. 위치는 기껏해야 도시 중심 수준이고, VPN은 여행처럼 보입니다",
+      "alerts_empty_open": "확인할 것이 없습니다. 불가능한 이동과 새로운 국가에서의 첫 접속이 여기에 표시됩니다.",
+      "alerts_empty": "경고가 없습니다.",
+      "sign_ins": {
+        "other": "로그인 {count}회"
+      },
+      "failed_sign_ins": {
+        "other": "로그인 실패 {count}회"
+      },
+      "addresses": {
+        "other": "주소 {count}개"
+      },
+      "last_seen_tip": "마지막 확인",
+      "last_attempt": "마지막 시도",
+      "user_in_place": "{user} · {place}",
+      "user_playing_now": "{user} · 지금 재생 중",
+      "close_place": "위치 상세 정보 닫기",
+      "failed_summary": {
+        "other": "로그인 실패 {count}회, 마지막 {when}."
+      },
+      "open_server_log": "서버 로그 열기",
+      "live_playing": "{user} 님이 {title} 재생 중입니다.",
+      "live_playing_on": "{user} 님이 {device}에서 {title} 재생 중입니다.",
+      "place_summary": "{plays} ({time}). 마지막 확인 {when}.",
+      "place_summary_sign_ins": "{plays} ({time}), {sign_ins}. 마지막 확인 {when}.",
+      "place_summary_addresses": "{addresses}에서 {plays} ({time}). 마지막 확인 {when}.",
+      "place_summary_sign_ins_addresses": "{addresses}에서 {plays} ({time}), {sign_ins}. 마지막 확인 {when}.",
+      "col": {
+        "place": "위치",
+        "people": "사람",
+        "plays": "재생",
+        "sign_ins": "로그인",
+        "last_seen": "마지막 확인",
+        "map": "지도"
+      },
+      "show_place_on_map": "지도에서 {place} 보기",
+      "downloading": "다운로드하는 중…",
+      "download_failed": "다운로드하지 못했습니다.",
+      "download_database": "데이터베이스 다운로드 (약 60 MB)",
+      "no_database_title": "아직 위치 데이터베이스가 없습니다",
+      "no_database_text": "위치는 FinStats가 로컬에서 읽는 도시 데이터베이스에서 가져오며, 주소는 어디에도 보내지 않습니다. 여기서 DB-IP의 무료 데이터베이스를 다운로드하거나, MaxMind 형식의 도시 파일(.mmdb)을 데이터 디렉터리의 geoip 폴더에 넣으세요. 설정 → 보안에서 최신 상태로 유지됩니다.",
+      "tile": {
+        "open_alerts": "미해결 경고",
+        "waiting": "확인 대기 중",
+        "all_clear": "이상 없음",
+        "countries": "국가",
+        "places_away": "집 밖의 위치",
+        "failed_outside": "외부에서의 로그인 실패"
+      },
+      "map_title": "어디에서 보는지",
+      "map_sub": "위치별 재생, 로그인, 실시간 스트림. 홈 네트워크는 점 하나로 표시됩니다",
+      "map_sub_no_home": "위치별 재생, 로그인, 실시간 스트림. 집은 아직 지도에 없습니다. FinStats가 이 네트워크의 공인 주소를 아직 알지 못합니다",
+      "map_empty": "이 기간에는 공인 주소에서 시청한 사람이 없습니다.",
+      "places_title": "위치",
+      "nothing_in_range": "이 기간에는 아무것도 없습니다.",
+      "countries_title": "국가",
+      "countries_sub": "재생 횟수순",
+      "database_built": "{kind}, {date} 생성",
+      "addresses_without_place": {
+        "other": "위치를 알 수 없는 주소 {count}개"
+      },
+      "map_outlines": "지도 윤곽: Natural Earth",
+      "page_sub": "어디에서 보는지, 그리고 앞뒤가 맞지 않는 것"
+    },
+    "dashboard": {
+      "sub": "{server}의 재생 현황",
+      "sub_default": "Jellyfin 서버의 재생 현황",
+      "recent": {
+        "title": "최근 추가됨",
+        "sub": "라이브러리에 새로 들어온 작품",
+        "aria": "최근 추가됨, 최신순"
+      },
+      "downloads": {
+        "title": "지금 다운로드 중",
+        "sub": "Sonarr, Radarr 및 토렌트 클라이언트에서",
+        "all": "모든 다운로드"
+      },
+      "coming": {
+        "title": "곧 공개",
+        "sub": "Sonarr와 Radarr의 앞으로 7일",
+        "calendar": "캘린더",
+        "aria": "곧 공개, 빠른 순"
+      },
+      "empty": {
+        "title": "아직 기록된 재생이 없습니다",
+        "manager": "이제 FinStats가 Jellyfin 서버를 지켜보고 있습니다. 새 재생은 일어나는 즉시 여기에 표시됩니다. Jellystat이나 Streamystats에 있는 기존 기록을 가져올 수도 있습니다.",
+        "viewer": "재생 기록은 일어나는 즉시 여기에 표시됩니다.",
+        "import_jellystat": "Jellystat에서 가져오기",
+        "import_streamystats": "Streamystats에서 가져오기"
+      },
+      "top": {
+        "series": "인기 시리즈",
+        "movies": "인기 영화",
+        "users": "상위 사용자",
+        "music": "인기 음악",
+        "no_music": "이 기간에는 재생된 음악이 없습니다."
+      },
+      "recent_activity": "최근 활동",
+      "view_all": "모두 보기",
+      "arrived": {
+        "Movie": "영화",
+        "MusicAlbum": "앨범",
+        "MusicVideo": "뮤직비디오",
+        "Video": "비디오",
+        "Book": "도서",
+        "AudioBook": "오디오북",
+        "episode_number": "{number}화"
+      }
+    },
+    "item": {
+      "page_title": "작품",
+      "community_rating": "커뮤니티 평점",
+      "runtime": "재생 시간",
+      "not_in_library": "라이브러리에 더 이상 없음",
+      "in_library": "{library}에 있음",
+      "in_library_added": "{library}에 있음 · {when} 추가됨",
+      "library_fallback": "라이브러리",
+      "container": "컨테이너",
+      "size": "크기",
+      "bitrate": "비트레이트",
+      "bit_depth": "비트 심도",
+      "bits": "{bits}비트",
+      "frame_rate": "프레임 레이트",
+      "fps": "{fps} fps",
+      "path": "경로",
+      "plays": "재생",
+      "last_when": "마지막 {when}",
+      "never_played": "재생된 적 없음",
+      "watched_by": "시청한 사람",
+      "plays_over_time": "기간별 재생",
+      "seasons": "시즌",
+      "seasons_sub": "이 기간의 에피소드별 재생 횟수",
+      "recent_plays": "최근 재생",
+      "view_all": "모두 보기",
+      "file": "파일",
+      "stop_measured": "정확히 측정 {measured}, 시청 시간으로 추정 {estimated}",
+      "stop_skips": "20초 미만의 건너뛰기는 기록되지 않습니다",
+      "where_people_stop": "시청을 멈춘 지점",
+      "who_keeps_watching": "누가 계속 보는지",
+      "who_keeps_watching_sub": "각 에피소드를 시작한 사람, 순서대로",
+      "viewers_n": {
+        "other": "시청자 {count}명"
+      },
+      "viewers_per_episode": "에피소드별 시청자",
+      "episode": "에피소드",
+      "viewers_head": "시청자",
+      "next_episodes": "다음 에피소드",
+      "coming_releases": "공개 예정",
+      "from_arr": "Sonarr 및 Radarr 기준",
+      "of_episodes": {
+        "other": "에피소드 {count}개 중 {seen}개"
+      },
+      "n_more": "+{count}개 더",
+      "by_episode": "에피소드별",
+      "audio": "오디오",
+      "subtitles": "자막",
+      "in_all_episodes": "에피소드 {total}개 모두에 있음",
+      "in_some": "일부에만 있음",
+      "in_some_of": "에피소드 {total}개 중 일부에 있음",
+      "of_total": "{total}개 중 {seen}개",
+      "languages": "언어",
+      "across_episodes": "디스크에 있는 에피소드 {total}개 기준",
+      "tracks_in_file": "파일의 트랙",
+      "cast": "출연진 및 제작진",
+      "new_tab": "(새 탭에서 열림)",
+      "marked_played": "Jellyfin에서 재생됨으로 표시",
+      "marked_played_sub": "Jellyfin 자체 표시이며, FinStats 이전의 기록도 포함합니다",
+      "last_played": "마지막 재생",
+      "favourite": "즐겨찾기",
+      "unknown_user": "알 수 없는 사용자",
+      "nobody_played": "선택한 기간에 이 작품을 재생한 사람이 없습니다.",
+      "season_n": "시즌 {number}",
+      "season_meta": "에피소드 {episodes}개 · {plays}",
+      "share": "비율",
+      "finished": "완료",
+      "finished_title": {
+        "other": "재생 {count}회 중 {finished}회가 에피소드의 90%에 도달"
+      }
+    },
+    "libraries": {
+      "kind": {
+        "movies": "영화",
+        "tvshows": "TV 프로그램",
+        "music": "음악",
+        "musicvideos": "뮤직비디오",
+        "homevideos": "홈 비디오",
+        "books": "도서",
+        "boxsets": "컬렉션",
+        "mixed": "혼합"
+      },
+      "library": "라이브러리",
+      "series": {
+        "other": "시리즈 {count}편"
+      },
+      "items": {
+        "other": "항목 {count}개"
+      },
+      "empty_title": "아직 라이브러리가 없습니다",
+      "empty_sub": "Jellyfin과 처음 동기화한 뒤에 라이브러리가 표시됩니다. 설정 → 작업에서 동기화를 시작할 수 있습니다.",
+      "removed": "Jellyfin에서 삭제됨",
+      "plays": "재생",
+      "last_played": "마지막 재생",
+      "never": "없음",
+      "sub": "서버에 무엇이 있고 그중 얼마나 시청되는지",
+      "most_watched": "가장 많이 본 작품",
+      "by_watch_time": "시청 시간순",
+      "recently_added": "최근 추가됨",
+      "everything_in_it": "전체 항목",
+      "health": "라이브러리 상태",
+      "health_line": "{things}: {kinds}.",
+      "things_to_look_at": {
+        "other": "확인할 항목 {count}개"
+      },
+      "nothing_added": "아직 추가된 것이 없습니다.",
+      "added": "{when} 추가됨",
+      "title_kind": {
+        "Movie": "영화",
+        "Series": "시리즈",
+        "MusicAlbum": "앨범",
+        "MusicVideo": "뮤직비디오",
+        "Video": "비디오",
+        "Book": "도서",
+        "AudioBook": "오디오북"
+      },
+      "sort": {
+        "name": "이름",
+        "year": "연도",
+        "added": "추가일",
+        "size": "크기"
+      },
+      "everything_in": "{name}의 전체 항목",
+      "find_title": "작품 찾기…",
+      "find_title_aria": "이 라이브러리에서 작품 찾기",
+      "sort_by": "정렬 기준",
+      "kind_label": "종류",
+      "all": "전체",
+      "no_match_title": "일치하는 항목이 없습니다",
+      "no_match_sub": "입력한 단어를 모두 포함한 작품이 이 라이브러리에 없습니다.",
+      "nothing_here_title": "아직 아무것도 없습니다",
+      "nothing_here_sub": "FinStats가 라이브러리를 읽은 뒤에 작품이 여기에 표시됩니다.",
+      "show_more": "더 보기",
+      "show_n_more": "{count}개 더 보기"
+    },
+    "users": {
+      "empty_title": "아직 사용자가 없습니다",
+      "empty_sub": "Jellyfin과 처음 동기화한 뒤에 사용자가 표시됩니다.",
+      "plays": "재생",
+      "last_played": "마지막 재생",
+      "last_title": "마지막 작품",
+      "last_client": "마지막 클라이언트",
+      "last_seen_jellyfin": "Jellyfin 마지막 접속",
+      "admin": "관리자",
+      "disabled": "비활성화됨",
+      "removed_chip": "Jellyfin에서 삭제됨",
+      "never": "없음",
+      "sub": "Jellyfin 서버에 계정이 있는 모든 사람",
+      "tabs_label": "프로필 섹션",
+      "tab_overview": "개요",
+      "tab_timeline": "타임라인",
+      "page_title": "사용자",
+      "coming_up": "곧 공개",
+      "coming_up_sub": "이 사용자가 보는 시리즈의 새 에피소드, 앞으로 30일",
+      "calendar": "캘린더",
+      "open_recap": "결산 열기",
+      "role_user": "사용자",
+      "disabled_lower": "비활성화됨",
+      "removed": "Jellyfin에서 삭제됨",
+      "last_seen": "마지막 접속 {when}",
+      "different_titles": {
+        "other": "서로 다른 작품 {count}개"
+      },
+      "movies": "영화",
+      "plays_hint": "재생",
+      "episodes": "에피소드",
+      "and_music_plays": {
+        "other": "그리고 음악 재생 {count}회"
+      },
+      "top_series": "인기 시리즈",
+      "top_movies": "인기 영화",
+      "by_watch_time": "시청 시간순",
+      "when_watches": "{name} 님이 보는 시간",
+      "play_methods": "재생 방식",
+      "share_of_plays": "재생 비율",
+      "clients": "클라이언트",
+      "by_plays": "재생 횟수순",
+      "devices": "기기",
+      "ip_addresses": "IP 주소",
+      "ip_addresses_sub": "이 사용자가 재생한 위치",
+      "recent_plays": "최근 재생",
+      "view_all": "모두 보기",
+      "in_jellyfin": "Jellyfin 기록",
+      "movies_played": "재생한 영화",
+      "episodes_played": "재생한 에피소드",
+      "favourites": "즐겨찾기",
+      "jellyfin_note": "Jellyfin의 재생됨 표시 기준이며, FinStats 이전의 기록도 포함합니다.",
+      "no_devices": "이 기간에는 기기가 없습니다.",
+      "device": "기기",
+      "version": "버전",
+      "last_used": "마지막 사용",
+      "no_ips": "이 기간에 기록된 IP 주소가 없습니다.",
+      "network": "네트워크",
+      "first_seen": "처음 확인",
+      "last_seen_head": "마지막 확인",
+      "local": "로컬",
+      "remote": "원격"
+    },
+    "person": {
+      "page_title": "인물",
+      "titles_in_library": {
+        "other": "라이브러리에 있는 작품 {count}개"
+      },
+      "watch_time_hint": "출연한 모든 작품 합계",
+      "plays": "재생",
+      "last_when": "마지막 {when}",
+      "never_played": "재생된 적 없음",
+      "titles_watched": "시청한 작품",
+      "of_total": "{total}개 중 {seen}개",
+      "watched": "시청함",
+      "watched_sub": "이 기간, 가장 많이 본 순",
+      "nothing_played": "선택한 기간에 이 인물이 나온 작품은 재생되지 않았습니다.",
+      "also_in_library": "라이브러리에 있는 다른 작품",
+      "not_played": "이 기간에 재생되지 않음",
+      "watched_by": "시청한 사람",
+      "director_as": "감독 · {role} 역",
+      "director_actor": "감독 · 배우",
+      "as_role": "{role} 역",
+      "not_in_library": "라이브러리에 더 이상 없음",
+      "last_played": "마지막 재생"
+    },
+    "showprogress": {
+      "longest_streak": "최장 연속 시청일",
+      "days": {
+        "other": "{count}일"
+      },
+      "no_plays_yet": "아직 재생 기록 없음",
+      "current_streak": "현재 연속 시청",
+      "nothing_today": "오늘과 어제 재생한 것이 없음",
+      "since": "{day}부터",
+      "since_keep": "{day}부터 · 오늘 무언가를 재생하면 이어집니다",
+      "days_with_play": "재생한 날",
+      "all_time": "전체 기간",
+      "source": {
+        "played": "시청함",
+        "jellyfin": "Jellyfin에서 재생됨으로 표시",
+        "manual": "직접 표시함"
+      },
+      "seen": "봄",
+      "seen_how": "봄 ({how})",
+      "episodes_seen": {
+        "other": "에피소드 {count}개 중 {seen}개 봄"
+      },
+      "started": "시작했지만 끝내지 않음",
+      "not_seen": "안 봄",
+      "click_unmark": "{title}. 클릭하면 표시가 해제됩니다.",
+      "click_mark": "{title}. 클릭하면 본 것으로 표시됩니다.",
+      "couldnt_save": "저장하지 못했습니다: {error}",
+      "not_in_library": "라이브러리에 더 이상 없음",
+      "undo_marks": "내 표시 되돌리기",
+      "season_n": "시즌 {number}",
+      "mark_season": "시즌을 본 것으로 표시",
+      "mark_show": "시리즈 전체를 본 것으로 표시",
+      "marks_help": "에피소드를 클릭하면 표시됩니다. 표시는 FinStats에만 남으며 Jellyfin에서는 아무것도 바뀌지 않습니다.",
+      "no_shows": "아직 시리즈가 없습니다.",
+      "no_shows_sub": "시리즈를 재생하면 에피소드가 여기에 표시됩니다.",
+      "no_finished": "아직 끝까지 본 시리즈가 없습니다.",
+      "nothing_in_progress": "보는 중인 시리즈가 없습니다. 시작한 것은 모두 끝냈습니다.",
+      "show_all": "{count}개 모두 보기",
+      "shows": "시리즈",
+      "shows_sub": "서버에 있는 에피소드 중 본 에피소드. 전체 기간.",
+      "which_shows": "표시할 시리즈",
+      "in_progress_n": "보는 중 · {count}",
+      "finished_n": "완료 · {count}",
+      "all": "전체"
+    },
+    "watchlist": {
+      "group": {
+        "started": "보는 중",
+        "on_server": "서버에 있음",
+        "coming_up": "곧 공개",
+        "requested": "요청됨",
+        "not_on_server": "서버에 없음",
+        "left_library": "라이브러리에서 빠짐",
+        "watched": "시청함"
+      },
+      "state": {
+        "all_watched": {
+          "other": "에피소드 {count}개 모두 시청"
+        },
+        "progress": {
+          "other": "에피소드 {count}개 중 {seen}개"
+        },
+        "requested_by_you": "내가 요청함",
+        "requested_by": "요청: {name}",
+        "coming_today": "오늘 공개",
+        "coming_tomorrow": "내일 공개",
+        "coming_on": "{day} 공개"
+      },
+      "empty_title": "찜 목록이 비어 있습니다",
+      "empty_sub": "영화나 시리즈 페이지, 공개 예정, 최근 추가됨 또는 검색에서 추가할 수 있습니다.",
+      "page_title": "{name} · 찜 목록",
+      "sub": "볼 영화와 시리즈, 최신순. 이 목록은 나만 볼 수 있습니다.",
+      "remove_aria": "찜 목록에서 {title} 제거",
+      "remove": "찜 목록에서 제거",
+      "kind_show": "시리즈",
+      "kind_film": "영화"
+    },
+    "timeline": {
+      "page_title": "타임라인",
+      "empty_title": "아직 아무것도 없습니다",
+      "empty_picked": "선택한 라이브러리에 재생 기록이 없습니다.",
+      "empty_sub": "무언가를 시청하면 바로 여기에 표시됩니다.",
+      "title_of": "{name} · 타임라인",
+      "sub": "시청한 모든 것, 최신순",
+      "show_all": "모두 보기",
+      "show_older": "이전 기록 보기",
+      "history_starts": "기록은 여기서 시작됩니다.",
+      "episode_n": "{number}화",
+      "episodes_range": "{from}–{to}화",
+      "movie": "영화",
+      "movie_sittings": {
+        "other": "영화 · {count}번에 나눠 시청"
+      }
+    },
+    "recap": {
+      "this_server": "이 서버",
+      "this_user": "이 사용자",
+      "unknown_title": "알 수 없는 작품",
+      "unknown_show": "알 수 없는 시리즈",
+      "bars_aria": "{label}. 왼쪽, 오른쪽 화살표 키로 값을 읽을 수 있습니다.",
+      "period": "기간",
+      "last_12_months": "최근 12개월",
+      "this_period": "이 기간",
+      "twelve_months": "12개월",
+      "nothing_played": "재생 없음",
+      "nothing": "없음",
+      "wave_caption": "막대 하나가 한 주입니다. 가장 많이 본 주: {week}, {time}.",
+      "eyebrow_year": "한 해 돌아보기",
+      "hero_title_year": {
+        "you": "다시 보는 나의 {year}년",
+        "user": "다시 보는 {name} 님의 {year}년",
+        "server": "다시 보는 이 서버의 {year}년"
+      },
+      "hero_title_last12": {
+        "you": "다시 보는 나의 최근 {months}",
+        "user": "다시 보는 {name} 님의 최근 {months}",
+        "server": "다시 보는 이 서버의 최근 {months}"
+      },
+      "hours": {
+        "other": "{count}시간"
+      },
+      "hero_line": "{titles}, {plays}, 총 {hours}.",
+      "rank": {
+        "other": "시청자 {count}명 중 {position}위"
+      },
+      "rank_share": {
+        "other": "시청자 {count}명 중 {position}위 · 전체 시청의 {share}"
+      },
+      "numbers_eyebrow": "숫자로 보기",
+      "numbers_title": {
+        "you": "{numbers}로 보는 나의 한 해",
+        "user": "{numbers}로 보는 {name} 님의 한 해",
+        "server": "{numbers}로 보는 이 서버의 한 해"
+      },
+      "numbers_word": "숫자",
+      "numbers_lead": {
+        "you": "{titles}을 {times} 재생했습니다",
+        "user": "{name} 님은 {titles}을 {times} 재생했습니다",
+        "server": "{name}에서는 {titles}을 {times} 재생했습니다"
+      },
+      "times": {
+        "other": "{count}번"
+      },
+      "different_titles": {
+        "other": "서로 다른 작품 {count}편"
+      },
+      "numbers_days": {
+        "other": ". 쉬지 않고 {count}일 동안 본 셈입니다."
+      },
+      "plays_label": "재생",
+      "tile_titles": "서로 다른 작품",
+      "tile_days": "시청한 날",
+      "tile_streak": "최장 연속, 일",
+      "tile_rewatches": "다시 보기",
+      "rewatch_you": {
+        "other": "이미 본 작품을 다시 본 횟수 {count}회"
+      },
+      "rewatch_other": {
+        "other": "이미 본 작품을 다시 본 횟수 {count}회"
+      },
+      "episodes_label": "에피소드",
+      "movies_label": "영화",
+      "music_label": "음악",
+      "made_of": "무엇으로 채워졌는지",
+      "genres": "장르",
+      "genres_word": { "other": "장르" },
+      "genres_title": {
+        "you": "당신은 {genre} 팬",
+        "user": "{name} 님은 {genre} 팬",
+        "server": "{name}의 취향은 {genre}"
+      },
+      "genres_title_an": {
+        "you": "당신은 {genre} 팬",
+        "user": "{name} 님은 {genre} 팬",
+        "server": "{name}의 취향은 {genre}"
+      },
+      "genres_lead": "1위는 {genre}: {plays}, {time}",
+      "genres_close": ", 그 뒤를 {genre} 장르가 바짝 따라왔습니다.",
+      "stat_was": "{genre} 비율",
+      "genres_note": "작품은 자신의 각 장르마다 한 번씩 세고, 시리즈는 에피소드 단위로 셉니다.",
+      "people": "가장 많이 본 인물",
+      "people_mark": "출연진",
+      "tab_actors": "배우",
+      "tab_directors": "감독",
+      "who": "인물",
+      "actor_title": "어디에나 {person}",
+      "director_title": "메가폰을 잡은 {person}",
+      "actor_lead": "{titles}에서 화면에 나온 시간 {time}",
+      "director_lead": "{titles}에서 연출한 시간 {time}",
+      "people_most": ", 대부분은 {title}.",
+      "persona_eyebrow": "시청 성향",
+      "persona_title": {
+        "you": "당신은 {persona}",
+        "user": "{name} 님은 {persona}",
+        "server": "{name}의 성향은 {persona}"
+      },
+      "persona": {
+        "name": {
+          "night_owl": "올빼미형",
+          "early_bird": "아침형",
+          "music_lover": "음악 애호가",
+          "weekend_warrior": "주말 전사",
+          "binge_watcher": "몰아보기 마니아",
+          "movie_buff": "영화광",
+          "creature_of_habit": "습관의 동물"
+        },
+        "article": {
+          "night_owl": "{persona}",
+          "early_bird": "{persona}",
+          "music_lover": "{persona}",
+          "weekend_warrior": "{persona}",
+          "binge_watcher": "{persona}",
+          "movie_buff": "{persona}",
+          "creature_of_habit": "{persona}",
+          "other": "{persona}",
+          "other_an": "{persona}"
+        }
+      },
+      "rhythm": "활동 패턴",
+      "rhythm_mark": "언제",
+      "tab_hours": "시간대",
+      "tab_days": "요일",
+      "tab_months": "월",
+      "rhythm_by": "시청 시간 보기 기준",
+      "hours_title": {
+        "you": "나의 황금 시간대: {hour}",
+        "user": "{name} 님의 황금 시간대: {hour}",
+        "server": "이 서버의 황금 시간대: {hour}"
+      },
+      "hours_lead": "{from}–{to}에 시작한 시청 {time}",
+      "hours_share": ". 하루 중 단 한 시간에 전체의 {pct}가 몰렸습니다.",
+      "hours_aria": "시간대별 시청 시간",
+      "head_hour": "시간",
+      "days_title_crown": "왕좌는 {weekday}",
+      "days_lead": "{weekday}에 본 시간 {time}",
+      "days_over": ", 평균적인 날보다 {pct} 많습니다.",
+      "weekday_aria": "요일별 시청 시간",
+      "head_weekday": "요일",
+      "month_mostly": "주로 {title}",
+      "month_title": "가장 큰 달은 {month}",
+      "month_lead": "한 달 동안 {time}",
+      "month_most": ", 대부분은 {title}.",
+      "month_aria": "월별 시청 시간",
+      "head_month": "월",
+      "month_caption": "월별 가장 많이 본 작품",
+      "heat_aria": {
+        "other": "날마다의 시청 시간: 재생한 날 {count}일. 화살표 키로 하루씩 읽을 수 있습니다."
+      },
+      "less": "적음",
+      "more": "많음",
+      "heat_live": "{day}: {time}, {plays}",
+      "heat_live_none": "{day}: 재생 없음",
+      "days_eyebrow": {
+        "you": "날짜로 보는 나의 한 해",
+        "user": "날짜로 보는 {name} 님의 한 해",
+        "server": "날짜로 보는 이 서버의 한 해"
+      },
+      "days_mark": "날짜",
+      "days_on": {
+        "other": "무언가를 본 날 {count}일"
+      },
+      "streak_lead": {
+        "you": "나의 최장 연속 시청은 {range}, {days}",
+        "user": "{name} 님의 최장 연속 시청은 {range}, {days}",
+        "server": "이 서버의 최장 연속 시청은 {range}, {days}"
+      },
+      "streak_days": {
+        "other": "{count}일"
+      },
+      "biggest_tail": ". 가장 많이 본 날은 {day}, {time}.",
+      "biggest_lead": "가장 많이 본 날은 {day}",
+      "biggest_lead_tail": ", 한 번에 {time}.",
+      "records": "기록",
+      "records_title_you": "{word} 날들",
+      "remember": "기억에 남을",
+      "records_title_other": "{word} 날들",
+      "stood_out": "돋보인",
+      "biggest_day": "가장 많이 본 날",
+      "biggest_binge": "최대 몰아보기",
+      "binge_context": "{day}, {show}",
+      "one_show": "한 시리즈",
+      "longest_streak": "최장 연속 시청",
+      "in_a_row": {
+        "other": "{count}일 연속"
+      },
+      "longest_play": "가장 긴 단일 재생",
+      "most_rewatched": "가장 많이 다시 본 작품",
+      "first_play_year": "올해 첫 재생",
+      "first_play_period": "이 기간의 첫 재생",
+      "first_play_at": "{day} {time}",
+      "oldest_title": "가장 오래된 작품",
+      "from_year": "{year}년 작품",
+      "discovery": "발견",
+      "discovery_mark": "새로움",
+      "discovery_title": {
+        "you": "처음 본 {shows}",
+        "user": "{name} 님이 처음 본 {shows}",
+        "server": "{name}에서 처음 본 {shows}"
+      },
+      "seen_end": "{end}까지 본 작품",
+      "end": "끝",
+      "shows_started": "시작한 시리즈",
+      "movies_finished": "끝까지 본 영화",
+      "episodes_finished": "끝까지 본 에피소드",
+      "one_and_done": "한 편으로 끝",
+      "one_and_done_note": "딱 한 에피소드만 보고 두 번째는 보지 않은 시리즈입니다.",
+      "together_mark": "함께",
+      "together_title": "함께한 {evenings}",
+      "evenings": {
+        "other": "저녁 {count}번"
+      },
+      "together_lead": "다른 사람과 함께 본 시간 {hours}",
+      "together_share": {
+        "you": ", 내 시청의 {pct}입니다.",
+        "user": ", {name} 님 시청의 {pct}입니다.",
+        "server": ", 이 서버 전체 시청의 {pct}입니다."
+      },
+      "watched_with": {
+        "you": "함께 본 사람",
+        "user": "{name} 님과 함께 본 사람",
+        "server": "{name}에서 함께 본 사람들"
+      },
+      "together_top": "사람들을 가장 많이 모은 작품",
+      "people_in_company": {
+        "other": "올해 {count}명이 누군가와 함께 시청했습니다."
+      },
+      "finished": "완주",
+      "finished_mark": "완료",
+      "finished_title": "끝까지 본 {shows}",
+      "left_title": "{later} 보려고 남겨 둔 작품",
+      "later": "나중에",
+      "left_for_later": "나중에 볼 작품",
+      "dropped_note": "올해 시작했지만 절반도 보지 않았고, 두 달 동안 전혀 보지 않은 작품입니다.",
+      "seen_of": {
+        "other": "에피소드 {count}개 중 {seen}개"
+      },
+      "asked": "요청",
+      "asked_mark": "바람",
+      "asked_title": {
+        "you": "내가 한 {requests}",
+        "user": "{name} 님이 한 {requests}",
+        "server": "들어온 {requests}"
+      },
+      "requests": {
+        "other": "요청 {count}건"
+      },
+      "arrived": "도착",
+      "watched_after": "도착 후 시청",
+      "versus_eyebrow": "{year}년과 비교",
+      "versus_mark": "비교",
+      "versus_more": "{pct} 증가",
+      "versus_less": "{pct} 감소",
+      "versus_title": "{year}년 대비 {change}",
+      "hours_in": "{year}년 시청 시간",
+      "plays_in": "{year}년 재생 횟수",
+      "card": {
+        "year": "올해",
+        "numbers": "숫자로 보기",
+        "shows": "인기 시리즈",
+        "films": "인기 영화",
+        "music": "인기 음악",
+        "genres": "장르",
+        "persona": "시청 성향",
+        "rhythm": "시간대와 요일",
+        "days": "매일의 기록",
+        "records": "기록",
+        "together": "함께 본 시간",
+        "finished": "완주한 시리즈",
+        "asked": "요청",
+        "versus": "작년과 비교"
+      },
+      "card_alt": "{card} 카드",
+      "cards_help": "각 장을 휴대폰 스토리 비율의 이미지로 만듭니다. 카드에는 다른 사람의 이름이 나오지 않습니다.",
+      "download": "다운로드",
+      "download_all": "모든 카드 다운로드",
+      "cards_title": "카드로 보는 한 해",
+      "clients_eyebrow": {
+        "you": "어떻게 봤는지",
+        "user": "{name} 님은 어떻게 봤는지",
+        "server": "{name}에서는 어떻게 봤는지"
+      },
+      "clients_mark": "화면",
+      "clients_title": "주로 {app}에서",
+      "of_plays": "재생의 {pct}",
+      "credit": {
+        "starring": "주연",
+        "feature": "본편",
+        "with": "함께한 이들",
+        "directed": "감독",
+        "soundtrack": "사운드트랙",
+        "genre": "장르",
+        "screened": "상영",
+        "running": "상영 시간"
+      },
+      "credits": "크레딧",
+      "roll_credits": "크레딧 올리기",
+      "that_was": "이렇게 {year}년이 지나갔습니다",
+      "that_was_last12": "이렇게 최근 {months}이 지나갔습니다",
+      "outro_line": {
+        "you": "지금부터 보는 모든 것은 벌써 다음 결산에 쌓이고 있습니다.",
+        "user": "지금부터 {name} 님이 보는 모든 것은 벌써 다음 결산에 쌓이고 있습니다.",
+        "server": "지금부터 {name}에서 보는 모든 것은 벌써 다음 결산에 쌓이고 있습니다."
+      },
+      "see_activity": "모든 활동 보기",
+      "profile": {
+        "you": "내 프로필",
+        "user": "{name} 님의 프로필",
+        "server": "이 서버의 프로필"
+      },
+      "top_shows": "인기 시리즈",
+      "shows_mark": "시리즈",
+      "shows_title": {
+        "you": "나의 한 해를 차지한 {title}",
+        "user": "{name} 님의 한 해를 차지한 {title}",
+        "server": "이 서버의 한 해를 차지한 {title}"
+      },
+      "shows_lead": "함께한 시간 {hours}",
+      "shows_lead_episodes": "{episodes}, 함께한 시간 {hours}",
+      "shows_more": ", 다른 어떤 시리즈보다 많습니다.",
+      "top_movies": "인기 영화",
+      "movies_mark": "영화",
+      "movies_title": {
+        "you": "올해의 영화: {title}",
+        "user": "{name} 님의 올해의 영화: {title}",
+        "server": "이 서버의 올해의 영화: {title}"
+      },
+      "movies_lead": "총 {time}",
+      "movies_back": {
+        "you": {
+          "other": ". {count}번 다시 찾아봤습니다."
+        },
+        "user": {
+          "other": ". {name} 님은 {count}번 다시 찾아봤습니다."
+        },
+        "server": {
+          "other": ". {name}에서 {count}번 다시 찾아봤습니다."
+        }
+      },
+      "top_tracks": "인기 트랙",
+      "tracks_mark": "반복",
+      "tracks_title": "{repeat} 재생",
+      "repeat": "무한 반복",
+      "my_recap": "내 결산",
+      "whose_recap": "누구의 결산",
+      "whose_year": "누구의 한 해",
+      "a_person": "한 사람",
+      "title_period": "{period} 결산",
+      "empty_last12": "최근 12개월 동안 재생된 것이 없습니다.",
+      "empty_period": "{period}에는 재생된 것이 없습니다.",
+      "empty_sub": {
+        "you": "이 기간에는 아무것도 재생하지 않았습니다. 위에서 다른 기간을 고르세요.",
+        "user": "{name} 님은 이 기간에 아무것도 재생하지 않았습니다. 위에서 다른 기간을 고르세요.",
+        "server": "{name}에서는 이 기간에 아무것도 재생되지 않았습니다. 위에서 다른 기간을 고르세요."
+      },
+      "share": "카드로 한 해 공유하기",
+      "banner": "{year}년 결산이 준비되었습니다",
+      "full_stop": "."
+    },
+    "changelog": {
+      "sub": "FinStats에서 바뀐 점, 최신순",
+      "empty_title": "아직 패치 노트가 없습니다.",
+      "empty_sub": "이 빌드는 변경 기록 없이 만들어졌습니다.",
+      "running": "현재 실행 중",
+      "releases": {
+        "other": "릴리스 {count}개"
+      },
+      "versions": "버전"
+    },
+    "health": {
+      "kind": {
+        "gap": {
+          "label": "빠진 에피소드",
+          "what": "한 시즌의 두 파일 사이에 빠진 에피소드"
+        },
+        "season_drift": {
+          "label": "다른 시즌",
+          "what": "해상도, 레인지 또는 코덱이 다른 시즌"
+        },
+        "episode_drift": {
+          "label": "튀는 에피소드",
+          "what": "같은 시즌의 다른 파일과 다른 파일"
+        },
+        "copies": {
+          "label": "사본",
+          "what": "같은 해상도로 두 번 있는 것"
+        },
+        "versions": {
+          "label": "버전",
+          "what": "한 작품을 두 가지 이상의 해상도로 보관"
+        },
+        "thin": {
+          "label": "빈약한 파일",
+          "what": "해당 해상도에 보통 필요한 것보다 비트가 훨씬 적은 파일"
+        },
+        "dub": {
+          "label": "중간에 끊긴 더빙",
+          "what": "일부 시즌에만 있고 다른 시즌에는 없는 언어"
+        },
+        "unidentified": {
+          "label": "식별되지 않음",
+          "what": "TMDB, TVDB, IMDb ID 없이 매칭됨"
+        }
+      },
+      "words": {
+        "season": "시즌 {list}",
+        "seasons": "시즌 {list}",
+        "gap_one": "시즌 {season}: {from}–{to} 사이에 에피소드 {episodes} 없음",
+        "gap_many": "시즌 {season}: {from}–{to} 사이에 에피소드 {episodes} 없음",
+        "season_is": "시즌 {list}: {value}",
+        "seasons_are": "시즌 {list}: {value}",
+        "the_rest": "{odd}, 나머지는 {usual}",
+        "episode_drift": "{code}: {value}, 시즌 {season}의 나머지는 {usual}",
+        "copies_files": {
+          "other": "{resolutions} 사본 {count}개, {size} 중복 보관"
+        },
+        "copies_episodes": {
+          "other": "두 번 이상 있는 에피소드 {count}개, {size} 중복 보관"
+        },
+        "versions_files": "보관된 해상도: {resolutions}",
+        "versions_episodes": {
+          "other": "{resolutions} 버전으로 보관된 에피소드 {count}개"
+        },
+        "thin_file": "{look}, {rate}. 이런 파일은 보통 {usual} 이상입니다",
+        "thin_season": {
+          "other": "시즌 {season}: 에피소드 {count}개 중 {files}개가 {rate}, {look}. 이런 파일은 보통 {usual} 이상입니다"
+        },
+        "dub": "{language}: {full}에는 있고 {none}에는 없음",
+        "dub_partial": "시즌 {season}: {of}개 중 {episodes}개에만 있음",
+        "unidentified_show": "Jellyfin이 이 시리즈를 어떤 카탈로그와도 연결하지 않아서, TMDB, TVDB, IMDb ID로 작품을 찾는 도구는 이 시리즈를 알아볼 수 없습니다",
+        "unidentified_film": "Jellyfin이 이 영화를 어떤 카탈로그와도 연결하지 않아서, TMDB, TVDB, IMDb ID로 작품을 찾는 도구는 이 영화를 알아볼 수 없습니다"
+      },
+      "facts": {
+        "resolution": "해상도",
+        "size": "크기",
+        "library": "라이브러리",
+        "path": "경로"
+      },
+      "more_episodes": {
+        "other": "외 에피소드 {count}개"
+      },
+      "dismiss": {
+        "note_placeholder": "다음에 볼 사람을 위해, 왜 괜찮은지",
+        "dismiss": "무시",
+        "note": "메모 (선택)",
+        "comes_back_capacity": "근거가 된 내용이 바뀌면 저절로 다시 나타납니다.",
+        "comes_back": "관련 파일이 바뀌면 저절로 다시 나타납니다.",
+        "title": "발견 사항 무시",
+        "dismissing": "무시하는 중…"
+      },
+      "bringing_back": "되살리는 중…",
+      "couldnt_bring_back": "되살리지 못했습니다: {error}",
+      "show_every_kind": "모든 종류 보기",
+      "show_only": "{kind}만 보기",
+      "kept_twice_size": "{size} 중복 보관",
+      "all_libraries": "모든 라이브러리",
+      "unlisted_library": "Jellyfin 목록에 더 이상 없는 라이브러리",
+      "this_library_empty": "이 라이브러리 (확인할 것 없음)",
+      "back_to_open": "확인할 항목으로 돌아가기",
+      "set_aside_count": "무시함 ({count})",
+      "col": {
+        "what": "내용",
+        "kept_twice": "중복 보관",
+        "found": "발견"
+      },
+      "removed_library": "삭제된 라이브러리",
+      "not_in_jellyfin": "Jellyfin에 더 이상 없음",
+      "set_aside_when": "{when} 무시함",
+      "set_aside_by": "{when} {name} 님이 무시함",
+      "bring_back": "되살리기",
+      "dismiss_button": "무시…",
+      "empty": {
+        "not_yet_title": "아직 분석되지 않음",
+        "not_yet": "FinStats는 다음 라이브러리 읽기 후, 그리고 메타데이터 변경을 확인할 때마다 라이브러리를 살펴봅니다. 이 페이지를 연다고 분석이 시작되지는 않습니다.",
+        "aside_title": "무시한 항목 없음",
+        "aside_filtered": "여기서 무시한 이 종류의 항목이 없습니다.",
+        "aside": "무시한 발견 사항은 누군가 되살리거나 파일이 바뀔 때까지 여기에 있습니다.",
+        "filtered_title": "아무것도 없음",
+        "clean_title": "확인할 것 없음",
+        "filtered": "라이브러리의 이 부분에서는 이 종류가 발견되지 않았습니다.",
+        "clean": "빠진 에피소드도, 사본도, 너무 빈약한 파일도 없고, 모든 시즌이 고릅니다."
+      },
+      "count_aside": {
+        "other": "무시한 발견 사항 {count}개"
+      },
+      "count_open": {
+        "other": "확인할 발견 사항 {count}개"
+      },
+      "thin_note": "Jellyfin은 항목의 첫 번째 버전만 FinStats에 넘겨주므로, 버전이 여러 개인 항목은 첫 번째 버전으로 판단합니다."
+    },
+    "pipeline": {
+      "tabs": {
+        "requests": { "label": "요청", "sub": "누가 무엇을 요청했는지, 얼마나 걸렸는지, 실제로 시청했는지" },
+        "upcoming": { "label": "공개 예정", "sub": "Sonarr와 Radarr가 기다리는 것, 그리고 누가 기다리는지" },
+        "downloads": { "label": "다운로드", "sub": "지금 들어오고 있는 것" }
+      },
+      "days": {
+        "other": "{count}일"
+      },
+      "a_year": "1년",
+      "sections_aria": "파이프라인 섹션",
+      "state": {
+        "pending": "승인 대기 중",
+        "approved": "승인됨",
+        "processing": "진행 중",
+        "partial": "일부 도착",
+        "available": "도착",
+        "declined": "거절됨",
+        "failed": "실패",
+        "removed": "Seerr에서 사라짐"
+      },
+      "status": {
+        "all": "전체",
+        "open": "진행 중",
+        "arrived": "도착",
+        "declined": "거절됨"
+      },
+      "seasons": {
+        "every": "모든 시즌",
+        "one": "시즌 {season}",
+        "run": "시즌 {first}–{last}"
+      },
+      "unknown_title": "알 수 없는 작품",
+      "col": {
+        "title": "작품",
+        "asked_by": "요청자",
+        "asked": "요청일",
+        "state": "상태",
+        "took": "소요",
+        "watched": "시청"
+      },
+      "unlinked_user": "Seerr가 어떤 Jellyfin 사용자인지 알려 주지 않습니다",
+      "watched": {
+        "by_them": "본인이",
+        "yes": "예",
+        "by_someone_else": "다른 사람이",
+        "not_yet": "아직"
+      },
+      "requests_empty_filtered": "이 필터에 맞는 요청이 없습니다",
+      "requests_empty": "아직 요청이 없습니다",
+      "requests_empty_sub": "누군가 Seerr에서 무언가를 요청하면 몇 분 안에 여기에 표시됩니다.",
+      "tile": {
+        "titles": "요청된 작품",
+        "requests_in_all": {
+          "other": "요청 총 {count}건"
+        },
+        "waiting": "아직 대기 중",
+        "not_here_yet": "아직 도착 안 함",
+        "nothing_outstanding": "대기 중인 것 없음",
+        "typical_wait": "보통 대기 시간",
+        "typical_wait_hint": "요청부터 이용 가능까지의 중앙값",
+        "watched_after": "도착 후 시청",
+        "watched_after_hint": "도착한 {arrived}개 중 {watched}개"
+      },
+      "trend": {
+        "title": "요청이 얼마나 걸리는지",
+        "sub": "요청부터 이용 가능까지 걸린 시간의 중앙값, 요청한 달 기준",
+        "hours": {
+          "other": "{count}시간"
+        },
+        "aria": "월별 도착까지 걸린 시간의 중앙값",
+        "month": "월",
+        "hours_to_arrive": "도착까지 걸린 시간"
+      },
+      "never": {
+        "title": "도착했지만 재생되지 않음",
+        "sub": "도착한 지 2주가 넘었는데 아무도 보지 않은 작품",
+        "here_since": "도착일"
+      },
+      "people": {
+        "title": "누가 무엇을 요청하는지",
+        "sub": "요청한 작품과 그중 나중에 시청한 수",
+        "person": "사람",
+        "asked_for": "요청",
+        "arrived": "도착"
+      },
+      "search_placeholder": "작품 검색…",
+      "search_aria": "요청 검색",
+      "which_requests": "표시할 요청",
+      "export_ics": ".ics 내보내기",
+      "export_help": ".ics 내보내기는 이 목록을 캘린더 앱으로 가져올 수 있는 스냅샷으로 저장하며, 저절로 업데이트되지 않습니다. 항상 최신 상태인 캘린더를 원하면 {link}에서 캘린더 키로 구독하세요.",
+      "film_releases": {
+        "other": "영화 출시 {count}건"
+      },
+      "upcoming_empty_mine": "여기서 보는 시리즈에 곧 공개될 것이 없습니다",
+      "upcoming_empty": "캘린더가 비어 있습니다",
+      "upcoming_empty_mine_sub": "최근 4개월 안에 에피소드를 재생한 시리즈를 보고 있는 것으로 셉니다.",
+      "upcoming_empty_sub": "이 기간에 Sonarr와 Radarr가 기다리는 것이 없습니다. 모니터링 중인 작품만 셉니다.",
+      "which_titles": "표시할 작품",
+      "everything": "전체",
+      "only_theirs": "이 사용자가 보는 것만",
+      "only_mine": "내가 보는 것만",
+      "how_far_ahead": "얼마나 앞까지",
+      "history": {
+        "arrived": "도착",
+        "in_the_last_year": "최근 1년",
+        "in_the_last_days": {
+          "other": "최근 {count}일"
+        },
+        "downloaded": "다운로드됨",
+        "on_average": "평균 {size}",
+        "failed": "실패",
+        "of_grabbed": "다운로드 시작 {grabbed}개 중",
+        "per_day_title": "일별 가져오기",
+        "per_day_sub": "다운로드를 마친 기가바이트",
+        "per_day_aria": "일별 가져온 기가바이트",
+        "day": "날짜",
+        "indexers": "인덱서",
+        "indexers_sub": "어디서 왔는지",
+        "quality": "품질",
+        "quality_sub": "Sonarr와 Radarr의 분류 기준",
+        "clients": "클라이언트",
+        "clients_sub": "무엇으로 받았는지",
+        "gb": {
+          "other": "{count} GB"
+        },
+        "failures_title": "실패한 다운로드",
+        "failures_sub": "다운로드를 시작했다가 포기한 것",
+        "when": "시각",
+        "indexer": "인덱서",
+        "title": "들어온 것",
+        "how_far_back": "얼마나 이전까지"
+      },
+      "downloads_empty": "다운로드 중인 것이 없습니다",
+      "downloads_empty_sub": "Sonarr, Radarr, 토렌트 클라이언트에 진행 중인 것이 없습니다.",
+      "downloads_empty_connect": "토렌트 클라이언트나 Sonarr와 Radarr를 연결하면 들어오는 것을 볼 수 있습니다.",
+      "sub": "요청된 것, 공개 예정인 것, 다운로드 중인 것",
+      "nothing_connected": "아직 연결된 것이 없습니다",
+      "nothing_connected_sub": "Sonarr, Radarr, Seerr 또는 토렌트 클라이언트를 연결하면 이 페이지에 사람들이 요청한 것, 언제 무엇이 방영되는지, 무엇이 들어오는지가 표시됩니다.",
+      "add_connection": "연결 추가"
+    },
+    "server": {
+      "result": {
+        "Completed": "완료",
+        "Failed": "실패",
+        "Aborted": "중단됨",
+        "Cancelled": "취소됨"
+      },
+      "sections": {
+        "overview": { "label": "개요", "sub": "버전, 시스템, 저장 공간" },
+        "jobs": { "label": "작업", "sub": "Jellyfin이 지금 하고 있는 일" },
+        "devices": { "label": "기기", "sub": "로그인한 적 있는 모든 기기" },
+        "plugins": { "label": "플러그인", "sub": "Jellyfin에 설치된 것" },
+        "capacity": { "label": "용량", "sub": "기록상 가장 붐빈 순간, 디스크가 차는 속도, 그리고 그것이 서버 설정에 대해 말해 주는 것" },
+        "health": { "label": "라이브러리 상태", "sub": "각 파일을 이웃 파일과 비교해 찾은 시즌의 빈 곳, 사본, 빈약한 파일, 서로 다른 시즌" },
+        "log": { "label": "로그", "sub": "Jellyfin 자체 활동 로그: 로그인, 로그인 실패, 재생, 작업" },
+        "audit": { "label": "감사", "sub": "FinStats에서 무엇이 바뀌었고 누가 바꿨는지" }
+      },
+      "sections_aria": "서버 섹션",
+      "update_available": "업데이트 있음",
+      "restart_pending": "재시작 대기 중",
+      "your_server": "Jellyfin 서버",
+      "details_from": "· {when} 기준 정보",
+      "system": {
+        "title": "시스템",
+        "version": "버전",
+        "os": "운영 체제",
+        "transcoder": "트랜스코더",
+        "transcode_folder": "트랜스코딩 폴더",
+        "cache_folder": "캐시 폴더",
+        "data_folder": "데이터 폴더",
+        "log_folder": "로그 폴더"
+      },
+      "fetch": {
+        "button": "서버 정보 가져오기",
+        "busy": "가져오는 중…",
+        "timeout": "Jellyfin이 아직 응답하지 않았습니다. 설정 → 작업에서 이유를 확인한 뒤 다시 시도하세요.",
+        "empty": "아직 서버 정보가 없습니다",
+        "empty_sub": "FinStats는 정기 동기화 때 Jellyfin에서 버전, 저장 공간, 플러그인, 예약 작업, 기기 정보를 가져옵니다. 지금 바로 가져올 수도 있습니다."
+      },
+      "storage": {
+        "title": "저장 공간",
+        "unreported": "이 Jellyfin 버전은 디스크 사용량을 알려 주지 않습니다(10.11부터 지원).",
+        "sub": "Jellyfin이 사용하는 볼륨의 디스크 사용량입니다. 수치가 똑같은 항목은 같은 디스크를 씁니다.",
+        "volume": "볼륨",
+        "library": "라이브러리",
+        "free_of": "{total} 중 {free} 남음",
+        "usage_aria": "{volume} 디스크 사용량",
+        "almost_full": "거의 가득 참",
+        "getting_full": "차는 중",
+        "used": "{pct}% 사용",
+        "folder": {
+          "program_data": "프로그램 데이터",
+          "cache": "캐시",
+          "transcodes": "트랜스코딩",
+          "metadata": "메타데이터",
+          "logs": "로그"
+        }
+      },
+      "devices": {
+        "shown_of": "{total}개 중 {shown}개",
+        "none": "아직 알려진 기기가 없습니다.",
+        "no_match": "일치하는 기기가 없습니다",
+        "no_match_sub": "기기, 앱 또는 사용자 이름으로 검색해 보세요.",
+        "device": "기기",
+        "app": "앱",
+        "last_user": "마지막 사용자",
+        "last_seen": "마지막 확인",
+        "unknown_device": "알 수 없는 기기",
+        "unknown_user": "알 수 없는 사용자",
+        "filter_placeholder": "기기 필터…",
+        "filter_aria": "기기 필터",
+        "title": "기기",
+        "sub": "Jellyfin에 로그인한 적 있는 모든 기기"
+      },
+      "plugins": {
+        "title": "플러그인",
+        "none": "보고된 플러그인이 없습니다.",
+        "plugin": "플러그인",
+        "version": "버전",
+        "status": "상태",
+        "state": {
+          "Active": "활성",
+          "Restart": "재시작 필요",
+          "Deleted": "삭제됨",
+          "Superceded": "대체됨",
+          "Malfunctioned": "오작동",
+          "NotSupported": "지원 안 됨",
+          "Disabled": "비활성화됨"
+        }
+      },
+      "jobs": {
+        "title": "Jellyfin 작업",
+        "sub": "서버가 백그라운드에서 하는 일, 각각의 용도, 그리고 얼마나 진행되었는지",
+        "eta_dots": "약 {dots} 남음",
+        "eta_none": "처리 중, 아직 예상 시간 없음",
+        "finishing": "마무리 중",
+        "eta": "약 {time} 남음",
+        "still": "· {time} 동안 {pct}%",
+        "watched_for": "· {time} 동안 지켜봄",
+        "stopping": "중지하는 중",
+        "running": "실행 중",
+        "percent": "{pct}%",
+        "progress_aria": "{name} 진행률",
+        "last_took": "· 지난번에는 {time} 걸림",
+        "on_demand": "요청이 있을 때만",
+        "hidden": "숨김",
+        "next": "다음 {when}",
+        "never_run": "실행된 적 없음",
+        "stale": "Jellyfin이 방금 응답하지 않았습니다({error}). 아래는 마지막으로 받은 정보입니다.",
+        "nothing_running": "지금 Jellyfin에서 실행 중인 작업이 없습니다.",
+        "job": "작업",
+        "runs": "실행",
+        "last_run": "마지막 실행",
+        "running_count": {
+          "other": "{count}개 실행 중"
+        }
+      }
+    },
+    "capacity": {
+      "left": {
+        "under_a_month": "한 달 미만",
+        "about_a_month": "약 한 달",
+        "months": {
+          "other": "약 {count}개월"
+        },
+        "years": {
+          "other": "약 {count}년"
+        }
+      },
+      "describe": {
+        "software_transcodes": {
+          "transcoded": {
+            "other": "최근 {days}일 동안 재생 {plays}회 중 {count}회가 트랜스코딩되었습니다."
+          },
+          "software": "그중 Jellyfin이 보고한 것 가운데 {software}회는 하드웨어 가속 없이 실행되었고 가속을 쓴 것은 없었으며, 동시에 최대 {most}개였습니다.",
+          "software_unsaid": "그중 Jellyfin이 보고한 것 가운데 {software}회는 하드웨어 가속 없이 실행되었고 가속을 쓴 것은 없었으며({unsaid}회는 보고 없음), 동시에 최대 {most}개였습니다.",
+          "where": "Jellyfin이 그래픽 카드로 트랜스코딩할지는 Jellyfin의 재생 설정에서 정합니다"
+        },
+        "scan_busy": {
+          "always": {
+            "other": "Jellyfin의 라이브러리 스캔은 {interval}마다 실행되도록 설정되어 있고 지난번에는 {last} 걸렸습니다. 실행 간격보다 오래 걸리므로 파일 {count}개를 쉬지 않고 스캔하고 있는 셈입니다."
+          },
+          "share": {
+            "other": "Jellyfin의 라이브러리 스캔은 {interval}마다 실행되도록 설정되어 있고 지난번에는 {last} 걸렸습니다. 파일 {count}개를 스캔하느라 전체 시간의 {pct}%를 쓰고 있습니다."
+          },
+          "where": "실행 주기는 Jellyfin의 예약 작업에서 정합니다"
+        },
+        "runway": {
+          "other": "{free} 남음, 최근 {count}개월 동안 한 달에 {added}씩 추가됨({libraries}). 이 속도라면 공간이 {left} 더 버팁니다"
+        }
+      },
+      "bringing_back": "되살리는 중…",
+      "bring_back_failed": "되살리지 못했습니다: {error}",
+      "findings": {
+        "title": "살펴볼 만한 것",
+        "sub": "가장 붐빈 순간, 디스크, 서버 설정이 말해 주는 것",
+        "set_aside": "{when} 무시함",
+        "set_aside_by": "{when} {name} 님이 무시함",
+        "found": "{when} 발견",
+        "bring_back": "되살리기",
+        "dismiss": "무시…"
+      },
+      "busiest": {
+        "streams": {
+          "other": "스트림 {count}개"
+        },
+        "transcodes": {
+          "other": "트랜스코딩 {count}개"
+        },
+        "hint_transcodes": "{transcodes}, {when}",
+        "title": "가장 붐빈 순간",
+        "sub": "FinStats가 본 최대 동시 스트림 수와 그중 트랜스코딩된 수입니다. 서버가 얼마나 감당할 수 있는지는 알 수 없고, 실제로 감당한 것만 보여 줍니다.",
+        "on_record": "기록상 최고",
+        "nothing_played": "아직 재생된 것이 없습니다",
+        "in_days": {
+          "other": "최근 {count}일 중 최고"
+        },
+        "nothing_in_days": {
+          "other": "최근 {count}일 동안 재생된 것이 없습니다"
+        },
+        "when": "시각",
+        "col_streams": "스트림",
+        "col_transcoded": "트랜스코딩",
+        "hardware_title": "Jellyfin이 하드웨어 가속을 사용했다고 보고함",
+        "hardware": "하드웨어",
+        "software_title": "Jellyfin이 가속을 사용하지 않았다고 보고함",
+        "software": "소프트웨어",
+        "unsaid_title": "이전 버전의 Jellyfin이나 가져온 재생 기록에는 이 정보가 없습니다",
+        "unsaid": "정보 없음",
+        "empty_sub": "무언가가 재생되면 가장 붐빈 순간이 표시됩니다."
+      },
+      "disks": {
+        "title": "디스크 공간",
+        "growth_sub": {
+          "other": "최근 {count}개월 동안 각 라이브러리에 추가된 양"
+        },
+        "unreported": "Jellyfin 10.11 이상은 남은 공간을 알려 주지만 이 서버는 그렇지 않으므로, 공간이 얼마나 버틸지는 알 수 없고 각 라이브러리가 늘어나는 속도만 보여 줍니다.",
+        "library": "라이브러리",
+        "added_in": {
+          "other": "{count}개월간 추가"
+        },
+        "a_month": "월평균",
+        "young": "{libraries}: 최근 2개월 안에 Jellyfin에 추가되었습니다. 이 디스크가 차는 속도는 채워진 뒤 한 달이 지나면 알 수 있습니다.",
+        "grew": {
+          "other": "{libraries}: 최근 {count}개월 동안 한 달에 {added}씩 늘었습니다. 이 속도라면 공간이 {left} 더 버팁니다."
+        },
+        "nothing_added": {
+          "other": "최근 {count}개월 동안 {libraries}에 추가된 것이 없습니다."
+        },
+        "sub": {
+          "other": "라이브러리가 있는 각 디스크와, 최근 {count}개월 동안 Jellyfin에 추가된 양으로 볼 때 디스크가 차는 속도"
+        },
+        "folders": "폴더",
+        "free": "남은 공간",
+        "added_a_month": "월 추가량",
+        "counted_by": "증가량은 Jellyfin이 각 파일을 추가한 날짜로 셉니다. 그래서 교체된 파일은 새 파일로 세고, 그 뒤 삭제된 파일은 세지 않습니다."
+      },
+      "empty": "아직 분석되지 않음",
+      "empty_sub": "FinStats는 다음 서버 정보 읽기(15분 이내) 후와 라이브러리를 읽을 때마다 이를 분석합니다. 이 페이지를 연다고 분석이 시작되지는 않습니다."
+    },
+    "events": {
+      "level": {
+        "error": "오류",
+        "critical": "심각",
+        "fatal": "치명적",
+        "warning": "경고",
+        "info": "정보",
+        "debug": "디버그",
+        "trace": "추적"
+      },
+      "type_chip": "유형: {type}",
+      "remove_type": "유형 필터 해제",
+      "entries": {
+        "other": "항목 {count}개"
+      },
+      "empty_filtered": "이 필터에 맞는 로그 항목이 없습니다.",
+      "empty": "아직 로그 항목이 없습니다",
+      "empty_sub": "다음 “서버 로그 동기화” 작업 때 항목이 들어옵니다.",
+      "col": {
+        "when": "시각",
+        "level": "수준",
+        "event": "이벤트",
+        "user": "사용자",
+        "type": "유형"
+      },
+      "only_this_type": "이 유형만 보기",
+      "search_placeholder": "로그 검색…",
+      "search_aria": "로그 검색"
+    },
+    "audit": {
+      "kind": {
+        "sign_in": "로그인함",
+        "sign_in_failed": "로그인 실패",
+        "sign_in_refused": "로그인 거부됨",
+        "sign_out": "로그아웃함",
+        "setup_completed": "FinStats 설정함",
+        "key_created": "키 생성",
+        "key_revoked": "키 폐기",
+        "key_used": "키 처음 사용",
+        "setting_changed": "설정 변경",
+        "permissions_changed": "권한 변경",
+        "service_added": "연결 추가",
+        "service_changed": "연결 변경",
+        "service_removed": "연결 삭제",
+        "target_added": "알림 대상 추가",
+        "target_changed": "알림 대상 변경",
+        "target_removed": "알림 대상 삭제",
+        "backup_made": "백업 생성",
+        "backup_restored": "백업 복원",
+        "backup_deleted": "백업 삭제",
+        "backup_undeleted": "삭제한 백업 되살림",
+        "backup_downloaded": "백업 다운로드",
+        "task_run": "작업 실행",
+        "task_schedule_changed": "작업 일정 변경",
+        "import_started": "가져오기 시작",
+        "import_finished": "가져오기 완료",
+        "play_deleted": "재생 기록 삭제",
+        "play_undeleted": "삭제한 재생 기록 되살림",
+        "trash_purged": "휴지통 비움",
+        "title_located": "누락된 작품 찾아 연결",
+        "alert_resolved": "경고 해결",
+        "alert_reopened": "경고 다시 열기",
+        "finding_dismissed": "라이브러리 발견 사항 무시",
+        "finding_undismissed": "라이브러리 발견 사항 되살림",
+        "profile_published": "공개 프로필 게시",
+        "profile_changed": "공개 프로필 변경",
+        "profile_unpublished": "공개 프로필 내림",
+        "profile_link_reset": "공개 프로필 링크 새로 만듦",
+        "appearance_changed": "모양 변경"
+      },
+      "outcome": {
+        "failed": "실패",
+        "refused": "거부됨"
+      },
+      "detail": {
+        "nothing": "없음",
+        "permissions_everyone": "모두: {permissions}",
+        "permissions_user": "사용자 {user}: {permissions}",
+        "expires": "{when} 만료",
+        "key": "키 {id}",
+        "moved": "다른 인스턴스로 이동함",
+        "target_personal": "{name} ({channel}, 개인)",
+        "target_server": "{name} ({channel}, 서버)",
+        "by_schedule": "일정에 따라",
+        "on_request": "요청에 따라",
+        "plays_restored": {
+          "other": "재생 기록 {count}개 복원, {skipped}개는 이미 있음"
+        },
+        "settings_too": "설정 포함",
+        "plays_imported": {
+          "other": "재생 기록 {count}개, {skipped}개는 이미 있음"
+        },
+        "title_by": "{title} · {user}",
+        "purged": "{plays}, {backups} 영구 삭제",
+        "backups": {
+          "other": "백업 {count}개"
+        },
+        "no_sections": "섹션 없음",
+        "preset": "프리셋 {code}",
+        "as_it_ships": "FinStats 기본값",
+        "plays_moved": {
+          "other": "재생 기록 {count}개 이동"
+        },
+        "alerts": {
+          "other": "경고 {count}개"
+        },
+        "alert": "경고 {id}",
+        "muted": "알림 끔"
+      },
+      "kind_chip": "종류: {kind}",
+      "remove_kind": "종류 필터 해제",
+      "entries": {
+        "other": "항목 {count}개"
+      },
+      "empty_filtered": "이 필터에 맞는 항목이 없습니다.",
+      "empty": "아직 기록된 것이 없습니다",
+      "empty_sub": "지금부터 로그인, 설정 변경, 키, 백업이 여기에 기록됩니다.",
+      "col": {
+        "when": "시각",
+        "who": "누가",
+        "what": "무엇을",
+        "detail": "상세",
+        "from": "출처"
+      },
+      "user": "사용자",
+      "as_typed": "입력한 그대로",
+      "only_this_kind": "이 종류만 보기",
+      "via_key": "키 “{name}” 사용",
+      "search_placeholder": "감사 로그 검색…",
+      "search_aria": "감사 로그 검색"
+    },
+    "licenses": {
+      "new_tab": "(새 탭에서 열림)",
+      "text_aria": "라이선스 전문",
+      "none_stated": "명시된 라이선스 없음",
+      "no_file": "{name}: 라이선스는 명시했지만 자체 라이선스 파일은 포함하지 않습니다.",
+      "shared": {
+        "other": "같은 텍스트를 다른 구성 요소 {count}개도 사용합니다"
+      },
+      "see_text": "전문 보기",
+      "col": {
+        "component": "구성 요소",
+        "version": "버전",
+        "licence": "라이선스",
+        "source": "소스"
+      },
+      "title": "라이선스",
+      "sub": "FinStats는 다른 사람들의 자유 소프트웨어 위에 만든 자유 소프트웨어입니다. 관련된 모든 라이선스의 전문이 여기에 있습니다.",
+      "empty": "이 빌드에는 라이선스 고지가 없습니다.",
+      "empty_sub": "tools/make-third-party.py로 생성되어 함께 컴파일됩니다.",
+      "app": {
+        "title": "FinStats 자체",
+        "body": "FinStats는 GNU General Public License 버전 3으로 배포됩니다. 자유롭게 사용, 연구, 공유, 수정할 수 있으며, 다른 사람에게 전달하는 것은 모두 같은 라이선스를 유지하고 소스를 함께 제공해야 합니다.",
+        "read": "라이선스 전문 읽기"
+      },
+      "bundled": {
+        "title": "FinStats에 포함된 것",
+        "sub": "글꼴, 지도 데이터, 위치 데이터베이스: 코드는 아니지만 함께 배포되거나 읽어 들이는 것"
+      },
+      "crates": {
+        "title": "Rust 크레이트",
+        "sub": {
+          "other": "바이너리를 구성하는 크레이트 {count}개 · 하나를 고르면 라이선스를 볼 수 있습니다"
+        },
+        "find": "구성 요소 찾기"
+      }
+    }
+  },
+  "public_profile": {
+    "default_name": "FinStats 프로필",
+    "doc_title": "FinStats의 {name}",
+    "hero": "본인이 직접 공개한 시청 기록입니다. 여기 나온 모든 내용은 최소 하루 지난 것입니다.",
+    "download_card": "카드로 다운로드",
+    "what_they_watch": "무엇을 보는지",
+    "when_they_watch": "언제 보는지",
+    "hours_watched": "시청 시간",
+    "plays": "재생",
+    "films": "영화",
+    "episodes": "에피소드",
+    "songs": "노래",
+    "longest_streak": "최장 연속 시청",
+    "days_with_something_on": "무언가를 본 날",
+    "days": {
+      "other": "{count}일"
+    },
+    "streak": {
+      "other": "{count}일 연속 시청"
+    },
+    "recap_title": "이 사용자의 {label}",
+    "year_line": "{days} 동안 {hours}시간, {plays}.",
+    "year_line_streak": "{days} 동안 {hours}시간, {plays}, {streak}.",
+    "open_card": "카드 열기: {chapter}",
+    "card_alt": "{chapter} 카드",
+    "download": "다운로드",
+    "download_all": "모든 카드 다운로드",
+    "download_wide": "가로 카드 다운로드",
+    "lately": "최근",
+    "made_with": "Jellyfin 통계 서버 FinStats로 만들었습니다.",
+    "gone_title": "여기에는 프로필이 없습니다",
+    "gone_body": "링크가 재설정되었거나 소유자가 공개를 중단했을 수 있습니다.",
+    "chapter": {
+      "year": "올해",
+      "numbers": "숫자로 보기",
+      "shows": "인기 시리즈",
+      "films": "인기 영화",
+      "music": "인기 음악",
+      "genres": "장르",
+      "persona": "시청 성향",
+      "rhythm": "시간대와 요일",
+      "days": "매일의 기록",
+      "records": "기록",
+      "together": "함께 본 시간",
+      "finished": "완주한 시리즈",
+      "asked": "요청",
+      "versus": "작년과 비교"
+    }
+  },
+  "charts": {
+    "types": {
+      "movies": "영화",
+      "episodes": "에피소드",
+      "music": "음악"
+    },
+    "together": "함께",
+    "alone": "혼자",
+    "arrows_aria": "{label}. 왼쪽, 오른쪽 화살표 키로 값을 읽을 수 있습니다.",
+    "columns_aria": {
+      "plays": {
+        "day": "일별 재생 횟수. 왼쪽, 오른쪽 화살표 키로 값을 읽을 수 있습니다.",
+        "week": "주별 재생 횟수. 왼쪽, 오른쪽 화살표 키로 값을 읽을 수 있습니다.",
+        "month": "월별 재생 횟수. 왼쪽, 오른쪽 화살표 키로 값을 읽을 수 있습니다."
+      },
+      "watch_s": {
+        "day": "일별 시청 시간. 왼쪽, 오른쪽 화살표 키로 값을 읽을 수 있습니다.",
+        "week": "주별 시청 시간. 왼쪽, 오른쪽 화살표 키로 값을 읽을 수 있습니다.",
+        "month": "월별 시청 시간. 왼쪽, 오른쪽 화살표 키로 값을 읽을 수 있습니다."
+      }
+    },
+    "week_of": "{date} 주",
+    "week_of_head": "주 시작일",
+    "total": "합계",
+    "date": "날짜",
+    "plays": "재생",
+    "heat_aria": "요일 및 시간대별 재생 횟수. 화살표 키로 값을 읽을 수 있습니다.",
+    "less": "적음",
+    "more": "많음",
+    "watched": "시청",
+    "methods_aria": "재생 방식별 재생 비율",
+    "nothing_recorded": "이 기간에 기록된 내용이 없습니다.",
+    "nothing_yet": "아직 표시할 내용이 없습니다.",
+    "name": "이름",
+    "share": "비율",
+    "files": "파일",
+    "size": "크기",
+    "items": {
+      "other": "항목 {count}개"
+    },
+    "column_chart": "세로 막대 차트",
+    "period": "기간",
+    "count": "횟수",
+    "where_people_stop": "시청을 멈춘 지점",
+    "not_enough_plays": "아직 재생 기록이 충분하지 않습니다.",
+    "still_watching_tip": "계속 시청 중",
+    "rewinds_here": {
+      "other": "여기로 되감기 {count}회"
+    },
+    "subtitles_here": {
+      "other": "자막 켜기 {count}회"
+    },
+    "still_watching": "계속 시청 중",
+    "rewinds": "되감기",
+    "subtitles_switched_on": "자막 켜기",
+    "from": "시작",
+    "subtitles_on": "자막 켬",
+    "split": "구분",
+    "unknown_client": "알 수 없는 클라이언트",
+    "radar_chart": "레이더 차트",
+    "radar_too_few": "레이더 차트에는 장르가 3개 이상 필요합니다. 목록에서 있는 그대로 볼 수 있습니다.",
+    "of_these": "이 중 {share}"
+  },
+  "worldmap": {
+    "kinds": {
+      "home": "홈 네트워크",
+      "remote": "외부",
+      "failed": "로그인 실패"
+    },
+    "load_failed": "지도를 불러오지 못했습니다",
+    "aria": "세계 지도. 드래그하여 이동하고, 버튼이나 Ctrl과 마우스 휠로 확대/축소합니다.",
+    "wheel_hint": "Ctrl을 누른 채 스크롤하면 확대/축소됩니다",
+    "loading": "지도를 불러오는 중…",
+    "zoom_in": "확대",
+    "zoom_in_key": "확대 (+)",
+    "zoom_out": "축소",
+    "zoom_out_key": "축소 (−)",
+    "show_all": "모든 점 보기",
+    "show_all_key": "모든 점 보기 (0)",
+    "places_near": {
+      "other": "{place} 근처 {count}곳"
+    },
+    "places": {
+      "other": "{count}곳"
+    },
+    "click_to_zoom": "클릭하여 확대"
+  },
+  "widgets": {
+    "plays": "재생",
+    "by_watch_time": "시청 시간순",
+    "activity": {
+      "title": "활동",
+      "per_week": "주별, 미디어 유형별",
+      "per_day": "일별, 미디어 유형별",
+      "measure": "기준"
+    },
+    "heatmap": {
+      "title": "언제 보는지",
+      "sub": "요일 및 시간대별 재생 횟수 (서버 시간)"
+    },
+    "tiles": {
+      "vs_year": "전년 대비",
+      "vs_days": {
+        "other": "직전 {count}일 대비"
+      },
+      "active_users": "활성 사용자",
+      "distinct_titles": "재생된 작품 수"
+    },
+    "media": {
+      "video": "비디오",
+      "audio": "오디오",
+      "container": "컨테이너",
+      "bitrate": "비트레이트",
+      "subtitles": "자막",
+      "hardware": "하드웨어",
+      "software": "소프트웨어",
+      "copied_direct": "복사 (직접)",
+      "transcoded": "트랜스코딩됨",
+      "reasons": "사유"
+    },
+    "np": {
+      "transcode_details": "트랜스코딩 상세 정보",
+      "client_on_device": "{device}의 {client}",
+      "paused": "일시 정지됨",
+      "playing": "재생 중",
+      "together_title": {
+        "other": "함께 시청 중 · {count}명"
+      },
+      "with": "함께: {names}",
+      "with_more": {
+        "other": "함께: {names} 외 {count}명"
+      },
+      "position_aria": "재생 위치",
+      "unavailable": "실시간 세션을 사용할 수 없습니다: {reason}",
+      "empty": "지금 재생 중인 항목이 없습니다."
+    },
+    "insights": {
+      "peak": "최대 동시 스트림",
+      "peak_transcodes": {
+        "other": "동시 트랜스코딩 {count}개"
+      },
+      "data_streamed": "스트리밍된 데이터",
+      "bytes": {
+        "other": "{count}바이트"
+      },
+      "estimated": "스트림 비트레이트로 추정",
+      "remote_plays": "원격 재생",
+      "remote_of": {
+        "other": "재생 {count}회 중 {remote}"
+      }
+    },
+    "genres": {
+      "title": "장르",
+      "aria": "시청 시간별 장르",
+      "empty": "이 재생 기록에는 아직 장르 정보가 없습니다.",
+      "view": "장르 보기 방식",
+      "list": "목록",
+      "radar": "레이더"
+    },
+    "groups": {
+      "sub": "같은 작품을 같은 시간에 재생한 사람들",
+      "time_together": "함께 본 시간",
+      "evenings_word": { "other": "저녁" },
+      "evenings": {
+        "other": "저녁 {count}번"
+      },
+      "people_word": "명",
+      "share": "시청 시간 중 함께 본 비율",
+      "most_often_with": "가장 자주 함께 본 사람",
+      "groups": "그룹",
+      "sessions": {
+        "other": "세션 {count}개"
+      },
+      "titles": "가장 많이 함께 본 작품"
+    },
+    "failed_logins": {
+      "title": "로그인 실패",
+      "sub": "Jellyfin 서버에 대한 최근 시도",
+      "server_log": "서버 로그",
+      "one": "로그인 실패"
+    },
+    "library": {
+      "added": "{when} 추가됨",
+      "title_this": "이 라이브러리의 구성",
+      "title_yours": "내 라이브러리의 구성",
+      "title_these": "이 라이브러리들의 구성",
+      "pick_label": "라이브러리",
+      "all_libraries": "모든 라이브러리",
+      "after_sync": "파일 정보는 다음 라이브러리 동기화 후에 표시됩니다.",
+      "about_files": "파일 자체에 관한 정보입니다. 위의 기간은 여기에 적용되지 않습니다.",
+      "files": "파일",
+      "count": {
+        "movies": {
+          "other": "영화 {count}편"
+        },
+        "series": {
+          "other": "시리즈 {count}편"
+        },
+        "episodes": {
+          "other": "에피소드 {count}개"
+        },
+        "tracks": {
+          "other": "트랙 {count}개"
+        }
+      },
+      "total_size": "전체 크기",
+      "per_file": "파일당 평균 {size}",
+      "total_runtime": "전체 재생 시간",
+      "play_all_once": "모두 한 번씩 재생하는 데 걸리는 시간",
+      "resolutions": "해상도",
+      "video_files": "비디오 파일",
+      "video_codecs": "비디오 코덱",
+      "dynamic_range": "다이내믹 레인지",
+      "containers": "컨테이너",
+      "all_files": "모든 파일",
+      "audio_codecs": "오디오 코덱",
+      "first_audio": "첫 번째 오디오 트랙",
+      "movies_and_series": "영화 및 시리즈",
+      "titles": "작품",
+      "audio_languages": "오디오 언어",
+      "audio_languages_sub": "해당 언어 트랙이 있는 비디오 파일 수. 더빙 파일은 언어마다 한 번씩 셉니다",
+      "subtitle_languages": "자막 언어",
+      "subtitle_languages_sub": "해당 언어 자막이 있는 비디오 파일 수",
+      "by_decade": "연대별",
+      "by_decade_sub": "개봉 연도별 작품 수",
+      "by_decade_aria": "연대별 작품 수",
+      "decade": "연대",
+      "added_per_month": "월별 추가",
+      "last_24_months": "최근 24개월",
+      "added_aria": "월별 추가된 작품 수",
+      "month": "월",
+      "added_head": "추가",
+      "largest": "가장 큰 항목",
+      "largest_sub": "시리즈는 모든 에피소드를 합산합니다",
+      "no_sizes": "아직 알려진 파일 크기가 없습니다.",
+      "never_watched": "한 번도 안 본 작품",
+      "never_watched_sub": {
+        "other": "작품 {count}개 · 아무도 재생하지 않은 {size}"
+      },
+      "all_played": "모든 작품이 한 번 이상 재생되었습니다",
+      "nothing_unwatched": "안 본 작품이 없거나 아직 알려진 파일 크기가 없습니다.",
+      "played_note": "FinStats가 기록한 재생과 Jellyfin의 재생됨 표시를 합쳐서, FinStats 이전의 기록도 함께 셉니다."
+    },
+    "shelf": {
+      "back": "뒤로 스크롤",
+      "on": "앞으로 스크롤"
+    }
+  },
+  "playmodal": {
+    "title": "재생 상세 정보",
+    "event": {
+      "start": "시작",
+      "pause": "일시 정지",
+      "resume": "다시 재생",
+      "seek": "건너뜀",
+      "audio": "오디오 트랙",
+      "subtitle": "자막",
+      "transcode": "트랜스코딩",
+      "stop": "정지",
+      "other": "이벤트",
+      "transcode_detail": "{method}: {reasons}"
+    },
+    "network": {
+      "local_title": "로컬 네트워크에서 재생됨",
+      "remote_title": "네트워크 외부에서 재생됨",
+      "local": "로컬",
+      "remote": "원격"
+    },
+    "source": {
+      "live": "FinStats가 기록함",
+      "imported_from": "{tracker}에서 가져옴",
+      "imported": "가져옴"
+    },
+    "no_events": {
+      "imported_from": "{tracker}에서 가져온 기록입니다. 이 도구는 재생마다 한 줄만 기록하며 재생 중에 일어난 일은 기록하지 않습니다.",
+      "imported": "가져온 기록입니다. 재생마다 한 줄만 기록되며 재생 중에 일어난 일은 기록되지 않습니다.",
+      "live": "이 재생 중에는 기록된 내용이 없습니다."
+    },
+    "position_title": "파일 내 위치",
+    "at": "{time} 지점",
+    "channels": {
+      "mono": "모노",
+      "stereo": "스테레오",
+      "count": {
+        "other": "{count}채널"
+      }
+    },
+    "bit_depth": "{bits}비트",
+    "not_in_library": "라이브러리에 더 이상 없음",
+    "started": "시작",
+    "ended": "종료",
+    "still_playing": "재생 중",
+    "paused_for": "일시 정지 시간",
+    "resumed_from": "이어 본 지점",
+    "pauses": "일시 정지",
+    "skips": "건너뛰기",
+    "stopped_at": "정지 지점",
+    "device": "기기",
+    "device_id": "기기 ID",
+    "copy_device_id": "기기 ID 복사",
+    "watched_with": "함께 본 사람",
+    "copy_ip": "IP 주소 복사",
+    "off": "끔",
+    "section": {
+      "session": "세션",
+      "media": "미디어",
+      "timeline": "타임라인"
+    },
+    "delete": {
+      "start": "이 재생 기록 삭제",
+      "confirm": "재생 기록 삭제",
+      "deleting": "삭제하는 중…",
+      "aria": "삭제 확인",
+      "question": "이 재생 기록을 통계에서 삭제할까요? 30일 동안은 되돌릴 수 있습니다."
+    },
+    "undo": {
+      "deleted_named": "{title} 삭제됨. 30일 동안 되돌릴 수 있습니다.",
+      "deleted": "재생 기록을 삭제했습니다. 30일 동안 되돌릴 수 있습니다.",
+      "undo": "되돌리기",
+      "failed": "되돌리지 못했습니다: {reason}"
+    }
+  },
+  "upcoming": {
+    "release": {
+      "air": "방영",
+      "cinema": "극장 개봉",
+      "digital": "디지털 출시",
+      "physical": "디스크 출시",
+      "other": "출시"
+    },
+    "finale": {
+      "season": "시즌 피날레",
+      "series": "시리즈 피날레",
+      "midseason": "미드시즌 피날레",
+      "other": "피날레"
+    },
+    "new_episode": "새 에피소드",
+    "already_here": "이미 있음",
+    "new": "라이브러리에 새로 추가",
+    "new_title": "Sonarr 또는 Radarr가 기다리고 있으며, 아직 Jellyfin 라이브러리에는 없습니다",
+    "you_watch": "내가 보는 작품"
+  },
+  "downloads": {
+    "state": {
+      "downloading": "다운로드 중",
+      "importing": "가져오는 중",
+      "stalled": "멈춤",
+      "queued": "대기 중",
+      "paused": "일시 정지됨",
+      "checking": "확인 중",
+      "failed": "실패"
+    },
+    "done": "{pct} 완료",
+    "of": "{done} / {size}",
+    "left": "{time} 남음",
+    "handed": "{service}에서 {client}에 넘김",
+    "speed_title": "직전 측정 이후 받은 양으로 계산했습니다",
+    "totals": {
+      "downloading": {
+        "other": "{count}개 다운로드 중"
+      },
+      "queued": {
+        "other": "{count}개 대기 중"
+      },
+      "importing": {
+        "other": "{count}개 가져오는 중"
+      },
+      "failed": {
+        "other": "{count}개 실패"
+      }
+    },
+    "updated": "{when} 업데이트됨"
+  },
+  "finui": {
+    "avatar_group": {
+      "and_more": "{names} 외 {count}명"
+    },
+    "bar_chart": {
+      "name": "막대 차트",
+      "aria": {
+        "other": "{title}: 막대 {count}개, 최댓값 {highest}"
+      }
+    },
+    "chart": {
+      "numbers": "수치",
+      "total": "합계",
+      "in_all": "전체",
+      "other": "기타",
+      "thousands": "{n}천",
+      "millions": "{n}백만",
+      "billions": "{n}십억"
+    },
+    "bar_list": {
+      "and_more": "외 {count}개"
+    },
+    "breadcrumb": {
+      "show_all": "모든 경로 보기",
+      "label": "이동 경로"
+    },
+    "calendar": {
+      "label": "달력",
+      "previous_month": "이전 달",
+      "next_month": "다음 달"
+    },
+    "callout": {
+      "dismiss": "닫기"
+    },
+    "card": {
+      "table": "표",
+      "chart": "차트"
+    },
+    "chip": {
+      "remove": "제거"
+    },
+    "code_block": {
+      "copy_command": "명령어 복사",
+      "copy_pane": "{name} 복사",
+      "label": "코드"
+    },
+    "combobox": {
+      "all_users": "모든 사용자",
+      "user": "사용자",
+      "type_to_filter": "입력하여 필터…",
+      "filter_aria": "{label} 필터",
+      "no_results": "결과 없음"
+    },
+    "context_menu": {
+      "label": "작업"
+    },
+    "copy": {
+      "copy": "복사",
+      "copied": "복사됨",
+      "failed": "복사하지 못했습니다. 텍스트를 직접 선택하세요"
+    },
+    "data_table": {
+      "sort_by": "{label} 기준 정렬",
+      "filter_rows": "행 필터",
+      "none": "일치하는 행이 없습니다.",
+      "filter_placeholder": "{label}…"
+    },
+    "date_picker": {
+      "placeholder": "예: {example}",
+      "choose": "달력에서 {label} 선택",
+      "none": "아직 선택한 날짜가 없습니다.",
+      "between": "{from}부터 {to}까지.",
+      "from": "{from}부터.",
+      "until": "{to}까지.",
+      "outside": "선택할 수 있는 범위를 벗어난 날짜입니다.",
+      "not_a_day": "올바른 날짜가 아닙니다. {example} 또는 2026-10-05 형식으로 입력해 보세요."
+    },
+    "desktop_nav": {
+      "pages": "페이지",
+      "new": "새로움",
+      "search": "검색",
+      "search_more": "검색…",
+      "search_keys": "검색 · {keys}",
+      "me_theme": "{name}: 내 정보와 테마",
+      "theme": "테마",
+      "pinned": "고정됨",
+      "pin_hint": "페이지를 가리킨 뒤 핀을 누르면 여기에 고정됩니다.",
+      "pin": "{page} 고정",
+      "search_from": "검색 ({label}에서)",
+      "styles": {
+        "sidebar": {
+          "label": "사이드바",
+          "line": "모든 페이지를 옆쪽의 차분한 목록 하나에 담습니다."
+        },
+        "grouped": {
+          "label": "그룹",
+          "line": "같은 목록을 이름 붙은 그룹으로 나눠, 페이지가 속한 곳에서 찾을 수 있습니다."
+        },
+        "rail": {
+          "label": "펼쳐지는 레일",
+          "line": "평소엔 아이콘만 보이다가 포인터가 오면 페이지 위로 사이드바 전체가 펼쳐집니다."
+        },
+        "search": {
+          "label": "검색 우선",
+          "line": "페이지 목록 위에 큰 검색창이 있고, 행이 조금 더 큽니다."
+        },
+        "dock": {
+          "label": "독",
+          "line": "페이지가 아래쪽 독에 있고, 상태 표시줄은 위로 올라갑니다."
+        },
+        "command": {
+          "label": "명령 표시줄",
+          "line": "화면에 목록이 없습니다. 위쪽의 페이지 이름을 누르면 모든 페이지가 열립니다."
+        },
+        "pinned": {
+          "label": "고정",
+          "line": "고정한 페이지가 위에, 나머지 페이지는 그 아래 그룹별로 있습니다."
+        },
+        "tiles": {
+          "label": "색상 타일",
+          "line": "아이콘마다 그룹 색의 타일에 담깁니다."
+        }
+      }
+    },
+    "mobile_nav": {
+      "styles": {
+        "tabs": {
+          "label": "탭 바",
+          "line": "아래쪽에 페이지 네 개가 늘 있고, 더 보기를 누르면 나머지가 올라옵니다."
+        },
+        "peek": {
+          "label": "살짝 보기",
+          "line": "자주 쓰는 페이지에서 절반만 열리는 시트입니다. 위로 끌어 올리면 전체가 보입니다."
+        },
+        "full": {
+          "label": "전체 화면",
+          "line": "화면 전체가 큰 글씨의 메뉴가 됩니다."
+        },
+        "arc": {
+          "label": "엄지 부채꼴",
+          "line": "모서리 버튼을 누르면 엄지 주위로 모든 페이지가 부채꼴로 펼쳐집니다."
+        },
+        "address": {
+          "label": "주소 표시줄",
+          "line": "아래쪽의 알약 모양 막대에 현재 페이지 이름이 표시되고, 누르면 메뉴로 커집니다."
+        }
+      },
+      "menu": "메뉴",
+      "new": "새로움",
+      "search": "검색",
+      "close_menu": "메뉴 닫기",
+      "pages": "페이지",
+      "open_menu": "메뉴 열기",
+      "more": "더 보기",
+      "more_pages": "다른 페이지",
+      "main": "주요",
+      "all_pages": "모든 페이지",
+      "most_used": "자주 사용",
+      "search_or_go": "검색 또는 이동…"
+    },
+    "modal": {
+      "close": "닫기"
+    },
+    "drawer": {
+      "close": "닫기"
+    },
+    "number_stepper": {
+      "in_unit": "{label} (단위: {unit})",
+      "less": "줄이기: {label}",
+      "more": "늘리기: {label}"
+    },
+    "otp": {
+      "code": "코드",
+      "box": "{label}, {total}자리 중 {n}번째"
+    },
+    "pagination": {
+      "label": "페이지 이동",
+      "range": "{total}개 중 {from}–{to}",
+      "previous": "이전 페이지",
+      "next": "다음 페이지"
+    },
+    "picker": {
+      "custom": "사용자 지정",
+      "lock": "{label} 잠금"
+    },
+    "popover": {
+      "held": "열린 채로 고정된 팝오버"
+    },
+    "progress": {
+      "done": "완료",
+      "seconds_left": "몇 초 남음",
+      "under_a_minute": "1분 미만 남음",
+      "a_minute_left": "약 1분 남음",
+      "minutes_left": {
+        "other": "약 {count}분 남음"
+      },
+      "hours": {
+        "other": "{count}시간"
+      },
+      "minutes": {
+        "other": "{count}분"
+      },
+      "hours_minutes": "{hours} {minutes}",
+      "about_left": "약 {time} 남음",
+      "percent": "{pct}%",
+      "working": "처리 중…",
+      "working_valuetext": "처리 중"
+    },
+    "search": {
+      "search": "검색",
+      "close": "검색 닫기",
+      "results": "결과",
+      "keys_watchlist": "찜 목록에 추가",
+      "keys_move": "이동",
+      "keys_open": "열기",
+      "keys_close": "닫기",
+      "nothing_found": "찾은 결과가 없습니다"
+    },
+    "sections": {
+      "label": "섹션"
+    },
+    "shelf": {
+      "back": "{label} 뒤로",
+      "on": "{label} 앞으로"
+    },
+    "slider": {
+      "highest": "{label}, 최댓값",
+      "lowest": "{label}, 최솟값"
+    },
+    "stat_tile": {
+      "no_change": "변화 없음",
+      "new": "신규",
+      "delta": "{delta}%"
+    },
+    "steps": {
+      "label": "단계"
+    },
+    "stream_card": {
+      "progress": "진행 상황"
+    },
+    "tag_input": {
+      "add": "추가…",
+      "remove": "{tag} 제거"
+    },
+    "file_drop": {
+      "label": "여기에 파일을 놓으세요",
+      "choose_files": "또는 눌러서 파일 선택",
+      "choose_one": "또는 눌러서 하나 선택",
+      "wrong_kind": "받을 수 없는 형식입니다 ({accept})",
+      "too_large": "{size}보다 큽니다",
+      "progress": "{size} 중 {pct}%",
+      "uploading": "{name} 업로드 중",
+      "remove": "{name} 제거"
+    },
+    "heatmap": {
+      "less": "적음",
+      "more": "많음",
+      "caption": "얼마나 붐비는지",
+      "name": "히트맵",
+      "aria": "{title}: 가장 붐비는 때 {busiest}"
+    },
+    "line_chart": {
+      "name": "선 차트",
+      "aria": "{title}: {from}부터 {to}까지",
+      "limit": "한도"
+    },
+    "donut_chart": {
+      "share": "{pct}%",
+      "name": "도넛 차트",
+      "caption": "구성",
+      "value": "값",
+      "share_head": "비율"
+    },
+    "toast": {
+      "dismiss": "닫기"
+    },
+    "to_top": {
+      "label": "맨 위로"
+    },
+    "top_bar": {
+      "label": "섹션"
+    },
+    "theme_switch": {
+      "device": "기기",
+      "light": "라이트",
+      "dark": "다크",
+      "label": "테마",
+      "title": "테마: {name}"
+    },
+    "error": {
+      "title": "불러오지 못했습니다",
+      "retry": "다시 시도"
+    }
+  },
+  "notifications": {
+    "switched_off": "꺼짐",
+    "switched_on": "켜짐",
+    "last_failed": "마지막 메시지가 전달되지 않았습니다: {error}",
+    "last_ok": "마지막 메시지 전달: {when}",
+    "nothing_sent": "아직 보낸 것이 없음",
+    "test": "테스트",
+    "sending": "보내는 중…",
+    "test_sent": "테스트 메시지를 보냈습니다.",
+    "remove_confirm": "이 알림 대상을 삭제할까요?",
+    "removing": "삭제하는 중…",
+    "remove": "삭제",
+    "remove_ask": "삭제…",
+    "edit": "편집",
+    "events_ticked": "이벤트 종류 {total}개 중 {ticked}개",
+    "addresses_included": "주소 포함",
+    "severity_above": {
+      "warn": "경고 이상",
+      "alert": "경보 이상"
+    },
+    "yours": "내 것",
+    "owners": "{name}의 것",
+    "somebodys": "다른 사용자의 것",
+    "name_label": "이름 (선택)",
+    "name_help": "FinStats에 표시됩니다. 예: “가족 채널”, “내 휴대폰”",
+    "address": "주소",
+    "topic": "토픽",
+    "token": "토큰",
+    "severity": {
+      "info": "전부",
+      "warn": "경고 및 경보",
+      "alert": "경보만"
+    },
+    "add_destination": "알림 대상 추가",
+    "add_title": "알림 대상 추가",
+    "edit_title": "{name} 편집",
+    "unchanged": "변경 없음",
+    "address_help_any": "FinStats가 메시지를 보낼 주소입니다. 예: {example}",
+    "address_help": {
+      "discord": "Discord → 채널 설정 → 연동 → 웹후크 → 웹후크 URL 복사. 이 URL이 곧 비밀번호입니다. FinStats는 이를 저장하며 다시 표시하지 않습니다.",
+      "slack": "Slack → 내 앱 → Incoming Webhooks → Add New Webhook to Workspace를 누른 뒤 URL을 복사하세요. 이 URL이 곧 비밀번호입니다. FinStats는 이를 저장하며 다시 표시하지 않습니다.",
+      "email": "사용하는 메일 서버입니다. smtps://는 처음부터 암호화됩니다(포트 465). smtp://는 평문으로 시작해 STARTTLS로 전환해야 합니다(587). FinStats는 메일 내용도 비밀번호도 평문으로 보내지 않습니다."
+    },
+    "keep_secret": "비워 두면 저장된 값을 유지합니다.",
+    "secret_help": {
+      "webhook": "“Authorization: Bearer …” 헤더로 보냅니다. 받는 쪽에 헤더가 필요 없으면 비워 두세요.",
+      "ntfy": "보호된 토픽이나 접근 제어가 있는 자체 ntfy에만 필요합니다.",
+      "gotify": "Gotify → Apps → 애플리케이션 생성 → 해당 토큰.",
+      "telegram": "Telegram에서 @BotFather에게 /newbot을 보내면 받는 토큰입니다.",
+      "pushover": "pushover.net → Your Applications → Create an Application → 해당 API 토큰.",
+      "pushbullet": "pushbullet.com → Settings → Account → Create Access Token.",
+      "email": "로그인이 필요 없는 릴레이라면 비워 두세요. 메일 서비스는 보통 로그인 비밀번호 대신 앱 비밀번호를 요구합니다."
+    },
+    "enter_address": "주소를 입력하세요. 예: {example}",
+    "enter_value": "{what} 값을 입력하세요.",
+    "went_wrong": "문제가 발생했습니다.",
+    "kind": "종류",
+    "who_for": "받는 대상",
+    "scope_server": "서버: 체크한 모든 항목, 누구에 관한 것이든",
+    "scope_me": "나만: 내가 이미 볼 수 있는 것만",
+    "how_much": "범위",
+    "what_to_send": "보낼 내용",
+    "with_addresses": "IP 주소와 위치 포함",
+    "with_addresses_help": "끄면 메시지에 “노르웨이 오슬로” 같은 위치만 나오고 접속한 주소는 나오지 않습니다. 켜면 주소도 함께 보내지므로, Discord처럼 다른 사람이 운영하는 곳으로 보낼 때는 한 번 더 생각해 보세요.",
+    "self_signed": "자체 서명 인증서 허용",
+    "self_signed_help": "인증서를 직접 만든 주소에만 사용하세요. 예: 내 네트워크의 서비스나 직접 운영하는 메일 서버.",
+    "saving": "저장하는 중…",
+    "history_empty": "아직 보낸 것이 없습니다. 지금부터 FinStats가 감지하는 일이 각 메시지의 전송 결과와 함께 여기에 표시됩니다.",
+    "state": {
+      "sent": "보냄",
+      "queued": "대기 중",
+      "failed": "포기함"
+    },
+    "historic": "보내지 않음: 몇 시간 이상 지난 일",
+    "nobody_listening": "받을 대상이 없었습니다",
+    "col_when": "시각",
+    "col_what": "내용",
+    "col_sent_to": "보낸 곳",
+    "public_url": "FinStats 주소",
+    "public_url_help": "FinStats가 보내는 메시지에 링크를 넣을 때만 사용합니다. 외부에서 어떤 주소로 접속하는지는 FinStats가 스스로 알 수 없기 때문입니다. 비워 두면 메시지에 링크가 없습니다.",
+    "intro_admin": "여기에 알림 대상을 추가하기 전까지 FinStats는 아무 데도 아무것도 보내지 않으며, 추가한 뒤에도 체크한 종류의 이벤트만 보냅니다. 주소와 토큰은 FinStats 자체 데이터베이스에 저장되며, 다시 표시되지 않고 백업에도 포함되지 않습니다.",
+    "intro_own": "내 알림 대상에는 FinStats에서 내가 이미 볼 수 있는 것만 보내며, 공개 주소를 가리켜야 합니다.",
+    "none_yet": "아직 알림 대상이 없습니다.",
+    "recently_sent": "최근 보낸 메시지",
+    "group": {
+      "security": "보안",
+      "housekeeping": "관리 작업",
+      "library": "라이브러리",
+      "playback": "재생"
+    },
+    "event": {
+      "travel": {
+        "label": "불가능한 이동",
+        "what": "어떤 비행기로도 이동할 수 없는 거리에서 한 계정이 연달아 확인됨"
+      },
+      "new_country": {
+        "label": "새로운 국가",
+        "what": "어떤 계정이 한 국가에서 처음 확인됨"
+      },
+      "failed_sign_ins": {
+        "label": "로그인 실패",
+        "what": "한 계정 또는 한 주소에서 로그인이 여러 번 연속으로 실패함"
+      },
+      "task_failed": {
+        "label": "작업 실패",
+        "what": "동기화, 가져오기 또는 연결된 서비스 읽기가 오류로 끝남"
+      },
+      "backup_failed": {
+        "label": "백업 실패",
+        "what": "백업을 기록하지 못함"
+      },
+      "service_down": {
+        "label": "응답 중단",
+        "what": "Jellyfin, Sonarr, Radarr 또는 Seerr가 응답하지 않음"
+      },
+      "service_back": {
+        "label": "응답 재개",
+        "what": "…그리고 다시 응답하기 시작했을 때"
+      },
+      "new_items": {
+        "label": "라이브러리에 새로 추가됨",
+        "what": "라이브러리에 추가된 작품. 시리즈와 날짜별로 묶음"
+      },
+      "request_available": {
+        "label": "요청한 작품 시청 가능",
+        "what": "누군가 Seerr에서 요청한 작품을 이제 볼 수 있음"
+      },
+      "play_started": {
+        "label": "시청 시작",
+        "what": "재생이 시작됨: 작품, 사람, 기기"
+      },
+      "play_stopped": {
+        "label": "시청 종료",
+        "what": "재생이 끝남. 얼마나 시청했는지 포함"
+      },
+      "recap_ready": {
+        "label": "연간 결산 준비 완료",
+        "what": "12월에 한 번: 한 사람의 연간 결산을 돌아보고 공유할 준비가 됨"
+      },
+      "watchlist_available": {
+        "label": "찜한 작품을 이제 볼 수 있음",
+        "what": "찜 목록에서 기다리던 영화나 시리즈가 라이브러리에 들어옴. 내 알림 대상에만 보냄"
+      },
+      "test": {
+        "label": "테스트 메시지",
+        "what": "테스트 버튼을 눌렀을 때만 보냄"
+      }
+    },
+    "channel": {
+      "discord": {
+        "label": "Discord",
+        "what": "서버에서 만든 웹후크를 통해 서버의 채널로"
+      },
+      "slack": {
+        "label": "Slack",
+        "what": "Incoming Webhook을 통해 워크스페이스의 채널로"
+      },
+      "telegram": {
+        "label": "Telegram",
+        "what": "직접 만든 봇과의 대화, 또는 그 봇이 들어 있는 그룹이나 채널로",
+        "topic_label": "채팅 ID",
+        "topic_help": "봇에게 메시지를 한 번 보낸 뒤 https://api.telegram.org/bot<token>/getUpdates 를 열어 표시되는 chat id를 사용하세요. 채널은 @이름 형식으로 입력해도 됩니다.",
+        "topic_missing": "채팅 ID를 입력하세요.",
+        "secret_label": "봇 토큰",
+        "secret_missing": "봇 토큰을 입력하세요."
+      },
+      "email": {
+        "label": "이메일",
+        "what": "이미 사용 중인 SMTP 서버를 통해 아무 메일함으로",
+        "topic_label": "받는 사람",
+        "topic_help": "메일을 받을 주소입니다.",
+        "topic_missing": "받는 주소를 입력하세요.",
+        "secret_label": "비밀번호 (선택)"
+      },
+      "ntfy": {
+        "label": "ntfy",
+        "what": "ntfy.sh 또는 자체 ntfy의 원하는 토픽으로",
+        "topic_label": "토픽",
+        "topic_help": "게시할 ntfy 토픽입니다. 토픽을 아는 사람은 누구나 알림을 읽을 수 있으니 추측하기 어렵게 만드세요.",
+        "topic_missing": "토픽을 입력하세요.",
+        "secret_label": "액세스 토큰 (선택)"
+      },
+      "gotify": {
+        "label": "Gotify",
+        "what": "애플리케이션 토큰으로 자체 Gotify 서버에",
+        "secret_label": "애플리케이션 토큰",
+        "secret_missing": "애플리케이션 토큰을 입력하세요."
+      },
+      "pushover": {
+        "label": "Pushover",
+        "what": "직접 만든 애플리케이션으로 휴대폰의 Pushover에",
+        "topic_label": "사용자 또는 그룹 키",
+        "topic_help": "pushover.net 첫 화면에 있는 사용자 키, 또는 그룹 키입니다.",
+        "topic_missing": "사용자 또는 그룹 키를 입력하세요.",
+        "secret_label": "애플리케이션 토큰",
+        "secret_missing": "애플리케이션 토큰을 입력하세요."
+      },
+      "pushbullet": {
+        "label": "Pushbullet",
+        "what": "계정에 로그인된 모든 기기의 Pushbullet에",
+        "secret_label": "액세스 토큰",
+        "secret_missing": "액세스 토큰을 입력하세요."
+      },
+      "webhook": {
+        "label": "웹후크",
+        "what": "아무 주소로 JSON을 POST: 직접 만든 스크립트, Home Assistant, n8n",
+        "secret_label": "Authorization 헤더 (선택)"
+      }
+    },
+    "extra": {
+      "from": {
+        "label": "보내는 주소",
+        "help": "메일을 보내는 사람으로 표시될 주소입니다. 많은 서버가 자신이 아는 주소만 받습니다.",
+        "missing": "보내는 주소를 입력하세요."
+      },
+      "username": {
+        "label": "사용자 이름 (선택)",
+        "help": "로그인이 필요 없는 릴레이라면 비워 두세요. 보통 보내는 주소와 같습니다."
+      }
+    }
+  },
+  "connections": {
+    "switched_off": "꺼짐",
+    "switched_on": "켜짐",
+    "not_answering": "응답 없음: {error}",
+    "connected": "연결됨",
+    "checked": "{when} 확인함",
+    "not_checked": "아직 확인 안 함",
+    "remove_confirm": "이 연결과 FinStats가 여기서 읽어 온 모든 정보를 삭제할까요?",
+    "removing": "삭제하는 중…",
+    "remove": "삭제",
+    "remove_ask": "삭제…",
+    "edit": "편집",
+    "name_label": "이름 (선택)",
+    "name_help": "FinStats에 표시됩니다. 같은 종류가 두 개일 때 유용합니다. 예: “Radarr 4K”",
+    "address": "주소",
+    "api_key": "API 키",
+    "test": "연결 테스트",
+    "test_and_save": "테스트 후 저장",
+    "kind": {
+      "sonarr": "시리즈: 언제 무엇이 방영되는지, 무엇을 다운로드 중인지",
+      "radarr": "영화: 언제 무엇이 출시되는지, 무엇을 다운로드 중인지",
+      "seerr": "요청: 누가 무엇을 요청했는지 (Seerr, Jellyseerr, Overseerr)"
+    },
+    "keep_secret": "비워 두면 저장된 값을 유지합니다.",
+    "secret_help": {
+      "sonarr": "Sonarr → Settings → General → Security → API Key에서 확인할 수 있습니다.",
+      "radarr": "Radarr → Settings → General → Security → API Key에서 확인할 수 있습니다.",
+      "seerr": "Seerr → Settings → General → API Key에서 확인할 수 있습니다."
+    },
+    "unchanged": "변경 없음",
+    "enter_address": "{service} 주소를 입력하세요. 예: {example}",
+    "enter_key": "API 키를 입력하세요.",
+    "went_wrong": "문제가 발생했습니다.",
+    "testing": "테스트 중…",
+    "connected_to": "연결됨: {app}",
+    "edit_title": "{name} 편집",
+    "add": "연결 추가",
+    "service": "서비스",
+    "self_signed": "자체 서명 인증서 허용",
+    "self_signed_help": "인증서를 직접 만든 https:// 주소에만 사용하세요. 이 경우 FinStats는 이 주소에서 응답하는 상대를 확인하지 않습니다. 그 외에는 꺼 두세요.",
+    "none_yet": "아직 연결된 것이 없습니다. Sonarr와 Radarr를 연결하면 FinStats가 앞으로 나올 작품과 다운로드 중인 항목을 알 수 있고, Seerr를 연결하면 누가 무엇을 요청했는지 알 수 있습니다.",
+    "intro": "FinStats는 이 서비스들에서 읽기만 합니다. 요청을 승인하거나 검색을 시작하거나 다운로드를 건드리는 일은 없습니다. 키와 비밀번호는 FinStats 자체 데이터베이스에 저장되며, 다시 표시되지 않고 백업에도 포함되지 않습니다."
+  },
+  "changelog_text": {
+    "kind": {
+      "Added": "추가",
+      "Changed": "변경",
+      "Performance": "성능",
+      "Stability": "안정성",
+      "Fixed": "수정",
+      "Removed": "제거"
+    }
+  }
+}

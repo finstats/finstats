@@ -4,6 +4,7 @@
 
 import { h, s } from '../../core.js';
 import { remaining, timeLeft } from './plan.js';
+import { say } from '../../i18n.js';
 
 /** progressBar({ label, value, elapsed, detail, tone }): `value` 0–1, or null for "working, no share known"; `elapsed`
  *  seconds so far, for the time left; `detail` says what (8 of 12 files). */
@@ -13,9 +14,9 @@ export function progressBar({ label, value = null, elapsed = null, detail = null
   const fill = h('span', { class: 'fui-progress__fill' });
   if (known) fill.style.width = `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%`;
   return h('div', { class: ['fui-progress', !known && 'is-working', `fui-progress--${tone}`] },
-    h('div', { class: 'fui-progress__head' }, h('span', { class: 'fui-progress__label' }, label), h('span', { class: 'fui-progress__share' }, known ? `${Math.round(value * 100)}%` : 'Working…')),
+    h('div', { class: 'fui-progress__head' }, h('span', { class: 'fui-progress__label' }, label), h('span', { class: 'fui-progress__share' }, known ? say('progress.percent', `${Math.round(value * 100)}%`, { pct: Math.round(value * 100) }) : say('progress.working', 'Working…'))),
     h('div', { class: 'fui-progress__track', role: 'progressbar', 'aria-label': label, 'aria-valuemin': known ? '0' : null, 'aria-valuemax': known ? '100' : null,
-      'aria-valuenow': known ? String(Math.round(value * 100)) : null, 'aria-valuetext': known ? [`${Math.round(value * 100)}%`, left].filter(Boolean).join(', ') : 'working' }, fill),
+      'aria-valuenow': known ? String(Math.round(value * 100)) : null, 'aria-valuetext': known ? [say('progress.percent', `${Math.round(value * 100)}%`, { pct: Math.round(value * 100) }), left].filter(Boolean).join(', ') : say('progress.working_valuetext', 'working') }, fill),
     detail || left ? h('div', { class: 'fui-progress__foot' }, detail ? h('span', null, detail) : h('span'), left ? h('span', null, left) : null) : null);
 }
 /** progressRing({ label, value, size }): the same share as a ring, for a small place (a card's corner, a button). */

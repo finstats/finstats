@@ -12,7 +12,6 @@
   <script src="data/meta.js"></script>
   <script src="data/img.js"></script>
   <script src="assets/js/demo.js"></script>
-  <script src="assets/js/theme.js"></script>
   <meta name="referrer" content="same-origin">
   <title>FinStats demo</title>
   <meta name="description" content="FinStats, playback statistics for Jellyfin: a demo with invented data.">
@@ -24,6 +23,8 @@
   <link rel="stylesheet" href="assets/finmotion.css">
   <link rel="stylesheet" href="assets/app.css">
   <link rel="stylesheet" href="assets/demo.css">
+  <!-- After the stylesheets: it applies this browser's theme, and in Simple mode writes that layout's sheet after them. -->
+  <script src="assets/js/theme.js"></script>
   <link rel="modulepreload" href="assets/finui/core.js">
   <link rel="modulepreload" href="assets/finui/components/button/button.js">
   <link rel="modulepreload" href="assets/finui/components/card/card.js">

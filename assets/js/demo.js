@@ -127,6 +127,7 @@
   // server's (stats.rs, `activity`) do. `days` holds which plays each range took in, as the server counted them.
   let history_ = null;
   const CHARTED = ['Movie', 'Episode', 'Audio'];
+  const SEEN_AT = 0.8;   // playback::SEEN_AT: far enough into a play to count as seen
   const SORTS = {
     when: (p) => p.ended_at, user: (p) => (p.user_name || '').toLowerCase(), title: (p) => (p.series_name || p.item_name || '').toLowerCase(),
     watched: (p) => p.duration_s, progress: (p) => p.completion, client: (p) => (p.client || '').toLowerCase(), method: (p) => p.play_method, ip: (p) => p.remote_ip,
@@ -137,10 +138,11 @@
     const many = (k) => (params.get(k) || '').split(',').map((x) => x.trim()).filter(Boolean);
     const days = params.get('days') || '30', inRange = h.sets[days];
     const methods = many('method'), types = many('type'), sources = many('source'), words = wordsOf(params.get('q'));
-    const [item, series, user] = ['item_id', 'series_id', 'user_id'].map((k) => params.get(k) || '');
-    const deleted = params.get('deleted') === '1';
+    const [item, series, user, library] = ['item_id', 'series_id', 'user_id', 'library_id'].map((k) => params.get(k) || '');
+    const deleted = params.get('deleted') === '1', watched = params.get('watched') === '1';
     let rows = deleted ? [] : h.rows.filter((p) => (!inRange || inRange.has(p.id))
       && (!user || p.user_id === user) && (!item || p.item_id === item) && (!series || p.series_id === series)
+      && (!library || p.library_id === library) && (!watched || (p.completion || 0) >= SEEN_AT)
       && (!methods.length || methods.includes(p.play_method)) && (!sources.length || sources.includes(p.source))
       && (!types.length || types.includes(p.item_type) || (types.includes('Other') && !CHARTED.includes(p.item_type)))
       && (!words.length || matches(words, [p.item_name, p.series_name, p.user_name, p.client, p.device_name, p.remote_ip])));
@@ -202,5 +204,15 @@
     }
     return realFetch(BASE + url.pathname + url.search, init);
   };
+  // ---- the live channel: there is no server to keep a socket open to, so it is refused at once and the pages ask
+  // every few seconds instead, as they do behind a proxy that does not pass WebSockets on (live.js).
+  const RealWebSocket = window.WebSocket;
+  window.WebSocket = function (url, protocols) {
+    if (new URL(url, location.href).pathname.endsWith('/api/live')) throw new DOMException('The demo has no live channel.', 'NotSupportedError');
+    return new RealWebSocket(url, protocols);
+  };
+  Object.assign(window.WebSocket, RealWebSocket);
+  window.WebSocket.prototype = RealWebSocket.prototype;
+
   window.finstatsDemo = { app, site, base: BASE };
 })();

@@ -5,6 +5,7 @@
 import { h, s } from '../../core.js';
 import { niceTicks, linear, stack, compact } from '../chart/plan.js';
 import { chartFigure, legend, tableTwin, tone, foldSeries, sized, hoverable } from '../chart/chart.js';
+import { say } from '../../i18n.js';
 
 const r2 = (n) => Math.round(n * 100) / 100;
 /** A column part, its top corners rounded when it is the top of its stack. */
@@ -20,11 +21,12 @@ export function barChart({ title = null, sub = null, categories, series, format 
   const totals = categories.map((_, i) => all.reduce((n, x) => n + (x.values[i] || 0), 0));
   const box = h('div', { class: 'fui-bar-chart__box' });
   const figure = chartFigure({ title, sub, legend: all.length > 1 ? legend(all.map((x) => ({ name: x.name }))) : null, plot: box,
-    table: tableTwin({ caption: title || 'The numbers', head: ['', ...all.map((x) => x.name), ...(all.length > 1 ? ['Total'] : [])], rows: categories.map((c, i) => [c, ...all.map((x) => format(x.values[i] || 0)), ...(all.length > 1 ? [format(totals[i])] : [])]) }) });
+    table: tableTwin({ caption: title || say('chart.numbers', 'The numbers'), head: ['', ...all.map((x) => x.name), ...(all.length > 1 ? [say('chart.total', 'Total')] : [])], rows: categories.map((c, i) => [c, ...all.map((x) => format(x.values[i] || 0)), ...(all.length > 1 ? [format(totals[i])] : [])]) }) });
   let spec = null;
-  hoverable(box, () => spec, `${title || 'A bar chart'}: ${categories.length} columns, the highest ${format(Math.max(...totals, 0))}`);
+  const named = title || say('bar_chart.name', 'A bar chart'), highest = format(Math.max(...totals, 0));
+  hoverable(box, () => spec, say('bar_chart.aria', `${named}: ${categories.length} ${categories.length === 1 ? 'column' : 'columns'}, the highest ${highest}`, { title: named, count: categories.length, highest }));
   sized(box, (width) => {
-    const ticks = niceTicks(0, Math.max(...totals, 0), 4);
+    const ticks = niceTicks(0, Math.max(...totals, 0), 4, { whole: all.every((x) => x.values.every((v) => Number.isInteger(v || 0))) });
     const m = { top: 8, right: 4, bottom: 22, left: Math.max(28, 8 + 7 * Math.max(...ticks.map((t) => format(t).length))) };
     const pw = width - m.left - m.right, ph = height - m.top - m.bottom;
     const y = linear([0, ticks[ticks.length - 1]], [m.top + ph, m.top]);
@@ -57,7 +59,7 @@ export function barChart({ title = null, sub = null, categories, series, format 
         const r = svg.getBoundingClientRect();
         return { rect: { left: r.left + m.left + i * band, top: r.top + y(totals[i]), width: band, height: 1, bottom: r.top + y(totals[i]) }, title: categories[i],
           rows: all.map((x, k) => ({ color: tone(k), value: format(x.values[i] || 0), label: x.name })).filter((_, k) => all.length > 1 || k === 0),
-          total: all.length > 1 ? { value: format(totals[i]), label: 'in all' } : null };
+          total: all.length > 1 ? { value: format(totals[i]), label: say('chart.in_all', 'in all') } : null };
       },
     };
     box.replaceChildren(svg);

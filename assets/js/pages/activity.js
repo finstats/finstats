@@ -1,4 +1,4 @@
-import { h, icon, debounce, num, mount, dateTime, TRACKERS } from '../dom.js';
+import { h, icon, debounce, mount, dateTime, TRACKERS } from '../dom.js';
 import { api } from '../api.js';
 import { readDays, saveDays, rangeLong, can } from '../state.js';
 import { replaceQuery } from '../router.js';
@@ -7,14 +7,15 @@ import { plainTable } from '../tables.js';
 import { button } from '../../finui/components/button/button.js';
 import { toast } from '../../finui/components/toast/toast.js';
 import { openPlayModal } from '../playmodal.js';
+import { t } from '../i18n.js';
 
 // Ticked, not chosen: films *and* episodes without music is a question worth being able to ask.
 // "All" is nothing ticked rather than one more thing to tick, so it is left out of these.
 const METHODS = [
-  { value: 'DirectPlay', label: 'Direct play' }, { value: 'DirectStream', label: 'Direct stream' }, { value: 'Transcode', label: 'Transcode' },
+  { value: 'DirectPlay', label: t('play_method.DirectPlay') }, { value: 'DirectStream', label: t('play_method.DirectStream') }, { value: 'Transcode', label: t('play_method.Transcode') },
 ];
 const TYPES = [
-  { value: 'Movie', label: 'Movies' }, { value: 'Episode', label: 'Episodes' }, { value: 'Audio', label: 'Music' }, { value: 'Other', label: 'Other' },
+  { value: 'Movie', label: t('pages.activity.type.movies') }, { value: 'Episode', label: t('pages.activity.type.episodes') }, { value: 'Audio', label: t('pages.activity.type.music') }, { value: 'Other', label: t('common.other') },
 ];
 // Which tracker a play came from. Only offered for the ones this history actually holds, which the
 // answer lists: an install that has never imported anything has nothing to choose between.
@@ -45,15 +46,16 @@ function filtersOf(q0) {
 /** Recently deleted: each play with when it goes for good, and the button that brings it back. Not sorted here:
  *  the list is paged, and newest deletion first is the order that matters. */
 function trashTable(rows, { showUser, onRestored }) {
-  if (!rows.length) return emptyState('Nothing in the trash.', 'A deleted play waits here for 30 days before it is removed for good.');
+  if (!rows.length) return emptyState(t('pages.activity.trash.empty_title'), t('pages.activity.trash.empty_body'));
   const restore = (p) => button({ size: 'sm', type: 'button', onClick: async (e) => {
-    setBusy(e.currentTarget, true, 'Restoring…');
-    try { await api.put(`/activity/${p.id}`, { deleted: false }); toast({ text: `Restored ${p.item_name}.`, tone: 'good' }); onRestored(); }
-    catch (err) { setBusy(e.currentTarget, false); toast({ text: `Couldn’t restore: ${err.message}`, tone: 'critical' }); }
-  } }, icon('refresh', 13), 'Restore');
+    const btn = e.currentTarget; // gone from the event once it has been handled
+    setBusy(btn, true, t('pages.activity.trash.restoring'));
+    try { await api.put(`/activity/${p.id}`, { deleted: false }); toast({ text: t('pages.activity.trash.restored', { title: p.item_name }), tone: 'good' }); onRestored(); }
+    catch (err) { setBusy(btn, false); toast({ text: t('pages.activity.trash.restore_failed', { reason: err.message }), tone: 'critical' }); }
+  } }, icon('refresh', 13), t('pages.activity.trash.restore'));
   const th = (label, cls) => h('th', { class: cls || null, 'data-nosort': '' }, label);
   return plainTable(h('table', { class: 'fui-data-table trash' },
-    h('thead', null, h('tr', null, th('Title'), showUser ? th('Person') : null, th('Played'), th('Deleted'), th('Removed for good'), th('', 'r'))),
+    h('thead', null, h('tr', null, th(t('plays_table.title')), showUser ? th(t('pages.activity.trash.person')) : null, th(t('pages.activity.trash.played')), th(t('pages.activity.trash.deleted')), th(t('pages.activity.trash.purge_at')), th('', 'r'))),
     h('tbody', null, rows.map((p) => h('tr', { dataset: { id: p.id } },
       h('td', null, p.series_name ? `${p.series_name} · ${p.item_name}` : p.item_name),
       showUser ? h('td', null, p.user_name) : null,
@@ -62,7 +64,7 @@ function trashTable(rows, { showUser, onRestored }) {
 }
 
 export default function activity(ctx) {
-  ctx.title('Activity');
+  ctx.title(t('nav.activity'));
   const f = filtersOf(ctx.query);
 
   const view = h('div');
@@ -73,19 +75,19 @@ export default function activity(ctx) {
     fetch: () => loadActivity(f, ctx.signal),
     render: (data) => {
       if (f.deleted) {
-        mount(summary, [`${num(data.total)} ${data.total === 1 ? 'play' : 'plays'} in the trash, each removed for good 30 days after it was deleted · `,
-          h('a', { href: '#', onClick: (e) => { e.preventDefault(); f.deleted = ''; apply(); } }, 'Back to every play')]);
+        mount(summary, [`${t('pages.activity.trash.summary', { count: data.total })} · `,
+          h('a', { href: '#', onClick: (e) => { e.preventDefault(); f.deleted = ''; apply(); } }, t('pages.activity.trash.back'))]);
         return [trashTable(data.rows, { showUser: can('see_everyone'), onRestored: () => dv.load() }),
           data.total > PER_PAGE ? pagination({ page: data.page || f.page, perPage: data.per_page || PER_PAGE, total: data.total,
             onPage: (p) => { f.page = p; apply(false); window.scrollTo({ top: 0 }); } }) : null];
       }
-      mount(summary, [`${num(data.total)} ${data.total === 1 ? 'play' : 'plays'} · ${rangeLong(f.days).toLowerCase()}`,
+      mount(summary, [`${t('terms.play', { count: data.total })} · ${rangeLong(f.days).toLowerCase()}`,
         data.in_trash ? [' · ', h('a', { href: '#', class: 'trash-link', onClick: (e) => { e.preventDefault(); f.deleted = 1; apply(); } },
-          icon('trash', 12), ` Recently deleted (${num(data.in_trash)})`)] : null]);
+          icon('trash', 12), ` ${t('pages.activity.recently_deleted', { count: data.in_trash })}`)] : null]);
       renderSources(data.sources);
       return [
         playsTable(data.rows, { showUser: can('see_everyone'), sort: { key: f.sort, dir: f.dir, onSort: (key, dir) => { f.sort = key; f.dir = dir; apply(); } }, onOpen: (p) => openPlayModal(p, { onDeleted: () => dv.load() }),
-          empty: 'No plays match these filters. Try a longer range or clear the search.' }),
+          empty: t('pages.activity.empty') }),
         data.total > PER_PAGE ? pagination({ page: data.page || f.page, perPage: data.per_page || PER_PAGE, total: data.total,
           onPage: (p) => { f.page = p; apply(false); window.scrollTo({ top: 0 }); } }) : null,
       ];
@@ -98,7 +100,7 @@ export default function activity(ctx) {
     dv.load();
   }
 
-  const search = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: 'Search titles…', value: f.q, 'aria-label': 'Search titles', autocomplete: 'off' });
+  const search = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: t('pages.activity.search_placeholder'), value: f.q, 'aria-label': t('pages.activity.search_label'), autocomplete: 'off' });
   const onSearch = debounce(() => { f.q = search.value.trim(); apply(); }, 250);
   search.addEventListener('input', onSearch);
   ctx.onCleanup(() => onSearch.cancel());
@@ -119,25 +121,25 @@ export default function activity(ctx) {
     sourceSig = sig;
     // One tracker, or none: nothing to choose between, so no filter at all.
     mount(sourceSlot, list.length < 2 ? null
-      : multiSelect({ label: 'Recorded by', allLabel: 'All trackers', options: list.map((v) => ({ value: v, label: SOURCES[v] })),
+      : multiSelect({ label: t('pages.activity.recorded_by'), allLabel: t('pages.activity.all_trackers'), options: list.map((v) => ({ value: v, label: SOURCES[v] })),
         value: f.source, onChange: (v) => { f.source = v; apply(); } }));
   }
 
-  const scopeChip = f.item_id || f.series_id ? h('span', { class: 'fui-chip fui-chip--removable' }, f.series_id ? 'One series' : 'One title',
-    h('button', { type: 'button', class: 'fui-chip__x', 'aria-label': 'Remove title filter', onClick: (e) => { f.item_id = ''; f.series_id = ''; e.target.closest('.fui-chip').remove(); apply(); } }, icon('x', 12))) : null;
+  const scopeChip = f.item_id || f.series_id ? h('span', { class: 'fui-chip fui-chip--removable' }, f.series_id ? t('pages.activity.one_series') : t('pages.activity.one_title'),
+    h('button', { type: 'button', class: 'fui-chip__x', 'aria-label': t('pages.activity.remove_title_filter'), onClick: (e) => { f.item_id = ''; f.series_id = ''; e.target.closest('.fui-chip').remove(); apply(); } }, icon('x', 12))) : null;
 
   const filters = filterBar({ days: f.days, userId: f.user_id, signal: ctx.signal,
     onDays: (v) => { f.days = v; saveDays(v); apply(); },
     onUser: (v) => { f.user_id = v; apply(); },
     extra: [
-      multiSelect({ label: 'Play method', allLabel: 'All methods', options: METHODS, value: f.method, onChange: (v) => { f.method = v; apply(); } }),
-      multiSelect({ label: 'Media type', allLabel: 'All types', options: TYPES, value: f.type, onChange: (v) => { f.type = v; apply(); } }),
+      multiSelect({ label: t('pages.activity.play_method'), allLabel: t('pages.activity.all_methods'), options: METHODS, value: f.method, onChange: (v) => { f.method = v; apply(); } }),
+      multiSelect({ label: t('pages.activity.media_type'), allLabel: t('pages.activity.all_types'), options: TYPES, value: f.type, onChange: (v) => { f.type = v; apply(); } }),
       sourceSlot,
       h('div', { class: 'fui-field__search' }, icon('search', 14), search),
       scopeChip,
     ] });
 
-  ctx.root.append(pageHeader('Activity', 'Every play FinStats knows about. Newest first, or click a column to sort by it'), filters, summary,
+  ctx.root.append(pageHeader(t('nav.activity'), t('pages.activity.sub')), filters, summary,
     card({ cls: 'fui-card--flush', body: view }));
   dv.load();
 }

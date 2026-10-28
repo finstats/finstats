@@ -1638,7 +1638,7 @@ th[aria-sort="descending"] .fui-data-table__sort-icon { transform: rotate(180deg
   background: color-mix(in srgb, var(--bg) 88%, transparent); border-bottom: 1px solid var(--border-soft);
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
 }
-.fui-top-bar__brand { flex: none; font: 750 19px/1 var(--font-heading); letter-spacing: -.03em; color: var(--text-strong); text-decoration: none; }
+.fui-top-bar__brand { flex: none; display: flex; align-items: center; gap: 8px; font: 750 19px/1 var(--font-heading); letter-spacing: -.03em; color: var(--text-strong); text-decoration: none; }
 .fui-top-bar__brand:hover { color: var(--text-strong); text-decoration: none; }
 .fui-top-bar__nav { display: flex; align-items: stretch; gap: 4px; flex: 1; min-width: 0; height: 100%; overflow-x: auto; scrollbar-width: none; }
 .fui-top-bar__link { display: flex; align-items: center; padding: 0 10px; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 14px; white-space: nowrap; text-decoration: none; }
@@ -1646,6 +1646,19 @@ th[aria-sort="descending"] .fui-data-table__sort-icon { transform: rotate(180deg
 .fui-top-bar__link.is-active { color: var(--text-strong); border-bottom-color: var(--accent); }
 .fui-top-bar__actions { display: flex; align-items: center; gap: 10px; flex: none; }
 @media (max-width: 560px) { .fui-top-bar { gap: 14px; padding: 0 14px; } }
+.fui-top-bar__lead { display: flex; align-items: center; flex: none; }
+/* Solid: an app's own bar, opaque on the sunken ground, the sections on the right and the open one a lifted box in the
+   accent's words. */
+.fui-top-bar--solid { gap: 4px; height: 52px; padding: 0 12px 0 16px; background: var(--bg-sunken); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.fui-top-bar--solid .fui-top-bar__brand { margin-right: auto; }
+.fui-top-bar--solid .fui-top-bar__nav { flex: 0 1 auto; justify-content: flex-end; gap: 0; }
+.fui-top-bar--solid .fui-top-bar__link { padding: 0 15px; border-bottom: 0; color: var(--text-muted); }
+.fui-top-bar--solid .fui-top-bar__link:hover { color: var(--text-strong); background: var(--bg); }
+.fui-top-bar--solid .fui-top-bar__link.is-active { color: var(--accent); background: var(--bg); }
+/* Its own controls, in the lead and among the actions, are as tall as the bar and light up as its sections do. */
+.fui-top-bar--solid :is(.fui-top-bar__lead, .fui-top-bar__actions) { align-self: stretch; align-items: stretch; gap: 0; }
+.fui-top-bar--solid :is(.fui-top-bar__lead, .fui-top-bar__actions) button { height: 100%; min-width: 46px; border-radius: 0; color: var(--text-muted); }
+.fui-top-bar--solid :is(.fui-top-bar__lead, .fui-top-bar__actions) button:hover { color: var(--text-strong); background: var(--bg); }
 /* The gallery's bar, in a frame rather than at the top of the window. */
 .fui-top-bar__demo { width: 100%; }
 .fui-top-bar__demo > .fui-top-bar { position: static; }
@@ -1991,6 +2004,14 @@ button.fui-steps__go:hover .fui-steps__label { color: var(--text-strong); }
 .fui-chart__line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .fui-chart__area { fill-opacity: .1; stroke: none; }
 .fui-chart__dot { stroke: var(--bg-2); stroke-width: 2; }
+/* A limit: dashed in the critical colour, named at its right end; a line past it is drawn in that colour above it. */
+.fui-chart__limit { stroke: var(--critical); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.fui-chart__limit-label { fill: var(--critical-text); font: 600 10.5px var(--mono); }
+.fui-chart__line.fui-chart__over { stroke: var(--critical); }
+/* A mark: the moments it happened, shaded the plot's height in its status colour. */
+.fui-chart__band { fill-opacity: .16; }
+.fui-chart__band--critical { fill: var(--critical); }
+.fui-chart__band--warning { fill: var(--warning); }
 .fui-chart__hit { fill: transparent; }
 .fui-chart__bar { transition: opacity .12s ease; }
 .fui-chart__plot.is-pointing .fui-chart__bar:not(.is-on) { opacity: .45; }
@@ -2063,3 +2084,84 @@ a.fui-bar-list__name:hover { color: var(--text-strong); }
 /* The gallery's example: a window's corner, drawn small, with the button where it would rest in it. */
 .fui-to-top__stage { position: relative; width: 100%; height: 160px; border: 1px dashed var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .fui-to-top--demo { position: absolute; }
+
+/* FinUI: tile-stat. A tile, a name and a figure; the figure large and in the accent. */
+.fui-tile-stat__grid { display: grid; gap: 16px 20px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
+.fui-tile-stat { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.fui-tile-stat__tile { display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: var(--radius-control); color: var(--on-fill); }
+.fui-tile-stat__tile--accent { background: var(--accent); color: var(--on-accent); }
+.fui-tile-stat__tile--good { background: var(--good); }
+.fui-tile-stat__tile--critical { background: var(--critical); }
+.fui-tile-stat__tile--series-2 { background: var(--series-2); }
+.fui-tile-stat__tile--series-4 { background: var(--series-4); }
+.fui-tile-stat__tile--neutral { background: var(--wash-2); color: var(--wash-2-text); }
+.fui-tile-stat__text { display: flex; flex-direction: column; min-width: 0; }
+.fui-tile-stat__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: var(--text); }
+a.fui-tile-stat__name:hover { color: var(--text-strong); }
+.fui-tile-stat__figure { font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--accent); }
+.fui-tile-stat__unit { margin-left: 5px; font-size: 13px; color: var(--text-faint); }
+
+/* FinUI: stat-card. A card on the panel ground, its leader's picture on the left and its art dimmed behind; the first row
+   large and its value in the accent. */
+.fui-stat-card__grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
+.fui-stat-card { position: relative; display: flex; gap: 14px; min-width: 0; min-height: 158px; padding: 4px 16px 12px 4px; overflow: hidden; background: var(--bg-2); border-radius: var(--radius); }
+.fui-stat-card__art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .14; pointer-events: none; }
+.fui-stat-card__picture { position: relative; display: flex; justify-content: center; flex: none; width: 100px; padding-top: 4px; }
+.fui-stat-card__picture .fui-poster { width: 100px; }
+.fui-stat-card__body { position: relative; flex: 1; min-width: 0; padding-top: 12px; }
+.fui-stat-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.fui-stat-card__title { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 500; letter-spacing: .01em; text-transform: uppercase; color: var(--text-strong); }
+.fui-stat-card__column { flex: none; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); }
+.fui-stat-card__rows { margin: 0; padding: 0; list-style: none; }
+.fui-stat-card__row { display: flex; align-items: baseline; gap: 9px; padding: 2px 0; font-size: 13px; line-height: 1.45; color: var(--text); }
+/* A ranking's leader is large; a list of facts (ranked: false) keeps its rows alike. */
+ol.fui-stat-card__rows > .fui-stat-card__row:first-child { padding-bottom: 5px; font-size: 18px; }
+.fui-stat-card__rank { flex: none; width: 12px; text-align: right; font-size: 11px; color: var(--text-faint); }
+.fui-stat-card__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fui-stat-card__name a { color: inherit; }
+.fui-stat-card__name a:hover { color: var(--text-strong); }
+.fui-stat-card__sub { margin-left: 7px; font-size: 12px; color: var(--text-faint); }
+.fui-stat-card__value { flex: none; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+ol.fui-stat-card__rows > .fui-stat-card__row:first-child .fui-stat-card__value { color: var(--accent); }
+ul.fui-stat-card__rows .fui-stat-card__value { color: var(--text-strong); }
+/* The gallery's stand-in for a poster. */
+.fui-stat-card__demo-poster { display: block; width: 100px; aspect-ratio: 2 / 3; border-radius: var(--radius-control); background: var(--placeholder); }
+
+/* FinUI: stream-card. A panel with the poster on the left and the details over the art, a thin bar under it, and the
+   title and who is watching under that. */
+.fui-stream-card__grid { display: grid; gap: 22px 18px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); }
+.fui-stream-card { min-width: 0; }
+.fui-stream-card__panel { position: relative; display: flex; min-height: 236px; overflow: hidden; background: var(--bg-2); border-radius: var(--radius) var(--radius) 0 0; }
+.fui-stream-card__art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .16; pointer-events: none; }
+.fui-stream-card__poster { position: relative; flex: none; width: 160px; padding: 6px; }
+.fui-stream-card__poster .fui-poster { width: 100%; }
+.fui-stream-card__details { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 12px 70px 44px 14px; }
+.fui-stream-card__facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0 10px; margin: 0; font-size: 12.5px; line-height: 1.6; }
+.fui-stream-card__facts dt { text-align: right; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--text-faint); }
+.fui-stream-card__facts dd { min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.fui-stream-card__tile { position: absolute; top: 10px; right: 10px; }
+.fui-stream-card__when { position: absolute; right: 12px; bottom: 9px; display: flex; flex-direction: column; align-items: flex-end; font-size: 11.5px; line-height: 1.45; font-variant-numeric: tabular-nums; color: var(--text); }
+.fui-stream-card__bar { position: relative; height: 5px; overflow: hidden; background: var(--track); }
+.fui-stream-card__buffer, .fui-stream-card__fill { position: absolute; top: 0; bottom: 0; left: 0; }
+.fui-stream-card__buffer { background: var(--border-strong); }
+.fui-stream-card__fill { background: var(--accent); }
+.fui-stream-card__foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 12px; padding: 9px 2px 0; }
+.fui-stream-card__title { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14.5px; font-weight: 600; color: var(--text-strong); }
+.fui-stream-card__title a, .fui-stream-card__title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; }
+.fui-stream-card__sub { display: flex; align-items: center; gap: 8px; min-width: 0; grid-column: 1; font-size: 13.5px; color: var(--text-muted); }
+.fui-stream-card__who { grid-row: 1 / span 2; grid-column: 2; display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--text-muted); }
+@media (max-width: 520px) {
+  .fui-stream-card__poster { width: 104px; }
+  .fui-stream-card__details { padding-right: 12px; padding-top: 64px; }
+}
+/* The gallery's stand-in for a poster. */
+.fui-stream-card__demo-poster { display: block; aspect-ratio: 2 / 3; border-radius: var(--radius-control); background: var(--placeholder); }
+
+/* FinUI: stat-figure. The label in the text's colour, the numbers large in the accent, the units small and faint. */
+.fui-stat-figure__row { display: grid; gap: 18px 24px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.fui-stat-figure { min-width: 0; }
+.fui-stat-figure__label { margin-bottom: 6px; font-size: 17px; color: var(--text-strong); }
+.fui-stat-figure__value { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; padding-left: 10px; }
+.fui-stat-figure__number { font-size: 27px; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--accent); }
+.fui-stat-figure__unit { margin-right: 8px; font-size: 12px; color: var(--text-faint); }
+.fui-stat-figure__slash { margin-right: 10px; font-size: 24px; color: var(--text-strong); }

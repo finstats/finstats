@@ -22,7 +22,19 @@
 .brand-mark { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--accent-wash); color: var(--accent-hi); }
 .brand-mark-lg { width: 34px; height: 34px; border-radius: 9px; }
 .brand-logo { display: block; flex: none; }
+.brand-logo img { display: block; }
+/* One file per theme, both FinStats' violet (a darker one by day, for the paper; the logo is not the accent); the other is
+   hidden. Nothing chosen, the device decides. */
+.brand-logo .brand-logo-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand-logo .brand-logo-light { display: none; }
+  :root:not([data-theme="light"]) .brand-logo .brand-logo-dark { display: block; }
+}
+:root[data-theme="dark"] .brand-logo .brand-logo-light { display: none; }
+:root[data-theme="dark"] .brand-logo .brand-logo-dark { display: block; }
 .brand-name { font-weight: 650; font-size: 15px; letter-spacing: -.01em; }
+/* The name beside the mark is set in Inter whatever font a preset chooses for the page. */
+.brand-name, .desktop-nav .fui-desktop-nav__name { font-family: "Inter Variable", var(--sans); }
 
 kbd {
   font: 500 10.5px/1 var(--mono); color: var(--text-faint); background: var(--bg-2);
@@ -540,6 +552,22 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .wizard-step.is-locked .wizard-title::before { background: var(--hover); color: var(--text-faint); }
 .wizard-step:not(.is-locked) .wizard-locked-note { display: none; }
 .test-ok { white-space: normal; }
+/* The welcome: setup's card, a little wider for the two layouts side by side. */
+.welcome { width: min(600px, 100%); }
+.wizard-step.is-done .wizard-title { color: var(--text-muted); }
+.wizard-step.is-done .wizard-title .icon { color: var(--good); }
+.welcome-layouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.welcome-layout { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 8px 8px 10px; border: 1px solid var(--border-soft); border-radius: var(--radius); cursor: pointer; }
+.welcome-layout:hover { border-color: var(--border-strong); }
+.welcome-layout.is-chosen { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.welcome-layout:has(input:focus-visible) { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
+.welcome-layout input { position: absolute; opacity: 0; pointer-events: none; }
+.welcome-layout img { width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: cover; object-position: top left; border-radius: var(--radius-sm); background: var(--bg-sunken); }
+.welcome-layout__name { font-weight: 600; color: var(--text-strong); margin-top: 4px; }
+.welcome-layout__line { font-size: 12.5px; color: var(--text-muted); }
+.welcome-actions { justify-content: flex-end; }
+.welcome-skip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+@media (max-width: 520px) { .welcome-layouts { grid-template-columns: 1fr; } }
 
 .grid-heat { display: grid; gap: 20px; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 .grid-heat > * { min-width: 0; }
@@ -548,7 +576,8 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
 .subsection { margin-top: 44px; padding-top: 28px; border-top: 1px solid var(--border-soft); }
 .subsection-title { font-size: 18px; font-weight: 650; letter-spacing: -.012em; color: var(--text-strong); }
 .subsection-sub { margin-top: 3px; color: var(--text-faint); font-size: 12.5px; }
-.makeup:empty { display: none; }
+.makeup:empty, .subsection:has(> .makeup:empty) { display: none; }
+.makeup-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; }
 
 .mini-list { display: flex; flex-direction: column; }
 .mini-row { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
@@ -569,6 +598,8 @@ a.lib-card:hover { border-color: var(--accent); text-decoration: none; }
    headers break onto two lines and tighten the gutters instead of scrolling a table that has room. */
 .cm-table th, .cm-table td { padding-left: 8px; padding-right: 8px; }
 .cm-table thead th.r { white-space: normal; line-height: 1.25; vertical-align: bottom; }
+/* Places' column names run long in some languages ("INNLOGGINGER"): they wrap rather than push the table out of its card. */
+.places-table thead th { white-space: normal; line-height: 1.25; vertical-align: bottom; }
 .cm-table thead th.r .fui-data-table__sort { text-align: right; }
 .sbar-sm { display: flex; height: 8px; min-width: 0; }
 
@@ -1524,6 +1555,18 @@ a.wl-poster:hover .fui-poster, a.wl-poster:focus-visible .fui-poster { outline: 
 .health-actions { white-space: nowrap; text-align: right; }
 .health-actions > * + * { margin-left: 4px; }
 .health-card .fui-card__body p { margin: 0; }
+
+/* Capacity (Server → Capacity) */
+.capacity-findings { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.capacity-finding { display: grid; gap: 4px; }
+.capacity-finding + .capacity-finding { padding-top: 14px; border-top: 1px solid var(--border); }
+.capacity-finding > p { margin: 0; }
+.capacity-finding__title { font-weight: 600; }
+.capacity-finding__found { font-size: 12.5px; }
+.capacity-finding.is-aside .capacity-finding__title { color: var(--text-muted); }
+.capacity-finding .health-actions { text-align: left; }
+.capacity-disk > p { margin: 0 0 6px; }
+.capacity-disk + .capacity-disk { padding-top: 12px; border-top: 1px solid var(--border); }
 
 /* ---------------------------------------------------------------- everything in a library (/libraries/:id/titles) */
 .titles-grid { margin-top: 4px; }

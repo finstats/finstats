@@ -7,51 +7,52 @@ import { card, sk, setBusy, inlineError } from '../components.js';
 import { numberForm, settingRow } from './common.js';
 import { triggerWords } from './tasks.js';
 import { button } from '../../finui/components/button/button.js';
+import { t, tParts } from '../i18n.js';
 
 const TRAVEL_FIELDS = [
-  { key: 'travel_speed_kmh', label: 'Impossible travel is faster than', unit: 'km/h', min: 100, max: 5000, help: 'Two sightings of one person that would need more than this raise an alert. 900 is a little above an airliner. 100–5,000.' },
-  { key: 'travel_min_km', label: 'Only between places at least', unit: 'km apart', min: 50, max: 5000, help: 'City databases are often a few hundred kilometres off; closer places than this never raise an alert. 50–5,000.' },
+  { key: 'travel_speed_kmh', label: t('settings.security.speed'), unit: 'km/h', min: 100, max: 5000, help: t('settings.security.speed_help') },
+  { key: 'travel_min_km', label: t('settings.security.distance'), unit: t('settings.security.distance_unit'), min: 50, max: 5000, help: t('settings.security.distance_help') },
 ];
 
 export default {
-  key: 'security', label: 'Security', sub: 'Places, and impossible travel', group: 'Tracking', icon: 'shield',
+  key: 'security', label: t('settings.sections.security.label'), sub: t('settings.sections.security.sub'), group: t('settings.groups.tracking'), icon: 'shield',
   visible: () => can('manage'),
   entries: [
-    { id: 'geoip-database', label: 'Geolocation database', hint: 'geoip mmdb city db-ip maxmind download places map' },
-    { id: 'geoip-schedule', label: 'Keep the database up to date', hint: 'geoip download monthly db-ip schedule task' },
-    ...TRAVEL_FIELDS.map((f) => ({ id: f.key, label: f.label, hint: 'impossible travel alert speed distance km' })),
+    { id: 'geoip-database', label: t('settings.security.database'), hint: t('settings.security.database_hint') },
+    { id: 'geoip-schedule', label: t('settings.security.up_to_date'), hint: t('settings.security.up_to_date_hint') },
+    ...TRAVEL_FIELDS.map((f) => ({ id: f.key, label: f.label, hint: t('settings.security.travel_hint') })),
   ],
   async render(slot, store) {
     const body = h('div', { class: 'fui-setting-row__rows' }, sk.rows(3));
-    mount(slot, card({ title: 'Security', sub: 'Where addresses are placed, and what counts as impossible travel', body, id: 'security' }));
+    mount(slot, card({ title: t('settings.sections.security.label'), sub: t('settings.security.card_sub'), body, id: 'security' }));
     await store.loadSettings();
     let geoWasRunning = false, geoSig = null;
     const paint = () => {
       const s = store.settings, g = s.geoip || {}, dbInfo = g.database;
-      const t = store.task('geoip');
-      const running = !!t && t.state === 'running';
+      const task = store.task('geoip');
+      const running = !!task && task.state === 'running';
       const status = dbInfo
-        ? h('p', { class: 'fui-field__help' }, h('strong', null, dbInfo.kind), `, built ${dateOnly(dbInfo.built_at)}`, dbInfo.file ? [' · ', h('span', { class: 'mono' }, dbInfo.file)] : null)
-        : h('p', { class: 'fui-field__help' }, 'None yet. The Security page stays empty until there is one.');
+        ? h('p', { class: 'fui-field__help' }, ...tParts('settings.security.built', { kind: h('strong', null, dbInfo.kind), date: dateOnly(dbInfo.built_at) }), dbInfo.file ? [' · ', h('span', { class: 'mono' }, dbInfo.file)] : null)
+        : h('p', { class: 'fui-field__help' }, t('settings.security.none_yet'));
       const err = h('div');
-      const get = button({ size: 'sm', type: 'button', disabled: running || g.from_env }, icon('upload', 13, 'flip-v'), running ? (t.message || 'Downloading…') : dbInfo ? 'Download the newest' : 'Download (about 60 MB)');
+      const get = button({ size: 'sm', type: 'button', disabled: running || g.from_env }, icon('upload', 13, 'flip-v'), running ? (task.message || t('settings.security.downloading')) : dbInfo ? t('settings.security.download_newest') : t('settings.security.download'));
       get.addEventListener('click', async () => {
         mount(err, '');
-        setBusy(get, true, 'Starting…');
+        setBusy(get, true, t('settings.security.starting'));
         try { await api.post('/security/database'); await store.poke(1000); }
         catch (e) { setBusy(get, false); mount(err, inlineError('geoip-err', e.message)); }
       });
-      if (t && t.state === 'error') mount(err, inlineError('geoip-err', t.error || 'The download failed.'));
+      if (task && task.state === 'error') mount(err, inlineError('geoip-err', task.error || t('settings.security.download_failed')));
       mount(body,
-        settingRow({ id: 'geoip-database', label: 'Geolocation database',
-          help: g.from_env ? 'Set with FINSTATS_GEOIP_DB; replace that file to update it.'
-            : `Addresses are placed from a file on this machine, never over the network: the newest .mmdb in ${g.folder || 'the geoip folder'}.`,
+        settingRow({ id: 'geoip-database', label: t('settings.security.database'),
+          help: g.from_env ? t('settings.security.from_env')
+            : g.folder ? t('settings.security.from_folder', { folder: g.folder }) : t('settings.security.from_default_folder'),
           control: [h('div', { class: 'home-known' }, status, h('div', { class: 'form-actions' }, get), err)] }),
-        g.from_env ? null : settingRow({ id: 'geoip-schedule', label: 'Keep the database up to date',
-          help: t && t.triggers && t.triggers.length
-            ? `Scheduled: ${t.triggers.map(triggerWords).join(', ')}. A newer month of DB-IP’s free file (CC BY 4.0) is fetched; nothing about you is sent.`
-            : 'Not scheduled. Its task fetches DB-IP’s free city file (about 60 MB, CC BY 4.0) when a newer month is out.',
-          control: button({ size: 'sm', href: '/settings/tasks/geoip' }, icon('clock', 13), 'Schedule') }),
+        g.from_env ? null : settingRow({ id: 'geoip-schedule', label: t('settings.security.up_to_date'),
+          help: task && task.triggers && task.triggers.length
+            ? t('settings.security.scheduled', { triggers: task.triggers.map(triggerWords).join(', ') })
+            : t('settings.security.not_scheduled'),
+          control: button({ size: 'sm', href: '/settings/tasks/geoip' }, icon('clock', 13), t('settings.security.schedule')) }),
         numberForm(store, TRAVEL_FIELDS, 'travel-err'));
     };
     paint();

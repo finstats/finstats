@@ -3,6 +3,7 @@
 import { h, icon } from '../../core.js';
 import { num } from '../../format.js';
 import { button } from '../button/button.js';
+import { say } from '../../i18n.js';
 
 export function pagination({ page, perPage, total, onPage }) {
   const pages = Math.max(1, Math.ceil(total / perPage));
@@ -10,11 +11,11 @@ export function pagination({ page, perPage, total, onPage }) {
   // Buttons stay enabled; out-of-range clicks are simply ignored (aria-disabled communicates the edge).
   const mk = (lbl, ic, target, off) => button({ size: 'sm', variant: 'ghost', type: 'button', 'aria-label': lbl, 'aria-disabled': off ? 'true' : null,
     onClick: () => { if (!off) onPage(target); } }, icon(ic, 14));
-  return h('nav', { class: 'fui-pagination', 'aria-label': 'Pagination' },
-    h('span', { class: 'fui-pagination__info mono' }, `${num(from)}–${num(to)} of ${num(total)}`),
-    h('div', { class: 'fui-pagination__buttons' }, mk('Previous page', 'chevronLeft', page - 1, page <= 1),
+  return h('nav', { class: 'fui-pagination', 'aria-label': say('pagination.label', 'Pagination') },
+    h('span', { class: 'fui-pagination__info mono' }, say('pagination.range', `${num(from)}–${num(to)} of ${num(total)}`, { from: num(from), to: num(to), total: num(total) })),
+    h('div', { class: 'fui-pagination__buttons' }, mk(say('pagination.previous', 'Previous page'), 'chevronLeft', page - 1, page <= 1),
       h('span', { class: 'fui-pagination__page mono' }, `${page} / ${pages}`),
-      mk('Next page', 'chevronRight', page + 1, page >= pages)));
+      mk(say('pagination.next', 'Next page'), 'chevronRight', page + 1, page >= pages)));
 }
 
 // ---------------------------------------------------------------- media

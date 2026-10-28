@@ -4,6 +4,7 @@
 
 import { h, icon } from '../../core.js';
 import { shown, rest } from './plan.js';
+import { say } from '../../i18n.js';
 
 /**
  * toTop({ label, after, kept, onTop }): the button; answers { el, place(kept), destroy() }. after: how far down (px) the
@@ -14,7 +15,7 @@ import { shown, rest } from './plan.js';
 /** Nothing should move: reduced motion, or a preset's Motion: Off (an --ease of 0s). */
 const still = (el) => matchMedia('(prefers-reduced-motion: reduce)').matches || parseFloat(getComputedStyle(el).getPropertyValue('--ease')) === 0;
 
-export function toTop({ label = 'Scroll to top', after = 400, kept = [], onTop = null } = {}) {
+export function toTop({ label = say('to_top.label', 'Scroll to top'), after = 400, kept = [], onTop = null } = {}) {
   const el = h('button', { type: 'button', class: 'fui-to-top', 'aria-label': label, title: label }, icon('arrowUp', 16));
   el.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: still(el) ? 'auto' : 'smooth' });

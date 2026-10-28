@@ -1,13 +1,18 @@
 // FinUI: chart, the arithmetic every chart shares: round steps on an axis, a value's place along it, stacks, the path
-// of a line and of a ring's slice, how busy a heat cell is, and numbers said compactly. Pure; tested in FinUI's repository.
+// of a line and of a ring's slice, how busy a heat cell is, where something happened, and numbers said compactly. Pure;
+// tested in FinUI's repository.
+
+import { say, locale } from '../../i18n.js';
 
 const dust = (n) => Number(n.toPrecision(12));
-/** Round ticks from 0 (or below) covering `min`…`max`, about `count` of them: steps of 1, 2, 2.5 or 5 times a power of ten. */
-export function niceTicks(min, max, count = 4) {
+/** Round ticks from 0 (or below) covering `min`…`max`, about `count` of them: steps of 1, 2, 2.5 or 5 times a power of ten,
+ *  and only whole ones with `whole`. */
+export function niceTicks(min, max, count = 4, { whole = false } = {}) {
   if (!(max > min)) return [min, min + 1];
   const raw = (max - min) / Math.max(1, count);
   const pow = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw);
+  // Whole things are counted in whole steps: 2.5 or 0.5 of a play would be printed rounded, and the axis would lie.
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw && (!whole || Number.isInteger(s))) || Math.ceil(raw);
   const out = [];
   for (let v = Math.floor(min / step) * step; v < max + step * 0.999; v += step) out.push(dust(v));
   return out;
@@ -32,12 +37,24 @@ export function slice(cx, cy, outer, inner, a0, a1) {
 }
 /** How busy a cell is, 0 (nothing) to `steps`: anything at all is at least the first step. */
 export const level = (v, max, steps = 6) => (!(v > 0) || !(max > 0) ? 0 : Math.max(1, Math.min(steps, Math.round((v / max) * steps))));
-const whole = new Intl.NumberFormat('en-US');
+/** Where something happened (a value above 0), as runs of neighbouring indexes: [[first, last], …]. */
+export function runs(values) {
+  const out = [];
+  values.forEach((v, i) => {
+    if (!(v > 0)) return;
+    const last = out[out.length - 1];
+    if (last && last[1] === i - 1) last[1] = i;
+    else out.push([i, i]);
+  });
+  return out;
+}
+let whole = null, tenth = null, numFor = '';
 /** 1,284 · 12.9K · 4.2M */
 export function compact(n) {
+  if (numFor !== locale()) { numFor = locale(); whole = new Intl.NumberFormat(numFor); tenth = new Intl.NumberFormat(numFor, { maximumFractionDigits: 1, useGrouping: false }); }
   const a = Math.abs(n);
   if (a < 10000) return whole.format(Math.round(n));
-  const [d, u] = a >= 1e9 ? [1e9, 'B'] : a >= 1e6 ? [1e6, 'M'] : [1e3, 'K'];
-  const v = n / d;
-  return `${Math.abs(v) >= 100 ? Math.round(v) : Number(v.toFixed(1))}${u}`;
+  const [d, u, key] = a >= 1e9 ? [1e9, 'B', 'chart.billions'] : a >= 1e6 ? [1e6, 'M', 'chart.millions'] : [1e3, 'K', 'chart.thousands'];
+  const v = n / d, said = tenth.format(Math.abs(v) >= 100 ? Math.round(v) : Number(v.toFixed(1)));
+  return say(key, `${said}${u}`, { n: said });
 }

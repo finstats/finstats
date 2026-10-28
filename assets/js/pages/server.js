@@ -10,15 +10,20 @@ import { reveal, pickSection, sectionNav, sectionLayout } from '../sections.js';
 import { logView, prefetchEvents } from './events.js';
 import { auditView, prefetchAudit } from './audit.js';
 import { healthView, prefetchHealth } from './health.js';
+import { capacityView, prefetchCapacity } from './capacity.js';
 import { isAdmin } from '../state.js';
 import { button } from '../../finui/components/button/button.js';
+import { t, tOr, tParts } from '../i18n.js';
 
 const RESULT = {
-  Completed: ['sev-good', 'check', 'Completed'],
-  Failed: ['sev-critical', 'alert', 'Failed'],
-  Aborted: ['sev-warning', 'alert', 'Aborted'],
-  Cancelled: ['sev-warning', 'alert', 'Cancelled'],
+  Completed: ['sev-good', 'check', t('pages.server.result.Completed')],
+  Failed: ['sev-critical', 'alert', t('pages.server.result.Failed')],
+  Aborted: ['sev-warning', 'alert', t('pages.server.result.Aborted')],
+  Cancelled: ['sev-warning', 'alert', t('pages.server.result.Cancelled')],
 };
+
+// Jellyfin's PluginStatus values.
+const PLUGIN_STATUS = ['Active', 'Restart', 'Deleted', 'Superceded', 'Malfunctioned', 'NotSupported', 'Disabled'];
 
 // Shared with the prefetcher, so a prefetched view has exactly the address the page asks for.
 const loadServer = (signal) => api.get('/server', null, { signal });
@@ -27,19 +32,22 @@ export const prefetchServer = (c) => {
   if (section === 'log') return prefetchEvents(c);
   if (section === 'audit') return prefetchAudit(c);
   if (section === 'health') return prefetchHealth(c);
+  if (section === 'capacity') return prefetchCapacity(c);
   return [() => loadServer(c.signal)];
 };
 
 const SECTIONS = [
-  { key: 'overview', label: 'Overview', sub: 'Version, system and storage', icon: 'server' },
-  { key: 'jobs', label: 'Jobs', sub: 'What Jellyfin is doing, live', icon: 'clock' },
-  { key: 'devices', label: 'Devices', sub: 'Every device that has signed in', icon: 'monitor' },
-  { key: 'plugins', label: 'Plugins', sub: 'What is installed on Jellyfin', icon: 'layers' },
+  { key: 'overview', label: t('pages.server.sections.overview.label'), sub: t('pages.server.sections.overview.sub'), icon: 'server' },
+  { key: 'jobs', label: t('pages.server.sections.jobs.label'), sub: t('pages.server.sections.jobs.sub'), icon: 'clock' },
+  { key: 'devices', label: t('pages.server.sections.devices.label'), sub: t('pages.server.sections.devices.sub'), icon: 'monitor' },
+  { key: 'plugins', label: t('pages.server.sections.plugins.label'), sub: t('pages.server.sections.plugins.sub'), icon: 'layers' },
   // Not the image's HEALTHCHECK: what is wrong with the files, found by comparing them with their neighbours.
-  { key: 'health', label: 'Library health', sub: 'Holes in seasons, copies, thin files and seasons that differ, found by comparing each file with its neighbours', icon: 'gauge' },
-  { key: 'log', label: 'Log', sub: 'Jellyfin’s own activity log: sign-ins, failed logins, playback, tasks', icon: 'log' },
+  // Will it cope: the busiest moments on record, how fast the disks fill, and what that says about the server's settings.
+  { key: 'capacity', label: t('pages.server.sections.capacity.label'), sub: t('pages.server.sections.capacity.sub'), icon: 'hardDrive' },
+  { key: 'health', label: t('pages.server.sections.health.label'), sub: t('pages.server.sections.health.sub'), icon: 'gauge' },
+  { key: 'log', label: t('pages.server.sections.log.label'), sub: t('pages.server.sections.log.sub'), icon: 'log' },
   // FinStats' own doings, for administrators: it names who changed what.
-  { key: 'audit', label: 'Audit', sub: 'What changed in FinStats, and who did it', icon: 'shield', visible: () => isAdmin() },
+  { key: 'audit', label: t('pages.server.sections.audit.label'), sub: t('pages.server.sections.audit.sub'), icon: 'shield', visible: () => isAdmin() },
 ];
 // The one-page card anchors, so a link from before still lands.
 const LEGACY = { jobs: 'jobs' };
@@ -48,8 +56,8 @@ export default function serverPage(ctx) {
   const visible = SECTIONS.filter((s) => !s.visible || s.visible());
   const section = pickSection(ctx, '/server', visible, LEGACY);
   if (!section) return;
-  ctx.title(`${section.label} · Server`);
-  const headerSlot = h('div', null, pageHeader('Server', section.sub));
+  ctx.title(`${section.label} · ${t('nav.server')}`);
+  const headerSlot = h('div', null, pageHeader(t('nav.server'), section.sub));
   const view = h('div', { class: 'fui-sections__body stack' });
   let deviceFilter = '';
 
@@ -65,11 +73,11 @@ export default function serverPage(ctx) {
     const info = d.info || null;
     const name = (info && info.server_name) || (state.status && state.status.server_name) || 'Jellyfin';
     const chips = [
-      info && info.has_update_available ? h('span', { class: 'fui-badge--status fui-badge--info fui-badge--outlined' }, icon('arrowUp', 13), 'Update available') : null,
-      info && info.has_pending_restart ? h('span', { class: 'fui-badge--status fui-badge--warning fui-badge--outlined' }, icon('refresh', 13), 'Restart pending') : null,
+      info && info.has_update_available ? h('span', { class: 'fui-badge--status fui-badge--info fui-badge--outlined' }, icon('arrowUp', 13), t('pages.server.update_available')) : null,
+      info && info.has_pending_restart ? h('span', { class: 'fui-badge--status fui-badge--warning fui-badge--outlined' }, icon('refresh', 13), t('pages.server.restart_pending')) : null,
     ].filter(Boolean);
     headerSlot.replaceChildren(pageHeader(name,
-      [info && info.version ? `Jellyfin ${info.version}` : 'Your Jellyfin server', d.fetched_at ? ['· details from ', relEl(d.fetched_at, '')] : null],
+      [info && info.version ? `Jellyfin ${info.version}` : t('pages.server.your_server'), d.fetched_at ? [...tParts('pages.server.details_from', { when: relEl(d.fetched_at, '') })] : null],
       chips.length ? h('div', { class: 'fui-chip__set' }, chips) : null));
   }
 
@@ -84,14 +92,14 @@ export default function serverPage(ctx) {
     if (section.key === 'devices') return devicesCard(d.devices);
     if (section.key === 'plugins') return pluginsCard(d.plugins);
     return [
-      info ? card({ title: 'System', id: 'system', body: facts([
-        ['Version', info.version, { mono: true }],
-        ['Operating system', [info.operating_system, info.architecture].filter(Boolean).join(' · ') || null],
-        ['Transcoder', info.encoder_location],
-        info.transcoding_temp_path ? ['Transcode folder', h('span', { class: 'mono path' }, info.transcoding_temp_path), { wide: true }] : null,
-        info.cache_path ? ['Cache folder', h('span', { class: 'mono path' }, info.cache_path), { wide: true }] : null,
-        info.program_data_path ? ['Data folder', h('span', { class: 'mono path' }, info.program_data_path), { wide: true }] : null,
-        info.log_path ? ['Log folder', h('span', { class: 'mono path' }, info.log_path), { wide: true }] : null,
+      info ? card({ title: t('pages.server.system.title'), id: 'system', body: facts([
+        [t('pages.server.system.version'), info.version, { mono: true }],
+        [t('pages.server.system.os'), [info.operating_system, info.architecture].filter(Boolean).join(' · ') || null],
+        [t('pages.server.system.transcoder'), info.encoder_location],
+        info.transcoding_temp_path ? [t('pages.server.system.transcode_folder'), h('span', { class: 'mono path' }, info.transcoding_temp_path), { wide: true }] : null,
+        info.cache_path ? [t('pages.server.system.cache_folder'), h('span', { class: 'mono path' }, info.cache_path), { wide: true }] : null,
+        info.program_data_path ? [t('pages.server.system.data_folder'), h('span', { class: 'mono path' }, info.program_data_path), { wide: true }] : null,
+        info.log_path ? [t('pages.server.system.log_folder'), h('span', { class: 'mono path' }, info.log_path), { wide: true }] : null,
       ]) }) : null,
       storageCard(d.storage),
     ];
@@ -100,10 +108,10 @@ export default function serverPage(ctx) {
   // ---- nothing fetched yet
   function fetchPrompt() {
     const err = h('div');
-    const btn = button({ variant: 'primary', type: 'button' }, icon('refresh', 14), 'Fetch server details');
+    const btn = button({ variant: 'primary', type: 'button' }, icon('refresh', 14), t('pages.server.fetch.button'));
     btn.addEventListener('click', async () => {
       mount(err);
-      setBusy(btn, true, 'Fetching…');
+      setBusy(btn, true, t('pages.server.fetch.busy'));
       try {
         await api.post('/tasks/sync_server/run', {}, { signal: ctx.signal });
       } catch (e) {
@@ -119,41 +127,44 @@ export default function serverPage(ctx) {
         } catch (e) { if (isAbort(e) || e.status === 401) return; }
         if (Date.now() > deadline) {
           setBusy(btn, false);
-          mount(err, inlineError('server-fetch-err', 'Jellyfin hasn’t answered yet. Check Settings → Tasks for the reason, then try again.'));
+          mount(err, inlineError('server-fetch-err', t('pages.server.fetch.timeout')));
           return;
         }
         timer = setTimeout(poll, 2000);
       };
       timer = setTimeout(poll, 2000);
     });
-    return emptyState('No server details yet', 'FinStats fetches version, storage, plugins, scheduled tasks and devices from Jellyfin on its regular sync. You can also fetch them now.',
+    return emptyState(t('pages.server.fetch.empty'), t('pages.server.fetch.empty_sub'),
       h('div', { class: 'fui-empty__action' }, btn, err));
   }
   let timer = null;
   ctx.onCleanup(() => clearTimeout(timer));
 
   // ---- storage
+  // Jellyfin's own folders are named by FinStats (in English, as stored); a library's folder by the library's own name.
+  const folderName = (x) => !x.label ? t('pages.server.storage.volume')
+    : x.kind === 'system' ? tOr(`pages.server.storage.folder.${x.label.toLowerCase().replace(/\W+/g, '_')}`, x.label) : x.label;
   function storageCard(storage) {
     const rows = (Array.isArray(storage) ? storage : []).filter((x) => x && x.used_bytes >= 0 && x.free_bytes >= 0 && x.used_bytes + x.free_bytes > 0);
     if (!rows.length) {
-      return card({ title: 'Storage', id: 'storage', body: h('p', { class: 'fui-field__help' }, 'This Jellyfin version doesn’t report disk usage (it arrived in 10.11).') });
+      return card({ title: t('pages.server.storage.title'), id: 'storage', body: h('p', { class: 'fui-field__help' }, t('pages.server.storage.unreported')) });
     }
     const order = { library: 0, system: 1 };
     rows.sort((a, b) => (order[a.kind] ?? 2) - (order[b.kind] ?? 2));
-    return card({ title: 'Storage', id: 'storage', sub: 'Disk usage of the volumes Jellyfin lives on. Entries with identical numbers share a disk.',
+    return card({ title: t('pages.server.storage.title'), id: 'storage', sub: t('pages.server.storage.sub'),
       body: h('ul', { class: 'storage' }, rows.map((x) => {
         const total = x.used_bytes + x.free_bytes, share = x.used_bytes / total;
         // Severity lives in the fill; the track is a lighter step of the same hue.
         const level = share >= 0.95 ? 'is-critical' : share >= 0.85 ? 'is-warning' : '';
         return h('li', { class: 'storage-row' },
           h('div', { class: 'storage-head' },
-            h('span', { class: 'storage-label' }, x.label || 'Volume', x.kind === 'library' ? h('span', { class: 'fui-chip' }, 'Library') : null),
-            h('span', { class: 'mono storage-nums' }, `${bytes(x.free_bytes)} free of ${bytes(total)}`)),
-          h('div', { class: ['fui-meter fui-meter--block storage-meter', level], role: 'progressbar', 'aria-label': `${x.label || 'Volume'} disk usage`, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(share * 100) },
+            h('span', { class: 'storage-label' }, folderName(x), x.kind === 'library' ? h('span', { class: 'fui-chip' }, t('pages.server.storage.library')) : null),
+            h('span', { class: 'mono storage-nums' }, t('pages.server.storage.free_of', { free: bytes(x.free_bytes), total: bytes(total) }))),
+          h('div', { class: ['fui-meter fui-meter--block storage-meter', level], role: 'progressbar', 'aria-label': t('pages.server.storage.usage_aria', { volume: folderName(x) }), 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(share * 100) },
             h('span', { class: 'fui-meter__fill', style: { width: Math.max(1, share * 100) + '%' } })),
           h('div', { class: 'storage-foot' }, x.path ? h('span', { class: 'mono path' }, x.path) : h('span'),
-            level ? h('span', { class: ['fui-badge--status', level === 'is-critical' ? 'fui-badge--critical' : 'fui-badge--warning'] }, icon('alert', 13), level === 'is-critical' ? 'Almost full' : 'Getting full')
-                  : h('span', { class: 'mono muted' }, Math.round(share * 100) + '% used')));
+            level ? h('span', { class: ['fui-badge--status', level === 'is-critical' ? 'fui-badge--critical' : 'fui-badge--warning'] }, icon('alert', 13), level === 'is-critical' ? t('pages.server.storage.almost_full') : t('pages.server.storage.getting_full'))
+                  : h('span', { class: 'mono muted' }, t('pages.server.storage.used', { pct: Math.round(share * 100) }))));
       })) });
   }
 
@@ -165,35 +176,35 @@ export default function serverPage(ctx) {
     const paint = () => {
       const q = deviceFilter.trim().toLowerCase();
       const rows = q ? all.filter((d) => [d.name, d.app, d.app_version, d.last_user_name].some((v) => v && String(v).toLowerCase().includes(q))) : all;
-      count.textContent = q ? `${num(rows.length)} of ${num(all.length)}` : num(all.length);
-      if (!all.length) return mount(body, emptyState('No devices known yet.'));
-      if (!rows.length) return mount(body, emptyState('No devices match', 'Try a device, app or user name.'));
+      count.textContent = q ? t('pages.server.devices.shown_of', { shown: rows.length, total: all.length }) : num(all.length);
+      if (!all.length) return mount(body, emptyState(t('pages.server.devices.none')));
+      if (!rows.length) return mount(body, emptyState(t('pages.server.devices.no_match'), t('pages.server.devices.no_match_sub')));
       mount(body, plainTable(h('table', { class: 'fui-data-table' },
-        h('thead', null, h('tr', null, h('th', null, 'Device'), h('th', null, 'App'), h('th', null, 'Last user'), h('th', null, 'Last seen'))),
+        h('thead', null, h('tr', null, h('th', null, t('pages.server.devices.device')), h('th', null, t('pages.server.devices.app')), h('th', null, t('pages.server.devices.last_user')), h('th', null, t('pages.server.devices.last_seen')))),
         h('tbody', null, rows.map((d) => h('tr', null,
-          h('td', { class: 'wrap-cell' }, d.name || 'Unknown device'),
+          h('td', { class: 'wrap-cell' }, d.name || t('pages.server.devices.unknown_device')),
           h('td', null, h('div', { class: 'client-cell' }, h('span', null, d.app || '–'), h('span', { class: 'muted mono' }, d.app_version || ''))),
-          h('td', null, d.last_user_id ? h('a', { href: `/users/${d.last_user_id}` }, d.last_user_name || 'Unknown user') : d.last_user_name || h('span', { class: 'muted' }, '–')),
+          h('td', null, d.last_user_id ? h('a', { href: `/users/${d.last_user_id}` }, d.last_user_name || t('pages.server.devices.unknown_user')) : d.last_user_name || h('span', { class: 'muted' }, '–')),
           h('td', null, d.last_seen ? relEl(d.last_seen) : h('span', { class: 'muted' }, '–'))))))));
     };
     const onInput = debounce((v) => { deviceFilter = v; paint(); }, 150);
     ctx.onCleanup(() => onInput.cancel());
-    const input = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: 'Filter devices…', 'aria-label': 'Filter devices', value: deviceFilter, spellcheck: false,
+    const input = h('input', { class: 'fui-field__input fui-field__input--search', type: 'search', placeholder: t('pages.server.devices.filter_placeholder'), 'aria-label': t('pages.server.devices.filter_aria'), value: deviceFilter, spellcheck: false,
       onInput: (e) => onInput(e.target.value) });
     paint();
-    return card({ title: ['Devices ', count], id: 'devices', sub: 'Every device that has signed in to Jellyfin',
+    return card({ title: [t('pages.server.devices.title'), ' ', count], id: 'devices', sub: t('pages.server.devices.sub'),
       actions: all.length > 5 ? h('div', { class: 'fui-field__search fui-field__search--sm' }, icon('search', 14), input) : null, cls: 'fui-card--flush', body });
   }
 
   function pluginsCard(plugins) {
     const rows = Array.isArray(plugins) ? plugins : [];
-    return card({ title: 'Plugins', id: 'plugins', cls: 'fui-card--flush', body: !rows.length ? emptyState('No plugins reported.') :
+    return card({ title: t('pages.server.plugins.title'), id: 'plugins', cls: 'fui-card--flush', body: !rows.length ? emptyState(t('pages.server.plugins.none')) :
       plainTable(h('table', { class: 'fui-data-table' },
-        h('thead', null, h('tr', null, h('th', null, 'Plugin'), h('th', null, 'Version'), h('th', null, 'Status'))),
+        h('thead', null, h('tr', null, h('th', null, t('pages.server.plugins.plugin')), h('th', null, t('pages.server.plugins.version')), h('th', null, t('pages.server.plugins.status')))),
         h('tbody', null, rows.map((p) => {
           const ok = !p.status || p.status === 'Active';
           return h('tr', null, h('td', { title: p.description || null }, p.name || '–'), h('td', { class: 'mono' }, p.version || '–'),
-            h('td', null, h('span', { class: ['fui-badge--status', ok ? 'fui-badge--good' : 'fui-badge--warning'] }, icon(ok ? 'check' : 'alert', 13), p.status || 'Active')));
+            h('td', null, h('span', { class: ['fui-badge--status', ok ? 'fui-badge--good' : 'fui-badge--warning'] }, icon(ok ? 'check' : 'alert', 13), PLUGIN_STATUS.includes(p.status || 'Active') ? t(`pages.server.plugins.state.${p.status || 'Active'}`) : p.status)));
         })))) });
   }
 
@@ -220,8 +231,8 @@ export default function serverPage(ctx) {
 
   function jobsCard() {
     return card({
-      title: 'Jellyfin’s jobs',
-      sub: 'What your server does in the background, what each one is for, and how far along it is',
+      title: t('pages.server.jobs.title'),
+      sub: t('pages.server.jobs.sub'),
       id: 'jobs',
       actions: jobsBadge,
       body: jobsSlot,
@@ -234,21 +245,20 @@ export default function serverPage(ctx) {
       loading. A guess put where an estimate goes would read exactly like an estimate, so there is no number. */
   function leftText(job) {
     if (job.eta_s == null) {
+      const dots = h('span', { class: 'dots', 'aria-hidden': 'true' }, h('span', null, '.'), h('span', null, '.'), h('span', null, '.'));
       return h('span', { class: 'job-working' },
-        h('span', { 'aria-hidden': 'true' }, 'about'),
-        h('span', { class: 'dots', 'aria-hidden': 'true' }, h('span', null, '.'), h('span', null, '.'), h('span', null, '.')),
-        h('span', { 'aria-hidden': 'true' }, 'left'),
-        h('span', { class: 'sr-only' }, 'Working; no estimate yet'));
+        ...tParts('pages.server.jobs.eta_dots', { dots }).map((p) => (typeof p === 'string' ? (p.trim() ? h('span', { 'aria-hidden': 'true' }, p.trim()) : null) : p)).filter(Boolean),
+        h('span', { class: 'sr-only' }, t('pages.server.jobs.eta_none')));
     }
-    if (job.eta_s <= 5) return h('span', null, 'finishing');
-    return h('span', null, 'about ', h('strong', null, duration(job.eta_s)), ' left');
+    if (job.eta_s <= 5) return h('span', null, t('pages.server.jobs.finishing'));
+    return h('span', null, ...tParts('pages.server.jobs.eta', { time: h('strong', null, duration(job.eta_s)) }));
   }
 
   /** A percentage that has not moved for a while: a slow job, said out loud, so it does not read as a
       stuck page. Jellyfin only reports progress when the job bothers to, and some barely do. */
   function stillText(job) {
     if (!job.unchanged_for_s || job.unchanged_for_s < 30) return null;
-    return h('span', { class: 'muted' }, `· ${Math.round(job.progress || 0)}% for ${duration(job.unchanged_for_s)}`);
+    return h('span', { class: 'muted' }, t('pages.server.jobs.still', { pct: Math.round(job.progress || 0), time: duration(job.unchanged_for_s) }));
   }
 
   /** How long FinStats has been watching, which is how young the estimate is. Left out when the job has
@@ -257,7 +267,7 @@ export default function serverPage(ctx) {
     if (!job.watching_since) return null;
     const watched = Math.max(1, Math.floor(Date.now() / 1000) - job.watching_since);
     if (job.unchanged_for_s >= 30 && watched - job.unchanged_for_s <= 5) return null;
-    return h('span', { class: 'muted' }, ['· watched for ', duration(watched)]);
+    return h('span', { class: 'muted' }, t('pages.server.jobs.watched_for', { time: duration(watched) }));
   }
 
   function runningJob(job) {
@@ -265,27 +275,27 @@ export default function serverPage(ctx) {
     return h('div', { class: 'job' },
       h('div', { class: 'job-head' },
         h('strong', null, job.name),
-        h('span', { class: 'fui-badge fui-badge--live' }, h('span', { class: 'fui-badge__dot' }), job.state === 'Cancelling' ? 'Stopping' : 'Running'),
-        h('span', { class: 'job-pct mono' }, `${pct}%`)),
-      h('div', { class: 'fui-meter fui-meter--wide', role: 'progressbar', 'aria-label': `${job.name} progress`, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct },
+        h('span', { class: 'fui-badge fui-badge--live' }, h('span', { class: 'fui-badge__dot' }), job.state === 'Cancelling' ? t('pages.server.jobs.stopping') : t('pages.server.jobs.running')),
+        h('span', { class: 'job-pct mono' }, t('pages.server.jobs.percent', { pct }))),
+      h('div', { class: 'fui-meter fui-meter--wide', role: 'progressbar', 'aria-label': t('pages.server.jobs.progress_aria', { name: job.name }), 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct },
         h('span', { class: 'fui-meter__fill', style: { width: `${Math.max(pct, 1)}%` } })),
       h('div', { class: 'job-meta' }, leftText(job), stillText(job), watchedText(job),
-        job.last_duration_s ? h('span', { class: 'muted' }, ['· last time it took ', duration(job.last_duration_s)]) : null),
+        job.last_duration_s ? h('span', { class: 'muted' }, t('pages.server.jobs.last_took', { time: duration(job.last_duration_s) })) : null),
       h('p', { class: 'fui-field__help job-what' }, job.what));
   }
 
   function jobRow(job) {
     const [cls, ic, label] = RESULT[job.last_result] || ['sev-info', 'info', job.last_result || null];
-    const when = job.schedule && job.schedule.length ? job.schedule.join(', ') : 'only when something asks for it';
+    const when = job.schedule && job.schedule.length ? job.schedule.join(', ') : t('pages.server.jobs.on_demand');
     return h('tr', null,
       h('td', null, h('div', { class: 'job-cell' },
-        h('span', null, job.name, job.hidden ? h('span', { class: 'fui-chip' }, 'hidden') : null),
+        h('span', null, job.name, job.hidden ? h('span', { class: 'fui-chip' }, t('pages.server.jobs.hidden')) : null),
         h('span', { class: 'cell-sub job-what' }, job.what))),
       h('td', null, h('div', { class: 'job-cell' },
         h('span', null, when),
-        job.next_at ? h('span', { class: 'cell-sub' }, `next ${untilText(job.next_at)}`) : null)),
+        job.next_at ? h('span', { class: 'cell-sub' }, t('pages.server.jobs.next', { when: untilText(job.next_at) })) : null)),
       h('td', null, h('div', { class: 'job-cell' },
-        job.last_run_at ? relEl(job.last_run_at) : h('span', { class: 'muted' }, 'never run'),
+        job.last_run_at ? relEl(job.last_run_at) : h('span', { class: 'muted' }, t('pages.server.jobs.never_run')),
         label ? h('span', { class: 'cell-sub' }, h('span', { class: 'fui-badge--status ' + cls }, icon(ic, 12), label, job.last_duration_s != null ? ` · ${duration(job.last_duration_s)}` : '')) : null)));
   }
 
@@ -295,22 +305,23 @@ export default function serverPage(ctx) {
     const running = jobs.filter((j) => j.running);
     const idle = jobs.filter((j) => !j.running);
     mount(jobsSlot,
-      jobsData && jobsData.error ? h('p', { class: 'fui-field__help' }, `Jellyfin did not answer just now (${jobsData.error}); this is the last thing it said.`) : null,
-      running.length ? h('div', { class: 'job-list' }, running.map(runningJob)) : h('p', { class: 'fui-field__help' }, 'Nothing is running on Jellyfin right now.'),
+      jobsData && jobsData.error ? h('p', { class: 'fui-field__help' }, t('pages.server.jobs.stale', { error: jobsData.error })) : null,
+      running.length ? h('div', { class: 'job-list' }, running.map(runningJob)) : h('p', { class: 'fui-field__help' }, t('pages.server.jobs.nothing_running')),
       idle.length
         ? plainTable(h('table', { class: 'fui-data-table jobs-table' },
-          h('thead', null, h('tr', null, h('th', null, 'Job'), h('th', null, 'Runs'), h('th', null, 'Last run'))),
+          h('thead', null, h('tr', null, h('th', null, t('pages.server.jobs.job')), h('th', null, t('pages.server.jobs.runs')), h('th', null, t('pages.server.jobs.last_run')))),
           h('tbody', null, idle.map(jobRow))))
         : null);
     const want = jobsData ? jobsData.running : 0;
-    jobsCount.textContent = `${num(want)} running`;
+    jobsCount.textContent = t('pages.server.jobs.running_count', { count: want });
     jobsBadge.hidden = !want;
   }
 
-  ctx.root.append(headerSlot, sectionLayout(sectionNav('/server', visible, section.key, 'Server sections'), view));
-  if (section.key === 'log' || section.key === 'audit' || section.key === 'health') {
-    // The logs and Library health are their own requests with their own filters; the server details only name the page.
-    view.append(...(section.key === 'log' ? logView(ctx) : section.key === 'audit' ? auditView(ctx) : healthView(ctx)));
+  ctx.root.append(headerSlot, sectionLayout(sectionNav('/server', visible, section.key, t('pages.server.sections_aria')), view));
+  const own = { log: logView, audit: auditView, health: healthView, capacity: capacityView }[section.key];
+  if (own) {
+    // The logs, Library health and Capacity are their own requests; the server details only name the page.
+    view.append(...own(ctx));
     loadServer(ctx.signal).then((d) => { if (!ctx.signal.aborted) paintHeader(d); }).catch(() => {});
   } else dv.load();
   if (section.key === 'jobs') {

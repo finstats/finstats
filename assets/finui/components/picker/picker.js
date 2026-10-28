@@ -4,6 +4,7 @@
 
 import { h, icon, mount } from '../../core.js';
 import { swatch } from '../swatch/swatch.js';
+import { say } from '../../i18n.js';
 
 let seq = 0;
 /** The nearest ancestor that scrolls: the room a list has to open into, before the window's. */
@@ -21,14 +22,14 @@ function room(el) {
  * them (it reads `custom`, "Custom"). `onPreview(i)`: an option is being looked at (−1 … back to what was there).
  * `lock`: { label, on, onToggle(on) }, a button beside it that holds the choice. Answers { el, update({ value, locked }) }.
  */
-export function picker({ label, options, value = 0, onChange = () => {}, onPreview = () => {}, lock = null, custom = 'Custom', dataset = {} }) {
+export function picker({ label, options, value = 0, onChange = () => {}, onPreview = () => {}, lock = null, custom = say('picker.custom', 'Custom'), dataset = {} }) {
   const id = `fui-picker-${++seq}`;
   let current = value, locked = !!(lock && lock.on), active = 0, before = 0;
   const valueEl = h('span', { class: 'fui-picker__value' });
   const markSlot = h('span', { class: 'fui-picker__mark', 'aria-hidden': 'true' });
   const btn = h('button', { type: 'button', class: 'fui-picker__button', 'aria-haspopup': 'listbox', 'aria-expanded': 'false', 'aria-controls': id, dataset },
     h('span', { class: 'fui-picker__text' }, h('span', { class: 'fui-picker__label' }, label), valueEl), markSlot);
-  const lockBtn = lock ? h('button', { type: 'button', class: 'fui-picker__lock', 'aria-pressed': 'false', dataset, 'aria-label': lock.label || `Lock ${label.toLowerCase()}`, title: lock.title || null }) : null;
+  const lockBtn = lock ? h('button', { type: 'button', class: 'fui-picker__lock', 'aria-pressed': 'false', dataset, 'aria-label': lock.label || say('picker.lock', `Lock ${label.toLowerCase()}`, { label: label.toLowerCase() }), title: lock.title || null }) : null;
   const list = h('ul', { class: 'fui-picker__list', role: 'listbox', id, tabindex: -1, hidden: true, 'aria-label': label });
   const el = h('div', { class: 'fui-picker' }, btn, lockBtn, list);
 

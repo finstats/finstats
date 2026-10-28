@@ -4,16 +4,18 @@
 import { h, s } from '../../core.js';
 import { level, compact } from '../chart/plan.js';
 import { chartFigure, tableTwin, sized, hoverable } from '../chart/chart.js';
+import { say } from '../../i18n.js';
 
 /** heatmap({ title, sub, rows, cols, values, format, every }): `values[row][col]`; `every` names every nth column. */
 export function heatmap({ title = null, sub = null, rows, cols, values, format = compact, every = null }) {
   const max = Math.max(0, ...values.flat());
   const box = h('div', { class: 'fui-heatmap__box' });
-  const key = h('div', { class: 'fui-heatmap__key', 'aria-hidden': 'true' }, h('span', null, 'Less'), [0, 1, 2, 3, 4, 5, 6].map((l) => { const c = h('span', { class: 'fui-heatmap__swatch' }); c.style.background = `var(--heat-${l})`; return c; }), h('span', null, 'More'));
+  const key = h('div', { class: 'fui-heatmap__key', 'aria-hidden': 'true' }, h('span', null, say('heatmap.less', 'Less')), [0, 1, 2, 3, 4, 5, 6].map((l) => { const c = h('span', { class: 'fui-heatmap__swatch' }); c.style.background = `var(--heat-${l})`; return c; }), h('span', null, say('heatmap.more', 'More')));
   const figure = chartFigure({ title, sub, plot: h('div', { class: 'fui-heatmap__wrap' }, box, key),
-    table: tableTwin({ caption: title || 'How busy', head: ['', ...cols], rows: rows.map((r, i) => [r, ...values[i].map((v) => format(v))]) }) });
+    table: tableTwin({ caption: title || say('heatmap.caption', 'How busy'), head: ['', ...cols], rows: rows.map((r, i) => [r, ...values[i].map((v) => format(v))]) }) });
   let spec = null;
-  hoverable(box, () => spec, `${title || 'A heatmap'}: the busiest ${format(max)}`);
+  const named = title || say('heatmap.name', 'A heatmap');
+  hoverable(box, () => spec, say('heatmap.aria', `${named}: the busiest ${format(max)}`, { title: named, busiest: format(max) }));
   sized(box, (width) => {
     const left = 8 + 7 * Math.max(...rows.map((r) => r.length)), top = 16;
     const cell = Math.max(6, Math.min(26, Math.floor((width - left) / cols.length)));

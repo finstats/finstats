@@ -3,6 +3,7 @@
 
 import { h, icon } from '../../core.js';
 import { button } from '../button/button.js';
+import { say } from '../../i18n.js';
 
 const TONE_ICON = { info: 'info', good: 'check', warning: 'alert', critical: 'alert' };
 /** callout({ tone, title, body, action, onDismiss }): `action` is a button (or a link) beside the words. */
@@ -11,7 +12,7 @@ export function callout({ tone = 'info', title = null, body = null, action = nul
     icon(TONE_ICON[tone] || 'info', 16, 'fui-callout__icon'),
     h('div', { class: 'fui-callout__words' }, title ? h('p', { class: 'fui-callout__title' }, title) : null, body ? h('div', { class: 'fui-callout__body' }, body) : null),
     action ? h('div', { class: 'fui-callout__action' }, action) : null,
-    onDismiss ? button({ variant: 'icon', class: 'fui-callout__close', 'aria-label': 'Dismiss', onClick: onDismiss }, icon('x', 14)) : null);
+    onDismiss ? button({ variant: 'icon', class: 'fui-callout__close', 'aria-label': say('callout.dismiss', 'Dismiss'), onClick: onDismiss }, icon('x', 14)) : null);
 }
 
 export const meta = {

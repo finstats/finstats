@@ -3,6 +3,7 @@
 
 import { h } from '../../core.js';
 import { compact } from '../chart/plan.js';
+import { say } from '../../i18n.js';
 
 /** barList({ items: [{ name, value, href, note }], format, max }): `max` rows, the rest summed into "And N more". */
 export function barList({ items, format = compact, max = 8 }) {
@@ -18,7 +19,7 @@ export function barList({ items, format = compact, max = 8 }) {
       h('div', { class: 'fui-bar-list__line' }, name, it.note ? h('span', { class: 'fui-bar-list__note' }, it.note) : null, h('span', { class: 'fui-bar-list__value' }, format(it.value))),
       h('span', { class: 'fui-bar-list__track', 'aria-hidden': 'true' }, fill));
   };
-  return h('ol', { class: 'fui-bar-list' }, shown.map((it) => row(it)), rest.length ? row({ name: `And ${rest.length} more`, value: rest.reduce((n, i) => n + i.value, 0) }, true) : null);
+  return h('ol', { class: 'fui-bar-list' }, shown.map((it) => row(it)), rest.length ? row({ name: say('bar_list.and_more', `And ${rest.length} more`, { count: rest.length }), value: rest.reduce((n, i) => n + i.value, 0) }, true) : null);
 }
 
 const CLIENTS = [['Jellyfin Web', 412], ['Swiftfin', 238], ['Findroid', 190], ['Infuse', 96], ['Kodi', 41], ['Roku', 22], ['Android TV', 18]];

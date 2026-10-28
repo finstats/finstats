@@ -4,13 +4,14 @@
 import { h, icon } from '../../core.js';
 import { button } from '../button/button.js';
 import { animatedIcon, setBusy } from '../animated-icon/animated-icon.js';
+import { say } from '../../i18n.js';
 
 export function errorState(err, retry) {
   // Pressed, its refresh turns until the view is replaced by what it tried again for (or by this again, if it failed again).
   const turn = retry ? animatedIcon('refresh', { size: 14, play: 'hover' }) : null;
   return h('div', { class: 'fui-error', role: 'alert' }, icon('alert', 18),
-    h('div', null, h('p', { class: 'fui-error__title' }, 'Couldn’t load this'), h('p', { class: 'fui-error__text' }, err.message || String(err))),
-    retry ? button({ size: 'sm', type: 'button', onClick: (e) => { setBusy(turn, true); return retry(e); } }, turn, 'Try again') : null);
+    h('div', null, h('p', { class: 'fui-error__title' }, say('error.title', 'Couldn’t load this')), h('p', { class: 'fui-error__text' }, err.message || String(err))),
+    retry ? button({ size: 'sm', type: 'button', onClick: (e) => { setBusy(turn, true); return retry(e); } }, turn, say('error.retry', 'Try again')) : null);
 }
 
 export const meta = {

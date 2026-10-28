@@ -1,0 +1,54 @@
+// Simple mode: FinStats laid out the way a classic Plex stats server is, for people who come from one. main.js loads this
+// for a browser that chose it (Settings → Appearance), and nothing of the FinStats layout: no menu, no FinMotion, and
+// none of the pages this layout leaves out (Recap, Together, Pipeline, Security, Server and the rest are no page here).
+// Pages it shares with the other layout (signing in, Settings, licences, patch notes) are fetched when they are opened.
+
+import { icon } from '../dom.js';
+import { t } from '../i18n.js';
+import { route, setLayout } from '../router.js';
+import { pageHeader, emptyState } from '../components.js';
+import { boot } from '../boot.js';
+import { button } from '../../finui/components/button/button.js';
+import { layout } from './shell.js';
+import home, { prefetchHome } from './pages/home.js';
+import history from './pages/history.js';
+import { librariesPage, libraryPage, prefetchLibraries, prefetchLibrary } from './pages/libraries.js';
+import { usersPage, userPage, prefetchUsers, prefetchUser } from './pages/users.js';
+import itemPage, { prefetchItem } from './pages/item.js';
+import graphs, { prefetchGraphs } from './pages/graphs.js';
+
+/** A page fetched when it is first opened: `load()` answers its function, drawn only if the reader is still there. It
+ *  runs after the router's own guard has returned, so a module that cannot load (a tab left open across an update) or a
+ *  page that throws says so here, as the router says it for every other page. */
+const later = (load) => (ctx) => load().then((page) => { if (!ctx.signal.aborted) page(ctx); }).catch((e) => {
+  if (ctx.signal.aborted) return;
+  console.error(e);
+  ctx.root.textContent = t('common.page_failed');
+});
+const settings = later(() => import('../pages/settings.js').then((m) => m.default));
+
+route('/setup', later(() => import('../pages/auth.js').then((m) => m.setupPage)), { bare: true });
+route('/login', later(() => import('../pages/auth.js').then((m) => m.loginPage)), { bare: true });
+route('/welcome', later(() => import('../welcome.js').then((m) => m.welcomePage)), { bare: true });
+route('/', home, { prefetch: prefetchHome });
+route('/history', history);
+route('/libraries', librariesPage, { prefetch: prefetchLibraries });
+route('/libraries/:id', libraryPage, { prefetch: prefetchLibrary });
+route('/users', usersPage, { perm: 'see_everyone', prefetch: prefetchUsers });
+route('/users/:id', userPage, { prefetch: prefetchUser });
+route('/items/:id', itemPage, { prefetch: prefetchItem });
+route('/graphs', graphs, { prefetch: prefetchGraphs });
+route('/settings', settings);
+route('/settings/:section', settings);
+route('/settings/:section/:task', settings);
+route('/changelog', later(() => import('./pages/changelog.js').then((m) => m.default)));
+route('/licenses', later(() => import('../pages/licenses.js').then((m) => m.default)));
+route('*', (ctx) => {
+  ctx.title(t('not_found.page_title'));
+  ctx.root.append(pageHeader(t('not_found.title')), emptyState(t('not_found.nothing_here'), t('not_found.simple'),
+    button({ href: '/' }, icon('home', 14), t('not_found.go_home'))));
+});
+
+setLayout(layout);
+
+boot({ top: (me) => ['/', '/libraries', '/history', '/graphs', `/users/${me.id}`, ...(me.is_admin || (me.permissions && me.permissions.see_everyone) ? ['/users'] : [])] });

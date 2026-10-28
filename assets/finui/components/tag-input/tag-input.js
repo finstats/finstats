@@ -4,9 +4,10 @@
 import { h } from '../../core.js';
 import { removableChip } from '../chip/chip.js';
 import { addTags } from './plan.js';
+import { say } from '../../i18n.js';
 
 /** tagInput({ label, value, onChange, placeholder, max }): `max` stops it at that many, and it says how many. */
-export function tagInput({ label, value = [], onChange = () => {}, placeholder = 'Add…', max = Infinity }) {
+export function tagInput({ label, value = [], onChange = () => {}, placeholder = say('tag_input.add', 'Add…'), max = Infinity }) {
   let tags = addTags([], value.join(','), { max });
   const field = h('input', { class: 'fui-tag-input__field', type: 'text', placeholder, 'aria-label': label, autocomplete: 'off', enterKeyHint: 'enter' });
   const list = h('span', { class: 'fui-tag-input__tags' });
@@ -14,7 +15,7 @@ export function tagInput({ label, value = [], onChange = () => {}, placeholder =
   const el = h('div', { class: 'fui-tag-input', onPointerdown: (e) => { if (e.target === el) { e.preventDefault(); field.focus(); } } }, list, field, count);
   const set = (next) => { const changed = next.join('\n') !== tags.join('\n'); tags = next; draw(); if (changed) onChange([...tags]); };
   function draw() {
-    list.replaceChildren(...tags.map((t, i) => removableChip({ label: t, removeLabel: `Remove ${t}`, onRemove: () => { set(tags.filter((_, k) => k !== i)); field.focus(); } })));
+    list.replaceChildren(...tags.map((t, i) => removableChip({ label: t, removeLabel: say('tag_input.remove', `Remove ${t}`, { tag: t }), onRemove: () => { set(tags.filter((_, k) => k !== i)); field.focus(); } })));
     const full = tags.length >= max;
     field.hidden = full;
     if (count) count.textContent = `${tags.length} / ${max}`;

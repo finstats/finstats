@@ -1,1 +1,1 @@
-{"kinds":[],"page":1,"per_page":50,"rows":[],"total":0}
+{"kinds":["task_run"],"page":1,"per_page":50,"rows":[{"at":1793174311,"detail":{},"has_image":false,"id":2,"ip":"192.168.1.10","key_id":null,"key_name":null,"kind":"task_run","outcome":"ok","target":"sync_server","user_id":"7359d280a2e9383760a45cf6755df612","user_name":"alex"},{"at":1793174304,"detail":{},"has_image":false,"id":1,"ip":"192.168.1.10","key_id":null,"key_name":null,"kind":"task_run","outcome":"ok","target":"sync_changes","user_id":"7359d280a2e9383760a45cf6755df612","user_name":"alex"}],"total":2}

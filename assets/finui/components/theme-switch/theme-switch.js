@@ -3,10 +3,11 @@
 // app's: it gives the value and is told the choice.
 
 import { h, icon, mount } from '../../core.js';
+import { say } from '../../i18n.js';
 
 // The stops, left to right: Device sits in the middle, the one that is neither.
 const THEME_STOPS = ['light', 'device', 'dark'];
-const THEME_NAME = { device: 'Device', light: 'Light', dark: 'Dark' };
+const THEME_NAME = { device: say('theme_switch.device', 'Device'), light: say('theme_switch.light', 'Light'), dark: say('theme_switch.dark', 'Dark') };
 const THEME_ICON = { device: 'monitor', light: 'sun', dark: 'moon' };
 
 /**
@@ -16,7 +17,7 @@ const THEME_ICON = { device: 'monitor', light: 'sun', dark: 'moon' };
  */
 export function themeSwitch({ value = 'device', onChange = () => {} } = {}) {
   const knob = h('span', { class: 'fui-theme-switch__knob' });
-  const el = h('div', { class: 'fui-theme-switch', role: 'slider', tabindex: '0', 'aria-label': 'Theme', 'aria-valuemin': '0', 'aria-valuemax': '2', 'aria-orientation': 'horizontal' },
+  const el = h('div', { class: 'fui-theme-switch', role: 'slider', tabindex: '0', 'aria-label': say('theme_switch.label', 'Theme'), 'aria-valuemin': '0', 'aria-valuemax': '2', 'aria-orientation': 'horizontal' },
     h('span', { class: 'fui-theme-switch__marks', 'aria-hidden': 'true' }, THEME_STOPS.map(() => h('span', { class: 'fui-theme-switch__mark' }))), knob);
   let at = Math.max(0, THEME_STOPS.indexOf(value));
   function paint(animate) {
@@ -25,7 +26,7 @@ export function themeSwitch({ value = 'device', onChange = () => {} } = {}) {
     el.style.setProperty('--at', String(at));
     el.setAttribute('aria-valuenow', String(at));
     el.setAttribute('aria-valuetext', THEME_NAME[t]);
-    el.title = `Theme: ${THEME_NAME[t]}`;
+    el.title = say('theme_switch.title', `Theme: ${THEME_NAME[t]}`, { name: THEME_NAME[t] });
     if (knob.dataset.icon !== THEME_ICON[t]) {
       knob.dataset.icon = THEME_ICON[t];
       mount(knob, icon(THEME_ICON[t], 13, animate ? 'fui-theme-switch__icon is-in' : 'fui-theme-switch__icon'));

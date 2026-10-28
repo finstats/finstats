@@ -5,6 +5,7 @@
 
 import { h, icon } from '../../core.js';
 import { cut, step, flat } from './plan.js';
+import { say } from '../../i18n.js';
 
 export { cut, step, flat } from './plan.js';
 
@@ -17,16 +18,16 @@ const mac = () => /Mac|iPhone|iPad/.test(navigator.platform || '');
  * what to say while there is nothing (searching, nothing found). `onPick(row, event)` opens a row; `onEscape()` gives up.
  * Answers { el, bar, input, list, set(words), focus(), destroy() }.
  */
-export function searchPanel({ run, onPick, onEscape = () => {}, placeholder = 'Search', label = 'Search', keys = true }) {
+export function searchPanel({ run, onPick, onEscape = () => {}, placeholder = say('search.search', 'Search'), label = say('search.search', 'Search'), keys = true }) {
   const id = `fui-search-${++made}`;
   const input = h('input', { class: 'fui-search__input', type: 'search', placeholder, autocomplete: 'off', spellcheck: 'false', enterkeyhint: 'go',
     role: 'combobox', 'aria-expanded': 'true', 'aria-controls': `${id}-list`, 'aria-autocomplete': 'list', 'aria-label': label });
-  const shut = h('button', { type: 'button', class: 'fui-search__close', 'aria-label': 'Close search' }, icon('x', 15));
+  const shut = h('button', { type: 'button', class: 'fui-search__close', 'aria-label': say('search.close', 'Close search') }, icon('x', 15));
   const bar = h('div', { class: 'fui-search__bar' }, icon('search', 16), input, h('kbd', { class: 'fui-search__esc', 'aria-hidden': 'true' }, 'Esc'), shut);
-  const list = h('ul', { class: 'fui-search__list', id: `${id}-list`, role: 'listbox', 'aria-label': 'Results' });
-  const keep = h('span', { hidden: true }, h('kbd', null, mac() ? '⌘' : 'Ctrl'), h('kbd', null, '↵'), ' to add to your watchlist');
+  const list = h('ul', { class: 'fui-search__list', id: `${id}-list`, role: 'listbox', 'aria-label': say('search.results', 'Results') });
+  const keep = h('span', { hidden: true }, h('kbd', null, mac() ? '⌘' : 'Ctrl'), h('kbd', null, '↵'), ' ' + say('search.keys_watchlist', 'to add to your watchlist'));
   const foot = keys ? h('div', { class: 'fui-search__foot', 'aria-hidden': 'true' },
-    h('span', null, h('kbd', null, '↑'), h('kbd', null, '↓'), ' to move'), h('span', null, h('kbd', null, '↵'), ' to open'), keep, h('span', null, h('kbd', null, 'Esc'), ' to close')) : null;
+    h('span', null, h('kbd', null, '↑'), h('kbd', null, '↓'), ' ' + say('search.keys_move', 'to move')), h('span', null, h('kbd', null, '↵'), ' ' + say('search.keys_open', 'to open')), keep, h('span', null, h('kbd', null, 'Esc'), ' ' + say('search.keys_close', 'to close'))) : null;
   const el = h('div', { class: 'fui-search' }, bar, list, foot);
   let rows = [], items = [], at = 0, asked = 0;
 
@@ -45,7 +46,7 @@ export function searchPanel({ run, onPick, onEscape = () => {}, placeholder = 'S
         li.addEventListener('click', (e) => { if (!(r.keep && r.keep.contains(e.target))) onPick(r, e); });
         items.push(li);
         return li;
-      })]).flat() : [h('li', { class: 'fui-search__none', role: 'presentation' }, note || 'Nothing found')]));
+      })]).flat() : [h('li', { class: 'fui-search__none', role: 'presentation' }, note || say('search.nothing_found', 'Nothing found'))]));
     mark(at);
   }
   function mark(k) {

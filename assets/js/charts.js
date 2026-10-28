@@ -5,17 +5,18 @@
 
 import { h, s, num, bytes, duration, durationExact, dayLabel, dayLabelLong, dayLabelYear, methodLabel, pct, clock, parseDay } from './dom.js';
 import { sortable, plainTable, chartTable } from './tables.js';
+import { t, lang } from './i18n.js';
 
 export const TYPES = [
-  { key: 'Movie', label: 'Movies', color: 'var(--series-1)' },
-  { key: 'Episode', label: 'Episodes', color: 'var(--series-2)' },
-  { key: 'Audio', label: 'Music', color: 'var(--series-3)' },
-  { key: 'Other', label: 'Other', color: 'var(--series-4)' },
+  { key: 'Movie', label: t('charts.types.movies'), color: 'var(--series-1)' },
+  { key: 'Episode', label: t('charts.types.episodes'), color: 'var(--series-2)' },
+  { key: 'Audio', label: t('charts.types.music'), color: 'var(--series-3)' },
+  { key: 'Other', label: t('common.other'), color: 'var(--series-4)' },
 ];
 // Time in company against time alone: its own two colours, never an entity's.
 export const TOGETHER = [
-  { key: 'together', label: 'Together', color: 'var(--single)' },
-  { key: 'alone', label: 'Alone', color: 'var(--alone)' },
+  { key: 'together', label: t('charts.together'), color: 'var(--single)' },
+  { key: 'alone', label: t('charts.alone'), color: 'var(--alone)' },
 ];
 export const METHODS = [
   { key: 'DirectPlay', color: 'var(--series-1)' },
@@ -28,8 +29,11 @@ const SUBS = 'var(--series-4)';
 const HEAT_EMPTY = 'var(--heat-0)';
 const HEAT_RAMP = ['var(--heat-1)', 'var(--heat-2)', 'var(--heat-3)', 'var(--heat-4)', 'var(--heat-5)', 'var(--heat-6)'];
 const TIME_STEPS = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400, 172800, 360000, 720000, 1800000, 3600000];
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const DAYS_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+// Monday first, as the heatmap's rows come; 1 January 2024 was a Monday.
+const weekdays = (weekday) => Array.from({ length: 7 }, (_, i) => new Intl.DateTimeFormat(lang(), { weekday }).format(new Date(2024, 0, 1 + i)));
+const DAYS = weekdays('short');
+const DAYS_LONG = weekdays('long');
+const upFirst = (str) => str.charAt(0).toLocaleUpperCase(lang()) + str.slice(1);
 
 // ---------------------------------------------------------------- tooltip (FinUI's; re-exported for the map)
 import { showTip, hideTip, tipShown, tipRows } from '../finui/components/tooltip/tooltip.js';
@@ -61,7 +65,14 @@ export function legend(items) {
       it.value != null ? h('span', { class: 'legend-value mono' }, it.value) : null)));
 }
 
-const fmtMetric = (metric, v) => (metric === 'plays' ? num(v) + (v === 1 ? ' play' : ' plays') : duration(v));
+const fmtMetric = (metric, v) => (metric === 'plays' ? t('terms.play', { count: v }) : duration(v));
+
+/** A counted phrase ("3 plays") as a tooltip writes it: the number, and the words after it. */
+export function counted(key, n) {
+  const text = t(key, { count: n }), v = num(n);
+  return text.startsWith(v) ? [v, text.slice(v.length).trim()] : [text, ''];
+}
+const arrowsAria = (label) => t('charts.arrows_aria', { label });
 
 // ---------------------------------------------------------------- stacked columns
 /** daily: [{date, plays, watch_s, by_type: {Movie:[plays, watch_s], …}}] */
@@ -75,9 +86,9 @@ export function columnsChart({ daily, bucket = 'day', metric = 'watch_s', series
   const used = series.filter((t) => rows.some((d) => val(d, t.key) > 0));
 
   const wrap = h('div', { class: 'chart', tabindex: rows.length && max > 0 ? 0 : null, role: 'group',
-    'aria-label': `${metric === 'plays' ? 'Plays' : 'Watch time'} per ${bucket}. Use left and right arrow keys to read values.` });
+    'aria-label': t(`charts.columns_aria.${metric === 'plays' ? 'plays' : 'watch_s'}.${['week', 'month'].includes(bucket) ? bucket : 'day'}`) });
   if (!rows.length || max <= 0) {
-    wrap.append(h('div', { class: 'fui-empty--chart' }, 'No plays in this range.'));
+    wrap.append(h('div', { class: 'fui-empty--chart' }, t('plays_table.empty_range')));
     return wrap;
   }
 
@@ -97,7 +108,7 @@ export function columnsChart({ daily, bucket = 'day', metric = 'watch_s', series
     const step = TIME_STEPS.find((st) => max / st <= 5) || Math.ceil(max / 5 / 3600000) * 3600000;
     ticks = [];
     for (let v = 0; v < max + step * 0.999; v += step) ticks.push(v);
-    tickLabel = (t) => (t === 0 ? '0' : step < 3600 ? duration(t) : num(t / 3600) + 'h');
+    tickLabel = (v) => (v === 0 ? '0' : step < 3600 ? duration(v) : t('units.hours', { count: v / 3600 }));
   }
   const top = ticks[ticks.length - 1];
 
@@ -164,10 +175,10 @@ export function columnsChart({ daily, bucket = 'day', metric = 'watch_s', series
     band.setAttribute('visibility', 'visible');
     const d = rows[i];
     const pr = plot.getBoundingClientRect();
-    const title = (bucket === 'week' ? 'Week of ' : '') + dayLabelLong(d.date);
+    const title = bucket === 'week' ? t('charts.week_of', { date: dayLabelLong(d.date) }) : dayLabelLong(d.date);
     const content = tipRows(title,
       used.filter((t) => val(d, t.key) > 0).map((t) => ({ color: t.color, value: fmtMetric(metric, val(d, t.key)), label: t.label })),
-      { value: fmtMetric(metric, total(d)), label: 'total' });
+      { value: fmtMetric(metric, total(d)), label: t('charts.total') });
     showTip({ left: pr.left + bx, width: bwid, top: pr.top + M.t, bottom: pr.bottom }, content);
   }
 
@@ -191,7 +202,7 @@ export function columnsTable({ daily, bucket = 'day', series = TYPES }) {
   return chartTable(
     h('table', { class: 'fui-data-table' },
       h('thead', null, h('tr', null,
-        h('th', null, bucket === 'week' ? 'Week of' : 'Date'), h('th', { class: 'r' }, 'Plays'), h('th', { class: 'r' }, 'Watch time'),
+        h('th', null, bucket === 'week' ? t('charts.week_of_head') : t('charts.date')), h('th', { class: 'r' }, t('charts.plays')), h('th', { class: 'r' }, t('terms.watch_time')),
         series.map((t) => h('th', { class: 'r' }, t.label)))),
       h('tbody', null, rows.map((d) => h('tr', null,
         h('td', { class: 'mono', dataset: { sort: String(parseDay(d.date).getTime()) } }, dayLabelYear(d.date)),
@@ -206,12 +217,12 @@ export function heatmap({ data, metric = 'plays' }) {
   const other = (data && data[metric === 'plays' ? 'watch_s' : 'plays']) || [];
   const max = Math.max(0, ...grid.flat());
   const wrap = h('div', { class: 'chart heat', tabindex: max > 0 ? 0 : null, role: 'group',
-    'aria-label': 'Plays by weekday and hour. Use arrow keys to read values.' });
-  if (max <= 0) { wrap.append(h('div', { class: 'fui-empty--chart' }, 'No plays in this range.')); return wrap; }
+    'aria-label': t('charts.heat_aria') });
+  if (max <= 0) { wrap.append(h('div', { class: 'fui-empty--chart' }, t('plays_table.empty_range'))); return wrap; }
 
   const plot = h('div', { class: 'chart-plot' });
-  wrap.append(plot, h('div', { class: 'heat-scale' }, h('span', null, 'Less'),
-    [HEAT_EMPTY, ...HEAT_RAMP].map((c) => h('span', { class: 'heat-swatch', style: { background: c } })), h('span', null, 'More')));
+  wrap.append(plot, h('div', { class: 'heat-scale' }, h('span', null, t('charts.less')),
+    [HEAT_EMPTY, ...HEAT_RAMP].map((c) => h('span', { class: 'heat-swatch', style: { background: c } })), h('span', null, t('charts.more'))));
 
   const L = 34, T = 4, B = 20, G = 2, CH = 20;
   let cells = [], active = null, cw = 0;
@@ -250,10 +261,11 @@ export function heatmap({ data, metric = 'plays' }) {
     rect.classList.add('is-active');
     const v = (grid[d] && grid[d][hr]) || 0, o = (other[d] && other[d][hr]) || 0;
     const plays = metric === 'plays' ? v : o, watch = metric === 'plays' ? o : v;
+    const [playsValue, playsLabel] = counted('terms.play', plays);
     showTip(rect.getBoundingClientRect(), h('div', null,
-      h('div', { class: 'fui-tooltip__title' }, `${DAYS_LONG[d]} ${hour(hr)}–${hour((hr + 1) % 24)}`),
-      h('div', { class: 'fui-tooltip__row' }, h('strong', null, num(plays)), h('span', null, plays === 1 ? 'play' : 'plays')),
-      h('div', { class: 'fui-tooltip__row' }, h('strong', null, duration(watch)), h('span', null, 'watched'))));
+      h('div', { class: 'fui-tooltip__title' }, `${upFirst(DAYS_LONG[d])} ${hour(hr)}–${hour((hr + 1) % 24)}`),
+      h('div', { class: 'fui-tooltip__row' }, h('strong', null, playsValue), h('span', null, playsLabel)),
+      h('div', { class: 'fui-tooltip__row' }, h('strong', null, duration(watch)), h('span', null, t('charts.watched')))));
   }
 
   wrap.addEventListener('keydown', (e) => {
@@ -275,7 +287,7 @@ export function heatmapTable({ data }) {
   const plays = (data && data.plays) || [];
   return chartTable(
     h('table', { class: 'fui-data-table fui-data-table--dense' },
-      h('thead', null, h('tr', null, h('th', null, 'Plays'), Array.from({ length: 24 }, (_, i) => h('th', { class: 'r' }, String(i).padStart(2, '0'))))),
+      h('thead', null, h('tr', null, h('th', null, t('charts.plays')), Array.from({ length: 24 }, (_, i) => h('th', { class: 'r' }, String(i).padStart(2, '0'))))),
       h('tbody', null, DAYS.map((d, i) => h('tr', null, h('th', { scope: 'row', dataset: { sort: String(i) } }, d),
         Array.from({ length: 24 }, (_, hr) => h('td', { class: 'mono r' }, num((plays[i] && plays[i][hr]) || 0))))))));
 }
@@ -284,7 +296,7 @@ export function heatmapTable({ data }) {
 /** items: [{label, value, color, display}] */
 export function stackedBar(items, { ariaLabel = '' } = {}) {
   const total = items.reduce((a, b) => a + (b.value || 0), 0);
-  if (total <= 0) return h('div', { class: 'fui-empty--chart' }, 'No plays in this range.');
+  if (total <= 0) return h('div', { class: 'fui-empty--chart' }, t('plays_table.empty_range'));
   const bar = h('div', { class: 'sbar', role: 'group', 'aria-label': ariaLabel },
     items.filter((it) => it.value > 0).map((it) => {
       const seg = h('div', { class: 'sbar-seg', tabindex: 0, style: { flexGrow: String(it.value), background: it.color },
@@ -311,19 +323,19 @@ export function methodsBar(methods, metric = 'plays') {
   const rest = (methods || []).filter((m) => !METHODS.some((k) => k.key === m.name));
   if (rest.length) {
     const v = rest.reduce((a, b) => a + (b[metric] || 0), 0);
-    if (v > 0) items.push({ label: 'Other', color: 'var(--series-4)', value: v, display: fmtMetric(metric, v) });
+    if (v > 0) items.push({ label: t('common.other'), color: 'var(--series-4)', value: v, display: fmtMetric(metric, v) });
   }
-  return stackedBar(items, { ariaLabel: 'Share of plays by play method' });
+  return stackedBar(items, { ariaLabel: t('charts.methods_aria') });
 }
 
 // ---------------------------------------------------------------- ranked bucket list (it is its own table)
 /** buckets: [{name, plays, watch_s}]: one color for every bar, as the categories are nominal. */
-export function bucketList(buckets, { labelFn = (x) => x, empty = 'Nothing recorded in this range.', watch = true } = {}) {
+export function bucketList(buckets, { labelFn = (x) => x, empty = t('charts.nothing_recorded'), watch = true } = {}) {
   const rows = buckets || [];
   if (!rows.length || !rows.some((b) => (b.plays || 0) > 0 || (b.watch_s || 0) > 0)) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
   const max = Math.max(1, ...rows.map((b) => b.plays || 0));
   return sortable(h('table', { class: 'buckets' },
-    h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Share')), h('th', { class: 'r' }, 'Plays'), watch ? h('th', { class: 'r' }, 'Watch time') : null)),
+    h('thead', null, h('tr', null, h('th', null, t('charts.name')), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, t('charts.share'))), h('th', { class: 'r' }, t('charts.plays')), watch ? h('th', { class: 'r' }, t('terms.watch_time')) : null)),
     h('tbody', null, rows.map((b) => h('tr', null,
       h('th', { scope: 'row', class: 'bucket-name', title: labelFn(b.name) }, labelFn(b.name)),
       h('td', { class: 'bucket-bar' }, h('span', { class: 'bucket-track' },
@@ -333,13 +345,13 @@ export function bucketList(buckets, { labelFn = (x) => x, empty = 'Nothing recor
 }
 
 /** Library make-up: [{name, count, size_bytes}]: bar by count, value = count, faint = size on disk. */
-export function libBucketList(buckets, { labelFn = (x) => x, empty = 'Nothing to show yet.', unit = 'Files' } = {}) {
+export function libBucketList(buckets, { labelFn = (x) => x, empty = t('charts.nothing_yet'), unit = t('charts.files') } = {}) {
   const rows = (buckets || []).filter((b) => b && b.name != null);
   if (!rows.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, empty);
   const max = Math.max(1, ...rows.map((b) => b.count || 0));
   const anySize = rows.some((b) => (b.size_bytes || 0) > 0);
   return sortable(h('table', { class: 'buckets' },
-    h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Share')), h('th', { class: 'r' }, unit), anySize ? h('th', { class: 'r' }, 'Size') : null)),
+    h('thead', null, h('tr', null, h('th', null, t('charts.name')), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, t('charts.share'))), h('th', { class: 'r' }, unit), anySize ? h('th', { class: 'r' }, t('charts.size')) : null)),
     h('tbody', null, rows.map((b) => h('tr', null,
       h('th', { scope: 'row', class: 'bucket-name', title: labelFn(b.name) }, labelFn(b.name)),
       h('td', { class: 'bucket-bar' }, h('span', { class: 'bucket-track' },
@@ -351,12 +363,12 @@ export function libBucketList(buckets, { labelFn = (x) => x, empty = 'Nothing to
 // ---------------------------------------------------------------- single-series columns
 /**
  * rows: [{label, title, value}] in display order. One series → one colour, no legend
- * (the card title says what is plotted).
+ * (the card title says what is plotted). `unit` writes a value with its words: (n) => t('terms.title', { count: n }).
  */
-export function simpleColumns({ rows, unit = ['item', 'items'], ariaLabel = 'Column chart', empty = 'Nothing to show yet.' }) {
+export function simpleColumns({ rows, unit = (n) => t('charts.items', { count: n }), ariaLabel = t('charts.column_chart'), empty = t('charts.nothing_yet') }) {
   const data = rows || [];
   const max = Math.max(0, ...data.map((d) => Number(d.value) || 0));
-  const wrap = h('div', { class: 'chart', tabindex: data.length && max > 0 ? 0 : null, role: 'group', 'aria-label': `${ariaLabel}. Use left and right arrow keys to read values.` });
+  const wrap = h('div', { class: 'chart', tabindex: data.length && max > 0 ? 0 : null, role: 'group', 'aria-label': arrowsAria(ariaLabel) });
   if (!data.length || max <= 0) { wrap.append(h('div', { class: 'fui-empty--chart' }, empty)); return wrap; }
   const plot = h('div', { class: 'chart-plot' });
   wrap.append(plot);
@@ -365,7 +377,7 @@ export function simpleColumns({ rows, unit = ['item', 'items'], ariaLabel = 'Col
   const ticks = [...new Set(niceTicks(max).map((t) => Math.ceil(t)))];
   const top = ticks[ticks.length - 1] || 1;
   let active = -1, geom = null, band = null;
-  const fmt = (v) => `${num(v)} ${v === 1 ? unit[0] : unit[1]}`;
+  const fmt = unit; // the number with its word, in the form its language gives that number
 
   function draw(w) {
     const pw = w - M.l - M.r, ph = H - M.t - M.b;
@@ -426,7 +438,7 @@ export function simpleColumns({ rows, unit = ['item', 'items'], ariaLabel = 'Col
   return wrap;
 }
 
-export function simpleColumnsTable({ rows, head = ['Period', 'Count'] }) {
+export function simpleColumnsTable({ rows, head = [t('charts.period'), t('charts.count')] }) {
   return chartTable(h('table', { class: 'fui-data-table' },
     h('thead', null, h('tr', null, h('th', null, head[0]), h('th', { class: 'r' }, head[1]))),
     h('tbody', null, (rows || []).map((d, i) => [d, i]).reverse().map(([d, i]) => h('tr', null,
@@ -437,10 +449,10 @@ export function simpleColumnsTable({ rows, head = ['Period', 'Count'] }) {
 /** Where a title loses its viewers: the share still watching at every bucket edge, and under it, per
  *  bucket, how many rewound to there and how many switched subtitles on there. `curve` has one point
  *  per edge (n + 1), `rewinds` and `subtitles` one count per bucket (n). */
-export function retentionChart({ runtime_s, bucket_s, curve, rewinds = [], subtitles = [], ariaLabel = 'Where people stop', empty = 'Not enough plays yet.' }) {
+export function retentionChart({ runtime_s, bucket_s, curve, rewinds = [], subtitles = [], ariaLabel = t('charts.where_people_stop'), empty = t('charts.not_enough_plays') }) {
   const pts = curve || [];
   const n = Math.max(0, pts.length - 1);
-  const wrap = h('div', { class: 'chart chart-retention', tabindex: n ? 0 : null, role: 'group', 'aria-label': `${ariaLabel}. Use left and right arrow keys to read values.` });
+  const wrap = h('div', { class: 'chart chart-retention', tabindex: n ? 0 : null, role: 'group', 'aria-label': arrowsAria(ariaLabel) });
   if (!n || !(runtime_s > 0) || !(bucket_s > 0)) { wrap.append(h('div', { class: 'fui-empty--chart' }, empty)); return wrap; }
   const plot = h('div', { class: 'chart-plot' });
   wrap.append(plot);
@@ -460,7 +472,7 @@ export function retentionChart({ runtime_s, bucket_s, curve, rewinds = [], subti
     for (const t of [0, 0.25, 0.5, 0.75, 1]) {
       const ty = Math.round(y(t)) + 0.5;
       svg.append(s('line', { x1: M.l, x2: w - M.r, y1: ty, y2: ty, class: t === 0 ? 'axis-line' : 'grid-line' }));
-      svg.append(s('text', { x: M.l - 8, y: ty + 3.5, class: 'tick', 'text-anchor': 'end' }, `${t * 100}%`));
+      svg.append(s('text', { x: M.l - 8, y: ty + 3.5, class: 'tick', 'text-anchor': 'end' }, pct(t)));
     }
     const step = TIME_STEPS.find((st) => runtime_s / st <= 6) || runtime_s;
     for (let t = 0; t <= runtime_s; t += step) {
@@ -502,10 +514,11 @@ export function retentionChart({ runtime_s, bucket_s, curve, rewinds = [], subti
     band.setAttribute('x', bx); band.setAttribute('width', bw);
     band.setAttribute('visibility', 'visible');
     const pr = plot.getBoundingClientRect();
-    const rows = [{ color: SINGLE, value: pct(pts[i]), label: 'still watching' }];
+    const rows = [{ color: SINGLE, value: pct(pts[i]), label: t('charts.still_watching_tip') }];
     const rw = Number(rewinds[i]) || 0, sb = Number(subtitles[i]) || 0;
-    if (rw) rows.push({ color: REWIND, value: num(rw), label: rw === 1 ? 'rewind to here' : 'rewinds to here' });
-    if (sb) rows.push({ color: SUBS, value: num(sb), label: sb === 1 ? 'switched subtitles on' : 'switched subtitles on' });
+    const tipRow = (color, [value, label]) => ({ color, value, label });
+    if (rw) rows.push(tipRow(REWIND, counted('charts.rewinds_here', rw)));
+    if (sb) rows.push(tipRow(SUBS, counted('charts.subtitles_here', sb)));
     showTip({ left: pr.left + bx, width: bw, top: pr.top + M.t, bottom: pr.bottom }, tipRows(`${clock(edge(i))} – ${clock(edge(i + 1))}`, rows));
   }
   wrap.addEventListener('keydown', (e) => {
@@ -517,9 +530,9 @@ export function retentionChart({ runtime_s, bucket_s, curve, rewinds = [], subti
   wrap.addEventListener('focus', () => { if (active < 0) setActive(0); });
   wrap.addEventListener('blur', () => setActive(-1));
   responsive(wrap, draw);
-  wrap.append(legend([{ color: SINGLE, label: 'Still watching' },
-    totals.rewinds ? { color: REWIND, label: 'Rewinds', value: num(totals.rewinds) } : null,
-    totals.subtitles ? { color: SUBS, label: 'Subtitles switched on', value: num(totals.subtitles) } : null].filter(Boolean)));
+  wrap.append(legend([{ color: SINGLE, label: t('charts.still_watching') },
+    totals.rewinds ? { color: REWIND, label: t('charts.rewinds'), value: num(totals.rewinds) } : null,
+    totals.subtitles ? { color: SUBS, label: t('charts.subtitles_switched_on'), value: num(totals.subtitles) } : null].filter(Boolean)));
   return wrap;
 }
 
@@ -528,7 +541,7 @@ export function retentionTable({ runtime_s, bucket_s, curve, rewinds = [], subti
   const n = Math.max(0, pts.length - 1);
   const edge = (k) => Math.min(k * bucket_s, runtime_s);
   return chartTable(h('table', { class: 'fui-data-table' },
-    h('thead', null, h('tr', null, h('th', null, 'From'), h('th', { class: 'r' }, 'Still watching'), h('th', { class: 'r' }, 'Rewinds'), h('th', { class: 'r' }, 'Subtitles on'))),
+    h('thead', null, h('tr', null, h('th', null, t('charts.from')), h('th', { class: 'r' }, t('charts.still_watching')), h('th', { class: 'r' }, t('charts.rewinds')), h('th', { class: 'r' }, t('charts.subtitles_on')))),
     h('tbody', null, Array.from({ length: n }, (_, i) => h('tr', null,
       h('td', { class: 'mono', dataset: { sort: String(edge(i)) } }, clock(edge(i))), h('td', { class: 'mono r' }, pct(pts[i])),
       h('td', { class: 'mono r' }, num(rewinds[i] || 0)), h('td', { class: 'mono r' }, num(subtitles[i] || 0)))))));
@@ -538,15 +551,15 @@ export function retentionTable({ runtime_s, bucket_s, curve, rewinds = [], subti
 /** rows: [{client, direct_play, direct_stream, transcode, watch_s}]: a small three-part bar per client. */
 export function clientMethods(rows) {
   const data = (rows || []).filter((r) => r && ((r.direct_play || 0) + (r.direct_stream || 0) + (r.transcode || 0)) > 0);
-  if (!data.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, 'No plays in this range.');
+  if (!data.length) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, t('plays_table.empty_range'));
   const keys = ['direct_play', 'direct_stream', 'transcode'];
   return plainTable(h('table', { class: 'fui-data-table fui-data-table--dense cm-table' },
-    h('thead', null, h('tr', null, h('th', null, 'Client'), h('th', { class: 'cm-barcol', 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Split')),
+    h('thead', null, h('tr', null, h('th', null, t('plays_table.client')), h('th', { class: 'cm-barcol', 'data-nosort': '' }, h('span', { class: 'sr-only' }, t('charts.split'))),
       METHODS.map((m) => h('th', { class: 'r' }, methodLabel(m.key))))),
     h('tbody', null, data.map((r) => {
       const total = keys.reduce((a, k) => a + (r[k] || 0), 0);
       return h('tr', null,
-        h('th', { scope: 'row', class: 'cm-client', title: r.client || '' }, r.client || 'Unknown client'),
+        h('th', { scope: 'row', class: 'cm-client', title: r.client || '' }, r.client || t('charts.unknown_client')),
         h('td', { class: 'cm-barcol' }, h('span', { class: 'sbar sbar-sm', role: 'img',
           'aria-label': METHODS.map((m, i) => `${methodLabel(m.key)} ${pct((r[keys[i]] || 0) / total)}`).join(', ') },
           METHODS.map((m, i) => (r[keys[i]] || 0) > 0 ? h('span', { class: 'sbar-seg', style: { flexGrow: String(r[keys[i]]), background: m.color } }) : null))),
@@ -575,9 +588,9 @@ export function sparkline(values, { w = 104, hgt = 30 } = {}) {
  * It shows the *shape* of someone's taste at a glance; the list view stays one click away for
  * reading the actual values, and every point also answers to hover and the arrow keys.
  */
-export function radarChart(buckets, { metric = 'watch_s', ariaLabel = 'Radar chart', empty = 'Nothing recorded in this range.' } = {}) {
+export function radarChart(buckets, { metric = 'watch_s', ariaLabel = t('charts.radar_chart'), empty = t('charts.nothing_recorded') } = {}) {
   const data = (buckets || []).filter((b) => b && b.name !== 'Other' && Number(b[metric]) > 0).slice(0, 12);
-  if (data.length < 3) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, data.length ? 'A radar needs at least three genres. The list shows what there is.' : empty);
+  if (data.length < 3) return h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, data.length ? t('charts.radar_too_few') : empty);
   const n = data.length;
   const W = 520, H = 360, cx = W / 2, cy = H / 2 + 4, R = 118;
   const max = Math.max(...data.map((d) => Number(d[metric])));
@@ -586,7 +599,7 @@ export function radarChart(buckets, { metric = 'watch_s', ariaLabel = 'Radar cha
   // Square-root scale: with a linear one a single dominant genre flattens everything else into the centre.
   const rOf = (d) => R * Math.max(0.06, Math.sqrt(Number(d[metric]) / max));
   const pts = data.map((d, i) => at(i, rOf(d)));
-  const fmt = (d) => (metric === 'watch_s' ? duration(d.watch_s) : `${num(d.plays)} ${d.plays === 1 ? 'play' : 'plays'}`);
+  const fmt = (d) => (metric === 'watch_s' ? duration(d.watch_s) : t('terms.play', { count: d.plays }));
 
   const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'radar-svg', role: 'img', 'aria-hidden': 'true' },
     [0.25, 0.5, 0.75, 1].map((k) => s('polygon', { points: ring(k), class: 'radar-ring' })),
@@ -603,7 +616,7 @@ export function radarChart(buckets, { metric = 'watch_s', ariaLabel = 'Radar cha
   // generous invisible targets: a 9 px dot is a pinpoint
   const hits = pts.map(([x, y], i) => { const c = s('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: 14, class: 'radar-hit' }); svg.append(c); return c; });
 
-  const wrap = h('div', { class: 'chart radar', tabindex: 0, role: 'group', 'aria-label': `${ariaLabel}. Use left and right arrow keys to read values.` }, svg);
+  const wrap = h('div', { class: 'chart radar', tabindex: 0, role: 'group', 'aria-label': arrowsAria(ariaLabel) }, svg);
   let active = -1;
   function setActive(i) {
     if (active >= 0) dots[active].classList.remove('is-active');
@@ -611,7 +624,8 @@ export function radarChart(buckets, { metric = 'watch_s', ariaLabel = 'Radar cha
     if (i < 0) { hideTip(); return; }
     dots[i].classList.add('is-active');
     const total = data.reduce((a, d) => a + Number(d[metric]), 0) || 1;
-    showTip(dots[i].getBoundingClientRect(), tipRows(data[i].name, [{ color: SINGLE, value: fmt(data[i]), label: pct(Number(data[i][metric]) / total) + ' of these' }]));
+    showTip(dots[i].getBoundingClientRect(), tipRows(data[i].name, [{ color: SINGLE, value: fmt(data[i]), label: t('charts.of_these', { share: pct(Number(data[i][metric]) / total) }) }]));
+
   }
   hits.forEach((hEl, i) => { hEl.addEventListener('pointerenter', () => setActive(i)); hEl.addEventListener('pointerleave', () => setActive(-1)); });
   wrap.addEventListener('keydown', (e) => {

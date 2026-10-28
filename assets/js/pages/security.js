@@ -3,15 +3,17 @@ import { api } from '../api.js';
 import { readDays, saveDays, can, rangeLong } from '../state.js';
 import { replaceQuery } from '../router.js';
 import { pageHeader, card, filterBar, dataView, sk, emptyState, statTile, segmented, pagination, avatar, openModal, setBusy, inlineError } from '../components.js';
-import { bucketList } from '../charts.js';
+import { bucketList, counted } from '../charts.js';
 import { dataTable } from '../tables.js';
-import { worldMap, placeTip } from '../worldmap.js';
+import { worldMap, placeTip, countryName } from '../worldmap.js';
 import { button } from '../../finui/components/button/button.js';
+import { toast } from '../../finui/components/toast/toast.js';
+import { t } from '../i18n.js';
 
 const PER_PAGE = 5;
 // Status colours always ship with an icon and a word.
-const SEVERITY = { high: { cls: 'fui-badge--critical', icon: 'alert', label: 'High' }, medium: { cls: 'fui-badge--warning', icon: 'alert', label: 'Medium' } };
-const KIND = { impossible_travel: 'Impossible travel', new_country: 'New country' };
+const SEVERITY = { high: { cls: 'fui-badge--critical', icon: 'alert', label: t('pages.security.severity.high') }, medium: { cls: 'fui-badge--warning', icon: 'alert', label: t('pages.security.severity.medium') } };
+const KIND = { impossible_travel: t('pages.security.kind.impossible_travel'), new_country: t('pages.security.kind.new_country') };
 
 // Shared with the prefetcher, so a prefetched view has exactly the addresses the page asks for.
 function loadSecurity({ days, userId, status, page }, signal) {
@@ -25,18 +27,21 @@ const scopeOf = (query) => ({ days: readDays(query), userId: query.get('user_id'
   page: Math.max(1, Number(query.get('page')) || 1) });
 export const prefetchSecurity = ({ query, signal }) => [() => loadSecurity(scopeOf(query), signal)];
 
-const km = (n) => `${num(n)} km`;
+const km = (n) => t('pages.security.km', { distance: num(n) });
 function gapText(sec) {
-  if (sec < 90) return `${Math.max(1, Math.round(sec))} s`;
-  if (sec < 5400) return `${Math.round(sec / 60)} min`;
+  if (sec < 90) return t('pages.security.gap_seconds', { count: Math.max(1, Math.round(sec)) });
+  if (sec < 5400) return t('pages.security.gap_minutes', { count: Math.round(sec / 60) });
   return duration(sec);
 }
 
 function travelSentence(d) {
   return d.overlap
-    ? `${km(d.distance_km)} apart at the same time`
-    : `${km(d.distance_km)} in ${gapText(d.gap_s)}, which is ${num(d.speed_kmh)} km/h`;
+    ? t('pages.security.travel_overlap', { distance: km(d.distance_km) })
+    : t('pages.security.travel_speed', { distance: km(d.distance_km), gap: gapText(d.gap_s), speed: num(d.speed_kmh) });
 }
+const country = (d) => countryName(d.country_code, d.country);
+const homeLabel = (p) => (p.home ? t('pages.security.home_place', { place: p.label }) : p.label);
+const usersText = (users) => users.slice(0, 3).map((u) => u.name).join(', ') + (users.length > 3 ? ` +${users.length - 3}` : '');
 
 function sightingFacts(label, side) {
   return h('div', { class: 'alert-side' },
@@ -47,7 +52,7 @@ function sightingFacts(label, side) {
 }
 
 export default function securityPage(ctx) {
-  ctx.title('Security');
+  ctx.title(t('nav.security'));
   const f = scopeOf(ctx.query);
   const view = h('div', { class: 'stack' });
   let map = null;
@@ -57,21 +62,22 @@ export default function securityPage(ctx) {
 
   function resolveDialog(a) {
     const travel = a.kind === 'impossible_travel';
-    const note = h('input', { class: 'fui-field__input', type: 'text', maxLength: 500, placeholder: 'On holiday, a VPN, a phone on mobile data…', id: 'alert-note', autocomplete: 'off' });
+    const note = h('input', { class: 'fui-field__input', type: 'text', maxLength: 500, placeholder: t('pages.security.note_placeholder'), id: 'alert-note', autocomplete: 'off' });
     const mute = h('input', { type: 'checkbox' });
     const error = inlineError('alert-error', '');
     error.hidden = true;
-    const save = button({ variant: 'primary', type: 'submit' }, icon('check', 14), 'Resolve');
+    const save = button({ variant: 'primary', type: 'submit' }, icon('check', 14), t('pages.security.resolve'));
     const form = h('form', { class: 'stack-sm' },
-      h('p', { class: 'fui-field__help' }, `${a.user_name}: ${travel ? travelSentence(a.details) : 'first seen in ' + (a.details.country || a.details.country_code)}.`),
-      h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', for: 'alert-note' }, 'Note (optional)'), note),
-      travel ? h('label', { class: 'fui-field__check' }, mute, `Never report ${a.details.from.place} and ${a.details.to.place} for ${a.user_name} again`) : null,
+      h('p', { class: 'fui-field__help' }, travel ? t('pages.security.resolve_help_travel', { user: a.user_name, travel: travelSentence(a.details) })
+        : t('pages.security.resolve_help_country', { user: a.user_name, country: country(a.details) })),
+      h('div', { class: 'fui-field' }, h('label', { class: 'fui-field__label', for: 'alert-note' }, t('pages.security.note_label')), note),
+      travel ? h('label', { class: 'fui-field__check' }, mute, t('pages.security.mute_pair', { from: a.details.from.place, to: a.details.to.place, user: a.user_name })) : null,
       error,
-      h('div', { class: 'form-actions' }, save, button({ variant: 'ghost', type: 'button', onClick: () => modal.close() }, 'Cancel')));
-    const modal = openModal({ title: 'Resolve alert', body: form, initialFocus: note });
+      h('div', { class: 'form-actions' }, save, button({ variant: 'ghost', type: 'button', onClick: () => modal.close() }, t('common.cancel'))));
+    const modal = openModal({ title: t('pages.security.resolve_title'), body: form, initialFocus: note });
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      setBusy(save, true, 'Resolving…');
+      setBusy(save, true, t('pages.security.resolving'));
       try {
         await api.post(`/security/alerts/${a.id}/resolve`, { note: note.value, mute: mute.checked });
         modal.close();
@@ -84,53 +90,67 @@ export default function securityPage(ctx) {
     });
   }
 
+  /** A button's write, then the page again; refused, the page has nothing new to draw, so the button is given back and the
+   *  refusal said, or it would stay busy and nobody would be told. */
+  async function pressed(btn, busy, write) {
+    setBusy(btn, true, busy);
+    try { await write(); } catch (e) { setBusy(btn, false); toast({ text: e.message, tone: 'critical' }); return; }
+    dv.load();
+  }
+
   function alertRow(a, manage) {
     const sev = SEVERITY[a.severity] || SEVERITY.medium, d = a.details || {};
     const travel = a.kind === 'impossible_travel' && d.from && d.to;
-    const showBtn = d.to ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => map && map.show(travel ? [d.from, d.to] : [d.to], { line: !!travel }) }, icon('compass', 13), 'Show on map') : null;
+    const showBtn = d.to ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: () => map && map.show(travel ? [d.from, d.to] : [d.to], { line: !!travel }) }, icon('compass', 13), t('pages.security.show_on_map')) : null;
     const act = !manage ? null : a.resolved_at
-      ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: async (e) => { setBusy(e.currentTarget, true, 'Reopening…'); try { await api.post(`/security/alerts/${a.id}/reopen`); } finally { dv.load(); } } }, icon('refresh', 13), 'Reopen')
-      : button({ size: 'sm', type: 'button', onClick: () => resolveDialog(a) }, icon('check', 13), 'Resolve…');
+      ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: (e) => pressed(e.currentTarget, t('pages.security.reopening'), () => api.post(`/security/alerts/${a.id}/reopen`)) }, icon('refresh', 13), t('pages.security.reopen'))
+      : button({ size: 'sm', type: 'button', onClick: () => resolveDialog(a) }, icon('check', 13), t('pages.security.resolve_more'));
     return h('li', { class: 'alert-row' + (a.resolved_at ? ' is-resolved' : '') },
       h('div', { class: 'alert-head' },
         h('span', { class: 'fui-badge--status ' + sev.cls }, icon(sev.icon, 13), sev.label),
         h('strong', { class: 'alert-kind' }, KIND[a.kind] || a.kind),
         h('a', { class: 'user-cell', href: `/users/${a.user_id}` }, avatar(a.user_id, a.user_name, { size: 20, hasImage: a.has_image }), a.user_name),
         h('span', { class: 'alert-when' }, relEl(a.at))),
-      h('p', { class: 'alert-text' }, travel ? `${d.from.place} → ${d.to.place}: ${travelSentence(d)}.`
-        : `First time in ${d.country || d.country_code}${d.to && d.to.place ? ` (${d.to.place})` : ''}. Known before: ${num(d.known)} ${d.known === 1 ? 'country' : 'countries'}.`),
-      h('div', { class: 'alert-sides' }, travel ? [sightingFacts('Before', d.from), sightingFacts('Then', d.to)] : d.to ? sightingFacts('Seen', d.to) : null),
-      a.resolved_at ? h('p', { class: 'alert-resolved' }, icon('check', 13), `Resolved ${relTime(a.resolved_at)} by ${a.resolved_by || 'someone'}`, a.note ? `: ${a.note}` : '', a.muted ? ' · this pair no longer reports' : '') : null,
+      h('p', { class: 'alert-text' }, travel ? t('pages.security.travel_text', { from: d.from.place, to: d.to.place, travel: travelSentence(d) })
+        : (d.to && d.to.place ? t('pages.security.first_time_place', { country: country(d), place: d.to.place }) : t('pages.security.first_time', { country: country(d) }))
+          + ' ' + t('pages.security.known_before', { count: d.known })),
+      h('div', { class: 'alert-sides' }, travel ? [sightingFacts(t('pages.security.side_before'), d.from), sightingFacts(t('pages.security.side_then'), d.to)] : d.to ? sightingFacts(t('pages.security.side_seen'), d.to) : null),
+      a.resolved_at ? h('p', { class: 'alert-resolved' }, icon('check', 13), t('pages.security.resolved_by', { when: relTime(a.resolved_at), name: a.resolved_by || t('pages.security.someone') }), a.note ? `: ${a.note}` : '', a.muted ? ' · ' + t('pages.security.muted') : '') : null,
       h('div', { class: 'alert-actions' }, showBtn, act));
   }
 
   function alertsCard(alerts, manage) {
-    const tabs = segmented({ label: 'Which alerts', size: 'sm', value: f.status, options: [{ value: 'open', label: `Open${alerts.open ? ` (${num(alerts.open)})` : ''}` }, { value: 'resolved', label: 'Resolved' }, { value: 'all', label: 'All' }],
+    // The last alert of a later page resolved: that page is empty now and has no pager to leave it by. The last page there is.
+    if (!alerts.rows.length && alerts.total > 0 && f.page > 1) {
+      const last = Math.max(1, Math.ceil(alerts.total / alerts.per_page));
+      queueMicrotask(() => { f.page = last; reload(); });
+    }
+    const tabs = segmented({ label: t('pages.security.which_alerts'), size: 'sm', value: f.status, options: [{ value: 'open', label: alerts.open ? t('pages.security.tab_open_count', { count: alerts.open }) : t('pages.security.tab_open') }, { value: 'resolved', label: t('pages.security.tab_resolved') }, { value: 'all', label: t('pages.security.tab_all') }],
       onChange: (v) => { f.status = v; f.page = 1; reload(); } });
     const resolveAll = manage && f.status === 'open' && alerts.open > 1 && !f.userId
-      ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: async (e) => { setBusy(e.currentTarget, true, 'Resolving…'); try { await api.post('/security/alerts/resolve-all'); } finally { dv.load(); } } }, icon('check', 13), 'Resolve all')
+      ? button({ size: 'sm', variant: 'ghost', type: 'button', onClick: (e) => pressed(e.currentTarget, t('pages.security.resolving'), () => api.post('/security/alerts/resolve-all')) }, icon('check', 13), t('pages.security.resolve_all'))
       : null;
     const body = alerts.rows.length
       ? [h('ul', { class: 'alert-list' }, alerts.rows.map((a) => alertRow(a, manage))),
         alerts.total > PER_PAGE ? pagination({ page: alerts.page, perPage: alerts.per_page, total: alerts.total, onPage: (p) => { f.page = p; reload(); } }) : null]
-      : h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, f.status === 'open' ? 'Nothing needs a look. Impossible travel and first visits to a new country show up here.' : 'No alerts here.');
-    return card({ title: 'Alerts', sub: 'A reason to look, never proof: places are city centres at best, and a VPN looks like a trip', actions: [resolveAll, tabs], body });
+      : h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, f.status === 'open' ? t('pages.security.alerts_empty_open') : t('pages.security.alerts_empty'));
+    return card({ title: t('pages.security.alerts_title'), sub: t('pages.security.alerts_sub'), actions: [resolveAll, tabs], body });
   }
 
   function mapPoints(o) {
     const pts = [];
     for (const p of o.places) {
-      pts.push({ kind: p.home ? 'home' : 'remote', latitude: p.latitude, longitude: p.longitude, weight: p.plays + p.sign_ins, label: p.home ? `Home (${p.label})` : p.label, data: p,
-        tip: () => placeTip(p.home ? `Home · ${p.label}` : p.label, [[p.plays, p.plays === 1 ? 'play' : 'plays'], p.sign_ins ? [p.sign_ins, p.sign_ins === 1 ? 'sign-in' : 'sign-ins'] : null,
-          [p.users.slice(0, 3).map((u) => u.name).join(', ') + (p.users.length > 3 ? ` +${p.users.length - 3}` : ''), ''], [relTime(p.last_seen), 'last seen']]) });
+      pts.push({ kind: p.home ? 'home' : 'remote', latitude: p.latitude, longitude: p.longitude, weight: p.plays + p.sign_ins, label: homeLabel(p), data: p,
+        tip: () => placeTip(p.home ? t('pages.security.home_tip', { place: p.label }) : p.label, [counted('terms.play', p.plays), p.sign_ins ? counted('pages.security.sign_ins', p.sign_ins) : null,
+          [usersText(p.users), ''], [relTime(p.last_seen), t('pages.security.last_seen_tip')]]) });
     }
     for (const x of o.failed) {
       pts.push({ kind: 'failed', latitude: x.latitude, longitude: x.longitude, weight: x.attempts, label: x.label, data: { ...x, failed: true },
-        tip: () => placeTip(x.label, [[x.attempts, x.attempts === 1 ? 'failed sign-in' : 'failed sign-ins'], [relTime(x.last_at), 'last attempt']]) });
+        tip: () => placeTip(x.label, [counted('pages.security.failed_sign_ins', x.attempts), [relTime(x.last_at), t('pages.security.last_attempt')]]) });
     }
     for (const n of o.now_playing) {
-      pts.push({ kind: 'live', latitude: n.latitude, longitude: n.longitude, weight: 1, label: `${n.user_name} in ${n.place}`, data: { ...n, live: true },
-        tip: () => placeTip(`${n.user_name} · playing now`, [[n.series_name ? `${n.series_name} · ${n.item_name}` : n.item_name, ''], [n.home ? 'Home' : n.place, n.device_name || '']]) });
+      pts.push({ kind: 'live', latitude: n.latitude, longitude: n.longitude, weight: 1, label: t('pages.security.user_in_place', { user: n.user_name, place: n.place }), data: { ...n, live: true },
+        tip: () => placeTip(t('pages.security.user_playing_now', { user: n.user_name }), [[n.series_name ? `${n.series_name} · ${n.item_name}` : n.item_name, ''], [n.home ? t('pages.security.home') : n.place, n.device_name || '']]) });
     }
     return pts;
   }
@@ -138,52 +158,56 @@ export default function securityPage(ctx) {
   function pickedPanel(slot, point) {
     const d = point.data;
     const head = h('div', { class: 'picked-head' }, h('strong', null, point.label),
-      button({ variant: 'icon', type: 'button', 'aria-label': 'Close place details', onClick: () => slot.replaceChildren() }, icon('x', 14)));
+      button({ variant: 'icon', type: 'button', 'aria-label': t('pages.security.close_place'), onClick: () => slot.replaceChildren() }, icon('x', 14)));
     let body;
     if (d.failed) {
-      body = [h('p', { class: 'fui-field__help' }, `${num(d.attempts)} failed ${d.attempts === 1 ? 'sign-in' : 'sign-ins'}, last ${relTime(d.last_at)}.`), h('ul', { class: 'picked-list' }, d.events.map((e) => h('li', null, e))),
-        can('see_server') ? h('a', { href: '/server/log?type=AuthenticationFailed' }, 'Open the server log') : null];
+      body = [h('p', { class: 'fui-field__help' }, t('pages.security.failed_summary', { count: d.attempts, when: relTime(d.last_at) })), h('ul', { class: 'picked-list' }, d.events.map((e) => h('li', null, e))),
+        can('see_server') ? h('a', { href: '/server/log?type=AuthenticationFailed' }, t('pages.security.open_server_log')) : null];
     } else if (d.live) {
-      body = h('p', { class: 'fui-field__help' }, `${d.user_name} is playing ${d.series_name ? d.series_name + ' · ' : ''}${d.item_name}${d.device_name ? ' on ' + d.device_name : ''}.`);
+      const title = d.series_name ? `${d.series_name} · ${d.item_name}` : d.item_name;
+      body = h('p', { class: 'fui-field__help' }, d.device_name ? t('pages.security.live_playing_on', { user: d.user_name, title, device: d.device_name }) : t('pages.security.live_playing', { user: d.user_name, title }));
     } else {
-      body = [h('p', { class: 'fui-field__help' }, `${num(d.plays)} ${d.plays === 1 ? 'play' : 'plays'} (${duration(d.watch_s)})${d.sign_ins ? `, ${num(d.sign_ins)} sign-ins` : ''}${d.addresses ? ` from ${num(d.addresses)} ${d.addresses === 1 ? 'address' : 'addresses'}` : ''}. Last seen ${relTime(d.last_seen)}.`),
+      const parts = { plays: t('terms.play', { count: d.plays }), time: duration(d.watch_s), when: relTime(d.last_seen),
+        sign_ins: d.sign_ins ? t('pages.security.sign_ins', { count: d.sign_ins }) : '', addresses: d.addresses ? t('pages.security.addresses', { count: d.addresses }) : '' };
+      const summary = `pages.security.place_summary${d.sign_ins ? '_sign_ins' : ''}${d.addresses ? '_addresses' : ''}`;
+      body = [h('p', { class: 'fui-field__help' }, t(summary, parts)),
         h('ul', { class: 'picked-list' }, d.users.map((u) => h('li', null, h('a', { class: 'user-cell', href: `/users/${u.id}` }, avatar(u.id, u.name, { size: 20 }), u.name),
-          h('span', { class: 'mono muted' }, `${num(u.plays)} ${u.plays === 1 ? 'play' : 'plays'}${u.sign_ins ? ` · ${num(u.sign_ins)} sign-ins` : ''}`))))];
+          h('span', { class: 'mono muted' }, t('terms.play', { count: u.plays }) + (u.sign_ins ? ' · ' + t('pages.security.sign_ins', { count: u.sign_ins }) : '')))))];
     }
     slot.replaceChildren(h('div', { class: 'picked', role: 'status' }, head, body));
   }
 
   function placesTable(places) {
-    return dataTable(h('table', { class: 'fui-data-table' },
-      h('thead', null, h('tr', null, h('th', null, 'Place'), h('th', null, 'People'), h('th', { 'data-first': 'desc' }, 'Plays'), h('th', { 'data-first': 'desc' }, 'Watch time'), h('th', { 'data-first': 'desc' }, 'Sign-ins'), h('th', { 'data-first': 'desc' }, 'Last seen'), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, 'Map')))),
+    return dataTable(h('table', { class: 'fui-data-table places-table' },
+      h('thead', null, h('tr', null, h('th', null, t('pages.security.col.place')), h('th', null, t('pages.security.col.people')), h('th', { 'data-first': 'desc' }, t('pages.security.col.plays')), h('th', { 'data-first': 'desc' }, t('terms.watch_time')), h('th', { 'data-first': 'desc' }, t('pages.security.col.sign_ins')), h('th', { 'data-first': 'desc' }, t('pages.security.col.last_seen')), h('th', { 'data-nosort': '' }, h('span', { class: 'sr-only' }, t('pages.security.col.map'))))),
       h('tbody', null, places.map((p) => h('tr', null,
-        h('td', null, h('span', { class: 'place-cell' }, icon(p.home ? 'home' : 'globe', 13), p.home ? `Home (${p.label})` : p.label)),
-        h('td', { 'data-sort': p.users.length }, p.users.slice(0, 3).map((u) => u.name).join(', ') + (p.users.length > 3 ? ` +${p.users.length - 3}` : '')),
+        h('td', null, h('span', { class: 'place-cell' }, icon(p.home ? 'home' : 'globe', 13), homeLabel(p))),
+        h('td', { 'data-sort': p.users.length }, usersText(p.users)),
         h('td', { class: 'mono' }, num(p.plays)),
         h('td', { class: 'mono', 'data-sort': p.watch_s }, duration(p.watch_s)),
         h('td', { class: 'mono' }, num(p.sign_ins)),
         h('td', { class: 'mono nowrap', 'data-sort': p.last_seen, title: dateTime(p.last_seen) }, relTime(p.last_seen)),
-        h('td', null, button({ size: 'sm', variant: 'ghost', type: 'button', 'aria-label': `Show ${p.label} on the map`, onClick: () => map && map.show([p]) }, icon('compass', 13))))))));
+        h('td', null, button({ size: 'sm', variant: 'ghost', type: 'button', 'aria-label': t('pages.security.show_place_on_map', { place: p.label }), onClick: () => map && map.show([p]) }, icon('compass', 13))))))));
   }
 
   function noDatabase(o) {
     const btn = o.can_manage ? button({ variant: 'primary', type: 'button', onClick: async (e) => {
       const b = e.currentTarget;
-      setBusy(b, true, 'Downloading…');
+      setBusy(b, true, t('pages.security.downloading'));
       try {
         await api.post('/security/database');
         const wait = setInterval(async () => {
-          const t = (await api.get('/tasks', null, { signal: ctx.signal })).tasks.find((x) => x.id === 'geoip');
-          if (t && t.state === 'running') { b.lastChild.textContent = t.message || 'Downloading…'; return; }
+          const task = (await api.get('/tasks', null, { signal: ctx.signal })).tasks.find((x) => x.id === 'geoip');
+          if (task && task.state === 'running') { b.lastChild.textContent = task.message || t('pages.security.downloading'); return; }
           clearInterval(wait);
-          if (t && t.state === 'error') { setBusy(b, false); note.textContent = t.error || 'The download failed.'; } else dv.load();
+          if (task && task.state === 'error') { setBusy(b, false); note.textContent = task.error || t('pages.security.download_failed'); } else dv.load();
         }, 1500);
         ctx.onCleanup(() => clearInterval(wait));
       } catch (err) { setBusy(b, false); note.textContent = err.message; }
-    } }, icon('upload', 14), 'Download the database (about 60 MB)') : null;
+    } }, icon('upload', 14), t('pages.security.download_database')) : null;
     const note = h('p', { class: 'fui-field__help', 'aria-live': 'polite' });
-    return emptyState('No geolocation database yet',
-      'Places come from a city database that FinStats reads locally; no address is ever sent anywhere. Download DB-IP’s free one here, or put any MaxMind-format city file (.mmdb) into the geoip folder of the data directory. Settings → Security keeps it up to date.',
+    return emptyState(t('pages.security.no_database_title'),
+      t('pages.security.no_database_text'),
       h('div', { class: 'fui-empty__action' }, btn, note));
   }
 
@@ -201,27 +225,28 @@ export default function securityPage(ctx) {
       const failedTotal = o.failed.reduce((n, x) => n + x.attempts, 0);
       return [
         h('div', { class: 'fui-stat-tile__grid' },
-          statTile({ label: 'Open alerts', value: num(o.open_alerts), hint: o.open_alerts ? 'Waiting for a look' : 'All clear' }),
-          statTile({ label: 'Countries', value: num(o.countries.length), hint: rangeLong(f.days) }),
-          statTile({ label: 'Places away from home', value: num(away.length), hint: rangeLong(f.days) }),
-          can('see_server') && !f.userId ? statTile({ label: 'Failed sign-ins from outside', value: num(failedTotal), hint: rangeLong(f.days) }) : null),
-        card({ title: 'Where people watch from', sub: o.home_known ? 'Plays, sign-ins and live streams by place; the home network is one dot' : 'Plays, sign-ins and live streams by place. Home is not on the map yet: FinStats has not learned this network’s public address',
-          body: points.length ? [map.el, picked] : h('div', { class: 'fui-empty--chart' }, 'Nobody has watched from a public address in this range.') }),
+          statTile({ label: t('pages.security.tile.open_alerts'), value: num(o.open_alerts), hint: o.open_alerts ? t('pages.security.tile.waiting') : t('pages.security.tile.all_clear') }),
+          statTile({ label: t('pages.security.tile.countries'), value: num(o.countries.length), hint: rangeLong(f.days) }),
+          statTile({ label: t('pages.security.tile.places_away'), value: num(away.length), hint: rangeLong(f.days) }),
+          can('see_server') && !f.userId ? statTile({ label: t('pages.security.tile.failed_outside'), value: num(failedTotal), hint: rangeLong(f.days) }) : null),
+        card({ title: t('pages.security.map_title'), sub: o.home_known ? t('pages.security.map_sub') : t('pages.security.map_sub_no_home'),
+          body: points.length ? [map.el, picked] : h('div', { class: 'fui-empty--chart' }, t('pages.security.map_empty')) }),
         alertsCard(alerts, o.can_manage),
         h('div', { class: 'grid-heat' },
-          card({ title: 'Places', cls: 'fui-card--flush', body: o.places.length ? placesTable(o.places) : h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, 'Nothing in this range.') }),
-          card({ title: 'Countries', sub: 'By plays', body: bucketList(o.countries.map((c) => ({ name: c.name, plays: c.plays, watch_s: 0 })), { watch: false, empty: 'Nothing in this range.' }) })),
+          card({ title: t('pages.security.places_title'), cls: 'fui-card--flush', body: o.places.length ? placesTable(o.places) : h('div', { class: 'fui-empty--chart fui-empty--chart-sm' }, t('pages.security.nothing_in_range')) }),
+          card({ title: t('pages.security.countries_title'), sub: t('pages.security.countries_sub'), body: bucketList(o.countries.map((c) => ({ name: countryName(c.code, c.name), plays: c.plays, watch_s: 0 })), { watch: false, empty: t('pages.security.nothing_in_range') }) })),
         h('p', { class: 'attribution' },
           o.database.dbip ? [h('a', { href: 'https://db-ip.com', target: '_blank', rel: 'noopener noreferrer' }, 'IP Geolocation by DB-IP'), ' · '] : null,
-          `${o.database.kind}, built ${dateOnly(o.database.built_at)}`,
-          o.addresses_without_place ? ` · ${num(o.addresses_without_place)} ${o.addresses_without_place === 1 ? 'address has' : 'addresses have'} no known place` : '',
-          ' · Map outlines: Natural Earth'),
+          t('pages.security.database_built', { kind: o.database.kind, date: dateOnly(o.database.built_at) }),
+          o.addresses_without_place ? ' · ' + t('pages.security.addresses_without_place', { count: o.addresses_without_place }) : '',
+          ' · ' + t('pages.security.map_outlines')),
       ];
     },
   });
 
   ctx.onCleanup(() => { if (map) map.destroy(); });
-  ctx.root.append(pageHeader('Security', 'Where people watch from, and what does not add up'),
+  ctx.root.append(pageHeader(t('nav.security'), t('pages.security.page_sub')),
+
     filterBar({ days: f.days, userId: f.userId, signal: ctx.signal,
       onDays: (d) => { f.days = d; saveDays(d); reload(); }, onUser: (u) => { f.userId = u; f.page = 1; reload(); } }),
     view);

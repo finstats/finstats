@@ -3,15 +3,22 @@
 
 import { h, s, clear, mount, icon } from '../finui/core.js';
 import { num, initials } from '../finui/format.js';
+import { t, lang } from './i18n.js';
+import { DATE_FORMATS, TIME_FORMATS, writeDate, writeTime } from './when.js';
 
-const nf = new Intl.NumberFormat('en-US');   // the other formatters' numbers, the way num() prints them
+// Every formatter writes in the language this page reads in (i18n.js has put it in use before any module runs), the
+// way num() prints numbers and tables read them back.
+const nf = new Intl.NumberFormat(lang());
+const nf1 = new Intl.NumberFormat(lang(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 // FinUI's builder and icons, for the modules that still import them from here.
 export { h, s, clear, mount, icon, num, initials };
 
-/** The FinStats logo. One source for favicon, sidebar and sign-in: /assets/logo.svg. */
+/** The FinStats logo as a page wears it: the bare mark, one file per theme (app.css shows the one that fits). Where the
+ *  logo stands alone (README, favicon) it keeps its tile: /assets/logo.svg. */
 export function logo(size = 24) {
-  return h('img', { class: 'brand-logo', src: '/assets/logo.svg', width: size, height: size, alt: '', decoding: 'async' });
+  const mark = (theme) => h('img', { class: `brand-logo-${theme}`, src: `/assets/mark-${theme}.svg`, width: size, height: size, alt: '', decoding: 'async' });
+  return h('span', { class: 'brand-logo' }, mark('light'), mark('dark'));
 }
 
 // ---------------------------------------------------------------- formatting
@@ -24,24 +31,26 @@ export function compact(n) {
   if (abs < 1e9) return trim1(n / 1e6) + 'M';
   return trim1(n / 1e9) + 'B';
 }
-const trim1 = (x) => (Math.abs(x) >= 100 ? Math.round(x).toString() : x.toFixed(1).replace(/\.0$/, ''));
+const upTo1 = new Intl.NumberFormat(lang(), { maximumFractionDigits: 1 });
+const trim1 = (x) => (Math.abs(x) >= 100 ? String(Math.round(x)) : upTo1.format(x));
 
-/** 3h 12m · 48m · 2d 4h · 35s */
+/** 3h 12m · 48m · 2d 4h · 35s (en), 3 t 12 min (nb) */
 export function duration(sec) {
   sec = Math.max(0, Math.round(Number(sec) || 0));
-  if (sec < 60) return sec + 's';
+  const u = (unit, count) => t(`units.${unit}`, { count });
+  if (sec < 60) return u('seconds', sec);
   const m = Math.floor(sec / 60);
-  if (m < 60) return m + 'm';
+  if (m < 60) return u('minutes', m);
   const hh = Math.floor(m / 60);
-  if (hh < 48) return hh + 'h' + (m % 60 ? ' ' + (m % 60) + 'm' : '');
+  if (hh < 48) return u('hours', hh) + (m % 60 ? ' ' + u('minutes', m % 60) : '');
   const d = Math.floor(hh / 24);
-  return d + 'd' + (hh % 24 ? ' ' + (hh % 24) + 'h' : '');
+  return u('days', d) + (hh % 24 ? ' ' + u('hours', hh % 24) : '');
 }
 
 export function durationExact(sec) {
   sec = Math.max(0, Math.round(Number(sec) || 0));
   const hh = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), ss = sec % 60;
-  return `${nf.format(hh)}h ${m}m ${ss}s`;
+  return t('units.exact', { hours: hh, minutes: m, seconds: ss });
 }
 
 /** h:mm:ss clock for playback positions */
@@ -62,44 +71,76 @@ export function bytes(n) {
   const u = ['KB', 'MB', 'GB', 'TB', 'PB'];
   let i = -1;
   do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
-  return (n >= 100 ? Math.round(n) : n.toFixed(1)) + ' ' + u[i];
+  return (n >= 100 ? nf.format(Math.round(n)) : nf1.format(n)) + ' ' + u[i];
 }
 
 export function bitrate(bps) {
   bps = Number(bps) || 0;
   if (!bps) return '–';
-  return bps >= 1e6 ? (bps / 1e6).toFixed(1) + ' Mbps' : Math.round(bps / 1e3) + ' kbps';
+  return bps >= 1e6 ? nf1.format(bps / 1e6) + ' Mbps' : nf.format(Math.round(bps / 1e3)) + ' kbps';
 }
 
-const dtf = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-const dayf = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
-const dayfy = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-const weekdayf = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+const dtf = new Intl.DateTimeFormat(lang(), { dateStyle: 'medium', timeStyle: 'short' });
+const dayf = new Intl.DateTimeFormat(lang(), { month: 'short', day: 'numeric' });
+const dayfy = new Intl.DateTimeFormat(lang(), { month: 'short', day: 'numeric', year: 'numeric' });
+const weekdayf = new Intl.DateTimeFormat(lang(), { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
-export const dateTime = (ts) => (ts ? dtf.format(new Date(ts * 1000)) : '–');
+// ---- the date and time formats this browser chose (Settings → Appearance), read once a visit; nothing stored is the
+// language's own way, which is what every formatter here writes then, exactly as before a format could be chosen.
+const DATE_KEY = 'finstats.dateFormat', TIME_KEY = 'finstats.timeFormat';
+let formats = null;
+const chosen = () => formats || (formats = { date: DATE_FORMATS.includes(store.get(DATE_KEY)) ? store.get(DATE_KEY) : null,
+  time: TIME_FORMATS.includes(store.get(TIME_KEY)) ? store.get(TIME_KEY) : null });
+export const dateFormatChoice = () => chosen().date || '';
+export const timeFormatChoice = () => chosen().time || '';
+/** Keep a format ('' is the language's own way); the page is read again in it. */
+export function setFormats({ date = dateFormatChoice(), time = timeFormatChoice() } = {}, reload = true) {
+  if (date) store.set(DATE_KEY, date); else store.remove(DATE_KEY);
+  if (time) store.set(TIME_KEY, time); else store.remove(TIME_KEY);
+  formats = null;
+  if (reload) location.reload();
+}
+const ampm = () => ({ am: t('time.am'), pm: t('time.pm') });
+const hm = new Intl.DateTimeFormat(lang(), { hour: '2-digit', minute: '2-digit', hour12: false });
+/** A time of day in the chosen format, or as `fallback` (the place's own Intl formatter) writes it. */
+export const clockTime = (d, fallback = hm, { seconds = false } = {}) => writeTime(d, chosen().time, ampm(), { seconds }) ?? fallback.format(d);
+/** A day with its year in the chosen format, or as `fallback` writes it ("Sep 1, 2026"). */
+export const calendarDate = (d, fallback = dayfy) => writeDate(d, chosen().date) ?? fallback.format(d);
+/** What a format reads like, for the choices in Settings and the welcome. */
+export const dateExample = (format) => writeDate(new Date(2026, 0, 31), format) ?? dayfy.format(new Date(2026, 0, 31));
+export const timeExample = (format) => {
+  const at = (hh, mm) => new Date(2026, 0, 31, hh, mm);
+  return format ? `${writeTime(at(1, 1), format, ampm())} – ${writeTime(at(23, 59), format, ampm())}` : `${hm.format(at(1, 1))} – ${hm.format(at(23, 59))}`;
+};
+
+export const dateTime = (ts) => {
+  if (!ts) return '–';
+  const d = new Date(ts * 1000);
+  return chosen().date || chosen().time ? `${calendarDate(d)} ${clockTime(d)}` : dtf.format(d);
+};
 /** The day of a moment, with its year: "Sep 1, 2026". */
-export const dateOnly = (ts) => (ts ? dayfy.format(new Date(ts * 1000)) : '–');
+export const dateOnly = (ts) => (ts ? calendarDate(new Date(ts * 1000)) : '–');
 
 export function relTime(ts) {
-  if (!ts) return 'never';
+  if (!ts) return t('time.never');
   const d = Date.now() / 1000 - ts;
-  if (d < 45) return 'just now';
-  if (d < 3600) return Math.round(d / 60) + 'm ago';
-  if (d < 86400) return Math.round(d / 3600) + 'h ago';
-  if (d < 86400 * 30) return Math.round(d / 86400) + 'd ago';
-  if (d < 86400 * 365) return Math.round(d / (86400 * 30)) + 'mo ago';
-  return Math.round(d / (86400 * 365)) + 'y ago';
+  if (d < 45) return t('time.just_now');
+  if (d < 3600) return t('time.minutes_ago', { count: Math.round(d / 60) });
+  if (d < 86400) return t('time.hours_ago', { count: Math.round(d / 3600) });
+  if (d < 86400 * 30) return t('time.days_ago', { count: Math.round(d / 86400) });
+  if (d < 86400 * 365) return t('time.months_ago', { count: Math.round(d / (86400 * 30)) });
+  return t('time.years_ago', { count: Math.round(d / (86400 * 365)) });
 }
 
 /** "in 6 days": `relTime` only looks backwards. */
 export function untilText(ts) {
   if (!ts) return '';
   const s = ts - Date.now() / 1000;
-  if (s <= 0) return 'due now';
-  if (s <= 90) return 'within a minute or two';
-  if (s < 3600) return `in ${Math.round(s / 60)} minutes`;
-  if (s < 86400 * 1.5) return `in ${Math.round(s / 3600)} hours`;
-  return `in ${Math.round(s / 86400)} days`;
+  if (s <= 0) return t('time.due_now');
+  if (s <= 90) return t('time.within_minutes');
+  if (s < 3600) return t('time.in_minutes', { count: Math.round(s / 60) });
+  if (s < 86400 * 1.5) return t('time.in_hours', { count: Math.round(s / 3600) });
+  return t('time.in_days', { count: Math.round(s / 86400) });
 }
 
 /** A compact absolute timestamp: "19 Sep, 14:04", with the year once it is not this year. */
@@ -107,7 +148,11 @@ export function shortStamp(ts) {
   if (!ts) return '';
   const d = new Date(ts * 1000);
   const sameYear = d.getFullYear() === new Date().getFullYear();
-  return d.toLocaleString(undefined, { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }), hour: '2-digit', minute: '2-digit', hour12: false });
+  if (chosen().date || chosen().time) {
+    const day = chosen().date ? calendarDate(d) : d.toLocaleDateString(lang(), { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) });
+    return `${day} ${clockTime(d)}`;
+  }
+  return d.toLocaleString(lang(), { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }), hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 export function relEl(ts, cls = 'mono') {
@@ -121,9 +166,10 @@ export function parseDay(str) {
 }
 export const dayLabel = (str) => dayf.format(parseDay(str));
 export const dayLabelLong = (str) => weekdayf.format(parseDay(str));
-export const dayLabelYear = (str) => dayfy.format(parseDay(str));
+export const dayLabelYear = (str) => calendarDate(parseDay(str));
 
-export const pct = (x, digits = 0) => (x == null ? '–' : (x * 100).toFixed(digits) + '%');
+const pctf = [0, 1, 2].map((d) => new Intl.NumberFormat(lang(), { style: 'percent', minimumFractionDigits: d, maximumFractionDigits: d }));
+export const pct = (x, digits = 0) => (x == null ? '–' : (pctf[digits] || new Intl.NumberFormat(lang(), { style: 'percent', minimumFractionDigits: digits, maximumFractionDigits: digits })).format(x));
 
 /** Where a play came from, by the `source` the server gives it: FinStats itself, or a tracker it imports from. One list
  *  for every page, so a tracker added to FinStats is not missing from one of them. */
@@ -140,21 +186,21 @@ export function episodeCode(season, episode) {
 const LANG_B = { ger: 'deu', fre: 'fra', chi: 'zho', dut: 'nld', cze: 'ces', gre: 'ell', rum: 'ron', per: 'fas', slo: 'slk', ice: 'isl', mac: 'mkd',
   may: 'msa', alb: 'sqi', arm: 'hye', baq: 'eus', bur: 'mya', geo: 'kat', tib: 'bod', wel: 'cym' };
 let langNames;
-/** "jpn" → "Japanese". An unknown code is shown as it is; a track without a language is "Unknown". */
+/** "jpn" → "Japanese" ("japansk" in Norwegian). An unknown code is shown as it is; a track without a language is "Unknown". */
 export function languageName(code) {
   const c = String(code || '').trim().toLowerCase();
-  if (!c || c === 'und' || c === 'unk' || c === 'zxx' || c === 'mis') return 'Unknown';
-  if (c === 'other') return 'Other';
+  if (!c || c === 'und' || c === 'unk' || c === 'zxx' || c === 'mis') return t('common.unknown');
+  if (c === 'other') return t('common.other');
   try {
-    if (langNames === undefined) langNames = typeof Intl.DisplayNames === 'function' ? new Intl.DisplayNames(['en'], { type: 'language', fallback: 'none' }) : null;
+    if (langNames === undefined) langNames = typeof Intl.DisplayNames === 'function' ? new Intl.DisplayNames([lang()], { type: 'language', fallback: 'none' }) : null;
     const name = langNames && langNames.of(LANG_B[c] || c);
     if (name) return name;
   } catch { /* not a well-formed code */ }
   return c.toUpperCase();
 }
 
-export const METHOD_LABEL = { DirectPlay: 'Direct play', DirectStream: 'Direct stream', Transcode: 'Transcode' };
-export const methodLabel = (m) => METHOD_LABEL[m] || m || 'Unknown';
+export const METHOD_LABEL = { DirectPlay: t('play_method.DirectPlay'), DirectStream: t('play_method.DirectStream'), Transcode: t('play_method.Transcode') };
+export const methodLabel = (m) => METHOD_LABEL[m] || m || t('common.unknown');
 
 /** "ContainerNotSupported" → "Container not supported" */
 export function humanize(str) {
@@ -168,8 +214,8 @@ export function safeHttps(url) {
 }
 
 /** Time of day, for timelines: 21:04:12 */
-const timef = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-export const timeOfDay = (ts) => (ts ? timef.format(new Date(ts * 1000)) : '–');
+const timef = new Intl.DateTimeFormat(lang(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+export const timeOfDay = (ts) => (ts ? clockTime(new Date(ts * 1000), timef, { seconds: true }) : '–');
 
 export function debounce(fn, ms) {
   let t;

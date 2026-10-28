@@ -7,6 +7,7 @@ import { state } from './state.js';
 import { navigate, onRouteChange } from './router.js';
 import { watchMenuItem } from './watchlist.js';
 import { attachContextMenu, closeMenu } from '../finui/components/context-menu/context-menu.js';
+import { t as tr } from './i18n.js';
 
 /** The `dataset` that tells the menu what kind of title a link opens; nothing when that is not known. */
 export const typed = (type) => (type ? { type } : null);
@@ -47,17 +48,17 @@ function itemsFor(a, target) {
   const here = section === 'users' ? `/users/${encodeURIComponent(id)}` : path;
   const url = new URL(window.finstatsDemo.site(here), location.origin).href;
   const items = [
-    { label: 'Open', icon: kind === 'person' ? 'user' : kind === 'library' ? 'library' : 'film', onSelect: () => navigate(here) },
-    kind === 'person' && section === 'users' ? { label: 'Timeline', icon: 'activity', onSelect: () => navigate(`${here}/timeline`) } : null,
-    kind === 'person' && section === 'users' && state.user && state.user.id === id ? { label: 'Watchlist', icon: 'bookmark', onSelect: () => navigate(`${here}/watchlist`) } : null,
-    { label: 'Open in a new tab', icon: 'external', href: here, newTab: true },
+    { label: tr('menus.open'), icon: kind === 'person' ? 'user' : kind === 'library' ? 'library' : 'film', onSelect: () => navigate(here) },
+    kind === 'person' && section === 'users' ? { label: tr('menus.timeline'), icon: 'activity', onSelect: () => navigate(`${here}/timeline`) } : null,
+    kind === 'person' && section === 'users' && state.user && state.user.id === id ? { label: tr('terms.watchlist'), icon: 'bookmark', onSelect: () => navigate(`${here}/watchlist`) } : null,
+    { label: tr('menus.new_tab'), icon: 'external', href: here, newTab: true },
   ];
   if (kind === 'title') {
     const keep = (a.dataset.type === 'Movie' || a.dataset.type === 'Series') ? watchMenuItem({ item_id: id }) : null;
     const jf = state.user && state.user.jellyfin_details;
-    if (keep || jf) items.push({ separator: true }, keep, jf ? { label: 'Open in Jellyfin', icon: 'play', href: jf + encodeURIComponent(id), newTab: true } : null);
+    if (keep || jf) items.push({ separator: true }, keep, jf ? { label: tr('common.open_in_jellyfin'), icon: 'play', href: jf + encodeURIComponent(id), newTab: true } : null);
   }
-  items.push({ separator: true }, { label: 'Copy link', icon: 'link', onSelect: () => copyText(url) });
+  items.push({ separator: true }, { label: tr('menus.copy_link'), icon: 'link', onSelect: () => copyText(url) });
   return items.filter(Boolean);
 }
 
@@ -65,8 +66,8 @@ function itemsFor(a, target) {
 function elsewhere(d) {
   const film = d.kind === 'Movie';
   return [
-    d.tmdb ? { label: 'Open on TMDB', icon: 'external', href: `https://www.themoviedb.org/${film ? 'movie' : 'tv'}/${encodeURIComponent(d.tmdb)}`, newTab: true } : null,
-    d.tvdb && !film ? { label: 'Open on TVDB', icon: 'external', href: `https://www.thetvdb.com/dereferrer/series/${encodeURIComponent(d.tvdb)}`, newTab: true } : null,
+    d.tmdb ? { label: tr('menus.open_tmdb'), icon: 'external', href: `https://www.themoviedb.org/${film ? 'movie' : 'tv'}/${encodeURIComponent(d.tmdb)}`, newTab: true } : null,
+    d.tvdb && !film ? { label: tr('menus.open_tvdb'), icon: 'external', href: `https://www.thetvdb.com/dereferrer/series/${encodeURIComponent(d.tvdb)}`, newTab: true } : null,
   ];
 }
 
@@ -74,12 +75,12 @@ function itemsNotHere(d) {
   const t = { kind: d.kind, tmdb_id: d.tmdb || null, tvdb_id: d.tvdb || null, title: d.name, year: d.year ? Number(d.year) : null };
   const upcoming = state.user && state.user.features && state.user.features.upcoming;
   return [
-    upcoming ? { label: 'In Pipeline', icon: 'calendar', onSelect: () => navigate('/pipeline?tab=upcoming') } : null,
+    upcoming ? { label: tr('menus.in_pipeline'), icon: 'calendar', onSelect: () => navigate('/pipeline?tab=upcoming') } : null,
     upcoming ? { separator: true } : null,
     watchMenuItem(t),
     ...elsewhere(d),
     { separator: true },
-    { label: 'Copy title', icon: 'copy', onSelect: () => copyText(d.kind === 'Movie' && d.year ? `${d.name} (${d.year})` : d.name) },
+    { label: tr('menus.copy_title'), icon: 'copy', onSelect: () => copyText(d.kind === 'Movie' && d.year ? `${d.name} (${d.year})` : d.name) },
   ].filter(Boolean);
 }
 
@@ -91,10 +92,10 @@ export function installMenus() {
     const target = a && linkTarget(a);
     if (!target) {
       const card = !a && el.closest('[data-not-here]');
-      return card && card.dataset.name ? { items: itemsNotHere(card.dataset), from: card, label: `Actions for ${card.dataset.name}` } : null;
+      return card && card.dataset.name ? { items: itemsNotHere(card.dataset), from: card, label: tr('menus.actions_for', { name: card.dataset.name }) } : null;
     }
     const name = nameOf(a);
-    return { items: itemsFor(a, target), from: a, label: name ? `Actions for ${name}` : 'Actions' };
+    return { items: itemsFor(a, target), from: a, label: name ? tr('menus.actions_for', { name }) : tr('menus.actions') };
   });
   onRouteChange(() => closeMenu({ instant: true }));
 }
