@@ -1358,10 +1358,32 @@ async fn tautulli_board(State(app): State<App>, Manager(_): Manager) -> ApiResul
 
 /// `POST /api/import/tautulli`: the backup (`.db`, or the zip Tautulli's download gives) as the raw body. Nothing is
 /// imported yet: the backup waits for its wires, and the answer is the board to draw them on.
+/// The turn of the one Tautulli backup arriving and being unpacked, given back however the upload ends (a dropped
+/// connection drops it too).
+struct TautulliArriving;
+
+static TAUTULLI_ARRIVING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+impl TautulliArriving {
+    fn take() -> Option<Self> {
+        (!TAUTULLI_ARRIVING.swap(true, std::sync::atomic::Ordering::SeqCst)).then_some(TautulliArriving)
+    }
+}
+
+impl Drop for TautulliArriving {
+    fn drop(&mut self) {
+        TAUTULLI_ARRIVING.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
 async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult {
     if history_being_written(&app) {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
     }
+    // One at a time: each upload may be 4 GB and unpack to as much again, so several at once filled the disk.
+    let Some(turn) = TautulliArriving::take() else {
+        return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.upload_running", &[])));
+    };
     let path = app.data_dir.join(crate::tautulli::UPLOAD);
     // A part of its own per upload: two at once wrote into one file, each over the other.
     static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -1385,7 +1407,9 @@ async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Reque
             anyhow::bail!(i18n::t("server.api.import_running", &[]));
         }
         std::fs::rename(&checked, &path)?;
-        crate::tautulli::board(&db, &path)
+        let board = crate::tautulli::board(&db, &path);
+        drop(turn);
+        board
     })
     .await
     .map_err(anyhow::Error::from)?;
@@ -1644,6 +1668,16 @@ mod tests {
             let _ = w.await;
         }
         assert_eq!(CARDS_QUEUED.load(std::sync::atomic::Ordering::SeqCst), 0, "a card that was drawn is still counted");
+    }
+
+    /// Each Tautulli upload had a part of its own and none waited for another, so the 4 GB an upload may be, and the 4 GB
+    /// its zip may unpack to, were as many times that as uploads at once: the disk FinStats' database is on, filled.
+    #[test]
+    fn one_tautulli_backup_arrives_at_a_time() {
+        let first = TautulliArriving::take().expect("nothing is arriving");
+        assert!(TautulliArriving::take().is_none(), "two arrived at once");
+        drop(first);
+        assert!(TautulliArriving::take().is_some(), "an upload that ended, however it ended, gave its turn back");
     }
 
     #[test]
