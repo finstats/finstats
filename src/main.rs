@@ -173,9 +173,15 @@ fn main() -> Result<()> {
     // create the data folder and open (and so migrate) the database before saying it did not know what to do.
     let command = command(&args)?;
     let data_dir = PathBuf::from(std::env::var("FINSTATS_DATA_DIR").unwrap_or_else(|_| "data".into()));
+    // For the user FinStats runs as alone: everything in it holds the Jellyfin key, a secret or everybody's history, and a
+    // folder nobody else may enter keeps whatever is made inside it (SQLite's own files included) from them.
     std::fs::create_dir_all(&data_dir).with_context(|| format!("creating data directory {}", data_dir.display()))?;
+    if let Err(e) = db::private_dir(&data_dir) {
+        tracing::warn!("could not make {} private to the user FinStats runs as ({e}); other accounts on this machine may read it", data_dir.display());
+    }
     ensure_writable(&data_dir)?;
     let db = db::Db::open(&data_dir.join("finstats.db"))?;
+    db::private_file(&data_dir.join("finstats.db"));
 
     match command {
         Command::Serve => {}

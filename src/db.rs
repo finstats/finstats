@@ -869,6 +869,37 @@ impl Db {
     }
 }
 
+/// A folder only the user FinStats runs as may enter (0700), made with what leads to it if need be. One already there
+/// is narrowed to that: everything FinStats keeps holds the Jellyfin key, somebody's secrets or everybody's history.
+pub fn private_dir(path: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+    std::fs::DirBuilder::new().recursive(true).mode(0o700).create(path)?;
+    let perms = std::fs::metadata(path)?.permissions();
+    if perms.mode() & 0o077 != 0 {
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(perms.mode() & !0o077))?;
+    }
+    Ok(())
+}
+
+/// Narrow a file FinStats keeps to its own user (0600), if anybody else may read or write it. Best effort: a file it
+/// does not own is left as it is.
+pub fn private_file(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    if let Ok(m) = std::fs::metadata(path)
+        && m.permissions().mode() & 0o077 != 0
+    {
+        let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(m.permissions().mode() & 0o700));
+    }
+}
+
+/// How FinStats creates a file of its own: new (never over another), readable and writable by its user alone.
+pub fn private_new_file() -> std::fs::OpenOptions {
+    use std::os::unix::fs::OpenOptionsExt;
+    let mut o = std::fs::OpenOptions::new();
+    o.write(true).create_new(true).mode(0o600);
+    o
+}
+
 /// Settings key: the newest FinStats version that has opened this database.
 const VERSION_KEY: &str = "app_version";
 /// Settings key: the copy an update took before it changed anything, while that update is not done.
@@ -1000,7 +1031,7 @@ fn back_up_before_update(conn: &Connection, path: &Path, running: &str) -> Resul
 /// start killed while copying used to leave an empty file under a snapshot's own name, which counted toward the
 /// three kept. Whatever such a start left behind is removed first.
 fn snapshot_into(conn: &Connection, dir: &Path, dst: &Path) -> Result<()> {
-    std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+    private_dir(dir).with_context(|| format!("creating {}", dir.display()))?;
     if let Ok(entries) = std::fs::read_dir(dir) {
         for e in entries.flatten() {
             if e.file_name().to_str().is_some_and(|n| n.starts_with("finstats-") && n.contains(".db.part")) {
@@ -1014,6 +1045,11 @@ fn snapshot_into(conn: &Connection, dir: &Path, dst: &Path) -> Result<()> {
     if let Err(e) = copied {
         let _ = std::fs::remove_file(&part);
         return Err(e.into());
+    }
+    // SQLite makes the file as the umask allows; the copy holds the Jellyfin key and every secret.
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&part, std::fs::Permissions::from_mode(0o600)).with_context(|| format!("protecting {}", part.display()))?;
     }
     std::fs::rename(&part, dst).with_context(|| format!("naming {}", dst.display()))?;
     Ok(())
@@ -1240,6 +1276,36 @@ mod tests {
         for (file, phrase, _) in IDENTITY_READS {
             assert!(reads.iter().any(|(f, sql)| *f == file && flat(sql).contains(phrase)), "IDENTITY_READS names a read that is no longer there: {file}: {phrase}");
         }
+    }
+
+    /// The data folder and what FinStats makes in it are for its own user alone: they hold the Jellyfin key, every
+    /// secret and everybody's history. A folder already there is narrowed, never widened.
+    #[test]
+    fn folders_finstats_keeps_are_for_its_own_user_alone() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = std::env::temp_dir().join(format!("finstats-private-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        let mode = |p: &Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        private_dir(&tmp.join("a/b")).unwrap();
+        assert_eq!(mode(&tmp.join("a/b")), 0o700);
+        std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o755)).unwrap();
+        private_dir(&tmp).unwrap();
+        assert_eq!(mode(&tmp), 0o700);
+        std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o500)).unwrap();
+        private_dir(&tmp).unwrap();
+        assert_eq!(mode(&tmp), 0o500, "a folder was widened");
+        std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o700)).unwrap();
+        // A copy taken before an update is the whole database, the key included.
+        let c = db_at(1, Some("1.0.0"));
+        let dst = tmp.join("snaps").join("finstats-1.0.0-x.db");
+        snapshot_into(&c, &tmp.join("snaps"), &dst).unwrap();
+        assert_eq!((mode(&tmp.join("snaps")), mode(&dst) & 0o077), (0o700, 0));
+        let db = tmp.join("finstats.db");
+        std::fs::write(&db, b"").unwrap();
+        std::fs::set_permissions(&db, std::fs::Permissions::from_mode(0o644)).unwrap();
+        private_file(&db);
+        assert_eq!(mode(&db), 0o600);
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 
     fn db_at(schema: usize, version: Option<&str>) -> Connection {

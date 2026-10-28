@@ -1591,7 +1591,9 @@ async fn store_upload(req: Request, path: &std::path::Path, max: u64) -> anyhow:
     }
     let mut unfinished = Unfinished(Some(path));
     let stored = async {
-        let mut file = tokio::fs::File::create(path).await?;
+        // A history, or a Plex user's tokens: for the user FinStats runs as alone. One left at that name is replaced.
+        let _ = tokio::fs::remove_file(path).await;
+        let mut file = tokio::fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(path).await?;
         let mut stream = req.into_body().into_data_stream();
         let mut total = 0u64;
         while let Some(chunk) = stream.next().await {
@@ -1653,6 +1655,8 @@ mod tests {
         let req = |n: usize| axum::extract::Request::new(axum::body::Body::from(vec![7u8; n]));
         assert_eq!(super::store_upload(req(10), &path, 10).await.unwrap(), 10);
         assert_eq!(std::fs::metadata(&path).unwrap().len(), 10);
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600, "an upload anybody on the machine may read");
         assert!(super::store_upload(req(11), &path, 10).await.is_err());
         assert!(!path.exists(), "what an upload past the limit left behind");
         let _ = std::fs::remove_dir_all(dir);

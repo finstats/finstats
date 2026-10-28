@@ -92,7 +92,7 @@ fn raw_row(row: &crate::db::rusqlite::Row) -> Map<String, Value> {
 
 /// Write a backup into `dir`. The file only gets its real name once it is complete.
 pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Result<ExportResult> {
-    std::fs::create_dir_all(dir).context("creating the backups folder")?;
+    db::private_dir(dir).context("creating the backups folder")?;
     // Only one backup is written at a time, so a partial file already here was a backup that was killed. Only files
     // with a backup's own name are touched.
     if let Ok(entries) = std::fs::read_dir(dir) {
@@ -123,7 +123,7 @@ pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Res
     let total: i64 = counts.values().filter_map(Value::as_i64).sum::<i64>().max(1);
 
     let result = (|| -> Result<ExportResult> {
-        let mut out = GzEncoder::new(BufWriter::with_capacity(1 << 20, File::create(&part)?), Compression::new(6));
+        let mut out = GzEncoder::new(BufWriter::with_capacity(1 << 20, db::private_new_file().open(&part)?), Compression::new(6));
         let header = json!({
             "finstats_backup": FORMAT, "app_version": env!("CARGO_PKG_VERSION"), "created_at": db::now(),
             "server_name": db::get_setting(&tx, "server_name")?, "counts": counts.clone(),
@@ -853,6 +853,22 @@ mod tests {
         export(&db, &tmp.join("backups"), None).unwrap();
         assert!(!stale.exists(), "the killed backup's partial file is still there");
         assert!(unrelated.exists(), "a file FinStats did not name was removed");
+        drop(db);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// A backup is a whole history with addresses: only the user FinStats runs as may read it, whatever the umask.
+    #[test]
+    fn a_backup_and_its_folder_are_for_finstats_alone() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = std::env::temp_dir().join(format!("finstats-backup-mode-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let db = Db::open(&tmp.join("finstats.db")).unwrap();
+        let made = export(&db, &dir(&tmp), None).unwrap();
+        let mode = |p: &Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode(&dir(&tmp).join(&made.name)), 0o600);
+        assert_eq!(mode(&dir(&tmp)), 0o700);
         drop(db);
         let _ = std::fs::remove_dir_all(&tmp);
     }

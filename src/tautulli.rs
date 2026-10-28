@@ -88,7 +88,9 @@ pub fn unpack(path: &Path) -> Result<()> {
     let packed = (&mut file).take(entry.packed);
     let unpacked = path.with_extension("unpacking");
     let written = {
-        let mut out = std::fs::File::create(&unpacked).context("unpacking the backup")?;
+        // Every Plex user's tokens: for the user FinStats runs as alone.
+        let _ = std::fs::remove_file(&unpacked);
+        let mut out = crate::db::private_new_file().open(&unpacked).context("unpacking the backup")?;
         match inflate(entry.method, packed, entry.size, &mut out) {
             Some(written) => written,
             None => {
@@ -1094,6 +1096,8 @@ mod tests {
             assert_eq!(std::fs::read(path).unwrap(), bytes, "{}", path.display());
             assert!(open(path).is_ok());
         }
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(std::fs::metadata(&deflated).unwrap().permissions().mode() & 0o077, 0, "what was unpacked may be read by anybody");
         let not_a_db = dir.join("readme.zip");
         std::fs::write(&not_a_db, crate::card::zip(&[("readme.txt".into(), b"hello".to_vec())])).unwrap();
         assert!(format!("{:#}", unpack(&not_a_db).unwrap_err()).contains("Tautulli"));
