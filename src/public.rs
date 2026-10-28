@@ -217,7 +217,9 @@ fn title(v: &Value) -> Title {
         sub: text(v, "sub"),
         plays: int(v, "plays"),
         watch_s: int(v, "watch_s"),
-        image: text(v, "image_item_id"),
+        // A title the library lacks (an imported play's id is whatever the file said) has no poster to show.
+        // A title the library lacks (an imported play's id is whatever the file said) has no poster to show.
+        image: if v["item_exists"] == false { None } else { text(v, "image_item_id") },
     }
 }
 
@@ -324,6 +326,22 @@ pub fn listed_images(a: &PublicProfile) -> HashSet<String> {
         out.extend(recent.iter().filter_map(|r| r.image.clone()));
     }
     out
+}
+
+/// Of [`listed_images`], those `artwork::known` lets FinStats fetch: the public image route serves only these. A year's
+/// cards name titles from the recap's own lists, a show finished or an evening together, by whatever id the play kept.
+pub fn servable_images(c: &Connection, a: &PublicProfile) -> Result<HashSet<String>> {
+    let mut out = listed_images(a);
+    let mut unknown = vec![];
+    for id in &out {
+        if !crate::artwork::known(c, crate::artwork::Picture::Primary, id)? {
+            unknown.push(id.clone());
+        }
+    }
+    for id in unknown {
+        out.remove(&id);
+    }
+    Ok(out)
 }
 
 /// The owner's side: what they set, and the token their link carries.
@@ -845,6 +863,26 @@ mod tests {
         let listed = listed_images(&answer(&c, &p, 0, NOW).unwrap());
         assert!(listed.contains("m1") && listed.contains("s1"), "{listed:?}");
         assert!(!listed.contains("e1"), "an episode is shown by its series' poster");
+    }
+
+    /// An imported play's id is whatever the file said: listed as a poster, the public route fetched that id from
+    /// Jellyfin with the administrator's key and served it to anyone. Only what the library has is listed, and only what
+    /// `artwork::known` allows is served, the year's cards included.
+    #[test]
+    fn an_imported_title_the_library_lacks_lists_no_poster() {
+        let c = conn();
+        let ghost = "0badc0de0badc0de0badc0de0badc0de";
+        c.execute(
+            &format!("INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+                      VALUES ('jellystat', 'u-alice-0001', 'alice.login', '{ghost}', 'Elephants Dream', 'Movie', ?1, ?1 + 9000, 9000)"),
+            [NOW - 5 * DAY],
+        )
+        .unwrap();
+        let a = answer(&c, &published(&c, &all()), 0, NOW).unwrap();
+        assert!(a.totals.as_ref().unwrap().top_movies.iter().any(|t| t.name == "Elephants Dream"), "the title is still told");
+        assert!(!listed_images(&a).contains(ghost), "{:?}", listed_images(&a));
+        let served = servable_images(&c, &a).unwrap();
+        assert!(!served.contains(ghost) && served.contains("m1"), "{served:?}");
     }
 
     #[test]

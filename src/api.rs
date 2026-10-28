@@ -464,7 +464,7 @@ async fn fetch_picture(app: &App, pic: Picture, id: &str, width: u32, tag: Optio
 async fn public_item_image(State(app): State<App>, Path((token, id)): Path<(String, String)>, Query(q): Query<ImageQuery>) -> ApiResult<Response> {
     let id = valid_id(&id)?;
     let (_, a) = crate::public::resolve(&app, token).await?;
-    if !crate::public::listed_images(&a).contains(&id) {
+    if !app.db.call(move |c| crate::public::servable_images(c, &a)).await?.contains(&id) {
         return Err(ApiError::not_found("Image"));
     }
     public_image(picture(&app, Picture::Primary, id, pick_width(q.w)).await?)
@@ -639,6 +639,11 @@ pub(crate) async fn draw_story(app: &App, story: &crate::story::StoryYear, ch: c
 /// A poster's bytes through the same cache the pages use; a card without one draws an empty frame.
 async fn poster_bytes(app: &App, id: &str) -> Option<Vec<u8>> {
     let id = valid_id(id).ok()?;
+    // Only what FinStats has, as for every picture: a card names titles by whatever id their play kept.
+    let asked = id.clone();
+    if !app.db.call(move |c| artwork::known(c, Picture::Primary, &asked)).await.ok()? {
+        return None;
+    }
     let r = picture(app, Picture::Primary, id, 480).await.ok()?;
     axum::body::to_bytes(r.into_body(), 16 << 20).await.ok().map(|b| b.to_vec())
 }
