@@ -382,18 +382,30 @@ pub fn bursts(rows: &[(i64, i64, String, Option<String>, String)], within_s: i64
 
 /// Read the failures out of the activity log and file what is new. Needs no geolocation database, so it
 /// runs on every install; `check` does the rest.
+/// A failed sign-in: id, when, the account's name if it is one, user id, address.
+type Failure = (i64, i64, Option<String>, Option<String>, String);
+
 pub fn scan_sign_ins(conn: &Connection, bus: &Fanout) -> Result<usize> {
     let since = db::now() - BURST_LOOKBACK_S;
-    let rows: Vec<(i64, i64, String, Option<String>, String)> = conn
+    let rows: Vec<Failure> = conn
         .prepare_cached(
-            "SELECT e.id, e.date, COALESCE(u.name, e.name, e.remote_ip, 'someone'), e.user_id, COALESCE(e.remote_ip, '')
+            // Jellyfin writes no user id on a failed sign-in, only a line ending in the name typed, in the server's
+            // language: an account is a user whose name ends that line.
+            "SELECT e.id, e.date,
+                    COALESCE(u.name, (SELECT k.name FROM users k WHERE lower(substr(e.name, -length(k.name) - 1)) = ' ' || lower(k.name) ORDER BY length(k.name) DESC LIMIT 1)),
+                    e.user_id, COALESCE(e.remote_ip, '')
              FROM server_events e LEFT JOIN users u ON u.id = e.user_id
              WHERE e.type = 'AuthenticationFailed' AND e.date >= ?1 ORDER BY e.date, e.id",
         )?
         .query_map([since], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))?
         .collect::<Result<_, _>>()?;
     let mut added = 0;
-    for b in bursts(&rows, BURST_WINDOW_S, BURST_MIN) {
+    // An account's failures are its own bursts. A name that is no account is whatever the one knocking typed, as many
+    // as they like: keyed by it, a thousand invented names were a thousand notifications carrying their text, and a
+    // real alert waited behind them. Those are one notice a window, for the whole server, and name nobody.
+    let (accounts, nobody): (Vec<_>, Vec<_>) = rows.into_iter().partition(|r| r.2.is_some());
+    let accounts: Vec<(i64, i64, String, Option<String>, String)> = accounts.into_iter().map(|(id, at, name, user, ip)| (id, at, name.unwrap_or_default(), user, ip)).collect();
+    for b in bursts(&accounts, BURST_WINDOW_S, BURST_MIN) {
         let mut event = notify::Event::new(
             Kind::FailedSignIns,
             format!("notify:signins:{}:{}", b.who, b.id),
@@ -411,6 +423,25 @@ pub fn scan_sign_ins(conn: &Connection, bus: &Fanout) -> Result<usize> {
         if !b.ip.is_empty() {
             event = event.private_field("From address", b.ip.clone());
         }
+        added += usize::from(notify::raise_in(conn, bus, &event)?);
+    }
+    let mut windows: BTreeMap<i64, Vec<&Failure>> = BTreeMap::new();
+    for r in &nobody {
+        windows.entry(r.1.div_euclid(BURST_WINDOW_S)).or_default().push(r);
+    }
+    for (window, tries) in windows.into_iter().filter(|(_, t)| t.len() >= BURST_MIN) {
+        let (first, last) = (tries[0].1, tries[tries.len() - 1].1);
+        let addresses = tries.iter().map(|r| r.4.as_str()).collect::<std::collections::BTreeSet<_>>().len();
+        let event = notify::Event::new(
+            Kind::FailedSignIns,
+            format!("notify:signins:nobody:{window}"),
+            format!("{} failed sign-ins for names that are not accounts", tries.len()),
+            format!("{} attempts in {}, from {addresses} address{}.", tries.len(), human_span(last - first), if addresses == 1 { "" } else { "es" }),
+        )
+        .at(last)
+        .severity(if tries.len() >= BURST_MIN * 4 { notify::ALERT } else { notify::WARN })
+        .field("Attempts", tries.len().to_string())
+        .link("/server");
         added += usize::from(notify::raise_in(conn, bus, &event)?);
     }
     Ok(added)
@@ -1035,6 +1066,38 @@ mod tests {
         assert_eq!(place_label(&p(Some("Reykjavík"), None, None)), "Reykjavík");
         assert_eq!(place_label(&p(None, None, Some("IS"))), "IS");
         assert_eq!(place_label(&p(None, None, None)), "Unknown place");
+    }
+
+    /// Names that are no account are typed by whoever is knocking, as many as they like: keyed by the name, a thousand
+    /// invented ones were a thousand notifications, a real alert waited behind them, and each carried the typed text.
+    /// They are one notice a window, server-wide, and say no name.
+    #[test]
+    fn a_thousand_invented_names_are_one_notice_a_window_and_name_none_of_them() {
+        use crate::notify::tests::{bus, target};
+        let c = conn();
+        c.execute("INSERT INTO users(id, name, updated_at) VALUES ('ua', 'alice', 1)", []).unwrap();
+        let f = bus(&c, vec![target(1, None, &[Kind::FailedSignIns])]);
+        let now = db::now();
+        let mut id = 0;
+        for name in 0..200 {
+            for n in 0..5 {
+                id += 1;
+                c.execute(
+                    "INSERT INTO server_events(id, date, name, type, severity, user_id, remote_ip) VALUES (?1, ?2, ?3, 'AuthenticationFailed', 'Error', NULL, '203.0.113.9')",
+                    params![id, now - 600 + n, format!("Failed login try from <!channel> name {name}")],
+                )
+                .unwrap();
+            }
+        }
+        for n in 0..5 {
+            id += 1;
+            // As Jellyfin writes it: no user id, the name at the end of the line.
+            c.execute("INSERT INTO server_events(id, date, name, type, severity, user_id, remote_ip) VALUES (?1, ?2, 'Failed login try from Alice', 'AuthenticationFailed', 'Error', NULL, '203.0.113.9')", params![id, now - 300 + n]).unwrap();
+        }
+        assert_eq!(scan_sign_ins(&c, &f).unwrap(), 2, "one notice for the invented names, one for alice");
+        let titles: Vec<String> = c.prepare("SELECT data FROM notify_events").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert!(titles.iter().all(|t| !t.contains("<!channel>")), "a typed name reached a notification: {titles:?}");
+        assert_eq!(scan_sign_ins(&c, &f).unwrap(), 0, "a rescan found them again");
     }
 
     #[test]

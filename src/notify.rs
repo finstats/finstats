@@ -734,11 +734,14 @@ pub struct Due {
     pub attempts: i64,
 }
 
+/// What is due now, the most severe first: a destination sends a few a minute, and a flood of warnings queued first
+/// kept a real alert waiting behind them.
 fn due(conn: &Connection, now: i64, limit: usize) -> Result<Vec<Due>> {
     let mut stmt = conn.prepare_cached(
         "SELECT e.id, e.kind, e.severity, e.at, e.user_name, e.title, e.body, e.link, e.data, e.private, d.target_id, d.attempts, e.user_id
          FROM notify_deliveries d JOIN notify_events e ON e.id = d.event_id
-         WHERE d.state = 'queued' AND d.next_at <= ?1 ORDER BY d.next_at, d.event_id LIMIT ?2",
+         WHERE d.state = 'queued' AND d.next_at <= ?1
+         ORDER BY CASE e.severity WHEN 'alert' THEN 0 WHEN 'warn' THEN 1 ELSE 2 END, d.next_at, d.event_id LIMIT ?2",
     )?;
     let rows = stmt
         .query_map(params![now, limit as i64], |r| {
@@ -1757,6 +1760,20 @@ pub(crate) mod tests {
             .unwrap();
         }
         Fanout::build(c, Arc::new(targets.into_iter().map(Arc::new).collect()), &Settings::default()).unwrap()
+    }
+
+    /// A destination sends a few a minute, so what goes first matters: a flood of warnings queued first kept a real alert
+    /// waiting behind them for as long as the flood lasted.
+    #[test]
+    fn an_alert_is_sent_before_the_warnings_queued_ahead_of_it() {
+        let c = conn();
+        let f = bus(&c, vec![target(1, None, &[Kind::FailedSignIns, Kind::NewCountry])]);
+        for n in 0..3 {
+            raise_in(&c, &f, &Event::new(Kind::FailedSignIns, format!("notify:signins:x:{n}"), "5 failed sign-ins", "5 attempts.").severity(WARN)).unwrap();
+        }
+        raise_in(&c, &f, &Event::new(Kind::NewCountry, "notify:country:x", "A sign-in from a new country", "Somewhere new.").severity(ALERT)).unwrap();
+        c.execute("UPDATE notify_deliveries SET next_at = 0", []).unwrap();
+        assert_eq!(due(&c, db::now(), 10).unwrap()[0].event.severity, ALERT);
     }
 
     #[test]
