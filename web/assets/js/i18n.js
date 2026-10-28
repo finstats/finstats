@@ -18,7 +18,6 @@ export const LANGUAGES = [
   { tag: 'en-US', name: 'English (US)', checked: true },
   { tag: 'nb-NO', name: 'Norsk Bokmål', checked: true },
   { tag: 'nn-NO', name: 'Norsk Nynorsk', checked: true },
-  { tag: 'nn-NO-synnmore', name: 'Synnmørsk', checked: true },
   { tag: 'da-DK', name: 'Dansk' },
   { tag: 'de-DE', name: 'Deutsch' },
   { tag: 'es-ES', name: 'Español' },
@@ -69,9 +68,10 @@ export function pickLanguage(list) {
   return DEFAULT;
 }
 
-/** What this browser chose ('' = follow the browser). */
+/** What this browser chose ('' = follow the browser). A choice of a language FinStats no longer speaks (Synnmørsk, in
+ *  2.3.0) is the one it was written from. */
 export function storedLanguage() {
-  try { const v = localStorage.getItem(KEY); return LANGUAGES.some((l) => l.tag === v) ? v : ''; } catch { return ''; }
+  try { const v = localStorage.getItem(KEY); return (v && languageOf(v)) || ''; } catch { return ''; }
 }
 /** The language to read FinStats in: the one chosen here, else the browser's. */
 export function chosenLanguage() {

@@ -14,14 +14,14 @@ use axum::middleware::Next;
 use axum::response::Response;
 
 /// Every language FinStats speaks; the first is the source.
-pub const LOCALES: [&str; 24] = [
-    "en-GB", "en-US", "nb-NO", "nn-NO", "nn-NO-synnmore", "da-DK", "de-DE", "es-ES", "fi-FI", "fr-FR", "hi-IN", "is-IS", "it-IT", "ja-JP", "ko-KR",
+pub const LOCALES: [&str; 23] = [
+    "en-GB", "en-US", "nb-NO", "nn-NO", "da-DK", "de-DE", "es-ES", "fi-FI", "fr-FR", "hi-IN", "is-IS", "it-IT", "ja-JP", "ko-KR",
     "nl-NL", "pl-PL", "pt-BR", "ru-RU", "sv-SE", "tr-TR", "uk-UA", "zh-CN", "zh-TW",
 ];
 /// The languages the owner reads and has checked: complete in every change. The others are translations nobody here
 /// can check; they may lag behind, and what one lacks is said in British English until it has it.
 #[allow(dead_code)] // read by the tests that hold the catalogues and the changelogs, and by the README's picture
-pub const CHECKED: [&str; 5] = ["en-GB", "en-US", "nb-NO", "nn-NO", "nn-NO-synnmore"];
+pub const CHECKED: [&str; 4] = ["en-GB", "en-US", "nb-NO", "nn-NO"];
 /// What a reader is given when nothing they ask for is a language FinStats speaks, and for English that names no country.
 pub const DEFAULT: &str = "en-US";
 
@@ -441,7 +441,6 @@ mod say_tests {
     fn norwegian_says_played_as_one_word_after_the_titles() {
         assert_eq!(say("nb-NO", "widgets.tiles.distinct_titles", &[]), "Ulike titler avspilt");
         assert_eq!(say("nn-NO", "widgets.tiles.distinct_titles", &[]), "Ulike titlar avspela");
-        assert_eq!(say("nn-NO-synnmore", "widgets.tiles.distinct_titles", &[]), "Ulike titla avspela");
     }
 
     #[test]
@@ -599,14 +598,13 @@ mod pick_tests {
     }
 
     #[test]
-    fn synnmorsk_is_its_own_checked_language_that_only_its_own_tag_asks_for() {
-        assert_eq!(pick("nn-NO-synnmore"), "nn-NO-synnmore");
-        assert_eq!(pick("nn-no-synnmore,nn;q=0.8"), "nn-NO-synnmore");
-        assert_eq!(pick("nn"), "nn-NO", "Nynorsk without saying which is Nynorsk, never the dialect");
-        assert_eq!(pick("nn-NO"), "nn-NO");
-        assert!(CHECKED.contains(&"nn-NO-synnmore"), "the owner reads it, so it is whole in every change");
-        assert_eq!((plural("nn-NO-synnmore", 1), plural("nn-NO-synnmore", 2)), ("one", "other"));
-        assert_eq!(number("nn-NO-synnmore", 12_345), "12\u{a0}345", "numbers as Norwegian writes them");
+    fn a_browser_that_asks_for_the_dialect_that_was_reads_nynorsk() {
+        // Synnmørsk was a language of its own in 2.3.0 and is no more: a browser that chose it, or a cookie that still says
+        // it, reads Nynorsk, the written language it was made from.
+        assert!(!LOCALES.contains(&"nn-NO-synnmore"));
+        assert_eq!(pick("nn-NO-synnmore"), "nn-NO");
+        assert_eq!(pick("nn-no-synnmore,nn;q=0.8"), "nn-NO");
+        assert_eq!(pick("nn"), "nn-NO");
     }
 
     #[test]
