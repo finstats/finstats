@@ -1221,6 +1221,7 @@ impl Drop for Running {
 }
 
 async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
+    may_locate(&user)?;
     let (path, held) = receive(&app, req, "import", UPLOADS[0]).await?;
     let actor = Actor::from(&user);
     audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("jellystat")).await;
@@ -1236,6 +1237,7 @@ async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: R
 }
 
 async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
+    may_locate(&user)?;
     let (path, held) = receive(&app, req, "import_streamystats", UPLOADS[1]).await?;
     let actor = Actor::from(&user);
     audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("streamystats")).await;
@@ -1264,6 +1266,8 @@ async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req
 /// the three titles it most likely is.
 /// Titles the library lost are listed from everybody's plays of them: somebody else's viewing is see_everyone's, on top
 /// of the manage that locating them takes.
+/// Whether somebody may work on everybody's history: locate a title the library lost, delete a play, import a tracker's
+/// history (which writes other people's plays) or see the Tautulli board (which lists every Jellyfin user).
 fn may_locate(user: &AuthUser) -> Result<(), ApiError> {
     if user.perms.see_everyone { Ok(()) } else { Err(ApiError::not_permitted("see other people's statistics")) }
 }
@@ -1346,7 +1350,8 @@ fn history_being_written(app: &App) -> bool {
 }
 
 /// `GET /api/import/tautulli`: the wiring board of a Tautulli backup waiting for its wires, or `null`.
-async fn tautulli_board(State(app): State<App>, Manager(_): Manager) -> ApiResult {
+async fn tautulli_board(State(app): State<App>, Manager(user): Manager) -> ApiResult {
+    may_locate(&user)?;
     let path = app.data_dir.join(crate::tautulli::UPLOAD);
     if !path.exists() {
         return Ok(Json(json!({ "board": null })));
@@ -1376,7 +1381,8 @@ impl Drop for TautulliArriving {
     }
 }
 
-async fn tautulli_upload(State(app): State<App>, Manager(_): Manager, req: Request) -> ApiResult {
+async fn tautulli_upload(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult {
+    may_locate(&user)?;
     if history_being_written(&app) {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
     }
@@ -1436,6 +1442,7 @@ struct TautulliWires {
 /// `POST /api/import/tautulli/run` with `{"wires": [{"plex_user_id", "jellyfin_user_id"}]}`: import the wired Plex
 /// users' history. The backup is removed afterwards, whatever the outcome: it holds every Plex user's tokens.
 async fn tautulli_run(State(app): State<App>, Manager(user): Manager, Json(body): Json<TautulliWires>) -> ApiResult<Response> {
+    may_locate(&user)?;
     let path = app.data_dir.join(crate::tautulli::UPLOAD);
     if !path.exists() {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.no_tautulli_backup", &[])));
@@ -1678,6 +1685,24 @@ mod tests {
         assert!(TautulliArriving::take().is_none(), "two arrived at once");
         drop(first);
         assert!(TautulliArriving::take().is_some(), "an upload that ended, however it ended, gave its turn back");
+    }
+
+    /// An import writes other people's history (their stats, their recap, a day later their public profile), and the
+    /// Tautulli board lists every Jellyfin user: both are see_everyone's, as locating a lost title and deleting a play are.
+    #[tokio::test]
+    async fn an_import_needs_see_everyone_as_well_as_manage() {
+        let app = crate::state::test_app();
+        let manager = AuthUser {
+            id: "m".into(), name: "mallory".into(), is_admin: false, credential: crate::auth::Credential::Session, ip: None,
+            perms: crate::auth::Perms { manage: true, ..Default::default() },
+        };
+        let body = || axum::extract::Request::new(axum::body::Body::from("[]"));
+        let refused = |r: ApiResult<Response>| r.err().map(|e| e.0);
+        assert_eq!(refused(import_jellystat(State(app.clone()), Manager(manager.clone()), body()).await), Some(StatusCode::FORBIDDEN));
+        assert_eq!(refused(import_streamystats(State(app.clone()), Manager(manager.clone()), body()).await), Some(StatusCode::FORBIDDEN));
+        assert_eq!(tautulli_board(State(app.clone()), Manager(manager.clone())).await.err().map(|e| e.0), Some(StatusCode::FORBIDDEN));
+        assert_eq!(tautulli_upload(State(app.clone()), Manager(manager.clone()), body()).await.err().map(|e| e.0), Some(StatusCode::FORBIDDEN));
+        assert!(app.tasks.snapshot().iter().all(|t| t.state != "running"), "a refused import took the slot");
     }
 
     #[test]

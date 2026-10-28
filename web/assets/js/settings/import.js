@@ -90,7 +90,7 @@ export const importing = (store) => IMPORTERS.some((i) => { const t = store.task
 
 export default {
   key: 'import', label: t('settings.sections.import.label'), sub: t('settings.sections.import.sub'), group: t('settings.groups.data'), icon: 'upload',
-  visible: () => can('manage'),
+  visible: () => can('manage') && can('see_everyone'), // an import writes other people's history
   entries: IMPORTERS.map((i) => ({ id: `import-${i.key}`, label: i.title, hint: `${i.name} ${t('settings.import.find_hint')}` })),
   async render(slot, store) {
     const slots = Object.fromEntries(IMPORTERS.map((i) => [i.key, h('div')]));
