@@ -29,6 +29,15 @@ pub const STEPS: &[Step] = &[Step {
         c.execute("DELETE FROM task_runs WHERE task = 'sync_server'", [])?;
         Ok(())
     },
+}, Step {
+    version: "2.3.1",
+    name: "library-access-first-read",
+    why: "FinStats follows Jellyfin's library access, which the users read brings, and until it has run nobody but an \
+          administrator sees a library; forgetting when the users were last read makes that read come at the first start.",
+    run: |c| {
+        c.execute("DELETE FROM task_runs WHERE task = 'sync_users'", [])?;
+        Ok(())
+    },
 }];
 
 /// Settings key: the names of the steps this database has had.
@@ -158,5 +167,17 @@ mod tests {
         assert_eq!(run(&mut c, STEPS, false, "2.3.0").unwrap(), ["capacity-first-look"]);
         let left: Vec<String> = c.prepare("SELECT task FROM task_runs ORDER BY task").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
         assert_eq!(left, ["sync_users"], "only the server read is due");
+    }
+
+    /// 2.3.1 follows Jellyfin's library access, which a users read brings: until one has run, nobody but an administrator
+    /// sees any library, so the first start reads the users at once.
+    #[test]
+    fn the_first_start_of_2_3_1_reads_the_users_at_once() {
+        let mut c = conn();
+        run(&mut c, STEPS, false, "2.3.0").unwrap();
+        c.execute_batch("INSERT INTO task_runs(task, state, started_at, finished_at) VALUES ('sync_server', 'ok', 1, 2), ('sync_users', 'ok', 1, 2);").unwrap();
+        assert_eq!(run(&mut c, STEPS, false, "2.3.1").unwrap(), ["library-access-first-read"]);
+        let left: Vec<String> = c.prepare("SELECT task FROM task_runs ORDER BY task").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!(left, ["sync_server"], "only the users read is due");
     }
 }

@@ -381,6 +381,8 @@ pub(crate) fn store_users(c: &mut Connection, users: &[Value], shrink_ok: bool, 
                 u["LastActivityDate"].as_str().and_then(parse_ts),
                 now,
             ])?;
+            // What of the library Jellyfin lets them see, read with who they are.
+            crate::access::store(&tx, &norm_id(id), &crate::access::policy(u))?;
         }
     }
     // The same guard as libraries and items: an empty /Users where FinStats knows people is a
@@ -412,9 +414,66 @@ async fn sync_users(app: &App, jf: &Jellyfin) -> Result<String> {
         app.request_halt(msg.clone());
         return Err(anyhow!(msg));
     }
+    // A policy that hides titles and changed since its list was read: ask Jellyfin for that person's list now, not at the
+    // next library read. Until then they see nothing of the library.
+    read_visible(app, jf, true).await;
     // Who is an administrator, disabled or gone is what Jellyfin just said: open live connections re-read who they speak for.
     app.live_feed.recheck();
     Ok(crate::i18n::t("server.sync.users_read", &[("count", count.into())]))
+}
+
+/// Ask Jellyfin, as each person something hides titles from, which titles it lists for them (`access.rs`), and keep the
+/// answer. `stale_only` asks only for those whose list was read under another policy, or never. A failure keeps what was
+/// there and is logged: a person whose list is out of date sees nothing of the library until it is read, never more.
+async fn read_visible(app: &App, jf: &Jellyfin, stale_only: bool) {
+    let people = match app.db.call(move |c| crate::access::to_list(c, stale_only)).await {
+        Ok(p) => p,
+        Err(e) => return tracing::warn!("reading who has titles hidden from them failed: {e:#}"),
+    };
+    if people.is_empty() {
+        return;
+    }
+    let known = match app.db.call(|c| {
+        let mut stmt = c.prepare("SELECT id FROM libraries WHERE removed = 0")?;
+        let ids = stmt.query_map([], |r| r.get(0))?.collect::<Result<Vec<String>, _>>()?;
+        Ok(ids)
+    }).await {
+        Ok(l) => l,
+        Err(e) => return tracing::warn!("reading the libraries failed: {e:#}"),
+    };
+    for (user_id, hides, opened) in people {
+        // The libraries FinStats reads that this person may open: a library the policy names and FinStats does not read
+        // (a collection of collections, one since deleted) is nothing to ask about.
+        let libraries: Vec<&String> = known.iter().filter(|l| opened.as_ref().is_none_or(|o| o.contains(l))).collect();
+        let mut ids: Vec<String> = vec![];
+        let mut failed = false;
+        'libraries: for lib in &libraries {
+            let mut at = 0usize;
+            loop {
+                match jf.visible_page(lib, &user_id, at, PAGE).await {
+                    Ok(page) => {
+                        let got = page.len();
+                        ids.extend(page);
+                        at += got;
+                        if got < PAGE {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("reading what Jellyfin lets one person see failed: {e:#}");
+                        failed = true;
+                        break 'libraries;
+                    }
+                }
+            }
+        }
+        if failed {
+            continue;
+        }
+        if let Err(e) = app.db.call(move |c| crate::access::store_visible(c, &user_id, &hides, &ids)).await {
+            tracing::warn!("keeping what Jellyfin lets one person see failed: {e:#}");
+        }
+    }
 }
 
 // ---------------------------------------------------------------- libraries & items
@@ -774,6 +833,8 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             db::set_setting(c, "library_synced_at", &started.to_string())
         })
         .await?;
+    // What this read brought is hidden from whoever something hides titles from, until Jellyfin lists it for them.
+    read_visible(app, jf, false).await;
     Ok(crate::i18n::t("server.sync.libraries_read", &[("items", total_items.into()), ("count", lib_count.into())]))
 }
 
@@ -909,6 +970,10 @@ async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
             db::set_setting(c, "changes_checked_at", &started.to_string())
         })
         .await?;
+    // A title edited or arrived since the last read may have a new rating or tags: what Jellyfin lists changes with it.
+    if changed > 0 {
+        read_visible(app, jf, false).await;
+    }
     Ok(changes_said(changed, portraits))
 }
 
@@ -1351,6 +1416,23 @@ mod tests {
         let reshaped = [json!({ "id": "a1", "name": "alice" }), json!({ "id": "b2", "name": "bob" })];
         assert_eq!(store_users(&mut c, &reshaped, false, 103).unwrap(), Some(2), "nobody readable is refused like nobody at all");
         assert_eq!((removed(&c, "a1"), removed(&c, "b2")), (0, 0));
+    }
+
+    /// What Jellyfin lets each person see is read with them: a person kept out of a library in Jellyfin is kept out of it
+    /// here, and a read that drops their policy opens nothing.
+    #[test]
+    fn the_users_read_keeps_what_jellyfin_lets_each_person_see() {
+        let mut c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch("INSERT INTO items(id, library_id, type, name, removed, updated_at) VALUES ('bbb', 'films', 'Movie', 'Big Buck Bunny', 0, 0), ('late', 'adult', 'Movie', 'Elephants Dream', 0, 0);").unwrap();
+        let kept_out = json!({ "Id": "B2", "Name": "bob", "Policy": { "IsAdministrator": false, "IsDisabled": false, "EnableAllFolders": false, "EnabledFolders": ["FILMS"] } });
+        store_users(&mut c, &[kept_out], false, 100).unwrap();
+        let bob = crate::access::Access::of(&c, "b2", false).unwrap();
+        assert!(bob.may_see_item(&c, "bbb").unwrap() && !bob.may_see_item(&c, "late").unwrap());
+        store_users(&mut c, &[json!({ "Id": "B2", "Name": "bob" })], false, 101).unwrap();
+        assert!(!crate::access::Access::of(&c, "b2", false).unwrap().may_see_item(&c, "bbb").unwrap(), "a policy that cannot be read opens nothing");
     }
 
     /// A person's played and favourite flags are replaced by each read, so an empty or reshaped read

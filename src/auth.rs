@@ -498,12 +498,14 @@ async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms
 /// row live, so it must never be older than the sign-in it serves. Without this, a row the users read has
 /// not reached yet (written by a Jellystat import from the file's own word for who administers Jellyfin)
 /// would make a session an administrator's that Jellyfin never did.
-pub(crate) fn remember_sign_in(c: &Connection, user_id: &str, user_name: &str, is_admin: bool, now: i64) -> anyhow::Result<()> {
+pub(crate) fn remember_sign_in(c: &Connection, user_id: &str, user_name: &str, is_admin: bool, policy: &crate::access::Policy, now: i64) -> anyhow::Result<()> {
     c.execute(
         "INSERT INTO users(id, name, is_admin, is_disabled, removed, updated_at) VALUES (?1, ?2, ?3, 0, 0, ?4)
          ON CONFLICT(id) DO UPDATE SET name = excluded.name, is_admin = excluded.is_admin, is_disabled = 0, removed = 0",
         params![user_id, user_name, is_admin, now],
     )?;
+    // What of the library Jellyfin lets them see, from the same answer.
+    crate::access::store(c, user_id, policy)?;
     Ok(())
 }
 
@@ -534,6 +536,7 @@ async fn start_session(
     user_id: &str,
     user_name: &str,
     is_admin: bool,
+    policy: crate::access::Policy,
     perms: Perms,
 ) -> ApiResult<Response> {
     let mut raw = [0u8; 32];
@@ -546,7 +549,7 @@ async fn start_session(
         .call(move |c| {
             let now = db::now();
             c.execute("DELETE FROM sessions WHERE expires_at <= ?1", [now])?;
-            remember_sign_in(c, &uid, &uname, is_admin, now)?;
+            remember_sign_in(c, &uid, &uname, is_admin, &policy, now)?;
             store_session(c, &hash, &uid, &uname, is_admin, now, Some(&ip_s), ua.as_deref())?;
             Ok(())
         })
@@ -661,7 +664,7 @@ pub async fn login(
     signed_in(&app, ip);
     tracing::info!("{} signed in from {ip}", auth.user_name);
     audit::record(&app, audit::Entry::new("sign_in", actor));
-    start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, auth.is_admin, perms).await
+    start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, auth.is_admin, auth.policy, perms).await
 }
 
 pub async fn logout(State(app): State<App>, ConnectInfo(peer): ConnectInfo<SocketAddr>, headers: HeaderMap) -> ApiResult<Response> {
@@ -856,7 +859,7 @@ pub async fn setup(
     audit::record(&app, audit::Entry::new("setup_completed", Actor { user_id: Some(auth.user_id.clone()), user_name: Some(auth.user_name.clone()), ip: Some(ip), key_id: None }));
     app.wake.notify_waiters();
 
-    start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, true, Perms::ALL).await
+    start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, true, auth.policy, Perms::ALL).await
 }
 
 #[cfg(test)]
@@ -1105,18 +1108,27 @@ mod key_tests {
         // A Jellystat import writes a row for somebody the users read has not reached yet, with the
         // file's word for whether they administer Jellyfin. The file is not Jellyfin.
         c.execute_batch("INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u3', 'dave', 1, 0);").unwrap();
-        remember_sign_in(&c, "u3", "dave", false, 1000).unwrap();
+        remember_sign_in(&c, "u3", "dave", false, &every_library(), 1000).unwrap();
         c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u3', 'dave', 0, 1, 9999999999)", [hash_token("dave-cookie")]).unwrap();
         assert!(!resolve_session_in(&c, &open(), "dave-cookie", 1000).unwrap().unwrap().is_admin, "an imported row crowned somebody Jellyfin did not");
         // Jellyfin has just let them in, so they are there and not disabled, whatever the last read said.
         c.execute_batch("UPDATE users SET removed = 1, is_disabled = 1 WHERE id = 'u2'").unwrap();
-        remember_sign_in(&c, "u2", "bob", false, 1000).unwrap();
+        remember_sign_in(&c, "u2", "bob", false, &every_library(), 1000).unwrap();
         let bob: (i64, i64, i64) = c.query_row("SELECT is_admin, is_disabled, removed FROM users WHERE id = 'u2'", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap();
         assert_eq!(bob, (0, 0, 0));
         // And somebody the read has never seen gets a row of their own.
-        remember_sign_in(&c, "u9", "carol", true, 1000).unwrap();
+        remember_sign_in(&c, "u9", "carol", true, &every_library(), 1000).unwrap();
         let carol: (String, i64) = c.query_row("SELECT name, is_admin FROM users WHERE id = 'u9'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         assert_eq!(carol, ("carol".to_string(), 1));
+        // What of the library Jellyfin lets them see comes with them, so somebody new is not shut out until the users read.
+        let films = crate::access::policy(&json!({ "Policy": { "EnableAllFolders": false, "EnabledFolders": ["films"] } }));
+        remember_sign_in(&c, "u8", "erin", false, &films, 1000).unwrap();
+        let erin = crate::access::Access::of(&c, "u8", false).unwrap();
+        assert!(erin.may_see_library("films") && !erin.may_see_library("adult"));
+    }
+
+    fn every_library() -> crate::access::Policy {
+        crate::access::policy(&json!({ "Policy": { "EnableAllFolders": true } }))
     }
 
     #[test]

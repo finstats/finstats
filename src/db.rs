@@ -727,6 +727,22 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         at      INTEGER NOT NULL
     ) WITHOUT ROWID;
     "#,
+    // user_version 41: What of the library each person may see, as Jellyfin decides it (2.3.1). From each user's policy:
+    //      every library or the ones named (`access_all`, NULL until a read has said, which opens nothing), and what hides
+    //      items inside them (`access_hides`: the rating cap, tags and unrated kinds, NULL when nothing does). For a person
+    //      something hides items from, `visible_items` is what Jellyfin itself listed for them, and it counts only while
+    //      `visible_for` is the policy it was read under. None of it is in a backup: Jellyfin gives it back.
+    r#"
+    ALTER TABLE users ADD COLUMN access_all INTEGER;
+    ALTER TABLE users ADD COLUMN access_libraries TEXT;
+    ALTER TABLE users ADD COLUMN access_hides TEXT;
+    ALTER TABLE users ADD COLUMN visible_for TEXT;
+    CREATE TABLE visible_items (
+        user_id TEXT NOT NULL,
+        item_id TEXT NOT NULL,
+        PRIMARY KEY (user_id, item_id)
+    ) WITHOUT ROWID;
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole

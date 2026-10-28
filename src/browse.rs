@@ -1,6 +1,6 @@
-//! Everything in one library, a page at a time: every film, show or album, not only what arrived lately. The library is
-//! the same for everyone (as Recently added and the library's make-up are), so nothing here is scoped to the caller, and
-//! nothing here is about plays.
+//! Everything in one library, a page at a time: every film, show or album, not only what arrived lately. What a person is
+//! listed is what Jellyfin lets them see (`access.rs`): a library they are kept out of lists nothing, and a title Jellyfin
+//! hides from them is not listed. Nothing here is about plays.
 
 use anyhow::Result;
 use serde_json::{Value, json};
@@ -9,6 +9,7 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use serde::Deserialize;
 
+use crate::access::Access;
 use crate::auth::AuthUser;
 use crate::db::rusqlite::{Connection, params_from_iter, types::Value as SqlValue};
 use crate::state::{ApiResult, App};
@@ -22,6 +23,8 @@ pub struct Browse {
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: i64,
+    /// What of the library the person asking may see.
+    pub access: Access,
 }
 
 /// Titles in one page: enough to fill a screen of posters twice, so scrolling asks again rarely.
@@ -36,6 +39,9 @@ const SORTS: [(&str, &str); 4] = [("name", "t.name COLLATE NOCASE"), ("year", "t
 fn filter(b: &Browse, with_kind: bool) -> (String, Vec<SqlValue>) {
     let mut sql = format!("t.library_id = ? AND t.removed = 0 AND t.type IN ({TITLE_TYPES})");
     let mut args: Vec<SqlValue> = vec![crate::db::norm_id(&b.library_id).into()];
+    let (seen, seen_args) = b.access.items_sql("t");
+    sql.push_str(&format!(" AND {seen}"));
+    args.extend(seen_args);
     if let Some(k) = b.kind.as_deref().filter(|k| with_kind && !k.is_empty()) {
         sql.push_str(" AND t.type = ?");
         args.push(k.to_string().into());
@@ -98,9 +104,20 @@ pub struct TitlesQuery {
 }
 
 /// `GET /api/libraries/{id}/titles?type=&q=&sort=&dir=&page=`: every title in a library, a page at a time.
-pub async fn get_titles(State(app): State<App>, _user: AuthUser, Path(id): Path<String>, Query(q): Query<TitlesQuery>) -> ApiResult {
-    let b = Browse { library_id: id, kind: q.kind, q: q.q, sort: q.sort, dir: q.dir, page: q.page.unwrap_or(1) };
-    Ok(Json(app.db.call(move |c| titles(c, &b)).await?))
+pub async fn get_titles(State(app): State<App>, user: AuthUser, Path(id): Path<String>, Query(q): Query<TitlesQuery>) -> ApiResult {
+    let answer = app
+        .db
+        .call(move |c| {
+            let access = Access::for_user(c, &user)?;
+            // A library Jellyfin keeps this person out of is not there, as one that does not exist is not.
+            if !access.may_see_library(&crate::db::norm_id(&id)) {
+                return Ok(None);
+            }
+            let b = Browse { library_id: id, kind: q.kind, q: q.q, sort: q.sort, dir: q.dir, page: q.page.unwrap_or(1), access };
+            titles(c, &b).map(Some)
+        })
+        .await?;
+    Ok(Json(answer.ok_or_else(|| crate::state::ApiError::not_found("Library"))?))
 }
 
 #[cfg(test)]
@@ -145,7 +162,25 @@ mod tests {
     }
 
     fn of(library: &str) -> Browse {
-        Browse { library_id: library.into(), page: 1, ..Default::default() }
+        Browse { library_id: library.into(), page: 1, access: Access::everything(), ..Default::default() }
+    }
+
+    /// FinStats follows Jellyfin: a library a person is kept out of lists nothing to them, and a title Jellyfin hides from
+    /// them (a rating cap, a tag) is not among a library's titles.
+    #[test]
+    fn a_person_is_listed_only_what_jellyfin_lets_them_see() {
+        let mut c = library();
+        c.execute_batch("INSERT INTO users(id, name, is_admin, updated_at) VALUES ('bob', 'bob', 0, 0), ('kid', 'kid', 0, 0);").unwrap();
+        crate::access::store(&c, "bob", &crate::access::Policy { all: false, libraries: vec!["shows".into()], hides: None }).unwrap();
+        let bob = Access::of(&c, "bob", false).unwrap();
+        assert_eq!(names(&titles(&c, &Browse { access: bob.clone(), ..of("films") }).unwrap()), Vec::<String>::new());
+        assert_eq!(names(&titles(&c, &Browse { access: bob, ..of("shows") }).unwrap()), ["Low Orbit"]);
+        crate::access::store(&c, "kid", &crate::access::Policy { all: true, libraries: vec![], hides: Some("r".into()) }).unwrap();
+        crate::access::store_visible(&mut c, "kid", "r", &["bbb".into(), "sin".into()]).unwrap();
+        let kid = titles(&c, &Browse { access: Access::of(&c, "kid", false).unwrap(), ..of("films") }).unwrap();
+        assert_eq!((names(&kid), kid["total"].as_i64()), (vec!["Big Buck Bunny".to_string(), "sintel".to_string()], Some(2)));
+        assert_eq!(kid["types"], json!([{ "type": "Movie", "count": 2 }]), "nor counted among its kinds");
+        assert_eq!(names(&titles(&c, &Browse { library_id: "films".into(), page: 1, ..Default::default() }).unwrap()), Vec::<String>::new(), "a browse that names nobody's access sees nothing");
     }
 
     #[test]

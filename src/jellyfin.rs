@@ -33,6 +33,8 @@ pub struct AuthResult {
     pub user_id: String,
     pub user_name: String,
     pub is_admin: bool,
+    /// What of the library Jellyfin lets them see.
+    pub policy: crate::access::Policy,
     pub access_token: String,
 }
 
@@ -224,6 +226,7 @@ impl Jellyfin {
             user_id: crate::db::norm_id(user["Id"].as_str().unwrap_or_default()),
             user_name: user["Name"].as_str().unwrap_or(username).to_string(),
             is_admin: user["Policy"]["IsAdministrator"].as_bool().unwrap_or(false),
+            policy: crate::access::policy(user),
             access_token: v["AccessToken"].as_str().unwrap_or_default().to_string(),
         })
     }
@@ -315,6 +318,14 @@ impl Jellyfin {
             Value::Array(a) => a,
             _ => vec![],
         })
+    }
+
+    /// The ids of one page of what one person may see in a library (`visible_query`). An answer FinStats cannot read is
+    /// an error, never an empty page: an empty list would hide everything, and a wrong one is worse.
+    pub async fn visible_page(&self, library_id: &str, user_id: &str, start: usize, limit: usize) -> Result<Vec<String>> {
+        let v = self.get_json("/Items", &visible_query(library_id, user_id, start, limit)).await?;
+        let Some(items) = v["Items"].as_array() else { bail!("unexpected /Items response") };
+        Ok(items.iter().filter_map(|i| i["Id"].as_str()).map(crate::db::norm_id).collect())
     }
 
     /// One page of the people Jellyfin saved since a moment (`people_changed_query`).
@@ -524,6 +535,17 @@ pub fn changed_query(library_id: &str, since: i64, start: usize, limit: usize) -
     q
 }
 
+/// The ids of what one person may see in one library: the library read's question asked as them, so Jellyfin applies
+/// their rating cap, blocked and allowed tags and unrated kinds itself (`access.rs`).
+pub fn visible_query(library_id: &str, user_id: &str, start: usize, limit: usize) -> Vec<(&'static str, String)> {
+    let mut q: Vec<(&'static str, String)> = library_query(library_id, start, limit)
+        .into_iter()
+        .filter(|(k, _)| !matches!(*k, "Fields" | "EnableImageTypes" | "ImageTypeLimit" | "EnableTotalRecordCount"))
+        .collect();
+    q.extend([("UserId", user_id.to_string()), ("EnableImages", "false".into()), ("EnableTotalRecordCount", "false".into())]);
+    q
+}
+
 /// The people Jellyfin saved since a moment, with their portraits' tags and nothing else. A portrait replaced in
 /// Jellyfin re-saves the person, never the titles they are in, so `changed_query` cannot see it.
 pub fn people_changed_query(since: i64, start: usize, limit: usize) -> Vec<(&'static str, String)> {
@@ -589,6 +611,21 @@ mod tests {
             }
         }
         assert!(library_query("lib1", 0, 200).iter().find(|(k, _)| *k == "Fields").is_some_and(|(_, f)| fields.starts_with(f.as_str())));
+    }
+
+    /// What one person may see in a library is asked as that person: the library read's own question, answered by
+    /// Jellyfin for them (it applies their rating cap, tags and unrated kinds itself), with ids and nothing else.
+    #[test]
+    fn a_read_of_what_one_person_may_see_is_the_library_reads_question_asked_as_them() {
+        let q = visible_query("lib1", "u1", 400, 200);
+        let get = |k: &str| q.iter().find(|(key, _)| *key == k).map(|(_, v)| v.as_str());
+        assert_eq!((get("ParentId"), get("UserId")), (Some("lib1"), Some("u1")));
+        for k in ["Recursive", "IncludeItemTypes", "ExcludeLocationTypes", "CollapseBoxSetItems", "SortBy", "SortOrder"] {
+            assert_eq!(get(k), library_query("lib1", 0, 200).iter().find(|(key, _)| *key == k).map(|(_, v)| v.as_str()), "{k}");
+        }
+        assert_eq!((get("StartIndex"), get("Limit")), (Some("400"), Some("200")));
+        assert_eq!((get("EnableImages"), get("EnableUserData")), (Some("false"), Some("false")), "ids only");
+        assert!(get("Fields").is_none(), "nothing but ids");
     }
 
     /// Only a path of `/web` is Jellyfin's web client; a host that happens to be called "web" is not.
