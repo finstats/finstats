@@ -57,13 +57,14 @@ pub fn tag_of(c: &Connection, pic: Picture, id: &str) -> Result<Option<String>> 
 /// Whether FinStats has what `id` names, and so may fetch its picture: a title, a person, a library, or a play's item or
 /// show (a channel, or a title the library has not been read for yet) for the primary picture and the backdrop; a person
 /// who signs in for theirs. Any other id would be fetched from Jellyfin with the administrator's key, which reaches
-/// every library, those FinStats never reads included.
+/// every library, those FinStats never reads included. A play counts only when FinStats saw it: an imported one's id is
+/// whatever the file said, and counts once a library read has seen it.
 pub fn known(c: &Connection, pic: Picture, id: &str) -> Result<bool> {
     let sql = match pic {
         Picture::Primary | Picture::Backdrop => {
             "SELECT EXISTS(SELECT 1 FROM items WHERE id = ?1) OR EXISTS(SELECT 1 FROM item_people WHERE person_id = ?1)
-                 OR EXISTS(SELECT 1 FROM libraries WHERE id = ?1) OR EXISTS(SELECT 1 FROM visible_playbacks WHERE item_id = ?1)
-                 OR EXISTS(SELECT 1 FROM visible_playbacks WHERE series_id = ?1)"
+                 OR EXISTS(SELECT 1 FROM libraries WHERE id = ?1) OR EXISTS(SELECT 1 FROM visible_playbacks WHERE item_id = ?1 AND source = 'live')
+                 OR EXISTS(SELECT 1 FROM visible_playbacks WHERE series_id = ?1 AND source = 'live')"
         }
         Picture::User => "SELECT EXISTS(SELECT 1 FROM users WHERE id = ?1)",
     };
@@ -154,6 +155,14 @@ mod tests {
         for (pic, id) in [(Picture::Primary, "photo"), (Picture::Primary, "binned"), (Picture::User, "film"), (Picture::Primary, "alice")] {
             assert!(!known(&c, pic, id).unwrap(), "{id}");
         }
+        // An imported play's id is whatever the file said: anybody allowed to import could name an item of a library
+        // FinStats never reads. It counts once a library read has seen it.
+        c.execute_batch(
+            "INSERT INTO playbacks(source, source_id, user_id, user_name, item_id, item_name, item_type, series_id, started_at, ended_at, duration_s)
+               VALUES ('jellystat', 'j1', 'alice', 'alice', 'hidden', 'Private', 'Episode', 'hidden-show', 1, 2, 1);",
+        )
+        .unwrap();
+        assert!(!known(&c, Picture::Primary, "hidden").unwrap() && !known(&c, Picture::Primary, "hidden-show").unwrap());
     }
 
     #[test]
