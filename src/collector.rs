@@ -1352,7 +1352,7 @@ async fn tick(
             tracing::info!("{} started {} on {}", rec.user_name, rec.item_name, rec.device_name.as_deref().unwrap_or("unknown device"));
             // A new sighting: is this account somewhere it cannot be?
             let (checker, who) = (app.clone(), rec.user_id.clone());
-            tokio::spawn(async move { crate::security::check(&checker, Some(who)).await });
+            tokio::spawn(async move { crate::security::check_person(&checker, who).await });
             // …and, for whoever asked to hear about it, somebody has started watching something.
             let (teller, event) = (app.clone(), play_event(&rec, true, row_id, s.watched.round() as i64));
             tokio::spawn(async move { crate::notify::raise(&teller, event).await; });

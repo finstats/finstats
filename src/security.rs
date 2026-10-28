@@ -569,7 +569,10 @@ fn sightings_of(conn: &Connection, user_id: &str, home: Option<&Spot>) -> Result
 
 /// Look at one person's history, or everyone's, and file what is new. Returns how many alerts were added.
 pub fn scan(conn: &Connection, geo: &Database, rules: &Rules, only_user: Option<&str>, bus: Option<&Fanout>) -> Result<usize> {
-    fill_event_ips(conn)?;
+    // Only sign-ins restored or read before addresses were kept lack one: a whole scan fills them, not each play's.
+    if only_user.is_none() {
+        fill_event_ips(conn)?;
+    }
     locate_new(conn, geo)?;
     file_alerts(conn, rules, only_user, bus)
 }
@@ -619,6 +622,47 @@ fn file_alerts(conn: &Connection, rules: &Rules, only_user: Option<&str>, bus: O
 }
 
 /// After a play begins or the log was read: is anything new wrong? Does nothing without a database.
+/// Scans of one person's history, one at a time: `begin` says whether to start one, and one asked for while another runs
+/// is noted, so that `finish` says to run once more.
+#[derive(Default)]
+pub struct Coalesce(std::sync::Mutex<(HashSet<String>, HashSet<String>)>);
+
+impl Coalesce {
+    pub fn begin(&self, who: &str) -> bool {
+        let mut s = self.0.lock().unwrap();
+        if s.0.contains(who) {
+            s.1.insert(who.to_string());
+            return false;
+        }
+        s.0.insert(who.to_string())
+    }
+
+    pub fn finish(&self, who: &str) -> bool {
+        let mut s = self.0.lock().unwrap();
+        if s.1.remove(who) {
+            return true;
+        }
+        s.0.remove(who);
+        false
+    }
+}
+
+/// A play began: scan that person's history, unless a scan of it is running, in which case once more after it. Every
+/// play that begins asked for one, and a client starting plays from new device ids ran several at once.
+pub async fn check_person(app: &App, who: String) {
+    static RUNNING: std::sync::OnceLock<Coalesce> = std::sync::OnceLock::new();
+    let running = RUNNING.get_or_init(Coalesce::default);
+    if !running.begin(&who) {
+        return;
+    }
+    loop {
+        check(app, Some(who.clone())).await;
+        if !running.finish(&who) {
+            break;
+        }
+    }
+}
+
 pub async fn check(app: &App, user_id: Option<String>) {
     let Some(geo) = app.geo.get() else { return };
     let rules = Rules::of(&app.settings());
@@ -1098,6 +1142,20 @@ mod tests {
         let titles: Vec<String> = c.prepare("SELECT data FROM notify_events").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
         assert!(titles.iter().all(|t| !t.contains("<!channel>")), "a typed name reached a notification: {titles:?}");
         assert_eq!(scan_sign_ins(&c, &f).unwrap(), 0, "a rescan found them again");
+    }
+
+    /// Every play that begins scans its person's history, and nothing coalesced them: a client starting plays from new
+    /// device ids ran several whole-history scans a second on the pool the collector shares. One runs at a time for a
+    /// person, and any number asked for meanwhile are one more after it.
+    #[test]
+    fn scans_of_one_person_asked_for_while_one_runs_are_one_more() {
+        let s = Coalesce::default();
+        assert!(s.begin("alice"), "nothing running: scan");
+        assert!(!s.begin("alice") && !s.begin("alice"), "one is running: noted, not started");
+        assert!(s.begin("bob"), "somebody else's runs beside it");
+        assert!(s.finish("alice"), "asked for meanwhile: once more");
+        assert!(!s.finish("alice"), "and then done");
+        assert!(s.begin("alice"));
     }
 
     #[test]
