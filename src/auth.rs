@@ -879,6 +879,13 @@ impl FailureTime {
     }
 }
 
+/// Whether a sign-in Jellyfin accepted is refused because Jellyfin keeps that person to the home network and the address
+/// is not on it (`local`: `Some(true)` at home, `None` when it cannot be judged). Jellyfin judges its switch on the address
+/// that asks it, which here is FinStats' own, so FinStats applies it to the real one.
+fn kept_home(remote_access: bool, local: Option<bool>) -> bool {
+    !remote_access && local != Some(true)
+}
+
 static FAILURE_TIME: std::sync::Mutex<FailureTime> = std::sync::Mutex::new(FailureTime(FailureTime::FIRST_GUESS));
 
 #[derive(Deserialize)]
@@ -939,6 +946,16 @@ pub async fn login(
         }
     };
     jf.logout(&auth.access_token).await;
+
+    if !auth.remote_access {
+        let at = ip.to_string();
+        let local = app.db.call(move |c| crate::network::classify(c, &at)).await?;
+        if kept_home(false, local) {
+            let actor = Actor { user_id: Some(auth.user_id.clone()), user_name: Some(auth.user_name.clone()), ip: Some(ip), key_id: None };
+            audit::record(&app, audit::Entry::new("sign_in_refused", actor).outcome("refused"));
+            return Err(ApiError::new(StatusCode::FORBIDDEN, crate::i18n::t("server.auth.home_only", &[])));
+        }
+    }
 
     let uid = auth.user_id.clone();
     let grants = if auth.is_admin { vec![] } else { app.db.call(move |c| stored_grants(c, &uid)).await? };
@@ -1162,6 +1179,16 @@ pub async fn setup(
 mod tests {
     use super::*;
     use crate::state::Settings;
+
+    /// Jellyfin keeps somebody without "allow remote connections" to the home network by the address that asks it, and at
+    /// a sign-in through FinStats that is FinStats' own: so FinStats holds the real one to the same rule.
+    #[test]
+    fn somebody_jellyfin_keeps_at_home_signs_in_only_from_home() {
+        assert!(kept_home(false, Some(false)), "from outside");
+        assert!(kept_home(false, None), "from an address that cannot be judged");
+        assert!(!kept_home(false, Some(true)), "from home");
+        assert!(!kept_home(true, Some(false)), "Jellyfin lets them in from anywhere");
+    }
 
     /// A proxy adds the address it saw to the end of `X-Forwarded-For` and keeps whatever the client
     /// sent in front of it, so only the last entry is the proxy's word. Reading the first let anybody

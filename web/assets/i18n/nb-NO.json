@@ -1499,6 +1499,7 @@
       "enter_username": "Skriv inn Jellyfin-brukernavnet ditt",
       "wrong_password": "Feil brukernavn eller passord",
       "unreachable": "Fikk ikke kontakt med Jellyfin for å sjekke innloggingen din",
+      "home_only": "Jellyfin vil bare slippe deg inn fra hjemmenettverket.",
       "no_access": "Du har ikke fått tilgang til FinStats. En Jellyfin-administrator kan slippe deg inn under Innstillinger.",
       "setup_code": "Det er ikke oppsettskoden i loggen til FinStats",
       "already_set_up": "FinStats er allerede satt opp",

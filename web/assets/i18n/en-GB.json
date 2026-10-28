@@ -1498,6 +1498,7 @@
       "enter_username": "Enter your Jellyfin username",
       "wrong_password": "Wrong username or password",
       "unreachable": "Could not reach Jellyfin to check your sign-in",
+      "home_only": "Jellyfin lets you sign in only from the home network.",
       "no_access": "You haven't been given access to FinStats. A Jellyfin administrator can allow you in Settings.",
       "setup_code": "That isn’t the setup code in FinStats’ log",
       "already_set_up": "FinStats is already set up",

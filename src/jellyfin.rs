@@ -35,7 +35,14 @@ pub struct AuthResult {
     pub is_admin: bool,
     /// What of the library Jellyfin lets them see.
     pub policy: crate::access::Policy,
+    /// Whether Jellyfin lets them in from outside the home network ([`remote_access`]).
+    pub remote_access: bool,
     pub access_token: String,
+}
+
+/// Jellyfin's "allow remote connections" for a user, on by default as in Jellyfin.
+pub fn remote_access(user: &Value) -> bool {
+    user["Policy"]["EnableRemoteAccess"].as_bool().unwrap_or(true)
 }
 
 #[derive(Debug)]
@@ -227,6 +234,7 @@ impl Jellyfin {
             user_name: user["Name"].as_str().unwrap_or(username).to_string(),
             is_admin: user["Policy"]["IsAdministrator"].as_bool().unwrap_or(false),
             policy: crate::access::policy(user),
+            remote_access: remote_access(user),
             access_token: v["AccessToken"].as_str().unwrap_or_default().to_string(),
         })
     }
@@ -583,6 +591,15 @@ pub fn web_link(base: &str, item_id: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_sign_in_says_whether_jellyfin_lets_the_person_in_from_outside() {
+        // Jellyfin judges "allow remote connections" on the address that asks, which at a sign-in through FinStats is
+        // FinStats' own: so FinStats reads the switch and applies it to the real one. Jellyfin's default is on.
+        assert!(!remote_access(&json!({ "Policy": { "EnableRemoteAccess": false } })));
+        assert!(remote_access(&json!({ "Policy": { "EnableRemoteAccess": true } })));
+        assert!(remote_access(&json!({ "Policy": {} })), "a Jellyfin that does not say keeps its default");
+    }
 
     #[test]
     fn a_look_for_changed_people_asks_for_people_and_their_portraits_only() {
