@@ -1245,6 +1245,7 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.restore_running", &[])));
     };
     let path = app.data_dir.join(UPLOADS[2]);
+    let held = held.with_file(path.clone());
     let received = store_upload(req, &path, UPLOAD_MAX).await;
     match received {
         Ok(n) if n > 0 => {}
@@ -1268,15 +1269,25 @@ const HISTORY_WRITERS: [&str; 4] = ["import", "import_streamystats", "import_tau
 /// whether because hyper dropped the handler when the connection closed (mid-upload, or before the answer) or because
 /// the work panicked, it says the task was interrupted: nothing else would ever give the slot back, and every import
 /// and every restore was refused until a restart.
+///
+/// The file the work reads (`with_file`) goes with a slot given up that way: the connection closing after the upload,
+/// while the answer was on its way, left a whole history in the data folder until the next start.
 struct Running {
     app: App,
     task: &'static str,
     live: bool,
+    file: Option<PathBuf>,
 }
 
 impl Running {
     fn start(app: &App, task: &'static str, message: &str) -> Option<Self> {
-        app.tasks.try_start_alone(task, message, &HISTORY_WRITERS).then(|| Running { app: app.clone(), task, live: true })
+        app.tasks.try_start_alone(task, message, &HISTORY_WRITERS).then(|| Running { app: app.clone(), task, live: true, file: None })
+    }
+
+    /// The file the work will read, removed if the slot is given up before the work said how it went.
+    fn with_file(mut self, file: PathBuf) -> Self {
+        self.file = Some(file);
+        self
     }
 
     /// The work said how it went (`Tasks::finish`): nothing left to give back.
@@ -1286,6 +1297,9 @@ impl Running {
 
     fn fail(mut self, e: anyhow::Error) {
         self.live = false;
+        if let Some(file) = &self.file {
+            let _ = std::fs::remove_file(file);
+        }
         self.app.tasks.finish(self.task, Err(e));
     }
 }
@@ -1293,6 +1307,9 @@ impl Running {
 impl Drop for Running {
     fn drop(&mut self) {
         if self.live {
+            if let Some(file) = &self.file {
+                let _ = std::fs::remove_file(file);
+            }
             self.app.tasks.finish(self.task, Err(anyhow::anyhow!(i18n::t("server.api.interrupted", &[]))));
         }
     }
@@ -1484,13 +1501,20 @@ async fn tautulli_upload(State(app): State<App>, Manager(user): Manager, req: Re
     }
     let (db, checked, gate) = (app.db.clone(), part.clone(), app.clone());
     let board = blocking(move || {
-        crate::tautulli::unpack(&checked)?;
-        crate::tautulli::open(&checked)?;
-        // An import that began while this was arriving reads the backup that is there, and removes it when done.
-        if history_being_written(&gate) {
-            anyhow::bail!(i18n::t("server.api.import_running", &[]));
+        let placed = (|| {
+            crate::tautulli::unpack(&checked)?;
+            crate::tautulli::open(&checked)?;
+            // An import that began while this was arriving reads the backup that is there, and removes it when done.
+            if history_being_written(&gate) {
+                anyhow::bail!(i18n::t("server.api.import_running", &[]));
+            }
+            Ok(std::fs::rename(&checked, &path)?)
+        })();
+        // Here as well as in the handler, which is gone if its connection closed meanwhile.
+        if placed.is_err() {
+            let _ = std::fs::remove_file(&checked);
         }
-        std::fs::rename(&checked, &path)?;
+        placed?;
         let board = crate::tautulli::board(&db, &path);
         drop(turn);
         board
@@ -1555,6 +1579,17 @@ const UPLOAD_MAX: u64 = 4 << 30;
 
 /// Write an upload's body to `path` as it arrives: how many bytes it was. One past `max` gives up and removes the file.
 async fn store_upload(req: Request, path: &std::path::Path, max: u64) -> anyhow::Result<u64> {
+    // Dropped half way (hyper drops a handler whose connection closed), nothing after the write runs: what was written
+    // goes with the guard.
+    struct Unfinished<'a>(Option<&'a std::path::Path>);
+    impl Drop for Unfinished<'_> {
+        fn drop(&mut self) {
+            if let Some(path) = self.0 {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+    }
+    let mut unfinished = Unfinished(Some(path));
     let stored = async {
         let mut file = tokio::fs::File::create(path).await?;
         let mut stream = req.into_body().into_data_stream();
@@ -1571,8 +1606,8 @@ async fn store_upload(req: Request, path: &std::path::Path, max: u64) -> anyhow:
         Ok(total)
     }
     .await;
-    if stored.is_err() {
-        let _ = tokio::fs::remove_file(path).await;
+    if stored.is_ok() {
+        unfinished.0 = None;
     }
     stored
 }
@@ -1583,6 +1618,7 @@ async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> Api
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
     };
     let path = app.data_dir.join(name);
+    let held = held.with_file(path.clone());
     let received = store_upload(req, &path, UPLOAD_MAX).await;
 
     match received {
@@ -1620,6 +1656,38 @@ mod tests {
         assert!(super::store_upload(req(11), &path, 10).await.is_err());
         assert!(!path.exists(), "what an upload past the limit left behind");
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// An upload whose connection closes half way is dropped by hyper in the middle of being written, and nothing after
+    /// the write ran: the part stayed on disk, and the next upload began another. What a dropped upload wrote goes with it.
+    #[tokio::test]
+    async fn an_upload_dropped_half_way_takes_its_file_with_it() {
+        let dir = std::env::temp_dir().join(format!("finstats-upload-dropped-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("upload.part");
+        let body = futures_util::stream::iter([Ok::<_, std::io::Error>(axum::body::Bytes::from(vec![7u8; 1000]))]).chain(futures_util::stream::pending());
+        let req = axum::extract::Request::new(axum::body::Body::from_stream(body));
+        let upload = super::store_upload(req, &path, 1 << 20);
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), upload).await.is_err(), "the upload ended by itself");
+        assert!(!path.exists(), "a dropped upload left its file behind");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// An import's or a restore's file waits for the work that reads it. A slot let go before the work began (the
+    /// connection closed after the upload, while the answer was on its way) takes the file with it.
+    #[tokio::test]
+    async fn a_history_writer_let_go_before_its_work_takes_its_file_with_it() {
+        let app = crate::state::test_app();
+        let file = app.data_dir.join(format!("finstats-running-file-{}.tmp", std::process::id()));
+        std::fs::write(&file, b"a whole history").unwrap();
+        let held = Running::start(&app, "restore", "Receiving backup").expect("the slot is free").with_file(file.clone());
+        drop(held);
+        assert!(!file.exists(), "a restore that never ran left its file");
+        std::fs::write(&file, b"a whole history").unwrap();
+        Running::start(&app, "restore", "Receiving backup").unwrap().with_file(file.clone()).done();
+        assert!(file.exists(), "the work's own file was taken from it");
+        let _ = std::fs::remove_file(&file);
     }
 
     /// A cached picture is written beside its name and renamed into place: written in place, a second request read it
