@@ -857,18 +857,26 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
     settings_response(&app, &user).await
 }
 
-async fn get_tasks(State(app): State<App>, Manager(_): Manager) -> ApiResult {
+async fn get_tasks(State(app): State<App>, Manager(user): Manager) -> ApiResult {
     let data_dir = app.data_dir.clone();
+    // Plays and streams are counted as the status bar counts them: one's own without see_everyone.
+    let whose = (!user.perms.see_everyone).then(|| user.id.clone());
     let dbinfo = app
         .db
         .call(move |c| {
-            let (plays, oldest): (i64, Option<i64>) = c.query_row("SELECT COUNT(*), MIN(started_at) FROM visible_playbacks", [], |r| Ok((r.get(0)?, r.get(1)?)))?;
+            let (plays, oldest): (i64, Option<i64>) = match &whose {
+                Some(u) => c.query_row("SELECT COUNT(*), MIN(started_at) FROM visible_playbacks WHERE user_id = ?1", [u], |r| Ok((r.get(0)?, r.get(1)?)))?,
+                None => c.query_row("SELECT COUNT(*), MIN(started_at) FROM visible_playbacks", [], |r| Ok((r.get(0)?, r.get(1)?)))?,
+            };
             let items: i64 = c.query_row("SELECT COUNT(*) FROM items WHERE removed = 0", [], |r| r.get(0))?;
             let size: u64 = ["finstats.db", "finstats.db-wal"].iter().filter_map(|f| std::fs::metadata(data_dir.join(f)).ok()).map(|m| m.len()).sum();
             Ok(json!({ "size_bytes": size, "plays": plays, "items": items, "oldest_play_at": oldest }))
         })
         .await?;
-    let collector = app.collector.read().unwrap().clone();
+    let mut collector = app.collector.read().unwrap().clone();
+    if !user.perms.see_everyone {
+        collector.active_sessions = app.live.read().unwrap().iter().filter(|s| s["user_id"].as_str() == Some(user.id.as_str())).count();
+    }
     let settings = app.settings();
     let tasks: Vec<Value> = app.tasks.snapshot().iter().map(|t| task_json(t, &settings)).collect();
     Ok(Json(json!({ "tasks": tasks, "collector": collector, "db": dbinfo, "time_zone": time_zone() })))
@@ -2051,6 +2059,30 @@ mod tests {
         assert_eq!(put(&manager, json!({ "public_ip_lookup": true })).await.err().map(|e| e.0), Some(StatusCode::TOO_MANY_REQUESTS));
         assert!(!app.settings().public_ip_lookup);
         assert!(by_hand(&admin, "public_ip").is_ok(), "the administrator is not kept waiting by a manager");
+    }
+
+    /// The Tasks section told any manager how many streams were playing and how many plays the history held, which the
+    /// status bar keeps to their own without see_everyone.
+    #[tokio::test]
+    async fn the_tasks_section_counts_a_managers_own_plays_and_streams_without_see_everyone() {
+        let app = crate::state::test_app();
+        app.db.call(|c| Ok(c.execute_batch(
+            "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+               ('live', 'm', 'mallory', 'i1', 'Big Buck Bunny', 'Movie', 1000, 1600, 600),
+               ('live', 'u2', 'bob', 'i1', 'Big Buck Bunny', 'Movie', 500, 1100, 600),
+               ('live', 'u2', 'bob', 'i2', 'Sintel', 'Movie', 2000, 2600, 600);",
+        )?)).await.unwrap();
+        *app.live.write().unwrap() = vec![json!({ "user_id": "u2", "item_id": "i1" })];
+        app.collector.write().unwrap().active_sessions = 1;
+        let manager = AuthUser {
+            id: "m".into(), name: "mallory".into(), is_admin: false, credential: crate::auth::Credential::Session, ip: None,
+            perms: crate::auth::Perms { manage: true, ..Default::default() },
+        };
+        let Json(mine) = get_tasks(State(app.clone()), Manager(manager.clone())).await.unwrap();
+        assert_eq!((mine["db"]["plays"].clone(), mine["db"]["oldest_play_at"].clone(), mine["collector"]["active_sessions"].clone()), (json!(1), json!(1000), json!(0)));
+        let everyone = AuthUser { perms: crate::auth::Perms { see_everyone: true, ..manager.perms }, ..manager };
+        let Json(all) = get_tasks(State(app), Manager(everyone)).await.unwrap();
+        assert_eq!((all["db"]["plays"].clone(), all["db"]["oldest_play_at"].clone(), all["collector"]["active_sessions"].clone()), (json!(3), json!(500), json!(1)));
     }
 
     #[test]
