@@ -4,7 +4,7 @@
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `CLAUDE.md` is the detailed rulebook
-> (the history behind each rule, the owner's decisions); the published docs at <https://docs.finstats.no/> (repository
+> (the history behind each rule, the owner's decisions); the published docs at <https://finstats.no/> (repository
 > `../docs`) are the user-facing manual and the HTTP contract. When this file and the code disagree, the code wins, and
 > this file should be fixed in the same change.
 

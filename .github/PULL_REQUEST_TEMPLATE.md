@@ -1,4 +1,4 @@
-<!-- Thanks! Keep it short. The contributing guide (https://docs.finstats.no/finstats/contributing/) explains each line of the checklist. -->
+<!-- Thanks! Keep it short. The contributing guide (https://finstats.no/finstats/contributing/) explains each line of the checklist. -->
 
 ## What a user will notice
 

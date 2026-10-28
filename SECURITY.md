@@ -9,5 +9,5 @@ Only the maintainers can see the report. Fixes go into the newest release (2.x);
 on `ghcr.io/finstats/finstats:latest` first, and never include real viewing data, a database or a backup.
 
 What a useful report says, what to expect, and what is in scope:
-**[Reporting a vulnerability](https://docs.finstats.no/finstats/reporting-security/)**. How FinStats is meant to
-protect these things: **[the security model](https://docs.finstats.no/finstats/security/)**.
+**[Reporting a vulnerability](https://finstats.no/finstats/reporting-security/)**. How FinStats is meant to
+protect these things: **[the security model](https://finstats.no/finstats/security/)**.

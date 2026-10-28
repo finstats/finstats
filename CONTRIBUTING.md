@@ -4,7 +4,7 @@ Thanks for wanting to help. The whole guide (what fits the project, reporting a 
 FinStats from source or in a local Docker setup, the rules for a change, commit messages and pull requests) is on the
 documentation site:
 
-**[docs.finstats.no/finstats/contributing](https://docs.finstats.no/finstats/contributing/)**
+**[finstats.no/finstats/contributing](https://finstats.no/finstats/contributing/)**
 
 The short version:
 

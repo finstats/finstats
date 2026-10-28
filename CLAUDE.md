@@ -54,7 +54,7 @@ named, and do not delete a test to make the bar green.
 ## Documentation lives in its own repository
 
 **Every page of documentation is written in `github.com/finstats/docs`** (checked out beside FinStats as `../docs`; MkDocs
-with Material, published by its Pages workflow at <https://docs.finstats.no/>), never in this repository (the
+with Material, published by its Pages workflow at <https://finstats.no/>), never in this repository (the
 owner's decision, 2026-10-07). There is no `docs/` folder here any more. What stays here is only what GitHub or the build
 needs: `README.md` (a short landing page: the pitch, the hero shot, the build blockquote, one `docker run`, links to the
 docs), `CONTRIBUTING.md` and `SECURITY.md` (pointers), `CODE_OF_CONDUCT.md`, `.github/`, and `CHANGELOG.md`, which is
