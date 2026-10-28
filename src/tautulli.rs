@@ -223,17 +223,33 @@ pub fn open(path: &Path) -> Result<Connection> {
             return Err(not_one());
         }
     }
+    // The import joins these on `id`, which Tautulli keeps unique: repeated, the join is the product of the copies.
+    for name in READ.iter().filter(|n| n.starts_with("session_history") && plain(n)) {
+        let repeats: bool = t
+            .query_row(&format!("SELECT EXISTS (SELECT 1 FROM {name} WHERE id IS NOT NULL GROUP BY id HAVING COUNT(*) > 1)"), [], |r| r.get(0))
+            .map_err(|_| not_one())?;
+        if repeats {
+            return Err(not_one());
+        }
+    }
     Ok(t)
 }
 
+/// The most of any text in the backup that is read: longer than any title, name or address, and a bound on what one row
+/// of somebody else's file can make the import hold.
+const TEXT_MAX: usize = 1000;
+
 /// What the board needs, and nothing else from `users`: never a token, never an address.
-const PLEX_USERS_SQL: &str = "WITH people AS (SELECT user_id FROM users UNION SELECT DISTINCT user_id FROM session_history WHERE user_id IS NOT NULL)
+/// The history is read once for everybody, never once per person: the file is somebody else's, with no index to help.
+const PLEX_USERS_SQL: &str = "WITH h AS MATERIALIZED (
+        SELECT user_id, MAX(user) AS user, COUNT(DISTINCT CASE WHEN media_type IN ('movie', 'episode') THEN reference_id END) AS plays,
+               MIN(started) AS first_at, MAX(stopped) AS last_at
+        FROM session_history WHERE user_id IS NOT NULL GROUP BY user_id),
+    people AS (SELECT user_id FROM users UNION SELECT user_id FROM h)
     SELECT CAST(p.user_id AS INTEGER),
-           COALESCE(NULLIF(TRIM(u.friendly_name), ''), NULLIF(TRIM(u.username), ''), (SELECT MAX(h.user) FROM session_history h WHERE h.user_id = p.user_id), 'Plex user ' || p.user_id) AS name,
-           (SELECT COUNT(DISTINCT h.reference_id) FROM session_history h WHERE h.user_id = p.user_id AND h.media_type IN ('movie', 'episode')),
-           (SELECT MIN(h.started) FROM session_history h WHERE h.user_id = p.user_id),
-           (SELECT MAX(h.stopped) FROM session_history h WHERE h.user_id = p.user_id)
-    FROM people p LEFT JOIN users u ON u.user_id = p.user_id
+           substr(COALESCE(NULLIF(TRIM(u.friendly_name), ''), NULLIF(TRIM(u.username), ''), h.user, 'Plex user ' || p.user_id), 1, 1000) AS name,
+           COALESCE(h.plays, 0), h.first_at, h.last_at
+    FROM people p LEFT JOIN users u ON u.user_id = p.user_id LEFT JOIN h ON h.user_id = p.user_id
     ORDER BY name COLLATE NOCASE, p.user_id";
 
 /// Every Plex user the backup knows, with how many viewings of theirs would come in. Never a token or an address.
@@ -363,9 +379,17 @@ fn sessions_sql(t: &Connection) -> Result<String> {
         let cols: Vec<String> = t.prepare(&format!("SELECT name FROM pragma_table_info('{}')", table(alias)))?.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?;
         have.extend(cols.into_iter().map(|c| (alias.to_string(), c)));
     }
-    let mut picked: Vec<String> = COLUMNS.iter().map(|(a, c)| if have.contains(&(a.to_string(), c.to_string())) { format!("{a}.{c}") } else { "NULL".into() }).collect();
-    picked.push(if have.contains(&("i".into(), "stream_audio_decision".into())) { "i.stream_audio_decision".into() } else { "NULL".into() });
-    picked.push(if have.contains(&("i".into(), "stream_bitrate".into())) { "i.stream_bitrate".into() } else { "NULL".into() });
+    // Only names of our own reach the statement, and a value is read only as far as anything here could use it.
+    let column = |a: &str, c: &str| {
+        if have.contains(&(a.to_string(), c.to_string())) {
+            format!("CASE typeof({a}.{c}) WHEN 'text' THEN substr({a}.{c}, 1, {TEXT_MAX}) WHEN 'blob' THEN NULL ELSE {a}.{c} END")
+        } else {
+            "NULL".into()
+        }
+    };
+    let mut picked: Vec<String> = COLUMNS.iter().map(|(a, c)| column(a, c)).collect();
+    picked.push(column("i", "stream_audio_decision"));
+    picked.push(column("i", "stream_bitrate"));
     picked.push("h.id".into());
     let info = if have.iter().any(|(a, _)| a == "i") { "LEFT JOIN session_history_media_info i ON i.id = h.id" } else { "LEFT JOIN (SELECT NULL AS id) i ON 0" };
     Ok(format!(
@@ -704,6 +728,62 @@ mod tests {
         drop(c);
         assert!(open(&path).is_err(), "a generated column was read");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The three tables are joined on `id`, which Tautulli keeps unique: a file where it is not made the join the product
+    /// of the copies (a thousand rows of one id in each, a billion rows read), and the process ran out of memory.
+    #[test]
+    fn a_backup_whose_ids_repeat_is_refused() {
+        for table in ["session_history", "session_history_metadata", "session_history_media_info"] {
+            let dir = temp(&format!("repeat-{table}"));
+            let path = backup(&dir);
+            {
+                let c = Connection::open(&path).unwrap();
+                session(&c, 0, 101, "movie", 1, "Big Buck Bunny", None, Some(2008), 1000, 1600, 0, 600_000, 600_000, "direct play");
+                c.execute_batch(&format!(
+                    "CREATE TABLE copy AS SELECT * FROM {table}; DROP TABLE {table}; CREATE TABLE {table} AS SELECT * FROM copy;
+                     INSERT INTO {table} SELECT * FROM copy; DROP TABLE copy;"
+                ))
+                .unwrap();
+            }
+            assert!(open(&path).is_err(), "{table} repeats an id");
+            let db = finstats(&dir);
+            assert!(run(&db, &path, &[wire(101, "ja")], None).is_err());
+            assert!(plays(&db).is_empty());
+            let _ = std::fs::remove_dir_all(dir);
+        }
+    }
+
+    /// The board reads the history once for every Plex user together: asked again for each user, as it was, a file of many
+    /// users and a long history (no index to help, since the file is somebody else's) took their product in steps.
+    #[test]
+    fn the_board_reads_the_history_once_not_once_per_person() {
+        let dir = temp("board-plan");
+        let t = open(&backup(&dir)).unwrap();
+        let plan: Vec<String> = t.prepare(&format!("EXPLAIN QUERY PLAN {PLEX_USERS_SQL}")).unwrap().query_map([], |r| r.get(3)).unwrap().map(Result::unwrap).collect();
+        assert!(!plan.iter().any(|p| p.contains("CORRELATED")), "{plan:#?}");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// Text is read only as far as anything here could use it: a title of a megabyte is one of a thousand characters.
+    #[test]
+    fn a_text_far_longer_than_any_title_is_read_only_in_part() {
+        let dir = temp("long-text");
+        let path = backup(&dir);
+        {
+            let c = Connection::open(&path).unwrap();
+            let id = session(&c, 0, 101, "movie", 1, "Big Buck Bunny", None, None, 1000, 1600, 0, 600_000, 600_000, "direct play");
+            c.execute("UPDATE session_history_metadata SET title = ?1 WHERE id = ?2", params!["x".repeat(1_000_000), id]).unwrap();
+            c.execute("UPDATE session_history SET player = ?1 WHERE id = ?2", params!["y".repeat(1_000_000), id]).unwrap();
+            c.execute("UPDATE users SET friendly_name = ?1 WHERE user_id = 101", ["z".repeat(1_000_000)]).unwrap();
+        }
+        let alice = plex_users(&open(&path).unwrap()).unwrap().into_iter().find(|u| u.id == 101).unwrap();
+        assert_eq!(alice.name.chars().count(), TEXT_MAX);
+        let db = finstats(&dir);
+        assert_eq!(run(&db, &path, &[wire(101, "ja")], None).unwrap().plays_imported, 1);
+        let (name, device): (String, String) = db.conn().unwrap().query_row("SELECT item_name, device_name FROM playbacks", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        assert_eq!((name.chars().count(), device.chars().count()), (TEXT_MAX, TEXT_MAX));
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     /// FinStats with two Jellyfin users and a little library.
