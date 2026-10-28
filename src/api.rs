@@ -508,53 +508,87 @@ struct CardQuery {
 /// `/u/{token}/card.png`: the published profile as a picture, for a link preview or to post.
 async fn public_card(State(app): State<App>, Path(token): Path<String>, Query(q): Query<CardQuery>) -> ApiResult<Response> {
     let kind = crate::card::Kind::parse(q.kind.as_deref()).ok_or_else(crate::public::not_found)?;
-    let (_, a) = crate::public::resolve(&app, token.clone()).await?;
-    if !kind.available(&a) {
-        return Err(crate::public::not_found());
-    }
-    let key = crate::card::key(&token, kind, &a);
-    let ids = crate::card::poster_ids(kind, &a);
-    let png = draw(&app, key, ids, move |posters| crate::card::svg(kind, &a, posters)).await?;
-    let r = Response::builder()
-        .header(CONTENT_TYPE, "image/png")
-        .header(CACHE_CONTROL, "public, max-age=3600")
-        .header("vary", "Accept-Language, Cookie")
-        .body(Body::from(png.as_ref().clone()))
-        .unwrap();
-    Ok(crate::public::noindex(r))
+    let png = i18n::speaking(PUBLIC_CARDS_IN, async move {
+        let (_, a) = crate::public::resolve(&app, token.clone()).await?;
+        if !kind.available(&a) {
+            return Err(crate::public::not_found());
+        }
+        let key = crate::card::key(&token, kind, &a);
+        let ids = crate::card::poster_ids(kind, &a);
+        draw_in(&app, Lane::Public, key, ids, move |posters| crate::card::svg(kind, &a, posters)).await
+    })
+    .await?;
+    Ok(public_png(&png))
+}
+
+/// A published card as it is sent: the same picture whoever asks, so a shared cache may keep it for everyone.
+fn public_png(png: &[u8]) -> Response {
+    let r = Response::builder().header(CONTENT_TYPE, "image/png").header(CACHE_CONTROL, "public, max-age=3600").body(Body::from(png.to_vec())).unwrap();
+    crate::public::noindex(r)
 }
 
 /// How many cards may wait for one of the two drawing at once. A card is a second's work, and a recap's fourteen are
 /// asked one after another, so a longer queue is somebody asking for far more than any page does.
 const CARDS_WAITING: usize = 8;
-/// Cards waiting their turn now, in the whole process.
+/// Cards of people signed in waiting their turn now, in the whole process.
 static CARDS_QUEUED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
-/// A card from the memory cache, or drawn: at most two at once (`card_permits`), its posters fetched
-/// through the image cache, rasterised off the async threads. Every card goes through here (the
-/// published ones and the recap's story), so none of them can skip the limit.
-pub(crate) async fn draw<F>(app: &App, key: String, poster_ids: Vec<String>, svg: F) -> ApiResult<std::sync::Arc<Vec<u8>>>
+/// Which cards a card waits with: those of people signed in, or those of published links. Each has its own cache, its own
+/// permits and its own queue, so a stranger holding a link cannot keep the owners' recap cards waiting or push them out.
+#[derive(Clone, Copy)]
+enum Lane {
+    Own,
+    Public,
+}
+
+/// The published links' lane: one card drawn at a time.
+struct PublicLane {
+    cache: crate::card::Cache,
+    permits: tokio::sync::Semaphore,
+    queued: std::sync::atomic::AtomicUsize,
+}
+
+fn public_lane() -> &'static PublicLane {
+    static LANE: std::sync::OnceLock<PublicLane> = std::sync::OnceLock::new();
+    LANE.get_or_init(|| PublicLane { cache: Default::default(), permits: tokio::sync::Semaphore::new(1), queued: Default::default() })
+}
+
+/// Published cards are said in one language, whoever asks: a link's cards are the same picture for everyone (and kept
+/// by shared caches as one), and in every language a stranger asked for each was drawn again.
+const PUBLIC_CARDS_IN: &str = i18n::DEFAULT;
+
+/// A card from its lane's memory cache, or drawn: at most two at once for people signed in (`card_permits`) and one for
+/// published links, its posters fetched through the image cache, rasterised off the async threads. Every card goes
+/// through here (the published ones and the recap's story), so none of them can skip the limit.
+async fn draw_in<F>(app: &App, lane: Lane, key: String, poster_ids: Vec<String>, svg: F) -> ApiResult<std::sync::Arc<Vec<u8>>>
 where
     F: FnOnce(&crate::card::Posters) -> String,
 {
-    if let Some(png) = app.public_cards.get(&key) {
+    let (cache, permits, queue) = match lane {
+        Lane::Own => (&app.public_cards, &app.card_permits, &CARDS_QUEUED),
+        Lane::Public => {
+            let l = public_lane();
+            (&l.cache, &l.permits, &l.queued)
+        }
+    };
+    if let Some(png) = cache.get(&key) {
         return Ok(png);
     }
     // At most `CARDS_WAITING` wait their turn; past that a card is refused at once rather than queued behind them.
-    struct Queued;
-    impl Drop for Queued {
+    struct Queued<'a>(&'a std::sync::atomic::AtomicUsize);
+    impl Drop for Queued<'_> {
         fn drop(&mut self) {
-            CARDS_QUEUED.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+            self.0.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
         }
     }
-    if CARDS_QUEUED.fetch_add(1, std::sync::atomic::Ordering::SeqCst) >= CARDS_WAITING {
-        CARDS_QUEUED.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+    if queue.fetch_add(1, std::sync::atomic::Ordering::SeqCst) >= CARDS_WAITING {
+        queue.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
         return Err(ApiError::new(StatusCode::SERVICE_UNAVAILABLE, i18n::t("server.api.cards_busy", &[])));
     }
-    let queued = Queued;
-    let _permit = app.card_permits.acquire().await.map_err(anyhow::Error::from)?;
+    let queued = Queued(queue);
+    let _permit = permits.acquire().await.map_err(anyhow::Error::from)?;
     drop(queued);
-    if let Some(png) = app.public_cards.get(&key) {
+    if let Some(png) = cache.get(&key) {
         return Ok(png);
     }
     let mut posters = crate::card::Posters::new();
@@ -565,28 +599,31 @@ where
     }
     let svg = svg(&posters);
     let png = blocking(move || crate::card::render_png(&svg)).await.map_err(anyhow::Error::from)??;
-    Ok(app.public_cards.put(key, png))
+    Ok(cache.put(key, png))
 }
 
 /// The published year, one chapter at a time, to anyone holding the link, only when the year is published.
 async fn public_story_card(State(app): State<App>, Path((token, chapter)): Path<(String, String)>) -> ApiResult<Response> {
     let ch = crate::story::Chapter::parse(&chapter).ok_or_else(crate::public::not_found)?;
-    let (_, a) = crate::public::resolve(&app, token).await?;
-    let story = a.recap.filter(|y| y.chapters().contains(&ch)).ok_or_else(crate::public::not_found)?;
-    let png = draw_story(&app, &story, ch).await?;
-    let r = Response::builder()
-        .header(CONTENT_TYPE, "image/png")
-        .header(CACHE_CONTROL, "public, max-age=3600")
-        .header("vary", "Accept-Language, Cookie")
-        .body(Body::from(png.as_ref().clone()))
-        .unwrap();
-    Ok(crate::public::noindex(r))
+    let png = i18n::speaking(PUBLIC_CARDS_IN, async move {
+        let (_, a) = crate::public::resolve(&app, token).await?;
+        let story = a.recap.filter(|y| y.chapters().contains(&ch)).ok_or_else(crate::public::not_found)?;
+        draw_story_in(&app, Lane::Public, &story, ch).await
+    })
+    .await?;
+    Ok(public_png(&png))
 }
 
 async fn public_story_zip(State(app): State<App>, Path(token): Path<String>) -> ApiResult<Response> {
-    let (_, a) = crate::public::resolve(&app, token).await?;
-    let story = a.recap.ok_or_else(crate::public::not_found)?;
-    Ok(crate::public::noindex(zip_response(&story_files(&app, &story).await?, &story.label)))
+    let (files, label) = i18n::speaking(PUBLIC_CARDS_IN, async move {
+        let (_, a) = crate::public::resolve(&app, token).await?;
+        let story = a.recap.ok_or_else(crate::public::not_found)?;
+        Ok::<_, ApiError>((story_files_in(&app, Lane::Public, &story).await?, story.label))
+    })
+    .await?;
+    let mut r = zip_response(&files, &label);
+    r.headers_mut().remove("vary");
+    Ok(crate::public::noindex(r))
 }
 
 /// One chapter of the caller's year as a 1080×1920 card, for the same people who may open that year.
@@ -612,9 +649,13 @@ async fn story_zip(State(app): State<App>, user: AuthUser, Query(q): Query<recap
 }
 
 pub(crate) async fn story_files(app: &App, story: &crate::story::StoryYear) -> ApiResult<Vec<(String, Vec<u8>)>> {
+    story_files_in(app, Lane::Own, story).await
+}
+
+async fn story_files_in(app: &App, lane: Lane, story: &crate::story::StoryYear) -> ApiResult<Vec<(String, Vec<u8>)>> {
     let mut files = vec![];
     for (i, ch) in story.chapters().into_iter().enumerate() {
-        files.push((format!("{:02}-{}.png", i + 1, ch.key()), draw_story(app, story, ch).await?.as_ref().clone()));
+        files.push((format!("{:02}-{}.png", i + 1, ch.key()), draw_story_in(app, lane, story, ch).await?.as_ref().clone()));
     }
     Ok(files)
 }
@@ -631,9 +672,13 @@ pub(crate) fn zip_response(files: &[(String, Vec<u8>)], label: &str) -> Response
 }
 
 pub(crate) async fn draw_story(app: &App, story: &crate::story::StoryYear, ch: crate::story::Chapter) -> ApiResult<std::sync::Arc<Vec<u8>>> {
+    draw_story_in(app, Lane::Own, story, ch).await
+}
+
+async fn draw_story_in(app: &App, lane: Lane, story: &crate::story::StoryYear, ch: crate::story::Chapter) -> ApiResult<std::sync::Arc<Vec<u8>>> {
     let key = story.cache_key(ch);
     let story = story.clone();
-    draw(app, key, story.poster_ids(ch), move |posters| crate::story::svg(ch, &story, posters)).await
+    draw_in(app, lane, key, story.poster_ids(ch), move |posters| crate::story::svg(ch, &story, posters)).await
 }
 
 /// A poster's bytes through the same cache the pages use; a card without one draws an empty frame.
@@ -1873,19 +1918,47 @@ mod tests {
         let waiting: Vec<_> = (0..CARDS_WAITING)
             .map(|n| {
                 let app = app.clone();
-                tokio::spawn(async move { draw(&app, format!("wait-{n}"), vec![], |_| String::new()).await.map(|_| ()) })
+                tokio::spawn(async move { draw_in(&app, Lane::Own, format!("wait-{n}"), vec![], |_| String::new()).await.map(|_| ()) })
             })
             .collect();
         while CARDS_QUEUED.load(std::sync::atomic::Ordering::SeqCst) < CARDS_WAITING {
             tokio::task::yield_now().await;
         }
-        let refused = draw(&app, "one-more".into(), vec![], |_| String::new()).await.expect_err("a card past the queue was let wait");
+        let refused = draw_in(&app, Lane::Own, "one-more".into(), vec![], |_| String::new()).await.expect_err("a card past the queue was let wait");
         assert_eq!(refused.0, StatusCode::SERVICE_UNAVAILABLE);
         drop(held);
         for w in waiting {
             let _ = w.await;
         }
         assert_eq!(CARDS_QUEUED.load(std::sync::atomic::Ordering::SeqCst), 0, "a card that was drawn is still counted");
+    }
+
+    /// A stranger holding a published link asked for its cards in one language after another: each was drawn again,
+    /// kept in the cache the owners' own cards use, and queued for the same two drawing permits, so the owner's recap
+    /// cards answered 503. Public cards are said in one language, and drawn in a lane of their own.
+    #[tokio::test]
+    async fn a_published_card_is_drawn_once_whatever_language_it_is_asked_in_and_beside_the_owners() {
+        let app = crate::state::test_app();
+        app.settings.write().unwrap().public_profiles = true;
+        let token = app.db.call(|c| {
+            c.execute("INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u-alice-0001', 'alice', 1, 1)", [])?;
+            let e: crate::public::Edit = serde_json::from_value(serde_json::json!({ "published": true, "display_name": "Alice", "show_avatar": false,
+                                                                                     "sections": { "totals": true } }))?;
+            crate::public::save(c, "u-alice-0001", &e, 1_800_000_000)
+        }).await.unwrap();
+        // The owners' lane is busy: both its permits held.
+        let held = app.card_permits.acquire_many(2).await.unwrap();
+        let card = |lang: &'static str| {
+            let (app, token) = (app.clone(), token.clone());
+            let asked = i18n::speaking(lang, async move { public_card(State(app), Path(token), Query(CardQuery { kind: None })).await });
+            async move { tokio::time::timeout(std::time::Duration::from_secs(60), asked).await.expect("a public card waited behind the owners'") }
+        };
+        let body = |r: Response| async move { axum::body::to_bytes(r.into_body(), 1 << 24).await.unwrap() };
+        let nb = card("nb-NO").await.unwrap();
+        assert!(nb.headers().get("vary").is_none_or(|v| !v.to_str().unwrap().contains("Accept-Language")), "{:?}", nb.headers());
+        let (nb, en) = (body(nb).await, body(card("en-GB").await.unwrap()).await);
+        assert_eq!(nb, en, "the card was said in the language of whoever asked");
+        drop(held);
     }
 
     /// Each Tautulli upload had a part of its own and none waited for another, so the 4 GB an upload may be, and the 4 GB

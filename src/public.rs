@@ -8,6 +8,7 @@
 //! Jellyfin login name are never produced, whatever the flags say.
 
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -521,8 +522,12 @@ const ANSWER_TTL_S: i64 = 60;
 const ANSWERS_KEPT: usize = 1_000;
 
 /// Profiles worked out a moment ago, by link and by what the owner shows (`key`): every picture and card on a page
-/// asked for the whole profile and recap again, as often as a stranger holding the link liked.
-pub struct Answers<T = PublicProfile>(std::sync::Mutex<std::collections::HashMap<Slot, (i64, String, T)>>);
+/// asked for the whole profile and recap again, as often as a stranger holding the link liked. Each slot is worked out
+/// by one request at a time: those arriving together wait for its answer rather than each working it out again.
+pub struct Answers<T = PublicProfile>(std::sync::Mutex<std::collections::HashMap<Slot, Arc<tokio::sync::Mutex<Kept<T>>>>>);
+
+/// A slot's answer, when it was worked out and for what the owner showed then.
+type Kept<T> = Option<(i64, String, T)>;
 
 /// A link and the language it is read in.
 type Slot = (String, String);
@@ -536,22 +541,56 @@ impl<T> Default for Answers<T> {
 impl<T: Clone> Answers<T> {
     /// The answer for a link read in a language: one slot for each, so the languages a stranger asks for in turn do not
     /// push each other out.
-    pub fn get_or<E>(&self, token: &str, lang: &str, key: &str, now: i64, work: impl FnOnce() -> Result<T, E>) -> Result<T, E> {
-        let slot = (token.to_string(), lang.to_string());
-        if let Some((at, k, v)) = self.0.lock().unwrap().get(&slot)
+    pub async fn get_or<E, F: std::future::Future<Output = Result<T, E>>>(&self, token: &str, lang: &str, key: &str, now: i64, work: impl FnOnce() -> F) -> Result<T, E> {
+        let slot = {
+            let mut slots = self.0.lock().unwrap();
+            if slots.len() >= ANSWERS_KEPT {
+                // Past the bound, what is stale and not being worked out goes first, then everything.
+                slots.retain(|_, s| s.try_lock().map_or(true, |v| v.as_ref().is_some_and(|(at, _, _)| now - *at < ANSWER_TTL_S)));
+                if slots.len() >= ANSWERS_KEPT {
+                    slots.clear();
+                }
+            }
+            slots.entry((token.to_string(), lang.to_string())).or_default().clone()
+        };
+        let mut held = slot.lock().await;
+        if let Some((at, k, v)) = held.as_ref()
             && *k == key
             && now - at < ANSWER_TTL_S
         {
             return Ok(v.clone());
         }
-        let v = work()?;
+        let v = work().await?;
+        *held = Some((now, key.to_string(), v.clone()));
+        Ok(v)
+    }
+}
+
+/// How long the fingerprint of a profile's plays is kept: it was read on every request, pictures and cards included.
+const PRINT_TTL_S: i64 = 5;
+
+/// A count, the newest id and the total time of the plays a profile counts: what says its answer is out of date.
+type Print = (i64, i64, f64);
+
+/// Each owner's [`Print`], as read a few seconds ago.
+#[derive(Default)]
+pub struct Prints(std::sync::Mutex<std::collections::HashMap<String, (i64, Print)>>);
+
+impl Prints {
+    pub fn get_or<E>(&self, user_id: &str, now: i64, read: impl FnOnce() -> Result<Print, E>) -> Result<Print, E> {
+        if let Some((at, p)) = self.0.lock().unwrap().get(user_id)
+            && now - at < PRINT_TTL_S
+        {
+            return Ok(*p);
+        }
+        let p = read()?;
         let mut kept = self.0.lock().unwrap();
-        kept.retain(|_, (at, _, _)| now - *at < ANSWER_TTL_S);
+        kept.retain(|_, (at, _)| now - *at < PRINT_TTL_S);
         if kept.len() >= ANSWERS_KEPT {
             kept.clear();
         }
-        kept.insert(slot, (now, key.to_string(), v.clone()));
-        Ok(v)
+        kept.insert(user_id.to_string(), (now, p));
+        Ok(p)
     }
 }
 
@@ -560,27 +599,41 @@ fn answers() -> &'static Answers {
     ANSWERS.get_or_init(Answers::default)
 }
 
-/// A token to its profile and the answer, on the database thread. Whether the link opens anything is asked every time;
-/// what it shows comes from `answers` when it was worked out a moment ago.
+fn prints() -> &'static Prints {
+    static PRINTS: std::sync::OnceLock<Prints> = std::sync::OnceLock::new();
+    PRINTS.get_or_init(Prints::default)
+}
+
+/// A token to its profile and the answer. Whether the link opens anything is asked every time; what it shows comes from
+/// `answers` when it was worked out a moment ago, and is worked out by one request while the others wait.
 pub async fn resolve(app: &App, token: String) -> Result<(Published, PublicProfile), ApiError> {
     let settings = app.settings();
     let min_play_s = settings.min_play_s;
-    app.db
+    let asked = token.clone();
+    let (p, plays) = app
+        .db
         .call(move |c| {
-            let Some(p) = lookup(c, &settings, &token)? else { return Ok(None) };
-            // What the owner shows, and a fingerprint of the plays it counts: one put in the trash, imported or brought
-            // back changes the answer at once, never a minute later.
-            let plays: (i64, i64, f64) = c.query_row(
-                "SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(duration_s) FROM visible_playbacks WHERE user_id = ?1 AND ended_at <= ?2",
-                params![p.user_id, counted_until(c, db::now())?],
-                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-            )?;
-            let shows = format!("{p:?} {min_play_s} {plays:?}");
-            let a = answers().get_or(&token, crate::i18n::current(), &shows, db::now(), || answer(c, &p, min_play_s, db::now()))?;
-            Ok(Some((p, a)))
+            let Some(p) = lookup(c, &settings, &asked)? else { return Ok(None) };
+            // A fingerprint of the plays it counts: one put in the trash, imported or brought back changes the answer
+            // within seconds, never a minute later.
+            let plays = prints().get_or(&p.user_id, db::now(), || {
+                c.query_row(
+                    "SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(duration_s) FROM visible_playbacks WHERE user_id = ?1 AND ended_at <= ?2",
+                    params![p.user_id, counted_until(c, db::now())?],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                )
+                .map_err(anyhow::Error::from)
+            })?;
+            Ok(Some((p, plays)))
         })
         .await?
-        .ok_or_else(not_found)
+        .ok_or_else(not_found)?;
+    let shows = format!("{p:?} {min_play_s} {plays:?}");
+    let owner = p.clone();
+    let a = answers()
+        .get_or(&token, crate::i18n::current(), &shows, db::now(), || app.db.call(move |c| answer(c, &owner, min_play_s, db::now())))
+        .await?;
+    Ok((p, a))
 }
 
 /// `GET /api/public/{token}`, with no session and no key: the link is the only thing asked for.
@@ -630,32 +683,71 @@ pub fn noindex(mut r: Response) -> Response {
 
 #[cfg(test)]
 mod tests {
+    /// Asks `answers` for a slot, counting in `worked` each time the answer is worked out.
+    async fn ask_counted(answers: &Answers<usize>, lang: &str, key: &str, now: i64, worked: &std::sync::atomic::AtomicUsize) -> usize {
+        answers.get_or("tok", lang, key, now, || async { Ok::<_, ()>(worked.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1) }).await.unwrap()
+    }
+
     /// A published link is answered from what was worked out a moment ago: every picture and card on the page asked for
     /// the whole profile and recap again, and a stranger holding the link could ask as often as they liked. What the
     /// owner shows (another key) is worked out at once, and so is everything once the moment has passed.
-    #[test]
-    fn a_profile_worked_out_a_moment_ago_is_not_worked_out_again() {
-        let answers = Answers::default();
-        let mut worked = 0;
-        let mut ask = |key: &str, now: i64| answers.get_or("tok", "en-GB", key, now, || { worked += 1; Ok::<_, ()>(worked) }).unwrap();
-        assert_eq!(ask("a", 100), 1);
-        assert_eq!(ask("a", 100 + ANSWER_TTL_S - 1), 1, "asked again within the moment");
-        assert_eq!(ask("b", 100 + ANSWER_TTL_S - 1), 2, "the owner changed what is shown");
-        assert_eq!(ask("b", 100 + 2 * ANSWER_TTL_S), 3, "the moment passed");
+    #[tokio::test]
+    async fn a_profile_worked_out_a_moment_ago_is_not_worked_out_again() {
+        let (answers, worked) = (Answers::default(), std::sync::atomic::AtomicUsize::new(0));
+        assert_eq!(ask_counted(&answers, "en-GB", "a", 100, &worked).await, 1);
+        assert_eq!(ask_counted(&answers, "en-GB", "a", 100 + ANSWER_TTL_S - 1, &worked).await, 1, "asked again within the moment");
+        assert_eq!(ask_counted(&answers, "en-GB", "b", 100 + ANSWER_TTL_S - 1, &worked).await, 2, "the owner changed what is shown");
+        assert_eq!(ask_counted(&answers, "en-GB", "b", 100 + 2 * ANSWER_TTL_S, &worked).await, 3, "the moment passed");
     }
 
     /// Each language a link is read in keeps its own answer: with one slot a link, a stranger alternating the language
     /// asked had the whole profile and recap worked out again at every request.
-    #[test]
-    fn a_link_read_in_turns_in_two_languages_is_worked_out_once_in_each() {
-        let answers = Answers::default();
-        let mut worked = 0;
-        let mut ask = |lang: &str| answers.get_or("tok", lang, "shows", 100, || { worked += 1; Ok::<_, ()>(worked) }).unwrap();
+    #[tokio::test]
+    async fn a_link_read_in_turns_in_two_languages_is_worked_out_once_in_each() {
+        let (answers, worked) = (Answers::default(), std::sync::atomic::AtomicUsize::new(0));
         for _ in 0..5 {
-            ask("nb-NO");
-            ask("en-GB");
+            ask_counted(&answers, "nb-NO", "shows", 100, &worked).await;
+            ask_counted(&answers, "en-GB", "shows", 100, &worked).await;
         }
-        assert_eq!(worked, 2);
+        assert_eq!(worked.into_inner(), 2);
+    }
+
+    /// Requests arriving together on a cold slot each worked the whole profile and recap out again, each on a pooled
+    /// connection. One works it out; the others wait for its answer.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn requests_arriving_together_work_the_answer_out_once() {
+        let answers: std::sync::Arc<Answers<usize>> = Default::default();
+        let worked = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let asks: Vec<_> = (0..16)
+            .map(|_| {
+                let (answers, worked) = (answers.clone(), worked.clone());
+                tokio::spawn(async move {
+                    answers
+                        .get_or("tok", "en-GB", "shows", 100, || async {
+                            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                            Ok::<_, ()>(worked.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1)
+                        })
+                        .await
+                        .unwrap()
+                })
+            })
+            .collect();
+        for a in asks {
+            assert_eq!(a.await.unwrap(), 1);
+        }
+        assert_eq!(worked.load(std::sync::atomic::Ordering::SeqCst), 1);
+    }
+
+    /// What the plays a profile counts look like is read again only after a few seconds: it ran on every request,
+    /// pictures included.
+    #[test]
+    fn the_fingerprint_of_the_plays_is_kept_a_few_seconds() {
+        let prints = Prints::default();
+        let mut read = 0;
+        let mut ask = |now: i64| prints.get_or("u1", now, || { read += 1; Ok::<_, ()>((read, 0, 0.0)) }).unwrap();
+        assert_eq!(ask(100).0, 1);
+        assert_eq!(ask(100 + PRINT_TTL_S - 1).0, 1);
+        assert_eq!(ask(100 + PRINT_TTL_S).0, 2);
     }
 
     use super::*;
