@@ -386,7 +386,7 @@ pub struct FindingsQuery {
 }
 
 /// `GET /api/library/health/findings?kind=&library_id=&dismissed=&sort=&dir=&page=`: one page of findings.
-pub async fn get_findings(State(app): State<App>, ServerViewer(_): ServerViewer, Query(q): Query<FindingsQuery>) -> ApiResult {
+pub async fn get_findings(State(app): State<App>, ServerViewer(user): ServerViewer, Query(q): Query<FindingsQuery>) -> ApiResult {
     let l = Listing {
         kind: q.kind,
         library_id: q.library_id,
@@ -395,7 +395,7 @@ pub async fn get_findings(State(app): State<App>, ServerViewer(_): ServerViewer,
         dir: q.dir,
         page: q.page.unwrap_or(1),
     };
-    let jellyfin = crate::stats::jellyfin_base(&app);
+    let jellyfin = crate::stats::jellyfin_base(&app, user.is_admin);
     Ok(Json(app.db.call(move |c| list(c, &l, jellyfin.as_deref())).await?))
 }
 

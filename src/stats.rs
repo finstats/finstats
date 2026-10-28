@@ -1244,16 +1244,20 @@ fn language_coverage(c: &Connection, item_type: &str, id: &str) -> Result<Option
 }
 
 /// Where people open Jellyfin: the address an administrator gave, else the one FinStats connects to.
-pub(crate) fn jellyfin_base(app: &App) -> Option<String> {
-    Some(app.settings().jellyfin_public_url.trim().to_string())
-        .filter(|u| !u.is_empty())
-        .or_else(|| app.config.read().unwrap().as_ref().map(|c| c.url.clone()))
+pub(crate) fn jellyfin_base(app: &App, is_admin: bool) -> Option<String> {
+    link_base(&app.settings().jellyfin_public_url, app.config.read().unwrap().as_ref().map(|c| c.url.clone()), is_admin)
+}
+
+/// Where a link into Jellyfin points: the address given for people to open it at, else, for an administrator only, the
+/// one FinStats reads it at, which is often inside the house and shown to nobody else (`/api/outbound`, `/auth/me`).
+fn link_base(public: &str, inside: Option<String>, is_admin: bool) -> Option<String> {
+    Some(public.trim().to_string()).filter(|u| !u.is_empty()).or(inside.filter(|_| is_admin))
 }
 
 pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<String>, Query(q): Query<FilterQuery>) -> ApiResult {
     let id = db::norm_id(&id);
     let (caller, min_play) = (user.id.clone(), app.settings().min_play_s.max(120));
-    let jellyfin_base = jellyfin_base(&app);
+    let jellyfin_base = jellyfin_base(&app, user.is_admin);
     let out = scoped(&app, &user, &q, move |c, scope| {
         // A title Jellyfin does not let the caller see is not there, as one that does not exist is not.
         if !scope.access.may_see_item(c, &id)? {
@@ -2598,6 +2602,16 @@ fn server_devices(c: &Connection, viewer: &str, perms: crate::auth::Perms) -> Re
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A link into Jellyfin is made at the address an administrator gave for people to open it at. The one FinStats reads
+    /// Jellyfin at is often inside the house, and only administrators are told that one.
+    #[test]
+    fn a_link_into_jellyfin_uses_its_inside_address_only_for_an_administrator() {
+        let inside = Some("http://192.168.1.10:8096".to_string());
+        assert_eq!(link_base(" https://jf.example.com ", inside.clone(), false).as_deref(), Some("https://jf.example.com"));
+        assert_eq!(link_base("", inside.clone(), true).as_deref(), Some("http://192.168.1.10:8096"));
+        assert_eq!(link_base("", inside, false), None);
+    }
 
     fn conn() -> Connection {
         let c = Connection::open_in_memory().unwrap();
