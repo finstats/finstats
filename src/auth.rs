@@ -24,6 +24,9 @@ use crate::jellyfin::{self, AuthError};
 use crate::state::{ApiError, ApiResult, App, JfConfig};
 
 const COOKIE_NAME: &str = "finstats_session";
+/// The session's cookie on https: the `__Host-` prefix makes a browser take it only from this host, Secure, for the whole
+/// path, so a host on a sibling name cannot set one of its own for this one to read first.
+const HOST_COOKIE_NAME: &str = "__Host-finstats_session";
 const SESSION_TTL_S: i64 = 30 * 86_400;
 /// An API key is `fs_` and 64 hex characters: recognisable in a log, greppable in a leak, and a token
 /// of any other shape never reaches the database.
@@ -172,11 +175,26 @@ fn hash_token(token: &str) -> String {
     hex::encode(Sha256::digest(token.as_bytes()))
 }
 
+/// The session a browser presents: the `__Host-` cookie when there is one; else the plain one, unless there are two of
+/// those, which only another host's cookie for the whole domain beside ours could make, and then neither.
 pub(crate) fn cookie_token(headers: &HeaderMap) -> Option<String> {
-    headers.get_all(COOKIE).iter().filter_map(|v| v.to_str().ok()).flat_map(|v| v.split(';')).find_map(|kv| {
-        let (k, v) = kv.trim().split_once('=')?;
-        (k == COOKIE_NAME && !v.is_empty()).then(|| v.to_string())
-    })
+    let named = |name: &str| -> Vec<String> {
+        headers
+            .get_all(COOKIE)
+            .iter()
+            .filter_map(|v| v.to_str().ok())
+            .flat_map(|v| v.split(';'))
+            .filter_map(|kv| {
+                let (k, v) = kv.trim().split_once('=')?;
+                (k == name && !v.is_empty()).then(|| v.to_string())
+            })
+            .collect()
+    };
+    if let Some(own) = named(HOST_COOKIE_NAME).into_iter().next() {
+        return Some(own);
+    }
+    let plain = named(COOKIE_NAME);
+    (plain.len() == 1).then(|| plain.into_iter().next()).flatten()
 }
 
 /// `Authorization: Bearer <key>`: `None` when there is no such header at all (the cookie may be there),
@@ -432,11 +450,20 @@ impl FromRequestParts<App> for JellyfinAdmin {
 }
 
 fn session_cookie(token: &str, max_age: i64, secure: bool) -> HeaderValue {
-    let mut c = format!("{COOKIE_NAME}={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}");
+    let name = if secure { HOST_COOKIE_NAME } else { COOKIE_NAME };
+    let mut c = format!("{name}={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}");
     if secure {
         c.push_str("; Secure");
     }
     HeaderValue::from_str(&c).expect("cookie is ascii")
+}
+
+/// The session's cookie set, and on https the plain one from before the `__Host-` name cleared beside it.
+fn set_session(resp: &mut Response, token: &str, max_age: i64, secure: bool) {
+    resp.headers_mut().append(SET_COOKIE, session_cookie(token, max_age, secure));
+    if secure {
+        resp.headers_mut().append(SET_COOKIE, session_cookie("", 0, false));
+    }
 }
 
 /// Whether the page that signs in is on https: its proxy says so, or the browser does in the `Origin` every sign-in (a POST)
@@ -528,7 +555,7 @@ async fn start_session(
     app.live_feed.recheck();
     let body = Json(json!({ "user": user_json(app, user_id, user_name, is_admin, perms).await }));
     let mut resp = body.into_response();
-    resp.headers_mut().insert(SET_COOKIE, session_cookie(&token, SESSION_TTL_S, is_https(headers)));
+    set_session(&mut resp, &token, SESSION_TTL_S, is_https(headers));
     Ok(resp)
 }
 
@@ -661,7 +688,7 @@ pub async fn logout(State(app): State<App>, ConnectInfo(peer): ConnectInfo<Socke
         }
     }
     let mut resp = Json(json!({ "ok": true })).into_response();
-    resp.headers_mut().insert(SET_COOKIE, session_cookie("", 0, is_https(&headers)));
+    set_session(&mut resp, "", 0, is_https(&headers));
     Ok(resp)
 }
 
@@ -1130,6 +1157,24 @@ mod key_tests {
         assert!(resolve_key_in(&c, &open(), &key, 1000).unwrap().is_none(), "disabled in Jellyfin");
         c.execute_batch("UPDATE users SET is_disabled = 0, removed = 1 WHERE id = 'u2'").unwrap();
         assert!(resolve_key_in(&c, &open(), &key, 1000).unwrap().is_none(), "removed from Jellyfin");
+    }
+
+    /// A host on a sibling name may set a cookie for the whole domain, sent first: a victim then worked inside the
+    /// attacker's account, adding their webhooks and keys to it. On https the session is a `__Host-` cookie, which only
+    /// this host can set, and it wins; two cookies of the plain name are one too many to choose between.
+    #[test]
+    fn a_cookie_another_host_could_have_set_does_not_win() {
+        let with = |cookies: &'static str| {
+            let mut h = HeaderMap::new();
+            h.insert(COOKIE, HeaderValue::from_static(cookies));
+            cookie_token(&h)
+        };
+        assert_eq!(with("finstats_session=tossed; __Host-finstats_session=mine").as_deref(), Some("mine"));
+        assert_eq!(with("finstats_session=tossed; finstats_session=mine"), None);
+        assert_eq!(with("finstats_session=mine").as_deref(), Some("mine"), "plain http, and sessions from before");
+        let set = session_cookie("t", 60, true);
+        assert!(set.to_str().unwrap().starts_with("__Host-finstats_session=t; Path=/;") && set.to_str().unwrap().contains("Secure"));
+        assert!(session_cookie("t", 60, false).to_str().unwrap().starts_with("finstats_session=t;"));
     }
 
     #[test]
