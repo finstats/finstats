@@ -65,9 +65,10 @@ export default {
       mount(body,
         toggleRow(store, { key: 'public_ip_lookup', label: t('settings.network.lookup'), onSaved: paint,
           help: t('settings.network.lookup_help') }),
-        settingRow({ id: 'known-home', label: t('settings.network.known'), help: t('settings.network.known_help'),
-          control: [h('div', { class: 'home-known' }, list, s.public_ip_lookup ? h('div', { class: 'form-actions' }, lookup) : null, lookupErr)] }),
-        form,
+        // The household's addresses are network details, and calling one home decides which alerts are raised.
+        can('see_network') ? settingRow({ id: 'known-home', label: t('settings.network.known'), help: t('settings.network.known_help'),
+          control: [h('div', { class: 'home-known' }, list, s.public_ip_lookup ? h('div', { class: 'form-actions' }, lookup) : null, lookupErr)] }) : null,
+        can('see_network') && can('see_everyone') ? form : null,
         h('p', { class: 'fui-field__help fui-setting-row__foot' }, services.length ? t('settings.network.foot', { services: new Intl.ListFormat(lang(), { type: 'disjunction' }).format(services) }) : t('settings.network.foot_none')));
     };
     paint();

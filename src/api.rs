@@ -642,11 +642,16 @@ fn settings_json(app: &App) -> Value {
 }
 
 /// The settings plus what is only read: the home addresses FinStats knows, and who it would ask.
-async fn settings_response(app: &App) -> ApiResult {
+async fn settings_response(app: &App, user: &AuthUser) -> ApiResult {
     let mut v = settings_json(app);
     let known = app.db.call(|c| crate::network::list(c)).await?;
     if let Some(obj) = v.as_object_mut() {
-        obj.insert("known_home_addresses".into(), json!(known));
+        // The household's public address and the others called home are network details.
+        if user.perms.see_network {
+            obj.insert("known_home_addresses".into(), json!(known));
+        } else {
+            obj.remove("home_addresses");
+        }
         // Hosts only: the address in FINSTATS_PUBLIC_IP_URL is the operator's, and may carry a token.
         obj.insert("public_ip_services".into(), json!(crate::network::services().iter().map(|u| crate::outbound::host_of(u)).collect::<Vec<_>>()));
         obj.insert("geoip".into(), security::status_json(app));
@@ -654,18 +659,18 @@ async fn settings_response(app: &App) -> ApiResult {
     Ok(Json(v))
 }
 
-async fn get_settings(State(app): State<App>, Manager(_): Manager) -> ApiResult {
-    settings_response(&app).await
+async fn get_settings(State(app): State<App>, Manager(user): Manager) -> ApiResult {
+    settings_response(&app, &user).await
 }
 
 /// Ask a public service for this network's address, now, because somebody pressed the button.
 /// It is the only thing that asks after the first answer: there is no timer behind this.
-async fn lookup_public_ip(State(app): State<App>, Manager(_): Manager) -> ApiResult {
+async fn lookup_public_ip(State(app): State<App>, Manager(user): Manager) -> ApiResult {
     if !app.settings().public_ip_lookup {
         return Err(ApiError::bad_request(i18n::t("server.api.lookup_off", &[])));
     }
     crate::network::refresh(&app).await;
-    settings_response(&app).await
+    settings_response(&app, &user).await
 }
 
 async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch): Json<Value>) -> ApiResult {
@@ -685,7 +690,11 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
                     target.insert(k.clone(), v.clone());
                 }
             }
-            *s = serde_json::from_value(merged).map_err(|e| ApiError::bad_request(i18n::t("server.api.invalid_settings", &[("error", e.to_string().into())])))?;
+            let next: Settings = serde_json::from_value(merged).map_err(|e| ApiError::bad_request(i18n::t("server.api.invalid_settings", &[("error", e.to_string().into())])))?;
+            if Changer::of(&user).refused(&serde_json::to_value(&*s).map_err(anyhow::Error::from)?, &serde_json::to_value(&next).map_err(anyhow::Error::from)?) {
+                return Err(ApiError::forbidden());
+            }
+            *s = next;
             Ok(())
         })
         .await?;
@@ -722,7 +731,7 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
     if !changed.is_empty() {
         crate::audit::record(&app, crate::audit::Entry::new("setting_changed", crate::audit::Actor::from(&user)).detail(json!({ "changed": changed })));
     }
-    settings_response(&app).await
+    settings_response(&app, &user).await
 }
 
 async fn get_tasks(State(app): State<App>, Manager(_): Manager) -> ApiResult {
@@ -767,6 +776,9 @@ fn time_zone() -> String {
 /// `PUT /api/tasks/{id}/triggers` with `{"triggers": [...]}`: the job's own schedule. An empty list means by hand only.
 async fn put_triggers(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>, Json(body): Json<Value>) -> ApiResult {
     let Some(id) = crate::state::TASK_IDS.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
+    if !user.is_admin && ADMIN_SCHEDULES.contains(&id) {
+        return Err(ApiError::forbidden());
+    }
     let triggers: Vec<crate::schedule::Trigger> =
         serde_json::from_value(body["triggers"].clone()).map_err(|e| ApiError::bad_request(i18n::t("server.api.invalid_triggers", &[("error", e.to_string().into())])))?;
     crate::schedule::validate(id, &triggers).map_err(ApiError::bad_request)?;
@@ -777,6 +789,9 @@ async fn put_triggers(State(app): State<App>, Manager(user): Manager, Path(id): 
 /// `DELETE /api/tasks/{id}/triggers`: back to the job's defaults.
 async fn reset_triggers(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>) -> ApiResult {
     let Some(id) = crate::state::TASK_IDS.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
+    if !user.is_admin && ADMIN_SCHEDULES.contains(&id) {
+        return Err(ApiError::forbidden());
+    }
     save_schedule(&app, &user, id, |s| _ = s.schedules.remove(id), json!({ "reset": true })).await
 }
 
@@ -826,6 +841,39 @@ async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path
 /// Settings only a Jellyfin administrator may write: who gets in, what everyone may see, the address
 /// FinStats puts in the messages it sends, and whether anything may be read without an account.
 const ACCESS_KEYS: [&str; 5] = ["allow_user_login", "default_permissions", "public_url", "public_profiles", "jellyfin_public_url"];
+
+/// Settings only an administrator changes, though a manager may send them unchanged: how many backups are kept (one,
+/// then a run of the job, unlinked every other) and the merge window (a day of rewatches merged into one play for good).
+const ADMIN_SETTINGS: [&str; 2] = ["backup_keep", "merge_window_s"];
+/// Jobs whose schedule only an administrator changes: the users read is how a disable or a demotion in Jellyfin reaches
+/// FinStats' sessions and keys, the activity log is where failed and foreign sign-ins are seen, and the backups are the
+/// administrator's own.
+const ADMIN_SCHEDULES: [&str; 3] = ["sync_users", "sync_events", "backup"];
+/// Settings that decide which security alerts are raised; changing them takes what reading those alerts takes.
+const SECURITY_SETTINGS: [&str; 3] = ["home_addresses", "travel_speed_kmh", "travel_min_km"];
+
+/// Who is changing the settings, as far as `refused` needs to know.
+struct Changer {
+    admin: bool,
+    /// May read the Security page (`see_network` and `see_everyone`).
+    security: bool,
+}
+
+impl Changer {
+    fn of(user: &AuthUser) -> Self {
+        Changer { admin: user.is_admin, security: user.perms.see_network && user.perms.see_everyone }
+    }
+
+    /// Whether going from `before` to `next` (both the whole settings blob) changes something this person may not.
+    fn refused(&self, before: &Value, next: &Value) -> bool {
+        if self.admin {
+            return false;
+        }
+        let changed = |k: &str| before.get(k) != next.get(k);
+        let schedule = |job: &str| before["schedules"].get(job) != next["schedules"].get(job);
+        ADMIN_SETTINGS.iter().any(|k| changed(k)) || ADMIN_SCHEDULES.iter().any(|j| schedule(j)) || (!self.security && SECURITY_SETTINGS.iter().any(|k| changed(k)))
+    }
+}
 
 const PERMISSION_INFO: [(&str, &str, &str); 7] = [
     ("sign_in", "Sign in", "May use FinStats and sees their own statistics and recap."),
@@ -1460,6 +1508,46 @@ mod tests {
             assert!(html.contains(r#"<meta name="darkreader-lock">"#), "{page} has no darkreader-lock");
             assert!(html.contains(r#"<meta name="color-scheme" content="light dark">"#), "{page} does not say it has both themes");
         }
+    }
+
+    #[test]
+    fn a_manager_changes_neither_what_keeps_the_history_safe_nor_what_watches_over_them() {
+        // `manage` is not an administrator's: a manager could prune every backup (keep 1, then run the job), merge a day of
+        // rewatches into one play for good, stop Jellyfin's disables and demotions reaching FinStats (the users read and the
+        // activity log by hand only) or blind the alerts they may not even read (home addresses, travel rules).
+        let base = serde_json::to_value(Settings::default()).unwrap();
+        let with = |k: &str, v: Value| {
+            let mut x = base.clone();
+            x[k] = v;
+            x
+        };
+        let (admin, security, manager) = (Changer { admin: true, security: true }, Changer { admin: false, security: true }, Changer { admin: false, security: false });
+        for next in [with("backup_keep", json!(1)), with("merge_window_s", json!(3600)), with("schedules", json!({ "sync_users": [] })), with("schedules", json!({ "backup": [] })), with("schedules", json!({ "sync_events": [] }))] {
+            assert!(manager.refused(&base, &next) && security.refused(&base, &next), "a manager changed {next}");
+            assert!(!admin.refused(&base, &next));
+        }
+        for next in [with("home_addresses", json!(["203.0.113.9"])), with("travel_speed_kmh", json!(5000)), with("travel_min_km", json!(5000))] {
+            assert!(manager.refused(&base, &next), "a manager without the Security page changed {next}");
+            assert!(!security.refused(&base, &next) && !admin.refused(&base, &next));
+        }
+        // Everything else is a manager's, and sending a value unchanged is no change.
+        for next in [with("min_play_s", json!(30)), with("schedules", json!({ "sync_libraries": [] })), base.clone()] {
+            assert!(!manager.refused(&base, &next));
+        }
+    }
+
+    #[tokio::test]
+    async fn the_settings_name_the_households_addresses_only_with_see_network() {
+        let app = crate::state::test_app();
+        app.db.call(|c| crate::network::set_manual(c, &["203.0.113.9".to_string()])).await.unwrap();
+        let reader = |see_network: bool| AuthUser {
+            id: "m".into(), name: "mallory".into(), is_admin: false, credential: crate::auth::Credential::Session, ip: None,
+            perms: crate::auth::Perms { manage: true, see_network, ..Default::default() },
+        };
+        let without = settings_response(&app, &reader(false)).await.unwrap().0;
+        assert!(without.get("known_home_addresses").is_none() && without.get("home_addresses").is_none(), "{without}");
+        let with = settings_response(&app, &reader(true)).await.unwrap().0;
+        assert!(with["known_home_addresses"].to_string().contains("203.0.113.9"), "{with}");
     }
 
     #[test]

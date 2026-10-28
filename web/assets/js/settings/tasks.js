@@ -5,7 +5,7 @@
 
 import { h, icon, mount, dateTime, clockTime, timeFormatChoice } from '../dom.js';
 import { api } from '../api.js';
-import { can, state } from '../state.js';
+import { can, state, isAdmin } from '../state.js';
 import { card, sk, spinner, inlineError, errorState, openModal, setBusy } from '../components.js';
 import { progressOf } from './common.js';
 import { button } from '../../finui/components/button/button.js';
@@ -138,6 +138,10 @@ function listView(slot, store) {
 
 const zoneWords = (store) => (store.tasks.time_zone ? tr('settings.tasks.zone', { zone: store.tasks.time_zone }) : tr('settings.tasks.zone_unknown'));
 
+// Jobs whose schedule only an administrator changes (the server's `ADMIN_SCHEDULES`): the users read carries Jellyfin's
+// disables to FinStats, the activity log its sign-ins, and the backups are the administrator's own.
+const ADMIN_SCHEDULES = ['sync_users', 'sync_events', 'backup'];
+
 // ---------------------------------------------------------------- one job
 function taskView(slot, store, id) {
   const body = h('div', { class: 'stack' }, sk.rows(3));
@@ -174,9 +178,10 @@ function taskView(slot, store, id) {
       mount(body, status, h('p', { class: 'fui-field__help' }, ...tParts('settings.tasks.needs_file', { where: h('a', { href }, where) })));
       return;
     }
-    const add = button({ variant: 'primary', type: 'button' }, icon('plus', 13), tr('settings.tasks.add_trigger'));
-    add.addEventListener('click', () => addDialog(t, (trigger) => save([...t.triggers, trigger])));
-    const reset = t.custom ? button({ variant: 'ghost', type: 'button' }, tr('settings.tasks.reset')) : null;
+    const mine = isAdmin() || !ADMIN_SCHEDULES.includes(id);
+    const add = mine ? button({ variant: 'primary', type: 'button' }, icon('plus', 13), tr('settings.tasks.add_trigger')) : null;
+    if (add) add.addEventListener('click', () => addDialog(t, (trigger) => save([...t.triggers, trigger])));
+    const reset = mine && t.custom ? button({ variant: 'ghost', type: 'button' }, tr('settings.tasks.reset')) : null;
     if (reset) reset.addEventListener('click', async () => {
       setBusy(reset, true, tr('settings.tasks.resetting')); err = null;
       try { await api.del(`/tasks/${id}/triggers`); } catch (e) { err = e.message; }
@@ -185,8 +190,8 @@ function taskView(slot, store, id) {
     const list = t.triggers.length
       ? h('ul', { class: 'trigger-list', id: 'task-triggers' }, t.triggers.map((g, i) => {
         const words = triggerWords(g);
-        const remove = button({ variant: 'icon', class: 'trigger-remove', type: 'button', 'aria-label': tr('settings.tasks.remove_aria', { trigger: words }), title: tr('settings.tasks.remove') }, icon('minus', 14));
-        remove.addEventListener('click', () => { remove.disabled = true; save(t.triggers.filter((_, j) => j !== i)); });
+        const remove = mine ? button({ variant: 'icon', class: 'trigger-remove', type: 'button', 'aria-label': tr('settings.tasks.remove_aria', { trigger: words }), title: tr('settings.tasks.remove') }, icon('minus', 14)) : null;
+        if (remove) remove.addEventListener('click', () => { remove.disabled = true; save(t.triggers.filter((_, j) => j !== i)); });
         return h('li', { class: 'trigger-row' }, h('span', { class: 'trigger-what' }, words),
           g.limit_s ? h('span', { class: 'trigger-limit muted' }, tr('settings.tasks.stops_after', { time: limitWords(g.limit_s) })) : null, remove);
       }))

@@ -195,7 +195,7 @@ impl Settings {
         check("active_interval_s", self.active_interval_s, 1, 60)?;
         check("idle_interval_s", self.idle_interval_s, 1, 60)?;
         check("sync_interval_h", self.sync_interval_h, 1, 168)?;
-        check("merge_window_s", self.merge_window_s, 0, 86_400)?;
+        check("merge_window_s", self.merge_window_s, 0, 3_600)?;
         check("group_window_s", self.group_window_s, 5, 600)?;
         check("min_play_s", self.min_play_s, 0, 3_600)
     }
@@ -549,6 +549,15 @@ mod tests {
         assert!(with("backup", vec![]).is_ok(), "no triggers: by hand only");
         assert!(with("import", vec![Trigger::new(When::Startup)]).is_err());
         assert!(with("backup", vec![Trigger::new(When::Interval { every_s: 1 })]).is_err());
+    }
+
+    #[test]
+    fn a_restart_is_merged_within_an_hour_at_most() {
+        // Plays the same person restarts on the same device within the window become one row, and imports skip what
+        // falls within it of another tracker's: a day merged every rewatch for good. The gaps measured are under ten minutes.
+        let with = |s: i64| Settings { merge_window_s: s, ..Settings::default() }.validate();
+        assert!(with(3600).is_ok());
+        assert!(with(3601).is_err());
     }
 
     #[test]

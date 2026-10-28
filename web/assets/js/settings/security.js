@@ -53,7 +53,8 @@ export default {
             ? t('settings.security.scheduled', { triggers: task.triggers.map(triggerWords).join(', ') })
             : t('settings.security.not_scheduled'),
           control: button({ size: 'sm', href: '/settings/tasks/geoip' }, icon('clock', 13), t('settings.security.schedule')) }),
-        numberForm(store, TRAVEL_FIELDS, 'travel-err'));
+        // The rules decide which alerts are raised, so they are changed by whoever may read them.
+        can('see_network') && can('see_everyone') ? numberForm(store, TRAVEL_FIELDS, 'travel-err') : null);
     };
     paint();
     store.onTasks(() => {
