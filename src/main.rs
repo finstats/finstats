@@ -58,7 +58,6 @@ mod upgrade;
 mod watchlist;
 mod welcome;
 
-use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -450,6 +449,7 @@ async fn serve_http(listener: tokio::net::TcpListener, app: axum::Router, limits
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::net::SocketAddr;
 
     fn parse(args: &[&str]) -> Result<Command> {
         command(&args.iter().map(|a| a.to_string()).collect::<Vec<_>>())

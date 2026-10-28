@@ -1279,7 +1279,7 @@ mod tests {
         let peer: SocketAddr = "192.0.2.7:4000".parse().unwrap();
         for name in ["bob", "mallory"] {
             let body = Json(LoginBody { username: name.into(), password: "x".into() });
-            let err = login(State(app.clone()), ConnectInfo(peer), HeaderMap::new(), body).await.err().expect("refused");
+            let err = login(State(app.clone()), ConnectInfo(peer), HeaderMap::new(), body).await.expect_err("refused");
             assert_eq!((err.0, err.1), (StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.wrong_password", &[])), "{name}");
         }
         let asked = tokio::time::timeout(std::time::Duration::from_millis(50), jellyfin.accept()).await;
