@@ -173,11 +173,24 @@ fn entry_json(e: &Entry) -> Value {
     })
 }
 
-/// The agenda for one viewer. `subject` is whose shows "you follow" refers to; `everyone` adds who else does.
-pub fn upcoming_json(conn: &Connection, days: i64, subject: &str, everyone: bool, mine: bool) -> Result<Vec<Value>> {
+/// Whether an entry may be on the agenda of somebody with `access` (`access.rs`): not one for a title in the library that
+/// Jellyfin hides from them. A title not in the library yet belongs to no library, and is Sonarr's or Radarr's to tell.
+pub fn seen_by(conn: &Connection, access: &crate::access::Access, e: &Entry) -> Result<bool> {
+    match &e.item_id {
+        Some(id) => access.may_see_item(conn, id),
+        None => Ok(true),
+    }
+}
+
+/// The agenda for one viewer, of what `access` may see. `subject` is whose shows "you follow" refers to; `everyone` adds
+/// who else does.
+pub fn upcoming_json(conn: &Connection, days: i64, subject: &str, everyone: bool, mine: bool, access: &crate::access::Access) -> Result<Vec<Value>> {
     let follows = followers(conn)?;
     let mut out = vec![];
     for e in entries(conn, days, None)? {
+        if !seen_by(conn, access, &e)? {
+            continue;
+        }
         let who = e.tvdb_id.filter(|_| e.kind == "episode").and_then(|t| follows.get(&t));
         let you = who.is_some_and(|w| w.contains_key(subject));
         if mine && !you {
@@ -229,7 +242,7 @@ pub async fn upcoming(State(app): State<App>, user: AuthUser, Query(q): Query<Up
     let subject = pinned_user(&user, q.user_id.as_deref()).unwrap_or_else(|| user.id.clone());
     let (everyone, mine) = (user.perms.see_everyone, q.mine.unwrap_or(false));
     let who = subject.clone();
-    let list = app.db.call(move |c| upcoming_json(c, days, &who, everyone, mine)).await?;
+    let list = app.db.call(move |c| upcoming_json(c, days, &who, everyone, mine, &crate::access::Access::for_user(c, &user)?)).await?;
     Ok(Json(json!({ "days": days, "user_id": subject, "entries": list })))
 }
 
@@ -726,13 +739,34 @@ mod tests {
         );
     }
 
+    /// FinStats follows Jellyfin: what is coming for a title in a library Jellyfin keeps somebody out of is not on their
+    /// agenda. What is not in the library yet belongs to no library, and stays.
+    #[test]
+    fn the_agenda_leaves_out_what_comes_for_a_title_jellyfin_hides_from_the_reader() {
+        let c = conn();
+        add(&c, 1, "episode", 5, "air", 2, Some(370001), None, false);
+        add(&c, 3, "movie", 7, "digital", 3, None, Some(990001), false);
+        add(&c, 3, "movie", 8, "digital", 4, None, Some(990099), false);
+        link(&c).unwrap();
+        c.execute_batch(
+            "UPDATE items SET library_id = 'adult' WHERE type = 'Series';
+             UPDATE items SET library_id = 'films' WHERE type = 'Movie';
+             INSERT INTO users(id, name, is_admin, updated_at, access_all, access_libraries) VALUES ('kid', 'kid', 0, 0, 0, '[\"films\"]');",
+        )
+        .unwrap();
+        let kid = crate::access::Access::of(&c, "kid", false).unwrap();
+        let kinds = |a: &crate::access::Access| -> Vec<String> { upcoming_json(&c, 14, "kid", false, false, a).unwrap().iter().map(|e| e["kind"].as_str().unwrap().to_string()).collect() };
+        assert_eq!(kinds(&crate::access::Access::everything()), ["episode", "movie", "movie"]);
+        assert_eq!(kinds(&kid), ["movie", "movie"], "the show is in a library kept from them; a film not here yet is nobody's");
+    }
+
     #[test]
     fn an_entry_names_its_title_by_its_ids_so_a_watchlist_can_hold_one_not_here_yet() {
         let c = conn();
         add(&c, 1, "episode", 5, "air", 2, Some(370001), None, false);
         add(&c, 3, "movie", 7, "digital", 3, None, Some(990001), false);
         link(&c).unwrap();
-        let list = upcoming_json(&c, 14, "ua", false, false).unwrap();
+        let list = upcoming_json(&c, 14, "ua", false, false, &crate::access::Access::everything()).unwrap();
         assert_eq!((list[0]["tvdb_id"].clone(), list[1]["tmdb_id"].clone(), list[1]["tvdb_id"].clone()), (json!(370001), json!(990001), Value::Null));
     }
 
@@ -753,18 +787,18 @@ mod tests {
             old = now - 400 * 86_400
         ))
         .unwrap();
-        let admin = upcoming_json(&c, 14, "ua", true, false).unwrap();
+        let admin = upcoming_json(&c, 14, "ua", true, false, &crate::access::Access::everything()).unwrap();
         assert_eq!((admin[0]["you_follow"].clone(), admin[0]["followers"].clone(), admin[0]["follower_names"].clone()), (json!(true), json!(2), json!(["alice", "bob"])));
         assert_eq!(admin[1]["followers"], json!(0), "nobody follows a film");
 
-        let plain = upcoming_json(&c, 14, "ub", false, false).unwrap();
+        let plain = upcoming_json(&c, 14, "ub", false, false, &crate::access::Access::everything()).unwrap();
         assert_eq!(plain[0]["you_follow"], json!(true));
         for e in &plain {
             assert!(e.get("followers").is_none() && e.get("follower_names").is_none(), "a count is a name on a small server: {e}");
             assert!(!e.to_string().contains("alice"));
         }
-        assert_eq!(upcoming_json(&c, 14, "uc", false, true).unwrap().len(), 0, "carol stopped watching long ago");
-        assert_eq!(upcoming_json(&c, 14, "ub", false, true).unwrap().len(), 1, "only what bob follows: no films");
+        assert_eq!(upcoming_json(&c, 14, "uc", false, true, &crate::access::Access::everything()).unwrap().len(), 0, "carol stopped watching long ago");
+        assert_eq!(upcoming_json(&c, 14, "ub", false, true, &crate::access::Access::everything()).unwrap().len(), 1, "only what bob follows: no films");
 
         // The show's own page: its episodes through either copy, and never a word about people.
         let page = upcoming_for_item(&c, "s-hd").unwrap();

@@ -167,9 +167,23 @@ fn truthy(v: Option<&str>) -> bool {
 /// One person's agenda as a calendar, `days` ahead: the one builder the feed and the export both send. It names nobody,
 /// by construction (`entries_for`), whoever it is for.
 /// `own`: the agenda is its reader's own. Somebody else's, exported into an administrator's calendar, is not "You".
-async fn agenda(app: &App, days: i64, subject: String, mine: bool, own: bool) -> anyhow::Result<String> {
+/// `reader` is who the calendar is for, whose access (`access.rs`) decides what is on it.
+async fn agenda(app: &App, days: i64, subject: String, mine: bool, own: bool, reader: &AuthUser) -> anyhow::Result<String> {
     let public_url = app.settings().public_url.clone();
-    let rows = app.db.call(move |c| crate::pipeline::entries_for(c, days, &subject, mine)).await?;
+    let (reader_id, reader_admin) = (reader.id.clone(), reader.is_admin);
+    let rows = app
+        .db
+        .call(move |c| {
+            let access = crate::access::Access::of(c, &reader_id, reader_admin)?;
+            let mut kept = vec![];
+            for (e, you) in crate::pipeline::entries_for(c, days, &subject, mine)? {
+                if crate::pipeline::seen_by(c, &access, &e)? {
+                    kept.push((e, you));
+                }
+            }
+            Ok(kept)
+        })
+        .await?;
     let now = db::now();
     let events: Vec<String> = rows.iter().map(|(e, you)| vevent(e, now, &public_url, *you && own)).collect();
     Ok(calendar(&events))
@@ -178,7 +192,7 @@ async fn agenda(app: &App, days: i64, subject: String, mine: bool, own: bool) ->
 /// `GET /api/calendar.ics?key=&days=&mine=`: the key's owner's agenda, as a calendar.
 pub async fn feed(State(app): State<App>, CalendarKey(user): CalendarKey, Query(q): Query<FeedQuery>) -> ApiResult<Response> {
     let days = q.days.unwrap_or(90).clamp(1, 90);
-    let body = agenda(&app, days, user.id.clone(), truthy(q.mine.as_deref()), true).await?;
+    let body = agenda(&app, days, user.id.clone(), truthy(q.mine.as_deref()), true, &user).await?;
     Ok(Response::builder()
         .header(CONTENT_TYPE, "text/calendar; charset=utf-8")
         .header(CACHE_CONTROL, "private, no-store")
@@ -194,7 +208,7 @@ pub async fn export(State(app): State<App>, user: AuthUser, Query(q): Query<crat
     let days = q.days.unwrap_or(14).clamp(1, 90);
     let subject = crate::stats::pinned_user(&user, q.user_id.as_deref()).unwrap_or_else(|| user.id.clone());
     let own = subject == user.id;
-    let body = agenda(&app, days, subject, q.mine.unwrap_or(false), own).await?;
+    let body = agenda(&app, days, subject, q.mine.unwrap_or(false), own, &user).await?;
     Ok(Response::builder()
         .header(CONTENT_TYPE, "text/calendar; charset=utf-8")
         .header(CACHE_CONTROL, "private, no-store")
