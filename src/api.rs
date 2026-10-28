@@ -1157,7 +1157,7 @@ async fn set_backup_deleted(State(app): State<App>, JellyfinAdmin(user): Jellyfi
     let kind = if deleted { "backup_deleted" } else { "backup_undeleted" };
     audit::record(&app, audit::Entry::new(kind, Actor::from(&user)).target(name.clone()));
     let deleted_at = deleted.then_some(at);
-    Ok(Json(json!({ "ok": true, "name": name, "deleted": deleted, "deleted_at": deleted_at, "purge_at": deleted_at.map(|at| at + crate::trash::KEEP_S) })))
+    Ok(Json(json!({ "ok": true, "name": name, "deleted": deleted, "deleted_at": deleted_at, "purge_at": deleted_at.map(|at| at.saturating_add(crate::trash::KEEP_S)) })))
 }
 
 /// How an import ended, for the audit log; written from the worker thread.

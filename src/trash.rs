@@ -26,7 +26,7 @@ pub struct PlayState {
 impl PlayState {
     /// When the trash lets go of it for good.
     pub fn purge_at(&self) -> Option<i64> {
-        self.deleted_at.map(|at| at + KEEP_S)
+        self.deleted_at.map(|at| at.saturating_add(KEEP_S))
     }
 }
 

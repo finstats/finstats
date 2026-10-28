@@ -274,7 +274,7 @@ pub fn trashed(dir: &Path) -> Vec<Value> {
             let (name, deleted_at) = in_trash(&file)?;
             let meta = e.metadata().ok()?;
             let made = meta.modified().ok()?.duration_since(std::time::UNIX_EPOCH).ok()?.as_secs() as i64;
-            Some((deleted_at, json!({ "name": name, "size_bytes": meta.len(), "created_at": made, "deleted_at": deleted_at, "purge_at": deleted_at + crate::trash::KEEP_S })))
+            Some((deleted_at, json!({ "name": name, "size_bytes": meta.len(), "created_at": made, "deleted_at": deleted_at, "purge_at": deleted_at.saturating_add(crate::trash::KEEP_S) })))
         })
         .collect();
     out.sort_by_key(|(at, _)| std::cmp::Reverse(*at));
@@ -377,6 +377,44 @@ fn at_a_real_time(row: &Map<String, Value>, columns: &[&str]) -> bool {
     columns.iter().all(|c| row.get(*c).and_then(Value::as_i64).is_some_and(|at| (crate::playback::IMPORTED_SINCE..=until).contains(&at)))
 }
 
+/// The furthest into a title a restored play's place (position, runtime, where it began) may be: a week.
+const PLACE_MAX_S: i64 = 7 * 86_400;
+/// The most pauses or seeks a restored play may count.
+const COUNT_MAX: i64 = 1_000_000;
+
+/// Keep a restored play's numbers to what a play can hold, its two ends already checked: no more time watched or
+/// paused than it lasted, no place in it past [`PLACE_MAX_S`], no count past [`COUNT_MAX`] or below nothing, and no
+/// deletion after `now` (one in years to come is never purged). Every chart sums them, and one huge number overflowed.
+fn bound_play(row: &mut Map<String, Value>, now: i64) {
+    let span = match (row.get("started_at").and_then(Value::as_i64), row.get("ended_at").and_then(Value::as_i64)) {
+        (Some(s), Some(e)) => e.saturating_sub(s).max(0),
+        _ => 0,
+    };
+    // A number that is not a whole one (or not a number) is read as nothing: 0, or for a deletion, none.
+    let mut clamp = |col: &str, max: i64| match row.get(col) {
+        None | Some(Value::Null) => {}
+        Some(v) => {
+            let n = v.as_i64().or_else(|| v.as_f64().filter(|f| f.is_finite()).map(|f| f as i64));
+            let fixed = match n {
+                Some(n) => json!(n.clamp(0, max)),
+                None if col == "deleted_at" => Value::Null,
+                None => json!(0),
+            };
+            row.insert(col.into(), fixed);
+        }
+    };
+    for col in ["duration_s", "paused_s"] {
+        clamp(col, span);
+    }
+    for col in ["position_s", "runtime_s", "start_position_s"] {
+        clamp(col, PLACE_MAX_S);
+    }
+    for col in ["pause_count", "seek_count"] {
+        clamp(col, COUNT_MAX);
+    }
+    clamp("deleted_at", now);
+}
+
 /// Whether the library has this title.
 fn in_library(conn: &Connection, id: Option<&str>) -> Result<bool> {
     Ok(conn.prepare_cached("SELECT EXISTS(SELECT 1 FROM items WHERE id = ?1)")?.query_row([id], |r| r.get(0))?)
@@ -453,6 +491,7 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
             "playbacks" if !at_a_real_time(row, &["started_at", "ended_at"]) || row.get("started_at").and_then(Value::as_i64) > row.get("ended_at").and_then(Value::as_i64) => {}
             "playbacks" => {
                 let mut row = row.clone();
+                bound_play(&mut row, db::now());
                 // A play FinStats saw itself keeps its source, and an id that says it was restored: only a play this
                 // install saw opens its item's picture or stands for a duplicate (`playback::restored_id`).
                 let source = row.get("source").and_then(Value::as_str).unwrap_or(crate::collector::SOURCE).to_string();
@@ -499,6 +538,11 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                 }
                 let mut row = row.clone();
                 row.insert("playback_id".into(), json!(new_id));
+                for col in ["position_s", "from_s"] {
+                    if let Some(n) = row.get(col).and_then(Value::as_i64) {
+                        row.insert(col.into(), json!(n.clamp(0, PLACE_MAX_S)));
+                    }
+                }
                 if insert_row(&tx, "playback_events", &known["playback_events"], &row, &["id"], "INSERT")? {
                     *kept += 1;
                     res.events += 1;
@@ -1119,6 +1163,26 @@ mod tests {
         let left: String = c.query_row("SELECT COALESCE(source_id, 'live') FROM playbacks WHERE item_id = 'i1'", [], |r| r.get(0)).unwrap();
         assert_eq!(left, "jellystat:1", "the older import stands for the evening, not the restored row");
         assert_eq!(restore(&target, &file, false, None).unwrap().plays_imported, 0, "restoring again doubled a play");
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// A restored play's numbers are kept to what a play can hold: no more time watched or paused than it lasted, no
+    /// place in it past a week, and no deletion in the future. Summed on every chart, one huge number overflowed.
+    #[test]
+    fn a_restored_play_s_numbers_are_kept_to_what_a_play_can_hold() {
+        let now = db::now();
+        let (tmp, target, file) = restoring("backup-numbers", &[
+            json!({ "finstats_backup": FORMAT, "app_version": "2.3.1" }),
+            json!({ "t": "playbacks", "r": { "id": 1, "source": "jellystat", "source_id": "jellystat:1", "user_id": "u1", "user_name": "alice", "item_id": "i1",
+                "item_name": "Big Buck Bunny", "item_type": "Movie", "started_at": now - 7200, "ended_at": now - 6600, "duration_s": i64::MAX, "paused_s": -5,
+                "position_s": i64::MAX, "runtime_s": i64::MIN, "start_position_s": i64::MAX, "pause_count": i64::MAX, "seek_count": -1, "deleted_at": i64::MAX } }),
+        ]);
+        restore(&target, &file, false, None).unwrap();
+        let c = target.conn().unwrap();
+        let got: (i64, i64, i64, i64, i64, i64, i64, i64) = c.query_row("SELECT duration_s, paused_s, position_s, runtime_s, start_position_s, pause_count, seek_count, deleted_at FROM playbacks", [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?))).unwrap();
+        assert_eq!((got.0, got.1, got.2, got.3, got.4, got.5, got.6), (600, 0, PLACE_MAX_S, 0, PLACE_MAX_S, COUNT_MAX, 0));
+        assert!(got.7 <= db::now(), "a deletion in years to come is never purged");
         let _ = std::fs::remove_dir_all(&tmp);
     }
 

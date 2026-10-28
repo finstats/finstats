@@ -786,7 +786,7 @@ fn activity_page(c: &Connection, scope: &Scope, q: ActivityQuery) -> Result<Valu
     let rows: Vec<Value> = rows_json(c, &sql, &cond.args)?
         .into_iter()
         .map(|mut m| {
-            let purge_at = m.get("deleted_at").and_then(Value::as_i64).map(|at| at + crate::trash::KEEP_S);
+            let purge_at = m.get("deleted_at").and_then(Value::as_i64).map(|at| at.saturating_add(crate::trash::KEEP_S));
             m.insert("purge_at".into(), json!(purge_at));
             decorate_play(m, scope.perms.see_network, false)
         })
