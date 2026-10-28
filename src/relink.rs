@@ -82,7 +82,7 @@ pub fn title_key(name: &str) -> String {
 fn pick(mut hits: Vec<(String, Option<i64>)>, year: Option<i64>) -> Option<String> {
     hits.sort();
     hits.dedup();
-    let near: Vec<&(String, Option<i64>)> = hits.iter().filter(|(_, y)| match (year, y) { (Some(a), Some(b)) => (a - b).abs() <= 1, _ => true }).collect();
+    let near: Vec<&(String, Option<i64>)> = hits.iter().filter(|(_, y)| match (year, y) { (Some(a), Some(b)) => a.abs_diff(*b) <= 1, _ => true }).collect();
     match near.as_slice() {
         [(id, _)] => Some(id.clone()),
         [] => None,
@@ -486,6 +486,17 @@ mod tests {
         relink_orphans(&c, 600).unwrap();
         assert_eq!(now_at(&c, "Squid Game"), "squid21");
         assert_eq!(now_at(&c, "All Quiet on the Western Front"), "quiet");
+    }
+
+    /// A year is the server's or an import's to say: one no film could have is compared without a wrap or a panic, and
+    /// re-linking runs at every start, so a panic there stopped every start.
+    #[test]
+    fn a_year_no_film_could_have_is_simply_another_year() {
+        let c = migrated();
+        c.execute("INSERT INTO items(id, type, name, production_year, updated_at) VALUES ('odd', 'Movie', 'Sintel', ?1, 1)", [i64::MIN]).unwrap();
+        orphan_film(&c, "Sintel (2010)");
+        relink_orphans(&c, 600).unwrap();
+        assert_eq!(now_at(&c, "Sintel (2010)"), "gone-Sintel (2010)");
     }
 
     /// Release years differ by a year between catalogues (Plex has Kingsman in 2014, Jellyfin in 2015); two is a remake.

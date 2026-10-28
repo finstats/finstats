@@ -182,13 +182,13 @@ pub fn take_places(files: &mut [File], gone: &[Gone]) {
     let mut taken: Vec<(usize, i64)> = vec![];
     for g in gone {
         let Some(here) = by.get(&(g.library.as_deref(), g.title.as_str())) else { continue };
-        let near = |i: &&usize| g.last_seen.is_none_or(|seen| (files[**i].added - seen).abs() <= REPLACED_WITHIN_S);
+        let near = |i: &&usize| g.last_seen.is_none_or(|seen| files[**i].added.abs_diff(seen) <= REPLACED_WITHIN_S as u64);
         if let Some(&i) = here.iter().find(near) {
             taken.push((i, g.bytes.max(0)));
         }
     }
     for (i, bytes) in taken {
-        files[i].replaced += bytes;
+        files[i].replaced = files[i].replaced.saturating_add(bytes);
     }
 }
 
@@ -239,13 +239,14 @@ fn pace(files: &[&File], now: i64) -> Pace {
 /// The same, measured from [`SETTLE_S`] after `first`, which may be earlier than any of `files` (a library's first file on
 /// another disk).
 fn pace_after(files: &[&File], first: Option<i64>, now: i64) -> Pace {
-    let since = now - GROWTH_MONTHS * MONTH_S;
-    let start = first.map_or(since, |first| since.max(first + SETTLE_S));
-    let window = now - start;
+    // Dates and sizes are the server's to say, so nothing here may wrap: a sum too large to hold is as large as one can be.
+    let since = now.saturating_sub(GROWTH_MONTHS * MONTH_S);
+    let start = first.map_or(since, |first| since.max(first.saturating_add(SETTLE_S)));
+    let window = now.saturating_sub(start);
     let young = window < MIN_WINDOW_S;
     // A file in another's place adds the difference, which a smaller one makes negative: the disk freed that.
-    let added: i64 = files.iter().filter(|f| f.added >= start).map(|f| f.bytes.max(0) - f.replaced).sum::<i64>().max(0);
-    let per_month = if young { 0 } else { (added as i128 * MONTH_S as i128 / window as i128) as i64 };
+    let added = files.iter().filter(|f| f.added >= start).fold(0i64, |a, f| a.saturating_add(f.bytes.max(0).saturating_sub(f.replaced.max(0)))).max(0);
+    let per_month = if young { 0 } else { (added as i128 * MONTH_S as i128 / window as i128).min(i64::MAX as i128) as i64 };
     let window_months = if young { 0.0 } else { (window as f64 / MONTH_S as f64 * 10.0).round() / 10.0 };
     Pace { added, per_month, window_months, young }
 }
@@ -316,8 +317,8 @@ fn disk_pace(here: &[&File], firsts: &HashMap<Option<&str>, i64>, now: i64) -> P
     }
     let grown: Vec<&Pace> = paces.iter().filter(|p| !p.young).collect();
     Pace {
-        added: grown.iter().map(|p| p.added).sum(),
-        per_month: grown.iter().map(|p| p.per_month).sum(),
+        added: grown.iter().fold(0i64, |a, p| a.saturating_add(p.added)),
+        per_month: grown.iter().fold(0i64, |a, p| a.saturating_add(p.per_month)),
         window_months: grown.iter().map(|p| p.window_months).fold(0.0, f64::max),
         young: grown.is_empty(),
     }
@@ -387,7 +388,7 @@ pub const SCAN_DUTY_PCT: i64 = 25;
 /// Jellyfin's library scan as its scheduled task reports it: how often it runs, and how long it last took.
 pub fn scan_busy(interval_s: Option<i64>, last_duration_s: Option<i64>, items: i64) -> Option<Finding> {
     let (interval, took) = (interval_s.filter(|i| *i > 0)?, last_duration_s?);
-    let duty = took * 100 / interval;
+    let duty = took.saturating_mul(100) / interval;
     let evidence = json!({ "interval_s": interval, "last_duration_s": took, "duty_pct": duty, "items": items });
     (duty >= SCAN_DUTY_PCT).then(|| Finding {
         key: "capacity:scan_busy".into(),
@@ -670,6 +671,35 @@ mod tests {
         let d = &disks(&folders, &files, NOW)[0];
         assert_eq!(d.per_month, (35 + 10 + 3) * 1_000_000_000 / GROWTH_MONTHS, "{d:?}");
         assert_eq!(library_paces(&files, NOW)["Films"].added, 48_000_000_000);
+    }
+
+    /// Sizes, dates and durations are the server's (or an import's) to say: numbers no disk or clock could have are still
+    /// added up and compared without a wrap, which read as a disk shrinking, or a panic, which stopped the recompute.
+    #[test]
+    fn numbers_no_disk_could_hold_are_counted_without_overflowing() {
+        let folders = [folder("Films", "/media/films", 3_000_000_000_000, Some("sda1"))];
+        let mut huge = [
+            file("Films", "/media/films/old.mkv", 1, 400),
+            titled(file("Films", "/media/films/a.mkv", 0, 20), "A (2001)"),
+            file("Films", "/media/films/b.mkv", 0, 20),
+        ];
+        (huge[1].bytes, huge[2].bytes) = (i64::MAX, i64::MAX);
+        take_places(&mut huge, &[gone("Films", "A (2001)", 0, Some(21)), Gone { library: Some("Films".into()), title: "A (2001)".into(), bytes: i64::MAX, last_seen: Some(i64::MIN) }]);
+        let mut more = huge.clone();
+        more[1].replaced = i64::MIN;
+        for files in [&huge[..], &more[..]] {
+            let d = &disks(&folders, files, NOW)[0];
+            assert!(d.per_month > 0, "{d:?}");
+            assert!(library_paces(files, NOW)["Films"].added > 0);
+        }
+        let mut young = [file("Films", "/media/films/d.mkv", 0, 400), file("Films", "/media/films/e.mkv", 0, 400)];
+        (young[0].added, young[1].bytes) = (NOW - MIN_WINDOW_S - SETTLE_S, i64::MAX);
+        young[1].added = NOW - 1;
+        assert!(library_paces(&young, NOW)["Films"].per_month > 0, "a month's window over the most bytes there are");
+        let mut odd = [file("Films", "/media/films/c.mkv", 1, 400)];
+        odd[0].added = i64::MIN;
+        assert!(!disks(&folders, &odd, i64::MAX).is_empty());
+        assert!(scan_busy(Some(1), Some(i64::MAX), 1).is_some());
     }
 
     /// One copy left takes one place: an HD copy replaced by an HD and a 4K one grew the disk by both new files less it.

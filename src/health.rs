@@ -449,14 +449,14 @@ fn gaps(lib: &Library) -> Vec<Finding> {
     for (&(series, season), files) in &lib.seasons {
         let mut covered = std::collections::BTreeSet::new();
         for e in files {
-            if let Some(n) = e.number {
-                // An end no episode could have (a date, an overflow) says nothing about what the file holds.
-                let end = e.number_end.filter(|&end| end >= n && end - n <= GAP_SPAN_MAX && end <= EPISODE_NUMBER_MAX).unwrap_or(n);
+            // A number no episode could have (a date, an overflow, below zero) says nothing about what the file holds.
+            if let Some(n) = e.number.filter(|n| (0..=EPISODE_NUMBER_MAX).contains(n)) {
+                let end = e.number_end.filter(|&end| end >= n && end <= EPISODE_NUMBER_MAX && end - n <= GAP_SPAN_MAX).unwrap_or(n);
                 covered.extend(n..=end);
             }
         }
         let (Some(&from), Some(&to)) = (covered.first(), covered.last()) else { continue };
-        if to > EPISODE_NUMBER_MAX || to - from > GAP_SPAN_MAX {
+        if to > EPISODE_NUMBER_MAX || to.checked_sub(from).is_none_or(|span| span > GAP_SPAN_MAX) {
             continue;
         }
         let mut missing: Vec<[i64; 2]> = vec![];
@@ -738,11 +738,15 @@ fn weigh(files: &[&Item]) -> (i64, bool, Vec<Option<Class>>) {
     for f in files {
         by_class.entry(class(f.width, f.height)).or_default().push(f.size_bytes.unwrap_or(0));
     }
-    let mut wasted = 0;
+    let mut wasted = 0i64;
     let mut twice = false;
     for sizes in by_class.values().filter(|s| s.len() > 1) {
         twice = true;
-        wasted += sizes.iter().sum::<i64>() - sizes.iter().max().copied().unwrap_or(0);
+        // Sizes are the server's to say: a sum that would not fit is as large as a number can be, never a wrap or a panic.
+        let mut sizes = sizes.clone();
+        sizes.sort_unstable();
+        sizes.pop();
+        wasted = sizes.iter().fold(wasted, |a: i64, &s| a.saturating_add(s.max(0)));
     }
     (wasted, twice, by_class.into_keys().rev().collect())
 }
@@ -788,13 +792,13 @@ fn copies(items: &[Item], lib: &Library) -> Vec<Finding> {
         slots.entry(show).or_default().entry((e.season_number(), n)).or_default().push(e);
     }
     for (show, slots) in slots {
-        let (mut twice_files, mut twice_slots, mut examples, mut wasted) = (vec![], 0, vec![], 0);
+        let (mut twice_files, mut twice_slots, mut examples, mut wasted) = (vec![], 0, vec![], 0i64);
         let (mut version_files, mut version_slots, mut version_classes) = (vec![], 0, std::collections::BTreeSet::new());
         for ((season, episode), files) in slots.into_iter().filter(|(_, f)| f.len() > 1) {
             let (w, twice, classes) = weigh(&files);
             if twice {
                 twice_slots += 1;
-                wasted += w;
+                wasted = wasted.saturating_add(w);
                 if examples.len() < COPY_EXAMPLES {
                     examples.push(json!({ "season": season, "episode": episode, "files": files.iter().map(|f| file_json(f)).collect::<Vec<_>>() }));
                 }
@@ -963,6 +967,33 @@ mod tests {
         let gaps = of(&found, "gap");
         assert_eq!(gaps.len(), 1, "the season is still read");
         assert_eq!(gaps[0].evidence["missing"], serde_json::json!([[2, 2]]));
+    }
+
+    /// A number no episode could have at the start of a file is as meaningless as one at its end: `i64::MIN` beside 10
+    /// made the span between them wrap past every check, and the loop over it ran for ever inside a pooled connection.
+    #[test]
+    fn a_season_holding_a_number_no_episode_could_have_returns_at_once_with_no_gap() {
+        let items = vec![show("lo", "Low Orbit"), episode("e1", "lo", 1, i64::MIN), episode("e2", "lo", 1, 10)];
+        assert!(of(&findings(&items), "gap").is_empty());
+        let mut ended = vec![show("lo", "Low Orbit"), episode("e1", "lo", 1, i64::MIN), episode("e2", "lo", 1, 10)];
+        ended[1].number_end = Some(i64::MAX);
+        assert!(of(&findings(&ended), "gap").is_empty());
+    }
+
+    /// Sizes are the server's to say, and two files claiming the most bytes there can be are still two files, not a crash.
+    #[test]
+    fn copies_of_impossible_sizes_are_counted_without_overflowing() {
+        let mut a = film("bbb-a", "Big Buck Bunny");
+        let mut b = film("bbb-b", "Big Buck Bunny");
+        let mut c = film("bbb-c", "Big Buck Bunny");
+        for f in [&mut a, &mut b, &mut c] {
+            f.provider_ids = [("Tmdb".to_string(), "10378".to_string())].into();
+            f.size_bytes = Some(i64::MAX);
+        }
+        let found = findings(&[a, b, c]);
+        let copies = of(&found, "copies");
+        assert_eq!(copies.len(), 1);
+        assert_eq!(copies[0].wasted_bytes, Some(i64::MAX));
     }
 
     #[test]

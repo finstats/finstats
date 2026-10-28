@@ -150,7 +150,7 @@ fn films<'a>(lib: &'a Library, m: &Missing, typed: Option<&Query>) -> Vec<(i32, 
         let Some(score) = score else { continue };
         let year = match (parsed.year, c.year) {
             (Some(a), Some(b)) if a == b => 300,
-            (Some(a), Some(b)) if (a - b).abs() == 1 => 150,
+            (Some(a), Some(b)) if a.abs_diff(b) == 1 => 150,
             _ => 0,
         };
         out.push((score + year, c));
@@ -316,6 +316,15 @@ mod tests {
         assert_eq!(first(&c, "plex:9", None).as_deref(), Some("tour005"), "an episode a guide moved into the specials of another show, by its own name");
         assert_eq!(first(&c, "plex:5", Some("jedi")).as_deref(), Some("jedi"), "and anything can be searched for");
         assert_eq!(first(&c, "plex:5", Some("nothing like it at all")), None);
+    }
+
+    /// A year no film could have is simply not the year asked for, never a wrap or a panic.
+    #[test]
+    fn a_year_no_film_could_have_is_compared_without_overflowing() {
+        let c = conn();
+        history(&c);
+        c.execute("UPDATE items SET production_year = ?1 WHERE id = 'empire'", [i64::MIN]).unwrap();
+        assert_eq!(first(&c, "plex:5", None).as_deref(), Some("empire"), "still the closest name");
     }
 
     #[test]
