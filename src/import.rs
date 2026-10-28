@@ -407,7 +407,7 @@ fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult,
                     d["Name"].as_str().unwrap_or("Season"),
                     d["SeriesId"].as_str().map(norm_id),
                     opt_str(&d["SeriesName"]),
-                    d["IndexNumber"].as_i64(),
+                    crate::playback::index_number(&d["IndexNumber"]),
                     d["archived"].as_bool().unwrap_or(false),
                 ])? as u64;
             Ok(())
@@ -428,8 +428,8 @@ fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult,
                     d["SeriesId"].as_str().map(norm_id),
                     d["SeasonId"].as_str().map(norm_id),
                     opt_str(&d["SeriesName"]),
-                    d["IndexNumber"].as_i64(),
-                    d["ParentIndexNumber"].as_i64(),
+                    crate::playback::index_number(&d["IndexNumber"]),
+                    crate::playback::index_number(&d["ParentIndexNumber"]),
                     ticks_to_s(&d["RunTimeTicks"]),
                     d["ProductionYear"].as_i64(),
                     opt_str(&d["PremiereDate"]),
@@ -437,7 +437,7 @@ fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult,
                     d["CommunityRating"].as_f64(),
                     opt_str(&d["OfficialRating"]),
                     d["archived"].as_bool().unwrap_or(false),
-                    d["IndexNumberEnd"].as_i64(),
+                    crate::playback::index_number(&d["IndexNumberEnd"]),
                 ])? as u64;
             Ok(())
         }
@@ -546,7 +546,7 @@ fn record(conn: &Connection, d: &Value) -> Result<Option<PlayRecord>> {
         season_id: d["SeasonId"].as_str().map(norm_id),
         season_number: None,
         episode_number: None,
-        started_at: ended_at - duration_s,
+        started_at: ended_at.saturating_sub(duration_s),
         ended_at,
         duration_s,
         paused_s: 0,
@@ -691,6 +691,23 @@ mod tests {
         import_row(&c, "jf_library_episodes", &row, &mut res, 300).unwrap();
         let end: Option<i64> = c.query_row("SELECT index_number_end FROM items WHERE id = 'ep1'", [], |r| r.get(0)).unwrap();
         assert_eq!(end, Some(2));
+    }
+
+    /// Jellyfin keeps a season or episode number as an `int32` and never below zero: a number past that in a file is no
+    /// number at all, or Library health counted every number between it and the next episode.
+    #[test]
+    fn an_episode_number_no_jellyfin_could_have_is_no_number() {
+        let db = Db::open_in_memory().unwrap();
+        let c = db.conn().unwrap();
+        let mut res = ImportResult::default();
+        let row = json!({ "EpisodeId": "EP-1", "Name": "Pilot", "SeriesId": "SHOW-1", "IndexNumber": i64::MIN, "IndexNumberEnd": i64::MAX, "ParentIndexNumber": -1 });
+        import_row(&c, "jf_library_episodes", &row, &mut res, 300).unwrap();
+        import_row(&c, "jf_library_seasons", &json!({ "Id": "SEASON-1", "Name": "Season 1", "SeriesId": "SHOW-1", "IndexNumber": 1i64 << 40 }), &mut res, 300).unwrap();
+        let numbers: (Option<i64>, Option<i64>, Option<i64>) =
+            c.query_row("SELECT index_number, parent_index_number, index_number_end FROM items WHERE id = 'ep1'", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap();
+        assert_eq!(numbers, (None, None, None));
+        let season: Option<i64> = c.query_row("SELECT index_number FROM items WHERE id = 'season1'", [], |r| r.get(0)).unwrap();
+        assert_eq!(season, None);
     }
 
     /// A play row as Jellystat writes one, with `extra` laid over it.

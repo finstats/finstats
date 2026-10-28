@@ -467,8 +467,8 @@ pub fn upsert_item(conn: &Connection, library_id: &str, it: &Value, now: i64) ->
         it["SeriesId"].as_str().map(norm_id),
         it["SeasonId"].as_str().map(norm_id),
         opt_str(&it["SeriesName"]),
-        it["IndexNumber"].as_i64(),
-        it["ParentIndexNumber"].as_i64(),
+        crate::playback::index_number(&it["IndexNumber"]),
+        crate::playback::index_number(&it["ParentIndexNumber"]),
         opt_str(&it["Album"]),
         opt_str(&it["AlbumArtist"]),
         ticks_to_s(&it["RunTimeTicks"]),
@@ -499,7 +499,7 @@ pub fn upsert_item(conn: &Connection, library_id: &str, it: &Value, now: i64) ->
         crate::media::track_languages(&source["MediaStreams"], "Audio"),
         crate::media::track_languages(&source["MediaStreams"], "Subtitle"),
         opt_str(&it["OriginalTitle"]),
-        it["IndexNumberEnd"].as_i64(),
+        crate::playback::index_number(&it["IndexNumberEnd"]),
     ])?;
     Ok(true)
 }
@@ -1429,6 +1429,24 @@ mod tests {
         assert_eq!(end(&c), Some(2));
         upsert_item(&c, "shows", &json!({ "Id": "e1", "Name": "Pilot", "Type": "Episode", "IndexNumber": 1 }), 200).unwrap();
         assert_eq!(end(&c), None, "a file split in two is one episode again");
+    }
+
+    /// Jellyfin keeps these numbers as an `int32`, never below zero: anything else in its answer is no number, or Library
+    /// health counted every number between it and the next episode, at every library read for good.
+    #[test]
+    fn an_episode_number_no_jellyfin_keeps_is_no_number() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        upsert_item(&c, "shows", &json!({ "Id": "e1", "Name": "Pilot", "Type": "Episode", "IndexNumber": i64::MIN, "ParentIndexNumber": 1i64 << 40, "IndexNumberEnd": -2 }), 100).unwrap();
+        let numbers: (Option<i64>, Option<i64>, Option<i64>) =
+            c.query_row("SELECT index_number, parent_index_number, index_number_end FROM items WHERE id = 'e1'", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap();
+        assert_eq!(numbers, (None, None, None));
+        upsert_item(&c, "shows", &json!({ "Id": "e1", "Name": "Pilot", "Type": "Episode", "IndexNumber": 0, "ParentIndexNumber": 2024, "IndexNumberEnd": 20240315 }), 200).unwrap();
+        let numbers: (Option<i64>, Option<i64>, Option<i64>) =
+            c.query_row("SELECT index_number, parent_index_number, index_number_end FROM items WHERE id = 'e1'", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap();
+        assert_eq!(numbers, (Some(0), Some(2024), Some(20240315)), "a season by year and an episode by date are real numbers");
     }
 
     #[test]

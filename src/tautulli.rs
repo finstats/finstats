@@ -418,15 +418,15 @@ fn session_of(r: &rusqlite::Row) -> rusqlite::Result<Session> {
         machine_id: text(13)?,
         title: text(14)?,
         show: text(15)?,
-        season: num(r, 16)?,
-        episode: num(r, 17)?,
+        season: crate::playback::bounded_index(num(r, 16)?),
+        episode: crate::playback::bounded_index(num(r, 17)?),
         year: num(r, 18)?,
         duration_ms: num(r, 19)?,
         live: num(r, 20)?.unwrap_or(0) != 0,
         decision: text(21)?,
         container: text(22)?,
         streams: Streams {
-            bitrate: num(r, 23)?.map(|kbps| kbps * 1000),
+            bitrate: num(r, 23)?.and_then(|kbps| kbps.checked_mul(1000)),
             video_codec: text(24)?,
             width: num(r, 25)?,
             height: num(r, 26)?,
@@ -448,7 +448,7 @@ fn session_of(r: &rusqlite::Row) -> rusqlite::Result<Session> {
             hw: text(40)?,
             video_decision: text(41)?,
             audio_decision: text(42)?,
-            bitrate: num(r, 43)?.map(|kbps| kbps * 1000),
+            bitrate: num(r, 43)?.and_then(|kbps| kbps.checked_mul(1000)),
         },
     })
 }
@@ -502,8 +502,10 @@ fn record(rows: &[Session], user: (&str, &str)) -> PlayRecord {
         episode_number: head.episode.filter(|_| item_type == "Episode"),
         started_at: head.started,
         ended_at: last.stopped,
-        duration_s: rows.iter().map(|s| (s.stopped - s.started - s.paused).max(0)).sum(),
-        paused_s: rows.iter().map(|s| s.paused.min((s.stopped - s.started).max(0))).sum(),
+        // Every number here is the file's, so nothing is added up into a wrap, and nothing ran longer than the viewing.
+        duration_s: rows.iter().fold(0i64, |a, s| a.saturating_add(s.stopped.saturating_sub(s.started).saturating_sub(s.paused).max(0)))
+            .min(last.stopped.saturating_sub(head.started).max(0)),
+        paused_s: rows.iter().fold(0i64, |a, s| a.saturating_add(s.paused.min(s.stopped.saturating_sub(s.started).max(0)))),
         position_s,
         runtime_s,
         client: head.product.clone(),
@@ -912,6 +914,33 @@ mod tests {
         let (item, width, height, bitrate): (String, Option<i64>, Option<i64>, Option<i64>) =
             db.conn().unwrap().query_row("SELECT item_id, width, height, bitrate FROM playbacks", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).unwrap();
         assert_eq!((item.as_str(), width, height, bitrate), ("film1", Some(1920), None, Some(8_000_000)), "the year in text still finds the film");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// Every number in the file is somebody else's: a season or episode number Jellyfin could not keep is none, and a
+    /// time, a pause or a bitrate past what an `i64` holds is never added up into a wrap or a panic.
+    #[test]
+    fn numbers_no_server_could_have_are_read_without_overflowing() {
+        let dir = temp("overflow");
+        let path = backup(&dir);
+        {
+            let c = Connection::open(&path).unwrap();
+            let first = session(&c, 0, 101, "episode", 11, "Pilot", Some(("Low Orbit", 50, 1, 1)), Some(2021), 1000, 1600, 0, 600_000, 1_800_000, "transcode");
+            let other = session(&c, 0, 101, "episode", 12, "Second", Some(("Low Orbit", 50, 1, 2)), Some(2021), 3000, 3600, 0, 600_000, 1_800_000, "transcode");
+            let second = session(&c, other, 101, "episode", 12, "Second", Some(("Low Orbit", 50, 1, 2)), Some(2021), 4000, 4100, 0, 600_000, 1_800_000, "transcode");
+            c.execute_batch(&format!(
+                "UPDATE session_history_metadata SET media_index = {min}, parent_media_index = {big} WHERE id = {first};
+                 UPDATE session_history SET started = {min}, stopped = {max}, paused_counter = {max} WHERE id = {second};
+                 UPDATE session_history_media_info SET bitrate = {max}, stream_bitrate = {max} WHERE id = {first};",
+                min = i64::MIN, max = i64::MAX, big = 1i64 << 40
+            ))
+            .unwrap();
+        }
+        let db = finstats(&dir);
+        run(&db, &path, &[wire(101, "ja")], None).unwrap();
+        let plays: Vec<(Option<i64>, Option<i64>)> =
+            db.conn().unwrap().prepare("SELECT season_number, episode_number FROM playbacks").unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(plays, [(None, None)], "the viewing from before any server ran is not imported, and the other has no numbers");
         let _ = std::fs::remove_dir_all(dir);
     }
 

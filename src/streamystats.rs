@@ -101,7 +101,7 @@ fn timing(d: &Value) -> Option<Timing> {
         Some(Timing { started_at: start, ended_at: end, duration_s: played.min(end - start) })
     } else {
         // One moment, and it is the end.
-        Some(Timing { started_at: end - played, ended_at: end, duration_s: played })
+        Some(Timing { started_at: end.saturating_sub(played), ended_at: end, duration_s: played })
     }
 }
 
@@ -113,7 +113,7 @@ fn streams_of(d: &Value) -> Streams {
     }
     let bitrate = match (int(&d["videoBitRate"]), int(&d["audioBitRate"])) {
         (None, None) => None,
-        (v, a) => Some(v.unwrap_or(0) + a.unwrap_or(0)),
+        (v, a) => Some(v.unwrap_or(0).saturating_add(a.unwrap_or(0))),
     };
     Streams {
         bitrate,

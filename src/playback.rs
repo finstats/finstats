@@ -135,8 +135,9 @@ impl PlayRecord {
     /// collector) got there first. See [`already_recorded`].
     pub fn insert_imported(&self, conn: &Connection, merge_window_s: i64) -> Result<Option<i64>> {
         // A moment no server of anybody's ran at is no play: year 1 made every all-time chart build hundreds of
-        // thousands of weekly buckets.
-        if self.started_at < IMPORTED_SINCE || self.ended_at > crate::db::now() + 86_400 {
+        // thousands of weekly buckets. Both ends are held to it, and to their order: Tautulli's start and end come from
+        // different rows, and a start in the year 9999 brought the buckets back.
+        if !(IMPORTED_SINCE <= self.started_at && self.started_at <= self.ended_at && self.ended_at <= crate::db::now() + 86_400) {
             return Ok(None);
         }
         let this = Play {
@@ -334,6 +335,18 @@ pub fn insert_events(conn: &Connection, playback_id: i64, events: &[PlayEvent]) 
     Ok(())
 }
 
+/// A season, episode or end number as Jellyfin's answer or an import file gives it. Jellyfin keeps these as an `int32`
+/// and never below zero, so anything else is no number at all: `i64::MIN` beside an episode 10 wrapped Library health's
+/// arithmetic into a loop that never ended. A season by year (2024) and an episode by date (20240315) are real numbers.
+pub fn index_number(v: &serde_json::Value) -> Option<i64> {
+    bounded_index(v.as_i64())
+}
+
+/// [`index_number`]'s rule, for a number already read.
+pub fn bounded_index(n: Option<i64>) -> Option<i64> {
+    n.filter(|n| (0..=i32::MAX as i64).contains(n))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -352,6 +365,22 @@ mod tests {
         assert!(at(-62_135_596_800, -62_135_596_000).insert_imported(&c, 600).unwrap().is_none(), "year 1");
         assert!(at(now + 3 * 86_400, now + 3 * 86_400 + 600).insert_imported(&c, 600).unwrap().is_none(), "the day after tomorrow");
         assert!(at(now - 86_400, now - 85_800).insert_imported(&c, 600).unwrap().is_some(), "yesterday");
+        // The start is read from another row than the end in a Tautulli viewing, so it is held to the same years.
+        assert!(at(253_402_300_799, now - 86_400).insert_imported(&c, 600).unwrap().is_none(), "a start in the year 9999 and an end in this one");
+        assert!(at(now - 3_600, now - 7_200).insert_imported(&c, 600).unwrap().is_none(), "an end before its start");
+    }
+
+    /// Jellyfin keeps a season or an episode number as an `int32`, and never below zero.
+    #[test]
+    fn a_season_or_episode_number_is_one_jellyfin_could_keep() {
+        assert_eq!(index_number(&serde_json::json!(3)), Some(3));
+        assert_eq!(index_number(&serde_json::json!(0)), Some(0));
+        assert_eq!(index_number(&serde_json::json!(20_240_315)), Some(20_240_315), "a date is a real episode number");
+        assert_eq!(index_number(&serde_json::json!(i32::MAX)), Some(i32::MAX as i64));
+        for no in [serde_json::json!(-1), serde_json::json!(i64::MIN), serde_json::json!(i32::MAX as i64 + 1), serde_json::json!("3"), serde_json::json!(null)] {
+            assert_eq!(index_number(&no), None, "{no}");
+        }
+        assert_eq!(bounded_index(Some(i64::MAX)), None);
     }
 
     /// A client may pause and jump every second for as long as it likes, two events a second each: a play keeps at most
