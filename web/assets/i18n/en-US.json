@@ -1468,6 +1468,7 @@
       "reading_backup": "Reading backup",
       "receiving_backup": "Receiving backup",
       "interrupted": "Interrupted before it finished: nothing was changed, and it can be started again",
+      "too_soon": "Asked a moment ago; try again in a minute",
       "upload_running": "A Tautulli backup is already arriving",
       "cards_busy": "Too many cards are being drawn just now; try again in a moment",
       "importing": "Importing",

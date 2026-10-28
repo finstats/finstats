@@ -1468,6 +1468,7 @@
       "reading_backup": "Leser sikkerhetskopien",
       "receiving_backup": "Tar imot sikkerhetskopien",
       "interrupted": "Avbrutt før det var ferdig: ingenting ble endret, og det kan startes på nytt",
+      "too_soon": "Det ble spurt for litt siden; prøv igjen litt senere",
       "upload_running": "En Tautulli-sikkerhetskopi lastes allerede opp",
       "cards_busy": "For mange kort lages akkurat nå; prøv igjen om litt",
       "importing": "Importerer",

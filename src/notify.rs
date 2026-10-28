@@ -1414,11 +1414,21 @@ pub async fn remove(State(app): State<App>, user: AuthUser, Path(id): Path<i64>)
 
 /// The Test button: one message to one destination, now, and the answer is what the other side said.
 /// It goes down the same path as everything else, so a test that arrives proves the real thing works.
+/// Whether a destination has had all the tests a minute may send it. A test goes out at once, outside the queue, so it
+/// keeps to a minute of its own, as long as everything else's.
+fn test_too_soon(target_id: i64, now: i64) -> bool {
+    static SENT: std::sync::OnceLock<std::sync::Mutex<HashMap<i64, (i64, usize)>>> = std::sync::OnceLock::new();
+    over_the_minute(&mut SENT.get_or_init(Default::default).lock().unwrap(), target_id, now)
+}
+
 pub async fn test(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -> ApiResult {
     gate(&user)?;
     let stored = app.db.call(move |c| stored_target(c, id)).await?.ok_or_else(|| ApiError::not_found("Destination"))?;
     if !may_touch(&user, &stored) {
         return Err(ApiError::forbidden());
+    }
+    if test_too_soon(id, db::now()) {
+        return Err(ApiError::new(axum::http::StatusCode::TOO_MANY_REQUESTS, t("server.api.too_soon", &[])));
     }
     let event = test_event(&user.name, &stored.name);
     let msg = message(&event, stored.with_addresses, Some(&app.settings().public_url));
@@ -1934,6 +1944,18 @@ pub(crate) mod tests {
         assert_eq!(made.err().map(|e| e.error.0), Some(axum::http::StatusCode::FORBIDDEN));
         let changed = update(State(app), by_key, Path(1), Json(body(json!({ "enabled": false })))).await;
         assert_eq!(changed.err().map(|e| e.error.0), Some(axum::http::StatusCode::FORBIDDEN));
+    }
+
+    /// A test is sent at once, outside the queue, so it skipped the per-minute limit every other message keeps to: a
+    /// loop of presses was a loop of messages to somebody's webhook. A destination is sent as many tests a minute as it
+    /// may be sent anything.
+    #[test]
+    fn tests_of_one_destination_keep_to_its_minute() {
+        for n in 0..PER_MINUTE {
+            assert!(!test_too_soon(77, 6_000), "test {n} of the minute goes out");
+        }
+        assert!(test_too_soon(77, 6_000));
+        assert!(!test_too_soon(78, 6_000), "another destination has its own minute");
     }
 
     #[test]

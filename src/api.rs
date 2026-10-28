@@ -688,6 +688,11 @@ async fn lookup_public_ip(State(app): State<App>, Manager(user): Manager) -> Api
     if !app.settings().public_ip_lookup {
         return Err(ApiError::bad_request(i18n::t("server.api.lookup_off", &[])));
     }
+    // Each press is a request to a service elsewhere; once a minute is as often as an address changes for anybody.
+    static ASKED: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<(), i64>>> = std::sync::OnceLock::new();
+    if too_soon(ASKED.get_or_init(Default::default), (), crate::db::now(), MANUAL_GAP_S) {
+        return Err(too_soon_error());
+    }
     crate::network::refresh(&app).await;
     settings_response(&app, &user).await
 }
@@ -835,8 +840,30 @@ const RUNNABLE: [&str; 11] = ["sync_users", "sync_libraries", "sync_events", "sy
 #[cfg(test)]
 const OWN_RUNNERS: [&str; 2] = ["backup", "geoip"];
 
+/// Whether `key` was last let through less than `gap_s` ago; if not, it is let through now and remembered.
+fn too_soon<K: std::hash::Hash + Eq>(last: &std::sync::Mutex<std::collections::HashMap<K, i64>>, key: K, now: i64, gap_s: i64) -> bool {
+    let mut last = last.lock().unwrap();
+    if last.get(&key).is_some_and(|at| now - at < gap_s) {
+        return true;
+    }
+    last.insert(key, now);
+    false
+}
+
+/// How long a manager waits between two runs of one job by hand. A run already going was the only thing that
+/// stopped another, so a loop of requests read the whole library, or every connected service, back to back.
+const MANUAL_GAP_S: i64 = 60;
+
+fn too_soon_error() -> ApiError {
+    ApiError::new(StatusCode::TOO_MANY_REQUESTS, i18n::t("server.api.too_soon", &[]))
+}
+
 async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>) -> ApiResult<Response> {
     let Some(id) = RUNNABLE.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
+    static RAN: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<&'static str, i64>>> = std::sync::OnceLock::new();
+    if !user.is_admin && too_soon(RAN.get_or_init(Default::default), id, crate::db::now(), MANUAL_GAP_S) {
+        return Err(too_soon_error());
+    }
     let started = match id {
         "backup" => sync::run_backup(&app, Some(Actor::from(&user))),
         "geoip" => {
@@ -1703,6 +1730,29 @@ mod tests {
         assert_eq!(tautulli_board(State(app.clone()), Manager(manager.clone())).await.err().map(|e| e.0), Some(StatusCode::FORBIDDEN));
         assert_eq!(tautulli_upload(State(app.clone()), Manager(manager.clone()), body()).await.err().map(|e| e.0), Some(StatusCode::FORBIDDEN));
         assert!(app.tasks.snapshot().iter().all(|t| t.state != "running"), "a refused import took the slot");
+    }
+
+    /// A run by hand blocked only a run already going, so a loop of requests read the whole library, or Sonarr, Radarr
+    /// and Seerr, back to back, and each press of the public-address button was a request to a service elsewhere.
+    #[test]
+    fn work_started_by_hand_waits_a_minute_before_it_is_started_again() {
+        let last: std::sync::Mutex<std::collections::HashMap<&str, i64>> = Default::default();
+        assert!(!too_soon(&last, "sync_libraries", 1_000, 60));
+        assert!(too_soon(&last, "sync_libraries", 1_059, 60));
+        assert!(!too_soon(&last, "sync_users", 1_059, 60), "another job has its own minute");
+        assert!(!too_soon(&last, "sync_libraries", 1_060, 60));
+    }
+
+    #[tokio::test]
+    async fn a_manager_runs_a_job_by_hand_once_a_minute() {
+        let app = crate::state::test_app();
+        let manager = AuthUser {
+            id: "m".into(), name: "mallory".into(), is_admin: false, credential: crate::auth::Credential::Session, ip: None,
+            perms: crate::auth::Perms { manage: true, ..Default::default() },
+        };
+        let _ = run_task(State(app.clone()), Manager(manager.clone()), Path("sync_users".into())).await;
+        let again = run_task(State(app), Manager(manager), Path("sync_users".into())).await;
+        assert_eq!(again.err().map(|e| e.0), Some(StatusCode::TOO_MANY_REQUESTS));
     }
 
     #[test]
