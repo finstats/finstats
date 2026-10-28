@@ -377,6 +377,22 @@ fn at_a_real_time(row: &Map<String, Value>, columns: &[&str]) -> bool {
     columns.iter().all(|c| row.get(*c).and_then(Value::as_i64).is_some_and(|at| (crate::playback::IMPORTED_SINCE..=until).contains(&at)))
 }
 
+/// Whether the library has this title.
+fn in_library(conn: &Connection, id: Option<&str>) -> Result<bool> {
+    Ok(conn.prepare_cached("SELECT EXISTS(SELECT 1 FROM items WHERE id = ?1)")?.query_row([id], |r| r.get(0))?)
+}
+
+/// A restored audit entry's detail, saying it was restored and from which version's backup.
+fn restored_detail(detail: &str, from: &str) -> String {
+    let mut d = match serde_json::from_str::<Value>(detail) {
+        Ok(Value::Object(m)) => m,
+        Ok(other) => Map::from_iter([("detail".to_string(), other)]),
+        Err(_) => Map::from_iter([("detail".to_string(), json!(detail))]),
+    };
+    d.insert("restored_from".into(), json!(from));
+    Value::Object(d).to_string()
+}
+
 /// Merge a backup into this database. `with_settings` also brings back the settings and permissions.
 pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks, &'static str)>) -> Result<RestoreResult> {
     let mut file = File::open(path).context("opening the backup")?;
@@ -403,6 +419,8 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
     let mut play_ids: HashMap<i64, i64> = HashMap::new();
     let mut settings_raw: Option<String> = None;
     let mut grants: Vec<Map<String, Value>> = vec![];
+    // Timeline rows restored per play (by its id here), never past what the collector keeps of one.
+    let mut events_of: HashMap<i64, usize> = HashMap::new();
     let mut saw_header = false;
 
     let (mut reader, mut line) = (reader, String::new());
@@ -431,6 +449,8 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
             // Only the settings themselves: a newer FinStats may keep other rows in that table, and none of them is these.
             "settings" if row.get("key").and_then(Value::as_str) == Some("settings") => settings_raw = row.get("value").and_then(Value::as_str).map(str::to_string),
             "settings" => {}
+            // A play from no time a server ran at, or one that ends before it starts, is no play: the bound an import keeps.
+            "playbacks" if !at_a_real_time(row, &["started_at", "ended_at"]) || row.get("started_at").and_then(Value::as_i64) > row.get("ended_at").and_then(Value::as_i64) => {}
             "playbacks" => {
                 let exists = crate::playback::already_recorded(
                     &tx,
@@ -459,10 +479,16 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                 }
             }
             "playback_events" => {
-                let Some(new_id) = row.get("playback_id").and_then(Value::as_i64).and_then(|old| play_ids.get(&old)) else { continue };
+                let Some(&new_id) = row.get("playback_id").and_then(Value::as_i64).and_then(|old| play_ids.get(&old)) else { continue };
+                // As many as the collector keeps of one play, and no more.
+                let kept = events_of.entry(new_id).or_insert(0);
+                if *kept >= crate::playback::EVENTS_PER_PLAY {
+                    continue;
+                }
                 let mut row = row.clone();
                 row.insert("playback_id".into(), json!(new_id));
                 if insert_row(&tx, "playback_events", &known["playback_events"], &row, &["id"], "INSERT")? {
+                    *kept += 1;
                     res.events += 1;
                 }
             }
@@ -473,6 +499,12 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     grants.push(row.clone());
                 }
             }
+            // Which addresses are home decides which plays are local and where "home" is on the map: a setting, so only with
+            // the settings, and only those somebody typed in (a looked-up one is this network's, found again here).
+            "home_addresses" if !with_settings || row.get("source").and_then(Value::as_str) != Some("manual") => {}
+            // Where the owner said a title is, only where this library has that title: otherwise the file chooses which
+            // title orphaned plays are attached to.
+            "located" if !in_library(&tx, row.get("to_id").and_then(Value::as_str))? => {}
             // A moment no server ran at: one row of the log from years to come stopped every later read of it.
             "server_events" | "devices" if !at_a_real_time(row, if table == "devices" { &["first_seen", "last_seen"] } else { &["date"] }) => {}
             // `located`: where the owner said a title is; `health_dismissed`: a finding set aside; `appearance`: how FinStats
@@ -488,18 +520,31 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
             "watchlist" if crate::watchlist::restore_row(&tx, row)? => res.other_rows += 1,
             "watchlist" => {}
             // Its own ids mean nothing here; `dedupe` keeps an alert this database already has from doubling.
-            "security_alerts" if insert_row(&tx, table, &known["security_alerts"], row, &["id"], "INSERT OR IGNORE")? => res.other_rows += 1,
-            "security_alerts" => {}
+            // A pair of places set aside never alerts again, so without the settings an alert comes back as one to look at.
+            "security_alerts" => {
+                let mut row = row.clone();
+                if !with_settings {
+                    row.insert("muted".into(), json!(0));
+                }
+                if insert_row(&tx, table, &known["security_alerts"], &row, &["id"], "INSERT OR IGNORE")? {
+                    res.other_rows += 1;
+                }
+            }
             // Its ids mean nothing here either, and it has no natural key: a row is appended unless the
             // same thing, by the same person, at the same moment, is already written down.
+            // Each says it was restored and from what, so nothing a file says reads as this install's own record.
             "audit" => {
                 let get = |k: &str| row.get(k).cloned().unwrap_or(Value::Null);
+                let detail = get("detail");
+                let marked = restored_detail(detail.as_str().unwrap_or("{}"), res.from_version.as_deref().unwrap_or("unknown"));
                 let dup: i64 = tx.query_row(
-                    "SELECT COUNT(*) FROM audit WHERE at = ?1 AND kind = ?2 AND COALESCE(user_id, '') = COALESCE(?3, '') AND COALESCE(target, '') = COALESCE(?4, '') AND detail = ?5",
-                    params_from_iter([sql_value(&get("at")), sql_value(&get("kind")), sql_value(&get("user_id")), sql_value(&get("target")), sql_value(&get("detail"))].iter()),
+                    "SELECT COUNT(*) FROM audit WHERE at = ?1 AND kind = ?2 AND COALESCE(user_id, '') = COALESCE(?3, '') AND COALESCE(target, '') = COALESCE(?4, '') AND detail IN (?5, ?6)",
+                    params_from_iter([sql_value(&get("at")), sql_value(&get("kind")), sql_value(&get("user_id")), sql_value(&get("target")), sql_value(&detail), SqlValue::from(marked.clone())].iter()),
                     |r| r.get(0),
                 )?;
-                if dup == 0 && insert_row(&tx, "audit", &known["audit"], row, &["id"], "INSERT")? {
+                let mut row = row.clone();
+                row.insert("detail".into(), json!(marked));
+                if dup == 0 && insert_row(&tx, "audit", &known["audit"], &row, &["id"], "INSERT")? {
                     res.other_rows += 1;
                 }
             }
@@ -685,25 +730,25 @@ mod tests {
         let source = Db::open(&tmp.join("source.db")).unwrap();
         source.conn().unwrap().execute_batch(
             "INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, deleted_at) VALUES
-               (1, 'jellystat', 'jellystat:kept',    'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 1600, 600, NULL),
-               (2, 'jellystat', 'jellystat:trashed', 'u1', 'alice', 'i2', 'Sintel',         'Movie', 5000, 5600, 600, 7000);",
+               (1, 'jellystat', 'jellystat:kept',    'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1700001000, 1700001600, 600, NULL),
+               (2, 'jellystat', 'jellystat:trashed', 'u1', 'alice', 'i2', 'Sintel',         'Movie', 1700005000, 1700005600, 600, 1700007000);",
         ).unwrap();
         let file = dir(&tmp).join(export(&source, &dir(&tmp), None).unwrap().name);
         // Here, the first play is in the trash already, and the backup has it in history.
         let target = Db::open(&tmp.join("target.db")).unwrap();
         target.conn().unwrap().execute_batch(
             "INSERT INTO playbacks(id, source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, deleted_at) VALUES
-               (40, 'jellystat', 'jellystat:kept', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 1600, 600, 9000);",
+               (40, 'jellystat', 'jellystat:kept', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1700001000, 1700001600, 600, 1700009000);",
         ).unwrap();
         let r = restore(&target, &file, false, None).unwrap();
         assert_eq!((r.plays_imported, r.plays_skipped), (1, 1));
         let c = target.conn().unwrap();
         let state = |sid: &str| c.query_row("SELECT deleted_at FROM playbacks WHERE source_id = ?1", [sid], |r| r.get::<_, Option<i64>>(0)).unwrap();
-        assert_eq!(state("jellystat:kept"), Some(9000), "restoring a backup that had the play undeleted it");
-        assert_eq!(state("jellystat:trashed"), Some(7000), "a play in the trash came back out of it");
-        assert_eq!(crate::trash::purge_plays(&c, 7000 + crate::trash::KEEP_S - 1).unwrap(), 0);
-        assert_eq!(crate::trash::purge_plays(&c, 7000 + crate::trash::KEEP_S).unwrap(), 1, "thirty days after its own deletion, not after the restore");
-        assert_eq!(state("jellystat:kept"), Some(9000));
+        assert_eq!(state("jellystat:kept"), Some(1_700_009_000), "restoring a backup that had the play undeleted it");
+        assert_eq!(state("jellystat:trashed"), Some(1_700_007_000), "a play in the trash came back out of it");
+        assert_eq!(crate::trash::purge_plays(&c, 1_700_007_000 + crate::trash::KEEP_S - 1).unwrap(), 0);
+        assert_eq!(crate::trash::purge_plays(&c, 1_700_007_000 + crate::trash::KEEP_S).unwrap(), 1, "thirty days after its own deletion, not after the restore");
+        assert_eq!(state("jellystat:kept"), Some(1_700_009_000));
         drop(c);
         let _ = std::fs::remove_dir_all(&tmp);
     }
@@ -718,7 +763,7 @@ mod tests {
         let db = Db::open(&tmp.join("finstats.db")).unwrap();
         db.conn().unwrap().execute_batch(
             "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
-               VALUES (1, 'live', 'u1', 'alice', 'old', 'Big Buck Bunny', 'Movie', 1000, 1600, 600);",
+               VALUES (1, 'live', 'u1', 'alice', 'old', 'Big Buck Bunny', 'Movie', 1700001000, 1700001600, 600);",
         ).unwrap();
         let file = dir(&tmp).join(export(&db, &dir(&tmp), None).unwrap().name);
         db.conn().unwrap().execute("UPDATE playbacks SET item_id = 'new' WHERE id = 1", []).unwrap(); // what re-linking does
@@ -739,8 +784,8 @@ mod tests {
             let c = source.conn().unwrap();
             c.execute_batch(
                 "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, remote_ip, active, group_id)
-                   VALUES (7, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 1600, 600, '192.168.1.10', 1, 7),
-                          (9, 'jellystat', 'u2', 'bob', 'i1', 'Big Buck Bunny', 'Movie', 1005, 1600, 590, '203.0.113.7', 0, 7);
+                   VALUES (7, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1700001000, 1700001600, 600, '192.168.1.10', 1, 7),
+                          (9, 'jellystat', 'u2', 'bob', 'i1', 'Big Buck Bunny', 'Movie', 1700001005, 1700001600, 590, '203.0.113.7', 0, 7);
                  UPDATE playbacks SET source_id = 'jellystat:abc' WHERE id = 9;
                  INSERT INTO playback_events(playback_id, at, kind, position_s) VALUES (7, 1000, 'start', 0), (7, 1300, 'pause', 300);
                  INSERT INTO manual_seen(user_id, item_id, created_at) VALUES ('u1', 'e1', 5);
@@ -840,7 +885,7 @@ mod tests {
         source.conn().unwrap().execute_batch(
             "INSERT INTO located(from_id, to_id, at, by) VALUES ('plex:5', 'empire', 100, 'u1');
              INSERT INTO playbacks(source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
-               VALUES ('tautulli', 'tautulli:1', 'u1', 'alice', 'plex:5', 'Star Wars: Episode V - The Empire Strikes Back (1980)', 'Movie', 1000, 2000, 1000);",
+               VALUES ('tautulli', 'tautulli:1', 'u1', 'alice', 'plex:5', 'Star Wars: Episode V - The Empire Strikes Back (1980)', 'Movie', 1700001000, 1700002000, 1000);",
         ).unwrap();
         let made = export(&source, &dir(&tmp), None).unwrap();
         let target = Db::open(&tmp.join("target.db")).unwrap();
@@ -950,7 +995,7 @@ mod tests {
     }
     fn a_play() -> Value {
         json!({ "t": "playbacks", "r": { "id": 1, "source": "live", "user_id": "u1", "user_name": "alice", "item_id": "i1", "item_name": "Big Buck Bunny",
-            "item_type": "Movie", "started_at": 1000, "ended_at": 1600, "duration_s": 600, "active": 0 } })
+            "item_type": "Movie", "started_at": 1_700_001_000i64, "ended_at": 1_700_001_600i64, "duration_s": 600, "active": 0 } })
     }
     fn plays(db: &Db) -> i64 {
         db.conn().unwrap().query_row("SELECT COUNT(*) FROM playbacks", [], |r| r.get(0)).unwrap()
@@ -995,6 +1040,44 @@ mod tests {
             .query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
         assert_eq!(grants, [("u-none".to_string(), r#"["sign_in"]"#.to_string()), ("u-row".to_string(), r#"["see_everyone"]"#.to_string())]);
         assert_eq!(Settings::load(&c).unwrap().default_permissions, ["sign_in"]);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// A restore of the history alone changes nothing about what is watched over: no home address (it made an address's
+    /// plays local and moved "home" there), no muted pair of places, no audit entry passed off as this install's own, no
+    /// title located where the library has none, and no play or timeline past the bounds an import keeps.
+    #[test]
+    fn a_restore_of_the_history_alone_leaves_what_watches_over_it_alone() {
+        let now = db::now();
+        let play = |id: i64, started: i64, ended: i64| json!({ "t": "playbacks", "r": { "id": id, "source": "jellystat", "source_id": format!("jellystat:{id}"),
+            "user_id": "u1", "user_name": "alice", "item_id": "i1", "item_name": "Big Buck Bunny", "item_type": "Movie", "started_at": started, "ended_at": ended, "duration_s": 600 } });
+        let mut lines = vec![
+            json!({ "finstats_backup": FORMAT, "app_version": "2.3.1" }),
+            json!({ "t": "home_addresses", "r": { "ip": "203.0.113.7", "source": "lookup", "first_seen": now - 60, "last_seen": now - 60 } }),
+            json!({ "t": "security_alerts", "r": { "id": 1, "kind": "impossible_travel", "severity": "high", "user_id": "u1", "user_name": "alice", "at": now - 60,
+                "dedupe": "travel:u1:1", "details": "{}", "created_at": now - 60, "muted": 1 } }),
+            json!({ "t": "audit", "r": { "id": 1, "at": now - 60, "kind": "permissions_changed", "user_id": "u1", "user_name": "alice", "target": "u2", "detail": "{\"granted\":[\"manage\"]}" } }),
+            json!({ "t": "located", "r": { "from_id": "plex:1", "to_id": "not-in-the-library", "at": now - 60, "by": "u1" } }),
+            json!({ "t": "located", "r": { "from_id": "plex:2", "to_id": "empire", "at": now - 60, "by": "u1" } }),
+            play(1, now - 7200, now - 6600),
+            play(2, 0, 600),
+            play(3, now - 600, 4_102_444_800),
+            play(4, now - 3600, now - 7200),
+        ];
+        lines.extend((0..crate::playback::EVENTS_PER_PLAY as i64 + 5).map(|i| json!({ "t": "playback_events", "r": { "playback_id": 1, "at": now - 7200 + i, "kind": "pause", "position_s": i } })));
+        let (tmp, target, file) = restoring("backup-security-state", &lines);
+        let c = target.conn().unwrap();
+        c.execute("INSERT INTO items(id, type, name, updated_at) VALUES ('empire', 'Movie', 'The Empire Strikes Back', 1)", []).unwrap();
+        restore(&target, &file, false, None).unwrap();
+        let n = |sql: &str| -> i64 { c.query_row(sql, [], |r| r.get(0)).unwrap() };
+        assert_eq!(n("SELECT COUNT(*) FROM home_addresses"), 0, "a home address came with the history");
+        assert_eq!(n("SELECT COUNT(*) FROM security_alerts WHERE muted = 1"), 0, "a muted pair came with the history");
+        assert_eq!(n("SELECT COUNT(*) FROM security_alerts"), 1, "the alert itself is history");
+        assert_eq!(n("SELECT COUNT(*) FROM audit WHERE json_extract(detail, '$.restored_from') = '2.3.1' AND json_extract(detail, '$.granted[0]') = 'manage'"), 1, "an audit entry reads as this install's own");
+        assert_eq!(n("SELECT COUNT(*) FROM located"), 1);
+        assert_eq!(n("SELECT COUNT(*) FROM located WHERE to_id = 'empire'"), 1);
+        assert_eq!(n("SELECT COUNT(*) FROM playbacks"), 1, "a play from no real time came back");
+        assert_eq!(n("SELECT COUNT(*) FROM playback_events"), crate::playback::EVENTS_PER_PLAY as i64);
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
@@ -1092,7 +1175,7 @@ mod tests {
             .unwrap()
             .execute_batch(
                 "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
-                   VALUES (7, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 1600, 600);
+                   VALUES (7, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1700001000, 1700001600, 600);
                  INSERT INTO playback_events(playback_id, at, kind, position_s, from_s, detail) VALUES
                    (7, 1000, 'start', 0, NULL, NULL), (7, 1100, 'seek', 900, NULL, '1:45 → 15:00'), (7, 1200, 'seek', 30, NULL, '16:40 → 0:30');",
             )
@@ -1119,8 +1202,8 @@ mod tests {
             .unwrap()
             .execute_batch(
                 "INSERT INTO playbacks(source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, device_id)
-                   VALUES ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100000, 100600, 600, 'tv'),
-                          ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100180, 100900, 600, 'phone');",
+                   VALUES ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1700100000, 1700100600, 600, 'tv'),
+                          ('live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1700100180, 1700100900, 600, 'phone');",
             )
             .unwrap();
         let made = export(&source, &dir(&tmp), None).unwrap();
@@ -1138,7 +1221,7 @@ mod tests {
             .unwrap()
             .execute_batch(
                 "INSERT INTO playbacks(source, source_id, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
-                   VALUES ('streamystats', 'streamystats:1', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 100045, 100650, 600);",
+                   VALUES ('streamystats', 'streamystats:1', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1700100045, 1700100650, 600);",
             )
             .unwrap();
         let r = restore(&imported, &file, false, None).unwrap();
