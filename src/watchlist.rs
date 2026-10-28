@@ -86,6 +86,15 @@ pub fn add(conn: &Connection, user_id: &str, wanted: Wanted, now: i64) -> Result
     Ok(Ok((conn.last_insert_rowid(), true)))
 }
 
+/// Whether somebody with `access` may add this (`access.rs`): a title Jellyfin hides from them is not one they can name by
+/// its id, as one the library does not have is not. Named by its provider ids, it may be added and reads as not here.
+pub fn may_add(conn: &Connection, access: &crate::access::Access, wanted: &Wanted) -> Result<bool> {
+    match wanted {
+        Wanted::Item(id) => access.may_see_item(conn, &crate::db::norm_id(id)),
+        Wanted::Title(_) => Ok(true),
+    }
+}
+
 /// One provider id out of an item's `provider_ids` JSON, as text, `NULL` when it has none.
 fn provider_id_sql(column: &str, key: &str) -> String {
     format!("CASE WHEN json_valid({column}) THEN NULLIF(CAST(json_extract({column}, '$.{key}') AS TEXT), '') END")
@@ -329,6 +338,11 @@ pub fn announce(conn: &Connection, bus: &crate::notify::Fanout) -> Result<usize>
         .collect::<Result<_, _>>()?;
     let mut told = 0;
     for (user_id, user_name, kind, item_id, name, arrived) in rows {
+        // Only a title Jellyfin lets them see (`access.rs`).
+        let is_admin: bool = conn.query_row("SELECT is_admin FROM users WHERE id = ?1", [&user_id], |r| r.get(0)).optional()?.unwrap_or(false);
+        if !crate::access::Access::of(conn, &user_id, is_admin)?.may_see_item(conn, &item_id)? {
+            continue;
+        }
         let event = Event::new(
             Kind::WatchlistAvailable,
             format!("notify:watchlist:{user_id}:{item_id}"),
@@ -426,18 +440,44 @@ pub fn resolve(conn: &Connection) -> Result<usize> {
     Ok(attached)
 }
 
+/// `keys`, with only the items somebody with `access` may see (`access.rs`).
+pub fn keys_seen(conn: &Connection, user_id: &str, access: &crate::access::Access) -> Result<Vec<Key>> {
+    let mut out = keys(conn, user_id)?;
+    if access.is_everything() {
+        return Ok(out);
+    }
+    for k in &mut out {
+        let mut kept = vec![];
+        for id in k.item_ids.drain(..) {
+            if access.may_see_item(conn, &id)? {
+                kept.push(id);
+            }
+        }
+        k.item_ids = kept;
+    }
+    Ok(out)
+}
+
 /// Every entry on `user_id`'s list, newest first, each with what is true of its title now, never stored, so it
 /// cannot go stale. `everyone`: the caller may see everyone's activity, and so who asked for a title in Seerr.
 ///
 /// The state is the first of these that holds: `watched` (by the profile's reading of "seen"; a show when every
 /// episode on disk is), `started` or `on_server` (in the library), `requested` (open in Seerr), `coming_up` (Sonarr or
 /// Radarr has a date), `left_library` (it was here and is not any more), `not_on_server`.
-pub fn listing(conn: &Connection, user_id: &str, everyone: bool) -> Result<Vec<Value>> {
-    let keys = keys(conn, user_id)?;
-    let snapshot: HashMap<i64, (Option<String>, String, Option<i64>, i64)> = conn
+pub fn listing(conn: &Connection, user_id: &str, everyone: bool, access: &crate::access::Access) -> Result<Vec<Value>> {
+    let keys = keys_seen(conn, user_id, access)?;
+    let mut snapshot: HashMap<i64, (Option<String>, String, Option<i64>, i64)> = conn
         .prepare_cached("SELECT id, item_id, title, year, added_at FROM watchlist WHERE user_id = ?1")?
         .query_map([user_id], |r| Ok((r.get(0)?, (r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))))?
         .collect::<Result<_, _>>()?;
+    // A title Jellyfin hides from them was never here as far as they are told.
+    for (item_id, ..) in snapshot.values_mut() {
+        if let Some(id) = item_id.as_deref()
+            && !access.may_see_item(conn, id)?
+        {
+            *item_id = None;
+        }
+    }
     let every_item: Vec<String> = keys.iter().flat_map(|k| k.item_ids.iter().cloned()).collect();
     let live: HashSet<String> = conn
         .prepare_cached("SELECT id FROM items WHERE id IN (SELECT value FROM json_each(?1)) AND removed = 0")?
@@ -550,6 +590,9 @@ pub async fn add_mine(State(app): State<App>, user: AuthUser, Json(body): Json<A
     let (id, created) = app
         .db
         .call(move |c| {
+            if !may_add(c, &crate::access::Access::for_user(c, &user)?, &wanted)? {
+                return Ok(Err(Refused::NotATitle));
+            }
             let tx = c.transaction()?;
             let done = add(&tx, &uid, wanted, db::now())?;
             tx.commit()?;
@@ -570,14 +613,14 @@ pub async fn remove_mine(State(app): State<App>, user: AuthUser, Path(id): Path<
 
 /// `GET /api/me/watchlist`: the caller's list, each entry with its state, and who the caller is for the page's header.
 pub async fn list_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
-    let (uid, everyone) = (user.id.clone(), user.perms.see_everyone);
+    let (uid, everyone, is_admin) = (user.id.clone(), user.perms.see_everyone, user.is_admin);
     let (who, entries) = app
         .db
         .call(move |c| {
             let who = c
                 .query_row("SELECT name, image_tag IS NOT NULL FROM users WHERE id = ?1", [&uid], |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?)))
                 .optional()?;
-            Ok((who, listing(c, &uid, everyone)?))
+            Ok((who, listing(c, &uid, everyone, &crate::access::Access::of(c, &uid, is_admin)?)?))
         })
         .await?;
     let (name, has_image) = who.unwrap_or_else(|| (user.name.clone(), false));
@@ -586,8 +629,7 @@ pub async fn list_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
 
 /// `GET /api/me/watchlist/keys`: what is on the caller's list, for the pages that offer the toggle.
 pub async fn keys_mine(State(app): State<App>, user: AuthUser) -> ApiResult {
-    let uid = user.id.clone();
-    let entries = app.db.call(move |c| keys(c, &uid)).await?;
+    let entries = app.db.call(move |c| keys_seen(c, &user.id, &crate::access::Access::for_user(c, &user)?)).await?;
     let entries: Vec<Value> = entries
         .into_iter()
         .map(|k| json!({ "id": k.id, "kind": k.kind, "item_ids": k.item_ids, "tmdb_id": k.tmdb_id, "tvdb_id": k.tvdb_id, "imdb_id": k.imdb_id }))
@@ -817,7 +859,7 @@ mod tests {
     }
 
     fn states(c: &Connection, everyone: bool) -> Vec<(String, String)> {
-        listing(c, "alice", everyone).unwrap().iter().map(|e| (e["title"].as_str().unwrap().to_string(), e["state"].as_str().unwrap().to_string())).collect()
+        listing(c, "alice", everyone, &crate::access::Access::everything()).unwrap().iter().map(|e| (e["title"].as_str().unwrap().to_string(), e["state"].as_str().unwrap().to_string())).collect()
     }
 
     #[test]
@@ -827,7 +869,7 @@ mod tests {
             ("Nowhere Yet", "not_on_server"), ("Nightfall Bay", "coming_up"), ("Glass Harbour", "not_on_server"), ("Winterline", "requested"),
             ("Old Cut", "left_library"), ("Low Orbit", "started"), ("Home Video", "on_server"), ("Sintel", "started"), ("Big Buck Bunny", "watched"),
         ].map(|(a, b)| (a.to_string(), b.to_string())), "newest first; somebody else's request is not even hinted at");
-        let list = listing(&c, "alice", false).unwrap();
+        let list = listing(&c, "alice", false, &crate::access::Access::everything()).unwrap();
         let get = |title: &str| list.iter().find(|e| e["title"] == title).unwrap().clone();
         assert_eq!(get("Low Orbit")["progress"], json!({ "seen": 2, "total": 4 }), "files only: the virtual episode is not one to watch");
         assert_eq!(get("Winterline")["request"], json!({ "by_you": true }));
@@ -841,7 +883,7 @@ mod tests {
     #[test]
     fn who_else_asked_is_said_only_to_whoever_may_see_everyone() {
         let c = household();
-        let list = listing(&c, "alice", true).unwrap();
+        let list = listing(&c, "alice", true, &crate::access::Access::everything()).unwrap();
         let glass = list.iter().find(|e| e["title"] == "Glass Harbour").unwrap();
         assert_eq!((glass["state"].as_str(), &glass["request"]), (Some("requested"), &json!({ "by_you": false, "user_name": "bob" })));
     }
@@ -854,7 +896,7 @@ mod tests {
              INSERT INTO user_items(user_id, item_id, played) VALUES ('alice', 'e4', 1);",
         )
         .unwrap();
-        let list = listing(&c, "alice", false).unwrap();
+        let list = listing(&c, "alice", false, &crate::access::Access::everything()).unwrap();
         let show = list.iter().find(|e| e["title"] == "Low Orbit").unwrap();
         assert_eq!((show["state"].as_str(), &show["progress"]), (Some("watched"), &json!({ "seen": 4, "total": 4 })));
     }
@@ -862,10 +904,35 @@ mod tests {
     #[test]
     fn a_list_is_its_owner_s_alone() {
         let c = household();
-        let bobs = listing(&c, "bob", true).unwrap();
+        let bobs = listing(&c, "bob", true, &crate::access::Access::everything()).unwrap();
         assert_eq!(bobs.len(), 1);
         assert_eq!((bobs[0]["title"].as_str(), bobs[0]["state"].as_str()), (Some("Sintel"), Some("on_server")), "alice's plays are not bob's");
     }
+
+    /// FinStats follows Jellyfin: a title Jellyfin hides from somebody is not on the server as far as their list says, and
+    /// its id is not one they can add or be handed.
+    #[test]
+    fn a_title_jellyfin_hides_from_a_person_is_not_on_the_server_for_their_list() {
+        let c = conn();
+        c.execute_batch(
+            "UPDATE items SET library_id = 'films' WHERE id IN ('bbb', 'plain');
+             UPDATE items SET library_id = 'adult' WHERE id IN ('bbb4k', 'sintel');
+             INSERT INTO users(id, name, is_admin, updated_at, access_all, access_libraries) VALUES ('kid', 'kid', 0, 0, 0, '[\"films\"]');",
+        )
+        .unwrap();
+        let kid = crate::access::Access::of(&c, "kid", false).unwrap();
+        assert!(!may_add(&c, &kid, &Wanted::Item("sintel".into())).unwrap(), "added by its id it would read as on the server");
+        assert!(may_add(&c, &kid, &Wanted::Item("bbb".into())).unwrap() && may_add(&c, &kid, &Wanted::Title(film(Some("45745"), None, "Sintel"))).unwrap());
+        add(&c, "kid", Wanted::Title(film(Some("45745"), None, "Sintel")), 1).unwrap().unwrap();
+        add(&c, "kid", Wanted::Item("bbb".into()), 2).unwrap().unwrap();
+        let list = listing(&c, "kid", false, &kid).unwrap();
+        let said: Vec<(&str, &str, &Value)> = list.iter().map(|e| (e["title"].as_str().unwrap(), e["state"].as_str().unwrap(), &e["item_id"])).collect();
+        assert_eq!(said, [("Big Buck Bunny", "on_server", &json!("bbb")), ("Sintel", "not_on_server", &Value::Null)], "nor the 4K copy kept from them");
+        assert!(list[1]["poster"].is_null(), "nor its poster");
+        let ids: Vec<Vec<String>> = keys_seen(&c, "kid", &kid).unwrap().into_iter().map(|k| k.item_ids).collect();
+        assert_eq!(ids, [vec!["bbb".to_string()], vec![]]);
+    }
+
     fn item_of(c: &Connection, id: i64) -> Option<String> {
         c.query_row("SELECT item_id FROM watchlist WHERE id = ?1", [id], |r| r.get(0)).unwrap()
     }
@@ -979,7 +1046,7 @@ mod tests {
         use crate::notify::{Kind, tests::{bus, target}};
         let c = conn();
         let now = db::now();
-        c.execute_batch(r#"INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 0);
+        c.execute_batch(r#"INSERT INTO users(id, name, updated_at, access_all) VALUES ('alice', 'alice', 0, 1);
                INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('alice', '["sign_in"]', 0);"#).unwrap();
         c.execute("UPDATE items SET date_created = ?1 WHERE id = 'sintel'", [now - 365 * 86_400]).unwrap();
         add(&c, "alice", Wanted::Item("sintel".into()), now - 7 * 86_400).unwrap().unwrap();
@@ -999,7 +1066,7 @@ mod tests {
         use crate::notify::{Kind, tests::{bus, target}};
         let c = conn();
         let now = db::now();
-        c.execute_batch(r#"INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 0);
+        c.execute_batch(r#"INSERT INTO users(id, name, updated_at, access_all) VALUES ('alice', 'alice', 0, 1);
                INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('alice', '["sign_in"]', 0);"#).unwrap();
         c.execute("UPDATE items SET date_created = ?1 WHERE id = 'sintel'", [now - 365 * 86_400]).unwrap();
         add(&c, "alice", Wanted::Item("sintel".into()), now - 7 * 86_400).unwrap().unwrap();
@@ -1018,7 +1085,7 @@ mod tests {
         use crate::notify::{Kind, tests::{bus, target}};
         let c = conn();
         let now = db::now();
-        c.execute_batch(r#"INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 0);
+        c.execute_batch(r#"INSERT INTO users(id, name, updated_at, access_all) VALUES ('alice', 'alice', 0, 1);
                INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('alice', '["sign_in"]', 0);"#).unwrap();
         c.execute("UPDATE items SET date_created = ?1 WHERE id = 'plain'", [now - 600]).unwrap();
         add(&c, "alice", Wanted::Item("plain".into()), now - 300).unwrap().unwrap();
@@ -1057,7 +1124,7 @@ mod tests {
         let c = conn();
         let now = db::now();
         c.execute_batch(
-            r#"INSERT INTO users(id, name, updated_at) VALUES ('alice', 'alice', 0), ('bob', 'bob', 0), ('carol', 'carol', 0);
+            r#"INSERT INTO users(id, name, updated_at, access_all) VALUES ('alice', 'alice', 0, 1), ('bob', 'bob', 0, 1), ('carol', 'carol', 0, 1);
                INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('alice', '["sign_in","notify"]', 0), ('bob', '["sign_in","notify"]', 0), ('carol', '["sign_in","notify"]', 0);"#,
         )
         .unwrap();
@@ -1079,5 +1146,24 @@ mod tests {
         assert_eq!(told, [("alice".to_string(), "Now on the server: Winterline".to_string(), Some("/items/win".to_string()))]);
         let queued: Vec<i64> = c.prepare("SELECT target_id FROM notify_deliveries").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
         assert_eq!(queued, [1], "to alice's destination and nobody else's");
+    }
+
+    /// FinStats follows Jellyfin: a title on somebody's list that Jellyfin hides from them arrives without a word to them.
+    #[test]
+    fn an_arrival_jellyfin_hides_from_a_person_is_not_told_to_them() {
+        use crate::notify::{Kind, tests::{bus, target}};
+        let c = conn();
+        let now = db::now();
+        c.execute_batch(
+            r#"INSERT INTO users(id, name, updated_at, access_all, access_libraries) VALUES ('kid', 'kid', 0, 0, '["films"]');
+               INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('kid', '["sign_in","notify"]', 0);"#,
+        )
+        .unwrap();
+        c.execute("INSERT INTO watchlist(user_id, kind, tmdb_id, title, added_at) VALUES ('kid', 'Movie', '990001', 'Winterline', ?1)", [now - 86_400]).unwrap();
+        c.execute(r#"INSERT INTO items(id, library_id, type, name, provider_ids, date_created, updated_at) VALUES ('win', 'adult', 'Movie', 'Winterline', '{"Tmdb":"990001"}', ?1, 0)"#, [now - 600]).unwrap();
+        crate::pipeline::rebuild_external(&c).unwrap();
+        resolve(&c).unwrap();
+        let f = bus(&c, vec![target(1, Some("kid"), &[Kind::WatchlistAvailable])]);
+        assert_eq!(announce(&c, &f).unwrap(), 0);
     }
 }
