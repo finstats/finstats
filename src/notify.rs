@@ -94,7 +94,8 @@ pub enum Need {
     Place,
     /// Attempts on somebody's account: `see_server` on top of `Place`, as on the Security page.
     SignIns,
-    /// About the server itself: `see_server`.
+    /// About the server's jobs and connections: `see_server` and `manage`, as the pages that show their failures. A
+    /// failure names a person (whose played flags were refused) or a service's internal address.
     Server,
     /// Somebody's own and nobody else's, such as their watchlist (2.1): their own destinations only, whatever anybody else
     /// may see, and never a destination of the server's.
@@ -529,7 +530,7 @@ pub fn wanted_by(t: &Target, kind: Kind, severity: &str, at: i64, about: Option<
         Need::Person => own || perms.see_everyone,
         Need::Place => own || (perms.see_everyone && perms.see_network),
         Need::SignIns => own || (perms.see_everyone && perms.see_network && perms.see_server),
-        Need::Server => perms.see_server,
+        Need::Server => perms.see_server && perms.manage,
         Need::Owner => own,
     }
 }
@@ -1638,7 +1639,12 @@ pub(crate) mod tests {
         assert!(may(Kind::FailedSignIns, Some("uc"), Perms::from_keys(["sign_in", "notify", "see_everyone", "see_network", "see_server"])));
         assert!(may(Kind::FailedSignIns, Some("ub"), plain), "attempts on your own account are yours");
         assert!(!may(Kind::TaskFailed, None, everyone), "the server's business needs see_server");
-        assert!(may(Kind::TaskFailed, None, server));
+        // A job's or a connection's failure says what the pages say only to who may run jobs: a person's name and the
+        // size of their history, Sonarr's or Seerr's internal address.
+        for k in [Kind::TaskFailed, Kind::BackupFailed, Kind::ServiceDown, Kind::ServiceBack] {
+            assert!(!may(k, None, server), "{} with see_server alone", k.key());
+            assert!(may(k, None, Perms::from_keys(["sign_in", "notify", "see_server", "manage"])));
+        }
         assert!(may(Kind::NewItems, None, plain), "the library is the same for everyone");
         assert!(!wanted_by(&t, Kind::NewItems, INFO, 10, None, None), "somebody who may not sign in is told nothing");
         // "Be sent notifications" taken away: their destinations go quiet, which they could no longer do themselves.
