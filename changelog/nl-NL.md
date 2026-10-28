@@ -4,11 +4,91 @@ Alles wat er in FinStats is veranderd, nieuwste eerst. Dit bestand wordt in het 
 ingebouwd en is wat het tabblad **Wijzigingslog** in de app toont.
 
 Opmaak: `## [version] - date`, of `## [version] - first day to release day` voor een versie die
-over meerdere dagen is gemaakt, daarna `### Added`, `### Changed`, `### Performance`, `### Stability`, `### Fixed`
-of `### Removed` (Toegevoegd, Gewijzigd, Prestaties, Stabiliteit, Opgelost, Verwijderd) met één punt per wijziging.
-Prestaties is iets wat sneller of lichter is geworden, Stabiliteit iets wat niet meer kan crashen, vastlopen,
-lekken of gegevens kwijtraken, en Opgelost iets wat een verkeerd antwoord gaf. Een `x.y.0`-versie heeft onder
-de kop een korte titelregel: die titel gebruikt de app als kop van de hele reeks.
+over meerdere dagen is gemaakt, daarna `### Added`, `### Changed`, `### Security`, `### Performance`, `### Stability`,
+`### Fixed` of `### Removed` (Toegevoegd, Gewijzigd, Beveiliging, Prestaties, Stabiliteit, Opgelost, Verwijderd) met
+één punt per wijziging. Beveiliging is iets wat iemand had kunnen misbruiken, Prestaties iets wat sneller of lichter is
+geworden, Stabiliteit iets wat niet meer kan crashen, vastlopen, lekken of gegevens kwijtraken, en Opgelost iets wat een
+verkeerd antwoord gaf. Een `x.y.0`-versie heeft onder de kop een korte titelregel: die titel gebruikt de app als kop van
+de hele reeks.
+
+## [2.3.1] - 2026-10-26 to 2026-10-28
+
+### Security
+- **De installatie vraagt om een eenmalige code**: zolang FinStats niet is ingesteld, schrijft het bij het starten een code naar zijn log (`docker logs finstats`), en de wizard vraagt erom voordat hij een adres test of iets instelt. Wie de poort als eerste bereikte, kon FinStats anders naar een eigen Jellyfin laten wijzen en er beheerder van worden, of de test gebruiken om in het netwerk rond te kijken.
+- **Toegang tot bibliotheken volgt Jellyfin**: iedereen ziet alleen de bibliotheken die Jellyfin voor hem openstelt, en daarin alleen de titels die Jellyfin voor hem toont onder zijn leeftijdsgrens, tags en regels voor titels zonder classificatie, in bibliotheekpagina’s, zoeken, cast, afbeeldingen, Onlangs toegevoegd, de kijklijst, Binnenkort, de agendafeed en meldingen van nieuwe titels. Iedereen die was aangemeld kon elke bibliotheek doorbladeren.
+- Een link kon iemand vanuit het welkom direct na het aanmelden naar een andere site sturen. Nu worden alleen de eigen pagina’s van FinStats gevolgd.
+- Het serverlog en de mislukte aanmeldingen in de inzichten gaven de aanmeldadressen en activiteit van iedereen aan iedereen met *De server zien*. Regels van een ander vragen *Activiteit van iedereen zien* en een adres *Netwerkdetails zien*, zoals overal elders.
+- Een persoonlijke meldingsbestemming kon het lokale netwerk bereiken via een naam die bij de tweede keer opzoeken een ander antwoord gaf. Er wordt verbonden met het adres dat is gecontroleerd, meer bereiken die nooit het internet bereiken tellen als lokaal, het eigen publieke adres van het huishouden wordt ook geweigerd, en een naam die niet kan worden opgezocht wordt in dezelfde woorden geweigerd als een lokale.
+- Achter een proxy die een eigen `X-Forwarded-For`-regel toevoegt, of vanaf een IPv6-netwerk, kon elke aanmeldpoging van een nieuw adres komen en gold de limiet nooit. Een IPv6-/48 krijgt nu 50 pogingen in vijf minuten, een volle limiet weigert een nieuw adres in plaats van een oud te vergeten, de hele server stopt bij 60 mislukte pogingen per minuut, en een mislukte aanmelding wordt eenmaal per adres en tijdvenster in het auditlog gezet.
+- `FINSTATS_TRUST_PROXY` noemt de proxy’s (adressen of bereiken) waarvan `X-Forwarded-For`, `X-Forwarded-Host` en `X-Forwarded-Proto` worden geloofd, en `1` of `true` gelooft nu alleen een peer op loopback of op een privénetwerk. Ingeschakeld kon elke peer zijn eigen adres kiezen; uitgeschakeld achter een proxy sloten tien verkeerde gokpogingen iedereen buiten.
+- Zodra de gebruikers zijn gelezen, wordt een aanmelding voor een naam die onbekend, uitgeschakeld, verwijderd of niet tot FinStats toegelaten is, zonder Jellyfin te vragen beantwoord als een verkeerd wachtwoord, en niet eerder dan Jellyfin zou hebben geantwoord. Zulke namen konden Jellyfin-accounts blokkeren, de regel van Jellyfin voor toegang op afstand omzeilen of zich verschuilen achter het adres van FinStats.
+- Wie door Jellyfin tot het thuisnetwerk wordt beperkt (*Externe verbindingen toestaan* uit), meldt zich alleen van daaruit aan bij FinStats, omdat Jellyfin de schakelaar beoordeelde op het eigen adres van FinStats, en een gebruikersuitlezing die niet zegt of iemand is uitgeschakeld, houdt die persoon buiten.
+- Een sessiecookie wordt als Secure gemarkeerd zodra de aanmeldpagina op https staat, ook achter een proxy die dat niet meldt.
+- Een geslaagde aanmelding vergeeft niet langer de gokpogingen ervoor. Op https is de sessiecookie een `__Host-`-cookie die een site op een naburige naam niet kan vervangen en die onder geen andere naam wordt aangenomen, en afmelden beëindigt elke sessie die de browser meestuurde.
+- Alleen een agendasleutel opent de agendafeed vanuit het adres; elke andere sleutel hoort in de header.
+- Een API-sleutel kan niet langer rechten toekennen, wijzigen wie erin komt of wat openbaar is, een back-up herstellen, of een dienst of meldingsbestemming toevoegen, wijzigen of testen: elk daarvan overleeft de sleutel, dus het vraagt een aangemelde browser.
+- Elk antwoord draagt `Cross-Origin-Opener-Policy: same-origin` en een `Permissions-Policy`, API-antwoorden dragen `Cross-Origin-Resource-Policy: same-origin` en zijn `no-store` tenzij ze anders zeggen, en de CSP staat geen `blob:`-afbeeldingen meer toe. Een pagina die FinStats had geopend, kon haar tabblad later veranderen in een eigen aanmeldpagina.
+- Waar FinStats het schema kent waarop het wordt bereikt (de `X-Forwarded-Proto` van een vertrouwde proxy, of het publieke adres), wordt een schrijfactie vanaf een ander schema geweigerd als cross-site.
+- `/auth/me`, de pagina van een titel en Bibliotheekgezondheid linken naar Jellyfin op zijn publieke adres; het adres waarop FinStats zelf Jellyfin leest, gaat alleen naar beheerders.
+- Een afbeelding wordt alleen bij Jellyfin opgehaald voor iets wat FinStats heeft, de posters en kaarten van een gepubliceerd profiel inbegrepen, zodat de afbeeldingen van een andere bibliotheek niet op id kunnen worden opgevraagd.
+- De sleutels van een private tracker worden ook uit de fouten van de downloadwachtrij weggelaten, op hun vorm en op hun naam, en wie alleen *Zien wat er downloadt* heeft, hoort welke dienst faalde en hoe, nooit het interne adres of waarheen die doorverwijst.
+- De pagina Server noemt de laatste gebruiker van een apparaat alleen met *Activiteit van iedereen zien*, en Niet-gekoppelde media vraagt dat ook, naast *FinStats beheren*. Zonder dat recht telt het onderdeel Taken alleen de eigen afspelingen en streams, wordt een verwijderde bibliotheek vermeld aan de hand van de eigen afspelingen, en kan een wachtend Tautulli-schakelbord niet worden geannuleerd.
+- De instellingen tonen de dienst voor het publieke adres alleen met zijn host en het adres van Jellyfin en de datamap alleen aan beheerders, en een titel die de bibliotheek kwijt is wordt alleen beschreven aan de hand van afspelingen die de lezer mag zien.
+- Een Tautulli-back-up waarvan de tabellen geen gewone tabellen waren, kon elke andere schrijfactie laten wachten tot FinStats opnieuw werd gestart. Zo’n bestand wordt geweigerd, en SQLite leest de back-up defensief.
+- Een upload van meer dan 4 GB wordt geweigerd, en een gezipte Tautulli-back-up wordt niet verder uitgepakt dan de grootte die hij opgeeft; beide konden de schijf vullen waarop de eigen database van FinStats staat.
+- Een antwoord van Jellyfin, Sonarr, Radarr, Seerr, het opzoeken van het publieke adres of de GeoIP-download wordt niet verder gelezen dan het hoogstens mag zijn, geteld na het uitpakken.
+- Elke Jellyfin-gebruiker kon FinStats voor iedereen laten stoppen met het vastleggen van afspelingen door duizenden korte afspelingen van één titel te melden. Uitzoeken wie samen keek gebeurt nu in één doorgang en houdt daarbij geen vergrendeling vast.
+- Afspelingen die direct na elkaar zijn bewaard, of één titel die beurtelings op apparaat na apparaat wordt afgespeeld, voegen geen vreemden meer samen tot één groep, en wie alleen zichzelf mag zien, hoort alleen van de mensen naast wie de eigen afspeling liep, en voor de tijd dat dat zo was.
+- Een link kon iemand na het aanmelden toch nog vanuit het welkom naar een andere site sturen, via een pad als `/.//`.
+- Wie *FinStats beheren* heeft, kan niet langer wijzigen hoeveel back-ups worden bewaard of hoe vaak ze worden geschreven, het samenvoegvenster (nu hooguit een uur) of wanneer gebruikers, het activiteitenlog en back-ups worden gelezen, en de back-ups van zo iemand verdringen nooit die van een beheerder; thuisadressen en de reisregels vragen wat de waarschuwingen vragen, en geschiedenis importeren vraagt ook *Activiteit van iedereen zien*.
+- Een opgeslagen sleutel, token of wachtwoord gaat alleen naar de server waarvoor het is opgeslagen, en een meldingsbestemming wordt alleen aangemaakt of gewijzigd wanneer je bent aangemeld, nooit met een API-sleutel. Een beheerder mag de persoonlijke bestemming van een ander uitschakelen of verwijderen, maar niet verplaatsen, de certificaatcontrole ervan niet uitzetten en het ntfy-topic of de Pushover-gebruikerssleutel niet lezen.
+- Webhooks van Discord en Slack moeten `https` zijn, omdat hun adres hun token is.
+- Een stroom mislukte aanmeldingen kan een echte niet langer verbergen of de waarschuwingen ondersneeuwen: namen die geen account zijn geven één melding per kwartier die niemand noemt, waarschuwingen gaan eerst, en Slack en Discord tonen wat een bericht zegt als tekst en pingen niemand.
+- De rang in de Terugblik, Capaciteit, een melding en een gepubliceerd profiel vertellen niet meer dan de pagina’s: geen rang of aandeel in ieders tijd aan wie alleen zichzelf mag zien, drukke momenten zonder *Activiteit van iedereen zien* alleen als dagen met drie streams of meer, geen mislukte taak of verbinding aan wie FinStats niet mag beheren, en een openbaar profiel verandert eens per dag.
+- Een Tautulli-back-up met een gegenereerde kolom wordt geweigerd, en een afbeelding wordt voor een geïmporteerde afspeling pas opgehaald als de bibliotheek de titel heeft.
+- Een herstel zet FinStats nooit verder open dan het is: instellingen komen alleen terug als daarom wordt gevraagd, aanmelden, rechten en openbare profielen worden wat zowel deze installatie als de back-up toestaat, en de publieke adressen blijven die van deze installatie. `finstats restore <file>` brengt alleen de geschiedenis terug, zoals de pagina, en met `--with-settings` ook de instellingen.
+- Een herstel van alleen de geschiedenis brengt niet langer thuisadressen terug, gedempte waarschuwingen, auditregels die voor die van deze installatie zelf doorgaan of gekoppelde titels die de bibliotheek niet heeft, en geen herstel brengt afspelingen, logregels of apparaten terug die gedateerd zijn vóór 1990 of na morgen. Een herstelde afspeling telt als geïmporteerd, welke bron ze ook opgeeft, zodat een herstart haar nooit voortzet.
+- De datamap is alleen van de eigen gebruiker van FinStats (0700, de bestanden 0600, `umask 077` in de image). FinStats weigert als root te draaien boven een datamap van een andere gebruiker en noemt de `docker exec -u` die je moet gebruiken, en het entrypoint wijzigt de eigenaar alleen van de map en van de eigen items van FinStats.
+- De naam van een bestemming mag geen stuurtekens bevatten, en de naam van een apparaat, een persoon of een titel kan geen regel in het log meer vervalsen.
+- De routeparameter van een link kan geen ander API-pad meer bereiken dan dat van de eigen pagina, en de elementbouwer van FinUI zet een adres alleen als het http(s) of relatief is, nooit `srcdoc`.
+- Zoeken, gepubliceerde profielen en met de hand gestart werk kunnen FinStats niet langer bezighouden: een zoekopdracht stopt bij 200 tekens, een profiel wordt per taal bewaard, kaarten wachten in een korte wachtrij, en een taak, het opzoeken van het adres, de download van de locatiedatabase en een testbericht starten maar zo vaak, hoe er ook om wordt gevraagd, testberichten geteld per afzender. Het ophalen van de locatiedatabase vraagt ook wat het lezen van de pagina Beveiliging vraagt.
+
+### Performance
+- Een gepubliceerd profiel wordt hooguit eens per minuut opgebouwd, niet opnieuw voor elke afbeelding en kaart erop.
+- De geschiedenis van een persoon wordt één keer tegelijk op beveiligingswaarschuwingen doorzocht, hoeveel afspelingen er ook beginnen.
+- Aan- of afmelden, een sleutel intrekken of de rechten van één persoon wijzigen laat alleen de liveverbindingen die het betreft opnieuw kijken.
+- Het Tautulli-schakelbord leest de geschiedenis één keer, niet één keer per Plex-gebruiker.
+- Een afbeelding die in de cache ontbreekt, wordt met één verzoek opgehaald terwijl de andere wachten, en een die de bron niet kon geven, wordt 30 seconden niet opnieuw gevraagd.
+- De bestanden van de webinterface worden één keer met gzip ingepakt en bewaard, en lettertypen worden niet nog eens gecomprimeerd.
+
+### Stability
+- Een back-up in het oudere formaat van Jellystat wordt rij voor rij gelezen in plaats van in zijn geheel, en een regel die langer is dan die van welke back-up ook wordt geweigerd.
+- Twee Tautulli-uploads tegelijk schrijven niet langer in één bestand.
+- Een paginanummer ver voorbij het einde van de titels van een bibliotheek of van Bibliotheekgezondheid geeft een lege pagina, geen fout.
+- Een import of herstel waarvan de upload werd afgebroken, weigert niet langer elke andere tot een herstart, en noch die, noch een import die werd opgegeven voordat hij begon, laat een bestand achter.
+- Eén rij van een back-up wordt niet verder gelezen dan 8 MB, en er komt één Tautulli-back-up tegelijk binnen.
+- Een afspeling houdt hooguit 2.000 gebeurtenissen, en een import slaat een afspeling over die niet tussen 1990 en morgen begint en eindigt.
+- Eén afleveringsnummer ver onder nul laat niet langer elke bibliotheekuitlezing hangen: Bibliotheekgezondheid (ook de samenvatting), Capaciteit, opnieuw koppelen en lokaliseren tellen op en vergelijken getallen zonder overloop, en een release-build controleert op overloop, zodat iets wat gemist is één taak stopt in plaats van in een lus te blijven.
+- Een seizoens-, afleverings- of eindnummer wordt alleen bewaard waar Jellyfin het zou kunnen bevatten (0 tot 2.147.483.647), uit Jellyfin, Jellystat en Tautulli gelijk.
+- Een Tautulli-back-up waarvan de id’s zich herhalen, wordt geweigerd, omdat een paar MB aan rijen onder één id het proces zonder geheugen liet, en een back-up wordt onveranderlijk geopend en laat geen `-wal` of `-shm` achter.
+- Een verbinding moet haar verzoek binnen 15 seconden sturen en er worden er hooguit 512 tegelijk bediend: een paar honderd half-open sockets haalden FinStats offline. Een frame op het livekanaal mag hooguit 4 KB zijn.
+- Een paar kilobyte van Sonarr, Radarr of Seerr kunnen niet langer gigabytes aan geheugen worden: een lijst houdt niet meer dan wat FinStats ervan leest.
+- Een meldingsbestemming die nooit antwoordt, houdt alleen zichzelf op: naar bestemmingen wordt naast elkaar gestuurd, en een die steeds een time-out geeft, wordt tien minuten met rust gelaten.
+- De resterende tijd en totale snelheid van een wachtrij, de getallen van een herstelde afspeling en de dag waarop een afspeling de prullenbak verlaat, kunnen niet langer overlopen.
+- Een herstel leest het hele bestand voordat het de schrijfvergrendeling neemt, weigert een bestand dat uitpakt tot veel meer dan zijn grootte, en schrijft in batches, zodat de collector intussen blijft vastleggen.
+- Back-ups worden in UTC benoemd en nooit over een bestaand bestand geschreven, en alleen de eigen kopieën van FinStats van vóór een update worden opgeruimd.
+- Een regel in het serverlog die in de toekomst is gedateerd, houdt het lezen van het activiteitenlog niet langer tegen: het wordt gelezen vanaf de nieuwste regel die niet in de toekomst ligt.
+- Verzoeken die tegelijk op een gepubliceerde link binnenkomen, bouwen het antwoord één keer op, en de kaarten ervan worden in een eigen baan getekend, zodat iemand met de link de Terugblik-kaarten van de eigenaar niet langer met 503 kan laten antwoorden.
+
+### Fixed
+- Mislukte aanmeldingen op een account geven één waarschuwing per tijdvenster die bij twintig uitgroeit tot een alarm, en een naam telt alleen tegen een account als die volledig is getypt ("x alice" telt niet langer tegen alice).
+- Berichten aan Discord en Slack worden eerst ge-escaped en daarna ingekort: een apparaatnaam vol Markdown liet Discord elke waarschuwing weigeren die hem noemde.
+- Een publiek IPv6-adres wordt geaccepteerd voor een persoonlijke bestemming.
+- Achter een proxy die zelf aanmeldt (nginx `auth_basic`), wordt de cookie van FinStats niet langer geweigerd.
+- Een weergavenaam met `{{url}}` wordt in de voorvertoning van een gepubliceerde pagina getoond zoals hij is geschreven.
+
+### Removed
+- **Synnmørsk** is geen taal van FinStats meer: een browser die het had gekozen, leest Nynorsk, de schrijftaal waaruit het is gemaakt.
 
 ## [2.3.0] - 2026-10-07 to 2026-10-26
 
@@ -236,14 +316,16 @@ Kijklijst
 
 ## [2.0.3] - 2026-09-28
 
+### Security
+- De pagina Server gaf de id van elk apparaat aan iedereen met *De server zien*; voor id’s is ook *Netwerkdetails zien* nodig, zoals overal elders.
+- Twee rechtenschakelaars die werden omgezet voordat de eerste was opgeslagen, stuurden twee keer dezelfde beginlijst, en de tweede maakte de eerste ongedaan: een ingetrokken recht bleef toegekend, een uitgeschakeld onderdeel van een openbaar profiel bleef gepubliceerd, terwijl beide schakelaars toonden wat er was gekozen.
+
 ### Stability
 - **Maar één import of terugzetting tegelijk**: twee uploads die samen werden verstuurd, kwamen allebei door de controle, en terugzetten keek nooit naar imports; de tweede wachtte de database uit en mislukte na minutenlang uploaden.
 - **Een adres met een kapotte `%`-escape opent de pagina Niet gevonden**, in plaats van eindeloos een draaiend laadicoontje te tonen.
 - **Een groot paginanummer in een lijst is een lege pagina**: het getal liep over en kwam terug als de eerste pagina.
 
 ### Fixed
-- **Beveiliging:** de pagina Server gaf de id van elk apparaat aan iedereen met *De server zien*; voor id’s is ook *Netwerkdetails zien* nodig, zoals overal elders.
-- **Beveiliging:** twee rechtenschakelaars die werden omgezet voordat de eerste was opgeslagen, stuurden twee keer dezelfde beginlijst, en de tweede maakte de eerste ongedaan: een ingetrokken recht bleef toegekend, een uitgeschakeld onderdeel van een openbaar profiel bleef gepubliceerd, terwijl beide schakelaars toonden wat er was gekozen.
 - **Tabellen sorteren getallen goed in een Duitse of Noorse browser**: ‘1,204’ werd gelezen als 1,204 met een decimale komma, en alles boven een miljoen als tekst.
 - **De tabelweergave van een grafiek sorteert datums, weekdagen en posities op tijd**, niet op hun letters.
 - **De downloadgeschiedenis noemt waar imports vandaan kwamen**: Sonarr en Radarr noemen de indexer en het protocol alleen bij het ophalen, dus die uitsplitsingen waren altijd leeg. Een mislukt seizoenspakket is één mislukking, niet één per aflevering.
@@ -268,6 +350,10 @@ Kijklijst
 
 ## [2.0.2] - 2026-09-28
 
+### Security
+- Achter een proxy telde de aanmeldlimiet het eerste `X-Forwarded-For`-adres, dat de client zelf meestuurt: per poging een nieuw verzonnen adres, en de limiet gold nooit. Nu is het het laatste, dat de proxy schreef.
+- *IP-adressen en plaatsen meesturen* stuurde adressen naar een persoonlijke bestemming van iemand zonder *Netwerkdetails zien*, die geen enkele pagina diegene zou tonen. Voor de mislukte aanmeldingen van een ander is nu ook *De server zien* nodig, zoals op de pagina Beveiliging.
+
 ### Stability
 - **Een noodstop gaat nooit verloren**: als een leesronde van de bibliotheek werd geweigerd in de eerste ogenblikken na het starten, voordat de server erop wachtte, werd de weigering genoteerd en draaide FinStats door in plaats van te stoppen.
 - **Een Jellyfin die antwoordt in een vorm die FinStats niet kan lezen, wordt geweigerd** en niet geloofd: elke gebruiker, of elke titel van een bibliotheek, die binnenkwam onder sleutels die het niet kent (`id` voor `Id`), kwam met een volledige telling door de controle en werd daarna als verwijderd gemarkeerd.
@@ -276,8 +362,6 @@ Kijklijst
 - **Een stuurteken in een naam of titel breekt de kaarten niet meer**: de profielkaart, elke verhaalkaart die die titel toonde en de ZIP ervan antwoordden met een fout.
 
 ### Fixed
-- **Beveiliging:** achter een proxy telde de aanmeldlimiet het eerste `X-Forwarded-For`-adres, dat de client zelf meestuurt: per poging een nieuw verzonnen adres, en de limiet gold nooit. Nu is het het laatste, dat de proxy schreef.
-- **Beveiliging:** *IP-adressen en plaatsen meesturen* stuurde adressen naar een persoonlijke bestemming van iemand zonder *Netwerkdetails zien*, die geen enkele pagina diegene zou tonen. Voor de mislukte aanmeldingen van een ander is nu ook *De server zien* nodig, zoals op de pagina Beveiliging.
 - **Meldingen stoppen voor iemand die in Jellyfin is uitgeschakeld of verwijderd**: diens persoonlijke bestemmingen kregen nog steeds alles wat de oude rechten toestonden.
 - **Een melding in de wachtrij wordt vóór het versturen opnieuw nagevraagd**: een uitgeschakelde bestemming, of een eigenaar die een recht was kwijtgeraakt, kreeg nog steeds wat op een nieuwe poging wachtte.
 - **Een bestemming die altijd `Retry-After` antwoordt, wordt opgegeven** na vijf pogingen, zoals elke andere, in plaats van dertig dagen lang opnieuw te worden geprobeerd.
@@ -412,9 +496,11 @@ Terugblik 2026, openbare profielen en samen kijken
 ### Added
 - **FinStats vertrouwt geen leesronde van Jellyfin meer die je geschiedenis zou wissen.** Als een bibliotheek waarvoor FinStats duizenden items bewaart ineens leeg of bijna leeg terugkomt (een upgrade van Jellyfin die de API veranderde, een fout die zich voordoet als een leeg resultaat), houdt FinStats de gegevens die het heeft, markeert het de synchronisatie als mislukt (en stuurt het een melding), en stopt het netjes met een duidelijke boodschap in plaats van alles als verwijderd te markeren. Start opnieuw zodra Jellyfin weer zichzelf is, of zet `FINSTATS_ALLOW_LIBRARY_SHRINK=1` als je echt een bibliotheek hebt leeggemaakt. Hetzelfde vangnet geldt voor de lijst met bibliotheken en de lijst met gebruikers.
 
+### Security
+- Een `X-Forwarded-Host`-header die een client meestuurde, kon instaan voor een vreemde `Origin` en zo een schrijfactie vanaf een andere site langs de same-origin-controle krijgen. Die header wordt nu alleen vertrouwd achter een vertrouwde proxy (`FINSTATS_TRUST_PROXY`), dezelfde regel die het opzoeken van het clientadres al gebruikt. De sessiecookie met `SameSite=Lax` was en blijft de eerste verdedigingslinie.
+- Een persoonlijke meldingsbestemming kon worden gericht op `0.0.0.0` of `::`, die deze machine bereiken. De controle die persoonlijke bestemmingen op openbare adressen gericht houdt, telt die nu als lokaal, naast loopback en de privébereiken.
+
 ### Fixed
-- **Beveiliging:** een `X-Forwarded-Host`-header die een client meestuurde, kon instaan voor een vreemde `Origin` en zo een schrijfactie vanaf een andere site langs de same-origin-controle krijgen. Die header wordt nu alleen vertrouwd achter een vertrouwde proxy (`FINSTATS_TRUST_PROXY`), dezelfde regel die het opzoeken van het clientadres al gebruikt. De sessiecookie met `SameSite=Lax` was en blijft de eerste verdedigingslinie.
-- **Beveiliging:** een persoonlijke meldingsbestemming kon worden gericht op `0.0.0.0` of `::`, die deze machine bereiken. De controle die persoonlijke bestemmingen op openbare adressen gericht houdt, telt die nu als lokaal, naast loopback en de privébereiken.
 - De pagina **Afspelen** laadt nu ook voor een bibliotheek met een weergave zonder vastgelegde methode (een rij die is teruggezet uit een back-up die ouder is dan de kolom); zo’n weergave telt gewoon als direct afspelen.
 - Een heel lang woord in een zoekopdracht of filter geeft geen serverfout meer: SQLite weigert een `LIKE`-patroon van meer dan 50.000 tekens, dus filterwoorden worden vóór de query tot een redelijke lengte ingekort.
 - De pagina **Instellingen** scrolt op een telefoon niet meer zijwaarts als een kaart een hele zin terugmeldt, zoals het resultaat van een terugzetting.

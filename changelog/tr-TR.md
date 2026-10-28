@@ -4,10 +4,90 @@ FinStats’te değişen her şey, en yenisi en üstte. Bu dosya ikili dosyanın 
 **Sürüm notları** sekmesinin gösterdiği de budur.
 
 Biçim: `## [version] - date` ya da birkaç günde yapılan bir sürüm için `## [version] - first day to release day`,
-ardından her değişiklik için bir madde ile `### Added`, `### Changed`, `### Performance`, `### Stability`, `### Fixed`
-ya da `### Removed`. Performans, daha hızlı ya da daha hafif hale gelen bir şeydir; Kararlılık, artık çökmeyen,
-durmayan, sızıntı yapmayan ya da veri kaybetmeyen bir şey; Düzeltildi ise yanlış yanıt veren bir şey. Bir `x.y.0`
-sürümü başlığının altında kısa bir başlık satırı taşır: uygulama bu başlığı tüm serinin manşeti olarak kullanır.
+ardından her değişiklik için bir madde ile `### Added`, `### Changed`, `### Security`, `### Performance`, `### Stability`,
+`### Fixed` ya da `### Removed`. Güvenlik, birinin kötüye kullanabileceği bir şeydir; Performans, daha hızlı ya da daha
+hafif hale gelen bir şey; Kararlılık, artık çökmeyen, durmayan, sızıntı yapmayan ya da veri kaybetmeyen bir şey;
+Düzeltildi ise yanlış yanıt veren bir şey. Bir `x.y.0` sürümü başlığının altında kısa bir başlık satırı taşır: uygulama
+bu başlığı tüm serinin manşeti olarak kullanır.
+
+## [2.3.1] - 2026-10-26 to 2026-10-28
+
+### Security
+- **Kurulum tek kullanımlık bir kod ister**: kurulana kadar FinStats başlarken günlüğüne bir kod yazar (`docker logs finstats`) ve sihirbaz, bir adresi denemeden ya da herhangi bir şeyi kurmadan önce bu kodu sorar. Aksi halde porta ilk ulaşan kişi FinStats’i kendine ait bir Jellyfin’e yönlendirip onun yöneticisi olabilir ya da denemeyi ağda dolaşmak için kullanabilirdi.
+- **Kütüphane erişimi Jellyfin’i izler**: herkes yalnızca Jellyfin’in kendisine açtığı kütüphaneleri, bunlarda da yalnızca Jellyfin’in yaş sınırı, etiketleri ve derecelendirilmemiş içerik kuralları altında kendisine listelediği başlıkları görür; kütüphane sayfalarında, aramada, oyuncu kadrosunda, resimlerde, Son eklenenler’de, İzleme listesi’nde, Yakında’da, takvim akışında ve yeni başlık bildirimlerinde. Oturum açmış herkes her kütüphaneye göz atabiliyordu.
+- Bir bağlantı, birini oturum açtıktan hemen sonra karşılama ekranından başka bir siteye gönderebiliyordu. Artık yalnızca FinStats’in kendi sayfalarına gidilir.
+- Sunucu günlüğü ve içgörülerdeki başarısız oturum açma girişimleri, herkesin oturum açma adreslerini ve etkinliğini *Sunucuyu görme* iznine sahip herkese veriyordu. Diğer her yerde olduğu gibi, başka birinin satırları *Herkesin etkinliğini görme*, bir adres ise *Ağ ayrıntılarını görme* iznini gerektirir.
+- Kişisel bir bildirim hedefi, ikinci kez sorgulandığında farklı yanıt veren bir ad üzerinden yerel ağa ulaşabiliyordu. Artık denetlenen adrese bağlanılır, internete hiç ulaşmayan daha fazla aralık yerel sayılır, evin kendi genel adresi de reddedilir ve sorgulanamayan bir ad, yerel bir adla aynı sözlerle reddedilir.
+- Kendi `X-Forwarded-For` satırını ekleyen bir proxy’nin arkasında ya da bir IPv6 ağından, her oturum açma denemesi yeni bir adresten gelebiliyor ve sınır hiç uygulanmıyordu. Bir IPv6 /48 artık beş dakikada 50 deneme hakkı alır, dolu bir sınır eski bir adresi unutmak yerine yeni bir adresi reddeder, tüm sunucu dakikada 60 başarısız denemede durur ve başarısız bir oturum açma, adres ve pencere başına bir kez denetim kaydına yazılır.
+- `FINSTATS_TRUST_PROXY`, `X-Forwarded-For`, `X-Forwarded-Host` ve `X-Forwarded-Proto` başlıklarına güvenilen proxy’leri (adresler ya da aralıklar) adlandırır; `1` ya da `true` artık yalnızca loopback’teki ya da özel bir ağdaki bir eşe güvenir. Açıkken her eş kendi adresini seçebiliyordu; bir proxy’nin arkasında kapalıyken on yanlış tahmin herkesi dışarıda bırakıyordu.
+- Kullanıcılar okunduktan sonra bilinmeyen, devre dışı bırakılmış, kaldırılmış ya da FinStats’e alınmayan bir ad için oturum açma, Jellyfin’e sorulmadan yanlış parola olarak yanıtlanır, üstelik Jellyfin’in yanıt vereceğinden daha erken değil. Bu tür adlar Jellyfin hesaplarını kilitleyebiliyor, Jellyfin’in uzaktan erişim kuralını aşabiliyor ya da FinStats’in adresinin arkasına saklanabiliyordu.
+- Jellyfin’in ev ağında tuttuğu biri (*Uzak bağlantılara izin ver* kapalı), FinStats’e yalnızca oradan oturum açar, çünkü Jellyfin bu ayarı FinStats’in kendi adresine göre değerlendiriyordu; birinin devre dışı olup olmadığını söylemeyen bir kullanıcı okuması da o kişiyi dışarıda tutar.
+- Oturum açılan sayfa https üzerindeyse oturum çerezi, bunu belirtmeyen bir proxy’nin arkasında da Secure olarak işaretlenir.
+- Başarılı bir oturum açma artık kendinden önceki tahminleri sıfırlamaz. https üzerinde oturum çerezi, komşu bir addaki bir sitenin değiştiremeyeceği ve başka hiçbir ad altında kabul edilmeyen bir `__Host-` çerezidir; oturumu kapatmak da tarayıcının gönderdiği her oturumu sonlandırır.
+- Takvim akışını adresinden yalnızca bir takvim anahtarı açar; diğer her anahtar başlıkta gönderilir.
+- Bir API anahtarı artık izin veremez, kimin girebileceğini ya da neyin herkese açık olduğunu değiştiremez, yedek geri yükleyemez, bir hizmeti ya da bildirim hedefini ekleyemez, değiştiremez veya deneyemez: bunların her biri anahtardan uzun yaşar, bu yüzden oturum açılmış bir tarayıcı gerektirir.
+- Her yanıt `Cross-Origin-Opener-Policy: same-origin` ve bir `Permissions-Policy` taşır, API yanıtları `Cross-Origin-Resource-Policy: same-origin` taşır ve aksini söylemedikçe `no-store` olur, CSP de artık `blob:` resimlere izin vermez. FinStats’i açan bir sayfa, daha sonra onun sekmesini kendine ait bir oturum açma sayfasına çevirebiliyordu.
+- FinStats’in hangi şemayla erişildiğini bildiği yerlerde (güvenilen bir proxy’nin `X-Forwarded-Proto` başlığı ya da genel adres), başka bir şemadan gelen yazma isteği siteler arası sayılıp reddedilir.
+- `/auth/me`, bir başlığın sayfası ve Kütüphane sağlığı, Jellyfin’e genel adresinden bağlantı verir; FinStats’in Jellyfin’i kendisinin okuduğu adres yalnızca yöneticilere gider.
+- Jellyfin’den yalnızca FinStats’te bulunan bir şey için resim alınır, yayımlanmış bir profilin posterleri ve kartları da buna dahildir; böylece başka bir kütüphanenin resimleri kimlikle istenemez.
+- Özel bir torrent izleyicisinin anahtarları indirme kuyruğunun hatalarından da, adlarının yanı sıra biçimlerine göre de silinir; yalnızca *İndirilenleri görme* iznine sahip birine hangi hizmetin nasıl başarısız olduğu söylenir, iç adresi ya da nereye yönlendirdiği asla söylenmez.
+- Sunucu sayfası bir cihazın son kullanıcısını yalnızca *Herkesin etkinliğini görme* izniyle gösterir; Bağlanmamış medya da *FinStats’i yönetme* izninin yanı sıra bunu gerektirir. Bu izin olmadan Görevler bölümü yalnızca kişinin kendi oynatmalarını ve akışlarını sayar, kaldırılmış bir kütüphane kişinin kendi oynatmalarına göre listelenir ve bekleyen bir Tautulli panosu iptal edilemez.
+- Ayarlar genel adres hizmetini yalnızca sunucu adıyla, Jellyfin’in adresini ve veri klasörünü yalnızca yöneticilere gösterir ve kütüphanenin kaybettiği bir başlık yalnızca okuyanın görebileceği oynatmalardan tanımlanır.
+- Tabloları düz tablo olmayan bir Tautulli yedeği, FinStats yeniden başlatılana kadar diğer tüm yazmaları bekletebiliyordu. Böyle bir dosya reddedilir ve SQLite yedeği savunmacı biçimde okur.
+- 4 GB’ı aşan bir yükleme reddedilir ve sıkıştırılmış bir Tautulli yedeği bildirdiği boyuttan öteye açılmaz; ikisi de FinStats’in kendi veritabanının bulunduğu diski doldurabilirdi.
+- Jellyfin, Sonarr, Radarr, Seerr, genel adres sorgusu ya da GeoIP indirmesinden gelen bir yanıt, olabileceği en büyük boyuttan öteye okunmaz; boyut açıldıktan sonra sayılır.
+- Herhangi bir Jellyfin kullanıcısı, tek bir başlığın binlerce kısa oynatmasını bildirerek FinStats’in herkes için oynatma kaydetmesini durdurabiliyordu. Kimin birlikte izlediğini hesaplamak artık tek geçişte yapılır ve çalışırken hiçbir kilit tutmaz.
+- Art arda kaydedilen oynatmalar ya da cihazdan cihaza sırayla oynatılan tek bir başlık artık yabancıları tek bir grupta birleştirmez ve yalnızca kendini görebilen birine yalnızca kendi oynatmasının yanında yürüdüğü kişilerden, yürüdüğü süre boyunca söz edilir.
+- Bir bağlantı, `/.//` gibi bir yol üzerinden, oturum açıldıktan sonra birini karşılama ekranından hâlâ başka bir siteye gönderebiliyordu.
+- Bir yönetici artık kaç yedeğin tutulacağını ya da ne sıklıkla yazılacağını, birleştirme süresini (artık en fazla bir saat) ya da kullanıcıların, etkinlik günlüğünün ve yedeklerin ne zaman okunacağını değiştiremez ve bir yöneticinin yedekleri, bir sistem yöneticisinin yedeklerini asla dışarı itmez; ev adresleri ve seyahat kuralları uyarıların gerektirdiği izinleri ister, geçmişi içe aktarmak ise *Herkesin etkinliğini görme* iznini de gerektirir.
+- Kaydedilmiş bir anahtar, belirteç ya da parola yalnızca kaydedildiği sunucuya gider ve bir bildirim hedefi API anahtarıyla değil, yalnızca oturum açıkken oluşturulur ya da değiştirilir. Bir yönetici başka birinin kişisel hedefini kapatabilir ya da kaldırabilir, ama başka yere yönlendiremez, sertifika denetimlerini kapatamaz, ntfy konusunu ya da Pushover kullanıcı anahtarını okuyamaz.
+- Discord ve Slack webhook’ları `https` olmalıdır, çünkü adresleri aynı zamanda belirteçleridir.
+- Başarısız oturum açma seli artık gerçek bir oturum açmayı gizleyemez ya da uyarıları gömemez: hesap olmayan adlar çeyrek saatte bir, kimseyi adlandırmayan tek bir bildirim oluşturur, uyarılar önce gönderilir, Slack ve Discord bir mesajın söylediğini düz metin olarak gösterir ve kimseyi etiketlemez.
+- Yıl özetindeki sıralama, Kapasite, bir bildirim ve yayımlanmış bir profil sayfaların söylediğinden fazlasını söylemez: yalnızca kendini görebilen birine sıralama ya da herkesin süresindeki pay gösterilmez, *Herkesin etkinliğini görme* izni olmadan yoğun anlar yalnızca üç ya da daha fazla akışlı günler olarak gösterilir, FinStats’i yönetemeyen birine başarısız bir iş ya da bağlantı bildirilmez ve herkese açık bir profil günde bir kez değişir.
+- Oluşturulan (generated) bir sütun içeren Tautulli yedeği reddedilir ve içe aktarılmış bir oynatma için resim ancak kütüphanede başlığı olduğunda alınır.
+- Bir geri yükleme FinStats’i asla olduğundan daha geniş açmaz: ayarlar yalnızca istendiğinde geri gelir, oturum açma, izinler ve herkese açık profiller hem bu kurulumun hem de yedeğin izin verdiği şey olur ve genel adresler bu kurulumunkiler olarak kalır. `finstats restore <file>`, sayfanın yaptığı gibi yalnızca geçmişi, `--with-settings` ile ayarları da geri getirir.
+- Yalnızca geçmişin geri yüklenmesi artık ev adreslerini, sessize alınmış uyarıları, bu kurulumun kendi kayıtları gibi görünen denetim kayıtlarını ya da kütüphanede olmayan konumlandırılmış başlıkları geri getirmez ve hiçbir geri yükleme 1990’dan önceye ya da yarından sonraya tarihli oynatmaları, günlük satırlarını ya da cihazları geri getirmez. Geri yüklenen bir oynatma, hangi kaynaktan geldiğini iddia ederse etsin içe aktarılmış sayılır, böylece bir yeniden başlatma onu asla sürdürmez.
+- Veri klasörü yalnızca FinStats’in kendi kullanıcısına aittir (0700, dosyaları 0600, imajda `umask 077`). FinStats, başka bir kullanıcıya ait bir veri klasörü üzerinde root olarak çalışmayı reddeder ve kullanılacak `docker exec -u` komutunu söyler; entrypoint yalnızca klasörün ve FinStats’in kendi girdilerinin sahibini değiştirir.
+- Bir hedefin adı denetim karakteri içeremez ve bir cihazın, kişinin ya da başlığın adı artık günlükte sahte bir satır oluşturamaz.
+- Bir bağlantının rota parametresi artık kendi sayfasınınkinden başka bir API yoluna ulaşamaz ve FinUI’nin öğe oluşturucusu bir adresi yalnızca http(s) ya da göreli olduğunda ayarlar, asla `srcdoc` olarak değil.
+- Arama, yayımlanmış profiller ve elle başlatılan işler artık FinStats’i meşgul edemez: arama 200 karakterde durur, bir profil her dil için ayrı saklanır, kartlar kısa bir kuyrukta bekler; bir iş, adres sorgusu, konum veritabanı indirmesi ve test mesajı, nasıl istenirse istensin yalnızca belirli aralıklarla başlar, test mesajları gönderen başına sayılır. Konum veritabanını indirmek, Güvenlik sayfasını okumanın gerektirdiği izinleri de gerektirir.
+
+### Performance
+- Yayımlanmış bir profil, üzerindeki her resim ve kart için yeniden değil, en fazla dakikada bir kez hesaplanır.
+- Bir kişinin geçmişi, kaç oynatma başlarsa başlasın, güvenlik uyarıları için aynı anda yalnızca bir kez taranır.
+- Oturum açmak ya da kapatmak, bir anahtarı iptal etmek ya da bir kişinin izinlerini değiştirmek, yalnızca bunun ilgilendirdiği canlı bağlantılardan yeniden bakmalarını ister.
+- Tautulli bağlantı panosu geçmişi her Plex kullanıcısı için ayrı ayrı değil, bir kez okur.
+- Önbellekte olmayan bir resim, diğerleri beklerken tek bir istekle alınır ve kaynağın veremediği bir resim 30 saniye boyunca yeniden istenmez.
+- Web arayüzünün dosyaları bir kez gzip ile sıkıştırılıp saklanır ve yazı tipleri yeniden sıkıştırılmaz.
+
+### Stability
+- Jellystat’ın eski biçimindeki bir yedek bütün olarak değil satır satır okunur ve herhangi bir yedeğinkinden uzun bir satır reddedilir.
+- Aynı anda yapılan iki Tautulli yüklemesi artık tek bir dosyaya yazmaz.
+- Bir kütüphanenin başlıklarının ya da Kütüphane sağlığının sonunun çok ötesindeki bir sayfa numarası hata değil, boş bir sayfadır.
+- Yüklemesi yarıda kesilen bir içe aktarma ya da geri yükleme artık yeniden başlatılana kadar diğer tümünü reddetmez; ne o ne de başlamadan önce bırakılan bir içe aktarma geride bir dosya bırakır.
+- Bir yedeğin tek bir satırı 8 MB’tan öteye okunmaz ve aynı anda yalnızca bir Tautulli yedeği alınır.
+- Bir oynatma en fazla 2.000 olay tutar ve bir içe aktarma, başlangıcı ve ardından gelen bitişi 1990 ile yarın arasında kalmayan bir oynatmayı atlar.
+- Sıfırın çok altındaki tek bir bölüm numarası artık her kütüphane okumasını kilitlemez: Kütüphane sağlığı (özeti de), Kapasite, yeniden bağlama ve konumlandırma sayıları taşma olmadan toplar ve karşılaştırır, sürüm derlemesi de taşmayı denetler; böylece gözden kaçan bir şey döngüye girmek yerine tek bir görevi durdurur.
+- Sezon, bölüm ya da bitiş numarası, Jellyfin’den, Jellystat’tan ya da Tautulli’den gelsin, yalnızca Jellyfin’in tutabileceği aralıkta (0 ile 2.147.483.647 arası) saklanır.
+- Kimlikleri yinelenen bir Tautulli yedeği reddedilir, çünkü tek bir kimlik altındaki birkaç MB’lık satır sürecin belleğini tüketiyordu; bir yedek değişmez olarak açılır ve geride `-wal` ya da `-shm` bırakmaz.
+- Bir bağlantı isteğini 15 saniye içinde göndermelidir ve aynı anda en fazla 512 bağlantıya hizmet verilir: birkaç yüz yarı açık soket FinStats’i erişilemez hale getiriyordu. Canlı kanaldaki bir çerçeve 4 KB ile sınırlıdır.
+- Sonarr, Radarr ya da Seerr’den gelen birkaç kilobayt artık gigabaytlarca belleğe dönüşemez: bir liste, FinStats’in ondan okuduğundan fazlasını tutmaz.
+- Hiç yanıt vermeyen bir bildirim hedefi yalnızca kendini bekletir: hedeflere yan yana gönderilir ve sürekli zaman aşımına uğrayan bir hedef on dakika boyunca rahat bırakılır.
+- Bir kuyruğun kalan süresi ve toplam hızı, geri yüklenen bir oynatmanın sayıları ve bir oynatmanın çöp kutusundan çıktığı gün artık taşamaz.
+- Bir geri yükleme, yazma kilidini almadan önce dosyanın tamamını okur, kendi boyutundan çok daha büyüğe açılan bir dosyayı reddeder ve gruplar halinde yazar; böylece toplayıcı bu sırada kaydetmeyi sürdürür.
+- Yedekler UTC ile adlandırılır ve asla var olan bir dosyanın üzerine yazılmaz; yalnızca FinStats’in kendi güncelleme öncesi kopyaları budanır.
+- Geleceğe tarihli bir sunucu günlüğü satırı artık etkinlik günlüğünün okunmasını durdurmaz: günlük, gelecekte olmayan en yeni satırından itibaren okunur.
+- Yayımlanmış bir bağlantıya birlikte gelen istekler yanıtını bir kez hesaplar ve kartları kendine ait bir şeritte çizilir; böylece bağlantıya sahip biri artık sahibin Yıl özeti kartlarının 503 yanıtı vermesine yol açamaz.
+
+### Fixed
+- Bir hesaptaki başarısız oturum açmalar pencere başına tek bir uyarıdır ve yirmide bir alarma dönüşür; bir ad, bir hesaba karşı yalnızca tam yazıldığında sayılır ("x alice" artık alice’e karşı sayılmaz).
+- Discord ve Slack mesajları önce kaçışlanır, sonra kesilir: Markdown dolu bir cihaz adı, Discord’un onu anan her uyarıyı reddetmesine yol açıyordu.
+- Kişisel bir hedef için genel bir IPv6 adresi kabul edilir.
+- İnsanların oturumunu kendisi açan bir proxy’nin arkasında (nginx `auth_basic`), FinStats’in çerezi artık reddedilmez.
+- `{{url}}` içeren bir görünen ad, yayımlanmış bir sayfanın önizlemesinde yazıldığı gibi gösterilir.
+
+### Removed
+- **Synnmørsk** artık FinStats'in dillerinden biri değil: onu seçmiş bir tarayıcı, dayandığı yazı dili olan Nynorsk'u okur.
 
 ## [2.3.0] - 2026-10-07 to 2026-10-26
 
@@ -235,14 +315,16 @@ Kütüphane sağlığı ve FinUI
 
 ## [2.0.3] - 2026-09-28
 
+### Security
+- Sunucu sayfası her cihazın kimliğini *Sunucuyu görme* iznine sahip herkese veriyordu; kimlikler, diğer her yerde olduğu gibi *Ağ ayrıntılarını görme* iznini de gerektirir.
+- Ilki kaydedilmeden çevrilen iki izin anahtarı aynı başlangıç listesini iki kez gönderiyordu ve ikincisi ilkini geri alıyordu: iki anahtar da seçileni gösterirken geri alınan bir izin verilmiş olarak kalıyor, kapatılan bir herkese açık profil bölümü yayında kalıyordu.
+
 ### Stability
 - **Aynı anda yalnızca bir içe aktarma ya da geri yükleme**: birlikte gönderilen iki yüklemenin ikisi de denetimi geçiyordu ve geri yükleme içe aktarmalara hiç bakmıyordu; ikincisi veritabanını bekliyor ve dakikalarca süren yüklemeden sonra başarısız oluyordu.
 - **Bozuk bir `%` kaçışı içeren bir adres bulunamadı sayfasını açar**, sonsuza dek dönen bir yükleme simgesi bırakmaz.
 - **Bir listedeki büyük bir sayfa numarası boş bir sayfadır**: taşma yapıyor ve yeniden ilk sayfa olarak geliyordu.
 
 ### Fixed
-- **Güvenlik:** Sunucu sayfası her cihazın kimliğini *Sunucuyu görme* iznine sahip herkese veriyordu; kimlikler, diğer her yerde olduğu gibi *Ağ ayrıntılarını görme* iznini de gerektirir.
-- **Güvenlik:** ilki kaydedilmeden çevrilen iki izin anahtarı aynı başlangıç listesini iki kez gönderiyordu ve ikincisi ilkini geri alıyordu: iki anahtar da seçileni gösterirken geri alınan bir izin verilmiş olarak kalıyor, kapatılan bir herkese açık profil bölümü yayında kalıyordu.
 - **Tablolar Almanca ya da Norveççe bir tarayıcıda sayıları doğru sıralar**: “1,204” bin iki yüz dört değil ondalık bir sayı olarak, bir milyonu aşan her şey ise metin olarak okunuyordu.
 - **Bir grafiğin Tablo görünümü tarihleri, hafta günlerini ve konumları zamana göre sıralar**, harflerine göre değil.
 - **İndirme geçmişi içe aktarmaların nereden geldiğini söyler**: Sonarr ve Radarr dizinleyiciyi ve protokolü yalnızca yakalamada belirtir, bu yüzden bu dökümler hep boştu. Başarısız bir sezon paketi bölüm başına bir değil, tek bir hatadır.
@@ -267,6 +349,10 @@ Kütüphane sağlığı ve FinUI
 
 ## [2.0.2] - 2026-09-28
 
+### Security
+- Bir vekil arkasında oturum açma sınırı, istemcinin gönderdiği ilk `X-Forwarded-For` adresini sayıyordu: her denemede uydurulmuş yeni bir adres gönderiliyor ve sınır hiç uygulanmıyordu. Artık vekilin yazdığı son adres sayılır.
+- *IP adreslerini ve konumları ekle*, sahibinin *Ağ ayrıntılarını görme* izni olmadığı kişisel bir hedefe, hiçbir sayfanın ona göstermeyeceği adresleri gönderiyordu. Başka birinin başarısız oturum açmaları artık Güvenlik sayfasındaki gibi *Sunucuyu görme* iznini de gerektirir.
+
 ### Stability
 - **Bir durdurma asla kaybolmaz**: başlatmadan hemen sonraki ilk anlarda, sunucu henüz onu dinlemeye başlamadan bir kütüphane okuması reddedildiğinde ret not ediliyor ve FinStats durmak yerine çalışmaya devam ediyordu.
 - **FinStats’in okuyamadığı bir biçimde yanıt veren bir Jellyfin reddedilir**, ona güvenilmez: her kullanıcının ya da bir kütüphanenin her içeriğinin bilmediği anahtarlar altında gelmesi (`id` olarak, `Id` değil) korumayı tam bir sayıyla geçiyor ve sonra hepsi kaldırılmış olarak işaretleniyordu.
@@ -275,8 +361,6 @@ Kütüphane sağlığı ve FinUI
 - **Bir kişi adındaki ya da içerik adındaki denetim karakteri artık kartları bozmuyor**: profil kartı, o içeriği gösteren her hikâye kartı ve onların ZIP dosyası bir hatayla yanıt veriyordu.
 
 ### Fixed
-- **Güvenlik:** bir vekil arkasında oturum açma sınırı, istemcinin gönderdiği ilk `X-Forwarded-For` adresini sayıyordu: her denemede uydurulmuş yeni bir adres gönderiliyor ve sınır hiç uygulanmıyordu. Artık vekilin yazdığı son adres sayılır.
-- **Güvenlik:** *IP adreslerini ve konumları ekle*, sahibinin *Ağ ayrıntılarını görme* izni olmadığı kişisel bir hedefe, hiçbir sayfanın ona göstermeyeceği adresleri gönderiyordu. Başka birinin başarısız oturum açmaları artık Güvenlik sayfasındaki gibi *Sunucuyu görme* iznini de gerektirir.
 - **Jellyfin’de devre dışı bırakılan ya da silinen biri için bildirimler durur**: kişisel hedeflerine eski izinlerinin izin verdiği her şey gönderilmeye devam ediyordu.
 - **Kuyruktaki bir bildirim gönderilmeden önce yeniden sorgulanır**: kapatılmış bir hedefe ya da bir iznini kaybetmiş bir sahibe, yeniden denenmeyi bekleyen şey hâlâ gönderiliyordu.
 - **Her zaman `Retry-After` ile yanıt veren bir hedeften vazgeçilir**: otuz gün boyunca yeniden denenmek yerine, diğerleri gibi beş denemeden sonra.
@@ -411,9 +495,11 @@ Yıl özeti 2026, herkese açık profiller ve birlikte izleme
 ### Added
 - **FinStats artık geçmişinizi silecek bir Jellyfin okumasına güvenmiyor.** FinStats’in binlerce öğe tuttuğu bir kütüphane birden boş ya da neredeyse boş okunursa (API’sini değiştiren bir Jellyfin yükseltmesi, boş sonuç kılığına girmiş bir hata), FinStats elindeki verileri korur, eşitlemeyi başarısız olarak işaretler (ve bildirir) ve her şeyi kaldırılmış olarak işaretlemek yerine açık bir iletiyle düzgünce durur. Jellyfin kendine geldiğinde yeniden başlatın ya da bir kütüphaneyi gerçekten boşalttıysanız `FINSTATS_ALLOW_LIBRARY_SHRINK=1` ayarlayın. Aynı koruma kütüphane listesini ve kullanıcı listesini de kapsar.
 
+### Security
+- Bir istemcinin gönderdiği `X-Forwarded-Host` başlığı yabancı bir `Origin` için kefil olabiliyor ve siteler arası bir yazmayı aynı köken korumasından geçirebiliyordu. Bu başlığa artık yalnızca güvenilen bir vekil arkasında güvenilir (`FINSTATS_TRUST_PROXY`); istemci adresinin belirlenmesinde zaten kullanılan kuralın aynısı. `SameSite=Lax` oturum çerezi ilk savunma hattıydı ve öyle kalıyor.
+- Kişisel bir bildirim hedefi, bu makineye ulaşan `0.0.0.0` ya da `::` adresine yöneltilebiliyordu. Kişisel hedeflerin herkese açık adreslere yönelmesini sağlayan denetim artık bunları da, geri döngü ve özel aralıkların yanında, yerel sayar.
+
 ### Fixed
-- **Güvenlik:** bir istemcinin gönderdiği `X-Forwarded-Host` başlığı yabancı bir `Origin` için kefil olabiliyor ve siteler arası bir yazmayı aynı köken korumasından geçirebiliyordu. Bu başlığa artık yalnızca güvenilen bir vekil arkasında güvenilir (`FINSTATS_TRUST_PROXY`); istemci adresinin belirlenmesinde zaten kullanılan kuralın aynısı. `SameSite=Lax` oturum çerezi ilk savunma hattıydı ve öyle kalıyor.
-- **Güvenlik:** kişisel bir bildirim hedefi, bu makineye ulaşan `0.0.0.0` ya da `::` adresine yöneltilebiliyordu. Kişisel hedeflerin herkese açık adreslere yönelmesini sağlayan denetim artık bunları da, geri döngü ve özel aralıkların yanında, yerel sayar.
 - **Oynatma** sayfası, yöntemi kaydedilmemiş bir oynatma içeren bir kütüphane için (sütundan daha eski bir yedekten geri yüklenmiş bir satır) artık yüklenememe hatası vermiyor; böyle bir oynatma basitçe doğrudan oynatma sayılır.
 - Bir aramada ya da filtrede çok uzun bir sözcük artık sunucu hatası değil: SQLite 50.000 karakteri aşan bir `LIKE` desenini reddeder, bu yüzden filtre sözcükleri sorgudan önce makul bir uzunluğa kısaltılır.
 - **Ayarlar** sayfası, bir kart bir geri yüklemenin sonucu gibi bütün bir cümle bildirdiğinde telefonda artık yana kaymıyor.

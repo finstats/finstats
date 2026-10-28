@@ -4,11 +4,90 @@ Everything that changed in FinStats, newest first. This file is compiled into th
 binary and is what the **Patch notes** tab in the app shows.
 
 Format: `## [version] - date`, or `## [version] - first day to release day` for a release made
-over several days, then `### Added`, `### Changed`, `### Performance`, `### Stability`, `### Fixed`
-or `### Removed` with one bullet per change. Performance is something that got quicker or lighter,
-Stability something that can no longer crash, halt, leak or lose data, Fixed something that gave a
-wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
+over several days, then `### Added`, `### Changed`, `### Security`, `### Performance`, `### Stability`,
+`### Fixed` or `### Removed` with one bullet per change. Security is something somebody could have
+misused, Performance something that got quicker or lighter, Stability something that can no longer
+crash, halt, leak or lose data, Fixed something that gave a wrong answer. An `x.y.0` release carries a short title line under its heading: that title is what
 the app uses as the headline of the whole series.
+
+## [2.3.1] - 2026-10-26 to 2026-10-28
+
+### Security
+- **Setup asks for a one-time code**: until it is set up, FinStats writes a code to its log when it starts (`docker logs finstats`), and the wizard asks for it before it tests an address or sets anything up. Whoever reached the port first could otherwise point FinStats at a Jellyfin of their own and be its administrator, or use the test to look around the network.
+- **Library access follows Jellyfin**: each person sees only the libraries Jellyfin opens to them, and in them only the titles Jellyfin lists for them under their rating limit, tags and unrated rules, in library pages, search, cast, pictures, Recently added, the watchlist, Coming up, the calendar feed and notifications of new titles. Every signed-in person could browse every library.
+- A link could send somebody from the welcome to another site straight after they signed in. Only FinStats' own pages are followed now.
+- The server log and the failed sign-ins in the insights gave everybody's sign-in addresses and activity to anybody with *see the server*. Somebody else's lines need *see everyone's activity* and an address *see network details*, as everywhere else.
+- A personal notification destination could reach the local network through a name that answered differently the second time it was looked up. It is connected to at the address that was checked, more ranges that never reach the internet count as local, the household's own public address is refused too, and a name that cannot be looked up is refused in the same words as a local one.
+- Behind a proxy that adds an `X-Forwarded-For` line of its own, or from an IPv6 network, every sign-in attempt could come from a new address and the limit never applied. An IPv6 /48 now gets 50 tries in five minutes, a full limit refuses a new address rather than forgetting an old one, the whole server stops at 60 failures a minute, and a failed sign-in is audited once per address and window.
+- `FINSTATS_TRUST_PROXY` names the proxies (addresses or ranges) whose `X-Forwarded-For`, `X-Forwarded-Host` and `X-Forwarded-Proto` are believed, and `1` or `true` now believes only a peer on loopback or a private network. Turned on, any peer could choose its own address; left off behind a proxy, ten wrong guesses locked everyone out.
+- Once the users have been read, a sign-in for a name that is unknown, disabled, removed or not let into FinStats is answered as a wrong password without asking Jellyfin, and no sooner than Jellyfin would have answered. Such names could lock Jellyfin accounts, get around Jellyfin's rule on remote access, or hide behind FinStats' address.
+- Somebody Jellyfin keeps to the home network (*Allow remote connections* off) signs in to FinStats only from there, since Jellyfin judged the switch on FinStats' own address, and a users read that does not say whether somebody is disabled keeps them out.
+- A session cookie is marked Secure whenever the page signing in is on https, also behind a proxy that does not say so.
+- A sign-in that works no longer forgives the guesses before it. On https the session cookie is a `__Host-` cookie that a site on a neighboring name cannot replace and is taken under no other name, and a sign-out ends every session the browser sent.
+- Only a calendar key opens the calendar feed from its address; any other key goes in the header.
+- An API key can no longer grant permissions, change who gets in or what is public, restore a backup, or add, change or test a service or a notification destination: each outlasts the key, so it needs a signed-in browser.
+- Every answer carries `Cross-Origin-Opener-Policy: same-origin` and a `Permissions-Policy`, API answers carry `Cross-Origin-Resource-Policy: same-origin` and are `no-store` unless they say otherwise, and the CSP no longer allows `blob:` pictures. A page that opened FinStats could later turn its tab into a sign-in page of its own.
+- Where FinStats knows the scheme it is reached by (a trusted proxy's `X-Forwarded-Proto`, or the public address), a write from another scheme is refused as cross-site.
+- `/auth/me`, a title's page and Library health link into Jellyfin at its public address; the address FinStats itself reads Jellyfin at goes to administrators only.
+- A picture is fetched from Jellyfin only for something FinStats has, a published profile's posters and cards included, so no other library's pictures can be asked for by id.
+- A private tracker's keys are blanked from the download queue's errors too, by their shape as well as their name, and somebody with only *see what is downloading* is told which service failed and how, never its internal address or where it redirects.
+- The Server page names a device's last user only with *see everyone's activity*, and Unlinked media needs it as well as *manage FinStats*. Without it, the Tasks section counts only one's own plays and streams, a removed library is listed by one's own plays, and a waiting Tautulli board cannot be cancelled.
+- The settings show the public-address service by its host alone and Jellyfin's address and the data folder to administrators only, and a title the library lost is described only from plays the reader may see.
+- A Tautulli backup whose tables were not plain tables could keep every other write waiting until FinStats was restarted. Such a file is refused, and SQLite reads the backup defensively.
+- An upload past 4 GB is refused, and a zipped Tautulli backup is unpacked no further than the size it claims; either could fill the disk FinStats' own database is on.
+- An answer from Jellyfin, Sonarr, Radarr, Seerr, the public-address lookup or the GeoIP download is read no further than the most it may be, counted after unpacking.
+- Any Jellyfin user could stop FinStats recording plays for everybody by reporting thousands of short plays of one title. Working out who watched together now takes one pass and holds no lock while it works.
+- Plays kept back to back, or one title played in rotation from device after device, no longer join strangers into one group, and somebody who may see only themselves is told only of the people their own play ran beside, for the time it did.
+- A link could still send somebody from the welcome to another site after signing in, through a path such as `/.//`.
+- A manager can no longer change how many backups are kept or how often they are written, the merge window (now an hour at most) or when users, the activity log and backups are read, and a manager's backups never push an administrator's out; home addresses and the travel rules need what the alerts need, and importing history needs *see everyone's activity* too.
+- A saved key, token or password goes only to the server it was saved for, and a notification destination is made or changed only when signed in, never with an API key. An administrator may switch off or remove somebody else's personal destination, but not move it, switch its certificate checks off or read its ntfy topic or Pushover user key.
+- Discord and Slack webhooks must be `https`, since their address is their token.
+- A flood of failed sign-ins can no longer hide a real one or bury the alerts: names that are no account make one notice a quarter of an hour that names nobody, alerts go out first, and Slack and Discord show what a message says as text and ping nobody.
+- The recap's rank, Capacity, a notification and a published profile tell no more than the pages do: no rank or share of everybody's time to somebody who may see only themselves, busy moments only as days of three streams or more without *see everyone's activity*, no failed job or connection to somebody who may not manage FinStats, and a public profile changes once a day.
+- A Tautulli backup with a generated column is refused, and a picture is fetched for an imported play only once the library has its title.
+- A restore never opens FinStats wider than it is: settings come back only when asked, sign-in, permissions and public profiles become what both this install and the backup allow, and the public addresses stay this install's. `finstats restore <file>` brings back the history only, as the page does, and the settings too with `--with-settings`.
+- A restore of the history alone no longer brings back home addresses, muted alerts, audit entries that pass for this install's own or located titles the library lacks, and no restore brings back plays, log rows or devices dated before 1990 or past tomorrow. A restored play counts as imported whatever source it claims, so a restart never continues it.
+- The data folder is FinStats' own user's alone (0700, its files 0600, `umask 077` in the image). FinStats refuses to run as root over a data folder another user owns and names the `docker exec -u` to use, and the entrypoint changes the owner only of the folder and FinStats' own entries.
+- A destination's name may hold no control characters, and the name of a device, a person or a title can no longer forge a line in the log.
+- A link's route parameter can no longer reach another API path than its page's own, and FinUI's element builder sets an address only when it is http(s) or relative, never `srcdoc`.
+- Search, published profiles and work started by hand can no longer keep FinStats busy: a search stops at 200 characters, a profile is kept per language, cards wait in a short queue, and a job, the address lookup, the location database download and a test message start only so often however they are asked for, test messages counted per sender. Fetching the location database also needs what reading the Security page needs.
+
+### Performance
+- A published profile is worked out once a minute at most, not again for every picture and card on it.
+- A person's history is scanned for security alerts once at a time, however many plays begin.
+- Signing in or out, revoking a key or changing one person's grants asks only the live connections it concerns to look again.
+- The Tautulli wiring board reads the history once, not once per Plex user.
+- A picture missing from the cache is fetched by one request while the others wait, and one the source failed to give is not asked for again for 30 seconds.
+- The web UI's files are gzipped once and kept, and fonts are not compressed again.
+
+### Stability
+- A backup in Jellystat's older format is read a row at a time instead of whole, and a line longer than any backup's is refused.
+- Two Tautulli uploads at once no longer write into one file.
+- A page number far past the end of a library's titles or of Library health is an empty page, not an error.
+- An import or a restore whose upload was cut off no longer refuses every other one until a restart, and neither it nor an import abandoned before it began leaves a file behind.
+- One row of a backup is read no further than 8 MB, and one Tautulli backup arrives at a time.
+- A play keeps at most 2,000 events, and an import skips a play that does not start and then end between 1990 and tomorrow.
+- One episode number far below zero no longer hangs every library read: Library health (its summary too), Capacity, re-linking and locating add up and compare numbers without wrapping, and a release build checks for overflow, so anything missed stops one task instead of looping.
+- A season, episode or end number is kept only where Jellyfin could hold it (0 to 2,147,483,647), from Jellyfin, Jellystat and Tautulli alike.
+- A Tautulli backup whose ids repeat is refused, since a few MB of rows under one id ran the process out of memory, and a backup is opened immutable, leaving no `-wal` or `-shm` behind.
+- A connection must send its request within 15 seconds and at most 512 are served at once: a few hundred half-open sockets took FinStats offline. A frame on the live channel is held to 4 KB.
+- A few kilobytes from Sonarr, Radarr or Seerr can no longer become gigabytes of memory: a list keeps no more than FinStats reads of it.
+- A notification destination that never answers holds up only itself: destinations are sent to side by side, and one that keeps timing out is left alone for ten minutes.
+- A queue's time left and total speed, a restored play's numbers and the day a play leaves the trash can no longer overflow.
+- A restore reads the whole file before it takes the write lock, refuses one that unpacks to far more than its size, and writes in batches, so the collector keeps recording meanwhile.
+- Backups are named in UTC and never written over an existing file, and only FinStats' own pre-update copies are pruned.
+- A server log row dated in the future no longer stops the activity log from being read: it is read from its newest row that is not in the future.
+- Requests arriving together on a published link work out its answer once, and its cards are drawn in a lane of their own, so a link holder can no longer make the owner's recap cards answer 503.
+
+### Fixed
+- Failed sign-ins on an account are one warning a window that grows into an alert at twenty, and a name counts against an account only when typed whole ("x alice" no longer counts against alice).
+- Discord and Slack messages are escaped first and cut after: a device name full of Markdown made Discord refuse every alert that named it.
+- A public IPv6 address is accepted for a personal destination.
+- Behind a proxy that signs people in itself (nginx `auth_basic`), FinStats' cookie is no longer refused.
+- A display name holding `{{url}}` is shown as written in a published page's preview.
+
+### Removed
+- **Synnmørsk** is no longer one of FinStats' languages: a browser that chose it reads Nynorsk, the written language it was made from.
 
 ## [2.3.0] - 2026-10-07 to 2026-10-26
 
@@ -236,14 +315,16 @@ Watchlist
 
 ## [2.0.3] - 2026-09-28
 
+### Security
+- The Server page gave every device's id to anybody with *see server details*; ids need *see network details* as well, as everywhere else.
+- Two permission switches flipped before the first had saved sent the same starting list twice, and the second undid the first: a permission taken away stayed granted, a public-profile section switched off stayed published, while both switches showed what was chosen.
+
 ### Stability
 - **Only one import or restore at a time**: two uploads posted together both passed the check, and a restore never looked at imports; the second waited out the database and failed after minutes of upload.
 - **An address with a broken `%`-escape opens the not-found page**, instead of leaving a spinner for good.
 - **A large page number in a list is an empty page**: it overflowed, and came back as the first page again.
 
 ### Fixed
-- **Security:** the Server page gave every device's id to anybody with *see server details*; ids need *see network details* as well, as everywhere else.
-- **Security:** two permission switches flipped before the first had saved sent the same starting list twice, and the second undid the first: a permission taken away stayed granted, a public-profile section switched off stayed published, while both switches showed what was chosen.
 - **Tables sort numbers right in a German or Norwegian browser**: "1,204" was read as 1.204, and anything past a million as text.
 - **A chart's Table view sorts dates, weekdays and positions by when**, not by their letters.
 - **The download history names where imports came from**: Sonarr and Radarr name the indexer and protocol only on the grab, so those breakdowns were always empty. A failed season pack is one failure, not one an episode.
@@ -268,6 +349,10 @@ Watchlist
 
 ## [2.0.2] - 2026-09-28
 
+### Security
+- Behind a proxy, the sign-in limit counted the first `X-Forwarded-For` address, which is the one the client sends: a new made-up address per attempt, and the limit never applied. It is the last one now, the one the proxy wrote.
+- *Include IP addresses and places* sent addresses to a personal destination whose owner lacks *see network details*, which no page would show them. Somebody else's failed sign-ins now need *see server details* too, as on the Security page.
+
 ### Stability
 - **A halt is never lost**: when a library read was refused in the first moments after start-up, before the server was listening for it, the refusal was noted and FinStats ran on instead of stopping.
 - **A Jellyfin that answers in a shape FinStats cannot read is refused**, not believed: every user, or every title of a library, arriving under keys it does not know (`id` for `Id`) passed the guard with a full count and was then marked removed.
@@ -276,8 +361,6 @@ Watchlist
 - **A control character in a name or a title no longer breaks the cards**: the profile card, every story card that showed that title and the ZIP of them answered with an error.
 
 ### Fixed
-- **Security:** behind a proxy, the sign-in limit counted the first `X-Forwarded-For` address, which is the one the client sends: a new made-up address per attempt, and the limit never applied. It is the last one now, the one the proxy wrote.
-- **Security:** *Include IP addresses and places* sent addresses to a personal destination whose owner lacks *see network details*, which no page would show them. Somebody else's failed sign-ins now need *see server details* too, as on the Security page.
 - **Notifications stop for somebody disabled or deleted in Jellyfin**: their personal destinations went on being sent everything their old permissions allowed.
 - **A queued notification is asked again before it is sent**: a destination switched off, or an owner who had lost a permission, was still sent what was waiting to be retried.
 - **A destination that always answers `Retry-After` is given up on** after five tries like any other, instead of being retried for thirty days.
@@ -412,9 +495,11 @@ Recap 2026, public profiles and watching together
 ### Added
 - **FinStats no longer trusts a Jellyfin read that would wipe your history.** If a library that FinStats holds thousands of items for suddenly reads back empty or nearly so (a Jellyfin upgrade that changed its API, an error dressed as an empty result), FinStats keeps the data it has, marks the sync failed (and notifies), and stops cleanly with a clear message rather than marking everything removed. Restart once Jellyfin is itself again, or set `FINSTATS_ALLOW_LIBRARY_SHRINK=1` if you really did empty a library. The same guard covers the library list and the user list.
 
+### Security
+- An `X-Forwarded-Host` header sent by a client could vouch for a foreign `Origin` and get a cross-site write past the same-origin guard. That header is trusted only behind a trusted proxy now (`FINSTATS_TRUST_PROXY`), the same rule the client-address lookup already uses. The `SameSite=Lax` session cookie was, and stays, the first line of defense.
+- A personal notification destination could be aimed at `0.0.0.0` or `::`, which reach this machine. The check that keeps personal destinations pointed at public addresses now counts those as local, alongside loopback and the private ranges.
+
 ### Fixed
-- **Security:** an `X-Forwarded-Host` header sent by a client could vouch for a foreign `Origin` and get a cross-site write past the same-origin guard. That header is trusted only behind a trusted proxy now (`FINSTATS_TRUST_PROXY`), the same rule the client-address lookup already uses. The `SameSite=Lax` session cookie was, and stays, the first line of defense.
-- **Security:** a personal notification destination could be aimed at `0.0.0.0` or `::`, which reach this machine. The check that keeps personal destinations pointed at public addresses now counts those as local, alongside loopback and the private ranges.
 - The **Playback** page no longer fails to load for a library that contains a play with no recorded method (a row restored from a backup older than the column); such a play simply counts as a direct play.
 - A very long word in a search or a filter is no longer a server error: SQLite refuses a `LIKE` pattern past 50,000 characters, so filter words are cut to a sane length before the query.
 - The **Settings** page no longer scrolls sideways on a phone when a card reports a whole sentence back, such as the result of a restore.

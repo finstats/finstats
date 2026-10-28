@@ -4,11 +4,91 @@ Alt, hvad der er ændret i FinStats, nyeste først. Denne fil bygges ind i progr
 **Ændringslog** i appen viser.
 
 Format: `## [version] - date`, eller `## [version] - first day to release day` for en version, der blev
-lavet over flere dage, derefter `### Added`, `### Changed`, `### Performance`, `### Stability`, `### Fixed`
-eller `### Removed` (Nyt, Ændret, Ydeevne, Stabilitet, Rettet, Fjernet) med ét punkt pr. ændring. Ydeevne er
-noget, der er blevet hurtigere eller lettere, Stabilitet noget, der ikke længere kan gå ned, standse, lække eller
-miste data, og Rettet noget, der gav et forkert svar. En `x.y.0`-version har en kort titellinje under
-overskriften: den titel bruger appen som overskrift for hele serien.
+lavet over flere dage, derefter `### Added`, `### Changed`, `### Security`, `### Performance`, `### Stability`,
+`### Fixed` eller `### Removed` (Nyt, Ændret, Sikkerhed, Ydeevne, Stabilitet, Rettet, Fjernet) med ét punkt pr.
+ændring. Sikkerhed er noget, nogen kunne have misbrugt, Ydeevne noget, der er blevet hurtigere eller lettere,
+Stabilitet noget, der ikke længere kan gå ned, standse, lække eller miste data, og Rettet noget, der gav et
+forkert svar. En `x.y.0`-version har en kort titellinje under overskriften: den titel bruger appen som
+overskrift for hele serien.
+
+## [2.3.1] - 2026-10-26 to 2026-10-28
+
+### Security
+- **Opsætningen beder om en engangskode**: indtil FinStats er sat op, skriver den en kode i sin log, når den starter (`docker logs finstats`), og guiden beder om den, før den tester en adresse eller sætter noget op. Ellers kunne den, der først nåede porten, pege FinStats mod sin egen Jellyfin og blive dens administrator eller bruge testen til at se sig om på netværket.
+- **Adgang til biblioteker følger Jellyfin**: hver person ser kun de biblioteker, Jellyfin åbner for dem, og i dem kun de titler, Jellyfin viser dem inden for deres aldersgrænse, tags og regler for titler uden aldersgrænse, i bibliotekssider, søgning, medvirkende, billeder, Tilføjet for nylig, Min liste, Kommer snart, kalenderfeedet og notifikationer om nye titler. Alle, der var logget ind, kunne gennemse alle biblioteker.
+- Et link kunne sende nogen fra velkomsten videre til et andet websted lige efter login. Nu følges kun FinStats’ egne sider.
+- Serverloggen og de mislykkede logins i indsigterne gav alles login-adresser og aktivitet til alle med *Se serveren*. Andres linjer kræver *Se alles aktivitet* og en adresse *Se netværksdetaljer*, som alle andre steder.
+- En personlig notifikationsmodtager kunne nå det lokale netværk gennem et navn, der svarede anderledes, anden gang det blev slået op. Der forbindes nu til den adresse, der blev kontrolleret, flere adresseområder, der aldrig når internettet, regnes som lokale, husstandens egen offentlige adresse afvises også, og et navn, der ikke kan slås op, afvises med de samme ord som et lokalt.
+- Bag en proxy, der tilføjer sin egen `X-Forwarded-For`-linje, eller fra et IPv6-netværk kunne hvert loginforsøg komme fra en ny adresse, og grænsen trådte aldrig i kraft. Et IPv6-/48 får nu 50 forsøg på fem minutter, en fuld grænse afviser en ny adresse i stedet for at glemme en gammel, hele serveren stopper ved 60 fejl i minuttet, og et mislykket login revideres én gang pr. adresse og tidsrum.
+- `FINSTATS_TRUST_PROXY` angiver de proxyer (adresser eller adresseområder), hvis `X-Forwarded-For`, `X-Forwarded-Host` og `X-Forwarded-Proto` troes, og `1` eller `true` tror nu kun på en modpart på loopback eller et privat netværk. Slået til kunne enhver modpart vælge sin egen adresse; slået fra bag en proxy låste ti forkerte gæt alle ude.
+- Når brugerne er læst, besvares et login med et navn, der er ukendt, deaktiveret, fjernet eller ikke lukket ind i FinStats, som en forkert adgangskode uden at spørge Jellyfin, og ikke hurtigere, end Jellyfin ville have svaret. Sådanne navne kunne låse Jellyfin-konti, omgå Jellyfins regel om fjernadgang eller gemme sig bag FinStats’ adresse.
+- Den, som Jellyfin holder til hjemmenetværket (*Allow remote connections* slået fra), logger kun ind i FinStats derfra, da Jellyfin vurderede indstillingen ud fra FinStats’ egen adresse, og en læsning af brugerne, der ikke siger, om nogen er deaktiveret, holder dem ude.
+- En sessionscookie markeres som Secure, når siden, der logges ind på, bruger https, også bag en proxy, der ikke oplyser det.
+- Et login, der lykkes, tilgiver ikke længere gættene før det. På https er sessionscookien en `__Host-`-cookie, som et websted på et nabonavn ikke kan erstatte, og som ikke tages imod under noget andet navn, og et log ud afslutter alle de sessioner, browseren sendte.
+- Kun en kalendernøgle åbner kalenderfeedet fra dets adresse; alle andre nøgler skal i headeren.
+- En API-nøgle kan ikke længere tildele tilladelser, ændre hvem der lukkes ind eller hvad der er offentligt, gendanne en sikkerhedskopi eller tilføje, ændre eller teste en tjeneste eller en notifikationsmodtager: hver af dem overlever nøglen og kræver derfor en browser, der er logget ind.
+- Alle svar har `Cross-Origin-Opener-Policy: same-origin` og en `Permissions-Policy`, API-svar har `Cross-Origin-Resource-Policy: same-origin` og er `no-store`, medmindre de siger andet, og CSP’en tillader ikke længere `blob:`-billeder. En side, der åbnede FinStats, kunne senere gøre dens fane til sin egen login-side.
+- Hvor FinStats kender det skema, den nås med (en betroet proxys `X-Forwarded-Proto` eller den offentlige adresse), afvises en skrivning fra et andet skema som cross-site.
+- `/auth/me`, en titels side og Bibliotekssundhed linker til Jellyfin på dens offentlige adresse; den adresse, FinStats selv læser Jellyfin på, gives kun til administratorer.
+- Et billede hentes kun fra Jellyfin for noget, FinStats har, også en offentliggjort profils plakater og kort, så andre bibliotekers billeder ikke kan hentes via id.
+- En privat trackers nøgler fjernes nu også fra downloadkøens fejl, ud fra deres form såvel som deres navn, og den, der kun har *Se downloads*, får at vide, hvilken tjeneste der fejlede og hvordan, men aldrig dens interne adresse eller hvortil den omdirigerer.
+- Siden Server nævner en enheds seneste bruger kun med *Se alles aktivitet*, og Ikke-tilknyttede medier kræver det ud over *Administrer FinStats*. Uden den tæller afsnittet Opgaver kun ens egne afspilninger og streams, et fjernet bibliotek vises ud fra ens egne afspilninger, og en ventende Tautulli-tavle kan ikke annulleres.
+- Indstillingerne viser tjenesten for den offentlige adresse kun med dens vært og Jellyfins adresse og datamappen kun for administratorer, og en titel, biblioteket har mistet, beskrives kun ud fra afspilninger, læseren må se.
+- En Tautulli-sikkerhedskopi, hvis tabeller ikke var almindelige tabeller, kunne lade alle andre skrivninger vente, indtil FinStats blev genstartet. En sådan fil afvises, og SQLite læser sikkerhedskopien defensivt.
+- En upload på over 4 GB afvises, og en zippet Tautulli-sikkerhedskopi pakkes ikke længere ud end den størrelse, den angiver; begge dele kunne fylde den disk, FinStats’ egen database ligger på.
+- Et svar fra Jellyfin, Sonarr, Radarr, Seerr, opslaget af den offentlige adresse eller GeoIP-downloaden læses ikke længere end det højst tilladte, talt efter udpakning.
+- Enhver Jellyfin-bruger kunne få FinStats til at holde op med at registrere afspilninger for alle ved at melde tusindvis af korte afspilninger af én titel. At finde ud af, hvem der så sammen, sker nu i én gennemgang og holder ingen lås, mens det står på.
+- Afspilninger lige efter hinanden, eller én titel afspillet på skift fra enhed efter enhed, samler ikke længere fremmede i én gruppe, og den, der kun må se sig selv, får kun besked om de personer, ens egen afspilning kørte side om side med, og kun for den tid, den gjorde.
+- Et link kunne stadig sende nogen fra velkomsten videre til et andet websted efter login via en sti som `/.//`.
+- Den, der administrerer FinStats, kan ikke længere ændre, hvor mange sikkerhedskopier der gemmes eller hvor ofte de skrives, sammenlægningsvinduet (nu højst en time) eller hvornår brugere, aktivitetsloggen og sikkerhedskopier læses, og sikkerhedskopier, som en sådan person tager, skubber aldrig en administrators ud; hjemmeadresser og rejsereglerne kræver det samme som advarslerne, og import af historik kræver også *Se alles aktivitet*.
+- En gemt nøgle, et token eller en adgangskode sendes kun til den server, den blev gemt til, og en notifikationsmodtager oprettes eller ændres kun af en, der er logget ind, aldrig med en API-nøgle. En administrator må slå en andens personlige modtager fra eller fjerne den, men ikke flytte den, slå dens certifikatkontrol fra eller læse dens ntfy-emne eller Pushover-brugernøgle.
+- Discord- og Slack-webhooks skal være `https`, da deres adresse er deres token.
+- En strøm af mislykkede logins kan ikke længere skjule et ægte login eller begrave advarslerne: navne, der ikke er en konto, giver én notifikation i kvarteret, der ikke nævner nogen, advarsler sendes først, og Slack og Discord viser en beskeds indhold som tekst og pinger ingen.
+- Placeringen i Tilbageblik, Kapacitet, en notifikation og en offentliggjort profil fortæller ikke mere end siderne: ingen placering eller andel af alles tid til den, der kun må se sig selv, travle øjeblikke kun som dage med tre streams eller flere uden *Se alles aktivitet*, intet mislykket job eller forbindelse til den, der ikke må administrere FinStats, og en offentlig profil ændrer sig én gang om dagen.
+- En Tautulli-sikkerhedskopi med en genereret kolonne afvises, og et billede til en importeret afspilning hentes først, når biblioteket har dens titel.
+- En gendannelse åbner aldrig FinStats mere, end den er: indstillinger kommer kun tilbage, når der bedes om det, login, tilladelser og offentlige profiler bliver det, både denne installation og sikkerhedskopien tillader, og de offentlige adresser forbliver denne installations. `finstats restore <file>` bringer kun historikken tilbage, som siden gør, og også indstillingerne med `--with-settings`.
+- En gendannelse af historikken alene bringer ikke længere hjemmeadresser, dæmpede advarsler, revisionsposter, der udgiver sig for at være denne installations egne, eller placerede titler, biblioteket ikke har, tilbage, og ingen gendannelse bringer afspilninger, logrækker eller enheder dateret før 1990 eller efter i morgen tilbage. En gendannet afspilning regnes som importeret, uanset hvilken kilde den angiver, så en genstart fortsætter den aldrig.
+- Datamappen tilhører kun FinStats’ egen bruger (0700, dens filer 0600, `umask 077` i imaget). FinStats nægter at køre som root over en datamappe, en anden bruger ejer, og nævner den `docker exec -u`, der skal bruges, og entrypointet ændrer kun ejeren af mappen og FinStats’ egne poster.
+- En modtagers navn må ikke indeholde kontroltegn, og navnet på en enhed, en person eller en titel kan ikke længere forfalske en linje i loggen.
+- Et links ruteparameter kan ikke længere nå en anden API-sti end dens sides egen, og FinUIs elementbygger sætter kun en adresse, når den er http(s) eller relativ, aldrig `srcdoc`.
+- Søgning, offentliggjorte profiler og arbejde startet manuelt kan ikke længere holde FinStats optaget: en søgning stopper ved 200 tegn, en profil gemmes pr. sprog, kort venter i en kort kø, og et job, adresseopslaget, download af placeringsdatabasen og en testbesked starter kun med mellemrum, uanset hvordan der bedes om dem, testbeskeder talt pr. afsender. At hente placeringsdatabasen kræver også det, som læsning af siden Sikkerhed kræver.
+
+### Performance
+- En offentliggjort profil beregnes højst én gang i minuttet, ikke igen for hvert billede og kort på den.
+- En persons historik gennemsøges for sikkerhedsadvarsler én ad gangen, uanset hvor mange afspilninger der begynder.
+- At logge ind eller ud, tilbagekalde en nøgle eller ændre én persons tilladelser beder kun de liveforbindelser, det angår, om at se efter igen.
+- Tautulli-tavlen læser historikken én gang, ikke én gang pr. Plex-bruger.
+- Et billede, der mangler i cachen, hentes af én forespørgsel, mens de andre venter, og et, kilden ikke kunne give, spørges der ikke efter igen i 30 sekunder.
+- Webbrugerfladens filer gzippes én gang og gemmes, og skrifttyper komprimeres ikke igen.
+
+### Stability
+- En sikkerhedskopi i Jellystats ældre format læses en række ad gangen i stedet for hele på én gang, og en linje, der er længere end nogen sikkerhedskopis, afvises.
+- To Tautulli-uploads på samme tid skriver ikke længere i den samme fil.
+- Et sidetal langt efter slutningen af et biblioteks titler eller af Bibliotekssundhed giver en tom side, ikke en fejl.
+- En import eller gendannelse, hvis upload blev afbrudt, afviser ikke længere alle andre indtil en genstart, og hverken den eller en import, der blev opgivet, før den begyndte, efterlader en fil.
+- En række i en sikkerhedskopi læses ikke længere end 8 MB, og der modtages én Tautulli-sikkerhedskopi ad gangen.
+- En afspilning gemmer højst 2.000 hændelser, og en import springer en afspilning over, der ikke både starter og slutter mellem 1990 og i morgen.
+- Ét afsnitsnummer langt under nul får ikke længere hver læsning af biblioteket til at hænge: Bibliotekssundhed (også dens oversigt), Kapacitet, gentilknytning og lokalisering lægger tal sammen og sammenligner dem uden at løbe rundt, og en release-build kontrollerer for overløb, så alt, der overses, stopper én opgave i stedet for at køre i ring.
+- Et sæson-, afsnits- eller slutnummer gemmes kun, hvor Jellyfin kunne rumme det (0 til 2.147.483.647), fra Jellyfin, Jellystat og Tautulli ens.
+- En Tautulli-sikkerhedskopi, hvis id’er gentages, afvises, da nogle få MB rækker under ét id fik processen til at løbe tør for hukommelse, og en sikkerhedskopi åbnes uforanderlig og efterlader ingen `-wal` eller `-shm`.
+- En forbindelse skal sende sin forespørgsel inden for 15 sekunder, og højst 512 betjenes på én gang: nogle hundrede halvåbne sockets tog FinStats offline. En frame på livekanalen holdes til 4 KB.
+- Nogle få kilobyte fra Sonarr, Radarr eller Seerr kan ikke længere blive til gigabyte hukommelse: en liste beholder ikke mere, end FinStats læser af den.
+- En notifikationsmodtager, der aldrig svarer, holder kun sig selv tilbage: modtagere får sendt side om side, og en, der bliver ved med at time ud, lades i fred i ti minutter.
+- En køs resterende tid og samlede hastighed, en gendannet afspilnings tal og den dag, en afspilning forlader papirkurven, kan ikke længere løbe over.
+- En gendannelse læser hele filen, før den tager skrivelåsen, afviser en, der pakkes ud til langt mere end sin størrelse, og skriver i portioner, så indsamleren bliver ved med at registrere imens.
+- Sikkerhedskopier navngives i UTC og skrives aldrig over en eksisterende fil, og kun FinStats’ egne kopier fra før en opdatering ryddes op.
+- En række i serverloggen dateret i fremtiden stopper ikke længere læsningen af aktivitetsloggen: den læses fra dens nyeste række, der ikke ligger i fremtiden.
+- Forespørgsler, der ankommer samtidig på et offentliggjort link, beregner dets svar én gang, og dets kort tegnes i deres egen bane, så en, der har linket, ikke længere kan få ejerens Tilbageblik-kort til at svare 503.
+
+### Fixed
+- Mislykkede logins på en konto er én advarsel pr. tidsrum, der vokser til en alarm ved tyve, og et navn tæller kun mod en konto, når det er skrevet helt ("x alice" tæller ikke længere mod alice).
+- Discord- og Slack-beskeder escapes først og afkortes bagefter: et enhedsnavn fuld af Markdown fik Discord til at afvise hver advarsel, der nævnte det.
+- En offentlig IPv6-adresse accepteres for en personlig modtager.
+- Bag en proxy, der selv logger folk ind (nginx `auth_basic`), afvises FinStats’ cookie ikke længere.
+- Et visningsnavn, der indeholder `{{url}}`, vises som skrevet i forhåndsvisningen af en offentliggjort side.
+
+### Removed
+- **Synnmørsk** er ikke længere et af FinStats' sprog: en browser, der valgte det, læser nynorsk, det skriftsprog det blev lavet ud fra.
 
 ## [2.3.0] - 2026-10-07 to 2026-10-26
 
@@ -236,14 +316,16 @@ Min liste
 
 ## [2.0.3] - 2026-09-28
 
+### Security
+- Siden Server gav hver enheds id til alle med *Se serveren*; id’er kræver også *Se netværksdetaljer*, som alle andre steder.
+- To tilladelseskontakter, der blev slået om, før den første var gemt, sendte den samme startliste to gange, og den anden ophævede den første: en tilladelse, der blev taget væk, var stadig givet, og en del af en offentlig profil, der blev slået fra, var stadig offentliggjort, mens begge kontakter viste det, der var valgt.
+
 ### Stability
 - **Kun én import eller gendannelse ad gangen**: to uploads sendt samtidig kom begge igennem kontrollen, og en gendannelse kiggede aldrig efter importer; den anden ventede databasen ud og fejlede efter flere minutters upload.
 - **En adresse med en ødelagt `%`-kodning åbner siden for ukendte adresser** i stedet for at efterlade en spinner for altid.
 - **Et stort sidetal i en liste giver en tom side**: tallet løb over og kom tilbage som første side igen.
 
 ### Fixed
-- **Sikkerhed:** siden Server gav hver enheds id til alle med *Se serveren*; id’er kræver også *Se netværksdetaljer*, som alle andre steder.
-- **Sikkerhed:** to tilladelseskontakter, der blev slået om, før den første var gemt, sendte den samme startliste to gange, og den anden ophævede den første: en tilladelse, der blev taget væk, var stadig givet, og en del af en offentlig profil, der blev slået fra, var stadig offentliggjort, mens begge kontakter viste det, der var valgt.
 - **Tabeller sorterer tal rigtigt i en tysk eller norsk browser**: »1,204« blev læst som lidt over én i stedet for 1.204, og alt over en million som tekst.
 - **Et diagrams tabelvisning sorterer datoer, ugedage og positioner efter tid**, ikke efter bogstaverne.
 - **Downloadhistorikken nævner, hvor importer kom fra**: Sonarr og Radarr oplyser kun indekser og protokol ved hentningen, så de fordelinger var altid tomme. En mislykket sæsonpakke er én fejl, ikke én pr. episode.
@@ -268,6 +350,10 @@ Min liste
 
 ## [2.0.2] - 2026-09-28
 
+### Security
+- Bag en proxy talte grænsen for logins den første `X-Forwarded-For`-adresse, som er den, klienten selv sender: en ny opdigtet adresse for hvert forsøg, og grænsen trådte aldrig i kraft. Nu er det den sidste, altså den, proxyen skrev.
+- *Medtag IP-adresser og steder* sendte adresser til en personlig modtager, hvis ejer mangler *Se netværksdetaljer*, og som ingen side ville vise vedkommende. Andres mislykkede logins kræver nu også *Se serveren*, som på siden Sikkerhed.
+
 ### Stability
 - **Et stop går aldrig tabt**: når en læsning af biblioteket blev afvist i de første øjeblikke efter start, før serveren lyttede efter det, blev afvisningen noteret, og FinStats kørte videre i stedet for at stoppe.
 - **En Jellyfin, der svarer i en form, FinStats ikke kan læse, bliver afvist**, ikke troet: hver bruger, eller hver titel i et bibliotek, der kom under nøgler, FinStats ikke kender (`id` for `Id`), slap igennem vagten med fuldt antal og blev så markeret som fjernet.
@@ -276,8 +362,6 @@ Min liste
 - **Et kontroltegn i et navn eller en titel ødelægger ikke længere kortene**: profilkortet, hvert historiekort, der viste den titel, og ZIP-filen med dem svarede med en fejl.
 
 ### Fixed
-- **Sikkerhed:** bag en proxy talte grænsen for logins den første `X-Forwarded-For`-adresse, som er den, klienten selv sender: en ny opdigtet adresse for hvert forsøg, og grænsen trådte aldrig i kraft. Nu er det den sidste, altså den, proxyen skrev.
-- **Sikkerhed:** *Medtag IP-adresser og steder* sendte adresser til en personlig modtager, hvis ejer mangler *Se netværksdetaljer*, og som ingen side ville vise vedkommende. Andres mislykkede logins kræver nu også *Se serveren*, som på siden Sikkerhed.
 - **Notifikationer stopper for den, der er deaktiveret eller slettet i Jellyfin**: deres personlige modtagere fik fortsat alt, hvad de gamle tilladelser gav adgang til.
 - **En notifikation i kø tjekkes igen, før den sendes**: en modtager, der var slået fra, eller en ejer, der havde mistet en tilladelse, fik stadig det, der ventede på et nyt forsøg.
 - **En modtager, der altid svarer `Retry-After`, bliver opgivet** efter fem forsøg som alle andre i stedet for at blive prøvet igen i tredive dage.
@@ -412,9 +496,11 @@ Tilbageblik 2026, offentlige profiler og Sammen
 ### Added
 - **FinStats stoler ikke længere på en læsning fra Jellyfin, der ville slette din historik.** Hvis et bibliotek, som FinStats har tusindvis af elementer for, pludselig kommer tomt eller næsten tomt tilbage (en Jellyfin-opgradering, der ændrede API’et, en fejl forklædt som et tomt resultat), beholder FinStats de data, det har, markerer synkroniseringen som mislykket (og giver besked) og stopper pænt med en tydelig meddelelse i stedet for at markere alt som fjernet. Genstart, når Jellyfin er sig selv igen, eller sæt `FINSTATS_ALLOW_LIBRARY_SHRINK=1`, hvis du virkelig tømte et bibliotek. Den samme vagt dækker listen over biblioteker og listen over brugere.
 
+### Security
+- En `X-Forwarded-Host`-header sendt af en klient kunne gå god for en fremmed `Origin` og få en skrivning på tværs af websteder forbi same-origin-vagten. Den header stoler FinStats nu kun på bag en betroet proxy (`FINSTATS_TRUST_PROXY`), den samme regel, som opslaget af klientens adresse allerede følger. Sessionscookien med `SameSite=Lax` var og forbliver det første forsvar.
+- En personlig modtager af notifikationer kunne rettes mod `0.0.0.0` eller `::`, som når denne maskine. Kontrollen, der holder personlige modtagere rettet mod offentlige adresser, regner nu også disse som lokale sammen med loopback og de private adresseområder.
+
 ### Fixed
-- **Sikkerhed:** en `X-Forwarded-Host`-header sendt af en klient kunne gå god for en fremmed `Origin` og få en skrivning på tværs af websteder forbi same-origin-vagten. Den header stoler FinStats nu kun på bag en betroet proxy (`FINSTATS_TRUST_PROXY`), den samme regel, som opslaget af klientens adresse allerede følger. Sessionscookien med `SameSite=Lax` var og forbliver det første forsvar.
-- **Sikkerhed:** en personlig modtager af notifikationer kunne rettes mod `0.0.0.0` eller `::`, som når denne maskine. Kontrollen, der holder personlige modtagere rettet mod offentlige adresser, regner nu også disse som lokale sammen med loopback og de private adresseområder.
 - Siden **Afspilning** fejler ikke længere for et bibliotek med en afspilning uden registreret afspilningsmåde (en række gendannet fra en sikkerhedskopi, der er ældre end kolonnen); sådan en afspilning tæller simpelthen som direkte afspilning.
 - Et meget langt ord i en søgning eller et filter giver ikke længere en serverfejl: SQLite afviser et `LIKE`-mønster på over 50.000 tegn, så filterord afkortes til en fornuftig længde før forespørgslen.
 - Siden **Indstillinger** ruller ikke længere sidelæns på en telefon, når et kort melder en hel sætning tilbage, som resultatet af en gendannelse.

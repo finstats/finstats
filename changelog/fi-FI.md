@@ -4,11 +4,90 @@ Kaikki, mikä FinStatsissa on muuttunut, uusin ensin. Tämä tiedosto käännet�
 ja sen näyttää sovelluksen **Muutosloki**-välilehti.
 
 Muoto: `## [version] - date`, tai `## [version] - first day to release day` usean päivän aikana tehdylle
-julkaisulle, ja sen jälkeen `### Added`, `### Changed`, `### Performance`, `### Stability`, `### Fixed`
-tai `### Removed`, yksi kohta kutakin muutosta kohden. Suorituskyky tarkoittaa, että jokin nopeutui tai keveni,
-Vakaus, että jokin ei enää voi kaatua, pysähtyä, vuotaa tai hukata tietoja, ja Korjattu, että jokin antoi
-väärän vastauksen. `x.y.0`-julkaisun otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää
-koko sarjan pääotsikkona.
+julkaisulle, ja sen jälkeen `### Added`, `### Changed`, `### Security`, `### Performance`, `### Stability`,
+`### Fixed` tai `### Removed`, yksi kohta kutakin muutosta kohden. Tietoturva tarkoittaa, että joku olisi voinut
+käyttää jotakin väärin, Suorituskyky, että jokin nopeutui tai keveni, Vakaus, että jokin ei enää voi kaatua,
+pysähtyä, vuotaa tai hukata tietoja, ja Korjattu, että jokin antoi väärän vastauksen. `x.y.0`-julkaisun
+otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääotsikkona.
+
+## [2.3.1] - 2026-10-26 to 2026-10-28
+
+### Security
+- **Käyttöönotto kysyy kertakäyttöistä koodia**: kunnes FinStats on otettu käyttöön, se kirjoittaa käynnistyessään lokiinsa koodin (`docker logs finstats`), ja ohjattu asennus kysyy sitä ennen kuin se testaa osoitetta tai ottaa mitään käyttöön. Muuten portin ensimmäisenä tavoittanut olisi voinut ohjata FinStatsin omaan Jellyfiniinsä ja tulla sen ylläpitäjäksi tai käyttää testiä verkon tutkimiseen.
+- **Kirjastojen käyttöoikeus seuraa Jellyfiniä**: kukin näkee vain ne kirjastot, jotka Jellyfin avaa hänelle, ja niissä vain ne nimikkeet, jotka Jellyfin näyttää hänelle hänen ikärajansa, tunnisteidensa ja luokittelemattomien nimikkeiden sääntöjensä mukaan, kirjastosivuilla, haussa, näyttelijöissä ja tekijöissä, kuvissa, Viimeksi lisätyissä, katselulistalla, Tulossa-näkymässä, kalenterisyötteessä ja uusien nimikkeiden ilmoituksissa. Jokainen kirjautunut saattoi selata jokaista kirjastoa.
+- Linkki saattoi ohjata jonkun tervetulosivulta toiselle sivustolle heti kirjautumisen jälkeen. Nyt seurataan vain FinStatsin omia sivuja.
+- Palvelimen loki ja oivallusten epäonnistuneet kirjautumiset antoivat kaikkien kirjautumisosoitteet ja toiminnan kenelle tahansa, jolla oli oikeus *Näe palvelin*. Jonkun toisen rivit vaativat oikeuden *Näe kaikkien toiminta* ja osoite oikeuden *Näe verkkotiedot*, kuten kaikkialla muualla.
+- Henkilökohtainen ilmoituskohde saattoi tavoittaa lähiverkon nimen kautta, joka vastasi toisella hakukerralla eri tavalla. Yhteys otetaan nyt tarkistettuun osoitteeseen, useampi osoitealue, joka ei koskaan johda internetiin, lasketaan paikalliseksi, myös kotitalouden oma julkinen osoite hylätään, ja nimi, jota ei voi hakea, hylätään samoin sanoin kuin paikallinen.
+- Sellaisen välityspalvelimen takana, joka lisää oman `X-Forwarded-For`-rivinsä, tai IPv6-verkosta jokainen kirjautumisyritys saattoi tulla uudesta osoitteesta, eikä raja koskaan pätenyt. IPv6-/48 saa nyt 50 yritystä viidessä minuutissa, täysi raja hylkää uuden osoitteen sen sijaan, että unohtaisi vanhan, koko palvelin pysähtyy 60 epäonnistumiseen minuutissa, ja epäonnistunut kirjautuminen kirjataan tarkastuslokiin kerran osoitetta ja aikaikkunaa kohden.
+- `FINSTATS_TRUST_PROXY` nimeää välityspalvelimet (osoitteet tai osoitealueet), joiden `X-Forwarded-For`, `X-Forwarded-Host` ja `X-Forwarded-Proto` uskotaan, ja `1` tai `true` uskoo nyt vain loopbackissa tai yksityisessä verkossa olevaa vastapuolta. Päällä ollessaan mikä tahansa vastapuoli saattoi valita oman osoitteensa; pois päältä välityspalvelimen takana kymmenen väärää arvausta lukitsi kaikki ulos.
+- Kun käyttäjät on luettu, kirjautumiseen nimellä, joka on tuntematon, poistettu käytöstä, poistettu tai jota ei ole päästetty FinStatsiin, vastataan vääränä salasanana kysymättä Jellyfiniltä, eikä aiemmin kuin Jellyfin olisi vastannut. Tällaisilla nimillä saattoi lukita Jellyfin-tilejä, kiertää Jellyfinin etäkäytön säännön tai piiloutua FinStatsin osoitteen taakse.
+- Se, jonka Jellyfin rajaa kotiverkkoon (*Salli etäyhteydet* pois päältä), kirjautuu FinStatsiin vain sieltä, koska Jellyfin arvioi asetuksen FinStatsin oman osoitteen perusteella, ja käyttäjien luku, joka ei kerro, onko joku poistettu käytöstä, pitää hänet ulkona.
+- Istuntoeväste merkitään Secure-määreellä aina, kun kirjautumissivu on https-yhteydellä, myös sellaisen välityspalvelimen takana, joka ei kerro sitä.
+- Onnistunut kirjautuminen ei enää anna anteeksi sitä edeltäneitä arvauksia. https-yhteydellä istuntoeväste on `__Host-`-eväste, jota naapurinimellä oleva sivusto ei voi korvata ja jota ei hyväksytä millään muulla nimellä, ja uloskirjautuminen päättää jokaisen istunnon, jonka selain lähetti.
+- Vain kalenteriavain avaa kalenterisyötteen sen osoitteesta; mikä tahansa muu avain kuuluu otsakkeeseen.
+- API-avaimella ei voi enää myöntää oikeuksia, muuttaa sitä, kuka pääsee sisään tai mikä on julkista, palauttaa varmuuskopiota eikä lisätä, muuttaa tai testata palvelua tai ilmoituskohdetta: kukin niistä kestää avainta kauemmin, joten se vaatii kirjautuneen selaimen.
+- Jokainen vastaus sisältää `Cross-Origin-Opener-Policy: same-origin` ja `Permissions-Policy`-otsakkeen, API-vastaukset sisältävät `Cross-Origin-Resource-Policy: same-origin` ja ovat `no-store`, ellei niissä toisin sanota, eikä CSP enää salli `blob:`-kuvia. Sivu, joka oli avannut FinStatsin, saattoi myöhemmin muuttaa välilehtensä omaksi kirjautumissivukseen.
+- Kun FinStats tietää, millä skeemalla se tavoitetaan (luotetun välityspalvelimen `X-Forwarded-Proto` tai julkinen osoite), toisesta skeemasta tuleva kirjoitus hylätään sivustorajat ylittävänä.
+- `/auth/me`, nimikkeen sivu ja Kirjaston kunto linkittävät Jellyfiniin sen julkisessa osoitteessa; osoite, josta FinStats itse lukee Jellyfiniä, näytetään vain ylläpitäjille.
+- Kuva haetaan Jellyfinistä vain sellaiselle, mitä FinStatsilla on, julkaistun profiilin julisteet ja kortit mukaan lukien, joten muiden kirjastojen kuvia ei voi pyytää tunnisteella.
+- Yksityisen trackerin avaimet peitetään nyt myös latausjonon virheistä, niin muotonsa kuin nimensä perusteella, ja sille, jolla on vain oikeus *Näe lataukset*, kerrotaan, mikä palvelu epäonnistui ja miten, mutta ei koskaan sen sisäistä osoitetta tai sitä, minne se ohjaa.
+- Palvelin-sivu nimeää laitteen viimeisimmän käyttäjän vain oikeudella *Näe kaikkien toiminta*, ja Linkittämätön media vaatii sen oikeuden *Hallinnoi FinStatsia* lisäksi. Ilman sitä Tehtävät-osio laskee vain omat toistot ja suoratoistot, poistettu kirjasto luetellaan omien toistojen perusteella, eikä odottavaa Tautulli-kytkentätaulua voi peruuttaa.
+- Asetukset näyttävät julkisen osoitteen palvelun pelkällä isäntänimellä ja Jellyfinin osoitteen sekä datakansion vain ylläpitäjille, ja kirjastosta kadonnut nimike kuvataan vain toistoista, jotka lukija saa nähdä.
+- Tautulli-varmuuskopio, jonka taulut eivät olleet tavallisia tauluja, saattoi pitää kaikki muut kirjoitukset odottamassa, kunnes FinStats käynnistettiin uudelleen. Tällainen tiedosto hylätään, ja SQLite lukee varmuuskopion varovaisesti.
+- Yli 4 GB:n lähetys hylätään, eikä zip-pakattua Tautulli-varmuuskopiota pureta ilmoittamaansa kokoa pidemmälle; kumpikin olisi voinut täyttää levyn, jolla FinStatsin oma tietokanta on.
+- Vastausta Jellyfiniltä, Sonarrilta, Radarrilta, Seerriltä, julkisen osoitteen haulta tai GeoIP-lataukselta ei lueta suurinta sallittua määrää pidemmälle purkamisen jälkeen laskettuna.
+- Kuka tahansa Jellyfin-käyttäjä saattoi pysäyttää toistojen tallentamisen kaikilta ilmoittamalla tuhansia lyhyitä toistoja yhdestä nimikkeestä. Sen selvittäminen, ketkä katsoivat yhdessä, tehdään nyt yhdellä läpikäynnillä, eikä se pidä lukkoa työn aikana.
+- Peräkkäiset toistot tai yksi nimike, jota toistetaan vuorotellen laitteelta toiselle, eivät enää yhdistä toisilleen vieraita yhdeksi ryhmäksi, ja sille, joka saa nähdä vain itsensä, kerrotaan vain niistä ihmisistä, joiden rinnalla oma toisto kulki, ja vain siltä ajalta.
+- Linkki saattoi yhä ohjata jonkun tervetulosivulta toiselle sivustolle kirjautumisen jälkeen polun kuten `/.//` kautta.
+- FinStatsia hallinnoiva ei voi enää muuttaa säilytettävien varmuuskopioiden määrää tai sitä, kuinka usein niitä kirjoitetaan, yhdistämisikkunaa (nyt enintään tunti) eikä sitä, milloin käyttäjät, toimintaloki ja varmuuskopiot luetaan, eivätkä hänen varmuuskopionsa koskaan syrjäytä ylläpitäjän varmuuskopioita; kotiosoitteet ja matkustussäännöt vaativat samat oikeudet kuin hälytykset, ja historian tuonti vaatii lisäksi oikeuden *Näe kaikkien toiminta*.
+- Tallennettu avain, tunnus tai salasana lähetetään vain palvelimelle, jolle se tallennettiin, ja ilmoituskohteen voi luoda tai muuttaa vain kirjautuneena, ei koskaan API-avaimella. Ylläpitäjä voi poistaa käytöstä tai poistaa jonkun toisen henkilökohtaisen kohteen, mutta ei ohjata sitä muualle, kytkeä sen varmennetarkistuksia pois eikä lukea sen ntfy-aihetta tai Pushover-käyttäjäavainta.
+- Discordin ja Slackin webhookien on oltava `https`, koska niiden osoite on niiden tunnus.
+- Epäonnistuneiden kirjautumisten tulva ei voi enää kätkeä oikeaa kirjautumista tai hukuttaa hälytyksiä: nimet, jotka eivät ole tilejä, tuottavat yhden ketään nimeämättömän ilmoituksen vartissa, hälytykset lähtevät ensin, ja Slack ja Discord näyttävät viestin sisällön tekstinä eivätkä mainitse ketään.
+- Vuosikatsauksen sijoitus, Kapasiteetti, ilmoitus ja julkaistu profiili eivät kerro enempää kuin sivut: ei sijoitusta tai osuutta kaikkien ajasta sille, joka saa nähdä vain itsensä, kiireiset hetket ilman oikeutta *Näe kaikkien toiminta* vain päivinä, joina oli kolme tai useampia suoratoistoja, ei epäonnistunutta tehtävää tai yhteyttä sille, joka ei saa hallinnoida FinStatsia, ja julkinen profiili muuttuu kerran päivässä.
+- Tautulli-varmuuskopio, jossa on generoitu sarake, hylätään, ja tuodun toiston kuva haetaan vasta, kun kirjastossa on sen nimike.
+- Palautus ei koskaan avaa FinStatsia laajemmin kuin se on: asetukset palautetaan vain pyydettäessä, kirjautuminen, oikeudet ja julkiset profiilit ovat sitä, minkä sekä tämä asennus että varmuuskopio sallivat, ja julkiset osoitteet pysyvät tämän asennuksen omina. `finstats restore <file>` palauttaa vain historian, kuten sivukin, ja `--with-settings` myös asetukset.
+- Pelkän historian palautus ei enää tuo takaisin kotiosoitteita, mykistettyjä hälytyksiä, tarkastuslokin merkintöjä, jotka näyttävät tämän asennuksen omilta, tai paikannettuja nimikkeitä, joita kirjastossa ei ole, eikä mikään palautus tuo toistoja, lokirivejä tai laitteita, jotka on päivätty ennen vuotta 1990 tai huomisen jälkeen. Palautettu toisto lasketaan tuoduksi riippumatta siitä, minkä lähteen se ilmoittaa, joten uudelleenkäynnistys ei koskaan jatka sitä.
+- Datakansio kuuluu vain FinStatsin omalle käyttäjälle (0700, sen tiedostot 0600, `umask 077` imagessa). FinStats kieltäytyy toimimasta rootina toisen käyttäjän omistaman datakansion päällä ja kertoo, mitä `docker exec -u` -komentoa käyttää, ja entrypoint vaihtaa omistajan vain kansiolta ja FinStatsin omilta merkinnöiltä.
+- Kohteen nimessä ei saa olla ohjausmerkkejä, eikä laitteen, henkilön tai nimikkeen nimi voi enää väärentää riviä lokiin.
+- Linkin reittiparametri ei voi enää tavoittaa muuta API-polkua kuin oman sivunsa, ja FinUI:n elementtien rakentaja asettaa osoitteen vain, jos se on http(s) tai suhteellinen, ei koskaan `srcdoc`.
+- Haku, julkaistut profiilit ja käsin käynnistetty työ eivät voi enää pitää FinStatsia kiireisenä: haku katkeaa 200 merkkiin, profiili säilytetään kielittäin, kortit odottavat lyhyessä jonossa, ja tehtävä, osoitehaku, sijaintitietokannan lataus ja testiviesti käynnistyvät vain rajallisen usein, pyydettiinpä niitä miten tahansa, testiviestit lähettäjäkohtaisesti laskettuina. Sijaintitietokannan hakeminen vaatii lisäksi samat oikeudet kuin Tietoturva-sivun lukeminen.
+
+### Performance
+- Julkaistu profiili lasketaan enintään kerran minuutissa, ei uudelleen jokaista sen kuvaa ja korttia varten.
+- Henkilön historiaa käydään läpi tietoturvahälytysten varalta vain yksi kerrallaan, vaikka toistoja alkaisi kuinka monta.
+- Sisään- tai uloskirjautuminen, avaimen peruminen tai yhden henkilön oikeuksien muuttaminen pyytää tarkistamaan tilanteen vain niitä reaaliaikaisia yhteyksiä, joita se koskee.
+- Tautullin kytkentätaulu lukee historian kerran eikä kerran jokaista Plex-käyttäjää kohden.
+- Välimuistista puuttuva kuva haetaan yhdellä pyynnöllä muiden odottaessa, eikä kuvaa, jota lähde ei pystynyt antamaan, pyydetä uudelleen 30 sekuntiin.
+- Verkkokäyttöliittymän tiedostot pakataan gzipillä kerran ja säilytetään, eikä fontteja pakata uudelleen.
+
+### Stability
+- Jellystatin vanhemmassa muodossa oleva varmuuskopio luetaan rivi kerrallaan eikä kokonaan, ja mitä tahansa varmuuskopiota pidempi rivi hylätään.
+- Kaksi samanaikaista Tautulli-lähetystä eivät enää kirjoita samaan tiedostoon.
+- Sivunumero kaukana kirjaston nimikkeiden tai Kirjaston kunnon lopun jälkeen on tyhjä sivu, ei virhe.
+- Tuonti tai palautus, jonka lähetys katkesi, ei enää hylkää kaikkia muita uudelleenkäynnistykseen asti, eikä se tai ennen alkamistaan hylätty tuonti jätä tiedostoa jälkeensä.
+- Varmuuskopion yhtä riviä luetaan enintään 8 MB, ja Tautulli-varmuuskopioita otetaan vastaan yksi kerrallaan.
+- Toisto säilyttää enintään 2 000 tapahtumaa, ja tuonti ohittaa toiston, joka ei ala ja pääty vuoden 1990 ja huomisen välillä.
+- Yksi kaukana nollan alapuolella oleva jakson numero ei enää jumita jokaista kirjaston lukua: Kirjaston kunto (myös sen yhteenveto), Kapasiteetti, uudelleenlinkitys ja paikantaminen laskevat yhteen ja vertailevat lukuja ilman ylivuotoa, ja julkaisuversio tarkistaa ylivuodot, joten kaikki huomaamatta jäänyt pysäyttää yhden tehtävän eikä jää silmukkaan.
+- Kauden, jakson tai loppunumeron arvo säilytetään vain, jos Jellyfin pystyisi pitämään sen (0:sta 2 147 483 647:ään), yhtä lailla Jellyfinistä, Jellystatista ja Tautullista.
+- Tautulli-varmuuskopio, jonka tunnisteet toistuvat, hylätään, koska muutama MB rivejä yhden tunnisteen alla vei prosessilta muistin, ja varmuuskopio avataan muuttumattomana, eikä se jätä jälkeensä `-wal`- tai `-shm`-tiedostoa.
+- Yhteyden on lähetettävä pyyntönsä 15 sekunnin kuluessa, ja enintään 512 palvellaan kerralla: muutama sata puoliavointa sokettia kaatoi FinStatsin. Reaaliaikaisen kanavan kehys on rajattu 4 kt:hen.
+- Muutama kilotavu Sonarrilta, Radarrilta tai Seerriltä ei voi enää paisua gigatavuiksi muistia: lista ei säilytä enempää kuin FinStats siitä lukee.
+- Ilmoituskohde, joka ei koskaan vastaa, viivästää vain itseään: kohteisiin lähetetään rinnakkain, ja kohde, joka aikakatkaistaan yhä uudelleen, jätetään rauhaan kymmeneksi minuutiksi.
+- Jonon jäljellä oleva aika ja kokonaisnopeus, palautetun toiston luvut ja päivä, jona toisto poistuu roskakorista, eivät voi enää vuotaa yli.
+- Palautus lukee koko tiedoston ennen kuin se ottaa kirjoituslukon, hylkää tiedoston, joka purkautuu paljon kokoaan suuremmaksi, ja kirjoittaa erissä, joten keräin jatkaa tallentamista sillä välin.
+- Varmuuskopiot nimetään UTC-ajassa eikä niitä koskaan kirjoiteta olemassa olevan tiedoston päälle, ja vain FinStatsin omat päivitystä edeltävät kopiot karsitaan.
+- Tulevaisuuteen päivätty palvelimen lokirivi ei enää pysäytä toimintalokin lukemista: se luetaan uusimmasta rivistä, joka ei ole tulevaisuudessa.
+- Samaan aikaan julkaistuun linkkiin saapuvat pyynnöt laskevat sen vastauksen kerran, ja sen kortit piirretään omalla kaistallaan, joten linkin haltija ei voi enää saada omistajan Vuosikatsaus-kortteja vastaamaan 503.
+
+### Fixed
+- Tilin epäonnistuneet kirjautumiset ovat yksi varoitus aikaikkunaa kohden, ja se kasvaa hälytykseksi kahdessakymmenessä, ja nimi lasketaan tiliä vastaan vain, kun se on kirjoitettu kokonaan ("x alice" ei enää laske alicea vastaan).
+- Discord- ja Slack-viestit suojataan ensin ja lyhennetään sen jälkeen: Markdownia täynnä oleva laitteen nimi sai Discordin hylkäämään jokaisen sen nimeävän hälytyksen.
+- Julkinen IPv6-osoite hyväksytään henkilökohtaiselle kohteelle.
+- Välityspalvelimen takana, joka kirjaa ihmiset sisään itse (nginx `auth_basic`), FinStatsin evästettä ei enää hylätä.
+- Näyttönimi, jossa on `{{url}}`, näytetään julkaistun sivun esikatselussa sellaisena kuin se on kirjoitettu.
+
+### Removed
+- **Synnmørsk** ei ole enää FinStatsin kieliä: selain, joka oli valinnut sen, näyttää uusnorjaa (nynorsk), kirjakieltä, josta se tehtiin.
 
 ## [2.3.0] - 2026-10-07 to 2026-10-26
 
@@ -236,14 +315,16 @@ Katselulista
 
 ## [2.0.3] - 2026-09-28
 
+### Security
+- Palvelin-sivu antoi jokaisen laitteen tunnisteen kenelle tahansa, jolla oli *Näe palvelin*; tunnisteet vaativat myös oikeuden *Näe verkkotiedot*, kuten kaikkialla muualla.
+- Kaksi oikeuskytkintä, joita käännettiin ennen kuin ensimmäinen ehti tallentua, lähettivät saman lähtöluettelon kahdesti, ja toinen kumosi ensimmäisen: poistettu oikeus jäi myönnetyksi ja pois kytketty julkisen profiilin osio julkaistuksi, vaikka molemmat kytkimet näyttivät valitun tilan.
+
 ### Stability
 - **Vain yksi tuonti tai palautus kerrallaan**: kaksi yhtä aikaa lähetettyä latausta läpäisivät molemmat tarkistuksen, eikä palautus koskaan katsonut tuonteja; jälkimmäinen odotti tietokantaa ja epäonnistui minuuttien latauksen jälkeen.
 - **Osoite, jossa on rikkinäinen `%`-koodaus, avaa ei löytynyt -sivun**, sen sijaan että latauskuvake jäisi pyörimään pysyvästi.
 - **Suuri sivunumero luettelossa on tyhjä sivu**: se ylivuoti ja palasi taas ensimmäisenä sivuna.
 
 ### Fixed
-- **Tietoturva:** Palvelin-sivu antoi jokaisen laitteen tunnisteen kenelle tahansa, jolla oli *Näe palvelin*; tunnisteet vaativat myös oikeuden *Näe verkkotiedot*, kuten kaikkialla muualla.
-- **Tietoturva:** kaksi oikeuskytkintä, joita käännettiin ennen kuin ensimmäinen ehti tallentua, lähettivät saman lähtöluettelon kahdesti, ja toinen kumosi ensimmäisen: poistettu oikeus jäi myönnetyksi ja pois kytketty julkisen profiilin osio julkaistuksi, vaikka molemmat kytkimet näyttivät valitun tilan.
 - **Taulukot lajittelevat luvut oikein saksan- tai norjankielisessä selaimessa**: ”1,204” luettiin lukuna 1.204, ja kaikki miljoonaa suuremmat tekstinä.
 - **Kaavion Taulukko-näkymä lajittelee päivämäärät, viikonpäivät ja kohdat ajan mukaan**, ei kirjainten mukaan.
 - **Lataushistoria nimeää, mistä tuonnit tulivat**: Sonarr ja Radarr nimeävät indeksoijan ja protokollan vain kaappauksessa, joten nuo erittelyt olivat aina tyhjiä. Epäonnistunut kausipaketti on yksi epäonnistuminen eikä yksi jaksoa kohden.
@@ -268,6 +349,10 @@ Katselulista
 
 ## [2.0.2] - 2026-09-28
 
+### Security
+- Välityspalvelimen takana kirjautumisraja laski ensimmäisen `X-Forwarded-For`-osoitteen, jonka asiakas itse lähettää: uusi keksitty osoite jokaisella yrityksellä, eikä raja koskaan pätenyt. Nyt se laskee viimeisen, jonka välityspalvelin kirjoitti.
+- *Sisällytä IP-osoitteet ja paikat* lähetti osoitteita henkilökohtaiseen kohteeseen, jonka omistajalla ei ole oikeutta *Näe verkkotiedot* ja jolle mikään sivu ei niitä näyttäisi. Jonkun toisen epäonnistuneet kirjautumiset vaativat nyt myös oikeuden *Näe palvelin*, kuten Tietoturva-sivulla.
+
 ### Stability
 - **Pysäytystä ei koskaan hukata**: kun kirjaston luenta hylättiin heti käynnistyksen jälkeisinä hetkinä, ennen kuin palvelin kuunteli sitä, hylkäys kirjattiin ja FinStats jatkoi toimintaansa pysähtymisen sijaan.
 - **Jellyfin, joka vastaa muodossa, jota FinStats ei osaa lukea, hylätään** eikä sitä uskota: jokainen käyttäjä tai kirjaston jokainen nimike, joka saapui tuntemattomien avainten alla (`id` eikä `Id`), läpäisi suojauksen täydellä määrällä ja merkittiin sitten poistetuksi.
@@ -276,8 +361,6 @@ Katselulista
 - **Ohjausmerkki nimessä tai nimikkeessä ei enää riko kortteja**: profiilikortti, jokainen nimikkeen näyttänyt tarinakortti ja niiden ZIP vastasivat virheellä.
 
 ### Fixed
-- **Tietoturva:** välityspalvelimen takana kirjautumisraja laski ensimmäisen `X-Forwarded-For`-osoitteen, jonka asiakas itse lähettää: uusi keksitty osoite jokaisella yrityksellä, eikä raja koskaan pätenyt. Nyt se laskee viimeisen, jonka välityspalvelin kirjoitti.
-- **Tietoturva:** *Sisällytä IP-osoitteet ja paikat* lähetti osoitteita henkilökohtaiseen kohteeseen, jonka omistajalla ei ole oikeutta *Näe verkkotiedot* ja jolle mikään sivu ei niitä näyttäisi. Jonkun toisen epäonnistuneet kirjautumiset vaativat nyt myös oikeuden *Näe palvelin*, kuten Tietoturva-sivulla.
 - **Ilmoitukset loppuvat Jellyfinissä poistetulta tai käytöstä poistetulta henkilöltä**: hänen henkilökohtaisiin kohteisiinsa lähetettiin edelleen kaikki, mitä hänen vanhat oikeutensa sallivat.
 - **Jonossa oleva ilmoitus tarkistetaan uudelleen ennen lähettämistä**: pois kytkettyyn kohteeseen tai oikeutensa menettäneelle omistajalle lähetettiin silti se, mikä odotti uutta yritystä.
 - **Kohteesta, joka vastaa aina `Retry-After`, luovutaan** viiden yrityksen jälkeen kuten mistä tahansa muusta, sen sijaan että sitä yritettäisiin kolmenkymmenen päivän ajan.
@@ -412,9 +495,11 @@ Vuosikatsaus 2026, julkiset profiilit ja yhteiskatselu
 ### Added
 - **FinStats ei enää luota Jellyfin-luentaan, joka pyyhkisi historiasi.** Jos kirjasto, jolle FinStatsilla on tuhansia kohteita, luetaan yhtäkkiä tyhjänä tai lähes tyhjänä (Jellyfin-päivitys, joka muutti sen API:a, tyhjäksi tulokseksi naamioitunut virhe), FinStats pitää tietonsa, merkitsee synkronoinnin epäonnistuneeksi (ja ilmoittaa siitä) ja pysähtyy hallitusti selkeällä viestillä sen sijaan, että merkitsisi kaiken poistetuksi. Käynnistä uudelleen, kun Jellyfin on taas oma itsensä, tai aseta `FINSTATS_ALLOW_LIBRARY_SHRINK=1`, jos todella tyhjensit kirjaston. Sama vahti kattaa kirjastoluettelon ja käyttäjäluettelon.
 
+### Security
+- Asiakkaan lähettämä `X-Forwarded-Host`-otsake saattoi taata vieraan `Origin`-arvon ja päästää sivustojen välisen kirjoituksen saman alkuperän suojauksen ohi. Otsakkeeseen luotetaan nyt vain luotetun välityspalvelimen takana (`FINSTATS_TRUST_PROXY`), samalla säännöllä, jota asiakkaan osoitteen haku jo käyttää. `SameSite=Lax`-istuntoeväste oli ja on edelleen ensimmäinen puolustuslinja.
+- Henkilökohtaisen ilmoituskohteen saattoi suunnata osoitteeseen `0.0.0.0` tai `::`, jotka osuvat tähän koneeseen. Tarkistus, joka pitää henkilökohtaiset kohteet julkisissa osoitteissa, laskee nyt nämä paikallisiksi silmukkaosoitteen ja yksityisten osoitealueiden lisäksi.
+
 ### Fixed
-- **Tietoturva:** asiakkaan lähettämä `X-Forwarded-Host`-otsake saattoi taata vieraan `Origin`-arvon ja päästää sivustojen välisen kirjoituksen saman alkuperän suojauksen ohi. Otsakkeeseen luotetaan nyt vain luotetun välityspalvelimen takana (`FINSTATS_TRUST_PROXY`), samalla säännöllä, jota asiakkaan osoitteen haku jo käyttää. `SameSite=Lax`-istuntoeväste oli ja on edelleen ensimmäinen puolustuslinja.
-- **Tietoturva:** henkilökohtaisen ilmoituskohteen saattoi suunnata osoitteeseen `0.0.0.0` tai `::`, jotka osuvat tähän koneeseen. Tarkistus, joka pitää henkilökohtaiset kohteet julkisissa osoitteissa, laskee nyt nämä paikallisiksi silmukkaosoitteen ja yksityisten osoitealueiden lisäksi.
 - **Toisto**-sivu latautuu nyt myös kirjastolle, jossa on toisto ilman tallennettua toistotapaa (rivi, joka on palautettu saraketta vanhemmasta varmuuskopiosta); tällainen toisto lasketaan yksinkertaisesti suoraksi toistoksi.
 - Hyvin pitkä sana haussa tai suodattimessa ei enää aiheuta palvelinvirhettä: SQLite hylkää yli 50 000 merkin `LIKE`-hahmon, joten suodatinsanat lyhennetään järkevän mittaisiksi ennen kyselyä.
 - **Asetukset**-sivu ei enää vieri sivuttain puhelimella, kun kortti näyttää kokonaisen lauseen, kuten palautuksen tuloksen.

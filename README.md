@@ -60,18 +60,17 @@ Already using Jellystat or Streamystats, or coming from Plex with Tautulli? [Bri
 
 ## Languages
 
-FinStats speaks 24 languages: every page, the Patch notes and what the server says. Each browser picks its own under
+FinStats speaks 23 languages: every page, the Patch notes and what the server says. Each browser picks its own under
 Settings → Appearance → Language, or follows the browser.
 
 > **A note on the translations.** English and Norwegian (Bokmål and Nynorsk) are written and checked by the maintainer,
-> who speaks them. Synnmørsk is the maintainer's own dialect, from Søre Sunnmøre: Claude Opus 5.5 wrote it from the
-> maintainer's notes on how the dialect is written, and the maintainer reads and checks it like the others. The other
-> languages were translated by Claude Opus 5.5 (high effort), an AI model, and the maintainer cannot read them, so
-> nobody here has checked whether they are good or bad: they may hold mistakes. If you speak one of them and something
-> reads wrong, an issue or a pull request is very welcome. A text a language does not have yet is shown in English.
+> who speaks them. The other languages were translated by Claude Opus 5.5 (high effort), an AI model, and the maintainer
+> cannot read them, so nobody here has checked whether they are good or bad: they may hold mistakes. If you speak one of
+> them and something reads wrong, an issue or a pull request is very welcome. A text a language does not have yet is
+> shown in English.
 
 <!-- languages: tools/make-languages.py writes this; run it again when a language changes -->
-<p align="center"><img src=".github/languages.svg" width="600" alt="Translation status: English (UK) 100%, English (US) 100%, Norsk Bokmål 100%, Norsk Nynorsk 100%, Synnmørsk 100%, Dansk 99%, Deutsch 99%, Español 99%, Suomi 99%, Français 99%, हिन्दी 99%, Íslenska 99%, Italiano 99%, 日本語 99%, 한국어 99%, Nederlands 99%, Polski 99%, Português (Brasil) 99%, Русский 99%, Svenska 99%, Türkçe 99%, Українська 99%, 简体中文 99%, 繁體中文 99%"></p>
+<p align="center"><img src=".github/languages.svg" width="600" alt="Translation status: English (UK) 100%, English (US) 100%, Norsk Bokmål 100%, Norsk Nynorsk 100%, Dansk 98%, Deutsch 98%, Español 98%, Suomi 98%, Français 98%, हिन्दी 98%, Íslenska 98%, Italiano 98%, 日本語 98%, 한국어 98%, Nederlands 98%, Polski 98%, Português (Brasil) 98%, Русский 98%, Svenska 98%, Türkçe 98%, Українська 98%, 简体中文 98%, 繁體中文 98%"></p>
 <!-- /languages -->
 
 ## Get started

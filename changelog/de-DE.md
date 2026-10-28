@@ -4,12 +4,91 @@ Alles, was sich in FinStats geändert hat, das Neueste zuerst. Diese Datei wird 
 einkompiliert und ist das, was der Tab **Versionshinweise** in der App zeigt.
 
 Format: `## [version] - date`, oder `## [version] - first day to release day` für eine Version, die über
-mehrere Tage entstand, dann `### Added`, `### Changed`, `### Performance`, `### Stability`, `### Fixed`
-oder `### Removed` (Neu, Geändert, Leistung, Stabilität, Behoben, Entfernt) mit einem Punkt pro Änderung.
-Leistung ist etwas, das schneller oder sparsamer wurde, Stabilität etwas, das nicht mehr abstürzen,
-anhalten, Lecks haben oder Daten verlieren kann, Behoben etwas, das eine falsche Antwort gab. Eine
-`x.y.0`-Version trägt unter ihrer Überschrift eine kurze Titelzeile: Diesen Titel nutzt die App als
-Schlagzeile der ganzen Reihe.
+mehrere Tage entstand, dann `### Added`, `### Changed`, `### Security`, `### Performance`, `### Stability`,
+`### Fixed` oder `### Removed` (Neu, Geändert, Sicherheit, Leistung, Stabilität, Behoben, Entfernt) mit einem
+Punkt pro Änderung. Sicherheit ist etwas, das jemand hätte missbrauchen können, Leistung etwas, das schneller
+oder sparsamer wurde, Stabilität etwas, das nicht mehr abstürzen, anhalten, Lecks haben oder Daten verlieren
+kann, Behoben etwas, das eine falsche Antwort gab. Eine `x.y.0`-Version trägt unter ihrer Überschrift eine
+kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
+
+## [2.3.1] - 2026-10-26 to 2026-10-28
+
+### Security
+- **Die Einrichtung fragt nach einem Einmalcode**: Solange FinStats nicht eingerichtet ist, schreibt es beim Start einen Code in sein Protokoll (`docker logs finstats`), und der Assistent fragt danach, bevor er eine Adresse testet oder etwas einrichtet. Sonst konnte, wer den Port zuerst erreichte, FinStats auf ein eigenes Jellyfin richten und dessen Administrator werden oder mit dem Test das Netzwerk auskundschaften.
+- **Der Zugriff auf Mediatheken folgt Jellyfin**: Jede Person sieht nur die Mediatheken, die Jellyfin ihr öffnet, und darin nur die Titel, die Jellyfin ihr unter ihrer Altersfreigabe, ihren Tags und ihren Regeln für Titel ohne Freigabe auflistet, in Mediatheksseiten, Suche, Besetzung, Bildern, Kürzlich hinzugefügt, der Merkliste, Demnächst, dem Kalender-Feed und Benachrichtigungen über neue Titel. Jede angemeldete Person konnte jede Mediathek durchsuchen.
+- Ein Link konnte jemanden direkt nach der Anmeldung von der Begrüßung auf eine andere Website schicken. Jetzt werden nur noch die eigenen Seiten von FinStats aufgerufen.
+- Das Serverprotokoll und die fehlgeschlagenen Anmeldungen in den Einblicken gaben jedem mit *Den Server sehen* die Anmeldeadressen und die Aktivität aller. Zeilen anderer erfordern *Aktivität aller sehen* und eine Adresse *Netzwerkdetails sehen*, wie überall sonst.
+- Ein persönliches Benachrichtigungsziel konnte das lokale Netzwerk über einen Namen erreichen, der beim zweiten Nachschlagen anders antwortete. Verbunden wird jetzt mit der geprüften Adresse, weitere Bereiche, die nie ins Internet führen, gelten als lokal, die eigene öffentliche Adresse des Haushalts wird ebenfalls abgelehnt, und ein Name, der sich nicht nachschlagen lässt, wird mit denselben Worten abgelehnt wie ein lokaler.
+- Hinter einem Proxy, der eine eigene `X-Forwarded-For`-Zeile hinzufügt, oder aus einem IPv6-Netzwerk konnte jeder Anmeldeversuch von einer neuen Adresse kommen, und das Limit griff nie. Ein IPv6-/48 bekommt jetzt 50 Versuche in fünf Minuten, ein volles Limit lehnt eine neue Adresse ab, statt eine alte zu vergessen, der ganze Server stoppt bei 60 Fehlversuchen pro Minute, und eine fehlgeschlagene Anmeldung wird einmal pro Adresse und Zeitfenster protokolliert.
+- `FINSTATS_TRUST_PROXY` nennt die Proxys (Adressen oder Bereiche), deren `X-Forwarded-For`, `X-Forwarded-Host` und `X-Forwarded-Proto` geglaubt werden, und `1` oder `true` glaubt jetzt nur einer Gegenstelle auf Loopback oder in einem privaten Netzwerk. Eingeschaltet konnte jede Gegenstelle ihre eigene Adresse wählen; ausgeschaltet hinter einem Proxy sperrten zehn falsche Rateversuche alle aus.
+- Sobald die Benutzer gelesen sind, wird eine Anmeldung mit einem Namen, der unbekannt, deaktiviert, entfernt oder nicht für FinStats zugelassen ist, ohne Rückfrage bei Jellyfin als falsches Passwort beantwortet, und nicht früher, als Jellyfin geantwortet hätte. Solche Namen konnten Jellyfin-Konten sperren, Jellyfins Regel für den Fernzugriff umgehen oder sich hinter der Adresse von FinStats verstecken.
+- Wen Jellyfin auf das Heimnetz beschränkt (*Fernverbindungen erlauben* aus), meldet sich bei FinStats nur von dort an, da Jellyfin den Schalter anhand der eigenen Adresse von FinStats beurteilte, und ein Lesen der Benutzer, das nicht sagt, ob jemand deaktiviert ist, lässt diese Person draußen.
+- Ein Sitzungscookie wird als Secure markiert, sobald die Anmeldeseite über https läuft, auch hinter einem Proxy, der das nicht mitteilt.
+- Eine erfolgreiche Anmeldung vergibt nicht mehr die Rateversuche davor. Unter https ist das Sitzungscookie ein `__Host-`-Cookie, das eine Website unter einem benachbarten Namen nicht ersetzen kann und das unter keinem anderen Namen angenommen wird, und eine Abmeldung beendet jede Sitzung, die der Browser mitgeschickt hat.
+- Nur ein Kalenderschlüssel öffnet den Kalender-Feed über seine Adresse; jeder andere Schlüssel gehört in den Header.
+- Ein API-Schlüssel kann keine Berechtigungen mehr vergeben, nicht mehr ändern, wer hineinkommt oder was öffentlich ist, keine Sicherung wiederherstellen und keinen Dienst und kein Benachrichtigungsziel hinzufügen, ändern oder testen: Jedes davon überdauert den Schlüssel und braucht daher einen angemeldeten Browser.
+- Jede Antwort trägt `Cross-Origin-Opener-Policy: same-origin` und eine `Permissions-Policy`, API-Antworten tragen `Cross-Origin-Resource-Policy: same-origin` und sind `no-store`, sofern sie nichts anderes sagen, und die CSP erlaubt keine `blob:`-Bilder mehr. Eine Seite, die FinStats geöffnet hatte, konnte ihren Tab später in eine eigene Anmeldeseite verwandeln.
+- Wo FinStats das Schema kennt, über das es erreicht wird (das `X-Forwarded-Proto` eines vertrauenswürdigen Proxys oder die öffentliche Adresse), wird ein Schreibvorgang von einem anderen Schema als websiteübergreifend abgelehnt.
+- `/auth/me`, die Seite eines Titels und Mediathek-Zustand verlinken auf Jellyfin unter seiner öffentlichen Adresse; die Adresse, unter der FinStats selbst Jellyfin liest, geht nur an Administratoren.
+- Ein Bild wird nur für etwas aus Jellyfin geholt, das FinStats kennt, auch die Poster und Karten eines veröffentlichten Profils, sodass sich Bilder anderer Mediatheken nicht über ihre ID anfordern lassen.
+- Die Schlüssel eines privaten Trackers werden jetzt auch aus den Fehlern der Download-Warteschlange entfernt, nach ihrer Form wie nach ihrem Namen, und wer nur *Downloads sehen* hat, erfährt, welcher Dienst fehlschlug und wie, nie aber seine interne Adresse oder wohin er umleitet.
+- Die Serverseite nennt den letzten Benutzer eines Geräts nur mit *Aktivität aller sehen*, und Nicht verknüpfte Medien erfordert das zusätzlich zu *FinStats verwalten*. Ohne diese Berechtigung zählt der Bereich Aufgaben nur die eigenen Wiedergaben und Streams, eine entfernte Mediathek wird nach den eigenen Wiedergaben aufgeführt, und ein wartendes Tautulli-Steckbrett lässt sich nicht abbrechen.
+- Die Einstellungen zeigen den Dienst für die öffentliche Adresse nur mit seinem Host und die Adresse von Jellyfin und den Datenordner nur Administratoren, und ein Titel, den die Mediathek verloren hat, wird nur aus Wiedergaben beschrieben, die der Lesende sehen darf.
+- Eine Tautulli-Sicherung, deren Tabellen keine einfachen Tabellen waren, konnte jeden anderen Schreibvorgang warten lassen, bis FinStats neu gestartet wurde. Eine solche Datei wird abgelehnt, und SQLite liest die Sicherung defensiv.
+- Ein Upload über 4 GB wird abgelehnt, und eine gezippte Tautulli-Sicherung wird nicht weiter entpackt als bis zur angegebenen Größe; beides konnte die Festplatte füllen, auf der die Datenbank von FinStats liegt.
+- Eine Antwort von Jellyfin, Sonarr, Radarr, Seerr, der Abfrage der öffentlichen Adresse oder dem GeoIP-Download wird nur bis zur zulässigen Höchstmenge gelesen, gezählt nach dem Entpacken.
+- Jeder Jellyfin-Benutzer konnte FinStats dazu bringen, für niemanden mehr Wiedergaben aufzuzeichnen, indem er Tausende kurzer Wiedergaben eines Titels meldete. Herauszufinden, wer zusammen geschaut hat, braucht jetzt einen Durchgang und hält dabei keine Sperre.
+- Direkt aufeinanderfolgende Wiedergaben oder ein Titel, der reihum von Gerät zu Gerät abgespielt wird, fassen keine Fremden mehr zu einer Gruppe zusammen, und wer nur sich selbst sehen darf, erfährt nur von den Personen, neben deren Wiedergabe die eigene lief, und für die Zeit, in der sie es tat.
+- Ein Link konnte jemanden nach der Anmeldung über einen Pfad wie `/.//` immer noch von der Begrüßung auf eine andere Website schicken.
+- Wer FinStats verwaltet, kann nicht mehr ändern, wie viele Sicherungen behalten oder wie oft sie geschrieben werden, das Zusammenführungsfenster (jetzt höchstens eine Stunde) oder wann Benutzer, das Aktivitätsprotokoll und Sicherungen gelesen werden, und die Sicherungen eines Verwalters verdrängen nie die eines Administrators; Heimadressen und die Reiseregeln erfordern dasselbe wie die Warnungen, und das Importieren des Verlaufs auch *Aktivität aller sehen*.
+- Ein gespeicherter Schlüssel, ein Token oder ein Passwort geht nur an den Server, für den es gespeichert wurde, und ein Benachrichtigungsziel wird nur angemeldet angelegt oder geändert, nie mit einem API-Schlüssel. Ein Administrator darf das persönliche Ziel eines anderen ausschalten oder entfernen, aber nicht umleiten, seine Zertifikatsprüfung nicht abschalten und sein ntfy-Topic oder seinen Pushover-Benutzerschlüssel nicht lesen.
+- Discord- und Slack-Webhooks müssen `https` sein, da ihre Adresse ihr Token ist.
+- Eine Flut fehlgeschlagener Anmeldungen kann keine echte mehr verbergen oder die Warnungen verschütten: Namen ohne Konto ergeben eine Meldung pro Viertelstunde, die niemanden nennt, Warnungen gehen zuerst hinaus, und Slack und Discord zeigen den Inhalt einer Nachricht als Text und pingen niemanden.
+- Der Rang im Jahresrückblick, Kapazität, eine Benachrichtigung und ein veröffentlichtes Profil verraten nicht mehr als die Seiten: kein Rang und kein Anteil an der Zeit aller für jemanden, der nur sich selbst sehen darf, Spitzenzeiten ohne *Aktivität aller sehen* nur als Tage mit drei oder mehr Streams, kein fehlgeschlagener Job und keine Verbindung für jemanden, der FinStats nicht verwalten darf, und ein öffentliches Profil ändert sich einmal am Tag.
+- Eine Tautulli-Sicherung mit einer generierten Spalte wird abgelehnt, und ein Bild für eine importierte Wiedergabe wird erst geholt, wenn die Mediathek ihren Titel hat.
+- Eine Wiederherstellung öffnet FinStats nie weiter, als es ist: Einstellungen kommen nur auf Wunsch zurück, Anmeldung, Berechtigungen und öffentliche Profile werden zu dem, was sowohl diese Installation als auch die Sicherung erlauben, und die öffentlichen Adressen bleiben die dieser Installation. `finstats restore <file>` bringt wie die Seite nur den Verlauf zurück, mit `--with-settings` auch die Einstellungen.
+- Eine Wiederherstellung nur des Verlaufs bringt keine Heimadressen, stummgeschalteten Warnungen, Audit-Einträge, die als eigene dieser Installation durchgehen, oder zugeordnete Titel, die der Mediathek fehlen, mehr zurück, und keine Wiederherstellung bringt Wiedergaben, Protokollzeilen oder Geräte zurück, die vor 1990 oder nach morgen datiert sind. Eine wiederhergestellte Wiedergabe gilt als importiert, egal welche Quelle sie angibt, sodass ein Neustart sie nie fortsetzt.
+- Der Datenordner gehört allein dem eigenen Benutzer von FinStats (0700, seine Dateien 0600, `umask 077` im Image). FinStats weigert sich, als root über einem Datenordner zu laufen, der einem anderen Benutzer gehört, und nennt das zu verwendende `docker exec -u`, und der Entrypoint ändert den Eigentümer nur des Ordners und der eigenen Einträge von FinStats.
+- Der Name eines Ziels darf keine Steuerzeichen enthalten, und der Name eines Geräts, einer Person oder eines Titels kann keine Zeile im Protokoll mehr fälschen.
+- Der Routenparameter eines Links kann keinen anderen API-Pfad als den der eigenen Seite mehr erreichen, und der Elementbaukasten von FinUI setzt eine Adresse nur, wenn sie http(s) oder relativ ist, nie `srcdoc`.
+- Suche, veröffentlichte Profile und von Hand gestartete Arbeit können FinStats nicht mehr dauerhaft beschäftigen: Eine Suche endet bei 200 Zeichen, ein Profil wird pro Sprache vorgehalten, Karten warten in einer kurzen Warteschlange, und ein Job, die Adressabfrage, der Download der Standortdatenbank und eine Testnachricht starten nur in Abständen, wie auch immer sie angefordert werden, Testnachrichten pro Absender gezählt. Das Abrufen der Standortdatenbank erfordert außerdem dasselbe wie das Lesen der Sicherheitsseite.
+
+### Performance
+- Ein veröffentlichtes Profil wird höchstens einmal pro Minute berechnet, nicht erneut für jedes Bild und jede Karte darauf.
+- Der Verlauf einer Person wird immer nur einmal zur gleichen Zeit nach Sicherheitswarnungen durchsucht, egal wie viele Wiedergaben beginnen.
+- An- oder Abmelden, das Widerrufen eines Schlüssels oder das Ändern der Berechtigungen einer Person lässt nur die Live-Verbindungen erneut nachsehen, die es betrifft.
+- Das Tautulli-Steckbrett liest den Verlauf einmal, nicht einmal pro Plex-Benutzer.
+- Ein Bild, das im Cache fehlt, wird mit einer Anfrage geholt, während die anderen warten, und eines, das die Quelle nicht liefern konnte, wird 30 Sekunden lang nicht erneut angefragt.
+- Die Dateien der Weboberfläche werden einmal mit gzip komprimiert und aufbewahrt, und Schriften werden nicht erneut komprimiert.
+
+### Stability
+- Eine Sicherung im älteren Format von Jellystat wird zeilenweise statt am Stück gelesen, und eine Zeile, die länger ist als in jeder Sicherung, wird abgelehnt.
+- Zwei gleichzeitige Tautulli-Uploads schreiben nicht mehr in dieselbe Datei.
+- Eine Seitenzahl weit hinter dem Ende der Titel einer Mediathek oder des Mediathek-Zustands ergibt eine leere Seite, keinen Fehler.
+- Ein Import oder eine Wiederherstellung, deren Upload abbrach, lehnt nicht mehr jeden weiteren bis zu einem Neustart ab, und weder er noch ein Import, der vor seinem Beginn aufgegeben wurde, hinterlässt eine Datei.
+- Eine Zeile einer Sicherung wird höchstens bis 8 MB gelesen, und es kommt jeweils nur eine Tautulli-Sicherung an.
+- Eine Wiedergabe behält höchstens 2.000 Ereignisse, und ein Import überspringt eine Wiedergabe, die nicht zwischen 1990 und morgen beginnt und endet.
+- Eine einzige stark negative Episodennummer lässt nicht mehr jedes Lesen der Mediatheken hängen: Mediathek-Zustand (auch seine Zusammenfassung), Kapazität, das Neuverknüpfen und das Zuordnen addieren und vergleichen Zahlen ohne Überlauf, und ein Release-Build prüft auf Überlauf, sodass alles Übersehene eine Aufgabe stoppt, statt in einer Schleife zu laufen.
+- Eine Staffel-, Episoden- oder Endnummer wird nur behalten, wo Jellyfin sie halten könnte (0 bis 2.147.483.647), aus Jellyfin, Jellystat und Tautulli gleichermaßen.
+- Eine Tautulli-Sicherung mit sich wiederholenden IDs wird abgelehnt, da ein paar MB Zeilen unter einer ID dem Prozess den Speicher ausgehen ließen, und eine Sicherung wird unveränderlich geöffnet und hinterlässt kein `-wal` oder `-shm`.
+- Eine Verbindung muss ihre Anfrage innerhalb von 15 Sekunden senden, und höchstens 512 werden gleichzeitig bedient: Ein paar hundert halboffene Sockets nahmen FinStats vom Netz. Ein Frame auf dem Live-Kanal ist auf 4 KB begrenzt.
+- Ein paar Kilobyte von Sonarr, Radarr oder Seerr können nicht mehr zu Gigabyte an Speicher werden: Eine Liste behält nicht mehr, als FinStats davon liest.
+- Ein Benachrichtigungsziel, das nie antwortet, hält nur sich selbst auf: An Ziele wird nebeneinander gesendet, und eines, bei dem es immer wieder zur Zeitüberschreitung kommt, wird zehn Minuten in Ruhe gelassen.
+- Die Restzeit und Gesamtgeschwindigkeit einer Warteschlange, die Zahlen einer wiederhergestellten Wiedergabe und der Tag, an dem eine Wiedergabe den Papierkorb verlässt, können nicht mehr überlaufen.
+- Eine Wiederherstellung liest die ganze Datei, bevor sie die Schreibsperre nimmt, lehnt eine ab, die sich auf weit mehr als ihre Größe entpackt, und schreibt in Stapeln, sodass der Collector währenddessen weiter aufzeichnet.
+- Sicherungen werden in UTC benannt und nie über eine bestehende Datei geschrieben, und nur die eigenen Kopien von FinStats vor einem Update werden aufgeräumt.
+- Eine Zeile im Serverprotokoll, die in der Zukunft datiert ist, hält das Lesen des Aktivitätsprotokolls nicht mehr auf: Es wird ab seiner neuesten Zeile gelesen, die nicht in der Zukunft liegt.
+- Gleichzeitig eintreffende Anfragen an einen veröffentlichten Link berechnen seine Antwort einmal, und seine Karten werden auf einer eigenen Spur gezeichnet, sodass jemand mit dem Link die Rückblick-Karten des Besitzers nicht mehr mit 503 antworten lassen kann.
+
+### Fixed
+- Fehlgeschlagene Anmeldungen bei einem Konto ergeben eine Warnung pro Zeitfenster, die bei zwanzig zu einem Alarm wird, und ein Name zählt nur gegen ein Konto, wenn er vollständig eingegeben wird ("x alice" zählt nicht mehr gegen alice).
+- Discord- und Slack-Nachrichten werden zuerst maskiert und danach gekürzt: Ein Gerätename voller Markdown ließ Discord jede Warnung ablehnen, die ihn nannte.
+- Eine öffentliche IPv6-Adresse wird für ein persönliches Ziel akzeptiert.
+- Hinter einem Proxy, der selbst anmeldet (nginx `auth_basic`), wird das Cookie von FinStats nicht mehr abgelehnt.
+- Ein Anzeigename mit `{{url}}` wird in der Vorschau einer veröffentlichten Seite so gezeigt, wie er geschrieben ist.
+
+### Removed
+- **Synnmørsk** ist keine Sprache von FinStats mehr: Ein Browser, der es gewählt hatte, liest Nynorsk, die Schriftsprache, aus der es entstand.
 
 ## [2.3.0] - 2026-10-07 to 2026-10-26
 
@@ -237,14 +316,16 @@ Merkliste
 
 ## [2.0.3] - 2026-09-28
 
+### Security
+- Die Serverseite gab jedem mit *Serverdetails sehen* die ID jedes Geräts; IDs erfordern wie überall sonst auch *Netzwerkdetails sehen*.
+- Zwei Berechtigungsschalter, die umgelegt wurden, bevor der erste gespeichert war, sandten zweimal dieselbe Ausgangsliste, und der zweite machte den ersten rückgängig: Eine entzogene Berechtigung blieb erteilt, ein abgeschalteter Abschnitt des öffentlichen Profils blieb veröffentlicht, während beide Schalter das Gewählte zeigten.
+
 ### Stability
 - **Nur ein Import oder eine Wiederherstellung zur Zeit**: Zwei gleichzeitig gesendete Uploads bestanden beide die Prüfung, und eine Wiederherstellung achtete nie auf Importe; der zweite wartete vergeblich auf die Datenbank und scheiterte nach Minuten des Hochladens.
 - **Eine Adresse mit einem kaputten `%`-Escape öffnet die Seite „Nicht gefunden“**, statt für immer einen Ladekreisel zu zeigen.
 - **Eine große Seitenzahl in einer Liste ist eine leere Seite**: Sie lief über und lieferte wieder die erste Seite.
 
 ### Fixed
-- **Sicherheit:** Die Serverseite gab jedem mit *Serverdetails sehen* die ID jedes Geräts; IDs erfordern wie überall sonst auch *Netzwerkdetails sehen*.
-- **Sicherheit:** Zwei Berechtigungsschalter, die umgelegt wurden, bevor der erste gespeichert war, sandten zweimal dieselbe Ausgangsliste, und der zweite machte den ersten rückgängig: Eine entzogene Berechtigung blieb erteilt, ein abgeschalteter Abschnitt des öffentlichen Profils blieb veröffentlicht, während beide Schalter das Gewählte zeigten.
 - **Tabellen sortieren Zahlen in einem deutschen oder norwegischen Browser richtig**: „1,204“ wurde als Kommazahl 1,204 gelesen statt als 1204, und alles über einer Million als Text.
 - **Die Tabellenansicht eines Diagramms sortiert Datumsangaben, Wochentage und Positionen zeitlich**, nicht nach ihren Buchstaben.
 - **Der Download-Verlauf nennt, woher Importe kamen**: Sonarr und Radarr nennen Indexer und Protokoll nur beim Grab, deshalb waren diese Aufschlüsselungen immer leer. Ein gescheitertes Staffelpaket ist ein Fehlschlag, nicht einer pro Episode.
@@ -269,6 +350,10 @@ Merkliste
 
 ## [2.0.2] - 2026-09-28
 
+### Security
+- Hinter einem Proxy zählte das Anmeldelimit die erste `X-Forwarded-For`-Adresse, also die, die der Client sendet: eine neue erfundene Adresse pro Versuch, und das Limit griff nie. Jetzt ist es die letzte, die der Proxy geschrieben hat.
+- *IP-Adressen und Orte einschließen* sandte Adressen an ein persönliches Ziel, dessen Inhaber kein *Netzwerkdetails sehen* hat und dem keine Seite sie zeigen würde. Fehlgeschlagene Anmeldungen anderer erfordern jetzt auch *Serverdetails sehen*, wie auf der Seite Sicherheit.
+
 ### Stability
 - **Ein Anhalten geht nie verloren**: Wurde das Lesen einer Mediathek in den ersten Augenblicken nach dem Start verweigert, bevor der Server darauf wartete, wurde die Verweigerung notiert, und FinStats lief weiter, statt anzuhalten.
 - **Ein Jellyfin, das in einer Form antwortet, die FinStats nicht lesen kann, wird abgelehnt**, statt ihm zu glauben: Jeder Benutzer oder jeder Titel einer Mediathek, der unter unbekannten Schlüsseln ankam (`id` für `Id`), passierte die Schutzprüfung mit voller Anzahl und wurde dann als entfernt markiert.
@@ -277,8 +362,6 @@ Merkliste
 - **Ein Steuerzeichen in einem Namen oder Titel macht die Karten nicht mehr kaputt**: Die Profilkarte, jede Story-Karte mit diesem Titel und das ZIP davon antworteten mit einem Fehler.
 
 ### Fixed
-- **Sicherheit:** Hinter einem Proxy zählte das Anmeldelimit die erste `X-Forwarded-For`-Adresse, also die, die der Client sendet: eine neue erfundene Adresse pro Versuch, und das Limit griff nie. Jetzt ist es die letzte, die der Proxy geschrieben hat.
-- **Sicherheit:** *IP-Adressen und Orte einschließen* sandte Adressen an ein persönliches Ziel, dessen Inhaber kein *Netzwerkdetails sehen* hat und dem keine Seite sie zeigen würde. Fehlgeschlagene Anmeldungen anderer erfordern jetzt auch *Serverdetails sehen*, wie auf der Seite Sicherheit.
 - **Benachrichtigungen enden für jemanden, der in Jellyfin deaktiviert oder gelöscht wurde**: Seine persönlichen Ziele bekamen weiter alles, was seine alten Berechtigungen erlaubten.
 - **Eine Benachrichtigung in der Warteschlange wird vor dem Senden erneut geprüft**: Ein abgeschaltetes Ziel oder ein Inhaber, der eine Berechtigung verloren hatte, bekam weiterhin, was auf einen neuen Versuch wartete.
 - **Ein Ziel, das immer mit `Retry-After` antwortet, wird aufgegeben**, nach fünf Versuchen wie jedes andere, statt dreißig Tage lang erneut versucht zu werden.
@@ -413,9 +496,11 @@ Rückblick 2026, öffentliche Profile und gemeinsames Schauen
 ### Added
 - **FinStats traut keinem Lesen von Jellyfin mehr, das deinen Verlauf auslöschen würde.** Kommt eine Mediathek, für die FinStats Tausende Elemente führt, plötzlich leer oder fast leer zurück (ein Jellyfin-Upgrade, das seine API geändert hat, ein Fehler, der als leeres Ergebnis daherkommt), behält FinStats seine Daten, markiert den Abgleich als fehlgeschlagen (und benachrichtigt) und hält sauber mit einer klaren Meldung an, statt alles als entfernt zu markieren. Starte neu, sobald Jellyfin wieder normal läuft, oder setze `FINSTATS_ALLOW_LIBRARY_SHRINK=1`, wenn du eine Mediathek wirklich geleert hast. Dieselbe Schutzprüfung gilt für die Liste der Mediatheken und die Benutzerliste.
 
+### Security
+- Ein von einem Client gesendeter `X-Forwarded-Host`-Header konnte für einen fremden `Origin` bürgen und einen seitenübergreifenden Schreibzugriff an der Same-Origin-Prüfung vorbeibringen. Dieser Header gilt jetzt nur noch hinter einem vertrauenswürdigen Proxy (`FINSTATS_TRUST_PROXY`), nach derselben Regel, die die Ermittlung der Client-Adresse schon nutzt. Das Sitzungscookie mit `SameSite=Lax` war und bleibt die erste Verteidigungslinie.
+- Ein persönliches Benachrichtigungsziel konnte auf `0.0.0.0` oder `::` zeigen, die diesen Rechner erreichen. Die Prüfung, die persönliche Ziele auf öffentliche Adressen beschränkt, zählt diese jetzt als lokal, neben Loopback und den privaten Bereichen.
+
 ### Fixed
-- **Sicherheit:** Ein von einem Client gesendeter `X-Forwarded-Host`-Header konnte für einen fremden `Origin` bürgen und einen seitenübergreifenden Schreibzugriff an der Same-Origin-Prüfung vorbeibringen. Dieser Header gilt jetzt nur noch hinter einem vertrauenswürdigen Proxy (`FINSTATS_TRUST_PROXY`), nach derselben Regel, die die Ermittlung der Client-Adresse schon nutzt. Das Sitzungscookie mit `SameSite=Lax` war und bleibt die erste Verteidigungslinie.
-- **Sicherheit:** Ein persönliches Benachrichtigungsziel konnte auf `0.0.0.0` oder `::` zeigen, die diesen Rechner erreichen. Die Prüfung, die persönliche Ziele auf öffentliche Adressen beschränkt, zählt diese jetzt als lokal, neben Loopback und den privaten Bereichen.
 - Die Seite **Wiedergabe** lädt jetzt auch für eine Mediathek, die eine Wiedergabe ohne erfasste Methode enthält (eine Zeile aus einer Sicherung, die älter als die Spalte ist); eine solche Wiedergabe zählt einfach als direkte Wiedergabe.
 - Ein sehr langes Wort in einer Suche oder einem Filter ist kein Serverfehler mehr: SQLite lehnt ein `LIKE`-Muster über 50.000 Zeichen ab, daher werden Filterwörter vor der Abfrage auf eine vernünftige Länge gekürzt.
 - Die Seite **Einstellungen** scrollt auf dem Handy nicht mehr seitwärts, wenn eine Karte einen ganzen Satz zurückmeldet, etwa das Ergebnis einer Wiederherstellung.

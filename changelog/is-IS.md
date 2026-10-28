@@ -4,11 +4,90 @@ Allt sem hefur breyst í FinStats, nýjast fyrst. Þessi skrá er felld inn í f
 flipinn **Útgáfulýsingar** í forritinu sýnir.
 
 Snið: `## [version] - date`, eða `## [version] - first day to release day` fyrir útgáfu sem var unnin
-á nokkrum dögum, síðan `### Added`, `### Changed`, `### Performance`, `### Stability`, `### Fixed`
-eða `### Removed` (Bætt við, Breytt, Afköst, Stöðugleiki, Lagfært, Fjarlægt) með einum punkti fyrir hverja
-breytingu. Afköst eru eitthvað sem varð fljótlegra eða léttara, Stöðugleiki eitthvað sem getur ekki lengur
+á nokkrum dögum, síðan `### Added`, `### Changed`, `### Security`, `### Performance`, `### Stability`, `### Fixed`
+eða `### Removed` (Bætt við, Breytt, Öryggi, Afköst, Stöðugleiki, Lagfært, Fjarlægt) með einum punkti fyrir hverja
+breytingu. Öryggi er eitthvað sem einhver hefði getað misnotað, Afköst eru eitthvað sem varð fljótlegra eða léttara, Stöðugleiki eitthvað sem getur ekki lengur
 hrunið, stöðvast, lekið eða glatað gögnum, og Lagfært eitthvað sem gaf rangt svar. Útgáfa `x.y.0` ber
 stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirsögn allrar raðarinnar.
+
+## [2.3.1] - 2026-10-26 to 2026-10-28
+
+### Security
+- **Uppsetningin biður um einnota kóða**: þar til FinStats hefur verið sett upp skrifar það kóða í atvikaskrá sína við ræsingu (`docker logs finstats`), og uppsetningarleiðsögnin biður um hann áður en hún prófar vistfang eða setur nokkuð upp. Annars gat hver sá sem komst fyrstur að gáttinni beint FinStats að eigin Jellyfin og orðið stjórnandi þess, eða notað prófunina til að skima um netið.
+- **Aðgangur að söfnum fylgir Jellyfin**: hver og einn sér aðeins söfnin sem Jellyfin opnar fyrir honum, og í þeim aðeins titlana sem Jellyfin sýnir honum innan aldursmarka hans, merkja og reglna um óflokkað efni, á safnasíðum, í leit, leikaraliði, myndum, Nýlega bætt við, áhorfslistanum, Á næstunni, dagatalsstraumnum og tilkynningum um nýja titla. Allir innskráðir gátu skoðað öll söfn.
+- Tengill gat sent einhvern frá móttökusíðunni yfir á annan vef strax eftir innskráningu. Nú er aðeins farið á síður FinStats sjálfs.
+- Atvikaskrá þjóns og misheppnaðar innskráningar í innsýninni gáfu hverjum sem hafði *Sjá þjóninn* innskráningarvistföng og virkni allra. Línur annarra krefjast nú *Sjá virkni allra* og vistfang *Sjá netupplýsingar*, eins og alls staðar annars staðar.
+- Persónulegur viðtakandi tilkynninga gat náð inn á staðarnetið gegnum nafn sem svaraði öðruvísi í annað sinn sem flett var upp í því. Nú er tengst við vistfangið sem var athugað, fleiri svið sem ná aldrei út á netið teljast staðbundin, opinberu vistfangi heimilisins sjálfs er líka hafnað, og nafni sem ekki er hægt að fletta upp er hafnað með sömu orðum og staðbundnu.
+- Á bak við milliþjón sem bætir við eigin `X-Forwarded-For`-línu, eða frá IPv6-neti, gat hver innskráningartilraun komið frá nýju vistfangi og hámarkið gilti aldrei. IPv6 /48-net fær nú 50 tilraunir á fimm mínútum, fullt hámark hafnar nýju vistfangi í stað þess að gleyma gömlu, allur þjónninn stöðvast við 60 mistök á mínútu, og misheppnuð innskráning er skráð í endurskoðunarskrá einu sinni fyrir hvert vistfang og tímabil.
+- `FINSTATS_TRUST_PROXY` tilgreinir milliþjónana (vistföng eða svið) sem treyst er fyrir `X-Forwarded-For`, `X-Forwarded-Host` og `X-Forwarded-Proto`, og `1` eða `true` treystir nú aðeins mótaðila á loopback eða einkaneti. Þegar kveikt var á þessu gat hvaða mótaðili sem var valið sér vistfang; slökkt á bak við milliþjón læstu tíu rangar ágiskanir alla úti.
+- Þegar notendurnir hafa verið lesnir er innskráningu fyrir nafn sem er óþekkt, óvirkt, fjarlægt eða ekki hleypt inn í FinStats svarað sem röngu lykilorði án þess að spyrja Jellyfin, og ekki fyrr en Jellyfin hefði svarað. Slík nöfn gátu læst Jellyfin-aðgöngum, komist fram hjá reglu Jellyfin um fjartengingar eða falið sig á bak við vistfang FinStats.
+- Sá sem Jellyfin heldur á heimanetinu (slökkt á *Allow remote connections*) skráir sig aðeins inn í FinStats þaðan, þar sem Jellyfin mat stillinguna út frá vistfangi FinStats sjálfs, og lestur notenda sem segir ekki hvort einhver sé óvirkur heldur þeim úti.
+- Lotukaka er merkt Secure hvenær sem síðan sem skráð er inn á er á https, líka á bak við milliþjón sem segir það ekki.
+- Innskráning sem tekst fyrirgefur ekki lengur ágiskanirnar á undan henni. Á https er lotukakan `__Host-`-kaka sem vefur á nálægu nafni getur ekki skipt út og er ekki tekin gild undir neinu öðru nafni, og útskráning lýkur öllum lotum sem vafrinn sendi.
+- Aðeins dagatalslykill opnar dagatalsstrauminn úr vistfangi hans; allir aðrir lyklar fara í hausinn.
+- API-lykill getur ekki lengur veitt heimildir, breytt því hver kemst inn eða hvað er opinbert, endurheimt afrit eða bætt við, breytt eða prófað þjónustu eða viðtakanda tilkynninga: hvert þeirra lifir lykilinn og krefst því innskráðs vafra.
+- Hvert svar ber `Cross-Origin-Opener-Policy: same-origin` og `Permissions-Policy`, API-svör bera `Cross-Origin-Resource-Policy: same-origin` og eru `no-store` nema þau segi annað, og CSP leyfir ekki lengur `blob:`-myndir. Síða sem opnaði FinStats gat síðar breytt flipa þess í eigin innskráningarsíðu.
+- Þar sem FinStats veit hvaða samskiptareglu það er náð með (`X-Forwarded-Proto` trausts milliþjóns, eða opinbera vistfangið), er skrifum frá annarri reglu hafnað sem cross-site.
+- `/auth/me`, síða titils og Heilbrigði safns tengja inn í Jellyfin á opinberu vistfangi þess; vistfangið sem FinStats sjálft les Jellyfin á fer aðeins til stjórnenda.
+- Mynd er aðeins sótt frá Jellyfin fyrir eitthvað sem FinStats hefur, veggspjöld og spjöld opinbers prófíls meðtalin, svo ekki er hægt að biðja um myndir annarra safna eftir auðkenni.
+- Lyklar lokaðs rekjara eru líka afmáðir úr villum niðurhalsbiðraðarinnar, eftir lögun sinni jafnt sem nafni, og sá sem hefur aðeins *Sjá hvað er verið að sækja* fær að vita hvaða þjónusta brást og hvernig, aldrei innra vistfang hennar eða hvert hún vísar áfram.
+- Síðan Þjónn nefnir síðasta notanda tækis aðeins með *Sjá virkni allra*, og Ótengt efni krefst þess auk *Stjórna FinStats*. Án hennar telur hlutinn Verkefni aðeins eigin spilanir og streymi, fjarlægt safn er sýnt eftir eigin spilunum, og ekki er hægt að hætta við Tautulli-töflu sem bíður.
+- Stillingarnar sýna þjónustuna fyrir opinbert vistfang aðeins eftir hýsilnafni hennar og vistfang Jellyfin og gagnamöppuna aðeins stjórnendum, og titli sem safnið missti er aðeins lýst út frá spilunum sem lesandinn má sjá.
+- Tautulli-afrit þar sem töflurnar voru ekki venjulegar töflur gat látið öll önnur skrif bíða þar til FinStats var endurræst. Slíkri skrá er hafnað, og SQLite les afritið með varúð.
+- Upphleðslu yfir 4 GB er hafnað, og þjappað Tautulli-afrit er ekki afþjappað umfram þá stærð sem það segist hafa; hvort tveggja gat fyllt diskinn sem gagnagrunnur FinStats sjálfs er á.
+- Svar frá Jellyfin, Sonarr, Radarr, Seerr, uppflettingu opinbers vistfangs eða GeoIP-niðurhalinu er ekki lesið umfram hámarkið sem það má vera, talið eftir afþjöppun.
+- Hvaða Jellyfin-notandi sem var gat stöðvað skráningu FinStats á spilunum allra með því að tilkynna þúsundir stuttra spilana á einum titli. Nú er fundið út hverjir horfðu saman í einni umferð, og enginn lás er haldinn á meðan.
+- Spilanir sem skráðar eru hver á eftir annarri, eða einn titill spilaður til skiptis af einu tæki eftir annað, tengja ekki lengur ókunnuga saman í einn hóp, og sá sem má aðeins sjá sjálfan sig fær aðeins að vita af þeim sem eigin spilun hans var samhliða, og aðeins þann tíma sem hún var það.
+- Tengill gat enn sent einhvern frá móttökusíðunni yfir á annan vef eftir innskráningu, gegnum slóð eins og `/.//`.
+- Sá sem má stjórna FinStats getur ekki lengur breytt því hve mörg afrit eru geymd eða hve oft þau eru skrifuð, sameiningarglugganum (nú í mesta lagi klukkustund) eða hvenær notendur, atvikaskráin og afrit eru lesin, og afrit slíks aðila ýta aldrei afritum stjórnanda út; heimilisvistföng og ferðareglurnar krefjast þess sama og viðvaranirnar, og innflutningur sögu krefst líka *Sjá virkni allra*.
+- Vistaður lykill, tóki eða lykilorð fer aðeins til þjónsins sem það var vistað fyrir, og viðtakanda tilkynninga er aðeins hægt að búa til eða breyta í innskráðri lotu, aldrei með API-lykli. Stjórnandi má slökkva á eða fjarlægja persónulegan viðtakanda annars, en ekki færa hann, slökkva á vottorðaathugun hans eða lesa ntfy-efni hans eða Pushover-notandalykil.
+- Discord- og Slack-vefkrókar verða að vera `https`, þar sem vistfang þeirra er tóki þeirra.
+- Flóð misheppnaðra innskráninga getur ekki lengur falið raunverulega innskráningu eða kaffært viðvaranirnar: nöfn sem eru ekki aðgangur gefa eina tilkynningu á korters fresti sem nefnir engan, viðvaranir fara fyrst út, og Slack og Discord sýna efni skilaboða sem texta og pinga engan.
+- Sætið í Uppgjöri, Afkastageta, tilkynning og opinber prófíll segja ekki meira en síðurnar: hvorki sæti né hlutdeild í tíma allra til þess sem má aðeins sjá sjálfan sig, annatímar aðeins sem dagar með þremur streymum eða fleiri án *Sjá virkni allra*, ekkert misheppnað verk eða tenging til þess sem má ekki stjórna FinStats, og opinber prófíll breytist einu sinni á dag.
+- Tautulli-afriti með reiknuðum dálki er hafnað, og mynd er aðeins sótt fyrir innflutta spilun þegar safnið hefur titil hennar.
+- Endurheimt opnar FinStats aldrei meira en það er: stillingar koma aðeins aftur þegar beðið er um það, innskráning, heimildir og opinberir prófílar verða það sem bæði þessi uppsetning og afritið leyfa, og opinberu vistföngin haldast þessarar uppsetningar. `finstats restore <file>` færir aðeins söguna aftur, eins og síðan, og stillingarnar líka með `--with-settings`.
+- Endurheimt sögunnar einnar færir ekki lengur aftur heimilisvistföng, þögguð viðvörunarboð, endurskoðunarfærslur sem þykjast vera þessarar uppsetningar eða staðsetta titla sem safnið vantar, og engin endurheimt færir aftur spilanir, línur í atvikaskrá eða tæki dagsett fyrir 1990 eða eftir morgundaginn. Endurheimt spilun telst innflutt hvaða uppruna sem hún segist hafa, svo endurræsing heldur henni aldrei áfram.
+- Gagnamappan tilheyrir aðeins eigin notanda FinStats (0700, skrár hennar 0600, `umask 077` í myndinni). FinStats neitar að keyra sem root yfir gagnamöppu sem annar notandi á og nefnir hvaða `docker exec -u` skuli nota, og entrypoint breytir eiganda aðeins möppunnar og eigin færslna FinStats.
+- Nafn viðtakanda má ekki innihalda stýristafi, og nafn tækis, manneskju eða titils getur ekki lengur falsað línu í atvikaskránni.
+- Leiðarbreyta tengils getur ekki lengur náð annarri API-slóð en eigin slóð síðunnar, og einingasmiður FinUI setur vistfang aðeins þegar það er http(s) eða afstætt, aldrei `srcdoc`.
+- Leit, opinberir prófílar og verk ræst handvirkt geta ekki lengur haldið FinStats uppteknu: leit stöðvast við 200 stafi, prófíll er geymdur fyrir hvert tungumál, spjöld bíða í stuttri biðröð, og verk, uppfletting vistfangs, niðurhal staðsetningargagnagrunnsins og prufuskilaboð ræsast aðeins með hæfilegu millibili hvernig sem beðið er um þau, og prufuskilaboð eru talin fyrir hvern sendanda. Að sækja staðsetningargagnagrunninn krefst líka þess sem lestur síðunnar Öryggi krefst.
+
+### Performance
+- Opinber prófíll er reiknaður út í mesta lagi einu sinni á mínútu, ekki aftur fyrir hverja mynd og hvert spjald á honum.
+- Saga einstaklings er skimuð eftir öryggisviðvörunum einu sinni í einu, hversu margar spilanir sem hefjast.
+- Innskráning eða útskráning, afturköllun lykils eða breyting á heimildum eins einstaklings biður aðeins rauntímatengingarnar sem málið varðar að líta aftur.
+- Tautulli-tengitaflan les söguna einu sinni, ekki einu sinni fyrir hvern Plex-notanda.
+- Mynd sem vantar í skyndiminnið er sótt með einni beiðni á meðan hinar bíða, og ekki er beðið aftur í 30 sekúndur um mynd sem uppruninn gat ekki gefið.
+- Skrár vefviðmótsins eru gzip-þjappaðar einu sinni og geymdar, og letur er ekki þjappað aftur.
+
+### Stability
+- Afrit á eldra sniði Jellystat er lesið röð fyrir röð í stað þess að vera lesið í heild, og línu sem er lengri en í nokkru afriti er hafnað.
+- Tvær Tautulli-upphleðslur samtímis skrifa ekki lengur í sömu skrána.
+- Síðunúmer langt umfram enda titla safns eða Heilbrigðis safns er tóm síða, ekki villa.
+- Innflutningur eða endurheimt þar sem upphleðslan rofnaði lætur ekki lengur hafna öllum öðrum fram að endurræsingu, og hvorki hún né innflutningur sem var hætt við áður en hann hófst skilur eftir sig skrá.
+- Ein röð afrits er ekki lesin lengra en 8 MB, og eitt Tautulli-afrit kemur í einu.
+- Spilun geymir í mesta lagi 2.000 atburði, og innflutningur sleppir spilun sem hefst ekki og lýkur á milli 1990 og morgundagsins.
+- Eitt þáttarnúmer langt undir núlli lætur ekki lengur hvern lestur safnsins hanga: Heilbrigði safns (samantektin líka), Afkastageta, endurtenging og staðsetning leggja saman og bera saman tölur án þess að fara hring, og útgáfusmíð athugar yfirflæði, svo það sem gleymist stöðvar eitt verkefni í stað þess að lenda í lykkju.
+- Þáttaraða-, þáttar- eða lokanúmer er aðeins geymt þar sem Jellyfin gæti rúmað það (0 til 2.147.483.647), jafnt frá Jellyfin, Jellystat og Tautulli.
+- Tautulli-afriti þar sem auðkenni endurtaka sig er hafnað, þar sem nokkur MB af röðum undir einu auðkenni tæmdu minni ferlisins, og afrit er opnað óbreytanlegt og skilur enga `-wal` eða `-shm` eftir.
+- Tenging verður að senda beiðni sína innan 15 sekúndna og í mesta lagi 512 er þjónað í einu: nokkur hundruð hálfopnar tengingar tóku FinStats úr sambandi. Rammi á rauntímarásinni er takmarkaður við 4 KB.
+- Nokkur kílóbæti frá Sonarr, Radarr eða Seerr geta ekki lengur orðið að gígabætum af minni: listi geymir ekki meira en FinStats les af honum.
+- Viðtakandi tilkynninga sem svarar aldrei tefur aðeins sjálfan sig: sent er til viðtakenda samhliða, og sá sem rennur sífellt út á tíma er látinn í friði í tíu mínútur.
+- Eftirstandandi tími og heildarhraði biðraðar, tölur endurheimtrar spilunar og dagurinn sem spilun fer úr ruslinu geta ekki lengur flætt yfir.
+- Endurheimt les alla skrána áður en hún tekur skrifalásinn, hafnar skrá sem afþjappast í miklu meira en stærð hennar, og skrifar í lotum, svo söfnunin heldur áfram að skrá á meðan.
+- Afrit eru nefnd í UTC og aldrei skrifuð yfir skrá sem er til, og aðeins eigin afrit FinStats frá því fyrir uppfærslu eru grisjuð.
+- Lína í atvikaskrá þjóns dagsett í framtíðinni stöðvar ekki lengur lestur virkniskrárinnar: hún er lesin frá nýjustu línu sinni sem er ekki í framtíðinni.
+- Beiðnir sem berast samtímis á opinberan tengil reikna svar hans út einu sinni, og spjöld hans eru teiknuð á eigin braut, svo handhafi tengilsins getur ekki lengur látið Uppgjörsspjöld eigandans svara 503.
+
+### Fixed
+- Misheppnaðar innskráningar á aðgang eru ein viðvörun á hvert tímabil sem verður að viðvörunarboði við tuttugu, og nafn telst gegn aðgangi aðeins þegar það er slegið inn í heild ("x alice" telst ekki lengur gegn alice).
+- Discord- og Slack-skilaboð eru fyrst varin (escaped) og svo stytt: tækisnafn fullt af Markdown lét Discord hafna hverri viðvörun sem nefndi það.
+- Opinbert IPv6-vistfang er samþykkt fyrir persónulegan viðtakanda.
+- Á bak við milliþjón sem skráir fólk sjálfur inn (nginx `auth_basic`) er köku FinStats ekki lengur hafnað.
+- Birtingarnafn sem inniheldur `{{url}}` er sýnt eins og það er skrifað í forskoðun opinberrar síðu.
+
+### Removed
+- **Synnmørsk** er ekki lengur eitt af tungumálum FinStats: vafri sem valdi það les nýnorsku, ritmálið sem það var gert eftir.
 
 ## [2.3.0] - 2026-10-07 to 2026-10-26
 
@@ -236,14 +315,16 @@ Heilbrigði safns og FinUI
 
 ## [2.0.3] - 2026-09-28
 
+### Security
+- Síðan Þjónn gaf auðkenni hvers tækis hverjum þeim sem hafði *Sjá þjóninn*; auðkenni krefjast líka *Sjá netupplýsingar*, eins og alls staðar annars staðar.
+- Ef tveimur heimildarrofum var snúið áður en sá fyrri hafði vistast var sami upphafslistinn sendur tvisvar, og sá seinni afturkallaði þann fyrri: heimild sem var tekin af hélst veitt, og hluti opinbers prófíls sem slökkt var á hélst birtur, meðan báðir rofarnir sýndu það sem var valið.
+
 ### Stability
 - **Aðeins einn innflutningur eða endurheimt í einu**: tvær upphleðslur sem voru sendar saman stóðust báðar athugunina, og endurheimt leit aldrei á innflutninga; sú seinni beið eftir gagnagrunninum þar til tíminn rann út og mistókst eftir margra mínútna upphleðslu.
 - **Vistfang með brotinni `%`-kóðun opnar síðuna sem fannst ekki**, í stað þess að skilja eftir hleðsluhjól að eilífu.
 - **Hátt blaðsíðunúmer í lista gefur tóma síðu**: það flæddi yfir og kom aftur sem fyrsta síðan.
 
 ### Fixed
-- **Öryggi:** síðan Þjónn gaf auðkenni hvers tækis hverjum þeim sem hafði *Sjá þjóninn*; auðkenni krefjast líka *Sjá netupplýsingar*, eins og alls staðar annars staðar.
-- **Öryggi:** ef tveimur heimildarrofum var snúið áður en sá fyrri hafði vistast var sami upphafslistinn sendur tvisvar, og sá seinni afturkallaði þann fyrri: heimild sem var tekin af hélst veitt, og hluti opinbers prófíls sem slökkt var á hélst birtur, meðan báðir rofarnir sýndu það sem var valið.
 - **Töflur raða tölum rétt í þýskum eða norskum vafra**: „1,204“ (eitt þúsund tvö hundruð og fjórir) var lesið sem tugabrot, og allt yfir milljón sem texti.
 - **Töfluyfirlit grafs raðar dagsetningum, vikudögum og stöðum eftir tíma**, ekki eftir stöfum þeirra.
 - **Niðurhalsferillinn nefnir hvaðan innfluttar skrár komu**: Sonarr og Radarr nefna leitarþjóninn (indexer) og samskiptaregluna aðeins þegar útgáfan er gripin, svo þær sundurliðanir voru alltaf tómar. Misheppnaður seríupakki er ein villa, ekki ein fyrir hvern þátt.
@@ -268,6 +349,10 @@ Heilbrigði safns og FinUI
 
 ## [2.0.2] - 2026-09-28
 
+### Security
+- Á bak við milliþjón taldi innskráningarhámarkið fyrsta `X-Forwarded-For`-vistfangið, sem er það sem biðlarinn sendir: nýtt uppdiktað vistfang í hverri tilraun, og hámarkið gilti aldrei. Nú er það það síðasta, það sem milliþjónninn skrifaði.
+- *Taka með IP-vistföng og staði* sendi vistföng til persónulegs viðtakanda þar sem eigandann vantar *Sjá netupplýsingar*, svo engin síða myndi sýna honum þau. Misheppnaðar innskráningar annarra krefjast nú líka *Sjá þjóninn*, eins og á síðunni Öryggi.
+
 ### Stability
 - **Stöðvun glatast aldrei**: þegar lestri safns var hafnað á fyrstu augnablikunum eftir ræsingu, áður en þjónninn hlustaði eftir henni, var höfnunin skráð og FinStats hélt áfram í stað þess að stöðvast.
 - **Jellyfin sem svarar á formi sem FinStats getur ekki lesið er hafnað**, ekki trúað: hver notandi, eða hver titill safns, sem barst undir lyklum sem FinStats þekkir ekki (`id` í stað `Id`) komst í gegnum vörnina með fullri talningu og var svo merktur fjarlægður.
@@ -276,8 +361,6 @@ Heilbrigði safns og FinUI
 - **Stýristafur í nafni eða titli brýtur ekki lengur spjöldin**: prófílspjaldið, hvert söguspjald sem sýndi þann titil og ZIP-skráin með þeim svöruðu með villu.
 
 ### Fixed
-- **Öryggi:** á bak við milliþjón taldi innskráningarhámarkið fyrsta `X-Forwarded-For`-vistfangið, sem er það sem biðlarinn sendir: nýtt uppdiktað vistfang í hverri tilraun, og hámarkið gilti aldrei. Nú er það það síðasta, það sem milliþjónninn skrifaði.
-- **Öryggi:** *Taka með IP-vistföng og staði* sendi vistföng til persónulegs viðtakanda þar sem eigandann vantar *Sjá netupplýsingar*, svo engin síða myndi sýna honum þau. Misheppnaðar innskráningar annarra krefjast nú líka *Sjá þjóninn*, eins og á síðunni Öryggi.
 - **Tilkynningar hætta fyrir þá sem eru gerðir óvirkir eða eytt í Jellyfin**: persónulegir viðtakendur þeirra fengu áfram allt sem gömlu heimildirnar þeirra leyfðu.
 - **Tilkynning í biðröð er athuguð aftur áður en hún er send**: viðtakandi sem slökkt hafði verið á, eða eigandi sem hafði misst heimild, fékk samt það sem beið eftir að vera reynt aftur.
 - **Viðtakanda sem svarar alltaf `Retry-After` er gefist upp á** eftir fimm tilraunir eins og öðrum, í stað þess að reyna aftur í þrjátíu daga.
@@ -412,9 +495,11 @@ Uppgjör 2026, opinberir prófílar og samáhorf
 ### Added
 - **FinStats treystir ekki lengur lestri úr Jellyfin sem myndi þurrka út ferilinn þinn.** Ef safn sem FinStats geymir þúsundir atriða fyrir les skyndilega aftur tómt eða næstum tómt (Jellyfin-uppfærsla sem breytti API-inu sínu, villa sem lítur út eins og tóm niðurstaða), heldur FinStats gögnunum sem það hefur, merkir samstillinguna misheppnaða (og sendir tilkynningu), og stöðvast snyrtilega með skýrum skilaboðum frekar en að merkja allt fjarlægt. Endurræstu þegar Jellyfin er orðið eðlilegt aftur, eða settu `FINSTATS_ALLOW_LIBRARY_SHRINK=1` ef þú tæmdir safn í raun. Sama vörn nær yfir safnalistann og notendalistann.
 
+### Security
+- `X-Forwarded-Host`-haus sem biðlari sendi gat vottað fyrir framandi `Origin` og komið skrifum milli vefsvæða framhjá vörninni um sama uppruna. Þeim haus er nú aðeins treyst á bak við traustan milliþjón (`FINSTATS_TRUST_PROXY`), sama regla og uppfletting á vistfangi biðlarans notar þegar. `SameSite=Lax`-lotukakan var, og er áfram, fyrsta varnarlínan.
+- Persónulegum viðtakanda tilkynninga mátti beina að `0.0.0.0` eða `::`, sem ná til þessarar vélar. Athugunin sem heldur persónulegum viðtakendum á opinberum vistföngum telur þau nú staðbundin, ásamt loopback-vistföngum og einkasviðunum.
+
 ### Fixed
-- **Öryggi:** `X-Forwarded-Host`-haus sem biðlari sendi gat vottað fyrir framandi `Origin` og komið skrifum milli vefsvæða framhjá vörninni um sama uppruna. Þeim haus er nú aðeins treyst á bak við traustan milliþjón (`FINSTATS_TRUST_PROXY`), sama regla og uppfletting á vistfangi biðlarans notar þegar. `SameSite=Lax`-lotukakan var, og er áfram, fyrsta varnarlínan.
-- **Öryggi:** persónulegum viðtakanda tilkynninga mátti beina að `0.0.0.0` eða `::`, sem ná til þessarar vélar. Athugunin sem heldur persónulegum viðtakendum á opinberum vistföngum telur þau nú staðbundin, ásamt loopback-vistföngum og einkasviðunum.
 - Síðan **Spilun** hleðst nú inn fyrir safn sem inniheldur spilun án skráðrar spilunaraðferðar (línu sem var endurheimt úr öryggisafriti sem er eldra en dálkurinn); slík spilun telst einfaldlega bein spilun.
 - Mjög langt orð í leit eða síu veldur ekki lengur villu á þjóninum: SQLite hafnar `LIKE`-mynstri yfir 50.000 stöfum, svo síuorð eru stytt í hæfilega lengd fyrir fyrirspurnina.
 - Síðan **Stillingar** flettist ekki lengur til hliðar í síma þegar spjald skilar heilli setningu, eins og niðurstöðu endurheimtar.
