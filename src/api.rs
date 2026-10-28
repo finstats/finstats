@@ -1591,7 +1591,8 @@ async fn tautulli_upload(State(app): State<App>, Manager(user): Manager, req: Re
 }
 
 /// `DELETE /api/import/tautulli`: put a waiting board away without importing anything.
-async fn tautulli_cancel(State(app): State<App>, Manager(_): Manager) -> ApiResult {
+async fn tautulli_cancel(State(app): State<App>, Manager(user): Manager) -> ApiResult {
+    may_locate(&user)?;
     if history_being_written(&app) {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
     }
@@ -1999,6 +2000,7 @@ mod tests {
         assert_eq!(refused(import_streamystats(State(app.clone()), Manager(manager.clone()), body()).await), Some(StatusCode::FORBIDDEN));
         assert_eq!(tautulli_board(State(app.clone()), Manager(manager.clone())).await.err().map(|e| e.0), Some(StatusCode::FORBIDDEN));
         assert_eq!(tautulli_upload(State(app.clone()), Manager(manager.clone()), body()).await.err().map(|e| e.0), Some(StatusCode::FORBIDDEN));
+        assert_eq!(tautulli_cancel(State(app.clone()), Manager(manager.clone())).await.err().map(|e| e.0), Some(StatusCode::FORBIDDEN), "a board waiting is the import's");
         assert!(app.tasks.snapshot().iter().all(|t| t.state != "running"), "a refused import took the slot");
     }
 
