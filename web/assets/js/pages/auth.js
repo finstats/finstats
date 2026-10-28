@@ -139,8 +139,7 @@ export function loginPage(ctx) {
       navigate(ownPage(next), { replace: true });
     } catch (err) {
       setBusy(btn, false);
-      if (err.status === 428) { code.setError(t('auth.setup.code_wrong')); code.input.select(); code.input.focus(); }
-      else if (err.status === 401) { pass.setError(t('auth.login.wrong')); pass.input.select(); pass.input.focus(); }
+      if (err.status === 401) { pass.setError(t('auth.login.wrong')); pass.input.select(); pass.input.focus(); }
       else if (err.status === 403) mount(formErr, inlineError('login-err', t('auth.login.admins_only')));
       else if (err.status === 429) mount(formErr, inlineError('login-err', t('auth.login.too_many')));
       else mount(formErr, inlineError('login-err', err.message));
