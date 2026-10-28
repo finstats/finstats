@@ -913,7 +913,8 @@ fn refuse_downgrade(conn: &Connection, running: &str) -> Result<()> {
          An older version cannot safely open a newer database, so it will not start. Nothing was changed.\n\
          Fix it by running that version or a newer one again (with Docker: the image tag you used before),\n\
          or start this version on an empty data folder and bring your history back from one of the files in\n\
-         the old folder's backups/ directory:   finstats restore <file>"
+         the old folder's backups/ directory:   finstats restore <file>\n\
+         (that brings back the history; add --with-settings for its settings and permissions too)"
     )
 }
 

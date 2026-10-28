@@ -74,7 +74,9 @@ USAGE:
     finstats import-jellystat <file>    Import a Jellystat backup (.jsonl / .json), then exit
     finstats import-streamystats <file> Import a Streamystats backup (.json), then exit
     finstats backup                     Write a backup into <data dir>/backups, then exit
-    finstats restore <file>             Merge a FinStats backup into the database (history, settings, permissions), then exit
+    finstats restore <file> [--with-settings]
+                                        Merge a FinStats backup's history into the database, then exit;
+                                        --with-settings also brings back its settings and permissions, never wider than here
     finstats relink                     Re-attach history to renamed items now, then exit (also runs after every sync)
     finstats --version
 
@@ -118,7 +120,8 @@ enum Command {
     ImportJellystat(PathBuf),
     ImportStreamystats(PathBuf),
     Backup,
-    Restore(PathBuf),
+    /// The file, and whether the settings and permissions come back too.
+    Restore(PathBuf, bool),
     Relink,
 }
 
@@ -129,7 +132,19 @@ fn command(args: &[String]) -> Result<Command> {
         Some(cmd @ "import-jellystat") => Command::ImportJellystat(file(cmd)?),
         Some(cmd @ "import-streamystats") => Command::ImportStreamystats(file(cmd)?),
         Some("backup") => Command::Backup,
-        Some(cmd @ "restore") => Command::Restore(file(cmd)?),
+        Some("restore") => {
+            let usage = || anyhow::anyhow!("usage: finstats restore <file> [--with-settings]");
+            let (flags, files): (Vec<&String>, Vec<&String>) = args[1..].iter().partition(|a| a.starts_with("--"));
+            let with_settings = match flags.as_slice() {
+                [] => false,
+                [flag] if flag.as_str() == "--with-settings" => true,
+                _ => return Err(usage()),
+            };
+            match files.as_slice() {
+                [file] => Command::Restore(PathBuf::from(file), with_settings),
+                _ => return Err(usage()),
+            }
+        }
         Some("relink") => Command::Relink,
         Some(other) => bail!("unknown command `{other}`\n\n{USAGE}"),
     })
@@ -188,8 +203,8 @@ fn main() -> Result<()> {
             println!("Wrote {} ({} plays, {} rows, {:.1} MB)", backup::dir(&data_dir).join(&made.name).display(), made.plays, made.rows, made.size_bytes as f64 / 1e6);
             return Ok(());
         }
-        Command::Restore(file) => {
-            let r = backup::restore(&db, &file, true, None)?;
+        Command::Restore(file, with_settings) => {
+            let r = backup::restore(&db, &file, with_settings, None)?;
             println!("Restored {} plays ({} already present), {} timeline events, {} other rows; settings restored: {}", r.plays_imported, r.plays_skipped, r.events, r.other_rows, r.settings_restored);
             return Ok(());
         }
@@ -547,17 +562,29 @@ mod tests {
         assert!(matches!(parse(&["relink"]).unwrap(), Command::Relink));
         assert!(matches!(parse(&["import-jellystat", "a.jsonl"]).unwrap(), Command::ImportJellystat(p) if p == std::path::Path::new("a.jsonl")));
         assert!(matches!(parse(&["import-streamystats", "b.json"]).unwrap(), Command::ImportStreamystats(p) if p == std::path::Path::new("b.json")));
-        assert!(matches!(parse(&["restore", "c.jsonl.gz"]).unwrap(), Command::Restore(p) if p == std::path::Path::new("c.jsonl.gz")));
+        assert!(matches!(parse(&["restore", "c.jsonl.gz"]).unwrap(), Command::Restore(p, false) if p == std::path::Path::new("c.jsonl.gz")));
+    }
+
+    /// The command line restores history only, as the web restore does; the settings and permissions only when asked.
+    /// It always brought them back, and it is the command FinStats itself tells people to run.
+    #[test]
+    fn a_restore_from_the_command_line_brings_settings_back_only_when_asked() {
+        assert!(matches!(parse(&["restore", "c.jsonl.gz", "--with-settings"]).unwrap(), Command::Restore(p, true) if p == std::path::Path::new("c.jsonl.gz")));
+        assert!(matches!(parse(&["restore", "--with-settings", "c.jsonl.gz"]).unwrap(), Command::Restore(p, true) if p == std::path::Path::new("c.jsonl.gz")));
+        assert!(parse(&["restore", "c.jsonl.gz", "--with-setting"]).is_err(), "a mistyped flag was taken for nothing");
+        assert!(USAGE.contains("restore <file> [--with-settings]"));
     }
 
     #[test]
     fn a_command_it_cannot_carry_out_is_refused_with_the_usage() {
         let err = parse(&["bakcup"]).err().expect("an unknown command was accepted").to_string();
         assert!(err.contains("unknown command `bakcup`") && err.contains("USAGE:"), "{err}");
-        for cmd in ["import-jellystat", "import-streamystats", "restore"] {
+        for cmd in ["import-jellystat", "import-streamystats"] {
             let err = parse(&[cmd]).err().unwrap_or_else(|| panic!("{cmd} without a file was accepted")).to_string();
             assert_eq!(err, format!("usage: finstats {cmd} <file>"));
         }
+        let err = parse(&["restore", "--with-settings"]).err().expect("restore without a file was accepted").to_string();
+        assert_eq!(err, "usage: finstats restore <file> [--with-settings]");
     }
 
     #[test]
