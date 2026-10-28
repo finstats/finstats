@@ -114,6 +114,24 @@ fn ensure_writable(data_dir: &std::path::Path) -> Result<()> {
     }
 }
 
+/// Why FinStats will not run as root (`euid` 0) over a data folder that belongs to `owner`: everything it wrote would
+/// belong to root, and FinStats, running as the folder's owner, could no longer write it (a `backups/` made by
+/// `docker exec finstats finstats backup`). `None` when that is not the case.
+fn as_root_over(euid: u32, owner: u32) -> Option<String> {
+    (euid == 0 && owner != 0).then(|| {
+        format!(
+            "FinStats does not run as root over a data folder that belongs to user {owner}: what it wrote would belong to\n\
+             root, and FinStats could no longer write it. Run it as that user. With Docker:\n\
+             \n    docker exec -u {owner} finstats finstats <command>\n"
+        )
+    })
+}
+
+/// The effective user id in the text of `/proc/self/status` (its `Uid:` line: real, effective, saved, filesystem).
+fn effective_uid_in(status: &str) -> Option<u32> {
+    status.lines().find_map(|l| l.strip_prefix("Uid:"))?.split_whitespace().nth(1)?.parse().ok()
+}
+
 /// What FinStats was asked to do; everything but `--version` and `--help`, which need nothing at all.
 enum Command {
     Serve,
@@ -176,6 +194,15 @@ fn main() -> Result<()> {
     // For the user FinStats runs as alone: everything in it holds the Jellyfin key, a secret or everybody's history, and a
     // folder nobody else may enter keeps whatever is made inside it (SQLite's own files included) from them.
     std::fs::create_dir_all(&data_dir).with_context(|| format!("creating data directory {}", data_dir.display()))?;
+    {
+        use std::os::unix::fs::MetadataExt;
+        let euid = std::fs::read_to_string("/proc/self/status").ok().as_deref().and_then(effective_uid_in);
+        if let (Some(euid), Ok(meta)) = (euid, std::fs::metadata(&data_dir))
+            && let Some(why) = as_root_over(euid, meta.uid())
+        {
+            bail!(why);
+        }
+    }
     if let Err(e) = db::private_dir(&data_dir) {
         tracing::warn!("could not make {} private to the user FinStats runs as ({e}); other accounts on this machine may read it", data_dir.display());
     }
@@ -579,6 +606,20 @@ mod tests {
         assert!(matches!(parse(&["restore", "--with-settings", "c.jsonl.gz"]).unwrap(), Command::Restore(p, true) if p == std::path::Path::new("c.jsonl.gz")));
         assert!(parse(&["restore", "c.jsonl.gz", "--with-setting"]).is_err(), "a mistyped flag was taken for nothing");
         assert!(USAGE.contains("restore <file> [--with-settings]"));
+    }
+
+    /// `docker exec finstats finstats backup` runs as root, past the entrypoint that drops to the data folder's owner,
+    /// and left a `backups/` the server could not write to. As root over somebody else's data folder, FinStats refuses
+    /// and says how to run it as that user; root over a folder of root's own changes no ownership and is let be.
+    #[test]
+    fn root_is_refused_over_somebody_else_s_data_folder() {
+        let said = as_root_over(0, 1000).expect("root over a folder of user 1000 was let through");
+        assert!(said.contains("-u 1000") && said.contains("root"), "{said}");
+        assert_eq!(as_root_over(1000, 1000), None);
+        assert_eq!(as_root_over(1000, 0), None, "not root: the usual error about writing says the rest");
+        assert_eq!(as_root_over(0, 0), None);
+        assert_eq!(effective_uid_in("Name:\tfinstats\nUid:\t1000\t0\t0\t0\nGid:\t1000\t1000\t1000\t1000\n"), Some(0), "the effective id is the second");
+        assert_eq!(effective_uid_in("Name:\tfinstats\n"), None);
     }
 
     #[test]
