@@ -361,18 +361,20 @@ where
 {
     let dir: PathBuf = app.data_dir.join("cache").join("img");
     let file = dir.join(&cache_name);
-    if let Ok(meta) = tokio::fs::metadata(&file).await {
-        let age = meta.modified().ok().and_then(|m| SystemTime::now().duration_since(m).ok()).unwrap_or(Duration::MAX);
-        if meta.len() == 0 && age < MISSING_TTL {
-            return Err(ApiError::not_found("Image"));
-        }
-        if meta.len() > 0 && age < IMAGE_TTL {
-            if let Ok(bytes) = tokio::fs::read(&file).await {
-                return Ok(image_response(bytes));
-            }
-        }
+    if let Some(answer) = from_disk(&file).await {
+        return answer;
     }
     let fetch = fetch.ok_or_else(|| ApiError::not_found("Image"))?;
+    let failed = || -> ApiResult<Response> { Err(ApiError::new(StatusCode::BAD_GATEWAY, format!("Could not load the image from {source}"))) };
+    // One request asks for a picture at a time; the others wait and are answered from the file it wrote.
+    let flight = Fetches::one(&file);
+    let _ours = flight.lock().await;
+    if let Some(answer) = from_disk(&file).await {
+        return answer;
+    }
+    if Fetches::failed_lately(&file) {
+        return stale_or(&file, failed).await;
+    }
     let fetched = fetch.await;
     tokio::fs::create_dir_all(&dir).await.ok();
     match fetched {
@@ -385,14 +387,67 @@ where
             Err(ApiError::not_found("Image"))
         }
         Err(e) => {
-            if let Ok(bytes) = tokio::fs::read(&file).await {
-                if !bytes.is_empty() {
-                    return Ok(image_response(bytes));
-                }
-            }
             tracing::debug!("image fetch failed: {e:#}");
-            Err(ApiError::new(StatusCode::BAD_GATEWAY, format!("Could not load the image from {source}")))
+            Fetches::failed(&file);
+            stale_or(&file, failed).await
         }
+    }
+}
+
+/// What the disk cache answers by itself: a fresh picture, or a miss remembered. `None` when it has to be asked for.
+async fn from_disk(file: &std::path::Path) -> Option<ApiResult<Response>> {
+    let meta = tokio::fs::metadata(file).await.ok()?;
+    let age = meta.modified().ok().and_then(|m| SystemTime::now().duration_since(m).ok()).unwrap_or(Duration::MAX);
+    if meta.len() == 0 && age < MISSING_TTL {
+        return Some(Err(ApiError::not_found("Image")));
+    }
+    if meta.len() > 0 && age < IMAGE_TTL {
+        return tokio::fs::read(file).await.ok().map(|bytes| Ok(image_response(bytes)));
+    }
+    None
+}
+
+/// When the source is down, a stale poster beats a broken one.
+async fn stale_or(file: &std::path::Path, otherwise: impl FnOnce() -> ApiResult<Response>) -> ApiResult<Response> {
+    match tokio::fs::read(file).await {
+        Ok(bytes) if !bytes.is_empty() => Ok(image_response(bytes)),
+        _ => otherwise(),
+    }
+}
+
+/// How long a picture the source failed to give is not asked for again: every repeat of a failing id went to Jellyfin.
+const FAILED_TTL: Duration = Duration::from_secs(30);
+
+/// The pictures being fetched now, one lock each, and those whose fetch failed a moment ago.
+struct Fetches;
+
+impl Fetches {
+    fn flights() -> &'static std::sync::Mutex<std::collections::HashMap<PathBuf, std::sync::Weak<tokio::sync::Mutex<()>>>> {
+        static FLIGHTS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<PathBuf, std::sync::Weak<tokio::sync::Mutex<()>>>>> = std::sync::OnceLock::new();
+        FLIGHTS.get_or_init(Default::default)
+    }
+    fn failures() -> &'static std::sync::Mutex<std::collections::HashMap<PathBuf, std::time::Instant>> {
+        static FAILED: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<PathBuf, std::time::Instant>>> = std::sync::OnceLock::new();
+        FAILED.get_or_init(Default::default)
+    }
+    /// The lock for one picture, shared with whoever is fetching it now; what nobody holds any more is forgotten.
+    fn one(file: &std::path::Path) -> std::sync::Arc<tokio::sync::Mutex<()>> {
+        let mut flights = Self::flights().lock().unwrap();
+        if let Some(lock) = flights.get(file).and_then(std::sync::Weak::upgrade) {
+            return lock;
+        }
+        flights.retain(|_, w| w.strong_count() > 0);
+        let lock = std::sync::Arc::new(tokio::sync::Mutex::new(()));
+        flights.insert(file.to_path_buf(), std::sync::Arc::downgrade(&lock));
+        lock
+    }
+    fn failed(file: &std::path::Path) {
+        let mut failed = Self::failures().lock().unwrap();
+        failed.retain(|_, at| at.elapsed() < FAILED_TTL);
+        failed.insert(file.to_path_buf(), std::time::Instant::now());
+    }
+    fn failed_lately(file: &std::path::Path) -> bool {
+        Self::failures().lock().unwrap().get(file).is_some_and(|at| at.elapsed() < FAILED_TTL)
     }
 }
 
@@ -1772,6 +1827,38 @@ mod tests {
         Running::start(&app, "restore", "Receiving backup").unwrap().with_file(file.clone()).done();
         assert!(file.exists(), "the work's own file was taken from it");
         let _ = std::fs::remove_file(&file);
+    }
+
+    /// Requests for one picture arriving together each asked Jellyfin, and a picture Jellyfin failed to give was asked
+    /// for again at every request. One request asks while the others wait for its file, and a failure is remembered a
+    /// little while.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn a_picture_is_asked_for_once_at_a_time_and_a_failure_is_not_asked_again_at_once() {
+        let dir = std::env::temp_dir().join(format!("finstats-imgflight-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut app = crate::state::test_app();
+        std::sync::Arc::get_mut(&mut app).unwrap().data_dir = dir.clone();
+        let asked = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let ask = |name: &'static str, ok: bool| {
+            let (app, asked) = (app.clone(), asked.clone());
+            tokio::spawn(async move {
+                let fetch = async move {
+                    asked.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                    if ok { Ok(Some(b"poster".to_vec())) } else { Err(anyhow::anyhow!("Jellyfin is down")) }
+                };
+                cached(&app, name.to_string(), "Jellyfin", Some(fetch)).await.map(|_| ()).map_err(|e| e.0)
+            })
+        };
+        let together: Vec<_> = (0..8).map(|_| ask("item-flight-300", true)).collect();
+        for t in together {
+            assert!(t.await.unwrap().is_ok());
+        }
+        assert_eq!(asked.swap(0, std::sync::atomic::Ordering::SeqCst), 1, "eight requests at once asked Jellyfin more than once");
+        assert_eq!(ask("item-failing-300", false).await.unwrap(), Err(StatusCode::BAD_GATEWAY));
+        assert_eq!(ask("item-failing-300", false).await.unwrap(), Err(StatusCode::BAD_GATEWAY));
+        assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 1, "a failure was asked for again at once");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// A cached picture is written beside its name and renamed into place: written in place, a second request read it
