@@ -763,6 +763,14 @@ async fn settings_response(app: &App, user: &AuthUser) -> ApiResult {
         // Hosts only: the address in FINSTATS_PUBLIC_IP_URL is the operator's, and may carry a token.
         obj.insert("public_ip_services".into(), json!(crate::network::services().iter().map(|u| crate::outbound::host_of(u)).collect::<Vec<_>>()));
         obj.insert("geoip".into(), security::status_json(app));
+        // Where Jellyfin is on the network and where FinStats keeps its files: an administrator's, as the outbound list
+        // keeps them.
+        if !user.is_admin {
+            obj.remove("jellyfin_url");
+            if let Some(g) = obj.get_mut("geoip").and_then(Value::as_object_mut) {
+                g.remove("folder");
+            }
+        }
     }
     Ok(Json(v))
 }
@@ -2083,6 +2091,26 @@ mod tests {
         let everyone = AuthUser { perms: crate::auth::Perms { see_everyone: true, ..manager.perms }, ..manager };
         let Json(all) = get_tasks(State(app), Manager(everyone)).await.unwrap();
         assert_eq!((all["db"]["plays"].clone(), all["db"]["oldest_play_at"].clone(), all["collector"]["active_sessions"].clone()), (json!(3), json!(500), json!(1)));
+    }
+
+    /// Where Jellyfin is on the network and where FinStats keeps its files are an administrator's to know, as the
+    /// outbound list keeps them; the settings told any manager both.
+    #[tokio::test]
+    async fn the_settings_name_jellyfins_address_and_the_data_folder_only_to_an_administrator() {
+        let app = crate::state::test_app();
+        *app.config.write().unwrap() = Some(crate::state::JfConfig {
+            url: "http://192.168.1.10:8096".into(), api_key: "k".into(), server_name: "Jellyfin".into(), server_version: "10.10.0".into(), from_env: false,
+        });
+        let manager = AuthUser {
+            id: "m".into(), name: "mallory".into(), is_admin: false, credential: crate::auth::Credential::Session, ip: None,
+            perms: crate::auth::Perms { manage: true, see_network: true, see_server: true, see_everyone: true, ..Default::default() },
+        };
+        let Json(seen) = get_settings(State(app.clone()), Manager(manager.clone())).await.unwrap();
+        assert!(seen.get("jellyfin_url").is_none() && seen["geoip"].get("folder").is_none(), "{seen}");
+        assert_eq!(seen["server_name"], "Jellyfin");
+        let Json(admin) = get_settings(State(app), Manager(AuthUser { is_admin: true, ..manager })).await.unwrap();
+        assert_eq!(admin["jellyfin_url"], "http://192.168.1.10:8096");
+        assert!(admin["geoip"]["folder"].is_string());
     }
 
     #[test]

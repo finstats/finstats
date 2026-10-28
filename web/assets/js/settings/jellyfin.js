@@ -33,7 +33,7 @@ export default {
         : h('span', { class: 'fui-badge--status fui-badge--warning' }, icon('clock', 13), t('settings.jellyfin.asked_every', { active: s.active_interval_s, idle: s.idle_interval_s }));
       mount(body, facts([
         [t('settings.jellyfin.server'), s.server_name],
-        [t('settings.jellyfin.address'), s.jellyfin_url, { mono: true }],
+        s.jellyfin_url ? [t('settings.jellyfin.address'), s.jellyfin_url, { mono: true }] : null,
         [t('settings.jellyfin.version'), s.server_version, { mono: true }],
         [t('settings.jellyfin.collector'), status],
         how ? [t('settings.jellyfin.how'), how] : null,
