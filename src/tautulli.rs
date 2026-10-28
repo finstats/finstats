@@ -177,7 +177,11 @@ fn zip_entry(file: &mut std::fs::File) -> Result<ZipEntry> {
 pub fn sweep(data_dir: &Path, older_than: std::time::Duration) -> bool {
     let stem = format!("{}.", UPLOAD.trim_end_matches(".db"));
     // Each upload arrives in a part of its own (`tautulli-upload.<n>.part`) and is unpacked beside it.
-    let left = |name: &str| name == UPLOAD || (name.starts_with(&stem) && (name.ends_with(".part") || name.ends_with(".unpacking")));
+    // An older version read it with a journal beside it, which SQLite then left behind: `-wal` and `-shm`.
+    let left = |name: &str| {
+        let name = name.strip_suffix("-wal").or_else(|| name.strip_suffix("-shm")).unwrap_or(name);
+        name == UPLOAD || (name.starts_with(&stem) && (name.ends_with(".part") || name.ends_with(".unpacking")))
+    };
     let names: Vec<String> = std::fs::read_dir(data_dir).map(|d| d.filter_map(|e| e.ok()?.file_name().into_string().ok()).filter(|n| left(n)).collect()).unwrap_or_default();
     let mut swept = false;
     for name in names {
@@ -190,6 +194,21 @@ pub fn sweep(data_dir: &Path, older_than: std::time::Duration) -> bool {
     swept
 }
 
+/// `file:<path>?immutable=1`, the path's bytes escaped as a URI needs them. `None` for a path that is not absolute and
+/// cannot be made so.
+fn immutable_uri(path: &Path) -> Option<String> {
+    let path = std::path::absolute(path).ok()?;
+    let mut out = String::from("file:");
+    for b in path.to_str()?.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' => out.push(b as char),
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out.push_str("?immutable=1");
+    Some(out)
+}
+
 /// Every table the import reads from a backup.
 const READ: [&str; 4] = ["session_history", "session_history_metadata", "session_history_media_info", "users"];
 
@@ -200,7 +219,10 @@ const READ: [&str; 4] = ["session_history", "session_history_metadata", "session
 /// query that never ends, a virtual table runs code of its own, and a generated column an expression on every row.
 pub fn open(path: &Path) -> Result<Connection> {
     let not_one = || anyhow::anyhow!(crate::i18n::t("server.tautulli.not_tautulli", &[]));
-    let t = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX).map_err(|_| not_one())?;
+    // Immutable: nothing changes the file while it is read, so SQLite needs no journal, and a backup written in WAL mode
+    // no longer leaves its `-wal` and `-shm` beside it for good.
+    let t = Connection::open_with_flags(immutable_uri(path).ok_or_else(not_one)?, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX | OpenFlags::SQLITE_OPEN_URI)
+        .map_err(|_| not_one())?;
     t.set_db_config(rusqlite::config::DbConfig::SQLITE_DBCONFIG_DEFENSIVE, true).map_err(|_| not_one())?;
     t.set_db_config(rusqlite::config::DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA, false).map_err(|_| not_one())?;
     t.execute_batch("PRAGMA cell_size_check = ON;").map_err(|_| not_one())?;
@@ -1102,6 +1124,26 @@ mod tests {
             assert_eq!(out.0, 11);
         }
         assert!(inflate(12, &bomb[..], 10, &mut Count(0)).is_none(), "a method nobody reads");
+    }
+
+    /// A backup written in WAL mode is read without SQLite leaving its journal beside it: the `-wal` and `-shm` files
+    /// stayed in the data folder for good. Whatever an older version left is swept with the upload.
+    #[test]
+    fn a_backup_in_wal_mode_is_read_without_leaving_a_journal_behind() {
+        let dir = temp("wal");
+        let path = backup(&dir);
+        Connection::open(&path).unwrap().execute_batch("PRAGMA journal_mode = WAL;").unwrap();
+        let held = dir.join(UPLOAD);
+        std::fs::rename(&path, &held).unwrap();
+        plex_users(&open(&held).unwrap()).unwrap();
+        let names = |dir: &Path| { let mut n: Vec<String> = std::fs::read_dir(dir).unwrap().map(|e| e.unwrap().file_name().into_string().unwrap()).collect(); n.sort(); n };
+        assert_eq!(names(&dir), [UPLOAD], "reading it left a journal beside it");
+        for left in ["tautulli-upload.db-wal", "tautulli-upload.db-shm", "tautulli-upload.3.part-wal", "tautulli-upload.3.part-shm"] {
+            std::fs::write(dir.join(left), b"x").unwrap();
+        }
+        assert!(sweep(&dir, std::time::Duration::ZERO));
+        assert!(names(&dir).is_empty(), "{:?}", names(&dir));
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]
