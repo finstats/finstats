@@ -37,10 +37,10 @@ pub fn normalize(s: &str) -> String {
 /// Is the edit distance at most `max`? Swapped neighbours ("sit" for "ist") count as one slip
 /// (optimal string alignment), and the scan stops early once a row can no longer get under `max`.
 fn within(a: &str, b: &str, max: usize) -> bool {
-    let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
-    if a.len().abs_diff(b.len()) > max {
+    if a.chars().count().abs_diff(b.chars().count()) > max {
         return false;
     }
+    let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
     let mut before: Vec<usize> = vec![];
     let mut prev: Vec<usize> = (0..=b.len()).collect();
     for i in 1..=a.len() {
@@ -92,7 +92,21 @@ pub struct Query {
     tokens: Vec<String>,
 }
 
+/// The most a person may type into a search, in characters and in words. Each typed word is compared with every word
+/// of every title, person and track, so an unbounded query (a request head holds about 400 KB) cost tens of seconds of
+/// one pooled connection; nobody searches for more than this.
+pub const TYPED_CHARS: usize = 200;
+pub const TYPED_WORDS: usize = 12;
+
 impl Query {
+    /// What a person typed: past `TYPED_CHARS` or `TYPED_WORDS` there is nothing to answer.
+    pub fn typed(raw: &str) -> Option<Self> {
+        if raw.chars().nth(TYPED_CHARS).is_some() {
+            return None;
+        }
+        Self::new(raw).filter(|q| q.tokens.len() <= TYPED_WORDS)
+    }
+
     pub fn new(raw: &str) -> Option<Self> {
         let text = normalize(raw);
         let tokens: Vec<String> = text.split(' ').filter(|t| !t.is_empty()).map(str::to_string).collect();
@@ -138,6 +152,19 @@ mod tests {
         assert!(hit("lodz", "Łódź"));
         assert!(hit("smorgasbord", "Smörgåsbord"));
         assert!(hit("amelie", "Amélie"));
+    }
+
+    #[test]
+    fn what_a_person_types_is_answered_only_up_to_a_sensible_length() {
+        // Every typed word is compared with every word of every title, person and track: 400 KB of one letter cost tens
+        // of seconds of one pooled connection a request, and six at once left the collector none.
+        assert!(Query::typed(&"a".repeat(400_000)).is_none());
+        assert!(Query::typed(&"a ".repeat(13)).is_none());
+        assert!(Query::typed("big buck bunny").is_some());
+        // A title read from the library is not typed, and is as long as it is.
+        assert!(Query::new(&"word ".repeat(40)).is_some());
+        // Words far apart in length are no slip of one another, and that is said before a letter is copied.
+        assert!(!within("abcd", &"a".repeat(100_000), 2));
     }
 
     fn hit(q: &str, title: &str) -> bool {

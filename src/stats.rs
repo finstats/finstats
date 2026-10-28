@@ -1616,7 +1616,7 @@ pub struct SearchQuery {
 }
 
 pub async fn search(State(app): State<App>, user: AuthUser, Query(q): Query<SearchQuery>) -> ApiResult {
-    let Some(query) = crate::fuzzy::Query::new(q.q.as_deref().unwrap_or_default()) else {
+    let Some(query) = crate::fuzzy::Query::typed(q.q.as_deref().unwrap_or_default()) else {
         return Ok(Json(json!({ "items": [], "users": [], "people": [] })));
     };
     let limit = q.limit.unwrap_or(12).clamp(1, 50) as usize;

@@ -128,7 +128,7 @@ impl Library {
 
 /// Up to `n` titles `m` might be, likeliest first: by its names when `typed` is empty, else by what was typed.
 pub fn candidates(lib: &Library, m: &Missing, typed: Option<&str>, n: usize) -> Vec<Candidate> {
-    let typed = typed.map(str::trim).filter(|t| !t.is_empty()).and_then(Query::new);
+    let typed = typed.map(str::trim).filter(|t| !t.is_empty()).and_then(Query::typed);
     // Searched for, anything a play can be of: a film one server keeps as a film may be a show's special on another.
     let mut scored: Vec<(i32, &Candidate)> = match (&typed, m.item_type == "Episode") {
         (Some(_), _) => [films(lib, m, typed.as_ref()), episodes(lib, m, typed.as_ref())].concat(),
