@@ -536,6 +536,12 @@ pub async fn get_bytes(app: &App, svc: &Service, path: &str, cap: usize) -> Resu
     body_at_most(resp, cap).await.map_err(|e| explain(e, svc))
 }
 
+/// What a service says it is, as it is quoted in a refusal that is stored and shown: as much as names an application
+/// (Sonarr's own is six letters), with nothing that could start a line of its own.
+fn app_name(raw: &str) -> String {
+    raw.chars().filter(|c| !c.is_control()).take(60).collect()
+}
+
 /// Does the address answer like the service it is meant to be, and does it accept the secret? → (what it is, its version)
 pub async fn test(app: &App, svc: &Service) -> Result<(String, String)> {
     match svc.kind {
@@ -546,7 +552,7 @@ pub async fn test(app: &App, svc: &Service) -> Result<(String, String)> {
                 let (url, service) = (svc.url.clone(), svc.kind.label().to_string());
                 return Err(match name {
                     "" => words("server.services.answers_as_other", vec![("url", url), ("service", service)]),
-                    app => words("server.services.answers_as", vec![("url", url), ("app", app.to_string()), ("service", service)]),
+                    app => words("server.services.answers_as", vec![("url", url), ("app", app_name(app)), ("service", service)]),
                 });
             }
             Ok((name.to_string(), status["version"].as_str().unwrap_or("").to_string()))
@@ -905,6 +911,15 @@ async fn changed(app: &App) -> Result<()> {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    /// What a service calls itself is quoted in its connection's last error, which is stored and shown: as much of it as
+    /// names an application, on one line.
+    #[test]
+    fn what_a_service_calls_itself_is_quoted_short_and_on_one_line() {
+        assert_eq!(app_name("Lidarr"), "Lidarr");
+        let said = app_name(&format!("Evil\napp{}", "x".repeat(10_000)));
+        assert!(said.chars().count() <= 60 && !said.contains('\n'), "{said:.80}");
+    }
 
     /// Bytes are not what memory is spent on: `{}` is two bytes and a value of its own, so a few kilobytes of gzip under
     /// the byte cap were millions of records and gigabytes. What is read keeps at most `items` of any list, skipping the

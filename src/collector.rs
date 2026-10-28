@@ -899,11 +899,17 @@ impl Decide {
 }
 
 /// Who started watching again, for the line in the log.
+/// A name somebody chose, as it may go into the log: a control character is written as its escape, so a line break in a
+/// device's name cannot start a line of its own.
+fn for_log(s: &str) -> String {
+    s.chars().map(|c| if c.is_control() { c.escape_default().to_string() } else { c.to_string() }).collect()
+}
+
 fn resumed_by(sessions: &[Value]) -> String {
     sessions
         .iter()
         .find(|s| !s["NowPlayingItem"].is_null() && !s["PlayState"]["IsPaused"].as_bool().unwrap_or(false))
-        .map(|s| format!("{}/{}", s["UserName"].as_str().unwrap_or("somebody"), s["NowPlayingItem"]["Name"].as_str().unwrap_or("something")))
+        .map(|s| format!("{}/{}", for_log(s["UserName"].as_str().unwrap_or("somebody")), for_log(s["NowPlayingItem"]["Name"].as_str().unwrap_or("something"))))
         .unwrap_or_else(|| "somebody".into())
 }
 
@@ -1349,7 +1355,7 @@ async fn tick(
                 rec.seek_count = seeks;
                 rec.start_position_s = start_position;
             }
-            tracing::info!("{} started {} on {}", rec.user_name, rec.item_name, rec.device_name.as_deref().unwrap_or("unknown device"));
+            tracing::info!("{} started {} on {}", for_log(&rec.user_name), for_log(&rec.item_name), for_log(rec.device_name.as_deref().unwrap_or("unknown device")));
             // A new sighting: is this account somewhere it cannot be?
             let (checker, who) = (app.clone(), rec.user_id.clone());
             tokio::spawn(async move { crate::security::check_person(&checker, who).await });
@@ -1384,7 +1390,7 @@ async fn tick(
             tracked.remove(key);
         }
         for (row_id, rec, _) in finished {
-            tracing::info!("{} stopped {} after {}s", rec.user_name, rec.item_name, rec.duration_s);
+            tracing::info!("{} stopped {} after {}s", for_log(&rec.user_name), for_log(&rec.item_name), rec.duration_s);
             if rec.duration_s >= MIN_KEEP_S {
                 let (teller, event) = (app.clone(), play_event(&rec, false, row_id, rec.duration_s));
                 tokio::spawn(async move { crate::notify::raise(&teller, event).await; });
@@ -1400,6 +1406,22 @@ async fn tick(
     live.sort_by_key(|v| v["started_at"].as_i64().unwrap_or(0));
     *app.live.write().unwrap() = live;
     Ok(())
+}
+
+#[cfg(test)]
+mod log_tests {
+    use super::*;
+
+    /// A device's name, a person's and a title's are whoever chose them: a line break in one wrote a line of its own into
+    /// the log, one that read like FinStats' own.
+    #[test]
+    fn a_name_cannot_write_a_line_of_its_own_into_the_log() {
+        assert_eq!(for_log("Living room TV"), "Living room TV");
+        let forged = for_log("TV\n2026-10-28T12:00:00Z  INFO finstats: alice signed in\r");
+        assert!(!forged.contains('\n') && !forged.contains('\r'), "{forged}");
+        let sessions = vec![serde_json::json!({ "UserName": "bob\nINFO", "NowPlayingItem": { "Name": "Sintel" }, "PlayState": { "IsPaused": false } })];
+        assert!(!resumed_by(&sessions).contains('\n'));
+    }
 }
 
 #[cfg(test)]

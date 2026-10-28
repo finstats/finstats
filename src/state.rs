@@ -73,7 +73,8 @@ pub struct AppState {
     pub halt_reason: Mutex<Option<String>>,
 }
 
-#[derive(Clone, Debug)]
+// No `Debug`: it holds the Jellyfin API key, and nothing should be able to print it by accident.
+#[derive(Clone)]
 pub struct JfConfig {
     pub url: String,
     pub api_key: String,

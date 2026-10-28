@@ -28,7 +28,7 @@ pub struct PublicInfo {
     pub id: Option<String>,
 }
 
-#[derive(Debug)]
+// No `Debug`: it holds the access token of a Jellyfin session, and nothing should be able to print it by accident.
 pub struct AuthResult {
     pub user_id: String,
     pub user_name: String,
