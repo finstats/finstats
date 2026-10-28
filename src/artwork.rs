@@ -71,6 +71,28 @@ pub fn known(c: &Connection, pic: Picture, id: &str) -> Result<bool> {
     Ok(c.prepare_cached(sql)?.query_row([id], |r| r.get(0))?)
 }
 
+/// Whether the picture of `id` (one `known` admits) may be shown to somebody with `access` (`access.rs`): a library they
+/// may open, a title they may see, a person in at least one of those. Anything else known is a play's own item, the
+/// library has nothing of it to hide.
+pub fn may_show(c: &Connection, access: &crate::access::Access, id: &str) -> Result<bool> {
+    if access.is_everything() {
+        return Ok(true);
+    }
+    if c.prepare_cached("SELECT EXISTS(SELECT 1 FROM libraries WHERE id = ?1)")?.query_row([id], |r| r.get::<_, bool>(0))? {
+        return Ok(access.may_see_library(id));
+    }
+    if c.prepare_cached("SELECT EXISTS(SELECT 1 FROM items WHERE id = ?1)")?.query_row([id], |r| r.get::<_, bool>(0))? {
+        return access.may_see_item(c, id);
+    }
+    if c.prepare_cached("SELECT EXISTS(SELECT 1 FROM item_people WHERE person_id = ?1)")?.query_row([id], |r| r.get::<_, bool>(0))? {
+        let (seen, args) = access.items_sql("i");
+        let sql = format!("SELECT EXISTS(SELECT 1 FROM item_people ip LEFT JOIN items i ON i.id = ip.item_id WHERE ip.person_id = ? AND (i.id IS NULL OR {seen}))");
+        let args: Vec<_> = std::iter::once(crate::db::rusqlite::types::Value::from(id.to_string())).chain(args).collect();
+        return Ok(c.query_row(&sql, crate::db::rusqlite::params_from_iter(args.iter()), |r| r.get(0))?);
+    }
+    Ok(true)
+}
+
 /// The ETag a picture under this tag is sent with.
 pub fn etag(tag: &str) -> String {
     format!("\"{}\"", safe_tag(tag))
@@ -173,5 +195,24 @@ mod tests {
         assert!(not_modified(Some("*"), "\"abc-300\""));
         assert!(!not_modified(Some("\"abd-300\""), "\"abc-300\""), "a replaced poster is sent again");
         assert!(!not_modified(None, "\"abc-300\""));
+    }
+
+    /// FinStats follows Jellyfin: a person kept out of a library is not shown its pictures, nor a poster or portrait of a
+    /// title hidden from them; what is theirs to see stays, a play's own item among it.
+    #[test]
+    fn a_picture_of_what_jellyfin_hides_from_a_person_is_not_theirs_to_see() {
+        let c = db();
+        c.execute_batch(
+            "INSERT INTO libraries(id, name, updated_at) VALUES ('films', 'Films', 0), ('adult', 'Late films', 0);
+             INSERT INTO items(id, library_id, type, name, removed, updated_at) VALUES ('bbb', 'films', 'Movie', 'Big Buck Bunny', 0, 0), ('late', 'adult', 'Movie', 'Elephants Dream', 0, 0);
+             INSERT INTO item_people(item_id, person_id, kind, name, sort) VALUES ('late', 'p1', 'Actor', 'Proog', 0), ('bbb', 'p2', 'Actor', 'Bunny', 0), ('late', 'p2', 'Actor', 'Bunny', 1);
+             INSERT INTO users(id, name, is_admin, updated_at, access_all, access_libraries) VALUES ('bob', 'bob', 0, 0, 0, '[\"films\"]');",
+        )
+        .unwrap();
+        let bob = crate::access::Access::of(&c, "bob", false).unwrap();
+        let shown = |id: &str| may_show(&c, &bob, id).unwrap();
+        assert_eq!([shown("bbb"), shown("films"), shown("p2"), shown("channel-1")], [true; 4]);
+        assert_eq!([shown("late"), shown("adult"), shown("p1")], [false; 3]);
+        assert!(may_show(&c, &crate::access::Access::everything(), "late").unwrap());
     }
 }

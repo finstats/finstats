@@ -373,9 +373,15 @@ fn valid_id(id: &str) -> Result<String, ApiError> {
     if id.len() == 32 && id.chars().all(|c| c.is_ascii_hexdigit()) { Ok(id) } else { Err(ApiError::not_found("Image")) }
 }
 
-async fn item_image(State(app): State<App>, _user: AuthUser, Path(id): Path<String>, Query(q): Query<ImageQuery>, headers: axum::http::HeaderMap) -> ApiResult<Response> {
+async fn item_image(State(app): State<App>, user: AuthUser, Path(id): Path<String>, Query(q): Query<ImageQuery>, headers: axum::http::HeaderMap) -> ApiResult<Response> {
     let pic = if q.kind.as_deref() == Some("backdrop") { Picture::Backdrop } else { Picture::Primary };
-    current_picture(&app, pic, valid_id(&id)?, pick_width(q.w), &headers).await
+    let id = valid_id(&id)?;
+    // What Jellyfin hides from this person is not there, picture included (`access.rs`): the same 404 as an unknown id.
+    let asked = id.clone();
+    if !app.db.call(move |c| artwork::may_show(c, &crate::access::Access::for_user(c, &user)?, &asked)).await? {
+        return Err(ApiError::not_found("Image"));
+    }
+    current_picture(&app, pic, id, pick_width(q.w), &headers).await
 }
 
 async fn user_image(State(app): State<App>, _user: AuthUser, Path(id): Path<String>, Query(q): Query<ImageQuery>, headers: axum::http::HeaderMap) -> ApiResult<Response> {
