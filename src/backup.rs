@@ -342,6 +342,13 @@ fn insert_row(conn: &Connection, table: &str, known: &HashSet<String>, row: &Map
     Ok(conn.prepare_cached(&sql)?.execute(params_from_iter(args.iter()))? > 0)
 }
 
+/// Whether each of these columns of a restored row is a moment some server could have run at: from 1990, the bound an
+/// import keeps, to tomorrow.
+fn at_a_real_time(row: &Map<String, Value>, columns: &[&str]) -> bool {
+    let until = db::now() + 86_400;
+    columns.iter().all(|c| row.get(*c).and_then(Value::as_i64).is_some_and(|at| (crate::playback::IMPORTED_SINCE..=until).contains(&at)))
+}
+
 /// Merge a backup into this database. `with_settings` also brings back the settings and permissions.
 pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks, &'static str)>) -> Result<RestoreResult> {
     let mut file = File::open(path).context("opening the backup")?;
@@ -438,6 +445,8 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     res.other_rows += 1;
                 }
             }
+            // A moment no server ran at: one row of the log from years to come stopped every later read of it.
+            "server_events" | "devices" if !at_a_real_time(row, if table == "devices" { &["first_seen", "last_seen"] } else { &["date"] }) => {}
             // `located`: where the owner said a title is; `health_dismissed`: a finding set aside; `appearance`: how FinStats
             // looks to a person; `welcomed`: who has had the welcome. A choice this database already has for the same id,
             // finding or person stands.
@@ -911,6 +920,27 @@ mod tests {
     }
     fn plays(db: &Db) -> i64 {
         db.conn().unwrap().query_row("SELECT COUNT(*) FROM playbacks", [], |r| r.get(0)).unwrap()
+    }
+
+    /// A row of the server log or a device from no time FinStats ran at is not restored: one dated in years to come froze
+    /// the activity log's reads for good.
+    #[test]
+    fn server_log_rows_and_devices_from_no_real_time_are_not_restored() {
+        let now = db::now();
+        let (tmp, target, file) = restoring("backup-times", &[
+            json!({ "finstats_backup": FORMAT, "app_version": "2.3.1" }),
+            json!({ "t": "server_events", "r": { "id": 1, "date": now - 3600, "name": "a sign-in", "remote_ip": "" } }),
+            json!({ "t": "server_events", "r": { "id": 2, "date": 4_102_444_800i64, "name": "from the future", "remote_ip": "" } }),
+            json!({ "t": "server_events", "r": { "id": 3, "date": 0, "name": "from 1970", "remote_ip": "" } }),
+            json!({ "t": "devices", "r": { "device_id": "tv", "user_id": "u1", "first_seen": now - 3600, "last_seen": now - 60 } }),
+            json!({ "t": "devices", "r": { "device_id": "phone", "user_id": "u1", "first_seen": now - 3600, "last_seen": 4_102_444_800i64 } }),
+        ]);
+        restore(&target, &file, false, None).unwrap();
+        let c = target.conn().unwrap();
+        let ids: Vec<i64> = c.prepare("SELECT id FROM server_events").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        let devices: Vec<String> = c.prepare("SELECT device_id FROM devices").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+        assert_eq!((ids, devices), (vec![1], vec!["tv".to_string()]));
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 
     #[test]

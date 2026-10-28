@@ -75,7 +75,7 @@ const VALUES: &str = ":source, :source_id, :active, :user_id, :user_name, :item_
     :pause_count, :seek_count, :start_position_s, :is_local";
 
 /// The earliest an imported play may have started: 1 January 1990, before any server a tracker could have watched.
-const IMPORTED_SINCE: i64 = 631_152_000;
+pub(crate) const IMPORTED_SINCE: i64 = 631_152_000;
 
 impl PlayRecord {
     /// Inserts the row. Returns `None` when `source_id` already exists (duplicate import).

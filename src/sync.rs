@@ -1012,10 +1012,16 @@ fn read_more_events(first: bool, got: usize, read: usize) -> bool {
     got == PAGE && !(first && read >= 20_000)
 }
 
+/// Where the next read of the activity log starts: its newest row that is not in the future. One dated years ahead (a
+/// restored backup, a server whose clock ran ahead) would otherwise stop every read after it.
+fn events_from(c: &Connection, now: i64) -> Result<Option<i64>> {
+    Ok(c.query_row("SELECT MAX(date) FROM server_events WHERE date <= ?1", [now], |r| r.get(0))?)
+}
+
 async fn sync_events(app: &App, jf: &Jellyfin) -> Result<String> {
     const ID: &str = "sync_events";
     app.tasks.update(ID, crate::i18n::t("server.sync.fetching_activity", &[]), None);
-    let newest: Option<i64> = app.db.call(|c| Ok(c.query_row("SELECT MAX(date) FROM server_events", [], |r| r.get(0))?)).await?;
+    let newest: Option<i64> = app.db.call(|c| events_from(c, crate::db::now())).await?;
     let min_date = newest
         .and_then(|t| chrono::DateTime::from_timestamp(t - 60, 0))
         .map(|d| d.to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
@@ -1294,6 +1300,17 @@ mod tests {
     }
 
     use super::*;
+
+    /// The activity log is read from its newest row on. One row dated in years to come (a restored backup, or a server
+    /// whose clock ran ahead) stopped every read after it: no sign-in, failed or foreign, was ever seen again.
+    #[test]
+    fn a_row_from_the_future_does_not_stop_the_activity_log() {
+        let db = crate::db::Db::open_in_memory().unwrap();
+        let c = db.conn().unwrap();
+        assert_eq!(events_from(&c, 2_000_000_000).unwrap(), None);
+        c.execute_batch("INSERT INTO server_events(id, date, name) VALUES (1, 1999999000, 'a sign-in'), (2, 4102444800, 'from the future')").unwrap();
+        assert_eq!(events_from(&c, 2_000_000_000).unwrap(), Some(1_999_999_000));
+    }
 
     /// A part of the server's details that could not be read this time keeps what the last read found. Read as
     /// empty, one timed-out request emptied the plugin, task or storage list on the Server page until the next read.
