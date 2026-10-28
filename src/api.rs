@@ -908,7 +908,8 @@ async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path
         return Err(too_soon_error());
     }
     let started = match id {
-        "backup" => sync::run_backup(&app, Some(Actor::from(&user))),
+        // An administrator's backup counts toward what is kept; a manager's is kept apart and never pushes one out.
+        "backup" => sync::run_backup(&app, Some(Actor::from(&user)), !user.is_admin),
         "geoip" => {
             if std::env::var("FINSTATS_GEOIP_DB").is_ok_and(|p| !p.trim().is_empty()) {
                 return Err(ApiError::bad_request(i18n::t("server.api.geoip_from_env", &[])));
@@ -932,8 +933,9 @@ async fn run_task(State(app): State<App>, Manager(user): Manager, Path(id): Path
 const ACCESS_KEYS: [&str; 5] = ["allow_user_login", "default_permissions", "public_url", "public_profiles", "jellyfin_public_url"];
 
 /// Settings only an administrator changes, though a manager may send them unchanged: how many backups are kept (one,
-/// then a run of the job, unlinked every other) and the merge window (a day of rewatches merged into one play for good).
-const ADMIN_SETTINGS: [&str; 2] = ["backup_keep", "merge_window_s"];
+/// then a run of the job, unlinked every other), how often one is written (it is the backup's schedule while the job has
+/// no triggers of its own, and 0 stops it) and the merge window (a day of rewatches merged into one play for good).
+const ADMIN_SETTINGS: [&str; 3] = ["backup_keep", "backup_every_d", "merge_window_s"];
 /// Jobs whose schedule only an administrator changes: the users read is how a disable or a demotion in Jellyfin reaches
 /// FinStats' sessions and keys, the activity log is where failed and foreign sign-ins are seen, and the backups are the
 /// administrator's own.
@@ -1103,7 +1105,7 @@ async fn list_backups(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -
 }
 
 async fn create_backup(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin) -> ApiResult<Response> {
-    if !sync::run_backup(&app, Some(Actor::from(&user))) {
+    if !sync::run_backup(&app, Some(Actor::from(&user)), false) {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.backup_running", &[])));
     }
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
@@ -1742,7 +1744,7 @@ mod tests {
             x
         };
         let (admin, security, manager) = (Changer { admin: true, security: true }, Changer { admin: false, security: true }, Changer { admin: false, security: false });
-        for next in [with("backup_keep", json!(1)), with("merge_window_s", json!(3600)), with("schedules", json!({ "sync_users": [] })), with("schedules", json!({ "backup": [] })), with("schedules", json!({ "sync_events": [] }))] {
+        for next in [with("backup_keep", json!(1)), with("backup_every_d", json!(0)), with("backup_every_d", json!(365)), with("merge_window_s", json!(3600)), with("schedules", json!({ "sync_users": [] })), with("schedules", json!({ "backup": [] })), with("schedules", json!({ "sync_events": [] }))] {
             assert!(manager.refused(&base, &next) && security.refused(&base, &next), "a manager changed {next}");
             assert!(!admin.refused(&base, &next));
         }

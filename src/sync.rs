@@ -155,8 +155,9 @@ async fn announce_ready_year(app: &App) {
 const HOUSEKEEPING_EVERY_S: i64 = 900;
 const SCAN_CHECK_EVERY_S: i64 = 300;
 
-/// Write a backup in the background and thin out old ones. Returns false when one is already being written.
-pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
+/// Write a backup in the background and thin out old ones. Returns false when one is already being written. One a
+/// manager asked for (`by_manager`) is counted apart when pruning ([`crate::backup::prune`]).
+pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>, by_manager: bool) -> bool {
     const ID: &str = "backup";
     if !app.tasks.try_start(ID, &crate::i18n::t("server.sync.writing_backup", &[])) {
         return false;
@@ -168,11 +169,11 @@ pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
     let job = crate::i18n::carry(async move {
         let dir = crate::backup::dir(&app.data_dir);
         // A panic is a failed backup, not a job left "running" for good (`schedule::caught`'s reason).
-        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| crate::backup::export(&app.db, &dir, Some((&app.tasks, ID))).map(|made| {
-            let removed = crate::backup::prune(&dir, app.settings().backup_keep.clamp(1, 100) as usize);
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| crate::backup::export(&app.db, &dir, Some((&app.tasks, ID))).and_then(|made| {
+            let removed = prune_backups(&app.db, &dir, app.settings().backup_keep.clamp(1, 100) as usize, by_manager.then_some(made.name.as_str()))?;
             tracing::info!("{} backup written: {} ({} plays){}", if automatic { "automatic" } else { "manual" }, made.name, made.plays,
                 if removed > 0 { format!("; removed {removed} old") } else { String::new() });
-            (said_backup(made.plays, made.size_bytes), serde_json::to_value(&made).ok())
+            Ok((said_backup(made.plays, made.size_bytes), serde_json::to_value(&made).ok()))
         })))
         .unwrap_or_else(|_| Err(anyhow!(crate::i18n::t("server.sync.backup_panicked", &[]))));
         if let Ok(c) = app.db.conn() {
@@ -193,6 +194,19 @@ pub fn run_backup(app: &App, actor: Option<crate::audit::Actor>) -> bool {
     });
     tokio::task::spawn_blocking(move || tokio::runtime::Handle::current().block_on(job));
     true
+}
+
+/// Prune the backups, `made` being the one a manager just asked for, if it was. The names asked for by hand are kept in
+/// the database, so a restart does not count them among the administrator's; a name no longer on disk is forgotten.
+fn prune_backups(db: &crate::db::Db, dir: &std::path::Path, keep: usize, made: Option<&str>) -> Result<usize> {
+    let c = db.conn()?;
+    let mut requested: std::collections::HashSet<String> =
+        crate::db::get_setting(&c, crate::backup::REQUESTED_KEY)?.and_then(|raw| serde_json::from_str(&raw).ok()).unwrap_or_default();
+    requested.extend(made.map(str::to_string));
+    let removed = crate::backup::prune(dir, keep, &requested);
+    requested.retain(|name| dir.join(name).exists());
+    crate::db::set_setting(&c, crate::backup::REQUESTED_KEY, &serde_json::to_string(&requested)?)?;
+    Ok(removed)
 }
 
 /// "1,390 plays, 12.5 MB": what a backup holds, in the language of the request.
@@ -308,7 +322,7 @@ async fn start_scheduled(app: &App, task: &'static str, limit_s: Option<i64>, sc
         "backup" => {
             let has_plays = app.db.call(|c| Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM playbacks)", [], |r| r.get::<_, bool>(0))?)).await.unwrap_or(false);
             if has_plays {
-                run_backup(app, None);
+                run_backup(app, None, false);
             }
         }
         "geoip" => {

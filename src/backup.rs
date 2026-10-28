@@ -181,22 +181,30 @@ pub fn newest_at(dir: &Path) -> Option<i64> {
     list(dir).first().and_then(|b| b["created_at"].as_i64())
 }
 
-/// Keep the newest `keep` backups. Returns how many were removed.
+/// Keep the newest `keep` backups, counting those a manager asked for by hand (`requested`) apart from the rest: each
+/// kind keeps its own newest `keep`. Returns how many were removed.
 ///
 /// A hard delete, and on purpose not the trash: the owner chose how many backups to keep, and every copy pruned going
 /// to the trash for a month would double the disk the backups take. Only a person's delete is undoable ([`move_to_trash`]),
-/// and the trash is out of what is counted here.
-pub fn prune(dir: &Path, keep: usize) -> usize {
+/// and the trash is out of what is counted here. A manager is not an administrator: counted together, a few runs by hand
+/// pushed every backup the schedule and the administrator had made out, for good.
+pub fn prune(dir: &Path, keep: usize, requested: &HashSet<String>) -> usize {
     let mut removed = 0;
-    for b in list(dir).into_iter().skip(keep.max(1)) {
-        if let Some(name) = b["name"].as_str() {
-            if std::fs::remove_file(dir.join(name)).is_ok() {
-                removed += 1;
-            }
+    let (mut asked, mut other) = (0usize, 0usize);
+    for b in list(dir) {
+        let Some(name) = b["name"].as_str() else { continue };
+        let seen = if requested.contains(name) { &mut asked } else { &mut other };
+        *seen += 1;
+        if *seen > keep.max(1) && std::fs::remove_file(dir.join(name)).is_ok() {
+            removed += 1;
         }
     }
     removed
 }
+
+/// Settings key: the backups a manager wrote by hand, which [`prune`] counts apart. Not in a backup: only the settings
+/// blob travels.
+pub const REQUESTED_KEY: &str = "backups_requested";
 
 // ---------------------------------------------------------------- the trash
 
@@ -553,7 +561,7 @@ mod tests {
         let in_trash = format!("{}.2000000000", names[2]);
         assert!(trash_dir(&dir).join(&in_trash).exists());
         assert!(!valid_name(&in_trash), "a name in the trash can be downloaded or restored from");
-        assert_eq!(prune(&dir, 1), 1, "the one past what is kept, and not the trash");
+        assert_eq!(prune(&dir, 1, &HashSet::new()), 1, "the one past what is kept, and not the trash");
         assert!(trash_dir(&dir).join(&in_trash).exists(), "pruning reached into the trash");
         // Listed in the trash, made when it was made: a rename keeps the file's own time.
         let t = trashed(&dir);
@@ -564,6 +572,17 @@ mod tests {
         assert_eq!(take_out_of_trash(&dir, &names[2]).unwrap(), 2_000_000_000);
         assert_eq!(names_in(&dir), [names[2].clone(), names[1].clone()]);
         assert!(trashed(&dir).is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A manager may write a backup by hand, but not push the administrator's out: five runs a minute apart pruned every
+    /// restore point older than five minutes, for good. What a manager asked for is kept apart and pruned among itself.
+    #[test]
+    fn backups_a_manager_asked_for_never_push_out_the_others() {
+        let (dir, names) = backups_on_disk("requested", 6);
+        let requested: HashSet<String> = names[3..].iter().cloned().collect();
+        assert_eq!(prune(&dir, 2, &requested), 2, "one of the older three and one of the newer three");
+        assert_eq!(names_in(&dir), [names[5].clone(), names[4].clone(), names[2].clone(), names[1].clone()]);
         let _ = std::fs::remove_dir_all(&dir);
     }
 
