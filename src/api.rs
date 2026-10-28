@@ -155,8 +155,46 @@ pub fn router(app: App) -> Router {
         .layer(middleware::from_fn(crate::i18n::middleware))
         // A backup is gzip already. Compressing it again gains nothing, and the doubly-encoded stream
         // broke off in browsers: downloads failed without a word.
-        .layer(CompressionLayer::new().gzip(true).compress_when(DefaultPredicate::new().and(NotForContentType::new("application/gzip"))))
+        .layer(CompressionLayer::new().gzip(true).compress_when(compress_when()))
         .with_state(app)
+}
+
+/// What the compression layer compresses. A backup is gzip already: compressing it again gains nothing, and the doubly
+/// encoded stream broke off in browsers, downloads failing without a word. A font is compressed already too. The web
+/// UI's own files arrive compressed (`gzipped`), and an answer that says how it is encoded is left as it is.
+fn compress_when() -> impl Predicate {
+    DefaultPredicate::new().and(NotForContentType::new("application/gzip")).and(NotForContentType::new("font/"))
+}
+
+/// Whether an asset of this type gains anything from gzip: not a font or a picture, which are compressed already, but
+/// an SVG, which is text.
+fn worth_gzip(mime: &str) -> bool {
+    !(mime.starts_with("font/") || mime.starts_with("image/") && mime != "image/svg+xml" || mime == "application/gzip" || mime.starts_with("application/octet-stream"))
+}
+
+/// A web UI file gzipped once and kept: they are the same until the next release, and were compressed again at every
+/// request on the async threads (the world map alone is 450 KB).
+fn gzipped(path: &str, etag: &str, data: &[u8]) -> std::sync::Arc<Vec<u8>> {
+    /// Each file's ETag when it was compressed, and the compressed bytes.
+    type Kept = std::collections::HashMap<String, (String, std::sync::Arc<Vec<u8>>)>;
+    static KEPT: std::sync::OnceLock<std::sync::Mutex<Kept>> = std::sync::OnceLock::new();
+    let kept = KEPT.get_or_init(Default::default);
+    if let Some((tag, gz)) = kept.lock().unwrap().get(path)
+        && tag == etag
+    {
+        return gz.clone();
+    }
+    let mut enc = flate2::write::GzEncoder::new(Vec::with_capacity(data.len() / 3), flate2::Compression::best());
+    let gz = std::sync::Arc::new(std::io::Write::write_all(&mut enc, data).and_then(|_| enc.finish()).unwrap_or_default());
+    kept.lock().unwrap().insert(path.to_string(), (etag.to_string(), gz.clone()));
+    gz
+}
+
+fn accepts_gzip(headers: &HeaderMap) -> bool {
+    headers.get_all(axum::http::header::ACCEPT_ENCODING).iter().filter_map(|v| v.to_str().ok()).flat_map(|v| v.split(',')).any(|e| {
+        let mut parts = e.split(';');
+        parts.next().is_some_and(|name| name.trim().eq_ignore_ascii_case("gzip")) && !parts.any(|q| q.trim().replace(' ', "") == "q=0")
+    })
 }
 
 /// `spawn_blocking` in the request's language: an import, a restore or a Tautulli check run on a blocking thread says what
@@ -299,7 +337,17 @@ async fn static_handler(State(app): State<App>, headers: HeaderMap, uri: Uri) ->
         // Fonts never change; everything else revalidates so upgrades show up immediately.
         let cache = if path.starts_with("assets/fonts/") { "public, max-age=31536000, immutable" } else { "no-cache" };
         let etag = format!("\"{}\"", hex::encode(&file.metadata.sha256_hash()[..8]));
-        return asset(&headers, &etag, mime.as_ref(), cache, None, || Body::from(file.data.into_owned()));
+        if !worth_gzip(mime.as_ref()) || file.data.len() < 256 {
+            return asset(&headers, &etag, mime.as_ref(), cache, None, || Body::from(file.data.into_owned()));
+        }
+        let gzip = accepts_gzip(&headers);
+        let mut r = asset(&headers, &etag, mime.as_ref(), cache, Some("Accept-Encoding"), || {
+            if gzip { Body::from(gzipped(path, &etag, &file.data).as_ref().clone()) } else { Body::from(file.data.into_owned()) }
+        });
+        if gzip && r.status() == StatusCode::OK {
+            r.headers_mut().insert(axum::http::header::CONTENT_ENCODING, HeaderValue::from_static("gzip"));
+        }
+        return r;
     }
     if path.starts_with("assets/") {
         return StatusCode::NOT_FOUND.into_response();
@@ -1859,6 +1907,32 @@ mod tests {
         assert_eq!(ask("item-failing-300", false).await.unwrap(), Err(StatusCode::BAD_GATEWAY));
         assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 1, "a failure was asked for again at once");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Every stylesheet, module, catalogue and the world map was gzipped again at each request, on the async threads,
+    /// and the fonts (compressed already) with them. An asset is compressed once and kept, and a font is sent as it is.
+    #[tokio::test]
+    async fn an_asset_is_compressed_once_and_a_font_not_at_all() {
+        let app = crate::state::test_app();
+        let mut headers = HeaderMap::new();
+        headers.insert(axum::http::header::ACCEPT_ENCODING, HeaderValue::from_static("gzip, br"));
+        let r = static_handler(State(app.clone()), headers.clone(), Uri::from_static("/assets/js/dom.js")).await;
+        assert_eq!(r.headers().get("content-encoding").map(|v| v.to_str().unwrap()), Some("gzip"));
+        assert!(r.headers().get("vary").is_some_and(|v| v.to_str().unwrap().contains("Accept-Encoding")));
+        let sent = axum::body::to_bytes(r.into_body(), 1 << 24).await.unwrap();
+        let mut plain = String::new();
+        std::io::Read::read_to_string(&mut flate2::read::GzDecoder::new(&sent[..]), &mut plain).unwrap();
+        assert_eq!(plain.as_bytes(), &WebAssets::get("assets/js/dom.js").unwrap().data[..]);
+        let file = WebAssets::get("assets/js/dom.js").unwrap();
+        let etag = format!("\"{}\"", hex::encode(&file.metadata.sha256_hash()[..8]));
+        assert!(std::sync::Arc::ptr_eq(&gzipped("assets/js/dom.js", &etag, &file.data), &gzipped("assets/js/dom.js", &etag, &file.data)), "compressed again");
+        let plain_asked = static_handler(State(app), HeaderMap::new(), Uri::from_static("/assets/js/dom.js")).await;
+        assert!(plain_asked.headers().get("content-encoding").is_none(), "a browser that asked for no gzip was sent it");
+
+        let font = Response::builder().header(CONTENT_TYPE, "font/woff2").body(Body::from(vec![0u8; 4096])).unwrap();
+        assert!(!compress_when().should_compress(&font), "a font was compressed again");
+        let json = Response::builder().header(CONTENT_TYPE, "application/json").body(Body::from(vec![b'1'; 4096])).unwrap();
+        assert!(compress_when().should_compress(&json));
     }
 
     /// A cached picture is written beside its name and renamed into place: written in place, a second request read it
