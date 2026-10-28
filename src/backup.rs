@@ -310,15 +310,24 @@ fn sql_value(v: &Value) -> SqlValue {
     }
 }
 
-/// Insert one row by column name. Columns this database does not have are dropped; returns whether a row went in.
-/// A restored person's grants: the backup's where there are none here, else those that both here and the backup hold.
-fn narrow_grants(conn: &Connection, known: &HashSet<String>, row: &Map<String, Value>) -> Result<bool> {
+/// A restored person's grants, never more than they have: with grants here, those that both here and the backup hold;
+/// without, those of the backup's that everyone is given anyway (`defaults`, as they stand once the settings are
+/// restored), so the row changes nothing they may do. Only names FinStats grants.
+fn narrow_grants(conn: &Connection, row: &Map<String, Value>, defaults: &[String]) -> Result<bool> {
     use crate::db::rusqlite::OptionalExtension;
     let Some(user) = row.get("user_id").and_then(Value::as_str) else { return Ok(false) };
-    let here: Option<String> = conn.query_row("SELECT permissions FROM user_permissions WHERE user_id = ?1", [user], |r| r.get(0)).optional()?;
-    let Some(here) = here else { return insert_row(conn, "user_permissions", known, row, &[], "INSERT") };
     let list = |s: &str| serde_json::from_str::<Vec<String>>(s).unwrap_or_default();
-    let theirs = list(row.get("permissions").and_then(Value::as_str).unwrap_or("[]"));
+    let theirs: Vec<String> = list(row.get("permissions").and_then(Value::as_str).unwrap_or("[]")).into_iter().filter(|p| crate::auth::GRANTABLE.contains(&p.as_str())).collect();
+    let here: Option<String> = conn.query_row("SELECT permissions FROM user_permissions WHERE user_id = ?1", [user], |r| r.get(0)).optional()?;
+    let Some(here) = here else {
+        let given: Vec<&String> = theirs.iter().filter(|p| defaults.contains(p)).collect();
+        if given.is_empty() {
+            return Ok(false);
+        }
+        let at = row.get("updated_at").and_then(Value::as_i64).unwrap_or_else(db::now);
+        conn.execute("INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES (?1, ?2, ?3)", crate::db::rusqlite::params![user, serde_json::to_string(&given)?, at])?;
+        return Ok(true);
+    };
     let mine = list(&here);
     let both: Vec<&String> = mine.iter().filter(|p| theirs.contains(p)).collect();
     if both.len() == mine.len() {
@@ -327,6 +336,25 @@ fn narrow_grants(conn: &Connection, known: &HashSet<String>, row: &Map<String, V
     conn.execute("UPDATE user_permissions SET permissions = ?2 WHERE user_id = ?1", crate::db::rusqlite::params![user, serde_json::to_string(&both)?])?;
     Ok(true)
 }
+
+/// The settings a restore brings back, never opening FinStats wider than `here` has it: who may sign in, what everyone
+/// is given and whether anything may be read without an account are what both say; the addresses FinStats sends people
+/// to (and puts in "Open in Jellyfin") stay this install's, and are the backup's only where this install has none.
+/// Everything else is the backup's.
+fn narrow_settings(here: &Settings, mut theirs: Settings) -> Settings {
+    theirs.allow_user_login &= here.allow_user_login;
+    theirs.public_profiles &= here.public_profiles;
+    theirs.default_permissions.retain(|p| here.default_permissions.contains(p));
+    if !here.public_url.is_empty() {
+        theirs.public_url = here.public_url.clone();
+    }
+    if !here.jellyfin_public_url.is_empty() {
+        theirs.jellyfin_public_url = here.jellyfin_public_url.clone();
+    }
+    theirs
+}
+
+/// Insert one row by column name. Columns this database does not have are dropped; returns whether a row went in.
 
 fn insert_row(conn: &Connection, table: &str, known: &HashSet<String>, row: &Map<String, Value>, skip: &[&str], verb: &str) -> Result<bool> {
     let cols: Vec<&String> = row.keys().filter(|k| known.contains(*k) && !skip.contains(&k.as_str())).collect();
@@ -374,6 +402,7 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
     // Old play id → the id it got here. Plays that were already present are absent: their timeline is too.
     let mut play_ids: HashMap<i64, i64> = HashMap::new();
     let mut settings_raw: Option<String> = None;
+    let mut grants: Vec<Map<String, Value>> = vec![];
     let mut saw_header = false;
 
     let (mut reader, mut line) = (reader, String::new());
@@ -437,12 +466,11 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
                     res.events += 1;
                 }
             }
-            // A restore may take a grant away and never gives one back: somebody with grants here keeps those the backup
-            // also has; what was taken away since the backup was made stays taken away. Somebody without any gets the
-            // backup's.
+            // A restore may take a grant away and never gives one back ([`narrow_grants`]), once the settings it narrows
+            // against are in place.
             "user_permissions" => {
-                if with_settings && narrow_grants(&tx, &known["user_permissions"], row)? {
-                    res.other_rows += 1;
+                if with_settings {
+                    grants.push(row.clone());
                 }
             }
             // A moment no server ran at: one row of the log from years to come stopped every later read of it.
@@ -494,11 +522,17 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
             // read at all is left out, never read as the defaults: that would reset every setting there is.
             match serde_json::from_str::<Settings>(&raw) {
                 Ok(parsed) if parsed.validate().is_ok() => {
-                    db::set_setting(&tx, "settings", &serde_json::to_string(&parsed)?)?;
+                    db::set_setting(&tx, "settings", &serde_json::to_string(&narrow_settings(&Settings::load(&tx)?, parsed))?)?;
                     res.settings_restored = true;
                 }
                 Ok(_) => tracing::warn!("the backup's settings were not restored: this version refuses them"),
                 Err(e) => tracing::warn!("the backup's settings were not restored: {e}"),
+            }
+        }
+        let defaults = Settings::load(&tx)?.default_permissions;
+        for row in &grants {
+            if narrow_grants(&tx, row, &defaults)? {
+                res.other_rows += 1;
             }
         }
     }
@@ -743,10 +777,10 @@ mod tests {
         assert_eq!(n("SELECT COUNT(DISTINCT group_id) FROM playbacks WHERE group_id IS NOT NULL"), 1);
         assert_eq!(n("SELECT COUNT(*) FROM audit WHERE kind = 'setting_changed'"), 1, "restoring twice adds no audit rows");
         assert_eq!(n("SELECT COUNT(*) FROM api_keys"), 0, "a key never arrives with a backup");
-        assert_eq!(n("SELECT COUNT(*) FROM user_permissions"), 1);
+        assert_eq!(n("SELECT COUNT(*) FROM user_permissions"), 0, "a grant past what everyone has here came with the backup");
         assert_eq!(Settings::load(&c).unwrap().min_play_s, 42);
         // A grant taken away since the backup was made stays taken away: last month's backup gave every one back.
-        c.execute("UPDATE user_permissions SET permissions = '[]' WHERE user_id = 'u2'", []).unwrap();
+        c.execute("INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('u2', '[]', 6)", []).unwrap();
         restore(&target, &file, true, None).unwrap();
         let grants: String = c.query_row("SELECT permissions FROM user_permissions WHERE user_id = 'u2'", [], |r| r.get(0)).unwrap();
         assert_eq!(grants, "[]", "a restore gave back a grant taken away");
@@ -920,6 +954,48 @@ mod tests {
     }
     fn plays(db: &Db) -> i64 {
         db.conn().unwrap().query_row("SELECT COUNT(*) FROM playbacks", [], |r| r.get(0)).unwrap()
+    }
+
+    /// Settings brought back from a backup never open FinStats wider than it is: who may sign in, what everyone may see
+    /// and whether anything may be read without an account are narrowed to what both say, and the addresses FinStats
+    /// sends people to stay this install's unless it has none. Everything else is the backup's.
+    #[test]
+    fn restored_settings_never_open_finstats_wider_than_it_is() {
+        let here = Settings { allow_user_login: false, default_permissions: vec!["sign_in".into(), "see_network".into()], public_profiles: true,
+            public_url: "https://stats.example.net".into(), ..Settings::default() };
+        let theirs = Settings { allow_user_login: true, default_permissions: vec!["sign_in".into(), "manage".into(), "see_everyone".into()], public_profiles: false,
+            public_url: "https://elsewhere.example".into(), jellyfin_public_url: "https://jellyfin.example.net".into(), min_play_s: 42, ..Settings::default() };
+        let got = narrow_settings(&here, theirs);
+        assert_eq!((got.allow_user_login, got.default_permissions, got.public_profiles), (false, vec!["sign_in".to_string()], false));
+        assert_eq!((got.public_url.as_str(), got.jellyfin_public_url.as_str()), ("https://stats.example.net", "https://jellyfin.example.net"), "an address here was replaced, or none here was not filled");
+        assert_eq!(got.min_play_s, 42, "the rest is the backup's");
+        let open = Settings { allow_user_login: true, public_profiles: true, ..Settings::default() };
+        let got = narrow_settings(&open, Settings { allow_user_login: true, public_profiles: true, ..Settings::default() });
+        assert!(got.allow_user_login && got.public_profiles, "what both say stays");
+    }
+
+    /// With settings, a person with grants here keeps those the backup also has; a person without any gets nothing past
+    /// what everyone is given anyway. By default nobody has a row of their own, so a crafted backup granted anybody
+    /// everything. Names FinStats does not grant are dropped.
+    #[test]
+    fn restored_grants_never_give_anybody_more_than_they_have() {
+        let backup_settings = Settings { default_permissions: vec!["sign_in".into(), "manage".into()], ..Settings::default() };
+        let grant = |user: &str, perms: &str| json!({ "t": "user_permissions", "r": { "user_id": user, "permissions": perms, "updated_at": 5 } });
+        let (tmp, target, file) = restoring("backup-grants", &[
+            json!({ "finstats_backup": FORMAT, "app_version": "2.3.1" }),
+            json!({ "t": "settings", "r": { "key": "settings", "value": serde_json::to_string(&backup_settings).unwrap() } }),
+            grant("u-row", r#"["see_everyone","manage"]"#),
+            grant("u-none", r#"["sign_in","manage","see_everyone","root"]"#),
+        ]);
+        let c = target.conn().unwrap();
+        db::set_setting(&c, "settings", &serde_json::to_string(&Settings { default_permissions: vec!["sign_in".into()], ..Settings::default() }).unwrap()).unwrap();
+        c.execute("INSERT INTO user_permissions(user_id, permissions, updated_at) VALUES ('u-row', '[\"see_everyone\",\"see_network\"]', 1)", []).unwrap();
+        restore(&target, &file, true, None).unwrap();
+        let grants: Vec<(String, String)> = c.prepare("SELECT user_id, permissions FROM user_permissions ORDER BY user_id").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
+        assert_eq!(grants, [("u-none".to_string(), r#"["sign_in"]"#.to_string()), ("u-row".to_string(), r#"["see_everyone"]"#.to_string())]);
+        assert_eq!(Settings::load(&c).unwrap().default_permissions, ["sign_in"]);
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 
     /// A row of the server log or a device from no time FinStats ran at is not restored: one dated in years to come froze
