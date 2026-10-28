@@ -1998,6 +1998,7 @@
       "enter_address_of": "Enter the address of {channel}",
       "not_a_token": "That does not look like a token",
       "too_long": "The {what} is too long, or has something in it that cannot be sent",
+      "name": "name",
       "unknown_event": "Unknown event `{event}`",
       "unknown_severity": "Unknown severity `{severity}`",
       "max_targets": { "one": "At most {count} destination", "other": "At most {count} destinations" },

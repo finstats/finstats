@@ -2298,6 +2298,7 @@
       "enter_address_of": "Skriv inn adressa til {channel}",
       "not_a_token": "D ser ikkje ut som en token",
       "too_long": "Felte «{what}» e for langt, elle inneheld nåke som ikkje kan sendast",
+      "name": "namn",
       "unknown_event": "Ukjend hending `{event}`",
       "unknown_severity": "Ukjend alvorsgrad `{severity}`",
       "max_targets": {

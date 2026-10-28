@@ -419,6 +419,15 @@ impl Target {
             _ => format!("{host}/…"),
         }
     }
+
+    /// As [`Target::shown`], for somebody whose destination this is not: an ntfy topic is the whole credential on a
+    /// server that takes any, so only its first letters are shown, enough to tell two apart.
+    fn shown_to_others(&self) -> String {
+        match (self.channel, self.topic.as_deref()) {
+            (Channel::Ntfy, Some(topic)) => format!("{}/{}…", crate::outbound::host_of(&self.url), topic.chars().take(3).collect::<String>()),
+            _ => self.shown(),
+        }
+    }
 }
 
 fn read_target(r: &crate::db::rusqlite::Row) -> crate::db::rusqlite::Result<Option<Target>> {
@@ -984,6 +993,10 @@ pub fn clean_url(input: &str, channel: Channel) -> Result<String> {
         return Ok(fixed.to_string());
     }
     let host = parsed.host_str().unwrap_or("");
+    // Their address is their token: it is never sent in the clear, and a redirect to https comes after it has left.
+    if matches!(channel, Channel::Discord | Channel::Slack) && parsed.scheme() != "https" {
+        bail!(t(if channel == Channel::Discord { "server.notify.not_discord" } else { "server.notify.not_slack" }, &[]));
+    }
     if channel == Channel::Discord {
         let discord = host == "discord.com" || host == "discordapp.com" || host.ends_with(".discord.com");
         if !discord || !parsed.path().starts_with("/api/webhooks/") {
@@ -1141,27 +1154,29 @@ fn catalogue() -> Value {
     json!({ "events": events, "channels": channels, "severities": SEVERITIES, "groups": Group::ALL.map(|g| json!({ "key": g.key(), "label": g.label() })) })
 }
 
-/// One destination as the page sees it: never the address, never the secret.
-fn target_row(r: &crate::db::rusqlite::Row) -> crate::db::rusqlite::Result<Option<Value>> {
+/// One destination as the page sees it: never the address, never the secret, and somebody else's topic (an ntfy topic,
+/// a Pushover user key) only to its owner, an administrator reading the list included.
+fn target_row(r: &crate::db::rusqlite::Row, caller: &str) -> crate::db::rusqlite::Result<Option<Value>> {
     let Some(t) = read_target(r)? else { return Ok(None) };
     let (last_ok_at, last_error): (Option<i64>, Option<String>) = (r.get(14)?, r.get(15)?);
     let owner_name: Option<String> = r.get(16)?;
+    let theirs = t.owner_id.as_deref().is_some_and(|o| o != caller);
     Ok(Some(json!({
-        "id": t.id, "kind": t.channel.key(), "label": t.channel.label(), "name": t.name, "shown": t.shown(),
+        "id": t.id, "kind": t.channel.key(), "label": t.channel.label(), "name": t.name, "shown": if theirs { t.shown_to_others() } else { t.shown() },
         "scope": if t.owner_id.is_some() { "me" } else { "server" }, "owner_id": t.owner_id, "owner_name": owner_name,
-        "topic": t.topic, "options": t.options, "has_secret": !t.secret.is_empty(), "events": t.events, "with_addresses": t.with_addresses,
+        "topic": if theirs { None } else { t.topic.clone() }, "topic_hidden": theirs && t.topic.is_some(), "options": t.options, "has_secret": !t.secret.is_empty(), "events": t.events, "with_addresses": t.with_addresses,
         "min_severity": t.min_severity, "accept_invalid_certs": t.accept_invalid_certs, "enabled": t.enabled,
         "created_at": t.created_at, "last_ok_at": last_ok_at, "last_error": last_error,
     })))
 }
 
-fn targets_json(conn: &Connection, only_owner: Option<&str>) -> Result<Vec<Value>> {
+fn targets_json(conn: &Connection, only_owner: Option<&str>, caller: &str) -> Result<Vec<Value>> {
     let mut stmt = conn.prepare(&format!(
         "SELECT {}, t.last_ok_at, t.last_error, u.name FROM notify_targets t LEFT JOIN users u ON u.id = t.owner_id
          WHERE ?1 IS NULL OR t.owner_id = ?1 ORDER BY t.owner_id IS NOT NULL, t.id",
         TARGET_COLS.split(", ").map(|c| format!("t.{c}")).collect::<Vec<_>>().join(", ")
     ))?;
-    let rows = stmt.query_map([only_owner], target_row)?.collect::<Result<Vec<_>, _>>()?;
+    let rows = stmt.query_map([only_owner], |r| target_row(r, caller))?.collect::<Result<Vec<_>, _>>()?;
     Ok(rows.into_iter().flatten().collect())
 }
 
@@ -1179,7 +1194,8 @@ fn named(mut rows: Vec<Value>) -> Vec<Value> {
 pub async fn list(State(app): State<App>, user: AuthUser) -> ApiResult {
     gate(&user)?;
     let only = (!user.is_admin).then(|| user.id.clone());
-    let targets = named(app.db.call(move |c| targets_json(c, only.as_deref())).await?);
+    let caller = user.id.clone();
+    let targets = named(app.db.call(move |c| targets_json(c, only.as_deref(), &caller)).await?);
     let public_url = app.settings().public_url.clone();
     Ok(Json(json!({
         "targets": targets, "catalogue": catalogue(), "public_url": public_url,
@@ -1227,6 +1243,10 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
         (None, Some(s)) => s.name.clone(),
         (None, None) => channel.title(),
     };
+    // The name is written to the log: a line break in it would be a line of its own.
+    if name.chars().any(char::is_control) {
+        return Err(FormError::at("name", t("server.notify.too_long", &[("what", t("server.notify.name", &[]).into())])));
+    }
     let url = match (body.url.as_deref().filter(|u| !u.trim().is_empty()), stored) {
         (Some(u), _) => clean_url(u, channel).map_err(|e| FormError::at("url", format!("{e}")))?,
         (None, Some(s)) => s.url.clone(),
@@ -1296,11 +1316,14 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
     };
     let pick = |given: Option<bool>, was: Option<bool>, or: bool| given.or(was).unwrap_or(or);
     let with_addresses = pick(body.with_addresses, stored.map(|s| s.with_addresses), false);
+    // Only an administrator may switch certificate checks off; a personal destination is public anyway.
+    let accept_invalid_certs = user.is_admin && pick(body.accept_invalid_certs, stored.map(|s| s.accept_invalid_certs), false);
     // Somebody else's personal destination is theirs: an administrator may switch it off, choose what it is told or
-    // remove it, never send it, its password and what it says, somewhere else.
+    // remove it, never send it, its password and what it says, somewhere else, nor to whatever certificate answers.
     if let Some(s) = stored
         && s.owner_id.as_deref().is_some_and(|o| o != user.id)
-        && (url != s.url || secret != s.secret || topic != s.topic || options != s.options || with_addresses != s.with_addresses)
+        && (url != s.url || secret != s.secret || topic != s.topic || options != s.options || with_addresses != s.with_addresses
+            || accept_invalid_certs != s.accept_invalid_certs)
     {
         return Err(ApiError::forbidden().into());
     }
@@ -1316,8 +1339,7 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
         events,
         with_addresses,
         min_severity,
-        // Only an administrator may switch certificate checks off; a personal destination is public anyway.
-        accept_invalid_certs: user.is_admin && pick(body.accept_invalid_certs, stored.map(|s| s.accept_invalid_certs), false),
+        accept_invalid_certs,
         enabled: pick(body.enabled, stored.map(|s| s.enabled), true),
         created_at: stored.map(|s| s.created_at).unwrap_or_else(db::now),
     })
@@ -1460,7 +1482,8 @@ pub async fn test(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -
 
 async fn one(app: &App, user: &AuthUser, id: i64) -> ApiResult {
     let only = (!user.is_admin).then(|| user.id.clone());
-    let list = named(app.db.call(move |c| targets_json(c, only.as_deref())).await?);
+    let caller = user.id.clone();
+    let list = named(app.db.call(move |c| targets_json(c, only.as_deref(), &caller)).await?);
     let found = list.into_iter().find(|t| t["id"].as_i64() == Some(id)).ok_or_else(|| ApiError::not_found("Destination"))?;
     Ok(Json(json!({ "target": found })))
 }
@@ -1930,16 +1953,16 @@ pub(crate) mod tests {
             [],
         )
         .unwrap();
-        let rows = targets_json(&c, None).unwrap();
+        let rows = targets_json(&c, None, "ua").unwrap();
         let text = serde_json::to_string(&rows).unwrap();
         assert!(!text.contains("s3cret-token") && !text.contains("tok3n"), "a webhook URL is itself a credential: {text}");
         assert!(text.contains("discord.com"), "the host is shown, so the owner knows which one this is");
         assert_eq!(rows[0]["has_secret"], true);
         assert_eq!(rows[0]["scope"], "server");
-        assert!(targets_json(&c, Some("ub")).unwrap().is_empty(), "somebody else's destination is not theirs to see");
+        assert!(targets_json(&c, Some("ub"), "ub").unwrap().is_empty(), "somebody else's destination is not theirs to see");
         // A personal destination says whose it is, so an administrator's list can tell "yours" from bob's.
         c.execute("UPDATE notify_targets SET owner_id = 'ub'", []).unwrap();
-        let rows = targets_json(&c, None).unwrap();
+        let rows = targets_json(&c, None, "ua").unwrap();
         assert_eq!((rows[0]["scope"].as_str(), rows[0]["owner_id"].as_str(), rows[0]["owner_name"].as_str()), (Some("me"), Some("ub"), Some("bob")));
     }
 
@@ -1963,6 +1986,44 @@ pub(crate) mod tests {
         stored.owner_id = Some("ub".into());
         assert!(describe(body(json!({ "url": "https://attacker.example", "secret": "new-token" })), Some(&stored), &admin()).is_err(), "an administrator moved somebody else's destination");
         assert!(describe(body(json!({ "enabled": false })), Some(&stored), &admin()).is_ok(), "an administrator may switch it off");
+    }
+
+    /// Switching certificate checks off on somebody else's destination sends their token, or their mailbox password, to
+    /// whatever certificate answers: it is theirs, as the address and the secret are.
+    #[tokio::test]
+    async fn an_administrator_does_not_switch_certificate_checks_off_on_somebody_else_s_destination() {
+        let mut stored = test_target(Channel::Gotify, "https://gotify.example.com");
+        stored.owner_id = Some("ub".into());
+        assert!(describe(body(json!({ "accept_invalid_certs": true })), Some(&stored), &admin()).is_err(), "certificate checks switched off on bob's destination");
+        assert!(describe(body(json!({ "accept_invalid_certs": false, "enabled": false })), Some(&stored), &admin()).is_ok(), "unchanged, it may still be switched off");
+    }
+
+    /// A destination's name is written to the log when it is added and when it will not take a message: a line break in
+    /// it would write a line of its own.
+    #[test]
+    fn a_destination_s_name_holds_no_control_characters() {
+        let refused = describe(body(json!({ "kind": "webhook", "url": "https://hooks.example.com/x", "name": "Household\nINFO forged" })), None, &admin()).err().expect("a name with a line break");
+        assert_eq!(refused.field, Some("name"));
+        assert!(describe(body(json!({ "kind": "webhook", "url": "https://hooks.example.com/x", "name": "Household" })), None, &admin()).is_ok());
+    }
+
+    /// An ntfy topic without a token is the whole credential on ntfy.sh, and a Pushover user key half of one: somebody
+    /// else's are not shown, an administrator's list included, and the line that names it masks the topic.
+    #[test]
+    fn somebody_else_s_topic_is_not_shown_even_to_an_administrator() {
+        let c = conn();
+        c.execute(
+            "INSERT INTO notify_targets(id, kind, name, url, secret, topic, owner_id, events, min_severity, created_at) VALUES
+             (1, 'ntfy', 'Mine', 'https://ntfy.sh', '', 'sam-private-topic-8f3k2', 'ub', '[]', 'info', 1),
+             (2, 'pushover', 'Phone', 'https://api.pushover.net', 'app-token', 'uQiRzpo4DXghDmr9QzzfQu27cmVRsG', 'ub', '[]', 'info', 1)",
+            [],
+        )
+        .unwrap();
+        let text = serde_json::to_string(&targets_json(&c, None, "ua").unwrap()).unwrap();
+        assert!(!text.contains("sam-private-topic-8f3k2") && !text.contains("uQiRzpo4DXghDmr9QzzfQu27cmVRsG"), "{text}");
+        let own = targets_json(&c, None, "ub").unwrap();
+        assert_eq!(own[0]["topic"], "sam-private-topic-8f3k2", "the owner reads their own");
+        assert_eq!(own[1]["topic"], "uQiRzpo4DXghDmr9QzzfQu27cmVRsG");
     }
 
     /// A destination keeps sending after the key that made it is revoked, so a key may not make or change one: a leaked
@@ -2074,6 +2135,8 @@ pub(crate) mod tests {
         assert!(clean_url("https://example.com/api/webhooks/1/tok", Channel::Discord).is_err(), "that is not Discord");
         assert!(clean_url("https://discord.com/api/webhooks/123", Channel::Discord).is_err(), "half a Discord webhook is no webhook");
         assert!(clean_url("https://discord.com/api/webhooks/123/abc", Channel::Discord).is_ok());
+        assert!(clean_url("http://discord.com/api/webhooks/1/t", Channel::Discord).is_err(), "a webhook's token in the clear");
+        assert!(clean_url("http://hooks.slack.com/services/T0/B0/tok", Channel::Slack).is_err(), "a webhook's token in the clear");
         assert!(clean_url("https://example.com/services/T0/B0/tok", Channel::Slack).is_err(), "that is not Slack");
         assert!(clean_url("https://hooks.slack.com/services/T0", Channel::Slack).is_err(), "half a Slack webhook is no webhook");
         assert!(clean_url("https://hooks.slack.com/services/T0/B0/tok", Channel::Slack).is_ok());

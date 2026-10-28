@@ -163,7 +163,8 @@ export function notificationsPanel(ctx) {
       if (channel.needs_topic) {
         topic.el.querySelector('.fui-field__label').textContent = said(channel, 'topic_label');
         topic.el.querySelector('.fui-field__help').textContent = said(channel, 'topic_help');
-        topic.input.placeholder = channel.topic_example;
+        // Somebody else's topic is not shown, not even to an administrator: it stays as it is unless typed again.
+        topic.input.placeholder = existing && existing.topic_hidden ? t('notifications.unchanged') : channel.topic_example;
       }
       for (const [key, field] of extras) {
         const spec = specOf(key);
@@ -215,7 +216,7 @@ export function notificationsPanel(ctx) {
       if (!existing) b.scope = scopeMine.checked ? 'me' : 'server';
       if (url.input.value.trim() && !channel.fixed_url) b.url = url.input.value.trim();
       if (secret.input.value) b.secret = secret.input.value;
-      if (channel.needs_topic) b.topic = topic.input.value.trim();
+      if (channel.needs_topic && topic.input.value.trim()) b.topic = topic.input.value.trim();
       if (channel.extras && channel.extras.length) {
         b.options = {};
         for (const e of channel.extras) b.options[e.key] = extras.get(e.key).input.value.trim();
@@ -225,7 +226,7 @@ export function notificationsPanel(ctx) {
     function valid() {
       let ok = true;
       if (!existing && !url.input.value.trim() && !channel.fixed_url) { url.setError(t('notifications.enter_address', { example: channel.example })); ok = false; }
-      if (channel.needs_topic && !topic.input.value.trim()) { topic.setError(CHANNELS.has(channel.key) ? t(`notifications.channel.${channel.key}.topic_missing`) : t('notifications.enter_value', { what: channel.topic_label.toLowerCase() })); ok = false; }
+      if (channel.needs_topic && !topic.input.value.trim() && !(existing && existing.topic_hidden)) { topic.setError(CHANNELS.has(channel.key) ? t(`notifications.channel.${channel.key}.topic_missing`) : t('notifications.enter_value', { what: channel.topic_label.toLowerCase() })); ok = false; }
       for (const e of channel.extras || []) {
         if (e.required && !extras.get(e.key).input.value.trim()) { extras.get(e.key).setError(EXTRAS.has(e.key) ? t(`notifications.extra.${e.key}.missing`) : t('notifications.enter_value', { what: e.label.toLowerCase() })); ok = false; }
       }

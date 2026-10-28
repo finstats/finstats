@@ -1998,6 +1998,7 @@
       "enter_address_of": "Skriv inn adressa til {channel}",
       "not_a_token": "Det ser ikkje ut som eit token",
       "too_long": "Feltet «{what}» er for langt, eller inneheld noko som ikkje kan sendast",
+      "name": "namn",
       "unknown_event": "Ukjend hending `{event}`",
       "unknown_severity": "Ukjend alvorsgrad `{severity}`",
       "max_targets": { "one": "Høgst {count} mottakar", "other": "Høgst {count} mottakarar" },
