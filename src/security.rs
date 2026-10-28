@@ -416,12 +416,14 @@ fn typed_name<'a>(line: &'a str, learned: Option<&str>) -> Option<&'a str> {
 /// runs on every install; `check` does the rest.
 /// A failed sign-in: id, when, the account's name if it is one, user id, address.
 type Failure = (i64, i64, Option<String>, Option<String>, String);
+/// A failed sign-in as the activity log has it: id, when, its line, the name of the user it names by id, user id, address.
+type LogLine = (i64, i64, String, Option<String>, Option<String>, String);
 
 pub fn scan_sign_ins(conn: &Connection, bus: &Fanout) -> Result<usize> {
     let since = db::now() - BURST_LOOKBACK_S;
     // Jellyfin writes no user id on a failed sign-in, only a line ending in the name typed, in the server's language: an
     // account is a user whose name is the whole of what was typed.
-    let read: Vec<(i64, i64, String, Option<String>, Option<String>, String)> = conn
+    let read: Vec<LogLine> = conn
         .prepare_cached(
             "SELECT e.id, e.date, COALESCE(e.name, ''), u.name, e.user_id, COALESCE(e.remote_ip, '')
              FROM server_events e LEFT JOIN users u ON u.id = e.user_id
