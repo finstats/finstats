@@ -382,7 +382,12 @@ pub async fn connect(
     // A WebSocket cannot carry a header of the page's own, so its tab says its language in the address (`?lang=`); the
     // cookie is every tab's, and another may have chosen since.
     let lang = uri.query().into_iter().flat_map(|q| q.split('&')).find_map(|kv| kv.strip_prefix("lang=")).and_then(crate::i18n::locale).unwrap_or_else(crate::i18n::current);
-    ws.max_message_size(MESSAGE_MAX).on_upgrade(move |socket| crate::i18n::speaking(lang, serve(app, socket, user, presented, seat, gone, auth)))
+    bounded(ws).on_upgrade(move |socket| crate::i18n::speaking(lang, serve(app, socket, user, presented, seat, gone, auth)))
+}
+
+/// A page's messages held to [`MESSAGE_MAX`], and each frame too: a frame is read whole before its message is measured.
+fn bounded(ws: WebSocketUpgrade) -> WebSocketUpgrade {
+    ws.max_message_size(MESSAGE_MAX).max_frame_size(MESSAGE_MAX)
 }
 
 /// What one connection has asked for, and what it was last sent, so nothing is sent twice.
@@ -590,6 +595,28 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A page sends four kinds of short message, so a frame is held to what a message may be: the frame limit was left
+    /// at 16 MB, and a frame is read whole before a message is measured, 16 MB a connection, twenty connections a person.
+    #[tokio::test]
+    async fn a_frame_is_held_to_what_a_message_may_be() {
+        use axum::extract::FromRequestParts;
+        let mut req = axum::http::Request::builder()
+            .uri("/api/live")
+            .header("connection", "upgrade")
+            .header("upgrade", "websocket")
+            .header("sec-websocket-version", "13")
+            .header("sec-websocket-key", "dGhlIHNhbXBsZSBub25jZQ==")
+            .body(axum::body::Body::empty())
+            .unwrap();
+        let on = hyper::upgrade::on(&mut req);
+        let (mut parts, _) = req.into_parts();
+        parts.extensions.insert(on);
+        let ws = WebSocketUpgrade::from_request_parts(&mut parts, &()).await.unwrap();
+        let config = format!("{:?}", bounded(ws));
+        assert!(config.contains(&format!("max_message_size: Some({MESSAGE_MAX})")), "{config}");
+        assert!(config.contains(&format!("max_frame_size: Some({MESSAGE_MAX})")), "{config}");
+    }
 
     fn stream(key: &str, pos: i64) -> Value {
         json!({ "key": key, "user_id": "u1", "user_name": "alice", "item_id": "i1", "item_name": "Big Buck Bunny", "position_s": pos,
