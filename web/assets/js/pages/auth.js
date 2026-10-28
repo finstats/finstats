@@ -4,7 +4,7 @@
 import { h, icon, mount, logo } from '../dom.js';
 import { api } from '../api.js';
 import { state, resetCaches } from '../state.js';
-import { navigate } from '../router.js';
+import { navigate, ownPage } from '../router.js';
 import { setBusy, inlineError, formField as field } from '../components.js';
 import { button } from '../../finui/components/button/button.js';
 import { t, tParts } from '../i18n.js';
@@ -136,7 +136,7 @@ export function loginPage(ctx) {
       state.user = res.user;
       resetCaches();
       const next = ctx.query.get('next');
-      navigate(next && next.startsWith('/') && !next.startsWith('//') ? next : '/', { replace: true });
+      navigate(ownPage(next), { replace: true });
     } catch (err) {
       setBusy(btn, false);
       if (err.status === 428) { code.setError(t('auth.setup.code_wrong')); code.input.select(); code.input.focus(); }

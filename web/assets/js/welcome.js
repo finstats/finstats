@@ -7,6 +7,7 @@ import { h, icon, mount, logo, dateExample, timeExample, setFormats } from './do
 import { setLayoutChoice, markWelcomed, themeChoice, setTheme } from './state.js';
 import { t, lang, LANGUAGES, keepLanguage, loadLanguage } from './i18n.js';
 import { DATE_FORMATS, TIME_FORMATS } from './when.js';
+import { ownPage } from './router.js';
 import { button } from '../finui/components/button/button.js';
 import { choiceGroup } from '../finui/components/choice/choice.js';
 
@@ -14,12 +15,10 @@ import { choiceGroup } from '../finui/components/choice/choice.js';
 export const DEFAULTS = { language: 'en-GB', date: 'dd/mm/yyyy', time: 'HH:mm', theme: 'device', layout: 'finstats' };
 const STEPS = ['language', 'formats', 'theme', 'layout'];
 
-/** Where to go once done: `next` if it is one of FinStats' own pages, else home. Read the way the browser will read it,
- *  never by its first characters: a browser takes `/\host` and `/<tab>/host` for `//host`, another site. */
+/** Where to go once done: `next` if it is one of FinStats' own pages (and not this one), else home. */
 const safeNext = (next) => {
-  let to;
-  try { to = new URL(next || '/', location.origin); } catch { return '/'; }
-  return to.origin === location.origin && !to.pathname.startsWith('/welcome') ? to.pathname + to.search + to.hash : '/';
+  const to = ownPage(next);
+  return to.startsWith('/welcome') ? '/' : to;
 };
 
 /** The card. `setup` draws setup's two steps above, done. */

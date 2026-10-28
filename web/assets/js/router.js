@@ -74,9 +74,19 @@ const depth = () => (history.state && history.state.depth) || 0;
 /** Is the history entry behind this one a page of FinStats? */
 export const canGoBack = () => depth() > 0;
 
+/** `next` as one of FinStats' own pages, else `fallback`. Read the way the browser will read it, never by its first
+ *  characters, and with the path's leading slashes made one: normalising `/.//host` or `/a/..//host` leaves a path of
+ *  `//host`, which the browser then takes for another site. */
+export function ownPage(next, fallback = '/') {
+  let to;
+  try { to = new URL(next || fallback, location.origin); } catch { return fallback; }
+  return to.origin === location.origin ? '/' + to.pathname.replace(/^\/+/, '') + to.search + to.hash : fallback;
+}
+
 export function navigate(to, { replace = false, scroll = true } = {}) {
   const url = new URL(to, location.origin);
-  const target = url.pathname + url.search + url.hash;
+  if (url.origin !== location.origin) return;
+  const target = ownPage(url.href);
   if (replace) history.replaceState({ depth: depth() }, '', target);
   else if (target !== location.pathname + location.search + location.hash) history.pushState({ depth: depth() + 1 }, '', target);
   render(scroll);
