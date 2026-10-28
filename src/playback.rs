@@ -74,6 +74,9 @@ const VALUES: &str = ":source, :source_id, :active, :user_id, :user_name, :item_
     :audio_codec, :audio_channels, :audio_language, :subtitle_codec, :subtitle_language, :transcode,
     :pause_count, :seek_count, :start_position_s, :is_local";
 
+/// The earliest an imported play may have started: 1 January 1990, before any server a tracker could have watched.
+const IMPORTED_SINCE: i64 = 631_152_000;
+
 impl PlayRecord {
     /// Inserts the row. Returns `None` when `source_id` already exists (duplicate import).
     pub fn insert(&self, conn: &Connection) -> Result<Option<i64>> {
@@ -131,6 +134,11 @@ impl PlayRecord {
     /// already: either this very row has been imported before, or another tracker (or the
     /// collector) got there first. See [`already_recorded`].
     pub fn insert_imported(&self, conn: &Connection, merge_window_s: i64) -> Result<Option<i64>> {
+        // A moment no server of anybody's ran at is no play: year 1 made every all-time chart build hundreds of
+        // thousands of weekly buckets.
+        if self.started_at < IMPORTED_SINCE || self.ended_at > crate::db::now() + 86_400 {
+            return Ok(None);
+        }
         let this = Play {
             source: self.source,
             source_id: self.source_id.as_deref(),
@@ -309,9 +317,18 @@ pub fn backfill_seek_origins(conn: &Connection) -> Result<usize> {
     )?)
 }
 
+/// The most timeline one play keeps. A client may pause and jump every second for as long as it likes, two events a
+/// second each; a whole evening's real viewing is a few dozen.
+pub const EVENTS_PER_PLAY: usize = 2_000;
+
 pub fn insert_events(conn: &Connection, playback_id: i64, events: &[PlayEvent]) -> Result<()> {
+    if events.is_empty() {
+        return Ok(());
+    }
+    let kept: i64 = conn.prepare_cached("SELECT COUNT(*) FROM playback_events WHERE playback_id = ?1")?.query_row([playback_id], |r| r.get(0))?;
+    let room = EVENTS_PER_PLAY.saturating_sub(kept.max(0) as usize);
     let mut stmt = conn.prepare_cached("INSERT INTO playback_events(playback_id, at, kind, position_s, from_s, detail) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")?;
-    for e in events {
+    for e in events.iter().take(room) {
         stmt.execute(crate::db::rusqlite::params![playback_id, e.at, e.kind, e.position_s, e.from_s, e.detail])?;
     }
     Ok(())
@@ -321,6 +338,34 @@ pub fn insert_events(conn: &Connection, playback_id: i64, events: &[PlayEvent]) 
 mod tests {
     use super::*;
     use crate::db::rusqlite::Connection;
+
+    /// An imported play from year 1 (or SQLite's floor) made every all-time chart build hundreds of thousands of weekly
+    /// buckets per answer, and one from next year is no play at all: nothing before 1990 or past tomorrow is imported.
+    #[test]
+    fn an_imported_play_from_no_time_any_server_ran_is_not_imported() {
+        let c = conn();
+        let now = crate::db::now();
+        let at = |started_at: i64, ended_at: i64| PlayRecord {
+            source: "jellystat", source_id: Some(format!("jellystat:{started_at}")), user_id: "u3".into(), user_name: "carol".into(), item_id: "i9".into(),
+            item_name: "Sintel".into(), item_type: "Movie".into(), started_at, ended_at, duration_s: ended_at - started_at, ..Default::default()
+        };
+        assert!(at(-62_135_596_800, -62_135_596_000).insert_imported(&c, 600).unwrap().is_none(), "year 1");
+        assert!(at(now + 3 * 86_400, now + 3 * 86_400 + 600).insert_imported(&c, 600).unwrap().is_none(), "the day after tomorrow");
+        assert!(at(now - 86_400, now - 85_800).insert_imported(&c, 600).unwrap().is_some(), "yesterday");
+    }
+
+    /// A client may pause and jump every second for as long as it likes, two events a second each: a play keeps at most
+    /// `EVENTS_PER_PLAY` of them.
+    #[test]
+    fn a_play_keeps_a_bounded_timeline() {
+        let c = conn();
+        let pause = |at: i64| PlayEvent { at, kind: "pause", position_s: Some(at), from_s: None, detail: None };
+        for n in 0..(EVENTS_PER_PLAY as i64 / 100 + 1) {
+            insert_events(&c, 1, &(0..100).map(|k| pause(n * 100 + k)).collect::<Vec<_>>()).unwrap();
+        }
+        let kept: i64 = c.query_row("SELECT COUNT(*) FROM playback_events WHERE playback_id = 1", [], |r| r.get(0)).unwrap();
+        assert_eq!(kept, EVENTS_PER_PLAY as i64);
+    }
 
     #[test]
     fn the_same_play_is_looked_for_in_a_window_of_one_persons_plays_of_one_title() {

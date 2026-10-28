@@ -618,6 +618,9 @@ mod tests {
         path
     }
 
+    /// When the sessions below were played: their times are seconds after it. An import takes nothing from before 1990.
+    const T0: i64 = 1_790_000_000;
+
     /// One session row, its metadata and its media info. `reference` 0 starts a viewing of its own.
     #[allow(clippy::too_many_arguments)]
     fn session(c: &Connection, reference: i64, user: i64, kind: &str, rating_key: i64, title: &str, show: Option<(&str, i64, i64, i64)>, year: Option<i64>, started: i64, stopped: i64, paused: i64, offset_ms: i64, duration_ms: i64, decision: &str) -> i64 {
@@ -629,7 +632,7 @@ mod tests {
             "INSERT INTO session_history(reference_id, started, stopped, rating_key, user_id, user, ip_address, paused_counter, player, product,
                  product_version, platform, machine_id, grandparent_rating_key, media_type, view_offset)
              VALUES (?1, ?2, ?3, ?4, ?5, 'plex-name', '192.168.1.10', ?6, 'Living Room TV', 'Plex for LG', '8.40.0', 'webOS', 'MACHINE-1', ?7, ?8, ?9)",
-            params![reference, started, stopped, rating_key, user, paused, show_key, kind, offset_ms],
+            params![reference, T0 + started, T0 + stopped, rating_key, user, paused, show_key, kind, offset_ms],
         )
         .unwrap();
         let id = c.last_insert_rowid();
@@ -768,8 +771,8 @@ mod tests {
         }
         let users = plex_users(&open(&path).unwrap()).unwrap();
         assert_eq!(users, vec![
-            PlexUser { id: 101, name: "Alice".into(), plays: 1, first_at: Some(1000), last_at: Some(3200) },
-            PlexUser { id: 102, name: "bob_plex".into(), plays: 1, first_at: Some(5000), last_at: Some(6800) },
+            PlexUser { id: 101, name: "Alice".into(), plays: 1, first_at: Some(T0 + 1000), last_at: Some(T0 + 3200) },
+            PlexUser { id: 102, name: "bob_plex".into(), plays: 1, first_at: Some(T0 + 5000), last_at: Some(T0 + 6800) },
             PlexUser { id: 103, name: "Carol".into(), plays: 0, first_at: None, last_at: None },
         ], "a viewing of several rows is one, music is not counted, and somebody who never played is still on the board");
         let said = serde_json::to_string(&users).unwrap();
@@ -810,7 +813,7 @@ mod tests {
         assert_eq!(got.len(), 1);
         let p = &got[0];
         assert_eq!((p.0.as_str(), p.1.as_str()), ("ja", "alice"), "the play is the Jellyfin user's, by their Jellyfin name");
-        assert_eq!((p.7, p.8, p.9, p.10), (1000, 2150, 550, 100), "first start to last stop; the time it ran, without the pause");
+        assert_eq!((p.7, p.8, p.9, p.10), (T0 + 1000, T0 + 2150, 550, 100), "first start to last stop; the time it ran, without the pause");
         assert_eq!((p.11, p.12), (Some(540), Some(600)), "stopped where the last sitting left off, in a film of ten minutes");
         let _ = std::fs::remove_dir_all(dir);
     }
