@@ -650,10 +650,26 @@ pub fn fill_page(page: &str, a: &PublicProfile, base: &str, token: &str) -> Stri
         Some(t) => crate::i18n::t("server.public.page_description", &[("hours", (t.watch_s / 3600).into()), ("plays", t.plays.into())]),
         None => crate::i18n::t("server.public.page_description_none", &[]),
     };
-    page.replace("{{title}}", &html_escape(&title))
-        .replace("{{description}}", &html_escape(&description))
-        .replace("{{image}}", &html_escape(&format!("{url}/card.png")))
-        .replace("{{url}}", &html_escape(&url))
+    let holes = [("{{title}}", html_escape(&title)), ("{{description}}", html_escape(&description)), ("{{image}}", html_escape(&format!("{url}/card.png"))), ("{{url}}", html_escape(&url))];
+    // In one pass over the page: what one hole is filled with is never read for another (a name may say "{{url}}").
+    let mut out = String::with_capacity(page.len() + 512);
+    let mut rest = page;
+    while let Some(at) = rest.find("{{") {
+        out.push_str(&rest[..at]);
+        rest = &rest[at..];
+        match holes.iter().find(|(hole, _)| rest.starts_with(hole)) {
+            Some((hole, with)) => {
+                out.push_str(with);
+                rest = &rest[hole.len()..];
+            }
+            None => {
+                out.push_str("{{");
+                rest = &rest[2..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 /// For text and attribute values alike.
@@ -1017,6 +1033,16 @@ mod tests {
         let p = published(&c, &Edit { display_name: String::new(), ..all() });
         let html = fill_page(page, &answer(&c, &p, 0, NOW).unwrap(), "", "Tok3n");
         assert!(html.contains("<title>A FinStats profile</title>") && html.contains("content=\"/u/Tok3n/card.png\""), "{html}");
+    }
+
+    /// The holes were filled one after another, so a name holding the next hole's name had it filled in too.
+    #[test]
+    fn a_name_that_names_a_hole_is_said_as_written() {
+        let c = conn();
+        let p = published(&c, &Edit { display_name: "{{url}} {{image}}".into(), ..all() });
+        let html = fill_page("<title>{{title}}</title><a href=\"{{url}}\">", &answer(&c, &p, 0, NOW).unwrap(), "https://stats.example.com", "Tok3n");
+        assert!(html.contains("{{url}} {{image}}"), "{html}");
+        assert!(html.ends_with("<a href=\"https://stats.example.com/u/Tok3n\">"), "{html}");
     }
 
     #[test]
