@@ -485,6 +485,12 @@ async fn public_card(State(app): State<App>, Path(token): Path<String>, Query(q)
     Ok(crate::public::noindex(r))
 }
 
+/// How many cards may wait for one of the two drawing at once. A card is a second's work, and a recap's fourteen are
+/// asked one after another, so a longer queue is somebody asking for far more than any page does.
+const CARDS_WAITING: usize = 8;
+/// Cards waiting their turn now, in the whole process.
+static CARDS_QUEUED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
 /// A card from the memory cache, or drawn: at most two at once (`card_permits`), its posters fetched
 /// through the image cache, rasterised off the async threads. Every card goes through here (the
 /// published ones and the recap's story), so none of them can skip the limit.
@@ -495,7 +501,20 @@ where
     if let Some(png) = app.public_cards.get(&key) {
         return Ok(png);
     }
+    // At most `CARDS_WAITING` wait their turn; past that a card is refused at once rather than queued behind them.
+    struct Queued;
+    impl Drop for Queued {
+        fn drop(&mut self) {
+            CARDS_QUEUED.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+    if CARDS_QUEUED.fetch_add(1, std::sync::atomic::Ordering::SeqCst) >= CARDS_WAITING {
+        CARDS_QUEUED.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+        return Err(ApiError::new(StatusCode::SERVICE_UNAVAILABLE, i18n::t("server.api.cards_busy", &[])));
+    }
+    let queued = Queued;
     let _permit = app.card_permits.acquire().await.map_err(anyhow::Error::from)?;
+    drop(queued);
     if let Some(png) = app.public_cards.get(&key) {
         return Ok(png);
     }
@@ -1601,6 +1620,30 @@ mod tests {
         // Work that finishes hands the slot over and is not marked failed after it.
         next.done();
         assert!(app.tasks.snapshot().iter().all(|t| t.id != "restore" || t.state != "error"));
+    }
+
+    #[tokio::test]
+    async fn past_a_few_cards_waiting_another_is_refused_at_once() {
+        // Two cards are drawn at a time; the rest waited in an unbounded queue, and a stranger with a public link asking
+        // for every chapter in turn in five languages kept both busy and everybody's own cards behind them.
+        let app = crate::state::test_app();
+        let held = app.card_permits.acquire_many(2).await.unwrap();
+        let waiting: Vec<_> = (0..CARDS_WAITING)
+            .map(|n| {
+                let app = app.clone();
+                tokio::spawn(async move { draw(&app, format!("wait-{n}"), vec![], |_| String::new()).await.map(|_| ()) })
+            })
+            .collect();
+        while CARDS_QUEUED.load(std::sync::atomic::Ordering::SeqCst) < CARDS_WAITING {
+            tokio::task::yield_now().await;
+        }
+        let refused = draw(&app, "one-more".into(), vec![], |_| String::new()).await.expect_err("a card past the queue was let wait");
+        assert_eq!(refused.0, StatusCode::SERVICE_UNAVAILABLE);
+        drop(held);
+        for w in waiting {
+            let _ = w.await;
+        }
+        assert_eq!(CARDS_QUEUED.load(std::sync::atomic::Ordering::SeqCst), 0, "a card that was drawn is still counted");
     }
 
     #[test]

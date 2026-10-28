@@ -1666,6 +1666,7 @@
       "reading_backup": "Les tryggingskopien",
       "receiving_backup": "Tek imot tryggingskopien",
       "interrupted": "Avbrote før d va ferdig: ingenting vart endra, og d kan startast på nytt",
+      "cards_busy": "For monge kort vert laga akkurat no; prøv igjen om litt",
       "importing": "Importerer",
       "restored": {
         "one": "Gjenoppretta {count} avspeling ({skipped} fanst ifrå før)",

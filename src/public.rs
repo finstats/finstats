@@ -497,7 +497,10 @@ const ANSWERS_KEPT: usize = 1_000;
 
 /// Profiles worked out a moment ago, by link and by what the owner shows (`key`): every picture and card on a page
 /// asked for the whole profile and recap again, as often as a stranger holding the link liked.
-pub struct Answers<T = PublicProfile>(std::sync::Mutex<std::collections::HashMap<String, (i64, String, T)>>);
+pub struct Answers<T = PublicProfile>(std::sync::Mutex<std::collections::HashMap<Slot, (i64, String, T)>>);
+
+/// A link and the language it is read in.
+type Slot = (String, String);
 
 impl<T> Default for Answers<T> {
     fn default() -> Self {
@@ -506,8 +509,11 @@ impl<T> Default for Answers<T> {
 }
 
 impl<T: Clone> Answers<T> {
-    pub fn get_or<E>(&self, token: &str, key: &str, now: i64, work: impl FnOnce() -> Result<T, E>) -> Result<T, E> {
-        if let Some((at, k, v)) = self.0.lock().unwrap().get(token)
+    /// The answer for a link read in a language: one slot for each, so the languages a stranger asks for in turn do not
+    /// push each other out.
+    pub fn get_or<E>(&self, token: &str, lang: &str, key: &str, now: i64, work: impl FnOnce() -> Result<T, E>) -> Result<T, E> {
+        let slot = (token.to_string(), lang.to_string());
+        if let Some((at, k, v)) = self.0.lock().unwrap().get(&slot)
             && *k == key
             && now - at < ANSWER_TTL_S
         {
@@ -519,7 +525,7 @@ impl<T: Clone> Answers<T> {
         if kept.len() >= ANSWERS_KEPT {
             kept.clear();
         }
-        kept.insert(token.to_string(), (now, key.to_string(), v.clone()));
+        kept.insert(slot, (now, key.to_string(), v.clone()));
         Ok(v)
     }
 }
@@ -544,8 +550,8 @@ pub async fn resolve(app: &App, token: String) -> Result<(Published, PublicProfi
                 params![p.user_id, db::now() - DELAY_S],
                 |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
             )?;
-            let shows = format!("{p:?} {min_play_s} {} {plays:?}", crate::i18n::current());
-            let a = answers().get_or(&token, &shows, db::now(), || answer(c, &p, min_play_s, db::now()))?;
+            let shows = format!("{p:?} {min_play_s} {plays:?}");
+            let a = answers().get_or(&token, crate::i18n::current(), &shows, db::now(), || answer(c, &p, min_play_s, db::now()))?;
             Ok(Some((p, a)))
         })
         .await?
@@ -606,11 +612,25 @@ mod tests {
     fn a_profile_worked_out_a_moment_ago_is_not_worked_out_again() {
         let answers = Answers::default();
         let mut worked = 0;
-        let mut ask = |key: &str, now: i64| answers.get_or("tok", key, now, || { worked += 1; Ok::<_, ()>(worked) }).unwrap();
+        let mut ask = |key: &str, now: i64| answers.get_or("tok", "en-GB", key, now, || { worked += 1; Ok::<_, ()>(worked) }).unwrap();
         assert_eq!(ask("a", 100), 1);
         assert_eq!(ask("a", 100 + ANSWER_TTL_S - 1), 1, "asked again within the moment");
         assert_eq!(ask("b", 100 + ANSWER_TTL_S - 1), 2, "the owner changed what is shown");
         assert_eq!(ask("b", 100 + 2 * ANSWER_TTL_S), 3, "the moment passed");
+    }
+
+    /// Each language a link is read in keeps its own answer: with one slot a link, a stranger alternating the language
+    /// asked had the whole profile and recap worked out again at every request.
+    #[test]
+    fn a_link_read_in_turns_in_two_languages_is_worked_out_once_in_each() {
+        let answers = Answers::default();
+        let mut worked = 0;
+        let mut ask = |lang: &str| answers.get_or("tok", lang, "shows", 100, || { worked += 1; Ok::<_, ()>(worked) }).unwrap();
+        for _ in 0..5 {
+            ask("nb-NO");
+            ask("en-GB");
+        }
+        assert_eq!(worked, 2);
     }
 
     use super::*;

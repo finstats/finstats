@@ -1468,6 +1468,7 @@
       "reading_backup": "Les tryggingskopien",
       "receiving_backup": "Tek imot tryggingskopien",
       "interrupted": "Avbrote før det var ferdig: ingenting vart endra, og det kan startast på nytt",
+      "cards_busy": "For mange kort vert laga akkurat no; prøv igjen om litt",
       "importing": "Importerer",
       "restored": { "one": "Gjenoppretta {count} avspeling ({skipped} fanst frå før)", "other": "Gjenoppretta {count} avspelingar ({skipped} fanst frå før)" },
       "imported": { "one": "Importerte {count} avspeling ({skipped} fanst frå før)", "other": "Importerte {count} avspelingar ({skipped} fanst frå før)" },
