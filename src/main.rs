@@ -338,19 +338,18 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
     }
 
     let serve_app = app.clone();
-    axum::serve(listener, api::router(app.clone()).into_make_service_with_connect_info::<SocketAddr>())
-        .with_graceful_shutdown(async move {
-            let ctrl_c = tokio::signal::ctrl_c();
-            let mut term = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).expect("SIGTERM handler");
-            // A fail-closed halt (`request_halt`) is a third way out, next to Ctrl-C and SIGTERM: FinStats
-            // refused to apply something from Jellyfin and is stopping so the operator can look.
-            tokio::select! {
-                _ = ctrl_c => tracing::info!("shutting down"),
-                _ = term.recv() => tracing::info!("shutting down"),
-                _ = serve_app.halt.notified() => {}
-            }
-        })
-        .await?;
+    serve_http(listener, api::router(app.clone()), Limits::default(), async move {
+        let ctrl_c = tokio::signal::ctrl_c();
+        let mut term = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).expect("SIGTERM handler");
+        // A fail-closed halt (`request_halt`) is a third way out, next to Ctrl-C and SIGTERM: FinStats
+        // refused to apply something from Jellyfin and is stopping so the operator can look.
+        tokio::select! {
+            _ = ctrl_c => tracing::info!("shutting down"),
+            _ = term.recv() => tracing::info!("shutting down"),
+            _ = serve_app.halt.notified() => {}
+        }
+    })
+    .await;
     // A clean stop returns 0; a fail-closed halt returns non-zero and says why, so a process manager
     // surfaces it (a restart loop stops as soon as the operator sets FINSTATS_ALLOW_LIBRARY_SHRINK=1 or
     // fixes Jellyfin). The refused change was never applied: the database is exactly as it was.
@@ -368,12 +367,171 @@ set FINSTATS_ALLOW_LIBRARY_SHRINK=1.
     Ok(())
 }
 
+/// What one connection may hold, and how many may be held at once.
+#[derive(Clone, Copy)]
+struct Limits {
+    /// A request's head must have arrived this long after the connection began waiting for it: on a new connection, and
+    /// between two requests on one kept alive, which is how long an idle connection is kept.
+    head_within: std::time::Duration,
+    /// The most connections served at once; the next waits in the listen queue until one closes.
+    connections: usize,
+}
+
+impl Default for Limits {
+    /// Fifteen seconds is far more than any browser takes to send a head, and a browser opens a new connection when an
+    /// idle one was closed. Five hundred connections is a household's tabs many times over, and well inside the open
+    /// files a container is given (1,024 at the least), leaving room for the database and every outbound read.
+    fn default() -> Self {
+        Limits { head_within: std::time::Duration::from_secs(15), connections: 512 }
+    }
+}
+
+/// How long a stop waits for the requests under way to finish.
+const DRAIN_WITHIN: std::time::Duration = std::time::Duration::from_secs(20);
+
+/// Serve `app` on `listener` until `shutdown`, then let the requests under way finish (at most [`DRAIN_WITHIN`]).
+/// `axum::serve` sets no timer, so a connection that never finished its request head, or sat idle after one, was kept for
+/// good, and enough of them left no file to open: FinStats stopped answering, reading Jellyfin and writing its database.
+async fn serve_http(listener: tokio::net::TcpListener, app: axum::Router, limits: Limits, shutdown: impl std::future::Future<Output = ()>) {
+    use hyper_util::rt::{TokioIo, TokioTimer};
+    let permits = Arc::new(tokio::sync::Semaphore::new(limits.connections));
+    let (stop, stopping) = tokio::sync::watch::channel(false);
+    let mut builder = hyper::server::conn::http1::Builder::new();
+    builder.timer(TokioTimer::new()).header_read_timeout(limits.head_within);
+    tokio::pin!(shutdown);
+    loop {
+        let permit = tokio::select! {
+            p = permits.clone().acquire_owned() => p.expect("the semaphore is never closed"),
+            _ = &mut shutdown => break,
+        };
+        let (stream, peer) = tokio::select! {
+            accepted = listener.accept() => match accepted {
+                Ok(a) => a,
+                Err(e) => {
+                    // Out of files, most likely: wait a moment rather than spin on it.
+                    tracing::warn!("could not accept a connection: {e}");
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    continue;
+                }
+            },
+            _ = &mut shutdown => break,
+        };
+        let app = app.clone();
+        let service = hyper::service::service_fn(move |mut req: axum::http::Request<hyper::body::Incoming>| {
+            req.extensions_mut().insert(axum::extract::ConnectInfo(peer));
+            tower_service::Service::call(&mut app.clone(), req)
+        });
+        let conn = builder.serve_connection(TokioIo::new(stream), service).with_upgrades();
+        let mut stopping = stopping.clone();
+        tokio::spawn(async move {
+            let _permit = permit;
+            tokio::pin!(conn);
+            tokio::select! {
+                _ = conn.as_mut() => return,
+                _ = stopping.wait_for(|s| *s) => conn.as_mut().graceful_shutdown(),
+            }
+            let _ = conn.await;
+        });
+    }
+    drop(listener);
+    let _ = stop.send(true);
+    // Every connection gives its permit back as it ends: once all are back, nothing is under way.
+    let all = u32::try_from(limits.connections).unwrap_or(u32::MAX);
+    if tokio::time::timeout(DRAIN_WITHIN, permits.acquire_many(all)).await.is_err() {
+        tracing::warn!("stopping with requests still under way after {}s", DRAIN_WITHIN.as_secs());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn parse(args: &[&str]) -> Result<Command> {
         command(&args.iter().map(|a| a.to_string()).collect::<Vec<_>>())
+    }
+
+    /// A server on a free port with these limits, answering `ok` at `/` with the address it saw.
+    async fn listening(limits: Limits) -> SocketAddr {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let app = axum::Router::new().route("/", axum::routing::get(|axum::extract::ConnectInfo(peer): axum::extract::ConnectInfo<SocketAddr>| async move { format!("ok {}", peer.ip()) }));
+        tokio::spawn(serve_http(listener, app, limits, std::future::pending()));
+        addr
+    }
+
+    /// Whether the server closes this connection within `within` (a read that ends, or fails).
+    async fn closed_within(stream: &mut tokio::net::TcpStream, within: std::time::Duration) -> bool {
+        use tokio::io::AsyncReadExt;
+        let mut buf = [0u8; 512];
+        loop {
+            match tokio::time::timeout(within, stream.read(&mut buf)).await {
+                Err(_) => return false,
+                Ok(Ok(0) | Err(_)) => return true,
+                Ok(Ok(_)) => {}
+            }
+        }
+    }
+
+    /// A connection that sends half a request head, or nothing at all, or finishes one request and then sits there, is
+    /// closed once a head is overdue. Without a timer every such socket stayed open for good, and a few hundred of them
+    /// took FinStats offline: no file left to open a database or reach Jellyfin with.
+    #[tokio::test]
+    async fn a_connection_that_never_finishes_a_request_is_closed() {
+        use tokio::io::AsyncWriteExt;
+        let addr = listening(Limits { head_within: std::time::Duration::from_millis(300), connections: 8 }).await;
+        let mut half = tokio::net::TcpStream::connect(addr).await.unwrap();
+        half.write_all(b"G").await.unwrap();
+        let mut silent = tokio::net::TcpStream::connect(addr).await.unwrap();
+        let mut kept = tokio::net::TcpStream::connect(addr).await.unwrap();
+        kept.write_all(b"GET / HTTP/1.1\r\nHost: x\r\n\r\n").await.unwrap();
+        let wait = std::time::Duration::from_secs(3);
+        assert!(closed_within(&mut half, wait).await, "half a request head kept its connection");
+        assert!(closed_within(&mut silent, wait).await, "a connection that said nothing was kept");
+        assert!(closed_within(&mut kept, wait).await, "an idle connection was kept alive for good");
+    }
+
+    /// Past the most connections served at once the next waits for one to close, rather than each taking a file until
+    /// none is left for anything else.
+    #[tokio::test]
+    async fn no_more_connections_are_served_at_once_than_the_limit() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let addr = listening(Limits { head_within: std::time::Duration::from_secs(10), connections: 2 }).await;
+        let first = tokio::net::TcpStream::connect(addr).await.unwrap();
+        let _second = tokio::net::TcpStream::connect(addr).await.unwrap();
+        let mut third = tokio::net::TcpStream::connect(addr).await.unwrap();
+        third.write_all(b"GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n").await.unwrap();
+        let mut buf = vec![];
+        let early = tokio::time::timeout(std::time::Duration::from_millis(300), third.read_to_end(&mut buf)).await;
+        assert!(early.is_err(), "a third connection was served beside two");
+        drop(first);
+        tokio::time::timeout(std::time::Duration::from_secs(3), third.read_to_end(&mut buf)).await.expect("one closed, and still the third waited").unwrap();
+        let answer = String::from_utf8_lossy(&buf);
+        assert!(answer.starts_with("HTTP/1.1 200") && answer.ends_with("ok 127.0.0.1"), "{answer}");
+    }
+
+    /// The live channel is a WebSocket: a connection served here must still be handed over when it asks to be upgraded.
+    #[tokio::test]
+    async fn a_websocket_is_still_handed_over() {
+        use futures_util::{SinkExt, StreamExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let app = axum::Router::new().route(
+            "/ws",
+            axum::routing::get(|ws: axum::extract::ws::WebSocketUpgrade| async move {
+                ws.on_upgrade(|mut socket| async move {
+                    if let Some(Ok(msg)) = socket.recv().await {
+                        let _ = socket.send(msg).await;
+                    }
+                })
+            }),
+        );
+        tokio::spawn(serve_http(listener, app, Limits { head_within: std::time::Duration::from_millis(300), connections: 4 }, std::future::pending()));
+        let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/ws")).await.unwrap();
+        // Past the head's time limit: an upgraded connection is no longer waiting for a head.
+        tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+        ws.send(tokio_tungstenite::tungstenite::Message::text("hello")).await.unwrap();
+        let back = ws.next().await.unwrap().unwrap();
+        assert_eq!(back.into_text().unwrap().as_str(), "hello");
     }
 
     #[test]

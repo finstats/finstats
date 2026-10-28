@@ -511,6 +511,8 @@ dependencies = [
  "flate2",
  "futures-util",
  "hex",
+ "hyper",
+ "hyper-util",
  "lettre",
  "maxminddb",
  "mime_guess",
@@ -526,6 +528,7 @@ dependencies = [
  "tokio",
  "tokio-tungstenite 0.30.0",
  "tower-http",
+ "tower-service",
  "tracing",
  "tracing-subscriber",
 ]

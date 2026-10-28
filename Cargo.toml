@@ -28,6 +28,11 @@ serde_json = "1"
 sha2 = "0.10"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "fs", "time", "sync", "io-util"] }
 tower-http = { version = "0.6", features = ["compression-gzip"] }
+# Served through hyper directly rather than `axum::serve`, which sets no timer: a request head must arrive in time and a
+# connection may not sit idle for ever (`main::serve_http`). All three are axum's own dependencies already.
+hyper = { version = "1", default-features = false, features = ["http1", "server"] }
+hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
+tower-service = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }
 maxminddb = { version = "0.32.0", features = ["mmap"] }
