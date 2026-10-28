@@ -372,7 +372,6 @@ fn narrow_settings(here: &Settings, mut theirs: Settings) -> Settings {
 }
 
 /// Insert one row by column name. Columns this database does not have are dropped; returns whether a row went in.
-
 fn insert_row(conn: &Connection, table: &str, known: &HashSet<String>, row: &Map<String, Value>, skip: &[&str], verb: &str) -> Result<bool> {
     let cols: Vec<&String> = row.keys().filter(|k| known.contains(*k) && !skip.contains(&k.as_str())).collect();
     if cols.is_empty() {
