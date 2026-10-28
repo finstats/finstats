@@ -65,60 +65,88 @@ pub struct Queued {
     pub error: Option<String>,
 }
 
-/// Parameter names whose value is somebody's credential, as indexers, trackers and download clients spell them.
-const SECRET_PARAMS: [&str; 18] = [
-    "apikey", "api_key", "api-key", "apitoken", "key", "passkey", "authkey", "torrent_pass", "rsskey", "token", "access_token", "auth", "password", "pass", "pwd", "secret",
-    "sig", "signature",
+/// Parameter names whose value is somebody's credential, as indexers, trackers, Jackett and download clients spell them.
+/// Newznab's `r` and `i` and IPTorrents' `tp` and `u` are a key and a user id. A value that looks like a key is blanked
+/// whatever it is called (`looks_like_key`), so this list is the short ones a shape cannot tell.
+const SECRET_PARAMS: [&str; 27] = [
+    "apikey", "api_key", "api-key", "api.key", "apitoken", "key", "passkey", "authkey", "torrent_pass", "rsskey", "token", "access_token", "auth", "password", "pass", "pwd",
+    "secret", "secret_key", "sig", "signature", "jackett_apikey", "r", "i", "uid", "pid", "tp", "u",
 ];
 
 /// A part of an address's path this long and all letters and digits is a key, not a name: private trackers put the
 /// passkey there (`/0123…cdef/announce`). Where it is a hash instead, more is blanked than needed, never less.
 const PATH_KEY_LEN: usize = 20;
+/// A value this long and all letters and digits is a key, whatever its name or wherever it stands.
+const KEY_LEN: usize = 16;
+
+/// Does this look like a key: long, letters and digits only, and either all hexadecimal or both letters and digits? A word
+/// as long is all letters, and a release name has dots between its parts.
+fn looks_like_key(s: &str) -> bool {
+    s.len() >= KEY_LEN
+        && s.bytes().all(|b| b.is_ascii_alphanumeric())
+        && (s.bytes().all(|b| b.is_ascii_hexdigit()) || (s.bytes().any(|b| b.is_ascii_digit()) && s.bytes().any(|b| b.is_ascii_alphabetic())))
+}
+
+/// A part of a path that holds a key: one of its pieces between `.` and `-` looks like one (`Name.2026.<key>`), or with its
+/// dashes taken out it is a long hexadecimal one (`0123-4567-…`), or it is long and nothing but letters and digits.
+fn path_part_is_key(part: &str) -> bool {
+    let undashed: String = part.chars().filter(|c| *c != '-').collect();
+    (part.len() >= PATH_KEY_LEN && part.bytes().all(|b| b.is_ascii_alphanumeric()))
+        || part.split(['.', '-']).any(looks_like_key)
+        || (undashed.len() >= 32 && undashed.bytes().all(|b| b.is_ascii_hexdigit()))
+}
 
 /// The address after its login: the host as it is, and every part of its path that is a key blanked.
 fn blank_path_keys(addr: &str) -> String {
     let (host, path) = addr.split_at(addr.find('/').unwrap_or(addr.len()));
-    let path: Vec<&str> = path.split('/').map(|part| if part.len() >= PATH_KEY_LEN && part.bytes().all(|b| b.is_ascii_alphanumeric()) { "***" } else { part }).collect();
+    let path: Vec<&str> = path.split('/').map(|part| if path_part_is_key(part) { "***" } else { part }).collect();
     format!("{host}{}", path.join("/"))
 }
 
-/// A service's own words with the credentials in them blanked: the login in an address (`http://user:pass@host`)
-/// and the value of any query parameter named like a key or a password. Sonarr and Radarr quote the download
-/// client and the indexer they could not reach, addresses and all, and those words are shown to everybody who
-/// may see the queue. That is who may see what is downloading, not the keys it is downloading with.
+/// A service's own words with the credentials in them blanked: the login in an address (`http://user:pass@host`), the
+/// value of any query parameter named like a key or a password or looking like a key, and any part of a path that looks
+/// like one. Sonarr and Radarr quote the download client and the indexer they could not reach, addresses and all, and
+/// those words are shown to everybody who may see the queue. That is who may see what is downloading, not the keys it is
+/// downloading with.
 pub fn redact(s: &str) -> String {
-    // Not '/': a password printed as it was typed may hold one, and the login ends at the last '@' before
-    // the query. Where a path has an '@' of its own, more is blanked than needed, never less.
     let stop = |c: char| c.is_whitespace() || matches!(c, '?' | '#' | ')' | '(' | '"' | '\'' | ',' | '<' | '>');
-    // The login part of every address.
+    // The login part of every address. It ends at the last '@' before the address's end, or before the next '/' when that
+    // is further: a password printed as it was typed may hold a '/', a ',' or a space. Where a path or the words after an
+    // address have an '@' of their own, more is blanked than needed, never less.
     let mut out = String::with_capacity(s.len());
     let mut rest = s;
     while let Some(i) = rest.find("://") {
         let (head, tail) = rest.split_at(i + 3);
         out.push_str(head);
         let end = tail.find(stop).unwrap_or(tail.len());
-        match tail[..end].rfind('@') {
+        let slash = tail.find('/').unwrap_or(tail.len());
+        match [tail[..end].rfind('@'), tail[..slash].rfind('@')].into_iter().flatten().max() {
             Some(at) => {
                 out.push_str("***@");
-                out.push_str(&blank_path_keys(&tail[at + 1..end]));
+                let after = &tail[at + 1..];
+                let end = after.find(stop).unwrap_or(after.len());
+                out.push_str(&blank_path_keys(&after[..end]));
+                rest = &after[end..];
             }
-            None => out.push_str(&blank_path_keys(&tail[..end])),
+            None => {
+                out.push_str(&blank_path_keys(&tail[..end]));
+                rest = &tail[end..];
+            }
         }
-        rest = &tail[end..];
     }
     out.push_str(rest);
-    // Then every `?name=value`, `&name=value` and `;name=value` whose name is a credential's.
+    // Then every `?name=value`, `&name=value` and `;name=value` whose name is a credential's or whose value looks like one.
     let value_stop = |c: char| c.is_whitespace() || matches!(c, '&' | ';' | '#' | ')' | '"' | '\'' | ',' | '<' | '>');
     let mut done = String::with_capacity(out.len());
     let mut rest = out.as_str();
     while let Some(i) = rest.find(['?', '&', ';']) {
         let (head, tail) = rest.split_at(i + 1);
         done.push_str(head);
-        let name_end = tail.find(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-')).unwrap_or(tail.len());
+        let name_end = tail.find(|c: char| !(c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))).unwrap_or(tail.len());
         let (name, after) = tail.split_at(name_end);
-        if after.starts_with('=') && SECRET_PARAMS.iter().any(|k| k.eq_ignore_ascii_case(name)) {
-            let value = &after[1..];
-            let end = value.find(value_stop).unwrap_or(value.len());
+        let value = after.strip_prefix('=').unwrap_or("");
+        let end = value.find(value_stop).unwrap_or(value.len());
+        if after.starts_with('=') && (SECRET_PARAMS.iter().any(|k| k.eq_ignore_ascii_case(name)) || looks_like_key(&value[..end])) {
             done.push_str(name);
             done.push_str("=***");
             rest = &value[end..];
@@ -134,16 +162,17 @@ fn text(v: &Value) -> Option<String> {
     v.as_str().map(str::trim).filter(|s| !s.is_empty()).map(str::to_string)
 }
 
-/// `00:12:34` or `1.02:03:04` (a .NET timespan) in seconds.
+/// `00:12:34` or `1.02:03:04` (a .NET timespan) in seconds. `None` for anything that is not one, a number too large
+/// to be one included.
 pub fn timespan(v: &Value) -> Option<i64> {
     let raw = v.as_str()?;
-    let (days, rest) = match raw.split_once('.') {
+    let (days, rest): (i64, &str) = match raw.split_once('.') {
         Some((d, rest)) if d.parse::<i64>().is_ok() && rest.contains(':') => (d.parse().unwrap_or(0), rest),
         _ => (0, raw),
     };
     let parts: Vec<i64> = rest.split(':').map(|p| p.split('.').next().unwrap_or("0").parse().unwrap_or(0)).collect();
     let [h, m, s] = parts[..] else { return None };
-    Some(((days * 24 + h) * 60 + m) * 60 + s)
+    days.checked_mul(24)?.checked_add(h)?.checked_mul(60)?.checked_add(m)?.checked_mul(60)?.checked_add(s)
 }
 
 /// What a queue record is doing, in FinStats' words. Importing and failing matter: that is where things get stuck.
@@ -392,6 +421,11 @@ pub fn speeds(rows: &mut [Download], before: &HashMap<String, (i64, i64)>, now: 
     rows.iter().map(|d| (d.key.clone(), (d.left, now))).collect()
 }
 
+/// Every download's speed together. The figures are worked out from a queue's numbers, which are somebody else's.
+pub fn total_bps(rows: &[Download]) -> i64 {
+    rows.iter().fold(0i64, |sum, d| sum.saturating_add(d.down_bps))
+}
+
 // ---------------------------------------------------------------- the snapshot
 
 #[derive(Default)]
@@ -526,7 +560,7 @@ async fn tick(app: &App, before: &HashMap<String, (i64, i64)>) -> HashMap<String
     let now = crate::db::now();
     let (mut rows, mut totals) = fold(rows);
     let after = speeds(&mut rows, before, now);
-    totals.down_bps = rows.iter().map(|d| d.down_bps).sum();
+    totals.down_bps = total_bps(&rows);
     *app.downloads.write().unwrap() = Arc::new(Snapshot { rows, totals, at: now, problems, sources });
     after
 }
@@ -686,6 +720,41 @@ mod tests {
             "Announce to https://tracker.example/***/announce failed"
         );
         assert_eq!(redact("http://10.0.0.5:8080/api/v2/torrents/info"), "http://10.0.0.5:8080/api/v2/torrents/info", "an ordinary path is left as it is");
+    }
+
+    /// A key is blanked by what it looks like as well as by what it is called: indexers, trackers and Jackett each name
+    /// theirs differently, and a list of names is always one short.
+    #[test]
+    fn a_key_is_blanked_by_its_shape_whatever_it_is_called() {
+        let secrets = ["abcdefghijklmnop1234", "0123456789abcdef0123456789abcdef", "424242", "s3cr3t", "pa,ss word", "keyvalue99"];
+        let leaks = |said: &str| secrets.iter().filter(|s| said.contains(*s)).map(|s| s.to_string()).collect::<Vec<_>>();
+        for quoted in [
+            "Jackett: http://jackett:9117/dl/indexer/?jackett_apikey=abcdefghijklmnop1234&path=Q2hlY2s&file=Sintel",
+            "https://indexer.example/getnzb/a1b2.nzb&i=424242&r=0123456789abcdef0123456789abcdef failed",
+            "https://iptorrents.example/download.php/1/Sintel.torrent?torrent_pass=s3cr3t;tp=0123456789abcdef0123456789abcdef;u=424242",
+            "https://tracker.example/download/Sintel.2026.1080p.12345.0123456789abcdef0123456789abcdef failed",
+            "https://tracker.example/announce/0123-4567-89ab-cdef-0123-4567-89ab-cdef failed",
+            "qBittorrent at http://admin:pa,ss word@10.0.0.5:8080/api failed",
+            "https://indexer.example/api?api.key=keyvalue99&uid=424242&pid=424242&secret_key=s3cr3t",
+            "https://indexer.example/api?anything=abcdefghijklmnop1234",
+        ] {
+            let said = redact(quoted);
+            assert!(leaks(&said).is_empty(), "{quoted} -> {said}");
+        }
+        assert_eq!(redact("https://indexer.example/api?t=search&cat=5040&q=Big.Buck.Bunny"), "https://indexer.example/api?t=search&cat=5040&q=Big.Buck.Bunny", "nothing that looks like a key");
+        assert_eq!(redact("https://tracker.example/Sintel.2026.1080p.WEB-DL.mkv"), "https://tracker.example/Sintel.2026.1080p.WEB-DL.mkv", "a release name is a name");
+    }
+
+    /// A queue's numbers are somebody else's: a time left of a billion days and speeds that add past what an i64 holds
+    /// are read as nothing and as the most there can be, never as a panic.
+    #[test]
+    fn numbers_from_a_queue_cannot_overflow() {
+        assert_eq!(timespan(&json!("99999999999999999.00:00:00")), None);
+        assert_eq!(timespan(&json!("00:9223372036854775807:00")), None);
+        let row = |bps: i64| Download { key: "k".into(), title: "Sintel".into(), sub: None, state: "downloading", progress: 0.5, size: 10, left: 5, eta_s: None, down_bps: bps,
+            release: None, client: None, protocol: None, service_name: None, arr: None, media_type: None, tmdb_id: None, tvdb_id: None, seasons: vec![], parts: 1, error: None };
+        assert_eq!(total_bps(&[row(i64::MAX), row(i64::MAX)]), i64::MAX);
+        assert_eq!(total_bps(&[row(3), row(4)]), 7);
     }
 
     #[test]
