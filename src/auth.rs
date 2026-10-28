@@ -641,19 +641,24 @@ pub async fn logout(State(app): State<App>, ConnectInfo(peer): ConnectInfo<Socke
     if let Some(token) = cookie_token(&headers) {
         let hash = hash_token(&token);
         let ip = client_ip(&app, &headers, peer);
-        app.db
+        let ended = app
+            .db
             .call(move |c| {
                 let who: Option<(String, String)> = c
                     .query_row("DELETE FROM sessions WHERE token_hash = ?1 RETURNING user_id, user_name", [hash], |r| Ok((r.get(0)?, r.get(1)?)))
                     .optional()?;
+                let ended = who.is_some();
                 if let Some((id, name)) = who {
                     audit::record_quietly(c, &audit::Entry::new("sign_out", Actor { user_id: Some(id), user_name: Some(name), ip: Some(ip), key_id: None }));
                 }
-                Ok(())
+                Ok(ended)
             })
             .await?;
-        // The tab signing out is not the only one this session opened: every live connection of it closes now.
-        app.live_feed.recheck();
+        // The tab signing out is not the only one this session opened: every live connection of it closes now. Only
+        // when a session ended, or anybody could make every open connection read its access again, in a loop.
+        if ended {
+            app.live_feed.recheck();
+        }
     }
     let mut resp = Json(json!({ "ok": true })).into_response();
     resp.headers_mut().insert(SET_COOKIE, session_cookie("", 0, is_https(&headers)));
@@ -852,6 +857,26 @@ mod tests {
         headers.append("x-forwarded-for", "198.51.100.1".parse().unwrap());
         headers.append("x-forwarded-for", "203.0.113.9".parse().unwrap());
         assert_eq!(client_ip(&app, &headers, peer).to_string(), "203.0.113.9", "the client's own line was believed");
+    }
+
+    /// Signing out with a cookie that opens nothing asks no open connection to re-read its access: anybody could do it
+    /// in a loop, signed out, and each request cost a database read for every tab open anywhere.
+    #[tokio::test]
+    async fn a_sign_out_that_ends_no_session_asks_nobody_to_look_again() {
+        let app = crate::state::test_app();
+        let peer: SocketAddr = "192.0.2.7:4000".parse().unwrap();
+        let with = |token: &str| {
+            let mut h = HeaderMap::new();
+            h.insert(axum::http::header::COOKIE, format!("{COOKIE_NAME}={token}").parse().unwrap());
+            h
+        };
+        let before = app.live_feed.rechecks();
+        logout(State(app.clone()), ConnectInfo(peer), with("not-a-session")).await.unwrap();
+        assert_eq!(app.live_feed.rechecks(), before);
+        let hash = hash_token("a-real-one");
+        app.db.call(move |c| Ok(c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'ua', 'alice', 0, 1, 9999999999)", [hash])?)).await.unwrap();
+        logout(State(app.clone()), ConnectInfo(peer), with("a-real-one")).await.unwrap();
+        assert_eq!(app.live_feed.rechecks(), before + 1);
     }
 
     /// A sign-in of one's own takes back that attempt alone. Clearing the address's count let anybody with an account

@@ -249,6 +249,12 @@ impl Feed {
         self.auth.send_modify(|n| *n += 1);
     }
 
+    /// How many times access has been asked to be re-read, for the tests of who asks.
+    #[cfg(test)]
+    pub fn rechecks(&self) -> u64 {
+        *self.auth.borrow()
+    }
+
     fn bump(topic: &watch::Sender<u64>) {
         topic.send_modify(|n| *n += 1);
     }
