@@ -1900,6 +1900,7 @@
       "not_json": "The file is not a FinStats backup (line {line} is not JSON)",
       "not_finstats": "This is not a FinStats backup. A Jellystat backup goes under “Import from Jellystat”.",
       "newer_format": "This backup was made by a newer FinStats (format {format}). Update FinStats, then restore it.",
+      "too_large": "The file is damaged or not a FinStats backup (it unpacks to far more than a backup holds)",
       "restoring": { "one": "Restoring: {count} play so far", "other": "Restoring: {count} plays so far" },
       "linking": "Linking plays to the library"
     },

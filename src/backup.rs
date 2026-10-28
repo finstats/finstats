@@ -432,7 +432,34 @@ fn restored_detail(detail: &str, from: &str) -> String {
 }
 
 /// Merge a backup into this database. `with_settings` also brings back the settings and permissions.
+///
+/// The whole file is read once before anything is written ([`check`]), without a lock: a file that is wrong further down
+/// writes nothing, and one that unpacks to far more than it is (gzipped blank lines) is refused there. It is then written
+/// a batch at a time, each its own transaction, so the collector and everybody else write between two batches: in one
+/// transaction a large or crafted file held the write lock for as long as it took to read, minutes or a day. Restoring is
+/// a merge that recognises what is already there, so a restore stopped between batches is finished by restoring again.
 pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks, &'static str)>) -> Result<RestoreResult> {
+    restore_within(db, path, with_settings, tasks, LIMITS)
+}
+
+/// How far a file may unpack: `ratio` times its own size, but always to `floor`, and never past `cap`.
+#[derive(Clone, Copy)]
+struct Limits {
+    ratio: u64,
+    floor: u64,
+    cap: u64,
+}
+
+/// A real backup gzips about ten to one; a hundred to one is no backup. A small file may still unpack to 64 MB, and
+/// nothing past 64 GB is read whatever it is.
+const LIMITS: Limits = Limits { ratio: 100, floor: 64 << 20, cap: 64 << 30 };
+
+/// The most a batch holds before it is written: rows, and bytes of their lines.
+const BATCH_ROWS: usize = 2_000;
+const BATCH_BYTES: usize = 16 << 20;
+
+/// The file, unpacked if it is gzipped, with how much of it has been read (for progress) and its size.
+fn open_backup(path: &Path) -> Result<(Box<dyn BufRead>, std::sync::Arc<std::sync::atomic::AtomicU64>, u64)> {
     let mut file = File::open(path).context("opening the backup")?;
     let total_bytes = file.metadata()?.len().max(1);
     let mut magic = [0u8; 2];
@@ -443,29 +470,24 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
     let counted = Counted { inner: file, read: counter.clone() };
     let reader: Box<dyn BufRead> =
         if gz { Box::new(BufReader::with_capacity(1 << 20, GzDecoder::new(counted))) } else { Box::new(BufReader::with_capacity(1 << 20, counted)) };
+    Ok((reader, counter, total_bytes))
+}
 
-    let mut conn = db.conn()?;
-    // This install's own idea of how far apart two sightings can be and still be one viewing.
-    let merge_window_s = Settings::load(&conn)?.merge_window_s;
-    let tx = conn.transaction()?;
-    let mut res = RestoreResult::default();
-    let mut known: HashMap<&'static str, HashSet<String>> = HashMap::new();
-    for t in TABLES {
-        known.insert(t, table_columns(&tx, t)?);
-    }
-    // Old play id → the id it got here. Plays that were already present are absent: their timeline is too.
-    let mut play_ids: HashMap<i64, i64> = HashMap::new();
-    let mut settings_raw: Option<String> = None;
-    let mut grants: Vec<Map<String, Value>> = vec![];
-    // Timeline rows restored per play (by its id here), never past what the collector keeps of one.
-    let mut events_of: HashMap<i64, usize> = HashMap::new();
-    let mut saw_header = false;
-
-    let (mut reader, mut line) = (reader, String::new());
+/// Every line of the file, blank ones skipped, each with its number, parsed; the first must be a FinStats backup's
+/// header. Reading stops with an error once the file has unpacked past `limits` of its own size, blank lines counted.
+fn each_line(path: &Path, limits: Limits, mut f: impl FnMut(u64, Value, usize, f64) -> Result<()>) -> Result<Option<String>> {
+    let (mut reader, counter, total_bytes) = open_backup(path)?;
+    let most = total_bytes.saturating_mul(limits.ratio).max(limits.floor).min(limits.cap);
+    let (mut line, mut unpacked, mut from_version, mut saw_header) = (String::new(), 0u64, None, false);
     for n in 0u64.. {
         line.clear();
-        if crate::import::read_line_at_most(&mut reader, &mut line, crate::import::LINE_MAX).with_context(|| crate::i18n::t("server.backup.unreadable", &[]))? == 0 {
+        let got = crate::import::read_line_at_most(&mut reader, &mut line, crate::import::LINE_MAX).with_context(|| crate::i18n::t("server.backup.unreadable", &[]))?;
+        if got == 0 {
             break;
+        }
+        unpacked = unpacked.saturating_add(got as u64);
+        if unpacked > most {
+            bail!(crate::i18n::t("server.backup.too_large", &[]));
         }
         if line.trim().is_empty() {
             continue;
@@ -478,147 +500,77 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
             if format > FORMAT {
                 bail!(crate::i18n::t("server.backup.newer_format", &[("format", format.to_string().into())]));
             }
-            res.from_version = v["app_version"].as_str().map(str::to_string);
+            from_version = Some(v["app_version"].as_str().map(str::to_string));
             saw_header = true;
             continue;
         }
-        let (Some(table), Some(row)) = (v["t"].as_str(), v["r"].as_object()) else { continue };
-        match table {
-            // Only the settings themselves: a newer FinStats may keep other rows in that table, and none of them is these.
-            "settings" if row.get("key").and_then(Value::as_str) == Some("settings") => settings_raw = row.get("value").and_then(Value::as_str).map(str::to_string),
-            "settings" => {}
-            // A play from no time a server ran at, or one that ends before it starts, is no play: the bound an import keeps.
-            "playbacks" if !at_a_real_time(row, &["started_at", "ended_at"]) || row.get("started_at").and_then(Value::as_i64) > row.get("ended_at").and_then(Value::as_i64) => {}
-            "playbacks" => {
-                let mut row = row.clone();
-                bound_play(&mut row, db::now());
-                // A play FinStats saw itself keeps its source, and an id that says it was restored: only a play this
-                // install saw opens its item's picture or stands for a duplicate (`playback::restored_id`).
-                let source = row.get("source").and_then(Value::as_str).unwrap_or(crate::collector::SOURCE).to_string();
-                if source == crate::collector::SOURCE {
-                    let restored = crate::playback::restored_id(
-                        row.get("user_id").and_then(Value::as_str).unwrap_or_default(),
-                        row.get("started_at").and_then(Value::as_i64).unwrap_or_default(),
-                        row.get("ended_at").and_then(Value::as_i64).unwrap_or_default(),
-                    );
-                    row.insert("source".into(), json!(source));
-                    row.insert("source_id".into(), json!(restored));
-                }
-                let exists = crate::playback::already_recorded(
-                    &tx,
-                    crate::playback::Play {
-                        source: &source,
-                        source_id: row.get("source_id").and_then(Value::as_str),
-                        user_id: row.get("user_id").and_then(Value::as_str).unwrap_or_default(),
-                        item_id: row.get("item_id").and_then(Value::as_str).unwrap_or_default(),
-                        started_at: row.get("started_at").and_then(Value::as_i64).unwrap_or_default(),
-                        ended_at: row.get("ended_at").and_then(Value::as_i64).unwrap_or_default(),
-                    },
-                    merge_window_s,
-                )?;
-                if exists {
-                    res.plays_skipped += 1;
-                    continue;
-                }
-                // Nothing restored is still playing, and who watched together is worked out again afterwards.
-                row.insert("active".into(), json!(0));
-                if insert_row(&tx, "playbacks", &known["playbacks"], &row, &["id", "group_id"], "INSERT")? {
-                    if let Some(old) = row.get("id").and_then(Value::as_i64) {
-                        play_ids.insert(old, tx.last_insert_rowid());
-                    }
-                    res.plays_imported += 1;
-                }
-            }
-            "playback_events" => {
-                let Some(&new_id) = row.get("playback_id").and_then(Value::as_i64).and_then(|old| play_ids.get(&old)) else { continue };
-                // As many as the collector keeps of one play, and no more.
-                let kept = events_of.entry(new_id).or_insert(0);
-                if *kept >= crate::playback::EVENTS_PER_PLAY {
-                    continue;
-                }
-                let mut row = row.clone();
-                row.insert("playback_id".into(), json!(new_id));
-                for col in ["position_s", "from_s"] {
-                    if let Some(n) = row.get(col).and_then(Value::as_i64) {
-                        row.insert(col.into(), json!(n.clamp(0, PLACE_MAX_S)));
-                    }
-                }
-                if insert_row(&tx, "playback_events", &known["playback_events"], &row, &["id"], "INSERT")? {
-                    *kept += 1;
-                    res.events += 1;
-                }
-            }
-            // A restore may take a grant away and never gives one back ([`narrow_grants`]), once the settings it narrows
-            // against are in place.
-            "user_permissions" => {
-                if with_settings {
-                    grants.push(row.clone());
-                }
-            }
-            // Which addresses are home decides which plays are local and where "home" is on the map: a setting, so only with
-            // the settings, and only those somebody typed in (a looked-up one is this network's, found again here).
-            "home_addresses" if !with_settings || row.get("source").and_then(Value::as_str) != Some("manual") => {}
-            // Where the owner said a title is, only where this library has that title: otherwise the file chooses which
-            // title orphaned plays are attached to.
-            "located" if !in_library(&tx, row.get("to_id").and_then(Value::as_str))? => {}
-            // A moment no server ran at: one row of the log from years to come stopped every later read of it.
-            "server_events" | "devices" if !at_a_real_time(row, if table == "devices" { &["first_seen", "last_seen"] } else { &["date"] }) => {}
-            // `located`: where the owner said a title is; `health_dismissed`: a finding set aside; `appearance`: how FinStats
-            // looks to a person; `welcomed`: who has had the welcome. A choice this database already has for the same id,
-            // finding or person stands.
-            "manual_seen" | "home_addresses" | "server_events" | "devices" | "located" | "health_dismissed" | "appearance" | "welcomed" => {
-                let t = TABLES.iter().find(|t| **t == table).copied().unwrap_or("devices");
-                if insert_row(&tx, t, &known[t], row, &[], "INSERT OR IGNORE")? {
-                    res.other_rows += 1;
-                }
-            }
-            // Somebody's list: one entry per title and person, the older date kept.
-            "watchlist" if crate::watchlist::restore_row(&tx, row)? => res.other_rows += 1,
-            "watchlist" => {}
-            // Its own ids mean nothing here; `dedupe` keeps an alert this database already has from doubling.
-            // A pair of places set aside never alerts again, so without the settings an alert comes back as one to look at.
-            "security_alerts" => {
-                let mut row = row.clone();
-                if !with_settings {
-                    row.insert("muted".into(), json!(0));
-                }
-                if insert_row(&tx, table, &known["security_alerts"], &row, &["id"], "INSERT OR IGNORE")? {
-                    res.other_rows += 1;
-                }
-            }
-            // Its ids mean nothing here either, and it has no natural key: a row is appended unless the
-            // same thing, by the same person, at the same moment, is already written down.
-            // Each says it was restored and from what, so nothing a file says reads as this install's own record.
-            "audit" => {
-                let get = |k: &str| row.get(k).cloned().unwrap_or(Value::Null);
-                let detail = get("detail");
-                let marked = restored_detail(detail.as_str().unwrap_or("{}"), res.from_version.as_deref().unwrap_or("unknown"));
-                let dup: i64 = tx.query_row(
-                    "SELECT COUNT(*) FROM audit WHERE at = ?1 AND kind = ?2 AND COALESCE(user_id, '') = COALESCE(?3, '') AND COALESCE(target, '') = COALESCE(?4, '') AND detail IN (?5, ?6)",
-                    params_from_iter([sql_value(&get("at")), sql_value(&get("kind")), sql_value(&get("user_id")), sql_value(&get("target")), sql_value(&detail), SqlValue::from(marked.clone())].iter()),
-                    |r| r.get(0),
-                )?;
-                let mut row = row.clone();
-                row.insert("detail".into(), json!(marked));
-                if dup == 0 && insert_row(&tx, "audit", &known["audit"], &row, &["id"], "INSERT")? {
-                    res.other_rows += 1;
-                }
-            }
-            _ => {} // a table from a newer FinStats
-        }
-        if n % 5000 == 0 {
-            if let Some((t, id)) = tasks {
-                let p = counter.load(std::sync::atomic::Ordering::Relaxed) as f64 / total_bytes as f64;
-                t.update(id, crate::i18n::t("server.backup.restoring", &[("count", res.plays_imported.into())]), Some(p.min(0.97)));
-            }
-        }
+        let done = counter.load(std::sync::atomic::Ordering::Relaxed) as f64 / total_bytes as f64;
+        f(n, v, line.len(), done)?;
     }
-    if !saw_header {
-        bail!(crate::i18n::t("server.import.empty_file", &[]));
-    }
+    from_version.ok_or_else(|| anyhow::anyhow!(crate::i18n::t("server.import.empty_file", &[])))
+}
 
+/// What a restore carries from one batch to the next.
+struct Restoring {
+    with_settings: bool,
+    merge_window_s: i64,
+    res: RestoreResult,
+    known: HashMap<&'static str, HashSet<String>>,
+    // Old play id: the id it got here. Plays that were already present are absent: their timeline is too.
+    play_ids: HashMap<i64, i64>,
+    settings_raw: Option<String>,
+    grants: Vec<Map<String, Value>>,
+    // Timeline rows restored per play (by its id here), never past what the collector keeps of one.
+    events_of: HashMap<i64, usize>,
+}
+
+fn restore_within(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks, &'static str)>, limits: Limits) -> Result<RestoreResult> {
+    // The whole file, read and parsed before anything is written, and without a lock.
+    let from_version = each_line(path, limits, |_, _, _, _| Ok(()))?;
+
+    let mut conn = db.conn()?;
+    let mut known: HashMap<&'static str, HashSet<String>> = HashMap::new();
+    for t in TABLES {
+        known.insert(t, table_columns(&conn, t)?);
+    }
+    let mut st = Restoring {
+        with_settings,
+        // This install's own idea of how far apart two sightings can be and still be one viewing.
+        merge_window_s: Settings::load(&conn)?.merge_window_s,
+        res: RestoreResult { from_version, ..Default::default() },
+        known,
+        play_ids: HashMap::new(),
+        settings_raw: None,
+        grants: vec![],
+        events_of: HashMap::new(),
+    };
+    let (mut batch, mut bytes): (Vec<Value>, usize) = (vec![], 0);
+    let write = |conn: &mut Connection, batch: &mut Vec<Value>, st: &mut Restoring| -> Result<()> {
+        let tx = conn.transaction()?;
+        for v in batch.drain(..) {
+            apply(&tx, &v, st)?;
+        }
+        tx.commit()?;
+        Ok(())
+    };
+    each_line(path, limits, |_, v, len, done| {
+        batch.push(v);
+        bytes += len;
+        if batch.len() >= BATCH_ROWS || bytes >= BATCH_BYTES {
+            write(&mut conn, &mut batch, &mut st)?;
+            bytes = 0;
+            if let Some((t, id)) = tasks {
+                t.update(id, crate::i18n::t("server.backup.restoring", &[("count", st.res.plays_imported.into())]), Some(done.min(0.97)));
+            }
+        }
+        Ok(())
+    })?;
+    write(&mut conn, &mut batch, &mut st)?;
+
+    let tx = conn.transaction()?;
+    let mut res = std::mem::take(&mut st.res);
     if with_settings {
-        if let Some(raw) = settings_raw {
+        if let Some(raw) = st.settings_raw.take() {
             // Through the type, so a backup cannot plant values this version would refuse. What cannot be
             // read at all is left out, never read as the defaults: that would reset every setting there is.
             match serde_json::from_str::<Settings>(&raw) {
@@ -631,7 +583,7 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
             }
         }
         let defaults = Settings::load(&tx)?.default_permissions;
-        for row in &grants {
+        for row in &st.grants {
             if narrow_grants(&tx, row, &defaults)? {
                 res.other_rows += 1;
             }
@@ -649,6 +601,135 @@ pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks,
     // Who watched together is derived data with a transaction of its own; the restore itself is already safe.
     crate::groups::detect(&mut conn, settings.group_window_s, None)?;
     Ok(res)
+}
+
+/// Write one row of the backup.
+fn apply(tx: &Connection, v: &Value, st: &mut Restoring) -> Result<()> {
+    let (Some(table), Some(row)) = (v["t"].as_str(), v["r"].as_object()) else { return Ok(()) };
+    match table {
+        // Only the settings themselves: a newer FinStats may keep other rows in that table, and none of them is these.
+        "settings" if row.get("key").and_then(Value::as_str) == Some("settings") => st.settings_raw = row.get("value").and_then(Value::as_str).map(str::to_string),
+        "settings" => {}
+        // A play from no time a server ran at, or one that ends before it starts, is no play: the bound an import keeps.
+        "playbacks" if !at_a_real_time(row, &["started_at", "ended_at"]) || row.get("started_at").and_then(Value::as_i64) > row.get("ended_at").and_then(Value::as_i64) => {}
+        "playbacks" => {
+            let mut row = row.clone();
+            bound_play(&mut row, db::now());
+            // A play FinStats saw itself keeps its source, and an id that says it was restored: only a play this
+            // install saw opens its item's picture or stands for a duplicate (`playback::restored_id`).
+            let source = row.get("source").and_then(Value::as_str).unwrap_or(crate::collector::SOURCE).to_string();
+            if source == crate::collector::SOURCE {
+                let restored = crate::playback::restored_id(
+                    row.get("user_id").and_then(Value::as_str).unwrap_or_default(),
+                    row.get("started_at").and_then(Value::as_i64).unwrap_or_default(),
+                    row.get("ended_at").and_then(Value::as_i64).unwrap_or_default(),
+                );
+                row.insert("source".into(), json!(source));
+                row.insert("source_id".into(), json!(restored));
+            }
+            let exists = crate::playback::already_recorded(
+                tx,
+                crate::playback::Play {
+                    source: &source,
+                    source_id: row.get("source_id").and_then(Value::as_str),
+                    user_id: row.get("user_id").and_then(Value::as_str).unwrap_or_default(),
+                    item_id: row.get("item_id").and_then(Value::as_str).unwrap_or_default(),
+                    started_at: row.get("started_at").and_then(Value::as_i64).unwrap_or_default(),
+                    ended_at: row.get("ended_at").and_then(Value::as_i64).unwrap_or_default(),
+                },
+                st.merge_window_s,
+            )?;
+            if exists {
+                st.res.plays_skipped += 1;
+                return Ok(());
+            }
+            // Nothing restored is still playing, and who watched together is worked out again afterwards.
+            row.insert("active".into(), json!(0));
+            if insert_row(tx, "playbacks", &st.known["playbacks"], &row, &["id", "group_id"], "INSERT")? {
+                if let Some(old) = row.get("id").and_then(Value::as_i64) {
+                    st.play_ids.insert(old, tx.last_insert_rowid());
+                }
+                st.res.plays_imported += 1;
+            }
+        }
+        "playback_events" => {
+            let Some(&new_id) = row.get("playback_id").and_then(Value::as_i64).and_then(|old| st.play_ids.get(&old)) else { return Ok(()) };
+            // As many as the collector keeps of one play, and no more.
+            let kept = st.events_of.entry(new_id).or_insert(0);
+            if *kept >= crate::playback::EVENTS_PER_PLAY {
+                return Ok(());
+            }
+            let mut row = row.clone();
+            row.insert("playback_id".into(), json!(new_id));
+            for col in ["position_s", "from_s"] {
+                if let Some(n) = row.get(col).and_then(Value::as_i64) {
+                    row.insert(col.into(), json!(n.clamp(0, PLACE_MAX_S)));
+                }
+            }
+            if insert_row(tx, "playback_events", &st.known["playback_events"], &row, &["id"], "INSERT")? {
+                *kept += 1;
+                st.res.events += 1;
+            }
+        }
+        // A restore may take a grant away and never gives one back ([`narrow_grants`]), once the settings it narrows
+        // against are in place.
+        "user_permissions" => {
+            if st.with_settings {
+                st.grants.push(row.clone());
+            }
+        }
+        // Which addresses are home decides which plays are local and where "home" is on the map: a setting, so only with
+        // the settings, and only those somebody typed in (a looked-up one is this network's, found again here).
+        "home_addresses" if !st.with_settings || row.get("source").and_then(Value::as_str) != Some("manual") => {}
+        // Where the owner said a title is, only where this library has that title: otherwise the file chooses which
+        // title orphaned plays are attached to.
+        "located" if !in_library(tx, row.get("to_id").and_then(Value::as_str))? => {}
+        // A moment no server ran at: one row of the log from years to come stopped every later read of it.
+        "server_events" | "devices" if !at_a_real_time(row, if table == "devices" { &["first_seen", "last_seen"] } else { &["date"] }) => {}
+        // `located`: where the owner said a title is; `health_dismissed`: a finding set aside; `appearance`: how FinStats
+        // looks to a person; `welcomed`: who has had the welcome. A choice this database already has for the same id,
+        // finding or person stands.
+        "manual_seen" | "home_addresses" | "server_events" | "devices" | "located" | "health_dismissed" | "appearance" | "welcomed" => {
+            let t = TABLES.iter().find(|t| **t == table).copied().unwrap_or("devices");
+            if insert_row(tx, t, &st.known[t], row, &[], "INSERT OR IGNORE")? {
+                st.res.other_rows += 1;
+            }
+        }
+        // Somebody's list: one entry per title and person, the older date kept.
+        "watchlist" if crate::watchlist::restore_row(tx, row)? => st.res.other_rows += 1,
+        "watchlist" => {}
+        // Its own ids mean nothing here; `dedupe` keeps an alert this database already has from doubling.
+        // A pair of places set aside never alerts again, so without the settings an alert comes back as one to look at.
+        "security_alerts" => {
+            let mut row = row.clone();
+            if !st.with_settings {
+                row.insert("muted".into(), json!(0));
+            }
+            if insert_row(tx, table, &st.known["security_alerts"], &row, &["id"], "INSERT OR IGNORE")? {
+                st.res.other_rows += 1;
+            }
+        }
+        // Its ids mean nothing here either, and it has no natural key: a row is appended unless the
+        // same thing, by the same person, at the same moment, is already written down.
+        // Each says it was restored and from what, so nothing a file says reads as this install's own record.
+        "audit" => {
+            let get = |k: &str| row.get(k).cloned().unwrap_or(Value::Null);
+            let detail = get("detail");
+            let marked = restored_detail(detail.as_str().unwrap_or("{}"), st.res.from_version.as_deref().unwrap_or("unknown"));
+            let dup: i64 = tx.query_row(
+                "SELECT COUNT(*) FROM audit WHERE at = ?1 AND kind = ?2 AND COALESCE(user_id, '') = COALESCE(?3, '') AND COALESCE(target, '') = COALESCE(?4, '') AND detail IN (?5, ?6)",
+                params_from_iter([sql_value(&get("at")), sql_value(&get("kind")), sql_value(&get("user_id")), sql_value(&get("target")), sql_value(&detail), SqlValue::from(marked.clone())].iter()),
+                |r| r.get(0),
+            )?;
+            let mut row = row.clone();
+            row.insert("detail".into(), json!(marked));
+            if dup == 0 && insert_row(tx, "audit", &st.known["audit"], &row, &["id"], "INSERT")? {
+                st.res.other_rows += 1;
+            }
+        }
+        _ => {} // a table from a newer FinStats
+    }
+    Ok(())
 }
 
 struct Counted {
@@ -1184,6 +1265,32 @@ mod tests {
         assert_eq!((got.0, got.1, got.2, got.3, got.4, got.5, got.6), (600, 0, PLACE_MAX_S, 0, PLACE_MAX_S, COUNT_MAX, 0));
         assert!(got.7 <= db::now(), "a deletion in years to come is never purged");
         let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// A file that unpacks to far more than its own size (blank lines counted) is refused before anything is written: a
+    /// few megabytes of gzipped blank lines held the database's write lock for most of a minute.
+    #[test]
+    fn a_file_that_unpacks_to_far_more_than_it_is_refused_before_anything_is_written() {
+        let (tmp, target, _) = restoring("backup-bomb", &[]);
+        let file = tmp.join("bomb.jsonl.gz");
+        let mut gz = GzEncoder::new(File::create(&file).unwrap(), Compression::new(9));
+        writeln!(gz, "{}", json!({ "finstats_backup": FORMAT, "app_version": "2.3.1" })).unwrap();
+        writeln!(gz, "{}", a_play()).unwrap();
+        gz.write_all(&vec![b'\n'; 4 << 20]).unwrap();
+        gz.finish().unwrap();
+        let limits = Limits { ratio: 100, floor: 1 << 20, cap: 1 << 40 };
+        let err = format!("{:#}", restore_within(&target, &file, false, None, limits).expect_err("a bomb was restored"));
+        assert!(err.contains("unpacks to far more"), "{err}");
+        assert_eq!(plays(&target), 0, "a refused file wrote a play");
+        let capped = Limits { ratio: 1_000_000, floor: 0, cap: 1 << 20 };
+        assert!(restore_within(&target, &file, false, None, capped).is_err(), "past the cap whatever the ratio");
+        // Nothing is written from a file that is wrong further down either: it is all read before anything is written.
+        let (tmp2, target2, bad) = restoring("backup-bad-end", &[json!({ "finstats_backup": FORMAT, "app_version": "2.3.1" }), a_play()]);
+        std::fs::OpenOptions::new().append(true).open(&bad).unwrap().write_all(b"not json\n").unwrap();
+        assert!(restore(&target2, &bad, false, None).is_err());
+        assert_eq!(plays(&target2), 0);
+        let _ = std::fs::remove_dir_all(&tmp);
+        let _ = std::fs::remove_dir_all(&tmp2);
     }
 
     /// A row of the server log or a device from no time FinStats ran at is not restored: one dated in years to come froze

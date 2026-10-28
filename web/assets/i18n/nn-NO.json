@@ -1900,6 +1900,7 @@
       "not_json": "Fila er ikkje ein tryggingskopi frå FinStats (linje {line} er ikkje JSON)",
       "not_finstats": "Dette er ikkje ein tryggingskopi frå FinStats. Ein tryggingskopi frå Jellystat høyrer heime under «Importer frå Jellystat».",
       "newer_format": "Denne tryggingskopien vart laga av ein nyare FinStats (format {format}). Oppdater FinStats, og gjenopprett han etterpå.",
+      "too_large": "Fila er skadd eller ikkje ein tryggingskopi frå FinStats (ho blir pakka ut til langt meir enn ein tryggingskopi inneheld)",
       "restoring": { "one": "Gjenopprettar: {count} avspeling så langt", "other": "Gjenopprettar: {count} avspelingar så langt" },
       "linking": "Koplar avspelingar til biblioteket"
     },

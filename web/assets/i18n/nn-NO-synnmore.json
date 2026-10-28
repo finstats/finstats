@@ -2197,6 +2197,7 @@
       "not_json": "Fila ekje en tryggingskopi ifrå FinStats (linje {line} ekje JSON)",
       "not_finstats": "Dette ekje en tryggingskopi ifrå FinStats. En tryggingskopi ifrå Jellystat høyrer heime under «Importer ifrå Jellystat».",
       "newer_format": "Dinna tryggingskopien vart laga av en nyare FinStats (format {format}). Oppdater FinStats, og gjenopprett han etterpå.",
+      "too_large": "Fila e skadd elle ikkje en tryggingskopi ifrå FinStats (ho blir pakka ut til langt meir enn en tryggingskopi inneheld)",
       "restoring": {
         "one": "Gjenopprettar: {count} avspeling so langt",
         "other": "Gjenopprettar: {count} avspelingar so langt"
