@@ -230,8 +230,26 @@ fn fields_json(m: &Message, inline: bool) -> Vec<Value> {
     m.fields
         .iter()
         .take(FIELDS_MAX)
-        .map(|(label, value)| json!({ "name": cut(label, 100), "value": cut(value, FIELD_MAX), "inline": inline }))
+        .map(|(label, value)| json!({ "name": cut(label, 100), "value": markdown_text(&cut(value, FIELD_MAX)), "inline": inline }))
         .collect()
+}
+
+/// Text as Slack shows text: it reads `<!channel>` and `<url|label>` in a message, and part of what one says was typed
+/// by somebody else (a device's name, a name tried at a sign-in).
+fn slack_text(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+}
+
+/// Text as Discord shows text: an embed's description and fields are Markdown, a masked link `[label](url)` included.
+fn markdown_text(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        if matches!(ch, '\\' | '*' | '_' | '~' | '`' | '|' | '>' | '<' | '[' | ']' | '(' | ')' | '#' | '@') {
+            out.push('\\');
+        }
+        out.push(ch);
+    }
+    out
 }
 
 /// Discord's colour bar, and ntfy's and Gotify's priorities: the one place severity turns into a number.
@@ -307,8 +325,10 @@ pub fn payload(channel: Channel, base_url: &str, topic: Option<&str>, secret: &s
             base_url.to_string(),
             json!({
                 "username": "FinStats",
+                // Nobody is pinged by what a message says, whoever wrote part of it.
+                "allowed_mentions": { "parse": [] },
                 "embeds": [{
-                    "title": title, "description": body, "url": m.link, "color": colour(&m.severity),
+                    "title": title, "description": markdown_text(&body), "url": m.link, "color": colour(&m.severity),
                     "timestamp": chrono::DateTime::from_timestamp(at, 0).map(|t| t.to_rfc3339()),
                     "fields": fields_json(m, true), "footer": { "text": "FinStats" },
                 }],
@@ -319,10 +339,10 @@ pub fn payload(channel: Channel, base_url: &str, topic: Option<&str>, secret: &s
         Channel::Slack => (
             base_url.to_string(),
             json!({
-                "text": title,
+                "text": slack_text(&title),
                 "attachments": [{
-                    "color": hex(&m.severity), "title": title, "title_link": m.link, "text": body,
-                    "fields": m.fields.iter().take(FIELDS_MAX).map(|(l, v)| json!({ "title": cut(l, 100), "value": cut(v, FIELD_MAX), "short": true })).collect::<Vec<_>>(),
+                    "color": hex(&m.severity), "title": slack_text(&title), "title_link": m.link, "text": slack_text(&body),
+                    "fields": m.fields.iter().take(FIELDS_MAX).map(|(l, v)| json!({ "title": slack_text(&cut(l, 100)), "value": slack_text(&cut(v, FIELD_MAX)), "short": true })).collect::<Vec<_>>(),
                     "footer": "FinStats", "ts": at,
                 }],
             }),
@@ -597,6 +617,25 @@ mod tests {
             vec![Channel::Email],
             "only email needs more than an address, a token and one field beside them"
         );
+    }
+
+    /// What a message says comes partly from outside: a device's name, an account name typed at a sign-in. Slack reads
+    /// `<!channel>` and `<url|label>` in its text, Discord masked links in an embed, so anybody could ping a whole channel
+    /// or send a disguised link from the server's own bot. Those two are given text as text.
+    #[test]
+    fn what_a_stranger_typed_is_text_to_slack_and_discord() {
+        let typed = "<!channel> your session expired, <https://evil.example/login|sign in again> [here](https://evil.example) @everyone";
+        let m = Message { title: typed.into(), body: typed.into(), fields: vec![("Account".into(), typed.into())], ..msg() };
+        let (_, slack) = post(Channel::Slack, "https://hooks.slack.com/services/x", None, &m);
+        let said = slack.to_string();
+        assert!(!said.contains("<!channel>") && !said.contains("<https://"), "{said}");
+        assert!(said.contains("&lt;!channel&gt;"));
+        let (_, discord) = post(Channel::Discord, "https://discord.com/api/webhooks/x", None, &m);
+        assert_eq!(discord["allowed_mentions"], json!({ "parse": [] }));
+        let embed = &discord["embeds"][0];
+        for text in [embed["description"].as_str().unwrap(), embed["fields"][0]["value"].as_str().unwrap()] {
+            assert!(!text.contains("[here](") && text.contains(r"\[here\]\(https://evil.example\)"), "{text}");
+        }
     }
 
     #[test]
