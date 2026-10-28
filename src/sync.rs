@@ -925,6 +925,13 @@ fn changes_said(titles: usize, portraits: usize) -> String {
 
 // ---------------------------------------------------------------- server activity log
 
+/// Whether to read another page of the activity log, `got` entries having come in the last and `read` in all. Only the
+/// very first read is capped (the log of an old server can be enormous); every later one reads all that is new, since the
+/// log answers newest first and whatever is left unread is never read.
+fn read_more_events(first: bool, got: usize, read: usize) -> bool {
+    got == PAGE && !(first && read >= 20_000)
+}
+
 async fn sync_events(app: &App, jf: &Jellyfin) -> Result<String> {
     const ID: &str = "sync_events";
     app.tasks.update(ID, crate::i18n::t("server.sync.fetching_activity", &[]), None);
@@ -974,8 +981,7 @@ async fn sync_events(app: &App, jf: &Jellyfin) -> Result<String> {
             .await?;
         start += got;
         app.tasks.update(ID, crate::i18n::t("server.sync.entries_read", &[("done", start.into()), ("total", total.max(start).into())]), Some(start as f64 / total.max(start) as f64));
-        // Cap the very first backfill; the log can be enormous on old servers.
-        if got < PAGE || start >= 20_000 {
+        if !read_more_events(newest.is_none(), got, start) {
             break;
         }
     }
@@ -1194,6 +1200,19 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    /// A read of the activity log goes on to the end of what is new. The cap was meant for the very first backfill but held
+    /// at every read, and the log answers newest first: more than 20,000 failed sign-ins between two reads pushed a real
+    /// sign-in from abroad out of what was read, for good, and no alert was raised for it.
+    #[test]
+    fn a_flood_between_two_reads_of_the_activity_log_hides_nothing() {
+        assert!(read_more_events(false, PAGE, 20_000));
+        assert!(read_more_events(false, PAGE, 400_000));
+        assert!(!read_more_events(false, PAGE - 1, 400_000), "the last page");
+        // The first read of an old server's whole log stops somewhere.
+        assert!(!read_more_events(true, PAGE, 20_000));
+        assert!(read_more_events(true, PAGE, 19_500));
+    }
+
     use super::*;
 
     /// A part of the server's details that could not be read this time keeps what the last read found. Read as
