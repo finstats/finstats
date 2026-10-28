@@ -549,9 +549,44 @@ pub fn answer(conn: &Connection) -> Result<Value> {
     Ok(facts)
 }
 
+/// The busiest moments as somebody may be told them who sees the server but not everyone's plays: the day, not the
+/// minute, and only moments of at least [`FEWEST_TOLD`] streams. On a server of two or three, "one stream at
+/// 21:14" when it was not theirs is somebody else's evening. `day_of` answers the start of a moment's local day.
+pub fn narrow_moments(facts: &mut Value, day_of: impl Fn(i64) -> i64) {
+    let told = |m: &Value| -> Option<Value> {
+        (m["streams"].as_i64().unwrap_or(0) >= FEWEST_TOLD).then(|| {
+            let mut m = m.clone();
+            m["at"] = json!(day_of(m["at"].as_i64().unwrap_or(0)));
+            m
+        })
+    };
+    if let Some(list) = facts["busiest"].as_array() {
+        facts["busiest"] = json!(list.iter().filter_map(told).collect::<Vec<_>>());
+    }
+    facts["recent"] = told(&facts["recent"]).unwrap_or(Value::Null);
+    facts["by_day"] = json!(true);
+}
+
+/// The fewest streams a busy moment must have been to be told somebody without `see_everyone`.
+pub const FEWEST_TOLD: i64 = 3;
+
+/// The start of the local day `at` falls in.
+fn local_day(at: i64) -> i64 {
+    use chrono::TimeZone;
+    chrono::Local
+        .timestamp_opt(at, 0)
+        .single()
+        .and_then(|d| d.date_naive().and_hms_opt(0, 0, 0))
+        .and_then(|midnight| midnight.and_local_timezone(chrono::Local).earliest())
+        .map_or(at - at.rem_euclid(86_400), |d| d.timestamp())
+}
+
 /// `GET /api/server/capacity`: what the last recompute found. Read only; worked out after the server's reads.
-pub async fn get_capacity(State(app): State<App>, ServerViewer(_): ServerViewer) -> ApiResult {
+pub async fn get_capacity(State(app): State<App>, ServerViewer(user): ServerViewer) -> ApiResult {
     let mut out = app.db.call(|c| answer(c)).await?;
+    if !user.perms.see_everyone && out.is_object() {
+        narrow_moments(&mut out, local_day);
+    }
     // A finding is stored in the source's words; it is said again here, in the reader's.
     for f in out["findings"].as_array_mut().into_iter().flatten() {
         if let Some(title) = said(f["kind"].as_str().unwrap_or(""), &f["evidence"]) {
@@ -1065,6 +1100,20 @@ mod tests {
         assert_eq!((a["free_space_reported"].clone(), a["disks"].clone()), (json!(false), json!([])));
         assert_eq!(a["growth"][0]["added_bytes"], 120_000_000_000i64);
         assert!(a["findings"].as_array().unwrap().iter().all(|f| f["kind"] != "runway"));
+    }
+
+    /// Somebody who may see the server but not everyone's plays was given the exact moments people were watching: on a
+    /// server of two or three, "one stream at 21:14" when it was not theirs is somebody else's evening. They are told the
+    /// day of the busy moments, and only of moments too busy to be one person's.
+    #[test]
+    fn without_see_everyone_the_busiest_moments_are_days_and_never_one_or_two_streams() {
+        let m = |at: i64, streams: i64| json!({ "at": at, "streams": streams, "transcodes": 0, "hardware": 0, "software": 0, "unsaid": 0 });
+        let mut facts = json!({ "busiest": [m(NOW + 3_600, 4), m(NOW + 7_200, 2), m(NOW + 9_000, 1)], "recent": m(NOW + 9_000, 1) });
+        narrow_moments(&mut facts, |at| at - at.rem_euclid(DAY));
+        let day = NOW - NOW.rem_euclid(DAY);
+        assert_eq!(facts["busiest"], json!([m(day, 4)]), "the moment of four is a day; the moments of one and two are no one's business");
+        assert!(facts["recent"].is_null());
+        assert_eq!(facts["by_day"], true);
     }
 
     #[test]

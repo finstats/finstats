@@ -2,7 +2,7 @@
 // about the server's own settings. The server works it all out after its reads; this only draws it. FinStats cannot know
 // what the machine could do, so nothing here says how many streams it can take: it shows what it has seen.
 
-import { h, icon, num, bytes, duration, relTime, dateTime } from '../dom.js';
+import { h, icon, num, bytes, duration, relTime, dateTime, dateOnly } from '../dom.js';
 import { api } from '../api.js';
 import { can } from '../state.js';
 import { card, dataView, sk, emptyState, setBusy, facts, statTile } from '../components.js';
@@ -66,10 +66,12 @@ export function capacityView(ctx) {
   }
 
   function busiest(d) {
+    // Without everyone's plays the server answers the day of a busy moment, not its minute.
+    const when = (at) => (d.by_day ? dateOnly(at) : relTime(at));
     const tile = (label, m, none) => statTile({ label, value: m ? t('pages.capacity.busiest.streams', { count: m.streams }) : '–',
-      hint: m ? (m.transcodes ? t('pages.capacity.busiest.hint_transcodes', { transcodes: t('pages.capacity.busiest.transcodes', { count: m.transcodes }), when: relTime(m.at) }) : relTime(m.at)) : none });
+      hint: m ? (m.transcodes ? t('pages.capacity.busiest.hint_transcodes', { transcodes: t('pages.capacity.busiest.transcodes', { count: m.transcodes }), when: when(m.at) }) : when(m.at)) : none });
     const rows = (d.busiest || []).map((m) => h('tr', null,
-      h('td', { class: 'nowrap' }, h('time', { datetime: new Date(m.at * 1000).toISOString(), title: relTime(m.at) }, dateTime(m.at))),
+      h('td', { class: 'nowrap' }, h('time', { datetime: new Date(m.at * 1000).toISOString(), title: when(m.at) }, d.by_day ? dateOnly(m.at) : dateTime(m.at))),
       h('td', { class: 'mono r' }, num(m.streams)),
       h('td', { class: 'mono r' }, num(m.transcodes)),
       h('td', { class: 'mono r' }, num(m.hardware)),
