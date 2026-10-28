@@ -132,11 +132,12 @@ fn start_plays(c: &mut crate::db::rusqlite::Connection, plays: Vec<PlayRecord>, 
             .query_row([&probe.user_id], |r| r.get(0))
             .optional()?
             .unwrap_or(false);
-        // Same person, same item, same device, moments later: that's one viewing.
+        // Same person, same item, same device, moments later: that's one viewing. Only a play FinStats saw (a restored
+        // one carries a `restored:` id).
         let resumed = tx
             .prepare_cached(
                 "SELECT id, started_at, duration_s, paused_s, pause_count, seek_count, start_position_s FROM visible_playbacks
-                 WHERE source = 'live' AND active = 0 AND user_id = ?1 AND item_id = ?2
+                 WHERE source = 'live' AND source_id IS NULL AND active = 0 AND user_id = ?1 AND item_id = ?2
                    AND device_id IS ?3 AND ended_at >= ?4
                  ORDER BY ended_at DESC LIMIT 1",
             )?
@@ -1644,6 +1645,19 @@ mod tests {
         assert!(started[0].row_id != old && started[0].started_at == 5000 && started[0].counters.is_none(), "the restart continued the deleted row");
         let (active, deleted): (bool, Option<i64>) = c.query_row("SELECT active, deleted_at FROM playbacks WHERE id = ?1", [old], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         assert_eq!((active, deleted), (false, Some(4990)), "the play in the trash was touched");
+    }
+
+    /// A play a backup brought back may say it was seen live, and is no row FinStats saw: a restart is never continued
+    /// onto it, or a crafted file's numbers and timeline would become the start of somebody's real evening.
+    #[test]
+    fn a_restart_never_continues_a_restored_play() {
+        let mut c = migrated();
+        let mut earlier = playing("bob", "film", "tv");
+        (earlier.started_at, earlier.ended_at, earlier.active, earlier.duration_s) = (3000, 4950, false, 1900);
+        let old = earlier.insert(&c).unwrap().unwrap();
+        c.execute("UPDATE playbacks SET source_id = 'restored:bob:3000:4950' WHERE id = ?1", [old]).unwrap();
+        let started = start_plays(&mut c, vec![playing("bob", "film", "tv")], 5000, 600).unwrap();
+        assert!(started[0].row_id != old && started[0].started_at == 5000 && started[0].counters.is_none(), "the restart continued the restored row");
     }
 
     #[test]
