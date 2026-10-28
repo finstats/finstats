@@ -32,6 +32,15 @@ struct Row {
     stop: Option<i64>,
 }
 
+/// How many plays starting (or ending) after one a play is compared with. An evening together is a handful of people;
+/// without a bound, plays starting in one crowded minute were each compared with every other.
+const PEERS: usize = 256;
+
+/// A play shorter than `MIN_OVERLAP_S` cannot have overlapped anybody's for that long, so it is in no group.
+fn long_enough(r: &Row) -> bool {
+    r.end - r.start >= MIN_OVERLAP_S
+}
+
 /// Given one item's plays in start order, the plays that belong to a group: (play id, group id). Two ways to be
 /// together, and a group is everything either joins: starts within the window of one another, or ends within it at
 /// nearly the same measured place (`max(window, 30)` s, as for live streams). The second is SyncPlay with a late
@@ -53,29 +62,24 @@ fn cluster(rows: &[Row], window_s: i64) -> Vec<(i64, i64)> {
         let (ra, rb) = (root(of, a), root(of, b));
         of[ra.max(rb)] = ra.min(rb);
     };
-    let mut i = 0;
-    while i < rows.len() {
-        // A chain of starts, each within the window of the one before it.
-        let mut j = i + 1;
-        while j < rows.len() && rows[j].start - rows[j - 1].start <= window_s {
-            j += 1;
-        }
-        // Keep the plays that really ran alongside someone else's.
-        let together: Vec<usize> = (i..j).filter(|&a| (i..j).any(|b| rows[b].user != rows[a].user && overlap(&rows[a], &rows[b]))).collect();
-        if together.iter().map(|&k| rows[k].user.as_str()).collect::<BTreeSet<_>>().len() >= 2 {
-            for &k in &together {
-                grouped[k] = true;
-                join(&mut of, together[0], k);
+    // Starts: a play joins another person's that began within the window of its own start, never one that began
+    // within the window of a third play's. Chaining start to start let anyone keep a title playing back to back all
+    // evening and so put everyone who played it that evening into one group with each other.
+    for a in (0..rows.len()).filter(|&a| long_enough(&rows[a])) {
+        for b in (a + 1..rows.len()).take_while(|&b| rows[b].start - rows[a].start <= window_s).take(PEERS) {
+            if rows[b].user != rows[a].user && overlap(&rows[a], &rows[b]) {
+                grouped[a] = true;
+                grouped[b] = true;
+                join(&mut of, a, b);
             }
         }
-        i = j;
     }
     // Ends: only plays whose stop was measured, compared with those ending within the window after them.
     let near = window_s.max(30);
-    let mut by_end: Vec<usize> = (0..rows.len()).filter(|&k| rows[k].stop.is_some()).collect();
+    let mut by_end: Vec<usize> = (0..rows.len()).filter(|&k| rows[k].stop.is_some() && long_enough(&rows[k])).collect();
     by_end.sort_by_key(|&k| rows[k].end);
     for (x, &a) in by_end.iter().enumerate() {
-        for &b in by_end[x + 1..].iter().take_while(|&&b| rows[b].end - rows[a].end <= window_s) {
+        for &b in by_end[x + 1..].iter().take_while(|&&b| rows[b].end - rows[a].end <= window_s).take(PEERS) {
             let (ra, rb) = (&rows[a], &rows[b]);
             if ra.user != rb.user && (ra.stop.unwrap_or(0) - rb.stop.unwrap_or(0)).abs() <= near && overlap(ra, rb) {
                 grouped[a] = true;
@@ -148,53 +152,60 @@ pub fn mark_live(sessions: &mut [Value], window_s: i64) {
     }
 }
 
-/// (Re)assign `group_id` for one item, or for everything. Returns the number of groups found.
-pub fn detect(conn: &mut Connection, window_s: i64, only_item: Option<&str>) -> Result<usize> {
-    let tx = conn.transaction()?;
-    let mut groups = 0;
-    {
-        let filter = if only_item.is_some() { "AND item_id = ?1" } else { "" };
-        let args: Vec<SqlValue> = only_item.map(|i| vec![i.to_string().into()]).unwrap_or_default();
-        let mut stmt = tx.prepare(&format!("SELECT item_id, id, user_id, started_at, ended_at, group_id, position_s FROM visible_playbacks WHERE 1 = 1 {filter} ORDER BY item_id, started_at, id"))?;
-        let mut rows = stmt.query(params_from_iter(args.iter()))?;
-        // Each title's plays with the group they have now; what the clustering says is compared with it, and only the
-        // plays whose group actually changes are written. (Resetting every group to NULL and writing them all back
-        // rewrote every grouped play of the history each time: at start-up, after every import, after every play.)
-        let mut changes: Vec<(i64, Option<i64>)> = vec![];
-        let mut found: BTreeSet<i64> = BTreeSet::new();
-        let mut current: Option<String> = None;
-        let mut batch: Vec<Row> = vec![];
-        let mut had: Vec<Option<i64>> = vec![];
-        let mut flush = |batch: &mut Vec<Row>, had: &mut Vec<Option<i64>>| {
-            let assigned: HashMap<i64, i64> = if batch.len() >= 2 { cluster(batch, window_s).into_iter().collect() } else { HashMap::new() };
-            for (row, now) in batch.iter().zip(had.iter()) {
-                let want = assigned.get(&row.id).copied();
-                if want != *now {
-                    changes.push((row.id, want));
-                }
+/// What the clustering says should change: (play, its new group), and how many groups there are. It only reads, and
+/// holds no transaction: one SELECT is its own snapshot, and a title's whole history may take a while to cluster, which
+/// inside a write transaction kept every other write waiting (the collector's included).
+fn plan(conn: &Connection, window_s: i64, only_item: Option<&str>) -> Result<(Vec<(i64, Option<i64>)>, usize)> {
+    let filter = if only_item.is_some() { "AND item_id = ?1" } else { "" };
+    let args: Vec<SqlValue> = only_item.map(|i| vec![i.to_string().into()]).unwrap_or_default();
+    let mut stmt = conn.prepare(&format!("SELECT item_id, id, user_id, started_at, ended_at, group_id, position_s FROM visible_playbacks WHERE 1 = 1 {filter} ORDER BY item_id, started_at, id"))?;
+    let mut rows = stmt.query(params_from_iter(args.iter()))?;
+    // Each title's plays with the group they have now; what the clustering says is compared with it, and only the
+    // plays whose group actually changes are written. (Resetting every group to NULL and writing them all back
+    // rewrote every grouped play of the history each time: at start-up, after every import, after every play.)
+    let mut changes: Vec<(i64, Option<i64>)> = vec![];
+    let mut found: BTreeSet<i64> = BTreeSet::new();
+    let mut current: Option<String> = None;
+    let mut batch: Vec<Row> = vec![];
+    let mut had: Vec<Option<i64>> = vec![];
+    let mut flush = |batch: &mut Vec<Row>, had: &mut Vec<Option<i64>>| {
+        let assigned: HashMap<i64, i64> = if batch.len() >= 2 { cluster(batch, window_s).into_iter().collect() } else { HashMap::new() };
+        for (row, now) in batch.iter().zip(had.iter()) {
+            let want = assigned.get(&row.id).copied();
+            if want != *now {
+                changes.push((row.id, want));
             }
-            found.extend(assigned.values());
-            batch.clear();
-            had.clear();
-        };
-        while let Some(r) = rows.next()? {
-            let item: String = r.get(0)?;
-            if current.as_deref() != Some(item.as_str()) {
-                flush(&mut batch, &mut had);
-                current = Some(item);
-            }
-            batch.push(Row { id: r.get(1)?, user: r.get(2)?, start: r.get(3)?, end: r.get(4)?, stop: r.get(6)? });
-            had.push(r.get(5)?);
         }
-        flush(&mut batch, &mut had);
-        drop(rows);
-        drop(stmt);
+        found.extend(assigned.values());
+        batch.clear();
+        had.clear();
+    };
+    while let Some(r) = rows.next()? {
+        let item: String = r.get(0)?;
+        if current.as_deref() != Some(item.as_str()) {
+            flush(&mut batch, &mut had);
+            current = Some(item);
+        }
+        batch.push(Row { id: r.get(1)?, user: r.get(2)?, start: r.get(3)?, end: r.get(4)?, stop: r.get(6)? });
+        had.push(r.get(5)?);
+    }
+    flush(&mut batch, &mut had);
+    Ok((changes, found.len()))
+}
 
+/// (Re)assign `group_id` for one item, or for everything. Returns the number of groups found. The groups are worked
+/// out first, without the write lock, and only what changed is written under it.
+pub fn detect(conn: &mut Connection, window_s: i64, only_item: Option<&str>) -> Result<usize> {
+    let (changes, groups) = plan(conn, window_s, only_item)?;
+    if changes.is_empty() {
+        return Ok(groups);
+    }
+    let tx = conn.transaction()?;
+    {
         let mut set = tx.prepare("UPDATE playbacks SET group_id = ?2 WHERE id = ?1")?;
         for (id, group_id) in &changes {
             set.execute(params![id, group_id])?;
         }
-        groups += found.len();
     }
     tx.commit()?;
     Ok(groups)
@@ -212,8 +223,9 @@ pub enum Regrouped {
 const REGROUPED_KEY: &str = "groups_detected";
 
 /// Which rule `cluster` groups by. A new rule regroups the whole history once, even under the same version and window:
-/// 2 is "or ended together at the same place" (2.3.0), which found SyncPlay evenings with a late joiner.
-const RULE: i64 = 2;
+/// 2 is "or ended together at the same place" (2.3.0), which found SyncPlay evenings with a late joiner; 3 joins a play
+/// only to one that started within the window of its own start (2.3.1), so plays back to back no longer chain strangers.
+const RULE: i64 = 3;
 
 /// The start-up pass. A play that ends regroups its title at once, and an import, a restore or a new window regroup
 /// everything themselves, so a start has only to catch what the last run left behind: plays it was still recording
@@ -976,6 +988,55 @@ mod tests {
         assert_eq!(detect(&mut c, 60, Some("film")).unwrap(), 1);
         let groups: Vec<Option<i64>> = c.prepare("SELECT group_id FROM playbacks ORDER BY id").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
         assert_eq!(groups, vec![Some(1), Some(1)]);
+    }
+
+    #[test]
+    fn one_person_starting_plays_back_to_back_all_night_costs_next_to_nothing() {
+        // Any Jellyfin user can report plays of one title a second apart from fresh device ids, every one of them long
+        // enough to keep: one unbroken chain of starts. Comparing each play with every other in it took 5.9 s for 40,000
+        // plays, and detection runs at every play's end, so the collector stopped recording for everyone.
+        let rows: Vec<Row> = (0..50_000).map(|i| ends(i, "mallory", i, i + 180, Some(180))).collect();
+        let began = std::time::Instant::now();
+        assert!(cluster(&rows, 60).is_empty());
+        assert!(began.elapsed() < std::time::Duration::from_millis(500), "took {:?}", began.elapsed());
+    }
+
+    #[test]
+    fn working_out_the_groups_holds_no_write_lock() {
+        // Detection runs at every play's end, and it read and clustered a title's whole history inside an IMMEDIATE
+        // transaction: however long that took, nobody's play could be recorded. Only writing what changed needs the lock.
+        let dir = std::env::temp_dir().join(format!("finstats-groups-lock-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let db = crate::db::Db::open(&dir.join("finstats.db")).unwrap();
+        let mut mine = db.conn().unwrap();
+        mine.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s)
+               VALUES (1, 'live', 'alice', 'alice', 'film', 'Big Buck Bunny', 'Movie', 1000, 5000, 4000),
+                      (2, 'live', 'bob', 'bob', 'film', 'Big Buck Bunny', 'Movie', 1010, 5000, 3990);",
+        )
+        .unwrap();
+        mine.busy_timeout(std::time::Duration::ZERO).unwrap();
+        let mut other = db.conn().unwrap();
+        let held = other.transaction().unwrap();
+        let (changes, groups) = plan(&mine, 60, Some("film")).unwrap();
+        assert_eq!((changes, groups), (vec![(1, Some(1)), (2, Some(1))], 1));
+        held.commit().unwrap();
+        assert_eq!(detect(&mut mine, 60, Some("film")).unwrap(), 1);
+        drop((mine, other, db));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn plays_back_to_back_do_not_chain_strangers_into_one_evening() {
+        // Somebody keeps the title playing all evening, each play starting within the window of the last. Alice at
+        // 20:00 and Bob at 21:30 each ran alongside one of those plays, and never alongside each other.
+        let mut rows = vec![r(1, "alice", 0, 3600)];
+        rows.extend((0..120).map(|k| r(10 + k, "mallory", k * 50, 600)));
+        rows.push(r(1000, "bob", 5400, 3600));
+        rows.sort_by_key(|x| (x.start, x.id));
+        let got: HashMap<i64, i64> = cluster(&rows, 60).into_iter().collect();
+        assert_ne!(got[&1], got[&1000], "alice and bob were put in one group");
     }
 
     #[test]
