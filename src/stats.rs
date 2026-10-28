@@ -560,6 +560,20 @@ const PLAY_SELECT: &str = "SELECT p.id, p.source, p.active, p.user_id, COALESCE(
   LEFT JOIN items i ON i.id = p.item_id
   LEFT JOIN users u ON u.id = p.user_id";
 
+/// How `PLAY_SELECT` counts a group, and how it counts one for whoever may see only themselves: the people whose play
+/// ran alongside this one (`MET_SQL`). A group is joined through anybody in it, so its whole size told them of people
+/// their play never met.
+const GROUP_SIZE_ALL: &str = "WHERE g.group_id = p.group_id) END AS group_size";
+const GROUP_SIZE_MET: &str = "WHERE g.group_id = p.group_id AND (g.user_id = p.user_id OR MIN(g.ended_at, p.ended_at) - MAX(g.started_at, p.started_at) >= 120)) END AS group_size";
+/// Of a play `m` and another `p`, that they ran alongside each other for the two minutes grouping asks
+/// (`groups::MIN_OVERLAP_S`).
+const MET_SQL: &str = "AND MIN(m.ended_at, p.ended_at) - MAX(m.started_at, p.started_at) >= 120";
+
+/// `PLAY_SELECT`, its group counted as the caller may be told it.
+fn play_select(see_everyone: bool) -> String {
+    if see_everyone { PLAY_SELECT.to_string() } else { PLAY_SELECT.replacen(GROUP_SIZE_ALL, GROUP_SIZE_MET, 1) }
+}
+
 const DETAIL_ONLY: [&str; 12] = [
     "device_id", "bitrate", "video_codec", "width", "height", "video_range", "bit_depth", "audio_codec", "audio_channels",
     "audio_language", "subtitle_codec", "subtitle_language",
@@ -781,7 +795,7 @@ fn activity_page(c: &Connection, scope: &Scope, q: ActivityQuery) -> Result<Valu
     // Sorting by address is only for those who are shown addresses.
     let sort = q.sort.as_deref().filter(|k| *k != "ip" || scope.perms.see_network);
     let order = order_by(&ACTIVITY_SORTS, sort, q.dir.as_deref(), if trash { "p.deleted_at DESC, p.id DESC" } else { "p.ended_at DESC, p.id DESC" });
-    let select = PLAY_SELECT.replacen("FROM visible_playbacks p\n", &format!("FROM {from} p\n"), 1);
+    let select = play_select(scope.perms.see_everyone).replacen("FROM visible_playbacks p\n", &format!("FROM {from} p\n"), 1);
     let sql = format!("{select} {} ORDER BY {order} LIMIT {per_page} OFFSET {}", cond.sql(), (page - 1) * per_page);
     let rows: Vec<Value> = rows_json(c, &sql, &cond.args)?
         .into_iter()
@@ -805,29 +819,35 @@ fn activity_page(c: &Connection, scope: &Scope, q: ActivityQuery) -> Result<Valu
 }
 
 pub async fn activity_detail(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -> ApiResult {
-    let found = scoped(&app, &user, &FilterQuery::default(), move |c, scope| {
-        let mut cond = Cond::default();
-        cond.add("p.id = ?", id);
-        cond.add_in("p.user_id", &scope.user_ids);
-        let Some(play) = one_json(c, &format!("{PLAY_SELECT} {}", cond.sql()), &cond.args)? else { return Ok(None) };
-        let mut play = decorate_play(play, scope.perms.see_network, true);
-        let events = rows_json(c, "SELECT at, kind, position_s, from_s, detail FROM playback_events WHERE playback_id = ?1 ORDER BY id", &[id.into()])?;
-        play["events"] = json!(events);
-        // The people it was watched with. Visible to anyone who can see this play: it was a shared evening.
-        let with = match play["group_id"].as_i64() {
-            Some(g) => rows_json(
-                c,
-                "SELECT DISTINCT p.user_id, COALESCE(u.name, p.user_name) AS user_name FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id
-                 WHERE p.group_id = ?1 AND p.user_id <> ?2 ORDER BY 2",
-                &[g.into(), play["user_id"].as_str().unwrap_or_default().to_string().into()],
-            )?,
-            None => vec![],
-        };
-        play["watched_with"] = json!(with);
-        Ok(Some(play))
-    })
-    .await?;
+    let found = scoped(&app, &user, &FilterQuery::default(), move |c, scope| play_detail(c, scope, id)).await?;
     found.map(Json).ok_or_else(|| ApiError::not_found("Play"))
+}
+
+/// One play as `GET /api/activity/{id}` answers it, with its timeline and the people it was watched with.
+fn play_detail(c: &Connection, scope: &Scope, id: i64) -> Result<Option<Value>> {
+    let mut cond = Cond::default();
+    cond.add("p.id = ?", id);
+    cond.add_in("p.user_id", &scope.user_ids);
+    let Some(play) = one_json(c, &format!("{} {}", play_select(scope.perms.see_everyone), cond.sql()), &cond.args)? else { return Ok(None) };
+    let mut play = decorate_play(play, scope.perms.see_network, true);
+    let events = rows_json(c, "SELECT at, kind, position_s, from_s, detail FROM playback_events WHERE playback_id = ?1 ORDER BY id", &[id.into()])?;
+    play["events"] = json!(events);
+    // The people it was watched with: everyone in its group, or, for whoever may see only themselves, those whose play
+    // ran alongside this one (`MET_SQL`).
+    let met = if scope.perms.see_everyone { "" } else { MET_SQL };
+    let with = match play["group_id"].as_i64() {
+        Some(g) => rows_json(
+            c,
+            &format!(
+                "SELECT DISTINCT p.user_id, COALESCE(u.name, p.user_name) AS user_name FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id
+                 WHERE p.group_id = ?1 AND p.user_id <> ?2 AND EXISTS (SELECT 1 FROM visible_playbacks m WHERE m.id = ?3 {met}) ORDER BY 2"
+            ),
+            &[g.into(), play["user_id"].as_str().unwrap_or_default().to_string().into(), id.into()],
+        )?,
+        None => vec![],
+    };
+    play["watched_with"] = json!(with);
+    Ok(Some(play))
 }
 
 #[derive(Deserialize)]
@@ -1738,9 +1758,14 @@ pub async fn search(State(app): State<App>, user: AuthUser, Query(q): Query<Sear
 
 /// Everybody's streams as the collector last saw them, with who watches with whom marked. Marked before anything is
 /// filtered out: you may see who you are watching with, even if you can't see their streams.
-pub fn marked_live(app: &App) -> Vec<Value> {
+/// Somebody who played the title just before this play began is looking, not watching (`groups::replayed`), which only
+/// the history can say; a failed read keeps nobody back, as before it was asked.
+pub async fn marked_live(app: &App) -> Vec<Value> {
     let mut sessions = app.live.read().unwrap().clone();
-    crate::groups::mark_live(&mut sessions, app.settings().group_window_s);
+    let window_s = app.settings().group_window_s;
+    let shown = sessions.clone();
+    let replayed = app.db.call(move |c| crate::groups::replayed(c, &shown, window_s)).await.unwrap_or_default();
+    crate::groups::mark_live_with(&mut sessions, window_s, &replayed);
     sessions
 }
 
@@ -1769,7 +1794,7 @@ pub fn now_playing_for(marked: &[Value], user: &AuthUser) -> Value {
 }
 
 pub async fn now_playing(State(app): State<App>, user: AuthUser) -> ApiResult {
-    Ok(Json(now_playing_for(&marked_live(&app), &user)))
+    Ok(Json(now_playing_for(&marked_live(&app).await, &user)))
 }
 
 pub async fn summary(State(app): State<App>, user: AuthUser) -> ApiResult {
@@ -3098,6 +3123,33 @@ mod tests {
         assert_eq!(names, vec![("bob", "Sintel"), ("alice", "Big Buck Bunny")]);
         assert_eq!(page["total"], 2);
         assert_eq!(activity_page(&c, &scope, ActivityQuery::default()).unwrap()["total"], 5, "without it, every play");
+    }
+
+    /// A group is joined through anybody in it, so a play's companions and the group's size told somebody who may see only
+    /// themselves of people their play never ran alongside. They are told of those it met.
+    #[test]
+    fn without_see_everyone_a_play_is_told_only_of_companions_it_met() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s, group_id) VALUES
+               (1, 'live', 'u1', 'alice', 'i1', 'Big Buck Bunny', 'Movie', 1000, 2000, 1000, 1),
+               (2, 'live', 'u2', 'bob',   'i1', 'Big Buck Bunny', 'Movie', 1010, 5000, 3990, 1),
+               (3, 'live', 'u3', 'carol', 'i1', 'Big Buck Bunny', 'Movie', 3000, 6000, 3000, 1);",
+        )
+        .unwrap();
+        let alice = Scope { user_ids: vec!["u1".into()], perms: crate::auth::Perms { see_everyone: false, ..Default::default() }, ..everyone() };
+        let play = play_detail(&c, &alice, 1).unwrap().unwrap();
+        assert_eq!(play["watched_with"], json!([{ "user_id": "u2", "user_name": "bob" }]), "carol never met alice's play");
+        assert_eq!(play["group_size"], 2);
+        assert_eq!(activity_page(&c, &alice, ActivityQuery::default()).unwrap()["rows"][0]["group_size"], 2);
+        let all = play_detail(&c, &everyone(), 1).unwrap().unwrap();
+        assert_eq!((all["watched_with"].as_array().unwrap().len(), all["group_size"].clone()), (2, json!(3)), "everyone's view is as before");
+        let rule = format!(">= {})", crate::groups::MIN_OVERLAP_S);
+        assert!(MET_SQL.ends_with(&rule[..rule.len() - 1]) && GROUP_SIZE_MET.contains(&rule), "the SQL meets as grouping does");
+        assert!(PLAY_SELECT.contains(GROUP_SIZE_ALL));
     }
 
     /// One person's row (a profile, `/stats/spans`) reads that person's plays and nobody else's: the outer `WHERE` does not

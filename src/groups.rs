@@ -7,7 +7,7 @@
 //! jitter and "you press play, I'm a moment late" spread genuine group starts over up to a minute.
 //! The end rule is SyncPlay with a late joiner, whose start can be minutes after the first.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use anyhow::Result;
 use axum::Json;
@@ -21,7 +21,7 @@ use crate::state::{ApiResult, App};
 use crate::stats::{FilterQuery, Scope};
 
 /// Two plays were "together" only if they shared at least this much time.
-const MIN_OVERLAP_S: i64 = 120;
+pub(crate) const MIN_OVERLAP_S: i64 = 120;
 
 struct Row {
     id: i64,
@@ -46,15 +46,69 @@ fn long_enough(r: &Row) -> bool {
 /// nearly the same measured place (`max(window, 30)` s, as for live streams). The second is SyncPlay with a late
 /// joiner: the first waits paused at the start for minutes, so the starts prove nothing, and from then on every pause
 /// lands on both.
+///
+/// Somebody with more than one play overlapping a group is left out of it, and the rest are grouped again without
+/// them: keeping a title playing in rotation, a new play every minute, started with everyone who played it meanwhile,
+/// and told whoever did so who they were and how long they watched. One person watching with others plays it once.
 fn cluster(rows: &[Row], window_s: i64) -> Vec<(i64, i64)> {
-    fn root(of: &mut [usize], i: usize) -> usize {
-        let mut r = i;
-        while of[r] != r {
-            r = of[r];
+    let mut left_out = vec![false; rows.len()];
+    loop {
+        let (mut of, grouped) = link(rows, window_s, &left_out);
+        let mut members: HashMap<usize, Vec<usize>> = HashMap::new();
+        for k in (0..rows.len()).filter(|&k| grouped[k]) {
+            members.entry(root(&mut of, k)).or_default().push(k);
         }
-        of[i] = r;
-        r
+        let looking = if members.is_empty() { vec![] } else { looking(rows, members.values()) };
+        if looking.is_empty() {
+            let mut lowest: HashMap<usize, i64> = HashMap::new();
+            for (&r, ks) in &members {
+                lowest.insert(r, ks.iter().map(|&k| rows[k].id).min().unwrap_or(0));
+            }
+            return (0..rows.len()).filter(|&k| grouped[k]).map(|k| (rows[k].id, lowest[&root(&mut of, k)])).collect();
+        }
+        for (k, row) in rows.iter().enumerate() {
+            if looking.iter().any(|&(who, from, to)| row.user == who && row.start < to && row.end > from) {
+                left_out[k] = true;
+            }
+        }
     }
+}
+
+fn root(of: &mut [usize], i: usize) -> usize {
+    let mut r = i;
+    while of[r] != r {
+        r = of[r];
+    }
+    of[i] = r;
+    r
+}
+
+/// Who, in any of these groups, has more than one play overlapping the group's span (its first start to its last end),
+/// with that span. Each person's plays are looked up by start, and at most `PEERS` of those that began before the end
+/// of the span are looked at.
+fn looking<'a>(rows: &'a [Row], groups: impl Iterator<Item = &'a Vec<usize>>) -> Vec<(&'a str, i64, i64)> {
+    let mut of_user: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (k, row) in rows.iter().enumerate() {
+        of_user.entry(row.user.as_str()).or_default().push(k);
+    }
+    let mut out = vec![];
+    for ks in groups {
+        let (from, to) = (ks.iter().map(|&k| rows[k].start).min().unwrap_or(0), ks.iter().map(|&k| rows[k].end).max().unwrap_or(0));
+        let people: BTreeSet<&str> = ks.iter().map(|&k| rows[k].user.as_str()).collect();
+        for who in people {
+            let mine = &of_user[who];
+            let before_end = mine.partition_point(|&k| rows[k].start < to);
+            let overlapping = mine[..before_end].iter().rev().take(PEERS).filter(|&&k| rows[k].end > from).take(2).count();
+            if overlapping > 1 {
+                out.push((who, from, to));
+            }
+        }
+    }
+    out
+}
+
+/// The joining itself, over the plays not left out: the union-find of every pair that is together, and which plays are.
+fn link(rows: &[Row], window_s: i64, left_out: &[bool]) -> (Vec<usize>, Vec<bool>) {
     let overlap = |a: &Row, b: &Row| a.end.min(b.end) - a.start.max(b.start) >= MIN_OVERLAP_S;
     let mut of: Vec<usize> = (0..rows.len()).collect();
     let mut grouped = vec![false; rows.len()];
@@ -62,12 +116,13 @@ fn cluster(rows: &[Row], window_s: i64) -> Vec<(i64, i64)> {
         let (ra, rb) = (root(of, a), root(of, b));
         of[ra.max(rb)] = ra.min(rb);
     };
+    let counts = |k: usize| !left_out[k] && long_enough(&rows[k]);
     // Starts: a play joins another person's that began within the window of its own start, never one that began
     // within the window of a third play's. Chaining start to start let anyone keep a title playing back to back all
     // evening and so put everyone who played it that evening into one group with each other.
-    for a in (0..rows.len()).filter(|&a| long_enough(&rows[a])) {
+    for a in (0..rows.len()).filter(|&a| counts(a)) {
         for b in (a + 1..rows.len()).take_while(|&b| rows[b].start - rows[a].start <= window_s).take(PEERS) {
-            if rows[b].user != rows[a].user && overlap(&rows[a], &rows[b]) {
+            if !left_out[b] && rows[b].user != rows[a].user && overlap(&rows[a], &rows[b]) {
                 grouped[a] = true;
                 grouped[b] = true;
                 join(&mut of, a, b);
@@ -76,7 +131,7 @@ fn cluster(rows: &[Row], window_s: i64) -> Vec<(i64, i64)> {
     }
     // Ends: only plays whose stop was measured, compared with those ending within the window after them.
     let near = window_s.max(30);
-    let mut by_end: Vec<usize> = (0..rows.len()).filter(|&k| rows[k].stop.is_some() && long_enough(&rows[k])).collect();
+    let mut by_end: Vec<usize> = (0..rows.len()).filter(|&k| rows[k].stop.is_some() && counts(k)).collect();
     by_end.sort_by_key(|&k| rows[k].end);
     for (x, &a) in by_end.iter().enumerate() {
         for &b in by_end[x + 1..].iter().take_while(|&&b| rows[b].end - rows[a].end <= window_s).take(PEERS) {
@@ -88,13 +143,7 @@ fn cluster(rows: &[Row], window_s: i64) -> Vec<(i64, i64)> {
             }
         }
     }
-    let mut lowest: HashMap<usize, i64> = HashMap::new();
-    for k in (0..rows.len()).filter(|&k| grouped[k]) {
-        let r = root(&mut of, k);
-        let id = lowest.entry(r).or_insert(rows[k].id);
-        *id = (*id).min(rows[k].id);
-    }
-    (0..rows.len()).filter(|&k| grouped[k]).map(|k| (rows[k].id, lowest[&root(&mut of, k)])).collect()
+    (of, grouped)
 }
 
 /// The same idea for streams that are running right now: same title, different people, and either
@@ -104,8 +153,45 @@ fn cluster(rows: &[Row], window_s: i64) -> Vec<(i64, i64)> {
 /// How many companions a live stream names; its group's size says how many there are in all.
 pub const COMPANIONS_NAMED: usize = 6;
 
+#[cfg(test)]
 pub fn mark_live(sessions: &mut [Value], window_s: i64) {
+    mark_live_with(sessions, window_s, &HashSet::new());
+}
+
+/// Which (person, title) of these streams follows a play of the same title by the same person that ended within the
+/// window before it began: somebody playing a title from one device after another, who is looking, not watching. Read
+/// only when a title has more than one person on it, through the index on when plays ended.
+pub fn replayed(conn: &Connection, sessions: &[Value], window_s: i64) -> Result<HashSet<(String, String)>> {
+    let mut people_on: HashMap<&str, BTreeSet<&str>> = HashMap::new();
+    for s in sessions {
+        if let (Some(item), Some(user)) = (s["item_id"].as_str(), s["user_id"].as_str()) {
+            people_on.entry(item).or_default().insert(user);
+        }
+    }
+    let shared: Vec<&Value> = sessions.iter().filter(|s| s["item_id"].as_str().is_some_and(|i| people_on[i].len() > 1)).collect();
+    let Some(earliest) = shared.iter().filter_map(|s| s["started_at"].as_i64()).min() else { return Ok(HashSet::new()) };
+    let ended: HashMap<(String, String), i64> = conn
+        .prepare("SELECT user_id, item_id, MAX(ended_at) FROM visible_playbacks WHERE active = 0 AND ended_at >= ?1 GROUP BY user_id, item_id")?
+        .query_map([earliest.saturating_sub(window_s)], |r| Ok(((r.get(0)?, r.get(1)?), r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    Ok(shared
+        .iter()
+        .filter_map(|s| {
+            let key = (s["user_id"].as_str()?.to_string(), s["item_id"].as_str()?.to_string());
+            let started = s["started_at"].as_i64()?;
+            ended.get(&key).is_some_and(|&at| at >= started.saturating_sub(window_s)).then_some(key)
+        })
+        .collect())
+}
+
+/// [`mark_live`], with the streams [`replayed`] found: they name nobody to whoever may see only themselves, and are
+/// named to nobody there.
+pub fn mark_live_with(sessions: &mut [Value], window_s: i64, replayed: &HashSet<(String, String)>) {
     let near = window_s.max(30);
+    let looking: Vec<bool> = sessions
+        .iter()
+        .map(|s| !replayed.is_empty() && matches!((s["user_id"].as_str(), s["item_id"].as_str()), (Some(u), Some(i)) if replayed.contains(&(u.to_string(), i.to_string()))))
+        .collect();
     // Read what the comparison needs once, as plain values: looking fields up in JSON for every pair of streams is
     // what made 10,000 streams take 40 s. People become small numbers, so "already counted" is one array lookup.
     let mut people: HashMap<String, usize> = HashMap::new();
@@ -123,7 +209,7 @@ pub fn mark_live(sessions: &mut [Value], window_s: i64) {
     }
     // For whoever may see only themselves (`alone`): a position anybody may seek to proves nothing about who is there,
     // and somebody with the title playing more than once is looking, not watching.
-    let (everyone, alone) = live_groups(&facts, people.len(), &titles, window_s, near);
+    let (everyone, alone) = live_groups(&facts, &looking, people.len(), &titles, window_s, near);
     let named = |sessions: &[Value], group: Option<(usize, Vec<usize>)>| {
         group.map(|(size, named)| {
             let with: Vec<Value> = named.into_iter().map(|o| json!({ "user_id": sessions[o]["user_id"], "user_name": sessions[o]["user_name"] })).collect();
@@ -149,7 +235,7 @@ type Live = Vec<Option<(usize, Vec<usize>)>>;
 /// Each stream's companions on the same title (how many, and the first `COMPANIONS_NAMED`), read two ways in one pass:
 /// people whose stream started within the window of its own or sits within `near` of its position, and, for whoever may
 /// see only themselves, people who started with it, unless its own person has the title playing more than once.
-fn live_groups(facts: &[Fact], people: usize, titles: &HashMap<String, Vec<usize>>, window_s: i64, near: i64) -> (Live, Live) {
+fn live_groups(facts: &[Fact], looking: &[bool], people: usize, titles: &HashMap<String, Vec<usize>>, window_s: i64, near: i64) -> (Live, Live) {
     let close = |a: Option<i64>, b: Option<i64>, within: i64| matches!((a, b), (Some(p), Some(q)) if (p - q).abs() <= within);
     let (mut counted, mut counted_alone) = (vec![usize::MAX; people], vec![usize::MAX; people]);
     let mut streams_of = vec![0usize; people];
@@ -163,7 +249,7 @@ fn live_groups(facts: &[Fact], people: usize, titles: &HashMap<String, Vec<usize
         }
         for &a in streams {
             let (me, pos, started) = facts[a];
-            let single = streams_of[me] == 1;
+            let single = streams_of[me] == 1 && !looking[a];
             counted[me] = a;
             counted_alone[me] = a;
             let (mut size, mut named, mut size_alone, mut named_alone) = (0usize, Vec::new(), 0usize, Vec::new());
@@ -177,7 +263,7 @@ fn live_groups(facts: &[Fact], people: usize, titles: &HashMap<String, Vec<usize
                         named.push(b);
                     }
                 }
-                if single && counted_alone[who] != a && started_with {
+                if single && !looking[b] && counted_alone[who] != a && started_with {
                     counted_alone[who] = a;
                     size_alone += 1;
                     if named_alone.len() < COMPANIONS_NAMED {
@@ -268,8 +354,9 @@ const REGROUPED_KEY: &str = "groups_detected";
 
 /// Which rule `cluster` groups by. A new rule regroups the whole history once, even under the same version and window:
 /// 2 is "or ended together at the same place" (2.3.0), which found SyncPlay evenings with a late joiner; 3 joins a play
-/// only to one that started within the window of its own start (2.3.1), so plays back to back no longer chain strangers.
-const RULE: i64 = 3;
+/// only to one that started within the window of its own start (2.3.1), so plays back to back no longer chain strangers;
+/// 4 leaves out of a group whoever has more than one play overlapping it, so plays in rotation group nobody.
+const RULE: i64 = 4;
 
 /// The start-up pass. A play that ends regroups its title at once, and an import, a restore or a new window regroup
 /// everything themselves, so a start has only to catch what the last run left behind: plays it was still recording
@@ -315,6 +402,7 @@ pub struct PlayRow {
     pub has_image: bool,
     pub duration_s: i64,
     pub started_at: i64,
+    pub ended_at: i64,
     pub item: Value,
     pub title_id: String,
     pub title_name: String,
@@ -403,6 +491,42 @@ pub struct Pair {
 /// the whole of every group those people were in, which is what lets someone who may only see
 /// themselves still see who they were watching with.
 pub fn sessions_for(conn: &Connection, w: &Window, library_id: Option<&str>, user_ids: &[String]) -> Result<Vec<Session>> {
+    Ok(fold_sessions(grouped_plays(conn, w, library_id, user_ids)?))
+}
+
+/// [`sessions_for`] as somebody who may see only themselves (`viewers`) is told it: [`met_by`] them.
+pub fn sessions_met_by(conn: &Connection, w: &Window, library_id: Option<&str>, viewers: &[String]) -> Result<Vec<Session>> {
+    Ok(fold_sessions(met_by(grouped_plays(conn, w, library_id, viewers)?, viewers)))
+}
+
+/// Of each group, the viewers' own plays and the others' plays that ran alongside one of theirs for at least
+/// `MIN_OVERLAP_S`, each counted for that time only; a group none of whose others met them is left out. A group is
+/// joined through anybody in it, so its whole membership told one person of people their play never met, and each
+/// member's whole watch time told them more than the evening did.
+pub fn met_by(rows: Vec<PlayRow>, viewers: &[String]) -> Vec<PlayRow> {
+    let mut mine: HashMap<i64, Vec<(i64, i64)>> = HashMap::new();
+    for r in rows.iter().filter(|r| viewers.contains(&r.user_id)) {
+        mine.entry(r.group_id).or_default().push((r.started_at, r.ended_at));
+    }
+    let kept: Vec<PlayRow> = rows
+        .into_iter()
+        .filter_map(|mut r| {
+            if viewers.contains(&r.user_id) {
+                return Some(r);
+            }
+            let met = mine.get(&r.group_id)?.iter().map(|&(s, e)| e.min(r.ended_at).saturating_sub(s.max(r.started_at))).max()?;
+            (met >= MIN_OVERLAP_S).then(|| {
+                r.duration_s = r.duration_s.min(met);
+                r
+            })
+        })
+        .collect();
+    let met: HashSet<i64> = kept.iter().filter(|r| !viewers.contains(&r.user_id)).map(|r| r.group_id).collect();
+    kept.into_iter().filter(|r| met.contains(&r.group_id)).collect()
+}
+
+/// The grouped plays [`sessions_for`] folds, in group order.
+fn grouped_plays(conn: &Connection, w: &Window, library_id: Option<&str>, user_ids: &[String]) -> Result<Vec<PlayRow>> {
     let mut wh = vec!["p.group_id IS NOT NULL".to_string()];
     let mut args: Vec<SqlValue> = vec![];
     // A session belongs whole to the window it started in: every member of a group whose first play started
@@ -436,7 +560,7 @@ pub fn sessions_for(conn: &Connection, w: &Window, library_id: Option<&str>, use
     }
     let sql = format!(
         "SELECT p.group_id, p.user_id, COALESCE(u.name, p.user_name), (u.image_tag IS NOT NULL), p.duration_s, p.started_at,
-                p.item_id, p.item_name, p.item_type, p.series_id, p.series_name, p.season_number, p.episode_number
+                p.item_id, p.item_name, p.item_type, p.series_id, p.series_name, p.season_number, p.episode_number, p.ended_at
          FROM visible_playbacks p LEFT JOIN users u ON u.id = p.user_id WHERE {} ORDER BY p.group_id, p.started_at",
         wh.join(" AND ")
     );
@@ -451,6 +575,7 @@ pub fn sessions_for(conn: &Connection, w: &Window, library_id: Option<&str>, use
             has_image: r.get(3)?,
             duration_s: r.get(4)?,
             started_at: r.get(5)?,
+            ended_at: r.get(13)?,
             title_id: series_id.clone().unwrap_or_else(|| item_id.clone()),
             title_name: series_name.clone().unwrap_or_else(|| item_name.clone()),
             item: json!({
@@ -460,7 +585,7 @@ pub fn sessions_for(conn: &Connection, w: &Window, library_id: Option<&str>, use
             }),
         })
     })?;
-    Ok(fold_sessions(rows.collect::<Result<Vec<_>, _>>()?))
+    Ok(rows.collect::<Result<Vec<_>, _>>()?)
 }
 
 /// Rows into sessions, one per group, in group order.
@@ -635,7 +760,9 @@ fn pair_json(p: &Pair) -> Value {
 /// cards always had, plus the pairs, a gap-free series of time together against time alone, each
 /// person's share, and the same window right before for the deltas.
 pub(crate) fn answer(c: &Connection, scope: &Scope) -> Result<Value> {
-    let sessions = sessions_for(c, &Window { since: scope.since, until: None }, scope.library_id.as_deref(), &scope.user_ids)?;
+    // Without "see everyone", the groups as the caller's own plays met them.
+    let read = |w: &Window| if scope.perms.see_everyone { sessions_for(c, w, scope.library_id.as_deref(), &scope.user_ids) } else { sessions_met_by(c, w, scope.library_id.as_deref(), &scope.user_ids) };
+    let sessions = read(&Window { since: scope.since, until: None })?;
     let people_seen: BTreeSet<&str> = sessions.iter().flat_map(|s| s.per_user.keys().map(String::as_str)).collect();
     let cond = scope.cond();
     let totals = watch_totals(c, &cond)?;
@@ -664,7 +791,7 @@ pub(crate) fn answer(c: &Connection, scope: &Scope) -> Result<Value> {
 
     let previous = match (scope.since, scope.previous_cond()) {
         (Some(since), Some(pcond)) => {
-            let before = sessions_for(c, &Window { since: Some(since - scope.days * 86_400), until: Some(since) }, scope.library_id.as_deref(), &scope.user_ids)?;
+            let before = read(&Window { since: Some(since - scope.days * 86_400), until: Some(since) })?;
             let ptotals = watch_totals(c, &pcond)?;
             let (_, _, pshare) = share_of(&before, &scope.user_ids, &ptotals);
             let ppeople: BTreeSet<&str> = before.iter().flat_map(|s| s.per_user.keys().map(String::as_str)).collect();
@@ -706,7 +833,7 @@ mod tests {
     // ---- the fold and what is read off it (2.0)
 
     fn play(gid: i64, user: &str, dur: i64, started: i64, title: &str) -> PlayRow {
-        PlayRow { group_id: gid, user_id: user.into(), user_name: user.to_uppercase(), has_image: false, duration_s: dur, started_at: started,
+        PlayRow { group_id: gid, user_id: user.into(), user_name: user.to_uppercase(), has_image: false, duration_s: dur, started_at: started, ended_at: started + dur,
                   item: json!({ "item_id": title, "item_name": title }), title_id: title.into(), title_name: title.into() }
     }
 
@@ -792,6 +919,24 @@ mod tests {
         assert_eq!(s.len(), 1);
         assert_eq!(s[0].per_user.keys().cloned().collect::<Vec<_>>(), ["a", "b"], "b is in a's group, so b is answered");
         assert_eq!(sessions_for(&c, &Window { since: None, until: None }, None, &[]).unwrap().len(), 2);
+    }
+
+    /// Somebody who may see only themselves was handed the whole of every group they were in: people their own play never
+    /// ran alongside (joined through a third), and each member's whole watch time rather than the time spent with them.
+    /// They are told of those their play met, for as long as it met them.
+    #[test]
+    fn who_may_see_only_themselves_is_told_of_those_their_play_met_and_for_how_long() {
+        let at = |gid: i64, user: &str, started: i64, ended: i64| PlayRow { ended_at: ended, ..play(gid, user, ended - started, started, "Film") };
+        let rows = vec![
+            at(1, "a", 1000, 2000), at(1, "b", 1010, 5000), at(1, "c", 3000, 6000),
+            at(2, "a", 9000, 12000), at(2, "d", 11_940, 15_000),
+        ];
+        let sessions = fold_sessions(met_by(rows, &["a".into()]));
+        assert_eq!(sessions.len(), 1, "a met d for a minute: no evening together");
+        let s = &sessions[0];
+        assert_eq!(s.per_user.keys().cloned().collect::<Vec<_>>(), ["a", "b"], "c never met a's play");
+        assert_eq!(s.per_user["b"].duration_s, 990, "b's time with a, not b's whole play");
+        assert_eq!(s.per_user["a"].duration_s, 1000);
     }
 
     #[test]
@@ -895,6 +1040,28 @@ mod tests {
         assert_eq!(all["totals"]["sessions"], 2);
     }
 
+    /// One person keeping a title playing in rotation (a new four-minute play every minute) started with everyone who
+    /// played it meanwhile, and was grouped with each of them: names, starts and whole watch times of strangers. Somebody
+    /// with more than one play overlapping a group is looking, not watching, and is left out of it.
+    #[test]
+    fn plays_in_rotation_put_nobody_into_a_group() {
+        let mut rows: Vec<Row> = (0..60).map(|k| r(k + 1, "sam", k * 60, 240)).collect();
+        rows.push(r(100, "priya", 1234, 5400));
+        rows.sort_by_key(|x| (x.start, x.id));
+        assert_eq!(cluster(&rows, 60), vec![], "priya was grouped with somebody playing the title over and over");
+        // Spaced so that only one start falls within the window of hers, the plays still overlap one another.
+        let mut rows: Vec<Row> = (0..30).map(|k| r(k + 1, "sam", k * 150, 300)).collect();
+        rows.push(r(100, "priya", 1234, 5400));
+        rows.sort_by_key(|x| (x.start, x.id));
+        assert_eq!(cluster(&rows, 60), vec![]);
+        // What was left out is that evening, not the person: a week on, sam and priya watch it together.
+        rows.extend([r(200, "sam", 604_800, 5400), r(201, "priya", 604_810, 5400)]);
+        assert_eq!(cluster(&rows, 60), vec![(200, 200), (201, 200)]);
+        // A real evening keeps its group, and somebody who played the title once, earlier, does not undo it.
+        let rows = vec![r(1, "a", 0, 600), r(2, "a", 5000, 1500), r(3, "b", 5004, 1500)];
+        assert_eq!(cluster(&rows, 60), vec![(2, 2), (3, 2)]);
+    }
+
     #[test]
     fn people_starting_together_form_a_group() {
         // a and b press play 4 s apart, c joins 40 s later; d watches the same thing an hour on.
@@ -918,6 +1085,38 @@ mod tests {
         mark_live(&mut probing, 60);
         assert!(probing[0]["group_seen_alone"].is_null() && probing[1]["group_seen_alone"].is_null(), "two streams of the title named a companion");
         assert_eq!(probing[2]["group_seen_alone"]["size"], 2, "carol started with mallory, and is told of one person");
+    }
+
+    /// Playing a title from one device after another kept "playing it once" at every moment, and each new play started
+    /// with whoever had just pressed play. Somebody whose play of the title ended within the window before this one began
+    /// (`replayed`) is looking, not watching: they are told of nobody, and nobody who may see only themselves is told of them.
+    #[test]
+    fn who_keeps_restarting_a_title_names_nobody_and_is_named_to_nobody() {
+        let s = |user: &str, started: i64| json!({ "user_id": user, "user_name": user, "item_id": "ep", "position_s": 10, "started_at": started });
+        let mut live = vec![s("mallory", 9000), s("carol", 9010)];
+        let replayed: HashSet<(String, String)> = [("mallory".to_string(), "ep".to_string())].into();
+        mark_live_with(&mut live, 60, &replayed);
+        assert!(live[0]["group_seen_alone"].is_null(), "{}", live[0]);
+        assert!(live[1]["group_seen_alone"].is_null(), "carol was told of somebody only looking: {}", live[1]);
+        assert_eq!(live[0]["group"]["size"], 2, "everyone's view is as before");
+        assert!(live.iter().all(|l| l.get("replayed").is_none()));
+    }
+
+    #[test]
+    fn a_play_that_ended_just_before_a_live_one_of_the_same_title_is_a_replay() {
+        let c = conn();
+        c.execute_batch(
+            "INSERT INTO playbacks(id, source, active, user_id, user_name, item_id, item_name, item_type, started_at, ended_at, duration_s) VALUES
+               (1, 'live', 0, 'mallory', 'mallory', 'ep', 'Pilot', 'Episode', 8700, 8990, 290),
+               (2, 'live', 1, 'mallory', 'mallory', 'ep', 'Pilot', 'Episode', 9000, 9100, 100),
+               (3, 'live', 0, 'carol', 'carol', 'ep', 'Pilot', 'Episode', 1000, 2000, 1000),
+               (4, 'live', 1, 'carol', 'carol', 'ep', 'Pilot', 'Episode', 9010, 9100, 90);",
+        )
+        .unwrap();
+        let s = |user: &str, started: i64| json!({ "user_id": user, "item_id": "ep", "started_at": started });
+        let got = replayed(&c, &[s("mallory", 9000), s("carol", 9010)], 60).unwrap();
+        assert_eq!(got, [("mallory".to_string(), "ep".to_string())].into(), "carol's play ended hours before");
+        assert!(replayed(&c, &[s("mallory", 9000)], 60).unwrap().is_empty(), "nobody to be told of: nothing is read");
     }
 
     #[test]
@@ -1097,7 +1296,7 @@ mod tests {
         rows.push(r(1000, "bob", 5400, 3600));
         rows.sort_by_key(|x| (x.start, x.id));
         let got: HashMap<i64, i64> = cluster(&rows, 60).into_iter().collect();
-        assert_ne!(got[&1], got[&1000], "alice and bob were put in one group");
+        assert!(got.get(&1).is_none_or(|g| got.get(&1000) != Some(g)), "alice and bob were put in one group");
     }
 
     #[test]
@@ -1106,8 +1305,9 @@ mod tests {
         assert!(cluster(&[r(1, "a", 0, 1500), r(2, "a", 3, 1500)], 60).is_empty());
         // Started together, but one of them left after a minute: never really together.
         assert!(cluster(&[r(1, "a", 0, 1500), r(2, "b", 2, 60)], 60).is_empty());
-        // A restart by the same person stays in the group; the one who bailed at once does not.
-        let rows = vec![r(1, "a", 0, 900), r(2, "b", 3, 1500), r(3, "c", 5, 30), r(4, "a", 50, 600)];
-        assert_eq!(cluster(&rows, 60), vec![(1, 1), (2, 1), (4, 1)]);
+        // Somebody playing it twice while the others watch is left out, and the others are still together; the one who
+        // bailed at once is not.
+        let rows = vec![r(1, "a", 0, 900), r(2, "b", 3, 1500), r(3, "c", 5, 30), r(4, "d", 10, 1500), r(5, "a", 50, 600)];
+        assert_eq!(cluster(&rows, 60), vec![(2, 2), (4, 2)]);
     }
 }

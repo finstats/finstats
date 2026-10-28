@@ -331,7 +331,7 @@ pub async fn run(app: App) {
             continue;
         }
         let now = crate::db::now();
-        let marked = crate::stats::marked_live(&app);
+        let marked = crate::stats::marked_live(&app).await;
         let sh = shape(&marked);
         if shown_shape != Some(sh) || course.moved(&marked, now) {
             course.set(&marked, now);
@@ -616,7 +616,7 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
             if due.contains(&"now_playing") {
                 np.borrow_and_update();
             }
-            Arc::new(crate::stats::marked_live(&app))
+            Arc::new(crate::stats::marked_live(&app).await)
         } else {
             np.borrow().clone()
         };
