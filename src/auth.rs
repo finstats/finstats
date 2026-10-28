@@ -210,7 +210,17 @@ pub fn bearer_token(headers: &HeaderMap) -> Option<Result<String, ApiError>> {
 
 /// The header wins over the cookie: it is an explicit act of this request where a cookie is ambient,
 /// so a script sending a revoked key gets its 401 rather than quietly succeeding on a browser's session.
+/// Another scheme (`Basic`, which a proxy's own sign-in passes along) beside a cookie is not FinStats' and is left alone;
+/// keys are `Bearer` only.
 pub fn pick_credential(headers: &HeaderMap) -> Result<Presented, ApiError> {
+    let not_bearer = headers
+        .get(AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split_whitespace().next())
+        .is_some_and(|scheme| !scheme.eq_ignore_ascii_case("bearer"));
+    if not_bearer && let Some(cookie) = cookie_token(headers) {
+        return Ok(Presented::Cookie(cookie));
+    }
     match bearer_token(headers) {
         Some(t) => Ok(Presented::Bearer(t?)),
         None => cookie_token(headers).map(Presented::Cookie).ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.sign_in_to_continue", &[]))),
@@ -600,7 +610,9 @@ async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms
         .unwrap_or((false, false));
     // `features`: which optional pages have something behind them (a connected Sonarr, a Seerr, …). `jellyfin_details`:
     // a title's page in Jellyfin is this followed by its id, for a link offered where the answer had none to give (a menu).
-    let jellyfin_details = crate::stats::jellyfin_base(app).map(|b| crate::jellyfin::web_link(&b, ""));
+    // Only the address an administrator gave for people to open Jellyfin at: the one FinStats reads it at is often inside
+    // the house, and only administrators are shown that.
+    let jellyfin_details = Some(app.settings().jellyfin_public_url.trim().to_string()).filter(|u| !u.is_empty()).map(|b| crate::jellyfin::web_link(&b, ""));
     // `public_url`: the address FinStats is reached at, for a link made in the page (a calendar feed's); the settings
     // that hold it are a manager's to read.
     let public_url = Some(app.settings().public_url.trim_end_matches('/').to_string()).filter(|u| !u.is_empty());
@@ -1512,8 +1524,15 @@ mod key_tests {
         assert_eq!(pick_credential(&h).unwrap(), Presented::Cookie("cookie-token".into()));
         h.insert(AUTHORIZATION, HeaderValue::from_static("Bearer fs_abc"));
         assert_eq!(pick_credential(&h).unwrap(), Presented::Bearer("fs_abc".into()), "an explicit header, not the ambient cookie");
+        h.insert(AUTHORIZATION, HeaderValue::from_static("Bearer"));
+        assert_eq!(pick_credential(&h).unwrap_err().0, StatusCode::UNAUTHORIZED, "a key sent wrong never falls back to the cookie");
+        // A proxy's own sign-in (nginx's auth_basic) passes `Authorization: Basic` along with every request: that is not
+        // FinStats' to judge, and the cookie beside it is the browser's.
         h.insert(AUTHORIZATION, HeaderValue::from_static("Basic dXNlcjpwYXNz"));
-        assert_eq!(pick_credential(&h).unwrap_err().0, StatusCode::UNAUTHORIZED, "a wrong header never falls back to the cookie");
+        assert_eq!(pick_credential(&h).unwrap(), Presented::Cookie("cookie-token".into()));
+        let mut basic_alone = HeaderMap::new();
+        basic_alone.insert(AUTHORIZATION, HeaderValue::from_static("Basic dXNlcjpwYXNz"));
+        assert_eq!(pick_credential(&basic_alone).unwrap_err().0, StatusCode::UNAUTHORIZED);
         assert_eq!(pick_credential(&HeaderMap::new()).unwrap_err().0, StatusCode::UNAUTHORIZED);
     }
 
@@ -1566,6 +1585,10 @@ mod me_tests {
         let app = crate::state::test_app();
         let me = || user_json(&app, "u1", "alice", false, Perms::default());
         assert_eq!(me().await["jellyfin_details"], Value::Null, "no Jellyfin yet, no link");
+        // The address FinStats reads Jellyfin at is often one inside the house, which only administrators are shown; a
+        // link is offered once Settings names the address people open Jellyfin at.
+        *app.config.write().unwrap() = Some(JfConfig { url: "http://192.168.1.10:8096".into(), api_key: "k".into(), server_name: "Jellyfin".into(), server_version: String::new(), from_env: false });
+        assert_eq!(me().await["jellyfin_details"], Value::Null, "the internal address was told to everyone signed in");
         app.update_settings(|s| {
             s.jellyfin_public_url = "https://jellyfin.example.com/".into();
             Ok(())
