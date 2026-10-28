@@ -141,16 +141,19 @@ const SQL: &str = "SELECT i.id, i.type, i.name, i.date_created, date(i.date_crea
  FROM items i
  LEFT JOIN items s ON s.id = i.series_id
  LEFT JOIN items sn ON sn.id = i.season_id
- WHERE i.removed = 0 AND i.date_created IS NOT NULL AND {TYPE} IN ({TYPES})
+ WHERE i.removed = 0 AND i.date_created IS NOT NULL AND {TYPE} IN ({TYPES}) AND {SEEN}
  ORDER BY i.date_created DESC";
 
-fn sql(kind: Kind) -> String {
-    SQL.replace("{TYPE}", if kind == Kind::All { "+i.type" } else { "i.type" }).replace("{TYPES}", kind.types())
+/// The shelf's query for one kind, as one person may see it (`access.rs`).
+fn sql(kind: Kind, access: &crate::access::Access) -> (String, Vec<crate::db::rusqlite::types::Value>) {
+    let (seen, args) = access.items_sql("i");
+    (SQL.replace("{TYPE}", if kind == Kind::All { "+i.type" } else { "i.type" }).replace("{TYPES}", kind.types()).replace("{SEEN}", &seen), args)
 }
 
-fn recent(conn: &Connection, limit: usize, kind: Kind) -> Result<Vec<Value>> {
-    let mut stmt = conn.prepare(&sql(kind))?;
-    let rows = stmt.query_map([], |r| {
+fn recent(conn: &Connection, limit: usize, kind: Kind, access: &crate::access::Access) -> Result<Vec<Value>> {
+    let (sql, args) = sql(kind, access);
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(crate::db::rusqlite::params_from_iter(args.iter()), |r| {
         Ok(Added {
             id: r.get(0)?, item_type: r.get(1)?, name: r.get(2)?, at: r.get(3)?, day: r.get(4)?, series_id: r.get(5)?, series_name: r.get(6)?,
             season_number: r.get(7)?, episode_number: r.get(8)?, season_image_id: r.get(9)?, year: r.get(10)?, album_artist: r.get(11)?,
@@ -170,7 +173,7 @@ fn recent(conn: &Connection, limit: usize, kind: Kind) -> Result<Vec<Value>> {
 pub fn announce(conn: &Connection, bus: &crate::notify::Fanout) -> Result<usize> {
     let cutoff = crate::db::now() - crate::notify::HISTORIC_S;
     let mut added = 0;
-    for entry in recent(conn, MAX_LIMIT, Kind::All)? {
+    for entry in recent(conn, MAX_LIMIT, Kind::All, &crate::access::Access::everything())? {
         let at = entry["added_at"].as_i64().unwrap_or(0);
         if at < cutoff {
             break; // the list is newest first
@@ -205,11 +208,11 @@ fn announce_key(entry: &Value) -> Option<String> {
     Some(format!("notify:new_items:{}:{n}", entry["id"].as_str()?))
 }
 
-/// The library is the same for everyone who may sign in, so this is not scoped to the caller.
-pub async fn recently_added(State(app): State<App>, _user: AuthUser, Query(q): Query<RecentQuery>) -> ApiResult {
+/// What arrived lately of what Jellyfin lets the caller see.
+pub async fn recently_added(State(app): State<App>, user: AuthUser, Query(q): Query<RecentQuery>) -> ApiResult {
     let limit = q.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
     let kind = Kind::asked(q.kind.as_deref());
-    let items = app.db.call(move |c| recent(c, limit, kind)).await?;
+    let items = app.db.call(move |c| recent(c, limit, kind, &crate::access::Access::for_user(c, &user)?)).await?;
     Ok(Json(json!({ "items": items })))
 }
 
@@ -280,14 +283,49 @@ mod tests {
                ('v1', 'Video', 'Home movie', NULL, NULL, NULL, NULL, 1790000400, 0, 0);",
         )
         .unwrap();
-        let names = |kind: Kind| -> Vec<String> { recent(&c, 30, kind).unwrap().iter().map(|e| e["name"].as_str().unwrap().to_string()).collect() };
+        let names = |kind: Kind| -> Vec<String> { recent(&c, 30, kind, &all()).unwrap().iter().map(|e| e["name"].as_str().unwrap().to_string()).collect() };
         assert_eq!(names(Kind::All), vec!["Home movie", "Rookery", "Big Buck Bunny", "First Light"]);
         assert_eq!(names(Kind::Movies), vec!["Big Buck Bunny"]);
         assert_eq!(names(Kind::Shows), vec!["Rookery"]);
-        assert_eq!(recent(&c, 30, Kind::Shows).unwrap()[0]["episodes"], 2);
+        assert_eq!(recent(&c, 30, Kind::Shows, &all()).unwrap()[0]["episodes"], 2);
         assert_eq!(names(Kind::Music), vec!["First Light"]);
         assert_eq!([Kind::asked(Some("music")), Kind::asked(Some("shows")), Kind::asked(Some("movies")), Kind::asked(Some("films")), Kind::asked(None)],
                    [Kind::Music, Kind::Shows, Kind::Movies, Kind::All, Kind::All]);
+    }
+
+    fn all() -> crate::access::Access {
+        crate::access::Access::everything()
+    }
+
+    /// Somebody kept to the library `films`, with titles hidden from them.
+    fn limited() -> crate::access::Access {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch("INSERT INTO users(id, name, is_admin, updated_at, access_all, access_libraries, access_hides, visible_for) VALUES ('kid', 'kid', 0, 0, 0, '[\"films\"]', 'r', 'r');").unwrap();
+        crate::access::Access::of(&c, "kid", false).unwrap()
+    }
+
+    /// FinStats follows Jellyfin: a library a person is kept out of, and a title Jellyfin hides from them, never arrives
+    /// on their shelf.
+    #[test]
+    fn the_shelf_holds_only_what_jellyfin_lets_the_person_see() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO items(id, library_id, type, name, date_created, removed, updated_at) VALUES
+               ('m1', 'films', 'Movie', 'Big Buck Bunny', 1790000200, 0, 0), ('m2', 'films', 'Movie', 'Sintel', 1790000300, 0, 0),
+               ('m3', 'adult', 'Movie', 'Elephants Dream', 1790000400, 0, 0);
+             INSERT INTO users(id, name, is_admin, updated_at, access_all, access_libraries, access_hides, visible_for) VALUES ('kid', 'kid', 0, 0, 0, '[\"films\"]', 'r', 'r');
+             INSERT INTO visible_items(user_id, item_id) VALUES ('kid', 'm1'), ('kid', 'm3');",
+        )
+        .unwrap();
+        let names = |a: &crate::access::Access| -> Vec<String> { recent(&c, 30, Kind::All, a).unwrap().iter().map(|e| e["name"].as_str().unwrap().to_string()).collect() };
+        assert_eq!(names(&all()), ["Elephants Dream", "Sintel", "Big Buck Bunny"]);
+        assert_eq!(names(&crate::access::Access::of(&c, "kid", false).unwrap()), ["Big Buck Bunny"], "not the library they are kept out of, nor what Jellyfin hides");
     }
 
     #[test]
@@ -300,11 +338,15 @@ mod tests {
         // One kind walks its own type newest first: through every title's, a kind the library has few of (no music at
         // all, a handful of films among thousands of episodes) read the whole library before it knew it had them all.
         for (kind, index) in [(Kind::All, "idx_items_added"), (Kind::Movies, "idx_items_type_added"), (Kind::Shows, "idx_items_type_added"), (Kind::Music, "idx_items_type_added")] {
-            let plan: Vec<String> = conn.prepare(&format!("EXPLAIN QUERY PLAN {}", sql(kind))).unwrap()
-                .query_map([], |r| r.get::<_, String>(3)).unwrap().map(|r| r.unwrap()).collect();
-            assert!(plan.iter().any(|p| p.contains(&format!("{index} "))) && !plan.iter().any(|p| p.contains("TEMP B-TREE")), "{kind:?}: {plan:?}");
+            // Whoever asks: somebody kept to some libraries, with titles Jellyfin hides from them, walks the same index.
+            for access in [all(), limited()] {
+                let (q, args) = sql(kind, &access);
+                let plan: Vec<String> = conn.prepare(&format!("EXPLAIN QUERY PLAN {q}")).unwrap()
+                    .query_map(crate::db::rusqlite::params_from_iter(args.iter()), |r| r.get::<_, String>(3)).unwrap().map(|r| r.unwrap()).collect();
+                assert!(plan.iter().any(|p| p.contains(&format!("{index} "))) && !plan.iter().any(|p| p.contains("TEMP B-TREE")), "{kind:?}: {plan:?}");
+            }
         }
-        assert!(recent(&conn, 30, Kind::All).unwrap().is_empty());
+        assert!(recent(&conn, 30, Kind::All, &all()).unwrap().is_empty());
         drop(conn);
         drop(db);
         let _ = std::fs::remove_dir_all(&dir);

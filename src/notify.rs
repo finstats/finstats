@@ -547,6 +547,14 @@ pub fn deliverable(t: &Target, e: &Stored, owner: Option<Perms>) -> Option<bool>
 
 // ---------------------------------------------------------------- raising one
 
+/// Whether a title that arrived may be told to this destination: on a person's own, only one Jellyfin lets them see
+/// (`access.rs`). The server's destinations are the administrators', and every other kind is decided by `wanted_by`.
+fn owner_sees_title(conn: &Connection, t: &Target, e: &Event) -> Result<bool> {
+    let (Kind::NewItems, Some(owner), Some(item)) = (e.kind, &t.owner_id, e.link.as_deref().and_then(|l| l.strip_prefix("/items/"))) else { return Ok(true) };
+    let is_admin: bool = conn.query_row("SELECT is_admin FROM users WHERE id = ?1", [owner], |r| r.get(0)).optional()?.unwrap_or(false);
+    crate::access::Access::of(conn, owner, is_admin)?.may_see_item(conn, item)
+}
+
 /// Write an event down and queue it for every destination that wants it. `false` when it was already
 /// known, which is the normal answer, because most sources re-derive the same events every pass.
 pub fn raise_in(conn: &Connection, f: &Fanout, e: &Event) -> Result<bool> {
@@ -573,7 +581,7 @@ pub fn raise_in(conn: &Connection, f: &Fanout, e: &Event) -> Result<bool> {
     let mut queue = conn.prepare_cached("INSERT OR IGNORE INTO notify_deliveries(event_id, target_id, state, next_at) VALUES (?1, ?2, 'queued', ?3)")?;
     for t in f.targets.iter() {
         let owner = t.owner_id.as_ref().and_then(|o| f.perms.get(o)).copied();
-        if wanted_by(t, e.kind, e.severity, e.at, e.user_id.as_deref(), owner) {
+        if wanted_by(t, e.kind, e.severity, e.at, e.user_id.as_deref(), owner) && owner_sees_title(conn, t, e)? {
             queue.execute(params![event_id, t.id, now])?;
         }
     }
@@ -1834,6 +1842,30 @@ pub(crate) mod tests {
             let queued: i64 = c.query_row("SELECT COUNT(*) FROM notify_deliveries", [], |r| r.get(0)).unwrap();
             assert_eq!(queued, 0, "an administrator whose account is {gone} was still told");
         }
+    }
+
+    /// FinStats follows Jellyfin: somebody kept out of a library, or with a title hidden from them, is not told on their
+    /// own destination that it arrived. The server's destinations are the administrators' and stay as they are.
+    #[test]
+    fn a_personal_destination_is_not_told_of_a_title_its_owner_may_not_see() {
+        let c = conn();
+        c.execute_batch(
+            "INSERT INTO items(id, library_id, type, name, removed, updated_at) VALUES ('bbb', 'films', 'Movie', 'Big Buck Bunny', 0, 0), ('late', 'adult', 'Movie', 'Elephants Dream', 0, 0);
+             UPDATE users SET access_all = 0, access_libraries = '[\"films\"]' WHERE id = 'ub';",
+        )
+        .unwrap();
+        let f = bus(&c, vec![target(1, Some("ub"), &[Kind::NewItems]), target(2, None, &[Kind::NewItems])]);
+        let arrived = |id: &str| Event::new(Kind::NewItems, format!("notify:new_items:{id}:1"), "New in the library", "A title").link(format!("/items/{id}"));
+        raise_in(&c, &f, &arrived("late")).unwrap();
+        raise_in(&c, &f, &arrived("bbb")).unwrap();
+        let told: Vec<(i64, String)> = c
+            .prepare("SELECT d.target_id, e.link FROM notify_deliveries d JOIN notify_events e ON e.id = d.event_id ORDER BY d.target_id, e.link")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        assert_eq!(told, [(1, "/items/bbb".to_string()), (2, "/items/bbb".to_string()), (2, "/items/late".to_string())]);
     }
 
     fn eq_rows(c: &Connection, want: i64) {

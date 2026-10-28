@@ -163,7 +163,8 @@ impl Access {
         let mut parts = vec![];
         let mut args: Vec<SqlValue> = vec![];
         if let Some(l) = &self.libraries {
-            parts.push(format!("{alias}.library_id IN (SELECT value FROM json_each(?))"));
+            // `+`: a narrowing, never what the planner walks, or the shelf would leave its date index for the libraries'.
+            parts.push(format!("+{alias}.library_id IN (SELECT value FROM json_each(?))"));
             args.push(serde_json::to_string(l).unwrap_or_else(|_| "[]".into()).into());
         }
         if let Some(u) = &self.listed_for {
