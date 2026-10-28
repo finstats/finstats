@@ -1467,6 +1467,7 @@
       "upload_too_large": "The file is larger than the 4 GB FinStats accepts",
       "reading_backup": "Reading backup",
       "receiving_backup": "Receiving backup",
+      "interrupted": "Interrupted before it finished: nothing was changed, and it can be started again",
       "importing": "Importing",
       "restored": { "one": "Restored {count} play ({skipped} already present)", "other": "Restored {count} plays ({skipped} already present)" },
       "imported": { "one": "Imported {count} play ({skipped} already present)", "other": "Imported {count} plays ({skipped} already present)" },

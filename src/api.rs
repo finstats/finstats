@@ -1077,7 +1077,7 @@ fn import_finished(app: &App, actor: Actor, tracker: &str, outcome: Result<(u64,
 }
 
 /// Run a restore in the background, then load what it may have changed (the settings) into the running app.
-fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bool, actor: Actor, source: String) {
+fn spawn_restore(app: &App, held: Running, path: PathBuf, with_settings: bool, remove_after: bool, actor: Actor, source: String) {
     let (worker, lang) = (app.clone(), i18n::current());
     blocking(move || {
         // A restore that brings settings is a change to them like any other: nothing else may write the blob over
@@ -1109,15 +1109,16 @@ fn spawn_restore(app: &App, path: PathBuf, with_settings: bool, remove_after: bo
             "restore",
             outcome.map(|r| (i18n::say(lang, "server.api.restored", &[("count", r.plays_imported.into()), ("skipped", r.plays_skipped.into())]), serde_json::to_value(&r).ok())),
         );
+        held.done();
     });
 }
 
 async fn restore_stored(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(name): Path<String>, Query(q): Query<RestoreQuery>) -> ApiResult<Response> {
     let path = backup_path(&app, &name)?;
-    if !app.tasks.try_start_alone("restore", &i18n::t("server.api.reading_backup", &[]), &HISTORY_WRITERS) {
+    let Some(held) = Running::start(&app, "restore", &i18n::t("server.api.reading_backup", &[])) else {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.restore_running", &[])));
-    }
-    spawn_restore(&app, path, q.settings.unwrap_or(true), false, Actor::from(&user), name);
+    };
+    spawn_restore(&app, held, path, q.settings.unwrap_or(true), false, Actor::from(&user), name);
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
@@ -1143,9 +1144,9 @@ async fn write_whole(file: &std::path::Path, bytes: &[u8]) {
 }
 
 async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Query(q): Query<RestoreQuery>, req: Request) -> ApiResult<Response> {
-    if !app.tasks.try_start_alone("restore", &i18n::t("server.api.receiving_backup", &[]), &HISTORY_WRITERS) {
+    let Some(held) = Running::start(&app, "restore", &i18n::t("server.api.receiving_backup", &[])) else {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.restore_running", &[])));
-    }
+    };
     let path = app.data_dir.join(UPLOADS[2]);
     let received = store_upload(req, &path, UPLOAD_MAX).await;
     match received {
@@ -1153,11 +1154,11 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
         other => {
             let _ = tokio::fs::remove_file(&path).await;
             let msg = other.map(|_| i18n::t("server.api.upload_empty", &[])).unwrap_or_else(|e| format!("{e:#}"));
-            app.tasks.finish("restore", Err(anyhow::anyhow!(msg.clone())));
+            held.fail(anyhow::anyhow!(msg.clone()));
             return Err(ApiError::bad_request(msg));
         }
     }
-    spawn_restore(&app, path, q.settings.unwrap_or(true), true, Actor::from(&user), "upload".into());
+    spawn_restore(&app, held, path, q.settings.unwrap_or(true), true, Actor::from(&user), "upload".into());
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
@@ -1166,8 +1167,42 @@ async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdm
 /// The three imports and the restore. Each holds the database in one long transaction: only one of them at a time.
 const HISTORY_WRITERS: [&str; 4] = ["import", "import_streamystats", "import_tautulli", "restore"];
 
+/// A history writer's slot, held from the moment it is taken until its work has said how it went. Dropped before that,
+/// whether because hyper dropped the handler when the connection closed (mid-upload, or before the answer) or because
+/// the work panicked, it says the task was interrupted: nothing else would ever give the slot back, and every import
+/// and every restore was refused until a restart.
+struct Running {
+    app: App,
+    task: &'static str,
+    live: bool,
+}
+
+impl Running {
+    fn start(app: &App, task: &'static str, message: &str) -> Option<Self> {
+        app.tasks.try_start_alone(task, message, &HISTORY_WRITERS).then(|| Running { app: app.clone(), task, live: true })
+    }
+
+    /// The work said how it went (`Tasks::finish`): nothing left to give back.
+    fn done(mut self) {
+        self.live = false;
+    }
+
+    fn fail(mut self, e: anyhow::Error) {
+        self.live = false;
+        self.app.tasks.finish(self.task, Err(e));
+    }
+}
+
+impl Drop for Running {
+    fn drop(&mut self) {
+        if self.live {
+            self.app.tasks.finish(self.task, Err(anyhow::anyhow!(i18n::t("server.api.interrupted", &[]))));
+        }
+    }
+}
+
 async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
-    let path = receive(&app, req, "import", UPLOADS[0]).await?;
+    let (path, held) = receive(&app, req, "import", UPLOADS[0]).await?;
     let actor = Actor::from(&user);
     audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("jellystat")).await;
     let (worker, lang) = (app.clone(), i18n::current());
@@ -1176,12 +1211,13 @@ async fn import_jellystat(State(app): State<App>, Manager(user): Manager, req: R
         let _ = std::fs::remove_file(&path);
         import_finished(&worker, actor, "jellystat", outcome.as_ref().map(|r| (r.plays_imported, r.plays_skipped)).map_err(|e| format!("{e:#}")));
         worker.tasks.finish("import", outcome.map(|r| (i18n::say(lang, "server.api.imported", &[("count", r.plays_imported.into()), ("skipped", r.plays_skipped.into())]), serde_json::to_value(&r).ok())));
+        held.done();
     });
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
 
 async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req: Request) -> ApiResult<Response> {
-    let path = receive(&app, req, "import_streamystats", UPLOADS[1]).await?;
+    let (path, held) = receive(&app, req, "import_streamystats", UPLOADS[1]).await?;
     let actor = Actor::from(&user);
     audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("streamystats")).await;
     let (worker, lang) = (app.clone(), i18n::current());
@@ -1200,6 +1236,7 @@ async fn import_streamystats(State(app): State<App>, Manager(user): Manager, req
                 (msg, serde_json::to_value(&r).ok())
             }),
         );
+        held.done();
     });
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
@@ -1365,9 +1402,9 @@ async fn tautulli_run(State(app): State<App>, Manager(user): Manager, Json(body)
     if let Err(why) = wrong {
         return Err(ApiError::bad_request(why));
     }
-    if !app.tasks.try_start_alone(crate::tautulli::TASK, &i18n::t("server.api.importing", &[]), &HISTORY_WRITERS) {
+    let Some(held) = Running::start(&app, crate::tautulli::TASK, &i18n::t("server.api.importing", &[])) else {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
-    }
+    };
     let actor = Actor::from(&user);
     audit::record_now(&app, audit::Entry::new("import_started", actor.clone()).target("tautulli").detail(json!({ "wires": body.wires.len() }))).await;
     let (worker, lang) = (app.clone(), i18n::current());
@@ -1379,6 +1416,7 @@ async fn tautulli_run(State(app): State<App>, Manager(user): Manager, Json(body)
             crate::tautulli::TASK,
             outcome.map(|r| (i18n::say(lang, "server.api.imported", &[("count", r.plays_imported.into()), ("skipped", r.plays_skipped.into())]), serde_json::to_value(&r).ok())),
         );
+        held.done();
     });
     Ok((StatusCode::ACCEPTED, Json(json!({ "ok": true }))).into_response())
 }
@@ -1412,10 +1450,10 @@ async fn store_upload(req: Request, path: &std::path::Path, max: u64) -> anyhow:
 }
 
 /// Stream an uploaded export to disk. One import at a time, whichever tracker it came from.
-async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> ApiResult<std::path::PathBuf> {
-    if !app.tasks.try_start_alone(task, &i18n::t("server.api.receiving_backup", &[]), &HISTORY_WRITERS) {
+async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> ApiResult<(std::path::PathBuf, Running)> {
+    let Some(held) = Running::start(app, task, &i18n::t("server.api.receiving_backup", &[])) else {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.import_running", &[])));
-    }
+    };
     let path = app.data_dir.join(name);
     let received = store_upload(req, &path, UPLOAD_MAX).await;
 
@@ -1423,17 +1461,17 @@ async fn receive(app: &App, req: Request, task: &'static str, name: &str) -> Api
         Ok(0) => {
             let _ = tokio::fs::remove_file(&path).await;
             let msg = i18n::t("server.api.upload_empty", &[]);
-            app.tasks.finish(task, Err(anyhow::anyhow!(msg.clone())));
+            held.fail(anyhow::anyhow!(msg.clone()));
             Err(ApiError::bad_request(msg))
         }
         Ok(total) => {
             tracing::info!("received a history export ({:.1} MB)", total as f64 / 1e6);
-            Ok(path)
+            Ok((path, held))
         }
         Err(e) => {
             let _ = tokio::fs::remove_file(&path).await;
             let msg = format!("{e:#}");
-            app.tasks.finish(task, Err(e));
+            held.fail(e);
             Err(ApiError::bad_request(msg))
         }
     }
@@ -1548,6 +1586,21 @@ mod tests {
         assert!(without.get("known_home_addresses").is_none() && without.get("home_addresses").is_none(), "{without}");
         let with = settings_response(&app, &reader(true)).await.unwrap().0;
         assert!(with["known_home_addresses"].to_string().contains("203.0.113.9"), "{with}");
+    }
+
+    #[tokio::test]
+    async fn an_import_whose_request_is_dropped_lets_the_next_one_run() {
+        // hyper drops a handler when its connection closes, mid-body or before the answer; the slot an import took was
+        // given back only by the blocking work, so every import and every restore was refused until a restart.
+        let app = crate::state::test_app();
+        let held = Running::start(&app, "import", "Receiving backup").expect("the slot is free");
+        assert!(Running::start(&app, "restore", "Receiving backup").is_none(), "two history writers at once");
+        drop(held);
+        assert!(app.tasks.snapshot().iter().all(|t| t.state != "running"), "the import is still running");
+        let next = Running::start(&app, "restore", "Receiving backup").expect("the restore was refused after a dropped import");
+        // Work that finishes hands the slot over and is not marked failed after it.
+        next.done();
+        assert!(app.tasks.snapshot().iter().all(|t| t.id != "restore" || t.state != "error"));
     }
 
     #[test]

@@ -1467,6 +1467,7 @@
       "upload_too_large": "Filen er større enn de 4 GB FinStats tar imot",
       "reading_backup": "Leser sikkerhetskopien",
       "receiving_backup": "Tar imot sikkerhetskopien",
+      "interrupted": "Avbrutt før det var ferdig: ingenting ble endret, og det kan startes på nytt",
       "importing": "Importerer",
       "restored": { "one": "Gjenopprettet {count} avspilling ({skipped} fantes fra før)", "other": "Gjenopprettet {count} avspillinger ({skipped} fantes fra før)" },
       "imported": { "one": "Importerte {count} avspilling ({skipped} fantes fra før)", "other": "Importerte {count} avspillinger ({skipped} fantes fra før)" },
