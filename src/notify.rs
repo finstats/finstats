@@ -1223,6 +1223,8 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
     };
     let secret = match (body.secret.filter(|s| !s.is_empty()), stored) {
         (Some(s), _) => s,
+        // A stored token or password goes only where it was saved for: pointed at another server, it is typed again.
+        (None, Some(s)) if !s.secret.is_empty() && !crate::services::same_place(&url, &s.url) => return Err(FormError::at("secret", t("server.notify.secret_again", &[]))),
         (None, Some(s)) => s.secret.clone(),
         (None, None) => String::new(),
     };
@@ -1281,6 +1283,15 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
         (None, None) => INFO.to_string(),
     };
     let pick = |given: Option<bool>, was: Option<bool>, or: bool| given.or(was).unwrap_or(or);
+    let with_addresses = pick(body.with_addresses, stored.map(|s| s.with_addresses), false);
+    // Somebody else's personal destination is theirs: an administrator may switch it off, choose what it is told or
+    // remove it, never send it, its password and what it says, somewhere else.
+    if let Some(s) = stored
+        && s.owner_id.as_deref().is_some_and(|o| o != user.id)
+        && (url != s.url || secret != s.secret || topic != s.topic || options != s.options || with_addresses != s.with_addresses)
+    {
+        return Err(ApiError::forbidden().into());
+    }
     Ok(Target {
         id: stored.map(|s| s.id).unwrap_or(0),
         channel,
@@ -1291,7 +1302,7 @@ fn describe(body: TargetBody, stored: Option<&Target>, user: &AuthUser) -> std::
         options,
         owner_id,
         events,
-        with_addresses: pick(body.with_addresses, stored.map(|s| s.with_addresses), false),
+        with_addresses,
         min_severity,
         // Only an administrator may switch certificate checks off; a personal destination is public anyway.
         accept_invalid_certs: user.is_admin && pick(body.accept_invalid_certs, stored.map(|s| s.accept_invalid_certs), false),
@@ -1871,6 +1882,19 @@ pub(crate) mod tests {
 
     fn admin() -> AuthUser {
         AuthUser { id: "ua".into(), name: "alice".into(), is_admin: true, perms: Perms::ALL, credential: Default::default(), ip: None }
+    }
+
+    /// A stored token or password goes only where it was saved for, and somebody else's personal destination is theirs:
+    /// an administrator may switch it off or remove it, not point it, and the mail password with it, at another server.
+    #[tokio::test]
+    async fn a_stored_secret_is_not_sent_to_a_new_address_and_anothers_destination_is_not_moved() {
+        let mut stored = test_target(Channel::Gotify, "https://gotify.example.com");
+        let mine = describe(body(json!({ "url": "https://attacker.example" })), Some(&stored), &admin()).err().expect("the stored token went to a new address");
+        assert_eq!(mine.field, Some("secret"));
+        assert!(describe(body(json!({ "url": "https://attacker.example", "secret": "new-token" })), Some(&stored), &admin()).is_ok());
+        stored.owner_id = Some("ub".into());
+        assert!(describe(body(json!({ "url": "https://attacker.example", "secret": "new-token" })), Some(&stored), &admin()).is_err(), "an administrator moved somebody else's destination");
+        assert!(describe(body(json!({ "enabled": false })), Some(&stored), &admin()).is_ok(), "an administrator may switch it off");
     }
 
     #[test]

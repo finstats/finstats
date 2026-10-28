@@ -1984,6 +1984,7 @@
       "mail_no_login": "Ikkje ta med brukarnamn og passord i adressa; dei har kvart sitt felt",
       "mail_host_port": "Ei e-postserveradresse er ein vert og ein port, utan noko etter",
       "enter": "Feltet «{what}» må fyllast ut",
+      "secret_again": "Skriv inn token eller passord på nytt: det som er lagra, vert berre send til same server som før",
       "value": "verdi",
       "token": "token",
       "ntfy_topic": "Eit ntfy-emne kan berre innehalde bokstavar, siffer, - og _",
@@ -2111,6 +2112,7 @@
       "say_kind": "Sei kva type teneste dette er",
       "enter_address": "Skriv inn adressa til {service}",
       "enter_key": "Skriv inn API-nøkkelen",
+      "key_again": "Skriv inn API-nøkkelen på nytt: ein lagra nøkkel vert berre send til same server som før",
       "not_a_key": "Det ser ikkje ut som ein nøkkel eller eit passord",
       "max": { "one": "Høgst {count} tilkopling", "other": "Høgst {count} tilkoplingar" },
       "starting": "Startar …"

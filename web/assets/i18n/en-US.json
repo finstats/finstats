@@ -1984,6 +1984,7 @@
       "mail_no_login": "Leave the user name and password out of the address; there is a field for each of them",
       "mail_host_port": "A mail server address is a host and a port, with nothing after it",
       "enter": "Enter the {what}",
+      "secret_again": "Enter the token or password again: a saved one is only sent to the server it was saved for",
       "value": "value",
       "token": "token",
       "ntfy_topic": "An ntfy topic may hold letters, digits, - and _ only",
@@ -2111,6 +2112,7 @@
       "say_kind": "Say which kind of service this is",
       "enter_address": "Enter the address of {service}",
       "enter_key": "Enter the API key",
+      "key_again": "Enter the API key again: a saved key is only sent to the server it was saved for",
       "not_a_key": "That does not look like a key or password",
       "max": { "one": "At most {count} connection", "other": "At most {count} connections" },
       "starting": "Starting…"

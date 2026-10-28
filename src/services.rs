@@ -286,6 +286,12 @@ pub fn clean_url(input: &str, kind: Kind) -> Result<String> {
 }
 
 /// Host, port and base path: when these change, it is another instance and its ids mean nothing here.
+/// The same server: scheme, host and port. A stored secret is sent nowhere else without being typed again.
+pub(crate) fn same_place(a: &str, b: &str) -> bool {
+    let key = |u: &str| reqwest::Url::parse(u).ok().map(|p| (p.scheme().to_string(), p.host_str().map(str::to_ascii_lowercase), p.port_or_known_default()));
+    key(a).is_some() && key(a) == key(b)
+}
+
 fn same_instance(a: &str, b: &str) -> bool {
     let key = |u: &str| reqwest::Url::parse(u).ok().map(|p| (p.host_str().map(str::to_ascii_lowercase), p.port_or_known_default(), p.path().trim_end_matches('/').to_string()));
     key(a).is_some() && key(a) == key(b)
@@ -593,6 +599,8 @@ fn describe(body: ServiceBody, stored: Option<&Service>, taken: &[String]) -> st
     };
     let secret = match (body.secret.filter(|s| !s.is_empty()), stored) {
         (Some(s), _) => s,
+        // A stored key goes only where it was saved for: pointed at another server, it is typed again.
+        (None, Some(s)) if !same_place(&url, &s.url) => return Err(FormError::at("secret", t("server.services.key_again", &[]))),
         (None, Some(s)) => s.secret.clone(),
         (None, None) => return Err(FormError::at("secret", t("server.services.enter_key", &[]))),
     };
@@ -871,6 +879,20 @@ mod tests {
         assert_eq!(Said::of(&anyhow!("disk full")).say("nn-NO"), "disk full", "words FinStats does not have stay as they were");
         assert_eq!(unreachable_service(refuse(StatusCode::UNAUTHORIZED, &HeaderMap::new(), &svc)).field, Some("secret"), "a refused key is the key's fault");
         assert_eq!(unreachable_service(refuse(StatusCode::NOT_FOUND, &HeaderMap::new(), &svc)).field, Some("url"));
+    }
+
+    /// A stored key goes only where it was saved for: a test or an edit naming another host took the stored key there,
+    /// so a leaked administrator key read out every Sonarr, Radarr and Seerr key by pointing them at its own server.
+    #[test]
+    fn a_stored_key_is_not_sent_to_a_new_address() {
+        let stored = service(Kind::Sonarr, "http://192.168.1.10:8989");
+        let body = |url: &str, secret: Option<&str>| ServiceBody { id: Some(1), kind: None, name: None, url: Some(url.into()), secret: secret.map(str::to_string), accept_invalid_certs: None, enabled: None };
+        for elsewhere in ["https://attacker.example", "http://192.168.1.10:9999", "https://192.168.1.10:8989"] {
+            assert_eq!(describe(body(elsewhere, None), Some(&stored), &[]).err().expect("the stored key went to a new address").field, Some("secret"), "{elsewhere}");
+            assert!(describe(body(elsewhere, Some("a-new-key")), Some(&stored), &[]).is_ok(), "a key typed again goes anywhere");
+        }
+        // The same place, under another base path, is still where the key was saved for.
+        assert_eq!(describe(body("http://192.168.1.10:8989/sonarr", None), Some(&stored), &[]).ok().unwrap().secret(), "hunter2-secret-key");
     }
 
     #[test]
