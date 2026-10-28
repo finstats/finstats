@@ -832,6 +832,55 @@ fn failed(app: &App, ip: IpAddr) -> bool {
     }
 }
 
+/// Whether a sign-in as `name` may be put to Jellyfin: `Some(false)` when the name is nobody who may use FinStats (no such
+/// user, disabled or gone in Jellyfin, or not let in), `None` while the users have never been read and so nobody is
+/// known (a fresh install's first sign-ins, the wizard's own among them), which Jellyfin alone decides.
+pub(crate) fn may_try(c: &Connection, settings: &crate::state::Settings, name: &str) -> anyhow::Result<Option<bool>> {
+    let read: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM task_runs WHERE task = 'sync_users' AND state = 'ok')", [], |r| r.get(0))?;
+    if !read {
+        return Ok(None);
+    }
+    let mut stmt = c.prepare("SELECT id, is_admin FROM users WHERE name = ?1 COLLATE NOCASE AND is_disabled = 0 AND removed = 0")?;
+    let found: Vec<(String, bool)> = stmt.query_map([name], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<_, _>>()?;
+    for (id, is_admin) in found {
+        let grants = if is_admin { vec![] } else { stored_grants(c, &id)? };
+        if effective(is_admin, &grants, settings).is_some() {
+            return Ok(Some(true));
+        }
+    }
+    Ok(Some(false))
+}
+
+/// How long Jellyfin typically takes to turn a password down (it hashes what it was sent), so that a name refused without
+/// asking it is answered no sooner: an answer that came at once would tell which names are somebody.
+#[derive(Clone, Copy)]
+pub(crate) struct FailureTime(std::time::Duration);
+
+impl Default for FailureTime {
+    fn default() -> Self {
+        FailureTime(Self::FIRST_GUESS)
+    }
+}
+
+impl FailureTime {
+    /// Before Jellyfin has turned anybody down: about what a Jellyfin on modest hardware takes.
+    pub const FIRST_GUESS: std::time::Duration = std::time::Duration::from_millis(400);
+    /// No refusal waits longer than this, however slow one answer was.
+    pub const LONGEST: std::time::Duration = std::time::Duration::from_secs(5);
+
+    /// One more refusal Jellyfin took this long over: a running average, each new one a tenth of it.
+    pub fn saw(&mut self, took: std::time::Duration) {
+        let took = took.min(Self::LONGEST);
+        self.0 = (self.0 * 9 + took) / 10;
+    }
+
+    pub fn typical(&self) -> std::time::Duration {
+        self.0
+    }
+}
+
+static FAILURE_TIME: std::sync::Mutex<FailureTime> = std::sync::Mutex::new(FailureTime(FailureTime::FIRST_GUESS));
+
 #[derive(Deserialize)]
 pub struct LoginBody {
     #[serde(default)]
@@ -855,18 +904,34 @@ pub async fn login(
     }
     let ip = client_ip(&app, &headers, peer);
     check_rate_limit(&app, ip)?;
+    // The name as typed: it is the administrator's own server, and Jellyfin's log says the same. Once per address and
+    // window: a guesser's every try was a row more, and Jellyfin's own log has each.
+    let failure = |app: &App| {
+        if failed(app, ip) {
+            let who = Actor { user_id: None, user_name: Some(username.chars().take(100).collect()), ip: Some(ip), key_id: None };
+            audit::record(app, audit::Entry::new("sign_in_failed", who).outcome("failed"));
+        }
+        ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.wrong_password", &[]))
+    };
+
+    // Only a name that may use FinStats is put to Jellyfin, which counts every failure against the account (and locks it),
+    // judges its "remote access" on FinStats' own address and logs FinStats as the one trying. Anybody else is told what a
+    // wrong password is told, no sooner than Jellyfin would have told them.
+    let (settings, typed) = (app.settings(), username.to_string());
+    if app.db.call(move |c| may_try(c, &settings, &typed)).await? == Some(false) {
+        let typical = FAILURE_TIME.lock().unwrap().typical();
+        let jitter = rand::Rng::random_range(&mut rand::rng(), 0.85..1.15);
+        tokio::time::sleep(typical.mul_f64(jitter)).await;
+        return Err(failure(&app));
+    }
 
     let jf = app.jellyfin_anonymous(jf.base());
+    let asked = std::time::Instant::now();
     let auth = match jf.authenticate(username, &body.password).await {
         Ok(a) => a,
         Err(AuthError::InvalidCredentials) => {
-            // The name as typed: it is the administrator's own server, and Jellyfin's log says the same. Once per address
-            // and window: a guesser's every try was a row more, and Jellyfin's own log has each.
-            if failed(&app, ip) {
-                let who = Actor { user_id: None, user_name: Some(username.chars().take(100).collect()), ip: Some(ip), key_id: None };
-                audit::record(&app, audit::Entry::new("sign_in_failed", who).outcome("failed"));
-            }
-            return Err(ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.wrong_password", &[])));
+            FAILURE_TIME.lock().unwrap().saw(asked.elapsed());
+            return Err(failure(&app));
         }
         Err(AuthError::Other(e)) => {
             tracing::warn!("login could not be checked against Jellyfin: {e:#}");
@@ -1200,6 +1265,25 @@ mod tests {
         logout(State(app.clone()), ConnectInfo(peer), h).await.unwrap();
         let left: i64 = app.db.call(|c| Ok(c.query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get(0))?)).await.unwrap();
         assert_eq!(left, 0);
+    }
+
+    /// A name that may not use FinStats is answered as a wrong password, and Jellyfin hears nothing of it.
+    #[tokio::test]
+    async fn a_name_that_may_not_sign_in_never_reaches_jellyfin() {
+        let app = crate::state::test_app();
+        let jellyfin = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", jellyfin.local_addr().unwrap());
+        *app.config.write().unwrap() = Some(JfConfig { url, api_key: "k".into(), server_name: "Jellyfin".into(), server_version: String::new(), from_env: false });
+        app.db.call(|c| Ok(c.execute_batch("INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u2', 'bob', 0, 1);
+                                             INSERT INTO task_runs(task, state, started_at, finished_at) VALUES ('sync_users', 'ok', 1, 2);")?)).await.unwrap();
+        let peer: SocketAddr = "192.0.2.7:4000".parse().unwrap();
+        for name in ["bob", "mallory"] {
+            let body = Json(LoginBody { username: name.into(), password: "x".into() });
+            let err = login(State(app.clone()), ConnectInfo(peer), HeaderMap::new(), body).await.err().expect("refused");
+            assert_eq!((err.0, err.1), (StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.wrong_password", &[])), "{name}");
+        }
+        let asked = tokio::time::timeout(std::time::Duration::from_millis(50), jellyfin.accept()).await;
+        assert!(asked.is_err(), "Jellyfin was asked about a name that may not sign in");
     }
 
     /// Whether a connection was asked to read its access again.
@@ -1596,6 +1680,40 @@ mod key_tests {
         assert!(!looks_like_key(&hex64), "no prefix");
         assert!(!looks_like_key(&format!("fs_{}", "g".repeat(64))));
         assert!(!looks_like_key(""));
+    }
+
+    /// Before Jellyfin is asked, the name typed must be somebody who may use FinStats: Jellyfin counts every failure
+    /// against the account (and locks it), judges "remote access" on FinStats' own address, and logs FinStats as the one
+    /// guessing. Until the users have been read once, nobody is known, so everybody is asked about as before.
+    #[test]
+    fn only_a_name_that_may_use_finstats_is_put_to_jellyfin() {
+        let c = conn();
+        let closed = Settings::default();
+        assert_eq!(may_try(&c, &closed, "nobody").unwrap(), None, "no users read yet: Jellyfin decides, as for the wizard's first sign-in");
+        c.execute_batch("INSERT INTO task_runs(task, state, started_at, finished_at) VALUES ('sync_users', 'ok', 1, 2)").unwrap();
+        assert_eq!(may_try(&c, &closed, "nobody").unwrap(), Some(false), "a name that is nobody");
+        assert_eq!(may_try(&c, &closed, "ALICE").unwrap(), Some(true), "an administrator, however the name is typed");
+        assert_eq!(may_try(&c, &closed, "bob").unwrap(), Some(false), "not allowed in");
+        assert_eq!(may_try(&c, &open(), "bob").unwrap(), Some(true), "sign-in open to everybody");
+        c.execute_batch("UPDATE users SET is_disabled = 1 WHERE id = 'u1'").unwrap();
+        assert_eq!(may_try(&c, &closed, "alice").unwrap(), Some(false), "disabled in Jellyfin");
+        c.execute_batch("UPDATE users SET is_disabled = 0, removed = 1 WHERE id = 'u1'").unwrap();
+        assert_eq!(may_try(&c, &closed, "alice").unwrap(), Some(false), "gone from Jellyfin");
+    }
+
+    /// A name refused without asking Jellyfin waits about as long as one Jellyfin turned down, or how fast the answer came
+    /// would tell which names are somebody.
+    #[test]
+    fn a_refusal_takes_about_as_long_as_jellyfin_takes_to_refuse() {
+        let mut took = FailureTime::default();
+        assert_eq!(took.typical(), FailureTime::FIRST_GUESS);
+        for _ in 0..50 {
+            took.saw(std::time::Duration::from_millis(900));
+        }
+        let t = took.typical().as_millis();
+        assert!((850..=950).contains(&t), "{t}");
+        took.saw(std::time::Duration::from_secs(60));
+        assert!(took.typical() <= FailureTime::LONGEST, "one slow answer does not hold every refusal for a minute");
     }
 
     #[test]
