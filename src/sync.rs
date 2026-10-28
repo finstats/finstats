@@ -375,7 +375,8 @@ pub(crate) fn store_users(c: &mut Connection, users: &[Value], shrink_ok: bool, 
                 norm_id(id),
                 u["Name"].as_str().unwrap_or("Unknown"),
                 u["Policy"]["IsAdministrator"].as_bool().unwrap_or(false),
-                u["Policy"]["IsDisabled"].as_bool().unwrap_or(false),
+                // Fails closed, as being an administrator does: a read that does not say is no leave to sign in.
+                u["Policy"]["IsDisabled"].as_bool().unwrap_or(true),
                 opt_str(&u["PrimaryImageTag"]),
                 u["LastLoginDate"].as_str().and_then(parse_ts),
                 u["LastActivityDate"].as_str().and_then(parse_ts),
@@ -1392,6 +1393,24 @@ mod tests {
         assert_eq!(library, "films", "a title that arrived since the read is stored under its library");
         let removed: i64 = c.query_row("SELECT removed FROM items WHERE id = 'm2'", [], |r| r.get(0)).unwrap();
         assert_eq!(removed, 0, "a title the look did not return is not gone: only a whole library read can say that");
+    }
+
+    /// A read that does not say whether somebody is disabled (a Jellyfin that changed shape under an upgrade) keeps them
+    /// out rather than letting them in: it read as "not disabled", and enabled again everybody Jellyfin had disabled.
+    #[test]
+    fn a_user_whose_read_does_not_say_they_may_sign_in_is_kept_out() {
+        let mut c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        let users = [
+            json!({ "Id": "a1", "Name": "alice", "Policy": { "IsAdministrator": true, "IsDisabled": false } }),
+            json!({ "Id": "b2", "Name": "bob", "Policy": { "IsAdministrator": false } }),
+            json!({ "Id": "c3", "Name": "carol" }),
+        ];
+        store_users(&mut c, &users, false, 100).unwrap();
+        let disabled = |id: &str| c.query_row("SELECT is_disabled FROM users WHERE id = ?1", [id], |r| r.get::<_, i64>(0)).unwrap();
+        assert_eq!((disabled("a1"), disabled("b2"), disabled("c3")), (0, 1, 1));
     }
 
     #[test]
