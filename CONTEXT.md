@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-28, on branch `dev` (crate version 2.3.1, local only; schema `user_version` 40; newest pushed tag `v2.2.0`).
+> **Last updated:** 2026-10-28, on branch `dev` (crate version 2.3.1, local only; schema `user_version` 41; newest pushed tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `CLAUDE.md` is the detailed rulebook
@@ -23,7 +23,7 @@ It **only reads from Jellyfin**. The one write it ever makes there is creating i
 |---|---|
 | Shape | One Rust binary (`finstats`) with the web UI embedded; one data folder |
 | Language | Rust, edition 2024, `GPL-3.0-only` |
-| HTTP server | `axum 0.8` (HTTP/1 only, `ws`), `tower-http` gzip compression |
+| HTTP server | `axum 0.8` (HTTP/1 only, `ws`) served through `hyper` directly (15 s for a request head, 512 connections), `tower-http` gzip compression |
 | Async | `tokio` multi-thread runtime with **2 workers, 8 blocking threads** |
 | Database | SQLite, bundled, through `r2d2` + `r2d2_sqlite` (pool of 6), WAL; rusqlite re-exported as `db::rusqlite` |
 | Outbound HTTP | `reqwest 0.12`, rustls, `gzip` + `brotli` decoding |
@@ -47,7 +47,7 @@ It **only reads from Jellyfin**. The one write it ever makes there is creating i
 
 ```
 finstats/
-├── Cargo.toml / Cargo.lock      Crate manifest; release profile thin-LTO + strip. No dev-dependencies.
+├── Cargo.toml / Cargo.lock      Crate manifest; release profile thin-LTO + strip + overflow-checks. No dev-dependencies.
 ├── src/                          The whole server. Flat: one module per subsystem (see §3 and §7).
 │   └── finui/preset.rs           Decodes a FinUI preset code into token-file overlays.
 ├── web/                          Embedded UI (debug builds read it from disk; release builds embed it)
@@ -190,6 +190,7 @@ LIBRARY (re-read from Jellyfin; not in backups)
   items ──< item_people (item_id, person_id, kind)   no people table; person_id is Jellyfin's
   items ──< item_external (item_id, source) = provider_ids turned sideways; one id may map to several items (HD + 4K)
   users ──< user_items >── items   Jellyfin's played / favourite flags
+  users ──< visible_items >── items   what Jellyfin lists for somebody it hides titles from (access.rs)
 
 HISTORY (backed up)
   users ──< playbacks >── items        (item_id may be ORPHANED until relink/locate)
@@ -233,7 +234,8 @@ MISC
 | **item_people** | (item_id, person_id, kind) | name, role, sort, image_tag | Actors (first 12) and directors of films/shows only |
 | **item_external** | (item_id, source) | value | Rebuilt from `provider_ids` by `pipeline::rebuild_external` |
 | **user_items** | (user_id, item_id) | played, is_favorite, play_count | Jellyfin's flags |
-| **users** | id | name, is_admin, is_disabled, image_tag, removed | Mirror of Jellyfin users |
+| **users** | id | name, is_admin, is_disabled, image_tag, removed, access_all, access_libraries, access_hides, visible_for | Mirror of Jellyfin users; `access_*` is their library access from Jellyfin's policy (NULL = unread, opens nothing) |
+| **visible_items** | (user_id, item_id) | | Titles Jellyfin lists for a person something hides titles from; counts only while `users.visible_for` is the policy it was read under. Not in backups. New in 2.3.1 |
 | **playbacks** | id | source (`live`/`jellystat`/`streamystats`/`tautulli`), source_id UNIQUE, active, user_id, item_id, item_type, series_id, season_id, library_id, started_at, ended_at, duration_s, paused_s, position_s, runtime_s, remote_ip, is_local, play_method, transcode, group_id, deleted_at | Denormalised names kept so a play reads without the library |
 | **playback_events** | id | playback_id (FK), at, kind, position_s, from_s, detail | Live plays only |
 | **devices** | (device_id, user_id) | client, app_version, last_ip, first/last_seen | |
@@ -283,29 +285,37 @@ network (`public_ip_lookup`, `home_addresses`), security (`travel_speed_kmh`, `t
 (`backup_every_d`, `backup_keep`), scheduling (`schedules`: job → triggers; legacy `follow_jellyfin_scan`,
 `sync_interval_h`, `geoip_download` only seed defaults), links (`public_url`, `jellyfin_public_url`, `public_profiles`).
 
-Other `settings` keys: `app_version` (downgrade guard), `upgrade_steps`, `update_copy`, `jellyfin_url`,
+Other `settings` keys: `app_version` (downgrade guard), `upgrade_steps`, `update_copy`, `backups_requested` (a manager's
+backups, pruned apart; not exported), `jellyfin_url`,
 `jellyfin_api_key`, `device_id` (secrets), `library_synced_at`, `changes_checked_at`, `health_computed_at`, `capacity`,
 `groups_detected`, `network_classified` (re-derive-once markers), `service:{id}:*` cursors.
 
 ### 4.6 Backups
 
-gzip JSON Lines (`finstats-backup-YYYYMMDD-HHMMSS.jsonl.gz`): header, the settings blob, then rows tagged by table and
+gzip JSON Lines (`finstats-backup-YYYYMMDD-HHMMSS.jsonl.gz`, in UTC, never written over an existing file): header, the settings blob, then rows tagged by table and
 matched **by column name** both ways. `backup::TABLES`: playbacks, playback_events, manual_seen, user_permissions,
 home_addresses, server_events, devices, security_alerts, audit, watchlist, located, health_dismissed, appearance, welcomed.
 
 Never exported: secrets (Jellyfin URL/key, sessions, api_keys, services, notify_targets), the library (re-readable),
-Pipeline tables, derived tables, public_profiles. Restore **merges** (dedupe through `already_recorded`, remaps event
-ids, never undeletes, narrows grants and never widens them, brings settings only with `settings=true`) then re-derives groups,
-`is_local`, library links. Separately, `pre-update-backups/` holds full
-`VACUUM INTO` copies taken before a newer binary migrates (newest 3 kept, never served).
+Pipeline tables, derived tables, public_profiles, library access (`visible_items`, `users.access_*`). Restore reads the whole
+file first without a lock (refused past a hundred times its size, at least 64 MB, at most 64 GB), then **merges** a batch at a
+time (dedupe through `already_recorded`, remaps event ids, never undeletes, keeps plays and their numbers within an import's
+bounds), brings settings only with `settings=true` (CLI `finstats restore <file> --with-settings`) and then never wider than
+this install has them (`narrow_settings`, `narrow_grants`); without settings it leaves out home addresses, mutes and located
+titles the library lacks, and marks audit rows `restored_from`. A restored live play gets `source_id = 'restored:…'`, so
+**seen live is `source = 'live' AND source_id IS NULL`**. Then it re-derives groups, `is_local`, library links. A backup a
+manager runs by hand is pruned in its own pool. Separately, `pre-update-backups/` holds full
+`VACUUM INTO` copies taken before a newer binary migrates (newest 3 of FinStats' own kept, never served).
 
 ---
 
 ## 5. API surface
 
 `/api/*` is a nested router behind `same_origin`; unknown `/api` paths answer JSON 404. Everything else non-asset falls
-back to `index.html` (SPA). Layers, outermost first: gzip compression (skips `application/gzip`), `i18n::middleware`
-(the `finstats_lang` cookie, else Accept-Language; nothing FinStats speaks is `i18n::DEFAULT`, en-US), `security_headers` (CSP etc.).
+back to `index.html` (SPA). Layers, outermost first: gzip compression (skips `application/gzip` and fonts; the UI's own files
+are gzipped once and kept), `i18n::middleware` (the `finstats_lang` cookie, else Accept-Language; nothing FinStats speaks is
+`i18n::DEFAULT`, en-US), `security_headers` (`harden`: CSP, `Cross-Origin-Opener-Policy`, `Permissions-Policy`; on `/api/*`
+also `Cross-Origin-Resource-Policy: same-origin` and `no-store` unless the answer says otherwise).
 
 The authoritative contract is `../docs/docs/finstats/api.md`; change it with the endpoint (a QA check reads it).
 
@@ -313,8 +323,8 @@ The authoritative contract is `../docs/docs/finstats/api.md`; change it with the
 |---|---|---|---|
 | `/status` | GET | **anyone** (shape only, from memory) | auth |
 | `/setup/test`, `/setup` | POST | anyone, only while unconfigured, with the one-time code from the log (428 without it), rate-limited; needs a Jellyfin admin | auth |
-| `/auth/login`, `/auth/logout`, `/auth/me` | POST, POST, GET | anyone / session | auth |
-| `/summary`, `/now-playing`, `/stats/*`, `/library/{insights,recent}`, `/libraries*`, `/items/{id}`, `/people/{id}`, `/search`, `/users*`, `/users/{id}/{shows,timeline}`, `/activity`, `/stats/groups` | GET | AuthUser, narrowed by `Scope` | stats, groups, browse, recent, profile, timeline |
+| `/auth/login`, `/auth/logout`, `/auth/me` | POST, POST, GET | anyone / session (logout ends every session the browser sent) | auth |
+| `/summary`, `/now-playing`, `/stats/*`, `/library/{insights,recent}`, `/libraries*`, `/items/{id}`, `/people/{id}`, `/search`, `/users*`, `/users/{id}/{shows,timeline}`, `/activity`, `/stats/groups` | GET | AuthUser, narrowed by `Scope` (library, title, person pages and search also by library access: hidden = 404) | stats, groups, browse, recent, profile, timeline |
 | `/activity/{id}` | PUT `{deleted}` | Manager | stats + trash |
 | `/live` | GET (WebSocket) | cookie or Bearer, Origin-checked, never a calendar key | live |
 | `/recap`, `/recap/cards/{chapter}`, `/recap/cards.zip` | GET | AuthUser (`whose_year`) | recap, story |
@@ -324,14 +334,14 @@ The authoritative contract is `../docs/docs/finstats/api.md`; change it with the
 | `/upcoming`, `/requests*` | GET | AuthUser, pinned scope | pipeline |
 | `/downloads*` | GET | DownloadsViewer | downloads, pipeline |
 | `/notifications*` | various | AuthUser + `notify`/ownership inside | notify |
-| `/security*` | GET / POST | `see_network`+`see_everyone`; writes Manager | security |
+| `/security*` | GET / POST | `see_network`+`see_everyone`; writes Manager (the database download also waits `by_hand`'s minute) | security |
 | `/server`, `/jellyfin/jobs`, `/events`, `/library/health*`, `/server/capacity` | GET | ServerViewer (others' log lines and a device's last user need `see_everyone`, addresses `see_network`) | stats, jobs, health, capacity |
 | `/library/health/{dismiss,undismiss}` | POST | Manager + `see_server` | health |
-| `/settings`, `/settings/public-ip`, `/tasks*` | various | Manager (access keys, backup count, merge window and the users / activity log / backup schedules admin-only; home addresses and travel rules need the Security page's permissions; a job by hand once a minute) | api |
-| `/import/*` | various | Manager + `see_everyone` (an upload past 4 GB is refused; one Tautulli upload at a time) | api, tautulli |
+| `/settings`, `/settings/public-ip`, `/tasks*` | various | Manager (access keys, backup count and interval, merge window and the users / activity log / backup schedules admin-only, the access keys by a session only; `jellyfin_url` and the data folder told to admins only; home addresses and travel rules need the Security page's permissions; work by hand once a minute for a manager, `api::by_hand`) | api |
+| `/import/*` | various | Manager + `see_everyone` (an upload past 4 GB is refused; one Tautulli upload at a time; cancelling a board too) | api, tautulli |
 | `/library/missing*`, `/library/locate` | various | Manager + `see_everyone` | api, locate |
-| `/permissions*`, `/backups*`, `/services*`, `/audit`, `/outbound`, `/public-profiles*` | various | JellyfinAdmin | api, services, audit, outbound, public |
-| `/img/item/{id}`, `/img/user/{id}`, `/img/arr/{svc}/{media}` | GET | AuthUser (item/user: only what FinStats has, `artwork::known`; arr: only ids FinStats listed) | api, artwork |
+| `/permissions*`, `/backups*`, `/services*`, `/audit`, `/outbound`, `/public-profiles*` | various | JellyfinAdmin (permissions, a restore and a service's create / update / test need a session, never a key) | api, services, audit, outbound, public |
+| `/img/item/{id}`, `/img/user/{id}`, `/img/arr/{svc}/{media}` | GET | AuthUser (item/user: only what FinStats has, `artwork::known`, and what the caller may see, `artwork::may_show`; arr: only ids FinStats listed) | api, artwork |
 | `/public/{token}*`, `/u/{token}*` | GET | **anyone** with the token; every failure is the same 404 | public, card, story |
 
 **Conventions**
@@ -340,9 +350,11 @@ The authoritative contract is `../docs/docs/finstats/api.md`; change it with the
   profiles and story cards use **typed structs** on purpose (nothing added to a query can leak).
 - Errors: `ApiError(StatusCode, String)` → `{"error": "..."}`. `anyhow`/rusqlite errors log at ERROR and answer 500
   with a fixed message (never internals). Helpers `bad_request`, `not_found`, `forbidden`, `not_permitted`. Also used:
-  401, 409 (already running / name taken), 429 (sign-in limit), 502 (upstream unreachable), 202 (task started).
-- Writes (non-GET) must pass the Origin check (`same_origin`; `X-Forwarded-Host` only with `FINSTATS_TRUST_PROXY`).
-- CSP: `default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: blob:; frame-ancestors 'none'; …`.
+  401, 409 (already running / name taken), 429 (sign-in limit; work by hand within its minute), 502 (upstream unreachable),
+  202 (task started).
+- Writes (non-GET) must pass the Origin check (`same_origin`; `X-Forwarded-Host` only from a peer `FINSTATS_TRUST_PROXY`
+  names; the scheme is compared too when a believed proxy sends `X-Forwarded-Proto` or the page is on `public_url`'s host).
+- CSP: `default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'; …`.
   The UI may not use inline `<style>` or `style=""`.
 - Static assets: ETag + `no-cache` (fonts are immutable). `/assets/finui.css` is per-person (`private`, `Vary: Cookie`).
   Images: ETag from the Jellyfin image tag, `private, no-cache`, 304 before any read.
@@ -356,26 +368,43 @@ The authoritative contract is `../docs/docs/finstats/api.md`; change it with the
 - **Sign-in:** `POST /auth/login` forwards to Jellyfin's `AuthenticateByName`, logs that Jellyfin session out at once,
   and mints FinStats' own session (random token, stored as sha256; cookie `finstats_session`, or `__Host-finstats_session`
   on https, which wins and which a sibling host cannot set; HttpOnly, SameSite=Lax, 30 days, Secure when `X-Forwarded-Proto`
-  or the sign-in's `Origin` says https). Rate limit 10 attempts / 5 min per address, an IPv6 /64 counting as one, at most
-  10,000 remembered; a sign-in that works gives back only its own attempt. Behind `FINSTATS_TRUST_PROXY` the address is the last
-  entry of the last `X-Forwarded-For` line. Every sign-in rewrites the user row from Jellyfin's answer.
+  or the sign-in's `Origin` says https). A token begins `h` or `p` (begun on https or http), and an `h` token under the plain
+  name is refused. Rate limit 10 attempts / 5 min per address (an IPv6 /64 counting as one), 50 per IPv6 /48, and nothing
+  forwarded past 60 failures a minute server-wide; at 10,000 remembered addresses a new one is refused; a failure is audited
+  once per address and window; a sign-in that works gives back only its own attempt. Once a users read has succeeded, a
+  name that may not use FinStats is answered as a wrong password without asking Jellyfin (`may_try`), no sooner than
+  Jellyfin would; with Jellyfin's `EnableRemoteAccess` off, a sign-in from outside the home network is refused (403).
+  `FINSTATS_TRUST_PROXY` names the proxies whose `X-Forwarded-*` is believed (`auth::Proxies`), the header walked from the
+  right past them. Every sign-in rewrites the user row from Jellyfin's answer, its library policy included.
 - **Setup:** until configured, `main.rs` writes a one-time code to the log (`auth::new_setup_code`, kept in
   `AppState.setup_code`); `/setup/test` and `/setup` refuse without it (428) and count against the sign-in limit, and
   `SETUP_FINISHING` holds the last check and the write together.
 - **One resolution point:** `auth::resolve`. A `Bearer fs_…` header beats the cookie; a malformed header is 401 and never
   falls back. Sessions and keys are both resolved against the **live** `users` row and live grants (`auth::effective`),
-  so a demotion, disable or delete in Jellyfin takes effect immediately.
+  so a demotion, disable or delete in Jellyfin takes effect immediately. A users read that does not say somebody is enabled
+  keeps them out. A non-`Bearer` `Authorization` header beside a cookie (a proxy's Basic sign-in) is ignored.
+- **What outlives a key needs a session** (`keys::needs_a_session` / `only_a_session`, 403 to a key): minting and revoking
+  keys, permissions, the access settings, a restore, a service's create / update / test, notification destinations.
 - **Perms:** `see_everyone`, `see_network`, `see_server`, `see_downloads`, `notify`, `manage` (+ `sign_in`). Jellyfin
   admins get `Perms::ALL`. Others get nothing unless `allow_user_login` or `sign_in`; then their grants ∪
   `default_permissions`. Grants only add; no denies.
 - **Extractors:** `AuthUser`, `Manager`, `ServerViewer`, `DownloadsViewer`, `JellyfinAdmin` (the only one that may edit
   permissions), `CalendarKey`. A calendar-scoped key is refused by `AuthUser` everywhere.
+- **Library access is Jellyfin's, not a permission** (`access.rs`): each person sees the libraries Jellyfin opens to them and,
+  inside them, only the titles Jellyfin lists for them under their rating cap, tags and unrated rules (`visible_items`, read
+  by `sync::read_visible` through `/Items?UserId=` only for people something hides titles from). Administrators see
+  everything; an unread policy opens nothing. `Scope` carries `access` and `viewer`; applied to library pages and titles,
+  Recently added, a title's and a person's page, search, library insights, pictures, the watchlist, Coming up and the
+  calendar feed, and arrivals told to personal destinations. History is not narrowed; Library health and Capacity are
+  whole for `see_server`.
 - **In queries, decide by the specific permission, never by `is_admin`**: `see_everyone` for whose rows,
   `see_network` for IPs/devices/`is_local`, `see_server` for file paths and failed sign-ins. The recap is the documented
-  exception (own year for everyone; any user or the server for Jellyfin admins).
+  exception (own year for everyone; any user or the server for Jellyfin admins), and its rank is left out without
+  `see_everyone`.
 - **UI** mirrors this with `can('perm')` from `state.js`; it is cosmetic. Every rule is enforced server-side.
 - **A manager is not an administrator** (`api::Changer`): settings whose value changes are judged key by key, so a form may
-  send what it may not change, unchanged.
+  send what it may not change, unchanged. Work started by hand (a job, the public-address lookup, a regroup, the location
+  database) goes through `api::by_hand`: a manager once a minute, an administrator not held.
 - **Audit:** `audit.rs` records FinStats' own write paths (`KINDS`). A new write path gets a kind and one `record`.
 
 ---
@@ -422,17 +451,22 @@ past tomorrow. Uploads stop at `api::UPLOAD_MAX`
 backup is opened defensively (`SQLITE_DBCONFIG_DEFENSIVE`, no trusted schema) and every table it reads must be a plain
 table (`tautulli::READ`) without a generated or hidden column, it is read whole before the write lock is taken, its zip entry
 is inflated no further than its size (`inflate`), and one upload arrives at a time, each in a part of its own, swept by prefix.
+It is opened `immutable=1` (no `-wal`/`-shm` left), refused when its ids repeat, and its text read to 1,000 characters.
+Season, episode and end numbers from every producer are kept only within 0 to `i32::MAX` (`playback::bounded_index`); an
+imported play's start and end are both bounded and in order. An upload cut off half way takes its file with it.
 
 **Stats (`stats.rs`).** See the pattern in §9.2. Also playback insights (where viewers stop), concurrency, splits,
 search (`fuzzy.rs`, scored in Rust).
 
 **Groups (`groups.rs`).** Plays of one item by ≥ 2 users starting within `group_window_s` of each other's own start (never
 chained start to start), or ending within it at nearly the same measured place (SyncPlay with a late joiner), and
-overlapping ≥ 2 min share `group_id`; clustered without the write lock, written under it. `mark_live` does the same for
-streams playing now; somebody without `see_everyone` is told only of companions who started with them.
+overlapping ≥ 2 min share `group_id`; somebody with more than one play overlapping a group is left out of it (`RULE` 4);
+clustered without the write lock, written under it. Without `see_everyone` a group is only the people the caller's play met
+(`met_by`, `GROUP_SIZE_MET`). `mark_live` does the same for streams playing now; somebody without `see_everyone` is told
+only of companions who started with them, and a stream following one of the same title by the same person names nobody.
 
 **Recap and story (`recap.rs`, `story.rs`).** One person's year (or the server's); story cards drawn from the typed
-`StoryYear`, which has no field for another person's name, a rank or an app.
+`StoryYear`, which has no field for another person's name, a rank or an app. No rank without `see_everyone`.
 
 **Profile, timeline, recent, watchlist.** `profile.rs` (show progress; seen = play ≥ 80 %, Jellyfin's flag, or a manual
 mark), `timeline.rs` (folded stops, `(started_at, id)` cursor), `recent.rs` (episodes of one show on one day fold),
@@ -440,29 +474,39 @@ mark), `timeline.rs` (folded stops, `(started_at, id)` cursor), `recent.rs` (epi
 
 **Public profiles (`public.rs`, `card.rs`).** `/u/:token` without an account. Built from the owner's id alone, typed
 structs, only plays that ended before the last local midnight a day ago (so a page changes once a day), uniform 404. PNG
-cards via resvg, two at a time, eight waiting at most. An answer is kept a minute per link and language (`public::Answers`),
-keyed by what the owner shows and a fingerprint of the plays it counts.
+cards via resvg: the owner's own two at a time, eight waiting at most; published cards drawn in en-US whoever asks, in a lane
+of their own (one at a time, own cache and queue). An answer is kept a minute per link and language (`public::Answers`, worked
+out once while concurrent requests wait), keyed by what the owner shows and a fingerprint of the plays it counts (kept 5 s,
+so a change shows within seconds). Posters only through `servable_images` (`listed_images` ∩ `artwork::known`).
 
 **Library health and capacity (`health.rs`, `capacity.rs`).** Pure rules over item rows (gaps, drift, thin bitrates,
 dubs, unidentified, copies/versions; disks, runway, transcodes) with named-constant thresholds; findings stored after
 library reads; dismissals hold while the fingerprint matches. A disk's growth counts a file that took a removed one's place
 (same title and library, `take_places`, within `REPLACED_WITHIN_S` of the removed row's last `updated_at`, or any time
-when an import wrote it with 0) as the difference only.
+when an import wrote it with 0) as the difference only. Sums use checked or saturating arithmetic. Without `see_everyone`,
+Capacity's busiest moments are days, and only of at least three streams.
 
 **Network, geo, security (`network.rs`, `geo.rs`, `security.rs`).** Local = private range or a home address; always via
 `network::classify`. GeoIP maps a private copy of a MaxMind-format city DB (opt-in DB-IP download). Pure `detect()` finds
-impossible travel and new countries; `bursts()` failed sign-ins.
+impossible travel and new countries; `bursts()` failed sign-ins, per account (the whole name typed) and 15-minute window:
+one warning, one alert at twenty. The activity log is read from its newest row not in the future.
 
 **Pipeline (`services.rs`, `arr.rs`, `seerr.rs`, `downloads.rs`, `pipeline.rs`).** GET-only clients that follow **no
 redirect** (`X-Api-Key` would follow). `Service` is neither `Debug` nor `Serialize`. Download clients are deliberately
 not connected; queues are read from Sonarr/Radarr. Every upstream body is read through `services::body_at_most`, capped
-after unpacking (64 MB for a service's JSON, 256 MB for Jellyfin's, 20 MB for a picture, 1 GB / 2 GB for the GeoIP file).
+after unpacking (16 MB for a service's JSON, 8 MB for a queue, request or history page, 256 MB for Jellyfin's, 20 MB for a
+picture, 1 GB / 2 GB for the GeoIP file), and a service's JSON is parsed within `services::Limits` (lists cut, too many values
+refused). Without admin, a queue's problem is a kind of failure (`server.downloads.problem.*`), never the service's words;
+a key in those words is blanked by its shape as well as its name.
 
 **Notifications (`notify.rs`, `channels.rs`, `mail.rs`).** Events written once (`dedupe`), one delivery per destination
-with backoff (30 s, 2 min, 10 min, 1 h, then given up). `wanted_by` is the whole permission rule, checked at raise and send
+with backoff (30 s, 2 min, 10 min, 1 h, then given up), sent side by side (four destinations at once, 5 s a message, 30 s a
+letter; three timeouts in a row pause a destination ten minutes). `wanted_by` is the whole permission rule, checked at raise and send
 time (a job's or a connection's failure needs `manage` too). `message()` reads the `private` bag (addresses) only with the
 per-destination switch. A stored secret goes only to the scheme, host and port it was saved for; destinations are made or
-changed only by a session; deliveries go the most severe first. A personal destination is
+changed only by a session; deliveries go the most severe first; Discord and Slack need `https`; an administrator never sees
+another person's topic or user key nor changes its certificate checks; text is escaped before it is cut. A personal
+destination may not point at the household's public address either, and is
 sent through `services::Http::public` (its resolver refuses any non-public answer, no proxy) and mail connects to the
 address that was checked (`mail::Account::connect_to`), so a name cannot be checked at one address and reached at another. Channels: Discord, Telegram,
 Slack, email, ntfy, Gotify, Pushover, Pushbullet, webhook.
@@ -472,14 +516,16 @@ there and to the privacy sentences in `README.md` and the docs' `privacy.md` / `
 
 **Live channel (`live.rs`, `live.js`).** One WebSocket per tab; topics `now_playing`, `downloads`, `summary`, each frame
 built by the same function its GET uses, per person, pushed only on change. Permissions re-checked every 30 s and on
-`Feed::recheck` (close 4401); 20 per person, oldest closed with 4429. The fallback is the old polling.
+`Feed::recheck` (everybody), `recheck_person` or `recheck_key` (close 4401); 20 per person, oldest closed with 4429; a frame
+at most 4 KB. The fallback is the old polling.
 
 **Trash (`trash.rs`).** Deleting a play or a backup moves it to the trash for 30 days; `purge` runs on housekeeping.
 
 **Smaller modules.** `upgrade.rs` (one-off data steps beyond migrations, recorded in `upgrade_steps`), `changelog.rs`
 (Patch notes, per language), `licenses.rs` (shipped licence notice), `finui.rs` / `finmotion.rs` / `appearance.rs`
-(assembled stylesheets, per-person preset), `browse.rs` (a library's titles grid), `artwork.rs` (image cache names and
-ETags by image tag), `ical.rs` (hand-written RFC 5545 feed), `welcome.rs` (who has had the welcome), `keys.rs`, `audit.rs`, `i18n.rs`.
+(assembled stylesheets, per-person preset), `browse.rs` (a library's titles grid), `access.rs` (library access from Jellyfin's
+policy, `Access`, `visible_items`), `artwork.rs` (image cache names and ETags by image tag, `known`, `may_show`; one fetch per
+missing picture, a failure remembered 30 s), `ical.rs` (hand-written RFC 5545 feed), `welcome.rs` (who has had the welcome), `keys.rs`, `audit.rs`, `i18n.rs`.
 
 ---
 
@@ -499,7 +545,7 @@ ETags by image tag), `ical.rs` (hand-written RFC 5545 feed), `welcome.rs` (who h
 |---|---|
 | `dom.js` | `h()` element builder (from FinUI), icons, all formatters (durations, bytes, dates via `Intl`), `safeHttps`, `store` |
 | `api.js` | `api.get/post/put/del` (prefix `/api`, throw `ApiError`), `soft()`, view cache (cleared by any non-GET), `Accept-Language` |
-| `router.js` | History-API router; guard (setup / login / perm); `ctx = {params, query, signal, root, onCleanup, every, title}` |
+| `router.js` | History-API router; guard (setup / login / perm); `ctx = {params, query, signal, root, onCleanup, every, title}`; refuses a parameter that decodes to a separator, `.`, `..`, `?` or `#` (loaders encode parameters into API paths) |
 | `state.js` | `state.user`, `can(perm)`, ranges, all `finstats.*` localStorage keys (theme, layout, language, menus, …; `welcomed()` is the server's `user.welcomed`; the date and time formats are `dom.js`'s) |
 | `components.js` | `dataView()` (stale-while-revalidate page loader), `setBusy`, `openModal`, filters, plays table, FinUI re-exports |
 | `tables.js` | Re-export of FinUI data-table (`dataTable`, `plainTable`, `chartTable`, `sortable`) |
@@ -549,7 +595,8 @@ export default function personPage(ctx) {
 ### 8.5 FinUI and FinMotion
 
 - **FinUI** (`web/assets/finui/`): `registry.json` lists foundation files (`tokens.css`, `base.css`, `core.js`,
-  `format.js`, `i18n.js`) and components (`components/<name>/` with `<name>.js` exporting a builder + `meta`,
+  `format.js`, `i18n.js`; `core.js`'s `h()`/`s()` set an address only when it is http(s) or relative, never `srcdoc`, a change
+  that must stay in step with `../finui`, where it is already) and components (`components/<name>/` with `<name>.js` exporting a builder + `meta`,
   `<name>.css` styling only `fui-<name>`, often a pure `plan.js`). The server concatenates every CSS file in registry
   order into `/assets/finui.css`, then appends the person's preset overlay (`create/presets.json` axes; token files
   `p/<axis>/<option>.css`; a preset code is one base-36 digit per axis).
@@ -579,24 +626,28 @@ Load order: `finui.css` (tokens + components + preset), `finmotion.css`, `app.cs
 4. **Every transaction is IMMEDIATE** (pool init). A read-only snapshot asks for `Deferred` by name.
 5. **Import rusqlite as `db::rusqlite`.**
 6. **Settings change only through `AppState::update_settings`.**
-7. **A read never wipes what it cannot see.** Removals go through `trustworthy_removal` / `whole_set_vanished`; count
+7. **Library reads go through the caller's `Access`** (`Scope.access`; `access.rs`): a title or library Jellyfin hides is the
+   same 404 as an unknown one. History is not narrowed by it.
+8. **A read never wipes what it cannot see.** Removals go through `trustworthy_removal` / `whole_set_vanished`; count
    what was stored, not what was returned.
-8. **Anything that rewrites `playbacks.item_id` re-applies the duplicate rule** (`relink::move_plays`).
-9. **Sticky values go above a diff** (e.g. "once a transcode, always a transcode" before `diff_events`).
-10. **Every `/Sessions` read goes through the gate**, and a timed read re-arms the clock that called for it.
-11. **Pure where possible**: decisions as pure functions with tests; DB and network at the edges.
-12. **Secrets never serialise.** Types holding them (`Service`, `notify::Target`) are neither `Debug` nor `Serialize`;
+9. **Anything that rewrites `playbacks.item_id` re-applies the duplicate rule** (`relink::move_plays`). Seen live is
+   `source = 'live' AND source_id IS NULL`, never `source` alone.
+10. **Sticky values go above a diff** (e.g. "once a transcode, always a transcode" before `diff_events`).
+11. **Every `/Sessions` read goes through the gate**, and a timed read re-arms the clock that called for it.
+12. **Pure where possible**: decisions as pure functions with tests; DB and network at the edges. Sums over numbers from
+    Jellyfin or a file are checked or saturating (release builds check for overflow).
+13. **Secrets never serialise.** Types holding them (`Service`, `notify::Target`) are neither `Debug` nor `Serialize`;
     JSON is built by hand with `has_secret`; errors name a status and a kind, never an upstream body.
-13. **New outbound destination** → `outbound.rs` + README / docs privacy sentences, same change.
-14. **New table holding something Jellyfin cannot give back** → `backup::TABLES`.
-15. **New notification kind** → a `Kind` arm and one `raise`; **new channel** → a `Channel` arm, a `payload` arm, where its
+14. **New outbound destination** → `outbound.rs` + README / docs privacy sentences, same change.
+15. **New table holding something Jellyfin cannot give back** → `backup::TABLES`.
+16. **New notification kind** → a `Kind` arm and one `raise`; **new channel** → a `Channel` arm, a `payload` arm, where its
     token goes (and `notify::clean_url` / `clean_topic` / `Target::shown` if it has special host or field rules).
-16. **New importer** → `PlayRecord::insert_imported`, one IMMEDIATE transaction, `import::finalize`, task id in
+17. **New importer** → `PlayRecord::insert_imported`, one IMMEDIATE transaction, `import::finalize`, task id in
     `HISTORY_WRITERS`, docs page in `../docs`.
-17. **Test mocks must answer the real query** (a mock that ignored `IncludeItemTypes` hid a halt-loop bug).
-18. **Do not run `cargo fmt`.** The code is deliberately not rustfmt-formatted; match the surrounding style by hand.
-19. **Clippy:** add no new warnings.
-20. **Dependencies** must be GPL-3.0-compatible; re-run `tools/make-third-party.py` after any change to `Cargo.lock`.
+18. **Test mocks must answer the real query** (a mock that ignored `IncludeItemTypes` hid a halt-loop bug).
+19. **Do not run `cargo fmt`.** The code is deliberately not rustfmt-formatted; match the surrounding style by hand.
+20. **Clippy:** add no new warnings.
+21. **Dependencies** must be GPL-3.0-compatible; re-run `tools/make-third-party.py` after any change to `Cargo.lock`.
 
 ### 9.2 Adding a statistic
 
@@ -622,7 +673,8 @@ let (a, b) = tokio::try_join!(apart(app.clone(), scope.clone(), |c, s| totals(c,
 
 ### 9.3 Frontend rules
 
-1. API and user strings reach the DOM only through `h()` / `textContent`; never `innerHTML` with data.
+1. API and user strings reach the DOM only through `h()` / `textContent`; never `innerHTML` with data. A route parameter put
+   into an API path is encoded.
 2. Pass possibly-absent nodes through `h()` (native `append(null)` prints "null").
 3. Everything a page starts dies with `ctx.signal` (fetches, `follow`, listeners on `window`/`document`, timers via
    `ctx.every`). `stickyFilters` throws without a signal.
@@ -632,8 +684,8 @@ let (a, b) = tokio::try_join!(apart(app.clone(), scope.clone(), |c, s| totals(c,
 7. No inline styles (CSP); `el.style.x` from JS is fine. Every colour is a token, reached as `'var(--x)'`.
 8. Live data uses `follow()`, never a bare `setInterval`.
 9. Overlays stop propagation of their own Esc; `shell.js` handles Esc globally.
-10. Every word a person reads comes from `t('key')`. A new key lands in the five checked catalogues (en-GB, en-US, nb-NO,
-    nn-NO, nn-NO-synnmore, the owner's dialect, by `internal/dialekt.md`) in the same change; the other nineteen say it in en-GB until translated (see `CLAUDE.md`, Languages).
+10. Every word a person reads comes from `t('key')`. A new key lands in the four checked catalogues (en-GB, en-US, nb-NO,
+    nn-NO) in the same change; the other nineteen say it in en-GB until translated (see `CLAUDE.md`, Languages).
 11. Content stays visible: no folds; use navigation and jump lists instead.
 
 ### 9.4 Writing rules (all repositories)
@@ -657,7 +709,7 @@ cargo build --release                                   # embeds web/, CHANGELOG
 FINSTATS_DATA_DIR=./data FINSTATS_BIND=127.0.0.1:8088 cargo run        # serve (debug reads web/ from disk)
 cargo run -- import-jellystat <backup.jsonl>
 cargo run -- import-streamystats <backup.json>
-cargo run -- backup | restore <file> | relink | --version | --help
+cargo run -- backup | restore <file> [--with-settings] | relink | --version | --help   # restore: history only by default
 
 # Tests and checks
 cargo test                                              # all unit tests (~0.5 s; CI runs cargo test --locked)
@@ -683,7 +735,8 @@ docker build -t finstats:latest .
 
 The owner's own install runs as a container named `finstats` built from this checkout; finishing a change means
 rebuilding the image and swapping the container (read its run arguments from `docker inspect`, never from memory), then
-checking `/api/status`, the log and the health state.
+checking `/api/status`, the log and the health state. A command inside the container runs as the data folder's owner
+(`docker exec -u <PUID> finstats finstats <command>`): FinStats refuses to run as root over a folder another user owns.
 
 ---
 
@@ -737,7 +790,7 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 |---|---|---|
 | `FINSTATS_DATA_DIR` | `data` (image: `/data`) | Database, caches, backups, uploads, geoip |
 | `FINSTATS_BIND` | `0.0.0.0:8080` | Listen address |
-| `FINSTATS_TRUST_PROXY` | off | Use the last `X-Forwarded-For`; let `X-Forwarded-Host` vouch in the Origin check |
+| `FINSTATS_TRUST_PROXY` | off | The proxies (addresses or CIDR ranges, comma or space separated) whose `X-Forwarded-For`, `-Host` and `-Proto` are believed, read from the right past them; `1`/`true` = a loopback or private-network peer, one hop; an unreadable list stops the start |
 | `FINSTATS_GEOIP_DB` | newest `.mmdb` in `<data>/geoip` | Fixed city database (also disables the download job) |
 | `FINSTATS_PUBLIC_IP_URL` | built-in services | Plain-text public-IP lookup URL |
 | `FINSTATS_ALLOW_LIBRARY_SHRINK` | off | Let an emptying/shrinking library read through (clears a halt loop) |
@@ -745,7 +798,7 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 | `JELLYFIN_URL` + `JELLYFIN_API_KEY` | unset | Configure Jellyfin without the wizard (both or neither) |
 | `TZ` | process local | Local-day bucketing (the image ships tzdata) |
 | `RUST_LOG` | `finstats=info` | Log filter |
-| `PUID` / `PGID` | 1000 / 1000 | Container user (entrypoint only) |
+| `PUID` / `PGID` | 1000 / 1000 | Container user (entrypoint only; it sets `umask 077` and changes only the data folder and FinStats' own entries) |
 
 `main.rs`'s `USAGE` text must name every variable FinStats reads (a test checks literal `env::var("…")` calls).
 
@@ -755,7 +808,7 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 
 - `CHANGELOG.md`: `## [x.y.z] - YYYY-MM-DD` (or `- first to last`), an `x.y.0` opens with a short title line, groups
   `### Added | Changed | Security | Performance | Stability | Fixed | Removed`, one-line bullets (`**bold**`, `*italic*`, `` `code` ``;
-  no links). **Every entry must also be added to `changelog/en-US.md`, `nb-NO.md`, `nn-NO.md`, `nn-NO-synnmore.md`** with the same groups,
+  no links). **Every entry must also be added to `changelog/en-US.md`, `nb-NO.md`, `nn-NO.md`** with the same groups,
   bullet counts and code spans, or `cargo test` fails. The other nineteen `changelog/<tag>.md` may follow within the
   series, but `qa/run.sh i18n` fails until every one tells every release the source does, so none ships behind.
 - History shape: logical commits (backend before UI, `fix(...)` on their own, then `docs:`), then
@@ -782,8 +835,8 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 
 **Open issues found while writing this file (2026-10-12)**
 
-- **Nineteen of the 24 languages are unchecked translations.** Only en-GB, en-US, nb-NO, nn-NO and nn-NO-synnmore are read by the owner;
-  the README, the docs and Settings → Appearance → Language say so. Cards (Recap, public profile) draw Japanese, Korean,
+- **Nineteen of the 23 languages are unchecked translations.** Only en-GB, en-US, nb-NO and nn-NO are read by the owner;
+  the README, the docs and Settings → Appearance → Language say so. A person's own Recap cards draw Japanese, Korean,
   Chinese and Hindi readers' cards in en-GB, because the card font (Inter) has no CJK or Devanagari letters.
 - **Notification messages stay English** (they are sent outside any request, to external services), and stored texts
   written by scheduled runs (a task's error) are in en-GB.
@@ -797,8 +850,21 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
   only the plays since its last run can change the busiest moments.
 - `capacity::busiest_of` joins two evenings into one spell while a play is stuck active between them.
 - The live channel: a topic dropped at a recheck (access taken away) is not subscribed again when access comes back
-  within the page's life, so the page stays still until it is reloaded; a tab's own drift can hide behind a reset of the
-  shared course; and one person creating and revoking API keys in a loop makes every open connection recheck its access.
+  within the page's life, so the page stays still until it is reloaded; and a tab's own drift can hide behind a reset of the
+  shared course. (A key revoked, a sign-in or a sign-out now rechecks only the connections it concerns.)
+
+**Left with the owner after the 2.3.1 security passes (2026-10-28)**
+
+- **No `Host` allowlist against DNS rebinding.** A page on a name the attacker controls, re-pointed at FinStats' address,
+  is same-origin to itself; FinStats does not refuse unknown `Host` headers, because a default allowlist would break LAN
+  hostnames, bare IPs and proxies. It could be an opt-in (`FINSTATS_ALLOWED_HOSTS`), which the owner may want.
+- **No per-name sign-in limit below Jellyfin's lockout.** Jellyfin's failure counter resets only on a successful sign-in, so
+  a window in FinStats would delay a lockout without preventing it, and would let anyone keep a person out of FinStats by
+  typing their name. The per-address, per-/48 and server-wide limits and `may_try` stand instead.
+- **Published cards are always drawn in en-US** (`i18n::DEFAULT`), not in the owner's language: FinStats stores no language
+  for a person, and keeping one would need a migration.
+- On plain http every other web service on the same host or address, on any port, receives the session cookie; only the
+  `__Host-` cookie on https is FinStats' alone (the docs say to serve it on its own hostname over https).
 
 ---
 
