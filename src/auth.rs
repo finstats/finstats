@@ -4,6 +4,7 @@
 //! `AuthenticateByName`; on success we mint our own opaque session token (stored
 //! hashed) and immediately end the Jellyfin session the check created.
 
+use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 
 use axum::extract::{ConnectInfo, FromRequestParts, State};
@@ -569,9 +570,50 @@ async fn start_session(
     Ok(resp)
 }
 
-/// The most addresses the limiter remembers at once; past it the oldest are let go, so a flood of new addresses
-/// cannot grow it without end.
+/// The most addresses (and /48s) the limiter remembers at once. Past it a new one is refused until a window ends, never
+/// an old one forgotten: forgetting the oldest let a guesser with more addresses than this take them in turn, each
+/// forgotten before its tenth try.
 const ATTEMPTS_REMEMBERED: usize = 10_000;
+/// Tries per IPv6 /48 in a window, across all its /64s: a network is often given a whole /48, 65,536 /64s.
+const WIDE_ATTEMPTS: u32 = 5 * MAX_ATTEMPTS;
+/// Failed sign-ins a minute on the whole server past which nobody's attempt is forwarded until the minute has passed. A
+/// household mistypes a few; this many is somebody guessing from more addresses than any limit per address can see.
+const FAILURES_PER_MINUTE: usize = 60;
+
+/// One address's (or one /48's) attempts in its window.
+#[derive(Clone, Copy)]
+struct Bucket {
+    tries: u32,
+    since: i64,
+    /// Whether this window's first failure has been written to the audit log; the rest are not.
+    audited: bool,
+}
+
+/// What the sign-in limiter remembers.
+#[derive(Default)]
+pub struct Attempts {
+    buckets: HashMap<IpAddr, Bucket>,
+    /// The same, per IPv6 /48.
+    wide: HashMap<IpAddr, Bucket>,
+    /// When each failure of the last minute happened, server-wide.
+    failures: std::collections::VecDeque<i64>,
+}
+
+impl Attempts {
+    /// How many addresses and /48s are remembered now.
+    #[cfg(test)]
+    pub fn remembered(&self) -> usize {
+        self.buckets.len().max(self.wide.len())
+    }
+
+    fn forget_old(&mut self, now: i64) {
+        self.buckets.retain(|_, b| now - b.since < ATTEMPT_WINDOW_S);
+        self.wide.retain(|_, b| now - b.since < ATTEMPT_WINDOW_S);
+        while self.failures.front().is_some_and(|t| now - t >= 60) {
+            self.failures.pop_front();
+        }
+    }
+}
 
 /// Whose attempts an address counts as: an IPv4 address, or a whole IPv6 /64, which one machine holds and may
 /// take any address in. An IPv4 address written inside IPv6 is that address.
@@ -585,36 +627,74 @@ fn attempt_bucket(ip: IpAddr) -> IpAddr {
     }
 }
 
-/// Sliding-window limiter against password guessing through FinStats.
+/// The IPv6 /48 an address is in, if it is IPv6.
+fn wide_bucket(ip: IpAddr) -> Option<IpAddr> {
+    match attempt_bucket(ip) {
+        IpAddr::V6(v6) => Some(IpAddr::V6(std::net::Ipv6Addr::from(u128::from(v6) & !((1u128 << 80) - 1)))),
+        IpAddr::V4(_) => None,
+    }
+}
+
+fn too_many(wait_s: i64) -> ApiError {
+    ApiError::new(StatusCode::TOO_MANY_REQUESTS, crate::i18n::t("server.auth.too_many_attempts", &[("count", ((wait_s.max(1) + 59) / 60).into())]))
+}
+
+/// Room for one more try in `map` under `key`, at most `max` a window: refused when spent, or when the map is full and
+/// `key` is new. Nothing is counted here.
+fn room(map: &HashMap<IpAddr, Bucket>, key: IpAddr, max: u32, now: i64) -> Result<(), ApiError> {
+    match map.get(&key) {
+        Some(b) if b.tries >= max => Err(too_many(ATTEMPT_WINDOW_S - (now - b.since))),
+        Some(_) => Ok(()),
+        None if map.len() >= ATTEMPTS_REMEMBERED => Err(too_many(ATTEMPT_WINDOW_S)),
+        None => Ok(()),
+    }
+}
+
+/// Sliding-window limiter against password guessing through FinStats: per address (an IPv6 /64), per IPv6 /48, and the
+/// failures of the whole server in the last minute.
 fn check_rate_limit(app: &App, ip: IpAddr) -> Result<(), ApiError> {
     let now = db::now();
-    let ip = attempt_bucket(ip);
-    let mut map = app.login_attempts.lock().unwrap();
-    map.retain(|_, (_, start)| now - *start < ATTEMPT_WINDOW_S);
-    if map.len() >= ATTEMPTS_REMEMBERED && !map.contains_key(&ip) {
-        let mut oldest: Vec<(IpAddr, i64)> = map.iter().map(|(k, (_, start))| (*k, *start)).collect();
-        oldest.sort_by_key(|(_, start)| *start);
-        for (k, _) in oldest.into_iter().take(map.len() + 1 - ATTEMPTS_REMEMBERED) {
-            map.remove(&k);
-        }
+    let mut a = app.login_attempts.lock().unwrap();
+    a.forget_old(now);
+    if a.failures.len() >= FAILURES_PER_MINUTE {
+        return Err(too_many(60 - (now - a.failures.front().copied().unwrap_or(now))));
     }
-    let entry = map.entry(ip).or_insert((0, now));
-    if entry.0 >= MAX_ATTEMPTS {
-        let wait = (ATTEMPT_WINDOW_S - (now - entry.1)).max(1);
-        return Err(ApiError::new(
-            StatusCode::TOO_MANY_REQUESTS,
-            crate::i18n::t("server.auth.too_many_attempts", &[("count", ((wait + 59) / 60).into())]),
-        ));
+    let key = attempt_bucket(ip);
+    room(&a.buckets, key, MAX_ATTEMPTS, now)?;
+    let wide = wide_bucket(ip);
+    if let Some(w) = wide {
+        room(&a.wide, w, WIDE_ATTEMPTS, now)?;
+        a.wide.entry(w).or_insert(Bucket { tries: 0, since: now, audited: false }).tries += 1;
     }
-    entry.0 += 1;
+    a.buckets.entry(key).or_insert(Bucket { tries: 0, since: now, audited: false }).tries += 1;
     Ok(())
 }
 
 /// A sign-in that worked is not a guess: it gives back its own attempt and nothing more. Clearing the address's count
 /// here let anybody allowed in guess at any account without a limit, a sign-in of their own between every nine.
 fn signed_in(app: &App, ip: IpAddr) {
-    if let Some(entry) = app.login_attempts.lock().unwrap().get_mut(&attempt_bucket(ip)) {
-        entry.0 = entry.0.saturating_sub(1);
+    let mut a = app.login_attempts.lock().unwrap();
+    if let Some(b) = a.buckets.get_mut(&attempt_bucket(ip)) {
+        b.tries = b.tries.saturating_sub(1);
+    }
+    if let Some(b) = wide_bucket(ip).and_then(|w| a.wide.get_mut(&w)) {
+        b.tries = b.tries.saturating_sub(1);
+    }
+}
+
+/// A sign-in Jellyfin refused: counted against the whole server's minute. Answers whether it is this address's first
+/// failure of its window, the one written to the audit log.
+fn failed(app: &App, ip: IpAddr) -> bool {
+    let now = db::now();
+    let mut a = app.login_attempts.lock().unwrap();
+    a.failures.push_back(now);
+    match a.buckets.get_mut(&attempt_bucket(ip)) {
+        Some(b) if !b.audited => {
+            b.audited = true;
+            true
+        }
+        Some(_) => false,
+        None => true,
     }
 }
 
@@ -646,9 +726,12 @@ pub async fn login(
     let auth = match jf.authenticate(username, &body.password).await {
         Ok(a) => a,
         Err(AuthError::InvalidCredentials) => {
-            // The name as typed: it is the administrator's own server, and Jellyfin's log says the same.
-            let who = Actor { user_id: None, user_name: Some(username.chars().take(100).collect()), ip: Some(ip), key_id: None };
-            audit::record(&app, audit::Entry::new("sign_in_failed", who).outcome("failed"));
+            // The name as typed: it is the administrator's own server, and Jellyfin's log says the same. Once per address
+            // and window: a guesser's every try was a row more, and Jellyfin's own log has each.
+            if failed(&app, ip) {
+                let who = Actor { user_id: None, user_name: Some(username.chars().take(100).collect()), ip: Some(ip), key_id: None };
+                audit::record(&app, audit::Entry::new("sign_in_failed", who).outcome("failed"));
+            }
             return Err(ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.wrong_password", &[])));
         }
         Err(AuthError::Other(e)) => {
@@ -978,11 +1061,63 @@ mod tests {
             let _ = check_rate_limit(&app, ip("192.0.2.7"));
         }
         assert!(check_rate_limit(&app, ip("::ffff:192.0.2.7")).is_err());
-        // A flood of new addresses lets the oldest go rather than grow without end.
-        for n in 0..ATTEMPTS_REMEMBERED as u32 + 50 {
+    }
+
+    /// A flood of new addresses fills the limiter, and then a new one is refused rather than an old one forgotten:
+    /// letting the oldest go meant ten thousand and one /64s, taken in turn, each forgotten before its tenth try, guessed
+    /// without any limit.
+    #[test]
+    fn a_full_limiter_refuses_newcomers_rather_than_forgetting_the_spent() {
+        let app = crate::state::test_app();
+        let spent: IpAddr = "192.0.2.7".parse().unwrap();
+        for _ in 0..MAX_ATTEMPTS {
+            check_rate_limit(&app, spent).unwrap();
+        }
+        for n in 0..ATTEMPTS_REMEMBERED as u32 {
             let _ = check_rate_limit(&app, IpAddr::V4(std::net::Ipv4Addr::from(0x0a00_0000 + n)));
         }
-        assert_eq!(app.login_attempts.lock().unwrap().len(), ATTEMPTS_REMEMBERED);
+        assert!(app.login_attempts.lock().unwrap().remembered() <= ATTEMPTS_REMEMBERED, "it grew without end");
+        assert!(check_rate_limit(&app, spent).is_err(), "an address that spent its tries was forgotten");
+        assert!(check_rate_limit(&app, "198.51.100.1".parse().unwrap()).is_err(), "a newcomer was let in by forgetting another");
+    }
+
+    /// One network is often given a whole IPv6 /48 (65,536 /64s), so the /48 has a limit of its own, a few households wide.
+    #[test]
+    fn an_ipv6_48_has_a_wider_limit_of_its_own() {
+        let app = crate::state::test_app();
+        for n in 0..WIDE_ATTEMPTS {
+            assert!(check_rate_limit(&app, format!("2001:db8:1:{:x}::1", n + 1).parse().unwrap()).is_ok(), "{n}");
+        }
+        assert!(check_rate_limit(&app, "2001:db8:1:ffff::1".parse().unwrap()).is_err(), "a fresh /64 in a spent /48");
+        assert!(check_rate_limit(&app, "2001:db8:2::1".parse().unwrap()).is_ok(), "the next /48 is somebody else");
+    }
+
+    /// Past so many failures a minute on the whole server, nobody's attempt is forwarded until the minute has passed:
+    /// the limit per address does nothing against a guesser with thousands of addresses.
+    #[test]
+    fn so_many_failures_a_minute_anywhere_stop_every_attempt() {
+        let app = crate::state::test_app();
+        for n in 0..FAILURES_PER_MINUTE as u32 {
+            let ip = IpAddr::V4(std::net::Ipv4Addr::from(0x0a00_0000 + n));
+            check_rate_limit(&app, ip).unwrap();
+            failed(&app, ip);
+        }
+        assert!(check_rate_limit(&app, "198.51.100.1".parse().unwrap()).is_err());
+    }
+
+    /// A failed sign-in is written to the audit log once per address and window: each try wrote a row, and a guesser's
+    /// every try was a row more in the log.
+    #[test]
+    fn a_failure_is_audited_once_per_address_and_window() {
+        let app = crate::state::test_app();
+        let ip: IpAddr = "192.0.2.7".parse().unwrap();
+        check_rate_limit(&app, ip).unwrap();
+        assert!(failed(&app, ip), "the first");
+        check_rate_limit(&app, ip).unwrap();
+        assert!(!failed(&app, ip), "the second, in the same window");
+        let other: IpAddr = "192.0.2.8".parse().unwrap();
+        check_rate_limit(&app, other).unwrap();
+        assert!(failed(&app, other), "another address's first");
     }
 
     /// A session cookie is Secure whenever the page signing in is on https. A proxy says so with `X-Forwarded-Proto`, but

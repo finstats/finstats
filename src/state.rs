@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, HashMap};
-use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -30,7 +29,7 @@ pub struct AppState {
     pub tasks: Tasks,
     pub live: RwLock<Vec<Value>>,
     pub collector: RwLock<CollectorStatus>,
-    pub login_attempts: Mutex<HashMap<IpAddr, (u32, i64)>>,
+    pub login_attempts: Mutex<crate::auth::Attempts>,
     /// A fresh install's one-time setup code (`auth::new_setup_code`): written to the log at start, asked for by the
     /// wizard. `None` once FinStats knows its Jellyfin.
     pub setup_code: Option<String>,
