@@ -529,6 +529,7 @@ pub(crate) fn store_session(c: &Connection, hash: &str, user_id: &str, user_name
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn start_session(
     app: &App,
     headers: &HeaderMap,

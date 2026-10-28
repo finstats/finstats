@@ -57,9 +57,15 @@ pub fn store(c: &Connection, user_id: &str, p: &Policy) -> Result<()> {
     Ok(())
 }
 
+/// One person whose list of titles is to be read: their id, the policy it is read under, and their libraries (`None`: all).
+pub type ToList = (String, String, Option<Vec<String>>);
+
+/// A user's stored access: every library, the ones named, what hides titles, and the policy their list was read under.
+type Row = (Option<bool>, Option<String>, Option<String>, Option<String>);
+
 /// The people whose list of titles must be read from Jellyfin: something hides titles from them. With `stale_only`, only
 /// those whose list was read under another policy, or never.
-pub fn to_list(c: &Connection, stale_only: bool) -> Result<Vec<(String, String, Option<Vec<String>>)>> {
+pub fn to_list(c: &Connection, stale_only: bool) -> Result<Vec<ToList>> {
     let mut stmt = c.prepare(
         "SELECT id, access_hides, access_all, access_libraries FROM users
          WHERE removed = 0 AND is_admin = 0 AND access_hides IS NOT NULL AND (?1 = 0 OR visible_for IS NOT access_hides)
@@ -139,7 +145,7 @@ impl Access {
         if is_admin {
             return Ok(Self::everything());
         }
-        let row: Option<(Option<bool>, Option<String>, Option<String>, Option<String>)> = c
+        let row: Option<Row> = c
             .query_row("SELECT access_all, access_libraries, access_hides, visible_for FROM users WHERE id = ?1", [user_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
             .optional()?;
         let Some((Some(all), libs, hides, read_for)) = row else { return Ok(Self::nothing()) };
