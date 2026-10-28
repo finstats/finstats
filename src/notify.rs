@@ -1329,6 +1329,8 @@ fn may_touch(user: &AuthUser, t: &Target) -> bool {
 
 pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<TargetBody>) -> FormResult {
     gate(&user)?;
+    // A destination keeps sending after the key that made it is revoked: as with minting a key, only a session.
+    crate::keys::only_a_session(&user)?;
     let next = describe(body, None, &user)?;
     if next.owner_id.is_some() {
         must_be_public(next.url()).await.map_err(|e| FormError::at("url", format!("{e}")))?;
@@ -1368,6 +1370,7 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Tar
 
 pub async fn update(State(app): State<App>, user: AuthUser, Path(id): Path<i64>, Json(body): Json<TargetBody>) -> FormResult {
     gate(&user)?;
+    crate::keys::only_a_session(&user)?;
     let stored = app.db.call(move |c| stored_target(c, id)).await?.ok_or_else(|| ApiError::not_found("Destination"))?;
     if !may_touch(&user, &stored) {
         return Err(ApiError::forbidden().into());
@@ -1918,6 +1921,19 @@ pub(crate) mod tests {
         stored.owner_id = Some("ub".into());
         assert!(describe(body(json!({ "url": "https://attacker.example", "secret": "new-token" })), Some(&stored), &admin()).is_err(), "an administrator moved somebody else's destination");
         assert!(describe(body(json!({ "enabled": false })), Some(&stored), &admin()).is_ok(), "an administrator may switch it off");
+    }
+
+    /// A destination keeps sending after the key that made it is revoked, so a key may not make or change one: a leaked
+    /// key that could would have left a way of being told everything behind it, as minting a successor would.
+    #[tokio::test]
+    async fn a_key_does_not_make_or_change_a_destination() {
+        let app = crate::state::test_app();
+        let mut by_key = admin();
+        by_key.credential = crate::auth::Credential::Key { id: 1, scope: crate::auth::KeyScope::Full };
+        let made = create(State(app.clone()), by_key.clone(), Json(body(json!({ "kind": "webhook", "url": "https://hooks.example.com/x" })))).await;
+        assert_eq!(made.err().map(|e| e.error.0), Some(axum::http::StatusCode::FORBIDDEN));
+        let changed = update(State(app), by_key, Path(1), Json(body(json!({ "enabled": false })))).await;
+        assert_eq!(changed.err().map(|e| e.error.0), Some(axum::http::StatusCode::FORBIDDEN));
     }
 
     #[test]
