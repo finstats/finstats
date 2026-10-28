@@ -1666,7 +1666,7 @@ pub(crate) mod tests {
             assert!(!may(k, None, server), "{} with see_server alone", k.key());
             assert!(may(k, None, Perms::from_keys(["sign_in", "notify", "see_server", "manage"])));
         }
-        assert!(may(Kind::NewItems, None, plain), "the library is the same for everyone");
+        assert!(may(Kind::NewItems, None, plain), "wanted by anybody; which titles they may see is `owner_sees_title`'s to decide");
         assert!(!wanted_by(&t, Kind::NewItems, INFO, 10, None, None), "somebody who may not sign in is told nothing");
         // "Be sent notifications" taken away: their destinations go quiet, which they could no longer do themselves.
         assert!(!may(Kind::PlayStarted, Some("ub"), Perms::from_keys(["sign_in", "see_everyone"])), "sent notifications without being allowed them");
