@@ -275,8 +275,7 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
         }
         Ok(())
     };
-    let mut de = serde_json::Deserializer::from_reader(BufReader::with_capacity(1 << 20, file));
-    let found = Doc { each: &mut each, expected: &expected }.deserialize(&mut de).map_err(|e| unexpected(path, Some(e)))?;
+    let found = walk(BufReader::with_capacity(1 << 20, file), &mut each, &expected).map_err(|e| unexpected(path, Some(e)))?;
     if !found {
         return Err(unexpected(path, None));
     }
@@ -288,6 +287,12 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
     crate::groups::detect(&mut conn, settings.group_window_s, None)?;
     conn.execute_batch("PRAGMA optimize;")?;
     Ok(res)
+}
+
+/// Walk a backup, handing each session to `each` as it is read, one at a time and none past `import::ROW_MAX`.
+fn walk<R: std::io::Read>(reader: R, each: &mut impl FnMut(Value) -> Result<()>, expected: &std::cell::Cell<u64>) -> std::result::Result<bool, serde_json::Error> {
+    let mut de = serde_json::Deserializer::from_reader(crate::import::RowBudget(reader));
+    Doc { each, expected }.deserialize(&mut de)
 }
 
 /// Say what is wrong with the file in a way an operator can act on, naming the other tracker when
@@ -369,8 +374,14 @@ impl<'de, F: FnMut(Value) -> Result<()>> Visitor<'de> for Doc<'_, F> {
                 // How many there are, when the file says so before the list itself: only used to
                 // tell the operator how far along the import is.
                 "counts" => {
-                    let counts: Value = map.next_value()?;
-                    self.expected.set(counts["sessions"].as_u64().unwrap_or(0));
+                    // Only the number it is read for: anything else under it is stepped over, never kept.
+                    #[derive(serde::Deserialize)]
+                    struct Counts {
+                        #[serde(default)]
+                        sessions: Option<u64>,
+                    }
+                    let counts: Counts = map.next_value()?;
+                    self.expected.set(counts.sessions.unwrap_or(0));
                 }
                 _ => {
                     map.next_value::<IgnoredAny>()?;
@@ -393,7 +404,7 @@ struct Each<'a, F> {
 
 impl<F: FnMut(Value) -> Result<()>> Each<'_, F> {
     fn read<'de, A: SeqAccess<'de>>(self, mut seq: A) -> std::result::Result<(), A::Error> {
-        while let Some(row) = seq.next_element::<Value>()? {
+        while let Some(row) = crate::import::one_row(|| seq.next_element::<Value>())? {
             (self.each)(row).map_err(|e| serde::de::Error::custom(format!("{e:#}")))?;
         }
         Ok(())
@@ -425,6 +436,19 @@ mod tests {
     use super::*;
     use crate::db::rusqlite::Connection;
     use serde_json::json;
+
+    /// One session had no limit, nor did `counts`: `{"sessions":[[0,0,0,…]]}` ran the process out of memory inside the
+    /// import's transaction. A session stops at `import::ROW_MAX`; `counts` keeps only the number it is read for.
+    #[test]
+    fn one_session_is_read_no_further_than_any_row_could_be() {
+        let zeros = format!("[{}0]", "0,".repeat(crate::import::ROW_MAX as usize));
+        let expected = std::cell::Cell::new(0u64);
+        for doc in [format!("{{\"sessions\":[{zeros}]}}"), format!("{{\"counts\":{{\"sessions\":3,\"x\":{zeros}}},\"sessions\":[]}}")] {
+            let walked = walk(doc.as_bytes(), &mut |_| Ok(()), &expected);
+            assert!(walked.is_err() == doc.starts_with("{\"sessions"), "{}", &doc[..30]);
+        }
+        assert_eq!(expected.get(), 3, "counts said how many");
+    }
 
     /// 2026-01-01T00:00:00Z. The fixtures below are dated from here.
     const MIDNIGHT: i64 = 1_767_225_600;

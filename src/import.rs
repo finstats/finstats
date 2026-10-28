@@ -59,9 +59,45 @@ fn phase_label(table: &str) -> String {
     crate::i18n::t(&format!("server.import.{key}"), &[])
 }
 
-/// The longest line a backup's reader takes. A row of the largest export seen is a few hundred kilobytes; a file that is
-/// one endless line (or a little gzip that inflates into one) was otherwise kept whole in memory.
-pub(crate) const LINE_MAX: u64 = 64 << 20;
+/// The most one row of a backup may be, as a line or inside one document. A row of the largest export seen is a few
+/// hundred kilobytes. Read as JSON, a row takes many times its size (`[0,0,…]` is 32 bytes for every two), so a row
+/// the upload limit allowed ran the process out of memory inside the import's transaction.
+pub(crate) const ROW_MAX: u64 = 8 << 20;
+
+/// The longest line a backup's reader takes: one row. A file that is one endless line (or a little gzip that inflates
+/// into one) was otherwise kept whole in memory.
+pub(crate) const LINE_MAX: u64 = ROW_MAX;
+
+thread_local! {
+    /// What the row being read may still take, while one is (`None` between rows: stepping over a section nobody reads
+    /// keeps nothing).
+    static ROW_LEFT: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
+}
+
+/// Read one row of a document through `read` with at most `ROW_MAX` of the file under it. The reader must be a
+/// [`RowBudget`].
+pub(crate) fn one_row<T>(read: impl FnOnce() -> T) -> T {
+    ROW_LEFT.set(Some(ROW_MAX));
+    let row = read();
+    ROW_LEFT.set(None);
+    row
+}
+
+/// A reader that refuses to go past `ROW_MAX` inside a row being read through [`one_row`].
+pub(crate) struct RowBudget<R>(pub R);
+
+impl<R: Read> Read for RowBudget<R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let Some(left) = ROW_LEFT.get() else { return self.0.read(buf) };
+        if left == 0 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, crate::i18n::t("server.import.line_too_long", &[])));
+        }
+        let most = buf.len().min(left as usize);
+        let n = self.0.read(&mut buf[..most])?;
+        ROW_LEFT.set(Some(left - n as u64));
+        Ok(n)
+    }
+}
 
 /// `read_line`, refusing a line longer than `max`.
 pub(crate) fn read_line_at_most(reader: &mut impl BufRead, line: &mut String, max: u64) -> std::io::Result<usize> {
@@ -89,7 +125,7 @@ impl<R: Read> Read for Counted<'_, R> {
 /// The older Jellystat format, `[{"<table>": [rows…]}, …]`, read as it arrives: each row is handed to `each` with its
 /// table as soon as it has been read. Read whole into memory first, it took several times the file's size.
 fn legacy_rows<R: Read>(reader: R, mut each: impl FnMut(&str, Value) -> Result<()>) -> Result<()> {
-    let mut de = serde_json::Deserializer::from_reader(reader);
+    let mut de = serde_json::Deserializer::from_reader(RowBudget(reader));
     serde::de::DeserializeSeed::deserialize(legacy::Sections(&mut each), &mut de)?;
     de.end()?;
     Ok(())
@@ -178,7 +214,7 @@ mod legacy {
             f.write_str("a list of rows")
         }
         fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<(), A::Error> {
-            while let Some(row) = seq.next_element::<Value>()? {
+            while let Some(row) = super::one_row(|| seq.next_element::<Value>())? {
                 (self.each)(self.table, row).map_err(|e| A::Error::custom(format!("{e:#}")))?;
             }
             Ok(())
@@ -752,6 +788,21 @@ mod tests {
         });
         assert!(r.is_err(), "a document that stops half way");
         assert_eq!(seen, ["jf_users/A", "jf_users/B", "jf_playback_activity/p1"]);
+    }
+
+    /// One row of the older format had no limit: `[[0,0,0,…]]` as a row is 32 bytes of memory for every two of file, so a
+    /// file the upload limit allows ran the process out of memory inside the import's transaction. A row stops at
+    /// `ROW_MAX`, and what is stepped over (a section nobody reads) is not counted against it.
+    #[test]
+    fn one_row_of_the_older_format_is_read_no_further_than_any_row_could_be() {
+        let row = format!("[{{\"jf_users\":[[{}0]]}}]", "0,".repeat(ROW_MAX as usize));
+        let began = std::time::Instant::now();
+        assert!(legacy_rows(row.as_bytes(), |_, _| Ok(())).is_err(), "a row past the most a row may be");
+        assert!(began.elapsed() < std::time::Duration::from_secs(5));
+        let skipped = format!("[[{}0],{{\"jf_users\":[{{\"Id\":\"A\"}}]}}]", "0,".repeat(ROW_MAX as usize));
+        let mut seen = 0;
+        legacy_rows(skipped.as_bytes(), |_, _| { seen += 1; Ok(()) }).unwrap();
+        assert_eq!(seen, 1);
     }
 
     #[test]
