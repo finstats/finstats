@@ -19,6 +19,15 @@ use crate::db::{self};
 use crate::state::{ApiError, ApiResult, App};
 use crate::stats::rows_json;
 
+/// What outlives a key is done with a session, never with a key: a grant, a setting that opens FinStats, a restore (which
+/// can bring grants back), a service's connection. A leaked key revoked must take everything it could do with it.
+pub fn needs_a_session(user: &AuthUser) -> Result<(), ApiError> {
+    match user.credential {
+        Credential::Session => Ok(()),
+        Credential::Key { .. } => Err(ApiError::new(StatusCode::FORBIDDEN, crate::i18n::t("server.keys.session_needed", &[]))),
+    }
+}
+
 /// Live keys one person may hold at once.
 pub const MAX_KEYS_PER_USER: i64 = 20;
 

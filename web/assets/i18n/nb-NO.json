@@ -1506,6 +1506,7 @@
     },
     "keys": {
       "session_only": "Logg inn for å administrere nøkler; en nøkkel kan ikke lage eller trekke tilbake nøkler",
+      "session_needed": "Logg inn for å gjøre dette; en nøkkel kan ikke gjøre det",
       "name": "Gi nøkkelen et navn på opptil 60 tegn",
       "expiry": "En utløpstid er 1 til 3 650 dager",
       "scope": "Omfanget er `full` eller `calendar`",

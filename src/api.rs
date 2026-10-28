@@ -730,8 +730,12 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
         return Err(ApiError::bad_request(i18n::t("server.api.expected_object", &[])));
     };
     // Who gets in and what everyone may see is an administrator's call: a manager must not be able to promote themselves.
-    if !user.is_admin && ACCESS_KEYS.iter().any(|k| patch.contains_key(*k)) {
-        return Err(ApiError::forbidden());
+    if ACCESS_KEYS.iter().any(|k| patch.contains_key(*k)) {
+        if !user.is_admin {
+            return Err(ApiError::forbidden());
+        }
+        // And only from a signed-in browser: opening sign-in or a public address outlives a key, which may be revoked.
+        crate::keys::needs_a_session(&user)?;
     }
     let (before, next) = app
         .update_settings(|s| {
@@ -1006,6 +1010,8 @@ async fn get_permissions(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin
 }
 
 async fn put_default_permissions(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Json(body): Json<PermissionsBody>) -> ApiResult {
+    // A grant outlives the key that made it: a leaked key must not hand out access that stays once it is revoked.
+    crate::keys::needs_a_session(&user)?;
     let keys = clean_permissions(body.permissions)?;
     let (_, next) = app
         .update_settings(|s| {
@@ -1019,6 +1025,7 @@ async fn put_default_permissions(State(app): State<App>, JellyfinAdmin(user): Je
 }
 
 async fn put_user_permissions(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(id): Path<String>, Json(body): Json<PermissionsBody>) -> ApiResult {
+    crate::keys::needs_a_session(&user)?;
     let id = db::norm_id(&id);
     let keys = clean_permissions(body.permissions)?;
     let stored = keys.clone();
@@ -1188,6 +1195,8 @@ fn spawn_restore(app: &App, held: Running, path: PathBuf, with_settings: bool, r
 }
 
 async fn restore_stored(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(name): Path<String>, Query(q): Query<RestoreQuery>) -> ApiResult<Response> {
+    // A restore can bring grants and settings back, which would outlive the key that asked for it.
+    crate::keys::needs_a_session(&user)?;
     let path = backup_path(&app, &name)?;
     let Some(held) = Running::start(&app, "restore", &i18n::t("server.api.reading_backup", &[])) else {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.restore_running", &[])));
@@ -1218,6 +1227,7 @@ async fn write_whole(file: &std::path::Path, bytes: &[u8]) {
 }
 
 async fn restore_upload(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Query(q): Query<RestoreQuery>, req: Request) -> ApiResult<Response> {
+    crate::keys::needs_a_session(&user)?;
     let Some(held) = Running::start(&app, "restore", &i18n::t("server.api.receiving_backup", &[])) else {
         return Err(ApiError::new(StatusCode::CONFLICT, i18n::t("server.api.restore_running", &[])));
     };
@@ -1622,6 +1632,35 @@ mod tests {
     }
 
     use super::*;
+
+    /// A key stands in for its maker only while it lives, so nothing it does may outlast it: handing out permissions,
+    /// opening sign-in or a public address, restoring a backup (grants and settings with it) or pointing a service
+    /// elsewhere all take a signed-in browser, as minting a key does. A leaked administrator's key granted its holder's
+    /// own account everything, and the grant stayed after the key was revoked.
+    #[tokio::test]
+    async fn a_key_cannot_do_what_outlives_it() {
+        use crate::auth::{Credential, KeyScope, Perms};
+        let app = crate::state::test_app();
+        app.db.call(|c| Ok(c.execute_batch("INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u2', 'bob', 0, 1)")?)).await.unwrap();
+        let key = AuthUser { id: "u1".into(), name: "alice".into(), is_admin: true, perms: Perms::ALL, credential: Credential::Key { id: 1, scope: KeyScope::Full }, ip: None };
+        let forbidden = |e: Option<ApiError>| e.map(|e| e.0) == Some(StatusCode::FORBIDDEN);
+        let body = || Json(PermissionsBody { permissions: vec!["sign_in".into(), "manage".into()] });
+        assert!(forbidden(put_user_permissions(State(app.clone()), JellyfinAdmin(key.clone()), Path("u2".into()), body()).await.err()), "a person's grants");
+        assert!(forbidden(put_default_permissions(State(app.clone()), JellyfinAdmin(key.clone()), body()).await.err()), "everybody's grants");
+        for access in ["allow_user_login", "default_permissions", "public_url", "public_profiles", "jellyfin_public_url"] {
+            let patch = json!({ access: serde_json::to_value(Settings::default()).unwrap()[access].clone() });
+            assert!(forbidden(put_settings(State(app.clone()), Manager(key.clone()), Json(patch)).await.err()), "{access}, even unchanged");
+        }
+        assert!(put_settings(State(app.clone()), Manager(key.clone()), Json(json!({ "backup_keep": 5 }))).await.is_ok(), "an ordinary setting");
+        let restore = || Query(RestoreQuery { settings: None });
+        assert!(forbidden(restore_stored(State(app.clone()), JellyfinAdmin(key.clone()), Path("finstats-backup.jsonl.gz".into()), restore()).await.err()));
+        assert!(forbidden(restore_upload(State(app.clone()), JellyfinAdmin(key.clone()), restore(), Request::new(Body::empty())).await.err()));
+        let service = || Json(serde_json::from_value::<services::ServiceBody>(json!({ "kind": "sonarr", "url": "http://192.168.1.10:8989", "secret": "x" })).unwrap());
+        let refused = |r: crate::notify::FormResult| r.err().map(|e| e.error.0) == Some(StatusCode::FORBIDDEN);
+        assert!(refused(services::create(State(app.clone()), JellyfinAdmin(key.clone()), service()).await), "a new service");
+        assert!(refused(services::update(State(app.clone()), JellyfinAdmin(key.clone()), Path(1), service()).await), "a service moved");
+        assert!(refused(services::test_connection(State(app.clone()), JellyfinAdmin(key.clone()), service()).await), "a stored secret sent to a test");
+    }
 
     /// Every answer keeps its tab to itself (a page that opened FinStats could later turn that tab into a sign-in page of
     /// its own), asks for no camera, microphone or place, and loads pictures from nowhere but itself and `data:`. An API

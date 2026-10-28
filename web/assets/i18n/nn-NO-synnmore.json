@@ -1716,6 +1716,7 @@
     },
     "keys": {
       "session_only": "Logg inn for å administrere nøkla; en nøkkel kan ikkje lage elle trekkje tilbake nøkla",
+      "session_needed": "Logg inn for å gjære dette; en nøkkel kan ikkje gjære d",
       "name": "Gje nøkkeli en namn på opptil 60 teikn",
       "expiry": "Ei utløpstid e 1 til 3 650 daga",
       "scope": "Omfange e `full` elle `calendar`",

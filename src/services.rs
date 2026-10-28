@@ -800,7 +800,9 @@ pub async fn list(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin) -> Ap
     Ok(Json(list_json(&app)))
 }
 
-pub async fn test_connection(State(app): State<App>, JellyfinAdmin(_): JellyfinAdmin, Json(body): Json<ServiceBody>) -> FormResult {
+pub async fn test_connection(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Json(body): Json<ServiceBody>) -> FormResult {
+    // A connection holds its key for good, and a test sends a stored one: both take a signed-in browser, never a key.
+    crate::keys::needs_a_session(&user)?;
     let stored = match body.id {
         Some(id) => Some(find(&app, id)?),
         None => None,
@@ -811,6 +813,7 @@ pub async fn test_connection(State(app): State<App>, JellyfinAdmin(_): JellyfinA
 }
 
 pub async fn create(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Json(body): Json<ServiceBody>) -> FormResult {
+    crate::keys::needs_a_session(&user)?;
     if all(&app).len() >= MAX_SERVICES {
         return Err(ApiError::bad_request(t("server.services.max", &[("count", MAX_SERVICES.into())])).into());
     }
@@ -836,6 +839,7 @@ pub async fn create(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, 
 }
 
 pub async fn update(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(id): Path<i64>, Json(body): Json<ServiceBody>) -> FormResult {
+    crate::keys::needs_a_session(&user)?;
     let stored = find(&app, id)?;
     let taken: Vec<String> = names(&app).into_iter().filter(|n| *n != stored.name).collect();
     let svc = describe(body, Some(&stored), &taken)?;
