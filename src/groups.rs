@@ -872,7 +872,7 @@ mod tests {
             now_ish + 3000, now_ish + 5, now_ish + 2505, now_ish + 7200, now_ish + 8200, before + 900, before + 2, before + 802
         ))
         .unwrap();
-        let scope = Scope { days: 7, since: Some(since), user_ids: vec![], library_id: None, min_play_s: 0, perms: crate::auth::Perms::ALL };
+        let scope = Scope { days: 7, since: Some(since), user_ids: vec![], library_id: None, min_play_s: 0, perms: crate::auth::Perms::ALL, access: crate::access::Access::everything(), viewer: None };
         let a = answer(&c, &scope).unwrap();
         assert_eq!((a["totals"]["sessions"].as_i64(), a["totals"]["together_s"].as_i64(), a["totals"]["watch_s"].as_i64()), (Some(1), Some(2500), Some(6500)));
         assert_eq!(a["totals"]["share"], ((5500.0 / 6500.0) * 1000.0f64).round() / 1000.0);

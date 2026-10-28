@@ -122,6 +122,11 @@ pub struct Scope {
     pub min_play_s: i64,
     /// What the caller may see; decides which fields survive and whose plays are counted.
     pub perms: crate::auth::Perms,
+    /// What of the library the caller may see (`access.rs`): their libraries and titles, never whose plays are counted.
+    /// Nothing until `resolve` has read it.
+    pub access: crate::access::Access,
+    /// Whose access `resolve` reads (the caller, and whether they administer Jellyfin); `None` once it has.
+    pub viewer: Option<(String, bool)>,
 }
 
 /// A filter that may name several values at once: `type=Movie,Episode`. Naming nothing is not a
@@ -174,12 +179,17 @@ impl Scope {
             library_id: clean(&q.library_id),
             min_play_s: app.settings().min_play_s,
             perms: user.perms,
+            access: crate::access::Access::nothing(),
+            viewer: Some((user.id.clone(), user.is_admin)),
         }
     }
 
     /// "Last 7 days" means today plus the six full local days before it, so the chart's
     /// buckets and the totals always describe exactly the same plays.
     pub fn resolve(mut self, conn: &Connection) -> Result<Self> {
+        if let Some((id, is_admin)) = self.viewer.take() {
+            self.access = crate::access::Access::of(conn, &id, is_admin)?;
+        }
         if self.days > 0 {
             let since: i64 = conn.query_row(
                 "SELECT CAST(strftime('%s', date('now', 'localtime', ?1), 'utc') AS INTEGER)",
@@ -856,11 +866,15 @@ pub async fn activity_set_deleted(State(app): State<App>, Manager(user): Manager
 // ---------------------------------------------------------------- stats endpoints
 
 fn overview_library(c: &Connection, scope: &Scope) -> Result<Option<Map<String, Value>>> {
-    let lib = match &scope.library_id {
+    let mut lib = match &scope.library_id {
         Some(l) => Cond::default().with("library_id = ?", l.clone()),
         None => Cond::default(),
     }
     .with_raw("removed = 0");
+    // Of what the caller may see (`access.rs`).
+    let (seen, seen_args) = scope.access.items_sql("items");
+    lib.raw(&seen);
+    lib.args.extend(seen_args);
     one_json(
         c,
         &format!(
@@ -1094,12 +1108,18 @@ pub async fn user_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
 
 fn library_rows(conn: &Connection, scope: &Scope, only: Option<&str>) -> Result<Vec<Value>> {
     let cond = scope.cond();
+    // Only what the caller may see (`access.rs`): the libraries Jellyfin opens to them, and their titles in each.
+    let (libraries, libraries_args) = scope.access.libraries_sql("l");
+    let (titles, titles_args) = scope.access.items_sql("items");
     // In the order the statement reads them: its titles, its plays (the scope's own first), the library.
-    let args: Vec<_> = match only {
-        Some(id) => std::iter::once(id.to_string().into()).chain(cond.args.iter().cloned()).chain([id.to_string().into(), id.to_string().into()]).collect(),
-        None => cond.args.clone(),
-    };
-    let sql = library_rows_sql(&cond.sql(), only.is_some());
+    let mut args: Vec<SqlValue> = only.map(|id| id.to_string().into()).into_iter().collect();
+    args.extend(titles_args);
+    args.extend(cond.args.iter().cloned());
+    if let Some(id) = only {
+        args.extend([id.to_string().into(), id.to_string().into()]);
+    }
+    args.extend(libraries_args);
+    let sql = library_rows_sql(&cond.sql(), only.is_some()).replace("{SEEN_TITLES}", &titles).replace("{SEEN_LIBRARIES}", &libraries);
     Ok(rows_json(conn, &sql, &args)?.into_iter().map(Value::Object).collect())
 }
 
@@ -1130,12 +1150,12 @@ fn library_rows_sql(cond: &str, one: bool) -> String {
                            -- The library read brings no artist items: the artists are the album artists its tracks name.
                            COUNT(DISTINCT CASE WHEN type = 'Audio' THEN album_artist END) AS artist_count,
                            SUM(size_bytes) AS size_bytes
-                    FROM items WHERE removed = 0 {its_items} GROUP BY library_id) c ON c.library_id = l.id
+                    FROM items WHERE removed = 0 {its_items} AND {{SEEN_TITLES}} GROUP BY library_id) c ON c.library_id = l.id
          -- The last play's own columns beside MAX(): SQLite takes a plain column from the row that holds the maximum.
          LEFT JOIN (SELECT p.library_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, MAX(p.ended_at) AS last_played_at,
                            p.item_id AS last_item_id, p.item_name AS last_item_name, p.series_name AS last_series_name, p.item_type AS last_item_type
                     FROM visible_playbacks p {cond} {its_plays} GROUP BY p.library_id) s ON s.library_id = l.id
-         {filter}
+         {filter} AND {{SEEN_LIBRARIES}}
          ORDER BY l.removed, watch_s DESC, l.name COLLATE NOCASE"
     )
 }
@@ -1157,10 +1177,11 @@ pub async fn library_detail(State(app): State<App>, user: AuthUser, Path(id): Pa
         let Some(lib) = library_rows(c, &list_scope, Some(&id))?.into_iter().next() else { return Ok(None) };
         let cond = scope.cond();
         let (series, bucket) = daily(c, scope, &cond)?;
+        let (seen, seen_args) = scope.access.items_sql("i");
         let recent = rows_json(
             c,
-            &format!("{ITEM_CARD} WHERE i.library_id = ?1 AND i.removed = 0 AND i.type IN ('Movie', 'Series', 'MusicAlbum', 'Video', 'MusicVideo', 'Book', 'AudioBook') ORDER BY i.date_created DESC LIMIT 18"),
-            &[id.clone().into()],
+            &format!("{ITEM_CARD} WHERE i.library_id = ?1 AND i.removed = 0 AND i.type IN ('Movie', 'Series', 'MusicAlbum', 'Video', 'MusicVideo', 'Book', 'AudioBook') AND {seen} ORDER BY i.date_created DESC LIMIT 18"),
+            &std::iter::once(id.clone().into()).chain(seen_args).collect::<Vec<_>>(),
         )?;
         Ok(Some(json!({
             "library": lib, "top": top(c, &cond, "library_items", 10, Rank::Watch)?,
@@ -1206,6 +1227,10 @@ pub async fn item_detail(State(app): State<App>, user: AuthUser, Path(id): Path<
     let (caller, min_play) = (user.id.clone(), app.settings().min_play_s.max(120));
     let jellyfin_base = jellyfin_base(&app);
     let out = scoped(&app, &user, &q, move |c, scope| {
+        // A title Jellyfin does not let the caller see is not there, as one that does not exist is not.
+        if !scope.access.may_see_item(c, &id)? {
+            return Ok(None);
+        }
         let mut requested: Option<Value> = None;
         let item = one_json(
             c,
@@ -1556,12 +1581,18 @@ fn file_signals_for(c: &Connection, scope: &Scope) -> Result<Value> {
 pub async fn person_detail(State(app): State<App>, user: AuthUser, Path(id): Path<String>, Query(q): Query<FilterQuery>) -> ApiResult {
     let id = db::norm_id(&id);
     let out = scoped(&app, &user, &q, move |c, scope| {
+        // Only the titles the caller may see (`access.rs`); somebody in none of them is not there. A title the library no
+        // longer holds at all has nothing of it to hide, as on its own page.
+        let (seen, seen_args) = scope.access.items_sql("i");
+        let seen = format!("(i.id IS NULL OR {seen})");
         let person = one_json(
             c,
-            "SELECT person_id AS id, MAX(name) AS name, MAX(has_image) AS has_image,
-                    MAX(kind = 'Actor') AS is_actor, MAX(kind = 'Director') AS is_director, COUNT(DISTINCT item_id) AS titles
-             FROM item_people WHERE person_id = ?1 GROUP BY person_id",
-            &[id.clone().into()],
+            &format!(
+                "SELECT ip.person_id AS id, MAX(ip.name) AS name, MAX(ip.has_image) AS has_image,
+                        MAX(ip.kind = 'Actor') AS is_actor, MAX(ip.kind = 'Director') AS is_director, COUNT(DISTINCT ip.item_id) AS titles
+                 FROM item_people ip LEFT JOIN items i ON i.id = ip.item_id WHERE ip.person_id = ?1 AND {seen} GROUP BY ip.person_id"
+            ),
+            &std::iter::once(id.clone().into()).chain(seen_args.iter().cloned()).collect::<Vec<_>>(),
         )?;
         let Some(person) = person else { return Ok(None) };
 
@@ -1579,6 +1610,7 @@ pub async fn person_detail(State(app): State<App>, user: AuthUser, Path(id): Pat
         )?;
         let mut args: Vec<SqlValue> = vec![id.clone().into()];
         args.extend(cond.args.iter().cloned());
+        args.extend(seen_args);
         let titles = rows_json(
             c,
             &format!(
@@ -1588,6 +1620,7 @@ pub async fn person_detail(State(app): State<App>, user: AuthUser, Path(id): Pat
                  LEFT JOIN items i ON i.id = ip.item_id
                  LEFT JOIN (SELECT {TITLE} AS title_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, MAX(p.ended_at) AS last_played_at
                             FROM visible_playbacks p {} GROUP BY 1) s ON s.title_id = ip.item_id
+                 WHERE {seen}
                  ORDER BY watch_s DESC, i.production_year DESC, name",
                 cond.sql(),
             ),
@@ -1624,12 +1657,14 @@ pub async fn search(State(app): State<App>, user: AuthUser, Query(q): Query<Sear
     let out = app
         .db
         .call(move |c| {
+            // Only what Jellyfin lets the caller see (`access.rs`), titles and the people in them alike.
+            let (may_see, may_see_args) = crate::access::Access::for_user(c, &user)?.items_sql("i");
             // Matching is done here rather than with LIKE: word by word, any order, accents and typos
             // forgiven. A library's worth of titles is a few thousand short strings, which is nothing.
             let mut scored: Vec<(i32, i32, Map<String, Value>)> = rows_json(
                 c,
-                &format!("{ITEM_CARD} WHERE i.removed = 0 AND i.type IN ('Movie', 'Series', 'MusicAlbum', 'Audio')"),
-                &[],
+                &format!("{ITEM_CARD} WHERE i.removed = 0 AND i.type IN ('Movie', 'Series', 'MusicAlbum', 'Audio') AND {may_see}"),
+                &may_see_args,
             )?
             .into_iter()
             .filter_map(|row| {
@@ -1680,10 +1715,12 @@ pub async fn search(State(app): State<App>, user: AuthUser, Query(q): Query<Sear
             for (score, id) in named {
                 let found = one_json(
                     c,
-                    "SELECT ip.person_id AS id, MAX(ip.name) AS name, MAX(ip.has_image) AS has_image, MAX(ip.kind = 'Actor') AS is_actor,
-                            MAX(ip.kind = 'Director') AS is_director, COUNT(DISTINCT ip.item_id) AS titles
-                     FROM item_people ip JOIN items i ON i.id = ip.item_id AND i.removed = 0 WHERE ip.person_id = ?1 GROUP BY ip.person_id",
-                    &[id.into()],
+                    &format!(
+                        "SELECT ip.person_id AS id, MAX(ip.name) AS name, MAX(ip.has_image) AS has_image, MAX(ip.kind = 'Actor') AS is_actor,
+                                MAX(ip.kind = 'Director') AS is_director, COUNT(DISTINCT ip.item_id) AS titles
+                         FROM item_people ip JOIN items i ON i.id = ip.item_id AND i.removed = 0 WHERE ip.person_id = ?1 AND {may_see} GROUP BY ip.person_id"
+                    ),
+                    &std::iter::once(id.into()).chain(may_see_args.iter().cloned()).collect::<Vec<_>>(),
                 )?;
                 if let Some(p) = found {
                     people.push((score, p.get("titles").and_then(Value::as_i64).unwrap_or(0), p));
@@ -2383,21 +2420,23 @@ pub async fn library_insights(State(app): State<App>, user: AuthUser, Query(q): 
     let libraries = make_up_libraries(q.library_id.as_deref());
     // Whose viewing "never watched" is about: everybody's with see_everyone, else the reader's own.
     let viewer = (!user.perms.see_everyone).then(|| user.id.clone());
-    Ok(Json(app.db.call(move |c| library_make_up(c, &libraries, viewer.as_deref())).await?))
+    Ok(Json(app.db.call(move |c| library_make_up(c, &libraries, viewer.as_deref(), &crate::access::Access::for_user(c, &user)?)).await?))
 }
 
-/// What the files of the given libraries are made of (all of them when none is named). "Never watched" is by `viewer`
-/// alone when one is named, by anybody otherwise.
-fn library_make_up(c: &Connection, libraries: &[String], viewer: Option<&str>) -> Result<Value> {
-    // `AND <alias>.library_id IN (?, …)`: every query below takes the same arguments.
+/// What the files of the given libraries are made of (all of them when none is named), of what `access` may see. "Never
+/// watched" is by `viewer` alone when one is named, by anybody otherwise.
+fn library_make_up(c: &Connection, libraries: &[String], viewer: Option<&str>, access: &crate::access::Access) -> Result<Value> {
+    // `AND <alias>.library_id IN (?, …) AND <what may be seen>`: every query below takes the same arguments.
     let in_libraries = |alias: &str| {
-        if libraries.is_empty() {
+        let named = if libraries.is_empty() {
             String::new()
         } else {
             format!("AND {alias}.library_id IN ({})", std::iter::repeat_n("?", libraries.len()).collect::<Vec<_>>().join(", "))
-        }
+        };
+        format!("{named} AND {}", access.items_sql(alias).0)
     };
-    let args: Vec<SqlValue> = libraries.iter().map(|l| l.clone().into()).collect();
+    let mut args: Vec<SqlValue> = libraries.iter().map(|l| l.clone().into()).collect();
+    args.extend(access.items_sql("i").1);
     let lib_sql = in_libraries("i");
     let files = format!("WHERE i.removed = 0 AND i.size_bytes IS NOT NULL {lib_sql}");
     let video = format!("{files} AND i.video_codec IS NOT NULL");
@@ -2620,7 +2659,7 @@ mod tests {
     fn failed_sign_ins_in_the_insights_need_see_everyone_and_their_addresses_see_network() {
         use crate::auth::Perms;
         let c = server_log();
-        let scope = |perms| Scope { days: 0, since: None, user_ids: vec![], library_id: None, min_play_s: 0, perms };
+        let scope = |perms| Scope { days: 0, since: None, user_ids: vec![], library_id: None, min_play_s: 0, perms, access: crate::access::Access::everything(), viewer: None };
         let server = Perms { see_server: true, ..Default::default() };
         assert!(insight_failed_logins(&c, &scope(server)).unwrap().is_empty());
         assert!(insight_failed_logins(&c, &scope(Perms { see_network: true, ..server })).unwrap().is_empty());
@@ -2648,14 +2687,14 @@ mod tests {
         .unwrap();
         let files = |libs: &[&str]| {
             let libs: Vec<String> = libs.iter().map(|s| s.to_string()).collect();
-            let d = library_make_up(&c, &libs, None).unwrap();
+            let d = library_make_up(&c, &libs, None, &crate::access::Access::everything()).unwrap();
             (d["totals"]["files"].as_i64().unwrap(), d["totals"]["size_bytes"].as_i64().unwrap())
         };
         assert_eq!(files(&[]), (4, 355));
         assert_eq!(files(&["films"]), (2, 300));
         assert_eq!(files(&["films", "shows"]), (3, 350));
         assert_eq!(files(&["nowhere"]), (0, 0));
-        let both = library_make_up(&c, &["films".into(), "music".into()], None).unwrap();
+        let both = library_make_up(&c, &["films".into(), "music".into()], None, &crate::access::Access::everything()).unwrap();
         assert_eq!(both["containers"], json!([{ "name": "mkv", "count": 2, "size_bytes": 300 }, { "name": "flac", "count": 1, "size_bytes": 5 }]));
         assert_eq!(both["largest"].as_array().unwrap().iter().map(|r| r["id"].as_str().unwrap()).collect::<Vec<_>>(), ["m2", "m1"]);
     }
@@ -2676,7 +2715,7 @@ mod tests {
              INSERT INTO user_items(user_id, item_id, played) VALUES ('bob', 'm2', 1);",
         )
         .unwrap();
-        let never = |viewer: Option<&str>| library_make_up(&c, &[], viewer).unwrap()["unwatched"]["count"].as_i64().unwrap();
+        let never = |viewer: Option<&str>| library_make_up(&c, &[], viewer, &crate::access::Access::everything()).unwrap()["unwatched"]["count"].as_i64().unwrap();
         assert_eq!(never(None), 0, "with see_everyone: bob watched both");
         assert_eq!(never(Some("alice")), 2, "alice has watched neither, and is not told that bob has");
         assert_eq!(never(Some("bob")), 0);
@@ -2829,7 +2868,7 @@ mod tests {
     // ---- v1.8: playback insights
 
     fn everyone() -> Scope {
-        Scope { days: 0, since: None, user_ids: vec![], library_id: None, min_play_s: 0, perms: crate::auth::Perms::ALL }
+        Scope { days: 0, since: None, user_ids: vec![], library_id: None, min_play_s: 0, perms: crate::auth::Perms::ALL, access: crate::access::Access::everything(), viewer: None }
     }
 
     #[test]
@@ -3082,10 +3121,15 @@ mod tests {
     #[test]
     fn one_librarys_row_reads_only_its_own() {
         let c = conn();
-        let mut stmt = c.prepare(&format!("EXPLAIN QUERY PLAN {}", library_rows_sql("", true))).unwrap();
-        let unbound = vec![crate::db::rusqlite::types::Value::Null; stmt.parameter_count()];
-        let plan: Vec<String> = stmt.query_map(params_from_iter(unbound), |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
-        assert!(plan.iter().any(|p| p.contains("idx_items_library (library_id=?)")), "{plan:?}");
+        // Whoever asks: somebody kept to some libraries, with titles hidden from them, reads by the same index.
+        c.execute_batch("INSERT INTO users(id, name, is_admin, updated_at, access_all, access_libraries, access_hides, visible_for) VALUES ('kid', 'kid', 0, 0, 0, '[\"l1\"]', 'r', 'r');").unwrap();
+        for access in [crate::access::Access::everything(), crate::access::Access::of(&c, "kid", false).unwrap()] {
+            let sql = library_rows_sql("", true).replace("{SEEN_TITLES}", &access.items_sql("items").0).replace("{SEEN_LIBRARIES}", &access.libraries_sql("l").0);
+            let mut stmt = c.prepare(&format!("EXPLAIN QUERY PLAN {sql}")).unwrap();
+            let unbound = vec![crate::db::rusqlite::types::Value::Null; stmt.parameter_count()];
+            let plan: Vec<String> = stmt.query_map(params_from_iter(unbound), |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
+            assert!(plan.iter().any(|p| p.contains("idx_items_library (library_id=?)")), "{plan:?}");
+        }
         c.execute_batch(
             "INSERT INTO libraries(id, name, collection_type, updated_at) VALUES ('l1', 'Films', 'movies', 0), ('l2', 'Shows', 'tvshows', 0);
              INSERT INTO items(id, type, name, library_id, size_bytes, removed, updated_at) VALUES ('f1', 'Movie', 'Big Buck Bunny', 'l1', 100, 0, 0), ('s1', 'Series', 'Rookery', 'l2', 50, 0, 0);
@@ -3514,7 +3558,7 @@ mod tests {
     fn a_scope_of_several_people_holds_to_those_people() {
         let c = conn();
         let two = |ids: &[&str]| -> i64 {
-            let scope = Scope { days: 0, since: None, user_ids: ids.iter().map(|s| s.to_string()).collect(), library_id: None, min_play_s: 0, perms: crate::auth::Perms::ALL };
+            let scope = Scope { days: 0, since: None, user_ids: ids.iter().map(|s| s.to_string()).collect(), library_id: None, min_play_s: 0, perms: crate::auth::Perms::ALL, access: crate::access::Access::everything(), viewer: None };
             let cond = scope.cond();
             c.query_row(&format!("SELECT COUNT(*) FROM playbacks p {}", cond.sql()), params_from_iter(cond.args.iter()), |r| r.get(0)).unwrap()
         };
@@ -3867,5 +3911,53 @@ mod tests {
         assert_eq!(last(library_rows(&c, &scope, None).unwrap(), "l2"), json!(false));
         let films: Vec<(Value, Value)> = top(&c, &scope.cond(), "movies", 10, Rank::Plays).unwrap().into_iter().map(|r| (r["id"].clone(), r["item_exists"].clone())).collect();
         assert!(films.contains(&(json!("here"), json!(true))) && films.contains(&(json!("gone"), json!(false))) && films.contains(&(json!("plex:42"), json!(false))), "{films:?}");
+    }
+
+    /// FinStats follows Jellyfin: bob may open the library "films" and not "adult". Nothing of "adult" reaches him: not the
+    /// library, its titles, a title's page, its cast, nor a search. His own play of a title there is still his history.
+    #[tokio::test]
+    async fn a_person_kept_out_of_a_library_finds_nothing_of_it() {
+        let app = crate::state::test_app();
+        app.db
+            .call(|c| {
+                c.execute_batch(
+                    "INSERT INTO libraries(id, name, updated_at) VALUES ('films', 'Films', 0), ('adult', 'Late films', 0);
+                     INSERT INTO items(id, library_id, type, name, removed, updated_at, size_bytes) VALUES
+                       ('bbb', 'films', 'Movie', 'Big Buck Bunny', 0, 0, 100), ('late', 'adult', 'Movie', 'Elephants Dream', 0, 0, 900);
+                     INSERT INTO item_people(item_id, person_id, kind, name, sort) VALUES ('late', 'p1', 'Actor', 'Proog', 0), ('bbb', 'p2', 'Actor', 'Bunny', 0);
+                     INSERT INTO users(id, name, is_admin, updated_at, access_all, access_libraries) VALUES ('bob', 'bob', 0, 0, 0, '[\"films\"]');
+                     INSERT INTO playbacks(user_id, user_name, item_id, item_name, item_type, library_id, started_at, ended_at, duration_s, source)
+                       VALUES ('bob', 'bob', 'late', 'Elephants Dream', 'Movie', 'adult', 1000, 2000, 1000, 'live');",
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let bob = AuthUser {
+            id: "bob".into(), name: "bob".into(), is_admin: false, credential: crate::auth::Credential::Session, ip: None,
+            perms: crate::auth::Perms { see_everyone: true, ..Default::default() },
+        };
+        let status = |r: ApiResult| r.err().map(|e| e.0);
+        let libs = libraries(State(app.clone()), bob.clone(), Query(FilterQuery::default())).await.unwrap().0;
+        let ids: Vec<&str> = libs["libraries"].as_array().unwrap().iter().filter_map(|l| l["id"].as_str()).collect();
+        assert_eq!(ids, ["films"]);
+        assert_eq!(status(library_detail(State(app.clone()), bob.clone(), Path("adult".into()), Query(FilterQuery::default())).await), Some(axum::http::StatusCode::NOT_FOUND));
+        assert!(library_detail(State(app.clone()), bob.clone(), Path("films".into()), Query(FilterQuery::default())).await.is_ok());
+        assert_eq!(status(item_detail(State(app.clone()), bob.clone(), Path("late".into()), Query(FilterQuery::default())).await), Some(axum::http::StatusCode::NOT_FOUND), "the same 404 as a title that does not exist");
+        assert!(item_detail(State(app.clone()), bob.clone(), Path("bbb".into()), Query(FilterQuery::default())).await.is_ok());
+        assert_eq!(status(person_detail(State(app.clone()), bob.clone(), Path("p1".into()), Query(FilterQuery::default())).await), Some(axum::http::StatusCode::NOT_FOUND), "somebody only in what he may not see");
+        let found = |q: &str| {
+            let (app, bob) = (app.clone(), bob.clone());
+            let q = q.to_string();
+            async move { search(State(app), bob, Query(SearchQuery { q: Some(q), limit: None })).await.unwrap().0 }
+        };
+        let late = found("elephants").await;
+        assert_eq!((late["items"].as_array().unwrap().len(), late["people"].as_array().unwrap().len()), (0, 0), "{late}");
+        assert_eq!(found("proog").await["people"].as_array().unwrap().len(), 0, "nor anybody all of whose titles he may not see");
+        assert_eq!(found("bunny").await["items"].as_array().unwrap().len(), 1);
+        let made_up = library_insights(State(app.clone()), bob.clone(), Query(LibraryInsightsQuery { library_id: None })).await.unwrap().0;
+        assert_eq!(made_up["totals"]["size_bytes"], 100, "the make-up of what he may see");
+        let mine = activity(State(app.clone()), bob.clone(), Query(ActivityQuery::default())).await.unwrap().0;
+        assert_eq!(mine["total"], 1, "his own play is still his history: {mine}");
     }
 }
