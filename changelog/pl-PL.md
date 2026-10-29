@@ -86,6 +86,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Za proxy, które samo loguje ludzi (nginx `auth_basic`), ciasteczko FinStats nie jest już odrzucane.
 - Nazwa wyświetlana zawierająca `{{url}}` jest pokazywana tak, jak ją zapisano, w podglądzie opublikowanej strony.
 - Podsumowanie dla roku 9999 pokazuje rok domyślny zamiast błędu.
+- Strona na żywo, której uprawnienie odebrano i przywrócono, gdy była otwarta, znów jest aktualizowana bez przeładowania.
 
 ### Removed
 - **Synnmørsk** nie jest już jednym z języków FinStats: przeglądarka, która go wybrała, wyświetla nynorsk, język pisany, z którego powstał.

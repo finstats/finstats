@@ -86,6 +86,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Välityspalvelimen takana, joka kirjaa ihmiset sisään itse (nginx `auth_basic`), FinStatsin evästettä ei enää hylätä.
 - Näyttönimi, jossa on `{{url}}`, näytetään julkaistun sivun esikatselussa sellaisena kuin se on kirjoitettu.
 - Vuoden 9999 kooste näyttää oletusvuoden virheen sijaan.
+- Reaaliaikainen sivu, jonka oikeus poistettiin ja palautettiin sen ollessa auki, pysyy taas ajan tasalla ilman uudelleenlatausta.
 
 ### Removed
 - **Synnmørsk** ei ole enää FinStatsin kieliä: selain, joka oli valinnut sen, näyttää uusnorjaa (nynorsk), kirjakieltä, josta se tehtiin.

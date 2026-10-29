@@ -86,6 +86,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - İnsanların oturumunu kendisi açan bir proxy’nin arkasında (nginx `auth_basic`), FinStats’in çerezi artık reddedilmez.
 - `{{url}}` içeren bir görünen ad, yayımlanmış bir sayfanın önizlemesinde yazıldığı gibi gösterilir.
 - 9999 yılı için istenen özet, hata yerine varsayılan yılı gösterir.
+- Açıkken izni alınıp geri verilen canlı bir sayfa, yeniden yüklenmeden tekrar güncel tutulur.
 
 ### Removed
 - **Synnmørsk** artık FinStats'in dillerinden biri değil: onu seçmiş bir tarayıcı, dayandığı yazı dili olan Nynorsk'u okur.

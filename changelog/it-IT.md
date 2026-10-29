@@ -87,6 +87,7 @@ usa come titolo dell’intera serie.
 - Dietro un proxy che fa accedere le persone da sé (`auth_basic` di nginx), il cookie di FinStats non viene più rifiutato.
 - Un nome visualizzato che contiene `{{url}}` viene mostrato così come è scritto nell’anteprima di una pagina pubblicata.
 - Un riepilogo chiesto per l'anno 9999 mostra l'anno predefinito invece di un errore.
+- Una pagina dal vivo il cui permesso è stato tolto e ridato mentre era aperta torna ad aggiornarsi, senza ricaricarla.
 
 ### Removed
 - Il **Synnmørsk** non è più una delle lingue di FinStats: un browser che l'aveva scelto legge il nynorsk, la lingua scritta da cui era tratto.

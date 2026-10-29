@@ -87,6 +87,7 @@ som overskrift for heile serien.
 - Bak ein proxy som sjølv loggar folk inn (nginx `auth_basic`), vert ikkje cookien til FinStats avvist lenger.
 - Eit visingsnamn som inneheld `{{url}}`, vert vist slik det er skrive i førehandsvisinga av ei publisert side.
 - Ei oppsummering for år 9999 viser standardåret i staden for ein feil.
+- Ei side som miste eit løyve og fekk det attende medan ho var open, vert halden oppdatert over direktekanalen att utan å lastast på nytt.
 
 ### Removed
 - **Synnmørsk** er ikkje lenger eitt av språka til FinStats: ein nettlesar som valde det, les nynorsk, skriftspråket det vart laga frå.

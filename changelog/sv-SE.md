@@ -86,6 +86,7 @@ har en kort titelrad under rubriken: den titeln använder appen som rubrik för 
 - Bakom en proxy som själv loggar in folk (nginx `auth_basic`) avvisas inte längre FinStats cookie.
 - Ett visningsnamn som innehåller `{{url}}` visas som det skrevs i förhandsvisningen av en publicerad sida.
 - En sammanfattning för år 9999 visar standardåret i stället för ett fel.
+- En livesida vars behörighet togs bort och gavs tillbaka medan den var öppen hålls aktuell igen, utan omladdning.
 
 ### Removed
 - **Synnmørsk** är inte längre ett av FinStats språk: en webbläsare som valde det läser nynorska, skriftspråket det byggde på.

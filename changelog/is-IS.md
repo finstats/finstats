@@ -86,6 +86,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - Á bak við milliþjón sem skráir fólk sjálfur inn (nginx `auth_basic`) er köku FinStats ekki lengur hafnað.
 - Birtingarnafn sem inniheldur `{{url}}` er sýnt eins og það er skrifað í forskoðun opinberrar síðu.
 - Samantekt fyrir árið 9999 sýnir sjálfgefna árið í stað villu.
+- Lifandi síða sem missti heimild og fékk hana aftur meðan hún var opin helst aftur uppfærð án endurhleðslu.
 
 ### Removed
 - **Synnmørsk** er ekki lengur eitt af tungumálum FinStats: vafri sem valdi það les nýnorsku, ritmálið sem það var gert eftir.

@@ -87,6 +87,7 @@ manchete de toda a série.
 - Atrás de um proxy que faz o próprio login das pessoas (nginx `auth_basic`), o cookie do FinStats não é mais recusado.
 - Um nome de exibição contendo `{{url}}` aparece como foi escrito na prévia de uma página publicada.
 - Uma retrospectiva pedida para o ano 9999 mostra o ano padrão em vez de um erro.
+- Uma página ao vivo cuja permissão foi retirada e devolvida enquanto estava aberta volta a ficar atualizada, sem recarregar.
 
 ### Removed
 - O **Synnmørsk** não é mais um dos idiomas do FinStats: um navegador que o escolheu lê nynorsk, a língua escrita da qual ele foi feito.

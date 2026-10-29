@@ -432,7 +432,10 @@ fn bounded(ws: WebSocketUpgrade) -> WebSocketUpgrade {
 /// What one connection has asked for, and what it was last sent, so nothing is sent twice.
 struct Tab {
     user: AuthUser,
+    /// What it is sent: what it asked for that this person may have.
     topics: HashSet<&'static str>,
+    /// What it asked for, allowed or not, so that a topic allowed again at a recheck is sent again.
+    wanted: HashSet<&'static str>,
     visible: bool,
     sent: HashMap<&'static str, String>,
     /// Now playing's own measure of news (see [`Drawn`]); the other topics go by `sent`.
@@ -471,6 +474,46 @@ impl Tab {
         })
     }
 
+    /// The page asks for topics: answers those it gets and those this person may not have. Each is remembered as asked for.
+    fn subscribe(&mut self, asked: &[String]) -> (Vec<&'static str>, Vec<&'static str>) {
+        let may = allowed(&self.user);
+        let (mut granted, mut denied) = (vec![], vec![]);
+        for t in TOPICS.into_iter().filter(|t| asked.iter().any(|x| x == t)) {
+            self.wanted.insert(t);
+            if may.contains(&t) {
+                self.topics.insert(t);
+                self.resend(t); // the whole state on subscribing, whatever was sent before
+                granted.push(t);
+            } else {
+                denied.push(t);
+            }
+        }
+        (granted, denied)
+    }
+
+    fn unsubscribe(&mut self, asked: &[String]) {
+        self.topics.retain(|t| !asked.iter().any(|x| x == t));
+        self.wanted.retain(|t| !asked.iter().any(|x| x == t));
+    }
+
+    /// The person as just read again: answers the topics they lost and the ones asked for that they have again.
+    fn reread(&mut self, user: AuthUser) -> (Vec<&'static str>, Vec<&'static str>) {
+        let may = allowed(&user);
+        self.user = user;
+        let mut lost: Vec<&'static str> = self.topics.iter().copied().filter(|t| !may.contains(t)).collect();
+        let mut regained: Vec<&'static str> = self.wanted.iter().copied().filter(|t| may.contains(t) && !self.topics.contains(t)).collect();
+        lost.sort_unstable();
+        regained.sort_unstable();
+        for t in &lost {
+            self.topics.remove(t);
+        }
+        for &t in &regained {
+            self.topics.insert(t);
+            self.resend(t);
+        }
+        (lost, regained)
+    }
+
     /// Send this topic whole the next time round, whatever was sent before: a new subscription, or a tab shown again
     /// whose clocks ran slow while it was hidden (a browser throttles a hidden tab's timers to once a minute).
     fn resend(&mut self, topic: &'static str) {
@@ -486,7 +529,7 @@ async fn send(socket: &mut WebSocket, msg: Message) -> bool {
 async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Presented, _seat: Seat, (gone, asked): (Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>), mut auth: watch::Receiver<u64>) {
     let feed = &app.live_feed;
     let (mut np, mut dl, mut sum) = (feed.now_playing.subscribe(), feed.downloads.subscribe(), feed.summary.subscribe());
-    let mut tab = Tab { topics: HashSet::new(), visible: false, sent: HashMap::new(), drawn: Drawn::default(), user };
+    let mut tab = Tab { topics: HashSet::new(), wanted: HashSet::new(), visible: false, sent: HashMap::new(), drawn: Drawn::default(), user };
     let hello = json!({ "type": "hello", "v": FRAME_V, "topics": allowed(&tab.user) }).to_string();
     if !send(&mut socket, Message::Text(hello.into())).await {
         return;
@@ -510,25 +553,20 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                     Message::Close(_) => break,
                     Message::Text(text) => match serde_json::from_str::<ClientMsg>(&text) {
                         Ok(ClientMsg::Subscribe { topics }) => {
-                            let may = allowed(&tab.user);
-                            for t in TOPICS.into_iter().filter(|t| topics.iter().any(|x| x == t)) {
-                                if may.contains(&t) {
-                                    tab.topics.insert(t);
-                                    tab.resend(t); // the whole state on subscribing, whatever was sent before
-                                    due.push(t);
-                                    fresh = true;
-                                } else {
-                                    let denied = json!({ "type": "denied", "v": FRAME_V, "topic": t }).to_string();
-                                    if !send(&mut socket, Message::Text(denied.into())).await {
-                                        return;
-                                    }
+                            let (granted, denied) = tab.subscribe(&topics);
+                            fresh |= !granted.is_empty();
+                            due.extend(granted);
+                            for t in denied {
+                                let denied = json!({ "type": "denied", "v": FRAME_V, "topic": t }).to_string();
+                                if !send(&mut socket, Message::Text(denied.into())).await {
+                                    return;
                                 }
                             }
                             if stamps(tab.topics.contains("downloads"), tab.visible) {
                                 crate::downloads::watched(&app, crate::db::now());
                             }
                         }
-                        Ok(ClientMsg::Unsubscribe { topics }) => tab.topics.retain(|t| !topics.iter().any(|x| x == t)),
+                        Ok(ClientMsg::Unsubscribe { topics }) => tab.unsubscribe(&topics),
                         Ok(ClientMsg::Ping) => {
                             let pong = json!({ "type": "pong", "v": FRAME_V }).to_string();
                             if !send(&mut socket, Message::Text(pong.into())).await {
@@ -583,10 +621,11 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
         if recheck {
             match crate::auth::resolve_presented(presented.clone(), tab.user.ip, &app).await {
                 Ok(user) if crate::auth::refuse_calendar_key(&user).is_ok() => {
-                    let lost: Vec<&'static str> = tab.topics.iter().copied().filter(|t| !allowed(&user).contains(t)).collect();
-                    let before = std::mem::replace(&mut tab.user, user);
+                    let before = tab.user.perms;
+                    let (lost, regained) = tab.reread(user);
+                    fresh |= !regained.is_empty();
+                    due.extend(regained);
                     for t in lost {
-                        tab.topics.remove(t);
                         let denied = json!({ "type": "denied", "v": FRAME_V, "topic": t }).to_string();
                         if !send(&mut socket, Message::Text(denied.into())).await {
                             return;
@@ -594,7 +633,7 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
                     }
                     // What this person may see may have changed: every answer again, sent only where it differs. The
                     // same grants answer the same, so the half-minute re-read costs nothing more when nothing changed.
-                    if before.perms != tab.user.perms {
+                    if before != tab.user.perms {
                         due.extend(TOPICS);
                         fresh = true;
                     }
@@ -635,6 +674,33 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn tab(see_downloads: bool) -> Tab {
+        let perms = crate::auth::Perms { see_downloads, ..Default::default() };
+        let user = AuthUser { id: "u1".into(), name: "alice".into(), is_admin: false, perms, credential: Default::default(), ip: None };
+        Tab { user, topics: HashSet::new(), wanted: HashSet::new(), visible: true, sent: HashMap::new(), drawn: Drawn::default() }
+    }
+
+    /// A topic is the page's for as long as the page asked for it, not only while it was allowed: taken away at a
+    /// recheck (the grant withdrawn) and allowed again later (given back), it is sent again. It was dropped for good,
+    /// and the page stood still until it was reloaded.
+    #[test]
+    fn a_topic_taken_away_comes_back_when_it_is_allowed_again() {
+        let mut t = tab(true);
+        assert_eq!(t.subscribe(&["downloads".into(), "summary".into()]), (vec!["downloads", "summary"], vec![]));
+        t.sent.insert("downloads", "old".into());
+        assert_eq!(t.reread(tab(false).user), (vec!["downloads"], vec![]));
+        assert!(!t.topics.contains("downloads"));
+        assert_eq!(t.reread(tab(true).user), (vec![], vec!["downloads"]));
+        assert!(t.topics.contains("downloads") && !t.sent.contains_key("downloads"), "sent whole again");
+        // Denied when asked for, it comes once allowed; a topic the page let go of does not.
+        let mut t = tab(false);
+        assert_eq!(t.subscribe(&["downloads".into()]), (vec![], vec!["downloads"]));
+        assert_eq!(t.reread(tab(true).user).1, vec!["downloads"]);
+        t.unsubscribe(&["downloads".into()]);
+        t.reread(tab(false).user);
+        assert_eq!(t.reread(tab(true).user).1, Vec::<&str>::new());
+    }
 
     /// A page sends four kinds of short message, so a frame is held to what a message may be: the frame limit was left
     /// at 16 MB, and a frame is read whole before a message is measured, 16 MB a connection, twenty connections a person.

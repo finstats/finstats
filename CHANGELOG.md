@@ -87,6 +87,7 @@ series.
 - Behind a proxy that signs people in itself (nginx `auth_basic`), FinStats' cookie is no longer refused.
 - A display name holding `{{url}}` is shown as written in a published page's preview.
 - A recap asked for the year 9999 is the default year, not an error.
+- A page that lost a permission and got it back while it was open is kept current over the live channel again, without a reload.
 
 ### Removed
 - **Synnmørsk** is no longer one of FinStats' languages: a browser that chose it reads Nynorsk, the written language it was made from.

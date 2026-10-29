@@ -849,9 +849,9 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 - `capacity::recompute` reads the whole play history each time it runs (after every read of the server's details), where
   only the plays since its last run can change the busiest moments.
 - `capacity::busiest_of` joins two evenings into one spell while a play is stuck active between them.
-- The live channel: a topic dropped at a recheck (access taken away) is not subscribed again when access comes back
-  within the page's life, so the page stays still until it is reloaded; and a tab's own drift can hide behind a reset of the
-  shared course. (A key revoked, a sign-in or a sign-out now rechecks only the connections it concerns.)
+- The live channel: a tab's own drift can hide behind a reset of the shared course. (A key revoked, a sign-in or a
+  sign-out now rechecks only the connections it concerns, and a topic taken away at a recheck comes back on the same
+  connection when it is allowed again.)
 
 **Left with the owner after the 2.3.1 security passes (2026-10-28)**
 
