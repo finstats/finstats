@@ -1309,8 +1309,8 @@ mod tests {
             let err = login(State(app.clone()), ConnectInfo(peer), HeaderMap::new(), body).await.expect_err("refused");
             assert_eq!((err.0, err.1), (StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.wrong_password", &[])), "{name}");
         }
-        let asked = tokio::time::timeout(std::time::Duration::from_millis(50), jellyfin.accept()).await;
-        assert!(asked.is_err(), "Jellyfin was asked about a name that may not sign in");
+        let asked = crate::state::finstats_knock(&jellyfin, std::time::Duration::from_millis(50)).await;
+        assert!(asked.is_none(), "Jellyfin was asked about a name that may not sign in");
     }
 
     /// Whether a connection was asked to read its access again.

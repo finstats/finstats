@@ -397,6 +397,27 @@ impl Tasks {
     }
 }
 
+/// The next connection to `listener` that FinStats made, within `within`, with the head of its request; `None` when none
+/// came. A test asking "did FinStats knock here?" must not count strangers: an editor on the same machine sends a `GET /`
+/// to every port that opens on localhost, and that made such tests fail at random.
+#[cfg(test)]
+pub async fn finstats_knock(listener: &tokio::net::TcpListener, within: std::time::Duration) -> Option<(tokio::net::TcpStream, String)> {
+    use tokio::io::AsyncReadExt;
+    tokio::time::timeout(within, async {
+        loop {
+            let Ok((mut sock, _)) = listener.accept().await else { continue };
+            let mut buf = vec![0u8; 8192];
+            let n = tokio::time::timeout(std::time::Duration::from_secs(1), sock.read(&mut buf)).await.ok().and_then(Result::ok).unwrap_or(0);
+            let head = String::from_utf8_lossy(&buf[..n]).into_owned();
+            if head.to_ascii_lowercase().contains("\r\nuser-agent: finstats") {
+                return (sock, head);
+            }
+        }
+    })
+    .await
+    .ok()
+}
+
 /// An app with an empty database and no connections, for tests that need one.
 #[cfg(test)]
 pub fn test_app() -> App {
@@ -491,6 +512,21 @@ pub type ApiResult<T = Json<Value>> = Result<T, ApiError>;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A stranger's request on the port is not FinStats knocking; FinStats' own, after it, is.
+    #[tokio::test]
+    async fn a_knock_counts_only_when_finstats_made_it() {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let mut stranger = tokio::net::TcpStream::connect(addr).await.unwrap();
+        stranger.write_all(b"GET / HTTP/1.1\r\nhost: localhost\r\nuser-agent: node\r\n\r\n").await.unwrap();
+        assert!(finstats_knock(&listener, std::time::Duration::from_millis(200)).await.is_none(), "a stranger counted");
+        let sent = tokio::spawn(async move { crate::jellyfin::http_client().get(format!("http://{addr}/System/Info")).timeout(std::time::Duration::from_secs(1)).send().await });
+        let (_, head) = finstats_knock(&listener, std::time::Duration::from_secs(1)).await.expect("FinStats' own request");
+        assert!(head.starts_with("GET /System/Info "), "{head}");
+        drop(sent);
+    }
 
     /// Settings that cannot be read are an error, never "all defaults": read as defaults, every switch, grant and
     /// schedule went back to its default without a word, and the next save wrote the defaults over what was there.

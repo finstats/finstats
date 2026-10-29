@@ -978,15 +978,16 @@ pub(crate) mod tests {
     async fn a_personal_destination_never_connects_to_a_name_that_answers_inwards() {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
-        let reached = tokio::spawn(async move { tokio::time::timeout(Duration::from_secs(2), listener.accept()).await.is_ok() });
+        let reached = tokio::spawn(async move { crate::state::finstats_knock(&listener, Duration::from_secs(2)).await.is_some() });
         let http = Http::new();
         assert!(http.public(false).post(format!("http://localhost:{port}/")).send().await.is_err());
         assert!(!reached.await.unwrap(), "the request reached a loopback address");
         // The ordinary client, an administrator's, still may.
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
-        let _ = http.client(false).post(format!("http://localhost:{port}/")).timeout(Duration::from_millis(300)).send().await;
-        assert!(tokio::time::timeout(Duration::from_secs(1), listener.accept()).await.is_ok());
+        let sent = tokio::spawn(http.client(false).post(format!("http://localhost:{port}/")).timeout(Duration::from_millis(1500)).send());
+        assert!(crate::state::finstats_knock(&listener, Duration::from_secs(1)).await.is_some());
+        drop(sent);
     }
 
     pub(crate) fn service(kind: Kind, url: &str) -> Service {
@@ -1094,15 +1095,13 @@ pub(crate) mod tests {
     /// The reason this module has its own client: a redirect must not be followed, or the key goes along.
     #[tokio::test]
     async fn a_redirect_is_reported_and_the_key_goes_nowhere_else() {
-        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::io::AsyncWriteExt;
         let elsewhere = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let target = elsewhere.local_addr().unwrap();
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         tokio::spawn(async move {
-            let (mut sock, _) = listener.accept().await.unwrap();
-            let mut buf = [0u8; 2048];
-            let _ = sock.read(&mut buf).await;
+            let (mut sock, _) = crate::state::finstats_knock(&listener, Duration::from_secs(5)).await.unwrap();
             let _ = sock.write_all(format!("HTTP/1.1 307 Temporary Redirect\r\nLocation: http://{target}/api/v3/system/status\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await;
         });
         let svc = service(Kind::Sonarr, &format!("http://{addr}"));
@@ -1111,7 +1110,7 @@ pub(crate) mod tests {
         assert_eq!(resp.status(), StatusCode::TEMPORARY_REDIRECT);
         assert!(refuse(resp.status(), resp.headers(), &svc).to_string().contains("redirect"));
         // Nobody ever knocks on the other door.
-        assert!(tokio::time::timeout(Duration::from_millis(300), elsewhere.accept()).await.is_err(), "the redirect was followed");
+        assert!(crate::state::finstats_knock(&elsewhere, Duration::from_millis(300)).await.is_none(), "the redirect was followed");
     }
     #[test]
     fn a_server_says_it_keeps_watchlists_so_an_older_one_shows_no_toggle() {
