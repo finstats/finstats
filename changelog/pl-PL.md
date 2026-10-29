@@ -85,6 +85,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Publiczny adres IPv6 jest akceptowany dla osobistego celu.
 - Za proxy, które samo loguje ludzi (nginx `auth_basic`), ciasteczko FinStats nie jest już odrzucane.
 - Nazwa wyświetlana zawierająca `{{url}}` jest pokazywana tak, jak ją zapisano, w podglądzie opublikowanej strony.
+- Podsumowanie dla roku 9999 pokazuje rok domyślny zamiast błędu.
 
 ### Removed
 - **Synnmørsk** nie jest już jednym z języków FinStats: przeglądarka, która go wybrała, wyświetla nynorsk, język pisany, z którego powstał.

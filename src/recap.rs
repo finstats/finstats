@@ -139,7 +139,8 @@ pub(crate) fn build(c: &Connection, scope_user: Option<String>, min_play_s: i64,
             [],
             |r| Ok((r.get(0)?, r.get(1)?)),
         )?;
-        let y = requested.parse::<i64>().ok().filter(|y| (1990..=9999).contains(y)).unwrap_or_else(|| default_year(this_year, month, &years));
+        // The year ends at midnight of the next one, which SQLite has to read: it reads four-digit years only.
+        let y = requested.parse::<i64>().ok().filter(|y| (1990..=9998).contains(y)).unwrap_or_else(|| default_year(this_year, month, &years));
         (json!(y), local_midnight(&format!("'{y:04}-01-01'"))?, local_midnight(&format!("'{:04}-01-01'", y + 1))?)
     };
 
@@ -844,6 +845,15 @@ mod tests {
 
     fn year_of(c: &Connection, user: Option<&str>, year: &str) -> Value {
         build(c, user.map(str::to_string), 0, "", year, None).unwrap()
+    }
+
+    /// A year too far ahead is answered as no year asked for, not with a server error: its end would be midnight of a
+    /// year SQLite cannot read.
+    #[test]
+    fn a_year_too_far_ahead_is_answered_as_none_asked_for() {
+        let c = year_db();
+        assert_eq!(year_of(&c, Some("ua"), "9999")["year"], year_of(&c, Some("ua"), "")["year"]);
+        assert_eq!(year_of(&c, Some("ua"), "9998")["year"], 9998);
     }
 
     /// The people of a year: who was watched longest, in how many titles, and in which most, counted per title, an

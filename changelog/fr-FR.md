@@ -87,6 +87,7 @@ la série.
 - Une adresse IPv6 publique est acceptée pour une destination personnelle.
 - Derrière un proxy qui connecte lui-même les gens (`auth_basic` de nginx), le cookie de FinStats n’est plus refusé.
 - Un nom d’affichage contenant `{{url}}` s’affiche tel qu’écrit dans l’aperçu d’une page publiée.
+- Un bilan demandé pour l'année 9999 affiche l'année par défaut au lieu d'une erreur.
 
 ### Removed
 - Le **Synnmørsk** ne fait plus partie des langues de FinStats : un navigateur qui l'avait choisi lit le nynorsk, la langue écrite dont il était tiré.

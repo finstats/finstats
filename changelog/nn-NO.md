@@ -86,6 +86,7 @@ som overskrift for heile serien.
 - Ei offentleg IPv6-adresse vert godteken for ein personleg mottakar.
 - Bak ein proxy som sjølv loggar folk inn (nginx `auth_basic`), vert ikkje cookien til FinStats avvist lenger.
 - Eit visingsnamn som inneheld `{{url}}`, vert vist slik det er skrive i førehandsvisinga av ei publisert side.
+- Ei oppsummering for år 9999 viser standardåret i staden for ein feil.
 
 ### Removed
 - **Synnmørsk** er ikkje lenger eitt av språka til FinStats: ein nettlesar som valde det, les nynorsk, skriftspråket det vart laga frå.

@@ -86,6 +86,7 @@ manchete de toda a série.
 - Um endereço IPv6 público é aceito para um destino pessoal.
 - Atrás de um proxy que faz o próprio login das pessoas (nginx `auth_basic`), o cookie do FinStats não é mais recusado.
 - Um nome de exibição contendo `{{url}}` aparece como foi escrito na prévia de uma página publicada.
+- Uma retrospectiva pedida para o ano 9999 mostra o ano padrão em vez de um erro.
 
 ### Removed
 - O **Synnmørsk** não é mais um dos idiomas do FinStats: um navegador que o escolheu lê nynorsk, a língua escrita da qual ele foi feito.

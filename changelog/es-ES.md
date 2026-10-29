@@ -86,6 +86,7 @@ bajo su encabezado: ese título es el que la aplicación usa como titular de tod
 - Se acepta una dirección IPv6 pública para un destino personal.
 - Detrás de un proxy que inicia la sesión de la gente por sí mismo (`auth_basic` de nginx), la cookie de FinStats ya no se rechaza.
 - Un nombre visible que contiene `{{url}}` se muestra tal como está escrito en la vista previa de una página publicada.
+- Un resumen pedido para el año 9999 muestra el año por defecto en lugar de un error.
 
 ### Removed
 - **Synnmørsk** ya no es uno de los idiomas de FinStats: un navegador que lo había elegido lee nynorsk, la lengua escrita de la que surgió.

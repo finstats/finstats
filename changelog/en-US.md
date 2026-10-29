@@ -85,6 +85,7 @@ the app uses as the headline of the whole series.
 - A public IPv6 address is accepted for a personal destination.
 - Behind a proxy that signs people in itself (nginx `auth_basic`), FinStats' cookie is no longer refused.
 - A display name holding `{{url}}` is shown as written in a published page's preview.
+- A recap requested for the year 9999 shows the default year, not an error.
 
 ### Removed
 - **Synnmørsk** is no longer one of FinStats' languages: a browser that chose it reads Nynorsk, the written language it was made from.

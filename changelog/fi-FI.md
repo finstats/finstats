@@ -85,6 +85,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Julkinen IPv6-osoite hyväksytään henkilökohtaiselle kohteelle.
 - Välityspalvelimen takana, joka kirjaa ihmiset sisään itse (nginx `auth_basic`), FinStatsin evästettä ei enää hylätä.
 - Näyttönimi, jossa on `{{url}}`, näytetään julkaistun sivun esikatselussa sellaisena kuin se on kirjoitettu.
+- Vuoden 9999 kooste näyttää oletusvuoden virheen sijaan.
 
 ### Removed
 - **Synnmørsk** ei ole enää FinStatsin kieliä: selain, joka oli valinnut sen, näyttää uusnorjaa (nynorsk), kirjakieltä, josta se tehtiin.

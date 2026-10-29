@@ -86,6 +86,7 @@ kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 - Eine öffentliche IPv6-Adresse wird für ein persönliches Ziel akzeptiert.
 - Hinter einem Proxy, der selbst anmeldet (nginx `auth_basic`), wird das Cookie von FinStats nicht mehr abgelehnt.
 - Ein Anzeigename mit `{{url}}` wird in der Vorschau einer veröffentlichten Seite so gezeigt, wie er geschrieben ist.
+- Ein Rückblick für das Jahr 9999 zeigt das Standardjahr statt eines Fehlers.
 
 ### Removed
 - **Synnmørsk** ist keine Sprache von FinStats mehr: Ein Browser, der es gewählt hatte, liest Nynorsk, die Schriftsprache, aus der es entstand.
