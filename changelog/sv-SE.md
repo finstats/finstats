@@ -79,7 +79,7 @@ har en kort titelrad under rubriken: den titeln använder appen som rubrik för 
 - Webbgränssnittets filer gzippas en gång och sparas, och typsnitt komprimeras inte igen.
 
 ### Stability
-- En säkerhetskopia provar ett annat filnamn om namnet är upptaget, utan att ersätta en färdig kopia eller ta bort en annan exports nya delfil.
+- En säkerhetskopia provar ett annat filnamn om namnet är upptaget, utan att ersätta en färdig kopia eller ta bort en annan exports nya delfil. När borttagningen av en säkerhetskopia ångras bevaras en fil som har tagit över dess namn, även under en samtidig export. Placering av säkerhetskopior kräver stöd för hårda länkar och misslyckas säkert om stödet saknas.
 - En säkerhetskopia i Jellystats äldre format läses en rad i taget i stället för hel, och en rad som är längre än någon säkerhetskopias avvisas.
 - Två Tautulli-uppladdningar samtidigt skriver inte längre i samma fil.
 - Ett sidnummer långt bortom slutet på ett biblioteks titlar eller på Bibliotekshälsa är en tom sida, inte ett fel.

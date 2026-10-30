@@ -80,7 +80,7 @@ bajo su encabezado: ese título es el que la aplicación usa como titular de tod
 - Los archivos de la interfaz web se comprimen con gzip una vez y se guardan, y las fuentes no se vuelven a comprimir.
 
 ### Stability
-- Si un nombre está ocupado, la copia de seguridad prueba otro sin sobrescribir una copia completa ni borrar el archivo parcial reciente de otra exportación.
+- Si un nombre está ocupado, la copia de seguridad prueba otro sin sobrescribir una copia completa ni borrar el archivo parcial reciente de otra exportación. Al deshacer la eliminación de una copia de seguridad se conserva cualquier archivo que haya ocupado su nombre, incluso durante una exportación simultánea. Para guardar las copias de seguridad se necesita compatibilidad con enlaces duros; sin ella, la operación falla de forma segura.
 - Una copia de seguridad en el formato antiguo de Jellystat se lee fila a fila en lugar de entera, y una línea más larga que la de cualquier copia se rechaza.
 - Dos subidas de Tautulli a la vez ya no escriben en el mismo archivo.
 - Un número de página muy posterior al final de los títulos de una biblioteca o de Estado de la biblioteca da una página vacía, no un error.

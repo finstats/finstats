@@ -80,7 +80,7 @@ kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 - Die Dateien der Weboberfläche werden einmal mit gzip komprimiert und aufbewahrt, und Schriften werden nicht erneut komprimiert.
 
 ### Stability
-- Bei einem belegten Dateinamen verwendet eine Sicherung einen anderen Namen, ohne fertige Sicherungen zu ersetzen oder frische Teildateien anderer Exporte zu löschen.
+- Bei einem belegten Dateinamen verwendet eine Sicherung einen anderen Namen, ohne fertige Sicherungen zu ersetzen oder frische Teildateien anderer Exporte zu löschen. Das Rückgängigmachen einer Sicherungslöschung erhält eine Datei, die deren Namen übernommen hat, auch während eines gleichzeitigen Exports. Das Ablegen von Sicherungen erfordert Unterstützung für Hardlinks und schlägt ohne sie sicher fehl.
 - Eine Sicherung im älteren Format von Jellystat wird zeilenweise statt am Stück gelesen, und eine Zeile, die länger ist als in jeder Sicherung, wird abgelehnt.
 - Zwei gleichzeitige Tautulli-Uploads schreiben nicht mehr in dieselbe Datei.
 - Eine Seitenzahl weit hinter dem Ende der Titel einer Mediathek oder des Mediathek-Zustands ergibt eine leere Seite, keinen Fehler.

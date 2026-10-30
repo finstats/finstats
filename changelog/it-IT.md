@@ -80,7 +80,7 @@ usa come titolo dell’intera serie.
 - I file dell’interfaccia web vengono compressi con gzip una volta e conservati, e i font non vengono compressi di nuovo.
 
 ### Stability
-- Se un nome è occupato, il backup ne prova un altro senza sovrascrivere un backup completo o eliminare il file parziale recente di un'altra esportazione.
+- Se un nome è occupato, il backup ne prova un altro senza sovrascrivere un backup completo o eliminare il file parziale recente di un'altra esportazione. Annullare l’eliminazione di un backup preserva un file che ne ha preso il nome, anche durante un’esportazione simultanea. Il salvataggio dei backup richiede il supporto per i collegamenti fisici e, in sua assenza, fallisce in modo sicuro.
 - Un backup nel vecchio formato di Jellystat viene letto una riga alla volta anziché per intero, e una riga più lunga di quelle di qualsiasi backup viene rifiutata.
 - Due caricamenti di Tautulli contemporanei non scrivono più nello stesso file.
 - Un numero di pagina molto oltre la fine dei titoli di una libreria o di Salute della libreria dà una pagina vuota, non un errore.

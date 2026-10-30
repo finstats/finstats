@@ -81,7 +81,7 @@ la série.
 - Les fichiers de l’interface web sont compressés en gzip une fois pour toutes et conservés, et les polices ne sont plus compressées à nouveau.
 
 ### Stability
-- Si un nom est pris, la sauvegarde en essaie un autre sans remplacer une sauvegarde terminée ni supprimer le fichier partiel récent d'un autre export.
+- Si un nom est pris, la sauvegarde en essaie un autre sans remplacer une sauvegarde terminée ni supprimer le fichier partiel récent d'un autre export. Annuler la suppression d’une sauvegarde préserve un fichier qui a pris son nom, même pendant un export simultané. L’enregistrement des sauvegardes nécessite la prise en charge des liens physiques et échoue sans risque si elle manque.
 - Une sauvegarde au format ancien de Jellystat est lue ligne par ligne au lieu d’être chargée en entier, et une ligne plus longue que celle de toute sauvegarde est refusée.
 - Deux envois Tautulli simultanés n’écrivent plus dans le même fichier.
 - Un numéro de page bien au-delà de la fin des titres d’une médiathèque ou de Santé de la médiathèque donne une page vide, et non une erreur.

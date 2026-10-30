@@ -80,7 +80,7 @@ overskrift for hele serien.
 - Webbrugerfladens filer gzippes én gang og gemmes, og skrifttyper komprimeres ikke igen.
 
 ### Stability
-- En sikkerhedskopi vælger et andet filnavn ved navnesammenfald uden at overskrive en færdig kopi eller fjerne en anden eksports nye delvise fil.
+- En sikkerhedskopi vælger et andet filnavn ved navnesammenfald uden at overskrive en færdig kopi eller fjerne en anden eksports nye delvise fil. Fortrydelse af en slettet sikkerhedskopi bevarer en fil, der har overtaget dens navn, også under en samtidig eksport. Placering af sikkerhedskopier kræver understøttelse af hårde links og afbrydes sikkert, hvis den mangler.
 - En sikkerhedskopi i Jellystats ældre format læses en række ad gangen i stedet for hele på én gang, og en linje, der er længere end nogen sikkerhedskopis, afvises.
 - To Tautulli-uploads på samme tid skriver ikke længere i den samme fil.
 - Et sidetal langt efter slutningen af et biblioteks titler eller af Bibliotekssundhed giver en tom side, ikke en fejl.
