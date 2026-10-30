@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 
 use axum::extract::{ConnectInfo, FromRequestParts, State};
-use axum::http::header::{AUTHORIZATION, COOKIE, SET_COOKIE};
+use axum::http::header::{AUTHORIZATION, COOKIE, HOST, SET_COOKIE};
 use axum::http::request::Parts;
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -624,22 +624,30 @@ fn set_session(resp: &mut Response, token: &str, max_age: i64, secure: bool) {
 /// Whether the page that signs in is on https: its proxy says so, or the browser does in the `Origin` every sign-in (a POST)
 /// carries. Either can only ever make a cookie stricter, so neither needs a trusted proxy.
 /// Whether a session begun by this request is an https one (a Secure `__Host-` cookie, a token marked `h`): its page
-/// is on https, a proxy says so, or FinStats' public address is https, which no request has a say in.
+/// is on https, a proxy says so, or it was asked for at FinStats' public address and that is https.
 fn is_https(app: &App, headers: &HeaderMap) -> bool {
     let said = |name: &str| headers.get(name).and_then(|v| v.to_str().ok()).map(str::to_ascii_lowercase);
-    said("x-forwarded-proto").is_some_and(|v| v == "https") || said("origin").is_some_and(|v| v.starts_with("https://")) || public_https(app)
+    said("x-forwarded-proto").is_some_and(|v| v == "https") || said("origin").is_some_and(|v| v.starts_with("https://")) || at_public_https(app, headers)
 }
 
-fn public_https(app: &App) -> bool {
-    app.settings().public_url.trim().to_ascii_lowercase().starts_with("https://")
+/// Whether the request was asked for at FinStats' public address (its `Host`) and that address is https. Only then: the
+/// same install reached over plain http at an address in the house can hold no `__Host-` cookie, and refusing the plain
+/// one there locked everybody out.
+fn at_public_https(app: &App, headers: &HeaderMap) -> bool {
+    let public = app.settings().public_url.trim().to_ascii_lowercase();
+    let Some(rest) = public.strip_prefix("https://") else { return false };
+    let host = rest.split(['/', '?', '#']).next().unwrap_or_default();
+    let asked = headers.get(HOST).and_then(|v| v.to_str().ok()).map(|h| h.trim().to_ascii_lowercase());
+    !host.is_empty() && asked.is_some_and(|a| a == host || a.strip_suffix(":443") == Some(host))
 }
 
-/// Whether FinStats knows this request reached it by https: its public address is https, or a proxy it believes says
-/// so. Then the plain cookie name, which any host of the domain may set, is never taken ([`cookie_token`]).
+/// Whether FinStats knows this request reached it by https: a proxy it believes says so, or it was asked for at the
+/// public address and that is https. Then the plain cookie name, which any host of the domain may set, is never taken
+/// ([`cookie_token`]).
 pub(crate) fn reached_by_https(app: &App, headers: &HeaderMap, peer: Option<SocketAddr>) -> bool {
     let proxied = peer.is_some_and(|p| app.trust_proxy.trusts(canonical(p.ip())))
         && headers.get("x-forwarded-proto").and_then(|v| v.to_str().ok()).and_then(|v| v.split(',').next()).is_some_and(|v| v.trim().eq_ignore_ascii_case("https"));
-    proxied || public_https(app)
+    proxied || at_public_https(app, headers)
 }
 
 async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms) -> Value {
@@ -1593,8 +1601,15 @@ mod tests {
         let mut settings = app.settings();
         settings.public_url = "https://stats.example.com".into();
         *app.settings.write().unwrap() = settings;
-        assert!(reached_by_https(&app, &plain, None), "the public address is https");
-        assert!(is_https(&app, &plain), "a session begun without a word of https on the request is still an https one");
+        let mut public = HeaderMap::new();
+        public.insert(HOST, "stats.example.com".parse().unwrap());
+        assert!(reached_by_https(&app, &public, None), "asked for at the public address, which is https");
+        assert!(is_https(&app, &public), "a session begun there without a word of https on the request is still an https one");
+        // The same install reached over plain http at its own address in the house: the browser could never hold a
+        // `__Host-` cookie there, so the plain name is the only one, and refusing it locked everybody out.
+        let mut inside = HeaderMap::new();
+        inside.insert(HOST, "192.168.1.10:8080".parse().unwrap());
+        assert!(!reached_by_https(&app, &inside, None) && !is_https(&app, &inside));
     }
 
     /// The setup code is eight letters and digits nobody misreads, and is taken however it is typed.

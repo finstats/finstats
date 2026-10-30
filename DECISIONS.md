@@ -909,9 +909,10 @@ Learned from real exports; also documented at the top of `import.rs`.
     (`cookie_token`).
 15. **A token says where it was begun** (`h` on https, `p` on http), and an `h` token under the plain name is refused:
     while the browser held no `__Host-` cookie, a sibling's tossed plain one was the only one sent. **And where FinStats
-    knows it is reached by https** (`reached_by_https`: an https `public_url`, or a believed proxy's `X-Forwarded-Proto`)
-    the plain name is never taken, and an https `public_url` makes every new session an `h` one in a `__Host-` cookie
-    (`is_https`): the mark was chosen by the sign-in that made it, so one sent with no `Origin` through a proxy that said
+    knows it is reached by https** (`reached_by_https`: asked for at an https `public_url`'s own host, or a believed proxy's
+    `X-Forwarded-Proto`) the plain name is never taken, and a session begun at that host is an `h` one in a `__Host-`
+    cookie (`is_https`). Only at that host: the same install reached over plain http inside the house can hold no
+    `__Host-` cookie, and refusing the plain one everywhere locked everybody out there. the mark was chosen by the sign-in that made it, so one sent with no `Origin` through a proxy that said
     nothing was a plain session for a sibling to toss in.
 16. A sign-out ends every session the browser sent, both names.
 17. An `Authorization` header that is not `Bearer` beside a cookie is left alone (a proxy's own Basic sign-in, nginx
