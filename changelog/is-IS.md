@@ -63,6 +63,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - Endurheimt heldur einni heimild á mann, fyrir ekki fleiri en heimili margfalt, og leitar að tvítekningu færslu í atvikaskrá án þess að lesa hverja færslu sem hún var að skrifa. Smíðað afrit gat haldið minni og skriflási gagnagrunnsins lengur og lengur meðan það var endurheimt.
 - Endurheimt með stillingum kveikir á uppflettingu opinbers vistfangs og niðurhali staðsetningargagnagrunns aðeins þar sem þessi uppsetning hefur kveikt á þeim líka, og geymir aldrei færri afrit né skrifar þau sjaldnar en þessi uppsetning. Afrit sem geymdi eitt gat látið næstu keyrslu fjarlægja öll hin.
 - Skráarstærð sem enginn diskur gæti rúmað er lesin sem engin stærð, og stærðir eru lagðar saman svo engin summa geti flætt yfir. Ein innflutt stærð lét safnsíðurnar svara með villu fyrir fullt og allt.
+- Þegar FinStats veit að það er sótt um https (opinbert vistfang þess er https, eða traustur milliþjónn segir það) er seta aðeins tekin úr `__Host-`-vafrakökunni, og með opinberu https-vistfangi er hver ný seta https-seta. Innskráning send án `Origin` í gegnum milliþjón sem sagði ekkert bjó til venjulega setu sem nágrannavefur gat komið fyrir í vafra einhvers.
 
 ### Performance
 - Opinber prófíll er reiknaður út í mesta lagi einu sinni á mínútu, ekki aftur fyrir hverja mynd og hvert spjald á honum.

@@ -399,7 +399,7 @@ pub async fn connect(
     // Before the credential is read, so a recheck sent while this connection is being made is one it hears.
     let auth = app.live_feed.auth.subscribe();
     let asked_before = app.live_feed.asked.load(std::sync::atomic::Ordering::SeqCst);
-    let presented = match crate::auth::pick_credential(&headers) {
+    let presented = match crate::auth::pick_credential(&headers, crate::auth::reached_by_https(&app, &headers, Some(peer))) {
         Ok(p) => p,
         Err(e) => return e.into_response(),
     };

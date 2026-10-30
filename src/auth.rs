@@ -198,9 +198,15 @@ fn cookies_named(headers: &HeaderMap, name: &str) -> Vec<String> {
 /// those, which only another host's cookie for the whole domain beside ours could make, and then neither. A session
 /// begun on https is never taken under the plain name, which any host of the domain may set: before the browser held
 /// a `__Host-` cookie, or once it had signed out, a sibling's tossed cookie was the only one sent, and won.
-pub(crate) fn cookie_token(headers: &HeaderMap) -> Option<String> {
+///
+/// Where FinStats knows it is reached by https (`https`, [`reached_by_https`]), only the `__Host-` cookie is taken: the
+/// mark of where a session began was chosen by the sign-in that made it, so a sibling could toss in a plain `p…` one.
+pub(crate) fn cookie_token(headers: &HeaderMap, https: bool) -> Option<String> {
     if let Some(own) = cookies_named(headers, HOST_COOKIE_NAME).into_iter().next() {
         return Some(own);
+    }
+    if https {
+        return None;
     }
     let plain = cookies_named(headers, COOKIE_NAME);
     (plain.len() == 1).then(|| plain.into_iter().next()).flatten().filter(|t| !t.starts_with(BEGUN_ON_HTTPS))
@@ -220,18 +226,18 @@ pub fn bearer_token(headers: &HeaderMap) -> Option<Result<String, ApiError>> {
 /// so a script sending a revoked key gets its 401 rather than quietly succeeding on a browser's session.
 /// Another scheme (`Basic`, which a proxy's own sign-in passes along) beside a cookie is not FinStats' and is left alone;
 /// keys are `Bearer` only.
-pub fn pick_credential(headers: &HeaderMap) -> Result<Presented, ApiError> {
+pub fn pick_credential(headers: &HeaderMap, https: bool) -> Result<Presented, ApiError> {
     let not_bearer = headers
         .get(AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.split_whitespace().next())
         .is_some_and(|scheme| !scheme.eq_ignore_ascii_case("bearer"));
-    if not_bearer && let Some(cookie) = cookie_token(headers) {
+    if not_bearer && let Some(cookie) = cookie_token(headers, https) {
         return Ok(Presented::Cookie(cookie));
     }
     match bearer_token(headers) {
         Some(t) => Ok(Presented::Bearer(t?)),
-        None => cookie_token(headers).map(Presented::Cookie).ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.sign_in_to_continue", &[]))),
+        None => cookie_token(headers, https).map(Presented::Cookie).ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.sign_in_to_continue", &[]))),
     }
 }
 
@@ -520,7 +526,8 @@ impl FromRequestParts<App> for AuthUser {
     /// Every route but the calendar feed: the cookie or a full key. Grants are read on every
     /// request, so a change by an administrator applies at once, to a key as much as to a session.
     async fn from_request_parts(parts: &mut Parts, app: &App) -> Result<Self, Self::Rejection> {
-        let user = resolve(pick_credential(&parts.headers)?, request_ip(parts, app), app).await?;
+        let peer = parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|c| c.0);
+        let user = resolve(pick_credential(&parts.headers, reached_by_https(app, &parts.headers, peer))?, request_ip(parts, app), app).await?;
         refuse_calendar_key(&user)?;
         Ok(user)
     }
@@ -616,9 +623,23 @@ fn set_session(resp: &mut Response, token: &str, max_age: i64, secure: bool) {
 
 /// Whether the page that signs in is on https: its proxy says so, or the browser does in the `Origin` every sign-in (a POST)
 /// carries. Either can only ever make a cookie stricter, so neither needs a trusted proxy.
-fn is_https(headers: &HeaderMap) -> bool {
+/// Whether a session begun by this request is an https one (a Secure `__Host-` cookie, a token marked `h`): its page
+/// is on https, a proxy says so, or FinStats' public address is https, which no request has a say in.
+fn is_https(app: &App, headers: &HeaderMap) -> bool {
     let said = |name: &str| headers.get(name).and_then(|v| v.to_str().ok()).map(str::to_ascii_lowercase);
-    said("x-forwarded-proto").is_some_and(|v| v == "https") || said("origin").is_some_and(|v| v.starts_with("https://"))
+    said("x-forwarded-proto").is_some_and(|v| v == "https") || said("origin").is_some_and(|v| v.starts_with("https://")) || public_https(app)
+}
+
+fn public_https(app: &App) -> bool {
+    app.settings().public_url.trim().to_ascii_lowercase().starts_with("https://")
+}
+
+/// Whether FinStats knows this request reached it by https: its public address is https, or a proxy it believes says
+/// so. Then the plain cookie name, which any host of the domain may set, is never taken ([`cookie_token`]).
+pub(crate) fn reached_by_https(app: &App, headers: &HeaderMap, peer: Option<SocketAddr>) -> bool {
+    let proxied = peer.is_some_and(|p| app.trust_proxy.trusts(canonical(p.ip())))
+        && headers.get("x-forwarded-proto").and_then(|v| v.to_str().ok()).and_then(|v| v.split(',').next()).is_some_and(|v| v.trim().eq_ignore_ascii_case("https"));
+    proxied || public_https(app)
 }
 
 async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms) -> Value {
@@ -696,7 +717,7 @@ async fn start_session(
 ) -> ApiResult<Response> {
     let mut raw = [0u8; 32];
     rand::rng().fill_bytes(&mut raw);
-    let secure = is_https(headers);
+    let secure = is_https(app, headers);
     let token = format!("{}{}", if secure { BEGUN_ON_HTTPS } else { BEGUN_ON_HTTP }, hex::encode(raw));
     let hash = hash_token(&token);
     let ua =headers.get("user-agent").and_then(|v| v.to_str().ok()).map(|s| s.chars().take(200).collect::<String>());
@@ -1059,7 +1080,7 @@ pub async fn logout(State(app): State<App>, ConnectInfo(peer): ConnectInfo<Socke
         }
     }
     let mut resp = Json(json!({ "ok": true })).into_response();
-    set_session(&mut resp, "", 0, is_https(&headers));
+    set_session(&mut resp, "", 0, is_https(&app, &headers));
     Ok(resp)
 }
 
@@ -1521,14 +1542,40 @@ mod tests {
     /// The browser says it too: a sign-in is a POST, which always carries the page's own `Origin`.
     #[test]
     fn a_session_cookie_is_secure_whenever_the_page_is_on_https() {
+        let app = crate::state::test_app();
         let mut h = HeaderMap::new();
-        assert!(!is_https(&h));
+        assert!(!is_https(&app, &h));
         h.insert("origin", "https://stats.example.com".parse().unwrap());
-        assert!(is_https(&h), "a page on https, behind a proxy that says nothing");
+        assert!(is_https(&app, &h), "a page on https, behind a proxy that says nothing");
         h.insert("origin", "http://192.168.1.10:8080".parse().unwrap());
-        assert!(!is_https(&h), "a page on plain http: a Secure cookie would never be kept");
+        assert!(!is_https(&app, &h), "a page on plain http: a Secure cookie would never be kept");
         h.insert("x-forwarded-proto", "https".parse().unwrap());
-        assert!(is_https(&h));
+        assert!(is_https(&app, &h));
+    }
+
+    /// Where FinStats knows it is reached by https (its public address is https, or a believed proxy says so), a session is
+    /// taken only under the `__Host-` name and every session begins as an https one: the plain name could be tossed in by a
+    /// sibling host, and the mark of where a session began was chosen by the very sign-in that made it.
+    #[test]
+    fn on_https_the_plain_cookie_name_is_never_taken() {
+        let mut app = crate::state::test_app();
+        let peer: SocketAddr = "10.0.0.2:5000".parse().unwrap();
+        let mut h = HeaderMap::new();
+        h.insert(COOKIE, HeaderValue::from_static("finstats_session=p0123abcd"));
+        assert_eq!(cookie_token(&h, true), None, "a plain cookie on https");
+        assert_eq!(cookie_token(&h, false).as_deref(), Some("p0123abcd"), "on plain http it is the only name there is");
+        assert!(!reached_by_https(&app, &h, Some(peer)));
+        h.insert("x-forwarded-proto", "https".parse().unwrap());
+        assert!(!reached_by_https(&app, &h, Some(peer)), "a proxy nobody named");
+        std::sync::Arc::get_mut(&mut app).unwrap().trust_proxy = Proxies::parse("10.0.0.2").unwrap();
+        assert!(reached_by_https(&app, &h, Some(peer)), "a believed proxy says so");
+        let plain = HeaderMap::new();
+        assert!(!reached_by_https(&app, &plain, Some(peer)) && !is_https(&app, &plain));
+        let mut settings = app.settings();
+        settings.public_url = "https://stats.example.com".into();
+        *app.settings.write().unwrap() = settings;
+        assert!(reached_by_https(&app, &plain, None), "the public address is https");
+        assert!(is_https(&app, &plain), "a session begun without a word of https on the request is still an https one");
     }
 
     /// The setup code is eight letters and digits nobody misreads, and is taken however it is typed.
@@ -1782,7 +1829,7 @@ mod key_tests {
         let with = |cookies: &'static str| {
             let mut h = HeaderMap::new();
             h.insert(COOKIE, HeaderValue::from_static(cookies));
-            cookie_token(&h)
+            cookie_token(&h, false)
         };
         assert_eq!(with("finstats_session=tossed; __Host-finstats_session=mine").as_deref(), Some("mine"));
         assert_eq!(with("finstats_session=tossed; finstats_session=mine"), None);
@@ -1801,19 +1848,19 @@ mod key_tests {
     fn the_header_beats_the_cookie() {
         let mut h = HeaderMap::new();
         h.insert(COOKIE, HeaderValue::from_static("finstats_session=cookie-token"));
-        assert_eq!(pick_credential(&h).unwrap(), Presented::Cookie("cookie-token".into()));
+        assert_eq!(pick_credential(&h, false).unwrap(), Presented::Cookie("cookie-token".into()));
         h.insert(AUTHORIZATION, HeaderValue::from_static("Bearer fs_abc"));
-        assert_eq!(pick_credential(&h).unwrap(), Presented::Bearer("fs_abc".into()), "an explicit header, not the ambient cookie");
+        assert_eq!(pick_credential(&h, false).unwrap(), Presented::Bearer("fs_abc".into()), "an explicit header, not the ambient cookie");
         h.insert(AUTHORIZATION, HeaderValue::from_static("Bearer"));
-        assert_eq!(pick_credential(&h).unwrap_err().0, StatusCode::UNAUTHORIZED, "a key sent wrong never falls back to the cookie");
+        assert_eq!(pick_credential(&h, false).unwrap_err().0, StatusCode::UNAUTHORIZED, "a key sent wrong never falls back to the cookie");
         // A proxy's own sign-in (nginx's auth_basic) passes `Authorization: Basic` along with every request: that is not
         // FinStats' to judge, and the cookie beside it is the browser's.
         h.insert(AUTHORIZATION, HeaderValue::from_static("Basic dXNlcjpwYXNz"));
-        assert_eq!(pick_credential(&h).unwrap(), Presented::Cookie("cookie-token".into()));
+        assert_eq!(pick_credential(&h, false).unwrap(), Presented::Cookie("cookie-token".into()));
         let mut basic_alone = HeaderMap::new();
         basic_alone.insert(AUTHORIZATION, HeaderValue::from_static("Basic dXNlcjpwYXNz"));
-        assert_eq!(pick_credential(&basic_alone).unwrap_err().0, StatusCode::UNAUTHORIZED);
-        assert_eq!(pick_credential(&HeaderMap::new()).unwrap_err().0, StatusCode::UNAUTHORIZED);
+        assert_eq!(pick_credential(&basic_alone, false).unwrap_err().0, StatusCode::UNAUTHORIZED);
+        assert_eq!(pick_credential(&HeaderMap::new(), false).unwrap_err().0, StatusCode::UNAUTHORIZED);
     }
 
     #[test]

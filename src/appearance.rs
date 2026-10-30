@@ -42,7 +42,7 @@ fn no_such_preset(preset: &str) -> String {
 /// The preset of whoever sent these headers: their session cookie's person, or "" for somebody signed out. Only the
 /// cookie: a stylesheet is fetched by a <link>, which carries nothing else.
 pub async fn of_request(app: &App, headers: &HeaderMap) -> String {
-    let Some(token) = crate::auth::cookie_token(headers) else { return String::new() };
+    let Some(token) = crate::auth::cookie_token(headers, crate::auth::reached_by_https(app, headers, None)) else { return String::new() };
     let settings = app.settings();
     app.db
         .call(move |c| match crate::auth::resolve_session_in(c, &settings, &token, db::now(), Some(true))? {

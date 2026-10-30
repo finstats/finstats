@@ -64,6 +64,7 @@ series.
 - A restore holds one grant per person, for no more people than a household many times over, and checks an audit entry for a double without reading every entry it has just written. A crafted backup could hold memory and the database's write lock longer and longer as it was restored.
 - A restore with its settings switches on the public-address lookup and the location database download only where this install has them on too, and never keeps fewer backups or writes them less often than this install does. A backup that kept one could have the next run remove every other.
 - A file size no disk could hold is read as no size, and sizes are added up so that no total can overflow. One imported size made the library pages answer an error for good.
+- Once FinStats knows it is reached by https (its public address is https, or a trusted proxy says so), a session is taken only from its `__Host-` cookie, and with an https public address every new session is an https one. A sign-in sent without an `Origin` through a proxy that said nothing made a plain session that a neighbouring site could plant in somebody's browser.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

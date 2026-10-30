@@ -65,6 +65,7 @@ la série.
 - Une restauration garde une autorisation par personne, pour pas plus de personnes qu'un foyer bien des fois, et cherche un doublon d'une entrée d'audit sans relire chaque entrée qu'elle vient d'écrire. Une sauvegarde fabriquée pouvait retenir la mémoire et le verrou d'écriture de la base de plus en plus longtemps pendant la restauration.
 - Une restauration avec ses réglages n'active la recherche de l'adresse publique et le téléchargement de la base de localisation que là où cette installation les a aussi activés, et ne garde jamais moins de sauvegardes ni ne les écrit moins souvent que cette installation. Une sauvegarde qui en gardait une pouvait faire supprimer toutes les autres au passage suivant.
 - Une taille de fichier qu'aucun disque ne pourrait contenir est lue comme aucune taille, et les tailles sont additionnées de sorte qu'aucun total ne puisse déborder. Une seule taille importée faisait répondre les pages des bibliothèques par une erreur pour de bon.
+- Dès que FinStats sait qu'il est joint en https (son adresse publique est en https, ou un proxy de confiance le dit), une session n'est prise que dans son cookie `__Host-`, et avec une adresse publique en https chaque nouvelle session est une session https. Une connexion envoyée sans `Origin` par un proxy qui ne disait rien créait une session ordinaire qu'un site voisin pouvait déposer dans le navigateur de quelqu'un.
 
 ### Performance
 - Un profil publié est calculé au plus une fois par minute, et non à nouveau pour chaque image et chaque carte qu’il contient.

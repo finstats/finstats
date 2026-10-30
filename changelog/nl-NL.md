@@ -64,6 +64,7 @@ de hele reeks.
 - Een herstel houdt één recht per persoon vast, voor niet meer mensen dan een huishouden vele malen, en controleert een auditregel op dubbels zonder elke regel te lezen die het net schreef. Een gemaakte back-up kon tijdens het herstel geheugen en de schrijfvergrendeling van de database steeds langer vasthouden.
 - Een herstel met de instellingen zet het opzoeken van het openbare adres en het downloaden van de locatiedatabase alleen aan waar deze installatie ze ook aan heeft, en bewaart nooit minder back-ups of schrijft ze nooit minder vaak dan deze installatie. Een back-up die er één bewaarde, kon de volgende run alle andere laten verwijderen.
 - Een bestandsgrootte die geen schijf kan bevatten, telt als geen grootte, en groottes worden zo opgeteld dat geen totaal kan overlopen. Eén geïmporteerde grootte liet de bibliotheekpagina's voorgoed met een fout antwoorden.
+- Zodra FinStats weet dat het via https bereikt wordt (het openbare adres is https, of een vertrouwde proxy zegt het), wordt een sessie alleen uit de `__Host-`-cookie genomen, en met een openbaar https-adres is elke nieuwe sessie een https-sessie. Een aanmelding zonder `Origin` via een proxy die niets zei, gaf een gewone sessie die een naburige site in iemands browser kon planten.
 
 ### Performance
 - Een gepubliceerd profiel wordt hooguit eens per minuut opgebouwd, niet opnieuw voor elke afbeelding en kaart erop.

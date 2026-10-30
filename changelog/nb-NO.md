@@ -63,6 +63,7 @@ den tittelen bruker appen som overskrift for hele serien.
 - En gjenoppretting holder én tilgang per person, for ikke flere personer enn en husstand mange ganger over, og sjekker en revisjonsoppføring for dobbel uten å lese hver oppføring den nettopp har skrevet. En laget sikkerhetskopi kunne holde minne og databasens skrivelås lenger og lenger mens den ble gjenopprettet.
 - En gjenoppretting med innstillingene slår på oppslaget av den offentlige adressen og nedlastingen av stedsdatabasen bare der denne installasjonen også har dem på, og beholder aldri færre sikkerhetskopier eller skriver dem sjeldnere enn denne installasjonen gjør. En sikkerhetskopi som beholdt én, kunne få neste kjøring til å fjerne alle andre.
 - En filstørrelse ingen disk kunne romme, leses som ingen størrelse, og størrelser legges sammen slik at ingen sum kan flyte over. Én importert størrelse fikk bibliotekssidene til å svare med feil for godt.
+- Når FinStats vet at den nås over https (den offentlige adressen er https, eller en betrodd proxy sier det), tas en økt bare fra `__Host-`-informasjonskapselen, og med en offentlig https-adresse er hver nye økt en https-økt. En innlogging sendt uten `Origin` gjennom en proxy som ikke sa noe, laget en vanlig økt som et nabonettsted kunne plante i noens nettleser.
 
 ### Performance
 - En publisert profil regnes ut høyst én gang i minuttet, ikke på nytt for hvert bilde og kort på den.

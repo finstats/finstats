@@ -63,6 +63,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Przywracanie trzyma jedno uprawnienie na osobę, dla nie więcej osób niż wielokrotność domostwa, i sprawdza wpis audytu pod kątem dubla bez czytania każdego wpisu, który właśnie zapisało. Spreparowana kopia mogła podczas przywracania coraz dłużej trzymać pamięć i blokadę zapisu bazy danych.
 - Przywracanie z ustawieniami włącza sprawdzanie adresu publicznego i pobieranie bazy lokalizacji tylko tam, gdzie ta instalacja też je ma włączone, i nigdy nie przechowuje mniej kopii ani nie zapisuje ich rzadziej niż ta instalacja. Kopia, która przechowywała jedną, mogła sprawić, że następne uruchomienie usuwało wszystkie inne.
 - Rozmiar pliku, którego żaden dysk by nie pomieścił, jest czytany jako brak rozmiaru, a rozmiary są sumowane tak, by żadna suma nie mogła się przepełnić. Jeden zaimportowany rozmiar sprawiał, że strony bibliotek na stałe odpowiadały błędem.
+- Gdy FinStats wie, że jest osiągany przez https (jego adres publiczny to https albo mówi tak zaufane proxy), sesja jest brana tylko z ciasteczka `__Host-`, a przy publicznym adresie https każda nowa sesja jest sesją https. Logowanie wysłane bez `Origin` przez proxy, które nic nie mówiło, tworzyło zwykłą sesję, którą sąsiednia witryna mogła podrzucić do czyjejś przeglądarki.
 
 ### Performance
 - Opublikowany profil jest obliczany najwyżej raz na minutę, a nie od nowa dla każdego obrazka i karty na nim.

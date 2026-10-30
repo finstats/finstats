@@ -63,6 +63,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Palautus pitää yhden oikeuden henkilöä kohden, enintään monen talouden verran ihmisiä, ja tarkistaa tarkastusmerkinnän kaksoiskappaleen lukematta jokaista juuri kirjoittamaansa merkintää. Muokattu varmuuskopio saattoi palautettaessa pitää muistia ja tietokannan kirjoituslukkoa yhä pidempään.
 - Asetuksineen tehty palautus kytkee julkisen osoitteen haun ja sijaintitietokannan latauksen päälle vain, jos tässäkin asennuksessa ne ovat päällä, eikä koskaan säilytä vähemmän varmuuskopioita tai kirjoita niitä harvemmin kuin tämä asennus. Varmuuskopio, joka säilytti yhden, saattoi saada seuraavan ajon poistamaan kaikki muut.
 - Tiedostokoko, jota mikään levy ei voisi mahduttaa, luetaan kooksi ei mitään, ja koot lasketaan yhteen niin, ettei mikään summa voi ylivuotaa. Yksi tuotu koko sai kirjastosivut vastaamaan virheellä pysyvästi.
+- Kun FinStats tietää, että siihen tullaan https:llä (sen julkinen osoite on https tai luotettu välityspalvelin kertoo niin), istunto otetaan vain sen `__Host-`-evästeestä, ja julkisella https-osoitteella jokainen uusi istunto on https-istunto. Ilman `Origin`-otsaketta lähetetty kirjautuminen välityspalvelimen kautta, joka ei kertonut mitään, loi tavallisen istunnon, jonka naapurisivusto saattoi istuttaa jonkun selaimeen.
 
 ### Performance
 - Julkaistu profiili lasketaan enintään kerran minuutissa, ei uudelleen jokaista sen kuvaa ja korttia varten.

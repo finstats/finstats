@@ -64,6 +64,7 @@ overskrift for hele serien.
 - En gendannelse holder én tilladelse pr. person, for ikke flere personer end en husstand mange gange, og tjekker en revisionspost for dubletter uden at læse hver post, den lige har skrevet. En konstrueret sikkerhedskopi kunne holde hukommelse og databasens skrivelås længere og længere under gendannelsen.
 - En gendannelse med indstillingerne slår opslaget af den offentlige adresse og hentningen af placeringsdatabasen til kun dér, hvor denne installation også har dem slået til, og gemmer aldrig færre sikkerhedskopier eller skriver dem sjældnere, end denne installation gør. En sikkerhedskopi, der gemte én, kunne få næste kørsel til at fjerne alle andre.
 - En filstørrelse, ingen disk kunne rumme, læses som ingen størrelse, og størrelser lægges sammen, så ingen sum kan løbe over. Én importeret størrelse fik bibliotekssiderne til at svare med en fejl for altid.
+- Når FinStats ved, at den nås via https (den offentlige adresse er https, eller en betroet proxy siger det), tages en session kun fra dens `__Host-`-cookie, og med en offentlig https-adresse er hver ny session en https-session. Et login sendt uden `Origin` gennem en proxy, der intet sagde, lavede en almindelig session, som et nabowebsted kunne plante i nogens browser.
 
 ### Performance
 - En offentliggjort profil beregnes højst én gang i minuttet, ikke igen for hvert billede og kort på den.

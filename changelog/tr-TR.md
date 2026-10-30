@@ -63,6 +63,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Geri yükleme kişi başına bir izin tutar, bir hanenin kat kat fazlasından çok kişi için değil, ve bir denetim kaydının kopyasını az önce yazdığı her kaydı okumadan arar. Hazırlanmış bir yedek, geri yükleme sırasında belleği ve veritabanının yazma kilidini giderek daha uzun tutabiliyordu.
 - Ayarlarıyla yapılan bir geri yükleme, genel adres sorgusunu ve konum veritabanı indirmesini yalnızca bu kurulumda da açık oldukları yerde açar ve bu kurulumdan asla daha az yedek tutmaz ya da yedekleri daha seyrek yazmaz. Bir yedek tutan bir yedek, sonraki çalıştırmanın diğer tümünü kaldırmasına yol açabiliyordu.
 - Hiçbir diskin alamayacağı bir dosya boyutu boyut yok olarak okunur ve boyutlar hiçbir toplam taşmayacak şekilde toplanır. İçe aktarılan tek bir boyut, kitaplık sayfalarının kalıcı olarak hata vermesine yol açıyordu.
+- FinStats'a https ile ulaşıldığını bildiğinde (genel adresi https ise ya da güvenilen bir proxy bunu söylüyorsa) oturum yalnızca `__Host-` çerezinden alınır ve genel adres https ise her yeni oturum bir https oturumudur. Hiçbir şey söylemeyen bir proxy üzerinden `Origin` olmadan gönderilen oturum açma, komşu bir sitenin birinin tarayıcısına yerleştirebileceği düz bir oturum oluşturuyordu.
 
 ### Performance
 - Yayımlanmış bir profil, üzerindeki her resim ve kart için yeniden değil, en fazla dakikada bir kez hesaplanır.

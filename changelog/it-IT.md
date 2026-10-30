@@ -64,6 +64,7 @@ usa come titolo dell’intera serie.
 - Un ripristino tiene un permesso per persona, per non più persone di una famiglia molte volte, e controlla i doppioni di una voce di audit senza rileggere ogni voce appena scritta. Un backup costruito ad arte poteva trattenere memoria e il blocco di scrittura del database sempre più a lungo durante il ripristino.
 - Un ripristino con le impostazioni attiva la ricerca dell'indirizzo pubblico e il download del database delle posizioni solo dove anche questa installazione li ha attivi, e non tiene mai meno backup né li scrive meno spesso di questa installazione. Un backup che ne teneva uno poteva far rimuovere tutti gli altri al giro successivo.
 - Una dimensione di file che nessun disco potrebbe contenere viene letta come nessuna dimensione, e le dimensioni si sommano in modo che nessun totale possa traboccare. Una sola dimensione importata faceva rispondere le pagine delle librerie con un errore per sempre.
+- Quando FinStats sa di essere raggiunto via https (il suo indirizzo pubblico è https, o un proxy fidato lo dice), una sessione si prende solo dal suo cookie `__Host-`, e con un indirizzo pubblico https ogni nuova sessione è una sessione https. Un accesso inviato senza `Origin` tramite un proxy che non diceva nulla creava una sessione semplice che un sito vicino poteva piazzare nel browser di qualcuno.
 
 ### Performance
 - Un profilo pubblicato viene calcolato al massimo una volta al minuto, non di nuovo per ogni immagine e scheda che contiene.
