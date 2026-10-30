@@ -67,6 +67,7 @@ overskrift for hele serien.
 - Når FinStats ved, at den nås via https (den offentlige adresse er https, eller en betroet proxy siger det), tages en session kun fra dens `__Host-`-cookie, og med en offentlig https-adresse er hver ny session en https-session. Et login sendt uden `Origin` gennem en proxy, der intet sagde, lavede en almindelig session, som et nabowebsted kunne plante i nogens browser.
 - Billedet bygges med hver GitHub-handling fastlåst til et commit og begge grundbilleder til et digest, kun flyttet af Dependabot, og en udgivelse bygges uden den delte byggecache. Et flyttet tag på en andens handling kunne have udgivet et hvilket som helst billede som FinStats.
 - FinUI's typografiark, tegnet i den besøgendes eget udseende, må kun indlæses af FinStats' egne sider. En side på en anden port på samme vært kunne aflæse, om den besøgende var logget ind, og hvilken forudindstilling de valgte.
+- Hvert afvist login besvares på ét tidspunkt regnet fra, da det blev sendt, uanset om FinStats eller Jellyfin afviste det, og et navn genkendes uanset store eller små bogstaver, også ud over A til Z. Hvor hurtigt en afvisning kom, afslørede hvilke navne der var nogen, og "Åse", der skrev `åse`, blev afvist uden at Jellyfin blev spurgt.
 
 ### Performance
 - En offentliggjort profil beregnes højst én gang i minuttet, ikke igen for hvert billede og kort på den.

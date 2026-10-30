@@ -66,6 +66,7 @@ the app uses as the headline of the whole series.
 - Once FinStats knows it is reached by https (its public address is https, or a trusted proxy says so), a session is taken only from its `__Host-` cookie, and with an https public address every new session is an https one. A sign-in sent without an `Origin` through a proxy that said nothing made a plain session that a neighboring site could plant in somebody's browser.
 - The image is built with every GitHub action pinned to a commit and both base images to a digest, moved only by Dependabot, and a release builds without the shared build cache. A moved tag of somebody else's action could have published any image as FinStats.
 - FinUI's stylesheet, drawn in the visitor's own look, may be loaded by FinStats' own pages only. A page on another port of the same host could read from it whether the visitor was signed in, and which preset they chose.
+- Every refused sign-in is answered at one moment counted from when it was sent, whether FinStats or Jellyfin turned it down, and a name is matched whatever the case of its letters, also past A to Z. How quickly a refusal came told which names were somebody, and "Åse" typing `åse` was turned away without Jellyfin being asked.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

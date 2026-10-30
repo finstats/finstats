@@ -913,8 +913,14 @@ pub(crate) fn may_try(c: &Connection, settings: &crate::state::Settings, name: &
     if !read {
         return Ok(None);
     }
-    let mut stmt = c.prepare("SELECT id, is_admin FROM users WHERE name = ?1 COLLATE NOCASE AND is_disabled = 0 AND removed = 0")?;
-    let found: Vec<(String, bool)> = stmt.query_map([name], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<_, _>>()?;
+    // Case is folded here, not by SQLite, whose NOCASE folds ASCII alone: "Åse" typing `åse`, which Jellyfin takes, was
+    // told "wrong password" without Jellyfin being asked.
+    let typed = name.to_lowercase();
+    let mut stmt = c.prepare("SELECT id, is_admin, name FROM users WHERE is_disabled = 0 AND removed = 0")?;
+    let found: Vec<(String, bool)> = stmt
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, bool>(1)?, r.get::<_, String>(2)?)))?
+        .filter_map(|r| r.map(|(id, admin, n)| (n.to_lowercase() == typed).then_some((id, admin))).transpose())
+        .collect::<Result<_, _>>()?;
     for (id, is_admin) in found {
         let grants = if is_admin { vec![] } else { stored_grants(c, &id)? };
         if effective(is_admin, &grants, settings).is_some() {
@@ -959,6 +965,14 @@ fn kept_home(remote_access: bool, local: Option<bool>) -> bool {
     !remote_access && local != Some(true)
 }
 
+/// Wait until about `typical` has passed since `began` (give or take 15%), and no longer if it has: every refusal, of a
+/// name refused here or one Jellyfin turned down, is answered at one deadline from the start of the request, or how soon
+/// it came would tell which names are somebody.
+async fn refuse_no_sooner(began: tokio::time::Instant, typical: std::time::Duration) {
+    let jitter = rand::Rng::random_range(&mut rand::rng(), 0.85..1.15);
+    tokio::time::sleep_until(began + typical.mul_f64(jitter)).await;
+}
+
 static FAILURE_TIME: std::sync::Mutex<FailureTime> = std::sync::Mutex::new(FailureTime(FailureTime::FIRST_GUESS));
 
 #[derive(Deserialize)]
@@ -978,6 +992,7 @@ pub async fn login(
     let jf = app
         .jellyfin()
         .ok_or_else(|| ApiError::new(StatusCode::CONFLICT, crate::i18n::t("server.auth.not_connected", &[])))?;
+    let began = tokio::time::Instant::now();
     let username = body.username.trim();
     if username.is_empty() {
         return Err(ApiError::bad_request(crate::i18n::t("server.auth.enter_username", &[])));
@@ -1000,8 +1015,7 @@ pub async fn login(
     let (settings, typed) = (app.settings(), username.to_string());
     if app.db.call(move |c| may_try(c, &settings, &typed)).await? == Some(false) {
         let typical = FAILURE_TIME.lock().unwrap().typical();
-        let jitter = rand::Rng::random_range(&mut rand::rng(), 0.85..1.15);
-        tokio::time::sleep(typical.mul_f64(jitter)).await;
+        refuse_no_sooner(began, typical).await;
         return Err(failure(&app));
     }
 
@@ -1011,8 +1025,13 @@ pub async fn login(
     let auth = match jf.authenticate(username, &body.password).await {
         Ok(a) => a,
         Err(AuthError::InvalidCredentials) => {
-            FAILURE_TIME.lock().unwrap().saw(asked.elapsed());
+            let typical = {
+                let mut seen = FAILURE_TIME.lock().unwrap();
+                seen.saw(asked.elapsed());
+                seen.typical()
+            };
             place.refused();
+            refuse_no_sooner(began, typical).await;
             return Err(failure(&app));
         }
         Err(AuthError::Other(e)) => {
@@ -1887,10 +1906,31 @@ mod key_tests {
         assert_eq!(may_try(&c, &closed, "ALICE").unwrap(), Some(true), "an administrator, however the name is typed");
         assert_eq!(may_try(&c, &closed, "bob").unwrap(), Some(false), "not allowed in");
         assert_eq!(may_try(&c, &open(), "bob").unwrap(), Some(true), "sign-in open to everybody");
+        c.execute_batch("INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u7', 'Åse', 1, 1)").unwrap();
+        assert_eq!(may_try(&c, &closed, "åse").unwrap(), Some(true), "a letter past ASCII, typed in the other case, as Jellyfin takes it");
         c.execute_batch("UPDATE users SET is_disabled = 1 WHERE id = 'u1'").unwrap();
         assert_eq!(may_try(&c, &closed, "alice").unwrap(), Some(false), "disabled in Jellyfin");
         c.execute_batch("UPDATE users SET is_disabled = 0, removed = 1 WHERE id = 'u1'").unwrap();
         assert_eq!(may_try(&c, &closed, "alice").unwrap(), Some(false), "gone from Jellyfin");
+    }
+
+    /// Every refusal is answered no sooner than one deadline counted from when the request began, whether FinStats or
+    /// Jellyfin turned the name down: a name refused here waited the typical time after its own lookups, a forwarded one
+    /// answered at Jellyfin's own speed, and the difference told which names were somebody.
+    #[tokio::test]
+    async fn every_refusal_is_answered_at_one_deadline_from_the_start() {
+        let typical = std::time::Duration::from_millis(100);
+        for already in [std::time::Duration::from_millis(1), std::time::Duration::from_millis(60)] {
+            let began = tokio::time::Instant::now();
+            tokio::time::sleep(already).await;
+            refuse_no_sooner(began, typical).await;
+            let took = began.elapsed();
+            assert!(took >= typical.mul_f64(0.85) && took <= typical.mul_f64(1.6), "{already:?} in, answered after {took:?}");
+        }
+        let began = tokio::time::Instant::now();
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+        refuse_no_sooner(began, typical).await;
+        assert!(began.elapsed() < std::time::Duration::from_millis(330), "a refusal already late waits no longer");
     }
 
     /// A name refused without asking Jellyfin waits about as long as one Jellyfin turned down, or how fast the answer came

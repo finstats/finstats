@@ -68,6 +68,7 @@ la série.
 - Dès que FinStats sait qu'il est joint en https (son adresse publique est en https, ou un proxy de confiance le dit), une session n'est prise que dans son cookie `__Host-`, et avec une adresse publique en https chaque nouvelle session est une session https. Une connexion envoyée sans `Origin` par un proxy qui ne disait rien créait une session ordinaire qu'un site voisin pouvait déposer dans le navigateur de quelqu'un.
 - L'image est construite avec chaque action GitHub épinglée à un commit et les deux images de base à un condensé, déplacés seulement par Dependabot, et une version se construit sans le cache de construction partagé. Une étiquette déplacée sur l'action de quelqu'un d'autre aurait pu publier n'importe quelle image comme FinStats.
 - La feuille de style de FinUI, dessinée dans l'apparence propre du visiteur, ne peut être chargée que par les pages de FinStats. Une page sur un autre port du même hôte pouvait y lire si le visiteur était connecté et quel préréglage il avait choisi.
+- Chaque connexion refusée reçoit sa réponse à un même moment compté depuis son envoi, que FinStats ou Jellyfin l'ait refusée, et un nom est reconnu quelle que soit la casse de ses lettres, au-delà de A à Z aussi. La rapidité d'un refus révélait quels noms correspondaient à quelqu'un, et « Åse » tapant `åse` était refusée sans que Jellyfin soit consulté.
 
 ### Performance
 - Un profil publié est calculé au plus une fois par minute, et non à nouveau pour chaque image et chaque carte qu’il contient.

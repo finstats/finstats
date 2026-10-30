@@ -67,6 +67,7 @@ som overskrift for heile serien.
 - Når FinStats veit at han vert nådd over https (den offentlege adressa er https, eller ein tiltrudd proxy seier det), vert ei økt berre teken frå `__Host-`-informasjonskapselen, og med ei offentleg https-adresse er kvar ny økt ei https-økt. Ei innlogging send utan `Origin` gjennom ein proxy som ikkje sa noko, laga ei vanleg økt som ein nabonettstad kunne plante i nettlesaren til nokon.
 - Biletet vert bygt med kvar GitHub-handling festa til ein commit og begge grunnbileta til eit samandrag, flytte berre av Dependabot, og ei utgjeving vert bygd utan den delte byggjebufferen. Ein flytt tagg på andre sin handling kunne ha publisert kva bilete som helst som FinStats.
 - Stilarket til FinUI, teikna i den besøkande sin eigen utsjånad, kan berre lastast av FinStats sine eigne sider. Ei side på ein annan port på same vert kunne lese av det om den besøkande var innlogga, og kva førehandsinnstilling dei valde.
+- Kvar avvist innlogging vert svara på eitt tidspunkt rekna frå då ho vart send, anten FinStats eller Jellyfin avviste ho, og eit namn vert kjent att same kva store eller små bokstavar, òg utover A til Å. Kor raskt ei avvising kom, avslørte kva namn som var nokon, og «Åse» som skreiv `åse` vart avvist utan at Jellyfin vart spurd.
 
 ### Performance
 - Ein publisert profil vert rekna ut høgst éin gong i minuttet, ikkje på nytt for kvart bilete og kort på han.

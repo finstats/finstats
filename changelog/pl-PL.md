@@ -66,6 +66,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Gdy FinStats wie, że jest osiągany przez https (jego adres publiczny to https albo mówi tak zaufane proxy), sesja jest brana tylko z ciasteczka `__Host-`, a przy publicznym adresie https każda nowa sesja jest sesją https. Logowanie wysłane bez `Origin` przez proxy, które nic nie mówiło, tworzyło zwykłą sesję, którą sąsiednia witryna mogła podrzucić do czyjejś przeglądarki.
 - Obraz jest budowany z każdą akcją GitHub przypiętą do commita, a oboma obrazami bazowymi do skrótu, przesuwanymi tylko przez Dependabota, a wydanie buduje się bez wspólnej pamięci podręcznej budowania. Przesunięty tag cudzej akcji mógł opublikować dowolny obraz jako FinStats.
 - Arkusz stylów FinUI, rysowany w wyglądzie wybranym przez odwiedzającego, mogą wczytywać tylko strony FinStats. Strona na innym porcie tego samego hosta mogła odczytać z niego, czy odwiedzający był zalogowany i jaki ustawienie wstępne wybrał.
+- Każde odrzucone logowanie dostaje odpowiedź w jednej chwili liczonej od jego wysłania, niezależnie od tego, czy odrzucił je FinStats, czy Jellyfin, a nazwa jest rozpoznawana bez względu na wielkość liter, także poza A–Z. To, jak szybko przychodziła odmowa, zdradzało, które nazwy należą do kogoś, a „Åse” wpisująca `åse` była odrzucana bez pytania Jellyfin.
 
 ### Performance
 - Opublikowany profil jest obliczany najwyżej raz na minutę, a nie od nowa dla każdego obrazka i karty na nim.

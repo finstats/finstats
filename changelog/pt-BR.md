@@ -67,6 +67,7 @@ manchete de toda a série.
 - Quando o FinStats sabe que é acessado por https (o endereço público é https, ou um proxy confiável diz isso), uma sessão só é tirada do seu cookie `__Host-`, e com um endereço público https cada nova sessão é uma sessão https. Uma entrada enviada sem `Origin` por um proxy que não dizia nada criava uma sessão comum que um site vizinho podia plantar no navegador de alguém.
 - A imagem é construída com cada ação do GitHub fixada em um commit e as duas imagens base em um digest, movidos só pelo Dependabot, e uma versão é construída sem o cache de build compartilhado. Uma tag movida na ação de outra pessoa poderia ter publicado qualquer imagem como FinStats.
 - A folha de estilos do FinUI, desenhada na aparência escolhida por quem visita, só pode ser carregada pelas páginas do próprio FinStats. Uma página em outra porta do mesmo host podia ler nela se a pessoa estava conectada e qual predefinição escolheu.
+- Toda entrada recusada é respondida em um mesmo momento contado a partir do envio, tenha sido o FinStats ou o Jellyfin a recusá-la, e um nome é reconhecido em maiúsculas ou minúsculas, também além de A a Z. A rapidez de uma recusa revelava quais nomes eram de alguém, e “Åse” digitando `åse` era recusada sem que o Jellyfin fosse consultado.
 
 ### Performance
 - Um perfil publicado é calculado no máximo uma vez por minuto, e não de novo para cada imagem e cartão nele.
