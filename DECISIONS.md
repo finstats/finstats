@@ -1144,6 +1144,11 @@ Learned from real exports; also documented at the top of `import.rs`.
     job, a failed backup, what arrived), `services.rs` and `collector.rs` (a connection that stopped answering, Jellyfin
     included, and plays beginning and ending), `seerr.rs` (a request that became watchable). Adding a kind of event means a
     `Kind` arm and one `raise`, never a second way out.
+22. **A mail server is read no further than any reply could be**: `mail::deliver` opens the connection itself and hands
+    lettre a stream (`Capped`) that ends after 1 MiB over the whole letter, certificates included, and lets no read wait
+    longer than 10 s; for `smtps://` the TLS goes inside it (`Encrypted`). lettre grows a reply until it sees a line's end,
+    so a server that never sent one grew FinStats' memory as fast as it could send. A Test goes under the same
+    `MAIL_TIMEOUT` (or `SEND_TIMEOUT`) as the queue's own sending.
 
 ## Backups (`backup.rs`)
 

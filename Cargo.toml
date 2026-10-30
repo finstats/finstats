@@ -34,6 +34,8 @@ hyper = { version = "1", default-features = false, features = ["http1", "server"
 hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
 # The request body's rate is watched by a body of our own (`main::MinRate`); axum's own dependency already.
 http-body = "1"
+# The `smtps://` stream lettre hands back speaks futures-io (`mail::Encrypted`); lettre's own dependency already.
+futures-io = "0.3"
 tower-service = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }

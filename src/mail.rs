@@ -13,13 +13,16 @@
 //! - **Nothing that comes back is repeated.** Errors say a host and a kind of failure, exactly like
 //!   `channels::explain` does, and never the server's own words or the password it refused.
 
+use std::pin::Pin;
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 use anyhow::{Result, anyhow, bail};
 use lettre::message::{Mailbox, header::ContentType};
-use lettre::transport::smtp::authentication::Credentials;
-use lettre::transport::smtp::client::{Tls, TlsParameters};
-use lettre::{Address, AsyncSmtpTransport, AsyncTransport, Tokio1Executor};
+use lettre::transport::smtp::authentication::{Credentials, DEFAULT_MECHANISMS};
+use lettre::transport::smtp::client::{AsyncSmtpConnection, AsyncTokioStream, TlsParameters};
+use lettre::transport::smtp::extension::ClientId;
+use lettre::Address;
 
 use crate::channels::SendError;
 use crate::i18n::t;
@@ -125,14 +128,138 @@ pub async fn deliver(acct: Account<'_>, m: &Message) -> std::result::Result<(), 
         .dangerous_accept_invalid_hostnames(acct.lax)
         .build()
         .map_err(|_| SendError::of(t("server.mail.no_tls_setup", &[("host", server.host.as_str().into())])))?;
-    let mut builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(acct.connect_to.map_or_else(|| server.host.clone(), |ip| ip.to_string()))
-        .port(server.port)
-        .timeout(Some(Duration::from_secs(TIMEOUT_S)))
-        .tls(if server.starttls { Tls::Required(tls) } else { Tls::Wrapper(tls) });
-    if !acct.username.is_empty() {
-        builder = builder.credentials(Credentials::new(acct.username.to_string(), acct.password.to_string()));
+    let host = server.host.as_str();
+    let said = |key: &str| t(&format!("server.mail.{key}"), &[("host", host.into())]);
+    let fail = |e: lettre::transport::smtp::Error| SendError { timed_out: e.is_timeout(), ..SendError::of(explain(&e, host)) };
+
+    // lettre's own transport opens its own connection, and reads a reply until a line ends however long that takes: a
+    // connection of ours, read no further than `READ_MAX`, is handed to it instead.
+    let at = acct.connect_to.map_or_else(|| server.host.clone(), |ip| ip.to_string());
+    let tcp = match tokio::time::timeout(Duration::from_secs(TIMEOUT_S), tokio::net::TcpStream::connect((at.as_str(), server.port))).await {
+        Err(_) => return Err(SendError { timed_out: true, ..SendError::of(said("timeout")) }),
+        Ok(Err(_)) => return Err(SendError::of(said("connect"))),
+        Ok(Ok(tcp)) => tcp,
+    };
+    let capped = Capped { io: tcp, left: READ_MAX, idle: None };
+    let hello = ClientId::default();
+    let stream: Box<dyn AsyncTokioStream> = if server.starttls {
+        Box::new(capped)
+    } else {
+        #[allow(deprecated)]
+        let mut wrapped = lettre::transport::smtp::client::AsyncNetworkStream::use_existing_tokio1(Box::new(capped));
+        wrapped.upgrade_tls(tls.clone()).await.map_err(fail)?;
+        Box::new(Encrypted(wrapped))
+    };
+    let mut conn = AsyncSmtpConnection::connect_with_transport(stream, &hello).await.map_err(fail)?;
+    if server.starttls {
+        conn.starttls(tls, &hello).await.map_err(fail)?;
     }
-    builder.build().send(built).await.map(|_| ()).map_err(|e| SendError { timed_out: e.is_timeout(), ..SendError::of(explain(&e, &server.host)) })
+    if !acct.username.is_empty() {
+        conn.auth(DEFAULT_MECHANISMS, &Credentials::new(acct.username.to_string(), acct.password.to_string())).await.map_err(fail)?;
+    }
+    conn.send(built.envelope(), &built.formatted()).await.map_err(fail)?;
+    let _ = conn.quit().await;
+    Ok(())
+}
+
+/// The most a mail server may send over one letter, its certificates included. A real exchange is a few kilobytes.
+const READ_MAX: u64 = 1 << 20;
+
+/// The connection to a mail server: read no further than `left` bytes, and no read waits longer than `TIMEOUT_S`.
+struct Capped {
+    io: tokio::net::TcpStream,
+    left: u64,
+    idle: Option<std::pin::Pin<Box<tokio::time::Sleep>>>,
+}
+
+impl std::fmt::Debug for Capped {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Capped")
+    }
+}
+
+impl AsyncTokioStream for Capped {
+    fn peer_addr(&self) -> std::io::Result<std::net::SocketAddr> {
+        self.io.peer_addr()
+    }
+}
+
+impl tokio::io::AsyncRead for Capped {
+    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut tokio::io::ReadBuf<'_>) -> Poll<std::io::Result<()>> {
+        if self.left == 0 {
+            return Poll::Ready(Err(std::io::Error::other("the mail server sent more than any reply holds")));
+        }
+        let before = buf.filled().len();
+        match Pin::new(&mut self.io).poll_read(cx, buf) {
+            Poll::Ready(Ok(())) => {
+                let got = (buf.filled().len() - before) as u64;
+                self.left = self.left.saturating_sub(got);
+                self.idle = None;
+                Poll::Ready(Ok(()))
+            }
+            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+            Poll::Pending => {
+                let idle = self.idle.get_or_insert_with(|| Box::pin(tokio::time::sleep(Duration::from_secs(TIMEOUT_S))));
+                match idle.as_mut().poll(cx) {
+                    Poll::Ready(()) => Poll::Ready(Err(std::io::ErrorKind::TimedOut.into())),
+                    Poll::Pending => Poll::Pending,
+                }
+            }
+        }
+    }
+}
+
+impl tokio::io::AsyncWrite for Capped {
+    fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
+        Pin::new(&mut self.io).poll_write(cx, buf)
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.io).poll_flush(cx)
+    }
+
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.io).poll_shutdown(cx)
+    }
+}
+
+/// `smtps://`: the capped connection inside TLS, as lettre's own stream type, which speaks `futures-io`, turned back into
+/// the tokio stream `connect_with_transport` takes.
+#[allow(deprecated)]
+#[derive(Debug)]
+struct Encrypted(lettre::transport::smtp::client::AsyncNetworkStream);
+
+impl AsyncTokioStream for Encrypted {
+    fn peer_addr(&self) -> std::io::Result<std::net::SocketAddr> {
+        self.0.peer_addr()
+    }
+}
+
+impl tokio::io::AsyncRead for Encrypted {
+    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut tokio::io::ReadBuf<'_>) -> Poll<std::io::Result<()>> {
+        match futures_io::AsyncRead::poll_read(Pin::new(&mut self.0), cx, buf.initialize_unfilled()) {
+            Poll::Ready(Ok(n)) => {
+                buf.advance(n);
+                Poll::Ready(Ok(()))
+            }
+            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+impl tokio::io::AsyncWrite for Encrypted {
+    fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>> {
+        futures_io::AsyncWrite::poll_write(Pin::new(&mut self.0), cx, buf)
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        futures_io::AsyncWrite::poll_flush(Pin::new(&mut self.0), cx)
+    }
+
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        futures_io::AsyncWrite::poll_close(Pin::new(&mut self.0), cx)
+    }
 }
 
 /// Why a letter did not go, in words, and without anything the server said back.
@@ -169,6 +296,39 @@ mod tests {
             r = listener.accept() => assert!(r.is_ok()),
             _ = tokio::time::sleep(Duration::from_secs(5)) => panic!("nothing connected to the address given"),
         }
+    }
+
+    /// A server that answers `220 ` and then nothing but `A`, never a line's end, is let go once FinStats has read more
+    /// than any real reply holds. lettre grows one line until it sees a newline, so such a server once took FinStats to
+    /// 1.6 GB in two seconds.
+    #[tokio::test]
+    async fn a_reply_that_never_ends_a_line_is_read_no_further_than_any_reply_could_be() {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let sent = tokio::spawn(async move {
+            let (mut s, _) = listener.accept().await.unwrap();
+            let chunk = vec![b'A'; 64 << 10];
+            let mut sent = 0usize;
+            if s.write_all(b"220 ").await.is_err() {
+                return sent;
+            }
+            while sent < 200 << 20 {
+                if s.write_all(&chunk).await.is_err() {
+                    return sent;
+                }
+                sent += chunk.len();
+            }
+            std::future::pending::<()>().await;
+            sent
+        });
+        let url = format!("smtp://mail.invalid:{port}");
+        let acct = Account { url: &url, from: "finstats@example.com", to: "alice@example.com", username: "", password: "", lax: false, connect_to: Some("127.0.0.1".parse().unwrap()) };
+        let m = msg();
+        let r = tokio::time::timeout(Duration::from_secs(5), deliver(acct, &m)).await.expect("still reading the endless reply after 5 s");
+        assert!(r.is_err(), "an endless reply was taken for an answer");
+        let sent = tokio::time::timeout(Duration::from_secs(5), sent).await.expect("the server was never let go").unwrap();
+        assert!(sent < 8 << 20, "{sent} bytes were read of one reply");
     }
 
     fn msg() -> Message {

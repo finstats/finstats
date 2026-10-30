@@ -53,6 +53,7 @@ manchete de toda a série.
 - O parâmetro de rota de um link não consegue mais alcançar outro caminho da API além do da própria página, e o construtor de elementos do FinUI só define um endereço quando ele é http(s) ou relativo, nunca `srcdoc`.
 - Busca, perfis publicados e trabalho iniciado à mão não conseguem mais manter o FinStats ocupado: uma busca para em 200 caracteres, um perfil é guardado por idioma, os cartões esperam em uma fila curta, e uma tarefa, a consulta do endereço, o download da base de localização e uma mensagem de teste só começam de tempos em tempos, seja qual for a forma como são pedidos, com as mensagens de teste contadas por remetente. Baixar a base de localização também exige o que ler a página Segurança exige.
 - O corpo de uma requisição precisa continuar chegando depois dos primeiros 15 segundos, uma resposta que ninguém lê é abandonada após 30 segundos e um endereço mantém no máximo 64 conexões, exceto um proxy confiável. Algumas centenas de requisições que nunca enviavam o corpo podiam impedir o FinStats de responder a qualquer pessoa.
+- Um servidor de e-mail não é lido além do que uma resposta pode ter (1 MB para uma carta inteira), e uma mensagem de teste para depois do tempo que uma na fila pode levar. Um servidor que nunca terminava uma linha podia fazer o FinStats segurar cada vez mais memória até ser parado.
 
 ### Performance
 - Um perfil publicado é calculado no máximo uma vez por minuto, e não de novo para cada imagem e cartão nele.

@@ -52,6 +52,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Linkin reittiparametri ei voi enää tavoittaa muuta API-polkua kuin oman sivunsa, ja FinUI:n elementtien rakentaja asettaa osoitteen vain, jos se on http(s) tai suhteellinen, ei koskaan `srcdoc`.
 - Haku, julkaistut profiilit ja käsin käynnistetty työ eivät voi enää pitää FinStatsia kiireisenä: haku katkeaa 200 merkkiin, profiili säilytetään kielittäin, kortit odottavat lyhyessä jonossa, ja tehtävä, osoitehaku, sijaintitietokannan lataus ja testiviesti käynnistyvät vain rajallisen usein, pyydettiinpä niitä miten tahansa, testiviestit lähettäjäkohtaisesti laskettuina. Sijaintitietokannan hakeminen vaatii lisäksi samat oikeudet kuin Tietoturva-sivun lukeminen.
 - Pyynnön sisällön on jatkettava saapumista ensimmäisten 15 sekunnin jälkeen, vastaus, jota kukaan ei lue, hylätään 30 sekunnin jälkeen, ja yksi osoite pitää enintään 64 yhteyttä, luotettua välityspalvelinta lukuun ottamatta. Muutama sata pyyntöä, jotka eivät koskaan lähettäneet sisältöään, saattoi estää FinStatsia vastaamasta kenellekään.
+- Sähköpostipalvelinta ei lueta pidemmälle kuin mikään vastaus voi olla (1 Mt koko kirjeeltä), ja testiviesti päättyy yhtä pitkän ajan jälkeen kuin jonossa oleva viesti saa kestää. Palvelin, joka ei koskaan päättänyt riviä, saattoi saada FinStatsin pitämään yhä enemmän muistia, kunnes se pysäytettiin.
 
 ### Performance
 - Julkaistu profiili lasketaan enintään kerran minuutissa, ei uudelleen jokaista sen kuvaa ja korttia varten.

@@ -53,6 +53,7 @@ de hele reeks.
 - De routeparameter van een link kan geen ander API-pad meer bereiken dan dat van de eigen pagina, en de elementbouwer van FinUI zet een adres alleen als het http(s) of relatief is, nooit `srcdoc`.
 - Zoeken, gepubliceerde profielen en met de hand gestart werk kunnen FinStats niet langer bezighouden: een zoekopdracht stopt bij 200 tekens, een profiel wordt per taal bewaard, kaarten wachten in een korte wachtrij, en een taak, het opzoeken van het adres, de download van de locatiedatabase en een testbericht starten maar zo vaak, hoe er ook om wordt gevraagd, testberichten geteld per afzender. Het ophalen van de locatiedatabase vraagt ook wat het lezen van de pagina Beveiliging vraagt.
 - De inhoud van een verzoek moet blijven binnenkomen zodra de eerste 15 seconden voorbij zijn, een antwoord dat niemand leest wordt na 30 seconden opgegeven, en één adres houdt hoogstens 64 verbindingen, een vertrouwde proxy uitgezonderd. Een paar honderd verzoeken die hun inhoud nooit stuurden, konden FinStats ervan weerhouden wie dan ook te antwoorden.
+- Een mailserver wordt niet verder gelezen dan een antwoord kan zijn (1 MB voor een hele brief), en een testbericht stopt na zo lang als een bericht in de wachtrij mag duren. Een server die nooit een regel afsloot, kon FinStats steeds meer geheugen laten vasthouden tot het werd gestopt.
 
 ### Performance
 - Een gepubliceerd profiel wordt hooguit eens per minuut opgebouwd, niet opnieuw voor elke afbeelding en kaart erop.

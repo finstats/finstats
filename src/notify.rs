@@ -1556,7 +1556,8 @@ pub async fn test(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -
     }
     let event = test_event(&user.name, &stored.name);
     let msg = message(&event, stored.with_addresses, Some(&app.settings().public_url));
-    let outcome = channels::send(&app, &stored, &msg).await;
+    let limit = if stored.channel.is_mail() { MAIL_TIMEOUT } else { SEND_TIMEOUT };
+    let outcome = tokio::time::timeout(limit, channels::send(&app, &stored, &msg)).await.unwrap_or_else(|_| Err(channels::SendError::timed_out(&stored)));
     let now = db::now();
     let (ok, error) = match &outcome {
         Ok(()) => (true, None),

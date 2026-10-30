@@ -52,6 +52,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Bir bağlantının rota parametresi artık kendi sayfasınınkinden başka bir API yoluna ulaşamaz ve FinUI’nin öğe oluşturucusu bir adresi yalnızca http(s) ya da göreli olduğunda ayarlar, asla `srcdoc` olarak değil.
 - Arama, yayımlanmış profiller ve elle başlatılan işler artık FinStats’i meşgul edemez: arama 200 karakterde durur, bir profil her dil için ayrı saklanır, kartlar kısa bir kuyrukta bekler; bir iş, adres sorgusu, konum veritabanı indirmesi ve test mesajı, nasıl istenirse istensin yalnızca belirli aralıklarla başlar, test mesajları gönderen başına sayılır. Konum veritabanını indirmek, Güvenlik sayfasını okumanın gerektirdiği izinleri de gerektirir.
 - Bir isteğin gövdesi ilk 15 saniyesi geçtikten sonra gelmeye devam etmeli, kimsenin okumadığı bir yanıttan 30 saniye sonra vazgeçilir ve bir adres, güvenilen bir proxy dışında, en fazla 64 bağlantı tutar. Gövdesini hiç göndermeyen birkaç yüz istek, FinStats'ın kimseye yanıt vermesini engelleyebiliyordu.
+- Bir posta sunucusu hiçbir yanıtın olabileceğinden daha fazla okunmaz (bütün bir mektup için 1 MB) ve bir test iletisi, kuyruktaki bir iletinin sürebileceği kadar sonra durur. Hiç satır bitirmeyen bir sunucu, FinStats durdurulana kadar giderek daha fazla bellek tutmasına yol açabiliyordu.
 
 ### Performance
 - Yayımlanmış bir profil, üzerindeki her resim ve kart için yeniden değil, en fazla dakikada bir kez hesaplanır.
