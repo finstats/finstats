@@ -55,6 +55,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Serwer poczty nie jest czytany dalej, niż może sięgać odpowiedź (1 MB na cały list), a wiadomość testowa kończy się po czasie, jaki może zająć wiadomość z kolejki. Serwer, który nigdy nie kończył wiersza, mógł sprawić, że FinStats trzymał coraz więcej pamięci, aż go zatrzymano.
 - Odczyt biblioteki ocenia się według tytułów zapisanych przez odczyty, nie tych z importu, a tytuł z Jellystat w bibliotece już odczytanej trafia jako usunięty. Import zmyślonych tytułów mógł sprawić, że każdy odczyt biblioteki zatrzymywał FinStats, przy każdym starcie.
 - Limit 60 nieudanych logowań na minutę dla całego serwera liczy tylko próby przekazane do Jellyfin, także te wciąż czekające na odpowiedź. Nazwy odrzucane przez sam FinStats pozwalały każdemu z kilkoma adresami zablokować logowanie wszystkim, a wiele prób wysłanych naraz docierało do Jellyfin.
+- Ten, kogo Jellyfin ogranicza do sieci domowej, pozostaje ograniczony przy każdym żądaniu, także jego sesja i klucze, nie tylko przy logowaniu; dom to sieć prywatna lub sprawdzony publiczny adres domostwa, nigdy adres wpisany jako domowy, a za proxy, którego `FINSTATS_TRUST_PROXY` nie wymienia, pozostaje na zewnątrz. Ciasteczko lub klucz wyniesione z domu otwierały wszystko z dowolnego miejsca, a zarządca mógł otworzyć dom dla wybranego przez siebie adresu.
 
 ### Performance
 - Opublikowany profil jest obliczany najwyżej raz na minutę, a nie od nowa dla każdego obrazka i karty na nim.

@@ -45,7 +45,7 @@ pub async fn of_request(app: &App, headers: &HeaderMap) -> String {
     let Some(token) = crate::auth::cookie_token(headers) else { return String::new() };
     let settings = app.settings();
     app.db
-        .call(move |c| match crate::auth::resolve_session_in(c, &settings, &token, db::now())? {
+        .call(move |c| match crate::auth::resolve_session_in(c, &settings, &token, db::now(), Some(true))? {
             Some(user) => of(c, &user.id),
             None => Ok(String::new()),
         })

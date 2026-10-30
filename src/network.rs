@@ -57,6 +57,21 @@ pub fn classify(conn: &Connection, ip: &str) -> Result<Option<bool>> {
     Ok(Some(conn.prepare_cached("SELECT 1 FROM home_addresses WHERE ip = ?1")?.exists([ip])?))
 }
 
+/// Whether an address is home for Jellyfin's rule on who may connect from outside: a private network, or the household's
+/// public address as the lookup found it, never one typed in as home. A home address entered by hand marks plays as
+/// local; it is no leave to open the house to an address, which is Jellyfin's decision.
+pub fn home_for_who_is_kept_home(conn: &Connection, ip: std::net::IpAddr) -> Result<bool> {
+    let ip = ip.to_string();
+    match is_local_ip(&ip) {
+        Some(true) => Ok(true),
+        None => Ok(false),
+        Some(false) => {
+            let Some(ip) = canonical(&ip) else { return Ok(false) };
+            Ok(conn.prepare_cached("SELECT 1 FROM home_addresses WHERE ip = ?1 AND source = 'lookup'")?.exists([ip])?)
+        }
+    }
+}
+
 /// Decide every play's network again. Cheap: one pass over the distinct addresses. Notes what it decided against, so
 /// a start can tell whether anything has changed since ([`reclassify_at_start`]).
 pub fn reclassify(conn: &Connection) -> Result<usize> {
@@ -202,6 +217,18 @@ pub async fn refresh(app: &App) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Who Jellyfin keeps home is let in from a private network or the household's own looked-up public address, never
+    /// from an address somebody typed in as home: a manager could otherwise open the house to any address they liked.
+    #[test]
+    fn only_a_private_or_looked_up_address_is_home_for_who_is_kept_home() {
+        let c = crate::db::Db::open_in_memory().unwrap().conn().unwrap();
+        c.execute_batch("INSERT INTO home_addresses(ip, source, first_seen, last_seen) VALUES ('203.0.113.9', 'manual', 1, 1), ('198.51.100.7', 'lookup', 1, 1)").unwrap();
+        assert_eq!(home_for_who_is_kept_home(&c, "192.168.1.10".parse().unwrap()).unwrap(), true);
+        assert_eq!(home_for_who_is_kept_home(&c, "198.51.100.7".parse().unwrap()).unwrap(), true, "the looked-up address");
+        assert_eq!(home_for_who_is_kept_home(&c, "203.0.113.9".parse().unwrap()).unwrap(), false, "an address typed in by hand");
+        assert_eq!(classify(&c, "203.0.113.9").unwrap(), Some(true), "it still counts as home for plays");
+    }
 
     /// An address typed by hand that a lookup then confirms is this network's either way: emptying the
     /// hand-written list must not take the looked-up answer with it.

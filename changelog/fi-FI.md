@@ -55,6 +55,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Sähköpostipalvelinta ei lueta pidemmälle kuin mikään vastaus voi olla (1 Mt koko kirjeeltä), ja testiviesti päättyy yhtä pitkän ajan jälkeen kuin jonossa oleva viesti saa kestää. Palvelin, joka ei koskaan päättänyt riviä, saattoi saada FinStatsin pitämään yhä enemmän muistia, kunnes se pysäytettiin.
 - Kirjaston lukua arvioidaan lukujen tallentamien nimikkeiden mukaan, ei tuonnin tuomien, ja Jellystat-nimike jo luetussa kirjastossa tulee poistettuna. Keksittyjen nimikkeiden tuonti saattoi saada jokaisen kirjaston luvun pysäyttämään FinStatsin, joka käynnistyksellä.
 - Koko palvelimen 60 epäonnistuneen kirjautumisen minuuttiraja laskee vain Jellyfinille välitetyt yritykset, myös vastausta yhä odottavat. FinStatsin itse hylkäämät nimet antoivat kenen tahansa muutamalla osoitteella estää kaikkia kirjautumasta, ja monet yhtä aikaa lähetetyt arvaukset päätyivät kaikki Jellyfiniin.
+- Jonka Jellyfin rajaa kotiverkkoon, pysyy siinä jokaisessa pyynnössä, myös istunto ja avaimet, ei vain kirjautuessa; koti on yksityinen verkko tai talouden haettu julkinen osoite, ei koskaan kodiksi kirjoitettu osoite, ja välityspalvelimen takana, jota `FINSTATS_TRUST_PROXY` ei nimeä, hänet pidetään ulkona. Kodista viety eväste tai avain avasi kaiken mistä tahansa, ja ylläpitäjä saattoi avata kodin valitsemalleen osoitteelle.
 
 ### Performance
 - Julkaistu profiili lasketaan enintään kerran minuutissa, ei uudelleen jokaista sen kuvaa ja korttia varten.

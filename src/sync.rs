@@ -383,10 +383,10 @@ pub(crate) fn store_users(c: &mut Connection, users: &[Value], shrink_ok: bool, 
     let tx = c.transaction()?;
     {
         let mut stmt = tx.prepare(
-            "INSERT INTO users(id, name, is_admin, is_disabled, image_tag, last_login_at, last_activity_at, removed, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8)
+            "INSERT INTO users(id, name, is_admin, is_disabled, image_tag, last_login_at, last_activity_at, removed, updated_at, remote_access)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8, ?9)
              ON CONFLICT(id) DO UPDATE SET name = excluded.name, is_admin = excluded.is_admin,
-                is_disabled = excluded.is_disabled, image_tag = excluded.image_tag,
+                is_disabled = excluded.is_disabled, image_tag = excluded.image_tag, remote_access = excluded.remote_access,
                 last_login_at = excluded.last_login_at, last_activity_at = excluded.last_activity_at,
                 removed = 0, updated_at = excluded.updated_at",
         )?;
@@ -402,6 +402,7 @@ pub(crate) fn store_users(c: &mut Connection, users: &[Value], shrink_ok: bool, 
                 u["LastLoginDate"].as_str().and_then(parse_ts),
                 u["LastActivityDate"].as_str().and_then(parse_ts),
                 now,
+                crate::jellyfin::remote_access(u),
             ])?;
             // What of the library Jellyfin lets them see, read with who they are.
             crate::access::store(&tx, &norm_id(id), &crate::access::policy(u))?;

@@ -56,6 +56,7 @@ series.
 - A mail server is read no further than any reply could be (1 MB over a whole letter), and a test message stops after as long as a queued one may take. A server that never ended a line could make FinStats hold more and more memory until it was stopped.
 - A library read is judged against the titles reads have stored, not those an import brought, and a Jellystat title in a library already read comes in as gone. An import of invented titles could make every library read halt FinStats, at every start.
 - The server-wide limit of 60 failed sign-ins a minute counts only attempts put to Jellyfin, those still waiting on its answer included. Names FinStats turned down itself let anybody with a few addresses stop everybody signing in, and many guesses sent at once all reached Jellyfin.
+- Somebody Jellyfin keeps to the home network is kept there on every request, their session and keys included, not only when they sign in; home is a private network or the household's looked-up public address, never an address typed in as home, and behind a proxy `FINSTATS_TRUST_PROXY` does not name they are kept out. A cookie or key taken out of the house opened everything from anywhere, and a manager could open the house to an address of their choosing.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

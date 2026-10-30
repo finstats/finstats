@@ -395,6 +395,7 @@ pub async fn connect(
         return ApiError::new(StatusCode::FORBIDDEN, "Cross-site request refused").into_response();
     }
     let ip = crate::auth::client_ip(&app, &headers, peer);
+    let judged = crate::auth::judged_ip(&app, &headers, peer);
     // Before the credential is read, so a recheck sent while this connection is being made is one it hears.
     let auth = app.live_feed.auth.subscribe();
     let asked_before = app.live_feed.asked.load(std::sync::atomic::Ordering::SeqCst);
@@ -402,7 +403,7 @@ pub async fn connect(
         Ok(p) => p,
         Err(e) => return e.into_response(),
     };
-    let user = match crate::auth::resolve_presented(presented.clone(), Some(ip), &app).await.and_then(|u| crate::auth::refuse_calendar_key(&u).map(|()| u)) {
+    let user = match crate::auth::resolve_presented(presented.clone(), (Some(ip), judged), &app).await.and_then(|u| crate::auth::refuse_calendar_key(&u).map(|()| u)) {
         Ok(u) => u,
         Err(e) => return e.into_response(),
     };
@@ -421,7 +422,7 @@ pub async fn connect(
     // A WebSocket cannot carry a header of the page's own, so its tab says its language in the address (`?lang=`); the
     // cookie is every tab's, and another may have chosen since.
     let lang = uri.query().into_iter().flat_map(|q| q.split('&')).find_map(|kv| kv.strip_prefix("lang=")).and_then(crate::i18n::locale).unwrap_or_else(crate::i18n::current);
-    bounded(ws).on_upgrade(move |socket| crate::i18n::speaking(lang, serve(app, socket, user, presented, seat, (gone, asked), auth)))
+    bounded(ws).on_upgrade(move |socket| crate::i18n::speaking(lang, serve(app, socket, user, (presented, judged), seat, (gone, asked), auth)))
 }
 
 /// A page's messages held to [`MESSAGE_MAX`], and each frame too: a frame is read whole before its message is measured.
@@ -526,7 +527,7 @@ async fn send(socket: &mut WebSocket, msg: Message) -> bool {
     matches!(tokio::time::timeout(SEND_WITHIN, socket.send(msg)).await, Ok(Ok(())))
 }
 
-async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Presented, _seat: Seat, (gone, asked): (Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>), mut auth: watch::Receiver<u64>) {
+async fn serve(app: App, mut socket: WebSocket, user: AuthUser, (presented, judged): (Presented, Option<std::net::IpAddr>), _seat: Seat, (gone, asked): (Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>), mut auth: watch::Receiver<u64>) {
     let feed = &app.live_feed;
     let (mut np, mut dl, mut sum) = (feed.now_playing.subscribe(), feed.downloads.subscribe(), feed.summary.subscribe());
     let mut tab = Tab { topics: HashSet::new(), wanted: HashSet::new(), visible: false, sent: HashMap::new(), drawn: Drawn::default(), user };
@@ -619,7 +620,7 @@ async fn serve(app: App, mut socket: WebSocket, user: AuthUser, presented: Prese
             }
         }
         if recheck {
-            match crate::auth::resolve_presented(presented.clone(), tab.user.ip, &app).await {
+            match crate::auth::resolve_presented(presented.clone(), (tab.user.ip, judged), &app).await {
                 Ok(user) if crate::auth::refuse_calendar_key(&user).is_ok() => {
                     let before = tab.user.perms;
                     let (lost, regained) = tab.reread(user);

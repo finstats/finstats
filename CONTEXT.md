@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-30, on branch `dev` (crate version 2.3.1, local only; schema `user_version` 41; newest pushed tag `v2.2.0`).
+> **Last updated:** 2026-10-30, on branch `dev` (crate version 2.3.1, local only; schema `user_version` 42; newest pushed tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `ARCHITECTURE.md` explains how
@@ -236,7 +236,7 @@ MISC
 | **item_people** | (item_id, person_id, kind) | name, role, sort, image_tag | Actors (first 12) and directors of films/shows only |
 | **item_external** | (item_id, source) | value | Rebuilt from `provider_ids` by `pipeline::rebuild_external` |
 | **user_items** | (user_id, item_id) | played, is_favorite, play_count | Jellyfin's flags |
-| **users** | id | name, is_admin, is_disabled, image_tag, removed, access_all, access_libraries, access_hides, visible_for | Mirror of Jellyfin users; `access_*` is their library access from Jellyfin's policy (NULL = unread, opens nothing) |
+| **users** | id | name, is_admin, is_disabled, image_tag, removed, access_all, access_libraries, access_hides, visible_for, remote_access | Mirror of Jellyfin users; `access_*` is their library access from Jellyfin's policy (NULL = unread, opens nothing); `remote_access` is Jellyfin's switch for connecting from outside, applied to every request |
 | **visible_items** | (user_id, item_id) | | Titles Jellyfin lists for a person something hides titles from; counts only while `users.visible_for` is the policy it was read under. Not in backups. New in 2.3.1 |
 | **playbacks** | id | source (`live`/`jellystat`/`streamystats`/`tautulli`), source_id UNIQUE, active, user_id, item_id, item_type, series_id, season_id, library_id, started_at, ended_at, duration_s, paused_s, position_s, runtime_s, remote_ip, is_local, play_method, transcode, group_id, deleted_at | Denormalised names kept so a play reads without the library |
 | **playback_events** | id | playback_id (FK), at, kind, position_s, from_s, detail | Live plays only |

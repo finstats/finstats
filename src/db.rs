@@ -743,6 +743,11 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         PRIMARY KEY (user_id, item_id)
     ) WITHOUT ROWID;
     "#,
+    // user_version 42: Whether Jellyfin lets each person in from outside the home network (2.3.1), from the same policy
+    //      as their access, so it is applied to every request and not only at sign-in. 1 until a read or a sign-in says.
+    r#"
+    ALTER TABLE users ADD COLUMN remote_access INTEGER NOT NULL DEFAULT 1;
+    "#,
 ];
 
 /// One look at the file before anything opens it for real. The pool retries a connection that fails for its whole

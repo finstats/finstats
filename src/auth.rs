@@ -260,17 +260,20 @@ pub fn mint_key(c: &Connection, user_id: &str, name: &str, scope: KeyScope, expi
 /// one minted for an administrator whom Jellyfin has since demoted, disabled or deleted must not go on
 /// acting for who they were. Only before the users read has written their row at all (the wizard signs
 /// its administrator in first) is the session what Jellyfin said at sign-in.
-pub(crate) fn resolve_session_in(c: &Connection, settings: &crate::state::Settings, token: &str, now: i64) -> anyhow::Result<Option<AuthUser>> {
+///
+/// `home` is whether the request is from the home network (`None`: it cannot be judged); somebody Jellyfin keeps there is
+/// refused from anywhere else, on every request, as Jellyfin refuses them.
+pub(crate) fn resolve_session_in(c: &Connection, settings: &crate::state::Settings, token: &str, now: i64, home: Option<bool>) -> anyhow::Result<Option<AuthUser>> {
     let row = c
         .query_row(
-            "SELECT s.user_id, s.user_name, COALESCE(u.is_admin, s.is_admin), COALESCE(u.is_disabled, 0), COALESCE(u.removed, 0)
+            "SELECT s.user_id, s.user_name, COALESCE(u.is_admin, s.is_admin), COALESCE(u.is_disabled, 0), COALESCE(u.removed, 0), COALESCE(u.remote_access, 1)
              FROM sessions s LEFT JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?1 AND s.expires_at > ?2",
             params![hash_token(token), now],
-            |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)? != 0, r.get::<_, i64>(3)? != 0, r.get::<_, i64>(4)? != 0)),
+            |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)? != 0, r.get::<_, i64>(3)? != 0, r.get::<_, i64>(4)? != 0, r.get::<_, i64>(5)? != 0)),
         )
         .optional()?;
-    let Some((id, name, is_admin, disabled, removed)) = row else { return Ok(None) };
-    if disabled || removed {
+    let Some((id, name, is_admin, disabled, removed, remote_access)) = row else { return Ok(None) };
+    if disabled || removed || kept_home(remote_access, home) {
         return Ok(None);
     }
     let mut user = AuthUser { id, name, is_admin, perms: Perms::default(), credential: Credential::Session, ip: None };
@@ -284,22 +287,22 @@ pub(crate) fn resolve_session_in(c: &Connection, settings: &crate::state::Settin
 /// users table has them today, so a demoted administrator's key demotes and a removed or disabled
 /// user's key dies. Then the same grants and settings as a session, so revoking a permission or
 /// switching sign-in off revokes the key on the next request.
-pub(crate) fn resolve_key_in(c: &Connection, settings: &crate::state::Settings, token: &str, now: i64) -> anyhow::Result<Option<AuthUser>> {
+pub(crate) fn resolve_key_in(c: &Connection, settings: &crate::state::Settings, token: &str, now: i64, home: Option<bool>) -> anyhow::Result<Option<AuthUser>> {
     if !looks_like_key(token) {
         return Ok(None);
     }
     let row = c
         .query_row(
-            "SELECT k.id, k.scope, k.user_id, k.expires_at, k.revoked_at, u.name, u.is_admin, u.is_disabled, u.removed
+            "SELECT k.id, k.scope, k.user_id, k.expires_at, k.revoked_at, u.name, u.is_admin, u.is_disabled, u.removed, u.remote_access
              FROM api_keys k LEFT JOIN users u ON u.id = k.user_id WHERE k.token_hash = ?1",
             [hash_token(token)],
             |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, Option<i64>>(3)?, r.get::<_, Option<i64>>(4)?,
-                    r.get::<_, Option<String>>(5)?, r.get::<_, Option<i64>>(6)?, r.get::<_, Option<i64>>(7)?, r.get::<_, Option<i64>>(8)?)),
+                    r.get::<_, Option<String>>(5)?, r.get::<_, Option<i64>>(6)?, r.get::<_, Option<i64>>(7)?, r.get::<_, Option<i64>>(8)?, r.get::<_, Option<i64>>(9)?)),
         )
         .optional()?;
-    let Some((id, scope, user_id, expires_at, revoked_at, name, is_admin, disabled, removed)) = row else { return Ok(None) };
+    let Some((id, scope, user_id, expires_at, revoked_at, name, is_admin, disabled, removed, remote_access)) = row else { return Ok(None) };
     let (Some(name), Some(scope)) = (name, KeyScope::parse(&scope)) else { return Ok(None) };
-    if revoked_at.is_some() || expires_at.is_some_and(|e| e <= now) || disabled.unwrap_or(0) != 0 || removed.unwrap_or(0) != 0 {
+    if revoked_at.is_some() || expires_at.is_some_and(|e| e <= now) || disabled.unwrap_or(0) != 0 || removed.unwrap_or(0) != 0 || kept_home(remote_access.unwrap_or(1) != 0, home) {
         return Ok(None);
     }
     let is_admin = is_admin.unwrap_or(0) != 0;
@@ -316,29 +319,42 @@ pub fn refuse_calendar_key(user: &AuthUser) -> Result<(), ApiError> {
     }
 }
 
-/// The address a request came from, when the listener recorded one.
-fn request_ip(parts: &Parts, app: &App) -> Option<IpAddr> {
-    parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|ConnectInfo(peer)| client_ip(app, &parts.headers, *peer))
+/// The address a request came from, when the listener recorded one, and the one Jellyfin's rule on remote access is
+/// judged by ([`judged_ip`]).
+fn request_ip(parts: &Parts, app: &App) -> (Option<IpAddr>, Option<IpAddr>) {
+    match parts.extensions.get::<ConnectInfo<SocketAddr>>() {
+        Some(ConnectInfo(peer)) => (Some(client_ip(app, &parts.headers, *peer)), judged_ip(app, &parts.headers, *peer)),
+        None => (None, None),
+    }
+}
+
+/// The address whether somebody is at home is judged by: the client's, unless a peer FinStats does not believe as a proxy
+/// says it forwards somebody else's. Then every request is that proxy's own private address, home for everybody, and
+/// the rule must have nothing to judge by rather than let everybody in.
+pub(crate) fn judged_ip(app: &App, headers: &HeaderMap, peer: SocketAddr) -> Option<IpAddr> {
+    let forwarded = headers.contains_key("x-forwarded-for");
+    (!forwarded || app.trust_proxy.trusts(canonical(peer.ip()))).then(|| client_ip(app, headers, peer))
 }
 
 /// The same resolution for a connection that outlives its request (the live channel), which keeps what it presented
 /// and asks again: a session signed out or a key revoked must close it as it would refuse a request.
-pub(crate) async fn resolve_presented(presented: Presented, ip: Option<IpAddr>, app: &App) -> Result<AuthUser, ApiError> {
-    resolve(presented, ip, app).await
+pub(crate) async fn resolve_presented(presented: Presented, (ip, judged): (Option<IpAddr>, Option<IpAddr>), app: &App) -> Result<AuthUser, ApiError> {
+    resolve(presented, (ip, judged), app).await
 }
 
 /// A presented credential to its user: the one place a request proves who it is.
-async fn resolve(presented: Presented, ip: Option<IpAddr>, app: &App) -> Result<AuthUser, ApiError> {
+async fn resolve(presented: Presented, (ip, judged): (Option<IpAddr>, Option<IpAddr>), app: &App) -> Result<AuthUser, ApiError> {
     let unauthorized = || ApiError::new(StatusCode::UNAUTHORIZED, crate::i18n::t("server.auth.sign_in_to_continue", &[]));
     let settings = app.settings();
     let user = app
         .db
         .call(move |c| {
             let now = db::now();
+            let home = judged.map(|ip| crate::network::home_for_who_is_kept_home(c, ip)).transpose()?;
             match presented {
-                Presented::Cookie(token) => resolve_session_in(c, &settings, &token, now),
+                Presented::Cookie(token) => resolve_session_in(c, &settings, &token, now, home),
                 Presented::Bearer(token) => {
-                    let user = resolve_key_in(c, &settings, &token, now)?;
+                    let user = resolve_key_in(c, &settings, &token, now, home)?;
                     if let Some(u) = &user {
                         touch_key(c, u, ip, now)?;
                     }
@@ -633,12 +649,13 @@ async fn user_json(app: &App, id: &str, name: &str, is_admin: bool, perms: Perms
 /// not reached yet (written by a Jellystat import from the file's own word for who administers Jellyfin)
 /// would make a session an administrator's that Jellyfin never did.
 /// Answers whether the row changed (or was new), which is when that person's open connections must look again.
-pub(crate) fn remember_sign_in(c: &Connection, user_id: &str, user_name: &str, is_admin: bool, policy: &crate::access::Policy, now: i64) -> anyhow::Result<bool> {
+pub(crate) fn remember_sign_in(c: &Connection, user_id: &str, user_name: &str, is_admin: bool, policy: &crate::access::Policy, remote_access: bool, now: i64) -> anyhow::Result<bool> {
     let changed = c.execute(
-        "INSERT INTO users(id, name, is_admin, is_disabled, removed, updated_at) VALUES (?1, ?2, ?3, 0, 0, ?4)
-         ON CONFLICT(id) DO UPDATE SET name = excluded.name, is_admin = excluded.is_admin, is_disabled = 0, removed = 0
-         WHERE users.name IS NOT excluded.name OR users.is_admin IS NOT excluded.is_admin OR users.is_disabled <> 0 OR users.removed <> 0",
-        params![user_id, user_name, is_admin, now],
+        "INSERT INTO users(id, name, is_admin, is_disabled, removed, updated_at, remote_access) VALUES (?1, ?2, ?3, 0, 0, ?4, ?5)
+         ON CONFLICT(id) DO UPDATE SET name = excluded.name, is_admin = excluded.is_admin, is_disabled = 0, removed = 0, remote_access = excluded.remote_access
+         WHERE users.name IS NOT excluded.name OR users.is_admin IS NOT excluded.is_admin OR users.is_disabled <> 0 OR users.removed <> 0
+            OR users.remote_access IS NOT excluded.remote_access",
+        params![user_id, user_name, is_admin, now, remote_access],
     )?;
     // What of the library Jellyfin lets them see, from the same answer: a change there is a change for their connections too.
     let access = crate::access::store(c, user_id, policy)?;
@@ -674,6 +691,7 @@ async fn start_session(
     user_name: &str,
     is_admin: bool,
     policy: crate::access::Policy,
+    remote_access: bool,
     perms: Perms,
 ) -> ApiResult<Response> {
     let mut raw = [0u8; 32];
@@ -688,7 +706,7 @@ async fn start_session(
         .call(move |c| {
             let now = db::now();
             c.execute("DELETE FROM sessions WHERE expires_at <= ?1", [now])?;
-            let row = remember_sign_in(c, &uid, &uname, is_admin, &policy, now)?;
+            let row = remember_sign_in(c, &uid, &uname, is_admin, &policy, remote_access, now)?;
             let let_go = store_session(c, &hash, &uid, &uname, is_admin, now, Some(&ip_s), ua.as_deref())?;
             Ok(row || let_go > 0)
         })
@@ -985,8 +1003,8 @@ pub async fn login(
     drop(place);
 
     if !auth.remote_access {
-        let at = ip.to_string();
-        let local = app.db.call(move |c| crate::network::classify(c, &at)).await?;
+        let judged = judged_ip(&app, &headers, peer);
+        let local = app.db.call(move |c| judged.map(|ip| crate::network::home_for_who_is_kept_home(c, ip)).transpose()).await?;
         if kept_home(false, local) {
             let actor = Actor { user_id: Some(auth.user_id.clone()), user_name: Some(auth.user_name.clone()), ip: Some(ip), key_id: None };
             audit::record(&app, audit::Entry::new("sign_in_refused", actor).outcome("refused"));
@@ -1007,7 +1025,7 @@ pub async fn login(
     signed_in(&app, ip);
     tracing::info!("{} signed in from {ip}", auth.user_name);
     audit::record(&app, audit::Entry::new("sign_in", actor));
-    start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, auth.is_admin, auth.policy, perms).await
+    start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, auth.is_admin, auth.policy, auth.remote_access, perms).await
 }
 
 /// `POST /api/auth/logout`: ends every session the browser sent, the `__Host-` cookie and each plain one. With two plain
@@ -1209,7 +1227,7 @@ pub async fn setup(
     audit::record(&app, audit::Entry::new("setup_completed", Actor { user_id: Some(auth.user_id.clone()), user_name: Some(auth.user_name.clone()), ip: Some(ip), key_id: None }));
     app.wake.notify_waiters();
 
-    start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, true, auth.policy, Perms::ALL).await
+    start_session(&app, &headers, ip, &auth.user_id, &auth.user_name, true, auth.policy, auth.remote_access, Perms::ALL).await
 }
 
 #[cfg(test)]
@@ -1310,8 +1328,8 @@ mod tests {
         let token = |resp: Response| resp.headers().get(SET_COOKIE).unwrap().to_str().unwrap().split(';').next().unwrap().to_string();
         let mut https = HeaderMap::new();
         https.insert("origin", "https://stats.example.com".parse().unwrap());
-        assert!(token(start_session(&app, &https, ip, "u1", "alice", false, crate::access::policy(&json!({ "Policy": { "EnableAllFolders": true } })), Perms::default()).await.unwrap()).starts_with("__Host-finstats_session=h"));
-        assert!(token(start_session(&app, &HeaderMap::new(), ip, "u1", "alice", false, crate::access::policy(&json!({ "Policy": { "EnableAllFolders": true } })), Perms::default()).await.unwrap()).starts_with("finstats_session=p"));
+        assert!(token(start_session(&app, &https, ip, "u1", "alice", false, crate::access::policy(&json!({ "Policy": { "EnableAllFolders": true } })), true, Perms::default()).await.unwrap()).starts_with("__Host-finstats_session=h"));
+        assert!(token(start_session(&app, &HeaderMap::new(), ip, "u1", "alice", false, crate::access::policy(&json!({ "Policy": { "EnableAllFolders": true } })), true, Perms::default()).await.unwrap()).starts_with("finstats_session=p"));
     }
 
     /// A sign-out ends every session it was sent, two plain cookies included: answering `ok` while ending none left the
@@ -1364,7 +1382,7 @@ mod tests {
         let (headers, ip): (HeaderMap, IpAddr) = (HeaderMap::new(), "192.0.2.7".parse().unwrap());
         let (alice, bob) = (app.live_feed.seats.take("u1", None), app.live_feed.seats.take("u2", None));
         let everybody = app.live_feed.rechecks();
-        let sign_in = || start_session(&app, &headers, ip, "u1", "alice", false, crate::access::policy(&json!({ "Policy": { "EnableAllFolders": true } })), Perms::default());
+        let sign_in = || start_session(&app, &headers, ip, "u1", "alice", false, crate::access::policy(&json!({ "Policy": { "EnableAllFolders": true } })), true, Perms::default());
         sign_in().await.unwrap();
         assert!(asked(&alice).await, "a row written for the first time");
         sign_in().await.unwrap();
@@ -1588,13 +1606,46 @@ mod key_tests {
         Settings { allow_user_login: true, ..Default::default() }
     }
 
+    /// Somebody Jellyfin keeps to the home network is kept there on every request, not only at sign-in: a session or key
+    /// is refused from outside, as Jellyfin refuses every request of theirs from there, and from an address that cannot
+    /// be judged. Checked at sign-in alone, a cookie or key carried out of the house opened everything from anywhere.
+    #[test]
+    fn somebody_kept_home_is_kept_home_on_every_request() {
+        let c = conn();
+        c.execute("UPDATE users SET remote_access = 0 WHERE id = 'u2'", []).unwrap();
+        c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u2', 'bob', 0, 1, 9999999999)", [hash_token("bob-cookie")]).unwrap();
+        let (_, key) = mint_key(&c, "u2", "laptop", KeyScope::Full, None, 1000).unwrap();
+        assert!(resolve_session_in(&c, &open(), "bob-cookie", 1000, Some(true)).unwrap().is_some(), "at home");
+        assert!(resolve_session_in(&c, &open(), "bob-cookie", 1000, Some(false)).unwrap().is_none(), "a session from outside");
+        assert!(resolve_session_in(&c, &open(), "bob-cookie", 1000, None).unwrap().is_none(), "a session from an address nobody can judge");
+        assert!(resolve_key_in(&c, &open(), &key, 1000, Some(true)).unwrap().is_some());
+        assert!(resolve_key_in(&c, &open(), &key, 1000, Some(false)).unwrap().is_none(), "a key from outside");
+        c.execute("UPDATE users SET remote_access = 1 WHERE id = 'u2'", []).unwrap();
+        assert!(resolve_session_in(&c, &open(), "bob-cookie", 1000, Some(false)).unwrap().is_some(), "let out again by Jellyfin");
+    }
+
+    /// Behind a proxy FinStats does not believe, every request is the proxy's own private address, which is home: the rule
+    /// for who is kept home has no address to judge then, rather than one that lets everybody in.
+    #[test]
+    fn an_unbelieved_proxy_leaves_nothing_to_judge_home_by() {
+        let app = crate::state::test_app();
+        let peer: SocketAddr = "172.18.0.2:5000".parse().unwrap();
+        let mut h = HeaderMap::new();
+        assert_eq!(judged_ip(&app, &h, peer), Some("172.18.0.2".parse().unwrap()), "no proxy at all: the peer is itself");
+        h.insert("x-forwarded-for", "203.0.113.5".parse().unwrap());
+        assert_eq!(judged_ip(&app, &h, peer), None, "a proxy nobody named");
+        let mut app = app;
+        std::sync::Arc::get_mut(&mut app).unwrap().trust_proxy = Proxies::parse("172.18.0.0/16").unwrap();
+        assert_eq!(judged_ip(&app, &h, peer), Some("203.0.113.5".parse().unwrap()), "a proxy named: the address it saw");
+    }
+
     #[test]
     fn a_key_resolves_to_the_same_permissions_as_a_session() {
         let c = conn();
         c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u2', 'bob', 0, 1, 9999999999)", [hash_token("cookie-token")]).unwrap();
         let (_, key) = mint_key(&c, "u2", "laptop", KeyScope::Full, None, 1000).unwrap();
-        let by_session = resolve_session_in(&c, &open(), "cookie-token", 1000).unwrap().expect("the session is good");
-        let by_key = resolve_key_in(&c, &open(), &key, 1000).unwrap().expect("the key is good");
+        let by_session = resolve_session_in(&c, &open(), "cookie-token", 1000, Some(true)).unwrap().expect("the session is good");
+        let by_key = resolve_key_in(&c, &open(), &key, 1000, Some(true)).unwrap().expect("the key is good");
         assert_eq!((by_key.id.as_str(), by_key.name.as_str(), by_key.is_admin, by_key.perms), (by_session.id.as_str(), by_session.name.as_str(), by_session.is_admin, by_session.perms));
         assert!(by_key.perms.see_everyone && !by_key.perms.manage);
         assert_eq!(by_session.credential, Credential::Session);
@@ -1602,27 +1653,27 @@ mod key_tests {
         assert_eq!(by_key.key_id(), Some(1));
         // An administrator's key is an administrator: everything, read live from the users table.
         let (_, admin) = mint_key(&c, "u1", "script", KeyScope::Full, None, 1000).unwrap();
-        assert_eq!(resolve_key_in(&c, &open(), &admin, 1000).unwrap().unwrap().perms, Perms::ALL);
+        assert_eq!(resolve_key_in(&c, &open(), &admin, 1000, Some(true)).unwrap().unwrap().perms, Perms::ALL);
         c.execute_batch("UPDATE users SET is_admin = 0 WHERE id = 'u1'").unwrap();
-        assert_eq!(resolve_key_in(&c, &open(), &admin, 1000).unwrap().unwrap().perms, Perms::default(), "demoted, the key demotes with them");
+        assert_eq!(resolve_key_in(&c, &open(), &admin, 1000, Some(true)).unwrap().unwrap().perms, Perms::default(), "demoted, the key demotes with them");
     }
 
     #[test]
     fn a_session_follows_the_user_as_jellyfin_has_them_now() {
         let c = conn();
         c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u1', 'alice', 1, 1, 9999999999)", [hash_token("alice-cookie")]).unwrap();
-        assert_eq!(resolve_session_in(&c, &open(), "alice-cookie", 1000).unwrap().unwrap().perms, Perms::ALL);
+        assert_eq!(resolve_session_in(&c, &open(), "alice-cookie", 1000, Some(true)).unwrap().unwrap().perms, Perms::ALL);
         c.execute_batch("UPDATE users SET is_admin = 0 WHERE id = 'u1'").unwrap();
-        let demoted = resolve_session_in(&c, &open(), "alice-cookie", 1000).unwrap().expect("a demoted administrator may still sign in");
+        let demoted = resolve_session_in(&c, &open(), "alice-cookie", 1000, Some(true)).unwrap().expect("a demoted administrator may still sign in");
         assert!(!demoted.is_admin && demoted.perms == Perms::default(), "demoted in Jellyfin, the session signed in as an administrator demotes with them");
         c.execute_batch("UPDATE users SET is_disabled = 1 WHERE id = 'u1'").unwrap();
-        assert!(resolve_session_in(&c, &open(), "alice-cookie", 1000).unwrap().is_none(), "disabled in Jellyfin");
+        assert!(resolve_session_in(&c, &open(), "alice-cookie", 1000, Some(true)).unwrap().is_none(), "disabled in Jellyfin");
         c.execute_batch("UPDATE users SET is_disabled = 0, removed = 1 WHERE id = 'u1'").unwrap();
-        assert!(resolve_session_in(&c, &open(), "alice-cookie", 1000).unwrap().is_none(), "removed from Jellyfin");
+        assert!(resolve_session_in(&c, &open(), "alice-cookie", 1000, Some(true)).unwrap().is_none(), "removed from Jellyfin");
         // The wizard signs its administrator in before the first read of the users has written their row:
         // until there is one, the session is what Jellyfin said at sign-in.
         c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u9', 'carol', 1, 1, 9999999999)", [hash_token("carol-cookie")]).unwrap();
-        let first = resolve_session_in(&c, &open(), "carol-cookie", 1000).unwrap().expect("no users row yet");
+        let first = resolve_session_in(&c, &open(), "carol-cookie", 1000, Some(true)).unwrap().expect("no users row yet");
         assert!(first.is_admin && first.name == "carol");
     }
 
@@ -1636,9 +1687,9 @@ mod key_tests {
         let bob: i64 = c.query_row("SELECT COUNT(*) FROM sessions WHERE user_id = 'u2'", [], |r| r.get(0)).unwrap();
         assert_eq!(bob, SESSIONS_PER_USER as i64, "one person's sign-ins are not bounded");
         let newest = SESSIONS_PER_USER as i64 + 14;
-        assert!(resolve_session_in(&c, &open(), &format!("t{newest}"), 2000).unwrap().is_some(), "the newest was dropped");
-        assert!(resolve_session_in(&c, &open(), "t0", 2000).unwrap().is_none(), "the oldest is still open");
-        assert!(resolve_session_in(&c, &open(), "alice", 6000).unwrap().is_some(), "somebody else's session gave way");
+        assert!(resolve_session_in(&c, &open(), &format!("t{newest}"), 2000, Some(true)).unwrap().is_some(), "the newest was dropped");
+        assert!(resolve_session_in(&c, &open(), "t0", 2000, Some(true)).unwrap().is_none(), "the oldest is still open");
+        assert!(resolve_session_in(&c, &open(), "alice", 6000, Some(true)).unwrap().is_some(), "somebody else's session gave way");
     }
 
     /// A sign-in loop fits dozens of sessions into one second, and `created_at` is whole seconds: which of
@@ -1649,7 +1700,7 @@ mod key_tests {
         for n in 0..(SESSIONS_PER_USER + 20) {
             store_session(&c, &hash_token(&format!("s{n}")), "u2", "bob", false, 1000, None, None).unwrap();
         }
-        let open_now = |t: &str| resolve_session_in(&c, &open(), t, 1000).unwrap().is_some();
+        let open_now = |t: &str| resolve_session_in(&c, &open(), t, 1000, Some(true)).unwrap().is_some();
         let kept: Vec<usize> = (0..SESSIONS_PER_USER + 20).filter(|n| open_now(&format!("s{n}"))).collect();
         assert_eq!(kept, (20..SESSIONS_PER_USER + 20).collect::<Vec<_>>(), "the newest thirty, in the order they were made");
     }
@@ -1660,21 +1711,21 @@ mod key_tests {
         // A Jellystat import writes a row for somebody the users read has not reached yet, with the
         // file's word for whether they administer Jellyfin. The file is not Jellyfin.
         c.execute_batch("INSERT INTO users(id, name, is_admin, updated_at) VALUES ('u3', 'dave', 1, 0);").unwrap();
-        remember_sign_in(&c, "u3", "dave", false, &every_library(), 1000).unwrap();
+        remember_sign_in(&c, "u3", "dave", false, &every_library(), true, 1000).unwrap();
         c.execute("INSERT INTO sessions(token_hash, user_id, user_name, is_admin, created_at, expires_at) VALUES (?1, 'u3', 'dave', 0, 1, 9999999999)", [hash_token("dave-cookie")]).unwrap();
-        assert!(!resolve_session_in(&c, &open(), "dave-cookie", 1000).unwrap().unwrap().is_admin, "an imported row crowned somebody Jellyfin did not");
+        assert!(!resolve_session_in(&c, &open(), "dave-cookie", 1000, Some(true)).unwrap().unwrap().is_admin, "an imported row crowned somebody Jellyfin did not");
         // Jellyfin has just let them in, so they are there and not disabled, whatever the last read said.
         c.execute_batch("UPDATE users SET removed = 1, is_disabled = 1 WHERE id = 'u2'").unwrap();
-        remember_sign_in(&c, "u2", "bob", false, &every_library(), 1000).unwrap();
+        remember_sign_in(&c, "u2", "bob", false, &every_library(), true, 1000).unwrap();
         let bob: (i64, i64, i64) = c.query_row("SELECT is_admin, is_disabled, removed FROM users WHERE id = 'u2'", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap();
         assert_eq!(bob, (0, 0, 0));
         // And somebody the read has never seen gets a row of their own.
-        remember_sign_in(&c, "u9", "carol", true, &every_library(), 1000).unwrap();
+        remember_sign_in(&c, "u9", "carol", true, &every_library(), true, 1000).unwrap();
         let carol: (String, i64) = c.query_row("SELECT name, is_admin FROM users WHERE id = 'u9'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         assert_eq!(carol, ("carol".to_string(), 1));
         // What of the library Jellyfin lets them see comes with them, so somebody new is not shut out until the users read.
         let films = crate::access::policy(&json!({ "Policy": { "EnableAllFolders": false, "EnabledFolders": ["films"] } }));
-        remember_sign_in(&c, "u8", "erin", false, &films, 1000).unwrap();
+        remember_sign_in(&c, "u8", "erin", false, &films, true, 1000).unwrap();
         let erin = crate::access::Access::of(&c, "u8", false).unwrap();
         assert!(erin.may_see_library("films") && !erin.may_see_library("adult"));
     }
@@ -1687,24 +1738,24 @@ mod key_tests {
     fn a_calendar_key_is_refused_everywhere_but_the_feed() {
         let c = conn();
         let (_, key) = mint_key(&c, "u2", "phone", KeyScope::Calendar, None, 1000).unwrap();
-        let user = resolve_key_in(&c, &open(), &key, 1000).unwrap().unwrap();
+        let user = resolve_key_in(&c, &open(), &key, 1000, Some(true)).unwrap().unwrap();
         assert!(matches!(user.credential, Credential::Key { scope: KeyScope::Calendar, .. }));
         assert_eq!(refuse_calendar_key(&user).unwrap_err().0, StatusCode::FORBIDDEN);
         let (_, full) = mint_key(&c, "u2", "laptop", KeyScope::Full, None, 1000).unwrap();
-        assert!(refuse_calendar_key(&resolve_key_in(&c, &open(), &full, 1000).unwrap().unwrap()).is_ok());
+        assert!(refuse_calendar_key(&resolve_key_in(&c, &open(), &full, 1000, Some(true)).unwrap().unwrap()).is_ok());
     }
 
     #[test]
     fn an_expired_revoked_or_unknown_key_is_refused() {
         let c = conn();
         let (id, expiring) = mint_key(&c, "u2", "a", KeyScope::Full, Some(2000), 1000).unwrap();
-        assert!(resolve_key_in(&c, &open(), &expiring, 1999).unwrap().is_some());
-        assert!(resolve_key_in(&c, &open(), &expiring, 2000).unwrap().is_none(), "expired on the second");
+        assert!(resolve_key_in(&c, &open(), &expiring, 1999, Some(true)).unwrap().is_some());
+        assert!(resolve_key_in(&c, &open(), &expiring, 2000, Some(true)).unwrap().is_none(), "expired on the second");
         let (rid, revoked) = mint_key(&c, "u2", "b", KeyScope::Full, None, 1000).unwrap();
         c.execute("UPDATE api_keys SET revoked_at = 1500 WHERE id = ?1", [rid]).unwrap();
-        assert!(resolve_key_in(&c, &open(), &revoked, 1600).unwrap().is_none());
-        assert!(resolve_key_in(&c, &open(), &format!("fs_{}", "0".repeat(64)), 1000).unwrap().is_none(), "unknown");
-        assert!(resolve_key_in(&c, &open(), "not a key", 1000).unwrap().is_none(), "not even shaped like one");
+        assert!(resolve_key_in(&c, &open(), &revoked, 1600, Some(true)).unwrap().is_none());
+        assert!(resolve_key_in(&c, &open(), &format!("fs_{}", "0".repeat(64)), 1000, Some(true)).unwrap().is_none(), "unknown");
+        assert!(resolve_key_in(&c, &open(), "not a key", 1000, Some(true)).unwrap().is_none(), "not even shaped like one");
         assert_ne!(id, rid);
     }
 
@@ -1712,15 +1763,15 @@ mod key_tests {
     fn a_key_of_someone_who_may_no_longer_sign_in_is_refused() {
         let c = conn();
         let (_, key) = mint_key(&c, "u2", "laptop", KeyScope::Full, None, 1000).unwrap();
-        assert!(resolve_key_in(&c, &open(), &key, 1000).unwrap().is_some());
+        assert!(resolve_key_in(&c, &open(), &key, 1000, Some(true)).unwrap().is_some());
         let closed = Settings { allow_user_login: false, ..Default::default() };
-        assert!(resolve_key_in(&c, &closed, &key, 1000).unwrap().is_none(), "sign-in switched off, no sign_in grant: the key dies with the access");
+        assert!(resolve_key_in(&c, &closed, &key, 1000, Some(true)).unwrap().is_none(), "sign-in switched off, no sign_in grant: the key dies with the access");
         c.execute_batch("UPDATE user_permissions SET permissions = '[\"sign_in\"]' WHERE user_id = 'u2'").unwrap();
-        assert!(resolve_key_in(&c, &closed, &key, 1000).unwrap().is_some(), "granted sign_in, the key lives");
+        assert!(resolve_key_in(&c, &closed, &key, 1000, Some(true)).unwrap().is_some(), "granted sign_in, the key lives");
         c.execute_batch("UPDATE users SET is_disabled = 1 WHERE id = 'u2'").unwrap();
-        assert!(resolve_key_in(&c, &open(), &key, 1000).unwrap().is_none(), "disabled in Jellyfin");
+        assert!(resolve_key_in(&c, &open(), &key, 1000, Some(true)).unwrap().is_none(), "disabled in Jellyfin");
         c.execute_batch("UPDATE users SET is_disabled = 0, removed = 1 WHERE id = 'u2'").unwrap();
-        assert!(resolve_key_in(&c, &open(), &key, 1000).unwrap().is_none(), "removed from Jellyfin");
+        assert!(resolve_key_in(&c, &open(), &key, 1000, Some(true)).unwrap().is_none(), "removed from Jellyfin");
     }
 
     /// A host on a sibling name may set a cookie for the whole domain, sent first: a victim then worked inside the

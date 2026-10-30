@@ -55,6 +55,7 @@ den tittelen bruker appen som overskrift for hele serien.
 - En e-postserver leses ikke lenger enn noe svar kan være (1 MB for et helt brev), og en testmelding stopper etter like lang tid som en melding i køen kan ta. En server som aldri avsluttet en linje, kunne få FinStats til å holde mer og mer minne til den ble stoppet.
 - En bibliotekslesing vurderes mot titlene lesingene har lagret, ikke dem en import tok med, og en Jellystat-tittel i et bibliotek som allerede er lest, kommer inn som borte. En import av oppdiktede titler kunne få hver bibliotekslesing til å stoppe FinStats, ved hver oppstart.
 - Grensen på 60 mislykkede innlogginger i minuttet for hele serveren teller bare forsøk som sendes til Jellyfin, også de som fortsatt venter på svar. Navn FinStats avviste selv, lot hvem som helst med noen få adresser stoppe alle fra å logge inn, og mange gjetninger sendt samtidig nådde alle Jellyfin.
+- Den Jellyfin holder til hjemmenettet, holdes der ved hver forespørsel, økten og nøklene deres også, ikke bare når de logger inn; hjemme er et privat nett eller husstandens oppslåtte offentlige adresse, aldri en adresse skrevet inn som hjemme, og bak en proxy `FINSTATS_TRUST_PROXY` ikke nevner, holdes de ute. En informasjonskapsel eller nøkkel tatt ut av huset åpnet alt fra hvor som helst, og en forvalter kunne åpne huset for en adresse de selv valgte.
 
 ### Performance
 - En publisert profil regnes ut høyst én gang i minuttet, ikke på nytt for hvert bilde og kort på den.

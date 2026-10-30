@@ -56,6 +56,7 @@ manchete de toda a série.
 - Um servidor de e-mail não é lido além do que uma resposta pode ter (1 MB para uma carta inteira), e uma mensagem de teste para depois do tempo que uma na fila pode levar. Um servidor que nunca terminava uma linha podia fazer o FinStats segurar cada vez mais memória até ser parado.
 - A leitura de uma biblioteca é julgada pelos títulos que as leituras guardaram, não pelos que uma importação trouxe, e um título do Jellystat numa biblioteca já lida entra como removido. Uma importação de títulos inventados podia fazer cada leitura de biblioteca parar o FinStats, a cada início.
 - O limite de 60 entradas com falha por minuto em todo o servidor conta só as tentativas enviadas ao Jellyfin, incluindo as que ainda esperam resposta. Nomes que o FinStats recusava sozinho deixavam qualquer pessoa com alguns endereços impedir todos de entrar, e muitos palpites enviados de uma vez chegavam todos ao Jellyfin.
+- Quem o Jellyfin limita à rede de casa continua limitado em cada requisição, sessão e chaves incluídas, não só ao entrar; casa é uma rede privada ou o endereço público da casa encontrado pela consulta, nunca um endereço digitado como de casa, e atrás de um proxy que `FINSTATS_TRUST_PROXY` não nomeia a pessoa fica de fora. Um cookie ou chave levado para fora de casa abria tudo de qualquer lugar, e um gestor podia abrir a casa para um endereço à sua escolha.
 
 ### Performance
 - Um perfil publicado é calculado no máximo uma vez por minuto, e não de novo para cada imagem e cartão nele.

@@ -55,6 +55,7 @@ har en kort titelrad under rubriken: den titeln använder appen som rubrik för 
 - En e-postserver läses inte längre än något svar kan vara (1 MB för ett helt brev), och ett testmeddelande stoppas efter lika lång tid som ett meddelande i kön får ta. En server som aldrig avslutade en rad kunde få FinStats att hålla mer och mer minne tills den stoppades.
 - En läsning av ett bibliotek bedöms mot de titlar läsningarna har sparat, inte dem en import tog med, och en Jellystat-titel i ett bibliotek som redan är läst kommer in som borta. En import av påhittade titlar kunde få varje läsning av ett bibliotek att stoppa FinStats vid varje start.
 - Gränsen på 60 misslyckade inloggningar i minuten för hela servern räknar bara försök som skickas till Jellyfin, även de som fortfarande väntar på svar. Namn som FinStats själv avvisade lät vem som helst med några få adresser hindra alla från att logga in, och många gissningar som skickades samtidigt nådde alla Jellyfin.
+- Den som Jellyfin håller till hemnätverket hålls där vid varje begäran, sessionen och nycklarna också, inte bara vid inloggning; hemma är ett privat nät eller hushållets uppslagna offentliga adress, aldrig en adress inskriven som hemma, och bakom en proxy som `FINSTATS_TRUST_PROXY` inte nämner hålls de ute. En kaka eller nyckel som tagits ut ur huset öppnade allt varifrån som helst, och en förvaltare kunde öppna huset för en adress de själva valde.
 
 ### Performance
 - En publicerad profil räknas fram högst en gång i minuten, inte på nytt för varje bild och kort på den.

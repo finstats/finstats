@@ -55,6 +55,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Bir posta sunucusu hiçbir yanıtın olabileceğinden daha fazla okunmaz (bütün bir mektup için 1 MB) ve bir test iletisi, kuyruktaki bir iletinin sürebileceği kadar sonra durur. Hiç satır bitirmeyen bir sunucu, FinStats durdurulana kadar giderek daha fazla bellek tutmasına yol açabiliyordu.
 - Bir kitaplık okuması, içe aktarmanın getirdiklerine göre değil, okumaların kaydettiği başlıklara göre değerlendirilir ve zaten okunmuş bir kitaplıktaki Jellystat başlığı kaldırılmış olarak gelir. Uydurma başlıkların içe aktarılması, her kitaplık okumasının her açılışta FinStats'ı durdurmasına yol açabiliyordu.
 - Tüm sunucu için dakikada 60 başarısız oturum açma sınırı yalnızca Jellyfin'e iletilen denemeleri, yanıt bekleyenler dahil, sayar. FinStats'ın kendisinin reddettiği adlar, birkaç adresi olan herkesin herkesin oturum açmasını engellemesine izin veriyordu ve aynı anda gönderilen pek çok tahmin Jellyfin'e ulaşıyordu.
+- Jellyfin'in ev ağıyla sınırladığı kişi yalnızca oturum açarken değil, oturumu ve anahtarları dahil her istekte orada tutulur; ev, özel bir ağ ya da hanenin aranıp bulunan genel adresidir, asla ev olarak yazılmış bir adres değildir ve `FINSTATS_TRUST_PROXY`'nin adlandırmadığı bir proxy arkasında dışarıda tutulur. Evden dışarı çıkarılan bir çerez ya da anahtar her yerden her şeyi açıyordu ve bir yönetici evi istediği bir adrese açabiliyordu.
 
 ### Performance
 - Yayımlanmış bir profil, üzerindeki her resim ve kart için yeniden değil, en fazla dakikada bir kez hesaplanır.

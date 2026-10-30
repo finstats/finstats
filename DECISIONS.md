@@ -864,7 +864,12 @@ Learned from real exports; also documented at the top of `import.rs`.
    seen then; a new Jellyfin user signs in after the next users read.
 10. **Jellyfin's "allow remote connections" is applied to the real address** (`kept_home`): Jellyfin reads the switch from
     the address asking it, which is FinStats', so with `EnableRemoteAccess` off a sign-in from outside the home network is
-    refused (403 `server.auth.home_only`).
+    refused (403 `server.auth.home_only`). **And on every request after it**: the switch is kept on the users row
+    (`remote_access`, migration 42, from every users read and sign-in), and `resolve_session_in` and `resolve_key_in` refuse
+    such a person from outside (401), the live socket at its next look. Checked at sign-in alone, a cookie or key carried
+    out of the house opened everything from anywhere. The address it is judged by is `judged_ip`: none at all when a peer
+    FinStats does not believe as a proxy sends `X-Forwarded-For`, since every request is then that proxy's private
+    address, home for everybody; the rule fails closed then.
 11. **`FINSTATS_TRUST_PROXY` names the proxies** (`auth::Proxies`): a list of addresses and CIDR ranges whose
     `X-Forwarded-For`, `-Host` and `-Proto` are believed, the header walked from the right past every listed hop (ports
     stripped). `1`/`true` believes only a loopback or private-network peer, one hop, and says so at start; unset believes
@@ -969,6 +974,9 @@ Learned from real exports; also documented at the top of `import.rs`.
    whole history and notes what it decided against (`network_classified`: version and home addresses); a start re-decides
    only when that differs (`reclassify_at_start`), never out of habit.
 4. The lookup must stay anonymous (no version, no ids in the request), and the docs' privacy claims must stay true to it.
+5. **For who Jellyfin keeps home, home is a private network or the looked-up public address only**
+   (`home_for_who_is_kept_home`), never a `manual` home address: those decide how plays are counted, and a manager who may
+   set them could otherwise open the house to any address they liked, which is Jellyfin's decision ("Permissions" 3).
 
 ## Security (`geo.rs`, `security.rs`, `worldmap.js`, `/security`)
 
