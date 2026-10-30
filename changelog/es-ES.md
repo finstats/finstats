@@ -63,6 +63,7 @@ bajo su encabezado: ese título es el que la aplicación usa como titular de tod
 - Una importación de Jellystat o Streamystats lee todo su archivo antes de tomar el bloqueo de escritura de la base de datos y después solo escribe las filas que conserva. Leído bajo el bloqueo, un archivo de unas pocas filas reales y gigabytes de cualquier otra cosa dejaba esperando cualquier otra escritura, reproducciones e inicios de sesión incluidos.
 - Una restauración guarda un permiso por persona, para no más personas que un hogar muchas veces, y busca duplicados de una entrada de auditoría sin leer cada entrada que acaba de escribir. Una copia de seguridad fabricada podía retener memoria y el bloqueo de escritura de la base de datos cada vez más tiempo durante la restauración.
 - Una restauración con sus ajustes activa la consulta de la dirección pública y la descarga de la base de ubicaciones solo donde esta instalación también las tiene activadas, y nunca guarda menos copias de seguridad ni las escribe con menos frecuencia que esta instalación. Una copia que guardaba una podía hacer que la siguiente ejecución quitara todas las demás.
+- Un tamaño de archivo que ningún disco podría contener se lee como ningún tamaño, y los tamaños se suman de modo que ningún total pueda desbordarse. Un solo tamaño importado hacía que las páginas de bibliotecas respondieran con un error para siempre.
 
 ### Performance
 - Un perfil publicado se calcula como mucho una vez por minuto, no de nuevo para cada imagen y tarjeta que contiene.

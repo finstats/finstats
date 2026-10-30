@@ -31,6 +31,15 @@ pub fn int(v: &Value) -> Option<i64> {
     }
 }
 
+/// The most bytes one file is taken to hold: a pebibyte, far past any disk. A bigger number (`"9e18"`, which `int`
+/// saturates) is no size, since a few of them summed past what SQLite holds and broke every page that adds sizes up.
+pub const SIZE_MAX: i64 = 1 << 50;
+
+/// A file's size in bytes, from Jellyfin or an import: none when it is no number of bytes a disk could hold.
+pub fn size(v: &Value) -> Option<i64> {
+    int(v).filter(|n| (0..=SIZE_MAX).contains(n))
+}
+
 pub fn ticks_to_s(v: &Value) -> Option<i64> {
     int(v).map(|t| t / 10_000_000)
 }
@@ -224,6 +233,17 @@ pub fn subtitle_label(codec: Option<&str>, language: Option<&str>) -> Option<Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A file's size is a number of bytes a disk could hold: `"9e18"` read through `int` saturated, and two such sizes
+    /// summed past what SQLite holds.
+    #[test]
+    fn a_size_no_disk_could_hold_is_no_size() {
+        assert_eq!(size(&json!("1500000000")), Some(1_500_000_000));
+        assert_eq!(size(&json!(1_500_000_000i64)), Some(1_500_000_000));
+        for nonsense in [json!("9e18"), json!(9e18), json!(-5), json!("lots")] {
+            assert_eq!(size(&nonsense), None, "{nonsense}");
+        }
+    }
 
     /// A stream's bitrate is the server's or an import file's to say: two claiming the most there can be are added up
     /// without a wrap or a panic, and a negative one adds nothing.

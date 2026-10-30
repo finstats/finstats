@@ -541,7 +541,7 @@ fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult,
                 .execute(params![
                     norm_id(id),
                     path,
-                    int(&d["Size"]),
+                    media::size(&d["Size"]),
                     int(&d["Bitrate"]),
                     container,
                     st.video_codec,

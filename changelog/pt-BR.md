@@ -63,6 +63,7 @@ manchete de toda a série.
 - Uma importação do Jellystat ou Streamystats lê o arquivo inteiro antes de pegar o bloqueio de escrita do banco de dados e depois grava só as linhas que mantém. Lido sob o bloqueio, um arquivo de poucas linhas reais e gigabytes de qualquer outra coisa deixava esperando qualquer outra escrita, reproduções e entradas incluídas.
 - Uma restauração guarda uma permissão por pessoa, para no máximo muitas vezes as pessoas de uma casa, e procura duplicatas de uma entrada de auditoria sem ler cada entrada que acabou de gravar. Um backup forjado podia segurar memória e o bloqueio de escrita do banco de dados por cada vez mais tempo durante a restauração.
 - Uma restauração com as configurações liga a consulta do endereço público e o download do banco de localização só onde esta instalação também os tem ligados, e nunca mantém menos backups nem os grava com menos frequência que esta instalação. Um backup que mantinha um podia fazer a próxima execução remover todos os outros.
+- Um tamanho de arquivo que nenhum disco poderia conter é lido como nenhum tamanho, e os tamanhos são somados de modo que nenhum total possa estourar. Um único tamanho importado fazia as páginas das bibliotecas responderem com erro para sempre.
 
 ### Performance
 - Um perfil publicado é calculado no máximo uma vez por minuto, e não de novo para cada imagem e cartão nele.

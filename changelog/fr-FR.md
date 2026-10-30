@@ -64,6 +64,7 @@ la série.
 - Une importation Jellystat ou Streamystats lit tout son fichier avant de prendre le verrou d'écriture de la base, puis n'écrit que les lignes qu'elle garde. Lu sous le verrou, un fichier de quelques vraies lignes et de gigaoctets d'autre chose faisait attendre toute autre écriture, lectures et connexions comprises.
 - Une restauration garde une autorisation par personne, pour pas plus de personnes qu'un foyer bien des fois, et cherche un doublon d'une entrée d'audit sans relire chaque entrée qu'elle vient d'écrire. Une sauvegarde fabriquée pouvait retenir la mémoire et le verrou d'écriture de la base de plus en plus longtemps pendant la restauration.
 - Une restauration avec ses réglages n'active la recherche de l'adresse publique et le téléchargement de la base de localisation que là où cette installation les a aussi activés, et ne garde jamais moins de sauvegardes ni ne les écrit moins souvent que cette installation. Une sauvegarde qui en gardait une pouvait faire supprimer toutes les autres au passage suivant.
+- Une taille de fichier qu'aucun disque ne pourrait contenir est lue comme aucune taille, et les tailles sont additionnées de sorte qu'aucun total ne puisse déborder. Une seule taille importée faisait répondre les pages des bibliothèques par une erreur pour de bon.
 
 ### Performance
 - Un profil publié est calculé au plus une fois par minute, et non à nouveau pour chaque image et chaque carte qu’il contient.

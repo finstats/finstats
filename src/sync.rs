@@ -565,7 +565,7 @@ pub fn upsert_item(conn: &Connection, library_id: &str, it: &Value, now: i64) ->
         opt_str(&it["BackdropImageTags"][0]),
         opt_str(&source["Container"]).or_else(|| opt_str(&it["Container"])),
         opt_str(&it["Path"]).or_else(|| opt_str(&source["Path"])),
-        int(&source["Size"]),
+        crate::media::size(&source["Size"]),
         int(&source["Bitrate"]),
         streams.video_codec,
         streams.width,

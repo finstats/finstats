@@ -62,6 +62,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - Innflutningur úr Jellystat eða Streamystats les alla skrána áður en hann tekur skriflás gagnagrunnsins og skrifar svo aðeins línurnar sem hann heldur. Lesin undir lásnum gat skrá með fáeinum raunverulegum línum og gígabætum af hverju sem er öðru látið öll önnur skrif bíða, spilanir og innskráningar meðtaldar.
 - Endurheimt heldur einni heimild á mann, fyrir ekki fleiri en heimili margfalt, og leitar að tvítekningu færslu í atvikaskrá án þess að lesa hverja færslu sem hún var að skrifa. Smíðað afrit gat haldið minni og skriflási gagnagrunnsins lengur og lengur meðan það var endurheimt.
 - Endurheimt með stillingum kveikir á uppflettingu opinbers vistfangs og niðurhali staðsetningargagnagrunns aðeins þar sem þessi uppsetning hefur kveikt á þeim líka, og geymir aldrei færri afrit né skrifar þau sjaldnar en þessi uppsetning. Afrit sem geymdi eitt gat látið næstu keyrslu fjarlægja öll hin.
+- Skráarstærð sem enginn diskur gæti rúmað er lesin sem engin stærð, og stærðir eru lagðar saman svo engin summa geti flætt yfir. Ein innflutt stærð lét safnsíðurnar svara með villu fyrir fullt og allt.
 
 ### Performance
 - Opinber prófíll er reiknaður út í mesta lagi einu sinni á mínútu, ekki aftur fyrir hverja mynd og hvert spjald á honum.

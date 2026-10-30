@@ -62,6 +62,7 @@ den tittelen bruker appen som overskrift for hele serien.
 - En import fra Jellystat eller Streamystats leser hele filen før den tar skrivelåsen i databasen, og skriver så bare radene den beholder. Lest under låsen kunne en fil med noen få ekte rader og gigabyte med hva som helst annet holde all annen skriving ventende, avspillinger og innlogginger også.
 - En gjenoppretting holder én tilgang per person, for ikke flere personer enn en husstand mange ganger over, og sjekker en revisjonsoppføring for dobbel uten å lese hver oppføring den nettopp har skrevet. En laget sikkerhetskopi kunne holde minne og databasens skrivelås lenger og lenger mens den ble gjenopprettet.
 - En gjenoppretting med innstillingene slår på oppslaget av den offentlige adressen og nedlastingen av stedsdatabasen bare der denne installasjonen også har dem på, og beholder aldri færre sikkerhetskopier eller skriver dem sjeldnere enn denne installasjonen gjør. En sikkerhetskopi som beholdt én, kunne få neste kjøring til å fjerne alle andre.
+- En filstørrelse ingen disk kunne romme, leses som ingen størrelse, og størrelser legges sammen slik at ingen sum kan flyte over. Én importert størrelse fikk bibliotekssidene til å svare med feil for godt.
 
 ### Performance
 - En publisert profil regnes ut høyst én gang i minuttet, ikke på nytt for hvert bilde og kort på den.

@@ -62,6 +62,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Jellystat- tai Streamystats-tuonti lukee koko tiedostonsa ennen kuin se ottaa tietokannan kirjoituslukon, ja kirjoittaa sitten vain säilyttämänsä rivit. Lukon alla luettuna tiedosto, jossa oli muutama oikea rivi ja gigatavuja mitä tahansa muuta, piti kaikki muut kirjoitukset odottamassa, toistot ja kirjautumiset mukaan lukien.
 - Palautus pitää yhden oikeuden henkilöä kohden, enintään monen talouden verran ihmisiä, ja tarkistaa tarkastusmerkinnän kaksoiskappaleen lukematta jokaista juuri kirjoittamaansa merkintää. Muokattu varmuuskopio saattoi palautettaessa pitää muistia ja tietokannan kirjoituslukkoa yhä pidempään.
 - Asetuksineen tehty palautus kytkee julkisen osoitteen haun ja sijaintitietokannan latauksen päälle vain, jos tässäkin asennuksessa ne ovat päällä, eikä koskaan säilytä vähemmän varmuuskopioita tai kirjoita niitä harvemmin kuin tämä asennus. Varmuuskopio, joka säilytti yhden, saattoi saada seuraavan ajon poistamaan kaikki muut.
+- Tiedostokoko, jota mikään levy ei voisi mahduttaa, luetaan kooksi ei mitään, ja koot lasketaan yhteen niin, ettei mikään summa voi ylivuotaa. Yksi tuotu koko sai kirjastosivut vastaamaan virheellä pysyvästi.
 
 ### Performance
 - Julkaistu profiili lasketaan enintään kerran minuutissa, ei uudelleen jokaista sen kuvaa ja korttia varten.

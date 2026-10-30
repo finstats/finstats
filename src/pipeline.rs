@@ -570,7 +570,7 @@ fn history(c: &Connection, since: i64, days: i64) -> Result<Value> {
         Ok(crate::stats::rows_json(
             c,
             &format!(
-                "SELECT {expr} AS name, COUNT(*) AS count, COALESCE(SUM(size_bytes), 0) AS size_bytes FROM ({imports})
+                "SELECT {expr} AS name, COUNT(*) AS count, CAST(TOTAL(size_bytes) AS INTEGER) AS size_bytes FROM ({imports})
                  WHERE {expr} IS NOT NULL AND {expr} <> '' GROUP BY 1 ORDER BY count DESC, name LIMIT 12"
             ),
             &[since.into()],

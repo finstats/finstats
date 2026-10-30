@@ -32,7 +32,7 @@ pub const PAGE_SIZE: i64 = 60;
 /// What a library holds as titles of their own; episodes, seasons and tracks belong to one of these.
 const TITLE_TYPES: &str = "'Movie', 'Series', 'MusicAlbum', 'MusicVideo', 'Video', 'Book', 'AudioBook'";
 /// What a show weighs: its episodes' files.
-const SIZE: &str = "COALESCE(t.size_bytes, (SELECT SUM(e.size_bytes) FROM items e WHERE e.series_id = t.id AND e.removed = 0))";
+const SIZE: &str = "COALESCE(t.size_bytes, (SELECT CASE WHEN COUNT(e.size_bytes) > 0 THEN CAST(TOTAL(e.size_bytes) AS INTEGER) END FROM items e WHERE e.series_id = t.id AND e.removed = 0))";
 const SORTS: [(&str, &str); 4] = [("name", "t.name COLLATE NOCASE"), ("year", "t.production_year"), ("added", "t.date_created"), ("size", SIZE)];
 
 /// The WHERE over `items t`, with the type filter or without it.

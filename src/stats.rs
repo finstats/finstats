@@ -900,7 +900,7 @@ fn overview_library(c: &Connection, scope: &Scope) -> Result<Option<Map<String, 
         &format!(
             "SELECT COALESCE(SUM(type = 'Movie'), 0) AS movies, COALESCE(SUM(type = 'Series'), 0) AS series,
                     COALESCE(SUM(type = 'Episode'), 0) AS episodes, COALESCE(SUM(type = 'Audio'), 0) AS tracks,
-                    COALESCE(SUM(size_bytes), 0) AS size_bytes,
+                    CAST(TOTAL(size_bytes) AS INTEGER) AS size_bytes,
                     (SELECT COUNT(*) FROM users WHERE removed = 0) AS users
              FROM items {}",
             lib.sql()
@@ -1177,7 +1177,7 @@ fn library_rows_sql(cond: &str, one: bool, own_history: bool) -> String {
                            SUM(type = 'Episode') AS episode_count, SUM(type = 'MusicAlbum') AS album_count, SUM(type = 'Audio') AS track_count,
                            -- The library read brings no artist items: the artists are the album artists its tracks name.
                            COUNT(DISTINCT CASE WHEN type = 'Audio' THEN album_artist END) AS artist_count,
-                           SUM(size_bytes) AS size_bytes
+                           CASE WHEN COUNT(size_bytes) > 0 THEN CAST(TOTAL(size_bytes) AS INTEGER) END AS size_bytes
                     FROM items WHERE removed = 0 {its_items} AND {{SEEN_TITLES}} GROUP BY library_id) c ON c.library_id = l.id
          -- The last play's own columns beside MAX(): SQLite takes a plain column from the row that holds the maximum.
          LEFT JOIN (SELECT p.library_id, COUNT(*) AS plays, SUM(p.duration_s) AS watch_s, MAX(p.ended_at) AS last_played_at,
@@ -2422,7 +2422,7 @@ pub struct LibraryInsightsQuery {
 
 fn lib_buckets(conn: &Connection, expr: &str, from: &str, wh: &str, args: &[SqlValue], order: &str, max: usize) -> Result<Vec<Value>> {
     let sql = format!(
-        "SELECT {expr} AS name, COUNT(*) AS count, COALESCE(SUM(i.size_bytes), 0) AS size_bytes
+        "SELECT {expr} AS name, COUNT(*) AS count, CAST(TOTAL(i.size_bytes) AS INTEGER) AS size_bytes
          FROM items i {from} {wh} GROUP BY 1 HAVING name IS NOT NULL ORDER BY {order}"
     );
     let rows = rows_json(conn, &sql, args)?;
@@ -2433,7 +2433,7 @@ fn lib_buckets(conn: &Connection, expr: &str, from: &str, wh: &str, args: &[SqlV
             out.push(Value::Object(r));
         } else {
             n += r["count"].as_i64().unwrap_or(0);
-            sz += r["size_bytes"].as_i64().unwrap_or(0);
+            sz = sz.saturating_add(r["size_bytes"].as_i64().unwrap_or(0));
         }
     }
     if n > 0 {
@@ -2484,7 +2484,7 @@ fn library_make_up(c: &Connection, libraries: &[String], viewer: Option<&str>, a
     let totals = one_json(
         c,
         &format!(
-            "SELECT COALESCE(SUM(i.size_bytes IS NOT NULL), 0) AS files, COALESCE(SUM(i.size_bytes), 0) AS size_bytes,
+            "SELECT COALESCE(SUM(i.size_bytes IS NOT NULL), 0) AS files, CAST(TOTAL(i.size_bytes) AS INTEGER) AS size_bytes,
                     COALESCE(SUM(CASE WHEN i.size_bytes IS NOT NULL THEN i.runtime_s END), 0) AS runtime_s,
                     COALESCE(SUM(i.type = 'Movie'), 0) AS movies, COALESCE(SUM(i.type = 'Series'), 0) AS series,
                     COALESCE(SUM(i.type = 'Episode'), 0) AS episodes, COALESCE(SUM(i.type = 'Audio'), 0) AS tracks
@@ -2518,7 +2518,7 @@ fn library_make_up(c: &Connection, libraries: &[String], viewer: Option<&str>, a
     // A series weighs what its episodes weigh.
     let sized = format!(
         "SELECT t.id, t.name, t.type, t.production_year AS year, t.date_created, t.id AS image_item_id,
-                COALESCE(t.size_bytes, (SELECT SUM(e.size_bytes) FROM items e WHERE e.series_id = t.id AND e.removed = 0), 0) AS size_bytes
+                COALESCE(t.size_bytes, (SELECT CAST(TOTAL(e.size_bytes) AS INTEGER) FROM items e WHERE e.series_id = t.id AND e.removed = 0), 0) AS size_bytes
          FROM items t WHERE t.removed = 0 AND t.type IN ('Movie', 'Series') {}",
         in_libraries("t")
     );
@@ -2531,7 +2531,7 @@ fn library_make_up(c: &Connection, libraries: &[String], viewer: Option<&str>, a
     never_args.extend(viewer.into_iter().flat_map(|v| [SqlValue::from(v.to_string()), SqlValue::from(v.to_string())]));
     let unwatched_items = rows_json(c, &format!("{sized} AND {never} ORDER BY size_bytes DESC LIMIT 25"), &never_args)?;
     let unwatched_totals =
-        one_json(c, &format!("SELECT COUNT(*) AS count, COALESCE(SUM(size_bytes), 0) AS size_bytes FROM ({sized} AND {never})"), &never_args)?.unwrap_or_default();
+        one_json(c, &format!("SELECT COUNT(*) AS count, CAST(TOTAL(size_bytes) AS INTEGER) AS size_bytes FROM ({sized} AND {never})"), &never_args)?.unwrap_or_default();
 
     Ok(json!({
         "totals": totals,
@@ -2714,6 +2714,25 @@ mod tests {
         assert_eq!(without_address[0]["overview"], json!("Failed login try from carol"));
         let all = insight_failed_logins(&c, &scope(Perms { see_everyone: true, see_network: true, ..server })).unwrap();
         assert_eq!(all[0]["overview"], json!("Failed login try from carol · IP address: 203.0.113.7"));
+    }
+
+    /// Sizes that add up past what a number holds (planted by an import, or a server's nonsense) make a total no bigger
+    /// than the most it can be, never an error: two such sizes broke the library pages for good.
+    #[test]
+    fn sizes_that_add_up_past_any_number_do_not_break_the_make_up() {
+        let c = Connection::open_in_memory().unwrap();
+        for m in crate::db::MIGRATIONS {
+            c.execute_batch(m).unwrap();
+        }
+        c.execute_batch(
+            "INSERT INTO items(id, library_id, type, name, size_bytes, runtime_s, container, removed, updated_at) VALUES
+               ('m1', 'films', 'Movie', 'Big Buck Bunny', 9000000000000000000, 600, 'mkv', 0, 0),
+               ('m2', 'films', 'Movie', 'Sintel',         9000000000000000000, 900, 'mkv', 0, 0),
+               ('m3', 'films', 'Movie', 'Tears of Steel', 9000000000000000000, 900, 'mp4', 0, 0);",
+        )
+        .unwrap();
+        let d = library_make_up(&c, &[], None, &crate::access::Access::everything()).expect("the make-up of a library with sizes that overflow");
+        assert_eq!(d["totals"]["size_bytes"].as_i64(), Some(i64::MAX));
     }
 
     /// "What your library is made of" for the libraries a person picked: one, several or (naming none) all of them, and a

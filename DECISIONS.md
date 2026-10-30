@@ -590,6 +590,9 @@ Learned from real exports; also documented at the top of `import.rs`.
 7. Graphs' one query of its own is `stats::breakdown` (`/api/stats/split`): plays by app, person, source or sent
    resolution, day or month, each split by kind of media or by how it played; the day's rule is shared with
    `overview.daily` through `periods`; the concurrency series says each day's most of each way of playing.
+8. **A size is read through `media::size`** (at most `SIZE_MAX`, a pebibyte; anything else is no size) and summed with
+    `CAST(TOTAL(…) AS INTEGER)`, which saturates, never `SUM`, which fails with "integer overflow": an imported size of
+    `"9e18"`, saturated by `int`, broke the library pages for good, and imported items are never read again.
 
 ## Library access (`access.rs`, migration 41, 2.3.1)
 

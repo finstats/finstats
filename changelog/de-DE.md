@@ -63,6 +63,7 @@ kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 - Ein Import aus Jellystat oder Streamystats liest die ganze Datei, bevor er die Schreibsperre der Datenbank nimmt, und schreibt dann nur die Zeilen, die er behält. Unter der Sperre gelesen, ließ eine Datei aus wenigen echten Zeilen und Gigabytes von irgendetwas anderem jedes andere Schreiben warten, Wiedergaben und Anmeldungen eingeschlossen.
 - Eine Wiederherstellung hält eine Berechtigung pro Person, für nicht mehr Personen als ein Haushalt um ein Vielfaches, und prüft einen Protokolleintrag auf Doppel, ohne jeden gerade geschriebenen Eintrag zu lesen. Eine präparierte Sicherung konnte beim Wiederherstellen Speicher und die Schreibsperre der Datenbank immer länger halten.
 - Eine Wiederherstellung mit Einstellungen schaltet das Nachschlagen der öffentlichen Adresse und das Herunterladen der Standortdatenbank nur ein, wo diese Installation sie auch eingeschaltet hat, und behält nie weniger Sicherungen und schreibt sie nie seltener als diese Installation. Eine Sicherung, die eine behielt, konnte den nächsten Lauf alle anderen entfernen lassen.
+- Eine Dateigröße, die keine Festplatte fassen könnte, gilt als keine Größe, und Größen werden so addiert, dass keine Summe überlaufen kann. Eine einzige importierte Größe ließ die Bibliotheksseiten dauerhaft mit einem Fehler antworten.
 
 ### Performance
 - Ein veröffentlichtes Profil wird höchstens einmal pro Minute berechnet, nicht erneut für jedes Bild und jede Karte darauf.
