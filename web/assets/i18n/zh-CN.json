@@ -106,7 +106,9 @@
     },
     "today": "今天",
     "tomorrow": "明天",
-    "yesterday": "昨天"
+    "yesterday": "昨天",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count} 秒",
@@ -217,6 +219,10 @@
       "sub": "只需两步，FinStats 就会开始记录服务器上的播放。",
       "step_connect": "连接 Jellyfin",
       "step_sign_in": "以管理员身份登录",
+      "code": "设置码",
+      "code_help": "FinStats 启动时会把它写入日志，例如：docker logs finstats",
+      "code_empty": "请输入 FinStats 日志中的设置码。",
+      "code_wrong": "这不是 FinStats 日志中的设置码。",
       "address": "Jellyfin 地址",
       "address_help": "FinStats 访问 Jellyfin 所用的地址。在 Docker 中通常是容器名称。",
       "address_empty": "请输入 Jellyfin 服务器的地址，例如 http://jellyfin:8096。",
@@ -327,6 +333,13 @@
       "language_checked": "已由维护者检查",
       "language_unchecked": "未经母语者检查",
       "language_unchecked_note": "此翻译尚未经过母语者检查：欢迎在 GitHub 上提出更正。",
+      "date_format": "日期格式",
+      "date_format_hint": "日期 格式 日 月 年 date format day month year 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "此浏览器中日期的写法。",
+      "time_format": "时间格式",
+      "time_format_hint": "时间 格式 时钟 24 小时 12 小时 上午 下午 time format clock 24-hour 12-hour am pm",
+      "time_format_help": "此浏览器中时刻的写法。",
+      "format_language": "按语言的写法",
       "layout": "布局",
       "layout_hint": "布局 简洁模式 经典 顶栏 首页 外观 layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats 布局，或简洁布局：顶部一条导航栏，只显示统计数据，就像经典的 Plex 统计服务器那样。仅保存在此浏览器中。",
@@ -1537,8 +1550,13 @@
       "locate_wrong_kind": "播放只能对应电影、视频或单集，不能对应整部剧集或整季",
       "upload_interrupted": "上传已中断：{error}",
       "upload_empty": "上传的文件是空的",
+      "upload_too_large": "文件超过 FinStats 接受的 4 GB",
       "reading_backup": "正在读取备份",
       "receiving_backup": "正在接收备份",
+      "interrupted": "在完成前被中断：没有任何更改，可以重新开始",
+      "too_soon": "刚刚请求过；请一分钟后再试",
+      "upload_running": "一个 Tautulli 备份已在传入",
+      "cards_busy": "现在正在绘制的卡片太多；请稍后再试",
       "importing": "正在导入",
       "restored": {
         "other": "已恢复 {count} 次播放（{skipped} 次已存在）"
@@ -1566,6 +1584,7 @@
       "bearer_form": "请使用 `Authorization: Bearer <key>`",
       "sign_in_to_continue": "请登录以继续",
       "calendar_key_only": "此密钥只能打开日历订阅",
+      "feed_key_in_address": "订阅地址中只能放日历密钥。其他密钥请放在 Authorization 标头中发送",
       "feed_needs_key": "此订阅需要密钥：请在地址后加上 ?key=…",
       "too_many_attempts": {
         "other": "登录尝试次数过多。请在 {count} 分钟后重试。"
@@ -1574,12 +1593,15 @@
       "enter_username": "请输入你的 Jellyfin 用户名",
       "wrong_password": "用户名或密码错误",
       "unreachable": "无法连接 Jellyfin 来验证你的登录",
+      "home_only": "Jellyfin 只允许你从家庭网络登录。",
       "no_access": "你尚未获得 FinStats 的访问权限。Jellyfin 管理员可以在“设置”中允许你访问。",
+      "setup_code": "这不是 FinStats 日志中的设置码",
       "already_set_up": "FinStats 已经设置完成",
       "not_admin": "该账户不是 Jellyfin 管理员。请使用管理员账户设置 FinStats。"
     },
     "keys": {
       "session_only": "请登录后管理密钥；密钥不能创建或吊销密钥",
+      "session_needed": "请登录后执行此操作；密钥无法执行",
       "name": "请为密钥起一个不超过 60 个字符的名称",
       "expiry": "有效期为 1 到 3650 天",
       "scope": "范围只能是 `full` 或 `calendar`",
@@ -1982,9 +2004,12 @@
       "reading_watched": "正在读取 {name} 看过的内容",
       "userdata_read": {
         "other": "{count} 个已播放或收藏的项目"
-      }
+      },
+      "userdata_refused": { "other": "Jellyfin 为 {name} 返回了 {count} 个已播放或收藏的项目，而 FinStats 中有 {current} 个。拒绝清除缺少的项目：这看起来像是 Jellyfin 的变更或读取出错。没有任何更改。" },
+      "userdata_repeated": "Jellyfin 再次返回了 {name} 的已播放和收藏项目的同一页。其标记保持原样：这看起来像是 Jellyfin 的变更或中间有代理。"
     },
     "import": {
+      "line_too_long": "文件中有一行比任何备份中的行都长",
       "reading_libraries": "正在读取媒体库",
       "reading_items": "正在读取电影、剧集和音乐",
       "reading_seasons": "正在读取季",
@@ -2027,6 +2052,7 @@
       "not_json": "该文件不是 FinStats 备份（第 {line} 行不是 JSON）",
       "not_finstats": "这不是 FinStats 备份。Jellystat 备份请在“从 Jellystat 导入”中上传。",
       "newer_format": "此备份由较新版本的 FinStats 创建（格式 {format}）。请先更新 FinStats，再恢复它。",
+      "too_large": "文件已损坏或不是 FinStats 备份（解压后远超任何备份的大小）",
       "restoring": {
         "other": "正在恢复：已恢复 {count} 次播放"
       },
@@ -2099,6 +2125,7 @@
       },
       "bad_url": "这看起来不是有效的 URL",
       "needs_host": "地址需要包含主机名",
+      "not_public_or_unknown": "无法将 {host} 解析为公共地址。你自己的目标必须指向公共服务。请改为让管理员为服务器添加它",
       "enter_address": "请输入要发送到的地址",
       "http_only": "地址必须以 http:// 或 https:// 开头",
       "no_login": "地址中不要包含用户名和密码",
@@ -2114,6 +2141,7 @@
       "mail_no_login": "地址中不要包含用户名和密码；它们各有单独的输入框",
       "mail_host_port": "邮件服务器地址由主机和端口组成，后面不能有其他内容",
       "enter": "请输入{what}",
+      "secret_again": "请重新输入令牌或密码：已保存的只会发送到保存时对应的服务器",
       "value": "值",
       "token": "令牌",
       "ntfy_topic": "ntfy 主题只能包含字母、数字、- 和 _",
@@ -2125,6 +2153,7 @@
       "enter_address_of": "请输入 {channel} 的地址",
       "not_a_token": "这看起来不是令牌",
       "too_long": "{what}太长，或包含无法发送的内容",
+      "name": "名称",
       "unknown_event": "未知事件 `{event}`",
       "unknown_severity": "未知严重程度 `{severity}`",
       "max_targets": {
@@ -2245,6 +2274,7 @@
       "say_kind": "请指定服务的类型",
       "enter_address": "请输入 {service} 的地址",
       "enter_key": "请输入 API 密钥",
+      "key_again": "请重新输入 API 密钥：已保存的密钥只会发送到保存时对应的服务器",
       "not_a_key": "这看起来不是密钥或密码",
       "max": {
         "other": "最多 {count} 个连接"
@@ -2283,6 +2313,11 @@
     },
     "downloads": {
       "no_answer": "{name} 未及时响应",
+      "problem": {
+        "timeout": "未及时响应",
+        "refused": "拒绝了 API 密钥",
+        "failed": "无法读取"
+      },
       "season": "第 {season} 季",
       "episodes": {
         "other": "{count} 集"
@@ -3923,7 +3958,8 @@
         "profile_changed": "更改了公开资料",
         "profile_unpublished": "撤下了公开资料",
         "profile_link_reset": "生成了新的公开资料链接",
-        "appearance_changed": "更改了外观"
+        "appearance_changed": "更改了外观",
+        "welcomed": "完成了欢迎向导"
       },
       "outcome": {
         "failed": "失败",
@@ -5013,5 +5049,25 @@
       "Fixed": "修复",
       "Removed": "移除"
     }
+  },
+  "welcome": {
+    "title": "欢迎使用 FinStats",
+    "sub": "为此浏览器做几个选择。你可以随时在 设置 → 外观 中更改。",
+    "step_language": "语言",
+    "step_formats": "日期和时间",
+    "step_theme": "配色",
+    "theme_label": "浅色或深色",
+    "theme_light": "始终浅色，无论设备如何设置。",
+    "theme_device": "采用设备自己的设置（浅色或深色），并在其变化时跟随。",
+    "theme_dark": "始终深色，无论设备如何设置。",
+    "step_layout": "布局",
+    "unchecked": "未经核对",
+    "layout_finstats": "所有页面，菜单在侧边。",
+    "layout_simple": "顶部一条栏，只显示统计，按 Tautulli 为 Plex 排列的方式排列。与 Tautulli 无关。",
+    "back": "返回",
+    "next": "下一步",
+    "done": "完成",
+    "skip": "跳过",
+    "skip_note": "英式英语、31/01/2026、13:05、设备的配色和 FinStats。"
   }
 }

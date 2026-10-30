@@ -106,7 +106,9 @@
     },
     "today": "오늘",
     "tomorrow": "내일",
-    "yesterday": "어제"
+    "yesterday": "어제",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count}초",
@@ -217,6 +219,10 @@
       "sub": "두 단계만 거치면 FinStats가 서버의 재생 기록을 시작합니다.",
       "step_connect": "Jellyfin에 연결",
       "step_sign_in": "관리자로 로그인",
+      "code": "설정 코드",
+      "code_help": "FinStats는 시작할 때 로그에 이 코드를 씁니다. 예: docker logs finstats",
+      "code_empty": "FinStats 로그에 있는 설정 코드를 입력하세요.",
+      "code_wrong": "FinStats 로그에 있는 설정 코드가 아닙니다.",
       "address": "Jellyfin 주소",
       "address_help": "FinStats가 Jellyfin에 접속할 주소입니다. Docker에서는 보통 컨테이너 이름입니다.",
       "address_empty": "Jellyfin 서버 주소를 입력하세요. 예: http://jellyfin:8096",
@@ -327,6 +333,13 @@
       "language_checked": "관리자가 검토함",
       "language_unchecked": "원어민 검토 전",
       "language_unchecked_note": "이 번역은 원어민의 검토를 거치지 않았습니다. GitHub에서 수정 제안을 환영합니다.",
+      "date_format": "날짜 형식",
+      "date_format_hint": "날짜 형식 일 월 년 date format day month year 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "이 브라우저에서 날짜를 쓰는 방식입니다.",
+      "time_format": "시간 형식",
+      "time_format_hint": "시간 형식 시계 24시간 12시간 오전 오후 time format clock 24-hour 12-hour am pm",
+      "time_format_help": "이 브라우저에서 시각을 쓰는 방식입니다.",
+      "format_language": "언어가 쓰는 방식대로",
       "layout": "레이아웃",
       "layout_hint": "레이아웃 간편 모드 클래식 상단 바 홈 모양 layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats 또는 간편 모드: 위쪽에 막대가 있고 통계만 보여 주는, 전통적인 Plex 통계 서버 방식의 배치입니다. 이 브라우저에만 저장됩니다.",
@@ -1537,8 +1550,13 @@
       "locate_wrong_kind": "재생 기록은 영화, 비디오 또는 에피소드의 것이며, 시리즈나 시즌 전체의 것일 수 없습니다",
       "upload_interrupted": "업로드가 중단되었습니다: {error}",
       "upload_empty": "업로드한 파일이 비어 있습니다",
+      "upload_too_large": "파일이 FinStats가 받는 4 GB보다 큽니다",
       "reading_backup": "백업 읽는 중",
       "receiving_backup": "백업 받는 중",
+      "interrupted": "끝나기 전에 중단되었습니다. 아무것도 바뀌지 않았으며 다시 시작할 수 있습니다",
+      "too_soon": "방금 요청되었습니다. 1분 뒤 다시 시도하세요",
+      "upload_running": "Tautulli 백업이 이미 도착하는 중입니다",
+      "cards_busy": "지금 그리고 있는 카드가 너무 많습니다. 잠시 후 다시 시도하세요",
       "importing": "가져오는 중",
       "restored": {
         "other": "재생 기록 {count}개 복원됨 ({skipped}개는 이미 있음)"
@@ -1566,6 +1584,7 @@
       "bearer_form": "`Authorization: Bearer <key>` 형식을 사용하세요",
       "sign_in_to_continue": "계속하려면 로그인하세요",
       "calendar_key_only": "이 키로는 캘린더 피드만 열 수 있습니다",
+      "feed_key_in_address": "피드 주소에는 캘린더 키만 넣을 수 있습니다. 다른 키는 Authorization 헤더로 보내세요",
       "feed_needs_key": "이 피드에는 키가 필요합니다. 주소에 ?key=…를 붙이세요",
       "too_many_attempts": {
         "other": "로그인 시도가 너무 많습니다. {count}분 뒤에 다시 시도하세요."
@@ -1574,12 +1593,15 @@
       "enter_username": "Jellyfin 사용자 이름을 입력하세요",
       "wrong_password": "사용자 이름 또는 비밀번호가 잘못되었습니다",
       "unreachable": "로그인을 확인하기 위해 Jellyfin에 연결하지 못했습니다",
+      "home_only": "Jellyfin은 홈 네트워크에서만 로그인할 수 있게 합니다.",
       "no_access": "FinStats 접근 권한이 없습니다. Jellyfin 관리자가 설정에서 허용할 수 있습니다.",
+      "setup_code": "FinStats 로그에 있는 설정 코드가 아닙니다",
       "already_set_up": "FinStats는 이미 설정되었습니다",
       "not_admin": "이 계정은 Jellyfin 관리자가 아닙니다. 관리자 계정으로 FinStats를 설정하세요."
     },
     "keys": {
       "session_only": "키를 관리하려면 로그인하세요. 키로는 키를 만들거나 폐기할 수 없습니다",
+      "session_needed": "이 작업은 로그인해야 할 수 있습니다. 키로는 할 수 없습니다",
       "name": "키 이름을 60자 이내로 입력하세요",
       "expiry": "만료 기간은 1일에서 3650일 사이입니다",
       "scope": "범위는 `full` 또는 `calendar`입니다",
@@ -1982,9 +2004,12 @@
       "reading_watched": "{name} 님이 본 항목 읽는 중",
       "userdata_read": {
         "other": "재생했거나 즐겨찾기한 항목 {count}개"
-      }
+      },
+      "userdata_refused": { "other": "Jellyfin이 {name}의 재생했거나 즐겨찾기한 항목을 {count}개 돌려주었지만 FinStats에는 {current}개가 있습니다. 빠진 항목을 지우지 않았습니다. Jellyfin의 변경이나 잘못된 읽기로 보입니다. 아무것도 바뀌지 않았습니다." },
+      "userdata_repeated": "Jellyfin이 {name}의 재생했거나 즐겨찾기한 항목의 같은 페이지를 다시 돌려주었습니다. 표시는 그대로 두었습니다. Jellyfin의 변경이나 중간에 있는 프록시로 보입니다."
     },
     "import": {
+      "line_too_long": "파일의 한 줄이 어떤 백업에도 있을 수 없을 만큼 깁니다",
       "reading_libraries": "라이브러리 읽는 중",
       "reading_items": "영화, 시리즈, 음악 읽는 중",
       "reading_seasons": "시즌 읽는 중",
@@ -2027,6 +2052,7 @@
       "not_json": "FinStats 백업이 아닙니다 ({line}번째 줄이 JSON이 아님)",
       "not_finstats": "FinStats 백업이 아닙니다. Jellystat 백업은 “Jellystat에서 가져오기”를 사용하세요.",
       "newer_format": "더 새로운 FinStats로 만든 백업입니다(형식 {format}). FinStats를 업데이트한 뒤 복원하세요.",
+      "too_large": "파일이 손상되었거나 FinStats 백업이 아닙니다 (압축을 풀면 백업이 담을 수 있는 양보다 훨씬 커집니다)",
       "restoring": {
         "other": "복원 중: 지금까지 재생 기록 {count}개"
       },
@@ -2099,6 +2125,7 @@
       },
       "bad_url": "올바른 URL이 아닌 것 같습니다",
       "needs_host": "주소에 호스트 이름이 있어야 합니다",
+      "not_public_or_unknown": "{host}을(를) 공개 주소로 조회할 수 없었습니다. 내 대상은 공개 서비스를 가리켜야 합니다. 대신 관리자에게 서버용으로 추가해 달라고 하세요",
       "enter_address": "보낼 주소를 입력하세요",
       "http_only": "주소는 http:// 또는 https://로 시작해야 합니다",
       "no_login": "주소에서 사용자 이름과 비밀번호를 빼세요",
@@ -2114,6 +2141,7 @@
       "mail_no_login": "주소에서 사용자 이름과 비밀번호를 빼세요. 각각 따로 입력하는 칸이 있습니다",
       "mail_host_port": "메일 서버 주소는 호스트와 포트로만 이루어지며 그 뒤에는 아무것도 없어야 합니다",
       "enter": "{what} 입력이 필요합니다",
+      "secret_again": "토큰이나 비밀번호를 다시 입력하세요. 저장된 값은 저장할 때의 서버로만 보내집니다",
       "value": "값",
       "token": "토큰",
       "ntfy_topic": "ntfy 토픽에는 문자, 숫자, -, _만 쓸 수 있습니다",
@@ -2125,6 +2153,7 @@
       "enter_address_of": "{channel} 주소를 입력하세요",
       "not_a_token": "토큰이 아닌 것 같습니다",
       "too_long": "{what} 길이가 너무 길거나, 보낼 수 없는 문자가 들어 있습니다",
+      "name": "이름",
       "unknown_event": "알 수 없는 이벤트 `{event}`",
       "unknown_severity": "알 수 없는 심각도 `{severity}`",
       "max_targets": {
@@ -2245,6 +2274,7 @@
       "say_kind": "어떤 종류의 서비스인지 지정하세요",
       "enter_address": "{service} 주소를 입력하세요",
       "enter_key": "API 키를 입력하세요",
+      "key_again": "API 키를 다시 입력하세요. 저장된 키는 저장할 때의 서버로만 보내집니다",
       "not_a_key": "키나 비밀번호가 아닌 것 같습니다",
       "max": {
         "other": "연결은 최대 {count}개입니다"
@@ -2283,6 +2313,11 @@
     },
     "downloads": {
       "no_answer": "{name}에서 제시간에 응답하지 않았습니다",
+      "problem": {
+        "timeout": "제시간에 응답하지 않았습니다",
+        "refused": "API 키를 거부했습니다",
+        "failed": "읽을 수 없었습니다"
+      },
       "season": "시즌 {season}",
       "episodes": {
         "other": "에피소드 {count}개"
@@ -3923,7 +3958,8 @@
         "profile_changed": "공개 프로필 변경",
         "profile_unpublished": "공개 프로필 내림",
         "profile_link_reset": "공개 프로필 링크 새로 만듦",
-        "appearance_changed": "모양 변경"
+        "appearance_changed": "모양 변경",
+        "welcomed": "환영 화면을 마침"
       },
       "outcome": {
         "failed": "실패",
@@ -5013,5 +5049,25 @@
       "Fixed": "수정",
       "Removed": "제거"
     }
+  },
+  "welcome": {
+    "title": "FinStats에 오신 것을 환영합니다",
+    "sub": "이 브라우저를 위한 몇 가지 선택입니다. 설정 → 모양에서 언제든 바꿀 수 있습니다.",
+    "step_language": "언어",
+    "step_formats": "날짜와 시간",
+    "step_theme": "색상",
+    "theme_label": "밝게 또는 어둡게",
+    "theme_light": "기기 설정과 관계없이 항상 밝게.",
+    "theme_device": "기기 자체의 설정(밝게 또는 어둡게)을 따르고, 바뀌면 함께 바뀝니다.",
+    "theme_dark": "기기 설정과 관계없이 항상 어둡게.",
+    "step_layout": "레이아웃",
+    "unchecked": "확인 안 됨",
+    "layout_finstats": "모든 페이지를 옆쪽 메뉴와 함께 표시합니다.",
+    "layout_simple": "위쪽 막대와 통계만, Tautulli가 Plex용으로 배치하는 방식대로 배치합니다. Tautulli와 관련이 없습니다.",
+    "back": "뒤로",
+    "next": "다음",
+    "done": "완료",
+    "skip": "건너뛰기",
+    "skip_note": "영국 영어, 31/01/2026, 13:05, 기기의 색상, FinStats."
   }
 }

@@ -166,7 +166,9 @@
     },
     "today": "Dzisiaj",
     "tomorrow": "Jutro",
-    "yesterday": "Wczoraj"
+    "yesterday": "Wczoraj",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count} s",
@@ -283,6 +285,10 @@
       "sub": "Dwa kroki, a potem FinStats zacznie rejestrować odtwarzanie na twoim serwerze.",
       "step_connect": "Połącz z Jellyfin",
       "step_sign_in": "Zaloguj się jako administrator",
+      "code": "Kod konfiguracji",
+      "code_help": "FinStats zapisuje go w swoim dzienniku przy starcie, na przykład: docker logs finstats",
+      "code_empty": "Wpisz kod konfiguracji z dziennika FinStats.",
+      "code_wrong": "To nie jest kod konfiguracji z dziennika FinStats.",
       "address": "Adres Jellyfin",
       "address_help": "Adres, pod którym FinStats może połączyć się z Jellyfin. W Dockerze często jest to nazwa kontenera.",
       "address_empty": "Wpisz adres swojego serwera Jellyfin, np. http://jellyfin:8096.",
@@ -396,6 +402,13 @@
       "language_checked": "Sprawdzone przez opiekuna projektu",
       "language_unchecked": "Niesprawdzone przez rodzimego użytkownika języka",
       "language_unchecked_note": "To tłumaczenie nie zostało sprawdzone przez rodzimego użytkownika języka: poprawki są mile widziane na GitHubie.",
+      "date_format": "Format daty",
+      "date_format_hint": "format daty data dzień miesiąc rok date format day month year 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "Jak zapisywane są daty w tej przeglądarce.",
+      "time_format": "Format godziny",
+      "time_format_hint": "format godziny godzina zegar 24-godzinny 12-godzinny time format clock 24-hour 12-hour am pm",
+      "time_format_help": "Jak zapisywane są godziny w tej przeglądarce.",
+      "format_language": "Tak, jak zapisuje to język",
       "layout": "Układ",
       "layout_hint": "układ tryb prosty klasyczny górny pasek strona główna wygląd layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats albo Prosty: pasek u góry i same statystyki, ułożone jak w klasycznym serwerze statystyk Plex. Zapamiętywany tylko w tej przeglądarce.",
@@ -1666,8 +1679,13 @@
       "locate_wrong_kind": "Odtworzenie dotyczy filmu, wideo lub odcinka, nigdy całego serialu ani sezonu",
       "upload_interrupted": "Przesyłanie zostało przerwane: {error}",
       "upload_empty": "Przesłany plik był pusty",
+      "upload_too_large": "Plik jest większy niż 4 GB, które przyjmuje FinStats",
       "reading_backup": "Odczytywanie kopii zapasowej",
       "receiving_backup": "Odbieranie kopii zapasowej",
+      "interrupted": "Przerwano przed zakończeniem: nic nie zmieniono i można to uruchomić ponownie",
+      "too_soon": "Poproszono przed chwilą; spróbuj ponownie za minutę",
+      "upload_running": "Kopia zapasowa Tautulli już napływa",
+      "cards_busy": "W tej chwili rysuje się zbyt wiele kart; spróbuj ponownie za moment",
       "importing": "Importowanie",
       "restored": {
         "one": "Przywrócono {count} odtworzenie (już obecne: {skipped})",
@@ -1704,6 +1722,7 @@
       "bearer_form": "Użyj `Authorization: Bearer <key>`",
       "sign_in_to_continue": "Zaloguj się, aby kontynuować",
       "calendar_key_only": "Ten klucz otwiera tylko kanał kalendarza",
+      "feed_key_in_address": "W adresie kanału może być tylko klucz kalendarza. Każdy inny klucz wyślij w nagłówku Authorization",
       "feed_needs_key": "Ten kanał wymaga klucza: dodaj ?key=… do jego adresu",
       "too_many_attempts": {
         "one": "Zbyt wiele prób logowania. Spróbuj ponownie za {count} minutę.",
@@ -1715,12 +1734,15 @@
       "enter_username": "Wpisz nazwę użytkownika Jellyfin",
       "wrong_password": "Nieprawidłowa nazwa użytkownika lub hasło",
       "unreachable": "Nie udało się połączyć z Jellyfin, aby sprawdzić logowanie",
+      "home_only": "Jellyfin pozwala logować się tylko z sieci domowej.",
       "no_access": "Nie masz dostępu do FinStats. Administrator Jellyfin może go nadać w Ustawieniach.",
+      "setup_code": "To nie jest kod konfiguracji z dziennika FinStats",
       "already_set_up": "FinStats jest już skonfigurowany",
       "not_admin": "To konto nie jest administratorem Jellyfin. Skonfiguruj FinStats przy użyciu konta administratora."
     },
     "keys": {
       "session_only": "Zaloguj się, aby zarządzać kluczami; klucz nie może tworzyć ani unieważniać kluczy",
+      "session_needed": "Zaloguj się, aby to zrobić; klucz tego nie może",
       "name": "Nadaj kluczowi nazwę o długości do 60 znaków",
       "expiry": "Ważność wynosi od 1 do 3650 dni",
       "scope": "Zakres to `full` lub `calendar`",
@@ -2207,9 +2229,12 @@
         "few": "{count} obejrzane lub ulubione pozycje",
         "many": "{count} obejrzanych lub ulubionych pozycji",
         "other": "{count} obejrzanej lub ulubionej pozycji"
-      }
+      },
+      "userdata_refused": { "one": "Jellyfin zwrócił {count} odtworzony lub ulubiony element dla {name}, gdzie FinStats ma {current}. Odmowa wyczyszczenia brakujących: to wygląda na zmianę w Jellyfin albo błędny odczyt. Nic nie zmieniono.", "few": "Jellyfin zwrócił {count} odtworzone lub ulubione elementy dla {name}, gdzie FinStats ma {current}. Odmowa wyczyszczenia brakujących: to wygląda na zmianę w Jellyfin albo błędny odczyt. Nic nie zmieniono.", "many": "Jellyfin zwrócił {count} odtworzonych lub ulubionych elementów dla {name}, gdzie FinStats ma {current}. Odmowa wyczyszczenia brakujących: to wygląda na zmianę w Jellyfin albo błędny odczyt. Nic nie zmieniono.", "other": "Jellyfin zwrócił {count} odtworzonego lub ulubionego elementu dla {name}, gdzie FinStats ma {current}. Odmowa wyczyszczenia brakujących: to wygląda na zmianę w Jellyfin albo błędny odczyt. Nic nie zmieniono." },
+      "userdata_repeated": "Jellyfin ponownie zwrócił tę samą stronę odtworzonych i ulubionych elementów {name}. Ich oznaczenia zostały bez zmian: to wygląda na zmianę w Jellyfin albo proxy po drodze."
     },
     "import": {
+      "line_too_long": "Wiersz pliku jest dłuższy, niż mieści jakakolwiek kopia zapasowa",
       "reading_libraries": "Odczytywanie bibliotek",
       "reading_items": "Odczytywanie filmów, seriali i muzyki",
       "reading_seasons": "Odczytywanie sezonów",
@@ -2252,6 +2277,7 @@
       "not_json": "Plik nie jest kopią zapasową FinStats (wiersz {line} nie jest w formacie JSON)",
       "not_finstats": "To nie jest kopia zapasowa FinStats. Kopię zapasową Jellystat importuje się w sekcji „Import z Jellystat”.",
       "newer_format": "Ta kopia zapasowa została utworzona przez nowszą wersję FinStats (format {format}). Zaktualizuj FinStats, a potem ją przywróć.",
+      "too_large": "Plik jest uszkodzony albo nie jest kopią zapasową FinStats (rozpakowuje się do znacznie więcej, niż mieści kopia)",
       "restoring": {
         "one": "Przywracanie: dotąd {count} odtworzenie",
         "few": "Przywracanie: dotąd {count} odtworzenia",
@@ -2327,6 +2353,7 @@
       },
       "bad_url": "To nie wygląda na prawidłowy adres URL",
       "needs_host": "Adres musi zawierać nazwę hosta",
+      "not_public_or_unknown": "Nie udało się sprawdzić {host} jako adresu publicznego. Twoje własne miejsca docelowe muszą wskazywać usługę publiczną. Zamiast tego poproś administratora, aby dodał je dla serwera",
       "enter_address": "Wpisz adres, na który mają być wysyłane wiadomości",
       "http_only": "Adres musi zaczynać się od http:// lub https://",
       "no_login": "Nie umieszczaj nazwy użytkownika ani hasła w adresie",
@@ -2342,6 +2369,7 @@
       "mail_no_login": "Nie umieszczaj nazwy użytkownika ani hasła w adresie; każde z nich ma własne pole",
       "mail_host_port": "Adres serwera pocztowego to host i port, bez niczego dalej",
       "enter": "Wpisz {what}",
+      "secret_again": "Wpisz ponownie token lub hasło: zapisane jest wysyłane tylko do serwera, dla którego je zapisano",
       "value": "wartość",
       "token": "token",
       "ntfy_topic": "Temat ntfy może zawierać tylko litery, cyfry, - i _",
@@ -2353,6 +2381,7 @@
       "enter_address_of": "Wpisz adres: {channel}",
       "not_a_token": "To nie wygląda na token",
       "too_long": "Pole ({what}) jest za długie albo zawiera coś, czego nie można wysłać",
+      "name": "nazwa",
       "unknown_event": "Nieznane zdarzenie `{event}`",
       "unknown_severity": "Nieznany poziom ważności `{severity}`",
       "max_targets": {
@@ -2479,6 +2508,7 @@
       "say_kind": "Podaj rodzaj usługi",
       "enter_address": "Wpisz adres: {service}",
       "enter_key": "Wpisz klucz API",
+      "key_again": "Wpisz ponownie klucz API: zapisany klucz jest wysyłany tylko do serwera, dla którego go zapisano",
       "not_a_key": "To nie wygląda na klucz ani hasło",
       "max": {
         "one": "Najwyżej {count} połączenie",
@@ -2535,6 +2565,11 @@
     },
     "downloads": {
       "no_answer": "{name} nie odpowiedział na czas",
+      "problem": {
+        "timeout": "nie odpowiedział na czas",
+        "refused": "odrzucił klucz API",
+        "failed": "nie udało się odczytać"
+      },
       "season": "Sezon {season}",
       "episodes": {
         "one": "{count} odcinek",
@@ -4412,7 +4447,8 @@
         "profile_changed": "Zmiana profilu publicznego",
         "profile_unpublished": "Zdjęcie profilu publicznego",
         "profile_link_reset": "Nowy link profilu publicznego",
-        "appearance_changed": "Zmiana wyglądu"
+        "appearance_changed": "Zmiana wyglądu",
+        "welcomed": "Przeszedł powitanie"
       },
       "outcome": {
         "failed": "Niepowodzenie",
@@ -5613,5 +5649,25 @@
       "Fixed": "Naprawiono",
       "Removed": "Usunięto"
     }
+  },
+  "welcome": {
+    "title": "Witaj w FinStats",
+    "sub": "Kilka wyborów dla tej przeglądarki. Możesz je zmienić w dowolnej chwili w Ustawienia → Wygląd.",
+    "step_language": "Język",
+    "step_formats": "Data i godzina",
+    "step_theme": "Kolory",
+    "theme_label": "Jasny czy ciemny",
+    "theme_light": "Zawsze jasny, niezależnie od ustawień urządzenia.",
+    "theme_device": "Bierze ustawienie samego urządzenia, jasne lub ciemne, i podąża za nim, gdy się zmienia.",
+    "theme_dark": "Zawsze ciemny, niezależnie od ustawień urządzenia.",
+    "step_layout": "Układ",
+    "unchecked": "niesprawdzony",
+    "layout_finstats": "Każda strona, z menu z boku.",
+    "layout_simple": "Pasek u góry i same statystyki, ułożone tak, jak Tautulli układa je dla Plex. Niezwiązane z Tautulli.",
+    "back": "Wstecz",
+    "next": "Dalej",
+    "done": "Gotowe",
+    "skip": "Pomiń",
+    "skip_note": "Angielski brytyjski, 31/01/2026, 13:05, kolory urządzenia i FinStats."
   }
 }

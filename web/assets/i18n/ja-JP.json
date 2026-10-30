@@ -106,7 +106,9 @@
     },
     "today": "今日",
     "tomorrow": "明日",
-    "yesterday": "昨日"
+    "yesterday": "昨日",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count}秒",
@@ -217,6 +219,10 @@
       "sub": "2つの手順が終わると、FinStatsがサーバーの再生の記録を始めます。",
       "step_connect": "Jellyfinに接続",
       "step_sign_in": "管理者としてサインイン",
+      "code": "セットアップコード",
+      "code_help": "FinStats は起動時にログへ書き出します。例: docker logs finstats",
+      "code_empty": "FinStats のログにあるセットアップコードを入力してください。",
+      "code_wrong": "FinStats のログにあるセットアップコードではありません。",
       "address": "Jellyfinのアドレス",
       "address_help": "FinStatsからJellyfinに届くアドレスです。Dockerではコンテナ名であることがよくあります。",
       "address_empty": "Jellyfinサーバーのアドレスを入力してください（例：http://jellyfin:8096）。",
@@ -327,6 +333,13 @@
       "language_checked": "メンテナーが確認済み",
       "language_unchecked": "ネイティブスピーカー未確認",
       "language_unchecked_note": "この翻訳はネイティブスピーカーによる確認を受けていません。修正はGitHubで歓迎しています。",
+      "date_format": "日付の形式",
+      "date_format_hint": "日付 形式 日 月 年 date format day month year 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "このブラウザーで日付をどう書くか。",
+      "time_format": "時刻の形式",
+      "time_format_hint": "時刻 形式 時計 24 時間 12 時間 午前 午後 time format clock 24-hour 12-hour am pm",
+      "time_format_help": "このブラウザーで時刻をどう書くか。",
+      "format_language": "言語の書き方どおり",
       "layout": "レイアウト",
       "layout_hint": "レイアウト シンプルモード クラシック トップバー ホーム 見た目 layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats、またはシンプル：上部にバーを置き、統計だけを並べます。Plexの定番の統計サーバーと同じ配置です。このブラウザーにのみ保存されます。",
@@ -1537,8 +1550,13 @@
       "locate_wrong_kind": "再生の対象は映画、ビデオ、エピソードのいずれかで、番組全体やシーズン全体にはなりません",
       "upload_interrupted": "アップロードが中断されました：{error}",
       "upload_empty": "アップロードされたファイルは空でした",
+      "upload_too_large": "ファイルが FinStats の受け付ける 4 GB を超えています",
       "reading_backup": "バックアップを読み込み中",
       "receiving_backup": "バックアップを受信中",
+      "interrupted": "終わる前に中断されました。何も変更されておらず、もう一度始められます",
+      "too_soon": "少し前に依頼されたばかりです。1 分後にもう一度お試しください",
+      "upload_running": "Tautulli のバックアップがすでに届いている途中です",
+      "cards_busy": "いまカードを描いている数が多すぎます。少し待ってからもう一度お試しください",
       "importing": "インポート中",
       "restored": {
         "other": "{count}回の再生を復元しました（{skipped}回は既存）"
@@ -1566,6 +1584,7 @@
       "bearer_form": "`Authorization: Bearer <key>`の形式を使ってください",
       "sign_in_to_continue": "続けるにはサインインしてください",
       "calendar_key_only": "このキーで開けるのはカレンダーフィードだけです",
+      "feed_key_in_address": "フィードのアドレスに入れられるのはカレンダーキーだけです。ほかのキーは Authorization ヘッダーで送ってください",
       "feed_needs_key": "このフィードにはキーが必要です。アドレスに?key=…を追加してください",
       "too_many_attempts": {
         "other": "サインインの試行回数が多すぎます。{count}分後にもう一度お試しください。"
@@ -1574,12 +1593,15 @@
       "enter_username": "Jellyfinのユーザー名を入力してください",
       "wrong_password": "ユーザー名またはパスワードが正しくありません",
       "unreachable": "サインインの確認のためにJellyfinに接続できませんでした",
+      "home_only": "Jellyfin はホームネットワークからのサインインだけを許可しています。",
       "no_access": "FinStatsへのアクセスが許可されていません。Jellyfinの管理者が設定で許可できます。",
+      "setup_code": "FinStats のログにあるセットアップコードではありません",
       "already_set_up": "FinStatsはすでにセットアップ済みです",
       "not_admin": "このアカウントはJellyfinの管理者ではありません。管理者アカウントでFinStatsをセットアップしてください。"
     },
     "keys": {
       "session_only": "キーを管理するにはサインインしてください。キーでキーを作成・取り消しすることはできません",
+      "session_needed": "これを行うにはサインインしてください。キーではできません",
       "name": "キーに60文字以内の名前を付けてください",
       "expiry": "有効期限は1〜3650日です",
       "scope": "範囲は`full`または`calendar`です",
@@ -1982,9 +2004,12 @@
       "reading_watched": "{name}の視聴済みを読み込み中",
       "userdata_read": {
         "other": "再生済みまたはお気に入りのアイテム{count}件"
-      }
+      },
+      "userdata_refused": { "other": "Jellyfin が返した {name} の再生済みまたはお気に入りの項目は {count} 件で、FinStats には {current} 件あります。足りない分の消去を拒否しました。Jellyfin の変更か読み取りの失敗のようです。何も変更されていません。" },
+      "userdata_repeated": "Jellyfin が {name} の再生済みとお気に入りの項目の同じページをもう一度返しました。印はそのまま残しました。Jellyfin の変更か、間にあるプロキシのせいのようです。"
     },
     "import": {
+      "line_too_long": "ファイルの 1 行が、どのバックアップにもありえない長さです",
       "reading_libraries": "ライブラリを読み込み中",
       "reading_items": "映画、番組、音楽を読み込み中",
       "reading_seasons": "シーズンを読み込み中",
@@ -2027,6 +2052,7 @@
       "not_json": "このファイルはFinStatsのバックアップではありません（{line}行目がJSONではありません）",
       "not_finstats": "これはFinStatsのバックアップではありません。Jellystatのバックアップは「Jellystatからインポート」でアップロードしてください。",
       "newer_format": "このバックアップは新しいFinStatsで作成されています（形式{format}）。FinStatsを更新してから復元してください。",
+      "too_large": "ファイルが壊れているか、FinStats のバックアップではありません (展開するとバックアップに入りうる量をはるかに超えます)",
       "restoring": {
         "other": "復元中：これまでに{count}回の再生"
       },
@@ -2099,6 +2125,7 @@
       },
       "bad_url": "有効なURLではないようです",
       "needs_host": "アドレスにはホスト名が必要です",
+      "not_public_or_unknown": "{host} を公開アドレスとして調べられませんでした。自分用の送信先は公開サービスを指している必要があります。代わりに管理者にサーバー用として追加してもらってください",
       "enter_address": "送信先のアドレスを入力してください",
       "http_only": "アドレスはhttp://またはhttps://で始まる必要があります",
       "no_login": "アドレスにユーザー名とパスワードを含めないでください",
@@ -2114,6 +2141,7 @@
       "mail_no_login": "アドレスにユーザー名とパスワードを含めないでください。それぞれ専用の入力欄があります",
       "mail_host_port": "メールサーバーのアドレスはホストとポートだけで、その後には何も付けません",
       "enter": "{what}を入力してください",
+      "secret_again": "トークンかパスワードをもう一度入力してください。保存済みのものは、保存したときのサーバーにしか送られません",
       "value": "値",
       "token": "トークン",
       "ntfy_topic": "ntfyのトピックに使えるのは英字、数字、-、_だけです",
@@ -2125,6 +2153,7 @@
       "enter_address_of": "{channel}のアドレスを入力してください",
       "not_a_token": "トークンではないようです",
       "too_long": "{what}が長すぎるか、送信できない文字が含まれています",
+      "name": "名前",
       "unknown_event": "不明なイベント`{event}`",
       "unknown_severity": "不明な重要度`{severity}`",
       "max_targets": {
@@ -2245,6 +2274,7 @@
       "say_kind": "サービスの種類を指定してください",
       "enter_address": "{service}のアドレスを入力してください",
       "enter_key": "APIキーを入力してください",
+      "key_again": "API キーをもう一度入力してください。保存済みのキーは、保存したときのサーバーにしか送られません",
       "not_a_key": "キーやパスワードではないようです",
       "max": {
         "other": "接続は最大{count}件です"
@@ -2283,6 +2313,11 @@
     },
     "downloads": {
       "no_answer": "{name}が時間内に応答しませんでした",
+      "problem": {
+        "timeout": "時間内に応答しませんでした",
+        "refused": "API キーを拒否しました",
+        "failed": "読み取れませんでした"
+      },
       "season": "シーズン{season}",
       "episodes": {
         "other": "{count}エピソード"
@@ -3923,7 +3958,8 @@
         "profile_changed": "公開プロフィールを変更",
         "profile_unpublished": "公開プロフィールを停止",
         "profile_link_reset": "公開プロフィールのリンクを再作成",
-        "appearance_changed": "外観を変更"
+        "appearance_changed": "外観を変更",
+        "welcomed": "ようこそ画面を終えた"
       },
       "outcome": {
         "failed": "失敗",
@@ -5013,5 +5049,25 @@
       "Fixed": "修正",
       "Removed": "削除"
     }
+  },
+  "welcome": {
+    "title": "FinStats へようこそ",
+    "sub": "このブラウザーのためのいくつかの選択です。設定 → 外観 でいつでも変更できます。",
+    "step_language": "言語",
+    "step_formats": "日付と時刻",
+    "step_theme": "配色",
+    "theme_label": "ライトかダーク",
+    "theme_light": "デバイスの設定にかかわらず、常にライト。",
+    "theme_device": "デバイス自身の設定 (ライトまたはダーク) を使い、変わったときにも合わせます。",
+    "theme_dark": "デバイスの設定にかかわらず、常にダーク。",
+    "step_layout": "レイアウト",
+    "unchecked": "未確認",
+    "layout_finstats": "すべてのページを、横のメニューと一緒に。",
+    "layout_simple": "上部のバーと統計だけを、Tautulli が Plex 向けに並べるように配置します。Tautulli とは関係ありません。",
+    "back": "戻る",
+    "next": "次へ",
+    "done": "完了",
+    "skip": "スキップ",
+    "skip_note": "イギリス英語、31/01/2026、13:05、デバイスの配色、FinStats。"
   }
 }

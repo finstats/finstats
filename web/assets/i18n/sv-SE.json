@@ -66,7 +66,9 @@
     "in_days": { "one": "om {count} dag", "other": "om {count} dagar" },
     "today": "I dag",
     "tomorrow": "I morgon",
-    "yesterday": "I går"
+    "yesterday": "I går",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count} s",
@@ -173,6 +175,10 @@
       "sub": "Två steg, sedan börjar FinStats registrera uppspelningar från din server.",
       "step_connect": "Anslut till Jellyfin",
       "step_sign_in": "Logga in som administratör",
+      "code": "Installationskod",
+      "code_help": "FinStats skriver den i sin logg när den startar, till exempel: docker logs finstats",
+      "code_empty": "Ange installationskoden från FinStats logg.",
+      "code_wrong": "Det är inte installationskoden i FinStats logg.",
       "address": "Jellyfin-adress",
       "address_help": "Adressen där FinStats når Jellyfin. I Docker är det ofta containerns namn.",
       "address_empty": "Ange adressen till din Jellyfin-server, till exempel http://jellyfin:8096.",
@@ -281,6 +287,13 @@
       "language_checked": "Kontrollerade av utvecklaren",
       "language_unchecked": "Inte kontrollerade av en modersmålstalare",
       "language_unchecked_note": "Den här översättningen har inte kontrollerats av en modersmålstalare: rättelser tas gärna emot på GitHub.",
+      "date_format": "Datumformat",
+      "date_format_hint": "datumformat datum dag månad år date format day month year 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "Hur datum skrivs i den här webbläsaren.",
+      "time_format": "Tidsformat",
+      "time_format_hint": "tidsformat klockslag klocka 24 timmar 12 timmar time format clock 24-hour 12-hour am pm",
+      "time_format_help": "Hur klockslag skrivs i den här webbläsaren.",
+      "format_language": "Som språket skriver det",
       "layout": "Layout",
       "layout_hint": "layout enkelt läge klassisk tautulli plex toppfält startsida utseende simple mode classic top bar home look",
       "layout_help": "FinStats, eller Enkel: ett fält överst och bara statistiken, så som en klassisk statistikserver för Plex visar den. Sparas bara i den här webbläsaren.",
@@ -1451,8 +1464,13 @@
       "locate_wrong_kind": "En uppspelning gäller en film, en video eller ett avsnitt, aldrig en hel serie eller säsong",
       "upload_interrupted": "Uppladdningen avbröts: {error}",
       "upload_empty": "Den uppladdade filen var tom",
+      "upload_too_large": "Filen är större än de 4 GB som FinStats tar emot",
       "reading_backup": "Läser säkerhetskopian",
       "receiving_backup": "Tar emot säkerhetskopian",
+      "interrupted": "Avbrutet innan det blev klart: inget ändrades, och det kan startas igen",
+      "too_soon": "Begärt för ett ögonblick sedan; försök igen om en minut",
+      "upload_running": "En Tautulli-säkerhetskopia håller redan på att komma",
+      "cards_busy": "För många kort ritas just nu; försök igen om en stund",
       "importing": "Importerar",
       "restored": { "one": "Återställde {count} uppspelning ({skipped} fanns redan)", "other": "Återställde {count} uppspelningar ({skipped} fanns redan)" },
       "imported": { "one": "Importerade {count} uppspelning ({skipped} fanns redan)", "other": "Importerade {count} uppspelningar ({skipped} fanns redan)" },
@@ -1474,18 +1492,22 @@
       "bearer_form": "Använd `Authorization: Bearer <key>`",
       "sign_in_to_continue": "Logga in för att fortsätta",
       "calendar_key_only": "Den här nyckeln öppnar bara kalenderflödet",
+      "feed_key_in_address": "Bara en kalendernyckel får stå i flödets adress. Skicka alla andra nycklar i Authorization-huvudet",
       "feed_needs_key": "Det här flödet kräver en nyckel: lägg till ?key=… i adressen",
       "too_many_attempts": { "one": "För många inloggningsförsök. Försök igen om {count} minut.", "other": "För många inloggningsförsök. Försök igen om {count} minuter." },
       "not_connected": "FinStats är inte anslutet till Jellyfin än",
       "enter_username": "Ange ditt användarnamn i Jellyfin",
       "wrong_password": "Fel användarnamn eller lösenord",
       "unreachable": "Kunde inte nå Jellyfin för att kontrollera din inloggning",
+      "home_only": "Jellyfin låter dig bara logga in från hemnätverket.",
       "no_access": "Du har inte fått åtkomst till FinStats. En administratör i Jellyfin kan släppa in dig under Inställningar.",
+      "setup_code": "Det är inte installationskoden i FinStats logg",
       "already_set_up": "FinStats är redan konfigurerat",
       "not_admin": "Det kontot är inte administratör i Jellyfin. Konfigurera FinStats med ett administratörskonto."
     },
     "keys": {
       "session_only": "Logga in för att hantera nycklar; en nyckel kan inte skapa eller återkalla nycklar",
+      "session_needed": "Logga in för att göra detta; en nyckel kan inte göra det",
       "name": "Ge nyckeln ett namn på högst 60 tecken",
       "expiry": "En giltighetstid är 1 till 3650 dagar",
       "scope": "Omfånget är `full` eller `calendar`",
@@ -1832,9 +1854,12 @@
       "server_read": { "one": "{count} enhet, {plugins} tillägg", "other": "{count} enheter, {plugins} tillägg" },
       "server_read_without_plugins": { "one": "{count} enhet; tilläggen gick inte att läsa", "other": "{count} enheter; tilläggen gick inte att läsa" },
       "reading_watched": "Läser vad {name} har sett",
-      "userdata_read": { "one": "{count} spelat objekt eller favorit", "other": "{count} spelade objekt eller favoriter" }
+      "userdata_read": { "one": "{count} spelat objekt eller favorit", "other": "{count} spelade objekt eller favoriter" },
+      "userdata_refused": { "one": "Jellyfin returnerade {count} spelat objekt eller favorit för {name} där FinStats har {current}. Vägrar rensa de som saknas: det ser ut som en ändring i Jellyfin eller en dålig läsning. Inget ändrades.", "other": "Jellyfin returnerade {count} spelade objekt eller favoriter för {name} där FinStats har {current}. Vägrar rensa de som saknas: det ser ut som en ändring i Jellyfin eller en dålig läsning. Inget ändrades." },
+      "userdata_repeated": "Jellyfin svarade med samma sida av {name}s spelade objekt och favoriter igen. Deras markeringar behölls som de var: det ser ut som en ändring i Jellyfin eller en proxy i vägen."
     },
     "import": {
+      "line_too_long": "En rad i filen är längre än någon säkerhetskopia rymmer",
       "reading_libraries": "Läser bibliotek",
       "reading_items": "Läser filmer, serier och musik",
       "reading_seasons": "Läser säsonger",
@@ -1877,6 +1902,7 @@
       "not_json": "Filen är inte en säkerhetskopia från FinStats (rad {line} är inte JSON)",
       "not_finstats": "Det här är inte en säkerhetskopia från FinStats. En säkerhetskopia från Jellystat hör hemma under ”Importera från Jellystat”.",
       "newer_format": "Den här säkerhetskopian gjordes av en nyare FinStats (format {format}). Uppdatera FinStats och återställ den sedan.",
+      "too_large": "Filen är skadad eller inte en FinStats-säkerhetskopia (den packas upp till mycket mer än en säkerhetskopia rymmer)",
       "restoring": { "one": "Återställer: {count} uppspelning hittills", "other": "Återställer: {count} uppspelningar hittills" },
       "linking": "Kopplar uppspelningar till biblioteket"
     },
@@ -1947,6 +1973,7 @@
       },
       "bad_url": "Det ser inte ut som en giltig URL",
       "needs_host": "Adressen behöver ett värdnamn",
+      "not_public_or_unknown": "{host} kunde inte slås upp som en offentlig adress. Dina egna mål måste peka på en offentlig tjänst. Be i stället en administratör lägga till den för servern",
       "enter_address": "Ange adressen att skicka till",
       "http_only": "Adressen måste börja med http:// eller https://",
       "no_login": "Ta inte med användarnamn och lösenord i adressen",
@@ -1962,6 +1989,7 @@
       "mail_no_login": "Ta inte med användarnamn och lösenord i adressen; det finns ett fält för vart och ett av dem",
       "mail_host_port": "En adress till en e-postserver är en värd och en port, utan något efter",
       "enter": "Ange {what}",
+      "secret_again": "Ange token eller lösenord igen: ett sparat skickas bara till den server det sparades för",
       "value": "värde",
       "token": "token",
       "ntfy_topic": "Ett ntfy-ämne får bara innehålla bokstäver, siffror, - och _",
@@ -1973,6 +2001,7 @@
       "enter_address_of": "Ange adressen till {channel}",
       "not_a_token": "Det ser inte ut som en token",
       "too_long": "Fältet ”{what}” är för långt eller innehåller något som inte kan skickas",
+      "name": "namn",
       "unknown_event": "Okänd händelse `{event}`",
       "unknown_severity": "Okänd allvarlighetsgrad `{severity}`",
       "max_targets": { "one": "Högst {count} mottagare", "other": "Högst {count} mottagare" },
@@ -2089,6 +2118,7 @@
       "say_kind": "Ange vilken typ av tjänst det här är",
       "enter_address": "Ange adressen till {service}",
       "enter_key": "Ange API-nyckeln",
+      "key_again": "Ange API-nyckeln igen: en sparad nyckel skickas bara till den server den sparades för",
       "not_a_key": "Det ser inte ut som en nyckel eller ett lösenord",
       "max": { "one": "Högst {count} anslutning", "other": "Högst {count} anslutningar" },
       "starting": "Startar…"
@@ -2115,6 +2145,11 @@
     },
     "downloads": {
       "no_answer": "{name} svarade inte i tid",
+      "problem": {
+        "timeout": "svarade inte i tid",
+        "refused": "avvisade API-nyckeln",
+        "failed": "kunde inte läsas"
+      },
       "season": "Säsong {season}",
       "episodes": { "one": "{count} avsnitt", "other": "{count} avsnitt" },
       "season_episodes": { "one": "Säsong {season} · {count} avsnitt", "other": "Säsong {season} · {count} avsnitt" },
@@ -3597,7 +3632,8 @@
         "profile_changed": "Ändrade en offentlig profil",
         "profile_unpublished": "Tog ner en offentlig profil",
         "profile_link_reset": "Skapade en ny länk till en offentlig profil",
-        "appearance_changed": "Ändrade sitt utseende"
+        "appearance_changed": "Ändrade sitt utseende",
+        "welcomed": "Hälsades välkommen"
       },
       "outcome": {
         "failed": "Misslyckades",
@@ -4613,5 +4649,25 @@
       "Fixed": "Åtgärdat",
       "Removed": "Borttaget"
     }
+  },
+  "welcome": {
+    "title": "Välkommen till FinStats",
+    "sub": "Några val för den här webbläsaren. Du kan ändra dem när som helst under Inställningar → Utseende.",
+    "step_language": "Språk",
+    "step_formats": "Datum och tid",
+    "step_theme": "Färger",
+    "theme_label": "Ljust eller mörkt",
+    "theme_light": "Alltid ljust, hur enheten än är inställd.",
+    "theme_device": "Tar enhetens egen inställning, ljust eller mörkt, och följer den när den ändras.",
+    "theme_dark": "Alltid mörkt, hur enheten än är inställd.",
+    "step_layout": "Layout",
+    "unchecked": "inte granskat",
+    "layout_finstats": "Varje sida, med menyn längs sidan.",
+    "layout_simple": "En list överst och bara statistiken, upplagd som Tautulli lägger upp den för Plex. Inte knutet till Tautulli.",
+    "back": "Tillbaka",
+    "next": "Nästa",
+    "done": "Klar",
+    "skip": "Hoppa över",
+    "skip_note": "Brittisk engelska, 31/01/2026, 13:05, enhetens färger och FinStats."
   }
 }

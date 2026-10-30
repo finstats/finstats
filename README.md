@@ -70,7 +70,7 @@ Settings → Appearance → Language, or follows the browser.
 > shown in English.
 
 <!-- languages: tools/make-languages.py writes this; run it again when a language changes -->
-<p align="center"><img src=".github/languages.svg" width="600" alt="Translation status: English (UK) 100%, English (US) 100%, Norsk Bokmål 100%, Norsk Nynorsk 100%, Dansk 98%, Deutsch 98%, Español 98%, Suomi 98%, Français 98%, हिन्दी 98%, Íslenska 98%, Italiano 98%, 日本語 98%, 한국어 98%, Nederlands 98%, Polski 98%, Português (Brasil) 98%, Русский 98%, Svenska 98%, Türkçe 98%, Українська 98%, 简体中文 98%, 繁體中文 98%"></p>
+<p align="center"><img src=".github/languages.svg" width="600" alt="Translation status: English (UK) 100%, English (US) 100%, Norsk Bokmål 100%, Norsk Nynorsk 100%, Dansk 100%, Deutsch 100%, Español 100%, Suomi 100%, Français 100%, हिन्दी 100%, Íslenska 100%, Italiano 100%, 日本語 100%, 한국어 100%, Nederlands 100%, Polski 100%, Português (Brasil) 100%, Русский 100%, Svenska 100%, Türkçe 100%, Українська 100%, 简体中文 100%, 繁體中文 100%"></p>
 <!-- /languages -->
 
 ## Get started

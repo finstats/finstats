@@ -66,7 +66,9 @@
     "in_days": { "one": "eftir {count} dag", "other": "eftir {count} daga" },
     "today": "Í dag",
     "tomorrow": "Á morgun",
-    "yesterday": "Í gær"
+    "yesterday": "Í gær",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count} s",
@@ -173,6 +175,10 @@
       "sub": "Tvö skref, svo byrjar FinStats að skrá spilun frá þjóninum þínum.",
       "step_connect": "Tengjast Jellyfin",
       "step_sign_in": "Skrá inn sem stjórnandi",
+      "code": "Uppsetningarkóði",
+      "code_help": "FinStats skrifar hann í annál sinn þegar það ræsist, til dæmis: docker logs finstats",
+      "code_empty": "Sláðu inn uppsetningarkóðann úr annál FinStats.",
+      "code_wrong": "Þetta er ekki uppsetningarkóðinn í annál FinStats.",
       "address": "Vistfang Jellyfin",
       "address_help": "Vistfangið sem FinStats nær Jellyfin á. Í Docker er það oft heiti gámsins.",
       "address_empty": "Sláðu inn vistfang Jellyfin-þjónsins þíns, til dæmis http://jellyfin:8096.",
@@ -281,6 +287,13 @@
       "language_checked": "Yfirfarið af umsjónaraðila",
       "language_unchecked": "Ekki yfirfarið af móðurmálshafa",
       "language_unchecked_note": "Þessi þýðing hefur ekki verið yfirfarin af móðurmálshafa: leiðréttingar eru vel þegnar á GitHub.",
+      "date_format": "Dagsetningarsnið",
+      "date_format_hint": "dagsetningarsnið dagsetning dagur mánuður ár date format day month year 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "Hvernig dagsetningar eru skrifaðar í þessum vafra.",
+      "time_format": "Tímasnið",
+      "time_format_hint": "tímasnið klukka 24 tímar 12 tímar time format clock 24-hour 12-hour am pm",
+      "time_format_help": "Hvernig tími dags er skrifaður í þessum vafra.",
+      "format_language": "Eins og tungumálið skrifar það",
       "layout": "Framsetning",
       "layout_hint": "framsetning einfaldur hamur klassískt stika efst forsíða útlit layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats, eða Einfalt: stika efst og tölfræðin ein og sér, eins og klassískur tölfræðiþjónn fyrir Plex raðar henni. Aðeins geymt í þessum vafra.",
@@ -1451,8 +1464,13 @@
       "locate_wrong_kind": "Spilun er alltaf af kvikmynd, myndbandi eða þætti, aldrei af heilli þáttaröð eða seríu",
       "upload_interrupted": "Upphleðslan rofnaði: {error}",
       "upload_empty": "Upphlaðna skráin var tóm",
+      "upload_too_large": "Skráin er stærri en þau 4 GB sem FinStats tekur við",
       "reading_backup": "Les afrit",
       "receiving_backup": "Tekur við afriti",
+      "interrupted": "Truflað áður en því lauk: engu var breytt og það má ræsa aftur",
+      "too_soon": "Beðið um það rétt áðan; reyndu aftur eftir mínútu",
+      "upload_running": "Tautulli-afrit er þegar að berast",
+      "cards_busy": "Of mörg spjöld eru teiknuð núna; reyndu aftur eftir smástund",
       "importing": "Flytur inn",
       "restored": { "one": "{count} spilun endurheimt ({skipped} voru þegar til staðar)", "other": "{count} spilanir endurheimtar ({skipped} voru þegar til staðar)" },
       "imported": { "one": "{count} spilun flutt inn ({skipped} voru þegar til staðar)", "other": "{count} spilanir fluttar inn ({skipped} voru þegar til staðar)" },
@@ -1474,18 +1492,22 @@
       "bearer_form": "Notaðu `Authorization: Bearer <key>`",
       "sign_in_to_continue": "Skráðu þig inn til að halda áfram",
       "calendar_key_only": "Þessi lykill opnar aðeins dagatalsstrauminn",
+      "feed_key_in_address": "Aðeins dagatalslykill má vera í vistfangi straumsins. Sendu hvern annan lykil í Authorization-hausnum",
       "feed_needs_key": "Þessi straumur þarf lykil: bættu ?key=… við vistfangið",
       "too_many_attempts": { "one": "Of margar innskráningartilraunir. Reyndu aftur eftir {count} mínútu.", "other": "Of margar innskráningartilraunir. Reyndu aftur eftir {count} mínútur." },
       "not_connected": "FinStats er ekki enn tengt við Jellyfin",
       "enter_username": "Sláðu inn notandanafnið þitt í Jellyfin",
       "wrong_password": "Rangt notandanafn eða lykilorð",
       "unreachable": "Náði ekki sambandi við Jellyfin til að staðfesta innskráninguna",
+      "home_only": "Jellyfin leyfir þér aðeins að skrá þig inn af heimanetinu.",
       "no_access": "Þú hefur ekki fengið aðgang að FinStats. Stjórnandi í Jellyfin getur hleypt þér inn í Stillingum.",
+      "setup_code": "Þetta er ekki uppsetningarkóðinn í annál FinStats",
       "already_set_up": "FinStats hefur þegar verið sett upp",
       "not_admin": "Þessi aðgangur er ekki stjórnandi í Jellyfin. Settu FinStats upp með stjórnandaaðgangi."
     },
     "keys": {
       "session_only": "Skráðu þig inn til að stjórna lyklum; lykill getur ekki búið til eða afturkallað lykla",
+      "session_needed": "Skráðu þig inn til að gera þetta; lykill getur það ekki",
       "name": "Gefðu lyklinum heiti, í mesta lagi 60 stafi",
       "expiry": "Gildistími er 1 til 3650 dagar",
       "scope": "Umfangið er `full` eða `calendar`",
@@ -1832,9 +1854,12 @@
       "server_read": { "one": "{count} tæki, {plugins} viðbætur", "other": "{count} tæki, {plugins} viðbætur" },
       "server_read_without_plugins": { "one": "{count} tæki; ekki tókst að lesa viðbæturnar", "other": "{count} tæki; ekki tókst að lesa viðbæturnar" },
       "reading_watched": "Les það sem {name} hefur horft á",
-      "userdata_read": { "one": "{count} spilað atriði eða eftirlæti", "other": "{count} spiluð atriði eða eftirlæti" }
+      "userdata_read": { "one": "{count} spilað atriði eða eftirlæti", "other": "{count} spiluð atriði eða eftirlæti" },
+      "userdata_refused": { "one": "Jellyfin skilaði {count} spiluðu eða eftirlætisatriði fyrir {name} þar sem FinStats geymir {current}. Neitar að hreinsa þau sem vantar: þetta lítur út eins og breyting á Jellyfin eða slæmur lestur. Engu var breytt.", "other": "Jellyfin skilaði {count} spiluðum eða eftirlætisatriðum fyrir {name} þar sem FinStats geymir {current}. Neitar að hreinsa þau sem vantar: þetta lítur út eins og breyting á Jellyfin eða slæmur lestur. Engu var breytt." },
+      "userdata_repeated": "Jellyfin svaraði aftur með sömu síðu af spiluðum og eftirlætisatriðum {name}. Merkingum þeirra var haldið eins og þær voru: þetta lítur út eins og breyting á Jellyfin eða milliþjónn í veginum."
     },
     "import": {
+      "line_too_long": "Lína í skránni er lengri en nokkurt afrit geymir",
       "reading_libraries": "Les söfn",
       "reading_items": "Les kvikmyndir, þáttaraðir og tónlist",
       "reading_seasons": "Les seríur",
@@ -1877,6 +1902,7 @@
       "not_json": "Skráin er ekki FinStats-afrit (lína {line} er ekki JSON)",
       "not_finstats": "Þetta er ekki FinStats-afrit. Jellystat-afrit á heima undir „Flytja inn úr Jellystat“.",
       "newer_format": "Þetta afrit var gert með nýrri útgáfu af FinStats (snið {format}). Uppfærðu FinStats og endurheimtu það svo.",
+      "too_large": "Skráin er skemmd eða ekki FinStats-afrit (hún pakkast upp í miklu meira en afrit geymir)",
       "restoring": { "one": "Endurheimtir: {count} spilun hingað til", "other": "Endurheimtir: {count} spilanir hingað til" },
       "linking": "Tengir spilanir við safnið"
     },
@@ -1947,6 +1973,7 @@
       },
       "bad_url": "Þetta lítur ekki út eins og gild slóð",
       "needs_host": "Vistfangið þarf hýsilheiti",
+      "not_public_or_unknown": "Ekki tókst að fletta {host} upp sem opinberu vistfangi. Eigin áfangastaðir þínir verða að vísa á opinbera þjónustu. Biddu kerfisstjóra frekar um að bæta honum við fyrir þjóninn",
       "enter_address": "Sláðu inn vistfangið sem á að senda til",
       "http_only": "Vistfangið verður að byrja á http:// eða https://",
       "no_login": "Slepptu notandanafni og lykilorði úr vistfanginu",
@@ -1962,6 +1989,7 @@
       "mail_no_login": "Slepptu notandanafni og lykilorði úr vistfanginu; það er sér reitur fyrir hvort",
       "mail_host_port": "Vistfang póstþjóns er hýsill og gátt, og ekkert á eftir",
       "enter": "Fylltu út: {what}",
+      "secret_again": "Sláðu inn tókann eða lykilorðið aftur: vistað er aðeins sent til þjónsins sem það var vistað fyrir",
       "value": "gildi",
       "token": "tóki",
       "ntfy_topic": "ntfy-efni má aðeins innihalda bókstafi, tölustafi, - og _",
@@ -1973,6 +2001,7 @@
       "enter_address_of": "Sláðu inn vistfangið: {channel}",
       "not_a_token": "Þetta lítur ekki út eins og tóki",
       "too_long": "Of langt, eða inniheldur eitthvað sem ekki er hægt að senda: {what}",
+      "name": "nafn",
       "unknown_event": "Óþekktur atburður `{event}`",
       "unknown_severity": "Óþekkt alvarleikastig `{severity}`",
       "max_targets": { "one": "Í mesta lagi {count} viðtakandi", "other": "Í mesta lagi {count} viðtakendur" },
@@ -2089,6 +2118,7 @@
       "say_kind": "Segðu hvaða tegund þjónustu þetta er",
       "enter_address": "Sláðu inn vistfang {service}",
       "enter_key": "Sláðu inn API-lykilinn",
+      "key_again": "Sláðu inn API-lykilinn aftur: vistaður lykill er aðeins sendur til þjónsins sem hann var vistaður fyrir",
       "not_a_key": "Þetta lítur ekki út eins og lykill eða lykilorð",
       "max": { "one": "Í mesta lagi {count} tenging", "other": "Í mesta lagi {count} tengingar" },
       "starting": "Ræsir…"
@@ -2115,6 +2145,11 @@
     },
     "downloads": {
       "no_answer": "{name} svaraði ekki í tæka tíð",
+      "problem": {
+        "timeout": "svaraði ekki í tæka tíð",
+        "refused": "hafnaði API-lyklinum",
+        "failed": "var ekki hægt að lesa"
+      },
       "season": "Sería {season}",
       "episodes": { "one": "{count} þáttur", "other": "{count} þættir" },
       "season_episodes": { "one": "Sería {season} · {count} þáttur", "other": "Sería {season} · {count} þættir" },
@@ -3597,7 +3632,8 @@
         "profile_changed": "Breytti opinberum prófíl",
         "profile_unpublished": "Tók niður opinberan prófíl",
         "profile_link_reset": "Bjó til nýjan tengil á opinberan prófíl",
-        "appearance_changed": "Breytti útlitinu sínu"
+        "appearance_changed": "Breytti útlitinu sínu",
+        "welcomed": "Var boðinn velkominn"
       },
       "outcome": {
         "failed": "Mistókst",
@@ -4613,5 +4649,25 @@
       "Fixed": "Lagfært",
       "Removed": "Fjarlægt"
     }
+  },
+  "welcome": {
+    "title": "Velkomin í FinStats",
+    "sub": "Nokkrir valkostir fyrir þennan vafra. Þú getur breytt þeim hvenær sem er í Stillingar → Útlit.",
+    "step_language": "Tungumál",
+    "step_formats": "Dagsetning og tími",
+    "step_theme": "Litir",
+    "theme_label": "Ljóst eða dökkt",
+    "theme_light": "Alltaf ljóst, hvernig sem tækið er stillt.",
+    "theme_device": "Tekur eigin stillingu tækisins, ljóst eða dökkt, og fylgir henni þegar hún breytist.",
+    "theme_dark": "Alltaf dökkt, hvernig sem tækið er stillt.",
+    "step_layout": "Útlit síðna",
+    "unchecked": "ekki yfirfarið",
+    "layout_finstats": "Allar síður, með valmyndina á hliðinni.",
+    "layout_simple": "Slá efst og tölfræðin ein, sett upp eins og Tautulli setur hana upp fyrir Plex. Ekki tengt Tautulli.",
+    "back": "Til baka",
+    "next": "Áfram",
+    "done": "Lokið",
+    "skip": "Sleppa",
+    "skip_note": "Bresk enska, 31/01/2026, 13:05, litir tækisins og FinStats."
   }
 }

@@ -66,7 +66,9 @@
     "in_days": { "one": "over {count} dag", "other": "over {count} dagen" },
     "today": "Vandaag",
     "tomorrow": "Morgen",
-    "yesterday": "Gisteren"
+    "yesterday": "Gisteren",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count}s",
@@ -173,6 +175,10 @@
       "sub": "Twee stappen, daarna begint FinStats het afspelen op je server vast te leggen.",
       "step_connect": "Verbinden met Jellyfin",
       "step_sign_in": "Aanmelden als beheerder",
+      "code": "Installatiecode",
+      "code_help": "FinStats schrijft hem bij het starten in zijn logboek, bijvoorbeeld: docker logs finstats",
+      "code_empty": "Voer de installatiecode uit het logboek van FinStats in.",
+      "code_wrong": "Dat is niet de installatiecode uit het logboek van FinStats.",
       "address": "Jellyfin-adres",
       "address_help": "Het adres waarop FinStats Jellyfin kan bereiken. In Docker is dit vaak de containernaam.",
       "address_empty": "Vul het adres van je Jellyfin-server in, bijvoorbeeld http://jellyfin:8096.",
@@ -281,6 +287,13 @@
       "language_checked": "Gecontroleerd door de ontwikkelaar",
       "language_unchecked": "Niet gecontroleerd door een moedertaalspreker",
       "language_unchecked_note": "Deze vertaling is niet gecontroleerd door een moedertaalspreker: verbeteringen zijn welkom op GitHub.",
+      "date_format": "Datumnotatie",
+      "date_format_hint": "datumnotatie datum dag maand jaar date format day month year 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "Hoe datums in deze browser worden geschreven.",
+      "time_format": "Tijdnotatie",
+      "time_format_hint": "tijdnotatie tijd klok 24 uur 12 uur time format clock 24-hour 12-hour am pm",
+      "time_format_help": "Hoe tijden van de dag in deze browser worden geschreven.",
+      "format_language": "Zoals de taal het schrijft",
       "layout": "Indeling",
       "layout_hint": "indeling eenvoudig eenvoudige modus klassiek bovenbalk startpagina uiterlijk layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats, of Eenvoudig: een balk bovenaan en alleen de statistieken, zoals een klassieke Plex-statistiekenserver ze indeelt. Alleen in deze browser bewaard.",
@@ -1451,8 +1464,13 @@
       "locate_wrong_kind": "Een weergave hoort bij een film, een video of een aflevering, nooit bij een hele serie of een heel seizoen",
       "upload_interrupted": "Het uploaden is onderbroken: {error}",
       "upload_empty": "Het geüploade bestand was leeg",
+      "upload_too_large": "Het bestand is groter dan de 4 GB die FinStats aanneemt",
       "reading_backup": "Back-up lezen",
       "receiving_backup": "Back-up ontvangen",
+      "interrupted": "Onderbroken voordat het klaar was: er is niets gewijzigd, en het kan opnieuw worden gestart",
+      "too_soon": "Zojuist gevraagd; probeer het over een minuut opnieuw",
+      "upload_running": "Er komt al een Tautulli-back-up binnen",
+      "cards_busy": "Er worden nu te veel kaarten getekend; probeer het zo opnieuw",
       "importing": "Importeren",
       "restored": { "one": "{count} weergave teruggezet ({skipped} waren er al)", "other": "{count} weergaven teruggezet ({skipped} waren er al)" },
       "imported": { "one": "{count} weergave geïmporteerd ({skipped} waren er al)", "other": "{count} weergaven geïmporteerd ({skipped} waren er al)" },
@@ -1474,18 +1492,22 @@
       "bearer_form": "Gebruik `Authorization: Bearer <key>`",
       "sign_in_to_continue": "Meld je aan om verder te gaan",
       "calendar_key_only": "Deze sleutel opent alleen de agendafeed",
+      "feed_key_in_address": "Alleen een agendasleutel mag in het adres van de feed staan. Stuur elke andere sleutel in de Authorization-header",
       "feed_needs_key": "Deze feed heeft een sleutel nodig: voeg ?key=… toe aan het adres",
       "too_many_attempts": { "one": "Te veel aanmeldpogingen. Probeer het over {count} minuut opnieuw.", "other": "Te veel aanmeldpogingen. Probeer het over {count} minuten opnieuw." },
       "not_connected": "FinStats is nog niet met Jellyfin verbonden",
       "enter_username": "Vul je Jellyfin-gebruikersnaam in",
       "wrong_password": "Onjuiste gebruikersnaam of wachtwoord",
       "unreachable": "Kon Jellyfin niet bereiken om je aanmelding te controleren",
+      "home_only": "Jellyfin laat je alleen aanmelden vanaf het thuisnetwerk.",
       "no_access": "Je hebt geen toegang tot FinStats gekregen. Een Jellyfin-beheerder kan je toelaten in Instellingen.",
+      "setup_code": "Dat is niet de installatiecode uit het logboek van FinStats",
       "already_set_up": "FinStats is al ingesteld",
       "not_admin": "Dat account is geen Jellyfin-beheerder. Stel FinStats in met een beheerdersaccount."
     },
     "keys": {
       "session_only": "Meld je aan om sleutels te beheren; een sleutel kan geen sleutels maken of intrekken",
+      "session_needed": "Meld je aan om dit te doen; een sleutel kan het niet",
       "name": "Geef de sleutel een naam van hoogstens 60 tekens",
       "expiry": "Een vervaltermijn is 1 tot 3650 dagen",
       "scope": "Het bereik is `full` of `calendar`",
@@ -1832,9 +1854,12 @@
       "server_read": { "one": "{count} apparaat, {plugins} plug-ins", "other": "{count} apparaten, {plugins} plug-ins" },
       "server_read_without_plugins": { "one": "{count} apparaat; de plug-ins konden niet worden gelezen", "other": "{count} apparaten; de plug-ins konden niet worden gelezen" },
       "reading_watched": "Lezen wat {name} heeft gekeken",
-      "userdata_read": { "one": "{count} afgespeeld of favoriet item", "other": "{count} afgespeelde of favoriete items" }
+      "userdata_read": { "one": "{count} afgespeeld of favoriet item", "other": "{count} afgespeelde of favoriete items" },
+      "userdata_refused": { "one": "Jellyfin gaf {count} afgespeeld of favoriet item voor {name} terug waar FinStats er {current} heeft. Weigert de ontbrekende te wissen: dit lijkt op een wijziging in Jellyfin of een slechte uitlezing. Er is niets gewijzigd.", "other": "Jellyfin gaf {count} afgespeelde of favoriete items voor {name} terug waar FinStats er {current} heeft. Weigert de ontbrekende te wissen: dit lijkt op een wijziging in Jellyfin of een slechte uitlezing. Er is niets gewijzigd." },
+      "userdata_repeated": "Jellyfin gaf opnieuw dezelfde pagina met afgespeelde en favoriete items van {name}. Hun markeringen bleven zoals ze waren: dit lijkt op een wijziging in Jellyfin of een proxy die in de weg zit."
     },
     "import": {
+      "line_too_long": "Een regel van het bestand is langer dan een back-up ooit bevat",
       "reading_libraries": "Bibliotheken lezen",
       "reading_items": "Films, series en muziek lezen",
       "reading_seasons": "Seizoenen lezen",
@@ -1877,6 +1902,7 @@
       "not_json": "Het bestand is geen FinStats-back-up (regel {line} is geen JSON)",
       "not_finstats": "Dit is geen FinStats-back-up. Een Jellystat-back-up hoort onder ‘Importeren uit Jellystat’.",
       "newer_format": "Deze back-up is gemaakt door een nieuwere FinStats (formaat {format}). Werk FinStats bij en zet hem dan terug.",
+      "too_large": "Het bestand is beschadigd of geen FinStats-back-up (het pakt uit tot veel meer dan een back-up bevat)",
       "restoring": { "one": "Terugzetten: tot nu toe {count} weergave", "other": "Terugzetten: tot nu toe {count} weergaven" },
       "linking": "Weergaven aan de bibliotheek koppelen"
     },
@@ -1947,6 +1973,7 @@
       },
       "bad_url": "Dat lijkt geen geldige URL",
       "needs_host": "Het adres heeft een hostnaam nodig",
+      "not_public_or_unknown": "{host} kon niet worden opgezocht als openbaar adres. Je eigen bestemmingen moeten naar een openbare dienst wijzen. Vraag in plaats daarvan een beheerder om hem voor de server toe te voegen",
       "enter_address": "Vul het adres in waarnaar moet worden verstuurd",
       "http_only": "Het adres moet beginnen met http:// of https://",
       "no_login": "Laat de gebruikersnaam en het wachtwoord uit het adres weg",
@@ -1962,6 +1989,7 @@
       "mail_no_login": "Laat de gebruikersnaam en het wachtwoord uit het adres weg; daar is elk een eigen veld voor",
       "mail_host_port": "Het adres van een mailserver is een host en een poort, met niets erachter",
       "enter": "Vul de {what} in",
+      "secret_again": "Voer het token of wachtwoord opnieuw in: een opgeslagen wordt alleen naar de server gestuurd waarvoor het is opgeslagen",
       "value": "waarde",
       "token": "token",
       "ntfy_topic": "Een ntfy-topic mag alleen letters, cijfers, - en _ bevatten",
@@ -1973,6 +2001,7 @@
       "enter_address_of": "Vul het adres van {channel} in",
       "not_a_token": "Dat lijkt geen token",
       "too_long": "De {what} is te lang, of bevat iets wat niet kan worden verstuurd",
+      "name": "naam",
       "unknown_event": "Onbekende gebeurtenis `{event}`",
       "unknown_severity": "Onbekende ernst `{severity}`",
       "max_targets": { "one": "Hoogstens {count} bestemming", "other": "Hoogstens {count} bestemmingen" },
@@ -2089,6 +2118,7 @@
       "say_kind": "Geef aan wat voor soort dienst dit is",
       "enter_address": "Vul het adres van {service} in",
       "enter_key": "Vul de API-sleutel in",
+      "key_again": "Voer de API-sleutel opnieuw in: een opgeslagen sleutel wordt alleen naar de server gestuurd waarvoor hij is opgeslagen",
       "not_a_key": "Dat lijkt geen sleutel of wachtwoord",
       "max": { "one": "Hoogstens {count} koppeling", "other": "Hoogstens {count} koppelingen" },
       "starting": "Starten…"
@@ -2115,6 +2145,11 @@
     },
     "downloads": {
       "no_answer": "{name} antwoordde niet op tijd",
+      "problem": {
+        "timeout": "antwoordde niet op tijd",
+        "refused": "weigerde de API-sleutel",
+        "failed": "kon niet worden gelezen"
+      },
       "season": "Seizoen {season}",
       "episodes": { "one": "{count} aflevering", "other": "{count} afleveringen" },
       "season_episodes": { "one": "Seizoen {season} · {count} aflevering", "other": "Seizoen {season} · {count} afleveringen" },
@@ -3597,7 +3632,8 @@
         "profile_changed": "Openbaar profiel gewijzigd",
         "profile_unpublished": "Openbaar profiel offline gehaald",
         "profile_link_reset": "Nieuwe link voor openbaar profiel gemaakt",
-        "appearance_changed": "Eigen uiterlijk gewijzigd"
+        "appearance_changed": "Eigen uiterlijk gewijzigd",
+        "welcomed": "Werd welkom geheten"
       },
       "outcome": {
         "failed": "Mislukt",
@@ -4613,5 +4649,25 @@
       "Fixed": "Opgelost",
       "Removed": "Verwijderd"
     }
+  },
+  "welcome": {
+    "title": "Welkom bij FinStats",
+    "sub": "Een paar keuzes voor deze browser. Je kunt ze altijd wijzigen onder Instellingen → Uiterlijk.",
+    "step_language": "Taal",
+    "step_formats": "Datum en tijd",
+    "step_theme": "Kleuren",
+    "theme_label": "Licht of donker",
+    "theme_light": "Altijd licht, hoe het apparaat ook is ingesteld.",
+    "theme_device": "Neemt de eigen instelling van het apparaat, licht of donker, en volgt die als ze verandert.",
+    "theme_dark": "Altijd donker, hoe het apparaat ook is ingesteld.",
+    "step_layout": "Indeling",
+    "unchecked": "niet gecontroleerd",
+    "layout_finstats": "Elke pagina, met het menu aan de zijkant.",
+    "layout_simple": "Een balk bovenaan en alleen de statistieken, ingedeeld zoals Tautulli ze voor Plex indeelt. Niet verbonden aan Tautulli.",
+    "back": "Terug",
+    "next": "Volgende",
+    "done": "Klaar",
+    "skip": "Overslaan",
+    "skip_note": "Brits Engels, 31/01/2026, 13:05, de kleuren van het apparaat en FinStats."
   }
 }

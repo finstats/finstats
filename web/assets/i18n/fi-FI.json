@@ -66,7 +66,9 @@
     "in_days": { "one": "{count} päivän päästä", "other": "{count} päivän päästä" },
     "today": "Tänään",
     "tomorrow": "Huomenna",
-    "yesterday": "Eilen"
+    "yesterday": "Eilen",
+    "am": "am",
+    "pm": "pm"
   },
   "units": {
     "seconds": "{count} s",
@@ -173,6 +175,10 @@
       "sub": "Kaksi vaihetta, sitten FinStats alkaa tallentaa palvelimesi toistoja.",
       "step_connect": "Yhdistä Jellyfiniin",
       "step_sign_in": "Kirjaudu ylläpitäjänä",
+      "code": "Käyttöönottokoodi",
+      "code_help": "FinStats kirjoittaa sen lokiinsa käynnistyessään, esimerkiksi: docker logs finstats",
+      "code_empty": "Anna käyttöönottokoodi FinStatsin lokista.",
+      "code_wrong": "Se ei ole FinStatsin lokissa oleva käyttöönottokoodi.",
       "address": "Jellyfinin osoite",
       "address_help": "Osoite, josta FinStats tavoittaa Jellyfinin. Dockerissa se on usein kontin nimi.",
       "address_empty": "Anna Jellyfin-palvelimesi osoite, esimerkiksi http://jellyfin:8096.",
@@ -281,6 +287,13 @@
       "language_checked": "Ylläpitäjän tarkistama",
       "language_unchecked": "Äidinkielisen puhujan tarkistamaton",
       "language_unchecked_note": "Äidinkielinen puhuja ei ole tarkistanut tätä käännöstä: korjauksia otetaan mielellään vastaan GitHubissa.",
+      "date_format": "Päivämäärän muoto",
+      "date_format_hint": "päivämäärän muoto päivämäärä päivä kuukausi vuosi date format day month year 31.01.2026 01/31/2026 2026-01-31",
+      "date_format_help": "Miten päivämäärät kirjoitetaan tässä selaimessa.",
+      "time_format": "Ajan muoto",
+      "time_format_hint": "ajan muoto kellonaika kello 24 tuntia 12 tuntia time format clock 24-hour 12-hour am pm",
+      "time_format_help": "Miten kellonajat kirjoitetaan tässä selaimessa.",
+      "format_language": "Kuten kieli sen kirjoittaa",
       "layout": "Asettelu",
       "layout_hint": "asettelu yksinkertainen tila klassinen yläpalkki etusivu ulkoasu layout simple mode classic tautulli plex top bar home look",
       "layout_help": "FinStats tai Yksinkertainen: palkki ylhäällä ja pelkät tilastot, kuten klassinen Plexin tilastopalvelin ne asettelee. Tallennetaan vain tähän selaimeen.",
@@ -1451,8 +1464,13 @@
       "locate_wrong_kind": "Toisto on aina elokuvan, videon tai jakson toisto, ei koskaan koko sarjan tai kauden",
       "upload_interrupted": "Lähetys keskeytyi: {error}",
       "upload_empty": "Lähetetty tiedosto oli tyhjä",
+      "upload_too_large": "Tiedosto on suurempi kuin FinStatsin hyväksymät 4 Gt",
       "reading_backup": "Luetaan varmuuskopiota",
       "receiving_backup": "Vastaanotetaan varmuuskopiota",
+      "interrupted": "Keskeytyi ennen valmistumista: mitään ei muutettu, ja sen voi aloittaa uudelleen",
+      "too_soon": "Pyydetty hetki sitten; yritä minuutin päästä uudelleen",
+      "upload_running": "Tautulli-varmuuskopio on jo saapumassa",
+      "cards_busy": "Kortteja piirretään juuri nyt liian monta; yritä hetken päästä uudelleen",
       "importing": "Tuodaan",
       "restored": { "one": "Palautettu {count} toisto ({skipped} oli jo olemassa)", "other": "Palautettu {count} toistoa ({skipped} oli jo olemassa)" },
       "imported": { "one": "Tuotu {count} toisto ({skipped} oli jo olemassa)", "other": "Tuotu {count} toistoa ({skipped} oli jo olemassa)" },
@@ -1474,18 +1492,22 @@
       "bearer_form": "Käytä muotoa `Authorization: Bearer <key>`",
       "sign_in_to_continue": "Kirjaudu sisään jatkaaksesi",
       "calendar_key_only": "Tämä avain avaa vain kalenterisyötteen",
+      "feed_key_in_address": "Syötteen osoitteessa saa olla vain kalenteriavain. Lähetä mikä tahansa muu avain Authorization-otsakkeessa",
       "feed_needs_key": "Tämä syöte tarvitsee avaimen: lisää osoitteeseen ?key=…",
       "too_many_attempts": { "one": "Liian monta kirjautumisyritystä. Yritä uudelleen {count} minuutin kuluttua.", "other": "Liian monta kirjautumisyritystä. Yritä uudelleen {count} minuutin kuluttua." },
       "not_connected": "FinStatsia ei ole vielä yhdistetty Jellyfiniin",
       "enter_username": "Anna Jellyfin-käyttäjänimesi",
       "wrong_password": "Väärä käyttäjänimi tai salasana",
       "unreachable": "Jellyfiniin ei saatu yhteyttä kirjautumisen tarkistamiseksi",
+      "home_only": "Jellyfin sallii kirjautumisen vain kotiverkosta.",
       "no_access": "Sinulle ei ole annettu pääsyä FinStatsiin. Jellyfinin ylläpitäjä voi sallia sen asetuksissa.",
+      "setup_code": "Se ei ole FinStatsin lokissa oleva käyttöönottokoodi",
       "already_set_up": "FinStats on jo otettu käyttöön",
       "not_admin": "Tämä tili ei ole Jellyfinin ylläpitäjä. Ota FinStats käyttöön ylläpitäjän tilillä."
     },
     "keys": {
       "session_only": "Kirjaudu sisään hallitaksesi avaimia; avaimella ei voi luoda tai peruuttaa avaimia",
+      "session_needed": "Kirjaudu sisään tehdäksesi tämän; avain ei voi tehdä sitä",
       "name": "Anna avaimelle enintään 60 merkin nimi",
       "expiry": "Voimassaolo on 1–3650 päivää",
       "scope": "Laajuus on `full` tai `calendar`",
@@ -1832,9 +1854,12 @@
       "server_read": { "one": "{count} laite, lisäosia {plugins}", "other": "{count} laitetta, lisäosia {plugins}" },
       "server_read_without_plugins": { "one": "{count} laite; lisäosia ei voitu lukea", "other": "{count} laitetta; lisäosia ei voitu lukea" },
       "reading_watched": "Luetaan, mitä {name} on katsonut",
-      "userdata_read": { "one": "{count} toistettu tai suosikkikohde", "other": "{count} toistettua tai suosikkikohdetta" }
+      "userdata_read": { "one": "{count} toistettu tai suosikkikohde", "other": "{count} toistettua tai suosikkikohdetta" },
+      "userdata_refused": { "one": "Jellyfin palautti {count} toistetun tai suosikkikohteen käyttäjälle {name}, kun FinStatsissa on {current}. Puuttuvia ei tyhjennetä: tämä näyttää Jellyfinin muutokselta tai virheelliseltä luvulta. Mitään ei muutettu.", "other": "Jellyfin palautti {count} toistettua tai suosikkikohdetta käyttäjälle {name}, kun FinStatsissa on {current}. Puuttuvia ei tyhjennetä: tämä näyttää Jellyfinin muutokselta tai virheelliseltä luvulta. Mitään ei muutettu." },
+      "userdata_repeated": "Jellyfin palautti uudelleen saman sivun käyttäjän {name} toistetuista ja suosikkikohteista. Merkinnät pidettiin ennallaan: tämä näyttää Jellyfinin muutokselta tai välissä olevalta välityspalvelimelta."
     },
     "import": {
+      "line_too_long": "Tiedoston rivi on pidempi kuin mikään varmuuskopio sisältää",
       "reading_libraries": "Luetaan kirjastoja",
       "reading_items": "Luetaan elokuvia, sarjoja ja musiikkia",
       "reading_seasons": "Luetaan kausia",
@@ -1877,6 +1902,7 @@
       "not_json": "Tiedosto ei ole FinStats-varmuuskopio (rivi {line} ei ole JSONia)",
       "not_finstats": "Tämä ei ole FinStats-varmuuskopio. Jellystat-varmuuskopio kuuluu kohtaan ”Tuonti lähteestä Jellystat”.",
       "newer_format": "Tämä varmuuskopio on tehty uudemmalla FinStatsilla (muoto {format}). Päivitä FinStats ja palauta se sitten.",
+      "too_large": "Tiedosto on vioittunut tai ei ole FinStats-varmuuskopio (se purkautuu paljon suuremmaksi kuin varmuuskopio voi olla)",
       "restoring": { "one": "Palautetaan: {count} toisto tähän mennessä", "other": "Palautetaan: {count} toistoa tähän mennessä" },
       "linking": "Linkitetään toistoja kirjastoon"
     },
@@ -1947,6 +1973,7 @@
       },
       "bad_url": "Tämä ei näytä kelvolliselta osoitteelta",
       "needs_host": "Osoitteessa on oltava palvelimen nimi",
+      "not_public_or_unknown": "Osoitetta {host} ei voitu selvittää julkisena osoitteena. Omien kohteidesi on osoitettava julkiseen palveluun. Pyydä sen sijaan ylläpitäjää lisäämään se palvelimelle",
       "enter_address": "Anna osoite, johon lähetetään",
       "http_only": "Osoitteen on alettava http:// tai https://",
       "no_login": "Jätä käyttäjänimi ja salasana pois osoitteesta",
@@ -1962,6 +1989,7 @@
       "mail_no_login": "Jätä käyttäjänimi ja salasana pois osoitteesta; kummallekin on oma kenttänsä",
       "mail_host_port": "Sähköpostipalvelimen osoite on palvelin ja portti, eikä niiden perässä mitään",
       "enter": "Anna {what}",
+      "secret_again": "Anna tunnus tai salasana uudelleen: tallennettu lähetetään vain palvelimelle, jolle se tallennettiin",
       "value": "arvo",
       "token": "tunnus",
       "ntfy_topic": "ntfy-aiheessa saa olla vain kirjaimia, numeroita, - ja _",
@@ -1973,6 +2001,7 @@
       "enter_address_of": "Anna osoite: {channel}",
       "not_a_token": "Tämä ei näytä tunnukselta",
       "too_long": "Kenttä ({what}) on liian pitkä tai sisältää jotain, mitä ei voi lähettää",
+      "name": "nimi",
       "unknown_event": "Tuntematon tapahtuma `{event}`",
       "unknown_severity": "Tuntematon vakavuus `{severity}`",
       "max_targets": { "one": "Enintään {count} kohde", "other": "Enintään {count} kohdetta" },
@@ -2089,6 +2118,7 @@
       "say_kind": "Kerro, minkä tyyppinen palvelu tämä on",
       "enter_address": "Anna osoite: {service}",
       "enter_key": "Anna API-avain",
+      "key_again": "Anna API-avain uudelleen: tallennettu avain lähetetään vain palvelimelle, jolle se tallennettiin",
       "not_a_key": "Tämä ei näytä avaimelta tai salasanalta",
       "max": { "one": "Enintään {count} yhteys", "other": "Enintään {count} yhteyttä" },
       "starting": "Aloitetaan…"
@@ -2115,6 +2145,11 @@
     },
     "downloads": {
       "no_answer": "{name} ei vastannut ajoissa",
+      "problem": {
+        "timeout": "ei vastannut ajoissa",
+        "refused": "hylkäsi API-avaimen",
+        "failed": "ei voitu lukea"
+      },
       "season": "Kausi {season}",
       "episodes": { "one": "{count} jakso", "other": "{count} jaksoa" },
       "season_episodes": { "one": "Kausi {season} · {count} jakso", "other": "Kausi {season} · {count} jaksoa" },
@@ -3597,7 +3632,8 @@
         "profile_changed": "Muutti julkista profiilia",
         "profile_unpublished": "Poisti julkisen profiilin julkaisun",
         "profile_link_reset": "Loi uuden julkisen profiilin linkin",
-        "appearance_changed": "Muutti ulkoasuaan"
+        "appearance_changed": "Muutti ulkoasuaan",
+        "welcomed": "Toivotettiin tervetulleeksi"
       },
       "outcome": {
         "failed": "Epäonnistui",
@@ -4613,5 +4649,25 @@
       "Fixed": "Korjattu",
       "Removed": "Poistettu"
     }
+  },
+  "welcome": {
+    "title": "Tervetuloa FinStatsiin",
+    "sub": "Muutama valinta tälle selaimelle. Voit muuttaa niitä milloin tahansa kohdassa Asetukset → Ulkoasu.",
+    "step_language": "Kieli",
+    "step_formats": "Päivämäärä ja aika",
+    "step_theme": "Värit",
+    "theme_label": "Vaalea vai tumma",
+    "theme_light": "Aina vaalea, asetettiinpa laite miten tahansa.",
+    "theme_device": "Käyttää laitteen omaa asetusta, vaalea tai tumma, ja seuraa sitä, kun se muuttuu.",
+    "theme_dark": "Aina tumma, asetettiinpa laite miten tahansa.",
+    "step_layout": "Asettelu",
+    "unchecked": "ei tarkistettu",
+    "layout_finstats": "Jokainen sivu, valikko sivussa.",
+    "layout_simple": "Palkki ylhäällä ja pelkät tilastot, aseteltuina kuten Tautulli asettelee ne Plexille. Ei yhteydessä Tautulliin.",
+    "back": "Takaisin",
+    "next": "Seuraava",
+    "done": "Valmis",
+    "skip": "Ohita",
+    "skip_note": "Brittienglanti, 31/01/2026, 13:05, laitteen värit ja FinStats."
   }
 }
