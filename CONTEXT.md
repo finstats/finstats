@@ -294,7 +294,7 @@ backups, pruned apart; not exported), `jellyfin_url`,
 
 ### 4.6 Backups
 
-gzip JSON Lines (`finstats-backup-YYYYMMDD-HHMMSS.jsonl.gz`, in UTC, trying up to 1,024 earlier seconds on name collisions, never written over an existing file; placement and undo-delete require hard-link support): header, the settings blob, then rows tagged by table and
+gzip JSON Lines (`finstats-backup-YYYYMMDD-HHMMSS.jsonl.gz`, in UTC, trying the current second and up to 1,023 earlier seconds on name collisions, never written over an existing file; placement and undo-delete require hard-link support): header, the settings blob, then rows tagged by table and
 matched **by column name** both ways. `backup::TABLES`: playbacks, playback_events, manual_seen, user_permissions,
 home_addresses, server_events, devices, security_alerts, audit, watchlist, located, health_dismissed, appearance, welcomed.
 

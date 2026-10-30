@@ -1256,8 +1256,9 @@ Learned from real exports; also documented at the top of `import.rs`.
     interrupted valid backup, but an invalid row must first be corrected. Comments must preserve this distinction so
     the first pass is not mistaken for an all-or-nothing SQL validation.
 
-14. **Export reserves its own part exclusively before cleanup can touch it**. On a name collision it tries up to 1,024
-    UTC seconds backwards from the current second, keeping the accepted filename shape without sleeps or future names.
+14. **Export reserves its own part exclusively before cleanup can touch it**. On a name collision it tries the current
+    UTC second and up to 1,023 earlier seconds, keeping the accepted filename shape without sleeps or future names.
+    No-follow metadata treats dangling completed symlinks as occupied; exclusive creation also preserves part symlinks.
     Occupied completed files and fresh parts are left alone; exhaustion fails promptly. A retry must neither lose a
     concurrent export nor depend on waiting for the clock. Cleanup ownership transfers before placement, which removes
     its own part even on failure; outer cleanup must never remove a later writer's reservation.

@@ -109,6 +109,42 @@ fn raw_row(row: &crate::db::rusqlite::Row) -> Map<String, Value> {
     m
 }
 
+fn occupied(path: &Path) -> std::io::Result<bool> {
+    match std::fs::symlink_metadata(path) {
+        Ok(_) => Ok(true),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e),
+    }
+}
+
+fn reserve_backup(dir: &Path, name: &str, mut occupied: impl FnMut(&Path) -> std::io::Result<bool>) -> Result<(String, PathBuf, PathBuf, File)> {
+    // Reserve a part exclusively before entering the cleanup scope. A failed open owns nothing.
+    let stamp = chrono::NaiveDateTime::parse_from_str(&name[PREFIX.len()..name.len() - SUFFIX.len()], "%Y%m%d-%H%M%S")?;
+    let mut reserved = None;
+    for offset in 0..1024 {
+        let Some(at) = stamp.checked_sub_signed(chrono::Duration::seconds(offset)) else { break };
+        let name = format!("{PREFIX}{}{SUFFIX}", at.format("%Y%m%d-%H%M%S"));
+        let (part, path) = (dir.join(format!("{name}.part")), dir.join(&name));
+        if occupied(&path)? { continue; }
+        match db::private_new_file().open(&part) {
+            Ok(file) => {
+                // A completed file may have appeared while the part was being reserved.
+                match occupied(&path) {
+                    Ok(false) => { reserved = Some((name, part, path, file)); break; }
+                    other => {
+                        drop(file);
+                        let _ = std::fs::remove_file(&part);
+                        other?;
+                    }
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e.into()),
+        }
+    }
+    reserved.context("no free backup name in 1024 UTC seconds")
+}
+
 /// Write a backup into `dir`. The file only gets its real name once it is complete.
 pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Result<ExportResult> {
     export_named(db, dir, tasks, new_name())
@@ -144,31 +180,7 @@ fn export_named(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>, name
     }
     let total: i64 = counts.values().filter_map(Value::as_i64).sum::<i64>().max(1);
 
-    // Reserve a part exclusively before entering the cleanup scope. A failed open owns nothing.
-    let stamp = chrono::NaiveDateTime::parse_from_str(&name[PREFIX.len()..name.len() - SUFFIX.len()], "%Y%m%d-%H%M%S")?;
-    let mut reserved = None;
-    for offset in 0..1024 {
-        let Some(at) = stamp.checked_sub_signed(chrono::Duration::seconds(offset)) else { break };
-        let name = format!("{PREFIX}{}{SUFFIX}", at.format("%Y%m%d-%H%M%S"));
-        let (part, path) = (dir.join(format!("{name}.part")), dir.join(&name));
-        if path.try_exists()? { continue; }
-        match db::private_new_file().open(&part) {
-            Ok(file) => {
-                // A completed file may have appeared while the part was being reserved.
-                match path.try_exists() {
-                    Ok(false) => { reserved = Some((name, part, path, file)); break; }
-                    other => {
-                        drop(file);
-                        let _ = std::fs::remove_file(&part);
-                        other?;
-                    }
-                }
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(e) => return Err(e.into()),
-        }
-    }
-    let (name, part, path, file) = reserved.context("no free backup name in 1024 UTC seconds")?;
+    let (name, part, path, file) = reserve_backup(dir, &name, occupied)?;
     with_owned_part(&part, |owned| {
         let mut out = GzEncoder::new(BufWriter::with_capacity(1 << 20, file), Compression::new(6));
         let header = json!({
@@ -853,6 +865,78 @@ impl Read for Counted {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reservation_exhaustion_preserves_all_1024_names_and_leaves_no_part() {
+        let tmp = std::env::temp_dir().join(format!("finstats-exhaust-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        db::private_dir(&tmp).unwrap();
+        let stamp = chrono::NaiveDateTime::parse_from_str("20261030-000000", "%Y%m%d-%H%M%S").unwrap();
+        for offset in 0..1024 {
+            let at = stamp - chrono::Duration::seconds(offset);
+            std::fs::write(tmp.join(format!("{PREFIX}{}{SUFFIX}", at.format("%Y%m%d-%H%M%S"))), offset.to_string()).unwrap();
+        }
+        let start = std::time::Instant::now();
+        assert!(reserve_backup(&tmp, "finstats-backup-20261030-000000.jsonl.gz", occupied).is_err());
+        assert!(start.elapsed() < std::time::Duration::from_secs(5));
+        assert_eq!(std::fs::read_dir(&tmp).unwrap().count(), 1024);
+        for offset in 0..1024 {
+            let at = stamp - chrono::Duration::seconds(offset);
+            assert_eq!(std::fs::read(tmp.join(format!("{PREFIX}{}{SUFFIX}", at.format("%Y%m%d-%H%M%S")))).unwrap(), offset.to_string().as_bytes());
+        }
+        std::fs::remove_dir_all(tmp).unwrap();
+    }
+
+    #[test]
+    fn completed_file_appearing_after_reservation_releases_only_owned_part() {
+        let tmp = std::env::temp_dir().join(format!("finstats-reserve-race-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        db::private_dir(&tmp).unwrap();
+        let name = "finstats-backup-20261030-000000.jsonl.gz";
+        let mut checks = 0;
+        let (made, part, _, file) = reserve_backup(&tmp, name, |path| {
+            checks += 1;
+            if checks == 2 {
+                assert!(tmp.join(format!("{name}.part")).exists());
+                std::fs::write(path, b"another export")?;
+            }
+            occupied(path)
+        }).unwrap();
+        assert_eq!(made, "finstats-backup-20261029-235959.jsonl.gz");
+        assert!(!tmp.join(format!("{name}.part")).exists());
+        assert_eq!(std::fs::read(tmp.join(name)).unwrap(), b"another export");
+        drop(file);
+        std::fs::remove_file(part).unwrap();
+        std::fs::write(tmp.join(&made), b"second occupied").unwrap();
+        let (made, part, _, file) = reserve_backup(&tmp, name, occupied).unwrap();
+        assert_eq!(made, "finstats-backup-20261029-235958.jsonl.gz");
+        assert_eq!(std::fs::read(tmp.join("finstats-backup-20261029-235959.jsonl.gz")).unwrap(), b"second occupied");
+        drop(file);
+        std::fs::remove_file(part).unwrap();
+        std::fs::remove_dir_all(tmp).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn export_skips_dangling_completed_and_part_symlinks() {
+        let tmp = std::env::temp_dir().join(format!("finstats-export-link-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        db::private_dir(&tmp).unwrap();
+        let db = Db::open(&tmp.join("test.db")).unwrap();
+        let folder = dir(&tmp);
+        db::private_dir(&folder).unwrap();
+        let name = "finstats-backup-20261030-000000.jsonl.gz";
+        let completed = folder.join(name);
+        let part = folder.join("finstats-backup-20261029-235959.jsonl.gz.part");
+        std::os::unix::fs::symlink("missing", &completed).unwrap();
+        std::os::unix::fs::symlink("missing-part", &part).unwrap();
+        let made = export_named(&db, &folder, None, name.into()).unwrap();
+        assert_eq!(made.name, "finstats-backup-20261029-235958.jsonl.gz");
+        assert_eq!(std::fs::read_link(completed).unwrap(), PathBuf::from("missing"));
+        assert_eq!(std::fs::read_link(part).unwrap(), PathBuf::from("missing-part"));
+        assert!(!folder.join("missing-part").exists());
+        std::fs::remove_dir_all(tmp).unwrap();
+    }
 
     #[cfg(unix)]
     #[test]
