@@ -8,13 +8,20 @@
 *.sqlite
 *.sqlite3
 *.backup.db
+*.db.*
 
 # Personal history exports: these carry user names, IP addresses and viewing history
 *.jsonl
 backup_*
-jellystat-upload.tmp
 streamystats-backup-*.json
-streamystats-upload.tmp
+*-upload.tmp
+*-upload.tmp.rows
+# FinStats' own backups (finstats-backup-*.jsonl.gz, and a half-written .part) and a Tautulli backup, which carries
+# every Plex user's token and e-mail
+*.jsonl.gz
+*.jsonl.gz.part
+finstats-backup-*
+*.zip
 
 # Secrets and local overrides
 .env

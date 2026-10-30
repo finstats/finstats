@@ -7,6 +7,13 @@ data
 *.jsonl
 backup_*
 streamystats-backup-*.json
+*.db.*
+*.jsonl.gz
+*.jsonl.gz.part
+finstats-backup-*
+*.zip
+*-upload.tmp
+*-upload.tmp.rows
 .git
 .githooks
 .env
