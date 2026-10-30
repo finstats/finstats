@@ -93,6 +93,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Geleceğe tarihli bir sunucu günlüğü satırı artık etkinlik günlüğünün okunmasını durdurmaz: günlük, gelecekte olmayan en yeni satırından itibaren okunur.
 - Yayımlanmış bir bağlantıya birlikte gelen istekler yanıtını bir kez hesaplar ve kartları kendine ait bir şeritte çizilir; böylece bağlantıya sahip biri artık sahibin Yıl özeti kartlarının 503 yanıtı vermesine yol açamaz.
 - Jellyfin'in kitaplık listesinde olmayan bir kitaplığın oynatmaları, aynı başlığın başka bir kitaplıktaki kopyasına taşınmadan önce iki gün bekler. Bir kitaplığı atlayan tek bir liste onları hemen taşıyordu ve kitaplık geri geldiğinde taşınmış olarak kalıyorlardı.
+- Jellyfin'in hiçbir sayının alamayacağı kadar büyük bildirdiği bir disk, artık sunucu ayrıntılarının her okunuşunu başarısız kılmaz.
 
 ### Fixed
 - Bir hesaptaki başarısız oturum açmalar pencere başına tek bir uyarıdır ve yirmide bir alarma dönüşür; bir ad, bir hesaba karşı yalnızca tam yazıldığında sayılır ("x alice" artık alice’e karşı sayılmaz).

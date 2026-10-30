@@ -93,6 +93,7 @@ den tittelen bruker appen som overskrift for hele serien.
 - En rad i serverloggen datert i fremtiden stopper ikke lenger lesingen av aktivitetsloggen: den leses fra den nyeste raden som ikke er i fremtiden.
 - Forespørsler som kommer samtidig til en publisert lenke, regner ut svaret én gang, og kortene tegnes i en egen kø, så den som har lenken, ikke lenger kan få eierens kort fra tilbakeblikket til å svare 503.
 - Avspillingene i et bibliotek som mangler i Jellyfins liste over biblioteker, venter to dager før de flyttes til et annet biblioteks kopi av samme tittel. Én liste som utelot et bibliotek, flyttet dem straks, og de ble værende flyttet da biblioteket kom tilbake.
+- En disk Jellyfin oppgir som større enn noe tall kan romme, får ikke lenger hver lesing av serverdetaljene til å feile.
 
 ### Fixed
 - Mislykkede innlogginger på en konto gir ett varsel per tidsrom som blir til et alarmvarsel ved tjue, og et navn teller mot en konto bare når det er skrevet helt ("x alice" teller ikke lenger mot alice).

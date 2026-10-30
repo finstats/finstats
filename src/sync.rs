@@ -1086,7 +1086,7 @@ async fn sync_events(app: &App, jf: &Jellyfin) -> Result<String> {
 
 fn folder(label: &str, kind: &str, f: &Value) -> Option<Value> {
     let (free, used) = (f["FreeSpace"].as_i64()?, f["UsedSpace"].as_i64()?);
-    (free >= 0 && used >= 0 && free + used > 0).then(|| json!({ "label": label, "path": f["Path"], "free_bytes": free, "used_bytes": used, "kind": kind, "device": f["DeviceId"] }))
+    (free >= 0 && used >= 0 && free.checked_add(used).is_some_and(|t| t > 0)).then(|| json!({ "label": label, "path": f["Path"], "free_bytes": free, "used_bytes": used, "kind": kind, "device": f["DeviceId"] }))
 }
 
 /// The library's folders and Jellyfin's own, as the Server page lists them.
@@ -1311,6 +1311,14 @@ mod tests {
 
     /// The activity log is read from its newest row on. One row dated in years to come (a restored backup, or a server
     /// whose clock ran ahead) stopped every read after it: no sign-in, failed or foreign, was ever seen again.
+    /// A disk Jellyfin says is fuller than any number holds is no disk: added unchecked, `FreeSpace = i64::MAX` panicked
+    /// in a release build, and the server read failed at every run.
+    #[test]
+    fn a_disk_bigger_than_any_number_is_no_disk() {
+        assert!(folder("Films", "library", &json!({ "FreeSpace": i64::MAX, "UsedSpace": 10 })).is_none());
+        assert!(folder("Films", "library", &json!({ "FreeSpace": 5, "UsedSpace": 10 })).is_some());
+    }
+
     #[test]
     fn a_row_from_the_future_does_not_stop_the_activity_log() {
         let db = crate::db::Db::open_in_memory().unwrap();

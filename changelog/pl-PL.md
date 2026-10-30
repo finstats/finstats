@@ -93,6 +93,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Wiersz dziennika serwera z datą w przyszłości nie wstrzymuje już czytania dziennika aktywności: jest on czytany od najnowszego wiersza, który nie jest w przyszłości.
 - Żądania przychodzące jednocześnie na opublikowany link obliczają jego odpowiedź raz, a jego karty są rysowane na osobnym torze, więc posiadacz linku nie może już sprawić, że karty Podsumowania właściciela odpowiadają 503.
 - Odtworzenia biblioteki, której brakuje na liście bibliotek Jellyfin, czekają dwa dni, zanim zostaną przeniesione na kopię tego samego tytułu w innej bibliotece. Jedna lista, która pominęła bibliotekę, przenosiła je od razu, a po powrocie biblioteki zostawały przeniesione.
+- Dysk, który Jellyfin podaje jako większy, niż mieści jakakolwiek liczba, nie psuje już każdego odczytu szczegółów serwera.
 
 ### Fixed
 - Nieudane logowania na konto to jedno ostrzeżenie na okno, które przy dwudziestu zamienia się w alert, a nazwa liczy się przeciw kontu tylko wtedy, gdy wpisano ją w całości ("x alice" nie liczy się już przeciw alice).

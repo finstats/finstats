@@ -93,6 +93,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - Lína í atvikaskrá þjóns dagsett í framtíðinni stöðvar ekki lengur lestur virkniskrárinnar: hún er lesin frá nýjustu línu sinni sem er ekki í framtíðinni.
 - Beiðnir sem berast samtímis á opinberan tengil reikna svar hans út einu sinni, og spjöld hans eru teiknuð á eigin braut, svo handhafi tengilsins getur ekki lengur látið Uppgjörsspjöld eigandans svara 503.
 - Spilanir safns sem vantar á lista Jellyfin yfir söfn bíða í tvo daga áður en þær eru færðar á afrit sama titils í öðru safni. Einn listi sem sleppti safni færði þær strax, og þær voru áfram færðar þegar safnið kom aftur.
+- Diskur sem Jellyfin segir stærri en nokkur tala rúmar lætur ekki lengur hvern lestur á upplýsingum þjónsins mistakast.
 
 ### Fixed
 - Misheppnaðar innskráningar á aðgang eru ein viðvörun á hvert tímabil sem verður að viðvörunarboði við tuttugu, og nafn telst gegn aðgangi aðeins þegar það er slegið inn í heild ("x alice" telst ekki lengur gegn alice).
