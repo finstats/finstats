@@ -1,12 +1,12 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-28, on branch `dev` (crate version 2.3.1, local only; schema `user_version` 41; newest pushed tag `v2.2.0`).
+> **Last updated:** 2026-10-29, on branch `dev` (crate version 2.3.1, local only; schema `user_version` 41; newest pushed tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
-> where things belong, which rules hold, and what is missing. It is the distilled map. `CLAUDE.md` is the detailed rulebook
-> (the history behind each rule, the owner's decisions); the published docs at <https://finstats.no/> (repository
-> `../docs`) are the user-facing manual and the HTTP contract. When this file and the code disagree, the code wins, and
-> this file should be fixed in the same change.
+> where things belong, which rules hold, and what is missing. It is the distilled map. `ARCHITECTURE.md` explains how
+> the pieces work, `DECISIONS.md` holds every rule with its reason and the owner's decisions, and `CLAUDE.md` says how
+> we work; the published docs at <https://finstats.no/> (repository `../docs`) are the user-facing manual and the HTTP
+> contract. When this file and the code disagree, the code wins, and this file should be fixed in the same change.
 
 ---
 
@@ -79,7 +79,9 @@ finstats/
 ├── README.md                     Landing page only (docs live in ../docs)
 ├── CONTRIBUTING.md, SECURITY.md  Pointers to the docs site
 ├── CODE_OF_CONDUCT.md, LICENSE
-├── CLAUDE.md                     Detailed rules and history for AI assistants
+├── CLAUDE.md                     How we work (for AI assistants): TDD, commands, git, releases
+├── ARCHITECTURE.md               How the pieces work and fit together
+├── DECISIONS.md                  Every rule with its reason, numbered per section
 └── CONTEXT.md                    This file
 
 Local only, never committed (git-ignored or excluded):
@@ -685,7 +687,7 @@ let (a, b) = tokio::try_join!(apart(app.clone(), scope.clone(), |c, s| totals(c,
 8. Live data uses `follow()`, never a bare `setInterval`.
 9. Overlays stop propagation of their own Esc; `shell.js` handles Esc globally.
 10. Every word a person reads comes from `t('key')`. A new key lands in the four checked catalogues (en-GB, en-US, nb-NO,
-    nn-NO) in the same change; the other nineteen say it in en-GB until translated (see `CLAUDE.md`, Languages).
+    nn-NO) in the same change; the other nineteen say it in en-GB until translated (see `DECISIONS.md`, Languages).
 11. Content stays visible: no folds; use navigation and jump lists instead.
 
 ### 9.4 Writing rules (all repositories)
@@ -871,5 +873,5 @@ Never commit `qa/`. Add a check there for every bug fixed that unit tests cannot
 ## 15. Keeping this file current
 
 Update `CONTEXT.md` in the same change whenever you add a subsystem, table, route group, environment variable, command
-or convention, or fix one of the gaps in §14. Bump the **Last updated** line. Keep it a map: link to `CLAUDE.md`, the
+or convention, or fix one of the gaps in §14. Bump the **Last updated** line. Keep it a map: link to `ARCHITECTURE.md`, `DECISIONS.md`, the
 code and the docs for detail rather than copying them, and do not list how many files a folder holds.
