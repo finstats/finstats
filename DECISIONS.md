@@ -1110,6 +1110,9 @@ Learned from real exports; also documented at the top of `import.rs`.
     a test naming another server and no secret is refused at the secret's field, for a Sonarr, Radarr or Seerr connection
     as for a notification destination.
 
+25. **Download row errors hide URL addresses from everyone except a Jellyfin administrator**: the client name and failure
+    remain useful, but hosts, ports and paths describe the private network, not permission to see downloads.
+
 ## Outbound connections (`outbound.rs`, `GET /api/outbound`, Settings card)
 
 1. One row per destination FinStats can reach (Jellyfin, the public-IP services, DB-IP, each `services` row, each

@@ -493,6 +493,22 @@ impl Wishes {
     }
 }
 
+/// Keep the failure and client name, but not a URL's private network address.
+fn error_for(s: &str, viewer: &crate::auth::AuthUser) -> String {
+    if viewer.is_admin { return s.to_string() }
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find("://") {
+        let (head, tail) = rest.split_at(i + 3);
+        out.push_str(head);
+        out.push_str("***");
+        let end = tail.find(|c: char| c.is_whitespace() || matches!(c, ')' | '(' | '"' | '\'' | ',' | '<' | '>')).unwrap_or(tail.len());
+        rest = &tail[end..];
+    }
+    out.push_str(rest);
+    out
+}
+
 /// `viewer`: whose wish it is is said only of their own, or of anybody's with *see everyone* (`/api/requests`' rule).
 fn download_json(d: &Download, wishes: &Wishes, viewer: &crate::auth::AuthUser) -> Value {
     let (who, item) = wishes.of(d);
@@ -504,7 +520,7 @@ fn download_json(d: &Download, wishes: &Wishes, viewer: &crate::auth::AuthUser) 
     };
     json!({
         "key": d.key, "title": d.title, "sub": sub_of(d), "state": d.state, "progress": d.progress, "size": d.size, "left": d.left, "eta_s": d.eta_s,
-        "down_bps": d.down_bps, "release": d.release, "client": d.client, "protocol": d.protocol, "service_name": d.service_name, "error": d.error, "poster": poster,
+        "down_bps": d.down_bps, "release": d.release, "client": d.client, "protocol": d.protocol, "service_name": d.service_name, "error": d.error.as_deref().map(|s| error_for(s, viewer)), "poster": poster,
         "requested_by": who.map(|(id, name)| json!({ "user_id": id, "user_name": name })),
         "item_id": item,
     })
@@ -833,6 +849,23 @@ mod tests {
             sub: season.map(|s| format!("S{s:02}E01")), media_type: "tv", tmdb_id: None, tvdb_id: Some(id), season, size, left, eta_s: Some(600),
             state, protocol: Some("torrent".into()), client: Some("qBittorrent".into()), release: Some(format!("{title}.1080p.WEB-DL").replace(' ', ".")), error: None,
         }
+    }
+
+    #[test]
+    fn a_download_error_hides_the_client_address_from_non_admins() {
+        let mut q = queued(1, "Sintel", Some("ABC"), None, "failed", 10, 5);
+        q.error = Some("stalled (qBittorrent at http://***@10.0.0.5:8080/api)".into());
+        let (rows, _) = fold(vec![q]);
+        let mut viewer = crate::auth::AuthUser { id: "alice".into(), name: "alice".into(), is_admin: false,
+            perms: crate::auth::Perms { see_downloads: true, ..Default::default() }, credential: crate::auth::Credential::Session, ip: None };
+        let w = Wishes::default();
+        let answer = download_json(&rows[0], &w, &viewer);
+        let error = answer["error"].as_str().unwrap();
+        assert!(!error.contains("10.0.0.5"));
+        assert!(!error.contains(":8080") && !error.contains("/api"));
+        assert!(error.contains("stalled") && error.contains("qBittorrent"));
+        viewer.is_admin = true;
+        assert_eq!(download_json(&rows[0], &w, &viewer)["error"], rows[0].error.as_deref().unwrap());
     }
 
     #[test]

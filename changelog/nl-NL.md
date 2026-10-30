@@ -68,6 +68,7 @@ de hele reeks.
 - De image wordt gebouwd met elke GitHub-action vastgezet op een commit en beide basisimages op een digest, alleen verschoven door Dependabot, en een release bouwt zonder de gedeelde buildcache. Een verschoven tag van andermans action had elke image als FinStats kunnen publiceren.
 - Het stijlblad van FinUI, getekend in de eigen weergave van de bezoeker, mag alleen door FinStats' eigen pagina's worden geladen. Een pagina op een andere poort van dezelfde host kon eruit lezen of de bezoeker was aangemeld en welke voorinstelling die koos.
 - Elke geweigerde aanmelding wordt beantwoord op één moment, gerekend vanaf het versturen, of FinStats of Jellyfin hem nu weigerde, en een naam wordt herkend ongeacht hoofd- of kleine letters, ook buiten A tot Z. Hoe snel een weigering kwam, verried welke namen iemand waren, en ‘Åse’ die `åse` typte, werd geweigerd zonder dat Jellyfin werd gevraagd.
+- Downloadfouten verbergen clientadressen voor niet-beheerders. Wie de wachtrij kon bekijken, kon eerder interne hosts, poorten en paden zien.
 
 ### Performance
 - Een gepubliceerd profiel wordt hooguit eens per minuut opgebouwd, niet opnieuw voor elke afbeelding en kaart erop.

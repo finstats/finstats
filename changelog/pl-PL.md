@@ -67,6 +67,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Obraz jest budowany z każdą akcją GitHub przypiętą do commita, a oboma obrazami bazowymi do skrótu, przesuwanymi tylko przez Dependabota, a wydanie buduje się bez wspólnej pamięci podręcznej budowania. Przesunięty tag cudzej akcji mógł opublikować dowolny obraz jako FinStats.
 - Arkusz stylów FinUI, rysowany w wyglądzie wybranym przez odwiedzającego, mogą wczytywać tylko strony FinStats. Strona na innym porcie tego samego hosta mogła odczytać z niego, czy odwiedzający był zalogowany i jaki ustawienie wstępne wybrał.
 - Każde odrzucone logowanie dostaje odpowiedź w jednej chwili liczonej od jego wysłania, niezależnie od tego, czy odrzucił je FinStats, czy Jellyfin, a nazwa jest rozpoznawana bez względu na wielkość liter, także poza A–Z. To, jak szybko przychodziła odmowa, zdradzało, które nazwy należą do kogoś, a „Åse” wpisująca `åse` była odrzucana bez pytania Jellyfin.
+- Błędy pobierania ukrywają adresy klientów przed osobami bez uprawnień administratora. Osoby z dostępem do kolejki mogły wcześniej zobaczyć wewnętrzne hosty, porty i ścieżki.
 
 ### Performance
 - Opublikowany profil jest obliczany najwyżej raz na minutę, a nie od nowa dla każdego obrazka i karty na nim.

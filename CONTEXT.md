@@ -500,7 +500,8 @@ not connected; queues are read from Sonarr/Radarr. Every upstream body is read t
 after unpacking (16 MB for a service's JSON, 8 MB for a queue, request or history page, 256 MB for Jellyfin's, 20 MB for a
 picture, 1 GB / 2 GB for the GeoIP file), and a service's JSON is parsed within `services::Limits` (lists cut, too many values
 refused). Without admin, a queue's problem is a kind of failure (`server.downloads.problem.*`), never the service's words;
-a key in those words is blanked by its shape as well as its name.
+a key in those words is blanked by its shape as well as its name. Download row errors also hide URL hosts, ports and
+paths from everyone except a Jellyfin administrator.
 
 **Notifications (`notify.rs`, `channels.rs`, `mail.rs`).** Events written once (`dedupe`), one delivery per destination
 with backoff (30 s, 2 min, 10 min, 1 h, then given up), sent side by side (four destinations at once, 5 s a message, 30 s a

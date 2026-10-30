@@ -67,6 +67,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Levykuva rakennetaan jokainen GitHub-toiminto kiinnitettynä committiin ja molemmat pohjakuvat tiivisteeseen, joita siirtää vain Dependabot, ja julkaisu rakennetaan ilman jaettua koontivälimuistia. Jonkun toisen toiminnon siirretty tagi olisi voinut julkaista minkä tahansa levykuvan FinStatsina.
 - FinUI:n tyylitiedoston, joka piirretään kävijän omalla ulkoasulla, voivat ladata vain FinStatsin omat sivut. Saman koneen toisessa portissa oleva sivu saattoi lukea siitä, oliko kävijä kirjautunut ja minkä esiasetuksen hän valitsi.
 - Jokaiseen hylättyyn kirjautumiseen vastataan samalla hetkellä sen lähettämisestä laskettuna, hylkäsipä sen FinStats tai Jellyfin, ja nimi tunnistetaan kirjainkoosta riippumatta myös A–Z:n ulkopuolella. Hylkäyksen nopeus paljasti, mitkä nimet olivat jonkun, ja ”Åse”, joka kirjoitti `åse`, torjuttiin kysymättä Jellyfiniltä.
+- Latausvirheet piilottavat asiakasohjelmien osoitteet muilta kuin ylläpitäjiltä. Jonon katsojat saattoivat aiemmin nähdä sisäiset palvelinnimet, portit ja polut.
 
 ### Performance
 - Julkaistu profiili lasketaan enintään kerran minuutissa, ei uudelleen jokaista sen kuvaa ja korttia varten.

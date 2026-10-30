@@ -67,6 +67,7 @@ har en kort titelrad under rubriken: den titeln använder appen som rubrik för 
 - Avbilden byggs med varje GitHub-åtgärd låst till en commit och båda basavbilderna till en sammanfattning, flyttade bara av Dependabot, och en utgåva byggs utan den delade byggcachen. En flyttad tagg på någon annans åtgärd kunde ha publicerat vilken avbild som helst som FinStats.
 - FinUI:s formatmall, ritad i besökarens eget utseende, får bara läsas in av FinStats egna sidor. En sida på en annan port på samma värd kunde läsa av om besökaren var inloggad och vilken förinställning de valt.
 - Varje avvisad inloggning besvaras vid en tidpunkt räknad från när den skickades, oavsett om FinStats eller Jellyfin avvisade den, och ett namn känns igen oavsett stora eller små bokstäver, även utöver A till Z. Hur snabbt ett avslag kom avslöjade vilka namn som var någon, och ”Åse” som skrev `åse` avvisades utan att Jellyfin tillfrågades.
+- Nedladdningsfel döljer klientadresser för andra än administratörer. De som kunde se kön kunde tidigare se interna värdnamn, portar och sökvägar.
 
 ### Performance
 - En publicerad profil räknas fram högst en gång i minuten, inte på nytt för varje bild och kort på den.

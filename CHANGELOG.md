@@ -68,6 +68,7 @@ series.
 - The image is built with every GitHub action pinned to a commit and both base images to a digest, moved only by Dependabot, and a release builds without the shared build cache. A moved tag of somebody else's action could have published any image as FinStats.
 - FinUI's stylesheet, drawn in the visitor's own look, may be loaded by FinStats' own pages only. A page on another port of the same host could read from it whether the visitor was signed in, and which preset they chose.
 - Every refused sign-in is answered at one moment counted from when it was sent, whether FinStats or Jellyfin turned it down, and a name is matched whatever the case of its letters, also past A to Z. How quickly a refusal came told which names were somebody, and "Åse" typing `åse` was turned away without Jellyfin being asked.
+- Download errors hide client addresses from non-administrators. Queue viewers could previously see internal hosts, ports and paths.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.
