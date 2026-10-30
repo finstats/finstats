@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-29, on branch `dev` (crate version 2.3.1, local only; schema `user_version` 41; newest pushed tag `v2.2.0`).
+> **Last updated:** 2026-10-30, on branch `dev` (crate version 2.3.1, local only; schema `user_version` 41; newest pushed tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `ARCHITECTURE.md` explains how
@@ -23,7 +23,7 @@ It **only reads from Jellyfin**. The one write it ever makes there is creating i
 |---|---|
 | Shape | One Rust binary (`finstats`) with the web UI embedded; one data folder |
 | Language | Rust, edition 2024, `GPL-3.0-only` |
-| HTTP server | `axum 0.8` (HTTP/1 only, `ws`) served through `hyper` directly (15 s for a request head, 512 connections), `tower-http` gzip compression |
+| HTTP server | `axum 0.8` (HTTP/1 only, `ws`) served through `hyper` directly (15 s for a request head, then 1 KB/s for its body, 30 s per write, 512 connections, 64 per address), `tower-http` gzip compression |
 | Async | `tokio` multi-thread runtime with **2 workers, 8 blocking threads** |
 | Database | SQLite, bundled, through `r2d2` + `r2d2_sqlite` (pool of 6), WAL; rusqlite re-exported as `db::rusqlite` |
 | Outbound HTTP | `reqwest 0.12`, rustls, `gzip` + `brotli` decoding |

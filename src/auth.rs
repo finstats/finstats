@@ -751,7 +751,7 @@ impl Attempts {
 
 /// Whose attempts an address counts as: an IPv4 address, or a whole IPv6 /64, which one machine holds and may
 /// take any address in. An IPv4 address written inside IPv6 is that address.
-fn attempt_bucket(ip: IpAddr) -> IpAddr {
+pub(crate) fn attempt_bucket(ip: IpAddr) -> IpAddr {
     match ip {
         IpAddr::V6(v6) => match v6.to_ipv4_mapped() {
             Some(v4) => IpAddr::V4(v4),

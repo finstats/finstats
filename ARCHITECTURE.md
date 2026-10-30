@@ -268,7 +268,7 @@ days) before `trash::purge` removes it. Contracts: "Trash".
 
 ## 13. Serving HTTP
 
-`main.rs::serve_http` drives hyper directly with timers and a connection cap. `api.rs` builds the routes, the Origin
+`main.rs::serve_http` drives hyper directly with timers (head, body rate, writes), a connection cap and a share per address. `api.rs` builds the routes, the Origin
 check on writes and `harden`'s headers; the response compression layer skips what is already compressed and the UI's
 files are gzipped once (`gzipped`). Pictures go through `artwork.rs`. Contracts: "HTTP server".
 

@@ -52,6 +52,7 @@ usa come titolo dell’intera serie.
 - Il nome di una destinazione non può contenere caratteri di controllo, e il nome di un dispositivo, di una persona o di un titolo non può più falsificare una riga nel log.
 - Il parametro di percorso di un link non può più raggiungere un percorso dell’API diverso da quello della sua pagina, e il costruttore di elementi di FinUI imposta un indirizzo solo se è http(s) o relativo, mai `srcdoc`.
 - La ricerca, i profili pubblicati e il lavoro avviato a mano non possono più tenere occupato FinStats: una ricerca si ferma a 200 caratteri, un profilo è conservato per lingua, le schede attendono in una breve coda, e un job, la ricerca dell’indirizzo, il download del database di localizzazione e un messaggio di prova si avviano solo a intervalli, comunque vengano richiesti, con i messaggi di prova contati per mittente. Scaricare il database di localizzazione richiede anche ciò che richiede leggere la pagina Sicurezza.
+- Il corpo di una richiesta deve continuare ad arrivare una volta passati i primi 15 secondi, una risposta che nessuno legge viene abbandonata dopo 30 secondi e un indirizzo tiene al massimo 64 connessioni, a parte un proxy fidato. Qualche centinaio di richieste che non inviavano mai il loro corpo poteva impedire a FinStats di rispondere a chiunque.
 
 ### Performance
 - Un profilo pubblicato viene calcolato al massimo una volta al minuto, non di nuovo per ogni immagine e scheda che contiene.

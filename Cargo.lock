@@ -511,6 +511,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "hex",
+ "http-body",
  "hyper",
  "hyper-util",
  "lettre",

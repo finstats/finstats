@@ -51,6 +51,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Nazwa celu nie może zawierać znaków sterujących, a nazwa urządzenia, osoby lub tytułu nie może już podrobić wiersza w dzienniku.
 - Parametr trasy w linku nie może już sięgnąć innej ścieżki API niż ścieżka jego strony, a konstruktor elementów FinUI ustawia adres tylko wtedy, gdy jest http(s) lub względny, nigdy `srcdoc`.
 - Wyszukiwanie, opublikowane profile i praca uruchamiana ręcznie nie mogą już zająć FinStats: wyszukiwanie kończy się na 200 znakach, profil jest przechowywany osobno dla każdego języka, karty czekają w krótkiej kolejce, a zadanie, sprawdzanie adresu, pobieranie bazy lokalizacji i wiadomość testowa są uruchamiane tylko co jakiś czas, bez względu na to, jak się o nie prosi, przy czym wiadomości testowe liczone są dla każdego nadawcy. Pobieranie bazy lokalizacji wymaga też tego, czego wymaga czytanie strony Bezpieczeństwo.
+- Treść żądania musi dalej napływać po pierwszych 15 sekundach, odpowiedź, której nikt nie czyta, jest porzucana po 30 sekundach, a jeden adres utrzymuje najwyżej 64 połączenia, poza zaufanym proxy. Kilkaset żądań, które nigdy nie wysłały treści, mogło sprawić, że FinStats nikomu nie odpowiadał.
 
 ### Performance
 - Opublikowany profil jest obliczany najwyżej raz na minutę, a nie od nowa dla każdego obrazka i karty na nim.

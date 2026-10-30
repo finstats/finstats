@@ -51,6 +51,7 @@ har en kort titelrad under rubriken: den titeln använder appen som rubrik för 
 - Ett måls namn får inte innehålla kontrolltecken, och namnet på en enhet, en person eller en titel kan inte längre förfalska en rad i loggen.
 - En länks ruttparameter kan inte längre nå en annan API-sökväg än sidans egen, och FinUIs elementbyggare sätter en adress bara när den är http(s) eller relativ, aldrig `srcdoc`.
 - Sökning, publicerade profiler och arbete som startas för hand kan inte längre hålla FinStats upptaget: en sökning slutar vid 200 tecken, en profil sparas per språk, kort väntar i en kort kö, och ett jobb, adressuppslaget, nedladdningen av platsdatabasen och ett testmeddelande startar bara så ofta, hur de än efterfrågas, med testmeddelanden räknade per avsändare. Att hämta platsdatabasen kräver också det som läsning av sidan Säkerhet kräver.
+- Innehållet i en begäran måste fortsätta komma när de första 15 sekunderna har gått, ett svar som ingen läser ges upp efter 30 sekunder, och en adress håller högst 64 anslutningar, en betrodd proxy undantagen. Några hundra begäranden som aldrig skickade sitt innehåll kunde hindra FinStats från att svara någon.
 
 ### Performance
 - En publicerad profil räknas fram högst en gång i minuten, inte på nytt för varje bild och kort på den.

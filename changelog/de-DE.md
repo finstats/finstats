@@ -52,6 +52,7 @@ kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 - Der Name eines Ziels darf keine Steuerzeichen enthalten, und der Name eines Geräts, einer Person oder eines Titels kann keine Zeile im Protokoll mehr fälschen.
 - Der Routenparameter eines Links kann keinen anderen API-Pfad als den der eigenen Seite mehr erreichen, und der Elementbaukasten von FinUI setzt eine Adresse nur, wenn sie http(s) oder relativ ist, nie `srcdoc`.
 - Suche, veröffentlichte Profile und von Hand gestartete Arbeit können FinStats nicht mehr dauerhaft beschäftigen: Eine Suche endet bei 200 Zeichen, ein Profil wird pro Sprache vorgehalten, Karten warten in einer kurzen Warteschlange, und ein Job, die Adressabfrage, der Download der Standortdatenbank und eine Testnachricht starten nur in Abständen, wie auch immer sie angefordert werden, Testnachrichten pro Absender gezählt. Das Abrufen der Standortdatenbank erfordert außerdem dasselbe wie das Lesen der Sicherheitsseite.
+- Der Inhalt einer Anfrage muss nach den ersten 15 Sekunden weiter eintreffen, eine Antwort, die niemand liest, wird nach 30 Sekunden aufgegeben, und eine Adresse hält höchstens 64 Verbindungen, ein vertrauenswürdiger Proxy ausgenommen. Einige hundert Anfragen, die ihren Inhalt nie schickten, konnten FinStats davon abhalten, irgendwem zu antworten.
 
 ### Performance
 - Ein veröffentlichtes Profil wird höchstens einmal pro Minute berechnet, nicht erneut für jedes Bild und jede Karte darauf.

@@ -52,6 +52,7 @@ overskrift for hele serien.
 - En modtagers navn må ikke indeholde kontroltegn, og navnet på en enhed, en person eller en titel kan ikke længere forfalske en linje i loggen.
 - Et links ruteparameter kan ikke længere nå en anden API-sti end dens sides egen, og FinUIs elementbygger sætter kun en adresse, når den er http(s) eller relativ, aldrig `srcdoc`.
 - Søgning, offentliggjorte profiler og arbejde startet manuelt kan ikke længere holde FinStats optaget: en søgning stopper ved 200 tegn, en profil gemmes pr. sprog, kort venter i en kort kø, og et job, adresseopslaget, download af placeringsdatabasen og en testbesked starter kun med mellemrum, uanset hvordan der bedes om dem, testbeskeder talt pr. afsender. At hente placeringsdatabasen kræver også det, som læsning af siden Sikkerhed kræver.
+- Indholdet i en forespørgsel skal blive ved med at komme, når de første 15 sekunder er gået, et svar ingen læser, opgives efter 30 sekunder, og én adresse holder højst 64 forbindelser, en betroet proxy undtaget. Nogle hundrede forespørgsler, der aldrig sendte deres indhold, kunne forhindre FinStats i at svare nogen.
 
 ### Performance
 - En offentliggjort profil beregnes højst én gang i minuttet, ikke igen for hvert billede og kort på den.

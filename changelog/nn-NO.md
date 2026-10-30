@@ -52,6 +52,7 @@ som overskrift for heile serien.
 - Namnet på ein mottakar kan ikkje innehalde kontrollteikn, og namnet på ei eining, ein person eller ein tittel kan ikkje lenger forfalske ei linje i loggen.
 - Ein parameter i ei lenkje kan ikkje lenger nå ein annan API-sti enn sida sin eigen, og elementbyggjaren i FinUI set ei adresse berre når ho er http(s) eller relativ, aldri `srcdoc`.
 - Søk, publiserte profilar og arbeid starta for hand kan ikkje lenger halde FinStats oppteken: eit søk stoppar ved 200 teikn, ein profil vert lagra per språk, kort ventar i ein liten kø, og ein jobb, adresseoppslaget, nedlastinga av staddatabasen og ei testmelding startar berre så ofte, same korleis dei vert bedne om, og testmeldingar vert talde per avsendar. Å hente staddatabasen krev òg det Tryggleik-sida krev.
+- Innhaldet i ein førespurnad må halde fram med å kome når dei første 15 sekunda er over, eit svar ingen les, vert gjeve opp etter 30 sekund, og éi adresse held høgst 64 tilkoplingar, ein tiltrudd proxy unnateke. Nokre hundre førespurnader som aldri sende innhaldet sitt, kunne hindre FinStats i å svare nokon.
 
 ### Performance
 - Ein publisert profil vert rekna ut høgst éin gong i minuttet, ikkje på nytt for kvart bilete og kort på han.

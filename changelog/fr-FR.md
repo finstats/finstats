@@ -53,6 +53,7 @@ la série.
 - Le nom d’une destination ne peut contenir aucun caractère de contrôle, et le nom d’un appareil, d’une personne ou d’un titre ne peut plus forger une ligne dans le journal.
 - Le paramètre de route d’un lien ne peut plus atteindre un autre chemin d’API que celui de sa page, et le constructeur d’éléments de FinUI ne pose une adresse que si elle est en http(s) ou relative, jamais `srcdoc`.
 - La recherche, les profils publiés et le travail lancé à la main ne peuvent plus accaparer FinStats : une recherche s’arrête à 200 caractères, un profil est gardé par langue, les cartes attendent dans une file courte, et une tâche, la recherche d’adresse publique, le téléchargement de la base de localisation et un message de test ne se lancent qu’à intervalles limités, de quelque façon qu’on les demande, les messages de test étant comptés par expéditeur. Télécharger la base de localisation exige aussi ce qu’exige la lecture de la page Sécurité.
+- Le corps d'une requête doit continuer d'arriver une fois ses 15 premières secondes passées, une réponse que personne ne lit est abandonnée après 30 secondes, et une adresse tient au plus 64 connexions, un proxy de confiance mis à part. Quelques centaines de requêtes qui n'envoyaient jamais leur corps pouvaient empêcher FinStats de répondre à qui que ce soit.
 
 ### Performance
 - Un profil publié est calculé au plus une fois par minute, et non à nouveau pour chaque image et chaque carte qu’il contient.

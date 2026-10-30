@@ -32,6 +32,8 @@ tower-http = { version = "0.6", features = ["compression-gzip"] }
 # connection may not sit idle for ever (`main::serve_http`). All three are axum's own dependencies already.
 hyper = { version = "1", default-features = false, features = ["http1", "server"] }
 hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
+# The request body's rate is watched by a body of our own (`main::MinRate`); axum's own dependency already.
+http-body = "1"
 tower-service = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }

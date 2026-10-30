@@ -51,6 +51,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - Nafn viðtakanda má ekki innihalda stýristafi, og nafn tækis, manneskju eða titils getur ekki lengur falsað línu í atvikaskránni.
 - Leiðarbreyta tengils getur ekki lengur náð annarri API-slóð en eigin slóð síðunnar, og einingasmiður FinUI setur vistfang aðeins þegar það er http(s) eða afstætt, aldrei `srcdoc`.
 - Leit, opinberir prófílar og verk ræst handvirkt geta ekki lengur haldið FinStats uppteknu: leit stöðvast við 200 stafi, prófíll er geymdur fyrir hvert tungumál, spjöld bíða í stuttri biðröð, og verk, uppfletting vistfangs, niðurhal staðsetningargagnagrunnsins og prufuskilaboð ræsast aðeins með hæfilegu millibili hvernig sem beðið er um þau, og prufuskilaboð eru talin fyrir hvern sendanda. Að sækja staðsetningargagnagrunninn krefst líka þess sem lestur síðunnar Öryggi krefst.
+- Meginmál beiðni verður að halda áfram að berast þegar fyrstu 15 sekúndurnar eru liðnar, svar sem enginn les er gefið upp eftir 30 sekúndur, og eitt vistfang heldur í mesta lagi 64 tengingum, nema traustur milliþjónn. Nokkur hundruð beiðnir sem sendu aldrei meginmál sitt gátu komið í veg fyrir að FinStats svaraði nokkrum.
 
 ### Performance
 - Opinber prófíll er reiknaður út í mesta lagi einu sinni á mínútu, ekki aftur fyrir hverja mynd og hvert spjald á honum.
