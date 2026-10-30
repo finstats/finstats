@@ -61,6 +61,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Rozdział Razem w podsumowaniu wymienia tylko osoby, których odtwarzanie trwało obok twojego, jak strona Razem. Grupa, do której trafiło się przez kogoś innego, wymieniała ludzi, z którymi nigdy się nie oglądało.
 - Import z Jellystat lub Streamystats czyta cały plik, zanim zajmie blokadę zapisu bazy danych, a potem zapisuje tylko zachowane wiersze. Czytany pod blokadą plik z kilkoma prawdziwymi wierszami i gigabajtami czegokolwiek innego wstrzymywał każdy inny zapis, także odtworzenia i logowania.
 - Przywracanie trzyma jedno uprawnienie na osobę, dla nie więcej osób niż wielokrotność domostwa, i sprawdza wpis audytu pod kątem dubla bez czytania każdego wpisu, który właśnie zapisało. Spreparowana kopia mogła podczas przywracania coraz dłużej trzymać pamięć i blokadę zapisu bazy danych.
+- Przywracanie z ustawieniami włącza sprawdzanie adresu publicznego i pobieranie bazy lokalizacji tylko tam, gdzie ta instalacja też je ma włączone, i nigdy nie przechowuje mniej kopii ani nie zapisuje ich rzadziej niż ta instalacja. Kopia, która przechowywała jedną, mogła sprawić, że następne uruchomienie usuwało wszystkie inne.
 
 ### Performance
 - Opublikowany profil jest obliczany najwyżej raz na minutę, a nie od nowa dla każdego obrazka i karty na nim.

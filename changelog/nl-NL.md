@@ -62,6 +62,7 @@ de hele reeks.
 - Het hoofdstuk Samen in het jaaroverzicht noemt alleen wie naast jou keek, zoals de pagina Samen dat doet. Een groep waarin je via iemand anders terechtkwam, noemde mensen met wie je nooit keek.
 - Een import uit Jellystat of Streamystats leest het hele bestand voordat hij de schrijfvergrendeling van de database neemt, en schrijft daarna alleen de rijen die hij bewaart. Onder de vergrendeling gelezen hield een bestand met een paar echte rijen en gigabytes aan iets anders elke andere schrijfactie aan het wachten, afspelingen en aanmeldingen inbegrepen.
 - Een herstel houdt één recht per persoon vast, voor niet meer mensen dan een huishouden vele malen, en controleert een auditregel op dubbels zonder elke regel te lezen die het net schreef. Een gemaakte back-up kon tijdens het herstel geheugen en de schrijfvergrendeling van de database steeds langer vasthouden.
+- Een herstel met de instellingen zet het opzoeken van het openbare adres en het downloaden van de locatiedatabase alleen aan waar deze installatie ze ook aan heeft, en bewaart nooit minder back-ups of schrijft ze nooit minder vaak dan deze installatie. Een back-up die er één bewaarde, kon de volgende run alle andere laten verwijderen.
 
 ### Performance
 - Een gepubliceerd profiel wordt hooguit eens per minuut opgebouwd, niet opnieuw voor elke afbeelding en kaart erop.

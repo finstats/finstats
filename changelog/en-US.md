@@ -61,6 +61,7 @@ the app uses as the headline of the whole series.
 - The recap's Together chapter names only the people whose play ran beside your own, as the Together page does. A group joined through somebody else named people your play never met.
 - A Jellystat or Streamystats import reads its whole file before it takes the database's write lock, and then writes only the rows it keeps. Read under the lock, a file of a few real rows and gigabytes of anything else kept every other write waiting, plays and sign-ins included.
 - A restore holds one grant per person, for no more people than a household many times over, and checks an audit entry for a double without reading every entry it has just written. A crafted backup could hold memory and the database's write lock longer and longer as it was restored.
+- A restore with its settings switches on the public-address lookup and the location database download only where this install has them on too, and never keeps fewer backups or writes them less often than this install does. A backup that kept one could have the next run remove every other.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

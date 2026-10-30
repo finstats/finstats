@@ -61,6 +61,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Koosteen Yhdessä-luku nimeää vain ne, joiden toisto kulki omasi rinnalla, kuten Yhdessä-sivu. Ryhmä, johon päätyi jonkun toisen kautta, nimesi ihmisiä, joiden kanssa ei koskaan katsonut.
 - Jellystat- tai Streamystats-tuonti lukee koko tiedostonsa ennen kuin se ottaa tietokannan kirjoituslukon, ja kirjoittaa sitten vain säilyttämänsä rivit. Lukon alla luettuna tiedosto, jossa oli muutama oikea rivi ja gigatavuja mitä tahansa muuta, piti kaikki muut kirjoitukset odottamassa, toistot ja kirjautumiset mukaan lukien.
 - Palautus pitää yhden oikeuden henkilöä kohden, enintään monen talouden verran ihmisiä, ja tarkistaa tarkastusmerkinnän kaksoiskappaleen lukematta jokaista juuri kirjoittamaansa merkintää. Muokattu varmuuskopio saattoi palautettaessa pitää muistia ja tietokannan kirjoituslukkoa yhä pidempään.
+- Asetuksineen tehty palautus kytkee julkisen osoitteen haun ja sijaintitietokannan latauksen päälle vain, jos tässäkin asennuksessa ne ovat päällä, eikä koskaan säilytä vähemmän varmuuskopioita tai kirjoita niitä harvemmin kuin tämä asennus. Varmuuskopio, joka säilytti yhden, saattoi saada seuraavan ajon poistamaan kaikki muut.
 
 ### Performance
 - Julkaistu profiili lasketaan enintään kerran minuutissa, ei uudelleen jokaista sen kuvaa ja korttia varten.

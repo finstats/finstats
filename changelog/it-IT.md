@@ -62,6 +62,7 @@ usa come titolo dell’intera serie.
 - Il capitolo Insieme del riepilogo nomina solo le persone la cui visione è andata accanto alla tua, come fa la pagina Insieme. Un gruppo raggiunto tramite qualcun altro nominava persone con cui non avevi mai guardato.
 - Un'importazione da Jellystat o Streamystats legge l'intero file prima di prendere il blocco di scrittura del database, poi scrive solo le righe che tiene. Letto sotto il blocco, un file di poche righe vere e gigabyte di qualunque altra cosa teneva in attesa ogni altra scrittura, riproduzioni e accessi compresi.
 - Un ripristino tiene un permesso per persona, per non più persone di una famiglia molte volte, e controlla i doppioni di una voce di audit senza rileggere ogni voce appena scritta. Un backup costruito ad arte poteva trattenere memoria e il blocco di scrittura del database sempre più a lungo durante il ripristino.
+- Un ripristino con le impostazioni attiva la ricerca dell'indirizzo pubblico e il download del database delle posizioni solo dove anche questa installazione li ha attivi, e non tiene mai meno backup né li scrive meno spesso di questa installazione. Un backup che ne teneva uno poteva far rimuovere tutti gli altri al giro successivo.
 
 ### Performance
 - Un profilo pubblicato viene calcolato al massimo una volta al minuto, non di nuovo per ogni immagine e scheda che contiene.

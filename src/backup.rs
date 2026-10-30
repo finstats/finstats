@@ -357,8 +357,19 @@ fn narrow_grants(conn: &Connection, row: &Map<String, Value>, defaults: &[String
 /// The settings a restore brings back, never opening FinStats wider than `here` has it: who may sign in, what everyone
 /// is given and whether anything may be read without an account are what both say; the addresses FinStats sends people
 /// to (and puts in "Open in Jellyfin") stay this install's, and are the backup's only where this install has none.
-/// Everything else is the backup's.
+/// A connection to the outside (the public-address lookup, the location database) is on only where both have it on,
+/// and backups are kept no fewer and written no less often than here: `backup_keep: 1` in a file pruned every other
+/// backup at the next run. Everything else is the backup's.
 fn narrow_settings(here: &Settings, mut theirs: Settings) -> Settings {
+    theirs.public_ip_lookup &= here.public_ip_lookup;
+    theirs.geoip_download &= here.geoip_download;
+    theirs.backup_keep = theirs.backup_keep.max(here.backup_keep);
+    // 0 is off, which is the least often of all.
+    theirs.backup_every_d = match (here.backup_every_d, theirs.backup_every_d) {
+        (0, t) => t,
+        (h, 0) => h,
+        (h, t) => h.min(t),
+    };
     theirs.allow_user_login &= here.allow_user_login;
     theirs.public_profiles &= here.public_profiles;
     theirs.default_permissions.retain(|p| here.default_permissions.contains(p));
@@ -1244,6 +1255,23 @@ mod tests {
     }
     fn plays(db: &Db) -> i64 {
         db.conn().unwrap().query_row("SELECT COUNT(*) FROM playbacks", [], |r| r.get(0)).unwrap()
+    }
+
+    /// A restore switches on no connection to the outside this install has off, and never keeps fewer backups or writes
+    /// them less often than it does: `backup_keep: 1` in a file pruned every other backup at the next run.
+    #[test]
+    fn a_restore_neither_reaches_out_nor_keeps_fewer_backups_than_here() {
+        let here = Settings { public_ip_lookup: false, geoip_download: false, backup_keep: 10, backup_every_d: 1, ..Settings::default() };
+        let theirs = Settings { public_ip_lookup: true, geoip_download: true, backup_keep: 1, backup_every_d: 30, ..Settings::default() };
+        let got = narrow_settings(&here, theirs);
+        assert_eq!((got.public_ip_lookup, got.geoip_download), (false, false));
+        assert_eq!((got.backup_keep, got.backup_every_d), (10, 1));
+        let off = Settings { backup_every_d: 0, ..here.clone() };
+        assert_eq!(narrow_settings(&off, Settings { backup_every_d: 7, ..Settings::default() }).backup_every_d, 7, "off here, the backup's own schedule is more");
+        assert_eq!(narrow_settings(&here, Settings { backup_every_d: 0, ..Settings::default() }).backup_every_d, 1, "off in the file is less");
+        let on = Settings { public_ip_lookup: true, geoip_download: true, backup_keep: 3, ..Settings::default() };
+        let got = narrow_settings(&on, Settings { public_ip_lookup: true, geoip_download: false, backup_keep: 20, ..Settings::default() });
+        assert_eq!((got.public_ip_lookup, got.geoip_download, got.backup_keep), (true, false, 20), "what both have on, and more kept is the file's");
     }
 
     /// Settings brought back from a backup never open FinStats wider than it is: who may sign in, what everyone may see

@@ -61,6 +61,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Yıl özetinin Birlikte bölümü, tıpkı Birlikte sayfası gibi, yalnızca oynatması seninkiyle yan yana giden kişileri adlandırır. Başka biri aracılığıyla katıldığın bir grup, hiç birlikte izlemediğin kişileri adlandırıyordu.
 - Jellystat veya Streamystats içe aktarması, veritabanının yazma kilidini almadan önce dosyanın tamamını okur ve ardından yalnızca tuttuğu satırları yazar. Kilit altında okunduğunda, birkaç gerçek satır ve gigabaytlarca başka şeyden oluşan bir dosya, oynatmalar ve oturum açmalar dahil diğer tüm yazmaları bekletiyordu.
 - Geri yükleme kişi başına bir izin tutar, bir hanenin kat kat fazlasından çok kişi için değil, ve bir denetim kaydının kopyasını az önce yazdığı her kaydı okumadan arar. Hazırlanmış bir yedek, geri yükleme sırasında belleği ve veritabanının yazma kilidini giderek daha uzun tutabiliyordu.
+- Ayarlarıyla yapılan bir geri yükleme, genel adres sorgusunu ve konum veritabanı indirmesini yalnızca bu kurulumda da açık oldukları yerde açar ve bu kurulumdan asla daha az yedek tutmaz ya da yedekleri daha seyrek yazmaz. Bir yedek tutan bir yedek, sonraki çalıştırmanın diğer tümünü kaldırmasına yol açabiliyordu.
 
 ### Performance
 - Yayımlanmış bir profil, üzerindeki her resim ve kart için yeniden değil, en fazla dakikada bir kez hesaplanır.

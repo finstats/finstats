@@ -62,6 +62,7 @@ overskrift for hele serien.
 - Sammen-kapitlet i årsoversigten nævner kun dem, der så samtidig med dig, som Sammen-siden gør. En gruppe, du kom med i gennem en anden, nævnte folk, du aldrig så sammen med.
 - En import fra Jellystat eller Streamystats læser hele filen, før den tager databasens skrivelås, og skriver derefter kun de rækker, den beholder. Læst under låsen kunne en fil med få ægte rækker og gigabytes af hvad som helst andet holde al anden skrivning ventende, afspilninger og logins også.
 - En gendannelse holder én tilladelse pr. person, for ikke flere personer end en husstand mange gange, og tjekker en revisionspost for dubletter uden at læse hver post, den lige har skrevet. En konstrueret sikkerhedskopi kunne holde hukommelse og databasens skrivelås længere og længere under gendannelsen.
+- En gendannelse med indstillingerne slår opslaget af den offentlige adresse og hentningen af placeringsdatabasen til kun dér, hvor denne installation også har dem slået til, og gemmer aldrig færre sikkerhedskopier eller skriver dem sjældnere, end denne installation gør. En sikkerhedskopi, der gemte én, kunne få næste kørsel til at fjerne alle andre.
 
 ### Performance
 - En offentliggjort profil beregnes højst én gang i minuttet, ikke igen for hvert billede og kort på den.

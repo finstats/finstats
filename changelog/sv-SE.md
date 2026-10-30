@@ -61,6 +61,7 @@ har en kort titelrad under rubriken: den titeln använder appen som rubrik för 
 - Tillsammans-kapitlet i årsöversikten nämner bara dem som tittade samtidigt som du, som Tillsammans-sidan gör. En grupp du kom med i genom någon annan nämnde folk du aldrig tittade med.
 - En import från Jellystat eller Streamystats läser hela filen innan den tar databasens skrivlås och skriver sedan bara de rader den behåller. Läst under låset kunde en fil med några få riktiga rader och gigabyte av vad som helst annat hålla all annan skrivning väntande, uppspelningar och inloggningar också.
 - En återställning håller en behörighet per person, för inte fler personer än ett hushåll många gånger om, och kontrollerar en granskningspost för dubbletter utan att läsa varje post den just har skrivit. En konstruerad säkerhetskopia kunde hålla minne och databasens skrivlås längre och längre under återställningen.
+- En återställning med inställningarna slår på uppslaget av den offentliga adressen och hämtningen av platsdatabasen bara där den här installationen också har dem på, och sparar aldrig färre säkerhetskopior eller skriver dem mer sällan än den här installationen gör. En säkerhetskopia som sparade en kunde få nästa körning att ta bort alla andra.
 
 ### Performance
 - En publicerad profil räknas fram högst en gång i minuten, inte på nytt för varje bild och kort på den.

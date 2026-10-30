@@ -1223,6 +1223,10 @@ Learned from real exports; also documented at the top of `import.rs`.
     and among the restore's own by hash. Every grant row was held and applied in the final transaction, and each audit
     row was compared with every one the restore had written at the same moment, so later batches held the lock longer
     and longer.
+12. **A restore with its settings reaches out no further and keeps no fewer backups than this install**
+    (`narrow_settings`): the public-address lookup and the location download are on only where both have them on,
+    `backup_keep` is the larger and `backup_every_d` the more often (0 being off). The owner's decision, 2026-10-30:
+    `backup_keep: 1` in a file pruned every other backup at the next run.
 
 ## Trash (`trash.rs`, migration 37, 2.2.0)
 
