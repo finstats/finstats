@@ -61,6 +61,7 @@ kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 - Die Poster von Sonarr und Radarr und die nächste Folge auf der Merkliste folgen ebenfalls dem Bibliothekszugriff: Eine Serie, die Jellyfin vor jemandem verbirgt, hat für diese Person weder Poster noch Datum. Das Durchzählen der IDs der Dienste verriet, welche verborgenen Serien kamen, und eine Liste nannte die nächste Folge einer verborgenen Serie.
 - Das Kapitel Gemeinsam im Jahresrückblick nennt nur die Personen, deren Wiedergabe neben deiner lief, wie die Seite Gemeinsam. Eine Gruppe, in die man über jemand anderen kam, nannte Leute, neben denen man nie geschaut hatte.
 - Ein Import aus Jellystat oder Streamystats liest die ganze Datei, bevor er die Schreibsperre der Datenbank nimmt, und schreibt dann nur die Zeilen, die er behält. Unter der Sperre gelesen, ließ eine Datei aus wenigen echten Zeilen und Gigabytes von irgendetwas anderem jedes andere Schreiben warten, Wiedergaben und Anmeldungen eingeschlossen.
+- Eine Wiederherstellung hält eine Berechtigung pro Person, für nicht mehr Personen als ein Haushalt um ein Vielfaches, und prüft einen Protokolleintrag auf Doppel, ohne jeden gerade geschriebenen Eintrag zu lesen. Eine präparierte Sicherung konnte beim Wiederherstellen Speicher und die Schreibsperre der Datenbank immer länger halten.
 
 ### Performance
 - Ein veröffentlichtes Profil wird höchstens einmal pro Minute berechnet, nicht erneut für jedes Bild und jede Karte darauf.

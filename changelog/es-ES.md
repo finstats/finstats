@@ -61,6 +61,7 @@ bajo su encabezado: ese título es el que la aplicación usa como titular de tod
 - Los pósteres de Sonarr y Radarr, y el próximo episodio de una lista de deseos, siguen también el acceso a las bibliotecas: una serie que Jellyfin oculta a alguien no tiene para esa persona ni póster ni fecha. Contar los identificadores de los servicios revelaba qué series ocultas llegaban, y una lista nombraba el próximo episodio de una serie oculta.
 - El capítulo En compañía del resumen solo nombra a las personas cuya reproducción coincidió con la tuya, como hace la página En compañía. Un grupo al que llegaste por otra persona nombraba a gente con la que nunca viste nada.
 - Una importación de Jellystat o Streamystats lee todo su archivo antes de tomar el bloqueo de escritura de la base de datos y después solo escribe las filas que conserva. Leído bajo el bloqueo, un archivo de unas pocas filas reales y gigabytes de cualquier otra cosa dejaba esperando cualquier otra escritura, reproducciones e inicios de sesión incluidos.
+- Una restauración guarda un permiso por persona, para no más personas que un hogar muchas veces, y busca duplicados de una entrada de auditoría sin leer cada entrada que acaba de escribir. Una copia de seguridad fabricada podía retener memoria y el bloqueo de escritura de la base de datos cada vez más tiempo durante la restauración.
 
 ### Performance
 - Un perfil publicado se calcula como mucho una vez por minuto, no de nuevo para cada imagen y tarjeta que contiene.

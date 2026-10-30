@@ -60,6 +60,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - Veggspjöld frá Sonarr og Radarr og næsti þáttur á óskalista fylgja líka aðgangi að söfnum: þáttaröð sem Jellyfin felur fyrir einhverjum hefur hvorki veggspjald né dagsetningu fyrir viðkomandi. Að telja auðkenni þjónustanna sýndi hvaða faldar þáttaraðir voru á leiðinni, og listi nefndi næsta þátt faldrar þáttaraðar.
 - Kaflinn Saman í ársyfirlitinu nefnir aðeins þá sem spiluðu samhliða þér, eins og síðan Saman gerir. Hópur sem þú lentir í gegnum einhvern annan nefndi fólk sem þú horfðir aldrei með.
 - Innflutningur úr Jellystat eða Streamystats les alla skrána áður en hann tekur skriflás gagnagrunnsins og skrifar svo aðeins línurnar sem hann heldur. Lesin undir lásnum gat skrá með fáeinum raunverulegum línum og gígabætum af hverju sem er öðru látið öll önnur skrif bíða, spilanir og innskráningar meðtaldar.
+- Endurheimt heldur einni heimild á mann, fyrir ekki fleiri en heimili margfalt, og leitar að tvítekningu færslu í atvikaskrá án þess að lesa hverja færslu sem hún var að skrifa. Smíðað afrit gat haldið minni og skriflási gagnagrunnsins lengur og lengur meðan það var endurheimt.
 
 ### Performance
 - Opinber prófíll er reiknaður út í mesta lagi einu sinni á mínútu, ekki aftur fyrir hverja mynd og hvert spjald á honum.

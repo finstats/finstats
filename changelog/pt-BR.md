@@ -61,6 +61,7 @@ manchete de toda a série.
 - Os pôsteres do Sonarr e do Radarr, e o próximo episódio de uma lista de desejos, também seguem o acesso às bibliotecas: uma série que o Jellyfin esconde de alguém não tem para essa pessoa nem pôster nem data. Contar os ids dos serviços revelava quais séries escondidas estavam chegando, e uma lista nomeava o próximo episódio de uma série escondida.
 - O capítulo Juntos da retrospectiva nomeia só as pessoas cuja reprodução correu ao lado da sua, como faz a página Juntos. Um grupo em que você entrou por outra pessoa nomeava gente com quem você nunca assistiu.
 - Uma importação do Jellystat ou Streamystats lê o arquivo inteiro antes de pegar o bloqueio de escrita do banco de dados e depois grava só as linhas que mantém. Lido sob o bloqueio, um arquivo de poucas linhas reais e gigabytes de qualquer outra coisa deixava esperando qualquer outra escrita, reproduções e entradas incluídas.
+- Uma restauração guarda uma permissão por pessoa, para no máximo muitas vezes as pessoas de uma casa, e procura duplicatas de uma entrada de auditoria sem ler cada entrada que acabou de gravar. Um backup forjado podia segurar memória e o bloqueio de escrita do banco de dados por cada vez mais tempo durante a restauração.
 
 ### Performance
 - Um perfil publicado é calculado no máximo uma vez por minuto, e não de novo para cada imagem e cartão nele.

@@ -535,7 +535,11 @@ struct Restoring {
     // Old play id: the id it got here. Plays that were already present are absent: their timeline is too.
     play_ids: HashMap<i64, i64>,
     settings_raw: Option<String>,
-    grants: Vec<Map<String, Value>>,
+    /// One grant row per person, the narrowest the file gives them ([`hold_grant`]).
+    grants: HashMap<String, Map<String, Value>>,
+    /// Audit rows at or past this id are the restore's own; a double is looked for below it, and among those by hash.
+    audit_from: i64,
+    audit_written: HashSet<u64>,
     // Timeline rows restored per play (by its id here), never past what the collector keeps of one.
     events_of: HashMap<i64, usize>,
 }
@@ -557,7 +561,9 @@ fn restore_within(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tas
         known,
         play_ids: HashMap::new(),
         settings_raw: None,
-        grants: vec![],
+        grants: HashMap::new(),
+        audit_from: conn.query_row("SELECT COALESCE(MAX(id), 0) + 1 FROM audit", [], |r| r.get(0))?,
+        audit_written: HashSet::new(),
         events_of: HashMap::new(),
     };
     let (mut batch, mut bytes): (Vec<Value>, usize) = (vec![], 0);
@@ -599,7 +605,7 @@ fn restore_within(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tas
             }
         }
         let defaults = Settings::load(&tx)?.default_permissions;
-        for row in &st.grants {
+        for row in st.grants.values() {
             if narrow_grants(&tx, row, &defaults)? {
                 res.other_rows += 1;
             }
@@ -617,6 +623,35 @@ fn restore_within(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tas
     // Who watched together is derived data with a transaction of its own; the restore itself is already safe.
     crate::groups::detect(&mut conn, settings.group_window_s, None)?;
     Ok(res)
+}
+
+/// Whether an audit row is already written down, among the rows this install had before the restore (`?7` is where the
+/// restore's own begin): a row with the same moment was otherwise compared with every one the restore had written, and a
+/// file of rows sharing one moment made each check longer than the last. The restore's own are known by hash.
+const AUDIT_DOUBLE: &str = "SELECT COUNT(*) FROM audit WHERE at = ?1 AND id < ?7 AND kind = ?2 AND COALESCE(user_id, '') = COALESCE(?3, '')
+     AND COALESCE(target, '') = COALESCE(?4, '') AND detail IN (?5, ?6)";
+
+/// The most people a restore holds grants for: a household many times over. Past it, a row for somebody new is left out.
+const GRANTS_HELD: usize = 10_000;
+
+/// Hold one grant row until the settings are in place: one per person, the narrowest of what the rows say for them,
+/// since a restore only ever narrows ([`narrow_grants`]). Every row was held, and applied in the restore's last
+/// transaction, so a file of grant rows held memory and the write lock in proportion.
+fn hold_grant(held: &mut HashMap<String, Map<String, Value>>, row: &Map<String, Value>) {
+    let Some(user) = row.get("user_id").and_then(Value::as_str) else { return };
+    let list = |r: &Map<String, Value>| serde_json::from_str::<Vec<String>>(r.get("permissions").and_then(Value::as_str).unwrap_or("[]")).unwrap_or_default();
+    let room = held.len() < GRANTS_HELD;
+    match held.get_mut(user) {
+        Some(kept) => {
+            let theirs = list(row);
+            let both: Vec<String> = list(kept).into_iter().filter(|p| theirs.contains(p)).collect();
+            kept.insert("permissions".into(), json!(serde_json::to_string(&both).unwrap_or_else(|_| "[]".into())));
+        }
+        None if room => {
+            held.insert(user.to_string(), row.clone());
+        }
+        None => {}
+    }
 }
 
 /// Write one row of the backup.
@@ -691,7 +726,7 @@ fn apply(tx: &Connection, v: &Value, st: &mut Restoring) -> Result<()> {
         // against are in place.
         "user_permissions" => {
             if st.with_settings {
-                st.grants.push(row.clone());
+                hold_grant(&mut st.grants, row);
             }
         }
         // Which addresses are home decides which plays are local and where "home" is on the map: a setting, so only with
@@ -732,14 +767,27 @@ fn apply(tx: &Connection, v: &Value, st: &mut Restoring) -> Result<()> {
             let get = |k: &str| row.get(k).cloned().unwrap_or(Value::Null);
             let detail = get("detail");
             let marked = restored_detail(detail.as_str().unwrap_or("{}"), st.res.from_version.as_deref().unwrap_or("unknown"));
+            let key = {
+                use std::hash::{Hash, Hasher};
+                let mut h = std::collections::hash_map::DefaultHasher::new();
+                for k in ["at", "kind", "user_id", "target"] {
+                    get(k).to_string().hash(&mut h);
+                }
+                marked.hash(&mut h);
+                h.finish()
+            };
+            if st.audit_written.contains(&key) {
+                return Ok(());
+            }
             let dup: i64 = tx.query_row(
-                "SELECT COUNT(*) FROM audit WHERE at = ?1 AND kind = ?2 AND COALESCE(user_id, '') = COALESCE(?3, '') AND COALESCE(target, '') = COALESCE(?4, '') AND detail IN (?5, ?6)",
-                params_from_iter([sql_value(&get("at")), sql_value(&get("kind")), sql_value(&get("user_id")), sql_value(&get("target")), sql_value(&detail), SqlValue::from(marked.clone())].iter()),
+                AUDIT_DOUBLE,
+                params_from_iter([sql_value(&get("at")), sql_value(&get("kind")), sql_value(&get("user_id")), sql_value(&get("target")), sql_value(&detail), SqlValue::from(marked.clone()), SqlValue::from(st.audit_from)].iter()),
                 |r| r.get(0),
             )?;
             let mut row = row.clone();
             row.insert("detail".into(), json!(marked));
             if dup == 0 && insert_row(tx, "audit", &st.known["audit"], &row, &["id"], "INSERT")? {
+                st.audit_written.insert(key);
                 st.res.other_rows += 1;
             }
         }
@@ -1351,6 +1399,46 @@ mod tests {
         assert_eq!(plays(&target2), 0);
         let _ = std::fs::remove_dir_all(&tmp);
         let _ = std::fs::remove_dir_all(&tmp2);
+    }
+
+    /// However many grant rows a backup holds, one entry is held per person, the narrowest of what they say, and no
+    /// more people than any household has: every row was held, and applied in the restore's last transaction.
+    #[test]
+    fn grants_are_held_once_per_person_and_never_past_a_household() {
+        let mut held = HashMap::new();
+        let row = |user: &str, perms: &str| json!({ "user_id": user, "permissions": perms, "updated_at": 5 }).as_object().unwrap().clone();
+        hold_grant(&mut held, &row("u1", r#"["see_everyone","manage"]"#));
+        for _ in 0..1000 {
+            hold_grant(&mut held, &row("u1", r#"["see_everyone","see_network"]"#));
+        }
+        assert_eq!(held.len(), 1);
+        assert_eq!(held["u1"]["permissions"], json!(r#"["see_everyone"]"#), "the narrowest of what the rows say");
+        for n in 0..GRANTS_HELD + 50 {
+            hold_grant(&mut held, &row(&format!("p{n}"), "[]"));
+        }
+        assert_eq!(held.len(), GRANTS_HELD);
+    }
+
+    /// An audit row is checked against what this install had before the restore, and against the restore's own rows by
+    /// a hash, never against every row it wrote with the same time: a file of rows sharing one moment made each check
+    /// longer than the last.
+    #[test]
+    fn an_audit_row_is_checked_for_doubles_without_reading_what_the_restore_wrote() {
+        let c = db::Db::open_in_memory().unwrap().conn().unwrap();
+        let plan: Vec<String> = c.prepare(&format!("EXPLAIN QUERY PLAN {AUDIT_DOUBLE}")).unwrap().query_map(params_from_iter(std::iter::repeat_n(SqlValue::Null, 7)), |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
+        let plan = plan.join(" | ");
+        assert!(plan.contains("idx_audit_at (at=? AND rowid<?)"), "{plan}");
+        let (tmp, target, file) = restoring("backup-audit-doubles", &[
+            json!({ "finstats_backup": FORMAT, "app_version": "2.3.1" }),
+            json!({ "t": "audit", "r": { "id": 1, "at": 1_700_000_000i64, "kind": "sign_in", "user_id": "u1", "target": "a", "detail": "{}" } }),
+            json!({ "t": "audit", "r": { "id": 2, "at": 1_700_000_000i64, "kind": "sign_in", "user_id": "u1", "target": "a", "detail": "{}" } }),
+            json!({ "t": "audit", "r": { "id": 3, "at": 1_700_000_000i64, "kind": "sign_in", "user_id": "u1", "target": "b", "detail": "{}" } }),
+        ]);
+        restore(&target, &file, false, None).unwrap();
+        restore(&target, &file, false, None).unwrap();
+        let n: i64 = target.conn().unwrap().query_row("SELECT COUNT(*) FROM audit WHERE kind = 'sign_in'", [], |r| r.get(0)).unwrap();
+        assert_eq!(n, 2, "a double in the file, or the same file twice");
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 
     /// A row of the server log or a device from no time FinStats ran at is not restored: one dated in years to come froze

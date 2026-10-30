@@ -1217,6 +1217,12 @@ Learned from real exports; also documented at the top of `import.rs`.
    minutes (`STALE_PART`) was a killed backup and is removed; a fresher one may be `finstats backup` running beside the server.
 10. **A backup a manager runs by hand is pruned in its own pool** (settings key `backups_requested`, not exported), each
     pool keeping `backup_keep`: counted together, a few runs a minute apart pushed out every restore point the administrator had.
+11. **What a restore holds until its last transaction is bounded**: grant rows are held one per person, the narrowest the
+    file gives them, and for at most `GRANTS_HELD` (10,000) people (`hold_grant`); an audit row is checked for a double
+    only among the rows this install had before the restore (`AUDIT_DOUBLE`, `id < audit_from`, through `idx_audit_at`)
+    and among the restore's own by hash. Every grant row was held and applied in the final transaction, and each audit
+    row was compared with every one the restore had written at the same moment, so later batches held the lock longer
+    and longer.
 
 ## Trash (`trash.rs`, migration 37, 2.2.0)
 

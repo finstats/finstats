@@ -61,6 +61,7 @@ series.
 - Sonarr's and Radarr's posters, and a watchlist's next episode, follow library access too: a show Jellyfin hides from somebody has neither poster nor date for them. Counting the services' ids told which hidden shows were coming, and a list named a hidden show's next episode.
 - The recap's Together chapter names only the people whose play ran beside your own, as the Together page does. A group joined through somebody else named people your play never met.
 - A Jellystat or Streamystats import reads its whole file before it takes the database's write lock, and then writes only the rows it keeps. Read under the lock, a file of a few real rows and gigabytes of anything else kept every other write waiting, plays and sign-ins included.
+- A restore holds one grant per person, for no more people than a household many times over, and checks an audit entry for a double without reading every entry it has just written. A crafted backup could hold memory and the database's write lock longer and longer as it was restored.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

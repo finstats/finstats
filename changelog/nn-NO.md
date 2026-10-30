@@ -61,6 +61,7 @@ som overskrift for heile serien.
 - Plakatane frå Sonarr og Radarr og ønskjelista sin neste episode følgjer òg bibliotektilgangen: ein serie Jellyfin gøymer for nokon, har verken plakat eller dato for dei. Å telje ID-ane til tenestene avslørte kva gøymde seriar som kom, og ei liste nemnde neste episode av ein gøymd serie.
 - Saman-kapittelet i årsoversikta nemner berre dei som såg samstundes med deg, slik Saman-sida gjer. Ei gruppe du kom inn i gjennom nokon andre, nemnde folk du aldri såg saman med.
 - Ein import frå Jellystat eller Streamystats les heile fila før han tek skrivelåsen i databasen, og skriv så berre radene han held på. Lesen under låsen kunne ei fil med nokre få ekte rader og gigabyte med kva som helst anna halde all anna skriving ventande, avspelingar og innloggingar òg.
+- Ei gjenoppretting held éin tilgang per person, for ikkje fleire personar enn eit hushald mange gonger over, og sjekkar ei revisjonsoppføring for dobbel utan å lese kvar oppføring ho nett har skrive. Ein laga tryggleikskopi kunne halde minne og skrivelåsen i databasen lenger og lenger medan han vart gjenoppretta.
 
 ### Performance
 - Ein publisert profil vert rekna ut høgst éin gong i minuttet, ikkje på nytt for kvart bilete og kort på han.

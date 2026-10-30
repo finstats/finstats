@@ -60,6 +60,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Sonarr ve Radarr afişleri ile istek listesindeki sonraki bölüm de kitaplık erişimine uyar: Jellyfin'in birinden gizlediği bir dizinin o kişi için ne afişi ne de tarihi vardır. Hizmetlerin kimliklerini saymak hangi gizli dizilerin geldiğini ele veriyordu ve bir liste gizli bir dizinin sonraki bölümünü söylüyordu.
 - Yıl özetinin Birlikte bölümü, tıpkı Birlikte sayfası gibi, yalnızca oynatması seninkiyle yan yana giden kişileri adlandırır. Başka biri aracılığıyla katıldığın bir grup, hiç birlikte izlemediğin kişileri adlandırıyordu.
 - Jellystat veya Streamystats içe aktarması, veritabanının yazma kilidini almadan önce dosyanın tamamını okur ve ardından yalnızca tuttuğu satırları yazar. Kilit altında okunduğunda, birkaç gerçek satır ve gigabaytlarca başka şeyden oluşan bir dosya, oynatmalar ve oturum açmalar dahil diğer tüm yazmaları bekletiyordu.
+- Geri yükleme kişi başına bir izin tutar, bir hanenin kat kat fazlasından çok kişi için değil, ve bir denetim kaydının kopyasını az önce yazdığı her kaydı okumadan arar. Hazırlanmış bir yedek, geri yükleme sırasında belleği ve veritabanının yazma kilidini giderek daha uzun tutabiliyordu.
 
 ### Performance
 - Yayımlanmış bir profil, üzerindeki her resim ve kart için yeniden değil, en fazla dakikada bir kez hesaplanır.

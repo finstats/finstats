@@ -62,6 +62,7 @@ la série.
 - Les affiches de Sonarr et Radarr, et le prochain épisode d'une liste de souhaits, suivent aussi l'accès aux bibliothèques : une série que Jellyfin cache à quelqu'un n'a pour lui ni affiche ni date. Compter les identifiants des services révélait quelles séries cachées arrivaient, et une liste nommait le prochain épisode d'une série cachée.
 - Le chapitre Ensemble du bilan ne nomme que les personnes dont la lecture a tourné à côté de la vôtre, comme la page Ensemble. Un groupe rejoint par quelqu'un d'autre nommait des gens avec qui vous n'aviez jamais regardé.
 - Une importation Jellystat ou Streamystats lit tout son fichier avant de prendre le verrou d'écriture de la base, puis n'écrit que les lignes qu'elle garde. Lu sous le verrou, un fichier de quelques vraies lignes et de gigaoctets d'autre chose faisait attendre toute autre écriture, lectures et connexions comprises.
+- Une restauration garde une autorisation par personne, pour pas plus de personnes qu'un foyer bien des fois, et cherche un doublon d'une entrée d'audit sans relire chaque entrée qu'elle vient d'écrire. Une sauvegarde fabriquée pouvait retenir la mémoire et le verrou d'écriture de la base de plus en plus longtemps pendant la restauration.
 
 ### Performance
 - Un profil publié est calculé au plus une fois par minute, et non à nouveau pour chaque image et chaque carte qu’il contient.

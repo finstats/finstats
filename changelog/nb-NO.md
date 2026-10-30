@@ -60,6 +60,7 @@ den tittelen bruker appen som overskrift for hele serien.
 - Plakatene fra Sonarr og Radarr og ønskelistens neste episode følger også bibliotektilgangen: en serie Jellyfin skjuler for noen, har verken plakat eller dato for dem. Å telle tjenestenes ID-er avslørte hvilke skjulte serier som kom, og en liste nevnte neste episode av en skjult serie.
 - Sammen-kapittelet i årsoversikten nevner bare dem som så samtidig med deg, slik Sammen-siden gjør. En gruppe du kom inn i gjennom noen andre, nevnte folk du aldri så sammen med.
 - En import fra Jellystat eller Streamystats leser hele filen før den tar skrivelåsen i databasen, og skriver så bare radene den beholder. Lest under låsen kunne en fil med noen få ekte rader og gigabyte med hva som helst annet holde all annen skriving ventende, avspillinger og innlogginger også.
+- En gjenoppretting holder én tilgang per person, for ikke flere personer enn en husstand mange ganger over, og sjekker en revisjonsoppføring for dobbel uten å lese hver oppføring den nettopp har skrevet. En laget sikkerhetskopi kunne holde minne og databasens skrivelås lenger og lenger mens den ble gjenopprettet.
 
 ### Performance
 - En publisert profil regnes ut høyst én gang i minuttet, ikke på nytt for hvert bilde og kort på den.
