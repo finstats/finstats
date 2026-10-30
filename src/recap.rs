@@ -245,7 +245,11 @@ fn together(c: &Connection, w: &Window, user: Option<&str>, until: Option<i64>, 
     let end = until.map_or(w.to, |u| u.min(w.to));
     let window = crate::groups::Window { since: Some(w.from), until: Some(end) };
     let people: Vec<String> = user.map(|u| vec![u.to_string()]).unwrap_or_default();
-    let sessions = crate::groups::sessions_for(c, &window, None, &people)?;
+    // One person's year names only the people their own play ran beside, as the Together page tells it ("Groups" 8).
+    let sessions = match user {
+        Some(_) => crate::groups::sessions_met_by(c, &window, None, &people)?,
+        None => crate::groups::sessions_for(c, &window, None, &people)?,
+    };
     let mine: Vec<&crate::groups::Session> = sessions
         .iter()
         .filter(|s| user.is_none_or(|u| s.per_user.contains_key(u)))
@@ -956,6 +960,22 @@ mod tests {
         assert_eq!(names, ["bob", "carol"], "most evenings first");
         // Nobody else in the year: no chapter.
         assert!(year_of(&c, Some("ua"), "2024")["together"].is_null());
+    }
+
+    /// The recap names only the people whose own play ran beside the person's, as the Together page does: a group joined
+    /// through somebody else named people their play never met, and gave that person's evening to them by name.
+    #[test]
+    fn together_names_only_who_the_persons_own_play_met() {
+        let c = year_db();
+        let a = play(&c, "ua", "m1", "Movie", "2025-03-01", 180, None);
+        c.execute("UPDATE playbacks SET group_id = ?1 WHERE id = ?1", [a]).unwrap();
+        let b = play(&c, "ub", "m1", "Movie", "2025-03-01", 5000, Some(a));
+        let m = play(&c, "uc", "m1", "Movie", "2025-03-01", 5000, Some(a));
+        c.execute("UPDATE playbacks SET started_at = started_at + 5, ended_at = ended_at + 5 WHERE id = ?1", [b]).unwrap();
+        c.execute("UPDATE playbacks SET started_at = started_at + 64, ended_at = ended_at + 64 WHERE id = ?1", [m]).unwrap();
+        let t = &year_of(&c, Some("ua"), "2025")["together"];
+        let names: Vec<&str> = t["companions"].as_array().unwrap().iter().map(|p| p["user_name"].as_str().unwrap()).collect();
+        assert_eq!(names, ["bob"], "carol's play ran beside alice's for 116 s, under the two minutes that make company: {t}");
     }
 
     fn show(c: &Connection, id: &str, name: &str, episodes: &[&str]) {

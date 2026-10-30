@@ -793,6 +793,9 @@ Learned from real exports; also documented at the top of `import.rs`.
 8. `recap::announce_ready` tells each person who watched in December, once (`notify:recap:{year}:{user}`).
 9. Cards (Recap, public profile) are drawn in a language their font has letters for (`i18n::drawable`: Japanese, Korean,
    Chinese and Hindi draw in en-GB).
+10. **One person's Together chapter names only who their own play met** (`together` reads `groups::sessions_met_by` for a
+    person, `sessions_for` only for the whole server's year, which names nobody), as the Together page does without
+    `see_everyone` ("Groups" 8): the whole group, joined through somebody else, named people their play never ran beside.
 
 ## Library health (`health.rs`, Server → Library health, `/server/health`, 2.2.0)
 
