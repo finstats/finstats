@@ -178,12 +178,28 @@ pub(crate) const ORPHANS_SQL: &str = "WITH RECURSIVE t(id) AS (
         SELECT (SELECT MIN(item_id) FROM playbacks WHERE item_id > t.id) FROM t WHERE t.id IS NOT NULL)
     SELECT id FROM t WHERE id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM items live WHERE live.id = t.id AND live.removed = 0)";
 
+/// How long the plays of a library that went missing from Jellyfin's list wait before they are moved onto another
+/// library's copy of their title: one list that left a library out (a bad answer, or an administrator taking it out and
+/// putting it back) moved them at once, and they stayed moved when it came back with the same ids. A library still gone
+/// after this long is gone.
+const LIBRARY_GONE_WAIT_S: i64 = 2 * 86_400;
+
 /// `merge_window_s` is asked for rather than read here so that a caller cannot forget it: the one
 /// thing that rewrites `item_id` is the one thing that can turn an imported play into a duplicate
 /// of a play already here, and the rule has to be re-applied where the ids move.
 pub fn relink_orphans(conn: &Connection, merge_window_s: i64) -> Result<Relinked> {
     let mut done = Relinked::default();
-    let orphaned: Vec<String> = conn.prepare(ORPHANS_SQL)?.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?;
+    let mut orphaned: Vec<String> = conn.prepare(ORPHANS_SQL)?.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?;
+    // A title whose whole library went missing only lately waits ([`LIBRARY_GONE_WAIT_S`]).
+    let lately = crate::db::now() - LIBRARY_GONE_WAIT_S;
+    let mut waits = conn.prepare_cached("SELECT 1 FROM items i JOIN libraries l ON l.id = i.library_id WHERE i.id = ?1 AND l.removed = 1 AND l.updated_at > ?2")?;
+    let mut keep = Vec::with_capacity(orphaned.len());
+    for id in orphaned.drain(..) {
+        if !waits.exists(params![id, lately])? {
+            keep.push(id);
+        }
+    }
+    let orphaned = keep;
     if orphaned.is_empty() {
         return Ok(done);
     }
@@ -535,6 +551,32 @@ mod tests {
         assert_eq!(found, ["gone", "never"]);
         let plan: Vec<String> = c.prepare(&format!("EXPLAIN QUERY PLAN {ORPHANS_SQL}")).unwrap().query_map([], |r| r.get::<_, String>(3)).unwrap().map(Result::unwrap).collect();
         assert!(!plan.iter().any(|p| p.starts_with("SCAN playbacks")), "{plan:?}");
+    }
+
+    /// A library missing from one list of libraries (a bad answer, or one an administrator took out and put back) keeps
+    /// its plays for a while: moved onto another library's copy of the same film at once, they stayed there when the library
+    /// came back with the same ids. Gone for longer than that, they are relinked as any other.
+    #[test]
+    fn plays_of_a_library_that_just_went_missing_wait_before_they_are_relinked() {
+        let mut c = migrated();
+        let now = crate::db::now();
+        c.execute_batch(&format!(
+            "INSERT INTO libraries(id, name, removed, updated_at) VALUES ('films', 'Films', 0, {now}), ('films4k', 'Films 4K', 0, {now});
+             INSERT INTO items(id, type, name, production_year, provider_ids, library_id, updated_at) VALUES
+                ('hd', 'Movie', 'Big Buck Bunny', 2008, '{{\"Tmdb\":\"10378\"}}', 'films', {now}),
+                ('uhd', 'Movie', 'Big Buck Bunny', 2008, '{{\"Tmdb\":\"10378\"}}', 'films4k', {now});
+             INSERT INTO playbacks(id, source, user_id, user_name, item_id, item_name, item_type, library_id, started_at, ended_at, duration_s)
+                VALUES (1, 'live', 'u', 'u', 'hd', 'Big Buck Bunny (2008) [tmdbid-10378]', 'Movie', 'films', 0, 10, 10);"
+        ))
+        .unwrap();
+        let lists_only_4k = [serde_json::json!({ "id": "films4k", "name": "Films 4K", "collection_type": "movies" })];
+        assert_eq!(crate::sync::store_libraries(&mut c, &lists_only_4k, false, now + 1).unwrap(), None);
+        relink_orphans(&c, 600).unwrap();
+        let on = |c: &Connection| -> String { c.query_row("SELECT item_id FROM playbacks WHERE id = 1", [], |r| r.get(0)).unwrap() };
+        assert_eq!(on(&c), "hd", "a library one list left out took its plays to the 4K copy");
+        c.execute("UPDATE libraries SET updated_at = ?1 WHERE id = 'films'", [now - 3 * 86_400]).unwrap();
+        relink_orphans(&c, 600).unwrap();
+        assert_eq!(on(&c), "uhd", "a library gone for days lends its plays to the copy that is there");
     }
 
     #[test]

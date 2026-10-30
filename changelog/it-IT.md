@@ -92,6 +92,7 @@ usa come titolo dell’intera serie.
 - I backup vengono nominati in UTC e non sovrascrivono mai un file esistente, e vengono eliminate solo le copie pre-aggiornamento di FinStats stesso.
 - Una riga del registro del server datata nel futuro non impedisce più la lettura del registro attività: viene letto dalla sua riga più recente che non sia nel futuro.
 - Le richieste che arrivano insieme su un link pubblicato calcolano la risposta una sola volta, e le sue schede vengono disegnate in una corsia a parte, così chi ha il link non può più far rispondere 503 alle schede del Riepilogo del proprietario.
+- Le riproduzioni di una libreria che manca dall'elenco delle librerie di Jellyfin aspettano due giorni prima di passare alla copia dello stesso titolo in un'altra libreria. Un solo elenco che tralasciava una libreria le spostava subito, e restavano spostate quando la libreria tornava.
 
 ### Fixed
 - Gli accessi non riusciti su un account sono un solo avvertimento per finestra, che diventa un avviso a venti, e un nome conta contro un account solo se scritto per intero (“x alice” non conta più contro alice).

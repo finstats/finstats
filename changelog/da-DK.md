@@ -92,6 +92,7 @@ overskrift for hele serien.
 - Sikkerhedskopier navngives i UTC og skrives aldrig over en eksisterende fil, og kun FinStats’ egne kopier fra før en opdatering ryddes op.
 - En række i serverloggen dateret i fremtiden stopper ikke længere læsningen af aktivitetsloggen: den læses fra dens nyeste række, der ikke ligger i fremtiden.
 - Forespørgsler, der ankommer samtidig på et offentliggjort link, beregner dets svar én gang, og dets kort tegnes i deres egen bane, så en, der har linket, ikke længere kan få ejerens Tilbageblik-kort til at svare 503.
+- Afspilningerne i et bibliotek, der mangler på Jellyfins liste over biblioteker, venter to dage, før de flyttes til et andet biblioteks kopi af samme titel. Én liste, der udelod et bibliotek, flyttede dem straks, og de forblev flyttet, da biblioteket kom tilbage.
 
 ### Fixed
 - Mislykkede logins på en konto er én advarsel pr. tidsrum, der vokser til en alarm ved tyve, og et navn tæller kun mod en konto, når det er skrevet helt ("x alice" tæller ikke længere mod alice).

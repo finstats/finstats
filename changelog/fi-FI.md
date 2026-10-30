@@ -91,6 +91,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Varmuuskopiot nimetään UTC-ajassa eikä niitä koskaan kirjoiteta olemassa olevan tiedoston päälle, ja vain FinStatsin omat päivitystä edeltävät kopiot karsitaan.
 - Tulevaisuuteen päivätty palvelimen lokirivi ei enää pysäytä toimintalokin lukemista: se luetaan uusimmasta rivistä, joka ei ole tulevaisuudessa.
 - Samaan aikaan julkaistuun linkkiin saapuvat pyynnöt laskevat sen vastauksen kerran, ja sen kortit piirretään omalla kaistallaan, joten linkin haltija ei voi enää saada omistajan Vuosikatsaus-kortteja vastaamaan 503.
+- Jellyfinin kirjastoluettelosta puuttuvan kirjaston toistot odottavat kaksi päivää ennen kuin ne siirretään saman nimikkeen kopioon toisessa kirjastossa. Yksi luettelo, josta kirjasto puuttui, siirsi ne heti, ja ne jäivät siirretyiksi, kun kirjasto palasi.
 
 ### Fixed
 - Tilin epäonnistuneet kirjautumiset ovat yksi varoitus aikaikkunaa kohden, ja se kasvaa hälytykseksi kahdessakymmenessä, ja nimi lasketaan tiliä vastaan vain, kun se on kirjoitettu kokonaan ("x alice" ei enää laske alicea vastaan).

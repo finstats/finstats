@@ -92,6 +92,7 @@ manchete de toda a série.
 - Os backups recebem nomes em UTC e nunca sobrescrevem um arquivo existente, e só as cópias pré-atualização do próprio FinStats são podadas.
 - Uma linha do log do servidor com data no futuro não impede mais a leitura do log de atividades: ele é lido a partir da linha mais nova que não está no futuro.
 - Requisições que chegam juntas a um link publicado calculam a resposta dele uma vez, e os cartões dele são desenhados numa fila própria, então quem tem o link não consegue mais fazer os cartões da Retrospectiva do dono responderem 503.
+- As reproduções de uma biblioteca que falta na lista de bibliotecas do Jellyfin esperam dois dias antes de passar para a cópia do mesmo título em outra biblioteca. Uma única lista que deixava uma biblioteca de fora as movia na hora, e elas continuavam movidas quando a biblioteca voltava.
 
 ### Fixed
 - Logins com falha numa conta são um aviso por janela que vira alerta aos vinte, e um nome só conta contra uma conta quando digitado inteiro ("x alice" não conta mais contra alice).

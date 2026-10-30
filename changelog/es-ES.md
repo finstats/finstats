@@ -92,6 +92,7 @@ bajo su encabezado: ese título es el que la aplicación usa como titular de tod
 - Las copias de seguridad se nombran en UTC y nunca sobrescriben un archivo existente, y solo se podan las copias previas a una actualización hechas por el propio FinStats.
 - Una fila del registro del servidor con fecha futura ya no impide leer el registro de actividad: se lee a partir de su fila más reciente que no esté en el futuro.
 - Las solicitudes que llegan a la vez a un enlace publicado calculan su respuesta una sola vez, y sus tarjetas se dibujan en un carril propio, así que quien tenga el enlace ya no puede hacer que las tarjetas del Resumen anual del propietario respondan 503.
+- Las reproducciones de una biblioteca que falta en la lista de bibliotecas de Jellyfin esperan dos días antes de pasar a la copia del mismo título en otra biblioteca. Una sola lista que dejaba fuera una biblioteca las movía al instante, y seguían movidas cuando la biblioteca volvía.
 
 ### Fixed
 - Los inicios de sesión fallidos en una cuenta son un solo aviso por ventana que se convierte en alerta a los veinte, y un nombre solo cuenta contra una cuenta cuando se escribe entero («x alice» ya no cuenta contra alice).

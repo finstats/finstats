@@ -92,6 +92,7 @@ de hele reeks.
 - Back-ups worden in UTC benoemd en nooit over een bestaand bestand geschreven, en alleen de eigen kopieën van FinStats van vóór een update worden opgeruimd.
 - Een regel in het serverlog die in de toekomst is gedateerd, houdt het lezen van het activiteitenlog niet langer tegen: het wordt gelezen vanaf de nieuwste regel die niet in de toekomst ligt.
 - Verzoeken die tegelijk op een gepubliceerde link binnenkomen, bouwen het antwoord één keer op, en de kaarten ervan worden in een eigen baan getekend, zodat iemand met de link de Terugblik-kaarten van de eigenaar niet langer met 503 kan laten antwoorden.
+- De afspelingen van een bibliotheek die in Jellyfins lijst van bibliotheken ontbreekt, wachten twee dagen voordat ze naar de kopie van dezelfde titel in een andere bibliotheek gaan. Eén lijst die een bibliotheek wegliet, verplaatste ze meteen, en ze bleven verplaatst toen de bibliotheek terugkwam.
 
 ### Fixed
 - Mislukte aanmeldingen op een account geven één waarschuwing per tijdvenster die bij twintig uitgroeit tot een alarm, en een naam telt alleen tegen een account als die volledig is getypt ("x alice" telt niet langer tegen alice).

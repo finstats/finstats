@@ -93,6 +93,7 @@ la série.
 - Les sauvegardes sont nommées en UTC et n’écrasent jamais un fichier existant, et seules les copies d’avant mise à jour de FinStats lui-même sont élaguées.
 - Une ligne du journal du serveur datée dans le futur n’empêche plus la lecture du journal d’activité : il est lu à partir de sa ligne la plus récente qui n’est pas dans le futur.
 - Des requêtes arrivant ensemble sur un lien publié calculent sa réponse une seule fois, et ses cartes sont dessinées dans une file à part, si bien qu’un détenteur du lien ne peut plus faire répondre 503 aux cartes du bilan du propriétaire.
+- Les lectures d'une bibliothèque absente de la liste des bibliothèques de Jellyfin attendent deux jours avant d'être déplacées vers la copie du même titre dans une autre bibliothèque. Une seule liste qui oubliait une bibliothèque les déplaçait aussitôt, et elles restaient déplacées quand la bibliothèque revenait.
 
 ### Fixed
 - Les connexions échouées sur un compte donnent un seul avertissement par fenêtre, qui devient une alerte à vingt, et un nom ne compte contre un compte que s’il est tapé en entier (« x alice » ne compte plus contre alice).

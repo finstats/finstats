@@ -552,6 +552,9 @@ Learned from real exports; also documented at the top of `import.rs`.
 9. The duplicate sweep never keeps a deleted row over a live one (the keeper fragment of `relinked_duplicates_sql!`'s second
    arm); the one-argument arm is migration 26's text, byte for byte.
 10. Groups are detected again for the titles re-linking moved plays onto ("Groups" 9).
+11. **The plays of a library that went missing from Jellyfin's list wait two days before they are relinked**
+    (`LIBRARY_GONE_WAIT_S`): one list that left a library out moved its plays onto another library's copy of the same
+    title (Movies beside Movies 4K), which no later read undid when the library came back with the same ids.
 
 ## Locate (`locate.rs`, Settings → Unlinked media, 2.1.2)
 

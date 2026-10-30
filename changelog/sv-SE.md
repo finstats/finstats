@@ -91,6 +91,7 @@ har en kort titelrad under rubriken: den titeln använder appen som rubrik för 
 - Säkerhetskopior namnges i UTC och skrivs aldrig över en befintlig fil, och bara FinStats egna kopior från före en uppdatering rensas.
 - En rad i serverloggen daterad i framtiden stoppar inte längre läsningen av aktivitetsloggen: den läses från dess nyaste rad som inte ligger i framtiden.
 - Begäranden som anländer samtidigt till en publicerad länk räknar fram dess svar en gång, och dess kort ritas i ett eget spår, så den som har länken kan inte längre få ägarens Återblick-kort att svara 503.
+- Uppspelningarna i ett bibliotek som saknas i Jellyfins lista över bibliotek väntar två dagar innan de flyttas till ett annat biblioteks kopia av samma titel. En lista som utelämnade ett bibliotek flyttade dem genast, och de förblev flyttade när biblioteket kom tillbaka.
 
 ### Fixed
 - Misslyckade inloggningar på ett konto är en varning per tidsfönster som växer till ett larm vid tjugo, och ett namn räknas mot ett konto bara när det är skrivet helt ("x alice" räknas inte längre mot alice).
