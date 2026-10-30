@@ -10,7 +10,7 @@ Säkerhet är något som någon kunde ha missbrukat, Prestanda något som har bl
 som inte längre kan krascha, stanna, läcka eller förlora data, och Åtgärdat något som gav fel svar. En `x.y.0`-version
 har en kort titelrad under rubriken: den titeln använder appen som rubrik för hela serien.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **Installationen ber om en engångskod**: tills FinStats är installerat skriver det en kod i sin logg när det startar (`docker logs finstats`), och guiden ber om den innan den testar en adress eller ställer in något. Annars kunde den som nådde porten först peka FinStats mot en egen Jellyfin och bli dess administratör, eller använda testet för att se sig omkring i nätverket.

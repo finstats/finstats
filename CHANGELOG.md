@@ -11,7 +11,7 @@ crash, halt, leak or lose data, Fixed something that gave a wrong answer. An `x.
 a short title line under its heading: that title is what the app uses as the headline of the whole
 series.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **Setup asks for a one-time code**: until it is set up, FinStats writes a code to its log when it starts (`docker logs finstats`), and the wizard asks for it before it tests an address or sets anything up. Whoever reached the port first could otherwise point FinStats at a Jellyfin of their own and be its administrator, or use the test to look around the network.

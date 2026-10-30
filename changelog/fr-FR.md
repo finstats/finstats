@@ -12,7 +12,7 @@ fuir ou perdre de données, Corrections ce qui donnait une réponse fausse. Une 
 courte ligne de titre sous son en-tête : c’est ce titre que l’application utilise comme intitulé de toute
 la série.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **La configuration demande un code à usage unique** : tant qu’il n’est pas configuré, FinStats écrit un code dans son journal au démarrage (`docker logs finstats`), et l’assistant le demande avant de tester une adresse ou de configurer quoi que ce soit. Sinon, le premier à atteindre le port pouvait diriger FinStats vers son propre Jellyfin et en devenir l’administrateur, ou se servir du test pour explorer le réseau.

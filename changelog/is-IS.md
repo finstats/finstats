@@ -10,7 +10,7 @@ breytingu. Öryggi er eitthvað sem einhver hefði getað misnotað, Afköst eru
 hrunið, stöðvast, lekið eða glatað gögnum, og Lagfært eitthvað sem gaf rangt svar. Útgáfa `x.y.0` ber
 stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirsögn allrar raðarinnar.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **Uppsetningin biður um einnota kóða**: þar til FinStats hefur verið sett upp skrifar það kóða í atvikaskrá sína við ræsingu (`docker logs finstats`), og uppsetningarleiðsögnin biður um hann áður en hún prófar vistfang eða setur nokkuð upp. Annars gat hver sá sem komst fyrstur að gáttinni beint FinStats að eigin Jellyfin og orðið stjórnandi þess, eða notað prófunina til að skima um netið.

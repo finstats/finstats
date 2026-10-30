@@ -11,7 +11,7 @@ Stabilitet noget, der ikke længere kan gå ned, standse, lække eller miste dat
 forkert svar. En `x.y.0`-version har en kort titellinje under overskriften: den titel bruger appen som
 overskrift for hele serien.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **Opsætningen beder om en engangskode**: indtil FinStats er sat op, skriver den en kode i sin log, når den starter (`docker logs finstats`), og guiden beder om den, før den tester en adresse eller sætter noget op. Ellers kunne den, der først nåede porten, pege FinStats mod sin egen Jellyfin og blive dens administrator eller bruge testen til at se sig om på netværket.

@@ -11,7 +11,7 @@ geworden, Stabiliteit iets wat niet meer kan crashen, vastlopen, lekken of gegev
 verkeerd antwoord gaf. Een `x.y.0`-versie heeft onder de kop een korte titelregel: die titel gebruikt de app als kop van
 de hele reeks.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **De installatie vraagt om een eenmalige code**: zolang FinStats niet is ingesteld, schrijft het bij het starten een code naar zijn log (`docker logs finstats`), en de wizard vraagt erom voordat hij een adres test of iets instelt. Wie de poort als eerste bereikte, kon FinStats anders naar een eigen Jellyfin laten wijzen en er beheerder van worden, of de test gebruiken om in het netwerk rond te kijken.

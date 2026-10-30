@@ -10,7 +10,7 @@ hafif hale gelen bir şey; Kararlılık, artık çökmeyen, durmayan, sızıntı
 Düzeltildi ise yanlış yanıt veren bir şey. Bir `x.y.0` sürümü başlığının altında kısa bir başlık satırı taşır: uygulama
 bu başlığı tüm serinin manşeti olarak kullanır.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **Kurulum tek kullanımlık bir kod ister**: kurulana kadar FinStats başlarken günlüğüne bir kod yazar (`docker logs finstats`) ve sihirbaz, bir adresi denemeden ya da herhangi bir şeyi kurmadan önce bu kodu sorar. Aksi halde porta ilk ulaşan kişi FinStats’i kendine ait bir Jellyfin’e yönlendirip onun yöneticisi olabilir ya da denemeyi ağda dolaşmak için kullanabilirdi.

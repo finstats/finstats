@@ -11,7 +11,7 @@ más rápido o pesa menos; Estabilidad, algo que ya no puede bloquearse, detener
 datos; Corregido, algo que daba una respuesta equivocada. Una versión `x.y.0` lleva una línea de título corta
 bajo su encabezado: ese título es el que la aplicación usa como titular de toda la serie.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **La configuración pide un código de un solo uso**: hasta que está configurado, FinStats escribe un código en su registro al arrancar (`docker logs finstats`), y el asistente lo pide antes de probar una dirección o configurar nada. De lo contrario, quien llegara primero al puerto podía apuntar FinStats a un Jellyfin propio y ser su administrador, o usar la prueba para explorar la red.

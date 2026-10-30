@@ -10,7 +10,7 @@ na zmianę. Bezpieczeństwo to coś, co ktoś mógł wykorzystać w złej wierze
 Stabilność to coś, co nie może już ulec awarii, zatrzymać się, wyciekać ani tracić danych, a Naprawiono to coś, co dawało
 błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytułowy: aplikacja używa go jako nagłówka całej serii.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **Konfiguracja prosi o jednorazowy kod**: dopóki FinStats nie jest skonfigurowany, przy starcie zapisuje kod w swoim dzienniku (`docker logs finstats`), a kreator prosi o niego, zanim sprawdzi adres lub cokolwiek ustawi. W przeciwnym razie ten, kto pierwszy dotarł do portu, mógł skierować FinStats na własny Jellyfin i zostać jego administratorem albo użyć testu, by rozejrzeć się po sieci.

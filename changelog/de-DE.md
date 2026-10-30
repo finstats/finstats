@@ -11,7 +11,7 @@ oder sparsamer wurde, Stabilität etwas, das nicht mehr abstürzen, anhalten, Le
 kann, Behoben etwas, das eine falsche Antwort gab. Eine `x.y.0`-Version trägt unter ihrer Überschrift eine
 kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **Die Einrichtung fragt nach einem Einmalcode**: Solange FinStats nicht eingerichtet ist, schreibt es beim Start einen Code in sein Protokoll (`docker logs finstats`), und der Assistent fragt danach, bevor er eine Adresse testet oder etwas einrichtet. Sonst konnte, wer den Port zuerst erreichte, FinStats auf ein eigenes Jellyfin richten und dessen Administrator werden oder mit dem Test das Netzwerk auskundschaften.

@@ -11,7 +11,7 @@ crash, bloccarsi, consumare memoria senza restituirla o perdere dati, Corretto q
 sbagliata. Una versione `x.y.0` ha una breve riga di titolo sotto l’intestazione: quel titolo è ciò che l’app
 usa come titolo dell’intera serie.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **La configurazione chiede un codice monouso**: finché non è configurato, FinStats scrive un codice nel suo log all’avvio (`docker logs finstats`), e la procedura guidata lo chiede prima di provare un indirizzo o configurare qualsiasi cosa. Altrimenti chiunque raggiungesse per primo la porta poteva puntare FinStats a un proprio Jellyfin e diventarne amministratore, o usare la prova per esplorare la rete.

@@ -10,7 +10,7 @@ käyttää jotakin väärin, Suorituskyky, että jokin nopeutui tai keveni, Vaka
 pysähtyä, vuotaa tai hukata tietoja, ja Korjattu, että jokin antoi väärän vastauksen. `x.y.0`-julkaisun
 otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääotsikkona.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **Käyttöönotto kysyy kertakäyttöistä koodia**: kunnes FinStats on otettu käyttöön, se kirjoittaa käynnistyessään lokiinsa koodin (`docker logs finstats`), ja ohjattu asennus kysyy sitä ennen kuin se testaa osoitetta tai ottaa mitään käyttöön. Muuten portin ensimmäisenä tavoittanut olisi voinut ohjata FinStatsin omaan Jellyfiniinsä ja tulla sen ylläpitäjäksi tai käyttää testiä verkon tutkimiseen.

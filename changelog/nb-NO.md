@@ -10,7 +10,7 @@ er noe noen kunne ha misbrukt, Ytelse er noe som er blitt raskere eller lettere,
 miste data, og Rettet noe som ga feil svar. En `x.y.0`-versjon har en kort tittellinje under overskriften:
 den tittelen bruker appen som overskrift for hele serien.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **Oppsettet ber om en engangskode**: til FinStats er satt opp, skriver den en kode i loggen sin når den starter (`docker logs finstats`), og oppsettet ber om koden før det tester en adresse eller setter opp noe. Ellers kunne den som nådde porten først, peke FinStats mot sin egen Jellyfin og bli administrator der, eller bruke testen til å se seg om i nettverket.

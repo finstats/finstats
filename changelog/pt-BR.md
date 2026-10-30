@@ -11,7 +11,7 @@ ou mais leve, Estabilidade algo que não pode mais travar, parar, vazar ou perde
 resposta errada. Uma versão `x.y.0` traz uma linha curta de título sob o cabeçalho: esse título é o que o app usa como
 manchete de toda a série.
 
-## [2.3.1] - 2026-10-26 to 2026-10-28
+## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
 - **A configuração pede um código de uso único**: enquanto não estiver configurado, o FinStats escreve um código no seu log ao iniciar (`docker logs finstats`), e o assistente o pede antes de testar um endereço ou configurar qualquer coisa. Do contrário, quem chegasse primeiro à porta podia apontar o FinStats para um Jellyfin próprio e ser o administrador dele, ou usar o teste para explorar a rede.
