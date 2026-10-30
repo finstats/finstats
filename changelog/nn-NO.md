@@ -54,6 +54,7 @@ som overskrift for heile serien.
 - Søk, publiserte profilar og arbeid starta for hand kan ikkje lenger halde FinStats oppteken: eit søk stoppar ved 200 teikn, ein profil vert lagra per språk, kort ventar i ein liten kø, og ein jobb, adresseoppslaget, nedlastinga av staddatabasen og ei testmelding startar berre så ofte, same korleis dei vert bedne om, og testmeldingar vert talde per avsendar. Å hente staddatabasen krev òg det Tryggleik-sida krev.
 - Innhaldet i ein førespurnad må halde fram med å kome når dei første 15 sekunda er over, eit svar ingen les, vert gjeve opp etter 30 sekund, og éi adresse held høgst 64 tilkoplingar, ein tiltrudd proxy unnateke. Nokre hundre førespurnader som aldri sende innhaldet sitt, kunne hindre FinStats i å svare nokon.
 - Ein e-posttenar vert ikkje lesen lenger enn noko svar kan vere (1 MB for eit heilt brev), og ei testmelding stoppar etter like lang tid som ei melding i køen kan ta. Ein tenar som aldri avslutta ei linje, kunne få FinStats til å halde meir og meir minne til han vart stoppa.
+- Ei bibliotekslesing vert vurdert mot titlane lesingane har lagra, ikkje dei ein import tok med, og ein Jellystat-tittel i eit bibliotek som alt er lese, kjem inn som borte. Ein import av oppdikta titlar kunne få kvar bibliotekslesing til å stoppe FinStats, ved kvar oppstart.
 
 ### Performance
 - Ein publisert profil vert rekna ut høgst éin gong i minuttet, ikkje på nytt for kvart bilete og kort på han.

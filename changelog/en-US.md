@@ -53,6 +53,7 @@ the app uses as the headline of the whole series.
 - Search, published profiles and work started by hand can no longer keep FinStats busy: a search stops at 200 characters, a profile is kept per language, cards wait in a short queue, and a job, the address lookup, the location database download and a test message start only so often however they are asked for, test messages counted per sender. Fetching the location database also needs what reading the Security page needs.
 - A request's body must keep coming once its first 15 seconds are over, an answer nobody reads is given up after 30 seconds, and one address holds at most 64 connections, a trusted proxy aside. A few hundred requests that never sent their body could keep FinStats from answering anybody.
 - A mail server is read no further than any reply could be (1 MB over a whole letter), and a test message stops after as long as a queued one may take. A server that never ended a line could make FinStats hold more and more memory until it was stopped.
+- A library read is judged against the titles reads have stored, not those an import brought, and a Jellystat title in a library already read comes in as gone. An import of invented titles could make every library read halt FinStats, at every start.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

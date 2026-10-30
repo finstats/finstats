@@ -43,6 +43,13 @@ pub(crate) fn trustworthy_removal(seen: usize, current: i64) -> bool {
     !(would_remove >= WIPE_FLOOR && seen.saturating_mul(20) < current)
 }
 
+/// How many of a library's titles FinStats holds as there, for the guard against a broken read: only those a library read
+/// stored (`updated_at` is its time, 0 for a title only an import brought). Counted with imported ones, a backup of
+/// invented titles made every read look broken and halted FinStats at every start.
+pub(crate) fn held_by_reads(c: &Connection, library_id: &str) -> Result<i64> {
+    Ok(c.query_row("SELECT COUNT(*) FROM items WHERE library_id = ?1 AND removed = 0 AND updated_at > 0", [library_id], |r| r.get(0))?)
+}
+
 /// A whole set gone at once (Jellyfin listing zero libraries, or zero users, where FinStats holds
 /// some) is a broken read (an auth failure, an API change), never a normal day: you do not lose every
 /// library at once. Unlike the item guard there is no "big enough to matter" floor, because a set going
@@ -814,7 +821,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
         let refused = app
             .db
             .call(move |c| {
-                let current: i64 = c.query_row("SELECT COUNT(*) FROM items WHERE library_id = ?1 AND removed = 0", [&lib], |r| r.get(0))?;
+                let current = held_by_reads(c, &lib)?;
                 if !shrink_ok && !trustworthy_removal(stored, current) {
                     return Ok(Some(current));
                 }

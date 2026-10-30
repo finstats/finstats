@@ -369,6 +369,8 @@ fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult,
                 ])? as u64;
             Ok(())
         }
+        // A title in a library a read has filled, and that the read did not see, is a title that is gone: it names the
+        // plays it had, never one more live title.
         "jf_library_items" => {
             let Some(id) = d["Id"].as_str() else { return Ok(()) };
             let genres = d["Genres"].as_array().filter(|g| !g.is_empty()).map(|g| Value::Array(g.clone()).to_string());
@@ -376,7 +378,7 @@ fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult,
                 .prepare_cached(
                     "INSERT OR IGNORE INTO items(id, library_id, type, name, runtime_s, production_year, premiere_date,
                         date_created, community_rating, genres, image_tag, backdrop_tag, removed, updated_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, 0)",
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13 OR EXISTS (SELECT 1 FROM items WHERE library_id = ?2 AND updated_at > 0), 0)",
                 )?
                 .execute(params![
                     norm_id(id),
@@ -647,6 +649,32 @@ mod tests {
 
         let again = run(&db, &file, None).unwrap();
         assert_eq!((again.plays_imported, again.plays_skipped), (0, 2), "the same backup twice is once");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// Titles a backup brings into a library a read has already filled are not the read's to lose: the guard against a
+    /// broken read counts only what a read stored, and such titles come in as gone. A file of 1,200 invented titles in a
+    /// 50-title library made every library read refuse and halt FinStats, at every start, blaming Jellyfin.
+    #[test]
+    fn titles_a_backup_plants_in_a_library_already_read_never_halt_the_next_read() {
+        let mut text = String::from("{\"type\":\"table\",\"table\":\"jf_library_items\"}\n");
+        for n in 0..1200 {
+            text.push_str(&format!("{{\"type\":\"row\",\"data\":{{\"Id\":\"PLANTED-{n}\",\"ParentId\":\"LIB-1\",\"Type\":\"Movie\",\"Name\":\"x\"}}}}\n"));
+        }
+        let (db, file, dir) = backup("planted", &text);
+        {
+            let c = db.conn().unwrap();
+            for n in 0..50 {
+                c.execute("INSERT INTO items(id, library_id, type, name, removed, updated_at) VALUES (?1, 'lib1', 'Movie', 'Big Buck Bunny', 0, 1000)", [format!("real{n}")]).unwrap();
+            }
+        }
+        run(&db, &file, None).unwrap();
+        let c = db.conn().unwrap();
+        let current = crate::sync::held_by_reads(&c, "lib1").unwrap();
+        assert_eq!(current, 50, "titles only a backup brought were counted as the read's");
+        assert!(crate::sync::trustworthy_removal(50, current));
+        let live: i64 = c.query_row("SELECT COUNT(*) FROM items WHERE library_id = 'lib1' AND removed = 0", [], |r| r.get(0)).unwrap();
+        assert_eq!(live, 50, "a backup planted live titles in a library a read had filled");
         let _ = std::fs::remove_dir_all(dir);
     }
 

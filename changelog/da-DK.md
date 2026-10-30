@@ -54,6 +54,7 @@ overskrift for hele serien.
 - Søgning, offentliggjorte profiler og arbejde startet manuelt kan ikke længere holde FinStats optaget: en søgning stopper ved 200 tegn, en profil gemmes pr. sprog, kort venter i en kort kø, og et job, adresseopslaget, download af placeringsdatabasen og en testbesked starter kun med mellemrum, uanset hvordan der bedes om dem, testbeskeder talt pr. afsender. At hente placeringsdatabasen kræver også det, som læsning af siden Sikkerhed kræver.
 - Indholdet i en forespørgsel skal blive ved med at komme, når de første 15 sekunder er gået, et svar ingen læser, opgives efter 30 sekunder, og én adresse holder højst 64 forbindelser, en betroet proxy undtaget. Nogle hundrede forespørgsler, der aldrig sendte deres indhold, kunne forhindre FinStats i at svare nogen.
 - En mailserver læses ikke længere, end noget svar kan være (1 MB for et helt brev), og en testbesked stopper efter lige så lang tid, som en besked i køen må tage. En server, der aldrig afsluttede en linje, kunne få FinStats til at holde mere og mere hukommelse, til den blev stoppet.
+- En læsning af et bibliotek vurderes ud fra de titler, læsningerne har gemt, ikke dem en import bragte, og en Jellystat-titel i et bibliotek, der allerede er læst, kommer ind som væk. En import af opdigtede titler kunne få hver læsning af et bibliotek til at stoppe FinStats ved hver opstart.
 
 ### Performance
 - En offentliggjort profil beregnes højst én gang i minuttet, ikke igen for hvert billede og kort på den.

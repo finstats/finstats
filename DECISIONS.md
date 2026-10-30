@@ -177,6 +177,9 @@ Contents:
 12. `sync::store_users` keeps out a user whose read does not say they are enabled (a missing `IsDisabled` fails closed, as
     a missing `IsAdministrator` does), and marks removed whoever the read did not return, by id: a whole-second
     `updated_at` comparison missed a deletion read in the same second.
+13. **The guard counts only titles a library read stored** (`sync::held_by_reads`, `updated_at > 0`; a title only an import
+    brought has 0). Counted with imported titles, a backup of invented ones twenty times a library's size made every read
+    look broken and halted FinStats at every start, with the blame on Jellyfin.
 
 ## Scheduling (`schedule.rs`, `sync::scheduler`, Settings → Tasks, 2.0.4)
 
@@ -434,6 +437,8 @@ Learned from real exports; also documented at the top of `import.rs`.
 4. There is no item type, so Live TV is inferred (video, not in library, no container → `TvChannel`).
 5. The import is a single transaction and streams a multi-hundred-MB file line by line; the older Jellystat document is
    streamed too (`legacy_rows`).
+6. A `jf_library_items` row for a library a read has already filled comes in as removed: a title that read did not see is
+   gone, so it names the plays it had and is never one more live title ("Library reads" 13).
 
 ## Streamystats import (`streamystats.rs`, the docs' `finstats/imports/streamystats.md`)
 
