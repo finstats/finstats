@@ -65,6 +65,7 @@ the app uses as the headline of the whole series.
 - A file size no disk could hold is read as no size, and sizes are added up so that no total can overflow. One imported size made the library pages answer an error for good.
 - Once FinStats knows it is reached by https (its public address is https, or a trusted proxy says so), a session is taken only from its `__Host-` cookie, and with an https public address every new session is an https one. A sign-in sent without an `Origin` through a proxy that said nothing made a plain session that a neighboring site could plant in somebody's browser.
 - The image is built with every GitHub action pinned to a commit and both base images to a digest, moved only by Dependabot, and a release builds without the shared build cache. A moved tag of somebody else's action could have published any image as FinStats.
+- FinUI's stylesheet, drawn in the visitor's own look, may be loaded by FinStats' own pages only. A page on another port of the same host could read from it whether the visitor was signed in, and which preset they chose.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

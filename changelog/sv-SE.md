@@ -65,6 +65,7 @@ har en kort titelrad under rubriken: den titeln använder appen som rubrik för 
 - En filstorlek som ingen disk kunde rymma läses som ingen storlek, och storlekar läggs ihop så att ingen summa kan svämma över. En importerad storlek fick bibliotekssidorna att svara med fel för gott.
 - När FinStats vet att den nås via https (den offentliga adressen är https, eller en betrodd proxy säger det) tas en session bara från dess `__Host-`-kaka, och med en offentlig https-adress är varje ny session en https-session. En inloggning som skickades utan `Origin` genom en proxy som inte sa något gav en vanlig session som en grannwebbplats kunde plantera i någons webbläsare.
 - Avbilden byggs med varje GitHub-åtgärd låst till en commit och båda basavbilderna till en sammanfattning, flyttade bara av Dependabot, och en utgåva byggs utan den delade byggcachen. En flyttad tagg på någon annans åtgärd kunde ha publicerat vilken avbild som helst som FinStats.
+- FinUI:s formatmall, ritad i besökarens eget utseende, får bara läsas in av FinStats egna sidor. En sida på en annan port på samma värd kunde läsa av om besökaren var inloggad och vilken förinställning de valt.
 
 ### Performance
 - En publicerad profil räknas fram högst en gång i minuten, inte på nytt för varje bild och kort på den.

@@ -65,6 +65,7 @@ den tittelen bruker appen som overskrift for hele serien.
 - En filstørrelse ingen disk kunne romme, leses som ingen størrelse, og størrelser legges sammen slik at ingen sum kan flyte over. Én importert størrelse fikk bibliotekssidene til å svare med feil for godt.
 - Når FinStats vet at den nås over https (den offentlige adressen er https, eller en betrodd proxy sier det), tas en økt bare fra `__Host-`-informasjonskapselen, og med en offentlig https-adresse er hver nye økt en https-økt. En innlogging sendt uten `Origin` gjennom en proxy som ikke sa noe, laget en vanlig økt som et nabonettsted kunne plante i noens nettleser.
 - Bildet bygges med hver GitHub-handling festet til en commit og begge grunnbildene til et sammendrag, flyttet bare av Dependabot, og en utgivelse bygges uten den delte byggebufferen. En flyttet tagg på andres handling kunne ha publisert hvilket som helst bilde som FinStats.
+- Stilarket til FinUI, tegnet i besøkerens eget utseende, kan bare lastes av FinStats' egne sider. En side på en annen port på samme vert kunne lese av det om besøkeren var innlogget, og hvilken forhåndsinnstilling de valgte.
 
 ### Performance
 - En publisert profil regnes ut høyst én gang i minuttet, ikke på nytt for hvert bilde og kort på den.

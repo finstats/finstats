@@ -65,6 +65,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Tiedostokoko, jota mikään levy ei voisi mahduttaa, luetaan kooksi ei mitään, ja koot lasketaan yhteen niin, ettei mikään summa voi ylivuotaa. Yksi tuotu koko sai kirjastosivut vastaamaan virheellä pysyvästi.
 - Kun FinStats tietää, että siihen tullaan https:llä (sen julkinen osoite on https tai luotettu välityspalvelin kertoo niin), istunto otetaan vain sen `__Host-`-evästeestä, ja julkisella https-osoitteella jokainen uusi istunto on https-istunto. Ilman `Origin`-otsaketta lähetetty kirjautuminen välityspalvelimen kautta, joka ei kertonut mitään, loi tavallisen istunnon, jonka naapurisivusto saattoi istuttaa jonkun selaimeen.
 - Levykuva rakennetaan jokainen GitHub-toiminto kiinnitettynä committiin ja molemmat pohjakuvat tiivisteeseen, joita siirtää vain Dependabot, ja julkaisu rakennetaan ilman jaettua koontivälimuistia. Jonkun toisen toiminnon siirretty tagi olisi voinut julkaista minkä tahansa levykuvan FinStatsina.
+- FinUI:n tyylitiedoston, joka piirretään kävijän omalla ulkoasulla, voivat ladata vain FinStatsin omat sivut. Saman koneen toisessa portissa oleva sivu saattoi lukea siitä, oliko kävijä kirjautunut ja minkä esiasetuksen hän valitsi.
 
 ### Performance
 - Julkaistu profiili lasketaan enintään kerran minuutissa, ei uudelleen jokaista sen kuvaa ja korttia varten.

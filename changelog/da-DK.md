@@ -66,6 +66,7 @@ overskrift for hele serien.
 - En filstørrelse, ingen disk kunne rumme, læses som ingen størrelse, og størrelser lægges sammen, så ingen sum kan løbe over. Én importeret størrelse fik bibliotekssiderne til at svare med en fejl for altid.
 - Når FinStats ved, at den nås via https (den offentlige adresse er https, eller en betroet proxy siger det), tages en session kun fra dens `__Host-`-cookie, og med en offentlig https-adresse er hver ny session en https-session. Et login sendt uden `Origin` gennem en proxy, der intet sagde, lavede en almindelig session, som et nabowebsted kunne plante i nogens browser.
 - Billedet bygges med hver GitHub-handling fastlåst til et commit og begge grundbilleder til et digest, kun flyttet af Dependabot, og en udgivelse bygges uden den delte byggecache. Et flyttet tag på en andens handling kunne have udgivet et hvilket som helst billede som FinStats.
+- FinUI's typografiark, tegnet i den besøgendes eget udseende, må kun indlæses af FinStats' egne sider. En side på en anden port på samme vært kunne aflæse, om den besøgende var logget ind, og hvilken forudindstilling de valgte.
 
 ### Performance
 - En offentliggjort profil beregnes højst én gang i minuttet, ikke igen for hvert billede og kort på den.

@@ -65,6 +65,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - Skráarstærð sem enginn diskur gæti rúmað er lesin sem engin stærð, og stærðir eru lagðar saman svo engin summa geti flætt yfir. Ein innflutt stærð lét safnsíðurnar svara með villu fyrir fullt og allt.
 - Þegar FinStats veit að það er sótt um https (opinbert vistfang þess er https, eða traustur milliþjónn segir það) er seta aðeins tekin úr `__Host-`-vafrakökunni, og með opinberu https-vistfangi er hver ný seta https-seta. Innskráning send án `Origin` í gegnum milliþjón sem sagði ekkert bjó til venjulega setu sem nágrannavefur gat komið fyrir í vafra einhvers.
 - Myndin er smíðuð með hverja GitHub-aðgerð festa við commit og báðar grunnmyndir við samantekt, sem aðeins Dependabot færir, og útgáfa er smíðuð án sameiginlega smíðaskyndiminnisins. Fært merki á aðgerð einhvers annars hefði getað birt hvaða mynd sem er sem FinStats.
+- Stílblað FinUI, teiknað í eigin útliti gestsins, mega aðeins síður FinStats sjálfs hlaða. Síða á annarri gátt sama hýsils gat lesið úr því hvort gesturinn var innskráður og hvaða forstillingu hann valdi.
 
 ### Performance
 - Opinber prófíll er reiknaður út í mesta lagi einu sinni á mínútu, ekki aftur fyrir hverja mynd og hvert spjald á honum.

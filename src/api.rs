@@ -285,6 +285,11 @@ fn harden(path: &str, h: &mut HeaderMap) {
              object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
         ),
     );
+    // FinUI's stylesheet is drawn in the asker's own preset (`appearance::of_request`): another site's page that loads it
+    // must not be able to read who is signed in from it.
+    if path == "/assets/finui.css" {
+        h.insert("cross-origin-resource-policy", HeaderValue::from_static("same-origin"));
+    }
     if path.starts_with("/api/") {
         h.insert("cross-origin-resource-policy", HeaderValue::from_static("same-origin"));
         if !h.contains_key(CACHE_CONTROL) {
@@ -2043,6 +2048,11 @@ mod tests {
         let csp = page["content-security-policy"].to_str().unwrap();
         assert!(csp.contains("img-src 'self' data:;") && !csp.contains("blob:"), "{csp}");
         assert!(page.get("cross-origin-resource-policy").is_none(), "a public card is shared to other sites");
+        // The stylesheet is drawn in the asker's own preset, and signed out in the default: read from another site on the
+        // same host, it told whether the visitor was signed in, and which preset they chose.
+        let mut css = HeaderMap::new();
+        harden("/assets/finui.css", &mut css);
+        assert_eq!(css["cross-origin-resource-policy"], "same-origin");
         assert!(page.get(CACHE_CONTROL).is_none(), "a page says its own");
 
         let mut api = HeaderMap::new();

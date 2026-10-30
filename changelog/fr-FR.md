@@ -67,6 +67,7 @@ la série.
 - Une taille de fichier qu'aucun disque ne pourrait contenir est lue comme aucune taille, et les tailles sont additionnées de sorte qu'aucun total ne puisse déborder. Une seule taille importée faisait répondre les pages des bibliothèques par une erreur pour de bon.
 - Dès que FinStats sait qu'il est joint en https (son adresse publique est en https, ou un proxy de confiance le dit), une session n'est prise que dans son cookie `__Host-`, et avec une adresse publique en https chaque nouvelle session est une session https. Une connexion envoyée sans `Origin` par un proxy qui ne disait rien créait une session ordinaire qu'un site voisin pouvait déposer dans le navigateur de quelqu'un.
 - L'image est construite avec chaque action GitHub épinglée à un commit et les deux images de base à un condensé, déplacés seulement par Dependabot, et une version se construit sans le cache de construction partagé. Une étiquette déplacée sur l'action de quelqu'un d'autre aurait pu publier n'importe quelle image comme FinStats.
+- La feuille de style de FinUI, dessinée dans l'apparence propre du visiteur, ne peut être chargée que par les pages de FinStats. Une page sur un autre port du même hôte pouvait y lire si le visiteur était connecté et quel préréglage il avait choisi.
 
 ### Performance
 - Un profil publié est calculé au plus une fois par minute, et non à nouveau pour chaque image et chaque carte qu’il contient.

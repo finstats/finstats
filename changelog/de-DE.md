@@ -66,6 +66,7 @@ kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 - Eine Dateigröße, die keine Festplatte fassen könnte, gilt als keine Größe, und Größen werden so addiert, dass keine Summe überlaufen kann. Eine einzige importierte Größe ließ die Bibliotheksseiten dauerhaft mit einem Fehler antworten.
 - Sobald FinStats weiß, dass es über https erreicht wird (die öffentliche Adresse ist https, oder ein vertrauenswürdiger Proxy sagt es), wird eine Sitzung nur aus ihrem `__Host-`-Cookie genommen, und mit einer öffentlichen https-Adresse ist jede neue Sitzung eine https-Sitzung. Eine Anmeldung ohne `Origin` über einen Proxy, der nichts sagte, ergab eine einfache Sitzung, die eine benachbarte Website in den Browser von jemandem schmuggeln konnte.
 - Das Image wird mit jeder GitHub-Action an einen Commit und beiden Basis-Images an einen Digest gebunden gebaut, verschoben nur von Dependabot, und eine Veröffentlichung baut ohne den geteilten Build-Cache. Ein verschobenes Tag der Action eines anderen hätte ein beliebiges Image als FinStats veröffentlichen können.
+- FinUIs Stylesheet, im eigenen Aussehen des Besuchers gezeichnet, dürfen nur FinStats' eigene Seiten laden. Eine Seite auf einem anderen Port desselben Hosts konnte daraus lesen, ob der Besucher angemeldet war und welche Voreinstellung er gewählt hatte.
 
 ### Performance
 - Ein veröffentlichtes Profil wird höchstens einmal pro Minute berechnet, nicht erneut für jedes Bild und jede Karte darauf.

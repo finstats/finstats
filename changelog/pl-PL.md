@@ -65,6 +65,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Rozmiar pliku, którego żaden dysk by nie pomieścił, jest czytany jako brak rozmiaru, a rozmiary są sumowane tak, by żadna suma nie mogła się przepełnić. Jeden zaimportowany rozmiar sprawiał, że strony bibliotek na stałe odpowiadały błędem.
 - Gdy FinStats wie, że jest osiągany przez https (jego adres publiczny to https albo mówi tak zaufane proxy), sesja jest brana tylko z ciasteczka `__Host-`, a przy publicznym adresie https każda nowa sesja jest sesją https. Logowanie wysłane bez `Origin` przez proxy, które nic nie mówiło, tworzyło zwykłą sesję, którą sąsiednia witryna mogła podrzucić do czyjejś przeglądarki.
 - Obraz jest budowany z każdą akcją GitHub przypiętą do commita, a oboma obrazami bazowymi do skrótu, przesuwanymi tylko przez Dependabota, a wydanie buduje się bez wspólnej pamięci podręcznej budowania. Przesunięty tag cudzej akcji mógł opublikować dowolny obraz jako FinStats.
+- Arkusz stylów FinUI, rysowany w wyglądzie wybranym przez odwiedzającego, mogą wczytywać tylko strony FinStats. Strona na innym porcie tego samego hosta mogła odczytać z niego, czy odwiedzający był zalogowany i jaki ustawienie wstępne wybrał.
 
 ### Performance
 - Opublikowany profil jest obliczany najwyżej raz na minutę, a nie od nowa dla każdego obrazka i karty na nim.

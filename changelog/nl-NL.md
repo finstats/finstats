@@ -66,6 +66,7 @@ de hele reeks.
 - Een bestandsgrootte die geen schijf kan bevatten, telt als geen grootte, en groottes worden zo opgeteld dat geen totaal kan overlopen. Eén geïmporteerde grootte liet de bibliotheekpagina's voorgoed met een fout antwoorden.
 - Zodra FinStats weet dat het via https bereikt wordt (het openbare adres is https, of een vertrouwde proxy zegt het), wordt een sessie alleen uit de `__Host-`-cookie genomen, en met een openbaar https-adres is elke nieuwe sessie een https-sessie. Een aanmelding zonder `Origin` via een proxy die niets zei, gaf een gewone sessie die een naburige site in iemands browser kon planten.
 - De image wordt gebouwd met elke GitHub-action vastgezet op een commit en beide basisimages op een digest, alleen verschoven door Dependabot, en een release bouwt zonder de gedeelde buildcache. Een verschoven tag van andermans action had elke image als FinStats kunnen publiceren.
+- Het stijlblad van FinUI, getekend in de eigen weergave van de bezoeker, mag alleen door FinStats' eigen pagina's worden geladen. Een pagina op een andere poort van dezelfde host kon eruit lezen of de bezoeker was aangemeld en welke voorinstelling die koos.
 
 ### Performance
 - Een gepubliceerd profiel wordt hooguit eens per minuut opgebouwd, niet opnieuw voor elke afbeelding en kaart erop.
