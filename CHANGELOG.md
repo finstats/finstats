@@ -58,6 +58,7 @@ series.
 - The server-wide limit of 60 failed sign-ins a minute counts only attempts put to Jellyfin, those still waiting on its answer included. Names FinStats turned down itself let anybody with a few addresses stop everybody signing in, and many guesses sent at once all reached Jellyfin.
 - Somebody Jellyfin keeps to the home network is kept there on every request, their session and keys included, not only when they sign in; home is a private network or the household's looked-up public address, never an address typed in as home, and behind a proxy `FINSTATS_TRUST_PROXY` does not name they are kept out. A cookie or key taken out of the house opened everything from anywhere, and a manager could open the house to an address of their choosing.
 - An API key can no longer switch off what would notice it being misused, or the backups that would undo what it did: how many backups are kept and how often, the merge window, home addresses and travel rules, the users, activity-log and backup schedules, muting or resolving every alert, a backup into the trash, or removing a notification destination. Each outlasted the key once it was revoked.
+- Sonarr's and Radarr's posters, and a watchlist's next episode, follow library access too: a show Jellyfin hides from somebody has neither poster nor date for them. Counting the services' ids told which hidden shows were coming, and a list named a hidden show's next episode.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

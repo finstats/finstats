@@ -495,7 +495,13 @@ pub fn listing(conn: &Connection, user_id: &str, everyone: bool, access: &crate:
         s.2 += 1;
     }
     let requests = open_requests(conn, user_id, everyone)?;
-    let calendar = crate::pipeline::entries_for(conn, 90, user_id, false)?;
+    // What the calendar keeps from them, their list does not tell either: a hidden show's next episode is its day.
+    let mut calendar = vec![];
+    for entry in crate::pipeline::entries_for(conn, 90, user_id, false)? {
+        if crate::pipeline::seen_by(conn, access, &entry.0)? {
+            calendar.push(entry);
+        }
+    }
 
     let mut out = vec![];
     for k in &keys {
@@ -931,6 +937,26 @@ mod tests {
         assert!(list[1]["poster"].is_null(), "nor its poster");
         let ids: Vec<Vec<String>> = keys_seen(&c, "kid", &kid).unwrap().into_iter().map(|k| k.item_ids).collect();
         assert_eq!(ids, [vec!["bbb".to_string()], vec![]]);
+    }
+
+    /// A show Jellyfin hides from somebody has no date on their list either: its next episode is what the calendar keeps
+    /// from them, and their list told it, by day, season and number.
+    #[test]
+    fn a_show_jellyfin_hides_has_no_next_episode_on_the_list() {
+        let c = household();
+        c.execute_batch(
+            r#"INSERT INTO items(id, library_id, type, name, provider_ids, removed, updated_at) VALUES ('nb', 'adult', 'Series', 'Nightfall Bay', '{"Tvdb":"380002"}', 0, 1);
+               UPDATE upcoming SET item_id = 'nb' WHERE tvdb_id = 380002;
+               INSERT INTO users(id, name, is_admin, updated_at, access_all, access_libraries) VALUES ('kid', 'kid', 0, 0, 0, '["films"]');"#,
+        )
+        .unwrap();
+        crate::pipeline::rebuild_external(&c).unwrap();
+        let kid = crate::access::Access::of(&c, "kid", false).unwrap();
+        add(&c, "kid", Wanted::Title(Title { kind: "Series".into(), tvdb_id: Some("380002".into()), title: "x".into(), ..Default::default() }), 1).unwrap().unwrap();
+        let list = listing(&c, "kid", false, &kid).unwrap();
+        let entry = list.iter().find(|e| e["tvdb_id"] == "380002").unwrap();
+        assert_eq!(entry["state"], "not_on_server", "{entry}");
+        assert!(entry["next"].is_null() && entry["poster"].is_null(), "{entry}");
     }
 
     fn item_of(c: &Connection, id: i64) -> Option<String> {

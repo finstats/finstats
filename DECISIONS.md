@@ -615,6 +615,10 @@ Learned from real exports; also documented at the top of `import.rs`.
 9. None of it is in a backup: Jellyfin gives it back.
 10. **Library access is not a permission**: what of the library a person sees is Jellyfin's to say, for every permission
     alike, and only a Jellyfin administrator sees all of it.
+11. **Sonarr's and Radarr's posters and the watchlist's next episode follow it too**: `pipeline::poster_is_listed` serves a
+    poster only for a calendar or request row whose title the caller may see, and `watchlist::listing` reads the calendar
+    through `pipeline::seen_by`. Counting the services' small ids upwards told which hidden shows had dates, and a list
+    named a hidden show's next episode by day, season and number.
 
 ## Playback insights (`stats.rs`, 2.0)
 

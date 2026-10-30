@@ -595,13 +595,30 @@ fn history(c: &Connection, since: i64, days: i64) -> Result<Value> {
 }
 
 /// Is this poster one the caller could have been shown: on the calendar (which is everyone's), or on a request
-/// they may see? Otherwise the proxy would let anyone walk through everything Sonarr and Radarr know by counting upwards.
-pub fn poster_is_listed(conn: &Connection, service_id: i64, media_id: i64, user: &AuthUser) -> Result<bool> {
-    if conn.prepare_cached("SELECT 1 FROM upcoming WHERE service_id = ?1 AND arr_media_id = ?2 LIMIT 1")?.exists(params![service_id, media_id])? {
-        return Ok(true);
+/// they may see, and in either case not of a title Jellyfin hides from them (`access`)? Otherwise the proxy would let
+/// anyone walk through everything Sonarr and Radarr know by counting upwards, or tell which hidden shows have dates.
+pub fn poster_is_listed(conn: &Connection, service_id: i64, media_id: i64, user: &AuthUser, access: &crate::access::Access) -> Result<bool> {
+    let shown = |item: Option<String>| -> Result<bool> { item.map_or(Ok(true), |id| access.may_see_item(conn, &id)) };
+    let on_calendar: Vec<Option<String>> = conn
+        .prepare_cached("SELECT item_id FROM upcoming WHERE service_id = ?1 AND arr_media_id = ?2")?
+        .query_map(params![service_id, media_id], |r| r.get(0))?
+        .collect::<Result<_, _>>()?;
+    for item in on_calendar {
+        if shown(item)? {
+            return Ok(true);
+        }
     }
     let mine = (!user.perms.see_everyone).then(|| user.id.clone());
-    Ok(conn.prepare_cached("SELECT 1 FROM requests WHERE arr_service_id = ?1 AND arr_media_id = ?2 AND (?3 IS NULL OR user_id = ?3) LIMIT 1")?.exists(params![service_id, media_id, mine])?)
+    let asked: Vec<Option<String>> = conn
+        .prepare_cached("SELECT item_id FROM requests WHERE arr_service_id = ?1 AND arr_media_id = ?2 AND (?3 IS NULL OR user_id = ?3)")?
+        .query_map(params![service_id, media_id, mine], |r| r.get(0))?
+        .collect::<Result<_, _>>()?;
+    for item in asked {
+        if shown(item)? {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 #[cfg(test)]
@@ -822,8 +839,26 @@ mod tests {
         let c = conn();
         add(&c, 1, "episode", 5, "air", 2, Some(370001), None, false);
         let bob = plain("ub");
-        assert!(poster_is_listed(&c, 1, 12, &bob).unwrap());
-        assert!(!poster_is_listed(&c, 1, 13, &bob).unwrap() && !poster_is_listed(&c, 2, 12, &bob).unwrap());
+        let all = crate::access::Access::everything();
+        assert!(poster_is_listed(&c, 1, 12, &bob, &all).unwrap());
+        assert!(!poster_is_listed(&c, 1, 13, &bob, &all).unwrap() && !poster_is_listed(&c, 2, 12, &bob, &all).unwrap());
+    }
+
+    /// A poster of a title Jellyfin hides from somebody is not theirs to see because Sonarr has a date for it: counting
+    /// the services' ids upwards told which hidden shows were on the calendar.
+    #[test]
+    fn a_poster_of_a_title_jellyfin_hides_is_not_served() {
+        let c = conn();
+        add(&c, 1, "episode", 5, "air", 2, Some(370001), None, false);
+        c.execute_batch(
+            "INSERT INTO items(id, library_id, type, name, removed, updated_at) VALUES ('hidden', 'adult', 'Series', 'Low Orbit', 0, 1);
+             UPDATE upcoming SET item_id = 'hidden';
+             INSERT INTO users(id, name, is_admin, updated_at, access_all, access_libraries) VALUES ('kid', 'kid', 0, 0, 0, '[\"films\"]');",
+        )
+        .unwrap();
+        let kid = crate::access::Access::of(&c, "kid", false).unwrap();
+        assert!(!poster_is_listed(&c, 1, 12, &plain("kid"), &kid).unwrap());
+        assert!(poster_is_listed(&c, 1, 12, &plain("ub"), &crate::access::Access::everything()).unwrap());
     }
 
     fn plain(id: &str) -> AuthUser {
@@ -914,7 +949,8 @@ mod tests {
     fn a_poster_is_served_to_whoever_may_see_the_request_it_belongs_to() {
         let c = with_requests();
         c.execute("UPDATE requests SET arr_service_id = 3, arr_media_id = 77 WHERE request_id = 1", []).unwrap();
-        assert!(poster_is_listed(&c, 3, 77, &plain("ua")).unwrap() && poster_is_listed(&c, 3, 77, &everyone("ub")).unwrap());
-        assert!(!poster_is_listed(&c, 3, 77, &plain("ub")).unwrap(), "bob would learn what alice asked for");
+        let all = crate::access::Access::everything();
+        assert!(poster_is_listed(&c, 3, 77, &plain("ua"), &all).unwrap() && poster_is_listed(&c, 3, 77, &everyone("ub"), &all).unwrap());
+        assert!(!poster_is_listed(&c, 3, 77, &plain("ub"), &all).unwrap(), "bob would learn what alice asked for");
     }
 }

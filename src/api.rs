@@ -807,7 +807,7 @@ async fn arr_image(State(app): State<App>, user: AuthUser, Path((service_id, med
     // walk through the whole Arr library by counting upwards.
     let listed = media_id > 0
         && ((user.perms.see_downloads && crate::downloads::in_queue(&app, service_id, media_id))
-            || app.db.call(move |c| pipeline::poster_is_listed(c, service_id, media_id, &user)).await?);
+            || app.db.call(move |c| pipeline::poster_is_listed(c, service_id, media_id, &user, &crate::access::Access::of(c, &user.id, user.is_admin)?)).await?);
     if !listed {
         return Err(ApiError::not_found("Image"));
     }
