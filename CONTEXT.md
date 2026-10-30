@@ -306,7 +306,9 @@ bounds), brings settings only with `settings=true` (CLI `finstats restore <file>
 this install has them (`narrow_settings`, `narrow_grants`); without settings it leaves out home addresses, mutes and located
 titles the library lacks, and marks audit rows `restored_from`. A restored live play gets `source_id = 'restored:…'`, so
 **seen live is `source = 'live' AND source_id IS NULL`**. Then it re-derives groups, `is_local`, library links. A backup a
-manager runs by hand is pruned in its own pool. Separately, `pre-update-backups/` holds full
+manager runs by hand is pruned in its own pool. Restore preflight checks parsing, the header and size; a SQL failure
+rolls back only its batch, leaving earlier batches. An interrupted valid backup can be retried; invalid rows need correcting.
+Separately, `pre-update-backups/` holds full
 `VACUUM INTO` copies taken before a newer binary migrates (newest 3 of FinStats' own kept, never served).
 
 ---

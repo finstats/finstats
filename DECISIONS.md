@@ -1209,9 +1209,9 @@ Learned from real exports; also documented at the top of `import.rs`.
 2. Secrets (Jellyfin URL/API key, sessions, API keys) and the library are never exported; a test asserts the key is absent.
 3. Restore merges (dedupe on `source_id` or user + item + start), remaps timeline rows to the new play ids, and re-derives
    groups, `is_local` and library links.
-4. **A restore reads the whole file before it takes the write lock** (`each_line`, without a lock: a file wrong further down
-   writes nothing, and one that unpacks to far more than its size is refused, `server.backup.too_large`: a hundred times, at
-   least 64 MB, never past 64 GB, blank lines counted), **then writes it a batch at a time** (`BATCH_ROWS` / `BATCH_BYTES`,
+4. **A restore reads the whole file before it takes the write lock** (`each_line`, without a lock: invalid JSON or a header
+   rejected there writes nothing, and one that unpacks to far more than its size is refused, `server.backup.too_large`: a
+   hundred times, at least 64 MB, never past 64 GB, blank lines counted), **then writes it a batch at a time** (`BATCH_ROWS` / `BATCH_BYTES`,
    each its own transaction), so the collector writes between two batches: in one transaction a few MB of gzipped blank
    lines held the write lock for most of a minute and the collector lost plays. A restore stopped between batches is a
    partial merge, and restoring again completes it.
@@ -1247,6 +1247,11 @@ Learned from real exports; also documented at the top of `import.rs`.
     (`narrow_settings`): the public-address lookup and the location download are on only where both have them on,
     `backup_keep` is the larger and `backup_every_d` the more often (0 being off). The owner's decision, 2026-10-30:
     `backup_keep: 1` in a file pruned every other backup at the next run.
+
+13. **Restore preflight checks parsing, the header and unpacked size, not SQL row validity**. Row shapes and constraints
+    are checked in the writing pass; a failed batch rolls back while earlier batches remain. Retrying completes an
+    interrupted valid backup, but an invalid row must first be corrected. Comments must preserve this distinction so
+    the first pass is not mistaken for an all-or-nothing SQL validation.
 
 ## Trash (`trash.rs`, migration 37, 2.2.0)
 

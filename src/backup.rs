@@ -460,11 +460,12 @@ fn restored_detail(detail: &str, from: &str) -> String {
 
 /// Merge a backup into this database. `with_settings` also brings back the settings and permissions.
 ///
-/// The whole file is read once before anything is written ([`check`]), without a lock: a file that is wrong further down
-/// writes nothing, and one that unpacks to far more than it is (gzipped blank lines) is refused there. It is then written
-/// a batch at a time, each its own transaction, so the collector and everybody else write between two batches: in one
-/// transaction a large or crafted file held the write lock for as long as it took to read, minutes or a day. Restoring is
-/// a merge that recognises what is already there, so a restore stopped between batches is finished by restoring again.
+/// The whole file is parsed once before anything is written ([`each_line`]), without a lock: invalid JSON, an unsupported
+/// header or an unpacked size past the limit is refused before writing. Row shapes and SQL constraints are checked only
+/// while writing, a batch at a time, each its own transaction. A failed batch rolls back, but earlier batches remain.
+/// This lets the collector and everybody else write between batches: in one transaction a large or crafted file held
+/// the write lock for as long as it took to read, minutes or a day. Restoring is a merge that recognises what is already
+/// there, so an interrupted valid backup is finished by restoring again. Invalid rows must be corrected before retrying.
 pub fn restore(db: &Db, path: &Path, with_settings: bool, tasks: Option<(&Tasks, &'static str)>) -> Result<RestoreResult> {
     restore_within(db, path, with_settings, tasks, LIMITS)
 }
