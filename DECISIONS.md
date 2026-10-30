@@ -1261,6 +1261,9 @@ Learned from real exports; also documented at the top of `import.rs`.
     Occupied completed files and fresh parts are left alone; exhaustion fails promptly. A retry must neither lose a
     concurrent export nor depend on waiting for the clock. Cleanup ownership transfers before placement, which removes
     its own part even on failure; outer cleanup must never remove a later writer's reservation.
+15. **Placement and undo-delete use atomic no-replace hard links**, never a check followed by rename. An occupied
+    destination returns Taken on undo-delete and leaves the trash source intact. Filesystems without hard links fail
+    safely rather than risking replacement of a concurrently created backup.
 
 ## Trash (`trash.rs`, migration 37, 2.2.0)
 

@@ -56,11 +56,7 @@ const STALE_PART: std::time::Duration = std::time::Duration::from_secs(15 * 60);
 
 /// Give a finished `.part` its name, never over a file that has it already. The part is gone either way.
 fn put_in_place(part: &Path, path: &Path) -> std::io::Result<()> {
-    let placed = match std::fs::hard_link(part, path) {
-        // A folder that takes no hard links (some network shares): a rename, once nothing has the name.
-        Err(e) if e.kind() != std::io::ErrorKind::AlreadyExists && !path.exists() => std::fs::rename(part, path),
-        other => other,
-    };
+    let placed = std::fs::hard_link(part, path);
     let _ = std::fs::remove_file(part);
     placed
 }
@@ -304,10 +300,12 @@ pub fn take_out_of_trash(dir: &Path, name: &str) -> Result<i64, TrashError> {
     let latest = trashed(dir).into_iter().find(|t| t["name"].as_str() == Some(name)).and_then(|t| t["deleted_at"].as_i64());
     let Some(at) = latest else { return Err(TrashError::NotFound) };
     let to = dir.join(name);
-    if to.exists() {
-        return Err(TrashError::Taken);
+    let from = trash_dir(dir).join(format!("{name}.{at}"));
+    match std::fs::hard_link(&from, &to) {
+        Ok(()) => std::fs::remove_file(&from).map_err(TrashError::Io)?,
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => return Err(TrashError::Taken),
+        Err(e) => return Err(TrashError::Io(e)),
     }
-    std::fs::rename(trash_dir(dir).join(format!("{name}.{at}")), &to).map_err(TrashError::Io)?;
     Ok(at)
 }
 
@@ -855,6 +853,22 @@ impl Read for Counted {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn trash_restore_preserves_a_dangling_destination_and_its_source() {
+        let tmp = std::env::temp_dir().join(format!("finstats-trash-link-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(trash_dir(&tmp)).unwrap();
+        let name = "finstats-backup-20261030-000000.jsonl.gz";
+        let source = trash_dir(&tmp).join(format!("{name}.2000000000"));
+        std::fs::write(&source, b"trashed").unwrap();
+        std::os::unix::fs::symlink("missing", tmp.join(name)).unwrap();
+        assert!(matches!(take_out_of_trash(&tmp, name), Err(TrashError::Taken)));
+        assert_eq!(std::fs::read(&source).unwrap(), b"trashed");
+        assert_eq!(std::fs::read_link(tmp.join(name)).unwrap(), PathBuf::from("missing"));
+        std::fs::remove_dir_all(tmp).unwrap();
+    }
 
     #[test]
     fn failed_placement_does_not_clean_another_writers_part() {

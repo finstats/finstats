@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-30 (backup collision retry), on branch `dev` (crate version 2.3.1, local only; schema `user_version` 42; newest pushed tag `v2.2.0`).
+> **Last updated:** 2026-10-30 (backup placement ownership and atomic undo-delete), on branch `dev` (crate version 2.3.1, local only; schema `user_version` 42; newest pushed tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `ARCHITECTURE.md` explains how
@@ -294,7 +294,7 @@ backups, pruned apart; not exported), `jellyfin_url`,
 
 ### 4.6 Backups
 
-gzip JSON Lines (`finstats-backup-YYYYMMDD-HHMMSS.jsonl.gz`, in UTC, trying up to 1,024 earlier seconds on name collisions, never written over an existing file): header, the settings blob, then rows tagged by table and
+gzip JSON Lines (`finstats-backup-YYYYMMDD-HHMMSS.jsonl.gz`, in UTC, trying up to 1,024 earlier seconds on name collisions, never written over an existing file; placement and undo-delete require hard-link support): header, the settings blob, then rows tagged by table and
 matched **by column name** both ways. `backup::TABLES`: playbacks, playback_events, manual_seen, user_permissions,
 home_addresses, server_events, devices, security_alerts, audit, watchlist, located, health_dismissed, appearance, welcomed.
 

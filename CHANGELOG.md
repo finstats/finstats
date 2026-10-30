@@ -80,7 +80,7 @@ series.
 - The web UI's files are gzipped once and kept, and fonts are not compressed again.
 
 ### Stability
-- A backup retries an occupied filename without replacing a completed backup or removing another export's fresh partial file.
+- A backup retries an occupied filename without replacing a completed backup or removing another export's fresh partial file. Undoing a backup deletion preserves a file that took its name, including during a concurrent export. Backup placement requires hard-link support and fails safely without it.
 - A backup in Jellystat's older format is read a row at a time instead of whole, and a line longer than any backup's is refused.
 - Two Tautulli uploads at once no longer write into one file.
 - A page number far past the end of a library's titles or of Library health is an empty page, not an error.
