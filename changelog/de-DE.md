@@ -97,6 +97,7 @@ kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 - Gleichzeitig eintreffende Anfragen an einen veröffentlichten Link berechnen seine Antwort einmal, und seine Karten werden auf einer eigenen Spur gezeichnet, sodass jemand mit dem Link die Rückblick-Karten des Besitzers nicht mehr mit 503 antworten lassen kann.
 - Die Wiedergaben einer Bibliothek, die in Jellyfins Liste der Bibliotheken fehlt, warten zwei Tage, bevor sie auf die Kopie desselben Titels in einer anderen Bibliothek verschoben werden. Eine Liste, die eine Bibliothek ausließ, verschob sie sofort, und sie blieben verschoben, als die Bibliothek zurückkam.
 - Eine Festplatte, die Jellyfin größer meldet, als eine Zahl fassen kann, lässt nicht mehr jedes Lesen der Serverdetails fehlschlagen.
+- Jellyfin-Abfragen enden, wenn sich eine Seite ohne neue IDs wiederholt.
 
 ### Fixed
 - Fehlgeschlagene Anmeldungen bei einem Konto ergeben eine Warnung pro Zeitfenster, die bei zwanzig zu einem Alarm wird, und ein Name zählt nur gegen ein Konto, wenn er vollständig eingegeben wird ("x alice" zählt nicht mehr gegen alice).

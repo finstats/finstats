@@ -84,7 +84,8 @@ runs the derivations that depend on the library, in this order: `sync::backfill_
 season/episode numbers, the imported rows' item types), `relink` (§6.3), `pipeline::link`, `watchlist::resolve`; Library
 health and Capacity recompute beside it, never inside (§7.8). `sync_changes` (metadata changes) reads what Jellyfin saved
 since the last look, items and people, without removing anything. The users read (`sync_users`) stores users, their
-Jellyfin policies (§7.2) and who was removed. Contracts: "Library reads", "Pictures", "Track languages".
+Jellyfin policies (§7.2) and who was removed. All seven paged reads use `sync::page_adds_ids` to stop
+when a page brings no new id, with a fresh set per query. Contracts: "Library reads", "Pictures", "Track languages".
 
 ### 4.3 Scheduling
 

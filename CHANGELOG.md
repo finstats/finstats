@@ -97,6 +97,7 @@ series.
 - Requests arriving together on a published link work out its answer once, and its cards are drawn in a lane of their own, so a link holder can no longer make the owner's recap cards answer 503.
 - The plays of a library missing from Jellyfin's list of libraries wait two days before they are moved onto another library's copy of the same title. One list that left a library out moved them at once, and they stayed moved when the library came back.
 - A disk Jellyfin reports as bigger than any number can hold no longer makes every read of the server's details fail.
+- Jellyfin reads stop when a page repeats without new IDs.
 
 ### Fixed
 - Failed sign-ins on an account are one warning a window that grows into an alert at twenty, and a name counts against an account only when typed whole ("x alice" no longer counts against alice).

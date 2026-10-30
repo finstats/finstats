@@ -97,6 +97,7 @@ manchete de toda a série.
 - Requisições que chegam juntas a um link publicado calculam a resposta dele uma vez, e os cartões dele são desenhados numa fila própria, então quem tem o link não consegue mais fazer os cartões da Retrospectiva do dono responderem 503.
 - As reproduções de uma biblioteca que falta na lista de bibliotecas do Jellyfin esperam dois dias antes de passar para a cópia do mesmo título em outra biblioteca. Uma única lista que deixava uma biblioteca de fora as movia na hora, e elas continuavam movidas quando a biblioteca voltava.
 - Um disco que o Jellyfin informa como maior do que qualquer número comporta não faz mais falhar toda leitura dos detalhes do servidor.
+- As leituras do Jellyfin param quando uma página se repete sem novos IDs.
 
 ### Fixed
 - Logins com falha numa conta são um aviso por janela que vira alerta aos vinte, e um nome só conta contra uma conta quando digitado inteiro ("x alice" não conta mais contra alice).

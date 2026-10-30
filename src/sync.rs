@@ -16,6 +16,18 @@ const CONFIRM_BY: usize = 100;
 /// Library kinds that only reference items living in other libraries.
 const SKIPPED_COLLECTIONS: [&str; 2] = ["boxsets", "playlists"];
 
+/// Every page must bring an id not seen in this read, even if Jellyfin ignores the offset.
+/// Visit every id: short-circuiting at the first new one would miss repeats on the next page.
+fn page_adds_ids(seen: &mut std::collections::HashSet<String>, ids: impl Iterator<Item = String>) -> bool {
+    ids.fold(false, |added, id| seen.insert(id) || added)
+}
+
+/// Whether a page of `got` entries is the same page again (or a full one of nothing readable): for a read whose pages are
+/// kept as the whole, a broken read, never the end. An empty page is the end.
+fn repeated_page(seen: &mut std::collections::HashSet<String>, ids: Vec<String>, got: usize) -> bool {
+    got > 0 && !page_adds_ids(seen, ids.into_iter())
+}
+
 /// Whether a read is a trustworthy basis for removing what it did not return. `items_page` turns
 /// anything it cannot parse into an empty list, so a Jellyfin upgrade that changed the response shape,
 /// or an error dressed as `200 {"Items":[]}`, would otherwise silently wipe a library. But this guard
@@ -471,11 +483,18 @@ async fn read_visible(app: &App, jf: &Jellyfin, stale_only: bool) {
         let mut ids: Vec<String> = vec![];
         let mut failed = false;
         'libraries: for lib in &libraries {
+            let mut page_ids = std::collections::HashSet::new();
             let mut at = 0usize;
             loop {
                 match jf.visible_page(lib, &user_id, at, PAGE).await {
                     Ok(page) => {
                         let got = page.len();
+                        // The same page again is a broken read: what they may see is kept as it was, not cut short.
+                        if repeated_page(&mut page_ids, page.clone(), got) {
+                            tracing::warn!("reading what Jellyfin lets one person see failed: the same page came back again");
+                            failed = true;
+                            break 'libraries;
+                        }
                         ids.extend(page);
                         at += got;
                         if got < PAGE {
@@ -716,6 +735,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
         // What of it could be stored: the guard's count. `seen` is the page cursor, and an answer whose
         // items FinStats cannot read (no `Id`) is a full page that stored nothing.
         let mut stored = 0usize;
+        let mut page_ids = std::collections::HashSet::new();
         let mut total = 0usize;
         loop {
             let (items, reported) = jf.items_page(&lib_id, seen, PAGE).await?;
@@ -723,6 +743,9 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
                 total = reported;
             }
             let got = items.len();
+            if !page_adds_ids(&mut page_ids, items.iter().filter_map(|it| it["Id"].as_str()).map(norm_id)) {
+                break;
+            }
             if got == 0 {
                 break;
             }
@@ -753,6 +776,7 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
             }
         }
         // Cast and crew, for films and shows only. A failure here never fails the library read.
+        let mut page_ids = std::collections::HashSet::new();
         let mut people_at = 0usize;
         loop {
             let items = match jf.people_page(&lib_id, people_at, PAGE).await {
@@ -763,6 +787,9 @@ async fn sync_libraries(app: &App, jf: &Jellyfin) -> Result<String> {
                 }
             };
             let got = items.len();
+            if !page_adds_ids(&mut page_ids, items.iter().filter_map(|it| it["Id"].as_str()).map(norm_id)) {
+                break;
+            }
             if got == 0 {
                 break;
             }
@@ -934,10 +961,14 @@ async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
     let Some(from) = from else { return Ok(crate::i18n::t("server.sync.waiting_for_library_read", &[])) };
     let mut changed = 0usize;
     for (lib_id, lib_name) in libraries {
+        let mut page_ids = std::collections::HashSet::new();
         let mut looked = 0usize;
         loop {
             let items = jf.changed_page(&lib_id, from, looked, PAGE).await?;
             let got = items.len();
+            if !page_adds_ids(&mut page_ids, items.iter().filter_map(|it| it["Id"].as_str()).map(norm_id)) {
+                break;
+            }
             let lib = lib_id.clone();
             changed += app
                 .db
@@ -960,10 +991,14 @@ async fn sync_changes(app: &App, jf: &Jellyfin) -> Result<String> {
     let known = app.db.call(|c| Ok(db::get_setting(c, "portraits_read")?.is_some())).await?;
     let since = people_from(from, known);
     let mut portraits = 0usize;
+    let mut page_ids = std::collections::HashSet::new();
     let mut looked = 0usize;
     loop {
         let people = jf.changed_people_page(since, looked, PEOPLE_PAGE).await?;
         let got = people.len();
+        if !page_adds_ids(&mut page_ids, people.iter().filter_map(|it| it["Id"].as_str()).map(norm_id)) {
+            break;
+        }
         portraits += app.db.call(move |c| {
             let tx = c.transaction()?;
             let n = store_portraits(&tx, &people)?;
@@ -1034,11 +1069,15 @@ async fn sync_events(app: &App, jf: &Jellyfin) -> Result<String> {
         .and_then(|t| chrono::DateTime::from_timestamp(t - 60, 0))
         .map(|d| d.to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
 
+    let mut page_ids = std::collections::HashSet::new();
     let mut start = 0usize;
     let mut added = 0usize;
     loop {
         let (entries, total) = jf.activity_log(start, PAGE, min_date.as_deref()).await?;
         let got = entries.len();
+        if !page_adds_ids(&mut page_ids, entries.iter().filter_map(|it| it["Id"].as_i64()).map(|id| id.to_string())) {
+            break;
+        }
         if got == 0 {
             break;
         }
@@ -1262,11 +1301,18 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
     for (n, (user_id, name)) in users.into_iter().enumerate() {
         app.tasks.update(ID, crate::i18n::t("server.sync.reading_watched", &[("name", (&name).into())]), Some(n as f64 / count as f64));
         let mut rows: Vec<Value> = vec![];
-        for (filter, types) in [("IsPlayed", "Movie,Episode"), ("IsFavorite", "Movie,Series,Episode")] {
+        let mut repeated = false;
+        'filters: for (filter, types) in [("IsPlayed", "Movie,Episode"), ("IsFavorite", "Movie,Series,Episode")] {
+            let mut page_ids = std::collections::HashSet::new();
             let mut start = 0;
             loop {
                 let page = jf.user_items_page(&user_id, filter, types, start, 1000).await?;
                 let got = page.len();
+                // The same page again is a broken read: their flags are kept as they were, not replaced by part of them.
+                if repeated_page(&mut page_ids, page.iter().filter_map(|it| it["Id"].as_str()).map(norm_id).collect(), got) {
+                    repeated = true;
+                    break 'filters;
+                }
                 rows.extend(page);
                 start += got;
                 if got < 1000 {
@@ -1274,9 +1320,15 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
                 }
             }
         }
+        let seen = rows.iter().filter(|it| it["Id"].is_string()).count();
+        if repeated {
+            let msg = crate::i18n::t("server.sync.userdata_repeated", &[("name", (&name).into())]);
+            tracing::warn!("{msg}");
+            refused.push(msg);
+            continue;
+        }
         total += rows.len();
         let uid = user_id.clone();
-        let seen = rows.iter().filter(|it| it["Id"].is_string()).count();
         let shrink_ok = allow_shrink();
         // Refused, the flags are kept and the job fails, but FinStats does not stop: they are read again in full next time,
         // so nothing is lost by waiting, and narrowing somebody's libraries in Jellyfin reads exactly like a broken read.
@@ -1294,6 +1346,41 @@ async fn sync_userdata(app: &App, jf: &Jellyfin) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn paging_tracks_all_ids_and_allows_partial_overlap() {
+        let mut seen = std::collections::HashSet::new();
+        assert!(page_adds_ids(&mut seen, ["a", "b"].into_iter().map(str::to_string)));
+        assert!(page_adds_ids(&mut seen, ["b", "c"].into_iter().map(str::to_string)));
+        assert!(!page_adds_ids(&mut seen, ["c", "a", "b"].into_iter().map(str::to_string)));
+        assert!(!page_adds_ids(&mut seen, std::iter::empty()));
+    }
+
+    /// A read whose every page is kept as the whole (the titles Jellyfin lets somebody see, their played and favourite
+    /// flags) fails on a page that brings nothing new, rather than stop there and store part of it as all of it. Only an
+    /// empty page is the end.
+    #[test]
+    fn a_page_that_brings_nothing_new_is_a_broken_read_and_an_empty_one_the_end() {
+        let mut seen = std::collections::HashSet::new();
+        let ids = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert!(!repeated_page(&mut seen, ids(&["a", "b"]), 2));
+        assert!(repeated_page(&mut seen, ids(&["a", "b"]), 2), "the same page again");
+        assert!(!repeated_page(&mut seen, vec![], 0), "an empty page is the end, not a broken read");
+        assert!(repeated_page(&mut seen, vec![], 3), "a full page of nothing readable");
+    }
+
+    #[test]
+    fn paging_ignoring_start_index_stops_after_second_full_page() {
+        let mut seen = std::collections::HashSet::new();
+        let mut calls = 0;
+        // Stub ignores the requested offset and always returns a full page.
+        let mut page = |_start| { calls += 1; vec!["a".to_string(); PAGE] };
+        for start in (0..PAGE * 3).step_by(PAGE) {
+            let ids = page(start);
+            if !page_adds_ids(&mut seen, ids.into_iter()) { break; }
+        }
+        assert_eq!(calls, 2);
+    }
+
     /// A read of the activity log goes on to the end of what is new. The cap was meant for the very first backfill but held
     /// at every read, and the log answers newest first: more than 20,000 failed sign-ins between two reads pushed a real
     /// sign-in from abroad out of what was read, for good, and no alert was raised for it.

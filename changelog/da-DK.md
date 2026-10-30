@@ -97,6 +97,7 @@ overskrift for hele serien.
 - Forespørgsler, der ankommer samtidig på et offentliggjort link, beregner dets svar én gang, og dets kort tegnes i deres egen bane, så en, der har linket, ikke længere kan få ejerens Tilbageblik-kort til at svare 503.
 - Afspilningerne i et bibliotek, der mangler på Jellyfins liste over biblioteker, venter to dage, før de flyttes til et andet biblioteks kopi af samme titel. Én liste, der udelod et bibliotek, flyttede dem straks, og de forblev flyttet, da biblioteket kom tilbage.
 - En disk, som Jellyfin angiver som større, end noget tal kan rumme, får ikke længere hver læsning af serverens detaljer til at fejle.
+- Læsninger fra Jellyfin stopper, når en side gentages uden nye ID'er.
 
 ### Fixed
 - Mislykkede logins på en konto er én advarsel pr. tidsrum, der vokser til en alarm ved tyve, og et navn tæller kun mod en konto, når det er skrevet helt ("x alice" tæller ikke længere mod alice).

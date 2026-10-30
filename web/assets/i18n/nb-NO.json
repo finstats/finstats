@@ -1855,7 +1855,8 @@
       "server_read_without_plugins": { "one": "{count} enhet; programtilleggene kunne ikke leses", "other": "{count} enheter; programtilleggene kunne ikke leses" },
       "reading_watched": "Leser hva {name} har sett",
       "userdata_read": { "one": "{count} avspilt eller favorittmerket element", "other": "{count} avspilte eller favorittmerkede elementer" },
-      "userdata_refused": { "one": "Jellyfin ga {count} avspilt eller favorittmerket element for {name} der FinStats har {current}. De som mangler, blir ikke fjernet: dette ser ut som en endring i Jellyfin eller en feillesing. Ingenting ble endret.", "other": "Jellyfin ga {count} avspilte eller favorittmerkede elementer for {name} der FinStats har {current}. De som mangler, blir ikke fjernet: dette ser ut som en endring i Jellyfin eller en feillesing. Ingenting ble endret." }
+      "userdata_refused": { "one": "Jellyfin ga {count} avspilt eller favorittmerket element for {name} der FinStats har {current}. De som mangler, blir ikke fjernet: dette ser ut som en endring i Jellyfin eller en feillesing. Ingenting ble endret.", "other": "Jellyfin ga {count} avspilte eller favorittmerkede elementer for {name} der FinStats har {current}. De som mangler, blir ikke fjernet: dette ser ut som en endring i Jellyfin eller en feillesing. Ingenting ble endret." },
+      "userdata_repeated": "Jellyfin svarte med den samme siden av avspilte og favorittmerkede elementer for {name} igjen. Merkene ble beholdt som de var: dette ser ut som en endring i Jellyfin eller en proxy i veien."
     },
     "import": {
       "line_too_long": "En linje i filen er lengre enn noen sikkerhetskopi har",

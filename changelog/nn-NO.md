@@ -97,6 +97,7 @@ som overskrift for heile serien.
 - Førespurnader som kjem samtidig til ei publisert lenkje, reknar ut svaret éin gong, og korta vert teikna i ein eigen kø, så den som har lenkja, ikkje lenger kan få korta til eigaren frå tilbakeblikket til å svare 503.
 - Avspelingane i eit bibliotek som manglar i lista til Jellyfin over bibliotek, ventar to dagar før dei vert flytte til eit anna bibliotek sin kopi av same tittel. Éi liste som utelét eit bibliotek, flytte dei straks, og dei vart verande flytte då biblioteket kom tilbake.
 - Ein disk Jellyfin oppgjev som større enn noko tal kan romme, får ikkje lenger kvar lesing av tenardetaljane til å feile.
+- Lesingar frå Jellyfin stoppar når ei side blir gjenteken utan nye ID-ar.
 
 ### Fixed
 - Mislukka innloggingar på ein konto gjev eitt varsel per tidsrom som veks til eit alarmvarsel ved tjue, og eit namn tel mot ein konto berre når det er skrive heilt ("x alice" tel ikkje lenger mot alice).

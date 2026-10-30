@@ -97,6 +97,7 @@ bajo su encabezado: ese título es el que la aplicación usa como titular de tod
 - Las solicitudes que llegan a la vez a un enlace publicado calculan su respuesta una sola vez, y sus tarjetas se dibujan en un carril propio, así que quien tenga el enlace ya no puede hacer que las tarjetas del Resumen anual del propietario respondan 503.
 - Las reproducciones de una biblioteca que falta en la lista de bibliotecas de Jellyfin esperan dos días antes de pasar a la copia del mismo título en otra biblioteca. Una sola lista que dejaba fuera una biblioteca las movía al instante, y seguían movidas cuando la biblioteca volvía.
 - Un disco que Jellyfin declara más grande de lo que cabe en un número ya no hace fallar cada lectura de los detalles del servidor.
+- Las lecturas de Jellyfin se detienen si una página se repite sin nuevos ID.
 
 ### Fixed
 - Los inicios de sesión fallidos en una cuenta son un solo aviso por ventana que se convierte en alerta a los veinte, y un nombre solo cuenta contra una cuenta cuando se escribe entero («x alice» ya no cuenta contra alice).

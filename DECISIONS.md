@@ -180,6 +180,13 @@ Contents:
 13. **The guard counts only titles a library read stored** (`sync::held_by_reads`, `updated_at > 0`; a title only an import
     brought has 0). Counted with imported titles, a backup of invented ones twenty times a library's size made every read
     look broken and halted FinStats at every start, with the blame on Jellyfin.
+14. **Every paged Jellyfin read stops when a page brings no new id**, as well as on a short page. A shared
+    `sync::page_adds_ids` tracks every id per library, user query or activity read, including integer activity ids.
+    Partial overlap continues if any id is new; a server or proxy ignoring `StartIndex` cannot keep a job paging
+    through the same full answer until its time limit. A read whose pages are kept as the whole (what somebody may see,
+    their played and favourite flags) treats such a page as a broken read (`repeated_page`) and keeps what it had,
+    rather than store part as all; the library read may stop there, since it asks by id after any title its pages did
+    not bring.
 
 ## Scheduling (`schedule.rs`, `sync::scheduler`, Settings → Tasks, 2.0.4)
 

@@ -98,6 +98,7 @@ la série.
 - Des requêtes arrivant ensemble sur un lien publié calculent sa réponse une seule fois, et ses cartes sont dessinées dans une file à part, si bien qu’un détenteur du lien ne peut plus faire répondre 503 aux cartes du bilan du propriétaire.
 - Les lectures d'une bibliothèque absente de la liste des bibliothèques de Jellyfin attendent deux jours avant d'être déplacées vers la copie du même titre dans une autre bibliothèque. Une seule liste qui oubliait une bibliothèque les déplaçait aussitôt, et elles restaient déplacées quand la bibliothèque revenait.
 - Un disque que Jellyfin annonce plus grand qu'aucun nombre ne peut contenir ne fait plus échouer chaque lecture des détails du serveur.
+- Les lectures de Jellyfin s’arrêtent lorsqu’une page se répète sans nouvel identifiant.
 
 ### Fixed
 - Les connexions échouées sur un compte donnent un seul avertissement par fenêtre, qui devient une alerte à vingt, et un nom ne compte contre un compte que s’il est tapé en entier (« x alice » ne compte plus contre alice).

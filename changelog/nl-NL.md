@@ -97,6 +97,7 @@ de hele reeks.
 - Verzoeken die tegelijk op een gepubliceerde link binnenkomen, bouwen het antwoord één keer op, en de kaarten ervan worden in een eigen baan getekend, zodat iemand met de link de Terugblik-kaarten van de eigenaar niet langer met 503 kan laten antwoorden.
 - De afspelingen van een bibliotheek die in Jellyfins lijst van bibliotheken ontbreekt, wachten twee dagen voordat ze naar de kopie van dezelfde titel in een andere bibliotheek gaan. Eén lijst die een bibliotheek wegliet, verplaatste ze meteen, en ze bleven verplaatst toen de bibliotheek terugkwam.
 - Een schijf die Jellyfin groter opgeeft dan een getal kan bevatten, laat niet langer elke lezing van de servergegevens mislukken.
+- Het uitlezen van Jellyfin stopt als een pagina zich herhaalt zonder nieuwe ID’s.
 
 ### Fixed
 - Mislukte aanmeldingen op een account geven één waarschuwing per tijdvenster die bij twintig uitgroeit tot een alarm, en een naam telt alleen tegen een account als die volledig is getypt ("x alice" telt niet langer tegen alice).

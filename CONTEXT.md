@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-30, on branch `dev` (crate version 2.3.1, local only; schema `user_version` 42; newest pushed tag `v2.2.0`).
+> **Last updated:** 2026-10-30 (paging progress guard), on branch `dev` (crate version 2.3.1, local only; schema `user_version` 42; newest pushed tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `ARCHITECTURE.md` explains how
@@ -430,7 +430,8 @@ the play was already in, so a pause never becomes watch time.
 sources either end within `merge_window_s`. Importers call `insert_imported`, never `insert`. `STOP_S`, `PLAY_FRAC`,
 `SEEN_AT` (0.8) are the one rule for where a play stopped and whether it counts as seen.
 
-**Library sync and scheduling (`sync.rs`, `schedule.rs`).** Jobs: `sync_users`, `sync_libraries`, `sync_events`,
+**Library sync and scheduling (`sync.rs`, `schedule.rs`).** Every paged Jellyfin read stops on a short page or a page
+with no new id (`page_adds_ids`, a fresh set per query). Jobs: `sync_users`, `sync_libraries`, `sync_events`,
 `sync_server`, `sync_userdata`, `sync_changes`, `backup`, `geoip`, Pipeline syncs. Triggers per job (daily, weekly,
 interval, start-up, after Jellyfin's library scan), chosen by the pure `schedule::due`; last runs in `task_runs`.
 **`trustworthy_removal`** refuses a read (a library's items, the users, a person's played/favourite flags) that comes back empty or catastrophically shrunk: data kept, task failed,
