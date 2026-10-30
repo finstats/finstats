@@ -105,8 +105,8 @@ Contents:
 7. **A request's body and a response's writes have timers too, and one address holds at most its share of the
    connections** (`Limits`): once its first 15 s are over a body must have averaged 1 KB a second (`MinRate`), or it ends
    in an error and closes its connection; a write that waits 30 s for the client to read gives the connection up
-   (`WriteWithin`); and one address (an IPv6 /64) holds at most 64 connections, a believed proxy's apart, since it carries
-   everybody's. The head's timer alone let a body promised and sent a byte at a time hold its connection for good, and
+   (`WriteWithin`); and one public address (an IPv6 /64) holds at most 64 connections; an address on this machine or a private network
+   (a household's devices, a proxy, believed or not) is not held to it, since one such address carries everybody's. The head's timer alone let a body promised and sent a byte at a time hold its connection for good, and
    one host could hold all 512. A rate rather than a deadline, so a 4 GB upload over a slow line still arrives.
 
 ## Logging

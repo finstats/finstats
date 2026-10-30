@@ -391,8 +391,11 @@ async fn serve(db: db::Db, data_dir: PathBuf) -> Result<()> {
     }
 
     let serve_app = app.clone();
+    // The share per address is for strangers on the internet. A household's devices, and a proxy in front of FinStats
+    // (believed or not), are on this machine or a private network: one address there carries everybody's connections.
     let proxies = app.trust_proxy.clone();
-    serve_http(listener, api::router(app.clone()), Limits::default(), move |ip| proxies.trusts(ip), async move {
+    let not_a_stranger = move |ip: std::net::IpAddr| proxies.trusts(ip) || db::is_local_ip(&ip.to_string()).unwrap_or(false);
+    serve_http(listener, api::router(app.clone()), Limits::default(), not_a_stranger, async move {
         let ctrl_c = tokio::signal::ctrl_c();
         let mut term = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).expect("SIGTERM handler");
         // A fail-closed halt (`request_halt`) is a third way out, next to Ctrl-C and SIGTERM: FinStats
