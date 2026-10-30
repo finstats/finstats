@@ -1638,6 +1638,11 @@ Learned from real exports; also documented at the top of `import.rs`.
    (`db::private_dir`, `private_file`, `private_new_file`).
 5. Test the image on folders Docker creates (`qa/run.sh docker`), not on a data folder that already exists on the dev machine.
 6. The Docker image ships tzdata ("Stats layer" 4).
+7. **Every action in `.github/workflows/docker.yml` is pinned to a commit and both base images to a digest**, the version
+    beside each for Dependabot (`.github/dependabot.yml`), which moves the pins; a tag build uses no build cache. A tag can
+    be moved by whoever holds the action's repository, and every step runs beside the job's token (`packages: write`
+    pushes `:latest`); the cache is one store per repository that every job of a run on `main` may write. QA's
+    `workflow` rule holds all three. The JavaScript check parses every module (`find`), not two folders of them.
 
 ## Licence notice (`licenses.rs`, `THIRD-PARTY.json`, `GET /api/licenses`, `/licenses`)
 

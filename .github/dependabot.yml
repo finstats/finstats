@@ -1,0 +1,11 @@
+# Moves the commits the workflow's actions are pinned to, and the image's base images, once a week.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

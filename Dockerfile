@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
-FROM rust:1-alpine AS build
+# Pinned by digest, with the tag beside it for Dependabot (.github/dependabot.yml), which moves the pin.
+FROM rust:1-alpine@sha256:b1d5dd5a22a09404d3e798c0cf051b689077360374eb505fa5bb93c479693d87 AS build
 RUN apk add --no-cache musl-dev
 WORKDIR /src
 
@@ -30,7 +31,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,id=finstats-registry \
     --mount=type=cache,target=/src/target,id=finstats-target \
     cargo build --release --locked && cp target/release/finstats /finstats
 
-FROM alpine:3.22
+FROM alpine:3.22@sha256:2e0b81d60597f449baa56dc25d355367869d2dca4cd57e866f1e2b52af3eb55f
 # Ties the published image to its source; the release workflow adds version, revision and date.
 LABEL org.opencontainers.image.title="finstats" \
       org.opencontainers.image.description="Lightweight playback statistics for Jellyfin" \

@@ -65,6 +65,7 @@ bajo su encabezado: ese título es el que la aplicación usa como titular de tod
 - Una restauración con sus ajustes activa la consulta de la dirección pública y la descarga de la base de ubicaciones solo donde esta instalación también las tiene activadas, y nunca guarda menos copias de seguridad ni las escribe con menos frecuencia que esta instalación. Una copia que guardaba una podía hacer que la siguiente ejecución quitara todas las demás.
 - Un tamaño de archivo que ningún disco podría contener se lee como ningún tamaño, y los tamaños se suman de modo que ningún total pueda desbordarse. Un solo tamaño importado hacía que las páginas de bibliotecas respondieran con un error para siempre.
 - En cuanto FinStats sabe que se llega a él por https (su dirección pública es https, o un proxy de confianza lo dice), una sesión solo se toma de su cookie `__Host-`, y con una dirección pública https cada sesión nueva es una sesión https. Un inicio de sesión enviado sin `Origin` a través de un proxy que no decía nada creaba una sesión normal que un sitio vecino podía colar en el navegador de alguien.
+- La imagen se construye con cada acción de GitHub fijada a un commit y las dos imágenes base a un resumen, movidos solo por Dependabot, y una versión se construye sin la caché de compilación compartida. Una etiqueta movida en la acción de otra persona podría haber publicado cualquier imagen como FinStats.
 
 ### Performance
 - Un perfil publicado se calcula como mucho una vez por minuto, no de nuevo para cada imagen y tarjeta que contiene.

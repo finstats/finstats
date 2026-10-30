@@ -65,6 +65,7 @@ som overskrift for heile serien.
 - Ei gjenoppretting med innstillingane slår på oppslaget av den offentlege adressa og nedlastinga av stadsdatabasen berre der denne installasjonen òg har dei på, og held aldri færre tryggleikskopiar eller skriv dei sjeldnare enn denne installasjonen gjer. Ein tryggleikskopi som heldt éin, kunne få neste køyring til å fjerne alle andre.
 - Ein filstorleik ingen disk kunne romme, vert lesen som ingen storleik, og storleikar vert lagde saman slik at ingen sum kan flyte over. Éin importert storleik fekk bibliotekssidene til å svare med feil for godt.
 - Når FinStats veit at han vert nådd over https (den offentlege adressa er https, eller ein tiltrudd proxy seier det), vert ei økt berre teken frå `__Host-`-informasjonskapselen, og med ei offentleg https-adresse er kvar ny økt ei https-økt. Ei innlogging send utan `Origin` gjennom ein proxy som ikkje sa noko, laga ei vanleg økt som ein nabonettstad kunne plante i nettlesaren til nokon.
+- Biletet vert bygt med kvar GitHub-handling festa til ein commit og begge grunnbileta til eit samandrag, flytte berre av Dependabot, og ei utgjeving vert bygd utan den delte byggjebufferen. Ein flytt tagg på andre sin handling kunne ha publisert kva bilete som helst som FinStats.
 
 ### Performance
 - Ein publisert profil vert rekna ut høgst éin gong i minuttet, ikkje på nytt for kvart bilete og kort på han.

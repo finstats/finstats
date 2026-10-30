@@ -64,6 +64,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Ayarlarıyla yapılan bir geri yükleme, genel adres sorgusunu ve konum veritabanı indirmesini yalnızca bu kurulumda da açık oldukları yerde açar ve bu kurulumdan asla daha az yedek tutmaz ya da yedekleri daha seyrek yazmaz. Bir yedek tutan bir yedek, sonraki çalıştırmanın diğer tümünü kaldırmasına yol açabiliyordu.
 - Hiçbir diskin alamayacağı bir dosya boyutu boyut yok olarak okunur ve boyutlar hiçbir toplam taşmayacak şekilde toplanır. İçe aktarılan tek bir boyut, kitaplık sayfalarının kalıcı olarak hata vermesine yol açıyordu.
 - FinStats'a https ile ulaşıldığını bildiğinde (genel adresi https ise ya da güvenilen bir proxy bunu söylüyorsa) oturum yalnızca `__Host-` çerezinden alınır ve genel adres https ise her yeni oturum bir https oturumudur. Hiçbir şey söylemeyen bir proxy üzerinden `Origin` olmadan gönderilen oturum açma, komşu bir sitenin birinin tarayıcısına yerleştirebileceği düz bir oturum oluşturuyordu.
+- İmaj, her GitHub eylemi bir commit'e ve iki temel imaj bir özete sabitlenerek oluşturulur, bunları yalnızca Dependabot taşır, ve bir sürüm paylaşılan derleme önbelleği olmadan oluşturulur. Başkasının eyleminde taşınmış bir etiket, herhangi bir imajı FinStats olarak yayımlayabilirdi.
 
 ### Performance
 - Yayımlanmış bir profil, üzerindeki her resim ve kart için yeniden değil, en fazla dakikada bir kez hesaplanır.
