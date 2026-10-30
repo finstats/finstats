@@ -1256,6 +1256,11 @@ Learned from real exports; also documented at the top of `import.rs`.
     interrupted valid backup, but an invalid row must first be corrected. Comments must preserve this distinction so
     the first pass is not mistaken for an all-or-nothing SQL validation.
 
+14. **Export reserves its own part exclusively before cleanup can touch it**. On a name collision it tries up to 1,024
+    UTC seconds backwards from the current second, keeping the accepted filename shape without sleeps or future names.
+    Occupied completed files and fresh parts are left alone; exhaustion fails promptly. A retry must neither lose a
+    concurrent export nor depend on waiting for the clock.
+
 ## Trash (`trash.rs`, migration 37, 2.2.0)
 
 1. **Nothing a person deletes goes at once.** A play is deleted by `PUT /api/activity/{id}` `{"deleted": true}`

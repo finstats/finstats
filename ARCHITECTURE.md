@@ -262,7 +262,8 @@ socket the pages poll as before (`follow`). Contracts: "Live channel".
 
 `backup.rs`: gzip JSON Lines, one row per line tagged with its table, matched by column name both ways, of the tables in
 `backup::TABLES`. A restore reads the whole file, then merges a batch at a time. Pre-update snapshots (§3) are a separate,
-whole-database copy. Contracts: "Backups".
+whole-database copy. Export reserves an exclusive part under a free UTC name, searching at most 1,024 seconds
+backwards on collisions; cleanup touches only the reserved part. Contracts: "Backups".
 
 ### 12.2 The trash
 

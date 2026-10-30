@@ -79,6 +79,7 @@ den tittelen bruker appen som overskrift for hele serien.
 - Filene i nettgrensesnittet gzippes én gang og beholdes, og skrifter komprimeres ikke på nytt.
 
 ### Stability
+- En sikkerhetskopi prøver et annet opptatt filnavn uten å erstatte en ferdig kopi eller fjerne en annen eksports ferske delvise fil.
 - En sikkerhetskopi i Jellystats eldre format leses én rad om gangen i stedet for hel, og en linje lengre enn noen sikkerhetskopi har, avvises.
 - To opplastinger fra Tautulli samtidig skriver ikke lenger i samme fil.
 - Et sidetall langt forbi slutten av et biblioteks titler eller av Bibliotekhelse gir en tom side, ikke en feil.

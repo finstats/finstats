@@ -108,6 +108,10 @@ fn raw_row(row: &crate::db::rusqlite::Row) -> Map<String, Value> {
 
 /// Write a backup into `dir`. The file only gets its real name once it is complete.
 pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Result<ExportResult> {
+    export_named(db, dir, tasks, new_name())
+}
+
+fn export_named(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>, name: String) -> Result<ExportResult> {
     db::private_dir(dir).context("creating the backups folder")?;
     // A partial file nobody has written to for a while was a backup that was killed. Only files with a backup's own name
     // are touched, and none that may still be on its way.
@@ -120,8 +124,6 @@ pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Res
             }
         }
     }
-    let name = new_name();
-    let (part, path) = (dir.join(format!("{name}.part")), dir.join(&name));
     let report = |msg: String, p: f64| {
         if let Some((t, id)) = tasks {
             t.update(id, msg, Some(p));
@@ -139,8 +141,33 @@ pub fn export(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>) -> Res
     }
     let total: i64 = counts.values().filter_map(Value::as_i64).sum::<i64>().max(1);
 
+    // Reserve a part exclusively before entering the cleanup scope. A failed open owns nothing.
+    let stamp = chrono::NaiveDateTime::parse_from_str(&name[PREFIX.len()..name.len() - SUFFIX.len()], "%Y%m%d-%H%M%S")?;
+    let mut reserved = None;
+    for offset in 0..1024 {
+        let Some(at) = stamp.checked_sub_signed(chrono::Duration::seconds(offset)) else { break };
+        let name = format!("{PREFIX}{}{SUFFIX}", at.format("%Y%m%d-%H%M%S"));
+        let (part, path) = (dir.join(format!("{name}.part")), dir.join(&name));
+        if path.try_exists()? { continue; }
+        match db::private_new_file().open(&part) {
+            Ok(file) => {
+                // A completed file may have appeared while the part was being reserved.
+                match path.try_exists() {
+                    Ok(false) => { reserved = Some((name, part, path, file)); break; }
+                    other => {
+                        drop(file);
+                        let _ = std::fs::remove_file(&part);
+                        other?;
+                    }
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e.into()),
+        }
+    }
+    let (name, part, path, file) = reserved.context("no free backup name in 1024 UTC seconds")?;
     let result = (|| -> Result<ExportResult> {
-        let mut out = GzEncoder::new(BufWriter::with_capacity(1 << 20, db::private_new_file().open(&part)?), Compression::new(6));
+        let mut out = GzEncoder::new(BufWriter::with_capacity(1 << 20, file), Compression::new(6));
         let header = json!({
             "finstats_backup": FORMAT, "app_version": env!("CARGO_PKG_VERSION"), "created_at": db::now(),
             "server_name": db::get_setting(&tx, "server_name")?, "counts": counts.clone(),
@@ -824,6 +851,37 @@ impl Read for Counted {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn export_preserves_a_fresh_occupied_part_and_uses_another_name() {
+        collision_export(true);
+    }
+
+    #[test]
+    fn export_preserves_an_occupied_completed_backup_and_uses_another_name() {
+        collision_export(false);
+    }
+
+    fn collision_export(part: bool) {
+        let tmp = std::env::temp_dir().join(format!("finstats-collision-{part}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        db::private_dir(&tmp).unwrap();
+        let db = Db::open(&tmp.join("test.db")).unwrap();
+        let folder = dir(&tmp);
+        db::private_dir(&folder).unwrap();
+        let name = "finstats-backup-20261030-000000.jsonl.gz";
+        let occupied = folder.join(format!("{name}{}", if part { ".part" } else { "" }));
+        std::fs::write(&occupied, b"keep these bytes").unwrap();
+        let made = export_named(&db, &folder, None, name.into());
+        assert_eq!(std::fs::read(&occupied).unwrap(), b"keep these bytes");
+        let made = made.unwrap();
+        assert_eq!(made.name, "finstats-backup-20261029-235959.jsonl.gz");
+        assert!(valid_name(&made.name));
+        let mut text = String::new();
+        GzDecoder::new(File::open(folder.join(&made.name)).unwrap()).read_to_string(&mut text).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(text.lines().next().unwrap()).unwrap()["finstats_backup"], FORMAT);
+        let _ = std::fs::remove_dir_all(tmp);
+    }
 
     /// A backup's name is the moment in UTC, so the hour the clocks go back does not name two the same, and a backup is
     /// never written over another of the same name.

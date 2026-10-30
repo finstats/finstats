@@ -80,6 +80,7 @@ de hele reeks.
 - De bestanden van de webinterface worden één keer met gzip ingepakt en bewaard, en lettertypen worden niet nog eens gecomprimeerd.
 
 ### Stability
+- Bij een bezette bestandsnaam probeert een back-up een andere naam, zonder een voltooide back-up te vervangen of een recent gedeeltelijk bestand van een andere export te verwijderen.
 - Een back-up in het oudere formaat van Jellystat wordt rij voor rij gelezen in plaats van in zijn geheel, en een regel die langer is dan die van welke back-up ook wordt geweigerd.
 - Twee Tautulli-uploads tegelijk schrijven niet langer in één bestand.
 - Een paginanummer ver voorbij het einde van de titels van een bibliotheek of van Bibliotheekgezondheid geeft een lege pagina, geen fout.

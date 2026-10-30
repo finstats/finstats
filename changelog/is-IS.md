@@ -79,6 +79,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - Skrár vefviðmótsins eru gzip-þjappaðar einu sinni og geymdar, og letur er ekki þjappað aftur.
 
 ### Stability
+- Öryggisafrit velur annað skráarheiti ef heitið er frátekið, án þess að skipta út fullbúnu afriti eða eyða nýrri hlutaskrá annars útflutnings.
 - Afrit á eldra sniði Jellystat er lesið röð fyrir röð í stað þess að vera lesið í heild, og línu sem er lengri en í nokkru afriti er hafnað.
 - Tvær Tautulli-upphleðslur samtímis skrifa ekki lengur í sömu skrána.
 - Síðunúmer langt umfram enda titla safns eða Heilbrigðis safns er tóm síða, ekki villa.

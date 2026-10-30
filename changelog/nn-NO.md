@@ -80,6 +80,7 @@ som overskrift for heile serien.
 - Filene i nettgrensesnittet vert gzippa éin gong og tekne vare på, og skrifter vert ikkje komprimerte på nytt.
 
 ### Stability
+- Ein tryggingskopi prøver eit anna filnamn når namnet er oppteke, utan å erstatte ein ferdig kopi eller fjerne ei fersk delvis fil frå ein annan eksport.
 - Ein tryggingskopi i det eldre formatet til Jellystat vert lesen éi rad om gongen i staden for heil, og ei linje lengre enn nokon tryggingskopi har, vert avvist.
 - To opplastingar frå Tautulli samtidig skriv ikkje lenger i same fil.
 - Eit sidetal langt forbi slutten av titlane til eit bibliotek eller av Bibliotekhelse gjev ei tom side, ikkje ein feil.

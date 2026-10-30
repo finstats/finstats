@@ -79,6 +79,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - Verkkokäyttöliittymän tiedostot pakataan gzipillä kerran ja säilytetään, eikä fontteja pakata uudelleen.
 
 ### Stability
+- Varmuuskopio kokeilee toista varattua tiedostonimeä korvaamatta valmista kopiota tai poistamatta toisen viennin tuoretta osittaista tiedostoa.
 - Jellystatin vanhemmassa muodossa oleva varmuuskopio luetaan rivi kerrallaan eikä kokonaan, ja mitä tahansa varmuuskopiota pidempi rivi hylätään.
 - Kaksi samanaikaista Tautulli-lähetystä eivät enää kirjoita samaan tiedostoon.
 - Sivunumero kaukana kirjaston nimikkeiden tai Kirjaston kunnon lopun jälkeen on tyhjä sivu, ei virhe.

@@ -79,6 +79,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Pliki interfejsu WWW są kompresowane gzipem raz i przechowywane, a czcionki nie są kompresowane ponownie.
 
 ### Stability
+- Gdy nazwa pliku jest zajęta, kopia zapasowa próbuje innej, bez nadpisywania gotowej kopii ani usuwania świeżego pliku częściowego innego eksportu.
 - Kopia zapasowa w starszym formacie Jellystat jest czytana wiersz po wierszu zamiast w całości, a wiersz dłuższy niż w jakiejkolwiek kopii jest odrzucany.
 - Dwa jednoczesne przesłania z Tautulli nie zapisują już do jednego pliku.
 - Numer strony daleko za końcem tytułów biblioteki lub Stanu biblioteki daje pustą stronę, a nie błąd.

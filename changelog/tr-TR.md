@@ -79,6 +79,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Web arayüzünün dosyaları bir kez gzip ile sıkıştırılıp saklanır ve yazı tipleri yeniden sıkıştırılmaz.
 
 ### Stability
+- Bir dosya adı kullanımdayken yedekleme, tamamlanmış bir yedeğin üzerine yazmadan veya başka bir dışa aktarımın yeni kısmi dosyasını silmeden başka bir ad dener.
 - Jellystat’ın eski biçimindeki bir yedek bütün olarak değil satır satır okunur ve herhangi bir yedeğinkinden uzun bir satır reddedilir.
 - Aynı anda yapılan iki Tautulli yüklemesi artık tek bir dosyaya yazmaz.
 - Bir kütüphanenin başlıklarının ya da Kütüphane sağlığının sonunun çok ötesindeki bir sayfa numarası hata değil, boş bir sayfadır.

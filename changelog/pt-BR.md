@@ -80,6 +80,7 @@ manchete de toda a série.
 - Os arquivos da interface web são compactados com gzip uma vez e guardados, e as fontes não são compactadas de novo.
 
 ### Stability
+- Se um nome estiver ocupado, o backup tenta outro sem substituir um backup completo nem remover o arquivo parcial recente de outra exportação.
 - Um backup no formato antigo do Jellystat é lido uma linha por vez em vez de inteiro, e uma linha mais longa do que a de qualquer backup é recusada.
 - Dois uploads do Tautulli ao mesmo tempo não gravam mais em um único arquivo.
 - Um número de página muito além do fim dos títulos de uma biblioteca ou da Saúde da biblioteca é uma página vazia, não um erro.
