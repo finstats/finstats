@@ -8,7 +8,7 @@
 //! - bigint columns (`PlaybackDuration`, `RunTimeTicks`, `Size`…) arrive as strings.
 
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 
 use anyhow::{Context, Result, bail};
@@ -227,54 +227,51 @@ mod legacy {
     }
 }
 
-/// Blocking. Parses the backup at `path` and writes it in a single transaction, so a
-/// failed import leaves the database exactly as it was.
+/// Blocking. Reads the backup at `path` through once with no lock held, keeping aside the rows worth writing
+/// ([`Spool`]), then writes those in a single transaction, so a failed import leaves the database exactly as it was.
+/// Read inside the transaction, a file of a few real rows and gigabytes of anything else kept every other write
+/// waiting until it had been read to the end.
 pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> {
-    let mut file = File::open(path).context("opening the uploaded backup")?;
+    let file = File::open(path).context("opening the uploaded backup")?;
     let total_bytes = file.metadata()?.len().max(1);
+    let mut reader = BufReader::with_capacity(1 << 20, file);
 
     // The older Jellystat format is one JSON array; the current one is a record per line.
-    let mut first = [0u8; 1];
     let legacy = loop {
-        if file.read(&mut first)? == 0 {
-            bail!(crate::i18n::t("server.import.empty_file", &[]));
+        let buf = reader.fill_buf()?;
+        let Some(&first) = buf.first() else { bail!(crate::i18n::t("server.import.empty_file", &[])) };
+        if first.is_ascii_whitespace() {
+            reader.consume(1);
+            continue;
         }
-        if !first[0].is_ascii_whitespace() {
-            break first[0] == b'[';
-        }
+        break first == b'[';
     };
-    file.seek(SeekFrom::Start(0))?;
 
-    let mut conn = db.conn()?;
-    let settings = crate::state::Settings::load(&conn)?;
-    // Immediate: the import will write, so it takes the write lock before its first read rather than
-    // failing to upgrade later when another connection (the collector, an audit row) commits meanwhile.
-    let tx = conn.transaction_with_behavior(crate::db::rusqlite::TransactionBehavior::Immediate)?;
     let mut res = ImportResult::default();
     let report = |msg: &str, p: f64| {
         if let Some(t) = tasks {
             t.update(TASK, msg, Some(p));
         }
     };
+    let mut spool = Spool::beside(path)?;
 
     if legacy {
         report(&crate::i18n::t("server.import.reading_legacy", &[]), 0.05);
         let read = std::cell::Cell::new(0u64);
-        let (mut current, mut failed) = (String::new(), None);
-        let parsed = legacy_rows(Counted { inner: BufReader::with_capacity(1 << 20, file), read: &read }, |table, row| {
+        let mut current = String::new();
+        let mut failed = None;
+        let parsed = legacy_rows(Counted { inner: reader, read: &read }, |table, row| {
             if table != current {
                 current = table.to_string();
-                report(&phase_label(table), 0.1 + 0.8 * read.get() as f64 / total_bytes as f64);
+                report(&phase_label(table), 0.05 + 0.45 * read.get() as f64 / total_bytes as f64);
             }
-            // A row that could not be written is that error, not a file that is not JSON.
-            import_row(&tx, table, &row, &mut res, settings.merge_window_s).inspect_err(|e| failed = Some(anyhow::anyhow!("{e:#}")))
+            spool.keep(table, row, &mut res).inspect_err(|e| failed = Some(anyhow::anyhow!("{e:#}")))
         });
         if let Some(e) = failed {
             return Err(e);
         }
         parsed.context(crate::i18n::t("server.import.not_json", &[]))?;
     } else {
-        let mut reader = BufReader::with_capacity(1 << 20, file);
         let mut line = String::new();
         let mut read_bytes = 0u64;
         let mut line_no = 0u64;
@@ -307,13 +304,12 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
                 Some("row") => {
                     recognised += 1;
                     let table = v["table"].as_str().map(str::to_string).unwrap_or_else(|| current_table.clone());
-                    let data = v["data"].take();
-                    import_row(&tx, &table, &data, &mut res, settings.merge_window_s)?;
+                    spool.keep(&table, v["data"].take(), &mut res)?;
                 }
                 _ => res.unknown_rows += 1,
             }
             if line_no.is_multiple_of(2000) {
-                report(&phase_label(&current_table), 0.95 * read_bytes as f64 / total_bytes as f64);
+                report(&phase_label(&current_table), 0.5 * read_bytes as f64 / total_bytes as f64);
             }
             if line_no == 50 && recognised == 0 {
                 bail!(crate::i18n::t("server.import.no_records_at_first", &[]));
@@ -324,6 +320,22 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
         }
     }
 
+    let mut conn = db.conn()?;
+    let settings = crate::state::Settings::load(&conn)?;
+    // Immediate: the import will write, so it takes the write lock before its first read rather than
+    // failing to upgrade later when another connection (the collector, an audit row) commits meanwhile.
+    let tx = conn.transaction_with_behavior(crate::db::rusqlite::TransactionBehavior::Immediate)?;
+    let kept = spool.kept();
+    let mut current = String::new();
+    for (n, row) in spool.rows()?.enumerate() {
+        let (table, data) = row?;
+        if table != current || n % 2000 == 0 {
+            report(&phase_label(&table), 0.5 + 0.45 * n as f64 / kept.max(1) as f64);
+            current = table.clone();
+        }
+        import_row(&tx, &table, &data, &mut res, settings.merge_window_s)?;
+    }
+
     report(&crate::i18n::t("server.import.linking", &[]), 0.96);
     finalize(&tx)?;
     report(&crate::i18n::t("server.import.saving", &[]), 0.99);
@@ -331,6 +343,76 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
     crate::groups::detect(&mut conn, settings.group_window_s, None)?;
     conn.execute_batch("PRAGMA optimize;")?;
     Ok(res)
+}
+
+/// The tables `import_row` writes anything from; a row of any other is counted, and never kept aside.
+const WRITTEN: [&str; 7] = ["jf_playback_activity", "jf_users", "jf_libraries", "jf_library_items", "jf_library_seasons", "jf_library_episodes", "jf_item_info"];
+
+/// The rows of an upload worth writing, kept on disk beside it while the upload is read, so the read holds no lock and
+/// the write that follows reads only them. Removed when it is dropped.
+pub(crate) struct Spool {
+    path: std::path::PathBuf,
+    out: Option<std::io::BufWriter<File>>,
+    kept: u64,
+}
+
+impl Spool {
+    /// A spool next to the upload at `upload`, in the same folder (the data folder's own, for an upload); for a file the
+    /// command line was given in a folder FinStats may not write to, in the temporary folder. Readable by FinStats alone.
+    pub(crate) fn beside(upload: &Path) -> Result<Spool> {
+        let mut name = upload.file_name().map(|n| n.to_os_string()).unwrap_or_default();
+        name.push(".rows");
+        let open = |path: std::path::PathBuf| -> std::io::Result<Spool> {
+            let _ = std::fs::remove_file(&path);
+            let file = crate::db::private_new_file().open(&path)?;
+            Ok(Spool { path, out: Some(std::io::BufWriter::new(file)), kept: 0 })
+        };
+        open(upload.with_file_name(&name))
+            .or_else(|_| open(std::env::temp_dir().join(format!("finstats-{}-{}", std::process::id(), name.to_string_lossy()))))
+            .context("keeping the backup's rows aside")
+    }
+
+    /// One row of `table`: kept when it is one that is written, else counted as unknown.
+    fn keep(&mut self, table: &str, row: Value, res: &mut ImportResult) -> Result<()> {
+        match table {
+            "jf_playback_reporting_plugin_data" => Ok(()),
+            t if WRITTEN.contains(&t) => self.push(table, row),
+            _ => {
+                res.unknown_rows += 1;
+                Ok(())
+            }
+        }
+    }
+
+    /// Keep one row under `table` (any word the reader of [`Spool::rows`] understands).
+    pub(crate) fn push(&mut self, table: &str, row: Value) -> Result<()> {
+        use std::io::Write;
+        let out = self.out.as_mut().expect("a spool is written before it is read");
+        serde_json::to_writer(&mut *out, &(table, row))?;
+        out.write_all(b"\n")?;
+        self.kept += 1;
+        Ok(())
+    }
+
+    pub(crate) fn kept(&self) -> u64 {
+        self.kept
+    }
+
+    /// What was kept, in the order it came.
+    pub(crate) fn rows(&mut self) -> Result<impl Iterator<Item = Result<(String, Value)>> + '_> {
+        use std::io::Write;
+        if let Some(mut out) = self.out.take() {
+            out.flush()?;
+        }
+        let lines = BufReader::new(File::open(&self.path)?).lines();
+        Ok(lines.map(|l| Ok(serde_json::from_str::<(String, Value)>(&l?)?)))
+    }
+}
+
+impl Drop for Spool {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
 }
 
 fn import_row(conn: &Connection, table: &str, d: &Value, res: &mut ImportResult, merge_window_s: i64) -> Result<()> {
@@ -649,6 +731,34 @@ mod tests {
 
         let again = run(&db, &file, None).unwrap();
         assert_eq!((again.plays_imported, again.plays_skipped), (0, 2), "the same backup twice is once");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// Reading the file takes no lock: the write lock is taken only once what is worth writing has been read. Held from the
+    /// first line, a file of a valid head and gigabytes of lines of no known kind kept every other write waiting, and
+    /// failing, until it had been read to the end.
+    #[test]
+    fn nothing_waits_on_an_import_while_it_reads_the_file() {
+        use std::io::Write;
+        let (db, _, dir) = backup("reading", "");
+        let fifo = dir.join("upload.jsonl");
+        assert!(std::process::Command::new("mkfifo").arg(&fifo).status().unwrap().success());
+        let (reader_db, path) = (db.clone(), fifo.clone());
+        let import = std::thread::spawn(move || run(&reader_db, &path, None));
+        let mut upload = std::fs::OpenOptions::new().write(true).open(&fifo).unwrap();
+        writeln!(upload, r#"{{"type":"table","table":"jf_users"}}"#).unwrap();
+        writeln!(upload, r#"{{"type":"row","data":{{"Id":"AAAA-1111","Name":"alice"}}}}"#).unwrap();
+        writeln!(upload, r#"{{"type":"x","n":[0,0,0]}}"#).unwrap();
+        upload.flush().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        let other = db.conn().unwrap();
+        other.busy_timeout(std::time::Duration::ZERO).unwrap();
+        let wrote = other.execute("INSERT INTO welcomed(user_id, at) VALUES ('bob', 1)", []);
+        writeln!(upload, r#"{{"type":"x","n":[0,0,0]}}"#).unwrap();
+        drop(upload);
+        let res = import.join().unwrap().unwrap();
+        assert!(wrote.is_ok(), "a write waited on an import still reading its file: {wrote:?}");
+        assert_eq!((res.users, res.unknown_rows), (1, 2));
         let _ = std::fs::remove_dir_all(dir);
     }
 

@@ -60,6 +60,7 @@ usa come titolo dell’intera serie.
 - Una chiave API non può più disattivare ciò che noterebbe un suo abuso, né i backup che annullerebbero ciò che ha fatto: quanti backup si tengono e ogni quanto, la finestra di unione, gli indirizzi di casa e le regole di viaggio, le pianificazioni di utenti, registro attività e backup, silenziare o risolvere tutti gli avvisi, un backup nel cestino o la rimozione di una destinazione di notifica. Ognuno sopravviveva alla chiave una volta revocata.
 - Le locandine di Sonarr e Radarr, e il prossimo episodio di una lista dei desideri, seguono anch'essi l'accesso alle librerie: una serie che Jellyfin nasconde a qualcuno non ha per lui né locandina né data. Contare gli id dei servizi rivelava quali serie nascoste stavano arrivando, e una lista nominava il prossimo episodio di una serie nascosta.
 - Il capitolo Insieme del riepilogo nomina solo le persone la cui visione è andata accanto alla tua, come fa la pagina Insieme. Un gruppo raggiunto tramite qualcun altro nominava persone con cui non avevi mai guardato.
+- Un'importazione da Jellystat o Streamystats legge l'intero file prima di prendere il blocco di scrittura del database, poi scrive solo le righe che tiene. Letto sotto il blocco, un file di poche righe vere e gigabyte di qualunque altra cosa teneva in attesa ogni altra scrittura, riproduzioni e accessi compresi.
 
 ### Performance
 - Un profilo pubblicato viene calcolato al massimo una volta al minuto, non di nuovo per ogni immagine e scheda che contiene.

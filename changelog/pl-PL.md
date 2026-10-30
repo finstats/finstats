@@ -59,6 +59,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Klucz API nie może już wyłączyć tego, co zauważyłoby jego nadużycie, ani kopii zapasowych, które cofnęłyby to, co zrobił: ile kopii jest przechowywanych i jak często, okna scalania, adresów domowych i reguł podróży, harmonogramów użytkowników, dziennika aktywności i kopii, wyciszania lub rozwiązywania wszystkich alertów, kopii w koszu ani usuwania miejsca powiadomień. Każde z nich trwało dłużej niż klucz po jego odwołaniu.
 - Plakaty z Sonarr i Radarr oraz następny odcinek na liście życzeń też podlegają dostępowi do bibliotek: serial, który Jellyfin ukrywa przed kimś, nie ma dla tej osoby ani plakatu, ani daty. Liczenie identyfikatorów usług zdradzało, które ukryte seriale nadchodzą, a lista podawała następny odcinek ukrytego serialu.
 - Rozdział Razem w podsumowaniu wymienia tylko osoby, których odtwarzanie trwało obok twojego, jak strona Razem. Grupa, do której trafiło się przez kogoś innego, wymieniała ludzi, z którymi nigdy się nie oglądało.
+- Import z Jellystat lub Streamystats czyta cały plik, zanim zajmie blokadę zapisu bazy danych, a potem zapisuje tylko zachowane wiersze. Czytany pod blokadą plik z kilkoma prawdziwymi wierszami i gigabajtami czegokolwiek innego wstrzymywał każdy inny zapis, także odtworzenia i logowania.
 
 ### Performance
 - Opublikowany profil jest obliczany najwyżej raz na minutę, a nie od nowa dla każdego obrazka i karty na nim.

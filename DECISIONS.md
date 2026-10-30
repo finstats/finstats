@@ -426,6 +426,11 @@ Contents:
    holds a line: `[0,0,…]` is 32 bytes of memory for every two of file, so one row could run the process out of memory
    inside the transaction. Uploads stop at `api::UPLOAD_MAX` (4 GB).
 5. Importing history and the Tautulli board need `see_everyone` (`may_locate`), since an import writes other people's plays.
+6. **A file is read through before the write lock is taken** (`import::Spool`): Jellystat's and Streamystats' rows worth
+   writing are kept aside beside the upload as they are read, with no lock held, and only those are written, in one
+   IMMEDIATE transaction, once the file has been read to the end (Tautulli's reader already read first). Read inside the
+   transaction, a valid head and gigabytes of rows of no known kind kept every other write waiting until the end. A spool
+   is removed with the import, and at start with the uploads (`api::sweep_uploads`).
 
 ## Jellystat import (`import.rs`, the docs' `finstats/imports/jellystat.md`)
 

@@ -59,6 +59,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Bir API anahtarı artık kötüye kullanıldığını fark edecek şeyleri ya da yaptıklarını geri alacak yedekleri kapatamaz: kaç yedek ve ne sıklıkla tutulduğu, birleştirme penceresi, ev adresleri ve seyahat kuralları, kullanıcı, etkinlik günlüğü ve yedek zamanlamaları, tüm uyarıları susturmak ya da çözmek, bir yedeği çöpe taşımak veya bir bildirim hedefini kaldırmak. Her biri, anahtar iptal edildikten sonra da sürüyordu.
 - Sonarr ve Radarr afişleri ile istek listesindeki sonraki bölüm de kitaplık erişimine uyar: Jellyfin'in birinden gizlediği bir dizinin o kişi için ne afişi ne de tarihi vardır. Hizmetlerin kimliklerini saymak hangi gizli dizilerin geldiğini ele veriyordu ve bir liste gizli bir dizinin sonraki bölümünü söylüyordu.
 - Yıl özetinin Birlikte bölümü, tıpkı Birlikte sayfası gibi, yalnızca oynatması seninkiyle yan yana giden kişileri adlandırır. Başka biri aracılığıyla katıldığın bir grup, hiç birlikte izlemediğin kişileri adlandırıyordu.
+- Jellystat veya Streamystats içe aktarması, veritabanının yazma kilidini almadan önce dosyanın tamamını okur ve ardından yalnızca tuttuğu satırları yazar. Kilit altında okunduğunda, birkaç gerçek satır ve gigabaytlarca başka şeyden oluşan bir dosya, oynatmalar ve oturum açmalar dahil diğer tüm yazmaları bekletiyordu.
 
 ### Performance
 - Yayımlanmış bir profil, üzerindeki her resim ve kart için yeniden değil, en fazla dakikada bir kez hesaplanır.

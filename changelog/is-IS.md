@@ -59,6 +59,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - API-lykill getur ekki lengur slökkt á því sem myndi taka eftir misnotkun hans, né afritunum sem myndu afturkalla það sem hann gerði: hversu mörg afrit eru geymd og hve oft, sameiningarglugganum, heimilisföngum og ferðareglum, áætlunum notenda, virkniskrár og afrita, þöggun eða lausn allra viðvarana, afriti í ruslið eða að fjarlægja tilkynningastað. Hvert og eitt entist lengur en lykillinn þegar hann var afturkallaður.
 - Veggspjöld frá Sonarr og Radarr og næsti þáttur á óskalista fylgja líka aðgangi að söfnum: þáttaröð sem Jellyfin felur fyrir einhverjum hefur hvorki veggspjald né dagsetningu fyrir viðkomandi. Að telja auðkenni þjónustanna sýndi hvaða faldar þáttaraðir voru á leiðinni, og listi nefndi næsta þátt faldrar þáttaraðar.
 - Kaflinn Saman í ársyfirlitinu nefnir aðeins þá sem spiluðu samhliða þér, eins og síðan Saman gerir. Hópur sem þú lentir í gegnum einhvern annan nefndi fólk sem þú horfðir aldrei með.
+- Innflutningur úr Jellystat eða Streamystats les alla skrána áður en hann tekur skriflás gagnagrunnsins og skrifar svo aðeins línurnar sem hann heldur. Lesin undir lásnum gat skrá með fáeinum raunverulegum línum og gígabætum af hverju sem er öðru látið öll önnur skrif bíða, spilanir og innskráningar meðtaldar.
 
 ### Performance
 - Opinber prófíll er reiknaður út í mesta lagi einu sinni á mínútu, ekki aftur fyrir hverja mynd og hvert spjald á honum.

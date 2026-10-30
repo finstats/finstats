@@ -60,6 +60,7 @@ som overskrift for heile serien.
 - Ein API-nøkkel kan ikkje lenger skru av det som ville merke at han vert misbrukt, eller tryggleikskopiane som ville gjere om det han gjorde: kor mange tryggleikskopiar som vert haldne og kor ofte, samanslåingsvindauget, heimeadresser og reisereglar, timeplanane for brukarar, aktivitetsloggen og tryggleikskopiar, å dempe eller løyse alle varsel, ein tryggleikskopi i papirkorga eller å fjerne eit varslingsmål. Kvar av dei varte lenger enn nøkkelen når han vart trekt tilbake.
 - Plakatane frå Sonarr og Radarr og ønskjelista sin neste episode følgjer òg bibliotektilgangen: ein serie Jellyfin gøymer for nokon, har verken plakat eller dato for dei. Å telje ID-ane til tenestene avslørte kva gøymde seriar som kom, og ei liste nemnde neste episode av ein gøymd serie.
 - Saman-kapittelet i årsoversikta nemner berre dei som såg samstundes med deg, slik Saman-sida gjer. Ei gruppe du kom inn i gjennom nokon andre, nemnde folk du aldri såg saman med.
+- Ein import frå Jellystat eller Streamystats les heile fila før han tek skrivelåsen i databasen, og skriv så berre radene han held på. Lesen under låsen kunne ei fil med nokre få ekte rader og gigabyte med kva som helst anna halde all anna skriving ventande, avspelingar og innloggingar òg.
 
 ### Performance
 - Ein publisert profil vert rekna ut høgst éin gong i minuttet, ikkje på nytt for kvart bilete og kort på han.

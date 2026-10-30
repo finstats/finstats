@@ -60,6 +60,7 @@ overskrift for hele serien.
 - En API-nøgle kan ikke længere slå det fra, der ville opdage, at den misbruges, eller de sikkerhedskopier, der ville rulle det tilbage, den gjorde: hvor mange sikkerhedskopier der gemmes og hvor ofte, sammenlægningsvinduet, hjemmeadresser og rejseregler, tidsplanerne for brugere, aktivitetsloggen og sikkerhedskopier, at dæmpe eller løse alle advarsler, en sikkerhedskopi i papirkurven eller at fjerne en notifikationsmodtager. Hver af dem holdt længere end nøglen, når den blev tilbagekaldt.
 - Plakaterne fra Sonarr og Radarr og ønskelistens næste afsnit følger også biblioteksadgangen: en serie, Jellyfin skjuler for nogen, har hverken plakat eller dato for dem. At tælle tjenesternes id'er afslørede, hvilke skjulte serier der kom, og en liste nævnte næste afsnit af en skjult serie.
 - Sammen-kapitlet i årsoversigten nævner kun dem, der så samtidig med dig, som Sammen-siden gør. En gruppe, du kom med i gennem en anden, nævnte folk, du aldrig så sammen med.
+- En import fra Jellystat eller Streamystats læser hele filen, før den tager databasens skrivelås, og skriver derefter kun de rækker, den beholder. Læst under låsen kunne en fil med få ægte rækker og gigabytes af hvad som helst andet holde al anden skrivning ventende, afspilninger og logins også.
 
 ### Performance
 - En offentliggjort profil beregnes højst én gang i minuttet, ikke igen for hvert billede og kort på den.

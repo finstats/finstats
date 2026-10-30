@@ -61,6 +61,7 @@ la série.
 - Une clé d'API ne peut plus désactiver ce qui remarquerait qu'on en abuse, ni les sauvegardes qui annuleraient ce qu'elle a fait : combien de sauvegardes sont gardées et à quelle fréquence, la fenêtre de fusion, les adresses du domicile et les règles de déplacement, les planifications des utilisateurs, du journal d'activité et des sauvegardes, mettre en sourdine ou résoudre toutes les alertes, mettre une sauvegarde à la corbeille ou supprimer une destination de notification. Chacun survivait à la clé une fois celle-ci révoquée.
 - Les affiches de Sonarr et Radarr, et le prochain épisode d'une liste de souhaits, suivent aussi l'accès aux bibliothèques : une série que Jellyfin cache à quelqu'un n'a pour lui ni affiche ni date. Compter les identifiants des services révélait quelles séries cachées arrivaient, et une liste nommait le prochain épisode d'une série cachée.
 - Le chapitre Ensemble du bilan ne nomme que les personnes dont la lecture a tourné à côté de la vôtre, comme la page Ensemble. Un groupe rejoint par quelqu'un d'autre nommait des gens avec qui vous n'aviez jamais regardé.
+- Une importation Jellystat ou Streamystats lit tout son fichier avant de prendre le verrou d'écriture de la base, puis n'écrit que les lignes qu'elle garde. Lu sous le verrou, un fichier de quelques vraies lignes et de gigaoctets d'autre chose faisait attendre toute autre écriture, lectures et connexions comprises.
 
 ### Performance
 - Un profil publié est calculé au plus une fois par minute, et non à nouveau pour chaque image et chaque carte qu’il contient.

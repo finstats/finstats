@@ -59,6 +59,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - API-avain ei voi enää kytkeä pois sitä, mikä huomaisi sen väärinkäytön, eikä varmuuskopioita, jotka kumoaisivat sen teot: montako varmuuskopiota säilytetään ja kuinka usein, yhdistämisikkunaa, kotiosoitteita ja matkasääntöjä, käyttäjien, toimintalokin ja varmuuskopioiden aikatauluja, kaikkien hälytysten mykistämistä tai kuittaamista, varmuuskopiota roskakoriin eikä ilmoituskohteen poistamista. Jokainen kesti avainta pidempään, kun se peruttiin.
 - Sonarrin ja Radarrin julisteet sekä toivelistan seuraava jakso noudattavat myös kirjastojen käyttöoikeuksia: sarjalla, jonka Jellyfin piilottaa joltakulta, ei ole hänelle julistetta eikä päivää. Palveluiden tunnisteiden laskeminen paljasti, mitkä piilotetut sarjat olivat tulossa, ja lista kertoi piilotetun sarjan seuraavan jakson.
 - Koosteen Yhdessä-luku nimeää vain ne, joiden toisto kulki omasi rinnalla, kuten Yhdessä-sivu. Ryhmä, johon päätyi jonkun toisen kautta, nimesi ihmisiä, joiden kanssa ei koskaan katsonut.
+- Jellystat- tai Streamystats-tuonti lukee koko tiedostonsa ennen kuin se ottaa tietokannan kirjoituslukon, ja kirjoittaa sitten vain säilyttämänsä rivit. Lukon alla luettuna tiedosto, jossa oli muutama oikea rivi ja gigatavuja mitä tahansa muuta, piti kaikki muut kirjoitukset odottamassa, toistot ja kirjautumiset mukaan lukien.
 
 ### Performance
 - Julkaistu profiili lasketaan enintään kerran minuutissa, ei uudelleen jokaista sen kuvaa ja korttia varten.

@@ -59,6 +59,7 @@ har en kort titelrad under rubriken: den titeln använder appen som rubrik för 
 - En API-nyckel kan inte längre stänga av det som skulle märka att den missbrukas, eller säkerhetskopiorna som skulle göra om det den gjorde: hur många säkerhetskopior som sparas och hur ofta, sammanslagningsfönstret, hemadresser och reseregler, scheman för användare, aktivitetsloggen och säkerhetskopior, att tysta eller lösa alla larm, en säkerhetskopia i papperskorgen eller att ta bort ett aviseringsmål. Var och en varade längre än nyckeln när den återkallades.
 - Affischerna från Sonarr och Radarr och önskelistans nästa avsnitt följer också biblioteksåtkomsten: en serie som Jellyfin döljer för någon har varken affisch eller datum för dem. Att räkna tjänsternas id:n avslöjade vilka dolda serier som var på väg, och en lista nämnde nästa avsnitt av en dold serie.
 - Tillsammans-kapitlet i årsöversikten nämner bara dem som tittade samtidigt som du, som Tillsammans-sidan gör. En grupp du kom med i genom någon annan nämnde folk du aldrig tittade med.
+- En import från Jellystat eller Streamystats läser hela filen innan den tar databasens skrivlås och skriver sedan bara de rader den behåller. Läst under låset kunde en fil med några få riktiga rader och gigabyte av vad som helst annat hålla all annan skrivning väntande, uppspelningar och inloggningar också.
 
 ### Performance
 - En publicerad profil räknas fram högst en gång i minuten, inte på nytt för varje bild och kort på den.

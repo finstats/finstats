@@ -244,18 +244,15 @@ fn record(conn: &Connection, d: &Value) -> Result<Option<PlayRecord>> {
 /// leaves the database exactly as it was.
 ///
 /// The file is walked rather than loaded: everything but the session list is stepped over and each
-/// session is written as it is parsed, because years of history run to hundreds of megabytes and a
-/// document that size held as JSON would be several times worse.
+/// session is kept aside as it is parsed ([`crate::import::Spool`]), because years of history run to hundreds of
+/// megabytes and a document that size held as JSON would be several times worse. Only once the whole file has been
+/// read, with no lock held, are the sessions written.
 pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> {
     let file = File::open(path).context("opening the uploaded backup")?;
-    if file.metadata()?.len() == 0 {
+    let mut reader = BufReader::with_capacity(1 << 20, file);
+    if std::io::BufRead::fill_buf(&mut reader)?.is_empty() {
         bail!(crate::i18n::t("server.import.empty_file", &[]));
     }
-    let mut conn = db.conn()?;
-    let settings = crate::state::Settings::load(&conn)?;
-    // Immediate: the import will write, so it takes the write lock before its first read rather than
-    // failing to upgrade later when another connection (the collector, an audit row) commits meanwhile.
-    let tx = conn.transaction_with_behavior(crate::db::rusqlite::TransactionBehavior::Immediate)?;
     let mut res = ImportResult::default();
     let report = |msg: &str, p: Option<f64>| {
         if let Some(t) = tasks {
@@ -266,18 +263,33 @@ pub fn run(db: &Db, path: &Path, tasks: Option<&Tasks>) -> Result<ImportResult> 
     report(&crate::i18n::t("server.import.reading_backup", &[]), Some(0.02));
     // How many sessions the file says it holds, when it says so before the list itself.
     let expected = std::cell::Cell::new(0u64);
+    let mut spool = crate::import::Spool::beside(path)?;
     let mut each = |row: Value| -> Result<()> {
         res.sessions_read += 1;
-        session(&tx, &row, &mut res, settings.merge_window_s)?;
+        spool.push("session", row)?;
         if res.sessions_read % 500 == 0 {
             let (done, total) = (res.sessions_read, expected.get());
-            report(&crate::i18n::t("server.import.importing_history", &[]), (total > 0).then(|| 0.95 * done as f64 / total.max(done) as f64));
+            report(&crate::i18n::t("server.import.reading_backup", &[]), (total > 0).then(|| 0.5 * done as f64 / total.max(done) as f64));
         }
         Ok(())
     };
-    let found = walk(BufReader::with_capacity(1 << 20, file), &mut each, &expected).map_err(|e| unexpected(path, Some(e)))?;
+    let found = walk(reader, &mut each, &expected).map_err(|e| unexpected(path, Some(e)))?;
     if !found {
         return Err(unexpected(path, None));
+    }
+
+    let mut conn = db.conn()?;
+    let settings = crate::state::Settings::load(&conn)?;
+    // Immediate: the import will write, so it takes the write lock before its first read rather than
+    // failing to upgrade later when another connection (the collector, an audit row) commits meanwhile.
+    let tx = conn.transaction_with_behavior(crate::db::rusqlite::TransactionBehavior::Immediate)?;
+    let kept = spool.kept();
+    for (n, row) in spool.rows()?.enumerate() {
+        let (_, row) = row?;
+        session(&tx, &row, &mut res, settings.merge_window_s)?;
+        if (n + 1) % 500 == 0 {
+            report(&crate::i18n::t("server.import.importing_history", &[]), Some(0.5 + 0.45 * (n + 1) as f64 / kept.max(1) as f64));
+        }
     }
 
     report(&crate::i18n::t("server.import.linking", &[]), Some(0.96));
@@ -742,6 +754,33 @@ mod tests {
             "hiddenRecommendations": [],
         });
         doc.to_string()
+    }
+
+    /// Reading the export takes no lock, as with a Jellystat file: the write lock is taken once the sessions have been read.
+    #[test]
+    fn nothing_waits_on_an_import_while_it_reads_the_export() {
+        use std::io::Write;
+        let dir = std::env::temp_dir().join(format!("finstats-streamystats-reading-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let db = Db::open(&dir.join("finstats.db")).unwrap();
+        let fifo = dir.join("export.json");
+        assert!(std::process::Command::new("mkfifo").arg(&fifo).status().unwrap().success());
+        let (reader_db, path) = (db.clone(), fifo.clone());
+        let import = std::thread::spawn(move || run(&reader_db, &path, None));
+        let mut upload = std::fs::OpenOptions::new().write(true).open(&fifo).unwrap();
+        write!(upload, "{{\"sessions\":[{},", watched_live()).unwrap();
+        upload.flush().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        let other = db.conn().unwrap();
+        other.busy_timeout(std::time::Duration::ZERO).unwrap();
+        let wrote = other.execute("INSERT INTO welcomed(user_id, at) VALUES ('bob', 1)", []);
+        write!(upload, "{}]}}", came_from_jellystat()).unwrap();
+        drop(upload);
+        let res = import.join().unwrap().unwrap();
+        assert!(wrote.is_ok(), "a write waited on an import still reading its file: {wrote:?}");
+        assert_eq!(res.plays_imported, 2);
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     /// Its progress belongs on its own card: the Jellystat card watches `import` and keeps its last result.

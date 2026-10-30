@@ -60,6 +60,7 @@ de hele reeks.
 - Een API-sleutel kan niet langer uitzetten wat misbruik ervan zou opmerken, of de back-ups die zouden terugdraaien wat hij deed: hoeveel back-ups worden bewaard en hoe vaak, het samenvoegvenster, thuisadressen en reisregels, de schema's voor gebruikers, het activiteitenlogboek en back-ups, alle meldingen dempen of afhandelen, een back-up in de prullenbak of een meldingsbestemming verwijderen. Elk daarvan duurde langer dan de sleutel zodra die werd ingetrokken.
 - De posters van Sonarr en Radarr en de volgende aflevering op een verlanglijst volgen ook de bibliotheektoegang: een serie die Jellyfin voor iemand verbergt, heeft voor diegene poster noch datum. Door de id's van de diensten af te tellen zag je welke verborgen series eraan kwamen, en een lijst noemde de volgende aflevering van een verborgen serie.
 - Het hoofdstuk Samen in het jaaroverzicht noemt alleen wie naast jou keek, zoals de pagina Samen dat doet. Een groep waarin je via iemand anders terechtkwam, noemde mensen met wie je nooit keek.
+- Een import uit Jellystat of Streamystats leest het hele bestand voordat hij de schrijfvergrendeling van de database neemt, en schrijft daarna alleen de rijen die hij bewaart. Onder de vergrendeling gelezen hield een bestand met een paar echte rijen en gigabytes aan iets anders elke andere schrijfactie aan het wachten, afspelingen en aanmeldingen inbegrepen.
 
 ### Performance
 - Een gepubliceerd profiel wordt hooguit eens per minuut opgebouwd, niet opnieuw voor elke afbeelding en kaart erop.

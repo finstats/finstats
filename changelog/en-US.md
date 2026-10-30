@@ -59,6 +59,7 @@ the app uses as the headline of the whole series.
 - An API key can no longer switch off what would notice it being misused, or the backups that would undo what it did: how many backups are kept and how often, the merge window, home addresses and travel rules, the users, activity-log and backup schedules, muting or resolving every alert, a backup into the trash, or removing a notification destination. Each outlasted the key once it was revoked.
 - Sonarr's and Radarr's posters, and a watchlist's next episode, follow library access too: a show Jellyfin hides from somebody has neither poster nor date for them. Counting the services' ids told which hidden shows were coming, and a list named a hidden show's next episode.
 - The recap's Together chapter names only the people whose play ran beside your own, as the Together page does. A group joined through somebody else named people your play never met.
+- A Jellystat or Streamystats import reads its whole file before it takes the database's write lock, and then writes only the rows it keeps. Read under the lock, a file of a few real rows and gigabytes of anything else kept every other write waiting, plays and sign-ins included.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

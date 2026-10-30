@@ -1426,7 +1426,9 @@ const UPLOADS: [&str; 3] = ["jellystat-upload.tmp", "streamystats-upload.tmp", "
 /// Remove what an import or a restore killed half way left: a whole history, addresses and all, kept for good otherwise.
 /// Only at start, when nothing is arriving. Answers how many went.
 pub fn sweep_uploads(data_dir: &std::path::Path) -> usize {
-    UPLOADS.iter().filter(|name| std::fs::remove_file(data_dir.join(name)).is_ok()).count()
+    // With the rows an import keeps aside while it reads its file (`import::Spool`), named after the file.
+    let spools = UPLOADS.map(|name| format!("{name}.rows"));
+    UPLOADS.iter().copied().chain(spools.iter().map(String::as_str)).filter(|name| std::fs::remove_file(data_dir.join(name)).is_ok()).count()
 }
 
 /// A cached picture, written beside its name and renamed into place, so a reader sees the old one or the whole new one.
@@ -2062,10 +2064,10 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("finstats-uploads-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        for name in ["jellystat-upload.tmp", "streamystats-upload.tmp", "restore-upload.tmp", "finstats.db", "notes.tmp"] {
+        for name in ["jellystat-upload.tmp", "streamystats-upload.tmp", "restore-upload.tmp", "jellystat-upload.tmp.rows", "streamystats-upload.tmp.rows", "finstats.db", "notes.tmp"] {
             std::fs::write(dir.join(name), b"x").unwrap();
         }
-        assert_eq!(sweep_uploads(&dir), 3);
+        assert_eq!(sweep_uploads(&dir), 5, "the rows an import kept aside went with it");
         let mut left: Vec<String> = std::fs::read_dir(&dir).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
         left.sort();
         assert_eq!(left, ["finstats.db", "notes.tmp"]);
