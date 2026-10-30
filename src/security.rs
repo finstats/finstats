@@ -1043,6 +1043,10 @@ pub struct ResolveBody {
 
 pub async fn resolve(State(app): State<App>, Manager(user): Manager, Path(id): Path<i64>, Json(body): Json<ResolveBody>) -> ApiResult {
     gate(&user)?;
+    // A mute is for good: a leaked key must not be able to silence what would report it.
+    if body.mute {
+        crate::keys::needs_a_session(&user)?;
+    }
     let note = body.note.map(|n| n.trim().chars().take(500).collect::<String>()).filter(|n| !n.is_empty());
     let mute = body.mute;
     let actor = crate::audit::Actor::from(&user);
@@ -1094,6 +1098,7 @@ pub async fn reopen(State(app): State<App>, Manager(user): Manager, Path(id): Pa
 
 pub async fn resolve_all(State(app): State<App>, Manager(user): Manager) -> ApiResult {
     gate(&user)?;
+    crate::keys::needs_a_session(&user)?;
     let actor = crate::audit::Actor::from(&user);
     let n = app
         .db

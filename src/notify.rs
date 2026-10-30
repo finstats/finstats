@@ -1525,6 +1525,8 @@ fn target_detail(name: &str, channel: Channel, own: bool) -> Value {
 
 pub async fn remove(State(app): State<App>, user: AuthUser, Path(id): Path<i64>) -> ApiResult {
     gate(&user)?;
+    // As making or changing one: a destination removed with a key stays removed after the key is revoked.
+    crate::keys::only_a_session(&user)?;
     let stored = app.db.call(move |c| stored_target(c, id)).await?.ok_or_else(|| ApiError::not_found("Destination"))?;
     if !may_touch(&user, &stored) {
         return Err(ApiError::forbidden());

@@ -906,9 +906,17 @@ async fn put_settings(State(app): State<App>, Manager(user): Manager, Json(patch
         // And only from a signed-in browser: opening sign-in or a public address outlives a key, which may be revoked.
         crate::keys::needs_a_session(&user)?;
     }
+    // What watches for a leaked key (the alerts' rules, the users and activity-log reads) and the backups that would undo
+    // what it did outlive the key too: changed, they need a signed-in browser. Sent unchanged, as a whole form is, they do not.
+    let now = app.settings();
+    let current = serde_json::to_value(&now).map_err(anyhow::Error::from)?;
+    let watched = ADMIN_SETTINGS.iter().chain(SECURITY_SETTINGS.iter()).any(|k| patch.get(*k).is_some_and(|v| current.get(*k) != Some(v)));
+    let watched_jobs = patch.get("schedules").is_some_and(|s| ADMIN_SCHEDULES.iter().any(|j| s.get(*j).is_some_and(|v| current["schedules"].get(*j) != Some(v))));
+    if watched || watched_jobs {
+        crate::keys::needs_a_session(&user)?;
+    }
     // Switching the lookup on asks the service at once, and a new group window regroups the whole history: work started
     // by hand, which waits its minute like the button and the jobs.
-    let now = app.settings();
     if patch.get("public_ip_lookup") == Some(&json!(true)) && !now.public_ip_lookup {
         by_hand(&user, "public_ip")?;
     }
@@ -1018,9 +1026,7 @@ fn time_zone() -> String {
 /// `PUT /api/tasks/{id}/triggers` with `{"triggers": [...]}`: the job's own schedule. An empty list means by hand only.
 async fn put_triggers(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>, Json(body): Json<Value>) -> ApiResult {
     let Some(id) = crate::state::TASK_IDS.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
-    if !user.is_admin && ADMIN_SCHEDULES.contains(&id) {
-        return Err(ApiError::forbidden());
-    }
+    watched_schedule(&user, id)?;
     let triggers: Vec<crate::schedule::Trigger> =
         serde_json::from_value(body["triggers"].clone()).map_err(|e| ApiError::bad_request(i18n::t("server.api.invalid_triggers", &[("error", e.to_string().into())])))?;
     crate::schedule::validate(id, &triggers).map_err(ApiError::bad_request)?;
@@ -1031,10 +1037,20 @@ async fn put_triggers(State(app): State<App>, Manager(user): Manager, Path(id): 
 /// `DELETE /api/tasks/{id}/triggers`: back to the job's defaults.
 async fn reset_triggers(State(app): State<App>, Manager(user): Manager, Path(id): Path<String>) -> ApiResult {
     let Some(id) = crate::state::TASK_IDS.into_iter().find(|t| *t == id) else { return Err(ApiError::not_found("Task")) };
-    if !user.is_admin && ADMIN_SCHEDULES.contains(&id) {
+    watched_schedule(&user, id)?;
+    save_schedule(&app, &user, id, |s| _ = s.schedules.remove(id), json!({ "reset": true })).await
+}
+
+/// The schedule of a job that watches for misuse, or writes the backups: an administrator's, from a signed-in browser, since
+/// a key that stopped it would leave it stopped after the key was revoked.
+fn watched_schedule(user: &AuthUser, id: &str) -> Result<(), ApiError> {
+    if !ADMIN_SCHEDULES.contains(&id) {
+        return Ok(());
+    }
+    if !user.is_admin {
         return Err(ApiError::forbidden());
     }
-    save_schedule(&app, &user, id, |s| _ = s.schedules.remove(id), json!({ "reset": true })).await
+    crate::keys::needs_a_session(user)
 }
 
 async fn save_schedule(app: &App, user: &AuthUser, id: &'static str, change: impl FnOnce(&mut Settings), detail: Value) -> ApiResult {
@@ -1325,6 +1341,10 @@ struct TrashBody {
 /// `PUT /api/backups/{name}` `{"deleted": true|false}`: a backup into the trash, or back out of it. Audited when it moved.
 async fn set_backup_deleted(State(app): State<App>, JellyfinAdmin(user): JellyfinAdmin, Path(name): Path<String>, Json(body): Json<TrashBody>) -> ApiResult {
     use crate::backup::TrashError;
+    // A backup in the trash is purged within a month: a key that put it there would have it gone after it was revoked.
+    if body.deleted {
+        crate::keys::needs_a_session(&user)?;
+    }
     let dir = crate::backup::dir(&app.data_dir);
     let (n, deleted) = (name.clone(), body.deleted);
     let moved = blocking(move || if deleted { crate::backup::move_to_trash(&dir, &n, db::now()) } else { crate::backup::take_out_of_trash(&dir, &n) })
@@ -1977,7 +1997,25 @@ mod tests {
             let patch = json!({ access: serde_json::to_value(Settings::default()).unwrap()[access].clone() });
             assert!(forbidden(put_settings(State(app.clone()), Manager(key.clone()), Json(patch)).await.err()), "{access}, even unchanged");
         }
-        assert!(put_settings(State(app.clone()), Manager(key.clone()), Json(json!({ "backup_keep": 5 }))).await.is_ok(), "an ordinary setting");
+        assert!(put_settings(State(app.clone()), Manager(key.clone()), Json(json!({ "sync_interval_h": 12 }))).await.is_ok(), "an ordinary setting");
+        // What watches for a leaked key, and the backups that undo what it did, are not switched off with that key.
+        for watch in [json!({ "backup_keep": 1 }), json!({ "backup_every_d": 0 }), json!({ "merge_window_s": 3600 }), json!({ "home_addresses": ["203.0.113.66"] }), json!({ "travel_speed_kmh": 5000 }), json!({ "travel_min_km": 5000 })] {
+            assert!(forbidden(put_settings(State(app.clone()), Manager(key.clone()), Json(watch.clone())).await.err()), "{watch}");
+        }
+        let current = serde_json::to_value(app.settings()).unwrap();
+        assert!(put_settings(State(app.clone()), Manager(key.clone()), Json(json!({ "backup_keep": current["backup_keep"].clone() }))).await.is_ok(), "sent unchanged, as a whole form is");
+        for job in ["sync_users", "sync_events", "backup"] {
+            assert!(forbidden(put_triggers(State(app.clone()), Manager(key.clone()), Path(job.into()), Json(json!({ "triggers": [] }))).await.err()), "{job}'s schedule");
+            assert!(forbidden(reset_triggers(State(app.clone()), Manager(key.clone()), Path(job.into())).await.err()), "{job}'s schedule reset");
+        }
+        assert!(put_triggers(State(app.clone()), Manager(key.clone()), Path("sync_libraries".into()), Json(json!({ "triggers": [] }))).await.is_ok(), "an ordinary schedule");
+        app.db.call(|c| Ok(c.execute_batch("INSERT INTO security_alerts(id, kind, severity, user_id, user_name, at, dedupe, details, created_at) VALUES (1, 'impossible_travel', 'high', 'u2', 'bob', 1, 'd1', '{}', 1)")?)).await.unwrap();
+        let mute = || Json(serde_json::from_value::<crate::security::ResolveBody>(json!({ "mute": true })).unwrap());
+        assert!(forbidden(crate::security::resolve(State(app.clone()), Manager(key.clone()), Path(1), mute()).await.err()), "an alert muted for good");
+        assert!(forbidden(crate::security::resolve_all(State(app.clone()), Manager(key.clone())).await.err()), "every alert resolved at once");
+        assert!(forbidden(set_backup_deleted(State(app.clone()), JellyfinAdmin(key.clone()), Path("finstats-backup-20260101-000000.jsonl.gz".into()), Json(TrashBody { deleted: true })).await.err()), "a backup into the trash");
+        app.db.call(|c| Ok(c.execute_batch("INSERT INTO notify_targets(id, name, kind, url, enabled, created_at) VALUES (7, 'Household', 'webhook', 'https://hooks.example.com/x', 1, 1)")?)).await.unwrap();
+        assert!(forbidden(crate::notify::remove(State(app.clone()), key.clone(), Path(7)).await.err()), "a server destination removed");
         let restore = || Query(RestoreQuery { settings: None });
         assert!(forbidden(restore_stored(State(app.clone()), JellyfinAdmin(key.clone()), Path("finstats-backup.jsonl.gz".into()), restore()).await.err()));
         assert!(forbidden(restore_upload(State(app.clone()), JellyfinAdmin(key.clone()), restore(), Request::new(Body::empty())).await.err()));

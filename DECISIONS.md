@@ -898,6 +898,9 @@ Learned from real exports; also documented at the top of `import.rs`.
 21. Minting or revoking through a key is refused (`keys::only_a_session`), and so is whatever else outlives a key
     (`keys::needs_a_session`, 403): editing permissions, the access settings in `put_settings`, a restore (which can bring
     grants back) and adding, changing or testing a service; a leaked key revoked must take everything it could do with it.
+    That includes switching off what would notice it: changing `ADMIN_SETTINGS` or `SECURITY_SETTINGS` (sent unchanged,
+    as a whole form is, they pass), the schedule of `ADMIN_SCHEDULES` (`watched_schedule`), muting an alert or resolving
+    them all, moving a backup to the trash and removing a notification destination.
 22. `/auth/me`'s `jellyfin_details` is null unless `jellyfin_public_url` is set, and a title's `jellyfin_link` and Library
     health's links fall back to the address FinStats reads Jellyfin at only for administrators.
 23. `api_keys` is never in a backup.
