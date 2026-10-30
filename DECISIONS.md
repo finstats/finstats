@@ -1259,7 +1259,8 @@ Learned from real exports; also documented at the top of `import.rs`.
 14. **Export reserves its own part exclusively before cleanup can touch it**. On a name collision it tries up to 1,024
     UTC seconds backwards from the current second, keeping the accepted filename shape without sleeps or future names.
     Occupied completed files and fresh parts are left alone; exhaustion fails promptly. A retry must neither lose a
-    concurrent export nor depend on waiting for the clock.
+    concurrent export nor depend on waiting for the clock. Cleanup ownership transfers before placement, which removes
+    its own part even on failure; outer cleanup must never remove a later writer's reservation.
 
 ## Trash (`trash.rs`, migration 37, 2.2.0)
 

@@ -65,6 +65,13 @@ fn put_in_place(part: &Path, path: &Path) -> std::io::Result<()> {
     placed
 }
 
+fn with_owned_part<T>(part: &Path, action: impl FnOnce(&mut bool) -> Result<T>) -> Result<T> {
+    let mut owned = true;
+    let result = action(&mut owned);
+    if owned && result.is_err() { let _ = std::fs::remove_file(part); }
+    result
+}
+
 /// Only names FinStats itself would give a backup. This is what stands between a download or
 /// delete request and the rest of the disk.
 pub fn valid_name(name: &str) -> bool {
@@ -166,7 +173,7 @@ fn export_named(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>, name
         }
     }
     let (name, part, path, file) = reserved.context("no free backup name in 1024 UTC seconds")?;
-    let result = (|| -> Result<ExportResult> {
+    with_owned_part(&part, |owned| {
         let mut out = GzEncoder::new(BufWriter::with_capacity(1 << 20, file), Compression::new(6));
         let header = json!({
             "finstats_backup": FORMAT, "app_version": env!("CARGO_PKG_VERSION"), "created_at": db::now(),
@@ -192,13 +199,10 @@ fn export_named(db: &Db, dir: &Path, tasks: Option<(&Tasks, &'static str)>, name
             }
         }
         out.finish()?.into_inner().map_err(|e| anyhow::anyhow!("{e}"))?.sync_all()?;
+        *owned = false; // Placement consumes the part, including on failure.
         put_in_place(&part, &path).with_context(|| format!("naming {}", path.display()))?;
         Ok(ExportResult { name: name.clone(), size_bytes: std::fs::metadata(&path)?.len(), plays: counts["playbacks"].as_i64().unwrap_or(0), rows: written })
-    })();
-    if result.is_err() {
-        let _ = std::fs::remove_file(&part);
-    }
-    result
+    })
 }
 
 /// The backups on disk, newest first.
@@ -851,6 +855,25 @@ impl Read for Counted {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn failed_placement_does_not_clean_another_writers_part() {
+        let tmp = std::env::temp_dir().join(format!("finstats-handoff-{}", std::process::id()));
+        std::fs::create_dir_all(&tmp).unwrap();
+        let part = tmp.join("x.part");
+        std::fs::write(&part, b"ours").unwrap();
+        let result: Result<()> = with_owned_part(&part, |owned| {
+            *owned = false;
+            let failed = put_in_place(&part, &tmp.join("missing/x"));
+            assert!(failed.is_err());
+            std::fs::write(&part, b"another writer").unwrap();
+            failed?;
+            Ok(())
+        });
+        assert!(result.is_err());
+        assert_eq!(std::fs::read(&part).unwrap(), b"another writer");
+        std::fs::remove_dir_all(tmp).unwrap();
+    }
 
     #[test]
     fn export_preserves_a_fresh_occupied_part_and_uses_another_name() {
