@@ -70,6 +70,7 @@ la série.
 - La feuille de style de FinUI, dessinée dans l'apparence propre du visiteur, ne peut être chargée que par les pages de FinStats. Une page sur un autre port du même hôte pouvait y lire si le visiteur était connecté et quel préréglage il avait choisi.
 - Chaque connexion refusée reçoit sa réponse à un même moment compté depuis son envoi, que FinStats ou Jellyfin l'ait refusée, et un nom est reconnu quelle que soit la casse de ses lettres, au-delà de A à Z aussi. La rapidité d'un refus révélait quels noms correspondaient à quelqu'un, et « Åse » tapant `åse` était refusée sans que Jellyfin soit consulté.
 - Les erreurs de téléchargement masquent les adresses des clients aux personnes sans droits d’administration. Les personnes ayant accès à la file pouvaient auparavant voir les hôtes, ports et chemins internes.
+- Les limites de clés et de destinations de notification sont appliquées de manière atomique. Des requêtes simultanées pouvaient auparavant les dépasser.
 
 ### Performance
 - Un profil publié est calculé au plus une fois par minute, et non à nouveau pour chaque image et chaque carte qu’il contient.

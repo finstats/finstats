@@ -69,6 +69,7 @@ de hele reeks.
 - Het stijlblad van FinUI, getekend in de eigen weergave van de bezoeker, mag alleen door FinStats' eigen pagina's worden geladen. Een pagina op een andere poort van dezelfde host kon eruit lezen of de bezoeker was aangemeld en welke voorinstelling die koos.
 - Elke geweigerde aanmelding wordt beantwoord op één moment, gerekend vanaf het versturen, of FinStats of Jellyfin hem nu weigerde, en een naam wordt herkend ongeacht hoofd- of kleine letters, ook buiten A tot Z. Hoe snel een weigering kwam, verried welke namen iemand waren, en ‘Åse’ die `åse` typte, werd geweigerd zonder dat Jellyfin werd gevraagd.
 - Downloadfouten verbergen clientadressen voor niet-beheerders. Wie de wachtrij kon bekijken, kon eerder interne hosts, poorten en paden zien.
+- Limieten voor sleutels en meldingsbestemmingen worden atomair afgedwongen. Gelijktijdige verzoeken konden deze eerder overschrijden.
 
 ### Performance
 - Een gepubliceerd profiel wordt hooguit eens per minuut opgebouwd, niet opnieuw voor elke afbeelding en kaart erop.

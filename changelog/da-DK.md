@@ -69,6 +69,7 @@ overskrift for hele serien.
 - FinUI's typografiark, tegnet i den besøgendes eget udseende, må kun indlæses af FinStats' egne sider. En side på en anden port på samme vært kunne aflæse, om den besøgende var logget ind, og hvilken forudindstilling de valgte.
 - Hvert afvist login besvares på ét tidspunkt regnet fra, da det blev sendt, uanset om FinStats eller Jellyfin afviste det, og et navn genkendes uanset store eller små bogstaver, også ud over A til Z. Hvor hurtigt en afvisning kom, afslørede hvilke navne der var nogen, og "Åse", der skrev `åse`, blev afvist uden at Jellyfin blev spurgt.
 - Downloadfejl skjuler klientadresser for andre end administratorer. Brugere med adgang til køen kunne tidligere se interne værtsnavne, porte og stier.
+- Grænser for nøgler og notifikationsdestinationer håndhæves atomisk. Samtidige anmodninger kunne tidligere overskride dem.
 
 ### Performance
 - En offentliggjort profil beregnes højst én gang i minuttet, ikke igen for hvert billede og kort på den.

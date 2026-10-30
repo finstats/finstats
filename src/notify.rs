@@ -35,7 +35,7 @@ use serde_json::{Value, json};
 
 use crate::auth::{AuthUser, Perms};
 use crate::channels::{self, Channel};
-use crate::db::rusqlite::{Connection, OptionalExtension, params};
+use crate::db::rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use crate::db;
 use crate::i18n::t;
 use crate::state::{ApiError, ApiResult, App, Settings};
@@ -1450,6 +1450,30 @@ fn may_touch(user: &AuthUser, t: &Target) -> bool {
     user.is_admin || t.owner_id.as_deref() == Some(user.id.as_str())
 }
 
+fn insert_target_in(c: &mut Connection, next: Target) -> Result<std::result::Result<i64, ApiError>> {
+    let tx = c.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let (total, own): (i64, i64) = tx.query_row(
+        "SELECT COUNT(*), COUNT(*) FILTER (WHERE owner_id IS ?1) FROM notify_targets",
+        [&next.owner_id], |r| Ok((r.get(0)?, r.get(1)?)))?;
+    if total as usize >= MAX_TARGETS {
+        return Ok(Err(ApiError::bad_request(t("server.notify.max_targets", &[("count", MAX_TARGETS.into())]))));
+    }
+    if next.owner_id.is_some() && own as usize >= MAX_OWN_TARGETS {
+        return Ok(Err(ApiError::bad_request(t("server.notify.max_own", &[("count", MAX_OWN_TARGETS.into())]))));
+    }
+    tx.execute(
+        "INSERT INTO notify_targets(kind, name, url, secret, topic, owner_id, events, with_addresses, min_severity, accept_invalid_certs, enabled, created_at, options)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+        params![next.channel.key(), next.name, next.url, next.secret, next.topic, next.owner_id,
+            serde_json::to_string(&next.events)?, next.with_addresses, next.min_severity, next.accept_invalid_certs, next.enabled, next.created_at,
+            serde_json::to_string(&next.options)?],
+    )?;
+    let id = tx.last_insert_rowid();
+    tx.commit()?;
+    tracing::info!("notification destination added: {} ({})", next.name, next.channel.label());
+    Ok(Ok(id))
+}
+
 pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<TargetBody>) -> FormResult {
     gate(&user)?;
     // A destination keeps sending after the key that made it is revoked: as with minting a key, only a session.
@@ -1458,34 +1482,8 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Tar
     if next.owner_id.is_some() {
         must_be_public(next.url()).await.map_err(|e| FormError::at("url", format!("{e}")))?;
     }
-    let owner = next.owner_id.clone();
-    let (total, own): (i64, i64) = app
-        .db
-        .call(move |c| {
-            Ok(c.query_row("SELECT COUNT(*), COUNT(*) FILTER (WHERE owner_id IS ?1) FROM notify_targets", [&owner], |r| Ok((r.get(0)?, r.get(1)?)))?)
-        })
-        .await?;
-    if total as usize >= MAX_TARGETS {
-        return Err(ApiError::bad_request(t("server.notify.max_targets", &[("count", MAX_TARGETS.into())])).into());
-    }
-    if next.owner_id.is_some() && own as usize >= MAX_OWN_TARGETS {
-        return Err(ApiError::bad_request(t("server.notify.max_own", &[("count", MAX_OWN_TARGETS.into())])).into());
-    }
-    tracing::info!("notification destination added: {} ({})", next.name, next.channel.label());
     let detail = target_detail(&next.name, next.channel, next.owner_id.is_some());
-    let id = app
-        .db
-        .call(move |c| {
-            c.execute(
-                "INSERT INTO notify_targets(kind, name, url, secret, topic, owner_id, events, with_addresses, min_severity, accept_invalid_certs, enabled, created_at, options)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
-                params![next.channel.key(), next.name, next.url, next.secret, next.topic, next.owner_id,
-                    serde_json::to_string(&next.events)?, next.with_addresses, next.min_severity, next.accept_invalid_certs, next.enabled, next.created_at,
-                    serde_json::to_string(&next.options)?],
-            )?;
-            Ok(c.last_insert_rowid())
-        })
-        .await?;
+    let id = app.db.call(move |c| insert_target_in(c, next)).await??;
     reload(&app).await?;
     crate::audit::record(&app, crate::audit::Entry::new("target_added", crate::audit::Actor::from(&user)).target(id.to_string()).detail(detail));
     Ok(one(&app, &user, id).await?)
@@ -1681,6 +1679,48 @@ pub(crate) mod tests {
         )
         .unwrap();
         c
+    }
+
+    #[test]
+    fn concurrent_creates_obey_the_cap() {
+        for (owner, limit) in [(Some("ub"), MAX_OWN_TARGETS), (None, MAX_TARGETS)] {
+            let dir = std::env::temp_dir().join(format!("finstats-cap-notify-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+            std::fs::create_dir_all(&dir).unwrap();
+            let db = db::Db::open(&dir.join("finstats.db")).unwrap();
+            db.conn().unwrap().execute("INSERT INTO users(id, name, updated_at) VALUES ('ub', 'bob', 1)", []).unwrap();
+            for _ in 0..limit - 1 { assert!(insert_target_in(&mut db.conn().unwrap(), target(0, owner, &[])).unwrap().is_ok()); }
+            let connections: Vec<_> = (0..6).map(|_| db.conn().unwrap()).collect();
+            drop(connections);
+            let barrier = std::sync::Arc::new(std::sync::Barrier::new(64));
+            let threads: Vec<_> = (0..64).map(|_| {
+                let db = db.clone();
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    insert_target_in(&mut db.conn().unwrap(), target(0, owner, &[])).unwrap().is_ok()
+                })
+            }).collect();
+            let made = threads.into_iter().map(|t| usize::from(t.join().unwrap())).sum::<usize>();
+            assert_eq!(made, 1);
+            let count: i64 = db.conn().unwrap().query_row("SELECT COUNT(*) FROM notify_targets", [], |r| r.get(0)).unwrap();
+            assert_eq!(count, limit as i64);
+            drop(db);
+            std::fs::remove_dir_all(dir).unwrap();
+        }
+    }
+
+    #[test]
+    fn capped_destination_insert_refuses_at_both_limits() {
+        let mut c = conn();
+        for _ in 0..MAX_OWN_TARGETS {
+            assert!(insert_target_in(&mut c, target(0, Some("ub"), &[])).unwrap().is_ok());
+        }
+        assert!(insert_target_in(&mut c, target(0, Some("ub"), &[])).unwrap().is_err());
+        for _ in MAX_OWN_TARGETS..MAX_TARGETS {
+            assert!(insert_target_in(&mut c, target(0, None, &[])).unwrap().is_ok());
+        }
+        assert!(insert_target_in(&mut c, target(0, None, &[])).unwrap().is_err());
+        assert_eq!(c.query_row("SELECT COUNT(*) FROM notify_targets", [], |r| r.get::<_, i64>(0)).unwrap(), MAX_TARGETS as i64);
     }
 
     /// The last event on the list keeps every destination it went to, like the others.

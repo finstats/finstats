@@ -69,6 +69,7 @@ bajo su encabezado: ese título es el que la aplicación usa como titular de tod
 - La hoja de estilo de FinUI, dibujada con el aspecto propio de quien visita, solo pueden cargarla las páginas de FinStats. Una página en otro puerto del mismo equipo podía leer en ella si la persona había iniciado sesión y qué ajuste preestablecido eligió.
 - Cada inicio de sesión rechazado se responde en un mismo momento contado desde que se envió, lo haya rechazado FinStats o Jellyfin, y un nombre se reconoce sin importar mayúsculas o minúsculas, también más allá de la A a la Z. Lo rápido que llegaba un rechazo revelaba qué nombres eran de alguien, y «Åse» escribiendo `åse` era rechazada sin preguntar a Jellyfin.
 - Los errores de descarga ocultan las direcciones de los clientes a quienes no son administradores. Quienes podían ver la cola antes podían ver hosts, puertos y rutas internos.
+- Los límites de claves y destinos de notificación se aplican de forma atómica. Antes, las solicitudes simultáneas podían superarlos.
 
 ### Performance
 - Un perfil publicado se calcula como mucho una vez por minuto, no de nuevo para cada imagen y tarjeta que contiene.

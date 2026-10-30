@@ -68,6 +68,7 @@ den tittelen bruker appen som overskrift for hele serien.
 - Stilarket til FinUI, tegnet i besøkerens eget utseende, kan bare lastes av FinStats' egne sider. En side på en annen port på samme vert kunne lese av det om besøkeren var innlogget, og hvilken forhåndsinnstilling de valgte.
 - Hver avvist innlogging besvares på ett tidspunkt regnet fra da den ble sendt, enten FinStats eller Jellyfin avviste den, og et navn gjenkjennes uansett store eller små bokstaver, også utover A til Z. Hvor raskt en avvisning kom, avslørte hvilke navn som var noen, og «Åse» som skrev `åse` ble avvist uten at Jellyfin ble spurt.
 - Feilmeldinger for nedlastinger skjuler klientadresser for andre enn administratorer. De som kunne se køen, kunne tidligere se interne vertsnavn, porter og stier.
+- Grensene for nøkler og varslingsmål håndheves atomisk. Samtidige forespørsler kunne tidligere overskride dem.
 
 ### Performance
 - En publisert profil regnes ut høyst én gang i minuttet, ikke på nytt for hvert bilde og kort på den.

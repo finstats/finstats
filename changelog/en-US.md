@@ -68,6 +68,7 @@ the app uses as the headline of the whole series.
 - FinUI's stylesheet, drawn in the visitor's own look, may be loaded by FinStats' own pages only. A page on another port of the same host could read from it whether the visitor was signed in, and which preset they chose.
 - Every refused sign-in is answered at one moment counted from when it was sent, whether FinStats or Jellyfin turned it down, and a name is matched whatever the case of its letters, also past A to Z. How quickly a refusal came told which names were somebody, and "Åse" typing `åse` was turned away without Jellyfin being asked.
 - Download errors hide client addresses from non-administrators. Queue viewers could previously see internal hosts, ports and paths.
+- Enforced key and notification destination limits atomically. Concurrent requests could previously exceed them.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

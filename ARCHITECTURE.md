@@ -248,6 +248,8 @@ The only thing FinStats sends. An event is raised once where the thing is notice
 a row per destination with its own retries (`notify::run`). `message` decides what may be said; `wanted_by` who may be
 told; `channels.rs` holds every payload (nine kinds of destination, mail in `mail.rs`). Contracts: "Notifications".
 
+Key and notification destination creation count and insert within one IMMEDIATE transaction to enforce their caps under concurrent requests.
+
 ### 11.2 The live channel
 
 `live.rs` / `live.js` / `GET /api/live`: one WebSocket per tab carrying `now_playing`, `downloads` and `summary` when they

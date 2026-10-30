@@ -69,6 +69,7 @@ kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 - FinUIs Stylesheet, im eigenen Aussehen des Besuchers gezeichnet, dürfen nur FinStats' eigene Seiten laden. Eine Seite auf einem anderen Port desselben Hosts konnte daraus lesen, ob der Besucher angemeldet war und welche Voreinstellung er gewählt hatte.
 - Jede abgelehnte Anmeldung wird zu einem Zeitpunkt beantwortet, der ab ihrem Absenden gezählt wird, ob FinStats oder Jellyfin sie ablehnte, und ein Name wird unabhängig von Groß- und Kleinschreibung erkannt, auch jenseits von A bis Z. Wie schnell eine Ablehnung kam, verriet, welche Namen jemand waren, und „Åse“, die `åse` tippte, wurde abgewiesen, ohne dass Jellyfin gefragt wurde.
 - Downloadfehler verbergen Clientadressen vor Personen ohne Administratorrechte. Wer die Warteschlange sehen konnte, konnte zuvor interne Hosts, Ports und Pfade sehen.
+- Limits für Schlüssel und Benachrichtigungsziele werden atomar durchgesetzt. Gleichzeitige Anfragen konnten sie zuvor überschreiten.
 
 ### Performance
 - Ein veröffentlichtes Profil wird höchstens einmal pro Minute berechnet, nicht erneut für jedes Bild und jede Karte darauf.

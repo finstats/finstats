@@ -68,6 +68,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Arkusz stylów FinUI, rysowany w wyglądzie wybranym przez odwiedzającego, mogą wczytywać tylko strony FinStats. Strona na innym porcie tego samego hosta mogła odczytać z niego, czy odwiedzający był zalogowany i jaki ustawienie wstępne wybrał.
 - Każde odrzucone logowanie dostaje odpowiedź w jednej chwili liczonej od jego wysłania, niezależnie od tego, czy odrzucił je FinStats, czy Jellyfin, a nazwa jest rozpoznawana bez względu na wielkość liter, także poza A–Z. To, jak szybko przychodziła odmowa, zdradzało, które nazwy należą do kogoś, a „Åse” wpisująca `åse` była odrzucana bez pytania Jellyfin.
 - Błędy pobierania ukrywają adresy klientów przed osobami bez uprawnień administratora. Osoby z dostępem do kolejki mogły wcześniej zobaczyć wewnętrzne hosty, porty i ścieżki.
+- Limity kluczy i miejsc docelowych powiadomień są egzekwowane atomowo. Wcześniej równoczesne żądania mogły je przekroczyć.
 
 ### Performance
 - Opublikowany profil jest obliczany najwyżej raz na minutę, a nie od nowa dla każdego obrazka i karty na nim.

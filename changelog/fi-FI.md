@@ -68,6 +68,7 @@ otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääot
 - FinUI:n tyylitiedoston, joka piirretään kävijän omalla ulkoasulla, voivat ladata vain FinStatsin omat sivut. Saman koneen toisessa portissa oleva sivu saattoi lukea siitä, oliko kävijä kirjautunut ja minkä esiasetuksen hän valitsi.
 - Jokaiseen hylättyyn kirjautumiseen vastataan samalla hetkellä sen lähettämisestä laskettuna, hylkäsipä sen FinStats tai Jellyfin, ja nimi tunnistetaan kirjainkoosta riippumatta myös A–Z:n ulkopuolella. Hylkäyksen nopeus paljasti, mitkä nimet olivat jonkun, ja ”Åse”, joka kirjoitti `åse`, torjuttiin kysymättä Jellyfiniltä.
 - Latausvirheet piilottavat asiakasohjelmien osoitteet muilta kuin ylläpitäjiltä. Jonon katsojat saattoivat aiemmin nähdä sisäiset palvelinnimet, portit ja polut.
+- Avainten ja ilmoituskohteiden rajat tarkistetaan atomisesti. Samanaikaiset pyynnöt saattoivat aiemmin ylittää ne.
 
 ### Performance
 - Julkaistu profiili lasketaan enintään kerran minuutissa, ei uudelleen jokaista sen kuvaa ja korttia varten.

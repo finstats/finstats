@@ -68,6 +68,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - Stílblað FinUI, teiknað í eigin útliti gestsins, mega aðeins síður FinStats sjálfs hlaða. Síða á annarri gátt sama hýsils gat lesið úr því hvort gesturinn var innskráður og hvaða forstillingu hann valdi.
 - Hverri hafnaðri innskráningu er svarað á einu augnabliki talið frá því hún var send, hvort sem FinStats eða Jellyfin hafnaði henni, og nafn þekkist óháð há- eða lágstöfum, líka utan A til Ö. Hversu fljótt höfnun barst sagði hvaða nöfn voru einhver, og „Åse“ sem sló inn `åse` var hafnað án þess að spyrja Jellyfin.
 - Villur við niðurhal fela vistföng biðlara fyrir öðrum en stjórnendum. Þeir sem gátu skoðað biðröðina gátu áður séð innri hýsla, gáttir og slóðir.
+- Mörkum fyrir lykla og áfangastaði tilkynninga er framfylgt í einni ódeilanlegri aðgerð. Samtímis beiðnir gátu áður farið yfir þau.
 
 ### Performance
 - Opinber prófíll er reiknaður út í mesta lagi einu sinni á mínútu, ekki aftur fyrir hverja mynd og hvert spjald á honum.

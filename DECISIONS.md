@@ -933,6 +933,7 @@ Learned from real exports; also documented at the top of `import.rs`.
 22. `/auth/me`'s `jellyfin_details` is null unless `jellyfin_public_url` is set, and a title's `jellyfin_link` and Library
     health's links fall back to the address FinStats reads Jellyfin at only for administrators.
 23. `api_keys` is never in a backup.
+24. Key creation counts live keys and inserts in one IMMEDIATE transaction, so concurrent requests cannot exceed the per-user cap.
 
 ## Permissions (`auth.rs`, `api.rs`)
 
@@ -1201,6 +1202,7 @@ Learned from real exports; also documented at the top of `import.rs`.
     longer than 10 s; for `smtps://` the TLS goes inside it (`Encrypted`). lettre grows a reply until it sees a line's end,
     so a server that never sent one grew FinStats' memory as fast as it could send. A Test goes under the same
     `MAIL_TIMEOUT` (or `SEND_TIMEOUT`) as the queue's own sending.
+23. Destination creation counts and inserts in one IMMEDIATE transaction, enforcing both the personal and total caps under concurrent requests.
 
 ## Backups (`backup.rs`)
 

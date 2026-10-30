@@ -14,7 +14,7 @@ use serde_json::{Value, json};
 
 use crate::audit::{self, Actor};
 use crate::auth::{AuthUser, Credential, KeyScope, mint_key};
-use crate::db::rusqlite::{Connection, OptionalExtension, params};
+use crate::db::rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use crate::db::{self};
 use crate::state::{ApiError, ApiResult, App};
 use crate::stats::rows_json;
@@ -94,6 +94,18 @@ pub struct CreateBody {
     expires_in_d: Option<i64>,
 }
 
+fn create_key_in(c: &mut Connection, uid: &str, name: &str, scope: KeyScope, expires_in_d: Option<i64>) -> Result<Option<Value>> {
+    let tx = c.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let now = db::now();
+    if !may_mint(live_keys(&tx, uid, now)?) {
+        return Ok(None);
+    }
+    let expires_at = expires_in_d.map(|d| now + d * 86_400);
+    let (id, token) = mint_key(&tx, uid, name, scope, expires_at, now)?;
+    tx.commit()?;
+    Ok(Some(json!({ "id": id, "key": token, "name": name, "scope": scope.as_str(), "created_at": now, "expires_at": expires_at })))
+}
+
 /// `POST /api/keys`: a new key for the caller, shown this once.
 pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<CreateBody>) -> ApiResult<axum::response::Response> {
     only_a_session(&user)?;
@@ -104,14 +116,11 @@ pub async fn create(State(app): State<App>, user: AuthUser, Json(body): Json<Cre
     let made = app
         .db
         .call(move |c| {
-            if !may_mint(live_keys(c, &uid, db::now())?) {
-                return Ok(None);
+            let made = create_key_in(c, &uid, &name, scope, expires_in_d)?;
+            if let Some(ref made) = made {
+                audit::record_quietly(c, &audit::Entry::new("key_created", actor).target(made["id"].to_string()).detail(json!({ "name": name_for_audit, "scope": scope.as_str(), "expires_at": made["expires_at"] })));
             }
-            let now = db::now();
-            let expires_at = expires_in_d.map(|d| now + d * 86_400);
-            let (id, token) = mint_key(c, &uid, &name, scope, expires_at, now)?;
-            audit::record_quietly(c, &audit::Entry::new("key_created", actor).target(id.to_string()).detail(json!({ "name": name_for_audit, "scope": scope.as_str(), "expires_at": expires_at })));
-            Ok(Some(json!({ "id": id, "key": token, "name": name, "scope": scope.as_str(), "created_at": now, "expires_at": expires_at })))
+            Ok(made)
         })
         .await?
         .ok_or_else(|| ApiError::bad_request(crate::i18n::t("server.keys.too_many", &[("max", MAX_KEYS_PER_USER.into())])))?;
@@ -160,6 +169,44 @@ mod tests {
     }
     fn user(credential: Credential) -> AuthUser {
         AuthUser { id: "u2".into(), name: "bob".into(), is_admin: false, perms: Perms::default(), credential, ip: None }
+    }
+
+    #[test]
+    fn concurrent_creates_obey_the_cap() {
+        {
+            let dir = std::env::temp_dir().join(format!("finstats-cap-keys-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+            std::fs::create_dir_all(&dir).unwrap();
+            let db = db::Db::open(&dir.join("finstats.db")).unwrap();
+            db.conn().unwrap().execute("INSERT INTO users(id, name, updated_at) VALUES ('ub', 'bob', 1)", []).unwrap();
+            for _ in 0..MAX_KEYS_PER_USER - 1 { assert!(create_key_in(&mut db.conn().unwrap(), "ub", "seed", KeyScope::Full, None).unwrap().is_some()); }
+            let connections: Vec<_> = (0..6).map(|_| db.conn().unwrap()).collect();
+            drop(connections);
+            let barrier = std::sync::Arc::new(std::sync::Barrier::new(64));
+            let threads: Vec<_> = (0..64).map(|_| {
+                let db = db.clone();
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    create_key_in(&mut db.conn().unwrap(), "ub", "test", KeyScope::Full, None).unwrap().is_some()
+                })
+            }).collect();
+            let made = threads.into_iter().map(|t| usize::from(t.join().unwrap())).sum::<usize>();
+            assert_eq!(made, 1);
+            let count: i64 = db.conn().unwrap().query_row("SELECT COUNT(*) FROM api_keys", [], |r| r.get(0)).unwrap();
+            assert_eq!(count, MAX_KEYS_PER_USER);
+            drop(db);
+            std::fs::remove_dir_all(dir).unwrap();
+        }
+    }
+
+    #[test]
+    fn capped_key_insert_refuses_at_the_limit() {
+        let mut c = conn();
+        for _ in 0..MAX_KEYS_PER_USER {
+            assert!(create_key_in(&mut c, "u2", "test", KeyScope::Full, None).unwrap().is_some());
+        }
+        assert!(create_key_in(&mut c, "u2", "test", KeyScope::Full, None).unwrap().is_none());
+        assert_eq!(live_keys(&c, "u2", db::now()).unwrap(), MAX_KEYS_PER_USER);
     }
 
     #[test]

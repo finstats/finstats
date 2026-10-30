@@ -68,6 +68,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Ziyaretçinin kendi görünümünde çizilen FinUI stil sayfasını yalnızca FinStats'ın kendi sayfaları yükleyebilir. Aynı ana makinenin başka bir bağlantı noktasındaki bir sayfa, ziyaretçinin oturum açıp açmadığını ve hangi hazır ayarı seçtiğini ondan okuyabiliyordu.
 - Reddedilen her oturum açmaya, FinStats ya da Jellyfin reddetmiş olsun, gönderildiği andan sayılan tek bir anda yanıt verilir ve bir ad, A–Z dışındakiler de dahil, büyük küçük harften bağımsız tanınır. Bir reddin ne kadar çabuk geldiği hangi adların birine ait olduğunu ele veriyordu ve `åse` yazan "Åse" Jellyfin'e sorulmadan geri çevriliyordu.
 - İndirme hataları, yönetici olmayanlardan istemci adreslerini gizler. Kuyruğu görebilenler daha önce dahili ana makineleri, bağlantı noktalarını ve yolları görebiliyordu.
+- Anahtar ve bildirim hedefi sınırları atomik olarak uygulanıyor. Eşzamanlı istekler önceden bu sınırları aşabiliyordu.
 
 ### Performance
 - Yayımlanmış bir profil, üzerindeki her resim ve kart için yeniden değil, en fazla dakikada bir kez hesaplanır.

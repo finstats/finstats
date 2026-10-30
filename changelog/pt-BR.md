@@ -69,6 +69,7 @@ manchete de toda a série.
 - A folha de estilos do FinUI, desenhada na aparência escolhida por quem visita, só pode ser carregada pelas páginas do próprio FinStats. Uma página em outra porta do mesmo host podia ler nela se a pessoa estava conectada e qual predefinição escolheu.
 - Toda entrada recusada é respondida em um mesmo momento contado a partir do envio, tenha sido o FinStats ou o Jellyfin a recusá-la, e um nome é reconhecido em maiúsculas ou minúsculas, também além de A a Z. A rapidez de uma recusa revelava quais nomes eram de alguém, e “Åse” digitando `åse` era recusada sem que o Jellyfin fosse consultado.
 - Erros de download ocultam os endereços dos clientes de quem não é administrador. Quem podia ver a fila antes podia ver hosts, portas e caminhos internos.
+- Os limites de chaves e destinos de notificação são aplicados de forma atômica. Antes, solicitações simultâneas podiam ultrapassá-los.
 
 ### Performance
 - Um perfil publicado é calculado no máximo uma vez por minuto, e não de novo para cada imagem e cartão nele.
