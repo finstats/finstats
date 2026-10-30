@@ -55,6 +55,7 @@ usa come titolo dell’intera serie.
 - Il corpo di una richiesta deve continuare ad arrivare una volta passati i primi 15 secondi, una risposta che nessuno legge viene abbandonata dopo 30 secondi e un indirizzo tiene al massimo 64 connessioni, a parte un proxy fidato. Qualche centinaio di richieste che non inviavano mai il loro corpo poteva impedire a FinStats di rispondere a chiunque.
 - Un server di posta non viene letto oltre quanto può contenere una risposta (1 MB per un'intera lettera), e un messaggio di prova si ferma dopo il tempo che può impiegare uno in coda. Un server che non terminava mai una riga poteva far trattenere a FinStats sempre più memoria finché non veniva fermato.
 - La lettura di una libreria si giudica sui titoli che le letture hanno salvato, non su quelli portati da un'importazione, e un titolo Jellystat in una libreria già letta entra come rimosso. Un'importazione di titoli inventati poteva far fermare FinStats a ogni lettura della libreria, a ogni avvio.
+- Il limite di 60 accessi falliti al minuto su tutto il server conta solo i tentativi inviati a Jellyfin, compresi quelli ancora in attesa di risposta. I nomi che FinStats rifiutava da sé permettevano a chiunque con pochi indirizzi di impedire a tutti di accedere, e molti tentativi inviati insieme arrivavano tutti a Jellyfin.
 
 ### Performance
 - Un profilo pubblicato viene calcolato al massimo una volta al minuto, non di nuovo per ogni immagine e scheda che contiene.

@@ -55,6 +55,7 @@ de hele reeks.
 - De inhoud van een verzoek moet blijven binnenkomen zodra de eerste 15 seconden voorbij zijn, een antwoord dat niemand leest wordt na 30 seconden opgegeven, en één adres houdt hoogstens 64 verbindingen, een vertrouwde proxy uitgezonderd. Een paar honderd verzoeken die hun inhoud nooit stuurden, konden FinStats ervan weerhouden wie dan ook te antwoorden.
 - Een mailserver wordt niet verder gelezen dan een antwoord kan zijn (1 MB voor een hele brief), en een testbericht stopt na zo lang als een bericht in de wachtrij mag duren. Een server die nooit een regel afsloot, kon FinStats steeds meer geheugen laten vasthouden tot het werd gestopt.
 - Het lezen van een bibliotheek wordt afgemeten aan de titels die eerdere leesbeurten opsloegen, niet aan die van een import, en een Jellystat-titel in een al gelezen bibliotheek komt binnen als verdwenen. Een import van verzonnen titels kon elke leesbeurt FinStats laten stoppen, bij elke start.
+- De grens van 60 mislukte aanmeldingen per minuut voor de hele server telt alleen pogingen die naar Jellyfin gaan, ook die nog op antwoord wachten. Namen die FinStats zelf weigerde, lieten iedereen met een paar adressen alle aanmeldingen tegenhouden, en veel gelijktijdig verstuurde gokken bereikten allemaal Jellyfin.
 
 ### Performance
 - Een gepubliceerd profiel wordt hooguit eens per minuut opgebouwd, niet opnieuw voor elke afbeelding en kaart erop.

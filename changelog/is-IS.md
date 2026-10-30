@@ -54,6 +54,7 @@ stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirs
 - Meginmál beiðni verður að halda áfram að berast þegar fyrstu 15 sekúndurnar eru liðnar, svar sem enginn les er gefið upp eftir 30 sekúndur, og eitt vistfang heldur í mesta lagi 64 tengingum, nema traustur milliþjónn. Nokkur hundruð beiðnir sem sendu aldrei meginmál sitt gátu komið í veg fyrir að FinStats svaraði nokkrum.
 - Póstþjónn er ekki lesinn lengra en nokkurt svar getur verið (1 MB fyrir heilt bréf), og prófunarskilaboð stöðvast eftir jafnlangan tíma og skilaboð í biðröð mega taka. Þjónn sem endaði aldrei línu gat látið FinStats halda sífellt meira minni þar til það var stöðvað.
 - Lestur safns er metinn út frá titlunum sem lestrar hafa vistað, ekki þeim sem innflutningur kom með, og Jellystat-titill í safni sem þegar hefur verið lesið kemur inn sem horfinn. Innflutningur uppdiktaðra titla gat látið hvern lestur safns stöðva FinStats, við hverja ræsingu.
+- Mörkin um 60 misheppnaðar innskráningar á mínútu fyrir allan þjóninn telja aðeins tilraunir sem sendar eru til Jellyfin, líka þær sem bíða enn svars. Nöfn sem FinStats hafnaði sjálft leyfðu hverjum sem var með fáein vistföng að stöðva innskráningu allra, og margar ágiskanir sendar í einu náðu allar til Jellyfin.
 
 ### Performance
 - Opinber prófíll er reiknaður út í mesta lagi einu sinni á mínútu, ekki aftur fyrir hverja mynd og hvert spjald á honum.

@@ -847,7 +847,11 @@ Learned from real exports; also documented at the top of `import.rs`.
    port first could point it at a Jellyfin of their own and be its administrator.
 5. **The limiter has three tiers**: 10 tries in five minutes per address (an IPv6 /64 counting as one), 50 per IPv6 /48
    (`WIDE_ATTEMPTS`), and past 60 failed sign-ins a minute on the whole server (`FAILURES_PER_MINUTE`) nobody's attempt is
-   forwarded until the minute has passed.
+   forwarded until the minute has passed. **Only attempts put to Jellyfin count there, those still waiting on it
+   included** (`forward` takes a place in the same step as the look at whether there is one, `Forwarded::refused` makes it
+   a failure, and dropping it gives it back): counted, names refused here let anybody with six addresses stop everybody
+   signing in at no cost, and looked at apart from taking a place, 500 guesses at once all reached Jellyfin. Home
+   addresses get no way round it (the owner, 2026-10-30).
 6. **Full (`ATTEMPTS_REMEMBERED`, 10,000), the limiter refuses a new address** until a window ends: letting the oldest go
    let a guesser with more /64s than that take them in turn and guess without a limit.
 7. A failure is audited once per address and window (`sign_in_failed`), not once per try.

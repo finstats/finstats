@@ -55,6 +55,7 @@ bajo su encabezado: ese título es el que la aplicación usa como titular de tod
 - El cuerpo de una petición debe seguir llegando una vez pasados sus primeros 15 segundos, una respuesta que nadie lee se abandona a los 30 segundos y una dirección mantiene como mucho 64 conexiones, salvo un proxy de confianza. Unos cientos de peticiones que nunca enviaban su cuerpo podían impedir que FinStats respondiera a nadie.
 - Un servidor de correo no se lee más allá de lo que puede ocupar una respuesta (1 MB para una carta entera), y un mensaje de prueba se detiene tras el tiempo que puede tardar uno en cola. Un servidor que nunca terminaba una línea podía hacer que FinStats retuviera cada vez más memoria hasta que se detenía.
 - La lectura de una biblioteca se juzga por los títulos que las lecturas han guardado, no por los que trajo una importación, y un título de Jellystat en una biblioteca ya leída entra como desaparecido. Una importación de títulos inventados podía hacer que cada lectura de biblioteca detuviera FinStats, en cada arranque.
+- El límite de 60 inicios de sesión fallidos por minuto en todo el servidor solo cuenta los intentos enviados a Jellyfin, incluidos los que aún esperan su respuesta. Los nombres que FinStats rechazaba por sí mismo permitían a cualquiera con unas pocas direcciones impedir que nadie iniciara sesión, y muchos intentos enviados a la vez llegaban todos a Jellyfin.
 
 ### Performance
 - Un perfil publicado se calcula como mucho una vez por minuto, no de nuevo para cada imagen y tarjeta que contiene.

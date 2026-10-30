@@ -711,7 +711,8 @@ const ATTEMPTS_REMEMBERED: usize = 10_000;
 /// Tries per IPv6 /48 in a window, across all its /64s: a network is often given a whole /48, 65,536 /64s.
 const WIDE_ATTEMPTS: u32 = 5 * MAX_ATTEMPTS;
 /// Failed sign-ins a minute on the whole server past which nobody's attempt is forwarded until the minute has passed. A
-/// household mistypes a few; this many is somebody guessing from more addresses than any limit per address can see.
+/// household mistypes a few; this many is somebody guessing from more addresses than any limit per address can see. Only
+/// attempts put to Jellyfin count, those still waiting on it included (`forward`).
 const FAILURES_PER_MINUTE: usize = 60;
 
 /// One address's (or one /48's) attempts in its window.
@@ -729,8 +730,10 @@ pub struct Attempts {
     buckets: HashMap<IpAddr, Bucket>,
     /// The same, per IPv6 /48.
     wide: HashMap<IpAddr, Bucket>,
-    /// When each failure of the last minute happened, server-wide.
+    /// When each failure Jellyfin gave in the last minute happened, server-wide.
     failures: std::collections::VecDeque<i64>,
+    /// Attempts put to Jellyfin and not answered yet: each holds a place in the minute until it is.
+    forwarded: usize,
 }
 
 impl Attempts {
@@ -790,7 +793,7 @@ fn check_rate_limit(app: &App, ip: IpAddr) -> Result<(), ApiError> {
     let now = db::now();
     let mut a = app.login_attempts.lock().unwrap();
     a.forget_old(now);
-    if a.failures.len() >= FAILURES_PER_MINUTE {
+    if a.failures.len() + a.forwarded >= FAILURES_PER_MINUTE {
         return Err(too_many(60 - (now - a.failures.front().copied().unwrap_or(now))));
     }
     let key = attempt_bucket(ip);
@@ -816,12 +819,43 @@ fn signed_in(app: &App, ip: IpAddr) {
     }
 }
 
-/// A sign-in Jellyfin refused: counted against the whole server's minute. Answers whether it is this address's first
-/// failure of its window, the one written to the audit log.
-fn failed(app: &App, ip: IpAddr) -> bool {
+/// A place in the server's minute for one attempt put to Jellyfin, taken in the same step as the look at whether there is
+/// one: looked at apart, every attempt that arrived before the first answers came back found room. Given back when it is
+/// dropped; `refused` makes it one of the minute's failures instead.
+pub(crate) struct Forwarded {
+    app: App,
+}
+
+/// Room in the server's minute for one more attempt put to Jellyfin, or the refusal to give it.
+fn forward(app: &App) -> Result<Forwarded, ApiError> {
     let now = db::now();
     let mut a = app.login_attempts.lock().unwrap();
-    a.failures.push_back(now);
+    a.forget_old(now);
+    if a.failures.len() + a.forwarded >= FAILURES_PER_MINUTE {
+        return Err(too_many(60 - (now - a.failures.front().copied().unwrap_or(now))));
+    }
+    a.forwarded += 1;
+    Ok(Forwarded { app: app.clone() })
+}
+
+impl Forwarded {
+    /// Jellyfin turned it down: one of the minute's failures.
+    fn refused(self) {
+        self.app.login_attempts.lock().unwrap().failures.push_back(db::now());
+    }
+}
+
+impl Drop for Forwarded {
+    fn drop(&mut self) {
+        let mut a = self.app.login_attempts.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        a.forwarded = a.forwarded.saturating_sub(1);
+    }
+}
+
+/// A sign-in refused, here or by Jellyfin. Answers whether it is this address's first failure of its window, the one
+/// written to the audit log.
+fn failed(app: &App, ip: IpAddr) -> bool {
+    let mut a = app.login_attempts.lock().unwrap();
     match a.buckets.get_mut(&attempt_bucket(ip)) {
         Some(b) if !b.audited => {
             b.audited = true;
@@ -932,12 +966,14 @@ pub async fn login(
         return Err(failure(&app));
     }
 
+    let place = forward(&app)?;
     let jf = app.jellyfin_anonymous(jf.base());
     let asked = std::time::Instant::now();
     let auth = match jf.authenticate(username, &body.password).await {
         Ok(a) => a,
         Err(AuthError::InvalidCredentials) => {
             FAILURE_TIME.lock().unwrap().saw(asked.elapsed());
+            place.refused();
             return Err(failure(&app));
         }
         Err(AuthError::Other(e)) => {
@@ -946,6 +982,7 @@ pub async fn login(
         }
     };
     jf.logout(&auth.access_token).await;
+    drop(place);
 
     if !auth.remote_access {
         let at = ip.to_string();
@@ -1411,9 +1448,39 @@ mod tests {
         for n in 0..FAILURES_PER_MINUTE as u32 {
             let ip = IpAddr::V4(std::net::Ipv4Addr::from(0x0a00_0000 + n));
             check_rate_limit(&app, ip).unwrap();
-            failed(&app, ip);
+            forward(&app).unwrap().refused();
         }
         assert!(check_rate_limit(&app, "198.51.100.1".parse().unwrap()).is_err());
+    }
+
+    /// Only an attempt put to Jellyfin counts against the server's minute. A name refused here costs Jellyfin nothing, and
+    /// counted, sixty of them from six addresses kept everybody from signing in.
+    #[test]
+    fn refusals_never_put_to_jellyfin_do_not_fill_the_servers_minute() {
+        let app = crate::state::test_app();
+        for n in 0..FAILURES_PER_MINUTE as u32 {
+            let ip = IpAddr::V4(std::net::Ipv4Addr::from(0x0a00_0000 + n / MAX_ATTEMPTS));
+            check_rate_limit(&app, ip).unwrap();
+            failed(&app, ip);
+        }
+        assert!(check_rate_limit(&app, "198.51.100.1".parse().unwrap()).is_ok());
+        assert!(forward(&app).is_ok());
+    }
+
+    /// An attempt waiting on Jellyfin holds its place in the server's minute: checked only against the failures already
+    /// answered, 500 guesses at once all went through.
+    #[test]
+    fn attempts_waiting_on_jellyfin_hold_their_place_in_the_servers_minute() {
+        let app = crate::state::test_app();
+        let mut waiting = vec![];
+        for n in 0..FAILURES_PER_MINUTE as u32 {
+            check_rate_limit(&app, IpAddr::V4(std::net::Ipv4Addr::from(0x0a00_0000 + n))).unwrap();
+            waiting.push(forward(&app).unwrap());
+        }
+        assert!(forward(&app).is_err(), "one more was put to Jellyfin beside sixty under way");
+        assert!(check_rate_limit(&app, "198.51.100.1".parse().unwrap()).is_err());
+        drop(waiting.pop());
+        assert!(forward(&app).is_ok(), "an attempt Jellyfin accepted did not give its place back");
     }
 
     /// A failed sign-in is written to the audit log once per address and window: each try wrote a row, and a guesser's

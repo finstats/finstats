@@ -54,6 +54,7 @@ bu başlığı tüm serinin manşeti olarak kullanır.
 - Bir isteğin gövdesi ilk 15 saniyesi geçtikten sonra gelmeye devam etmeli, kimsenin okumadığı bir yanıttan 30 saniye sonra vazgeçilir ve bir adres, güvenilen bir proxy dışında, en fazla 64 bağlantı tutar. Gövdesini hiç göndermeyen birkaç yüz istek, FinStats'ın kimseye yanıt vermesini engelleyebiliyordu.
 - Bir posta sunucusu hiçbir yanıtın olabileceğinden daha fazla okunmaz (bütün bir mektup için 1 MB) ve bir test iletisi, kuyruktaki bir iletinin sürebileceği kadar sonra durur. Hiç satır bitirmeyen bir sunucu, FinStats durdurulana kadar giderek daha fazla bellek tutmasına yol açabiliyordu.
 - Bir kitaplık okuması, içe aktarmanın getirdiklerine göre değil, okumaların kaydettiği başlıklara göre değerlendirilir ve zaten okunmuş bir kitaplıktaki Jellystat başlığı kaldırılmış olarak gelir. Uydurma başlıkların içe aktarılması, her kitaplık okumasının her açılışta FinStats'ı durdurmasına yol açabiliyordu.
+- Tüm sunucu için dakikada 60 başarısız oturum açma sınırı yalnızca Jellyfin'e iletilen denemeleri, yanıt bekleyenler dahil, sayar. FinStats'ın kendisinin reddettiği adlar, birkaç adresi olan herkesin herkesin oturum açmasını engellemesine izin veriyordu ve aynı anda gönderilen pek çok tahmin Jellyfin'e ulaşıyordu.
 
 ### Performance
 - Yayımlanmış bir profil, üzerindeki her resim ve kart için yeniden değil, en fazla dakikada bir kez hesaplanır.

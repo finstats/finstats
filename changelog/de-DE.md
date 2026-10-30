@@ -55,6 +55,7 @@ kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 - Der Inhalt einer Anfrage muss nach den ersten 15 Sekunden weiter eintreffen, eine Antwort, die niemand liest, wird nach 30 Sekunden aufgegeben, und eine Adresse hält höchstens 64 Verbindungen, ein vertrauenswürdiger Proxy ausgenommen. Einige hundert Anfragen, die ihren Inhalt nie schickten, konnten FinStats davon abhalten, irgendwem zu antworten.
 - Ein Mailserver wird nicht weiter gelesen, als eine Antwort sein kann (1 MB für einen ganzen Brief), und eine Testnachricht endet nach so langer Zeit, wie eine Nachricht in der Warteschlange dauern darf. Ein Server, der nie eine Zeile beendete, konnte FinStats immer mehr Speicher halten lassen, bis es gestoppt wurde.
 - Ein Lesen der Bibliothek wird an den Titeln gemessen, die Lesevorgänge gespeichert haben, nicht an denen eines Imports, und ein Jellystat-Titel in einer bereits gelesenen Bibliothek kommt als entfernt herein. Ein Import erfundener Titel konnte jedes Lesen der Bibliothek FinStats anhalten lassen, bei jedem Start.
+- Die serverweite Grenze von 60 fehlgeschlagenen Anmeldungen pro Minute zählt nur Versuche, die an Jellyfin gehen, auch solche, die noch auf die Antwort warten. Namen, die FinStats selbst abwies, ließen jeden mit wenigen Adressen alle Anmeldungen verhindern, und viele gleichzeitig gesendete Versuche erreichten alle Jellyfin.
 
 ### Performance
 - Ein veröffentlichtes Profil wird höchstens einmal pro Minute berechnet, nicht erneut für jedes Bild und jede Karte darauf.

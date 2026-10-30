@@ -54,6 +54,7 @@ the app uses as the headline of the whole series.
 - A request's body must keep coming once its first 15 seconds are over, an answer nobody reads is given up after 30 seconds, and one address holds at most 64 connections, a trusted proxy aside. A few hundred requests that never sent their body could keep FinStats from answering anybody.
 - A mail server is read no further than any reply could be (1 MB over a whole letter), and a test message stops after as long as a queued one may take. A server that never ended a line could make FinStats hold more and more memory until it was stopped.
 - A library read is judged against the titles reads have stored, not those an import brought, and a Jellystat title in a library already read comes in as gone. An import of invented titles could make every library read halt FinStats, at every start.
+- The server-wide limit of 60 failed sign-ins a minute counts only attempts put to Jellyfin, those still waiting on its answer included. Names FinStats turned down itself let anybody with a few addresses stop everybody signing in, and many guesses sent at once all reached Jellyfin.
 
 ### Performance
 - A published profile is worked out once a minute at most, not again for every picture and card on it.

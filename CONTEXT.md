@@ -372,7 +372,7 @@ The authoritative contract is `../docs/docs/finstats/api.md`; change it with the
   on https, which wins and which a sibling host cannot set; HttpOnly, SameSite=Lax, 30 days, Secure when `X-Forwarded-Proto`
   or the sign-in's `Origin` says https). A token begins `h` or `p` (begun on https or http), and an `h` token under the plain
   name is refused. Rate limit 10 attempts / 5 min per address (an IPv6 /64 counting as one), 50 per IPv6 /48, and nothing
-  forwarded past 60 failures a minute server-wide; at 10,000 remembered addresses a new one is refused; a failure is audited
+  forwarded past 60 failures a minute server-wide (attempts put to Jellyfin only, those under way included); at 10,000 remembered addresses a new one is refused; a failure is audited
   once per address and window; a sign-in that works gives back only its own attempt. Once a users read has succeeded, a
   name that may not use FinStats is answered as a wrong password without asking Jellyfin (`may_try`), no sooner than
   Jellyfin would; with Jellyfin's `EnableRemoteAccess` off, a sign-in from outside the home network is refused (403).

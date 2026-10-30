@@ -54,6 +54,7 @@ błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytuło
 - Treść żądania musi dalej napływać po pierwszych 15 sekundach, odpowiedź, której nikt nie czyta, jest porzucana po 30 sekundach, a jeden adres utrzymuje najwyżej 64 połączenia, poza zaufanym proxy. Kilkaset żądań, które nigdy nie wysłały treści, mogło sprawić, że FinStats nikomu nie odpowiadał.
 - Serwer poczty nie jest czytany dalej, niż może sięgać odpowiedź (1 MB na cały list), a wiadomość testowa kończy się po czasie, jaki może zająć wiadomość z kolejki. Serwer, który nigdy nie kończył wiersza, mógł sprawić, że FinStats trzymał coraz więcej pamięci, aż go zatrzymano.
 - Odczyt biblioteki ocenia się według tytułów zapisanych przez odczyty, nie tych z importu, a tytuł z Jellystat w bibliotece już odczytanej trafia jako usunięty. Import zmyślonych tytułów mógł sprawić, że każdy odczyt biblioteki zatrzymywał FinStats, przy każdym starcie.
+- Limit 60 nieudanych logowań na minutę dla całego serwera liczy tylko próby przekazane do Jellyfin, także te wciąż czekające na odpowiedź. Nazwy odrzucane przez sam FinStats pozwalały każdemu z kilkoma adresami zablokować logowanie wszystkim, a wiele prób wysłanych naraz docierało do Jellyfin.
 
 ### Performance
 - Opublikowany profil jest obliczany najwyżej raz na minutę, a nie od nowa dla każdego obrazka i karty na nim.

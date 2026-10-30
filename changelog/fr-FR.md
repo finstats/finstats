@@ -56,6 +56,7 @@ la série.
 - Le corps d'une requête doit continuer d'arriver une fois ses 15 premières secondes passées, une réponse que personne ne lit est abandonnée après 30 secondes, et une adresse tient au plus 64 connexions, un proxy de confiance mis à part. Quelques centaines de requêtes qui n'envoyaient jamais leur corps pouvaient empêcher FinStats de répondre à qui que ce soit.
 - Un serveur de messagerie n'est pas lu au-delà de ce qu'une réponse peut contenir (1 Mo pour une lettre entière), et un message de test s'arrête au bout du temps qu'un message en file peut prendre. Un serveur qui ne terminait jamais une ligne pouvait faire garder à FinStats de plus en plus de mémoire jusqu'à son arrêt.
 - La lecture d'une bibliothèque est jugée sur les titres que les lectures ont enregistrés, pas sur ceux d'une importation, et un titre Jellystat dans une bibliothèque déjà lue arrive comme disparu. Une importation de titres inventés pouvait faire arrêter FinStats à chaque lecture de bibliothèque, à chaque démarrage.
+- La limite de 60 connexions échouées par minute sur tout le serveur ne compte que les tentatives soumises à Jellyfin, y compris celles qui attendent encore sa réponse. Les noms que FinStats refusait lui-même permettaient à quiconque disposait de quelques adresses d'empêcher tout le monde de se connecter, et de nombreux essais envoyés à la fois atteignaient tous Jellyfin.
 
 ### Performance
 - Un profil publié est calculé au plus une fois par minute, et non à nouveau pour chaque image et chaque carte qu’il contient.

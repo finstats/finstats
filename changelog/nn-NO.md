@@ -55,6 +55,7 @@ som overskrift for heile serien.
 - Innhaldet i ein førespurnad må halde fram med å kome når dei første 15 sekunda er over, eit svar ingen les, vert gjeve opp etter 30 sekund, og éi adresse held høgst 64 tilkoplingar, ein tiltrudd proxy unnateke. Nokre hundre førespurnader som aldri sende innhaldet sitt, kunne hindre FinStats i å svare nokon.
 - Ein e-posttenar vert ikkje lesen lenger enn noko svar kan vere (1 MB for eit heilt brev), og ei testmelding stoppar etter like lang tid som ei melding i køen kan ta. Ein tenar som aldri avslutta ei linje, kunne få FinStats til å halde meir og meir minne til han vart stoppa.
 - Ei bibliotekslesing vert vurdert mot titlane lesingane har lagra, ikkje dei ein import tok med, og ein Jellystat-tittel i eit bibliotek som alt er lese, kjem inn som borte. Ein import av oppdikta titlar kunne få kvar bibliotekslesing til å stoppe FinStats, ved kvar oppstart.
+- Grensa på 60 mislukka innloggingar i minuttet for heile tenaren tel berre forsøk som vert sende til Jellyfin, òg dei som framleis ventar på svar. Namn FinStats avviste sjølv, let kven som helst med nokre få adresser stoppe alle frå å logge inn, og mange gjetingar sende samstundes nådde alle Jellyfin.
 
 ### Performance
 - Ein publisert profil vert rekna ut høgst éin gong i minuttet, ikkje på nytt for kvart bilete og kort på han.

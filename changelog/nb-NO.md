@@ -54,6 +54,7 @@ den tittelen bruker appen som overskrift for hele serien.
 - Innholdet i en forespørsel må fortsette å komme når de første 15 sekundene er over, et svar ingen leser, blir gitt opp etter 30 sekunder, og én adresse holder høyst 64 tilkoblinger, en betrodd proxy unntatt. Noen hundre forespørsler som aldri sendte innholdet sitt, kunne hindre FinStats i å svare noen.
 - En e-postserver leses ikke lenger enn noe svar kan være (1 MB for et helt brev), og en testmelding stopper etter like lang tid som en melding i køen kan ta. En server som aldri avsluttet en linje, kunne få FinStats til å holde mer og mer minne til den ble stoppet.
 - En bibliotekslesing vurderes mot titlene lesingene har lagret, ikke dem en import tok med, og en Jellystat-tittel i et bibliotek som allerede er lest, kommer inn som borte. En import av oppdiktede titler kunne få hver bibliotekslesing til å stoppe FinStats, ved hver oppstart.
+- Grensen på 60 mislykkede innlogginger i minuttet for hele serveren teller bare forsøk som sendes til Jellyfin, også de som fortsatt venter på svar. Navn FinStats avviste selv, lot hvem som helst med noen få adresser stoppe alle fra å logge inn, og mange gjetninger sendt samtidig nådde alle Jellyfin.
 
 ### Performance
 - En publisert profil regnes ut høyst én gang i minuttet, ikke på nytt for hvert bilde og kort på den.

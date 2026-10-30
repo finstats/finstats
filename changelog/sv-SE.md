@@ -54,6 +54,7 @@ har en kort titelrad under rubriken: den titeln använder appen som rubrik för 
 - Innehållet i en begäran måste fortsätta komma när de första 15 sekunderna har gått, ett svar som ingen läser ges upp efter 30 sekunder, och en adress håller högst 64 anslutningar, en betrodd proxy undantagen. Några hundra begäranden som aldrig skickade sitt innehåll kunde hindra FinStats från att svara någon.
 - En e-postserver läses inte längre än något svar kan vara (1 MB för ett helt brev), och ett testmeddelande stoppas efter lika lång tid som ett meddelande i kön får ta. En server som aldrig avslutade en rad kunde få FinStats att hålla mer och mer minne tills den stoppades.
 - En läsning av ett bibliotek bedöms mot de titlar läsningarna har sparat, inte dem en import tog med, och en Jellystat-titel i ett bibliotek som redan är läst kommer in som borta. En import av påhittade titlar kunde få varje läsning av ett bibliotek att stoppa FinStats vid varje start.
+- Gränsen på 60 misslyckade inloggningar i minuten för hela servern räknar bara försök som skickas till Jellyfin, även de som fortfarande väntar på svar. Namn som FinStats själv avvisade lät vem som helst med några få adresser hindra alla från att logga in, och många gissningar som skickades samtidigt nådde alla Jellyfin.
 
 ### Performance
 - En publicerad profil räknas fram högst en gång i minuten, inte på nytt för varje bild och kort på den.
