@@ -425,11 +425,6 @@ impl Proxies {
         Ok(Proxies::Named(nets))
     }
 
-    /// Whether any peer is believed at all.
-    pub fn any(&self) -> bool {
-        *self != Proxies::Off
-    }
-
     /// Whether this peer is a proxy whose forwarded headers are believed.
     pub fn trusts(&self, peer: IpAddr) -> bool {
         let peer = canonical(peer);
@@ -1340,8 +1335,10 @@ mod tests {
         headers.insert("x-forwarded-for", "10.0.0.2".parse().unwrap());
         assert_eq!(client_ip(&app, &headers, proxy).to_string(), "10.0.0.2", "nothing but proxies: the last one");
         assert!(Proxies::parse("10.0.0.0/33").is_err() && Proxies::parse("proxy.lan").is_err(), "a list FinStats cannot read is refused at start");
-        assert!(!Proxies::parse("").unwrap().any() && !Proxies::parse("0").unwrap().any() && !Proxies::parse("false").unwrap().any());
-        assert!(Proxies::parse("true").unwrap().any());
+        assert_eq!(Proxies::parse("").unwrap(), Proxies::Off);
+        assert_eq!(Proxies::parse("0").unwrap(), Proxies::Off);
+        assert_eq!(Proxies::parse("false").unwrap(), Proxies::Off);
+        assert_ne!(Proxies::parse("true").unwrap(), Proxies::Off);
     }
 
     /// Signing out with a cookie that opens nothing asks no open connection to re-read its access: anybody could do it
