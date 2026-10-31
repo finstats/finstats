@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-30 (backup placement ownership and atomic undo-delete), on branch `dev` (crate version 2.3.1, local only; schema `user_version` 42; newest pushed tag `v2.2.0`).
+> **Last updated:** 2026-10-31 (reusable local and SSH idle benchmark tooling), on branch `dev` (crate version 2.3.1, local only; schema `user_version` 42; newest pushed tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `ARCHITECTURE.md` explains how
@@ -72,7 +72,7 @@ finstats/
 ├── CHANGELOG.md                  Patch notes source (en-GB); include_str!'d, parsed by changelog.rs
 ├── changelog/                    Translations of CHANGELOG.md, one per language (embedded)
 ├── THIRD-PARTY.json              Generated licence notice for every crate in Cargo.lock
-├── tools/                        make-third-party.py (licence notice), make-world-map.py (world.json), make-languages.py (README's languages picture)
+├── tools/                        make-third-party.py (licence notice), make-world-map.py (world.json), make-languages.py (README's languages picture), idle_benchmark.py + test_idle_benchmark.py
 ├── Dockerfile, docker-entrypoint.sh, docker-compose.yml, .dockerignore
 ├── .github/                      workflows/docker.yml (test, build, publish, release), issue/discussion/PR templates
 ├── .githooks/pre-commit          Refuses data, DBs, tracker exports, secrets, files > 2 MB
@@ -729,6 +729,10 @@ qa/run.sh                                               # everyday gate (~70 s)
 qa/run.sh endurance                                     # torture + soak, before a release
 qa/run.sh <stage>                                       # static, api, browser, live, socket, docker, finui, finmotion, i18n, coverage, screenshots, serve, …
 
+# Idle comparison tooling (Python 3.9+, Linux cgroup v2 hosts, Docker and optional SSH)
+python3 tools/idle_benchmark.py --target FinStats=local --container FinStats=finstats --output /tmp/idle-run
+python3 -m unittest discover -s tools -p test_idle_benchmark.py
+
 # Generated files
 cargo fetch && python3 tools/make-third-party.py        # after any dependency change
 python3 tools/make-languages.py                         # after a catalogue, changelog translation or language changes (--check: QA)
@@ -765,6 +769,12 @@ checking `/api/status`, the log and the health state. A command inside the conta
   - Pure simulations (the collector walking minutes of simulated time in microseconds).
   - Contract tests between modules (e.g. health's copy groups vs `watchlist::find_title`).
 - The changelog test requires the top `CHANGELOG.md` entry to equal the `Cargo.toml` version.
+
+Python tooling tests live beside their scripts in `tools/test_*.py`, using standard-library `unittest` and invented
+host counters. The idle benchmark tests exercise grouping, incomplete coverage, host reads, artifact privacy and a fake
+SSH transport without contacting a real host or Docker daemon, plus container identity checks, actual CPU counter-read
+timestamps, fish-safe SSH source transport, agent exit with held-open stdin and invalid agent output preserving partial artifacts. The tool prepares the upcoming 2.3.2 comparison; it does
+not change the application version or run during normal server operation.
 
 ### 11.2 The QA suite (`qa/`, local and private)
 

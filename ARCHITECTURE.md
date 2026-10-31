@@ -16,7 +16,7 @@ questions (§7.1 Scope, §7.2 library access, §7.3 insights, §7.4 groups, §7.
 profiles) · §9 Network and security · §10 Around Jellyfin: Pipeline · §11 Telling people (§11.1 notifications, §11.2 the
 live channel) · §12 Keeping data (§12.1 backups, §12.2 the trash) · §13 Serving HTTP · §14 Languages · §15 The web UI
 (§15.1 pages and data, §15.2 FinUI and FinMotion, §15.3 navigation, §15.4 Simple mode, §15.5 per-browser choices and the
-welcome) · §16 Shipping
+welcome) · §16 Shipping · §17 Idle comparison tooling
 
 ## 1. The process
 
@@ -324,3 +324,19 @@ Theme, layout, menu style, search mode, language and date/time formats (`when.js
 `.github/workflows/docker.yml` tests, builds amd64 and arm64 and publishes to `ghcr.io/finstats/finstats`. The licence
 notice (`licenses.rs`, `THIRD-PARTY.json`) and the patch notes (`changelog.rs`, `CHANGELOG.md`) are compiled in.
 Contracts: "Image and data folder", "Licence notice", "Changelog".
+
+## 17. Idle comparison tooling
+
+`tools/idle_benchmark.py` is a standalone standard-library Python command, outside the binary and its build. One agent
+per target reads host-side Docker cgroup v2 counters on an already running Linux deployment. Local agents run as child
+processes; SSH agents receive the same Python source as base64 in a shell-neutral quoted bootstrap, need no installed script, and exit when the
+controller disconnects. Only host-local Unix-socket Docker contexts are accepted, so a remote daemon's PID cannot select
+an unrelated local cgroup; its path must also match the full container ID. Counter-read timestamps are per container,
+with stack endpoints represented by their mean and non-overlapping CPU windows refused. The controller samples targets concurrently, bounds collection time and reaps its processes.
+
+Each target explicitly lists its application, worker and database containers. A baseline and adjacent endpoints yield
+CPU deltas as percent of one core; memory is the working set and anonymous bytes. Restart identity, failed reads and
+missed endpoints invalidate affected intervals instead of bridging gaps; an incomplete member invalidates stack totals.
+Artifacts are private raw JSONL, derived per-container and stack CSV, metadata with summary JSON, and a Markdown table
+with coverage and caveats. No application requests or restarts are made. Tests in `tools/test_idle_benchmark.py` use
+invented counters and a fake SSH transport. Contracts: "Idle comparisons"; usage lives in the docs' contributing guide.

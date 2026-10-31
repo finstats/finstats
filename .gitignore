@@ -33,3 +33,6 @@ ux-rules.md
 
 # Local QA suite: end-to-end, performance and browser checks run before a release
 /qa/
+
+# Python tooling bytecode
+__pycache__/

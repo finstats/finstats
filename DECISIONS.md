@@ -23,7 +23,7 @@ Contents:
 - Languages · Changelog
 - Web UI: Front-end · Tables · Data loading and prefetch · Settings and Server pages · Navigation · Theming · FinUI ·
   FinMotion · Simple mode · Formats and the welcome · Now playing
-- Shipping: Image and data folder · Licence notice
+- Shipping: Image and data folder · Licence notice · Idle comparisons
 
 ## Settings and state (`state.rs`)
 
@@ -1684,3 +1684,33 @@ Learned from real exports; also documented at the top of `import.rs`.
 3. Re-run the generator whenever a dependency is added, removed or bumped: a test holds the file against every package in
    `Cargo.lock`, so a dependency whose licence was never recorded fails `cargo test`.
 4. The answer is rendered once into a `OnceLock`: half a megabyte, the same for everyone, unchanging while the process runs.
+
+## Idle comparisons (`tools/idle_benchmark.py`)
+
+1. **Observe existing deployments without application traffic or restarts.** Linux host-side cgroup v2 counters use
+   `usage_usec` deltas divided by monotonic elapsed time as percent of one core, `max(0, memory.current - inactive_file)`
+   for working set and `memory.stat anon` for anonymous RAM. Default sampling is a baseline plus 30 endpoints over 300
+   seconds. Hardware multipliers are never applied; hardware, uptime, caches, data and settings make these observational
+   deployment comparisons, not controlled version regression tests.
+2. **A stack includes every explicitly configured container, including its database and workers.** Missing or
+   unreadable members make stack totals unavailable; a restart, replacement, counter reset or missing endpoint
+   invalidates adjoining CPU intervals. Two names resolving to one container cannot count twice. Report valid interval
+   counts, covered time and readable memory endpoints; CPU seconds are a lower bound when any interval is missing,
+   and no valid interval means unavailable rather than zero. Memory averages include the baseline.
+3. **Retain evidence before publishing numbers.** Each run writes private raw JSONL, derived CSV, summary JSON with
+   host/image/version metadata and Markdown with caveats. Version arguments are operator labels, not measurements.
+   Missing data stays visible and incomplete runs exit unsuccessfully. The controller accepts local or SSH targets,
+   quotes remote source and config, bounds host commands, cleans up on interruption and never needs an installed remote
+   script. Only a host-local Unix-socket Docker daemon may supply PIDs for that host's cgroup reads, and the cgroup
+   path must contain that container's full ID. CPU timestamps are taken immediately after reading each counter, not
+   before invoking Docker; stacks use the mean member read timestamp as a representative endpoint and reject CPU
+   windows without overlap. This estimates sequential reads without treating inspect delays as counter-read times.
+   Invalid and non-finite agent JSON preserves partial artifacts; only fixed known agent errors are retained.
+   Remote Python source is base64 inside a shell-neutral bootstrap: fish processes backslashes inside single quotes,
+   corrupting directly quoted source. The disconnect watcher uses an unbuffered descriptor read so a daemon thread
+   cannot hold stdin's buffered lock while the interpreter exits.
+   Docker's optional healthcheck and OCI-label metadata uses safe map indexing before nested access: images without a
+   healthcheck or labels must remain readable participants, especially database containers.
+4. **Tooling does not create a release.** This command prepares comparisons for the forthcoming 2.3.2; it neither bumps
+   the crate nor adds an in-app patch note for development tooling alone. A README comparison requires fresh measured
+   artifacts and reviewed deployment context, not a republished historical run presented as current.
