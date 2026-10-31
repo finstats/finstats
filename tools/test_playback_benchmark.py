@@ -284,6 +284,35 @@ class WorkloadTests(unittest.TestCase):
 
 
 class ControllerTests(unittest.TestCase):
+    def test_generated_methodology_does_not_claim_operator_declared_playback(self):
+        method = play.generated_methodology()
+        self.assertTrue(method[0].startswith('Observational generated DirectPlay'))
+        self.assertNotIn('operator-declared', ' '.join(method))
+        self.assertIn('decoded in real time', ' '.join(method))
+
+    def test_generated_summary_and_both_markdown_reports_have_consistent_methodology(self):
+        with tempfile.TemporaryDirectory() as temp:
+            args = play.parse_args(['--output', temp+'/out','--jellyfin-image','example:1','--finstats-image','FinStats=example:2','--duration','12','--interval','2','--warmup','0'])
+            sandbox = mock.Mock(cleanup_errors=[]);sandbox.container.side_effect=[('jf-id','jf-name'),('tracker-id','tracker-name')];sandbox.proxy_url.return_value='http://127.0.0.1:9999'
+            client = mock.Mock();client.snapshot.return_value={'position_ticks':20000000,'frames':24,'decoded_seconds':2}
+            workload = mock.Mock(errors=[],events=[{'type':kind} for kind in ('start','pause','resume','stop')],started_monotonic_s=1)
+            def media(ffmpeg, destination, duration): destination.write_bytes(b'fixture media')
+            def sample(sample_args, targets):
+                sample_args.output.mkdir(mode=0o700)
+                rows=[{'container':'total','interval_seconds':2,'cpu_seconds':None if i==0 else .1,'cpu_pct_one_core':None if i==0 else 5,'working_set_bytes':100,'anon_bytes':50} for i in range(7)]
+                metric=play.idle.summarize(rows,6,7)['total']
+                target={**targets[0],'errors':[],'metrics':{'total':metric},'first_utc':'fixture','last_utc':'fixture'}
+                summary={'timing':{'duration':12,'interval':2},'status':'complete','measurement_scenario':'playback','methodology':list(play.idle.CAVEATS)+['Playback context is operator-declared.'],'targets':[target]}
+                play.write_json(sample_args.output/'summary.json',summary)
+                with play.idle.private_file(sample_args.output/'comparison.md') as handle:handle.write(play.idle.markdown(summary))
+                return 0
+            observed={'closed_plays':1,'events':{kind:1 for kind in ('start','pause','resume','stop')}}
+            with mock.patch.object(play.idle,'require_local_docker'),mock.patch.object(play,'docker_command',return_value='image'),mock.patch.object(play,'Sandbox',return_value=sandbox),mock.patch.object(play,'generate_media',side_effect=media),mock.patch.object(play,'bootstrap',return_value=({'Id':'movie'},{'Id':'server','Version':'fixture'})),mock.patch.object(play,'wait_tracker'),mock.patch.object(play.Jellyfin,'authenticate'),mock.patch.object(play.Jellyfin,'playback_info',return_value=('source','session')),mock.patch.object(play.Jellyfin,'report'),mock.patch.object(play,'MediaClient',return_value=client),mock.patch.object(play,'Workload',return_value=workload),mock.patch.object(play.idle,'run',side_effect=sample),mock.patch.object(play,'history',return_value=observed),mock.patch('sys.stdout',new=io.StringIO()):
+                self.assertEqual(play.run_playback(args),0)
+            for path in (args.output/'comparison.md',args.output/'resources'/'comparison.md',args.output/'resources'/'summary.json'):
+                text=path.read_text();self.assertIn('Observational generated DirectPlay',text);self.assertNotIn('operator-declared',text)
+                self.assertEqual(path.stat().st_mode & 0o777,0o600)
+
     def test_missing_cached_image_never_creates_containers_and_keeps_failure_artifact(self):
         with tempfile.TemporaryDirectory() as temp:
             args = play.parse_args(['--output', temp + '/out', '--jellyfin-image', 'example:missing', '--finstats-image', 'FinStats=example:2'])

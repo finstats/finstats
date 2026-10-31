@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-31 (idle comparison and isolated generated-playback tooling), on branch `dev` (crate version 2.3.1, local only; schema `user_version` 42; newest pushed tag `v2.2.0`).
+> **Last updated:** 2026-10-31 (selected single-panel paired resource dashboard), on branch `dev` (crate version 2.3.1, local only; schema `user_version` 42; newest pushed tag `v2.2.0`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `ARCHITECTURE.md` explains how
@@ -72,11 +72,11 @@ finstats/
 ├── CHANGELOG.md                  Patch notes source (en-GB); include_str!'d, parsed by changelog.rs
 ├── changelog/                    Translations of CHANGELOG.md, one per language (embedded)
 ├── THIRD-PARTY.json              Generated licence notice for every crate in Cargo.lock
-├── tools/                        make-third-party.py (licence notice), make-world-map.py (world.json), make-languages.py (README's languages picture), idle_benchmark.py and playback_benchmark.py + test_*_benchmark.py
+├── tools/                        make-third-party.py (licence notice), make-world-map.py (world.json), make-languages.py (README's languages picture), make-benchmark-chart.py (combined measured resource graph), idle_benchmark.py and playback_benchmark.py + test_*_benchmark.py
 ├── Dockerfile, docker-entrypoint.sh, docker-compose.yml, .dockerignore
 ├── .github/                      workflows/docker.yml (test, build, publish, release), issue/discussion/PR templates
 ├── .githooks/pre-commit          Refuses data, DBs, tracker exports, secrets, files > 2 MB
-├── README.md                     Landing page only (docs live in ../docs)
+├── README.md                     Landing page and dated measured idle/playback comparison (docs live in ../docs)
 ├── CONTRIBUTING.md, SECURITY.md  Pointers to the docs site
 ├── CODE_OF_CONDUCT.md, LICENSE
 ├── CLAUDE.md                     How we work (for AI assistants): TDD, commands, git, releases
@@ -736,6 +736,7 @@ python3 tools/playback_benchmark.py --jellyfin-image jellyfin/jellyfin:12.4 --fi
 
 # Generated files
 cargo fetch && python3 tools/make-third-party.py        # after any dependency change
+python3 tools/make-benchmark-chart.py                   # sanitized idle/playback JSON to combined README graph; --check detects stale output
 python3 tools/make-languages.py                         # after a catalogue, changelog translation or language changes (--check: QA)
 python3 tools/make-world-map.py <ne_50m.geojson> web/assets/geo/world.json
 node ../finui/tools/build-site.mjs <dir>                # then copy p/, create/presets.json, fonts/ into web/assets/finui
@@ -774,7 +775,13 @@ checking `/api/status`, the log and the health state. A command inside the conta
 Python tooling tests live beside their scripts in `tools/test_*.py`, using standard-library `unittest` and invented
 host counters. The idle benchmark tests exercise grouping, incomplete coverage, host reads, artifact privacy and a fake
 SSH transport without contacting a real host or Docker daemon, plus container identity checks, actual CPU counter-read
-timestamps, fish-safe SSH source transport, agent exit with held-open stdin and invalid agent output preserving partial artifacts. The tool prepares the upcoming 2.3.2 comparison; it does
+timestamps, fish-safe SSH source transport, agent exit with held-open stdin and invalid agent output preserving partial artifacts.
+`--scenario idle|playback` records the operator-declared workload in raw events, summary and Markdown; it starts no
+playback and makes no application requests. The automated isolated controller selects playback explicitly.
+Program versions are discovered before the baseline with fixed CLI/package probes. `--program NAME=auto|none|finstats|jellystat|streamystats`
+controls detection; observed runtime/package/database versions and image provenance are retained without raw output.
+Summary format 2 separates observed values/provenance from operator labels. Malformed version metadata makes a run
+incomplete while preserving artifacts; probe startup time has its own collection budget. The tool prepares the upcoming 2.3.2 comparison; it does
 not change the application version or run during normal server operation. `playback_benchmark.py` reuses its sampler
 for real generated-media DirectPlay on fresh isolated Jellyfin and FinStats containers. Tests cover Docker ownership,
 loopback forwarding, strict bootstrap/response shapes, actual-decoder progress, lifecycle reports, TERM/HUP cleanup

@@ -575,6 +575,11 @@ PLAYBACK_CAVEATS = [
 ]
 
 
+def generated_methodology():
+    return ["Observational generated DirectPlay deployment comparison, not a controlled version regression test. No hardware multiplier is applied.",
+            *idle.CAVEATS[1:], *PLAYBACK_CAVEATS]
+
+
 def run_playback(args):
     args.output.mkdir(mode=0o700, parents=True, exist_ok=False)
     scenario = {'format_version': 1, 'status': 'starting', 'started_utc': idle.utc(), 'kind': 'generated-directplay',
@@ -644,7 +649,7 @@ def run_playback(args):
         worker = threading.Thread(target=workload.run, daemon=True)
         worker.start()
         sample_args = argparse.Namespace(output=args.output / 'resources', duration=args.duration,
-                                         interval=args.interval, timeout=args.timeout)
+                                         interval=args.interval, timeout=args.timeout, scenario='playback')
         result = idle.run(sample_args, targets)
         workload.stop_event.set()
         worker.join(timeout=args.timeout * args.streams + 5)
@@ -710,11 +715,13 @@ def run_playback(args):
         summary['scenario'] = scenario
         if scenario['status'] != 'complete':
             summary['status'] = scenario['status']
-        summary['methodology'] = [text.replace('Observational idle deployment', 'Observational generated DirectPlay') for text in summary['methodology']] + PLAYBACK_CAVEATS
+        summary['methodology'] = generated_methodology()
         write_json(summary_file, summary)
-        table = idle.markdown(summary).replace('# Idle resource comparison', '# Playback resource comparison').replace('Observational idle deployment', 'Observational generated DirectPlay')
+        table = idle.markdown(summary)
+        with open(args.output / 'resources' / 'comparison.md', 'w', encoding='utf-8', opener=lambda name, flags: os.open(name, flags, 0o600)) as handle:
+            handle.write(table)
         with idle.private_file(args.output / 'comparison.md') as handle:
-            handle.write(table + '\n' + '\n'.join('- ' + text for text in PLAYBACK_CAVEATS) + '\n')
+            handle.write(table)
     print('Playback benchmark ' + scenario['status'] + ': ' + str(args.output))
     if scenario['errors']:
         print('; '.join(scenario['errors']), file=sys.stderr)

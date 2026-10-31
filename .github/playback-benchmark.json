@@ -1,0 +1,58 @@
+{
+  "format_version": 2,
+  "scenario": "playback",
+  "playback": {
+    "streams": 1,
+    "method": "unverified",
+    "verification": "operator-confirmed"
+  },
+  "started_utc": "2026-10-31T09:55:57Z",
+  "finished_utc": "2026-10-31T10:00:57Z",
+  "duration_s": 300,
+  "interval_s": 10,
+  "finstats_revision": "dc05cbea0da893ba0d2c3b6c6740630721462d99",
+  "stacks": [
+    {
+      "name": "FinStats",
+      "version": "2.3.1",
+      "containers": 1,
+      "cpu_mean_pct_one_core": 0.5131991898526373,
+      "working_set_mean_bytes": 92012279.74193548,
+      "valid_intervals": 30,
+      "memory_endpoints": 31,
+      "version_provenance": "runtime_cli",
+      "cpu_p90_pct_one_core": 0.5864177032964744,
+      "cpu_peak_pct_one_core": 2.8610244352990826,
+      "working_set_p90_bytes": 103395328,
+      "working_set_peak_bytes": 103436288
+    },
+    {
+      "name": "Jellystat",
+      "version": "1.1.12",
+      "containers": 2,
+      "cpu_mean_pct_one_core": 3.1447795311333384,
+      "working_set_mean_bytes": 406127120.516129,
+      "valid_intervals": 30,
+      "memory_endpoints": 31,
+      "version_provenance": "application_package",
+      "cpu_p90_pct_one_core": 1.2635134898159872,
+      "cpu_peak_pct_one_core": 43.35409306415241,
+      "working_set_p90_bytes": 449810432,
+      "working_set_peak_bytes": 491843584
+    },
+    {
+      "name": "Streamystats",
+      "version": "2.0.0",
+      "containers": 3,
+      "cpu_mean_pct_one_core": 2.6490637674603907,
+      "working_set_mean_bytes": 646166329.8064516,
+      "valid_intervals": 30,
+      "memory_endpoints": 31,
+      "version_provenance": "application_package",
+      "cpu_p90_pct_one_core": 2.9235402779437187,
+      "cpu_peak_pct_one_core": 8.83678311650712,
+      "working_set_p90_bytes": 654786560,
+      "working_set_peak_bytes": 672219136
+    }
+  ]
+}

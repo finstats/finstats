@@ -153,7 +153,7 @@ developer files at the root: `README.md` (a short landing page: the pitch, the h
 - Pages for a version not yet released wait on a branch of the docs named like FinStats' own (`dev-2.3.0`) and reach
   `main`, which publishes, with the release.
 - The README's pictures are the docs' (`assets/screenshots/`, linked by their published address), and
-  `qa/run.sh screenshots` writes them there. The one exception is `.github/languages.svg` ("Languages" 18).
+  `qa/run.sh screenshots` writes them there. The generated exceptions are `.github/languages.svg` ("Languages" 18) and `.github/benchmark.svg`, drawn from sanitized idle/playback measurements by `tools/make-benchmark-chart.py` ("Idle comparisons" 9).
 - **HTTP contract**: the docs' `finstats/api.md` (`../docs/docs/finstats/api.md`) is the contract the UI is written
   against; change it together with the endpoint. The QA `routes` check reads it from there.
 - **The README says how FinStats is built**: a blockquote under the hero shot disclosing that most of the code was written

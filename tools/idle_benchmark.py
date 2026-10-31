@@ -80,6 +80,11 @@ def measure(current, previous):
     return rows + [total]
 
 
+def nearest_rank(values, percentile):
+    """Nearest rank: ceil(p * n), one based; no interpolation or invented samples."""
+    return sorted(values)[math.ceil(percentile * len(values)) - 1] if values else None
+
+
 def summarize(rows, expected_intervals, expected_endpoints, container_names=None):
     result = {}
     for name in (container_names or dict.fromkeys(r["container"] for r in rows)):
@@ -93,10 +98,12 @@ def summarize(rows, expected_intervals, expected_endpoints, container_names=None
             "covered_seconds": covered, "cpu_seconds": cpu if valid else None,
             "cpu_seconds_lower_bound": len(valid) != expected_intervals,
             "cpu_mean_pct_one_core": cpu / covered * 100 if covered else None,
+            "cpu_p90_pct_one_core": nearest_rank([r["cpu_pct_one_core"] for r in valid], 0.9),
             "cpu_median_pct_one_core": statistics.median(r["cpu_pct_one_core"] for r in valid) if valid else None,
             "cpu_peak_pct_one_core": max((r["cpu_pct_one_core"] for r in valid), default=None),
             "memory_samples": len(memory), "expected_endpoints": expected_endpoints,
             "working_set_mean_bytes": statistics.mean(r["working_set_bytes"] for r in memory) if memory else None,
+            "working_set_p90_bytes": nearest_rank([r["working_set_bytes"] for r in memory], 0.9),
             "working_set_min_bytes": min((r["working_set_bytes"] for r in memory), default=None),
             "working_set_peak_bytes": max((r["working_set_bytes"] for r in memory), default=None),
             "anon_mean_bytes": statistics.mean(r["anon_bytes"] for r in memory) if memory else None,
@@ -133,8 +140,9 @@ def parse_args(argv=None):
                "SSH uses config aliases; repeat --ssh-option Streamystats=IdentityFile=/path/to/key.\n"
                "Only observe an already idle deployment. No application requests or container changes are made.")
     parser.add_argument("--config", type=Path, help="JSON object with a targets array (see contributing guide)")
-    for flag in ("target", "container", "version", "ssh-option", "note"):
+    for flag in ("target", "container", "version", "ssh-option", "note", "program"):
         parser.add_argument("--" + flag, action="append", default=[], metavar="NAME=VALUE")
+    parser.add_argument("--scenario", choices=("idle", "playback"), default="idle", help="operator-declared workload context; never starts or verifies playback")
     parser.add_argument("--duration", type=float, default=300, help="window seconds, default 300")
     parser.add_argument("--interval", type=float, default=10, help="endpoint spacing seconds, default 10")
     parser.add_argument("--timeout", type=float, default=5, help="each host command timeout seconds, default 5")
@@ -165,7 +173,7 @@ def parse_args(argv=None):
         if not names or len(names) != len(set(names)):
             raise ValueError("supply at least one target with a unique name")
         for field, values in (("containers", args.container), ("version", args.version),
-                              ("ssh_options", args.ssh_option), ("notes", args.note)):
+                              ("ssh_options", args.ssh_option), ("notes", args.note), ("program", args.program)):
             for value in values:
                 name, text = pair(value)
                 target = next((t for t in targets if t["name"] == name), None)
@@ -176,7 +184,7 @@ def parse_args(argv=None):
                 else:
                     target[field] = text
         for target in targets:
-            if set(target) - {"name", "ssh", "containers", "version", "ssh_options", "notes"}:
+            if set(target) - {"name", "ssh", "containers", "version", "ssh_options", "notes", "program"}:
                 raise ValueError("unknown target config field")
             if not isinstance(target["name"], str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_. -]{0,79}", target["name"]):
                 raise ValueError("target names must be short plain labels")
@@ -184,6 +192,9 @@ def parse_args(argv=None):
             target.setdefault("ssh_options", [])
             target.setdefault("version", "unspecified")
             target.setdefault("notes", "")
+            target.setdefault("program", "auto")
+            if target["program"] not in ("auto", "none", "finstats", "jellystat", "streamystats"):
+                raise ValueError("program must be auto, none, finstats, jellystat or streamystats")
             host = target["ssh"]
             if host is not None and (not isinstance(host, str) or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.@:-]{0,253}", host)):
                 raise ValueError("SSH target must be a config alias or user@host, without options or shell text")
@@ -208,7 +219,7 @@ def parse_args(argv=None):
 
 
 def agent_command(target, timing):
-    config = base64.b64encode(json.dumps({**timing, "containers": target["containers"]}).encode()).decode()
+    config = base64.b64encode(json.dumps({**timing, "containers": target["containers"], "program": target.get("program", "auto")}).encode()).decode()
     if target["ssh"] is None:
         return [sys.executable, "-u", str(Path(__file__).resolve()), "--agent", config]
     command = ["ssh", "-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10"]
@@ -253,6 +264,81 @@ def inspect_container(name, timeout):
         return json.loads(host_command(["docker", "inspect", "--type", "container", "--format", INSPECT_TEMPLATE, name], timeout, "docker inspect"))
     except (ValueError, TypeError):
         raise SampleError("invalid docker inspect response") from None
+
+
+def infer_program(image):
+    image = image if isinstance(image, str) else ""
+    name = image.lower().split("@", 1)[0].rsplit("/", 1)[-1].split(":", 1)[0]
+    if name == "finstats": return "finstats"
+    if name == "jellystat": return "jellystat"
+    if name == "streamystats-nextjs": return "streamystats"
+    if name == "streamystats-job-server": return "streamystats-worker"
+    if "postgres" in name or "vectorchord" in name: return "postgres"
+    return "unknown"
+
+
+def discover_program_versions(containers, program, timeout):
+    """Fixed read-only probes, before the CPU baseline; never record raw output."""
+    if program == "none": return []
+    results = []
+    for index, name in enumerate(containers):
+        item = {"container": name, "kind": "unknown", "version": None, "provenance_kind": "unavailable"}
+        try:
+            info = inspect_container(name, timeout)
+            item.update({"image": info.get("image"), "image_ref": info.get("image_ref")})
+            kind = program if index == 0 and program != "auto" else infer_program(info.get("image_ref", ""))
+            item["kind"] = kind
+            if kind == "finstats":
+                command, provenance, source = ["finstats", "--version"], "runtime_cli", "finstats --version"
+            elif kind == "postgres":
+                command, provenance, source = ["postgres", "--version"], "database_cli", "postgres --version"
+            elif kind in ("jellystat", "streamystats"):
+                source = "/app/package.json" if kind == "jellystat" else "/app/apps/nextjs-app/package.json"
+                command, provenance = ["head", "-c", "131073", source], "application_package"
+            else:
+                item["source"] = "no fixed read-only version source available"
+                results.append(item)
+                continue
+            output = host_command(["docker", "exec", name, *command], timeout, "program version probe")
+            if len(output.encode()) > 131072: raise ValueError()
+            if provenance == "application_package":
+                package = strict_json(output)
+                version = package.get("version") if isinstance(package, dict) else None
+            else:
+                pattern = r"(?i)^finstats\s+([0-9][A-Za-z0-9.+-]*)" if kind == "finstats" else r"^postgres \(PostgreSQL\) ([0-9][A-Za-z0-9.+-]*)"
+                match = re.match(pattern, output.strip())
+                version = match[1] if match else None
+            if not isinstance(version, str) or not re.fullmatch(r"[0-9]+(?:\.[0-9]+){1,3}(?:[-+][A-Za-z0-9.-]+)?", version): raise ValueError()
+            item.update({"version": version, "provenance_kind": provenance, "source": source})
+        except (SampleError, ValueError, TypeError):
+            item["error"] = "fixed version source unavailable or invalid"
+        results.append(item)
+    return results
+
+
+def validated_program_versions(value, containers):
+    if not isinstance(value, list): raise ValueError("invalid program metadata")
+    required = {"container", "kind", "version", "provenance_kind"}
+    allowed = required | {"image", "image_ref", "source", "error"}
+    kinds = {"finstats", "jellystat", "streamystats", "streamystats-worker", "postgres", "unknown"}
+    provenances = {"runtime_cli", "application_package", "database_cli", "unavailable"}
+    seen, result = set(), []
+    for item in value:
+        if not isinstance(item, dict) or not required <= set(item) or set(item) - allowed: raise ValueError("invalid program metadata")
+        name, kind, version, provenance = (item[key] for key in ("container", "kind", "version", "provenance_kind"))
+        if not isinstance(name, str) or name not in containers or name in seen or not isinstance(kind, str) or kind not in kinds or not isinstance(provenance, str) or provenance not in provenances: raise ValueError("invalid program metadata")
+        if version is not None and (not isinstance(version, str) or not re.fullmatch(r"[0-9]+(?:\.[0-9]+){1,3}(?:[-+][A-Za-z0-9.-]+)?", version)): raise ValueError("invalid program metadata")
+        if (version is None) != (provenance == "unavailable"): raise ValueError("invalid program metadata")
+        for key in set(item) - required:
+            text = item[key]
+            if text is not None and (not isinstance(text, str) or len(text) > 512 or any(ord(c) < 32 or ord(c) == 127 for c in text)): raise ValueError("invalid program metadata")
+        seen.add(name);result.append(dict(item))
+    return result
+
+
+def collection_timeout(duration, timeout, members, remote, program):
+    startup = (2 + (0 if program == "none" else 2 * members)) * timeout + (10 if remote else 0)
+    return duration + startup + max(30, timeout * (members + 2) * 2)
 
 
 def counters(path):
@@ -341,7 +427,8 @@ def run_agent(config, stopped=None):
         print(json.dumps(event, allow_nan=False), flush=True)
     stopped = stopped or threading.Event()
     require_local_docker(config["timeout"])
-    emit({"type": "metadata", "host": host_metadata(config["timeout"])})
+    emit({"type": "metadata", "host": host_metadata(config["timeout"]),
+          "program_versions": discover_program_versions(config["containers"], config.get("program", "none"), config["timeout"])})
     start = time.monotonic()
     count = round(config["duration"] / config["interval"])
     for index in range(count + 1):
@@ -365,7 +452,7 @@ CAVEATS = [
     "Every configured container, including each database and worker, contributes to a stack. A missing member makes that endpoint's stack memory and adjoining CPU intervals unavailable.",
     "CPU seconds with missing intervals are a lower bound. A restart, replacement, counter reset, unreadable endpoint or absent endpoint cannot be bridged. No valid intervals means n/a, not zero.",
     "The sampler sends no application/API traffic and does not restart containers. Existing healthchecks, background jobs, real viewers and other host workloads remain enabled and are not independently instrumented.",
-    "Versions supplied by the operator are labels; image references, image IDs, OCI version/revision labels, start times, restart counts, limits and host metadata are retained in raw samples. Images without version labels require operator verification.",
+    "Version cells distinguish observed runtime CLI, application-package and database-CLI versions from supplied operator labels or unavailable values. Observations and their image/source provenance are retained; supplied labels remain separate. Package values do not establish immutable release tags, and OCI labels may be stale.",
     "Hosts start independently after connection and metadata setup; inspect counters sequentially within each endpoint. Sampling itself has overhead. See raw UTC windows, elapsed times and read durations; hosts need synchronized clocks to compare UTC.",
     "Hardware, uptime, caches, database size, settings and background work can change results. Include warm-up, activity checks and deployment context in notes before publishing; this tool cannot establish that an application was idle.",
     "Linux host-side cgroup v2 and a local Docker daemon are required. Docker Desktop VM, cgroup v1, remote Docker contexts and inaccessible host cgroups are unsupported. Process RSS, when available, is only the container init process, not a stack memory total.",
@@ -377,8 +464,9 @@ def markdown(summary):
         return str(text).replace("\\", "\\\\").replace("|", "\\|").replace("<", "&lt;").replace(">", "&gt;").replace("\n", " ").replace("\r", " ")
     def number(value, digits=3, divisor=1):
         return "n/a" if value is None else f"{value / divisor:.{digits}f}"
-    lines = ["# Idle resource comparison", "", "Measured runs only. Review deployment notes and metadata before copying this table into the README.", "",
-             "| Deployment | Version label | Mean CPU | Median CPU | Peak interval CPU | CPU seconds | Valid intervals | Covered seconds | Mean working set MiB | Working set range MiB | Mean anonymous MiB | Memory endpoints |",
+    scenario = summary.get("measurement_scenario", "idle")
+    lines = [f"# {scenario.capitalize()} resource comparison", "", "Measured runs only. Review deployment notes and metadata before copying this table into the README.", "",
+             "| Deployment | Version (source) | Mean CPU | Median CPU | Peak interval CPU | CPU seconds | Valid intervals | Covered seconds | Mean working set MiB | Working set range MiB | Mean anonymous MiB | Memory endpoints |",
              "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for target in summary["targets"]:
         metric = target["metrics"]["total"]
@@ -388,7 +476,8 @@ def markdown(summary):
         percentages = [number(metric[key]) + ("%" if metric[key] is not None else "") for key in
                        ("cpu_mean_pct_one_core", "cpu_median_pct_one_core", "cpu_peak_pct_one_core")]
         memory_range = number(metric["working_set_min_bytes"], 2, 1048576) + " to " + number(metric["working_set_peak_bytes"], 2, 1048576)
-        values = [cell(target["name"]), cell(target["version"]), *percentages, cpu_seconds,
+        source_label = {"runtime_cli": "runtime CLI", "application_package": "application package", "database_cli": "database CLI", "operator_label": "operator label", "unavailable": "unavailable"}.get(target.get("version_provenance", "operator_label"), "unavailable")
+        values = [cell(target["name"]), cell(target["version"]) + " (" + source_label + ")", *percentages, cpu_seconds,
                   f'{metric["valid_intervals"]}/{metric["expected_intervals"]}', number(metric["covered_seconds"]),
                   number(metric["working_set_mean_bytes"], 2, 1048576), memory_range,
                   number(metric["anon_mean_bytes"], 2, 1048576), f'{metric["memory_samples"]}/{metric["expected_endpoints"]}']
@@ -398,7 +487,7 @@ def markdown(summary):
         lines.append(f'- **{cell(target["name"])}**: containers {", ".join(cell(c) for c in target["containers"])}. Measured UTC: {cell(target.get("first_utc") or "n/a")} to {cell(target.get("last_utc") or "n/a")}. {cell(target["notes"])}')
         if target["errors"]:
             lines.append("  Collection issues: " + "; ".join(cell(e) for e in target["errors"]) + ".")
-    lines.extend(["", *["- " + caveat for caveat in CAVEATS], ""])
+    lines.extend(["", *["- " + caveat for caveat in summary.get("methodology", CAVEATS)], ""])
     return "\n".join(lines)
 
 
@@ -432,8 +521,13 @@ def run(args, targets):
     args.output.mkdir(mode=0o700, parents=True, exist_ok=False)
     timing = {"duration": args.duration, "interval": args.interval, "timeout": args.timeout}
     expected = round(args.duration / args.interval)
-    summary = {"format_version": 1, "started_utc": utc(), "timing": timing, "status": "complete",
-               "methodology": CAVEATS, "targets": []}
+    scenario = getattr(args, "scenario", "idle")
+    methodology = list(CAVEATS)
+    if scenario == "playback":
+        methodology[0] = methodology[0].replace("idle deployment", "playback deployment")
+        methodology.append("Playback context is operator-declared: the sampler does not start or verify playback. Record observed activity, stream count and play method before and after the window in notes.")
+    summary = {"format_version": 2, "started_utc": utc(), "timing": timing, "status": "complete",
+               "measurement_scenario": scenario, "methodology": methodology, "targets": []}
     states = []
     messages = queue.Queue()
     processes = []
@@ -459,10 +553,11 @@ def run(args, targets):
         try:
             for index, target in enumerate(targets):
                 info = {key: target[key] for key in ("name", "version", "containers", "notes")}
-                info.update({"transport": "ssh" if target["ssh"] else "local", "errors": [], "host": None})
+                info.update({"transport": "ssh" if target["ssh"] else "local", "errors": [], "host": None,
+                             "operator_version_label": info["version"], "version_provenance": "operator_label" if info["version"] != "unspecified" else "unavailable", "program_versions": []})
                 summary["targets"].append(info)
                 state = {"rows": [], "previous": None, "samples": 0, "done": False,
-                         "deadline": time.monotonic() + args.duration + max(30, args.timeout * (len(target["containers"]) + 2) * 2)}
+                         "deadline": time.monotonic() + collection_timeout(args.duration, args.timeout, len(target["containers"]), bool(target["ssh"]), target.get("program", "auto"))}
                 states.append(state)
                 try:
                     process = subprocess.Popen(agent_command(target, timing), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -492,10 +587,18 @@ def run(args, targets):
                     if event["returncode"]:
                         info["errors"].append("host agent failed; check python3 availability, SSH alias/key/known-host access, Docker and host permissions (SSH diagnostics are suppressed)")
                     continue
-                raw.write(json.dumps({"target": info["name"], **event}, allow_nan=False) + "\n")
+                raw.write(json.dumps({"target": info["name"], **event, "measurement_scenario": scenario}, allow_nan=False) + "\n")
                 raw.flush()
                 if kind == "metadata":
                     info["host"] = event.get("host")
+                    try:
+                        info["program_versions"] = validated_program_versions(event.get("program_versions", []), info["containers"])
+                    except ValueError:
+                        info["errors"].append("invalid program version metadata; supplied label retained")
+                    main = next((item for item in info["program_versions"] if item["kind"] in ("finstats", "jellystat", "streamystats") and item["version"]), None)
+                    if main:
+                        info["version"] = main["version"]
+                        info["version_provenance"] = main["provenance_kind"]
                 elif kind == "sample":
                     if event.get("sample") != state["samples"] or [c.get("name") for c in event.get("containers", [])] != info["containers"]:
                         info["errors"].append("agent endpoint sequence or container membership changed")
@@ -543,7 +646,7 @@ def run(args, targets):
         handle.write("\n")
     with private_file(args.output / "comparison.md") as handle:
         handle.write(markdown(summary))
-    print(f'Idle benchmark {summary["status"]}: {args.output}')
+    print(f'{scenario.capitalize()} benchmark {summary["status"]}: {args.output}')
     return 130 if interrupted else (0 if summary["status"] == "complete" else 1)
 
 

@@ -1,0 +1,52 @@
+{
+  "format_version": 2,
+  "started_utc": "2026-10-31T09:49:32Z",
+  "finished_utc": "2026-10-31T09:54:31Z",
+  "duration_s": 300,
+  "interval_s": 10,
+  "finstats_revision": "dc05cbea0da893ba0d2c3b6c6740630721462d99",
+  "stacks": [
+    {
+      "name": "FinStats",
+      "version": "2.3.1",
+      "containers": 1,
+      "cpu_mean_pct_one_core": 0.11758734821284747,
+      "working_set_mean_bytes": 70938491.87096775,
+      "valid_intervals": 30,
+      "memory_endpoints": 31,
+      "version_provenance": "runtime_cli",
+      "cpu_p90_pct_one_core": 0.29356451272969003,
+      "cpu_peak_pct_one_core": 0.39103477408681175,
+      "working_set_p90_bytes": 70971392,
+      "working_set_peak_bytes": 71053312
+    },
+    {
+      "name": "Jellystat",
+      "version": "1.1.12",
+      "containers": 2,
+      "cpu_mean_pct_one_core": 0.19412729971329526,
+      "working_set_mean_bytes": 309306665.2903226,
+      "valid_intervals": 30,
+      "memory_endpoints": 31,
+      "version_provenance": "application_package",
+      "cpu_p90_pct_one_core": 0.41939097673563225,
+      "cpu_peak_pct_one_core": 0.45272743045657443,
+      "working_set_p90_bytes": 311410688,
+      "working_set_peak_bytes": 311898112
+    },
+    {
+      "name": "Streamystats",
+      "version": "2.0.0",
+      "containers": 3,
+      "cpu_mean_pct_one_core": 2.3476795521934157,
+      "working_set_mean_bytes": 528069665.0322581,
+      "valid_intervals": 30,
+      "memory_endpoints": 31,
+      "version_provenance": "application_package",
+      "cpu_p90_pct_one_core": 3.0436794533459324,
+      "cpu_peak_pct_one_core": 4.897422560407707,
+      "working_set_p90_bytes": 535752704,
+      "working_set_peak_bytes": 558702592
+    }
+  ]
+}

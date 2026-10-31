@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="728" height="604" viewBox="0 0 728 604" role="img" aria-labelledby="benchmark-title benchmark-description">
+<title id="benchmark-title">Paired idle and playback resources per application</title>
+<desc id="benchmark-description">Idle: FinStats 2.3.1: CPU mean 0.118%, P90 0.294%, peak 0.391%; working set mean 67.65 MiB, P90 67.68 MiB, peak 67.76 MiB; Jellystat 1.1.12: CPU mean 0.194%, P90 0.419%, peak 0.453%; working set mean 294.98 MiB, P90 296.98 MiB, peak 297.45 MiB; Streamystats 2.0.0: CPU mean 2.348%, P90 3.044%, peak 4.897%; working set mean 503.61 MiB, P90 510.93 MiB, peak 532.82 MiB. Playback: 1 operator-confirmed stream · play method unverified. FinStats 2.3.1: CPU mean 0.513%, P90 0.586%, peak 2.861%; working set mean 87.75 MiB, P90 98.61 MiB, peak 98.64 MiB; Jellystat 1.1.12: CPU mean 3.145%, P90 1.264%, peak 43.354%; working set mean 387.31 MiB, P90 428.97 MiB, peak 469.06 MiB; Streamystats 2.0.0: CPU mean 2.649%, P90 2.924%, peak 8.837%; working set mean 616.23 MiB, P90 624.45 MiB, peak 641.08 MiB. Both are observational full-stack measurements.</desc>
+<style>
+svg { --surface:#ffffff; --border:#d0d7de; --foreground:#1f2328; --muted:#59636e; --track:#f0edf8; --series-1:#8a5cf5; --series-2:#3b73d9; --series-3:#188d7b; }
+@media (prefers-color-scheme: dark) { svg { --surface:#0d1117; --border:#3d444d; --foreground:#f0f6fc; --muted:#9198a1; --track:#242035; --series-1:#a78bfa; --series-2:#74a7ff; --series-3:#3ac3a6; } }
+text { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; fill:var(--foreground); }
+.card { fill:var(--surface); stroke:var(--border); } .title { font-size:20px; font-weight:650; }
+.name,.value { font-size:14px; font-weight:650; } .value { font-variant-numeric:tabular-nums; }
+.sub,.tag,.tail,.head { font-size:12px; fill:var(--muted); } .tag { font-weight:400; } .head { font-weight:600; }
+.rule { stroke:var(--border); } .track { fill:var(--track); } .range { opacity:.2; } .idle { opacity:.45; }
+.p90 { stroke:var(--foreground); stroke-width:2; } .series-1 { fill:var(--series-1); } .series-2 { fill:var(--series-2); } .series-3 { fill:var(--series-3); }
+</style>
+<rect class="card" x="0.5" y="0.5" width="727" height="603" rx="14"/>
+<text class="title" x="17" y="36">Paired per app</text>
+<text class="sub" x="17" y="56">Idle and 1 operator-confirmed stream, on the same host</text>
+<text class="sub" x="17" y="80">Solid: mean · Tick: P90 · Dot: peak</text>
+<text class="sub" x="711" y="80" text-anchor="end">Shared scales: CPU 0 to 50%; RAM 0 to 700 MiB</text>
+<text class="head" x="180" y="104">CPU · % of one core</text>
+<text class="head" x="454.5" y="104">Working set · MiB</text>
+<line class="rule" x1="17" x2="711" y1="116" y2="116"/>
+<circle class="series-1" cx="21" cy="135" r="4"/>
+<text class="name" x="30" y="139">FinStats<tspan class="tag"> 2.3.1</tspan></text>
+<text class="sub" x="17" y="159">1 container</text>
+<text class="sub" x="180" y="139">Idle</text>
+<text class="value" x="436.5" y="139" text-anchor="end">0.118%</text>
+<rect class="track" x="180" y="148" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-1" x="180" y="148" width="2.00601" height="9" rx="4.5"/>
+<rect class="bar series-1 idle" data-app="FinStats" data-scenario="idle" data-metric="cpu" x="180" y="148" width="0.60322" height="9" rx="4.5"/>
+<line class="p90" x1="181.50599" x2="181.50599" y1="145" y2="160"/>
+<circle class="peak series-1" cx="182.00601" cy="152.5" r="3.5"/>
+<text class="tail" x="180" y="177">P90 0.294% · Peak 0.391%</text>
+<text class="sub" x="180" y="199">Playback</text>
+<text class="value" x="436.5" y="199" text-anchor="end">0.513%</text>
+<rect class="track" x="180" y="208" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-1" x="180" y="208" width="14.67706" height="9" rx="4.5"/>
+<rect class="bar series-1 playing" data-app="FinStats" data-scenario="playback" data-metric="cpu" x="180" y="208" width="2.63271" height="9" rx="4.5"/>
+<line class="p90" x1="183.00832" x2="183.00832" y1="205" y2="220"/>
+<circle class="peak series-1" cx="194.67706" cy="212.5" r="3.5"/>
+<text class="tail" x="180" y="237">P90 0.586% · Peak 2.861%</text>
+<text class="sub" x="454.5" y="139">Idle</text>
+<text class="value" x="711.0" y="139" text-anchor="end">67.65 MiB</text>
+<rect class="track" x="454.5" y="148" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-1" x="454.5" y="148" width="24.82983" height="9" rx="4.5"/>
+<rect class="bar series-1 idle" data-app="FinStats" data-scenario="idle" data-metric="ram" x="454.5" y="148" width="24.78971" height="9" rx="4.5"/>
+<line class="p90" x1="479.30120" x2="479.30120" y1="145" y2="160"/>
+<circle class="peak series-1" cx="479.32983" cy="152.5" r="3.5"/>
+<text class="tail" x="454.5" y="177">P90 67.68 MiB · Peak 67.76 MiB</text>
+<text class="sub" x="454.5" y="199">Playback</text>
+<text class="value" x="711.0" y="199" text-anchor="end">87.75 MiB</text>
+<rect class="track" x="454.5" y="208" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-1" x="454.5" y="208" width="36.14617" height="9" rx="4.5"/>
+<rect class="bar series-1 playing" data-app="FinStats" data-scenario="playback" data-metric="ram" x="454.5" y="208" width="32.15401" height="9" rx="4.5"/>
+<line class="p90" x1="490.63186" x2="490.63186" y1="205" y2="220"/>
+<circle class="peak series-1" cx="490.64617" cy="212.5" r="3.5"/>
+<text class="tail" x="454.5" y="237">P90 98.61 MiB · Peak 98.64 MiB</text>
+<line class="rule" x1="17" x2="711" y1="256" y2="256"/>
+<circle class="series-2" cx="21" cy="275" r="4"/>
+<text class="name" x="30" y="279">Jellystat<tspan class="tag"> 1.1.12</tspan></text>
+<text class="sub" x="17" y="299">2 containers</text>
+<text class="sub" x="180" y="279">Idle</text>
+<text class="value" x="436.5" y="279" text-anchor="end">0.194%</text>
+<rect class="track" x="180" y="288" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-2" x="180" y="288" width="2.32249" height="9" rx="4.5"/>
+<rect class="bar series-2 idle" data-app="Jellystat" data-scenario="idle" data-metric="cpu" x="180" y="288" width="0.99587" height="9" rx="4.5"/>
+<line class="p90" x1="182.15148" x2="182.15148" y1="285" y2="300"/>
+<circle class="peak series-2" cx="182.32249" cy="292.5" r="3.5"/>
+<text class="tail" x="180" y="317">P90 0.419% · Peak 0.453%</text>
+<text class="sub" x="180" y="339">Playback</text>
+<text class="value" x="436.5" y="339" text-anchor="end">3.145%</text>
+<rect class="track" x="180" y="348" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-2" x="180" y="348" width="222.40650" height="9" rx="4.5"/>
+<rect class="bar series-2 playing" data-app="Jellystat" data-scenario="playback" data-metric="cpu" x="180" y="348" width="16.13272" height="9" rx="4.5"/>
+<line class="p90" x1="186.48182" x2="186.48182" y1="345" y2="360"/>
+<circle class="peak series-2" cx="402.40650" cy="352.5" r="3.5"/>
+<text class="tail" x="180" y="377">P90 1.264% · Peak 43.354%</text>
+<text class="sub" x="454.5" y="279">Idle</text>
+<text class="value" x="711.0" y="279" text-anchor="end">294.98 MiB</text>
+<rect class="track" x="454.5" y="288" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-2" x="454.5" y="288" width="108.99389" height="9" rx="4.5"/>
+<rect class="bar series-2 idle" data-app="Jellystat" data-scenario="idle" data-metric="ram" x="454.5" y="288" width="108.08830" height="9" rx="4.5"/>
+<line class="p90" x1="563.32356" x2="563.32356" y1="285" y2="300"/>
+<circle class="peak series-2" cx="563.49389" cy="292.5" r="3.5"/>
+<text class="tail" x="454.5" y="317">P90 296.98 MiB · Peak 297.45 MiB</text>
+<text class="sub" x="454.5" y="339">Playback</text>
+<text class="value" x="711.0" y="339" text-anchor="end">387.31 MiB</text>
+<rect class="track" x="454.5" y="348" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-2" x="454.5" y="348" width="171.87647" height="9" rx="4.5"/>
+<rect class="bar series-2 playing" data-app="Jellystat" data-scenario="playback" data-metric="ram" x="454.5" y="348" width="141.92255" height="9" rx="4.5"/>
+<line class="p90" x1="611.68784" x2="611.68784" y1="345" y2="360"/>
+<circle class="peak series-2" cx="626.37647" cy="352.5" r="3.5"/>
+<text class="tail" x="454.5" y="377">P90 428.97 MiB · Peak 469.06 MiB</text>
+<line class="rule" x1="17" x2="711" y1="396" y2="396"/>
+<circle class="series-3" cx="21" cy="415" r="4"/>
+<text class="name" x="30" y="419">Streamystats<tspan class="tag"> 2.0.0</tspan></text>
+<text class="sub" x="17" y="439">3 containers</text>
+<text class="sub" x="180" y="419">Idle</text>
+<text class="value" x="436.5" y="419" text-anchor="end">2.348%</text>
+<rect class="track" x="180" y="428" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-3" x="180" y="428" width="25.12378" height="9" rx="4.5"/>
+<rect class="bar series-3 idle" data-app="Streamystats" data-scenario="idle" data-metric="cpu" x="180" y="428" width="12.04360" height="9" rx="4.5"/>
+<line class="p90" x1="195.61408" x2="195.61408" y1="425" y2="440"/>
+<circle class="peak series-3" cx="205.12378" cy="432.5" r="3.5"/>
+<text class="tail" x="180" y="457">P90 3.044% · Peak 4.897%</text>
+<text class="sub" x="180" y="479">Playback</text>
+<text class="value" x="436.5" y="479" text-anchor="end">2.649%</text>
+<rect class="track" x="180" y="488" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-3" x="180" y="488" width="45.33270" height="9" rx="4.5"/>
+<rect class="bar series-3 playing" data-app="Streamystats" data-scenario="playback" data-metric="cpu" x="180" y="488" width="13.58970" height="9" rx="4.5"/>
+<line class="p90" x1="194.99776" x2="194.99776" y1="485" y2="500"/>
+<circle class="peak series-3" cx="225.33270" cy="492.5" r="3.5"/>
+<text class="tail" x="180" y="517">P90 2.924% · Peak 8.837%</text>
+<text class="sub" x="454.5" y="419">Idle</text>
+<text class="value" x="711.0" y="419" text-anchor="end">503.61 MiB</text>
+<rect class="track" x="454.5" y="428" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-3" x="454.5" y="428" width="195.24059" height="9" rx="4.5"/>
+<rect class="bar series-3 idle" data-app="Streamystats" data-scenario="idle" data-metric="ram" x="454.5" y="428" width="184.53580" height="9" rx="4.5"/>
+<line class="p90" x1="641.72067" x2="641.72067" y1="425" y2="440"/>
+<circle class="peak series-3" cx="649.74059" cy="432.5" r="3.5"/>
+<text class="tail" x="454.5" y="457">P90 510.93 MiB · Peak 532.82 MiB</text>
+<text class="sub" x="454.5" y="479">Playback</text>
+<text class="value" x="711.0" y="479" text-anchor="end">616.23 MiB</text>
+<rect class="track" x="454.5" y="488" width="256.5" height="9" rx="4.5"/>
+<rect class="range series-3" x="454.5" y="488" width="234.90934" height="9" rx="4.5"/>
+<rect class="bar series-3 playing" data-app="Streamystats" data-scenario="playback" data-metric="ram" x="454.5" y="488" width="225.80510" height="9" rx="4.5"/>
+<line class="p90" x1="683.31747" x2="683.31747" y1="485" y2="500"/>
+<circle class="peak series-3" cx="689.40934" cy="492.5" r="3.5"/>
+<text class="tail" x="454.5" y="517">P90 624.45 MiB · Peak 641.08 MiB</text>
+<text class="sub" x="17" y="546">31 October 2026 · 300s idle / 300s playback · Full stacks including databases and workers.</text>
+<text class="sub" x="17" y="565">P90: nearest rank. CPU peak: highest 10s interval. RAM peak: endpoint. Playback method unverified.</text>
+<text class="sub" x="17" y="584">Observed runtime/package versions. FinStats tested revision: dc05cbea0da893ba0d2c3b6c6740630721462d99</text>
+</svg>

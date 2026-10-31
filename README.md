@@ -38,10 +38,77 @@ disk is films nobody has ever pressed play on.
 
 FinStats watches your server quietly in the background and turns that into answers. It is a
 lightweight alternative to Jellystat and Streamystats: a single small program with its own
-built-in database, using **under 100 MB of memory**, where each of those needs around half a gigabyte.
-Nothing else to install, nothing to maintain.
+built-in database. Nothing else to install, nothing to maintain.
 
 Already using Jellystat or Streamystats, or coming from Plex with Tautulli? [Bring your history with you](https://finstats.no/finstats/imports/). It takes seconds.
+
+## Resource use
+
+<!-- resource-benchmark: tools/make-benchmark-chart.py writes this from sanitized benchmark JSON -->
+<p>Idle UTC endpoints: 2026-10-31T09:49:32Z to 2026-10-31T09:54:31Z; playback: 2026-10-31T09:55:57Z to 2026-10-31T10:00:57Z. FinStats tested revision <code>dc05cbea0da893ba0d2c3b6c6740630721462d99</code>.</p>
+<p align="center"><img src=".github/benchmark.svg" width="728" alt="Idle: FinStats 2.3.1: CPU mean 0.118%, P90 0.294%, peak 0.391%; working set mean 67.65 MiB, P90 67.68 MiB, peak 67.76 MiB; Jellystat 1.1.12: CPU mean 0.194%, P90 0.419%, peak 0.453%; working set mean 294.98 MiB, P90 296.98 MiB, peak 297.45 MiB; Streamystats 2.0.0: CPU mean 2.348%, P90 3.044%, peak 4.897%; working set mean 503.61 MiB, P90 510.93 MiB, peak 532.82 MiB. Playback: FinStats 2.3.1: CPU mean 0.513%, P90 0.586%, peak 2.861%; working set mean 87.75 MiB, P90 98.61 MiB, peak 98.64 MiB; Jellystat 1.1.12: CPU mean 3.145%, P90 1.264%, peak 43.354%; working set mean 387.31 MiB, P90 428.97 MiB, peak 469.06 MiB; Streamystats 2.0.0: CPU mean 2.649%, P90 2.924%, peak 8.837%; working set mean 616.23 MiB, P90 624.45 MiB, peak 641.08 MiB. 1 operator-confirmed stream · play method unverified. Observational full-stack totals."></p>
+<!-- /resource-benchmark -->
+
+One real stream was confirmed by the operator; its play method was not independently verified. FinStats reported
+`playing_poll` with a one-second poll interval after the window; the socket was connected and unsubscribed. This is
+its active-playback collection behavior. The idle collector reported idle before and after that window.
+
+Each scenario ran for five minutes, with a baseline plus 30 endpoints at 10-second intervals. Every stack had
+**30/30 valid CPU intervals** and 31 readable memory endpoints, with no restart during either window. UTC endpoint
+labels have whole-second precision; duration and CPU coverage use monotonic counter-read times. CPU is time weighted,
+with 100% meaning one fully occupied core. Working set is `max(0, memory.current - inactive_file)` from host cgroup v2, including each
+stack's database and workers. MiB means 1,048,576 bytes. P90 uses nearest rank: the 27th of 30 sorted CPU intervals
+and the 28th of 31 sorted memory endpoints. Highest CPU is the peak 10-second interval average, rather than an
+instantaneous spike; highest RAM is the largest observed endpoint.
+
+This is an **observational deployment comparison**. Hardware is shared, but data, settings, uptime and caches differ;
+healthchecks and background jobs remain enabled. No application requests were sent by the sampler, and none were
+sent for validation inside either window. Stream count is operator-confirmed; playback and every background task
+were not independently instrumented throughout the windows. FinStats 2.3.1 was read from its runtime CLI;
+Jellystat 1.1.12 and Streamystats 2.0.0 are application-package versions, observed on matching image IDs after the
+windows. Package versions do not prove immutable release tags. These numbers describe this dated run and are not
+memory limits or a controlled version regression test.
+
+<details>
+<summary>Deployment context and measured image identities</summary>
+
+At the start of the idle window, FinStats had been up for about 10 hours 11 minutes, Jellystat for about
+9 hours 25 minutes (its database 9 hours 27 minutes), and all three Streamystats containers for
+about 9 hours 29 minutes. Jellystat had one recorded app restart
+before the window. Warm-up and cache effects can differ; every container's start time and restart count stayed
+unchanged during measurement. At playback-window start, FinStats had been up about 10 hours 18 minutes,
+Jellystat 9 hours 32 minutes (database 9 hours 33 minutes), and Streamystats containers about 9 hours 35 minutes.
+The same six local image IDs were observed in both scenarios.
+
+Image references below identify the locally deployed images. A local `:latest` tag does not establish the current
+public release. These are local Docker image IDs, not registry manifest digests. FinStats' OCI labels were stale:
+version v2.0.1 and revision `ac6a62ee5558a210691fab26907170c6a4ae2807`. Its runtime-reported 2.3.1 and the tested source revision above identify this
+measurement.
+
+- `ghcr.io/finstats/finstats:latest`: `sha256:e47d421a3c43e13188c295e33dacb2304743eef2d328d26946a2be04dc09cc33`
+- `cyfershepard/jellystat:latest`: `sha256:321c974ca497a60fb42fe2a28d2d25f0234e605c293508667c7917f29c2ccdb2`
+- `postgres:15.2`: `sha256:bf700010ce28b2744ed00ca6105951604c68db0a28105cf2da2956b89c2560e8`
+- `ghcr.io/fredrikburmester/streamystats-nextjs:latest`: `sha256:b34151c1a4a9e22c9438e2e388d4156c278c621fe7099debb2f585ef757f055b`
+- `ghcr.io/fredrikburmester/streamystats-job-server:latest`: `sha256:6a0a2485ebde231697713c1515228f69fe65033c8d810433ef4608a995f731c0`
+- `tensorchord/vchord-postgres:pg17-v0.4.1`: `sha256:1bda4d18ec61ccc3b57a6369902e96bb62f359214705a0c405b143868bd52d87`
+
+</details>
+
+[`tools/idle_benchmark.py`](tools/idle_benchmark.py) preserves raw JSONL, per-container and full-stack CSV, metadata,
+summary JSON and a comparison table with coverage and caveats. It supports local Docker and SSH config aliases:
+
+```sh
+python3 tools/idle_benchmark.py --target FinStats=ssh:finstats-host --container FinStats=finstats \
+  --target Streamystats=ssh:media-server --container Streamystats=streamystats \
+  --container Streamystats=streamystats-worker --container Streamystats=streamystats-db \
+  --output /tmp/idle-comparison
+```
+
+The aliases and names are placeholders: list the complete application, worker and PostgreSQL containers of each
+measured deployment. Use `FinStats=local` for a local Docker host. For automated real-media playback on isolated
+throwaway servers, use [`tools/playback_benchmark.py`](tools/playback_benchmark.py).
+See `--help` and the [contributing guide](https://finstats.no/finstats/contributing/) for repeatable configurations,
+playback workload limits and artifact handling.
 
 ## What you get
 

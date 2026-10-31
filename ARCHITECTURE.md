@@ -334,11 +334,15 @@ controller disconnects. Only host-local Unix-socket Docker contexts are accepted
 an unrelated local cgroup; its path must also match the full container ID. Counter-read timestamps are per container,
 with stack endpoints represented by their mean and non-overlapping CPU windows refused. The controller samples targets concurrently, bounds collection time and reaps its processes.
 
-Each target explicitly lists its application, worker and database containers. A baseline and adjacent endpoints yield
+Each target explicitly lists its application, worker and database containers. Before its baseline, fixed read-only
+Docker exec probes discover runtime/package/database versions from known images (or an explicit `--program` kind),
+retaining version/source/image provenance without arbitrary commands or raw output. Unavailable worker versions stay
+unavailable; package versions are not presented as immutable release tags. A baseline and adjacent endpoints yield
 CPU deltas as percent of one core; memory is the working set and anonymous bytes. Restart identity, failed reads and
 missed endpoints invalidate affected intervals instead of bridging gaps; an incomplete member invalidates stack totals.
 Artifacts are private raw JSONL, derived per-container and stack CSV, metadata with summary JSON, and a Markdown table
-with coverage and caveats. No application requests or restarts are made. Tests in `tools/test_idle_benchmark.py` use
+with coverage and caveats. `--scenario idle|playback` labels the operator-declared workload in raw events, summary,
+output status and comparison title without generating or verifying activity. No application requests or restarts are made. Tests in `tools/test_idle_benchmark.py` use
 invented counters and a fake SSH transport. Contracts: "Idle comparisons"; usage lives in the docs' contributing guide.
 
 ### 17.1 Generated playback scenarios
@@ -362,3 +366,20 @@ library is included rather than coalesced into an older scan. Docker credentials
 local ffmpeg arguments contain only this run's short-lived test token. No existing Jellyfin URL or tracker is
 accepted, no image is pulled automatically and no production playback is generated. This is a tiny-library DirectPlay
 workload, not a transcode or production scaling claim. Usage lives in the docs' contributing guide.
+
+### 17.2 The public README graph
+
+`tools/make-benchmark-chart.py` reads only `.github/idle-benchmark.json` and `.github/playback-benchmark.json`, sanitized
+projections of reviewed complete runs. Raw host samples and private media names stay private. Public format 2 requires
+complete coverage, finite nonnegative mean/P90/peak values, observed version provenance and the tested FinStats revision.
+Whole-second UTC labels allow one second of quantization against monotonic duration; original timestamps are retained.
+
+The generator draws the owner's selected app-focused layout in one `.github/benchmark.svg` card and its accessible
+README block, including current timestamps and source revision. Each app has CPU/RAM columns with paired idle/playback
+rows. Both scenarios share zero-based linear axes. The full card supplies its own theme background, accessible text
+separates the workloads, and differing tested revisions are refused. Solid bars are means, ticks are nearest-rank P90,
+and dots are highest observed intervals/endpoints. P90 uses rank 27 of 30 valid CPU intervals and rank 28 of 31 readable
+memory endpoints for a normal five-minute run. CPU peaks are ten-second averages, not instantaneous spikes. The SVG
+uses light token defaults with `prefers-color-scheme` dark overrides, including older browsers without `light-dark()`.
+`--check` detects stale output without rewriting it. Deployment context, package-version provenance and unverified manual
+playback method remain explicit beside the graph. Derived quantile/version sidecars do not rewrite historical raw data.

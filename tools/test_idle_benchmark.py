@@ -78,6 +78,25 @@ class IntervalTests(unittest.TestCase):
         self.assertIsNone(row["working_set_bytes"])
         self.assertIsNone(row["cpu_seconds"])
 
+    def test_nearest_rank_p90_uses_27th_of_30_and_28th_of_31(self):
+        self.assertEqual(bench.nearest_rank(list(range(30,0,-1)),0.9),27)
+        self.assertEqual(bench.nearest_rank(list(range(31,0,-1)),0.9),28)
+        self.assertEqual(bench.nearest_rank([5],0.9),5)
+        self.assertIsNone(bench.nearest_rank([],0.9))
+
+    def test_summary_p90_excludes_invalid_cpu_but_includes_readable_baseline_memory(self):
+        rows=[]
+        for index in range(31):
+            rows.append({'container':'total','interval_seconds':10,'cpu_seconds':None if index==0 else index/10,
+                         'cpu_pct_one_core':None if index==0 else index,'working_set_bytes':index+1,'anon_bytes':index+1})
+        result=bench.summarize(rows,30,31)['total']
+        self.assertEqual(result['cpu_p90_pct_one_core'],27)
+        self.assertEqual(result['working_set_p90_bytes'],28)
+        self.assertEqual(result['cpu_peak_pct_one_core'],30)
+        self.assertEqual(result['working_set_peak_bytes'],31)
+        rows[1]['cpu_seconds']=rows[1]['cpu_pct_one_core']=None
+        self.assertEqual(bench.summarize(rows,30,31)['total']['cpu_p90_pct_one_core'],28)
+
     def test_summary_marks_partial_cpu_as_lower_bound_and_weights_time(self):
         samples = [endpoint(0), endpoint(1, 500_000), endpoint(2, status="down"),
                    endpoint(3, 2_000_000), endpoint(4, 3_000_000)]
@@ -101,6 +120,7 @@ class TargetTests(unittest.TestCase):
             "--container", "Streamystats=stream-app", "--container", "Streamystats=stream-db",
             "--ssh-option", "Streamystats=IdentityFile=/tmp/key with spaces", "--output", "/tmp/result"])
         self.assertEqual((args.duration, args.interval), (300, 10))
+        self.assertEqual(args.scenario, "idle")
         self.assertEqual(targets[1]["containers"], ["stream-app", "stream-db"])
         command = bench.agent_command(targets[1], {"duration": 300, "interval": 10, "timeout": 5})
         self.assertEqual(command[:3], ["ssh", "-T", "-o"])
@@ -289,6 +309,21 @@ class ArtifactTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 bench.run(args, targets)
 
+    def test_playback_scenario_is_explicit_in_raw_summary_and_markdown(self):
+        with tempfile.TemporaryDirectory() as temp:
+            args, targets = bench.parse_args(["--target", "Fixture=local", "--container", "Fixture=app",
+                "--scenario", "playback", "--duration", "10", "--interval", "10", "--output", temp + "/out"])
+            events = [endpoint(0, members=("app",)), endpoint(1, 100000, members=("app",))]
+            command = [sys.executable, "-c", "print(" + repr("\n".join(json.dumps(e) for e in events)) + ")"]
+            with mock.patch.object(bench, "agent_command", return_value=command), mock.patch("sys.stdout", new=io.StringIO()) as output:
+                self.assertEqual(bench.run(args, targets), 0)
+                self.assertIn("Playback benchmark complete", output.getvalue())
+            summary = json.loads((args.output / "summary.json").read_text())
+            self.assertEqual(summary["measurement_scenario"], "playback")
+            self.assertIn("operator-declared", " ".join(summary["methodology"]))
+            self.assertTrue((args.output / "comparison.md").read_text().startswith("# Playback resource comparison"))
+            self.assertEqual(json.loads((args.output / "samples.jsonl").read_text().splitlines()[0])["measurement_scenario"], "playback")
+
     def test_failed_target_has_no_zero_usage_claim_and_does_not_hide_good_target(self):
         with tempfile.TemporaryDirectory() as temp:
             args, targets = bench.parse_args(["--target", "Good=local", "--container", "Good=app",
@@ -338,6 +373,83 @@ class ArtifactTests(unittest.TestCase):
                 self.assertEqual(bench.run(args, targets), 0)
             summary = json.loads((args.output / "summary.json").read_text())
             self.assertEqual(summary["targets"][0]["metrics"]["total"]["cpu_mean_pct_one_core"], 1)
+
+
+class ProgramVersionTests(unittest.TestCase):
+    def test_fixed_app_and_database_probes_retain_only_version_provenance(self):
+        info = {'app':{'image_ref':'cyfershepard/jellystat:latest','image':'sha256:app'},
+                'db':{'image_ref':'postgres:15.2','image':'sha256:db'}}
+        def command(argv, timeout, label):
+            if 'head' in argv: return json.dumps({'name':'jfstat','version':'1.1.12','private':'do-not-retain'})
+            return 'postgres (PostgreSQL) 15.2 (fixture)'
+        with mock.patch.object(bench, 'inspect_container', side_effect=lambda name, timeout:info[name]), mock.patch.object(bench, 'host_command', side_effect=command) as probe:
+            versions = bench.discover_program_versions(['app','db'], 'jellystat', 5)
+        self.assertEqual([v['version'] for v in versions], ['1.1.12','15.2'])
+        self.assertEqual(versions[0]['provenance_kind'], 'application_package')
+        self.assertNotIn('do-not-retain', json.dumps(versions))
+        self.assertEqual(probe.call_args_list[0].args[0], ['docker','exec','app','head','-c','131073','/app/package.json'])
+
+    def test_finstats_cli_and_streamystats_package_use_known_sources(self):
+        cases = [('ghcr.io/finstats/finstats:latest','finstats 2.3.1','2.3.1','runtime_cli'),
+                 ('ghcr.io/fredrikburmester/streamystats-nextjs:latest',json.dumps({'version':'2.0.0'}),'2.0.0','application_package')]
+        for image, output, expected, provenance in cases:
+            with self.subTest(image=image), mock.patch.object(bench, 'inspect_container', return_value={'image_ref':image,'image':'sha256:fixture'}), mock.patch.object(bench, 'host_command', return_value=output):
+                result = bench.discover_program_versions(['app'], 'auto', 5)[0]
+            self.assertEqual(result['version'], expected)
+            self.assertEqual(result['provenance_kind'], provenance)
+
+    def test_unknown_worker_and_invalid_version_never_emit_unchecked_text(self):
+        with mock.patch.object(bench, 'inspect_container', return_value={'image_ref':'ghcr.io/fredrikburmester/streamystats-job-server:latest','image':'sha256:fixture'}), mock.patch.object(bench, 'host_command') as command:
+            result = bench.discover_program_versions(['worker'], 'auto', 5)[0]
+        self.assertIsNone(result['version']);command.assert_not_called()
+        with mock.patch.object(bench, 'inspect_container', return_value={'image_ref':'cyfershepard/jellystat:latest','image':'sha256:fixture'}), mock.patch.object(bench, 'host_command', return_value=json.dumps({'version':'secret body with controls\n'})):
+            result = bench.discover_program_versions(['app'], 'auto', 5)[0]
+        self.assertIsNone(result['version'])
+        self.assertNotIn('secret', json.dumps(result))
+
+    def test_null_image_reference_and_disabled_probing_are_safe(self):
+        with mock.patch.object(bench,'inspect_container',return_value={'image_ref':None}),mock.patch.object(bench,'host_command') as command:
+            self.assertIsNone(bench.discover_program_versions(['app'],'auto',5)[0]['version'])
+            command.assert_not_called()
+        with mock.patch.object(bench,'inspect_container') as inspect:
+            self.assertEqual(bench.discover_program_versions(['app'],'none',5),[]);inspect.assert_not_called()
+
+    def test_prebaseline_probe_cost_is_added_to_collection_budget(self):
+        budget=bench.collection_timeout(300,5,3,True,'auto')
+        self.assertGreaterEqual(budget,300+3*2*5+2*5+10+3*5)
+        self.assertGreater(budget,bench.collection_timeout(300,5,3,True,'none'))
+
+    def test_agent_probes_before_baseline_and_command_forwards_program(self):
+        trace=[];out=io.StringIO();stopped=mock.Mock();stopped.wait.return_value=False
+        config={'duration':0.01,'interval':0.01,'timeout':1,'containers':['app'],'program':'finstats'}
+        with mock.patch.object(bench,'require_local_docker'),mock.patch.object(bench,'host_metadata',return_value={}),mock.patch.object(bench,'discover_program_versions',side_effect=lambda *args:trace.append('probe') or []),mock.patch.object(bench,'sample_container',side_effect=lambda *args:trace.append('sample') or {'name':'app','status':'down'}),mock.patch('sys.stdout',new=out):bench.run_agent(config,stopped)
+        self.assertLess(trace.index('probe'),trace.index('sample'))
+        target={'name':'App','ssh':None,'containers':['app'],'program':'finstats','ssh_options':[]}
+        command=bench.agent_command(target,{'duration':10,'interval':10,'timeout':5})
+        self.assertEqual(json.loads(base64.b64decode(command[-1]))['program'],'finstats')
+
+    def test_controller_validates_version_metadata_and_preserves_supplied_label(self):
+        cases=[([1],False),('wrong',False),([{'container':'app','kind':'finstats','version':'2.3.1'}],False),
+               ([{'container':'app','kind':'finstats','version':{'secret':'body'},'provenance_kind':'runtime_cli'}],False),
+               ([{'container':'app','kind':'finstats','version':'2.3.1','provenance_kind':'runtime_cli'}],True)]
+        for metadata,valid in cases:
+            with self.subTest(metadata=metadata),tempfile.TemporaryDirectory() as temp:
+                args,targets=bench.parse_args(['--target','App=local','--container','App=app','--version','App=supplied-label','--duration','10','--interval','10','--output',temp+'/out'])
+                events=[{'type':'metadata','host':{},'program_versions':metadata},endpoint(0,members=('app',)),endpoint(1,100000,members=('app',))]
+                source='print('+repr('\n'.join(json.dumps(e) for e in events))+')'
+                with mock.patch.object(bench,'agent_command',return_value=[sys.executable,'-c',source]),mock.patch('sys.stdout',new=io.StringIO()):
+                    self.assertEqual(bench.run(args,targets),0 if valid else 1)
+                summary=json.loads((args.output/'summary.json').read_text());target=summary['targets'][0]
+                self.assertEqual(target['version'],'2.3.1' if valid else 'supplied-label')
+                self.assertEqual(target['operator_version_label'],'supplied-label')
+                self.assertEqual(target['version_provenance'],'runtime_cli' if valid else 'operator_label')
+                self.assertIn('Version (source)',(args.output/'comparison.md').read_text())
+
+    def test_program_kind_is_allowlisted(self):
+        args, targets = bench.parse_args(['--target','App=local','--container','App=app','--program','App=streamystats','--output','/tmp/fixture'])
+        self.assertEqual(targets[0]['program'], 'streamystats')
+        with mock.patch('sys.stderr'), self.assertRaises(SystemExit):
+            bench.parse_args(['--target','App=local','--container','App=app','--program','App=arbitrary command','--output','/tmp/fixture'])
 
 
 @unittest.skipUnless(os.environ.get("FINSTATS_BENCHMARK_DOCKER_TESTS") == "1", "opt-in cached Alpine Docker fixture")

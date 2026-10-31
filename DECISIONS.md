@@ -1345,8 +1345,8 @@ Learned from real exports; also documented at the top of `import.rs`.
 18. The README's **Languages** section is a picture drawn like a translation platform's status widget
     (`.github/languages.svg`, a bar per language, in GitHub's light or dark), worked out from the catalogues and the
     changelogs by `tools/make-languages.py`, which redraws both; run it whenever a language changes, and the QA static stage
-    runs it with `--check`, which fails while either is out of date. It is the one README picture kept here rather than in
-    the docs, because the tool draws it from this repository.
+    runs it with `--check`, which fails while either is out of date. It and the measured idle graph ("Idle comparisons" 9)
+    are generated README pictures kept here; screenshots remain in the docs repository.
 19. The local QA stage `i18n` runs `i18n.js`'s rules in node; the browser stage pins its pages to en-GB (it overrides
     `navigator.languages`, since headless Chromium says en-US whatever `--lang` says) and sweeps every page in Bokmål and
     Nynorsk for a missing key.
@@ -1742,3 +1742,41 @@ Learned from real exports; also documented at the top of `import.rs`.
    path instead of preventing the final status from being written. After adding the generated library, wait for the
    startup library scan to become idle and explicitly refresh: a request made during an older scan may be coalesced
    with a scan whose library list predates the fixture, leaving the generated movie unread.
+
+9. **The README comparison is a reproducible graph.** The owner's request on 2026-10-31 adds
+   one `.github/benchmark.svg` beside the Languages graphic. `tools/make-benchmark-chart.py` reads only sanitized public
+   idle/playback JSON, never raw host data; it refuses incomplete coverage, non-finite/negative means,
+   inconsistent UTC windows or unknown input fields. Whole-second endpoint labels permit one second of quantization
+   against monotonic duration, without changing timestamps. Both scenarios share zero-based linear CPU and memory axes,
+   with actual units and no ratios or hardware multipliers. The SVG, accessible README alt text and `--check` all come
+   from that source. Dated methodology, differing warm-up, unverified versions and stale image labels stay beside it.
+
+10. **A manually playing deployment is labeled playback.** `idle_benchmark.py --scenario playback` records that context
+    in raw events, summary JSON, comparison heading and command output. Idle remains the default. The label is the
+    operator's declaration, not activity verification: no application requests are added, no playback is generated, and
+    notes record observed stream count/method before and after. The isolated controller selects playback explicitly
+    and supplies its own generated-DirectPlay methodology, including verified decoder/history evidence, without
+    inheriting the manual operator-declared caveat. Summary JSON and both top-level and resource-folder Markdown
+    reports are regenerated from that same methodology so no stale manual caveat survives in an emitted report.
+
+11. **Discover program versions before measuring.** Known images use fixed read-only Docker exec probes: FinStats
+    `--version`, Jellystat `/app/package.json`, Streamystats `/app/apps/nextjs-app/package.json`, and PostgreSQL
+    `--version`. `--program` selects an allowlisted kind, automatic detection or none; there is no arbitrary command.
+    Package reads are bounded and only a validated version plus provenance/image identity is retained, never raw
+    stdout, package fields or upstream errors. Missing worker versions stay unavailable. Observed versions take
+    precedence over operator labels, which are retained separately; package values do not prove immutable release tags.
+    Agent version metadata is validated before merging. Malformed lists, versions or provenance preserve supplied
+    labels and partial artifacts instead of crashing. Summary format 2 distinguishes observed and operator versions;
+    report cells name their source. Collection deadlines include pre-baseline inspection and probe budgets.
+
+12. **Show only the distribution measured.** Resource P90 is nearest rank `ceil(0.9 * n)`, with no interpolation:
+    rank 27 of 30 valid CPU intervals and rank 28 of 31 readable memory endpoints for a five-minute window. Baseline
+    memory is included; baseline/invalid CPU intervals are excluded. CPU peaks are the highest measured interval
+    average (ten seconds by default), never an instantaneous spike, and RAM peaks are the highest endpoints. Public
+    mean/P90/peak figures require complete coverage. The combined SVG uses solid mean bars, P90 ticks and peak dots,
+    plus explicit numeric values. Its light defaults and dark media palette work without `light-dark()` support.
+
+13. **The owner selected preview A on 2026-10-31.** The public SVG is one compact app-focused card: CPU and RAM columns,
+    with paired idle/playback bars and explicit mean/P90/peak values for each app. It has one full theme background,
+    accessible descriptions identify the workloads separately, and paired scenarios must share the tested FinStats
+    revision and application identities. Layout alternatives remain private demos, not public assets.
