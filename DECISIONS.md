@@ -1714,3 +1714,31 @@ Learned from real exports; also documented at the top of `import.rs`.
 4. **Tooling does not create a release.** This command prepares comparisons for the forthcoming 2.3.2; it neither bumps
    the crate nor adds an in-app patch note for development tooling alone. A README comparison requires fresh measured
    artifacts and reviewed deployment context, not a republished historical run presented as current.
+
+5. **Automated playback belongs to disposable servers.** `tools/playback_benchmark.py` accepts cached image references,
+   creates its own labeled containers/internal network and scratch data, and never accepts an existing Jellyfin URL or
+   existing tracker container. Only a run's captured IDs with matching labels may be removed. Each container is limited
+   to 2 CPUs, 1 GiB and 256 PIDs; local loopback forwarding reaches only the newly created Jellyfin. Missing images fail
+   before runtime resources are allocated; the command never pulls automatically. Disposable Docker credentials are
+   passed through a temporary 0600 env file, removed after container creation, rather than on Docker's command line.
+   Local ffmpeg headers still expose short-lived test credentials in its arguments, and loopback permits other local
+   users; this harness assumes a trusted development host, with only its generated disposable credentials.
+6. **A playback report alone is not media playback.** Generated H.264/AAC is fetched over real HTTP and decoded with
+   ffmpeg in real time; progress reports use decoder positions. Pause suspends the actual decoder, and start, progress,
+   pause, resume and stop are reported to the disposable Jellyfin. DirectPlay negotiation is required; transcoding is
+   refused. The full window contains mixed phases and a two-interval stopped tail. Completion requires decoder progress,
+   phase reports, readable resource coverage and closed plays with lifecycle events in each scratch FinStats database.
+   A sampler interruption preserves interrupted status and skips post-window validation while cleanup still runs.
+7. **Keep workload cost separate and state the limit.** Tracker cgroups exclude the disposable Jellyfin and local
+   ffmpeg/forwarder processes, whose load still affects their shared host. A tiny generated library does not predict
+   production, transcoding or UI costs. Other trackers or SSH targets count as playback participants only when connected
+   to the same disposable Jellyfin; the automated controller currently provisions FinStats images locally and does not
+   label existing unrelated remote trackers as playback results.
+
+8. **A ready public endpoint must identify the server.** Playback setup waits for nonempty Jellyfin ID/version and an
+   explicit false startup-completed flag, then rereads the identity after setup. Partial startup objects and empty API
+   successes cannot pass as readiness or media data. Scoped SIGTERM/SIGHUP handlers follow the interrupted cleanup
+   path and restore previous handlers afterward. Scratch-removal failures retain scenario artifacts and the scratch
+   path instead of preventing the final status from being written. After adding the generated library, wait for the
+   startup library scan to become idle and explicitly refresh: a request made during an older scan may be coalesced
+   with a scan whose library list predates the fixture, leaving the generated movie unread.

@@ -340,3 +340,25 @@ missed endpoints invalidate affected intervals instead of bridging gaps; an inco
 Artifacts are private raw JSONL, derived per-container and stack CSV, metadata with summary JSON, and a Markdown table
 with coverage and caveats. No application requests or restarts are made. Tests in `tools/test_idle_benchmark.py` use
 invented counters and a fake SSH transport. Contracts: "Idle comparisons"; usage lives in the docs' contributing guide.
+
+### 17.1 Generated playback scenarios
+
+`tools/playback_benchmark.py` provisions only new containers from explicitly cached images, with scratch mounts, a
+run-specific ownership label, CPU/memory/PID limits and an internal Docker network. A loopback HTTP forwarder reaches
+only its own Jellyfin container because Docker does not publish internal-network ports. It bootstraps a generated user
+and one movie library, waits for FinStats to read it, then starts one to four local ffmpeg decoders fetching the generated
+H.264/AAC movie over actual HTTP. Positions are decoder output, not an assumed wall-clock playhead. The workload reports
+start/progress, suspends and resumes the decoders with matching pause/resume reports, stops them and leaves two intervals
+for the collectors to settle. Multiple supplied FinStats images share the same disposable Jellyfin concurrently.
+
+The resource sampler measures tracker cgroups only, with all raw evidence retained. Scenario artifacts separately record
+media hashes, limits, phase timing, decoder progress, lifecycle events and aggregate history checks against the scratch
+SQLite databases. A scenario is complete only when decoding, the phase sequence, resource coverage and each tracker's
+closed play and lifecycle events are confirmed. Cleanup checks the immutable IDs and ownership labels before removing
+only resources this run created; scratch credentials and databases are removed. Scoped TERM/HUP handlers follow the same interruption path; cleanup failures
+retain a final scenario status and the scratch location. Startup requires complete server identity before and after
+setup, required object responses are validated, and a refresh after the startup scan becomes idle ensures the new
+library is included rather than coalesced into an older scan. Docker credentials use a temporary private env file, while the
+local ffmpeg arguments contain only this run's short-lived test token. No existing Jellyfin URL or tracker is
+accepted, no image is pulled automatically and no production playback is generated. This is a tiny-library DirectPlay
+workload, not a transcode or production scaling claim. Usage lives in the docs' contributing guide.
