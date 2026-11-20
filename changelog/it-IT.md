@@ -11,6 +11,11 @@ crash, bloccarsi, consumare memoria senza restituirla o perdere dati, Corretto q
 sbagliata. Una versione `x.y.0` ha una breve riga di titolo sotto l’intestazione: quel titolo è ciò che l’app
 usa come titolo dell’intera serie.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 nell'immagine**, contro CVE-2026-4738. L'immagine ora include ogni correzione di sicurezza di Alpine quando viene costruita, anche quando l'Alpine su cui è costruita è più vecchio della correzione.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

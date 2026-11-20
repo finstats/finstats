@@ -11,6 +11,11 @@ vart raskare eller lettare, Stabilitet noko som ikkje lenger kan krasje, stanse,
 som gav feil svar. Ei `x.y.0`-utgjeving har ei kort tittellinje under overskrifta si: den tittelen brukar appen
 som overskrift for heile serien.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 i imaget**, mot CVE-2026-4738. Imaget tek no med alle tryggingsrettingane til Alpine når det vert bygt, også når Alpine-versjonen det vert bygt på er eldre enn rettinga.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

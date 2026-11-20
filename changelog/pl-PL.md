@@ -10,6 +10,11 @@ na zmianę. Bezpieczeństwo to coś, co ktoś mógł wykorzystać w złej wierze
 Stabilność to coś, co nie może już ulec awarii, zatrzymać się, wyciekać ani tracić danych, a Naprawiono to coś, co dawało
 błędną odpowiedź. Wydanie `x.y.0` ma pod nagłówkiem krótki wiersz tytułowy: aplikacja używa go jako nagłówka całej serii.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 w obrazie**, przeciw CVE-2026-4738. Obraz przy budowaniu przyjmuje teraz każdą poprawkę bezpieczeństwa Alpine, nawet gdy Alpine, na którym jest budowany, jest starszy niż poprawka.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

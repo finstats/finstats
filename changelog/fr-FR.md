@@ -12,6 +12,11 @@ fuir ou perdre de données, Corrections ce qui donnait une réponse fausse. Une 
 courte ligne de titre sous son en-tête : c’est ce titre que l’application utilise comme intitulé de toute
 la série.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 dans l'image**, contre CVE-2026-4738. L'image intègre désormais chaque correctif de sécurité d'Alpine à sa construction, même quand l'Alpine sur lequel elle est construite est plus ancien que le correctif.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

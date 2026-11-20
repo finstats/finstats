@@ -1,6 +1,6 @@
 # CONTEXT.md
 
-> **Last updated:** 2026-10-31 (selected single-panel paired resource dashboard), on branch `dev` (crate version 2.3.1, local only; schema `user_version` 42; newest pushed tag `v2.2.0`).
+> **Last updated:** 2026-11-20 (the runtime image takes every Alpine fix), on branch `dev` (crate version 2.3.2; schema `user_version` 42; newest pushed tag `v2.3.2`).
 >
 > A briefing for whoever starts work here next, a person or an AI assistant: what FinStats is, how the pieces fit,
 > where things belong, which rules hold, and what is missing. It is the distilled map. `ARCHITECTURE.md` explains how

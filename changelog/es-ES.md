@@ -11,6 +11,11 @@ más rápido o pesa menos; Estabilidad, algo que ya no puede bloquearse, detener
 datos; Corregido, algo que daba una respuesta equivocada. Una versión `x.y.0` lleva una línea de título corta
 bajo su encabezado: ese título es el que la aplicación usa como titular de toda la serie.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 en la imagen**, contra CVE-2026-4738. La imagen incorpora ahora todas las correcciones de seguridad de Alpine al construirse, aunque el Alpine sobre el que se construye sea anterior a la corrección.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

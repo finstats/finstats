@@ -10,6 +10,11 @@ hafif hale gelen bir şey; Kararlılık, artık çökmeyen, durmayan, sızıntı
 Düzeltildi ise yanlış yanıt veren bir şey. Bir `x.y.0` sürümü başlığının altında kısa bir başlık satırı taşır: uygulama
 bu başlığı tüm serinin manşeti olarak kullanır.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **İmajda zlib 1.4**, CVE-2026-4738'e karşı. İmaj artık derlenirken, üzerine kurulduğu Alpine düzeltmeden eski olsa bile Alpine'in tüm güvenlik düzeltmelerini alıyor.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

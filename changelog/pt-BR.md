@@ -11,6 +11,11 @@ ou mais leve, Estabilidade algo que não pode mais travar, parar, vazar ou perde
 resposta errada. Uma versão `x.y.0` traz uma linha curta de título sob o cabeçalho: esse título é o que o app usa como
 manchete de toda a série.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 na imagem**, contra o CVE-2026-4738. A imagem agora recebe todas as correções de segurança do Alpine ao ser construída, mesmo quando o Alpine em que é construída é mais antigo que a correção.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

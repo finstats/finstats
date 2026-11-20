@@ -10,6 +10,11 @@ Säkerhet är något som någon kunde ha missbrukat, Prestanda något som har bl
 som inte längre kan krascha, stanna, läcka eller förlora data, och Åtgärdat något som gav fel svar. En `x.y.0`-version
 har en kort titelrad under rubriken: den titeln använder appen som rubrik för hela serien.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 i avbildningen**, mot CVE-2026-4738. Avbildningen tar nu med alla Alpines säkerhetsrättningar när den byggs, även när den Alpine den byggs på är äldre än rättningen.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

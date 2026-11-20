@@ -10,6 +10,11 @@ käyttää jotakin väärin, Suorituskyky, että jokin nopeutui tai keveni, Vaka
 pysähtyä, vuotaa tai hukata tietoja, ja Korjattu, että jokin antoi väärän vastauksen. `x.y.0`-julkaisun
 otsikon alla on lyhyt otsikkorivi: sitä sovellus käyttää koko sarjan pääotsikkona.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 levykuvassa**, CVE-2026-4738:aa vastaan. Levykuva ottaa nyt rakennettaessa mukaan kaikki Alpinen tietoturvakorjaukset, vaikka Alpine, jonka päälle se rakennetaan, olisi korjausta vanhempi.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

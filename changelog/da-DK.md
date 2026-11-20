@@ -11,6 +11,11 @@ Stabilitet noget, der ikke længere kan gå ned, standse, lække eller miste dat
 forkert svar. En `x.y.0`-version har en kort titellinje under overskriften: den titel bruger appen som
 overskrift for hele serien.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 i imaget**, mod CVE-2026-4738. Imaget tager nu alle Alpines sikkerhedsrettelser med, når det bygges, også når den Alpine, det bygges på, er ældre end rettelsen.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

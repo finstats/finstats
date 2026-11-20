@@ -10,6 +10,11 @@ er noe noen kunne ha misbrukt, Ytelse er noe som er blitt raskere eller lettere,
 miste data, og Rettet noe som ga feil svar. En `x.y.0`-versjon har en kort tittellinje under overskriften:
 den tittelen bruker appen som overskrift for hele serien.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 i imaget**, mot CVE-2026-4738. Imaget tar nå med alle Alpines sikkerhetsrettelser når det bygges, også når Alpine-versjonen det bygges på er eldre enn rettelsen.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

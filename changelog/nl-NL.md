@@ -11,6 +11,11 @@ geworden, Stabiliteit iets wat niet meer kan crashen, vastlopen, lekken of gegev
 verkeerd antwoord gaf. Een `x.y.0`-versie heeft onder de kop een korte titelregel: die titel gebruikt de app als kop van
 de hele reeks.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 in de image**, tegen CVE-2026-4738. De image neemt nu bij het bouwen elke beveiligingsfix van Alpine mee, ook als de Alpine waarop hij gebouwd wordt ouder is dan de fix.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

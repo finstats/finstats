@@ -10,6 +10,11 @@ breytingu. Öryggi er eitthvað sem einhver hefði getað misnotað, Afköst eru
 hrunið, stöðvast, lekið eða glatað gögnum, og Lagfært eitthvað sem gaf rangt svar. Útgáfa `x.y.0` ber
 stutta titillínu undir fyrirsögn sinni: þann titil notar forritið sem fyrirsögn allrar raðarinnar.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 í myndinni**, gegn CVE-2026-4738. Myndin tekur nú allar öryggislagfæringar Alpine með þegar hún er smíðuð, líka þegar Alpine sem hún er smíðuð á er eldri en lagfæringin.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

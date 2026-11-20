@@ -11,6 +11,11 @@ oder sparsamer wurde, Stabilität etwas, das nicht mehr abstürzen, anhalten, Le
 kann, Behoben etwas, das eine falsche Antwort gab. Eine `x.y.0`-Version trägt unter ihrer Überschrift eine
 kurze Titelzeile: Diesen Titel nutzt die App als Schlagzeile der ganzen Reihe.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 im Image**, gegen CVE-2026-4738. Das Image übernimmt beim Bauen jetzt jede Sicherheitskorrektur von Alpine, auch wenn das Alpine, auf dem es gebaut wird, älter ist als die Korrektur.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security

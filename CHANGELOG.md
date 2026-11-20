@@ -11,6 +11,11 @@ crash, halt, leak or lose data, Fixed something that gave a wrong answer. An `x.
 a short title line under its heading: that title is what the app uses as the headline of the whole
 series.
 
+## [2.3.2] - 2026-11-20
+
+### Security
+- **zlib 1.4 in the image**, against CVE-2026-4738. The image now takes every Alpine security fix when it is built, even when the Alpine it is built on is older than the fix.
+
 ## [2.3.1] - 2026-10-26 to 2026-10-30
 
 ### Security
