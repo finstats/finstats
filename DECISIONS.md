@@ -1671,6 +1671,10 @@ Learned from real exports; also documented at the top of `import.rs`.
     be moved by whoever holds the action's repository, and every step runs beside the job's token (`packages: write`
     pushes `:latest`); the cache is one store per repository that every job of a run on `main` may write. QA's
     `workflow` rule holds all three. The JavaScript check parses every module (`find`), not two folders of them.
+8. **The runtime image runs `apk upgrade` before it adds anything.** Alpine fixes a CVE in its repositories days or weeks
+   before a new base image carries it (zlib 1.4-r0 against CVE-2026-4738 while `alpine:3.22.8` still shipped 1.3.2-r1),
+   and a tag build has no cache, so every release takes every fix there is. `qa/run.sh docker` fails while any package in
+   the image has a newer version on its branch (`apk list -u`).
 
 ## Licence notice (`licenses.rs`, `THIRD-PARTY.json`, `GET /api/licenses`, `/licenses`)
 

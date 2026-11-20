@@ -31,7 +31,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,id=finstats-registry \
     --mount=type=cache,target=/src/target,id=finstats-target \
     cargo build --release --locked && cp target/release/finstats /finstats
 
-FROM alpine:3.22@sha256:2e0b81d60597f449baa56dc25d355367869d2dca4cd57e866f1e2b52af3eb55f
+FROM alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
 # Ties the published image to its source; the release workflow adds version, revision and date.
 LABEL org.opencontainers.image.title="finstats" \
       org.opencontainers.image.description="Lightweight playback statistics for Jellyfin" \
@@ -39,7 +39,10 @@ LABEL org.opencontainers.image.title="finstats" \
       org.opencontainers.image.licenses="GPL-3.0-only"
 # tzdata: "plays per day" and the hour-of-day heatmap follow the TZ variable.
 # su-exec: the entrypoint drops from root to the finstats user with it.
-RUN apk add --no-cache tzdata su-exec \
+# apk upgrade: Alpine fixes a CVE in its repositories before a new base image carries it (zlib 1.4-r0 against
+# CVE-2026-4738, while alpine:3.22.8 still shipped 1.3.2-r1), so the image takes every fix there is when it is built.
+RUN apk upgrade --no-cache \
+    && apk add --no-cache tzdata su-exec \
     && addgroup -g 1000 finstats && adduser -D -u 1000 -G finstats finstats \
     && mkdir /data && chown finstats:finstats /data
 COPY --from=build /finstats /usr/local/bin/finstats
